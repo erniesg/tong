@@ -11,6 +11,7 @@ import {
   startOrResumeGame,
   type CityId,
   type GameProfile,
+  type HangoutRenderOp,
   type LearnSession,
   type LocationId,
   type ObjectiveNextResponse,
@@ -23,6 +24,7 @@ import {
   type SceneLine,
   type ScoreState,
 } from '@/lib/api';
+import { KoreanText } from '@/components/shared/KoreanText';
 
 interface DialogueMessage {
   id: string;
@@ -32,7 +34,7 @@ interface DialogueMessage {
 
 interface PresetResponse {
   text: string;
-  note: string;
+  note?: string;
 }
 
 type CjkLang = 'ko' | 'ja' | 'zh';
@@ -322,6 +324,7 @@ export default function GamePageClient({
   const [awaitingUserTurn, setAwaitingUserTurn] = useState(false);
   const [pendingUserLine, setPendingUserLine] = useState<string | null>(null);
   const [tongHint, setTongHint] = useState<string | null>(null);
+  const [lastNpcLine, setLastNpcLine] = useState<string | null>(null);
   const [typedDialogueText, setTypedDialogueText] = useState('');
   const [dialogueTypeDone, setDialogueTypeDone] = useState(true);
 
@@ -351,6 +354,7 @@ export default function GamePageClient({
       }
     : undefined;
   const activeSceneLine = pendingUserLine ? null : sceneLines[sceneLineIndex] || null;
+  const isUserTurn = awaitingUserTurn && Boolean(sceneSessionId) && !sendingTurn;
   const activeSpeakerLabel = pendingUserLine
     ? 'You'
     : activeSceneLine
@@ -360,12 +364,17 @@ export default function GamePageClient({
           ? 'You'
           : activeSceneLine.speakerName || character.name || `${cityConfig.label} partner`
       : character.name || `${cityConfig.label} partner`;
-  const activeDialogueText =
-    pendingUserLine ||
-    activeSceneLine?.text ||
-    (sceneSessionId ? 'Tap start from World if you want to relaunch this scene.' : 'Open World and start your first hangout.');
+  const activeDialogueText = pendingUserLine
+    ? pendingUserLine
+    : activeSceneLine?.text
+      ? activeSceneLine.text
+      : isUserTurn
+        ? lastNpcLine || 'Choose a reply or type your own response.'
+        : sceneSessionId
+          ? 'Hangout live. Use World to restart this scene.'
+          : 'Open World and start your first hangout.';
   const canTapContinue = Boolean(activeSceneLine) && !sendingTurn && !pendingUserLine;
-  const canAnswerTurn = awaitingUserTurn && Boolean(sceneSessionId) && !sendingTurn;
+  const canAnswerTurn = isUserTurn;
   const isTypewriting = canTapContinue && !dialogueTypeDone && !pendingUserLine;
 
   useEffect(() => {
@@ -464,6 +473,7 @@ export default function GamePageClient({
     setAwaitingUserTurn(false);
     setPendingUserLine(null);
     setTongHint(null);
+    setLastNpcLine(null);
     setUserUtterance('');
     setPresetResponses(EMPTY_PRESET_RESPONSES);
     setTypedDialogueText('');
@@ -568,7 +578,35 @@ export default function GamePageClient({
       setPresetResponses(EMPTY_PRESET_RESPONSES);
       return;
     }
-    setPresetResponses(replies.slice(0, 6).map((text) => ({ text, note: 'Suggested reply' })));
+    setPresetResponses(replies.slice(0, 6).map((text) => ({ text })));
+  }
+
+  function extractRenderHint(renderOps?: HangoutRenderOp[]): string | null {
+    if (!renderOps?.length) return null;
+    for (const op of renderOps) {
+      if (op.tool === 'tong_whisper' && op.text?.trim()) {
+        return op.text.trim();
+      }
+    }
+    return null;
+  }
+
+  function extractRenderReplies(renderOps?: HangoutRenderOp[]): string[] | undefined {
+    if (!renderOps?.length) return undefined;
+    const choices = renderOps.find((op) => op.tool === 'offer_choices' && Array.isArray(op.choices))?.choices;
+    if (!choices?.length) return undefined;
+    return choices.filter((choice) => Boolean(choice?.trim())).slice(0, 6);
+  }
+
+  function extractRenderLines(renderOps?: HangoutRenderOp[]): SceneLine[] {
+    if (!renderOps?.length) return [];
+    return renderOps
+      .filter((op) => op.tool === 'npc_speak' && Boolean(op.text?.trim()))
+      .map((op) => ({
+        speaker: 'character' as const,
+        text: op.text!.trim(),
+        speakerName: op.speakerName,
+      }));
   }
 
   function mergeIncomingLines(lines: SceneLine[], unlockInputAfter = true) {
@@ -583,6 +621,10 @@ export default function GamePageClient({
     const dialogueLines = lineToDialogue(spokenLines);
     if (dialogueLines.length) {
       setMessages((prev) => [...prev, ...dialogueLines]);
+    }
+    const lastCharacterLine = [...spokenLines].reverse().find((line) => line.speaker === 'character');
+    if (lastCharacterLine?.text) {
+      setLastNpcLine(lastCharacterLine.text);
     }
     setPendingUserLine(null);
     setSceneLineIndex(0);
@@ -674,9 +716,17 @@ export default function GamePageClient({
       }
 
       applyServerReplies(hangout.quickReplies);
-      setTongHint((hangout.tongHint || '').trim() || null);
+      const renderHint = extractRenderHint(hangout.renderOps);
+      setTongHint(renderHint || (hangout.tongHint || '').trim() || null);
+      const renderReplies = extractRenderReplies(hangout.renderOps);
+      if (renderReplies) applyServerReplies(renderReplies);
+      const renderLines = extractRenderLines(hangout.renderOps);
       const openingLines =
-        hangout.initialLines && hangout.initialLines.length > 0 ? hangout.initialLines : [hangout.initialLine];
+        renderLines.length > 0
+          ? renderLines
+          : hangout.initialLines && hangout.initialLines.length > 0
+            ? hangout.initialLines
+            : [hangout.initialLine];
       mergeIncomingLines(openingLines, true);
       return true;
     } catch (startError) {
@@ -718,8 +768,14 @@ export default function GamePageClient({
       setEngineMode(response.engineMode || engineMode);
       setScore(response.state.score);
       setCharacter((current) => mergeCharacterPayload(current, response.character || response.npc));
-      applyServerReplies(response.feedback.suggestedReplies);
-      setTongHint((response.feedback.tongHint || '').trim() || null);
+      const renderHint = extractRenderHint(response.renderOps);
+      setTongHint(renderHint || (response.feedback.tongHint || '').trim() || null);
+      const renderReplies = extractRenderReplies(response.renderOps);
+      if (renderReplies) {
+        applyServerReplies(renderReplies);
+      } else {
+        applyServerReplies(response.feedback.suggestedReplies);
+      }
       setRelationshipState(
         response.relationshipState ||
           response.state.relationshipState ||
@@ -773,8 +829,9 @@ export default function GamePageClient({
         return clamp01(previous + normalizedDelta);
       });
 
+      const renderLines = extractRenderLines(response.renderOps);
       const nextLines =
-        response.nextLines && response.nextLines.length > 0 ? response.nextLines : [response.nextLine];
+        renderLines.length > 0 ? renderLines : response.nextLines && response.nextLines.length > 0 ? response.nextLines : [response.nextLine];
       mergeIncomingLines(nextLines, true);
 
       if (response.completion?.isCompleted) {
@@ -1202,7 +1259,7 @@ export default function GamePageClient({
                   <section className="game-hangout-stage">
                     {tongHint && (
                       <button className="game-tong-whisper" type="button" onClick={() => setTongHint(null)}>
-                        <strong>Tong:</strong> {tongHint}
+                        <strong>Tong:</strong> <KoreanText text={tongHint} />
                       </button>
                     )}
                     <section
@@ -1247,7 +1304,7 @@ export default function GamePageClient({
                         </span>
                       </div>
                       <p className="game-dialogue-text">
-                        {isTypewriting ? typedDialogueText : activeDialogueText}
+                        <KoreanText text={isTypewriting ? typedDialogueText : activeDialogueText} />
                         {isTypewriting && <span className="game-type-cursor" />}
                       </p>
                     </section>
@@ -1263,8 +1320,9 @@ export default function GamePageClient({
                                 onClick={() => void sendHangoutTurn(preset.text)}
                                 disabled={!sceneSessionId || sendingTurn}
                               >
-                                <span className="game-chip-main">{preset.text}</span>
-                                <span className="game-chip-note">{preset.note}</span>
+                                <span className="game-chip-main">
+                                  <KoreanText text={preset.text} />
+                                </span>
                               </button>
                             ))}
                           </section>

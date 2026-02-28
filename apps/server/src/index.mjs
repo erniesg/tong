@@ -142,7 +142,7 @@ const CITY_CHARACTER_POOL = {
 const ROMANCEABLE_CHARACTERS = [
   {
     npcId: 'npc_haeun',
-    assetKey: 'hauen/haeun.png',
+    assetKey: 'haeun/haeun.png',
     name: 'Haeun',
     role: 'Primary romance route lead',
     baselineMood: 'warm',
@@ -798,8 +798,9 @@ function pickRandomNpc(city) {
   return { ...selected };
 }
 
-function pickCharacter({ city = 'seoul', preferRomance = true, requestedCharacterId } = {}) {
+function pickCharacter({ city = 'seoul', location = 'food_street', preferRomance = true, requestedCharacterId } = {}) {
   const safeCity = normalizeCity(city);
+  const safeLocation = normalizeLocation(location);
   const normalizedRequestedCharacterId =
     requestedCharacterId === 'npc_ding_man' ? 'npc_jin' : requestedCharacterId;
   const romancePool = ROMANCEABLE_CHARACTERS.filter((item) =>
@@ -816,6 +817,11 @@ function pickCharacter({ city = 'seoul', preferRomance = true, requestedCharacte
   }
 
   if (preferRomance && romancePool.length > 0) {
+    // Deterministic first-scene lead for parity in Seoul Food Street demos.
+    if (safeCity === 'seoul' && safeLocation === 'food_street') {
+      const lead = romancePool.find((item) => item.npcId === 'npc_haeun');
+      if (lead) return { ...lead };
+    }
     const selected = romancePool[Math.floor(Math.random() * romancePool.length)];
     return { ...selected };
   }
@@ -836,6 +842,13 @@ function normalizeLegacyRomanceIdentity(session) {
       npcId: 'npc_jin',
       name: 'Jin',
       assetKey: session.npc.assetKey || 'jin/jin.png',
+    };
+  }
+
+  if (session.npc?.npcId === 'npc_haeun' && session.npc.assetKey === 'hauen/haeun.png') {
+    session.npc = {
+      ...session.npc,
+      assetKey: 'haeun/haeun.png',
     };
   }
 
@@ -1118,6 +1131,7 @@ function createGameSession(userId, profile, options = {}) {
   const learnReadiness = deriveLearnReadiness(nextProfile, slice.lang);
   const npc = pickCharacter({
     city: slice.city,
+    location: slice.location.locationId,
     preferRomance: options.preferRomance !== false,
     requestedCharacterId: options.characterId,
   });
@@ -1229,6 +1243,7 @@ function createHangoutSession({
   const requestedCharacterId = randomizeCharacter ? null : characterId;
   const npc = pickCharacter({
     city: scene.city,
+    location: scene.location.locationId,
     preferRomance: shouldPreferRomance,
     requestedCharacterId,
   });
@@ -1825,6 +1840,18 @@ async function handleHangoutRespond(body) {
           speaker: 'tong',
           text: '이 장면은 이미 완료됐어. 새 세션으로 이어서 연습하자.',
         },
+        renderOps: [
+          {
+            tool: 'tong_whisper',
+            text: 'This hangout is already complete. Start a new scene to replay.',
+          },
+          {
+            tool: 'npc_speak',
+            text: '이 장면은 이미 완료됐어. 새 세션으로 이어서 연습하자.',
+            characterId: existing.npc?.npcId,
+            speakerName: existing.npc?.name,
+          },
+        ],
         state: {
           turn: existing.turn,
           sceneBeat: existing.sceneBeat || deriveSceneBeat(existing, scene),
@@ -2008,6 +2035,26 @@ async function handleHangoutRespond(body) {
       speaker: 'character',
       text: nextLineText,
     },
+    renderOps: [
+      {
+        tool: 'npc_speak',
+        text: nextLineText,
+        characterId: existing.npc?.npcId,
+        speakerName: existing.npc?.name,
+      },
+      {
+        tool: 'tong_whisper',
+        text: tongHint,
+      },
+      ...(suggestedReplies.length
+        ? [
+            {
+              tool: 'offer_choices',
+              choices: suggestedReplies,
+            },
+          ]
+        : []),
+    ],
     state: {
       turn: existing.turn,
       sceneBeat: existing.sceneBeat || deriveSceneBeat(existing, scene),
@@ -2137,6 +2184,7 @@ const server = http.createServer(async (req, res) => {
         if (!session.npc || body.randomizeCharacter || body.characterId) {
           session.npc = pickCharacter({
             city: requestedCity,
+            location: requestedLocation,
             preferRomance: body.preferRomance !== false,
             requestedCharacterId: body.characterId,
           });
@@ -2302,6 +2350,22 @@ const server = http.createServer(async (req, res) => {
           speaker: 'character',
           text: openingLine,
         },
+        renderOps: [
+          {
+            tool: 'npc_speak',
+            text: openingLine,
+            characterId: session.npc?.npcId,
+            speakerName: session.npc?.name,
+          },
+          {
+            tool: 'tong_whisper',
+            text: openingHint,
+          },
+          {
+            tool: 'offer_choices',
+            choices: openingQuickReplies,
+          },
+        ],
         initialLines: [
           {
             speaker: 'character',

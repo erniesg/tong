@@ -276,6 +276,14 @@ export interface SceneCharacter {
   assetKey?: string | null;
 }
 
+export interface HangoutRenderOp {
+  tool: 'npc_speak' | 'tong_whisper' | 'offer_choices';
+  text?: string;
+  choices?: string[];
+  characterId?: string;
+  speakerName?: string;
+}
+
 export interface SceneCompletionSummary {
   objectiveId?: string;
   status?: string;
@@ -329,6 +337,7 @@ export interface StartHangoutResponse {
   objectiveProgress?: ObjectiveProgressState;
   quickReplies?: string[];
   tongHint?: string;
+  renderOps?: HangoutRenderOp[];
   completion?: {
     isCompleted: boolean;
     completionSignal: string | null;
@@ -368,6 +377,7 @@ export interface RespondHangoutResponse {
   routeState?: RouteState;
   progressionLoop?: ProgressLoopState;
   state: HangoutState;
+  renderOps?: HangoutRenderOp[];
 }
 
 export interface MissionAssessResponse {
