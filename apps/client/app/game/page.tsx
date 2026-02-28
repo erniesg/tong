@@ -566,10 +566,6 @@ export default function GamePage() {
   return (
     <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="game-frame">
-        {/* Debug overlay — remove after testing */}
-        <div style={{ position: 'absolute', top: 40, left: 8, zIndex: 999, fontSize: 10, color: '#0f0', background: 'rgba(0,0,0,0.7)', padding: '4px 6px', borderRadius: 4, pointerEvents: 'none', maxWidth: 200, wordBreak: 'break-all' }}>
-          Q:{toolQueue.length} P:{String(processingRef.current)} msg:{currentMessage ? currentMessage.content.slice(0, 30) : 'null'} ex:{currentExercise ? 'yes' : 'no'} stream:{String(chatLoading)}
-        </div>
         <SceneView
           backgroundUrl="/assets/backgrounds/pojangmacha.png"
           ambientDescription="A warm pojangmacha (street food tent) on a Seoul side street"
