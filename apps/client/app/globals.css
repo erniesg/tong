@@ -311,6 +311,7 @@ button.nav-link:hover {
 }
 
 .game-root {
+  min-height: 100vh;
   min-height: 100dvh;
 }
 
@@ -449,7 +450,9 @@ button.nav-link:hover {
 
 .game-opening-mobile-frame {
   width: min(100%, 430px);
+  height: 100vh;
   height: min(100dvh, 932px);
+  min-height: 560px;
   margin: 0;
   border-color: rgba(236, 214, 186, 0.78);
   background: rgba(255, 254, 251, 0.95);
@@ -471,8 +474,10 @@ button.nav-link:hover {
 .game-opening-intro-video {
   width: 100%;
   flex: 1;
+  height: 100%;
   min-height: 0;
   max-height: none;
+  aspect-ratio: 9 / 16;
   border-radius: 0;
   object-fit: cover;
   background: #05080f;
@@ -681,6 +686,7 @@ button.game-city-card.active {
 .game-mobile-wrap {
   display: flex;
   width: 100%;
+  min-height: 100vh;
   min-height: 100dvh;
   justify-content: center;
   align-items: stretch;
@@ -689,7 +695,9 @@ button.game-city-card.active {
 .game-mobile-frame {
   position: relative;
   width: min(100%, 430px);
+  height: 100vh;
   height: 100dvh;
+  min-height: 560px;
   max-height: 100dvh;
   border: 0;
   border-radius: 0;
@@ -1069,6 +1077,7 @@ button.game-chip {
   .game-mobile-frame {
     border-radius: 26px;
     border: 1px solid rgba(229, 214, 194, 0.42);
+    max-height: min(100vh - 32px, 932px);
     max-height: min(100dvh - 32px, 932px);
     box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.08),

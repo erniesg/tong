@@ -37,6 +37,7 @@ interface PresetResponse {
 
 type CjkLang = 'ko' | 'ja' | 'zh';
 type EntryPhase = 'opening' | 'entry' | 'onboarding' | 'playing';
+type ProficiencyGaugeLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 type MapPosition = 'left' | 'center' | 'right';
 
@@ -153,6 +154,7 @@ const INITIAL_HINT = 'Tong hint: Use one short polite order phrase per turn.';
 const ACTIVE_USER_ID_STORAGE_KEY = 'tong_active_user_id';
 const GAME_LOGO_PATH = '/assets/app/logo_transparent.png';
 const OPENING_ANIMATION_PATH = '/assets/app/tong_opening.mp4';
+const MAX_PROFICIENCY_GAUGE_LEVEL = 6;
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -225,11 +227,15 @@ function getCharacterForCityLocation(city: CityId, location: LocationId): SceneC
   return LOCATION_CHARACTERS_BY_CITY[city]?.[location] || LOCATION_CHARACTERS_BY_CITY[DEFAULT_CITY][DEFAULT_LOCATION];
 }
 
-function sliderToProficiency(value: number): ProficiencyLevel {
-  if (value <= 0) return 'none';
-  if (value <= 35) return 'beginner';
-  if (value <= 65) return 'intermediate';
-  if (value <= 85) return 'advanced';
+function normalizeGaugeLevel(value: number): ProficiencyGaugeLevel {
+  return Math.max(0, Math.min(MAX_PROFICIENCY_GAUGE_LEVEL, Math.round(value))) as ProficiencyGaugeLevel;
+}
+
+function gaugeLevelToProficiency(level: ProficiencyGaugeLevel): ProficiencyLevel {
+  if (level <= 0) return 'none';
+  if (level <= 2) return 'beginner';
+  if (level <= 4) return 'intermediate';
+  if (level === 5) return 'advanced';
   return 'native';
 }
 
@@ -241,14 +247,14 @@ function proficiencyLabel(level: ProficiencyLevel): string {
   return 'Native';
 }
 
-function buildProfileFromGauge(gauge: Record<CjkLang, number>): GameProfile {
+function buildProfileFromGauge(gauge: Record<CjkLang, ProficiencyGaugeLevel>): GameProfile {
   return {
     nativeLanguage: 'en',
     targetLanguages: ['ko', 'ja', 'zh'],
     proficiency: {
-      ko: sliderToProficiency(gauge.ko),
-      ja: sliderToProficiency(gauge.ja),
-      zh: sliderToProficiency(gauge.zh),
+      ko: gaugeLevelToProficiency(gauge.ko),
+      ja: gaugeLevelToProficiency(gauge.ja),
+      zh: gaugeLevelToProficiency(gauge.zh),
     },
   };
 }
@@ -275,10 +281,10 @@ export default function GamePage() {
   const [mode, setMode] = useState<'hangout' | 'learn'>('hangout');
   const [city, setCity] = useState<CityId>(DEFAULT_CITY);
   const [location, setLocation] = useState<LocationId>(DEFAULT_LOCATION);
-  const [proficiencyGauge, setProficiencyGauge] = useState<Record<CjkLang, number>>({
-    ko: 58,
-    ja: 20,
-    zh: 22,
+  const [proficiencyGauge, setProficiencyGauge] = useState<Record<CjkLang, ProficiencyGaugeLevel>>({
+    ko: 4,
+    ja: 0,
+    zh: 2,
   });
 
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -327,6 +333,21 @@ export default function GamePage() {
     if (!track) return;
     const initialIndex = CITY_ORDER.indexOf(DEFAULT_CITY);
     track.scrollTo({ left: initialIndex * track.clientWidth, behavior: 'auto' });
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('newGame') === '1') {
+      beginNewGame();
+      return;
+    }
+    if (params.get('onboarding') === '1') {
+      setEntryPhase('onboarding');
+      return;
+    }
+    if (params.get('skipIntro') === '1' || params.get('entry') === '1') {
+      setEntryPhase('entry');
+    }
   }, []);
 
   useEffect(() => {
@@ -450,7 +471,7 @@ export default function GamePage() {
   function handleProficiencyChange(lang: CjkLang, nextValue: number) {
     setProficiencyGauge((current) => ({
       ...current,
-      [lang]: nextValue,
+      [lang]: normalizeGaugeLevel(nextValue),
     }));
   }
 
@@ -805,7 +826,7 @@ export default function GamePage() {
                           Language Gauge
                         </p>
                         {CJK_LANG_ORDER.map((lang) => {
-                          const level = sliderToProficiency(proficiencyGauge[lang]);
+                          const level = gaugeLevelToProficiency(proficiencyGauge[lang]);
                           return (
                             <label key={lang} className="game-slider-row">
                               <div className="row">
@@ -813,13 +834,13 @@ export default function GamePage() {
                                   {LANGUAGE_LABELS[lang]} ({lang.toUpperCase()})
                                 </strong>
                                 <span>
-                                  {proficiencyGauge[lang]} · {proficiencyLabel(level)}
+                                  {proficiencyGauge[lang] + 1}/7 · {proficiencyLabel(level)}
                                 </span>
                               </div>
                               <input
                                 type="range"
                                 min={0}
-                                max={100}
+                                max={MAX_PROFICIENCY_GAUGE_LEVEL}
                                 step={1}
                                 value={proficiencyGauge[lang]}
                                 onChange={(event) => handleProficiencyChange(lang, Number(event.target.value))}
@@ -957,7 +978,7 @@ export default function GamePage() {
                       Language gauge
                     </p>
                     {CJK_LANG_ORDER.map((lang) => {
-                      const level = sliderToProficiency(proficiencyGauge[lang]);
+                      const level = gaugeLevelToProficiency(proficiencyGauge[lang]);
                       return (
                         <label key={lang} className="game-slider-row">
                           <div className="row">
@@ -965,13 +986,13 @@ export default function GamePage() {
                               {LANGUAGE_LABELS[lang]} ({lang.toUpperCase()})
                             </strong>
                             <span>
-                              {proficiencyGauge[lang]} · {proficiencyLabel(level)}
+                              {proficiencyGauge[lang] + 1}/7 · {proficiencyLabel(level)}
                             </span>
                           </div>
                           <input
                             type="range"
                             min={0}
-                            max={100}
+                            max={MAX_PROFICIENCY_GAUGE_LEVEL}
                             step={1}
                             value={proficiencyGauge[lang]}
                             onChange={(event) => handleProficiencyChange(lang, Number(event.target.value))}

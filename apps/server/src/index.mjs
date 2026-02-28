@@ -544,6 +544,34 @@ function deriveLearnReadiness(profile, lang) {
   return Number(clampNumber(base, 0, 1).toFixed(2));
 }
 
+function resolveTargetProficiency(profile, lang) {
+  const level = profile?.proficiency?.[lang];
+  if (level === 'none' || level === 'beginner' || level === 'intermediate' || level === 'advanced' || level === 'native') {
+    return level;
+  }
+  return 'beginner';
+}
+
+function buildLanguageBlendGuidance(nativeLanguage, targetProficiency, relationshipStage) {
+  const safeNativeLanguage = String(nativeLanguage || 'en').trim() || 'en';
+  let targetLanguageShare = 0.22;
+  if (targetProficiency === 'none') targetLanguageShare = 0.08;
+  if (targetProficiency === 'beginner') targetLanguageShare = 0.22;
+  if (targetProficiency === 'intermediate') targetLanguageShare = 0.55;
+  if (targetProficiency === 'advanced') targetLanguageShare = 0.8;
+  if (targetProficiency === 'native') targetLanguageShare = 0.95;
+
+  const closeStage = relationshipStage === 'close' || relationshipStage === 'bonded';
+  if (closeStage) {
+    targetLanguageShare = clampNumber(targetLanguageShare + 0.08, 0.08, 0.96);
+  }
+  const nativeLanguageShare = Number((1 - targetLanguageShare).toFixed(2));
+  const targetPercent = Math.round(targetLanguageShare * 100);
+  const nativePercent = Math.round(nativeLanguageShare * 100);
+
+  return `Language blend policy: use about ${targetPercent}% target language and ${nativePercent}% ${safeNativeLanguage}. Keep lines short and natural for ${targetProficiency} proficiency.`;
+}
+
 function buildMissionGateState(session) {
   return {
     status: session.missionGateStatus || 'locked',
@@ -1452,6 +1480,17 @@ async function generateAiHangoutDecision({
     recentEvents: [...(existing.recentEvents || [])],
     lastSeenAt: null,
   });
+  const linkedGameSession =
+    existing.gameSessionId && state.gameSessions.has(existing.gameSessionId)
+      ? state.gameSessions.get(existing.gameSessionId)
+      : null;
+  const effectiveProfile = linkedGameSession?.profile || state.profiles.get(existing.userId) || null;
+  const targetProficiency = resolveTargetProficiency(effectiveProfile, scene.lang);
+  const languageBlendGuidance = buildLanguageBlendGuidance(
+    effectiveProfile?.nativeLanguage || 'en',
+    targetProficiency,
+    routeState.stage || 'stranger',
+  );
 
   const model = process.env.TONG_OPENAI_MODEL || 'gpt-5.2';
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -1468,7 +1507,8 @@ async function generateAiHangoutDecision({
         {
           role: 'system',
           content:
-            'You run a first-person language learning hangout. Keep continuity with prior turns. Return JSON only with: tier, objectiveProgressDelta, scoreDelta, nextLine, tongHint, suggestedReplies, mood, matchedTags, missingTags, sceneBeat, memoryNote.',
+            'You run a first-person language learning hangout. Keep continuity with prior turns. Return JSON only with: tier, objectiveProgressDelta, scoreDelta, nextLine, tongHint, suggestedReplies, mood, matchedTags, missingTags, sceneBeat, memoryNote. Never output narrator text or markdown. Keep the dialogue immersive and in-scene only. ' +
+            languageBlendGuidance,
         },
         {
           role: 'user',
@@ -1484,6 +1524,9 @@ async function generateAiHangoutDecision({
             objectiveProgress: Number((existing.objectiveProgress || 0).toFixed(2)),
             successfulTurns: existing.successfulTurns || 0,
             routeState,
+            profile: effectiveProfile,
+            targetProficiency,
+            languageBlendGuidance,
             priorMemoryNotes: [...(existing.memoryNotes || [])].slice(-5),
             transcriptWindow,
             userUtterance,
@@ -1553,6 +1596,85 @@ async function generateAiHangoutDecision({
         : turnScript.moodByTier[tier] || fallbackEvaluation.mood,
     sceneBeat,
     memoryNote,
+  };
+}
+
+async function generateAiHangoutOpening({ scene, session, profile, routeState }) {
+  if (!shouldUseAiHangout()) return null;
+
+  const targetProficiency = resolveTargetProficiency(profile, scene.lang);
+  const languageBlendGuidance = buildLanguageBlendGuidance(
+    profile?.nativeLanguage || 'en',
+    targetProficiency,
+    routeState?.stage || 'stranger',
+  );
+  const model = process.env.TONG_OPENAI_MODEL || 'gpt-5.2';
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.9,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Generate the opening beat for a first-person language-learning hangout scene. Return JSON only with: openingLine, tongHint, quickReplies, mood. quickReplies must be 3-6 short learner lines in the target language. No markdown, no narration labels. ' +
+            languageBlendGuidance,
+        },
+        {
+          role: 'user',
+          content: JSON.stringify({
+            city: scene.city,
+            cityLabel: scene.cityLabel,
+            location: scene.location.label,
+            language: scene.lang,
+            objective: scene.objective,
+            npc: session.npc || scene.npc,
+            profile,
+            targetProficiency,
+            routeState,
+            memoryNotes: [...(session.memoryNotes || [])].slice(-4),
+            scriptedOpening: buildHangoutOpeningLine(scene, session),
+            scriptedHint: scene.tongStartHint,
+            scriptedReplies: getQuickRepliesForTurn(scene, 1),
+            guidance:
+              'Open naturally, set one clear micro-goal for this turn, and keep replies practical for ordering food in this location.',
+          }),
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`openai_opening_failed_${response.status}`);
+  }
+
+  const payload = await response.json();
+  const raw = payload?.choices?.[0]?.message?.content || '';
+  const parsed = parseJsonObject(raw);
+  if (!parsed || typeof parsed !== 'object') return null;
+
+  const openingLine =
+    typeof parsed.openingLine === 'string' && parsed.openingLine.trim()
+      ? parsed.openingLine.trim()
+      : buildHangoutOpeningLine(scene, session);
+  const tongHint =
+    typeof parsed.tongHint === 'string' && parsed.tongHint.trim() ? parsed.tongHint.trim() : scene.tongStartHint;
+  const quickReplies = Array.isArray(parsed.quickReplies)
+    ? parsed.quickReplies.map((value) => String(value || '').trim()).filter(Boolean).slice(0, 6)
+    : [];
+  const mood = typeof parsed.mood === 'string' && parsed.mood.trim() ? parsed.mood.trim() : null;
+
+  return {
+    openingLine,
+    tongHint,
+    quickReplies: quickReplies.length >= 3 ? quickReplies : getQuickRepliesForTurn(scene, session.turn),
+    mood,
   };
 }
 
@@ -2033,7 +2155,32 @@ const server = http.createServer(async (req, res) => {
         lastSeenAt: null,
       });
       const progressionLoop = buildProgressLoopState(session);
-      const openingLine = buildHangoutOpeningLine(scene, session);
+      const profileForOpening = gameSession?.profile || state.profiles.get(userId) || null;
+      let openingLine = buildHangoutOpeningLine(scene, session);
+      let openingHint = scene.tongStartHint;
+      let openingQuickReplies = getQuickRepliesForTurn(scene, session.turn);
+
+      if (shouldUseAiHangout()) {
+        try {
+          const aiOpening = await generateAiHangoutOpening({
+            scene,
+            session,
+            profile: profileForOpening,
+            routeState,
+          });
+          if (aiOpening) {
+            openingLine = aiOpening.openingLine || openingLine;
+            openingHint = aiOpening.tongHint || openingHint;
+            openingQuickReplies = aiOpening.quickReplies?.length ? aiOpening.quickReplies : openingQuickReplies;
+            if (aiOpening.mood) {
+              session.npcMood = aiOpening.mood;
+              state.sessions.set(session.sceneSessionId, session);
+            }
+          }
+        } catch (error) {
+          console.warn('ai_opening_generation_failed', error instanceof Error ? error.message : 'unknown');
+        }
+      }
 
       jsonResponse(res, 200, {
         sceneSessionId: session.sceneSessionId,
@@ -2067,15 +2214,15 @@ const server = http.createServer(async (req, res) => {
           },
           {
             speaker: 'tong',
-            text: scene.tongStartHint,
+            text: openingHint,
           },
         ],
         locationMeta: buildLocationMeta(scene),
         currentObjective: buildCurrentObjective(scene, session.objectiveProgress, session.successfulTurns),
         npc: buildNpcState(scene, session.npcMood, session.npc),
         character: buildCharacterPayload(scene, session.npcMood, session.npc),
-        tongHint: scene.tongStartHint,
-        quickReplies: getQuickRepliesForTurn(scene, session.turn),
+        tongHint: openingHint,
+        quickReplies: openingQuickReplies,
         turnState: buildTurnState(scene, session),
         objectiveProgress: buildObjectiveProgressState(scene, session.objectiveProgress),
         relationshipState,
