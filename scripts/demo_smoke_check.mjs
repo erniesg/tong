@@ -11,6 +11,9 @@ const requiredFiles = [
   "packages/contracts/fixtures/dictionary.entry.sample.json",
   "packages/contracts/fixtures/vocab.frequency.sample.json",
   "packages/contracts/fixtures/vocab.insights.sample.json",
+  "packages/contracts/fixtures/media.events.sample.json",
+  "packages/contracts/fixtures/planner.lesson-context.sample.json",
+  "packages/contracts/fixtures/player.media-profile.sample.json",
   "packages/contracts/fixtures/game.start-or-resume.sample.json",
   "packages/contracts/fixtures/objectives.next.sample.json",
   "packages/contracts/fixtures/learn.sessions.sample.json",
@@ -45,6 +48,18 @@ const objectivesCatalog = JSON.parse(
 );
 const vocabInsights = JSON.parse(
   fs.readFileSync(path.join(root, "packages/contracts/fixtures/vocab.insights.sample.json"), "utf8")
+);
+const plannerContext = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "packages/contracts/fixtures/planner.lesson-context.sample.json"),
+    "utf8"
+  )
+);
+const playerMediaProfile = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "packages/contracts/fixtures/player.media-profile.sample.json"),
+    "utf8"
+  )
 );
 
 if (!Array.isArray(loop.cities) || loop.cities.length !== 3) {
@@ -121,9 +136,52 @@ for (const item of vocabInsights.items) {
   }
 }
 
+if (!plannerContext.sourceBreakdown || !plannerContext.topicModel) {
+  console.error("Expected sourceBreakdown + topicModel in planner.lesson-context sample");
+  process.exit(1);
+}
+
+if (!Array.isArray(plannerContext.topTerms) || plannerContext.topTerms.length === 0) {
+  console.error("Expected non-empty topTerms in planner.lesson-context sample");
+  process.exit(1);
+}
+
+if (
+  !plannerContext.plannerInput ||
+  !Array.isArray(plannerContext.plannerInput.objectiveCandidates) ||
+  plannerContext.plannerInput.objectiveCandidates.length === 0
+) {
+  console.error("Expected plannerInput.objectiveCandidates in planner.lesson-context sample");
+  process.exit(1);
+}
+
+if (!playerMediaProfile.sourceBreakdown) {
+  console.error("Expected sourceBreakdown in player.media-profile.sample.json");
+  process.exit(1);
+}
+
+for (const source of ["youtube", "spotify"]) {
+  const sourceStats = playerMediaProfile.sourceBreakdown[source];
+  if (!sourceStats) {
+    console.error(`Missing sourceBreakdown.${source} in player.media-profile sample`);
+    process.exit(1);
+  }
+
+  if (typeof sourceStats.minutes !== "number") {
+    console.error(`Expected numeric sourceBreakdown.${source}.minutes`);
+    process.exit(1);
+  }
+
+  if (!Array.isArray(sourceStats.topMedia) || sourceStats.topMedia.length === 0) {
+    console.error(`Expected non-empty sourceBreakdown.${source}.topMedia`);
+    process.exit(1);
+  }
+}
+
 console.log("Demo smoke check passed.");
 console.log("- Contract files present");
 console.log("- JSON fixtures parse");
 console.log("- Core progression shape validated");
 console.log("- Objective model targets validated");
 console.log("- Vocab insight model validated");
+console.log("- Planner context and media profile validated");

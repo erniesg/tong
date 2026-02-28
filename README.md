@@ -37,6 +37,11 @@ Run local demo contract smoke check:
 npm run demo:smoke
 ```
 
+Generate planner context from last-3-days sample media events:
+```bash
+npm run ingestion:planner
+```
+
 ## Legacy prototype (v0.1 extension)
 
 The original Chrome MV3 extension scaffold remains in:
