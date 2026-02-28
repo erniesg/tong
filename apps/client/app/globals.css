@@ -778,8 +778,14 @@ button.game-head-button.active {
 
 .game-inline-hint {
   margin: 0;
-  background: rgba(215, 249, 239, 0.82);
-  border-color: rgba(114, 217, 189, 0.74);
+  background: rgba(233, 245, 255, 0.97);
+  border-color: rgba(146, 184, 216, 0.9);
+  color: #0f2133;
+  box-shadow: 0 6px 18px rgba(4, 18, 34, 0.18);
+}
+
+.game-inline-hint strong {
+  color: #091a2a;
 }
 
 .game-mobile-frame-scene1 .game-mobile-body {
@@ -1106,6 +1112,7 @@ button.game-chip:hover {
 .chat-tong {
   background: #effcf8;
   border: 1px solid #bce9dd;
+  color: #0f2f2a;
 }
 
 .chat-user {
