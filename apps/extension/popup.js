@@ -17,6 +17,7 @@
   const testButton = document.getElementById('testConnection');
   const openYouTube = document.getElementById('openYouTube');
   const toggleOverlay = document.getElementById('toggleOverlay');
+  const overlayState = document.getElementById('overlayState');
 
   function normalizeApiBase(value) {
     if (typeof value !== 'string') return '';
@@ -61,6 +62,39 @@
     return tabs && tabs.length > 0 ? tabs[0] : null;
   }
 
+  function setOverlayStateText(text, tone) {
+    if (!overlayState) return;
+    overlayState.textContent = text;
+    overlayState.className = tone ? `status ${tone}` : 'status';
+  }
+
+  async function refreshOverlayState() {
+    const tab = await getActiveTab();
+    if (!tab || !tab.id || !tab.url || !tab.url.includes('youtube.com')) {
+      setOverlayStateText('Open an active YouTube tab to inspect overlay state.', 'warn');
+      return;
+    }
+
+    try {
+      const response = await chrome.tabs.sendMessage(tab.id, { type: 'GET_TONG_OVERLAY_STATE' });
+      if (!response || !response.ok) {
+        setOverlayStateText('Overlay state unavailable. Refresh the YouTube tab.', 'warn');
+        return;
+      }
+
+      const stateText = response.enabled ? 'ON' : 'OFF';
+      const sourceText = response.source || 'none';
+      const captionCount = Number(response.captionCount || 0);
+      setOverlayStateText(`Overlay ${stateText} · source: ${sourceText} · cues: ${captionCount}`, 'ok');
+      toggleOverlay.textContent = response.enabled
+        ? 'Turn Overlay Off (Active Tab)'
+        : 'Turn Overlay On (Active Tab)';
+    } catch (err) {
+      warn('Could not fetch overlay state:', err);
+      setOverlayStateText('Cannot reach content script. Refresh YouTube tab once.', 'warn');
+    }
+  }
+
   async function init() {
     log('Popup initialized');
     const initialBase = await readStoredApiBase();
@@ -74,6 +108,8 @@
       warn('Health check failed for', initialBase);
       setStatus(`Cannot reach ${initialBase}. Start server with npm run dev:server.`, 'warn');
     }
+
+    await refreshOverlayState();
   }
 
   saveButton.addEventListener('click', async () => {
@@ -117,6 +153,13 @@
       const response = await chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_TONG_OVERLAY' });
       if (response && response.ok) {
         setStatus(`Overlay ${response.enabled ? 'enabled' : 'disabled'} in active tab.`, 'ok');
+        setOverlayStateText(
+          `Overlay ${response.enabled ? 'ON' : 'OFF'} · source: active-tab`,
+          response.enabled ? 'ok' : 'warn',
+        );
+        toggleOverlay.textContent = response.enabled
+          ? 'Turn Overlay Off (Active Tab)'
+          : 'Turn Overlay On (Active Tab)';
       } else {
         setStatus('Toggle request did not return overlay state.', 'warn');
       }
