@@ -46,6 +46,22 @@ Workstreams:
 - Produce short video/reward placeholders for unlock scenes.
 - Publish asset manifest with usage rights and file conventions.
 
+
+## First critical milestone (parallel validation)
+1. Overlay path proves enriched captions + dictionary card from fixtures (`captions.enriched`, `dictionary.entry`).
+2. Mock UI path mirrors run-of-show from intro through Shanghai texting reward.
+3. Creative assets path ships first city/location placeholders in `assets/presets/manifest.json`.
+4. Ingestion path emits both YouTube + Spotify contributions for player-level modeling (`player.media-profile`).
+5. Web shell path renders player-specific insight cards using the same contracts as server fixtures.
+
+## Launching parallel worktrees + agent terminals
+1. Create all worktrees:
+   - `npm run setup:worktrees`
+2. Launch a tmux session with one terminal per workstream:
+   - `./scripts/launch-parallel-agents.sh`
+3. Skip tmux and only generate launcher commands:
+   - `LAUNCH_TMUX=0 ./scripts/launch-parallel-agents.sh`
+
 ## Merge strategy
 1. Merge `packages/contracts` updates first.
 2. Rebase client/server branches on latest contracts.

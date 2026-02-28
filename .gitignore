@@ -1,2 +1,6 @@
 .DS_Store
 tong.zip
+
+.worktrees/
+node_modules/
+.next/
