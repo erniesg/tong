@@ -1,6 +1,5 @@
 export type TargetLanguage = 'ko' | 'ja' | 'zh';
 export type AppLanguage = TargetLanguage | 'en';
-export type IngestionSource = 'youtube' | 'spotify';
 
 export interface EnrichedCaptionToken {
   text: string;
@@ -228,11 +227,27 @@ export interface LearnSessionCreateResponse {
 
 export interface IngestionSourceItem {
   id: string;
-  source: IngestionSource;
+  source: 'youtube' | 'spotify';
   title: string;
   lang: TargetLanguage;
   minutes: number;
   text: string;
+  mediaId?: string;
+  playedAtIso?: string;
+  tokens?: string[];
+}
+
+export interface MediaIngestionEvent {
+  eventId: string;
+  userId: string;
+  source: 'youtube' | 'spotify';
+  mediaId: string;
+  title: string;
+  lang: TargetLanguage;
+  minutes: number;
+  consumedAtIso: string;
+  tokens: string[];
+  text?: string;
 }
 
 export interface IngestionSnapshot {
@@ -245,46 +260,11 @@ export interface IngestionSnapshot {
 export interface IngestionRunResponse {
   success: true;
   generatedAtIso: string;
-  includeSources: IngestionSource[];
   sourceCount: {
     youtube: number;
     spotify: number;
   };
   topTerms: VocabFrequencyItem[];
-}
-
-export interface SpotifyIntegrationStatusResponse {
-  userId: string;
-  spotifyConfigured: boolean;
-  connected: boolean;
-  tokenExpiresAtIso: string | null;
-  tokenScope: string | null;
-  lastSyncAtIso: string | null;
-  lastSyncItemCount: number;
-  syncWindowHours: number | null;
-}
-
-export interface SpotifyConnectResponse {
-  userId: string;
-  connected: boolean;
-  state: string;
-  scope: string;
-  redirectUri: string;
-  authUrl: string;
-}
-
-export interface SpotifySyncResponse {
-  ok: true;
-  userId: string;
-  syncedAtIso: string;
-  windowHours: number;
-  spotifyItemCount: number;
-  spotifyRawItemCount: number;
-  topTerms: VocabFrequencyItem[];
-  sourceCount: {
-    youtube: number;
-    spotify: number;
-  };
 }
 
 export interface AgentToolDefinition {
@@ -310,4 +290,12 @@ export interface AgentToolInvokeResponse {
   tool?: string;
   error?: string;
   result?: unknown;
+}
+
+export interface DemoSecretStatusResponse {
+  demoPasswordEnabled: boolean;
+  youtubeApiKeyConfigured: boolean;
+  spotifyClientIdConfigured: boolean;
+  spotifyClientSecretConfigured: boolean;
+  openAiApiKeyConfigured: boolean;
 }

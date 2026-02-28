@@ -1,12 +1,33 @@
-const FALLBACK_BACKEND_MODE = process.env.NEXT_PUBLIC_TONG_BACKEND_MODE || 'local-server';
-const FALLBACK_LOCAL_API_BASE =
-  process.env.NEXT_PUBLIC_TONG_LOCAL_API_BASE_URL || process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
-const FALLBACK_REMOTE_API_BASE =
-  process.env.NEXT_PUBLIC_TONG_REMOTE_API_BASE_URL || process.env.NEXT_PUBLIC_TONG_API_BASE || FALLBACK_LOCAL_API_BASE;
+const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const DEMO_PASSWORD_STORAGE_KEY = 'tong.demo.password';
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (FALLBACK_BACKEND_MODE === 'remote-server' ? FALLBACK_REMOTE_API_BASE : FALLBACK_LOCAL_API_BASE);
+function stripDemoPasswordFromUrl() {
+  if (typeof window === 'undefined') return;
+
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('demo')) return;
+  params.delete('demo');
+  const query = params.toString();
+  const cleanUrl = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
+  window.history.replaceState({}, '', cleanUrl);
+}
+
+function getDemoPassword() {
+  if (typeof window === 'undefined') return '';
+
+  const fromStorage = window.localStorage.getItem(DEMO_PASSWORD_STORAGE_KEY);
+  if (fromStorage) return fromStorage;
+
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get('demo');
+  if (fromQuery) {
+    window.localStorage.setItem(DEMO_PASSWORD_STORAGE_KEY, fromQuery);
+    stripDemoPasswordFromUrl();
+    return fromQuery;
+  }
+
+  return '';
+}
 
 export interface CaptionToken {
   text: string;
@@ -113,6 +134,14 @@ export interface MediaProfileResponse {
   };
 }
 
+export interface SecretStatusResponse {
+  demoPasswordEnabled: boolean;
+  youtubeApiKeyConfigured: boolean;
+  spotifyClientIdConfigured: boolean;
+  spotifyClientSecretConfigured: boolean;
+  openAiApiKeyConfigured: boolean;
+}
+
 export type CityId = 'seoul' | 'tokyo' | 'shanghai';
 export type LocationId =
   | 'food_street'
@@ -121,70 +150,52 @@ export type LocationId =
   | 'subway_hub'
   | 'practice_studio';
 
-export interface ToolInvokeResponse<T = unknown> {
-  ok: boolean;
-  tool: string;
-  result?: T;
-  error?: string;
-  message?: string;
-  docs?: string;
-  [key: string]: unknown;
-}
-
-export interface IngestionSourceItem {
-  id: string;
-  source: 'youtube' | 'spotify';
-  title: string;
-  lang: 'ko' | 'ja' | 'zh';
-  minutes: number;
-  text: string;
-  playedAtIso?: string | null;
-}
-
-export interface IngestionSnapshotResult {
-  userId: string;
-  includeSources: Array<'youtube' | 'spotify'>;
-  windowStartIso: string | null;
-  windowEndIso: string | null;
-  generatedAtIso: string | null;
-  sourceItems: IngestionSourceItem[];
-  transcriptCandidates: Array<{
-    id: string;
-    title: string;
-    lang: 'ko' | 'ja' | 'zh';
-    text: string;
-    playedAtIso: string | null;
-  }>;
-  lyricCandidates: Array<{
-    id: string;
-    title: string;
-    lang: 'ko' | 'ja' | 'zh';
-    text: string;
-    lyricsSnippet?: string | null;
-    lyricsLang?: 'ko' | 'ja' | 'zh' | null;
-    lyricsSource?: string | null;
-    playedAtIso: string | null;
-  }>;
-  notes: {
-    youtube: string;
-    spotify: string;
-  };
-}
-
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const demoPassword = getDemoPassword();
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...(demoPassword ? { 'x-demo-password': demoPassword } : {}),
       ...(init?.headers || {}),
     },
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed (${response.status}) for ${path}`);
+    let serverMessage = '';
+    try {
+      const payload = (await response.json()) as { message?: string; error?: string };
+      serverMessage = payload.message || payload.error || '';
+    } catch {
+      serverMessage = '';
+    }
+
+    if (response.status === 401) {
+      throw new Error(serverMessage || 'Demo password is missing or invalid.');
+    }
+
+    throw new Error(`Request failed (${response.status}) for ${path}${serverMessage ? `: ${serverMessage}` : ''}`);
   }
 
   return (await response.json()) as T;
+}
+
+export function getStoredDemoPassword() {
+  if (typeof window === 'undefined') return '';
+  return window.localStorage.getItem(DEMO_PASSWORD_STORAGE_KEY) || '';
+}
+
+export function setStoredDemoPassword(password: string) {
+  if (typeof window === 'undefined') return;
+
+  const trimmed = password.trim();
+  if (!trimmed) return;
+  window.localStorage.setItem(DEMO_PASSWORD_STORAGE_KEY, trimmed);
+}
+
+export function clearStoredDemoPassword() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(DEMO_PASSWORD_STORAGE_KEY);
 }
 
 export function fetchCaptions(videoId: string, lang: 'ko' | 'ja' | 'zh' = 'ko') {
@@ -199,7 +210,16 @@ export function fetchDictionary(term: string, lang: 'ko' | 'ja' | 'zh' = 'ko') {
   );
 }
 
-export function startOrResumeGame() {
+export type ProficiencyLevel = 'none' | 'beginner' | 'intermediate' | 'advanced';
+
+export interface UserProficiency {
+  ko: ProficiencyLevel;
+  ja: ProficiencyLevel;
+  zh: ProficiencyLevel;
+}
+
+export function startOrResumeGame(proficiency?: UserProficiency) {
+  const prof = proficiency ?? { ko: 'beginner', ja: 'none', zh: 'none' };
   return apiFetch<{
     sessionId: string;
     city: 'seoul' | 'tokyo' | 'shanghai';
@@ -212,11 +232,7 @@ export function startOrResumeGame() {
       profile: {
         nativeLanguage: 'en',
         targetLanguages: ['ko', 'ja', 'zh'],
-        proficiency: {
-          ko: 'beginner',
-          ja: 'none',
-          zh: 'none',
-        },
+        proficiency: prof,
       },
     }),
   });
@@ -362,21 +378,8 @@ export function fetchMediaProfile() {
   return apiFetch<MediaProfileResponse>('/api/v1/player/media-profile?windowDays=3&userId=demo-user-1');
 }
 
-export async function invokeTool<T = unknown>(tool: string, args: Record<string, unknown> = {}) {
-  const response = await fetch(`${API_BASE}/api/v1/tools/invoke`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tool, args }),
-  });
-
-  const data = (await response.json()) as ToolInvokeResponse<T>;
-  return data;
-}
-
-export function fetchTools() {
-  return apiFetch<{ ok: true; tools: Array<{ name: string; description: string; args: Record<string, unknown> }> }>(
-    '/api/v1/tools',
-  );
+export function fetchSecretStatus() {
+  return apiFetch<SecretStatusResponse>('/api/v1/demo/secret-status');
 }
 
 export function getApiBase() {

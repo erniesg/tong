@@ -16,8 +16,13 @@
     "test:api-flow:worker-local": "node scripts/mock_api_flow_check.mjs ${TONG_WORKER_LOCAL_API_BASE_URL:-http://localhost:8788} --strict-state",
     "test:api-flow:cloud": "node scripts/mock_api_flow_check.mjs ${TONG_REMOTE_API_BASE_URL:-https://tong-api.erniesg.workers.dev}",
     "demo:smoke": "node scripts/demo_smoke_check.mjs",
+    "demo:tools": "node scripts/mock_tool_flow_check.mjs",
+    "demo:judge": "./scripts/run-judge-demo.sh",
+    "secrets:sync:cf": "./scripts/sync-cf-secrets-from-env.sh",
+    "build:client:cf": "npm --prefix apps/client run cf:build",
+    "deploy:client:cf": "./scripts/deploy-client-cloudflare.sh",
     "setup:worktrees": "./scripts/setup-hackathon-worktrees.sh",
-    "zip": "rm -f tong.zip && zip -r tong.zip manifest.json src README.md",
+    "zip": "./scripts/build-extension-bundle.sh",
     "launch:agents": "./scripts/launch-parallel-agents.sh"
   }
 }

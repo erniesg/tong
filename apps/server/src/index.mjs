@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import http from 'node:http';
-import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadGeneratedSnapshot, runMockIngestion, writeGeneratedSnapshots } from './ingestion.mjs';
@@ -10,6 +9,7 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '../../..');
 
 const PORT = Number(process.env.PORT || 8787);
+const DEMO_PASSWORD = String(process.env.TONG_DEMO_PASSWORD || '').trim();
 
 function loadJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
@@ -28,37 +28,6 @@ const FIXTURES = {
 };
 
 const mockMediaWindowPath = path.join(repoRoot, 'apps/server/data/mock-media-window.json');
-const integrationsStatePath =
-  process.env.TONG_INTEGRATIONS_STATE_PATH ||
-  path.join(repoRoot, 'apps/server/data/generated/integrations-state.json');
-
-const DICTIONARY_OVERRIDES = {
-  '오늘': {
-    term: '오늘',
-    lang: 'ko',
-    meaning: 'today',
-    examples: ['오늘 뭐 먹을까?'],
-    crossCjk: { zhHans: '今天', ja: '今日' },
-    readings: { ko: 'oneul', zhPinyin: 'jin tian', jaRomaji: 'kyou' },
-  },
-  '먹을까': {
-    term: '먹다',
-    lang: 'ko',
-    meaning: 'to eat; shall we eat?',
-    examples: ['같이 먹을까?'],
-    crossCjk: { zhHans: '吃', ja: '食べる' },
-    readings: { ko: 'meokda', zhPinyin: 'chi', jaRomaji: 'taberu' },
-  },
-  '주문': {
-    term: '주문',
-    lang: 'ko',
-    meaning: 'order (food/item)',
-    examples: ['주문 도와드릴까요?'],
-    crossCjk: { zhHans: '点餐', ja: '注文' },
-    readings: { ko: 'jumun', zhPinyin: 'dian can', jaRomaji: 'chuumon' },
-  },
-};
-
 const DEFAULT_USER_ID = 'demo-user-1';
 const PROFICIENCY_RANK = {
   none: 0,
@@ -98,83 +67,41 @@ const DEFAULT_OBJECTIVE_BY_LANG = {
   ja: 'ko_city_l2_003',
   zh: 'zh_stage_l3_002',
 };
-const YOUTUBE_AUTH_URL = process.env.YOUTUBE_AUTH_URL || 'https://accounts.google.com/o/oauth2/v2/auth';
-const YOUTUBE_TOKEN_URL = process.env.YOUTUBE_TOKEN_URL || 'https://oauth2.googleapis.com/token';
-const YOUTUBE_API_BASE = process.env.YOUTUBE_API_BASE || 'https://www.googleapis.com/youtube/v3';
-const YOUTUBE_SCOPE = process.env.YOUTUBE_SCOPE || 'https://www.googleapis.com/auth/youtube.readonly';
-const YOUTUBE_STATE_TTL_MS = 10 * 60 * 1000;
-const YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS = 72;
-const YOUTUBE_MAX_PAGES = 5;
-const YOUTUBE_MAX_ITEMS_PER_SYNC = 120;
-const YOUTUBE_CONNECT_DOCS_URL = 'https://developers.google.com/youtube/v3/getting-started';
-const SPOTIFY_ACCOUNTS_BASE = process.env.SPOTIFY_ACCOUNTS_BASE || 'https://accounts.spotify.com';
-const SPOTIFY_API_BASE = process.env.SPOTIFY_API_BASE || 'https://api.spotify.com/v1';
-const SPOTIFY_SCOPE = process.env.SPOTIFY_SCOPE || 'user-read-recently-played';
-const SPOTIFY_STATE_TTL_MS = 10 * 60 * 1000;
-const SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS = 72;
-const SPOTIFY_MAX_PAGES = 5;
-const SPOTIFY_LYRICS_API_BASE = process.env.SPOTIFY_LYRICS_API_BASE || 'https://lrclib.net/api';
-const SPOTIFY_LYRICS_ENABLED = String(process.env.SPOTIFY_LYRICS_ENABLED || 'true').toLowerCase() !== 'false';
-const SPOTIFY_LYRICS_MAX_TRACKS = Math.max(1, Number(process.env.SPOTIFY_LYRICS_MAX_TRACKS || 16) || 16);
-const SPOTIFY_LYRICS_MAX_CHARS = Math.max(80, Number(process.env.SPOTIFY_LYRICS_MAX_CHARS || 420) || 420);
-const SPOTIFY_CONNECT_DOCS_URL = 'https://developer.spotify.com/documentation/web-api';
 const INGESTION_SOURCES = new Set(['youtube', 'spotify']);
+
+const DICTIONARY_OVERRIDES = {
+  '오늘': {
+    term: '오늘',
+    lang: 'ko',
+    meaning: 'today',
+    examples: ['오늘 뭐 먹을까?'],
+    crossCjk: { zhHans: '今天', ja: '今日' },
+    readings: { ko: 'oneul', zhPinyin: 'jin tian', jaRomaji: 'kyou' },
+  },
+  '먹을까': {
+    term: '먹다',
+    lang: 'ko',
+    meaning: 'to eat; shall we eat?',
+    examples: ['같이 먹을까?'],
+    crossCjk: { zhHans: '吃', ja: '食べる' },
+    readings: { ko: 'meokda', zhPinyin: 'chi', jaRomaji: 'taberu' },
+  },
+  '주문': {
+    term: '주문',
+    lang: 'ko',
+    meaning: 'order (food/item)',
+    examples: ['주문 도와드릴까요?'],
+    crossCjk: { zhHans: '点餐', ja: '注文' },
+    readings: { ko: 'jumun', zhPinyin: 'dian can', jaRomaji: 'chuumon' },
+  },
+};
 
 const state = {
   profiles: new Map(),
   sessions: new Map(),
   learnSessions: [...(FIXTURES.learnSessions.items || [])],
   ingestionByUser: new Map(),
-  youtubeAuthStates: new Map(),
-  youtubeTokensByUser: new Map(),
-  youtubeRecentByUser: new Map(),
-  spotifyAuthStates: new Map(),
-  spotifyTokensByUser: new Map(),
-  spotifyRecentByUser: new Map(),
 };
-
-function mapToObject(map) {
-  return Object.fromEntries(map.entries());
-}
-
-function objectToMap(obj) {
-  if (!obj || typeof obj !== 'object') return new Map();
-  return new Map(Object.entries(obj));
-}
-
-function persistIntegrationState() {
-  const payload = {
-    version: 1,
-    updatedAtIso: new Date().toISOString(),
-    youtubeTokensByUser: mapToObject(state.youtubeTokensByUser),
-    youtubeRecentByUser: mapToObject(state.youtubeRecentByUser),
-    spotifyTokensByUser: mapToObject(state.spotifyTokensByUser),
-    spotifyRecentByUser: mapToObject(state.spotifyRecentByUser),
-  };
-
-  try {
-    fs.mkdirSync(path.dirname(integrationsStatePath), { recursive: true });
-    fs.writeFileSync(integrationsStatePath, JSON.stringify(payload, null, 2));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown_error';
-    console.warn(`[Tong Server] Failed to persist integration state: ${message}`);
-  }
-}
-
-function restoreIntegrationState() {
-  try {
-    if (!fs.existsSync(integrationsStatePath)) return;
-
-    const payload = JSON.parse(fs.readFileSync(integrationsStatePath, 'utf8'));
-    state.youtubeTokensByUser = objectToMap(payload.youtubeTokensByUser);
-    state.youtubeRecentByUser = objectToMap(payload.youtubeRecentByUser);
-    state.spotifyTokensByUser = objectToMap(payload.spotifyTokensByUser);
-    state.spotifyRecentByUser = objectToMap(payload.spotifyRecentByUser);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown_error';
-    console.warn(`[Tong Server] Failed to restore integration state: ${message}`);
-  }
-}
 
 const AGENT_TOOL_DEFINITIONS = [
   {
@@ -196,82 +123,6 @@ const AGENT_TOOL_DEFINITIONS = [
     args: {
       userId: 'string (optional)',
       includeSources: ['youtube', 'spotify'],
-    },
-  },
-  {
-    name: 'integrations.youtube.sync_mock',
-    description: 'Refresh mock ingestion from YouTube-only source items.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      userId: 'string (optional)',
-      profile: 'object (optional)',
-    },
-  },
-  {
-    name: 'integrations.youtube.status',
-    description: 'Get YouTube connection and sync status for a user.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      userId: 'string (optional)',
-    },
-  },
-  {
-    name: 'integrations.youtube.connect',
-    description: 'Generate YouTube OAuth connect URL for a user.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      userId: 'string (optional)',
-    },
-  },
-  {
-    name: 'integrations.youtube.sync',
-    description: 'Run real YouTube sync for a connected user.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      userId: 'string (optional)',
-      windowHours: 'number (optional)',
-    },
-  },
-  {
-    name: 'integrations.spotify.sync_mock',
-    description: 'Refresh mock ingestion from Spotify-only source items.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      userId: 'string (optional)',
-      profile: 'object (optional)',
-    },
-  },
-  {
-    name: 'integrations.spotify.status',
-    description: 'Get Spotify connection and sync status for a user.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      userId: 'string (optional)',
-    },
-  },
-  {
-    name: 'integrations.spotify.connect',
-    description: 'Generate Spotify OAuth connect URL for a user.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      userId: 'string (optional)',
-    },
-  },
-  {
-    name: 'integrations.spotify.sync',
-    description: 'Run real Spotify sync for a connected user.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      userId: 'string (optional)',
-      windowHours: 'number (optional)',
     },
   },
   {
@@ -313,57 +164,6 @@ const AGENT_TOOL_DEFINITIONS = [
       lang: 'ko|ja|zh (optional)',
     },
   },
-  {
-    name: 'game.start_or_resume',
-    description: 'Start or resume game session from profile + ingestion context.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      userId: 'string (optional)',
-      profile: 'object (optional)',
-    },
-  },
-  {
-    name: 'scenes.hangout.start',
-    description: 'Start a stateful hangout scene session.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      userId: 'string (optional)',
-    },
-  },
-  {
-    name: 'scenes.hangout.respond',
-    description: 'Submit user utterance and advance a stateful hangout scene.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      sceneSessionId: 'string (required)',
-      userUtterance: 'string (required)',
-      toolContext: 'object (optional)',
-    },
-  },
-  {
-    name: 'learn.sessions.list',
-    description: 'List recent learn sessions.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      userId: 'string (optional)',
-    },
-  },
-  {
-    name: 'learn.sessions.create',
-    description: 'Create a new objective-bound learn session.',
-    method: 'POST',
-    path: '/api/v1/tools/invoke',
-    args: {
-      userId: 'string (optional)',
-      objectiveId: 'string (optional)',
-      city: 'string (optional)',
-      lang: 'ko|ja|zh (optional)',
-    },
-  },
 ];
 
 function jsonResponse(res, statusCode, payload) {
@@ -371,26 +171,34 @@ function jsonResponse(res, statusCode, payload) {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Demo-Password',
   });
   res.end(JSON.stringify(payload));
-}
-
-function redirectResponse(res, location, statusCode = 302) {
-  res.writeHead(statusCode, {
-    Location: location,
-    'Access-Control-Allow-Origin': '*',
-  });
-  res.end();
 }
 
 function noContent(res) {
   res.writeHead(204, {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Demo-Password',
   });
   res.end();
+}
+
+function getHeaderValue(req, key) {
+  const value = req.headers[key];
+  if (Array.isArray(value)) return value[0] || '';
+  return value || '';
+}
+
+function isDemoAuthorized(req, url) {
+  if (!DEMO_PASSWORD) return true;
+
+  const provided =
+    String(getHeaderValue(req, 'x-demo-password')).trim() ||
+    String(url.searchParams.get('demo') || '').trim();
+
+  return provided === DEMO_PASSWORD;
 }
 
 async function readJsonBody(req) {
@@ -404,6 +212,45 @@ function getLang(query) {
   const lang = query.get('lang') || 'ko';
   if (lang === 'ko' || lang === 'ja' || lang === 'zh') return lang;
   return 'ko';
+}
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getUserIdFromQuery(query) {
+  return String(query.get('userId') || DEFAULT_USER_ID).trim() || DEFAULT_USER_ID;
+}
+
+function normalizeProfileRecord(input) {
+  if (!input || typeof input !== 'object') return null;
+  if (input.profile && typeof input.profile === 'object') return input.profile;
+
+  const hasProfileShape =
+    typeof input.nativeLanguage === 'string' &&
+    Array.isArray(input.targetLanguages) &&
+    input.proficiency &&
+    typeof input.proficiency === 'object';
+  return hasProfileShape ? input : null;
+}
+
+function getProfile(userId = DEFAULT_USER_ID) {
+  const raw = state.profiles.get(userId);
+  return normalizeProfileRecord(raw);
+}
+
+function getWeakestTargetLanguage(profile) {
+  if (!profile || !Array.isArray(profile.targetLanguages) || profile.targetLanguages.length === 0) {
+    return 'ko';
+  }
+
+  return [...profile.targetLanguages]
+    .filter((lang) => lang === 'ko' || lang === 'ja' || lang === 'zh')
+    .sort((a, b) => {
+      const rankA = PROFICIENCY_RANK[profile?.proficiency?.[a] || 'none'] ?? 0;
+      const rankB = PROFICIENCY_RANK[profile?.proficiency?.[b] || 'none'] ?? 0;
+      return rankA - rankB;
+    })[0] || 'ko';
 }
 
 function getCaptionsForVideo(videoId = 'karina-variety-demo') {
@@ -461,941 +308,27 @@ function getCaptionsForVideo(videoId = 'karina-variety-demo') {
   };
 }
 
-function cloneJson(value) {
-  return JSON.parse(JSON.stringify(value));
+function loadOrFallback(name, fallback) {
+  const generated = loadGeneratedSnapshot(name);
+  return generated || fallback;
 }
 
-function getUserIdFromSearch(searchParams) {
-  return searchParams.get('userId') || DEFAULT_USER_ID;
-}
-
-function normalizeObject(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
-  return value;
-}
-
-function normalizeIngestionSources(value) {
-  if (value == null) return [];
-
-  const raw = Array.isArray(value)
-    ? value
-    : typeof value === 'string'
-      ? value.split(',')
-      : [];
-
+function normalizeIngestionSources(input) {
+  if (!Array.isArray(input)) return [];
   return [...new Set(
-    raw
-      .map((item) => String(item || '').trim().toLowerCase())
-      .filter((item) => INGESTION_SOURCES.has(item)),
+    input
+      .map((value) => String(value || '').trim().toLowerCase())
+      .filter((value) => INGESTION_SOURCES.has(value)),
   )];
 }
 
-function getYouTubeRedirectUri() {
-  return process.env.YOUTUBE_REDIRECT_URI || `http://127.0.0.1:${PORT}/api/v1/integrations/youtube/callback`;
-}
-
-function getYouTubeClientCredentials() {
-  const clientId = process.env.YOUTUBE_CLIENT_ID;
-  const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
-  return { clientId, clientSecret };
-}
-
-function youtubeConfigured() {
-  return Boolean(getYouTubeClientCredentials());
-}
-
-function youtubeConfigErrorPayload() {
-  return {
-    error: 'youtube_not_configured',
-    message: 'Set YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET on the API server.',
-    docs: YOUTUBE_CONNECT_DOCS_URL,
-  };
-}
-
-function cleanupYouTubeAuthStates() {
-  const now = Date.now();
-  for (const [stateToken, payload] of state.youtubeAuthStates.entries()) {
-    if (!payload?.createdAtMs || now - payload.createdAtMs > YOUTUBE_STATE_TTL_MS) {
-      state.youtubeAuthStates.delete(stateToken);
-    }
-  }
-}
-
-function createYouTubeState(userId) {
-  cleanupYouTubeAuthStates();
-  const stateToken = crypto.randomBytes(18).toString('hex');
-  state.youtubeAuthStates.set(stateToken, {
-    userId,
-    createdAtMs: Date.now(),
-  });
-  return stateToken;
-}
-
-function buildYouTubeAuthUrl(userId) {
-  const creds = getYouTubeClientCredentials();
-  if (!creds) return null;
-
-  const stateToken = createYouTubeState(userId);
-  const search = new URLSearchParams({
-    response_type: 'code',
-    client_id: creds.clientId,
-    redirect_uri: getYouTubeRedirectUri(),
-    scope: YOUTUBE_SCOPE,
-    access_type: 'offline',
-    prompt: 'consent',
-    include_granted_scopes: 'true',
-    state: stateToken,
-  });
-
-  return {
-    stateToken,
-    authUrl: `${YOUTUBE_AUTH_URL}?${search.toString()}`,
-  };
-}
-
-function getSpotifyRedirectUri() {
-  return process.env.SPOTIFY_REDIRECT_URI || `http://127.0.0.1:${PORT}/api/v1/integrations/spotify/callback`;
-}
-
-function getSpotifyClientCredentials() {
-  const clientId = process.env.SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
-  return { clientId, clientSecret };
-}
-
-function spotifyConfigured() {
-  return Boolean(getSpotifyClientCredentials());
-}
-
-function spotifyConfigErrorPayload() {
-  return {
-    error: 'spotify_not_configured',
-    message: 'Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET on the API server.',
-    docs: SPOTIFY_CONNECT_DOCS_URL,
-  };
-}
-
-function cleanupSpotifyAuthStates() {
-  const now = Date.now();
-  for (const [stateToken, payload] of state.spotifyAuthStates.entries()) {
-    if (!payload?.createdAtMs || now - payload.createdAtMs > SPOTIFY_STATE_TTL_MS) {
-      state.spotifyAuthStates.delete(stateToken);
-    }
-  }
-}
-
-function createSpotifyState(userId) {
-  cleanupSpotifyAuthStates();
-  const stateToken = crypto.randomBytes(18).toString('hex');
-  state.spotifyAuthStates.set(stateToken, {
-    userId,
-    createdAtMs: Date.now(),
-  });
-  return stateToken;
-}
-
-function buildSpotifyAuthUrl(userId) {
-  const creds = getSpotifyClientCredentials();
-  if (!creds) return null;
-
-  const stateToken = createSpotifyState(userId);
-  const search = new URLSearchParams({
-    response_type: 'code',
-    client_id: creds.clientId,
-    redirect_uri: getSpotifyRedirectUri(),
-    scope: SPOTIFY_SCOPE,
-    state: stateToken,
-    show_dialog: 'true',
-  });
-
-  return {
-    stateToken,
-    authUrl: `${SPOTIFY_ACCOUNTS_BASE}/authorize?${search.toString()}`,
-  };
-}
-
-function parseWindowHours(value, fallback = SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric <= 0) return fallback;
-  return Math.min(24 * 14, Math.max(1, Math.round(numeric)));
-}
-
-function getGoogleApiError(payload, fallbackMessage) {
-  const reason = payload?.error?.errors?.[0]?.reason || null;
-  const message = payload?.error?.message || payload?.error || fallbackMessage;
-  const code = payload?.error?.code || null;
-
-  if (reason === 'youtubeSignupRequired') {
-    return {
-      code,
-      reason,
-      message:
-        'No YouTube channel is linked to this Google account yet. Create a YouTube channel, then reconnect and sync.',
-    };
-  }
-
-  return {
-    code,
-    reason,
-    message,
-  };
-}
-
-function detectLangFromText(text) {
-  if (typeof text !== 'string' || !text.trim()) return 'ko';
-  if (/[\p{Script=Hangul}]/u.test(text)) return 'ko';
-  if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(text)) return 'ja';
-  if (/[\p{Script=Han}]/u.test(text)) return 'zh';
-  return 'ko';
-}
-
-function detectCjkLangFromText(text) {
-  if (typeof text !== 'string' || !text.trim()) return null;
-  if (/[\p{Script=Hangul}]/u.test(text)) return 'ko';
-  if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(text)) return 'ja';
-  if (/[\p{Script=Han}]/u.test(text)) return 'zh';
-  return null;
-}
-
-function getSpotifyArtists(track) {
-  return Array.isArray(track?.artists)
-    ? track.artists.map((artist) => artist?.name).filter(Boolean).join(' ')
-    : '';
-}
-
-function getSpotifyTrackIdentity(track) {
-  if (!track || typeof track.name !== 'string') return null;
-  const artists = getSpotifyArtists(track);
-  return track.id || `${track.name}::${artists}`;
-}
-
-function compactLyricsSnippet(rawLyrics, maxChars = SPOTIFY_LYRICS_MAX_CHARS) {
-  if (typeof rawLyrics !== 'string' || !rawLyrics.trim()) return '';
-  const withoutTimestamp = rawLyrics
-    .replace(/\[[0-9]{1,2}:[0-9]{2}(?:\.[0-9]{1,3})?\]/g, ' ')
-    .replace(/\r/g, '\n');
-  const compact = withoutTimestamp
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  if (!compact) return '';
-  return compact.length <= maxChars ? compact : `${compact.slice(0, maxChars)}...`;
-}
-
-function parseIso8601DurationToMinutes(duration, fallbackMinutes = 6) {
-  if (typeof duration !== 'string' || !duration.startsWith('P')) return fallbackMinutes;
-  const match = duration.match(/P(?:([0-9]+)D)?(?:T(?:([0-9]+)H)?(?:([0-9]+)M)?(?:([0-9]+)S)?)?/);
-  if (!match) return fallbackMinutes;
-
-  const days = Number(match[1] || 0);
-  const hours = Number(match[2] || 0);
-  const minutes = Number(match[3] || 0);
-  const seconds = Number(match[4] || 0);
-  const totalSeconds = days * 86400 + hours * 3600 + minutes * 60 + seconds;
-  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return fallbackMinutes;
-  return Number((totalSeconds / 60).toFixed(2));
-}
-
-function getYouTubeActivityVideoId(activity) {
-  return (
-    activity?.contentDetails?.upload?.videoId ||
-    activity?.contentDetails?.playlistItem?.resourceId?.videoId ||
-    activity?.contentDetails?.like?.resourceId?.videoId ||
-    activity?.contentDetails?.recommendation?.resourceId?.videoId ||
-    null
-  );
-}
-
-function normalizeYouTubeActivityForIngestion(activity, videoDetailsById, index = 0) {
-  const activitySnippet = activity?.snippet || {};
-  const videoId = getYouTubeActivityVideoId(activity);
-  const videoDetails = videoId ? videoDetailsById.get(videoId) : null;
-  const videoSnippet = videoDetails?.snippet || {};
-  const contentDetails = videoDetails?.contentDetails || {};
-
-  const title = videoSnippet.title || activitySnippet.title || 'YouTube Activity';
-  const channelTitle = videoSnippet.channelTitle || activitySnippet.channelTitle || '';
-  const description = videoSnippet.description || activitySnippet.description || '';
-  const text = `${title} ${channelTitle} ${description}`.trim();
-  const playedAtIso = activitySnippet.publishedAt || new Date().toISOString();
-  const playedAtEpoch = Date.parse(playedAtIso);
-
-  return {
-    id: `yt_recent_${videoId || activity?.id || 'activity'}_${Number.isFinite(playedAtEpoch) ? playedAtEpoch : index}`,
-    source: 'youtube',
-    title,
-    lang: detectLangFromText(text),
-    minutes: parseIso8601DurationToMinutes(contentDetails.duration, 8),
-    text,
-    playedAtIso,
-  };
-}
-
-async function fetchSpotifyTrackLyrics(track) {
-  if (!SPOTIFY_LYRICS_ENABLED || !track?.name) return null;
-  const artistName = getSpotifyArtists(track);
-  if (!artistName) return null;
-
-  const query = new URLSearchParams({
-    track_name: track.name,
-    artist_name: artistName,
-  });
-  if (Number.isFinite(Number(track.duration_ms)) && Number(track.duration_ms) > 0) {
-    query.set('duration', String(Math.round(Number(track.duration_ms) / 1000)));
-  }
-
-  try {
-    const response = await fetch(`${SPOTIFY_LYRICS_API_BASE}/get?${query.toString()}`);
-    if (response.status === 404) return null;
-    if (!response.ok) return null;
-
-    const payload = await response.json();
-    const rawLyrics =
-      typeof payload?.plainLyrics === 'string'
-        ? payload.plainLyrics
-        : typeof payload?.syncedLyrics === 'string'
-          ? payload.syncedLyrics
-          : '';
-    const snippet = compactLyricsSnippet(rawLyrics);
-    if (!snippet) return null;
-
-    const lang = detectCjkLangFromText(snippet) || detectCjkLangFromText(`${track.name} ${artistName}`);
-    if (!lang) return null;
-
-    return {
-      snippet,
-      lang,
-      source: 'lrclib',
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function buildSpotifyLyricsMap(rawItems = []) {
-  const byTrack = new Map();
-  const visited = new Set();
-  let attemptedTrackCount = 0;
-
-  for (const raw of rawItems) {
-    const track = raw?.track;
-    const trackKey = getSpotifyTrackIdentity(track);
-    if (!trackKey || visited.has(trackKey)) continue;
-    visited.add(trackKey);
-
-    if (attemptedTrackCount >= SPOTIFY_LYRICS_MAX_TRACKS) break;
-    attemptedTrackCount += 1;
-
-    const lyrics = await fetchSpotifyTrackLyrics(track);
-    if (lyrics) {
-      byTrack.set(trackKey, lyrics);
-    }
-  }
-
-  return {
-    byTrack,
-    attemptedTrackCount,
-  };
-}
-
-function normalizeSpotifyTrackForIngestion(rawTrack, index = 0, lyricsSnippet = null) {
-  const track = rawTrack?.track;
-  if (!track || typeof track.name !== 'string') return null;
-  const playedAtIso = rawTrack.played_at || new Date().toISOString();
-  const playedAtEpoch = Date.parse(playedAtIso);
-  const artists = getSpotifyArtists(track);
-  const text = [track.name, artists, lyricsSnippet || ''].filter(Boolean).join(' ').trim();
-  const lang = detectLangFromText(text);
-
-  return {
-    id: `sp_recent_${track.id || 'track'}_${Number.isFinite(playedAtEpoch) ? playedAtEpoch : index}`,
-    source: 'spotify',
-    title: track.name,
-    lang,
-    minutes: Number((((Number(track.duration_ms) || 0) / 60000) || 0).toFixed(2)),
-    text,
-    lyricsSnippet: lyricsSnippet || null,
-    playedAtIso,
-  };
-}
-
-function buildIngestionSnapshotForUser(userId = DEFAULT_USER_ID, options = {}) {
+function buildIngestionSnapshotForUser(options = {}) {
   const includeSources = normalizeIngestionSources(options.includeSources);
   const snapshot = JSON.parse(fs.readFileSync(mockMediaWindowPath, 'utf8'));
-  const youtubeSynced = state.youtubeRecentByUser.get(userId);
-  const spotifySynced = state.spotifyRecentByUser.get(userId);
-  const hasYouTube = Array.isArray(youtubeSynced?.items) && youtubeSynced.items.length > 0;
-  const hasSpotify = Array.isArray(spotifySynced?.items) && spotifySynced.items.length > 0;
-
-  if (!hasYouTube && !hasSpotify) {
-    if (includeSources.length > 0) {
-      snapshot.sourceItems = (snapshot.sourceItems || []).filter((item) => includeSources.includes(item.source));
-    }
-    return snapshot;
-  }
-
-  const nowIso = new Date().toISOString();
-  let sourceItems = [...(snapshot.sourceItems || [])];
-  const windowHours = [];
-
-  if (hasYouTube) {
-    sourceItems = sourceItems.filter((item) => item.source !== 'youtube');
-    sourceItems.push(...youtubeSynced.items);
-    windowHours.push(parseWindowHours(youtubeSynced.windowHours, YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS));
-  }
-  if (hasSpotify) {
-    sourceItems = sourceItems.filter((item) => item.source !== 'spotify');
-    sourceItems.push(...spotifySynced.items);
-    windowHours.push(parseWindowHours(spotifySynced.windowHours, SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS));
-  }
-
-  const scopedWindowHours = windowHours.length > 0 ? Math.max(...windowHours) : SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS;
-  snapshot.sourceItems = sourceItems;
-  snapshot.windowStartIso = new Date(Date.now() - scopedWindowHours * 60 * 60 * 1000).toISOString();
-  snapshot.windowEndIso = nowIso;
-  snapshot.generatedAtIso = nowIso;
-
   if (includeSources.length > 0) {
     snapshot.sourceItems = (snapshot.sourceItems || []).filter((item) => includeSources.includes(item.source));
   }
-
   return snapshot;
-}
-
-function formatIngestionRunResponse(result, includeSources = []) {
-  return {
-    success: true,
-    generatedAtIso: result.generatedAtIso,
-    includeSources: includeSources.length > 0 ? includeSources : ['youtube', 'spotify'],
-    sourceCount: {
-      youtube: result.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
-      spotify: result.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
-    },
-    topTerms: result.frequency.items.slice(0, 10),
-  };
-}
-
-function getYouTubeStatusPayload(userId = DEFAULT_USER_ID) {
-  const token = state.youtubeTokensByUser.get(userId);
-  const synced = state.youtubeRecentByUser.get(userId);
-
-  return {
-    userId,
-    youtubeConfigured: youtubeConfigured(),
-    connected: Boolean(token?.accessToken),
-    tokenExpiresAtIso: token?.expiresAtEpochMs ? new Date(token.expiresAtEpochMs).toISOString() : null,
-    tokenScope: token?.scope || null,
-    lastSyncAtIso: synced?.syncedAtIso || null,
-    lastSyncItemCount: Array.isArray(synced?.items) ? synced.items.length : 0,
-    syncWindowHours: synced?.windowHours || null,
-  };
-}
-
-function getSpotifyStatusPayload(userId = DEFAULT_USER_ID) {
-  const token = state.spotifyTokensByUser.get(userId);
-  const synced = state.spotifyRecentByUser.get(userId);
-
-  return {
-    userId,
-    spotifyConfigured: spotifyConfigured(),
-    connected: Boolean(token?.accessToken),
-    tokenExpiresAtIso: token?.expiresAtEpochMs ? new Date(token.expiresAtEpochMs).toISOString() : null,
-    tokenScope: token?.scope || null,
-    lastSyncAtIso: synced?.syncedAtIso || null,
-    lastSyncItemCount: Array.isArray(synced?.items) ? synced.items.length : 0,
-    syncWindowHours: synced?.windowHours || null,
-    lastSyncLyricsCount: Number(synced?.lyricsEnrichedCount || 0),
-    lastSyncLyricsLangBreakdown: synced?.lyricsLangBreakdown || { ko: 0, ja: 0, zh: 0 },
-  };
-}
-
-async function fetchYouTubeToken(params) {
-  const creds = getYouTubeClientCredentials();
-  if (!creds) {
-    throw new Error('youtube_not_configured');
-  }
-
-  const response = await fetch(YOUTUBE_TOKEN_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      ...params,
-      client_id: creds.clientId,
-      client_secret: creds.clientSecret,
-    }).toString(),
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data?.error_description || data?.error || 'youtube_token_exchange_failed');
-  }
-  return data;
-}
-
-async function exchangeYouTubeCodeForToken(code) {
-  const tokenData = await fetchYouTubeToken({
-    grant_type: 'authorization_code',
-    code,
-    redirect_uri: getYouTubeRedirectUri(),
-  });
-
-  return {
-    accessToken: tokenData.access_token,
-    refreshToken: tokenData.refresh_token,
-    tokenType: tokenData.token_type,
-    scope: tokenData.scope || YOUTUBE_SCOPE,
-    expiresAtEpochMs: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000,
-    obtainedAtIso: new Date().toISOString(),
-  };
-}
-
-async function refreshYouTubeAccessToken(userId) {
-  const existing = state.youtubeTokensByUser.get(userId);
-  if (!existing?.refreshToken) {
-    throw new Error('youtube_refresh_token_missing');
-  }
-
-  const tokenData = await fetchYouTubeToken({
-    grant_type: 'refresh_token',
-    refresh_token: existing.refreshToken,
-  });
-
-  const refreshed = {
-    ...existing,
-    accessToken: tokenData.access_token,
-    refreshToken: tokenData.refresh_token || existing.refreshToken,
-    tokenType: tokenData.token_type || existing.tokenType,
-    scope: tokenData.scope || existing.scope,
-    expiresAtEpochMs: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000,
-    obtainedAtIso: new Date().toISOString(),
-  };
-
-  state.youtubeTokensByUser.set(userId, refreshed);
-  persistIntegrationState();
-  return refreshed.accessToken;
-}
-
-async function ensureYouTubeAccessToken(userId) {
-  const token = state.youtubeTokensByUser.get(userId);
-  if (!token?.accessToken) {
-    throw new Error('youtube_not_connected');
-  }
-
-  if (token.expiresAtEpochMs && token.expiresAtEpochMs > Date.now() + 60 * 1000) {
-    return token.accessToken;
-  }
-
-  return refreshYouTubeAccessToken(userId);
-}
-
-async function fetchYouTubeActivities(accessToken, windowHours = YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS) {
-  const cutoffMs = Date.now() - parseWindowHours(windowHours, YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS) * 60 * 60 * 1000;
-  const results = [];
-  let pageToken = null;
-
-  for (let page = 0; page < YOUTUBE_MAX_PAGES; page += 1) {
-    const query = new URLSearchParams({
-      part: 'snippet,contentDetails',
-      mine: 'true',
-      maxResults: '50',
-    });
-    if (pageToken) query.set('pageToken', pageToken);
-
-    const response = await fetch(`${YOUTUBE_API_BASE}/activities?${query.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    const payload = await response.json();
-    if (!response.ok) {
-      const parsed = getGoogleApiError(payload, 'youtube_activities_fetch_failed');
-      if (parsed.reason === 'forbidden') {
-        break;
-      }
-      throw new Error(parsed.reason ? `${parsed.message} [${parsed.reason}]` : parsed.message);
-    }
-
-    const items = Array.isArray(payload?.items) ? payload.items : [];
-    for (const item of items) {
-      const publishedAtMs = Date.parse(item?.snippet?.publishedAt || '');
-      if (!Number.isFinite(publishedAtMs) || publishedAtMs >= cutoffMs) {
-        results.push(item);
-      }
-    }
-
-    pageToken = payload?.nextPageToken || null;
-    if (!pageToken) break;
-  }
-
-  if (results.length === 0) {
-    return null;
-  }
-
-  return results;
-}
-
-async function fetchYouTubeUploadsAsActivities(accessToken, windowHours = YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS) {
-  const cutoffMs = Date.now() - parseWindowHours(windowHours, YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS) * 60 * 60 * 1000;
-  const channelResponse = await fetch(
-    `${YOUTUBE_API_BASE}/channels?part=contentDetails,snippet&mine=true&maxResults=1`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
-  );
-  const channelPayload = await channelResponse.json();
-  if (!channelResponse.ok) {
-    const parsed = getGoogleApiError(channelPayload, 'youtube_channels_fetch_failed');
-    throw new Error(parsed.reason ? `${parsed.message} [${parsed.reason}]` : parsed.message);
-  }
-
-  const channel = Array.isArray(channelPayload?.items) ? channelPayload.items[0] : null;
-  if (!channel) {
-    throw new Error(
-      'No YouTube channel found for this Google account. Create a YouTube channel, then reconnect and sync. [youtubeSignupRequired]',
-    );
-  }
-
-  const uploadsPlaylistId = channel?.contentDetails?.relatedPlaylists?.uploads;
-  if (!uploadsPlaylistId) {
-    throw new Error('Uploads playlist unavailable for this YouTube account. [forbidden]');
-  }
-
-  const activities = [];
-  let pageToken = null;
-  for (let page = 0; page < YOUTUBE_MAX_PAGES; page += 1) {
-    const query = new URLSearchParams({
-      part: 'snippet,contentDetails',
-      playlistId: uploadsPlaylistId,
-      maxResults: '50',
-    });
-    if (pageToken) query.set('pageToken', pageToken);
-
-    const response = await fetch(`${YOUTUBE_API_BASE}/playlistItems?${query.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      const parsed = getGoogleApiError(payload, 'youtube_playlist_items_fetch_failed');
-      throw new Error(parsed.reason ? `${parsed.message} [${parsed.reason}]` : parsed.message);
-    }
-
-    const items = Array.isArray(payload?.items) ? payload.items : [];
-    for (const item of items) {
-      const publishedAtIso = item?.snippet?.publishedAt || null;
-      const publishedAtMs = Date.parse(publishedAtIso || '');
-      if (Number.isFinite(publishedAtMs) && publishedAtMs < cutoffMs) continue;
-
-      const videoId =
-        item?.contentDetails?.videoId ||
-        item?.snippet?.resourceId?.videoId ||
-        null;
-      activities.push({
-        id: `upload_${item?.id || videoId || Math.random().toString(36).slice(2, 8)}`,
-        snippet: {
-          publishedAt: publishedAtIso || new Date().toISOString(),
-          title: item?.snippet?.title || 'YouTube Upload',
-          description: item?.snippet?.description || '',
-          channelTitle: item?.snippet?.channelTitle || channel?.snippet?.title || '',
-        },
-        contentDetails: {
-          upload: {
-            videoId,
-          },
-        },
-      });
-    }
-
-    pageToken = payload?.nextPageToken || null;
-    if (!pageToken) break;
-  }
-
-  return activities;
-}
-
-async function fetchYouTubeVideosById(accessToken, videoIds = []) {
-  const deduped = [...new Set(videoIds.filter(Boolean))];
-  const detailsById = new Map();
-  if (deduped.length === 0) return detailsById;
-
-  for (let i = 0; i < deduped.length; i += 50) {
-    const chunk = deduped.slice(i, i + 50);
-    const query = new URLSearchParams({
-      part: 'snippet,contentDetails',
-      id: chunk.join(','),
-      maxResults: String(chunk.length),
-    });
-
-    const response = await fetch(`${YOUTUBE_API_BASE}/videos?${query.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    const payload = await response.json();
-    if (!response.ok) {
-      const parsed = getGoogleApiError(payload, 'youtube_videos_fetch_failed');
-      throw new Error(parsed.reason ? `${parsed.message} [${parsed.reason}]` : parsed.message);
-    }
-
-    const items = Array.isArray(payload?.items) ? payload.items : [];
-    for (const item of items) {
-      if (item?.id) {
-        detailsById.set(item.id, item);
-      }
-    }
-  }
-
-  return detailsById;
-}
-
-async function syncYouTubeForUser(userId, requestedWindowHours = YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS) {
-  const windowHours = parseWindowHours(requestedWindowHours, YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS);
-  const accessToken = await ensureYouTubeAccessToken(userId);
-  const activityFeed = await fetchYouTubeActivities(accessToken, windowHours);
-  const rawActivities =
-    activityFeed && activityFeed.length > 0
-      ? activityFeed
-      : await fetchYouTubeUploadsAsActivities(accessToken, windowHours);
-  const videoIds = rawActivities.map((activity) => getYouTubeActivityVideoId(activity)).filter(Boolean);
-  const detailsById = await fetchYouTubeVideosById(accessToken, videoIds);
-
-  const normalizedItems = rawActivities
-    .map((activity, index) => normalizeYouTubeActivityForIngestion(activity, detailsById, index))
-    .filter(Boolean)
-    .slice(0, YOUTUBE_MAX_ITEMS_PER_SYNC);
-
-  state.youtubeRecentByUser.set(userId, {
-    syncedAtIso: new Date().toISOString(),
-    windowHours,
-    items: normalizedItems,
-    rawItemCount: rawActivities.length,
-  });
-  persistIntegrationState();
-  state.ingestionByUser.delete(userId);
-
-  const ingestion = runIngestionForUser(userId);
-  return {
-    syncedAtIso: state.youtubeRecentByUser.get(userId).syncedAtIso,
-    windowHours,
-    itemCount: normalizedItems.length,
-    rawItemCount: rawActivities.length,
-    ingestion,
-  };
-}
-
-async function fetchSpotifyToken(params) {
-  const creds = getSpotifyClientCredentials();
-  if (!creds) {
-    throw new Error('spotify_not_configured');
-  }
-
-  const authHeader = Buffer.from(`${creds.clientId}:${creds.clientSecret}`).toString('base64');
-  const response = await fetch(`${SPOTIFY_ACCOUNTS_BASE}/api/token`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${authHeader}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams(params).toString(),
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data?.error_description || data?.error || 'spotify_token_exchange_failed');
-  }
-  return data;
-}
-
-async function exchangeSpotifyCodeForToken(code) {
-  const tokenData = await fetchSpotifyToken({
-    grant_type: 'authorization_code',
-    code,
-    redirect_uri: getSpotifyRedirectUri(),
-  });
-
-  return {
-    accessToken: tokenData.access_token,
-    refreshToken: tokenData.refresh_token,
-    tokenType: tokenData.token_type,
-    scope: tokenData.scope || SPOTIFY_SCOPE,
-    expiresAtEpochMs: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000,
-    obtainedAtIso: new Date().toISOString(),
-  };
-}
-
-async function refreshSpotifyAccessToken(userId) {
-  const existing = state.spotifyTokensByUser.get(userId);
-  if (!existing?.refreshToken) {
-    throw new Error('spotify_refresh_token_missing');
-  }
-
-  const tokenData = await fetchSpotifyToken({
-    grant_type: 'refresh_token',
-    refresh_token: existing.refreshToken,
-  });
-
-  const refreshed = {
-    ...existing,
-    accessToken: tokenData.access_token,
-    refreshToken: tokenData.refresh_token || existing.refreshToken,
-    tokenType: tokenData.token_type || existing.tokenType,
-    scope: tokenData.scope || existing.scope,
-    expiresAtEpochMs: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000,
-    obtainedAtIso: new Date().toISOString(),
-  };
-
-  state.spotifyTokensByUser.set(userId, refreshed);
-  persistIntegrationState();
-  return refreshed.accessToken;
-}
-
-async function ensureSpotifyAccessToken(userId) {
-  const token = state.spotifyTokensByUser.get(userId);
-  if (!token?.accessToken) {
-    throw new Error('spotify_not_connected');
-  }
-
-  if (token.expiresAtEpochMs && token.expiresAtEpochMs > Date.now() + 60 * 1000) {
-    return token.accessToken;
-  }
-
-  return refreshSpotifyAccessToken(userId);
-}
-
-async function fetchSpotifyRecentlyPlayed(accessToken, windowHours = SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS) {
-  const afterMs = Date.now() - parseWindowHours(windowHours) * 60 * 60 * 1000;
-  let nextUrl = `${SPOTIFY_API_BASE}/me/player/recently-played?limit=50&after=${afterMs}`;
-  const results = [];
-
-  for (let page = 0; page < SPOTIFY_MAX_PAGES && nextUrl; page += 1) {
-    const response = await fetch(nextUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    const payload = await response.json();
-    if (!response.ok) {
-      const errorMessage = payload?.error?.message || payload?.error || 'spotify_recently_played_failed';
-      throw new Error(errorMessage);
-    }
-
-    const items = Array.isArray(payload?.items) ? payload.items : [];
-    results.push(...items);
-    nextUrl = payload?.next || null;
-  }
-
-  return results;
-}
-
-async function syncSpotifyForUser(userId, requestedWindowHours = SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS) {
-  const windowHours = parseWindowHours(requestedWindowHours);
-  const accessToken = await ensureSpotifyAccessToken(userId);
-  const rawItems = await fetchSpotifyRecentlyPlayed(accessToken, windowHours);
-  const { byTrack: lyricsByTrack, attemptedTrackCount } = await buildSpotifyLyricsMap(rawItems);
-  const normalizedItems = rawItems
-    .map((item, index) => {
-      const trackKey = getSpotifyTrackIdentity(item?.track);
-      const lyric = trackKey ? lyricsByTrack.get(trackKey) : null;
-      const normalized = normalizeSpotifyTrackForIngestion(item, index, lyric?.snippet || null);
-      if (!normalized) return null;
-      if (lyric?.lang) normalized.lyricsLang = lyric.lang;
-      if (lyric?.source) normalized.lyricsSource = lyric.source;
-      return normalized;
-    })
-    .filter(Boolean);
-
-  const lyricsEnrichedCount = normalizedItems.filter((item) => Boolean(item?.lyricsSnippet)).length;
-  const lyricsLangBreakdown = { ko: 0, ja: 0, zh: 0 };
-  for (const item of normalizedItems) {
-    const lang = item?.lyricsLang;
-    if (lang === 'ko' || lang === 'ja' || lang === 'zh') {
-      lyricsLangBreakdown[lang] += 1;
-    }
-  }
-
-  state.spotifyRecentByUser.set(userId, {
-    syncedAtIso: new Date().toISOString(),
-    windowHours,
-    items: normalizedItems,
-    rawItemCount: rawItems.length,
-    lyricsEnrichedCount,
-    lyricsLangBreakdown,
-    lyricsAttemptedTrackCount: attemptedTrackCount,
-  });
-  persistIntegrationState();
-  state.ingestionByUser.delete(userId);
-
-  const ingestion = runIngestionForUser(userId);
-  return {
-    syncedAtIso: state.spotifyRecentByUser.get(userId).syncedAtIso,
-    windowHours,
-    itemCount: normalizedItems.length,
-    rawItemCount: rawItems.length,
-    lyricsEnrichedCount,
-    lyricsLangBreakdown,
-    lyricsAttemptedTrackCount: attemptedTrackCount,
-    ingestion,
-  };
-}
-
-function normalizeProfile(rawProfile) {
-  if (!rawProfile || typeof rawProfile !== 'object') return null;
-
-  const profile = rawProfile.profile && typeof rawProfile.profile === 'object'
-    ? rawProfile.profile
-    : rawProfile;
-
-  const targetLanguages = Array.isArray(profile.targetLanguages)
-    ? profile.targetLanguages.filter((lang) => lang === 'ko' || lang === 'ja' || lang === 'zh')
-    : [];
-
-  return {
-    nativeLanguage: profile.nativeLanguage || 'en',
-    targetLanguages: targetLanguages.length > 0 ? targetLanguages : ['ko', 'ja', 'zh'],
-    proficiency: {
-      ko: profile?.proficiency?.ko || 'none',
-      ja: profile?.proficiency?.ja || 'none',
-      zh: profile?.proficiency?.zh || 'none',
-    },
-  };
-}
-
-function upsertProfile(userId, rawProfile) {
-  const profile = normalizeProfile(rawProfile);
-  if (!profile) return null;
-  state.profiles.set(userId, profile);
-  state.ingestionByUser.delete(userId);
-  return profile;
-}
-
-function getProfile(userId) {
-  return state.profiles.get(userId) || null;
-}
-
-function getWeakestTargetLanguage(profile) {
-  if (!profile || !Array.isArray(profile.targetLanguages) || profile.targetLanguages.length === 0) {
-    return 'ko';
-  }
-
-  return [...profile.targetLanguages].sort((a, b) => {
-    const rankA = PROFICIENCY_RANK[profile?.proficiency?.[a] || 'none'] ?? 0;
-    const rankB = PROFICIENCY_RANK[profile?.proficiency?.[b] || 'none'] ?? 0;
-    return rankA - rankB;
-  })[0];
 }
 
 function loadDefaultGeneratedIngestion() {
@@ -1418,23 +351,17 @@ function loadDefaultGeneratedIngestion() {
 
 function runIngestionForUser(userId = DEFAULT_USER_ID, options = {}) {
   const includeSources = normalizeIngestionSources(options.includeSources);
-  const snapshot = buildIngestionSnapshotForUser(userId, { includeSources });
+  const snapshot = buildIngestionSnapshotForUser({ includeSources });
   const result = runMockIngestion(snapshot, {
     userId,
-    profile: getProfile(userId),
   });
 
-  if (userId === DEFAULT_USER_ID) {
+  if (userId === DEFAULT_USER_ID && includeSources.length === 0) {
     writeGeneratedSnapshots(result);
   }
 
   state.ingestionByUser.set(userId, result);
-  return {
-    ...result,
-    _meta: {
-      includeSources,
-    },
-  };
+  return result;
 }
 
 function ensureIngestionForUser(userId = DEFAULT_USER_ID) {
@@ -1452,6 +379,22 @@ function ensureIngestionForUser(userId = DEFAULT_USER_ID) {
   return runIngestionForUser(userId);
 }
 
+function formatIngestionRunResponse(result) {
+  return {
+    success: true,
+    generatedAtIso: result.generatedAtIso,
+    sourceCount: {
+      youtube: result.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
+      spotify: result.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
+    },
+    topTerms: result.frequency.items.slice(0, 10),
+  };
+}
+
+function normalizeObject(input) {
+  return input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+}
+
 function getDominantClusterId(ingestion) {
   return (
     ingestion?.mediaProfile?.learningSignals?.clusterAffinities?.[0]?.clusterId ||
@@ -1464,7 +407,7 @@ function objectiveMatchesLanguage(objectiveId, lang) {
   return typeof objectiveId === 'string' && objectiveId.startsWith(`${lang}_`);
 }
 
-function buildPersonalizedObjective({ userId, mode = 'hangout', lang = 'ko' }) {
+function buildPersonalizedObjective({ userId = DEFAULT_USER_ID, mode = 'hangout', lang = 'ko' }) {
   const ingestion = ensureIngestionForUser(userId);
   const baseObjective = cloneJson(FIXTURES.objectivesNext);
   const dominantClusterId = getDominantClusterId(ingestion);
@@ -1488,10 +431,7 @@ function buildPersonalizedObjective({ userId, mode = 'hangout', lang = 'ko' }) {
   if (!objectiveMatchesLanguage(objectiveId, lang)) {
     const languageAlignedObjective =
       scopedItems.find((item) => objectiveMatchesLanguage(item?.objectiveLinks?.[0]?.objectiveId, lang))
-        ?.objectiveLinks?.[0]?.objectiveId ||
-      insightItems.find((item) => objectiveMatchesLanguage(item?.objectiveLinks?.[0]?.objectiveId, lang))
-        ?.objectiveLinks?.[0]?.objectiveId ||
-      DEFAULT_OBJECTIVE_BY_LANG[lang];
+        ?.objectiveLinks?.[0]?.objectiveId || DEFAULT_OBJECTIVE_BY_LANG[lang];
 
     if (languageAlignedObjective) {
       objectiveId = languageAlignedObjective;
@@ -1534,51 +474,41 @@ function buildPersonalizedObjective({ userId, mode = 'hangout', lang = 'ko' }) {
 
 function buildGameStartResponse(userId, incomingProfile) {
   const profile = incomingProfile || getProfile(userId) || FIXTURES.gameStart.profile;
-  const ingestion = ensureIngestionForUser(userId);
-  const dominantClusterId = getDominantClusterId(ingestion);
-
+  const weakestLang = getWeakestTargetLanguage(profile);
+  const objective = buildPersonalizedObjective({ userId, mode: 'hangout', lang: weakestLang });
+  const dominantClusterId = getDominantClusterId(ensureIngestionForUser(userId));
   const city = CLUSTER_CITY_MAP[dominantClusterId] || FIXTURES.gameStart.city || 'seoul';
   const location = CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
-
-  const ytMinutes = ingestion?.mediaProfile?.sourceBreakdown?.youtube?.minutes || 0;
-  const spMinutes = ingestion?.mediaProfile?.sourceBreakdown?.spotify?.minutes || 0;
-  const clusterCount = ingestion?.mediaProfile?.learningSignals?.clusterAffinities?.length || 0;
-  const topTermCount = ingestion?.mediaProfile?.learningSignals?.topTerms?.length || 0;
-  const crossSourceCount =
-    ingestion?.frequency?.items?.filter((item) => Number(item.sourceCount || 0) > 1).length || 0;
-
-  const xp = Math.round(
-    Math.min(999, 35 + ytMinutes * 0.45 + spMinutes * 0.4 + topTermCount * 2),
-  );
-  const sp = Math.round(Math.min(200, 12 + clusterCount * 8 + crossSourceCount * 3));
-  const rp = Math.round(Math.min(100, 6 + crossSourceCount * 2 + clusterCount * 2));
-  const currentMasteryLevel = xp >= 220 ? 3 : xp >= 140 ? 2 : 1;
-
-  const weakestLang = getWeakestTargetLanguage(profile);
-  const objective = buildPersonalizedObjective({
-    userId,
-    mode: 'hangout',
-    lang: weakestLang,
-  });
 
   return {
     ...cloneJson(FIXTURES.gameStart),
     city,
-    location,
-    mode: 'hangout',
     sceneId: `${location}_hangout_intro`,
-    profile: cloneJson(profile),
-    progression: {
-      xp,
-      sp,
-      rp,
-      currentMasteryLevel,
-    },
     actions: [
       'Start hangout validation',
       'Review personalized learn targets',
       `Practice ${weakestLang.toUpperCase()} objective ${objective.objectiveId}`,
     ],
+  };
+}
+
+function getSecretStatus() {
+  const youtubeConfigured = Boolean(
+    process.env.TONG_YOUTUBE_API_KEY ||
+      (process.env.YOUTUBE_CLIENT_ID && process.env.YOUTUBE_CLIENT_SECRET) ||
+      (process.env.TONG_YOUTUBE_CLIENT_ID && process.env.TONG_YOUTUBE_CLIENT_SECRET),
+  );
+  const spotifyConfigured = Boolean(
+    (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) ||
+      (process.env.TONG_SPOTIFY_CLIENT_ID && process.env.TONG_SPOTIFY_CLIENT_SECRET),
+  );
+
+  return {
+    demoPasswordEnabled: Boolean(DEMO_PASSWORD),
+    youtubeApiKeyConfigured: youtubeConfigured,
+    spotifyClientIdConfigured: spotifyConfigured,
+    spotifyClientSecretConfigured: spotifyConfigured,
+    openAiApiKeyConfigured: Boolean(process.env.OPENAI_API_KEY),
   };
 }
 
@@ -1632,20 +562,6 @@ function handleHangoutRespond(body) {
 
   state.sessions.set(sceneSessionId, existing);
   return { statusCode: 200, payload: response };
-}
-
-function buildGameSession(userId, profile) {
-  const sessionId = `sess_${Math.random().toString(36).slice(2, 10)}`;
-  const response = {
-    ...buildGameStartResponse(userId, profile),
-    sessionId,
-  };
-  state.sessions.set(sessionId, {
-    userId,
-    turn: 1,
-    score: { xp: 0, sp: 0, rp: 0 },
-  });
-  return response;
 }
 
 function startHangoutScene(userId = DEFAULT_USER_ID) {
@@ -1707,7 +623,9 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
 
   switch (toolName) {
     case 'ingestion.run_mock': {
-      if (args.profile) upsertProfile(userId, { profile: args.profile });
+      if (args.profile && typeof args.profile === 'object') {
+        state.profiles.set(userId, { userId, profile: args.profile });
+      }
       const includeSources = normalizeIngestionSources(args.includeSources);
       const result = runIngestionForUser(userId, { includeSources });
       return {
@@ -1715,38 +633,17 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
         payload: {
           ok: true,
           tool: toolName,
-          result: formatIngestionRunResponse(result, includeSources),
+          result: {
+            ...formatIngestionRunResponse(result),
+            includeSources: includeSources.length > 0 ? includeSources : ['youtube', 'spotify'],
+          },
         },
       };
     }
     case 'ingestion.snapshot.get': {
       const includeSources = normalizeIngestionSources(args.includeSources);
-      const snapshot = buildIngestionSnapshotForUser(userId, { includeSources });
+      const snapshot = buildIngestionSnapshotForUser({ includeSources });
       const sourceItems = Array.isArray(snapshot.sourceItems) ? snapshot.sourceItems : [];
-      const transcriptCandidates = sourceItems
-        .filter((item) => item?.source === 'youtube')
-        .slice(0, 20)
-        .map((item) => ({
-          id: item.id,
-          title: item.title,
-          lang: item.lang,
-          text: item.text,
-          playedAtIso: item.playedAtIso || null,
-        }));
-      const lyricCandidates = sourceItems
-        .filter((item) => item?.source === 'spotify')
-        .slice(0, 20)
-        .map((item) => ({
-          id: item.id,
-          title: item.title,
-          lang: item.lang,
-          text: item.text,
-          lyricsSnippet: item.lyricsSnippet || null,
-          lyricsLang: item.lyricsLang || null,
-          lyricsSource: item.lyricsSource || null,
-          playedAtIso: item.playedAtIso || null,
-        }));
-
       return {
         statusCode: 200,
         payload: {
@@ -1759,223 +656,6 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
             windowEndIso: snapshot.windowEndIso || null,
             generatedAtIso: snapshot.generatedAtIso || null,
             sourceItems,
-            transcriptCandidates,
-            lyricCandidates,
-            notes: {
-              youtube:
-                'YouTube transcript candidates come from synced item text (titles/descriptions unless subtitles are ingested).',
-              spotify:
-                'Spotify lyric candidates include CJK lyrics snippets when available from LRCLIB, then feed directly into topic and frequency analysis.',
-            },
-          },
-        },
-      };
-    }
-    case 'integrations.youtube.sync_mock': {
-      if (args.profile) upsertProfile(userId, { profile: args.profile });
-      const result = runIngestionForUser(userId, { includeSources: ['youtube'] });
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: formatIngestionRunResponse(result, ['youtube']),
-        },
-      };
-    }
-    case 'integrations.youtube.status': {
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: getYouTubeStatusPayload(userId),
-        },
-      };
-    }
-    case 'integrations.youtube.connect': {
-      if (!youtubeConfigured()) {
-        return {
-          statusCode: 503,
-          payload: {
-            ok: false,
-            tool: toolName,
-            ...youtubeConfigErrorPayload(),
-          },
-        };
-      }
-      const connectInfo = buildYouTubeAuthUrl(userId);
-      if (!connectInfo) {
-        return {
-          statusCode: 503,
-          payload: {
-            ok: false,
-            tool: toolName,
-            ...youtubeConfigErrorPayload(),
-          },
-        };
-      }
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: {
-            userId,
-            connected: Boolean(state.youtubeTokensByUser.get(userId)?.accessToken),
-            state: connectInfo.stateToken,
-            scope: YOUTUBE_SCOPE,
-            redirectUri: getYouTubeRedirectUri(),
-            authUrl: connectInfo.authUrl,
-          },
-        },
-      };
-    }
-    case 'integrations.youtube.sync': {
-      if (!youtubeConfigured()) {
-        return {
-          statusCode: 503,
-          payload: {
-            ok: false,
-            tool: toolName,
-            ...youtubeConfigErrorPayload(),
-          },
-        };
-      }
-      if (!state.youtubeTokensByUser.get(userId)?.accessToken) {
-        return {
-          statusCode: 400,
-          payload: {
-            ok: false,
-            tool: toolName,
-            error: 'youtube_not_connected',
-            message: 'Connect YouTube first via integrations.youtube.connect.',
-          },
-        };
-      }
-      const synced = await syncYouTubeForUser(userId, args.windowHours);
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: {
-            userId,
-            syncedAtIso: synced.syncedAtIso,
-            windowHours: synced.windowHours,
-            youtubeItemCount: synced.itemCount,
-            youtubeRawItemCount: synced.rawItemCount,
-            topTerms: synced.ingestion.frequency.items.slice(0, 10),
-            sourceCount: {
-              youtube: synced.ingestion.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
-              spotify: synced.ingestion.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
-            },
-          },
-        },
-      };
-    }
-    case 'integrations.spotify.sync_mock': {
-      if (args.profile) upsertProfile(userId, { profile: args.profile });
-      const result = runIngestionForUser(userId, { includeSources: ['spotify'] });
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: formatIngestionRunResponse(result, ['spotify']),
-        },
-      };
-    }
-    case 'integrations.spotify.status': {
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: getSpotifyStatusPayload(userId),
-        },
-      };
-    }
-    case 'integrations.spotify.connect': {
-      if (!spotifyConfigured()) {
-        return {
-          statusCode: 503,
-          payload: {
-            ok: false,
-            tool: toolName,
-            ...spotifyConfigErrorPayload(),
-          },
-        };
-      }
-      const connectInfo = buildSpotifyAuthUrl(userId);
-      if (!connectInfo) {
-        return {
-          statusCode: 503,
-          payload: {
-            ok: false,
-            tool: toolName,
-            ...spotifyConfigErrorPayload(),
-          },
-        };
-      }
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: {
-            userId,
-            connected: Boolean(state.spotifyTokensByUser.get(userId)?.accessToken),
-            state: connectInfo.stateToken,
-            scope: SPOTIFY_SCOPE,
-            redirectUri: getSpotifyRedirectUri(),
-            authUrl: connectInfo.authUrl,
-          },
-        },
-      };
-    }
-    case 'integrations.spotify.sync': {
-      if (!spotifyConfigured()) {
-        return {
-          statusCode: 503,
-          payload: {
-            ok: false,
-            tool: toolName,
-            ...spotifyConfigErrorPayload(),
-          },
-        };
-      }
-      if (!state.spotifyTokensByUser.get(userId)?.accessToken) {
-        return {
-          statusCode: 400,
-          payload: {
-            ok: false,
-            tool: toolName,
-            error: 'spotify_not_connected',
-            message: 'Connect Spotify first via integrations.spotify.connect.',
-          },
-        };
-      }
-      const synced = await syncSpotifyForUser(userId, args.windowHours);
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: {
-            userId,
-            syncedAtIso: synced.syncedAtIso,
-            windowHours: synced.windowHours,
-            spotifyItemCount: synced.itemCount,
-            spotifyRawItemCount: synced.rawItemCount,
-            lyricsEnrichedCount: synced.lyricsEnrichedCount,
-            lyricsLangBreakdown: synced.lyricsLangBreakdown,
-            lyricsAttemptedTrackCount: synced.lyricsAttemptedTrackCount,
-            topTerms: synced.ingestion.frequency.items.slice(0, 10),
-            sourceCount: {
-              youtube: synced.ingestion.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
-              spotify: synced.ingestion.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
-            },
           },
         },
       };
@@ -2004,12 +684,19 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
     }
     case 'vocab.insights.get': {
       const ingestion = ensureIngestionForUser(userId);
+      const lang = args.lang === 'ja' || args.lang === 'zh' || args.lang === 'ko' ? args.lang : null;
+      const result = lang
+        ? {
+            ...ingestion.insights,
+            items: (ingestion.insights?.items || []).filter((item) => item.lang === lang),
+          }
+        : ingestion.insights;
       return {
         statusCode: 200,
         payload: {
           ok: true,
           tool: toolName,
-          result: ingestion.insights || FIXTURES.insights,
+          result: result || FIXTURES.insights,
         },
       };
     }
@@ -2026,87 +713,13 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
         },
       };
     }
-    case 'game.start_or_resume': {
-      const incomingProfile = args.profile ? upsertProfile(userId, { profile: args.profile }) : null;
-      const response = buildGameSession(userId, incomingProfile);
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: response,
-        },
-      };
-    }
-    case 'scenes.hangout.start': {
-      const response = startHangoutScene(userId);
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: response,
-        },
-      };
-    }
-    case 'scenes.hangout.respond': {
-      const sceneSessionId = typeof args.sceneSessionId === 'string' ? args.sceneSessionId.trim() : '';
-      const userUtterance = typeof args.userUtterance === 'string' ? args.userUtterance : '';
-      if (!sceneSessionId || !userUtterance) {
-        return {
-          statusCode: 400,
-          payload: {
-            ok: false,
-            tool: toolName,
-            error: 'sceneSessionId_and_userUtterance_required',
-          },
-        };
-      }
-      const result = handleHangoutRespond({
-        sceneSessionId,
-        userUtterance,
-        toolContext: normalizeObject(args.toolContext),
-      });
-      return {
-        statusCode: result.statusCode,
-        payload: {
-          ok: result.statusCode === 200,
-          tool: toolName,
-          ...(result.statusCode === 200 ? { result: result.payload } : result.payload),
-        },
-      };
-    }
-    case 'learn.sessions.list': {
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: {
-            items: listLearnSessions(),
-          },
-        },
-      };
-    }
-    case 'learn.sessions.create': {
-      const response = createLearnSession(args);
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: response,
-        },
-      };
-    }
     default:
       return {
         statusCode: 404,
         payload: {
           ok: false,
-          error: 'unknown_tool',
+          error: 'tool_not_found',
           tool: toolName,
-          availableTools: AGENT_TOOL_DEFINITIONS.map((definition) => definition.name),
         },
       };
   }
@@ -2127,317 +740,15 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
     const pathname = url.pathname;
 
-    if (pathname === '/' && req.method === 'GET') {
-      jsonResponse(res, 200, {
-        ok: true,
-        service: 'tong-server',
-        message: 'Use /health or /api/v1/* endpoints.',
-      });
-      return;
-    }
-
     if (pathname === '/health') {
       jsonResponse(res, 200, { ok: true, service: 'tong-server' });
       return;
     }
 
-    if (pathname === '/api/v1/tools' && req.method === 'GET') {
-      jsonResponse(res, 200, {
-        ok: true,
-        tools: AGENT_TOOL_DEFINITIONS,
-      });
-      return;
-    }
-
-    if (pathname === '/api/v1/tools/invoke' && req.method === 'POST') {
-      const body = await readJsonBody(req);
-      const toolName = typeof body.tool === 'string' ? body.tool.trim() : '';
-      if (!toolName) {
-        jsonResponse(res, 400, {
-          ok: false,
-          error: 'tool_required',
-          message: 'Provide body.tool to invoke a registered agent tool.',
-        });
-        return;
-      }
-
-      const invocation = await invokeAgentTool(toolName, body.args);
-      jsonResponse(res, invocation.statusCode, invocation.payload);
-      return;
-    }
-
-    if (pathname === '/api/v1/integrations/youtube/status' && req.method === 'GET') {
-      const userId = getUserIdFromSearch(url.searchParams);
-      jsonResponse(res, 200, getYouTubeStatusPayload(userId));
-      return;
-    }
-
-    if (pathname === '/api/v1/integrations/youtube/connect' && req.method === 'GET') {
-      const userId = getUserIdFromSearch(url.searchParams);
-      if (!youtubeConfigured()) {
-        jsonResponse(res, 503, youtubeConfigErrorPayload());
-        return;
-      }
-
-      const connectInfo = buildYouTubeAuthUrl(userId);
-      if (!connectInfo) {
-        jsonResponse(res, 503, youtubeConfigErrorPayload());
-        return;
-      }
-
-      if (url.searchParams.get('redirect') === '1' || url.searchParams.get('mode') === 'redirect') {
-        redirectResponse(res, connectInfo.authUrl);
-        return;
-      }
-
-      jsonResponse(res, 200, {
-        userId,
-        connected: Boolean(state.youtubeTokensByUser.get(userId)?.accessToken),
-        state: connectInfo.stateToken,
-        scope: YOUTUBE_SCOPE,
-        redirectUri: getYouTubeRedirectUri(),
-        authUrl: connectInfo.authUrl,
-      });
-      return;
-    }
-
-    if (pathname === '/api/v1/integrations/youtube/callback' && req.method === 'GET') {
-      if (!youtubeConfigured()) {
-        jsonResponse(res, 503, youtubeConfigErrorPayload());
-        return;
-      }
-
-      const code = url.searchParams.get('code');
-      const stateToken = url.searchParams.get('state');
-      if (!code || !stateToken) {
-        jsonResponse(res, 400, { error: 'youtube_callback_missing_code_or_state' });
-        return;
-      }
-
-      cleanupYouTubeAuthStates();
-      const pending = state.youtubeAuthStates.get(stateToken);
-      state.youtubeAuthStates.delete(stateToken);
-      if (!pending?.userId) {
-        jsonResponse(res, 400, { error: 'youtube_invalid_state' });
-        return;
-      }
-
-      const tokens = await exchangeYouTubeCodeForToken(code);
-      state.youtubeTokensByUser.set(pending.userId, tokens);
-      persistIntegrationState();
-      state.ingestionByUser.delete(pending.userId);
-
-      let syncSummary = null;
-      try {
-        const synced = await syncYouTubeForUser(pending.userId, YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS);
-        syncSummary = {
-          syncedAtIso: synced.syncedAtIso,
-          windowHours: synced.windowHours,
-          itemCount: synced.itemCount,
-          rawItemCount: synced.rawItemCount,
-          lyricsEnrichedCount: synced.lyricsEnrichedCount,
-          lyricsLangBreakdown: synced.lyricsLangBreakdown,
-          lyricsAttemptedTrackCount: synced.lyricsAttemptedTrackCount,
-        };
-      } catch (syncError) {
-        syncSummary = {
-          error: syncError instanceof Error ? syncError.message : 'youtube_sync_failed',
-        };
-      }
-
-      jsonResponse(res, 200, {
-        ok: true,
-        userId: pending.userId,
-        connected: true,
-        tokenExpiresAtIso: new Date(tokens.expiresAtEpochMs).toISOString(),
-        sync: syncSummary,
-      });
-      return;
-    }
-
-    if (pathname === '/api/v1/integrations/youtube/disconnect' && req.method === 'POST') {
-      const body = await readJsonBody(req);
-      const userId = body.userId || getUserIdFromSearch(url.searchParams);
-      state.youtubeTokensByUser.delete(userId);
-      state.youtubeRecentByUser.delete(userId);
-      persistIntegrationState();
-      state.ingestionByUser.delete(userId);
-
-      jsonResponse(res, 200, {
-        ok: true,
-        userId,
-        disconnected: true,
-      });
-      return;
-    }
-
-    if (pathname === '/api/v1/integrations/youtube/sync' && req.method === 'POST') {
-      if (!youtubeConfigured()) {
-        jsonResponse(res, 503, youtubeConfigErrorPayload());
-        return;
-      }
-
-      const body = await readJsonBody(req);
-      const userId = body.userId || getUserIdFromSearch(url.searchParams);
-      if (!state.youtubeTokensByUser.get(userId)?.accessToken) {
-        jsonResponse(res, 400, {
-          error: 'youtube_not_connected',
-          message: 'Connect YouTube first via /api/v1/integrations/youtube/connect.',
-        });
-        return;
-      }
-
-      const synced = await syncYouTubeForUser(userId, body.windowHours);
-      jsonResponse(res, 200, {
-        ok: true,
-        userId,
-        syncedAtIso: synced.syncedAtIso,
-        windowHours: synced.windowHours,
-        youtubeItemCount: synced.itemCount,
-        youtubeRawItemCount: synced.rawItemCount,
-        topTerms: synced.ingestion.frequency.items.slice(0, 10),
-        sourceCount: {
-          youtube: synced.ingestion.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
-          spotify: synced.ingestion.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
-        },
-      });
-      return;
-    }
-
-    if (pathname === '/api/v1/integrations/spotify/status' && req.method === 'GET') {
-      const userId = getUserIdFromSearch(url.searchParams);
-      jsonResponse(res, 200, getSpotifyStatusPayload(userId));
-      return;
-    }
-
-    if (pathname === '/api/v1/integrations/spotify/connect' && req.method === 'GET') {
-      const userId = getUserIdFromSearch(url.searchParams);
-      if (!spotifyConfigured()) {
-        jsonResponse(res, 503, spotifyConfigErrorPayload());
-        return;
-      }
-
-      const connectInfo = buildSpotifyAuthUrl(userId);
-      if (!connectInfo) {
-        jsonResponse(res, 503, spotifyConfigErrorPayload());
-        return;
-      }
-
-      if (url.searchParams.get('redirect') === '1' || url.searchParams.get('mode') === 'redirect') {
-        redirectResponse(res, connectInfo.authUrl);
-        return;
-      }
-
-      jsonResponse(res, 200, {
-        userId,
-        connected: Boolean(state.spotifyTokensByUser.get(userId)?.accessToken),
-        state: connectInfo.stateToken,
-        scope: SPOTIFY_SCOPE,
-        redirectUri: getSpotifyRedirectUri(),
-        authUrl: connectInfo.authUrl,
-      });
-      return;
-    }
-
-    if (pathname === '/api/v1/integrations/spotify/callback' && req.method === 'GET') {
-      if (!spotifyConfigured()) {
-        jsonResponse(res, 503, spotifyConfigErrorPayload());
-        return;
-      }
-
-      const code = url.searchParams.get('code');
-      const stateToken = url.searchParams.get('state');
-      if (!code || !stateToken) {
-        jsonResponse(res, 400, { error: 'spotify_callback_missing_code_or_state' });
-        return;
-      }
-
-      cleanupSpotifyAuthStates();
-      const pending = state.spotifyAuthStates.get(stateToken);
-      state.spotifyAuthStates.delete(stateToken);
-      if (!pending?.userId) {
-        jsonResponse(res, 400, { error: 'spotify_invalid_state' });
-        return;
-      }
-
-      const tokens = await exchangeSpotifyCodeForToken(code);
-      state.spotifyTokensByUser.set(pending.userId, tokens);
-      persistIntegrationState();
-      state.ingestionByUser.delete(pending.userId);
-
-      let syncSummary = null;
-      try {
-        const synced = await syncSpotifyForUser(pending.userId, SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS);
-        syncSummary = {
-          syncedAtIso: synced.syncedAtIso,
-          windowHours: synced.windowHours,
-          itemCount: synced.itemCount,
-          rawItemCount: synced.rawItemCount,
-        };
-      } catch (syncError) {
-        syncSummary = {
-          error: syncError instanceof Error ? syncError.message : 'spotify_sync_failed',
-        };
-      }
-
-      jsonResponse(res, 200, {
-        ok: true,
-        userId: pending.userId,
-        connected: true,
-        tokenExpiresAtIso: new Date(tokens.expiresAtEpochMs).toISOString(),
-        sync: syncSummary,
-      });
-      return;
-    }
-
-    if (pathname === '/api/v1/integrations/spotify/disconnect' && req.method === 'POST') {
-      const body = await readJsonBody(req);
-      const userId = body.userId || getUserIdFromSearch(url.searchParams);
-      state.spotifyTokensByUser.delete(userId);
-      state.spotifyRecentByUser.delete(userId);
-      persistIntegrationState();
-      state.ingestionByUser.delete(userId);
-
-      jsonResponse(res, 200, {
-        ok: true,
-        userId,
-        disconnected: true,
-      });
-      return;
-    }
-
-    if (pathname === '/api/v1/integrations/spotify/sync' && req.method === 'POST') {
-      if (!spotifyConfigured()) {
-        jsonResponse(res, 503, spotifyConfigErrorPayload());
-        return;
-      }
-
-      const body = await readJsonBody(req);
-      const userId = body.userId || getUserIdFromSearch(url.searchParams);
-      if (!state.spotifyTokensByUser.get(userId)?.accessToken) {
-        jsonResponse(res, 400, {
-          error: 'spotify_not_connected',
-          message: 'Connect Spotify first via /api/v1/integrations/spotify/connect.',
-        });
-        return;
-      }
-
-      const synced = await syncSpotifyForUser(userId, body.windowHours);
-      jsonResponse(res, 200, {
-        ok: true,
-        userId,
-        syncedAtIso: synced.syncedAtIso,
-        windowHours: synced.windowHours,
-        spotifyItemCount: synced.itemCount,
-        spotifyRawItemCount: synced.rawItemCount,
-        lyricsEnrichedCount: synced.lyricsEnrichedCount,
-        lyricsLangBreakdown: synced.lyricsLangBreakdown,
-        lyricsAttemptedTrackCount: synced.lyricsAttemptedTrackCount,
-        topTerms: synced.ingestion.frequency.items.slice(0, 10),
-        sourceCount: {
-          youtube: synced.ingestion.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
-          spotify: synced.ingestion.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
-        },
+    if (!isDemoAuthorized(req, url)) {
+      jsonResponse(res, 401, {
+        error: 'demo_password_required',
+        message: 'Provide a valid demo password via x-demo-password header or ?demo= query.',
       });
       return;
     }
@@ -2459,42 +770,98 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/api/v1/tools' && req.method === 'GET') {
+      jsonResponse(res, 200, {
+        ok: true,
+        tools: AGENT_TOOL_DEFINITIONS,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/tools/invoke' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const toolName = typeof body.tool === 'string' ? body.tool : '';
+      if (!toolName) {
+        jsonResponse(res, 400, {
+          ok: false,
+          error: 'tool_required',
+        });
+        return;
+      }
+      const { statusCode, payload } = await invokeAgentTool(toolName, body.args);
+      jsonResponse(res, statusCode, payload);
+      return;
+    }
+
     if (pathname === '/api/v1/vocab/frequency' && req.method === 'GET') {
-      const userId = getUserIdFromSearch(url.searchParams);
+      const userId = getUserIdFromQuery(url.searchParams);
       const ingestion = ensureIngestionForUser(userId);
-      jsonResponse(res, 200, ingestion.frequency || FIXTURES.frequency);
+      jsonResponse(
+        res,
+        200,
+        userId === DEFAULT_USER_ID
+          ? loadOrFallback('frequency', ingestion.frequency || FIXTURES.frequency)
+          : ingestion.frequency || FIXTURES.frequency,
+      );
       return;
     }
 
     if (pathname === '/api/v1/vocab/insights' && req.method === 'GET') {
-      const userId = getUserIdFromSearch(url.searchParams);
+      const userId = getUserIdFromQuery(url.searchParams);
       const ingestion = ensureIngestionForUser(userId);
-      jsonResponse(res, 200, ingestion.insights || FIXTURES.insights);
+      jsonResponse(
+        res,
+        200,
+        userId === DEFAULT_USER_ID
+          ? loadOrFallback('insights', ingestion.insights || FIXTURES.insights)
+          : ingestion.insights || FIXTURES.insights,
+      );
       return;
     }
 
     if (pathname === '/api/v1/player/media-profile' && req.method === 'GET') {
-      const userId = getUserIdFromSearch(url.searchParams);
+      const userId = getUserIdFromQuery(url.searchParams);
       const ingestion = ensureIngestionForUser(userId);
-      jsonResponse(res, 200, ingestion.mediaProfile || { ...FIXTURES.mediaProfile, userId });
+      jsonResponse(
+        res,
+        200,
+        userId === DEFAULT_USER_ID
+          ? loadOrFallback('media-profile', ingestion.mediaProfile || FIXTURES.mediaProfile)
+          : ingestion.mediaProfile || { ...FIXTURES.mediaProfile, userId },
+      );
       return;
     }
 
     if (pathname === '/api/v1/ingestion/run-mock' && req.method === 'POST') {
       const body = await readJsonBody(req);
-      const userId = body.userId || getUserIdFromSearch(url.searchParams);
-      if (body.profile) upsertProfile(userId, { profile: body.profile });
+      const userId = body.userId || getUserIdFromQuery(url.searchParams);
+      if (body?.profile && typeof body.profile === 'object') {
+        state.profiles.set(userId, { userId, profile: body.profile });
+      }
       const includeSources = normalizeIngestionSources(body.includeSources);
       const result = runIngestionForUser(userId, { includeSources });
-      jsonResponse(res, 200, formatIngestionRunResponse(result, includeSources));
+      jsonResponse(res, 200, formatIngestionRunResponse(result));
+      return;
+    }
+
+    if (pathname === '/api/v1/demo/secret-status' && req.method === 'GET') {
+      jsonResponse(res, 200, getSecretStatus());
       return;
     }
 
     if (pathname === '/api/v1/game/start-or-resume' && req.method === 'POST') {
       const body = await readJsonBody(req);
       const userId = body.userId || DEFAULT_USER_ID;
-      const incomingProfile = body.profile ? upsertProfile(userId, { profile: body.profile }) : null;
-      const response = buildGameSession(userId, incomingProfile);
+      if (body.profile) {
+        state.profiles.set(userId, { userId, profile: body.profile });
+      }
+      const sessionId = `sess_${Math.random().toString(36).slice(2, 10)}`;
+      const response = { ...buildGameStartResponse(userId, body.profile), sessionId };
+      state.sessions.set(sessionId, {
+        userId,
+        turn: 1,
+        score: { xp: 0, sp: 0, rp: 0 },
+      });
       jsonResponse(res, 200, response);
       return;
     }
@@ -2505,19 +872,29 @@ const server = http.createServer(async (req, res) => {
         jsonResponse(res, 400, { error: 'userId_required' });
         return;
       }
-      const profile = upsertProfile(body.userId, body.profile ? { profile: body.profile } : body);
-      const ingestion = ensureIngestionForUser(body.userId);
-      jsonResponse(res, 200, { ok: true, profile, mediaProfile: ingestion.mediaProfile });
+      const profile = normalizeProfileRecord(body) || normalizeProfileRecord(body.profile);
+      const record = profile ? { userId: body.userId, profile } : body;
+      state.profiles.set(body.userId, record);
+      jsonResponse(res, 200, { ok: true, profile: record });
       return;
     }
 
     if (pathname === '/api/v1/objectives/next' && req.method === 'GET') {
-      const userId = getUserIdFromSearch(url.searchParams);
+      const explicitLang = url.searchParams.get('lang');
+      const lang = getLang(url.searchParams);
       const mode = url.searchParams.get('mode') === 'learn' ? 'learn' : 'hangout';
+      const userId = getUserIdFromQuery(url.searchParams);
+      const profile = getProfile(userId);
+      const selectedLang =
+        explicitLang && (explicitLang === 'ko' || explicitLang === 'ja' || explicitLang === 'zh')
+          ? lang
+          : profile
+            ? getWeakestTargetLanguage(profile)
+            : lang;
       const objective = buildPersonalizedObjective({
         userId,
         mode,
-        lang: getLang(url.searchParams),
+        lang: selectedLang,
       });
       jsonResponse(res, 200, objective);
       return;
@@ -2556,7 +933,6 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-restoreIntegrationState();
 ensureIngestionForUser(DEFAULT_USER_ID);
 
 server.listen(PORT, () => {
