@@ -10,7 +10,3 @@ node_modules/
 .open-next/
 reference-notes/
 apps/server/data/generated/
-
-# Large 3D model assets — copy from assets/presets/characters/hauen/hauen.glb
-apps/client/public/models/*.glb
-apps/client/public/models/*.fbx
