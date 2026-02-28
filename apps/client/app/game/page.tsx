@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  assessMission,
   createLearnSession,
   fetchLearnSessions,
   fetchObjectiveNext,
@@ -15,7 +16,9 @@ import {
   type LocationId,
   type ObjectiveNextResponse,
   type ObjectiveProgressState,
+  type ProgressLoopState,
   type ProficiencyLevel,
+  type RelationshipState,
   type SceneCharacter,
   type SceneLine,
   type ScoreState,
@@ -258,6 +261,9 @@ export default function GamePage() {
   const [character, setCharacter] = useState<SceneCharacter>(getCharacterForCityLocation(DEFAULT_CITY, DEFAULT_LOCATION));
 
   const [score, setScore] = useState<ScoreState>({ xp: 0, sp: 0, rp: 0 });
+  const [relationshipState, setRelationshipState] = useState<RelationshipState | null>(null);
+  const [progressionLoop, setProgressionLoop] = useState<ProgressLoopState | null>(null);
+  const [engineMode, setEngineMode] = useState<'dynamic_ai' | 'scripted_fallback'>('scripted_fallback');
   const [hint, setHint] = useState(INITIAL_HINT);
   const [status, setStatus] = useState('Set CJK sliders, swipe the map, then start your first hangout.');
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
@@ -381,6 +387,9 @@ export default function GamePage() {
         profile: buildProfileFromGauge(proficiencyGauge),
       });
       setSessionId(game.sessionId);
+      setEngineMode(game.engineMode || 'scripted_fallback');
+      setRelationshipState(game.relationshipState || null);
+      setProgressionLoop(game.progressionLoop || null);
       if (game.progression) {
         setScore({
           xp: game.progression.xp,
@@ -409,8 +418,11 @@ export default function GamePage() {
 
       setSceneSessionId(hangout.sceneSessionId);
       setStatus(`${cityConfig.label} hangout live. Use a preset phrase to test flow quickly.`);
+      setEngineMode(hangout.engineMode || game.engineMode || 'scripted_fallback');
       setCharacter((current) => mergeCharacterPayload(current, hangout.character || hangout.npc));
       setScore(hangout.state.score);
+      setRelationshipState(hangout.relationshipState || hangout.state.relationshipState || null);
+      setProgressionLoop(hangout.progressionLoop || hangout.state.progressionLoop || null);
 
       const startProgress =
         getObjectiveRatio(hangout.state.objectiveProgress) ?? getObjectiveRatio(hangout.objectiveProgress);
@@ -453,10 +465,43 @@ export default function GamePage() {
 
     try {
       const response = await respondHangout(sceneSessionId, utterance);
+      setEngineMode(response.engineMode || engineMode);
       setScore(response.state.score);
       setHint(response.feedback.tongHint || INITIAL_HINT);
       setCharacter((current) => mergeCharacterPayload(current, response.character || response.npc));
       applyServerReplies(response.feedback.suggestedReplies);
+      setRelationshipState(
+        response.relationshipState ||
+          response.state.relationshipState ||
+          response.feedback.relationshipState ||
+          response.completionSummary?.relationshipState ||
+          null,
+      );
+      setProgressionLoop(
+        response.progressionLoop ||
+          response.state.progressionLoop ||
+          response.feedback.progressionLoop ||
+          (response.completionSummary?.progressionLoop
+            ? {
+                masteryTier: response.completionSummary.progressionLoop.masteryTier || progressionLoop?.masteryTier || 1,
+                learnReadiness:
+                  response.completionSummary.progressionLoop.learnReadiness || progressionLoop?.learnReadiness || 0,
+                missionGate: {
+                  status:
+                    (response.completionSummary.progressionLoop.missionGateStatus as
+                      | 'locked'
+                      | 'ready'
+                      | 'passed'
+                      | undefined) || progressionLoop?.missionGate.status || 'locked',
+                  requiredValidatedHangouts: progressionLoop?.missionGate.requiredValidatedHangouts || 2,
+                  validatedHangouts:
+                    response.completionSummary.progressionLoop.validatedHangouts ||
+                    progressionLoop?.missionGate.validatedHangouts ||
+                    0,
+                },
+              }
+            : null),
+      );
 
       setObjectiveRatio((previous) => {
         const fromState = getObjectiveRatio(response.state.objectiveProgress);
@@ -476,7 +521,7 @@ export default function GamePage() {
 
       if (response.completion?.isCompleted) {
         if (response.completion.completionSignal === 'objective_validated') {
-          setStatus('Objective validated. Mission gate preview unlocked.');
+          setStatus('Objective validated. Mission gate progress updated.');
         } else {
           setStatus('Scene complete. Retry once more to fully validate objective.');
         }
@@ -516,6 +561,35 @@ export default function GamePage() {
       setError(learnError instanceof Error ? learnError.message : 'Failed to start learn session.');
     } finally {
       setLoadingLearn(false);
+    }
+  }
+
+  async function runMissionAssessment() {
+    if (!sessionId) {
+      setError('Start or resume a game session first.');
+      return;
+    }
+
+    try {
+      setError(null);
+      const mission = await assessMission({
+        sessionId,
+        city,
+        location,
+        lang: selectedLang,
+      });
+      setProgressionLoop(mission.progressionLoop);
+      setRelationshipState(mission.relationshipState || null);
+      if (mission.rewards) {
+        setScore((previous) => ({
+          xp: previous.xp + mission.rewards!.xp,
+          sp: previous.sp + mission.rewards!.sp,
+          rp: previous.rp + mission.rewards!.rp,
+        }));
+      }
+      setStatus(mission.message);
+    } catch (missionError) {
+      setError(missionError instanceof Error ? missionError.message : 'Mission assessment failed.');
     }
   }
 
@@ -666,6 +740,16 @@ export default function GamePage() {
               <span className="pill">{cityConfig.languageLabel}</span>
               <span className="pill">RP in use (replaces affinity)</span>
             </div>
+            <div className="row" style={{ alignItems: 'center' }}>
+              <span className="pill">Engine: {engineMode === 'dynamic_ai' ? 'Dynamic AI' : 'Scripted Fallback'}</span>
+            </div>
+            <div className="row" style={{ alignItems: 'center' }}>
+              <span className="pill">Bond: {relationshipState?.stage || 'stranger'}</span>
+              <span className="pill">
+                Gate: {progressionLoop?.missionGate.status || 'locked'} ({progressionLoop?.missionGate.validatedHangouts || 0}/
+                {progressionLoop?.missionGate.requiredValidatedHangouts || 2})
+              </span>
+            </div>
             <div className="game-location-row">
               {LOCATIONS.map((item) => (
                 <button
@@ -706,6 +790,22 @@ export default function GamePage() {
                   </div>
 
                   <div className="stack" style={{ gap: 8 }}>
+                    <div className="row">
+                      <span>Mastery Tier</span>
+                      <span>{progressionLoop?.masteryTier || 1}</span>
+                    </div>
+                    <div>
+                      <div className="row">
+                        <span>Learn Readiness</span>
+                        <span>{Math.round((progressionLoop?.learnReadiness || 0) * 100)}%</span>
+                      </div>
+                      <div className="metric-bar">
+                        <div
+                          className="metric-fill"
+                          style={{ width: `${Math.round((progressionLoop?.learnReadiness || 0) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
                     <div>
                       <div className="row">
                         <span>XP</span>
@@ -735,6 +835,10 @@ export default function GamePage() {
                     </div>
                   </div>
                 </section>
+
+                {progressionLoop?.missionGate.status === 'ready' && (
+                  <button onClick={() => void runMissionAssessment()}>Run mission assessment</button>
+                )}
 
                 <div className="chat-bubble chat-tong">
                   <strong>Tong hint:</strong> {hint}
