@@ -19,6 +19,8 @@ secrets are configured (booleans only).
 - `GET /health`
 - `GET /api/v1/captions/enriched?videoId=...&lang=ko`
 - `GET /api/v1/dictionary/entry?term=...&lang=ko`
+- `GET /api/v1/tools`
+- `POST /api/v1/tools/invoke`
 - `GET /api/v1/vocab/frequency?windowDays=3`
 - `GET /api/v1/vocab/insights?windowDays=3`
 - `GET /api/v1/player/media-profile?windowDays=3`
