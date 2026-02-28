@@ -1031,7 +1031,7 @@ async function generateAiHangoutTurn({
 }) {
   if (!shouldUseAiHangout()) return null;
 
-  const model = process.env.TONG_OPENAI_MODEL || 'gpt-4.1-mini';
+  const model = process.env.TONG_OPENAI_MODEL || 'gpt-5.2';
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
