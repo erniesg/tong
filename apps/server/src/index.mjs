@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '../../..');
 
 const PORT = Number(process.env.PORT || 8787);
+const DEMO_PASSWORD = String(process.env.TONG_DEMO_PASSWORD || '').trim();
 
 function loadJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
@@ -27,6 +28,45 @@ const FIXTURES = {
 };
 
 const mockMediaWindowPath = path.join(repoRoot, 'apps/server/data/mock-media-window.json');
+const DEFAULT_USER_ID = 'demo-user-1';
+const PROFICIENCY_RANK = {
+  none: 0,
+  beginner: 1,
+  intermediate: 2,
+  advanced: 3,
+  native: 4,
+};
+const CLUSTER_CITY_MAP = {
+  'food-ordering': 'seoul',
+  'performance-energy': 'shanghai',
+  'city-social': 'tokyo',
+  general: 'seoul',
+};
+const CLUSTER_LOCATION_MAP = {
+  'food-ordering': 'food_street',
+  'performance-energy': 'practice_studio',
+  'city-social': 'subway_hub',
+  general: 'food_street',
+};
+const LANG_TARGETS = {
+  ko: {
+    grammar: ['-고 싶어요', '-주세요'],
+    sentenceStructures: ['N + 주세요', 'N이/가 + adjective'],
+  },
+  ja: {
+    grammar: ['〜たいです', '〜ください'],
+    sentenceStructures: ['N を ください', 'N は adjective です'],
+  },
+  zh: {
+    grammar: ['想 + verb', '请 + verb'],
+    sentenceStructures: ['请给我 + N', 'N 很 + adjective'],
+  },
+};
+const DEFAULT_OBJECTIVE_BY_LANG = {
+  ko: 'ko_food_l2_001',
+  ja: 'ko_city_l2_003',
+  zh: 'zh_stage_l3_002',
+};
 
 const DICTIONARY_OVERRIDES = {
   '오늘': {
@@ -81,6 +121,22 @@ function noContent(res) {
   res.end();
 }
 
+function getHeaderValue(req, key) {
+  const value = req.headers[key];
+  if (Array.isArray(value)) return value[0] || '';
+  return value || '';
+}
+
+function isDemoAuthorized(req, url) {
+  if (!DEMO_PASSWORD) return true;
+
+  const provided =
+    String(getHeaderValue(req, 'x-demo-password')).trim() ||
+    String(url.searchParams.get('demo') || '').trim();
+
+  return provided === DEMO_PASSWORD;
+}
+
 async function readJsonBody(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
@@ -92,6 +148,45 @@ function getLang(query) {
   const lang = query.get('lang') || 'ko';
   if (lang === 'ko' || lang === 'ja' || lang === 'zh') return lang;
   return 'ko';
+}
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getUserIdFromQuery(query) {
+  return String(query.get('userId') || DEFAULT_USER_ID).trim() || DEFAULT_USER_ID;
+}
+
+function normalizeProfileRecord(input) {
+  if (!input || typeof input !== 'object') return null;
+  if (input.profile && typeof input.profile === 'object') return input.profile;
+
+  const hasProfileShape =
+    typeof input.nativeLanguage === 'string' &&
+    Array.isArray(input.targetLanguages) &&
+    input.proficiency &&
+    typeof input.proficiency === 'object';
+  return hasProfileShape ? input : null;
+}
+
+function getProfile(userId = DEFAULT_USER_ID) {
+  const raw = state.profiles.get(userId);
+  return normalizeProfileRecord(raw);
+}
+
+function getWeakestTargetLanguage(profile) {
+  if (!profile || !Array.isArray(profile.targetLanguages) || profile.targetLanguages.length === 0) {
+    return 'ko';
+  }
+
+  return [...profile.targetLanguages]
+    .filter((lang) => lang === 'ko' || lang === 'ja' || lang === 'zh')
+    .sort((a, b) => {
+      const rankA = PROFICIENCY_RANK[profile?.proficiency?.[a] || 'none'] ?? 0;
+      const rankB = PROFICIENCY_RANK[profile?.proficiency?.[b] || 'none'] ?? 0;
+      return rankA - rankB;
+    })[0] || 'ko';
 }
 
 function getCaptionsForVideo(videoId = 'karina-variety-demo') {
@@ -181,6 +276,113 @@ function ensureIngestion() {
   return runIngestion();
 }
 
+function getDominantClusterId(ingestion) {
+  return (
+    ingestion?.mediaProfile?.learningSignals?.clusterAffinities?.[0]?.clusterId ||
+    ingestion?.insights?.clusters?.[0]?.clusterId ||
+    'food-ordering'
+  );
+}
+
+function objectiveMatchesLanguage(objectiveId, lang) {
+  return typeof objectiveId === 'string' && objectiveId.startsWith(`${lang}_`);
+}
+
+function buildPersonalizedObjective({ mode = 'hangout', lang = 'ko' }) {
+  const ingestion = ensureIngestion();
+  const baseObjective = cloneJson(FIXTURES.objectivesNext);
+  const dominantClusterId = getDominantClusterId(ingestion);
+  const dominantCluster =
+    ingestion?.insights?.clusters?.find((cluster) => cluster.clusterId === dominantClusterId) ||
+    ingestion?.insights?.clusters?.[0];
+
+  const insightItems = Array.isArray(ingestion?.insights?.items) ? ingestion.insights.items : [];
+  const langItems = insightItems.filter((item) => item.lang === lang);
+  const scopedItems = langItems.length > 0 ? langItems : insightItems;
+  const scopedClusterItems = dominantCluster
+    ? scopedItems.filter((item) => item.clusterId === dominantCluster.clusterId)
+    : scopedItems;
+
+  let objectiveId =
+    scopedClusterItems[0]?.objectiveLinks?.[0]?.objectiveId ||
+    scopedItems[0]?.objectiveLinks?.[0]?.objectiveId ||
+    baseObjective.objectiveId ||
+    DEFAULT_OBJECTIVE_BY_LANG[lang];
+
+  if (!objectiveMatchesLanguage(objectiveId, lang)) {
+    const languageAlignedObjective =
+      scopedItems.find((item) => objectiveMatchesLanguage(item?.objectiveLinks?.[0]?.objectiveId, lang))
+        ?.objectiveLinks?.[0]?.objectiveId || DEFAULT_OBJECTIVE_BY_LANG[lang];
+
+    if (languageAlignedObjective) {
+      objectiveId = languageAlignedObjective;
+    }
+  }
+
+  const vocabCandidates = [
+    ...scopedClusterItems.map((item) => item.lemma),
+    ...scopedItems.map((item) => item.lemma),
+    ...(dominantCluster?.topTerms || []),
+  ];
+  const vocabulary = [...new Set(vocabCandidates)].slice(0, 3);
+
+  const topTerms = ingestion?.mediaProfile?.learningSignals?.topTerms || [];
+  const preferredTerms = topTerms.filter((item) => item.lang === lang);
+  const personalizedBase = preferredTerms.length > 0 ? preferredTerms : topTerms;
+  const personalizedTargets = personalizedBase.slice(0, 3).map((item) => ({
+    lemma: item.lemma,
+    source: item.dominantSource,
+  }));
+
+  return {
+    ...baseObjective,
+    objectiveId,
+    mode,
+    coreTargets: {
+      vocabulary:
+        vocabulary.length > 0 ? vocabulary : [...(baseObjective.coreTargets?.vocabulary || [])],
+      grammar: [...(LANG_TARGETS[lang]?.grammar || LANG_TARGETS.ko.grammar)],
+      sentenceStructures: [
+        ...(LANG_TARGETS[lang]?.sentenceStructures || LANG_TARGETS.ko.sentenceStructures),
+      ],
+    },
+    personalizedTargets:
+      personalizedTargets.length > 0
+        ? personalizedTargets
+        : cloneJson(baseObjective.personalizedTargets || []),
+  };
+}
+
+function buildGameStartResponse(userId, incomingProfile) {
+  const profile = incomingProfile || getProfile(userId) || FIXTURES.gameStart.profile;
+  const weakestLang = getWeakestTargetLanguage(profile);
+  const objective = buildPersonalizedObjective({ mode: 'hangout', lang: weakestLang });
+  const dominantClusterId = getDominantClusterId(ensureIngestion());
+  const city = CLUSTER_CITY_MAP[dominantClusterId] || FIXTURES.gameStart.city || 'seoul';
+  const location = CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
+
+  return {
+    ...cloneJson(FIXTURES.gameStart),
+    city,
+    sceneId: `${location}_hangout_intro`,
+    actions: [
+      'Start hangout validation',
+      'Review personalized learn targets',
+      `Practice ${weakestLang.toUpperCase()} objective ${objective.objectiveId}`,
+    ],
+  };
+}
+
+function getSecretStatus() {
+  return {
+    demoPasswordEnabled: Boolean(DEMO_PASSWORD),
+    youtubeApiKeyConfigured: Boolean(process.env.TONG_YOUTUBE_API_KEY),
+    spotifyClientIdConfigured: Boolean(process.env.TONG_SPOTIFY_CLIENT_ID),
+    spotifyClientSecretConfigured: Boolean(process.env.TONG_SPOTIFY_CLIENT_SECRET),
+    openAiApiKeyConfigured: Boolean(process.env.OPENAI_API_KEY),
+  };
+}
+
 function handleHangoutRespond(body) {
   const sceneSessionId = body.sceneSessionId;
   const userUtterance = String(body.userUtterance || '').trim();
@@ -253,6 +455,14 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (!isDemoAuthorized(req, url)) {
+      jsonResponse(res, 401, {
+        error: 'demo_password_required',
+        message: 'Provide a valid demo password via x-demo-password header or ?demo= query.',
+      });
+      return;
+    }
+
     if (pathname === '/api/v1/captions/enriched' && req.method === 'GET') {
       const videoId = url.searchParams.get('videoId') || 'karina-variety-demo';
       const lang = getLang(url.searchParams);
@@ -293,6 +503,10 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === '/api/v1/ingestion/run-mock' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      if (body?.userId && body?.profile) {
+        state.profiles.set(body.userId, { userId: body.userId, profile: body.profile });
+      }
       const result = runIngestion();
       jsonResponse(res, 200, {
         success: true,
@@ -306,14 +520,19 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/api/v1/demo/secret-status' && req.method === 'GET') {
+      jsonResponse(res, 200, getSecretStatus());
+      return;
+    }
+
     if (pathname === '/api/v1/game/start-or-resume' && req.method === 'POST') {
       const body = await readJsonBody(req);
-      const userId = body.userId || 'demo-user-1';
+      const userId = body.userId || DEFAULT_USER_ID;
+      if (body.profile) {
+        state.profiles.set(userId, { userId, profile: body.profile });
+      }
       const sessionId = `sess_${Math.random().toString(36).slice(2, 10)}`;
-      const response = {
-        ...FIXTURES.gameStart,
-        sessionId,
-      };
+      const response = { ...buildGameStartResponse(userId, body.profile), sessionId };
       state.sessions.set(sessionId, {
         userId,
         turn: 1,
@@ -329,13 +548,30 @@ const server = http.createServer(async (req, res) => {
         jsonResponse(res, 400, { error: 'userId_required' });
         return;
       }
-      state.profiles.set(body.userId, body);
-      jsonResponse(res, 200, { ok: true, profile: body });
+      const profile = normalizeProfileRecord(body) || normalizeProfileRecord(body.profile);
+      const record = profile ? { userId: body.userId, profile } : body;
+      state.profiles.set(body.userId, record);
+      jsonResponse(res, 200, { ok: true, profile: record });
       return;
     }
 
     if (pathname === '/api/v1/objectives/next' && req.method === 'GET') {
-      jsonResponse(res, 200, FIXTURES.objectivesNext);
+      const explicitLang = url.searchParams.get('lang');
+      const lang = getLang(url.searchParams);
+      const mode = url.searchParams.get('mode') === 'learn' ? 'learn' : 'hangout';
+      const userId = getUserIdFromQuery(url.searchParams);
+      const profile = getProfile(userId);
+      const selectedLang =
+        explicitLang && (explicitLang === 'ko' || explicitLang === 'ja' || explicitLang === 'zh')
+          ? lang
+          : profile
+            ? getWeakestTargetLanguage(profile)
+            : lang;
+      const objective = buildPersonalizedObjective({
+        mode,
+        lang: selectedLang,
+      });
+      jsonResponse(res, 200, objective);
       return;
     }
 
@@ -344,7 +580,7 @@ const server = http.createServer(async (req, res) => {
       const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
       const score = { xp: 0, sp: 0, rp: 0 };
       state.sessions.set(sceneSessionId, {
-        userId: body.userId || 'demo-user-1',
+        userId: body.userId || DEFAULT_USER_ID,
         turn: 1,
         score: { ...score },
       });
