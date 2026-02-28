@@ -488,32 +488,36 @@ export default function GamePage() {
   /* Intro phase */
   if (phase === 'intro') {
     return (
-      <div className="game-shell">
-        <div className="tong-avatar">T</div>
-        <div className="dialogue-area">
-          {TONG_LINES.map((line, i) => {
-            if (i < lineIndex) {
-              return (
-                <div key={i} className="dialogue-line muted">
-                  {line}
-                </div>
-              );
-            }
-            if (i === lineIndex && !allLinesDone) {
-              return (
-                <div key={i} className="dialogue-line">
-                  {currentLine.slice(0, displayedChars)}
-                  {displayedChars < currentLine.length && <span className="typewriter-cursor" />}
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
-        <div style={{ marginTop: 'auto', alignSelf: 'flex-end' }}>
-          <button className="btn-skip" onClick={handleSkip}>
-            skip
-          </button>
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="game-frame">
+          <div className="game-shell">
+            <div className="tong-avatar">T</div>
+            <div className="dialogue-area">
+              {TONG_LINES.map((line, i) => {
+                if (i < lineIndex) {
+                  return (
+                    <div key={i} className="dialogue-line muted">
+                      {line}
+                    </div>
+                  );
+                }
+                if (i === lineIndex && !allLinesDone) {
+                  return (
+                    <div key={i} className="dialogue-line">
+                      {currentLine.slice(0, displayedChars)}
+                      {displayedChars < currentLine.length && <span className="typewriter-cursor" />}
+                    </div>
+                  );
+                }
+                return null;
+              })}
+            </div>
+            <div style={{ marginTop: 'auto', alignSelf: 'flex-end' }}>
+              <button className="btn-skip" onClick={handleSkip}>
+                skip
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -522,60 +526,64 @@ export default function GamePage() {
   /* Proficiency phase */
   if (phase === 'proficiency') {
     return (
-      <div className="game-shell">
-        <div className="tong-avatar">T</div>
-        <div className="dialogue-area">
-          {TONG_LINES.map((line, i) => (
-            <div key={i} className={i === TONG_LINES.length - 1 ? 'dialogue-line' : 'dialogue-line muted'}>
-              {line}
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="game-frame">
+          <div className="game-shell">
+            <div className="tong-avatar">T</div>
+            <div className="dialogue-area">
+              {TONG_LINES.map((line, i) => (
+                <div key={i} className={i === TONG_LINES.length - 1 ? 'dialogue-line' : 'dialogue-line muted'}>
+                  {line}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <div className="proficiency-panel">
-          {LANG_LABELS.map((lang, idx) => {
-            const val = sliders[idx];
-            const gameLvl = GAME_LEVELS[val];
-            return (
-              <div key={lang.key} className="proficiency-lang">
-                <div className="proficiency-lang-header">
-                  <span className="proficiency-lang-name">
-                    {lang.flag} {lang.name} <span className="korean">{lang.native}</span>
-                  </span>
-                  <span className="proficiency-lang-level">
-                    {gameLvl.name}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={6}
-                  step={1}
-                  value={val}
-                  onChange={(e) => handleSlider(idx, Number(e.target.value))}
-                  className="proficiency-slider"
-                />
-                <div className="proficiency-ticks">
-                  {GAME_LEVELS.map((gl) => (
-                    <span
-                      key={gl.level}
-                      className={`proficiency-tick${gl.level === val ? ' active' : ''}`}
-                    >
-                      <span className="proficiency-tick-dot" />
-                      <span className="proficiency-tick-num">Lv.{gl.level}</span>
-                    </span>
-                  ))}
-                </div>
-                <div className="proficiency-level-map">
-                  <span className="proficiency-level-tag">{gameLvl.name}</span>
-                  <span className="proficiency-level-question">{gameLvl.desc}</span>
-                </div>
-              </div>
-            );
-          })}
-          <button onClick={handleConfirmProficiency} style={{ marginTop: 8 }}>
-            That&apos;s me
-          </button>
+            <div className="proficiency-panel">
+              {LANG_LABELS.map((lang, idx) => {
+                const val = sliders[idx];
+                const gameLvl = GAME_LEVELS[val];
+                return (
+                  <div key={lang.key} className="proficiency-lang">
+                    <div className="proficiency-lang-header">
+                      <span className="proficiency-lang-name">
+                        {lang.flag} {lang.name} <span className="korean">{lang.native}</span>
+                      </span>
+                      <span className="proficiency-lang-level">
+                        {gameLvl.name}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={6}
+                      step={1}
+                      value={val}
+                      onChange={(e) => handleSlider(idx, Number(e.target.value))}
+                      className="proficiency-slider"
+                    />
+                    <div className="proficiency-ticks">
+                      {GAME_LEVELS.map((gl) => (
+                        <span
+                          key={gl.level}
+                          className={`proficiency-tick${gl.level === val ? ' active' : ''}`}
+                        >
+                          <span className="proficiency-tick-dot" />
+                          <span className="proficiency-tick-num">Lv.{gl.level}</span>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="proficiency-level-map">
+                      <span className="proficiency-level-tag">{gameLvl.name}</span>
+                      <span className="proficiency-level-question">{gameLvl.desc}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              <button onClick={handleConfirmProficiency} style={{ marginTop: 8 }}>
+                That&apos;s me
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
