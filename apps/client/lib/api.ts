@@ -1,45 +1,33 @@
-const DEFAULT_API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const DEMO_PASSWORD_STORAGE_KEY = 'tong.demo.password';
 
-function normalizeApiBase(value: string): string {
-  return value.replace(/\/+$/, '');
+function stripDemoPasswordFromUrl() {
+  if (typeof window === 'undefined') return;
+
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('demo')) return;
+  params.delete('demo');
+  const query = params.toString();
+  const cleanUrl = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
+  window.history.replaceState({}, '', cleanUrl);
 }
 
-function isLocalApiBase(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return (
-      url.hostname === 'localhost' ||
-      url.hostname === '127.0.0.1' ||
-      url.hostname === '[::1]' ||
-      url.hostname === '::1'
-    );
-  } catch {
-    return false;
-  }
-}
+function getDemoPassword() {
+  if (typeof window === 'undefined') return '';
 
-function buildApiBaseCandidates(primary: string): string[] {
-  const normalizedPrimary = normalizeApiBase(primary);
-  const candidates = [normalizedPrimary];
+  const fromStorage = window.localStorage.getItem(DEMO_PASSWORD_STORAGE_KEY);
+  if (fromStorage) return fromStorage;
 
-  if (isLocalApiBase(normalizedPrimary)) {
-    for (const fallback of [
-      'http://localhost:8788',
-      'http://localhost:8787',
-      'http://127.0.0.1:8788',
-      'http://127.0.0.1:8787',
-    ]) {
-      const normalizedFallback = normalizeApiBase(fallback);
-      if (!candidates.includes(normalizedFallback)) {
-        candidates.push(normalizedFallback);
-      }
-    }
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get('demo');
+  if (fromQuery) {
+    window.localStorage.setItem(DEMO_PASSWORD_STORAGE_KEY, fromQuery);
+    stripDemoPasswordFromUrl();
+    return fromQuery;
   }
 
-  return candidates;
+  return '';
 }
-
-let activeApiBase = normalizeApiBase(DEFAULT_API_BASE);
 
 export interface CaptionToken {
   text: string;
@@ -146,6 +134,14 @@ export interface MediaProfileResponse {
   };
 }
 
+export interface SecretStatusResponse {
+  demoPasswordEnabled: boolean;
+  youtubeApiKeyConfigured: boolean;
+  spotifyClientIdConfigured: boolean;
+  spotifyClientSecretConfigured: boolean;
+  openAiApiKeyConfigured: boolean;
+}
+
 export type CityId = 'seoul' | 'tokyo' | 'shanghai';
 export type LocationId =
   | 'food_street'
@@ -153,283 +149,53 @@ export type LocationId =
   | 'convenience_store'
   | 'subway_hub'
   | 'practice_studio';
-export type ProficiencyLevel = 'none' | 'beginner' | 'intermediate' | 'advanced' | 'native';
-export type SceneSpeaker = 'character' | 'tong' | 'you';
-
-export interface GameProfile {
-  nativeLanguage: string;
-  targetLanguages: Array<'ko' | 'ja' | 'zh'>;
-  proficiency: Partial<Record<'ko' | 'ja' | 'zh', ProficiencyLevel>>;
-}
-
-export interface GameProgression extends ScoreState {
-  currentMasteryLevel?: number;
-}
-
-export interface RelationshipState {
-  rp: number;
-  stage: string;
-  currentStageMinRp?: number;
-  nextStageRp?: number | null;
-  progressToNext?: number;
-}
-
-export interface MissionGateState {
-  status: 'locked' | 'ready' | 'passed';
-  requiredValidatedHangouts: number;
-  validatedHangouts: number;
-}
-
-export interface ProgressLoopState {
-  masteryTier: number;
-  learnReadiness: number;
-  missionGate: MissionGateState;
-}
-
-export interface RouteEventDelta {
-  xp: number;
-  sp: number;
-  rp: number;
-  objectiveProgressDelta: number;
-}
-
-export interface RouteEvent {
-  atIso: string;
-  sceneId: string;
-  city: CityId;
-  location: LocationId;
-  stepId: string;
-  tier: 'success' | 'partial' | 'miss';
-  delta: RouteEventDelta;
-}
-
-export interface RouteState {
-  characterId: string;
-  characterName?: string;
-  rp: number;
-  stage: string;
-  progressToNext?: number;
-  validatedHangouts: number;
-  totalScenes: number;
-  totalTurns: number;
-  lastMood?: string;
-  memoryNotes?: string[];
-  recentEvents?: RouteEvent[];
-  lastSeenAt?: string | null;
-}
-
-export interface StartOrResumeGameResponse {
-  sessionId: string;
-  city: CityId;
-  sceneId: string;
-  location?: LocationId;
-  mode?: 'hangout' | 'learn';
-  actions?: string[];
-  profile?: GameProfile;
-  progression?: GameProgression;
-  relationshipState?: RelationshipState;
-  routeState?: RouteState;
-  progressionLoop?: ProgressLoopState;
-  engineMode?: 'dynamic_ai' | 'scripted_fallback';
-}
-
-export interface ObjectiveTargets {
-  vocabulary: string[];
-  grammar: string[];
-  sentenceStructures: string[];
-}
-
-export interface ObjectiveCompletionCriteria {
-  requiredTurns: number;
-  requiredAccuracy: number;
-}
-
-export interface ObjectiveNextResponse {
-  objectiveId: string;
-  level: number;
-  mode: 'hangout' | 'learn';
-  coreTargets: ObjectiveTargets;
-  personalizedTargets?: Array<{ lemma: string; source: string }>;
-  completionCriteria: ObjectiveCompletionCriteria;
-}
-
-export interface ObjectiveProgressState {
-  current?: number;
-  target?: number;
-  percent?: number;
-  label?: string;
-}
-
-export interface SceneLine {
-  speaker: SceneSpeaker;
-  text: string;
-  speakerName?: string;
-}
-
-export interface SceneCharacter {
-  id?: string;
-  name?: string;
-  role?: string;
-  mood?: string;
-  avatarEmoji?: string;
-  isRomanceable?: boolean;
-  assetKey?: string | null;
-}
-
-export interface HangoutRenderOp {
-  tool: 'npc_speak' | 'tong_whisper' | 'offer_choices';
-  text?: string;
-  choices?: string[];
-  characterId?: string;
-  speakerName?: string;
-}
-
-export interface SceneCompletionSummary {
-  objectiveId?: string;
-  status?: string;
-  completionSignal?: string;
-  turnsTaken?: number;
-  successfulTurns?: number;
-  accuracy?: number;
-  objectiveProgress?: number;
-  scoreDelta?: ScoreState;
-  relationshipState?: RelationshipState;
-  routeState?: RouteState;
-  progressionLoop?: {
-    masteryTier?: number;
-    learnReadiness?: number;
-    validatedHangouts?: number;
-    missionGateStatus?: string;
-  };
-  unlockPreview?: {
-    missionGate?: string;
-    nextMasteryTier?: number;
-    nextLocationOptions?: LocationId[];
-    learnModeObjective?: string;
-    unlocked?: boolean;
-  };
-}
-
-export interface HangoutState {
-  turn: number;
-  sceneBeat?: 'opening' | 'build' | 'challenge' | 'resolution';
-  score: ScoreState;
-  objectiveProgress?: ObjectiveProgressState;
-  relationshipState?: RelationshipState;
-  routeState?: RouteState;
-  progressionLoop?: ProgressLoopState;
-}
-
-export interface StartHangoutResponse {
-  sceneSessionId: string;
-  mode?: 'hangout';
-  engineMode?: 'dynamic_ai' | 'scripted_fallback';
-  city?: CityId;
-  location?: LocationId;
-  sceneId?: string;
-  objectiveId?: string;
-  objectiveSummary?: string;
-  character?: SceneCharacter;
-  npc?: SceneCharacter;
-  initialLine: SceneLine;
-  initialLines?: SceneLine[];
-  state: HangoutState;
-  objectiveProgress?: ObjectiveProgressState;
-  quickReplies?: string[];
-  tongHint?: string;
-  renderOps?: HangoutRenderOp[];
-  completion?: {
-    isCompleted: boolean;
-    completionSignal: string | null;
-  };
-  completionSummary?: SceneCompletionSummary | null;
-  relationshipState?: RelationshipState;
-  routeState?: RouteState;
-  progressionLoop?: ProgressLoopState;
-  uiPolicy: {
-    immersiveFirstPerson: boolean;
-    allowOnlyDialogueAndHints: boolean;
-  };
-}
-
-export interface RespondHangoutResponse {
-  accepted: boolean;
-  engineMode?: 'dynamic_ai' | 'scripted_fallback';
-  feedback: {
-    tongHint: string;
-    objectiveProgressDelta: number;
-    objectiveProgress?: ObjectiveProgressState;
-    relationshipState?: RelationshipState;
-    routeState?: RouteState;
-    progressionLoop?: ProgressLoopState;
-    suggestedReplies?: string[];
-  };
-  nextLine: SceneLine;
-  nextLines?: SceneLine[];
-  character?: SceneCharacter;
-  npc?: SceneCharacter;
-  completion?: {
-    isCompleted: boolean;
-    completionSignal: string | null;
-  };
-  completionSummary?: SceneCompletionSummary | null;
-  relationshipState?: RelationshipState;
-  routeState?: RouteState;
-  progressionLoop?: ProgressLoopState;
-  state: HangoutState;
-  renderOps?: HangoutRenderOp[];
-}
-
-export interface MissionAssessResponse {
-  missionId: string;
-  city: CityId;
-  location: LocationId;
-  lang: 'ko' | 'ja' | 'zh';
-  ok: boolean;
-  status: 'locked' | 'passed' | 'retry';
-  missionScore?: number;
-  message: string;
-  rewards?: ScoreState;
-  progressionLoop: ProgressLoopState;
-  relationshipState?: RelationshipState;
-  routeState?: RouteState;
-  unlockPreview?: {
-    nextMasteryTier?: number;
-    nextLocationOptions?: LocationId[];
-    videoCallRewardEligible?: boolean;
-    memoryCardRewardEligible?: boolean;
-  };
-}
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(init?.headers || {}),
-  };
-  const candidates = buildApiBaseCandidates(activeApiBase);
-  let lastError: unknown = null;
+  const demoPassword = getDemoPassword();
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(demoPassword ? { 'x-demo-password': demoPassword } : {}),
+      ...(init?.headers || {}),
+    },
+  });
 
-  for (const base of candidates) {
+  if (!response.ok) {
+    let serverMessage = '';
     try {
-      const response = await fetch(`${base}${path}`, {
-        ...init,
-        headers,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Request failed (${response.status}) for ${path} @ ${base}`);
-      }
-
-      activeApiBase = base;
-      return (await response.json()) as T;
-    } catch (error) {
-      lastError = error;
-      const isRetriableNetworkError = error instanceof TypeError;
-      if (!isRetriableNetworkError) break;
+      const payload = (await response.json()) as { message?: string; error?: string };
+      serverMessage = payload.message || payload.error || '';
+    } catch {
+      serverMessage = '';
     }
+
+    if (response.status === 401) {
+      throw new Error(serverMessage || 'Demo password is missing or invalid.');
+    }
+
+    throw new Error(`Request failed (${response.status}) for ${path}${serverMessage ? `: ${serverMessage}` : ''}`);
   }
 
-  throw lastError instanceof Error ? lastError : new Error(`Request failed for ${path}`);
+  return (await response.json()) as T;
+}
+
+export function getStoredDemoPassword() {
+  if (typeof window === 'undefined') return '';
+  return window.localStorage.getItem(DEMO_PASSWORD_STORAGE_KEY) || '';
+}
+
+export function setStoredDemoPassword(password: string) {
+  if (typeof window === 'undefined') return;
+
+  const trimmed = password.trim();
+  if (!trimmed) return;
+  window.localStorage.setItem(DEMO_PASSWORD_STORAGE_KEY, trimmed);
+}
+
+export function clearStoredDemoPassword() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(DEMO_PASSWORD_STORAGE_KEY);
 }
 
 export function fetchCaptions(videoId: string, lang: 'ko' | 'ja' | 'zh' = 'ko') {
@@ -444,33 +210,29 @@ export function fetchDictionary(term: string, lang: 'ko' | 'ja' | 'zh' = 'ko') {
   );
 }
 
-interface StartOrResumeGameParams {
-  userId?: string;
-  city?: CityId;
-  profile?: GameProfile;
-  randomizeCharacter?: boolean;
-  preferRomance?: boolean;
-  characterId?: string;
+export type ProficiencyLevel = 'none' | 'beginner' | 'intermediate' | 'advanced';
+
+export interface UserProficiency {
+  ko: ProficiencyLevel;
+  ja: ProficiencyLevel;
+  zh: ProficiencyLevel;
 }
 
-export function startOrResumeGame(params: StartOrResumeGameParams = {}) {
-  const userId = params.userId || 'demo-user-1';
-  return apiFetch<StartOrResumeGameResponse>('/api/v1/game/start-or-resume', {
+export function startOrResumeGame(proficiency?: UserProficiency) {
+  const prof = proficiency ?? { ko: 'beginner', ja: 'none', zh: 'none' };
+  return apiFetch<{
+    sessionId: string;
+    city: 'seoul' | 'tokyo' | 'shanghai';
+    sceneId: string;
+    actions: string[];
+  }>('/api/v1/game/start-or-resume', {
     method: 'POST',
     body: JSON.stringify({
-      userId,
-      city: params.city || 'seoul',
-      randomizeCharacter: Boolean(params.randomizeCharacter),
-      preferRomance: params.preferRomance,
-      characterId: params.characterId,
-      profile: params.profile || {
+      userId: 'demo-user-1',
+      profile: {
         nativeLanguage: 'en',
         targetLanguages: ['ko', 'ja', 'zh'],
-        proficiency: {
-          ko: 'beginner',
-          ja: 'none',
-          zh: 'none',
-        },
+        proficiency: prof,
       },
     }),
   });
@@ -493,42 +255,56 @@ export function fetchObjectiveNext(params: ObjectiveNextParams = {}) {
     lang: params.lang || 'ko',
   });
 
-  return apiFetch<ObjectiveNextResponse>(`/api/v1/objectives/next?${search.toString()}`);
+  return apiFetch<{
+    objectiveId: string;
+    level: number;
+    mode: 'hangout' | 'learn';
+    coreTargets: {
+      vocabulary: string[];
+      grammar: string[];
+      sentenceStructures: string[];
+    };
+    completionCriteria: {
+      requiredTurns: number;
+      requiredAccuracy: number;
+    };
+  }>(`/api/v1/objectives/next?${search.toString()}`);
 }
 
 interface StartHangoutParams {
   objectiveId: string;
   userId?: string;
-  sessionId?: string;
   city?: CityId;
   location?: LocationId;
   lang?: 'ko' | 'ja' | 'zh';
-  randomizeCharacter?: boolean;
-  preferRomance?: boolean;
-  characterId?: string;
 }
 
 export function startHangout(params: StartHangoutParams) {
-  const { objectiveId, userId, sessionId, city, location, lang, randomizeCharacter, preferRomance, characterId } =
-    params;
-  return apiFetch<StartHangoutResponse>('/api/v1/scenes/hangout/start', {
+  const { objectiveId, userId, city, location, lang } = params;
+  return apiFetch<{
+    sceneSessionId: string;
+    initialLine: { speaker: 'character' | 'tong'; text: string };
+    state: { turn: number; score: ScoreState };
+    uiPolicy: { immersiveFirstPerson: boolean; allowOnlyDialogueAndHints: boolean };
+  }>('/api/v1/scenes/hangout/start', {
     method: 'POST',
     body: JSON.stringify({
       userId: userId || 'demo-user-1',
-      gameSessionId: sessionId,
       city: city || 'seoul',
       location: location || 'food_street',
       lang: lang || 'ko',
       objectiveId,
-      randomizeCharacter: Boolean(randomizeCharacter),
-      preferRomance,
-      characterId,
     }),
   });
 }
 
 export function respondHangout(sceneSessionId: string, userUtterance: string) {
-  return apiFetch<RespondHangoutResponse>('/api/v1/scenes/hangout/respond', {
+  return apiFetch<{
+    accepted: boolean;
+    feedback: { tongHint: string; objectiveProgressDelta: number };
+    nextLine: { speaker: 'character' | 'tong'; text: string };
+    state: { turn: number; score: ScoreState };
+  }>('/api/v1/scenes/hangout/respond', {
     method: 'POST',
     body: JSON.stringify({
       sceneSessionId,
@@ -579,27 +355,6 @@ export function createLearnSession(params: CreateLearnSessionParams) {
   });
 }
 
-interface MissionAssessParams {
-  userId?: string;
-  sessionId?: string;
-  city?: CityId;
-  location?: LocationId;
-  lang?: 'ko' | 'ja' | 'zh';
-}
-
-export function assessMission(params: MissionAssessParams = {}) {
-  return apiFetch<MissionAssessResponse>('/api/v1/missions/assess', {
-    method: 'POST',
-    body: JSON.stringify({
-      userId: params.userId || 'demo-user-1',
-      gameSessionId: params.sessionId,
-      city: params.city,
-      location: params.location,
-      lang: params.lang,
-    }),
-  });
-}
-
 export function runMockIngestion() {
   return apiFetch<{
     success: true;
@@ -623,6 +378,10 @@ export function fetchMediaProfile() {
   return apiFetch<MediaProfileResponse>('/api/v1/player/media-profile?windowDays=3&userId=demo-user-1');
 }
 
+export function fetchSecretStatus() {
+  return apiFetch<SecretStatusResponse>('/api/v1/demo/secret-status');
+}
+
 export function getApiBase() {
-  return activeApiBase;
+  return API_BASE;
 }
