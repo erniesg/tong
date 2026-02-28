@@ -493,11 +493,21 @@ function buildGameStartResponse(userId, incomingProfile) {
 }
 
 function getSecretStatus() {
+  const youtubeConfigured = Boolean(
+    process.env.TONG_YOUTUBE_API_KEY ||
+      (process.env.YOUTUBE_CLIENT_ID && process.env.YOUTUBE_CLIENT_SECRET) ||
+      (process.env.TONG_YOUTUBE_CLIENT_ID && process.env.TONG_YOUTUBE_CLIENT_SECRET),
+  );
+  const spotifyConfigured = Boolean(
+    (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) ||
+      (process.env.TONG_SPOTIFY_CLIENT_ID && process.env.TONG_SPOTIFY_CLIENT_SECRET),
+  );
+
   return {
     demoPasswordEnabled: Boolean(DEMO_PASSWORD),
-    youtubeApiKeyConfigured: Boolean(process.env.TONG_YOUTUBE_API_KEY),
-    spotifyClientIdConfigured: Boolean(process.env.TONG_SPOTIFY_CLIENT_ID),
-    spotifyClientSecretConfigured: Boolean(process.env.TONG_SPOTIFY_CLIENT_SECRET),
+    youtubeApiKeyConfigured: youtubeConfigured,
+    spotifyClientIdConfigured: spotifyConfigured,
+    spotifyClientSecretConfigured: spotifyConfigured,
     openAiApiKeyConfigured: Boolean(process.env.OPENAI_API_KEY),
   };
 }
