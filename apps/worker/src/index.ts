@@ -856,7 +856,7 @@ async function handleRequest(request: Request): Promise<Response> {
     const pathname = url.pathname;
 
     if (pathname === '/health') {
-      return jsonResponse(200, { ok: true, service: 'tong-worker' });
+      return jsonResponse(200, { ok: true, service: 'tong-api' });
     }
 
     if (pathname === '/api/v1/captions/enriched' && request.method === 'GET') {

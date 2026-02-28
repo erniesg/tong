@@ -25,7 +25,7 @@ npm run deploy:worker
 ```
 
 Wrangler returns a URL like:
-`https://tong-api-worker.<subdomain>.workers.dev`
+`https://tong-api.<subdomain>.workers.dev`
 
 ## 3) Run local + cloud in parallel
 Terminal 1 (local node API):
@@ -53,7 +53,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8787
 
 ### Cloud Worker API
 ```bash
-NEXT_PUBLIC_API_BASE_URL=https://tong-api-worker.<subdomain>.workers.dev
+NEXT_PUBLIC_API_BASE_URL=https://tong-api.<subdomain>.workers.dev
 ```
 
 Restart `npm run dev:client` after changing env.
@@ -62,11 +62,11 @@ Restart `npm run dev:client` after changing env.
 ```bash
 curl "http://localhost:8787/health"
 curl "http://localhost:8788/health"
-curl "https://tong-api-worker.<subdomain>.workers.dev/health"
+curl "https://tong-api.<subdomain>.workers.dev/health"
 ```
 
 ```bash
-curl "https://tong-api-worker.<subdomain>.workers.dev/api/v1/objectives/next?userId=demo-user-1&mode=hangout&lang=ko"
+curl "https://tong-api.<subdomain>.workers.dev/api/v1/objectives/next?userId=demo-user-1&mode=hangout&lang=ko"
 ```
 
 ## Notes
