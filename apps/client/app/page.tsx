@@ -27,6 +27,15 @@ export default function HomePage() {
 
       <section className="grid grid-3">
         <article className="card stack">
+          <span className="pill">Integration Validation</span>
+          <h3>Connect + inspect raw signals</h3>
+          <p>Authorize Spotify/YouTube, run sync, and validate transcript/lyric candidate text before analytics.</p>
+          <Link className="button" href="/integrations">
+            Open /integrations
+          </Link>
+        </article>
+
+        <article className="card stack">
           <span className="pill">Web Overlay</span>
           <h3>Caption overlay review</h3>
           <p>Triple-lane subtitle rendering + token dictionary popover with playback simulation controls.</p>
