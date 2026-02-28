@@ -22,3 +22,18 @@ Template:
   - Demo should keep local dictionary API available (`localhost:8787`) for full enrichment path.
   - Avoid switching Chinese script mode mid-live demo unless cache-refresh follow-up lands.
 - Next owner: `codex/client-overlay`
+
+## 2026-02-28 (Ingestion Isolation)
+- Date: 2026-02-28
+- Branch/worktree: `codex/tong-bg-cutout-iter1` (shared root workspace)
+- What changed:
+  - Reworked server ingestion scoring to use connector-independent media event modeling (frequency, burst, orthography, objective links).
+  - Wired `GET /api/v1/objectives/next` and `POST /api/v1/game/start-or-resume` to consume modeled ingestion signals instead of static fixture-only objective selection.
+  - Added canonical media events fixture for isolated topic modeling iteration.
+- Contract changes:
+  - Added optional ingestion source metadata fields (`mediaId`, `playedAtIso`, `tokens`) and new `MediaIngestionEvent` type.
+  - Documented `POST /api/v1/ingestion/run-mock` and canonical `media.events` fixture shape.
+- Integration risks:
+  - Objective language selection now defaults to weakest profile target only when `lang` query is omitted; clients that always send `lang` keep explicit behavior.
+  - Ingestion remains single-cache for default user in this root server; per-user ingestion cache still lives in `codex/server-ingestion-sync`.
+- Next owner: `codex/server-ingestion-sync` (adapter from live connector payloads to canonical events)

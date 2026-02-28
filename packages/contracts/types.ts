@@ -232,6 +232,22 @@ export interface IngestionSourceItem {
   lang: TargetLanguage;
   minutes: number;
   text: string;
+  mediaId?: string;
+  playedAtIso?: string;
+  tokens?: string[];
+}
+
+export interface MediaIngestionEvent {
+  eventId: string;
+  userId: string;
+  source: 'youtube' | 'spotify';
+  mediaId: string;
+  title: string;
+  lang: TargetLanguage;
+  minutes: number;
+  consumedAtIso: string;
+  tokens: string[];
+  text?: string;
 }
 
 export interface IngestionSnapshot {
@@ -249,4 +265,12 @@ export interface IngestionRunResponse {
     spotify: number;
   };
   topTerms: VocabFrequencyItem[];
+}
+
+export interface DemoSecretStatusResponse {
+  demoPasswordEnabled: boolean;
+  youtubeApiKeyConfigured: boolean;
+  spotifyClientIdConfigured: boolean;
+  spotifyClientSecretConfigured: boolean;
+  openAiApiKeyConfigured: boolean;
 }
