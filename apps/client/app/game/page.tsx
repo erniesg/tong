@@ -17,15 +17,24 @@ export default function GamePage({
   searchParams?: SearchParams;
 }) {
   const forceNewGame = readParam(searchParams, 'newGame') === '1';
+  const forceHangout = readParam(searchParams, 'hangout') === '1' || readParam(searchParams, 'quick') === '1';
   const onboarding = readParam(searchParams, 'onboarding') === '1';
   const skipIntro = readParam(searchParams, 'skipIntro') === '1' || readParam(searchParams, 'entry') === '1';
 
   let initialEntryPhase: EntryPhase = 'opening';
-  if (forceNewGame || onboarding) {
+  if (forceHangout) {
+    initialEntryPhase = 'playing';
+  } else if (forceNewGame || onboarding) {
     initialEntryPhase = 'onboarding';
   } else if (skipIntro) {
     initialEntryPhase = 'entry';
   }
 
-  return <GamePageClient initialEntryPhase={initialEntryPhase} autoNewGame={forceNewGame} />;
+  return (
+    <GamePageClient
+      initialEntryPhase={initialEntryPhase}
+      autoNewGame={forceNewGame}
+      autoLaunchHangout={forceHangout}
+    />
+  );
 }

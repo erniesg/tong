@@ -55,6 +55,7 @@ interface CityDefinition {
 interface GamePageClientProps {
   initialEntryPhase?: EntryPhase;
   autoNewGame?: boolean;
+  autoLaunchHangout?: boolean;
 }
 
 const DEFAULT_CITY: CityId = 'seoul';
@@ -274,6 +275,7 @@ function createSessionUserId(): string {
 export default function GamePageClient({
   initialEntryPhase = 'opening',
   autoNewGame = false,
+  autoLaunchHangout = false,
 }: GamePageClientProps) {
   const cityTrackRef = useRef<HTMLDivElement | null>(null);
   const openingVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -364,6 +366,12 @@ export default function GamePageClient({
   }, [autoNewGame]);
 
   useEffect(() => {
+    if (!autoLaunchHangout) return;
+    const nextUserId = beginNewGame('playing');
+    void quickStartHangout(nextUserId);
+  }, [autoLaunchHangout]);
+
+  useEffect(() => {
     if (entryPhase !== 'opening') return;
     const timer = window.setTimeout(() => {
       setEntryPhase('entry');
@@ -429,7 +437,7 @@ export default function GamePageClient({
     setEntryPhase((current) => (current === 'opening' ? 'entry' : current));
   }
 
-  function beginNewGame() {
+  function beginNewGame(nextPhase: EntryPhase = 'onboarding') {
     const nextUserId = createSessionUserId();
     persistActiveUserId(nextUserId);
     setCity(DEFAULT_CITY);
@@ -444,9 +452,10 @@ export default function GamePageClient({
     setStatus('Set your language baseline, then launch your first hangout challenge.');
     setMode('hangout');
     setProficiencyGauge({ ...REQUESTED_GAUGE_PRESET });
-    setEntryPhase('onboarding');
+    setEntryPhase(nextPhase);
     setShowSetupPanel(false);
     resetSceneState(DEFAULT_LOCATION, DEFAULT_CITY);
+    return nextUserId;
   }
 
   async function resumeLatestGame() {
@@ -538,7 +547,8 @@ export default function GamePageClient({
     setAwaitingUserTurn(true);
   }
 
-  async function quickStartHangout() {
+  async function quickStartHangout(userIdOverride?: string) {
+    const sessionUserId = userIdOverride || activeUserId;
     try {
       setLoadingStart(true);
       setError(null);
@@ -547,7 +557,7 @@ export default function GamePageClient({
       resetSceneState(location, city);
 
       const game = await startOrResumeGame({
-        userId: activeUserId,
+        userId: sessionUserId,
         city,
         profile: buildProfileFromGauge(proficiencyGauge),
         randomizeCharacter,
@@ -569,7 +579,7 @@ export default function GamePageClient({
       }
 
       const nextObjective = await fetchObjectiveNext({
-        userId: activeUserId,
+        userId: sessionUserId,
         city,
         location,
         mode: 'hangout',
@@ -579,7 +589,7 @@ export default function GamePageClient({
 
       const hangout = await startHangout({
         objectiveId: nextObjective.objectiveId,
-        userId: activeUserId,
+        userId: sessionUserId,
         sessionId: game.sessionId,
         city,
         location,
