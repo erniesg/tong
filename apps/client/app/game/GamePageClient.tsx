@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   assessMission,
   createLearnSession,
@@ -155,7 +155,6 @@ const DEFAULT_PRESET_RESPONSES: PresetResponse[] = [
   { text: '물도 주세요.', note: 'Ask for water' },
 ];
 
-const INITIAL_HINT = 'Tong hint: Use one short polite order phrase per turn.';
 const ACTIVE_USER_ID_STORAGE_KEY = 'tong_active_user_id';
 const GAME_LOGO_PATH = '/assets/app/logo_transparent.png';
 const OPENING_ANIMATION_PATH = '/assets/app/tong_opening.mp4';
@@ -169,13 +168,6 @@ const REQUESTED_GAUGE_PRESET: Record<CjkLang, ProficiencyGaugeLevel> = {
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
-}
-
-function lineToHint(lines: SceneLine[]): string | null {
-  for (const line of lines) {
-    if (line.speaker === 'tong' && line.text.trim()) return line.text;
-  }
-  return null;
 }
 
 function isDialogueLine(line: SceneLine): line is SceneLine & { speaker: 'character' | 'you' } {
@@ -201,15 +193,6 @@ function getObjectiveRatio(progress?: ObjectiveProgressState): number | null {
     return clamp01(progress.current / progress.target);
   }
   return null;
-}
-
-function buildObjectiveSummary(objective: ObjectiveNextResponse | null): string {
-  if (!objective) return 'Validate practical food-order language in context.';
-  const vocab = objective.coreTargets.vocabulary.slice(0, 2).join(', ');
-  const grammar = objective.coreTargets.grammar[0];
-  if (!vocab && !grammar) return 'Validate practical food-order language in context.';
-  if (vocab && grammar) return `Use ${vocab} with ${grammar}.`;
-  return `Use ${vocab || grammar} naturally in scene dialogue.`;
 }
 
 function mergeCharacterPayload(base: SceneCharacter, payload?: SceneCharacter): SceneCharacter {
@@ -319,7 +302,6 @@ export default function GamePageClient({
   const [progressionLoop, setProgressionLoop] = useState<ProgressLoopState | null>(null);
   const [engineMode, setEngineMode] = useState<'dynamic_ai' | 'scripted_fallback'>('scripted_fallback');
   const [randomizeCharacter, setRandomizeCharacter] = useState(false);
-  const [hint, setHint] = useState(INITIAL_HINT);
   const [status, setStatus] = useState('Set your language baseline, then start your first hangout challenge.');
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
   const [userUtterance, setUserUtterance] = useState('');
@@ -341,15 +323,12 @@ export default function GamePageClient({
 
   const cityConfig = CITY_BY_ID[city];
   const selectedLang = cityConfig.language;
-  const objectiveSummary = useMemo(() => buildObjectiveSummary(objective), [objective]);
   const validatedHangouts = routeState?.validatedHangouts ?? progressionLoop?.missionGate.validatedHangouts ?? 0;
   const hasCompletedFirstHangout = validatedHangouts >= 1;
   const showSceneOneBackdrop = mode === 'hangout' && !hasCompletedFirstHangout;
   const characterAvatarSrc = getCharacterAvatarPath(character);
   const sceneOneBackdropLayers =
-    city === 'seoul'
-      ? [`url(${SEOUL_FIRST_SCENE_BACKDROP})`, `url(${cityConfig.backdropImage})`]
-      : [`url(${cityConfig.backdropImage})`];
+    city === 'seoul' ? [`url(${SEOUL_FIRST_SCENE_BACKDROP})`] : [`url(${cityConfig.backdropImage})`];
   const sceneOneBackdropStyle = showSceneOneBackdrop
     ? {
         backgroundImage: `linear-gradient(180deg, rgba(14, 20, 28, 0.2), rgba(14, 20, 28, 0.68)), ${sceneOneBackdropLayers.join(', ')}`,
@@ -438,7 +417,6 @@ export default function GamePageClient({
     setUserUtterance('');
     setPresetResponses(DEFAULT_PRESET_RESPONSES);
     setCharacter(getCharacterForCityLocation(nextCity, nextLocation));
-    setHint(INITIAL_HINT);
   }
 
   function persistActiveUserId(nextUserId: string) {
@@ -539,9 +517,7 @@ export default function GamePageClient({
 
   function mergeIncomingLines(lines: SceneLine[], unlockInputAfter = true) {
     const filteredLines = lines.filter((line) => line && line.text && line.text.trim());
-    const nextHint = lineToHint(filteredLines);
     const dialogueLines = lineToDialogue(filteredLines);
-    if (nextHint) setHint(nextHint);
     if (dialogueLines.length) {
       setMessages((prev) => [...prev, ...dialogueLines]);
     }
@@ -670,7 +646,6 @@ export default function GamePageClient({
       const response = await respondHangout(sceneSessionId, utterance);
       setEngineMode(response.engineMode || engineMode);
       setScore(response.state.score);
-      setHint(response.feedback.tongHint || INITIAL_HINT);
       setCharacter((current) => mergeCharacterPayload(current, response.character || response.npc));
       applyServerReplies(response.feedback.suggestedReplies);
       setRelationshipState(
@@ -986,14 +961,16 @@ export default function GamePageClient({
             className={`mobile-frame game-mobile-frame ${showSceneOneBackdrop ? 'game-mobile-frame-scene1' : ''}`}
             style={sceneOneBackdropStyle}
           >
-            <div className="mobile-head game-mobile-head">
-              <div className="row game-head-row">
-                <div className="stack" style={{ gap: 4 }}>
-                  <p className="game-mobile-kicker">
-                    {cityConfig.label} · {LOCATION_LABELS[location]}
-                  </p>
-                  <strong>{mode === 'hangout' ? `${character.name || 'Partner'} hangout` : `${cityConfig.languageLabel} learn`}</strong>
-                </div>
+            <div className={`mobile-head game-mobile-head ${mode === 'hangout' ? 'game-mobile-head-hangout' : ''}`}>
+              <div className={`row game-head-row ${mode === 'hangout' ? 'game-head-row-hangout' : ''}`}>
+                {mode !== 'hangout' && (
+                  <div className="stack" style={{ gap: 4 }}>
+                    <p className="game-mobile-kicker">
+                      {cityConfig.label} · {LOCATION_LABELS[location]}
+                    </p>
+                    <strong>{`${cityConfig.languageLabel} learn`}</strong>
+                  </div>
+                )}
                 <div className="game-head-actions">
                   <button
                     className={`secondary game-head-button ${mode === 'learn' ? 'active' : ''}`}
@@ -1011,11 +988,6 @@ export default function GamePageClient({
                   </button>
                 </div>
               </div>
-              {mode === 'hangout' && (
-                <div className="chat-bubble chat-tong game-inline-hint">
-                  <strong>Tong:</strong> {hint}
-                </div>
-              )}
             </div>
 
             <div className={`mobile-body game-mobile-body ${showSceneOneBackdrop ? 'game-mobile-body-scene1' : ''}`}>
@@ -1156,10 +1128,6 @@ export default function GamePageClient({
               {mode === 'hangout' && (
                 <>
                   <section className="game-hangout-stage">
-                    <p className="game-hangout-objective">
-                      <strong>Objective:</strong> {objectiveSummary} ({Math.round(objectiveRatio * 100)}%)
-                    </p>
-
                     <section
                       className={`game-dialogue-panel ${canTapContinue ? 'game-dialogue-panel-tappable' : ''}`}
                       onClick={canTapContinue ? handleTapToContinue : undefined}

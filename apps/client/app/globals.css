@@ -752,9 +752,20 @@ button.game-city-card.active {
   align-items: flex-start;
 }
 
+.game-head-row-hangout {
+  justify-content: flex-end;
+}
+
 .game-head-actions {
   display: flex;
   gap: 8px;
+}
+
+.game-mobile-head-hangout {
+  background: transparent;
+  border-bottom: 0;
+  backdrop-filter: none;
+  padding-bottom: 0;
 }
 
 button.game-head-button {
