@@ -83,6 +83,12 @@ type Phase = 'intro' | 'proficiency' | 'hangout';
 
 /* ── helpers ────────────────────────────────────────────── */
 
+/** Build context block for API messages (player level, NPC, location). */
+function buildContextBlock(level: number, npcId: string, cityId: CityId, locationId: LocationId): string {
+  const ctx = JSON.stringify({ playerLevel: level, characterId: npcId, city: cityId, location: locationId });
+  return `[CONTEXT]${ctx}[/CONTEXT] `;
+}
+
 /** Find the weakest language (lowest slider value), breaking ties left-to-right. */
 function getWeakestLangIndex(sliders: [number, number, number]): number {
   let minIdx = 0;
@@ -117,6 +123,7 @@ export default function GamePage() {
   const [location, setLocation] = useState<LocationId>('food_street');
   const [score, setScore] = useState<ScoreState>({ xp: 0, sp: 0, rp: 0 });
   const [activeNpc, setActiveNpc] = useState<string>('haeun');
+  const [playerLevel, setPlayerLevel] = useState(0);
 
   /* VN scene state */
   const [toolQueue, setToolQueue] = useState<ToolQueueItem[]>([]);
@@ -212,14 +219,17 @@ export default function GamePage() {
     const primaryLang = LANG_KEYS[weakIdx] as 'ko' | 'ja' | 'zh';
     const primaryCity = LANG_TO_CITY[primaryLang] ?? 'seoul';
 
+    const weakLevel = sliders[weakIdx];
+    const npcId = NPC_POOL[Math.floor(Math.random() * NPC_POOL.length)];
     setCity(primaryCity as CityId);
     setLocation('food_street');
-    setActiveNpc(NPC_POOL[Math.floor(Math.random() * NPC_POOL.length)]);
+    setActiveNpc(npcId);
+    setPlayerLevel(weakLevel);
     setScore({ xp: 0, sp: 0, rp: 0 });
     setPhase('hangout');
     setLoading(false);
 
-    void append({ role: 'user', content: 'Start the scene.' });
+    void append({ role: 'user', content: `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street')}Start the scene.` });
   }
 
   /* ── useChat integration (pinpoint pattern) ──────────────── */
@@ -233,11 +243,11 @@ export default function GamePage() {
     },
     onToolCall: ({ toolCall }) => {
       const { toolName, toolCallId, args } = toolCall;
-      if (processedToolCallsRef.current.has(toolCallId)) return;
+      if (processedToolCallsRef.current.has(toolCallId)) return args;
       // Pause guard: drop tools after interactive ones in the same response
       if (pausedRef.current) {
         console.log(`[VN] onToolCall SKIPPED (paused): ${toolName}`);
-        return;
+        return args; // Still return args to mark as resolved
       }
       processedToolCallsRef.current.add(toolCallId);
       console.log(`[VN] onToolCall: ${toolName}`, toolCallId);
@@ -251,6 +261,10 @@ export default function GamePage() {
       if (toolName === 'show_exercise' || toolName === 'offer_choices') {
         pausedRef.current = true;
       }
+
+      // Return args to mark tool invocation as resolved (state: 'result')
+      // This prevents unresolved tool calls from polluting message history
+      return args;
     },
     onError: (err) => {
       console.error('[VN] useChat error:', err);
@@ -264,9 +278,10 @@ export default function GamePage() {
   useEffect(() => {
     if (skipToHangout && !sceneStartedRef.current) {
       sceneStartedRef.current = true;
-      void append({ role: 'user', content: 'Start the scene.' });
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location);
+      void append({ role: 'user', content: `${ctx}Start the scene.` });
     }
-  }, [skipToHangout, append]);
+  }, [skipToHangout, append, playerLevel, activeNpc, city, location]);
 
   /* ── Tool queue processor (pinpoint pattern) ──────────────
    *
@@ -382,24 +397,27 @@ export default function GamePage() {
     // Case 5: Queue empty, no exercise/choices — request next turn
     if (!currentExercise && !choices && toolQueue.length === 0) {
       console.log('[VN] handleContinue: append Continue');
-      void append({ role: 'user', content: 'Continue.' });
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location);
+      void append({ role: 'user', content: `${ctx}Continue.` });
     }
-  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append]);
+  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location]);
 
   const handleExerciseResult = useCallback((exerciseId: string, correct: boolean) => {
     setCurrentExercise(null);
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
-    void append({ role: 'user', content: summarizeExercise(exerciseId, correct) });
-  }, [append]);
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location);
+    void append({ role: 'user', content: `${ctx}${summarizeExercise(exerciseId, correct)}` });
+  }, [append, playerLevel, activeNpc, city, location]);
 
   const handleChoice = useCallback((choiceId: string) => {
     setChoices(null);
     setChoicePrompt(null);
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
-    void append({ role: 'user', content: `Choice: ${choiceId}` });
-  }, [append]);
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location);
+    void append({ role: 'user', content: `${ctx}Choice: ${choiceId}` });
+  }, [append, playerLevel, activeNpc, city, location]);
 
   const handleDismissTong = useCallback(() => {
     setTongTip(null);
@@ -548,6 +566,10 @@ export default function GamePage() {
   return (
     <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="game-frame">
+        {/* Debug overlay — remove after testing */}
+        <div style={{ position: 'absolute', top: 40, left: 8, zIndex: 999, fontSize: 10, color: '#0f0', background: 'rgba(0,0,0,0.7)', padding: '4px 6px', borderRadius: 4, pointerEvents: 'none', maxWidth: 200, wordBreak: 'break-all' }}>
+          Q:{toolQueue.length} P:{String(processingRef.current)} msg:{currentMessage ? currentMessage.content.slice(0, 30) : 'null'} ex:{currentExercise ? 'yes' : 'no'} stream:{String(chatLoading)}
+        </div>
         <SceneView
           backgroundUrl="/assets/backgrounds/pojangmacha.png"
           ambientDescription="A warm pojangmacha (street food tent) on a Seoul side street"

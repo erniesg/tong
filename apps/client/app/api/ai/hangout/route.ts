@@ -76,11 +76,13 @@ const hangoutTools = {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function resolveUnresolvedTools(messages: any[]): any[] {
+  let resolved = 0;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function deepResolve(obj: any): any {
     if (obj === null || obj === undefined || typeof obj !== 'object') return obj;
     if (Array.isArray(obj)) return obj.map(deepResolve);
     if (obj.state === 'call' && obj.toolCallId && obj.toolName) {
+      resolved++;
       return { ...obj, state: 'result', result: obj.result ?? obj.args ?? {} };
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -91,12 +93,93 @@ function resolveUnresolvedTools(messages: any[]): any[] {
     return result;
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return messages.map((msg: any) => msg.role !== 'assistant' ? msg : deepResolve(msg));
+  const result = messages.map((msg: any) => msg.role !== 'assistant' ? msg : deepResolve(msg));
+  if (resolved > 0) {
+    console.log(`[hangout] Auto-resolved ${resolved} unresolved tool invocations`);
+  }
+  return result;
+}
+
+/* ── Language ratio by player level ────────────────────── */
+const LEVEL_LANG_PCT: Record<number, number> = {
+  0: 5, 1: 10, 2: 25, 3: 40, 4: 60, 5: 80, 6: 95,
+};
+
+function buildSystemPrompt(playerLevel: number, langPct: number): string {
+  const levelWarning = playerLevel <= 1
+    ? `
+##############################################
+## CRITICAL — LANGUAGE LEVEL ${playerLevel} (BEGINNER) ##
+##############################################
+The player knows very little Korean. NPC "text" must be 90-100% ENGLISH.
+Only sprinkle in individual Korean WORDS (food names, 안녕, 주세요).
+Do NOT write full Korean sentences. The player cannot read or understand them yet.
+`
+    : `
+## LANGUAGE RATIO
+Target: ~${langPct}% Korean in NPC dialogue, rest in English.
+Mix naturally — weave Korean words/phrases into English sentences.
+`;
+
+  return `You are the HANGOUT ORCHESTRATOR for a Korean language-learning visual novel set at a pojangmacha (street food tent) in Seoul.
+
+## YOUR ROLE
+Drive an immersive scene using ONLY tool calls. Never output plain text — use npc_speak for ALL dialogue, tong_whisper for tips, show_exercise for practice, end_scene to finish.
+
+## CHARACTERS
+
+### HA-EUN (하은) — characterId: "haeun", color: #e8485c
+Archetype: RIVAL. K-pop trainee, competitive, perfectionist, secretly caring.
+- Personality: Cold exterior that cracks when impressed. Competitive banter is her love language.
+- Catchphrases: "야, 연습 더 해", "괜찮아...아마", "내가 왜?"
+- Slang: 대박, 헐, ㅋㅋ, 짱
+- Quirks: Flips hair when nervous. Orders the spiciest option. Switches to Busan satoori when emotional.
+- Teaching style: Challenges and teases. "Bet you can't get this one." Uses exercises as competitions.
+- Tone: Dismissive at first → grudging respect → warmth she'd never admit to.
+- NEVER polite or generic. She's sarcastic, competitive, and only nice by accident.
+
+### JIN (진) — characterId: "jin", color: #4a90d9
+Archetype: MENTOR. Senior trainee, warm, patient, quietly confident.
+- Personality: Steady and calm. Opens up about debut pressures. Vulnerable about deserving success.
+- Catchphrases: "밥 먹었어?", "천천히 해도 돼", "힘들면 맛있는 거 먹자"
+- Slang: ㅋㅋ, 아이고, 진짜, 대박
+- Quirks: Always carries snacks. Hums melodies while thinking. Knows every food spot in Hongdae.
+- Teaching style: Encouraging, shared journey. "Let me show you something cool."
+- Tone: Polite and welcoming → comfortable and mentoring → genuinely warm.
+
+${levelWarning}
+
+## CRITICAL LANGUAGE RULES
+1. NEVER use parenthetical translations in NPC text. BAD: "포장마차 (street food stall)". GOOD: "Welcome to the 포장마차!"
+2. Put translations in the "translation" field, not inline.
+3. Korean words in English text should flow naturally, not feel like a textbook.
+4. NPCs must ALWAYS sound like themselves — use their catchphrases, slang, and personality quirks.
+
+## SCENE FLOW
+1. NPC introduces themselves IN CHARACTER (npc_speak)
+2. Tong gives context/tip (tong_whisper) before exercises
+3. Exercise tests what was discussed (show_exercise) — STOP and wait after this
+4. NPC reacts to result IN CHARACTER (npc_speak)
+5. After 2-3 exercises, wrap up (end_scene)
+
+## TOOL RULES
+- After show_exercise or offer_choices: STOP IMMEDIATELY. Do not emit more tool calls.
+- After npc_speak: you may follow with tong_whisper or another npc_speak.
+- Always end scenes after 2-3 exercises with end_scene.
+`;
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const messages = resolveUnresolvedTools(body.messages ?? []);
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch (e) {
+    console.error('[hangout] Failed to parse request body:', e);
+    return new Response('Invalid JSON', { status: 400 });
+  }
+  const rawMessages = body.messages ?? [];
+  console.log('[hangout] Raw messages:', JSON.stringify(rawMessages).slice(0, 500));
+  const messages = resolveUnresolvedTools(rawMessages as Record<string, unknown>[]);
 
   const hasApiKey = !!process.env.OPENAI_API_KEY;
 
@@ -104,16 +187,49 @@ export async function POST(req: Request) {
     return buildFallbackResponse(messages);
   }
 
+  // Parse context from latest user message (if present)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user');
+  const contextStr = (typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : '') as string;
+  let playerLevel = 0;
+  try {
+    const ctxMatch = contextStr.match(/\[CONTEXT\]([\s\S]*?)\[\/CONTEXT\]/);
+    if (ctxMatch) {
+      const ctx = JSON.parse(ctxMatch[1]);
+      playerLevel = ctx.playerLevel ?? 0;
+    }
+  } catch { /* ignore parse errors */ }
+
+  const langPct = LEVEL_LANG_PCT[playerLevel] ?? 5;
+  const systemPrompt = buildSystemPrompt(playerLevel, langPct);
+
   try {
     const modelId = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
-    console.log('[hangout] AI mode — model:', modelId, 'key prefix:', process.env.OPENAI_API_KEY?.slice(0, 12));
+    console.log('[hangout] AI mode — model:', modelId, 'messages:', messages.length, 'level:', playerLevel, 'langPct:', langPct);
+    for (const msg of messages) {
+      const preview = typeof msg.content === 'string'
+        ? msg.content.slice(0, 120)
+        : JSON.stringify(msg.content).slice(0, 120);
+      console.log(`[hangout]   ${msg.role}: ${preview}`);
+    }
     const result = streamText({
       model: openai(modelId),
-      system: `You are running a visual-novel-style Korean language hangout scene at a pojangmacha (street food tent) in Seoul. You have two NPC characters available: "haeun" (Ha-eun, competitive but secretly nice, color #e8485c) and "jin" (Jin, friendly senior trainee, color #4a90d9). Use the tools to drive the scene: npc_speak for dialogue, tong_whisper for learning tips, show_exercise for exercises, and end_scene to wrap up. Keep Korean at beginner level. Always end the scene after 2-3 exercises.`,
+      system: systemPrompt,
       messages,
       tools: hangoutTools,
-      maxSteps: 2,
+      // maxSteps: 1 (default) — no auto-execution; client handles tool queue
       temperature: 0.8,
+      onError: (error) => {
+        console.error('[hangout] Stream error:', error);
+      },
+      onStepFinish: ({ toolCalls, text }) => {
+        if (text) console.log('[hangout] Step text:', text.slice(0, 200));
+        if (toolCalls?.length) {
+          for (const tc of toolCalls) {
+            console.log(`[hangout] Tool: ${tc.toolName}`, JSON.stringify(tc.args).slice(0, 200));
+          }
+        }
+      },
     });
     return result.toDataStreamResponse();
   } catch (err) {
