@@ -208,6 +208,19 @@ function mergeCharacterPayload(base: SceneCharacter, payload?: SceneCharacter): 
   };
 }
 
+function getCharacterAvatarPath(value?: SceneCharacter): string | null {
+  if (!value) return null;
+  if (value.assetKey) return `/assets/characters/${value.assetKey}`;
+
+  if (value.id === 'npc_haeun') return '/assets/characters/hauen/haeun.png';
+  if (value.id === 'npc_ding_man') return '/assets/characters/ding_man/ding_man.png';
+
+  const safeName = (value.name || '').toLowerCase();
+  if (safeName === 'haeun') return '/assets/characters/hauen/haeun.png';
+  if (safeName === 'ding') return '/assets/characters/ding_man/ding_man.png';
+  return null;
+}
+
 function getCharacterForCityLocation(city: CityId, location: LocationId): SceneCharacter {
   return LOCATION_CHARACTERS_BY_CITY[city]?.[location] || LOCATION_CHARACTERS_BY_CITY[DEFAULT_CITY][DEFAULT_LOCATION];
 }
@@ -293,6 +306,7 @@ export default function GamePage() {
   const [sendingTurn, setSendingTurn] = useState(false);
   const [loadingLearn, setLoadingLearn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
 
   const cityConfig = CITY_BY_ID[city];
   const selectedLang = cityConfig.language;
@@ -312,6 +326,13 @@ export default function GamePage() {
   const objectiveTurnProgress = Math.min(requiredTurns, Math.round(objectiveRatio * requiredTurns));
   const validatedHangouts = routeState?.validatedHangouts ?? progressionLoop?.missionGate.validatedHangouts ?? 0;
   const hasCompletedFirstHangout = validatedHangouts >= 1;
+  const showSceneOneBackdrop = mode === 'hangout' && !hasCompletedFirstHangout;
+  const characterAvatarSrc = getCharacterAvatarPath(character);
+  const sceneOneBackdropStyle = showSceneOneBackdrop
+    ? {
+        backgroundImage: `linear-gradient(180deg, rgba(14, 20, 28, 0.3), rgba(14, 20, 28, 0.72)), url(${cityConfig.backdropImage})`,
+      }
+    : undefined;
 
   const scorePercent = useMemo(() => {
     return {
@@ -347,6 +368,10 @@ export default function GamePage() {
       void refreshLearnSessions();
     }
   }, [mode, city, selectedLang, activeUserId]);
+
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [characterAvatarSrc]);
 
   function resetSceneState(nextLocation: LocationId, nextCity: CityId = city) {
     setSceneSessionId(null);
@@ -1003,11 +1028,25 @@ export default function GamePage() {
                 </div>
               </div>
 
-              <div className="mobile-body game-mobile-body">
+              <div
+                className={`mobile-body game-mobile-body ${showSceneOneBackdrop ? 'game-mobile-body-scene1' : ''}`}
+                style={sceneOneBackdropStyle}
+              >
                 {mode === 'hangout' && (
                   <>
                     <section className="game-character-card">
-                      <span className="game-character-avatar">{character.avatarEmoji || selectedLang.toUpperCase()}</span>
+                      <span className="game-character-avatar">
+                        {characterAvatarSrc && !avatarLoadFailed ? (
+                          <img
+                            className="game-character-avatar-image"
+                            src={characterAvatarSrc}
+                            alt={`${character.name || 'Character'} avatar`}
+                            onError={() => setAvatarLoadFailed(true)}
+                          />
+                        ) : (
+                          character.avatarEmoji || selectedLang.toUpperCase()
+                        )}
+                      </span>
                       <div>
                         <p className="game-card-kicker">Hangout character</p>
                         <strong>{character.name || `${cityConfig.label} friend`}</strong>
