@@ -36,6 +36,27 @@ npm --prefix apps/worker install
 npm run dev:worker
 ```
 
+## Mock flow tests (integration-ready harness)
+These are static/mock end-to-end API checks you can run while real provider sync is built in parallel.
+
+```bash
+npm run test:api-flow:local
+npm run test:api-flow:worker-local
+npm run test:api-flow:cloud
+```
+
+If you need a custom endpoint:
+
+```bash
+node scripts/mock_api_flow_check.mjs https://your-worker-url.workers.dev
+```
+
+If `8787` is occupied by another worktree, override local base for the npm script:
+
+```bash
+TONG_LOCAL_API_BASE_URL=http://localhost:8790 npm run test:api-flow:local
+```
+
 ## Web review routes
 1. Overlay: `http://localhost:3000/overlay`
 2. Mobile game UI: `http://localhost:3000/game`

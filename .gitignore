@@ -6,3 +6,4 @@ node_modules/
 .next/
 reference-notes/
 apps/server/data/generated/
+apps/worker/.wrangler/

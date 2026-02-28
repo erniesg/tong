@@ -38,6 +38,13 @@ Run local demo contract smoke check:
 npm run demo:smoke
 ```
 
+Run mock API flow checks (local node / local worker / cloud worker):
+```bash
+npm run test:api-flow:local
+npm run test:api-flow:worker-local
+npm run test:api-flow:cloud
+```
+
 Run demo services:
 ```bash
 npm --prefix apps/server install
