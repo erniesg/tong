@@ -6,7 +6,9 @@
   "scripts": {
     "dev:client": "npm --prefix apps/client run dev",
     "dev:server": "npm --prefix apps/server run dev",
+    "dev:worker": "npm --prefix apps/worker run dev",
     "ingest:mock": "npm --prefix apps/server run ingest:mock",
+    "deploy:worker": "npm --prefix apps/worker run deploy",
     "demo:smoke": "node scripts/demo_smoke_check.mjs",
     "setup:worktrees": "./scripts/setup-hackathon-worktrees.sh",
     "zip": "rm -f tong.zip && zip -r tong.zip manifest.json src README.md",

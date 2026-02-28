@@ -21,6 +21,7 @@ Key docs:
 - `docs/mock-ui-and-assets-track.md`
 - `docs/install-and-test.md`
 - `docs/deployment-track.md`
+- `docs/cloudflare-worker-setup.md`
 - `packages/contracts/api-contract.md`
 - `packages/contracts/game-loop.json`
 - `packages/contracts/objective-catalog.sample.json`
@@ -41,8 +42,10 @@ Run demo services:
 ```bash
 npm --prefix apps/server install
 npm --prefix apps/client install
+npm --prefix apps/worker install
 npm run dev:server
 npm run dev:client
+npm run dev:worker
 ```
 
 Run mock ingestion snapshot generation:
