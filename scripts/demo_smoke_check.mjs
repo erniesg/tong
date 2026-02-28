@@ -18,6 +18,8 @@ const requiredFiles = [
   "packages/contracts/fixtures/scene.food-hangout.sample.json",
   "packages/contracts/fixtures/scene.shanghai-texting-reward.sample.json",
   "packages/contracts/fixtures/media.events.sample.json",
+  "packages/contracts/fixtures/tools.list.sample.json",
+  "packages/contracts/fixtures/tools.invoke.sample.json",
   "packages/contracts/fixtures/demo.secret-status.sample.json"
 ];
 
