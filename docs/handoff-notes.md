@@ -45,6 +45,7 @@ Template:
   - Added per-user ingestion cache and source-scoped mock ingestion execution in root server.
   - Added `GET /api/v1/tools` and `POST /api/v1/tools/invoke` so curriculum/game consumers can retrieve modeled data through a tool-style interface before live connectors land.
   - Wired existing frequency/insights/media-profile endpoints to respect `userId` and per-user ingestion state.
+  - Added `scripts/mock_tool_flow_check.mjs` and `npm run demo:tools` for repeatable verification of tool retrieval flow.
 - Contract changes:
   - Added tool response/request interfaces and fixtures for `tools.list` and `tools.invoke`.
   - Documented tool endpoints in API contract and server README.
