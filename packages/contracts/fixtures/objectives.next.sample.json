@@ -1,0 +1,18 @@
+{
+  "objectiveId": "ko_food_l2_001",
+  "level": 2,
+  "mode": "hangout",
+  "coreTargets": {
+    "vocabulary": ["메뉴", "주문", "맵다"],
+    "grammar": ["-고 싶어요", "-주세요"],
+    "sentenceStructures": ["N + 주세요", "N이/가 + adjective"]
+  },
+  "personalizedTargets": [
+    { "lemma": "무대", "source": "youtube" },
+    { "lemma": "연습", "source": "spotify" }
+  ],
+  "completionCriteria": {
+    "requiredTurns": 4,
+    "requiredAccuracy": 0.75
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "sessionId": "sess_demo_001",
+  "city": "seoul",
+  "sceneId": "food_street_hangout_intro",
+  "profile": {
+    "nativeLanguage": "en",
+    "targetLanguages": ["ko", "ja", "zh"],
+    "proficiency": {
+      "ko": "beginner",
+      "ja": "none",
+      "zh": "advanced"
+    }
+  },
+  "progression": {
+    "xp": 110,
+    "sp": 45,
+    "rp": 12,
+    "currentMasteryLevel": 1
+  }
+}

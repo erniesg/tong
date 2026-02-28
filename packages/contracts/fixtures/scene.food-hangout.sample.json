@@ -1,0 +1,30 @@
+{
+  "sceneId": "food_street_hangout_intro",
+  "city": "seoul",
+  "location": "food_street",
+  "mode": "hangout",
+  "objective": "Validate greeting + food-order vocabulary in context",
+  "steps": [
+    {
+      "type": "dialogue",
+      "speaker": "tong",
+      "text": "Let's warm up. Read this sign and tell me what dish sounds good."
+    },
+    {
+      "type": "exercise",
+      "exerciseId": "read-sign-001",
+      "masteryLevel": 0,
+      "successCriteria": "Player reads key script tokens correctly"
+    },
+    {
+      "type": "exercise",
+      "exerciseId": "order-food-002",
+      "masteryLevel": 2,
+      "successCriteria": "Player forms a valid order phrase"
+    },
+    {
+      "type": "reward",
+      "delta": { "xp": 30, "sp": 10, "rp": 5 }
+    }
+  ]
+}

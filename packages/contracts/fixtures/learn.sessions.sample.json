@@ -1,0 +1,22 @@
+{
+  "items": [
+    {
+      "learnSessionId": "learn_101",
+      "title": "Food Street L2 Drill",
+      "objectiveId": "ko_food_l2_001",
+      "city": "seoul",
+      "lang": "ko",
+      "uiTheme": "kakao_like",
+      "lastMessageAt": "2026-02-28T11:20:00.000Z"
+    },
+    {
+      "learnSessionId": "learn_087",
+      "title": "Pronunciation Warmup",
+      "objectiveId": "ko_food_l1_004",
+      "city": "seoul",
+      "lang": "ko",
+      "uiTheme": "kakao_like",
+      "lastMessageAt": "2026-02-27T10:10:00.000Z"
+    }
+  ]
+}
