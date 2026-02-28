@@ -153,6 +153,7 @@ const DEFAULT_PRESET_RESPONSES: PresetResponse[] = [
 const INITIAL_HINT = 'Tong hint: Use one short polite order phrase per turn.';
 const ACTIVE_USER_ID_STORAGE_KEY = 'tong_active_user_id';
 const GAME_LOGO_PATH = '/assets/app/logo_transparent.png';
+const OPENING_ANIMATION_PATH = '/assets/app/tong_opening.mp4';
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -265,6 +266,7 @@ function createSessionUserId(): string {
 
 export default function GamePage() {
   const cityTrackRef = useRef<HTMLDivElement | null>(null);
+  const openingVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const [entryPhase, setEntryPhase] = useState<EntryPhase>('opening');
   const [onboardingStep, setOnboardingStep] = useState(0);
@@ -307,6 +309,7 @@ export default function GamePage() {
   const [loadingLearn, setLoadingLearn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  const [needsIntroTap, setNeedsIntroTap] = useState(false);
 
   const cityConfig = CITY_BY_ID[city];
   const selectedLang = cityConfig.language;
@@ -350,11 +353,29 @@ export default function GamePage() {
   }, []);
 
   useEffect(() => {
+    if (entryPhase !== 'opening') return;
     const timer = window.setTimeout(() => {
       setEntryPhase('entry');
-    }, 1400);
+    }, 5200);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [entryPhase]);
+
+  useEffect(() => {
+    if (entryPhase !== 'opening') {
+      setNeedsIntroTap(false);
+      return;
+    }
+
+    const video = openingVideoRef.current;
+    if (!video) return;
+
+    const playPromise = video.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        setNeedsIntroTap(true);
+      });
+    }
+  }, [entryPhase]);
 
   useEffect(() => {
     const savedUserId = window.localStorage.getItem(ACTIVE_USER_ID_STORAGE_KEY);
@@ -388,6 +409,10 @@ export default function GamePage() {
     setActiveUserId(nextUserId);
     setHasSavedUserId(true);
     window.localStorage.setItem(ACTIVE_USER_ID_STORAGE_KEY, nextUserId);
+  }
+
+  function finishOpeningAnimation() {
+    setEntryPhase((current) => (current === 'opening' ? 'entry' : current));
   }
 
   function beginNewGame() {
@@ -730,107 +755,140 @@ export default function GamePage() {
             <span className="game-opening-blob game-opening-blob-c" />
           </div>
           <div className="game-opening-scrim" />
-          <div className="game-opening-content">
-            <img className="game-opening-logo" src={GAME_LOGO_PATH} alt="Tong logo" />
-            <p className="game-opening-kicker">Tong</p>
-            <h1 className="game-opening-title">Live a language, don&apos;t drill it.</h1>
-            <p className="game-opening-copy">
-              {entryPhase === 'opening'
-                ? 'Booting your world...'
-                : 'Start a new game. Tong will onboard you, then drop you straight into your first hangout.'}
-            </p>
-
-            {entryPhase === 'entry' && (
-              <div className="game-opening-actions">
-                <button onClick={() => beginNewGame()}>Start New Game</button>
-                <button className="secondary" onClick={() => void resumeLatestGame()} disabled={!hasSavedUserId}>
-                  Resume Last Session
-                </button>
-              </div>
-            )}
-
-            {entryPhase === 'onboarding' && (
-              <div className="card stack game-onboarding-story">
-                <p className="game-card-kicker" style={{ margin: 0 }}>
-                  Tong Onboarding
-                </p>
-                {onboardingLines.slice(0, onboardingStep + 1).map((line, index) => (
-                  <div key={`${line}_${index}`} className="chat-bubble chat-tong">
-                    {line}
-                  </div>
-                ))}
-
-                <div className="game-onboarding-grid">
-                  <article className="game-map-card stack">
-                    <p className="game-card-kicker" style={{ margin: 0 }}>
-                      City
-                    </p>
-                    <div className="row">
-                      {CITY_ORDER.map((cityId) => (
-                        <button
-                          key={cityId}
-                          className={cityId === city ? '' : 'secondary'}
-                          onClick={() => selectCity(cityId)}
-                          type="button"
-                        >
-                          {CITY_BY_ID[cityId].label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="game-city-hint">
-                      Left Tokyo, center Seoul, right Shanghai. You can switch later from the map.
-                    </p>
-                  </article>
-
-                  <article className="game-slider-card stack">
-                    <p className="game-card-kicker" style={{ margin: 0 }}>
-                      Language Gauge
-                    </p>
-                    {CJK_LANG_ORDER.map((lang) => {
-                      const level = sliderToProficiency(proficiencyGauge[lang]);
-                      return (
-                        <label key={lang} className="game-slider-row">
-                          <div className="row">
-                            <strong>
-                              {LANGUAGE_LABELS[lang]} ({lang.toUpperCase()})
-                            </strong>
-                            <span>
-                              {proficiencyGauge[lang]} · {proficiencyLabel(level)}
-                            </span>
-                          </div>
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            step={1}
-                            value={proficiencyGauge[lang]}
-                            onChange={(event) => handleProficiencyChange(lang, Number(event.target.value))}
-                          />
-                        </label>
-                      );
-                    })}
-                  </article>
-                </div>
-
-                <div className="game-opening-actions">
-                  {onboardingStep < onboardingLines.length - 1 ? (
-                    <button type="button" onClick={() => setOnboardingStep((current) => current + 1)}>
-                      Continue
-                    </button>
-                  ) : (
-                    <button type="button" onClick={() => void completeOnboardingAndLaunch()} disabled={loadingStart}>
-                      {loadingStart ? 'Entering Hangout...' : 'Enter First Hangout'}
-                    </button>
-                  )}
-                  <button className="secondary" type="button" onClick={() => setEntryPhase('entry')} disabled={loadingStart}>
-                    Back
+          <article className="mobile-frame game-opening-mobile-frame">
+            {entryPhase === 'opening' ? (
+              <div className="game-opening-intro-wrap">
+                <video
+                  ref={openingVideoRef}
+                  className="game-opening-intro-video"
+                  src={OPENING_ANIMATION_PATH}
+                  autoPlay
+                  muted
+                  playsInline
+                  preload="auto"
+                  onLoadedMetadata={(event) => {
+                    if (event.currentTarget.currentTime < 0.12) {
+                      event.currentTarget.currentTime = 0.12;
+                    }
+                  }}
+                  onEnded={finishOpeningAnimation}
+                  onError={finishOpeningAnimation}
+                />
+                <p className="game-opening-loading">Preparing your first scene...</p>
+                {needsIntroTap && (
+                  <button className="secondary" type="button" onClick={() => void openingVideoRef.current?.play()}>
+                    Tap To Play Intro
                   </button>
-                </div>
-                <p className="game-status">{status}</p>
-                {error && <p className="game-error">{error}</p>}
+                )}
+              </div>
+            ) : (
+              <div className="game-opening-content">
+                <img className="game-opening-logo" src={GAME_LOGO_PATH} alt="Tong logo" />
+                <p className="game-opening-kicker">Tong</p>
+                <h1 className="game-opening-title">
+                  <span>Live the drama.</span>
+                  <span className="game-opening-title-accent">Learn the language.</span>
+                </h1>
+                <p className="game-opening-copy">Start a new game. Tong will onboard you, then drop you into your first hangout.</p>
+
+                {entryPhase === 'entry' && (
+                  <div className="game-opening-actions">
+                    <button onClick={() => beginNewGame()}>Start New Game</button>
+                    <button className="secondary" onClick={() => void resumeLatestGame()} disabled={!hasSavedUserId}>
+                      Resume Last Session
+                    </button>
+                  </div>
+                )}
+
+                {entryPhase === 'onboarding' && (
+                  <div className="card stack game-onboarding-story">
+                    <p className="game-card-kicker" style={{ margin: 0 }}>
+                      Tong Onboarding
+                    </p>
+                    {onboardingLines.slice(0, onboardingStep + 1).map((line, index) => (
+                      <div key={`${line}_${index}`} className="chat-bubble chat-tong">
+                        {line}
+                      </div>
+                    ))}
+
+                    <div className="game-onboarding-grid">
+                      <article className="game-map-card stack">
+                        <p className="game-card-kicker" style={{ margin: 0 }}>
+                          City
+                        </p>
+                        <div className="row">
+                          {CITY_ORDER.map((cityId) => (
+                            <button
+                              key={cityId}
+                              className={cityId === city ? '' : 'secondary'}
+                              onClick={() => selectCity(cityId)}
+                              type="button"
+                            >
+                              {CITY_BY_ID[cityId].label}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="game-city-hint">
+                          Left Tokyo, center Seoul, right Shanghai. You can switch later from the map.
+                        </p>
+                      </article>
+
+                      <article className="game-slider-card stack">
+                        <p className="game-card-kicker" style={{ margin: 0 }}>
+                          Language Gauge
+                        </p>
+                        {CJK_LANG_ORDER.map((lang) => {
+                          const level = sliderToProficiency(proficiencyGauge[lang]);
+                          return (
+                            <label key={lang} className="game-slider-row">
+                              <div className="row">
+                                <strong>
+                                  {LANGUAGE_LABELS[lang]} ({lang.toUpperCase()})
+                                </strong>
+                                <span>
+                                  {proficiencyGauge[lang]} · {proficiencyLabel(level)}
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={proficiencyGauge[lang]}
+                                onChange={(event) => handleProficiencyChange(lang, Number(event.target.value))}
+                              />
+                            </label>
+                          );
+                        })}
+                      </article>
+                    </div>
+
+                    <div className="game-opening-actions">
+                      {onboardingStep < onboardingLines.length - 1 ? (
+                        <button type="button" onClick={() => setOnboardingStep((current) => current + 1)}>
+                          Continue
+                        </button>
+                      ) : (
+                        <button type="button" onClick={() => void completeOnboardingAndLaunch()} disabled={loadingStart}>
+                          {loadingStart ? 'Entering Hangout...' : 'Enter First Hangout'}
+                        </button>
+                      )}
+                      <button
+                        className="secondary"
+                        type="button"
+                        onClick={() => setEntryPhase('entry')}
+                        disabled={loadingStart}
+                      >
+                        Back
+                      </button>
+                    </div>
+                    <p className="game-status">{status}</p>
+                    {error && <p className="game-error">{error}</p>}
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </article>
         </section>
       )}
 
