@@ -1,4 +1,4 @@
-name = "tong-api-worker"
+name = "tong-api"
 main = "src/index.ts"
 compatibility_date = "2026-02-28"
 workers_dev = true

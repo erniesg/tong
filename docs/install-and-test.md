@@ -71,4 +71,4 @@ npm run dev:worker
 2. Follow `docs/cloudflare-worker-setup.md`
 3. Switch client backend by setting:
 - `NEXT_PUBLIC_API_BASE_URL=http://localhost:8787` (Node API)
-- `NEXT_PUBLIC_API_BASE_URL=https://tong-api-worker.<subdomain>.workers.dev` (Cloud Worker API)
+- `NEXT_PUBLIC_API_BASE_URL=https://tong-api.<subdomain>.workers.dev` (Cloud Worker API)
