@@ -14,6 +14,7 @@ export function Background({ imageUrl, ambientDescription }: BackgroundProps) {
           src={imageUrl}
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
+          style={{ objectPosition: 'center bottom' }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
         />
       ) : ambientDescription ? (

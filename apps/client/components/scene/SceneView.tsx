@@ -20,6 +20,7 @@ interface SceneViewProps {
   choicePrompt?: string | null;
   tongTip: { message: string; translation?: string } | null;
   isStreaming: boolean;
+  hudContent?: React.ReactNode;
   onChoice: (choiceId: string) => void;
   onContinue: () => void;
   onExerciseResult: (exerciseId: string, correct: boolean) => void;
@@ -45,6 +46,7 @@ export function SceneView({
   choicePrompt,
   tongTip,
   isStreaming,
+  hudContent,
   onChoice,
   onContinue,
   onExerciseResult,
@@ -63,7 +65,10 @@ export function SceneView({
   };
 
   return (
-    <div className="relative h-full w-full overflow-hidden select-none">
+    <div className="absolute inset-0 overflow-hidden select-none">
+      {/* Layer 0: HUD */}
+      {hudContent}
+
       {/* Layer 1: Background */}
       <Background imageUrl={backgroundUrl} ambientDescription={ambientDescription} />
 
