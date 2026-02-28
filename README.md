@@ -37,6 +37,16 @@ Run local demo contract smoke check:
 npm run demo:smoke
 ```
 
+Run the mock UI (YouTube + Spotify visualized with fixture data):
+```bash
+npm install
+npm run client:dev
+```
+
+Open:
+- `http://localhost:3000`
+- `http://localhost:3000?demo_fast_path=true&auto_pass_checks=true`
+
 ## Legacy prototype (v0.1 extension)
 
 The original Chrome MV3 extension scaffold remains in:
@@ -46,3 +56,5 @@ The original Chrome MV3 extension scaffold remains in:
 - `src/data/phrases.js`
 - `src/options.*`
 - `src/background.js`
+
+Player media profile fixtures now include source-specific YouTube + Spotify examples at `packages/contracts/fixtures/player.media-profile.sample.json`.

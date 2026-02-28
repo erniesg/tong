@@ -15,6 +15,8 @@ Let any contributor run and validate the demo flow locally, even without remote 
 cp .env.example .env
 npm run setup:worktrees
 npm run demo:smoke
+npm install
+npm run client:dev
 ```
 
 ## What `demo:smoke` validates
@@ -22,6 +24,7 @@ npm run demo:smoke
 2. JSON fixtures parse successfully.
 3. Core keys used by client and server are present.
 4. Objective model contains vocabulary + grammar + sentence structures.
+5. Player media profile fixture includes both YouTube + Spotify signal blocks.
 
 ## Local test modes
 1. `local-mock` (default): no remote dependencies, uses fixtures.
@@ -34,6 +37,8 @@ Always drive backend source via one env key:
 
 ## Device testing
 1. Web: browser run on localhost.
+   - Mock UI URL: `http://localhost:3000`
+   - Fast-path URL: `http://localhost:3000?demo_fast_path=true&auto_pass_checks=true`
 2. iOS: Capacitor sync + Xcode run to simulator/device.
 3. Android: Capacitor sync + Android Studio emulator/device.
 

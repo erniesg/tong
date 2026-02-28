@@ -1,2 +1,5 @@
 .DS_Store
 tong.zip
+node_modules/
+apps/client/.next/
+.worktrees/

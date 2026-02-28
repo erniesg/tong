@@ -3,8 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "description": "Chrome extension + dating sim game for learning CJK languages",
+  "workspaces": [
+    "apps/client"
+  ],
   "scripts": {
     "demo:smoke": "node scripts/demo_smoke_check.mjs",
+    "client:dev": "npm run dev --workspace @tong/client",
+    "client:build": "npm run build --workspace @tong/client",
+    "client:start": "npm run start --workspace @tong/client",
     "setup:worktrees": "./scripts/setup-hackathon-worktrees.sh",
     "zip": "rm -f tong.zip && zip -r tong.zip manifest.json src README.md"
   }
