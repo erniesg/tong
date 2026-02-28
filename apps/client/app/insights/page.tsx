@@ -71,6 +71,9 @@ export default function InsightsPage() {
           <Link href="/" className="nav-link">
             Home
           </Link>
+          <Link href="/integrations" className="nav-link">
+            Integrations
+          </Link>
           <Link href="/overlay" className="nav-link">
             Overlay
           </Link>

@@ -9,10 +9,16 @@ npm --prefix apps/client install
 npm --prefix apps/client run dev
 ```
 
-Set API base (optional):
+Set API base (recommended):
 
 ```bash
-NEXT_PUBLIC_TONG_API_BASE=http://localhost:8787
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8787
+```
+
+Cloud worker:
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=https://tong-api.<subdomain>.workers.dev
 ```
 
 ## Cloudflare Workers Deploy (OpenNext)

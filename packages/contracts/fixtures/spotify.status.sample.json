@@ -1,0 +1,10 @@
+{
+  "userId": "demo-user-1",
+  "spotifyConfigured": true,
+  "connected": true,
+  "tokenExpiresAtIso": "2026-02-28T17:00:00.000Z",
+  "tokenScope": "user-read-recently-played",
+  "lastSyncAtIso": "2026-02-28T16:05:00.000Z",
+  "lastSyncItemCount": 84,
+  "syncWindowHours": 72
+}
