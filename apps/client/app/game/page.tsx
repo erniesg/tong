@@ -269,7 +269,6 @@ export default function GamePage() {
   const openingVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const [entryPhase, setEntryPhase] = useState<EntryPhase>('opening');
-  const [onboardingStep, setOnboardingStep] = useState(0);
   const [activeUserId, setActiveUserId] = useState('demo-user-1');
   const [hasSavedUserId, setHasSavedUserId] = useState(false);
   const [showSetupPanel, setShowSetupPanel] = useState(false);
@@ -296,7 +295,7 @@ export default function GamePage() {
   const [engineMode, setEngineMode] = useState<'dynamic_ai' | 'scripted_fallback'>('scripted_fallback');
   const [randomizeCharacter, setRandomizeCharacter] = useState(false);
   const [hint, setHint] = useState(INITIAL_HINT);
-  const [status, setStatus] = useState('Set CJK sliders, swipe the map, then start your first hangout.');
+  const [status, setStatus] = useState('Set your language baseline, then start your first hangout challenge.');
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
   const [userUtterance, setUserUtterance] = useState('');
   const [presetResponses, setPresetResponses] = useState<PresetResponse[]>(DEFAULT_PRESET_RESPONSES);
@@ -314,15 +313,6 @@ export default function GamePage() {
   const cityConfig = CITY_BY_ID[city];
   const selectedLang = cityConfig.language;
   const objectiveSummary = useMemo(() => buildObjectiveSummary(objective), [objective]);
-  const onboardingLines = useMemo(
-    () => [
-      `Tong: Welcome to Tong. You will live in ${cityConfig.label} and learn through real scenes.`,
-      'Tong: Progression loop is Learn -> Hangout -> Mission. Your RP, XP, and SP all update live.',
-      `Tong: We start at ${LOCATION_LABELS[location]}. Keep responses short and natural.`,
-      `Tong: Swipe cities any time. Center is Korean, left Japanese, right Chinese. Ready?`,
-    ],
-    [cityConfig.label, location],
-  );
 
   const requiredTurns = objective?.completionCriteria.requiredTurns ?? 4;
   const objectivePercent = Math.round(objectiveRatio * 100);
@@ -418,6 +408,8 @@ export default function GamePage() {
   function beginNewGame() {
     const nextUserId = createSessionUserId();
     persistActiveUserId(nextUserId);
+    setCity(DEFAULT_CITY);
+    setLocation(DEFAULT_LOCATION);
     setSessionId(null);
     setRouteState(null);
     setRelationshipState(null);
@@ -425,19 +417,18 @@ export default function GamePage() {
     setScore({ xp: 0, sp: 0, rp: 0 });
     setMessages([]);
     setError(null);
-    setStatus('Tong is introducing your first scene...');
+    setStatus('Set your language baseline, then launch your first hangout challenge.');
     setMode('hangout');
-    setOnboardingStep(0);
     setEntryPhase('onboarding');
     setShowSetupPanel(false);
-    resetSceneState(location, city);
+    resetSceneState(DEFAULT_LOCATION, DEFAULT_CITY);
   }
 
   async function resumeLatestGame() {
     if (!hasSavedUserId) return;
     setError(null);
     setEntryPhase('onboarding');
-    setOnboardingStep(onboardingLines.length - 1);
+    setStatus('Adjust your baseline if needed, then jump into your first challenge.');
   }
 
   function selectCity(nextCity: CityId) {
@@ -803,76 +794,46 @@ export default function GamePage() {
                 {entryPhase === 'onboarding' && (
                   <div className="card stack game-onboarding-story">
                     <p className="game-card-kicker" style={{ margin: 0 }}>
-                      Tong Onboarding
+                      Starter Setup
                     </p>
-                    {onboardingLines.slice(0, onboardingStep + 1).map((line, index) => (
-                      <div key={`${line}_${index}`} className="chat-bubble chat-tong">
-                        {line}
-                      </div>
-                    ))}
-
-                    <div className="game-onboarding-grid">
-                      <article className="game-map-card stack">
-                        <p className="game-card-kicker" style={{ margin: 0 }}>
-                          City
-                        </p>
-                        <div className="row">
-                          {CITY_ORDER.map((cityId) => (
-                            <button
-                              key={cityId}
-                              className={cityId === city ? '' : 'secondary'}
-                              onClick={() => selectCity(cityId)}
-                              type="button"
-                            >
-                              {CITY_BY_ID[cityId].label}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="game-city-hint">
-                          Left Tokyo, center Seoul, right Shanghai. You can switch later from the map.
-                        </p>
-                      </article>
-
-                      <article className="game-slider-card stack">
-                        <p className="game-card-kicker" style={{ margin: 0 }}>
-                          Language Gauge
-                        </p>
-                        {CJK_LANG_ORDER.map((lang) => {
-                          const level = sliderToProficiency(proficiencyGauge[lang]);
-                          return (
-                            <label key={lang} className="game-slider-row">
-                              <div className="row">
-                                <strong>
-                                  {LANGUAGE_LABELS[lang]} ({lang.toUpperCase()})
-                                </strong>
-                                <span>
-                                  {proficiencyGauge[lang]} · {proficiencyLabel(level)}
-                                </span>
-                              </div>
-                              <input
-                                type="range"
-                                min={0}
-                                max={100}
-                                step={1}
-                                value={proficiencyGauge[lang]}
-                                onChange={(event) => handleProficiencyChange(lang, Number(event.target.value))}
-                              />
-                            </label>
-                          );
-                        })}
-                      </article>
+                    <div className="chat-bubble chat-tong">
+                      Set your current proficiency in Korean, Japanese, and Chinese. Then we begin your first hangout
+                      challenge in Seoul.
                     </div>
 
+                    <article className="game-slider-card stack">
+                      <p className="game-card-kicker" style={{ margin: 0 }}>
+                        Language Gauge
+                      </p>
+                      {CJK_LANG_ORDER.map((lang) => {
+                        const level = sliderToProficiency(proficiencyGauge[lang]);
+                        return (
+                          <label key={lang} className="game-slider-row">
+                            <div className="row">
+                              <strong>
+                                {LANGUAGE_LABELS[lang]} ({lang.toUpperCase()})
+                              </strong>
+                              <span>
+                                {proficiencyGauge[lang]} · {proficiencyLabel(level)}
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              step={1}
+                              value={proficiencyGauge[lang]}
+                              onChange={(event) => handleProficiencyChange(lang, Number(event.target.value))}
+                            />
+                          </label>
+                        );
+                      })}
+                    </article>
+
                     <div className="game-opening-actions">
-                      {onboardingStep < onboardingLines.length - 1 ? (
-                        <button type="button" onClick={() => setOnboardingStep((current) => current + 1)}>
-                          Continue
-                        </button>
-                      ) : (
-                        <button type="button" onClick={() => void completeOnboardingAndLaunch()} disabled={loadingStart}>
-                          {loadingStart ? 'Entering Hangout...' : 'Enter First Hangout'}
-                        </button>
-                      )}
+                      <button type="button" onClick={() => void completeOnboardingAndLaunch()} disabled={loadingStart}>
+                        {loadingStart ? 'Launching Challenge...' : 'Start First Hangout Challenge'}
+                      </button>
                       <button
                         className="secondary"
                         type="button"
