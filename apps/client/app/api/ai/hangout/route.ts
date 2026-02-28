@@ -222,7 +222,7 @@ export async function POST(req: Request) {
   };
 
   const systemPrompt = buildHangoutOrchestratorPrompt(defaultVars);
-  const modelId = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
+  const modelId = process.env.OPENAI_MODEL ?? 'gpt-5.2';
 
   console.log('[hangout] AI mode — model:', modelId, 'messages:', messages.length);
   console.log('[hangout] System prompt length:', systemPrompt.length);
