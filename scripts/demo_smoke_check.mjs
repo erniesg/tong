@@ -16,7 +16,9 @@ const requiredFiles = [
   "packages/contracts/fixtures/objectives.next.sample.json",
   "packages/contracts/fixtures/learn.sessions.sample.json",
   "packages/contracts/fixtures/scene.food-hangout.sample.json",
-  "packages/contracts/fixtures/scene.shanghai-texting-reward.sample.json"
+  "packages/contracts/fixtures/scene.shanghai-texting-reward.sample.json",
+  "packages/contracts/fixtures/media.events.sample.json",
+  "packages/contracts/fixtures/demo.secret-status.sample.json"
 ];
 
 const missing = requiredFiles.filter((rel) => !fs.existsSync(path.join(root, rel)));
@@ -50,6 +52,18 @@ const vocabInsights = JSON.parse(
 const playerMediaProfile = JSON.parse(
   fs.readFileSync(
     path.join(root, "packages/contracts/fixtures/player.media-profile.sample.json"),
+    "utf8"
+  )
+);
+const demoSecretStatus = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "packages/contracts/fixtures/demo.secret-status.sample.json"),
+    "utf8"
+  )
+);
+const mediaEvents = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "packages/contracts/fixtures/media.events.sample.json"),
     "utf8"
   )
 );
@@ -156,6 +170,24 @@ if (!playerMediaProfile.learningSignals || !Array.isArray(playerMediaProfile.lea
   process.exit(1);
 }
 
+if (!Array.isArray(mediaEvents.events) || mediaEvents.events.length === 0) {
+  console.error("Expected non-empty events array in media.events.sample.json");
+  process.exit(1);
+}
+
+for (const field of [
+  "demoPasswordEnabled",
+  "youtubeApiKeyConfigured",
+  "spotifyClientIdConfigured",
+  "spotifyClientSecretConfigured",
+  "openAiApiKeyConfigured"
+]) {
+  if (typeof demoSecretStatus[field] !== "boolean") {
+    console.error(`Expected boolean ${field} in demo.secret-status.sample.json`);
+    process.exit(1);
+  }
+}
+
 console.log("Demo smoke check passed.");
 console.log("- Contract files present");
 console.log("- JSON fixtures parse");
@@ -163,3 +195,4 @@ console.log("- Core progression shape validated");
 console.log("- Objective model targets validated");
 console.log("- Vocab insight model validated");
 console.log("- Player media profile includes youtube + spotify signals");
+console.log("- Demo secret status fixture validated");
