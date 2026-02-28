@@ -145,6 +145,38 @@ export interface ProgressLoopState {
   missionGate: MissionGateState;
 }
 
+export interface RouteEventDelta {
+  xp: number;
+  sp: number;
+  rp: number;
+  objectiveProgressDelta: number;
+}
+
+export interface RouteEvent {
+  atIso: string;
+  sceneId: string;
+  city: CityId;
+  location: LocationId;
+  stepId: string;
+  tier: 'success' | 'partial' | 'miss';
+  delta: RouteEventDelta;
+}
+
+export interface RouteState {
+  characterId: string;
+  characterName?: string;
+  rp: number;
+  stage: string;
+  progressToNext?: number;
+  validatedHangouts: number;
+  totalScenes: number;
+  totalTurns: number;
+  lastMood?: string;
+  memoryNotes?: string[];
+  recentEvents?: RouteEvent[];
+  lastSeenAt?: string | null;
+}
+
 export interface StartOrResumeGameResponse {
   sessionId: string;
   city: CityId;
@@ -155,6 +187,7 @@ export interface StartOrResumeGameResponse {
   profile?: GameProfile;
   progression?: GameProgression;
   relationshipState?: RelationshipState;
+  routeState?: RouteState;
   progressionLoop?: ProgressLoopState;
   engineMode?: 'dynamic_ai' | 'scripted_fallback';
 }
@@ -212,6 +245,7 @@ export interface SceneCompletionSummary {
   objectiveProgress?: number;
   scoreDelta?: ScoreState;
   relationshipState?: RelationshipState;
+  routeState?: RouteState;
   progressionLoop?: {
     masteryTier?: number;
     learnReadiness?: number;
@@ -229,9 +263,11 @@ export interface SceneCompletionSummary {
 
 export interface HangoutState {
   turn: number;
+  sceneBeat?: 'opening' | 'build' | 'challenge' | 'resolution';
   score: ScoreState;
   objectiveProgress?: ObjectiveProgressState;
   relationshipState?: RelationshipState;
+  routeState?: RouteState;
   progressionLoop?: ProgressLoopState;
 }
 
@@ -257,6 +293,7 @@ export interface StartHangoutResponse {
   };
   completionSummary?: SceneCompletionSummary | null;
   relationshipState?: RelationshipState;
+  routeState?: RouteState;
   progressionLoop?: ProgressLoopState;
   uiPolicy: {
     immersiveFirstPerson: boolean;
@@ -272,6 +309,7 @@ export interface RespondHangoutResponse {
     objectiveProgressDelta: number;
     objectiveProgress?: ObjectiveProgressState;
     relationshipState?: RelationshipState;
+    routeState?: RouteState;
     progressionLoop?: ProgressLoopState;
     suggestedReplies?: string[];
   };
@@ -285,6 +323,7 @@ export interface RespondHangoutResponse {
   };
   completionSummary?: SceneCompletionSummary | null;
   relationshipState?: RelationshipState;
+  routeState?: RouteState;
   progressionLoop?: ProgressLoopState;
   state: HangoutState;
 }
@@ -301,6 +340,7 @@ export interface MissionAssessResponse {
   rewards?: ScoreState;
   progressionLoop: ProgressLoopState;
   relationshipState?: RelationshipState;
+  routeState?: RouteState;
   unlockPreview?: {
     nextMasteryTier?: number;
     nextLocationOptions?: LocationId[];
@@ -341,6 +381,9 @@ interface StartOrResumeGameParams {
   userId?: string;
   city?: CityId;
   profile?: GameProfile;
+  randomizeCharacter?: boolean;
+  preferRomance?: boolean;
+  characterId?: string;
 }
 
 export function startOrResumeGame(params: StartOrResumeGameParams = {}) {
@@ -350,6 +393,9 @@ export function startOrResumeGame(params: StartOrResumeGameParams = {}) {
     body: JSON.stringify({
       userId,
       city: params.city || 'seoul',
+      randomizeCharacter: Boolean(params.randomizeCharacter),
+      preferRomance: params.preferRomance,
+      characterId: params.characterId,
       profile: params.profile || {
         nativeLanguage: 'en',
         targetLanguages: ['ko', 'ja', 'zh'],
@@ -390,10 +436,14 @@ interface StartHangoutParams {
   city?: CityId;
   location?: LocationId;
   lang?: 'ko' | 'ja' | 'zh';
+  randomizeCharacter?: boolean;
+  preferRomance?: boolean;
+  characterId?: string;
 }
 
 export function startHangout(params: StartHangoutParams) {
-  const { objectiveId, userId, sessionId, city, location, lang } = params;
+  const { objectiveId, userId, sessionId, city, location, lang, randomizeCharacter, preferRomance, characterId } =
+    params;
   return apiFetch<StartHangoutResponse>('/api/v1/scenes/hangout/start', {
     method: 'POST',
     body: JSON.stringify({
@@ -403,6 +453,9 @@ export function startHangout(params: StartHangoutParams) {
       location: location || 'food_street',
       lang: lang || 'ko',
       objectiveId,
+      randomizeCharacter: Boolean(randomizeCharacter),
+      preferRomance,
+      characterId,
     }),
   });
 }

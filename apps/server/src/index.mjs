@@ -58,7 +58,10 @@ const DICTIONARY_OVERRIDES = {
 const CITY_IDS = ['seoul', 'tokyo', 'shanghai'];
 const LOCATION_IDS = ['food_street', 'cafe', 'convenience_store', 'subway_hub', 'practice_studio'];
 const LANG_IDS = ['ko', 'ja', 'zh'];
+const ROMANCE_LOCATION_IDS = ['food_street', 'cafe'];
 const REQUIRED_VALIDATED_HANGOUTS_FOR_MISSION = 2;
+const ROUTE_MEMORY_LIMIT = 8;
+const ROUTE_HISTORY_LIMIT = 12;
 
 const RELATIONSHIP_STAGES = [
   { stage: 'stranger', minRp: 0 },
@@ -557,6 +560,122 @@ function buildProgressLoopState(session) {
   };
 }
 
+function sanitizeRouteMemoryNote(note) {
+  if (typeof note !== 'string') return null;
+  const trimmed = note.replace(/\s+/g, ' ').trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, 180);
+}
+
+function mergeRouteMemoryNotes(existing = [], incoming = []) {
+  const normalized = [];
+  const seen = new Set();
+  for (const candidate of [...existing, ...incoming]) {
+    const safe = sanitizeRouteMemoryNote(candidate);
+    if (!safe) continue;
+    const key = safe.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(safe);
+  }
+  return normalized.slice(-ROUTE_MEMORY_LIMIT);
+}
+
+function normalizeSceneBeat(value, fallback = 'opening') {
+  const safe = String(value || '').toLowerCase();
+  if (safe === 'opening' || safe === 'build' || safe === 'challenge' || safe === 'resolution') return safe;
+  return fallback;
+}
+
+function deriveSceneBeat(session, scene) {
+  const completedTurns = Math.min((session.turn || 1) - 1, scene.objective.requiredTurns);
+  const progress = Number(session.objectiveProgress || 0);
+  if (completedTurns <= 1 || progress < 0.2) return 'opening';
+  if (progress < 0.55) return 'build';
+  if (progress < 0.9) return 'challenge';
+  return 'resolution';
+}
+
+function buildFallbackMemoryNote(turnScript, tier, userUtterance) {
+  if (tier === 'miss') return null;
+  const cleanUtterance = String(userUtterance || '').replace(/\s+/g, ' ').trim();
+  const excerpt = cleanUtterance ? ` (${cleanUtterance.slice(0, 42)})` : '';
+  if (tier === 'success') return `Strong ${turnScript.stepId} response${excerpt}.`;
+  return `Partial ${turnScript.stepId} response${excerpt}.`;
+}
+
+function buildRouteEvent({ scene, turnScript, tier, xpDelta, spDelta, rpDelta, objectiveProgressDelta }) {
+  return {
+    atIso: new Date().toISOString(),
+    sceneId: scene.sceneId,
+    city: scene.city,
+    location: scene.location.locationId,
+    stepId: turnScript.stepId,
+    tier,
+    delta: {
+      xp: xpDelta,
+      sp: spDelta,
+      rp: rpDelta,
+      objectiveProgressDelta: Number(clampNumber(objectiveProgressDelta, 0, 1).toFixed(2)),
+    },
+  };
+}
+
+function createCharacterProgressSeed(npc, seedRp = 0) {
+  return {
+    npcId: npc?.npcId || 'npc_unknown',
+    name: npc?.name || 'Unknown',
+    rp: Math.max(0, Math.round(Number(seedRp || 0))),
+    validatedHangouts: 0,
+    totalScenes: 0,
+    totalTurns: 0,
+    lastMood: npc?.baselineMood || 'neutral',
+    lastSeenAt: null,
+    memoryNotes: [],
+    recentEvents: [],
+  };
+}
+
+function ensureCharacterProgress(session, npc, options = {}) {
+  if (!npc?.npcId) return null;
+  const seedRp = Math.max(0, Math.round(Number(options.seedRp || 0)));
+  session.characterProgress = session.characterProgress || {};
+  if (!session.characterProgress[npc.npcId]) {
+    session.characterProgress[npc.npcId] = createCharacterProgressSeed(npc, seedRp);
+  }
+  return session.characterProgress[npc.npcId];
+}
+
+function getCharacterProgress(session, npcId) {
+  if (!session?.characterProgress || !npcId) return null;
+  const record = session.characterProgress[npcId];
+  if (!record) return null;
+  return {
+    ...record,
+    memoryNotes: [...(record.memoryNotes || [])],
+    recentEvents: [...(record.recentEvents || [])],
+  };
+}
+
+function buildRouteState(npc, progress) {
+  const safeProgress = progress || createCharacterProgressSeed(npc, 0);
+  const relationshipState = buildRelationshipState(safeProgress.rp || 0);
+  return {
+    characterId: npc?.npcId || safeProgress.npcId,
+    characterName: npc?.name || safeProgress.name,
+    rp: safeProgress.rp || 0,
+    stage: relationshipState.stage,
+    progressToNext: relationshipState.progressToNext,
+    validatedHangouts: safeProgress.validatedHangouts || 0,
+    totalScenes: safeProgress.totalScenes || 0,
+    totalTurns: safeProgress.totalTurns || 0,
+    lastMood: safeProgress.lastMood || npc?.baselineMood || 'neutral',
+    memoryNotes: [...(safeProgress.memoryNotes || [])].slice(-3),
+    recentEvents: [...(safeProgress.recentEvents || [])].slice(-4),
+    lastSeenAt: safeProgress.lastSeenAt || null,
+  };
+}
+
 function normalizeCity(value, fallback = 'seoul') {
   if (CITY_IDS.includes(value)) return value;
   return fallback;
@@ -710,6 +829,7 @@ function buildObjectiveProgressState(scene, progress) {
 function buildTurnState(scene, session, lastTurn = null) {
   const completedTurns = Math.min(session.turn - 1, scene.objective.requiredTurns);
   return {
+    sceneBeat: session.sceneBeat || deriveSceneBeat(session, scene),
     currentTurn: session.turn,
     completedTurns,
     requiredTurns: scene.objective.requiredTurns,
@@ -757,7 +877,19 @@ function computeTurnAccuracy(session) {
 function buildCompletionSummary(scene, session) {
   if (!session.completed) return null;
   const passed = objectivePassed(scene, session);
-  const totalRp = (session.baseProgression?.rp || 0) + (session.score?.rp || 0);
+  const totalRp = (session.characterBaseRp || 0) + (session.score?.rp || 0);
+  const routeState = buildRouteState(session.npc, {
+    npcId: session.npc?.npcId,
+    name: session.npc?.name,
+    rp: totalRp,
+    validatedHangouts: session.routeValidatedHangouts || 0,
+    totalScenes: 1,
+    totalTurns: session.transcript?.length || 0,
+    lastMood: session.npcMood,
+    memoryNotes: [...(session.memoryNotes || [])],
+    recentEvents: [...(session.recentEvents || [])],
+    lastSeenAt: new Date().toISOString(),
+  });
   return {
     objectiveId: scene.objective.objectiveId,
     status: passed ? 'passed' : 'completed_retry_available',
@@ -768,6 +900,7 @@ function buildCompletionSummary(scene, session) {
     objectiveProgress: Number(session.objectiveProgress.toFixed(2)),
     scoreDelta: cloneScore(session.score),
     relationshipState: buildRelationshipState(totalRp),
+    routeState,
     progressionLoop: {
       masteryTier: session.masteryTier || 1,
       learnReadiness: Number(clampNumber(session.learnReadiness || 0, 0, 1).toFixed(2)),
@@ -812,6 +945,16 @@ function getQuickRepliesForTurn(scene, turnNumber) {
   return [...(scene.turnScript[scriptIndex].quickReplies || [])];
 }
 
+function buildHangoutOpeningLine(scene, session) {
+  const baseLine = scene.turnScript[0].prompts.start;
+  const lastMemory = [...(session.memoryNotes || [])].slice(-1)[0];
+  if (!lastMemory) return baseLine;
+  if (scene.lang === 'ko') return `${baseLine} 지난번에 ${lastMemory}`;
+  if (scene.lang === 'ja') return `${baseLine} 前回メモ: ${lastMemory}`;
+  if (scene.lang === 'zh') return `${baseLine} 上次记忆: ${lastMemory}`;
+  return `${baseLine} Last memory: ${lastMemory}`;
+}
+
 function buildObjectiveNextResponse({ city = 'seoul', location = 'food_street', lang = 'ko', mode = 'hangout' }) {
   const scene = getSceneSlice({ city, location, lang });
   return {
@@ -847,6 +990,9 @@ function createGameSession(userId, profile, options = {}) {
     preferRomance: options.preferRomance !== false,
     requestedCharacterId: options.characterId,
   });
+  const characterProgress = {
+    [npc.npcId]: createCharacterProgressSeed(npc, progression.rp || 0),
+  };
   const sessionId = nextSessionId('game');
   const session = {
     sessionId,
@@ -865,6 +1011,8 @@ function createGameSession(userId, profile, options = {}) {
     learnReadiness,
     validatedHangouts,
     missionGateStatus,
+    activeCharacterId: npc.npcId,
+    characterProgress,
     lastHangoutSummary: null,
   };
   state.gameSessions.set(sessionId, session);
@@ -878,7 +1026,9 @@ function buildGameStartResponse(session, resumed) {
     location: session.location,
     lang: session.lang,
   });
-  const relationshipState = buildRelationshipState(session.progression?.rp || 0);
+  const routeProgress = getCharacterProgress(session, session.activeCharacterId || session.npc?.npcId);
+  const relationshipState = buildRelationshipState(routeProgress?.rp ?? session.progression?.rp ?? 0);
+  const routeState = buildRouteState(session.npc, routeProgress);
   const progressionLoop = buildProgressLoopState(session);
 
   return {
@@ -891,6 +1041,7 @@ function buildGameStartResponse(session, resumed) {
     profile: session.profile,
     progression: session.progression,
     relationshipState,
+    routeState,
     progressionLoop,
     engineMode: shouldUseAiHangout() ? 'dynamic_ai' : 'scripted_fallback',
     resumed,
@@ -904,6 +1055,7 @@ function buildGameStartResponse(session, resumed) {
     locationMeta: buildLocationMeta(scene),
     npc: buildNpcState(scene, session.npcMood, session.npc),
     turnState: {
+      sceneBeat: 'opening',
       currentTurn: 1,
       completedTurns: 0,
       requiredTurns: scene.objective.requiredTurns,
@@ -911,6 +1063,7 @@ function buildGameStartResponse(session, resumed) {
       successfulTurns: session.successfulTurns,
       objectiveProgress: Number(session.objectiveProgress.toFixed(2)),
       relationshipState,
+      routeState,
       progressionLoop,
       isCompleted: false,
       completionSignal: null,
@@ -935,11 +1088,30 @@ function createHangoutSession({
   location,
   lang,
   characterId,
+  randomizeCharacter = false,
   preferRomance = true,
 }) {
   const scene = getSceneSlice({ city, location, lang });
-  const npc = pickCharacter({ city: scene.city, preferRomance, requestedCharacterId: characterId });
   const linkedGame = gameSessionId ? state.gameSessions.get(gameSessionId) : null;
+  const romanceEligible = ROMANCE_LOCATION_IDS.includes(scene.location.locationId);
+  const shouldPreferRomance = romanceEligible ? preferRomance !== false : false;
+  const requestedCharacterId = randomizeCharacter ? null : characterId;
+  const npc = pickCharacter({
+    city: scene.city,
+    preferRomance: shouldPreferRomance,
+    requestedCharacterId,
+  });
+  let characterProgress = null;
+  if (linkedGame) {
+    const seedRp = linkedGame.activeCharacterId === npc.npcId ? linkedGame.progression?.rp || 0 : 0;
+    characterProgress = ensureCharacterProgress(linkedGame, npc, { seedRp });
+    linkedGame.activeCharacterId = npc.npcId;
+    linkedGame.npc = npc;
+    state.gameSessions.set(linkedGame.sessionId, linkedGame);
+  }
+  if (!characterProgress) {
+    characterProgress = createCharacterProgressSeed(npc, 0);
+  }
   const baseProgression = linkedGame?.progression ? { ...linkedGame.progression } : { xp: 0, sp: 0, rp: 0 };
   const masteryTier = linkedGame?.masteryTier || linkedGame?.progression?.currentMasteryLevel || 1;
   const learnReadiness =
@@ -960,6 +1132,11 @@ function createHangoutSession({
     objectiveId: scene.objective.objectiveId,
     npc,
     baseProgression,
+    characterBaseRp: characterProgress.rp || 0,
+    routeValidatedHangouts: characterProgress.validatedHangouts || 0,
+    memoryNotes: [...(characterProgress.memoryNotes || [])].slice(-ROUTE_MEMORY_LIMIT),
+    recentEvents: [...(characterProgress.recentEvents || [])].slice(-ROUTE_HISTORY_LIMIT),
+    sceneBeat: 'opening',
     turn: 1,
     score: { xp: 0, sp: 0, rp: 0 },
     objectiveProgress: 0,
@@ -992,7 +1169,25 @@ function updateGameSessionFromHangout(hangoutSession, completionSummary) {
   gameSession.lang = hangoutSession.lang;
   gameSession.sceneId = hangoutSession.sceneId;
   gameSession.npc = hangoutSession.npc;
+  gameSession.activeCharacterId = hangoutSession.npc?.npcId || gameSession.activeCharacterId;
   gameSession.learnReadiness = Number(clampNumber((gameSession.learnReadiness || 0) + 0.04, 0, 1).toFixed(2));
+
+  if (hangoutSession.npc?.npcId) {
+    const route = ensureCharacterProgress(gameSession, hangoutSession.npc, { seedRp: 0 });
+    route.rp = Math.max(0, (route.rp || 0) + completionSummary.scoreDelta.rp);
+    if (completionSummary.completionSignal === 'objective_validated') {
+      route.validatedHangouts = (route.validatedHangouts || 0) + 1;
+    }
+    route.totalScenes = (route.totalScenes || 0) + 1;
+    route.totalTurns = (route.totalTurns || 0) + (hangoutSession.transcript?.length || 0);
+    route.lastMood = hangoutSession.npcMood || route.lastMood;
+    route.lastSeenAt = new Date().toISOString();
+    route.memoryNotes = mergeRouteMemoryNotes(route.memoryNotes, hangoutSession.memoryNotes || []);
+    route.recentEvents = [...(route.recentEvents || []), ...(hangoutSession.recentEvents || [])].slice(
+      -ROUTE_HISTORY_LIMIT,
+    );
+    gameSession.characterProgress[hangoutSession.npc.npcId] = route;
+  }
 
   if (completionSummary.completionSignal === 'objective_validated') {
     gameSession.validatedHangouts = (gameSession.validatedHangouts || 0) + 1;
@@ -1053,7 +1248,10 @@ function assessMissionForGameSession(session, scene) {
       : `${scene.cityLabel} mission not passed yet. Run another validated hangout and retry.`,
     rewards,
     progressionLoop: buildProgressLoopState(session),
-    relationshipState: buildRelationshipState(session.progression?.rp || 0),
+    relationshipState: buildRelationshipState(
+      getCharacterProgress(session, session.activeCharacterId || session.npc?.npcId)?.rp ?? session.progression?.rp ?? 0,
+    ),
+    routeState: buildRouteState(session.npc, getCharacterProgress(session, session.activeCharacterId || session.npc?.npcId)),
     unlockPreview: {
       nextMasteryTier: session.masteryTier,
       nextLocationOptions: buildUnlockPreview(scene, passed).nextLocationOptions,
@@ -1235,6 +1433,26 @@ async function generateAiHangoutDecision({
 }) {
   if (!shouldUseAiHangout()) return null;
 
+  const transcriptWindow = [...(existing.transcript || [])].slice(-4).map((item) => ({
+    stepId: item.stepId,
+    tier: item.tier,
+    userUtterance: item.userUtterance,
+    matchedTags: item.matchedTags,
+    missingTags: item.missingTags,
+  }));
+  const routeState = buildRouteState(existing.npc, {
+    npcId: existing.npc?.npcId,
+    name: existing.npc?.name,
+    rp: (existing.characterBaseRp || 0) + (existing.score?.rp || 0),
+    validatedHangouts: existing.routeValidatedHangouts || 0,
+    totalScenes: 1,
+    totalTurns: existing.transcript?.length || 0,
+    lastMood: existing.npcMood,
+    memoryNotes: [...(existing.memoryNotes || [])],
+    recentEvents: [...(existing.recentEvents || [])],
+    lastSeenAt: null,
+  });
+
   const model = process.env.TONG_OPENAI_MODEL || 'gpt-5.2';
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -1250,7 +1468,7 @@ async function generateAiHangoutDecision({
         {
           role: 'system',
           content:
-            'You run a first-person language learning hangout. Return JSON only with: tier, objectiveProgressDelta, scoreDelta, nextLine, tongHint, suggestedReplies, mood, matchedTags, missingTags.',
+            'You run a first-person language learning hangout. Keep continuity with prior turns. Return JSON only with: tier, objectiveProgressDelta, scoreDelta, nextLine, tongHint, suggestedReplies, mood, matchedTags, missingTags, sceneBeat, memoryNote.',
         },
         {
           role: 'user',
@@ -1262,6 +1480,12 @@ async function generateAiHangoutDecision({
             npc: existing.npc || scene.npc,
             objective: scene.objective,
             turn: existing.turn,
+            sceneBeat: existing.sceneBeat || deriveSceneBeat(existing, scene),
+            objectiveProgress: Number((existing.objectiveProgress || 0).toFixed(2)),
+            successfulTurns: existing.successfulTurns || 0,
+            routeState,
+            priorMemoryNotes: [...(existing.memoryNotes || [])].slice(-5),
+            transcriptWindow,
             userUtterance,
             rubricTierFallback: fallbackEvaluation.tier,
             matchedTagsFallback: fallbackEvaluation.matchedTags,
@@ -1270,7 +1494,7 @@ async function generateAiHangoutDecision({
             scriptedHints: turnScript.tongHints,
             scriptedReplies: turnScript.quickReplies,
             guidance:
-              'Evaluate the learner response for objective progress. suggestedReplies must be 3-5 short learner lines in target language.',
+              'Evaluate objective progress and keep scene continuity. suggestedReplies must be 3-5 short learner lines in target language. memoryNote should be one short persistent route memory item if relevant.',
           }),
         },
       ],
@@ -1301,6 +1525,8 @@ async function generateAiHangoutDecision({
   const missingTags = Array.isArray(parsed.missingTags)
     ? parsed.missingTags.map((value) => String(value || '').trim()).filter(Boolean)
     : fallbackEvaluation.missingTags;
+  const sceneBeat = normalizeSceneBeat(parsed.sceneBeat, deriveSceneBeat(existing, scene));
+  const memoryNote = sanitizeRouteMemoryNote(parsed.memoryNote);
 
   return {
     tier,
@@ -1325,6 +1551,8 @@ async function generateAiHangoutDecision({
       typeof parsed.mood === 'string' && parsed.mood.trim()
         ? parsed.mood.trim()
         : turnScript.moodByTier[tier] || fallbackEvaluation.mood,
+    sceneBeat,
+    memoryNote,
   };
 }
 
@@ -1351,7 +1579,19 @@ async function handleHangoutRespond(body) {
 
   if (existing.completed) {
     const completionSummary = buildCompletionSummary(scene, existing);
-    const relationshipState = buildRelationshipState((existing.baseProgression?.rp || 0) + existing.score.rp);
+    const relationshipState = buildRelationshipState((existing.characterBaseRp || 0) + existing.score.rp);
+    const routeState = buildRouteState(existing.npc, {
+      npcId: existing.npc?.npcId,
+      name: existing.npc?.name,
+      rp: (existing.characterBaseRp || 0) + existing.score.rp,
+      validatedHangouts: existing.routeValidatedHangouts || 0,
+      totalScenes: 1,
+      totalTurns: existing.transcript?.length || 0,
+      lastMood: existing.npcMood,
+      memoryNotes: [...(existing.memoryNotes || [])],
+      recentEvents: [...(existing.recentEvents || [])],
+      lastSeenAt: null,
+    });
     const progressionLoop = buildProgressLoopState(existing);
     return {
       statusCode: 200,
@@ -1363,6 +1603,7 @@ async function handleHangoutRespond(body) {
           objectiveProgressDelta: 0,
           objectiveProgress: buildObjectiveProgressState(scene, existing.objectiveProgress),
           relationshipState,
+          routeState,
           suggestedReplies: [],
         },
         nextLine: {
@@ -1371,9 +1612,11 @@ async function handleHangoutRespond(body) {
         },
         state: {
           turn: existing.turn,
+          sceneBeat: existing.sceneBeat || deriveSceneBeat(existing, scene),
           score: cloneScore(existing.score),
           objectiveProgress: buildObjectiveProgressState(scene, existing.objectiveProgress),
           relationshipState,
+          routeState,
           progressionLoop,
         },
         currentObjective: buildCurrentObjective(scene, existing.objectiveProgress, existing.successfulTurns),
@@ -1398,6 +1641,7 @@ async function handleHangoutRespond(body) {
         },
         completionSummary,
         relationshipState,
+        routeState,
         progressionLoop,
       },
     };
@@ -1441,6 +1685,7 @@ async function handleHangoutRespond(body) {
     existing.successfulTurns += 1;
   }
   existing.npcMood = evaluation.mood;
+  existing.sceneBeat = normalizeSceneBeat(evaluation.sceneBeat, deriveSceneBeat(existing, scene));
   existing.transcript.push({
     stepId: turnScript.stepId,
     userUtterance,
@@ -1448,6 +1693,24 @@ async function handleHangoutRespond(body) {
     matchedTags: evaluation.matchedTags,
     missingTags: evaluation.missingTags,
   });
+  const memoryNote =
+    sanitizeRouteMemoryNote(evaluation.memoryNote) ||
+    sanitizeRouteMemoryNote(buildFallbackMemoryNote(turnScript, evaluation.tier, userUtterance));
+  if (memoryNote) {
+    existing.memoryNotes = mergeRouteMemoryNotes(existing.memoryNotes, [memoryNote]);
+  }
+  existing.recentEvents = [
+    ...(existing.recentEvents || []),
+    buildRouteEvent({
+      scene,
+      turnScript,
+      tier: evaluation.tier,
+      xpDelta,
+      spDelta,
+      rpDelta,
+      objectiveProgressDelta,
+    }),
+  ].slice(-ROUTE_HISTORY_LIMIT);
 
   const completedTurns = Math.min(existing.turn - 1, scene.objective.requiredTurns);
   existing.completed = completedTurns >= scene.objective.requiredTurns;
@@ -1464,6 +1727,10 @@ async function handleHangoutRespond(body) {
     existing.missionGateStatus = linkedGameSession.missionGateStatus || existing.missionGateStatus;
     existing.masteryTier = linkedGameSession.masteryTier || existing.masteryTier;
     existing.learnReadiness = linkedGameSession.learnReadiness ?? existing.learnReadiness;
+    const linkedRoute = getCharacterProgress(linkedGameSession, existing.npc?.npcId);
+    if (linkedRoute) {
+      existing.routeValidatedHangouts = linkedRoute.validatedHangouts || existing.routeValidatedHangouts;
+    }
   }
   const finalCompletionSummary = existing.completed ? buildCompletionSummary(scene, existing) : completionSummary;
 
@@ -1482,7 +1749,19 @@ async function handleHangoutRespond(body) {
     : evaluation.suggestedReplies && evaluation.suggestedReplies.length
       ? evaluation.suggestedReplies
       : getQuickRepliesForTurn(scene, existing.turn);
-  const relationshipState = buildRelationshipState((existing.baseProgression?.rp || 0) + existing.score.rp);
+  const relationshipState = buildRelationshipState((existing.characterBaseRp || 0) + existing.score.rp);
+  const routeState = buildRouteState(existing.npc, {
+    npcId: existing.npc?.npcId,
+    name: existing.npc?.name,
+    rp: (existing.characterBaseRp || 0) + existing.score.rp,
+    validatedHangouts: existing.routeValidatedHangouts || 0,
+    totalScenes: 1,
+    totalTurns: existing.transcript?.length || 0,
+    lastMood: existing.npcMood,
+    memoryNotes: [...(existing.memoryNotes || [])],
+    recentEvents: [...(existing.recentEvents || [])],
+    lastSeenAt: null,
+  });
   const progressionLoop = buildProgressLoopState(existing);
 
   const lastTurn = {
@@ -1506,6 +1785,7 @@ async function handleHangoutRespond(body) {
       objectiveProgressDelta,
       objectiveProgress: buildObjectiveProgressState(scene, existing.objectiveProgress),
       relationshipState,
+      routeState,
       progressionLoop,
       suggestedReplies,
     },
@@ -1515,9 +1795,11 @@ async function handleHangoutRespond(body) {
     },
     state: {
       turn: existing.turn,
+      sceneBeat: existing.sceneBeat || deriveSceneBeat(existing, scene),
       score: cloneScore(existing.score),
       objectiveProgress: buildObjectiveProgressState(scene, existing.objectiveProgress),
       relationshipState,
+      routeState,
       progressionLoop,
     },
     currentObjective: buildCurrentObjective(scene, existing.objectiveProgress, existing.successfulTurns),
@@ -1535,6 +1817,7 @@ async function handleHangoutRespond(body) {
     },
     completionSummary: finalCompletionSummary,
     relationshipState,
+    routeState,
     progressionLoop,
   };
 
@@ -1643,6 +1926,10 @@ const server = http.createServer(async (req, res) => {
           });
           session.npcMood = session.npc.baselineMood;
         }
+        session.activeCharacterId = session.npc?.npcId || session.activeCharacterId;
+        ensureCharacterProgress(session, session.npc, {
+          seedRp: session.characterProgress?.[session.npc?.npcId]?.rp ?? (session.progression?.rp || 0),
+        });
         session.masteryTier = session.masteryTier || session.progression?.currentMasteryLevel || 1;
         session.progression.currentMasteryLevel = session.masteryTier;
         session.learnReadiness = deriveLearnReadiness(session.profile, requestedLang);
@@ -1699,7 +1986,14 @@ const server = http.createServer(async (req, res) => {
       const requestedCity = normalizeCity(body.city, gameSession?.city || 'seoul');
       const requestedLocation = normalizeLocation(body.location, gameSession?.location || 'food_street');
       const requestedLang = normalizeLang(body.lang, gameSession?.lang || CITY_BASE[requestedCity].defaultLang);
-      const requestedCharacterId = body.characterId || gameSession?.npc?.npcId;
+      const randomizeCharacter = Boolean(body.randomizeCharacter);
+      const requestedCharacterId =
+        body.characterId ||
+        (randomizeCharacter
+          ? null
+          : ROMANCE_LOCATION_IDS.includes(requestedLocation)
+            ? gameSession?.activeCharacterId || gameSession?.npc?.npcId
+            : null);
       const preferRomance = body.preferRomance !== false;
       const session = createHangoutSession({
         userId,
@@ -1708,6 +2002,7 @@ const server = http.createServer(async (req, res) => {
         location: requestedLocation,
         lang: requestedLang,
         characterId: requestedCharacterId,
+        randomizeCharacter,
         preferRomance,
       });
       if (gameSession) {
@@ -1724,8 +2019,21 @@ const server = http.createServer(async (req, res) => {
         location: session.location,
         lang: session.lang,
       });
-      const relationshipState = buildRelationshipState((session.baseProgression?.rp || 0) + session.score.rp);
+      const relationshipState = buildRelationshipState((session.characterBaseRp || 0) + session.score.rp);
+      const routeState = buildRouteState(session.npc, {
+        npcId: session.npc?.npcId,
+        name: session.npc?.name,
+        rp: (session.characterBaseRp || 0) + session.score.rp,
+        validatedHangouts: session.routeValidatedHangouts || 0,
+        totalScenes: 1,
+        totalTurns: session.transcript?.length || 0,
+        lastMood: session.npcMood,
+        memoryNotes: [...(session.memoryNotes || [])],
+        recentEvents: [...(session.recentEvents || [])],
+        lastSeenAt: null,
+      });
       const progressionLoop = buildProgressLoopState(session);
+      const openingLine = buildHangoutOpeningLine(scene, session);
 
       jsonResponse(res, 200, {
         sceneSessionId: session.sceneSessionId,
@@ -1741,19 +2049,21 @@ const server = http.createServer(async (req, res) => {
         },
         state: {
           turn: session.turn,
+          sceneBeat: session.sceneBeat || 'opening',
           score: cloneScore(session.score),
           objectiveProgress: buildObjectiveProgressState(scene, session.objectiveProgress),
           relationshipState,
+          routeState,
           progressionLoop,
         },
         initialLine: {
           speaker: 'character',
-          text: scene.turnScript[0].prompts.start,
+          text: openingLine,
         },
         initialLines: [
           {
             speaker: 'character',
-            text: scene.turnScript[0].prompts.start,
+            text: openingLine,
           },
           {
             speaker: 'tong',
@@ -1769,6 +2079,7 @@ const server = http.createServer(async (req, res) => {
         turnState: buildTurnState(scene, session),
         objectiveProgress: buildObjectiveProgressState(scene, session.objectiveProgress),
         relationshipState,
+        routeState,
         progressionLoop,
         objectiveId: body.objectiveId || scene.objective.objectiveId,
         objectiveSummary: scene.objective.summary,
