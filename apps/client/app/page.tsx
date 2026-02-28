@@ -1,5 +1,5 @@
-import JudgeOnboardingPage from '@/components/judge-onboarding';
+import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  return <JudgeOnboardingPage />;
+  redirect('/game');
 }
