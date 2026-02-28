@@ -753,7 +753,8 @@ button.game-city-card.active {
 }
 
 .game-head-row-hangout {
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .game-head-actions {
@@ -762,10 +763,10 @@ button.game-city-card.active {
 }
 
 .game-mobile-head-hangout {
-  background: transparent;
+  background: linear-gradient(180deg, rgba(12, 18, 29, 0.7), rgba(12, 18, 29, 0.02));
   border-bottom: 0;
-  backdrop-filter: none;
-  padding-bottom: 0;
+  backdrop-filter: blur(8px);
+  padding-bottom: 2px;
 }
 
 button.game-head-button {
@@ -805,10 +806,10 @@ button.game-head-button.active {
 
 .game-mobile-kicker {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.11em;
-  color: #becce2;
+  letter-spacing: 0.08em;
+  color: #d9e5ff;
   font-weight: 700;
 }
 
@@ -846,15 +847,16 @@ button.game-location-pill.active {
   display: flex;
   flex-direction: column;
   flex: 1;
-  gap: 14px;
-  padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
-  overflow-y: auto;
+  gap: 10px;
+  padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  overflow-y: hidden;
 }
 
 .game-mobile-body-scene1 {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  justify-content: flex-end;
 }
 
 .game-mobile-body-scene1 .game-character-card,
@@ -910,6 +912,7 @@ button.game-location-pill.active {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: top center;
 }
 
 .game-character-card p {
@@ -931,6 +934,24 @@ button.game-location-pill.active {
   justify-content: flex-end;
 }
 
+.game-tong-whisper {
+  margin: 0;
+  width: 100%;
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid rgba(200, 245, 219, 0.45);
+  background: rgba(238, 255, 247, 0.92);
+  color: #102736;
+  box-shadow: 0 8px 24px rgba(2, 15, 26, 0.2);
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.game-tong-whisper strong {
+  color: #0d2d42;
+}
+
 .game-hangout-objective {
   margin: 0;
   border-radius: 14px;
@@ -947,13 +968,13 @@ button.game-location-pill.active {
 }
 
 .game-dialogue-panel {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(16, 23, 38, 0.96), rgba(10, 16, 29, 0.96));
+  border: 1px solid rgba(109, 171, 255, 0.7);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(9, 22, 54, 0.95), rgba(6, 16, 39, 0.98));
   color: #f8fbff;
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.32);
-  padding: 12px 12px 14px;
-  min-height: 150px;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.44);
+  padding: 12px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+  min-height: 170px;
 }
 
 .game-dialogue-panel-tappable {
@@ -973,8 +994,8 @@ button.game-location-pill.active {
   align-items: center;
   gap: 8px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
   padding: 4px 10px 4px 4px;
 }
 
@@ -998,14 +1019,36 @@ button.game-location-pill.active {
 
 .game-dialogue-text {
   margin: 0;
-  font-size: 17px;
-  line-height: 1.45;
+  font-size: 18px;
+  line-height: 1.5;
   color: #f6f9ff;
   white-space: pre-wrap;
 }
 
+.game-type-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: #f7fbff;
+  animation: gameCursorBlink 0.8s ease-in-out infinite;
+}
+
+@keyframes gameCursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 .game-hangout-input {
   gap: 8px;
+}
+
+.game-hangout-input textarea {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.96);
+  color: #1a2433;
 }
 
 .game-card-kicker {
@@ -1064,11 +1107,12 @@ button.game-chip {
   align-items: flex-start;
   text-align: left;
   gap: 2px;
-  padding: 10px 10px;
+  padding: 11px 10px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.96);
-  color: #141f33;
+  border: 1px solid rgba(27, 38, 61, 0.25);
+  background: rgba(255, 255, 255, 0.98);
+  color: #131f34;
+  box-shadow: 0 4px 14px rgba(4, 18, 34, 0.12);
 }
 
 button.game-chip:hover {

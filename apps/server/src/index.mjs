@@ -640,6 +640,14 @@ function sanitizeSpokenLine(text, fallback = '') {
     cleaned = narrativePrefix[1].trim();
   }
 
+  // Reject template-like placeholders leaking from prompt examples.
+  const hasPlaceholderPattern =
+    /_{2,}|(?:^|\s)(?:N|V|A)\s*\+|(?:\(|\[)\s*(?:dish|menu|item|phrase|word|blank|fill|choice)\s*(?:\)|\])/i.test(
+      cleaned,
+    ) ||
+    /(?:^|\s)(?:___|…{2,}|\.{3,})/.test(cleaned);
+  if (hasPlaceholderPattern) return fallback;
+
   if (!cleaned) return fallback;
   return cleaned.slice(0, 260);
 }
@@ -652,6 +660,10 @@ function sanitizeSuggestedReply(text) {
     .replace(/^["“'`]+|["”'`]+$/gu, '')
     .trim();
   if (!cleaned) return null;
+  const hasPlaceholderPattern = /_{2,}|(?:^|\s)(?:N|V|A)\s*\+|___|(?:\(|\[)\s*(?:dish|menu|item|blank)\s*(?:\)|\])/i.test(
+    cleaned,
+  );
+  if (hasPlaceholderPattern) return null;
   return cleaned.slice(0, 120);
 }
 
@@ -1598,7 +1610,7 @@ async function generateAiHangoutDecision({
         {
           role: 'system',
           content:
-            'You run a first-person language learning hangout. Keep continuity with prior turns. Return JSON only with: tier, objectiveProgressDelta, scoreDelta, nextLine, tongHint, suggestedReplies, mood, matchedTags, missingTags, sceneBeat, memoryNote. Never output narrator text or markdown. Keep the dialogue immersive and in-scene only. nextLine must be only what the NPC says aloud, no stage directions and no third-person description. Never use labels like "Micro-goal", "Tong:", "Tip:", "Hint:", or objective percentage/meta copy in nextLine or tongHint. ' +
+            'You run a first-person language learning hangout. Keep continuity with prior turns. Return JSON only with: tier, objectiveProgressDelta, scoreDelta, nextLine, tongHint, suggestedReplies, mood, matchedTags, missingTags, sceneBeat, memoryNote. Never output narrator text or markdown. Keep the dialogue immersive and in-scene only. nextLine must be only what the NPC says aloud, no stage directions and no third-person description. Never use labels like "Micro-goal", "Tong:", "Tip:", "Hint:", or objective percentage/meta copy in nextLine or tongHint. Never output template placeholders like "___", "N + ...", or bracketed blanks. ' +
             languageBlendGuidance,
         },
         {
@@ -1708,7 +1720,7 @@ async function generateAiHangoutOpening({ scene, session, profile, routeState })
         {
           role: 'system',
           content:
-            'Generate the opening beat for a first-person language-learning hangout scene. Return JSON only with: openingLine, tongHint, quickReplies, mood. quickReplies must be 3-6 short learner lines in the target language. openingLine must be only what the NPC says aloud, with no stage directions or third-person narration. No markdown, no narration labels, and no labels like "Micro-goal", "Tong:", or "Hint:". ' +
+            'Generate the opening beat for a first-person language-learning hangout scene. Return JSON only with: openingLine, tongHint, quickReplies, mood. quickReplies must be 3-6 short learner lines in the target language. openingLine must be only what the NPC says aloud, with no stage directions or third-person narration. No markdown, no narration labels, and no labels like "Micro-goal", "Tong:", or "Hint:". Never output placeholders like "___", "N + ...", or bracketed blanks in openingLine or quickReplies. ' +
             languageBlendGuidance,
         },
         {

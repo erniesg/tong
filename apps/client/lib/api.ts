@@ -328,6 +328,7 @@ export interface StartHangoutResponse {
   state: HangoutState;
   objectiveProgress?: ObjectiveProgressState;
   quickReplies?: string[];
+  tongHint?: string;
   completion?: {
     isCompleted: boolean;
     completionSignal: string | null;
