@@ -121,6 +121,53 @@ export type LocationId =
   | 'subway_hub'
   | 'practice_studio';
 
+export interface ToolInvokeResponse<T = unknown> {
+  ok: boolean;
+  tool: string;
+  result?: T;
+  error?: string;
+  message?: string;
+  docs?: string;
+  [key: string]: unknown;
+}
+
+export interface IngestionSourceItem {
+  id: string;
+  source: 'youtube' | 'spotify';
+  title: string;
+  lang: 'ko' | 'ja' | 'zh';
+  minutes: number;
+  text: string;
+  playedAtIso?: string | null;
+}
+
+export interface IngestionSnapshotResult {
+  userId: string;
+  includeSources: Array<'youtube' | 'spotify'>;
+  windowStartIso: string | null;
+  windowEndIso: string | null;
+  generatedAtIso: string | null;
+  sourceItems: IngestionSourceItem[];
+  transcriptCandidates: Array<{
+    id: string;
+    title: string;
+    lang: 'ko' | 'ja' | 'zh';
+    text: string;
+    playedAtIso: string | null;
+  }>;
+  lyricCandidates: Array<{
+    id: string;
+    title: string;
+    lang: 'ko' | 'ja' | 'zh';
+    text: string;
+    playedAtIso: string | null;
+  }>;
+  notes: {
+    youtube: string;
+    spotify: string;
+  };
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -310,6 +357,23 @@ export function fetchInsights() {
 
 export function fetchMediaProfile() {
   return apiFetch<MediaProfileResponse>('/api/v1/player/media-profile?windowDays=3&userId=demo-user-1');
+}
+
+export async function invokeTool<T = unknown>(tool: string, args: Record<string, unknown> = {}) {
+  const response = await fetch(`${API_BASE}/api/v1/tools/invoke`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tool, args }),
+  });
+
+  const data = (await response.json()) as ToolInvokeResponse<T>;
+  return data;
+}
+
+export function fetchTools() {
+  return apiFetch<{ ok: true; tools: Array<{ name: string; description: string; args: Record<string, unknown> }> }>(
+    '/api/v1/tools',
+  );
 }
 
 export function getApiBase() {

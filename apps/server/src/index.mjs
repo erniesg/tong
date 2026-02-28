@@ -139,6 +139,16 @@ const AGENT_TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'ingestion.snapshot.get',
+    description: 'Get current source items for a user to validate ingestible transcript/lyric text signals.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      includeSources: ['youtube', 'spotify'],
+    },
+  },
+  {
     name: 'integrations.youtube.sync_mock',
     description: 'Refresh mock ingestion from YouTube-only source items.',
     method: 'POST',
@@ -1401,6 +1411,55 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
           ok: true,
           tool: toolName,
           result: formatIngestionRunResponse(result, includeSources),
+        },
+      };
+    }
+    case 'ingestion.snapshot.get': {
+      const includeSources = normalizeIngestionSources(args.includeSources);
+      const snapshot = buildIngestionSnapshotForUser(userId, { includeSources });
+      const sourceItems = Array.isArray(snapshot.sourceItems) ? snapshot.sourceItems : [];
+      const transcriptCandidates = sourceItems
+        .filter((item) => item?.source === 'youtube')
+        .slice(0, 20)
+        .map((item) => ({
+          id: item.id,
+          title: item.title,
+          lang: item.lang,
+          text: item.text,
+          playedAtIso: item.playedAtIso || null,
+        }));
+      const lyricCandidates = sourceItems
+        .filter((item) => item?.source === 'spotify')
+        .slice(0, 20)
+        .map((item) => ({
+          id: item.id,
+          title: item.title,
+          lang: item.lang,
+          text: item.text,
+          playedAtIso: item.playedAtIso || null,
+        }));
+
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: {
+            userId,
+            includeSources: includeSources.length > 0 ? includeSources : ['youtube', 'spotify'],
+            windowStartIso: snapshot.windowStartIso || null,
+            windowEndIso: snapshot.windowEndIso || null,
+            generatedAtIso: snapshot.generatedAtIso || null,
+            sourceItems,
+            transcriptCandidates,
+            lyricCandidates,
+            notes: {
+              youtube:
+                'YouTube transcript candidates come from synced item text (titles/descriptions unless subtitles are ingested).',
+              spotify:
+                'Spotify lyric candidates come from synced item text (track+artist unless lyrics provider is added).',
+            },
+          },
         },
       };
     }
