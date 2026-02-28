@@ -66,51 +66,36 @@ export function DialogueBox({
 
   return (
     <div
-      className="dialogue-box absolute bottom-0 left-0 right-0 p-5 cursor-pointer fade-in"
+      className="dialogue-subtitle absolute bottom-0 left-0 right-0 cursor-pointer fade-in"
       onClick={handleClick}
     >
       {speakerName && (
-        <div className="flex items-center gap-2 mb-2">
-          {speakerName === 'Tong' ? (
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-[#1a1a2e]"
-              style={{ background: 'linear-gradient(135deg, #f0c040, #e8a020)' }}
-            >
-              T
-            </div>
-          ) : speakerName !== 'You' ? (
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white"
-              style={{ backgroundColor: speakerColor }}
-            >
-              {speakerName[0]}
-            </div>
-          ) : null}
-          <div className="name-plate" style={{ backgroundColor: speakerColor }}>
-            {speakerName}
-          </div>
+        <div
+          className="dialogue-speaker"
+          style={{ color: speakerColor }}
+        >
+          {speakerName}
         </div>
       )}
 
-      <div className="text-base leading-relaxed min-h-[3.5em]">
-        <div className="text-ko">
-          {typewriterDone ? (
-            <KoreanText text={content} />
-          ) : (
-            <>
-              {visibleText}
-              <span className="typewriter-cursor" />
-            </>
-          )}
-        </div>
-        {typewriterDone && translation && (
-          <p className="text-xs text-[var(--color-text-muted)] italic mt-1 m-0">{translation}</p>
+      <div className="dialogue-text text-ko">
+        {typewriterDone ? (
+          <KoreanText text={content} />
+        ) : (
+          <>
+            {visibleText}
+            <span className="typewriter-cursor" />
+          </>
         )}
       </div>
 
+      {typewriterDone && translation && (
+        <p className="dialogue-translation">{translation}</p>
+      )}
+
       {typewriterDone && !isStreaming && onContinue && (
-        <div className="mt-2 text-right text-xs text-[var(--color-text-muted)] animate-pulse">
-          tap to continue ▼
+        <div className="dialogue-continue animate-pulse">
+          Tap to continue
         </div>
       )}
     </div>

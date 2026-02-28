@@ -1,13 +1,19 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
 import type { CityId, LocationId, ProficiencyLevel, ScoreState, UserProficiency } from '@/lib/api';
 import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData } from '@/lib/types/hangout';
 import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
+import type { Character } from '@/lib/types/relationship';
 import { SceneView } from '@/components/scene/SceneView';
 import { generateExercise } from '@/lib/exercises/generators';
 import { summarizeExercise } from '@/lib/utils/summarize-exercise';
+import { useGameState, dispatch, getRelationship, getMasterySnapshot } from '@/lib/store/game-store';
+import { CHARACTER_MAP, HAUEN } from '@/lib/content/characters';
+import { POJANGMACHA } from '@/lib/content/pojangmacha';
+import { getRelationshipStage } from '@/lib/types/relationship';
 
 /* ── scene constants ────────────────────────────────────── */
 
@@ -26,16 +32,6 @@ const TONG_LINES = [
   "Tell me how much you know and I'll set things up.",
 ];
 
-/*
- * Game mastery levels (aligned with Pinpoint's 7-level system).
- * The self-assessment slider (0-3) maps to a starting calibration
- * within the full 0-6 level range used during gameplay.
- *
- *   Slider 0 → starts at Lv.0 SCRIPT
- *   Slider 1 → starts at Lv.1 PRONUNCIATION
- *   Slider 2 → starts at Lv.3 GRAMMAR
- *   Slider 3 → starts at Lv.5 CONVERSATION
- */
 const GAME_LEVELS = [
   { level: 0, name: 'SCRIPT',        desc: 'Can I recognise the symbols?',       tongLangPct: 5 },
   { level: 1, name: 'PRONUNCIATION', desc: 'Can I say them correctly?',           tongLangPct: 10 },
@@ -82,6 +78,39 @@ type Phase = 'intro' | 'proficiency' | 'hangout';
 
 /* ── helpers ────────────────────────────────────────────── */
 
+/** Build rich context block for API messages using game store data. */
+function buildContextBlock(
+  level: number,
+  npcId: string,
+  cityId: CityId,
+  locationId: LocationId,
+  npcChar: Character,
+): string {
+  const rel = getRelationship(npcId);
+  const stage = getRelationshipStage(rel.affinity);
+  const mastery = getMasterySnapshot(POJANGMACHA);
+  const isFirstEncounter = rel.interactionCount === 0;
+
+  const locLevel = Math.min(level, POJANGMACHA.levels.length - 1);
+  const objectives = POJANGMACHA.levels[locLevel]?.objectives ?? [];
+
+  const ctx = JSON.stringify({
+    playerLevel: level,
+    characterId: npcId,
+    city: cityId,
+    location: locationId,
+    stage,
+    relationship: rel,
+    mastery,
+    isFirstEncounter,
+    selfAssessedLevel: level,
+    calibratedLevel: rel.interactionCount > 0 ? level : null,
+    locationLevel: locLevel,
+    objectives,
+  });
+  return `[HANGOUT_CONTEXT]${ctx}[/HANGOUT_CONTEXT] `;
+}
+
 /** Find the weakest language (lowest slider value), breaking ties left-to-right. */
 function getWeakestLangIndex(sliders: [number, number, number]): number {
   let minIdx = 0;
@@ -94,8 +123,12 @@ function getWeakestLangIndex(sliders: [number, number, number]): number {
 /* ── component ──────────────────────────────────────────── */
 
 export default function GamePage() {
-  /* phase state */
-  const [phase, setPhase] = useState<Phase>('intro');
+  const searchParams = useSearchParams();
+  const gameState = useGameState();
+
+  /* phase state — ?phase=hangout skips straight to scene */
+  const skipToHangout = searchParams.get('phase') === 'hangout';
+  const [phase, setPhase] = useState<Phase>(skipToHangout ? 'hangout' : 'intro');
   const [lineIndex, setLineIndex] = useState(0);
   const [displayedChars, setDisplayedChars] = useState(0);
   const [typewriterDone, setTypewriterDone] = useState(false);
@@ -113,6 +146,10 @@ export default function GamePage() {
   const [location, setLocation] = useState<LocationId>('food_street');
   const [score, setScore] = useState<ScoreState>({ xp: 0, sp: 0, rp: 0 });
   const [activeNpc, setActiveNpc] = useState<string>('haeun');
+  const [playerLevel, setPlayerLevel] = useState(0);
+
+  /* NPC character ref — set during proficiency confirmation */
+  const npcRef = useRef<Character>(HAUEN);
 
   /* VN scene state */
   const [toolQueue, setToolQueue] = useState<ToolQueueItem[]>([]);
@@ -126,6 +163,8 @@ export default function GamePage() {
   const processingRef = useRef(false);
   const pausedRef = useRef(false);
   const processedToolCallsRef = useRef(new Set<string>());
+  const lastContinueRef = useRef(0);
+  const sceneStartedRef = useRef(false);
 
   const currentLine = TONG_LINES[lineIndex] ?? '';
 
@@ -206,42 +245,81 @@ export default function GamePage() {
     const primaryLang = LANG_KEYS[weakIdx] as 'ko' | 'ja' | 'zh';
     const primaryCity = LANG_TO_CITY[primaryLang] ?? 'seoul';
 
+    const weakLevel = sliders[weakIdx];
+    const npcId = NPC_POOL[Math.floor(Math.random() * NPC_POOL.length)];
+    const npcChar = CHARACTER_MAP[npcId] ?? HAUEN;
+    npcRef.current = npcChar;
+
     setCity(primaryCity as CityId);
     setLocation('food_street');
-    setActiveNpc(NPC_POOL[Math.floor(Math.random() * NPC_POOL.length)]);
+    setActiveNpc(npcId);
+    setPlayerLevel(weakLevel);
     setScore({ xp: 0, sp: 0, rp: 0 });
+
+    // Store self-assessed level
+    dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
+
     setPhase('hangout');
     setLoading(false);
 
-    void append({ role: 'user', content: 'Start the scene.' });
+    void append({
+      role: 'user',
+      content: `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street', npcChar)}Start the scene.`,
+    });
   }
 
-  /* ── useChat integration ──────────────────────────────── */
+  /* ── useChat integration ──────────────────────────────────── */
 
   const { append, isLoading: chatLoading } = useChat({
     api: '/api/ai/hangout',
     maxSteps: 1,
+    onResponse: () => {
+      pausedRef.current = false;
+    },
     onToolCall: ({ toolCall }) => {
-      if (processedToolCallsRef.current.has(toolCall.toolCallId)) return;
-      processedToolCallsRef.current.add(toolCall.toolCallId);
+      const { toolName, toolCallId, args } = toolCall;
+      if (processedToolCallsRef.current.has(toolCallId)) return args;
+      if (pausedRef.current) {
+        console.log(`[VN] onToolCall SKIPPED (paused): ${toolName}`);
+        return args;
+      }
+      processedToolCallsRef.current.add(toolCallId);
+      console.log(`[VN] onToolCall: ${toolName}`, toolCallId);
 
-      const item: ToolQueueItem = {
-        toolCallId: toolCall.toolCallId,
-        toolName: toolCall.toolName,
-        args: toolCall.args as Record<string, unknown>,
-      };
-      setToolQueue((prev) => [...prev, item]);
+      setToolQueue((prev) => [
+        ...prev,
+        { toolCallId, toolName, args: args as Record<string, unknown> },
+      ]);
+
+      if (toolName === 'show_exercise' || toolName === 'offer_choices') {
+        pausedRef.current = true;
+      }
+
+      return args;
+    },
+    onError: (err) => {
+      console.error('[VN] useChat error:', err);
+    },
+    onFinish: (msg) => {
+      console.log('[VN] onFinish:', msg.role, 'tools:', msg.toolInvocations?.length ?? 0);
     },
   });
 
-  /* ── Tool queue processor ───────────────────────────────── */
+  /* Auto-start scene when skipping to hangout */
+  useEffect(() => {
+    if (skipToHangout && !sceneStartedRef.current) {
+      sceneStartedRef.current = true;
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
+      void append({ role: 'user', content: `${ctx}Start the scene.` });
+    }
+  }, [skipToHangout, append, playerLevel, activeNpc, city, location]);
 
-  const processQueue = useCallback(() => {
-    if (processingRef.current || pausedRef.current || toolQueue.length === 0) return;
+  /* ── Tool queue processor ───────────────────────────────── */
+  useEffect(() => {
+    if (toolQueue.length === 0 || processingRef.current) return;
     processingRef.current = true;
 
-    const [item, ...rest] = toolQueue;
-    setToolQueue(rest);
+    const item = toolQueue[0];
 
     switch (item.toolName) {
       case 'npc_speak': {
@@ -259,33 +337,53 @@ export default function GamePage() {
           content: args.text,
           translation: args.translation ?? undefined,
         });
-        pausedRef.current = true; // wait for tap
-        break;
+        // Update affinity if delta provided
+        if (args.affinityDelta && args.characterId) {
+          dispatch({ type: 'UPDATE_AFFINITY', characterId: args.characterId, delta: args.affinityDelta });
+        }
+        console.log('[VN] npc_speak BLOCK:', args.text.slice(0, 40));
+        return; // BLOCK — wait for tap
       }
       case 'tong_whisper': {
         const args = item.args as { message: string; translation?: string | null };
         setTongTip({ message: args.message, translation: args.translation ?? undefined });
-        // If next item is an exercise, block here
-        if (rest.length > 0 && rest[0].toolName === 'show_exercise') {
-          pausedRef.current = true;
+        if (toolQueue.length > 1 && toolQueue[1].toolName === 'show_exercise') {
+          console.log('[VN] tong_whisper BLOCK (exercise next)');
+          return; // BLOCK
         }
-        break;
+        break; // auto-advance
       }
       case 'show_exercise': {
-        const args = item.args as { exerciseType: string; objectiveId: string };
-        const exercise = generateExercise(args.exerciseType);
+        const args = item.args as {
+          exerciseType: string;
+          objectiveId: string;
+          hintItems?: string[] | null;
+          hintCount?: number | null;
+          hintSubType?: string | null;
+        };
+        const exercise = generateExercise(args.exerciseType, {
+          hintItems: args.hintItems ?? undefined,
+          hintCount: args.hintCount ?? undefined,
+          hintSubType: args.hintSubType ?? undefined,
+          objectiveId: args.objectiveId,
+        });
         setCurrentMessage(null);
         setCurrentExercise(exercise);
-        pausedRef.current = true; // wait for exercise completion
-        break;
+        console.log('[VN] show_exercise BLOCK:', args.exerciseType, 'hints:', args.hintItems);
+        return; // BLOCK — wait for exercise completion
       }
       case 'offer_choices': {
         const args = item.args as { prompt: string; choices: { id: string; text: string }[] };
         setChoicePrompt(args.prompt);
         setChoices(args.choices);
         setCurrentMessage(null);
-        pausedRef.current = true; // wait for choice
-        break;
+        console.log('[VN] offer_choices BLOCK');
+        return; // BLOCK — wait for choice
+      }
+      case 'assess_result': {
+        // Non-blocking — mastery tracking handled by exercise results
+        console.log('[VN] assess_result (non-blocking):', item.args);
+        break; // auto-advance
       }
       case 'end_scene': {
         const args = item.args as {
@@ -297,94 +395,129 @@ export default function GamePage() {
         setSceneSummary(args);
         setScore((prev) => ({ ...prev, xp: prev.xp + args.xpEarned }));
         setCurrentMessage(null);
-        break;
+
+        // Dispatch store updates
+        dispatch({ type: 'ADD_XP', amount: args.xpEarned });
+        for (const ac of args.affinityChanges) {
+          dispatch({ type: 'UPDATE_AFFINITY', characterId: ac.characterId, delta: ac.delta });
+        }
+        if (args.calibratedLevel != null) {
+          dispatch({ type: 'SET_CALIBRATED_LEVEL', level: args.calibratedLevel });
+        }
+        // Increment interaction count for active NPC
+        dispatch({ type: 'INCREMENT_INTERACTION', characterId: activeNpc });
+        break; // auto-advance
       }
       default:
-        // Auto-dequeue unknown tools
-        break;
+        break; // auto-advance
     }
 
+    // Auto-advance: dequeue and release lock
+    setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
-  }, [toolQueue]);
-
-  useEffect(() => {
-    processQueue();
-  }, [processQueue]);
+  }, [toolQueue, activeNpc]);
 
   /* ── Hangout handlers ───────────────────────────────────── */
 
-  function handleContinue() {
-    if (sceneSummary) return; // scene is done
+  const handleContinue = useCallback(() => {
+    const now = Date.now();
+    if (now - lastContinueRef.current < 400) return;
+    lastContinueRef.current = now;
 
-    // If tong tip is showing and no exercise/dialogue blocking, dismiss tip
-    if (tongTip && !currentExercise && pausedRef.current) {
-      setTongTip(null);
-      pausedRef.current = false;
-      return;
-    }
-
-    // If blocked on dialogue, release
-    if (pausedRef.current) {
+    if (processingRef.current) {
+      console.log('[VN] handleContinue: dequeue blocked tool');
       setCurrentMessage(null);
-      pausedRef.current = false;
+      setTongTip(null); // Clear any lingering tong tip
+      setToolQueue((prev) => prev.slice(1));
+      processingRef.current = false;
       return;
     }
 
-    // If queue is empty and not streaming, request next turn
-    if (toolQueue.length === 0 && !chatLoading) {
-      void append({ role: 'user', content: 'Continue.' });
+    if (sceneSummary) return;
+    if (chatLoading) return;
+
+    if (tongTip) {
+      setTongTip(null);
+      // tongTip was auto-advanced (not blocking) — fall through to request next turn
     }
-  }
 
-  function handleExerciseResult(exerciseId: string, correct: boolean) {
+    if (!currentExercise && !choices && toolQueue.length === 0) {
+      console.log('[VN] handleContinue: append Continue');
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
+      void append({ role: 'user', content: `${ctx}Continue.` });
+    }
+  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location]);
+
+  const handleExerciseResult = useCallback((exerciseId: string, correct: boolean) => {
     setCurrentExercise(null);
-    pausedRef.current = false;
-    // Report result to AI
-    void append({ role: 'user', content: summarizeExercise(exerciseId, correct) });
-  }
+    setToolQueue((prev) => prev.slice(1));
+    processingRef.current = false;
 
-  function handleChoice(choiceId: string) {
+    // Record mastery for exercise items
+    // The exercise might have vocabulary items we can track
+    dispatch({ type: 'RECORD_ITEM_RESULT', itemId: exerciseId, category: 'vocabulary', correct });
+
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
+    void append({ role: 'user', content: `${ctx}${summarizeExercise(exerciseId, correct)}` });
+  }, [append, playerLevel, activeNpc, city, location]);
+
+  const handleChoice = useCallback((choiceId: string) => {
     setChoices(null);
     setChoicePrompt(null);
-    pausedRef.current = false;
-    void append({ role: 'user', content: `Choice: ${choiceId}` });
-  }
+    setToolQueue((prev) => prev.slice(1));
+    processingRef.current = false;
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
+    void append({ role: 'user', content: `${ctx}Choice: ${choiceId}` });
+  }, [append, playerLevel, activeNpc, city, location]);
 
-  function handleDismissTong() {
+  const handleDismissTong = useCallback(() => {
     setTongTip(null);
-  }
+    if (processingRef.current) {
+      // tong_whisper was blocking (exercise next) — dequeue so processor advances
+      setToolQueue((prev) => prev.slice(1));
+      processingRef.current = false;
+    } else if (!currentExercise && !choices && toolQueue.length === 0) {
+      // tong_whisper was auto-advanced, nothing queued — request next turn
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
+      void append({ role: 'user', content: `${ctx}Continue.` });
+    }
+  }, [currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location]);
 
   /* ── renders ──────────────────────────────────────────── */
 
   /* Intro phase */
   if (phase === 'intro') {
     return (
-      <div className="game-shell">
-        <div className="tong-avatar">T</div>
-        <div className="dialogue-area">
-          {TONG_LINES.map((line, i) => {
-            if (i < lineIndex) {
-              return (
-                <div key={i} className="dialogue-line muted">
-                  {line}
-                </div>
-              );
-            }
-            if (i === lineIndex && !allLinesDone) {
-              return (
-                <div key={i} className="dialogue-line">
-                  {currentLine.slice(0, displayedChars)}
-                  {displayedChars < currentLine.length && <span className="typewriter-cursor" />}
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
-        <div style={{ marginTop: 'auto', alignSelf: 'flex-end' }}>
-          <button className="btn-skip" onClick={handleSkip}>
-            skip
-          </button>
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="game-frame">
+          <div className="game-shell">
+            <div className="tong-avatar">T</div>
+            <div className="dialogue-area">
+              {TONG_LINES.map((line, i) => {
+                if (i < lineIndex) {
+                  return (
+                    <div key={i} className="dialogue-line muted">
+                      {line}
+                    </div>
+                  );
+                }
+                if (i === lineIndex && !allLinesDone) {
+                  return (
+                    <div key={i} className="dialogue-line">
+                      {currentLine.slice(0, displayedChars)}
+                      {displayedChars < currentLine.length && <span className="typewriter-cursor" />}
+                    </div>
+                  );
+                }
+                return null;
+              })}
+            </div>
+            <div style={{ marginTop: 'auto', alignSelf: 'flex-end' }}>
+              <button className="btn-skip" onClick={handleSkip}>
+                skip
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -393,62 +526,64 @@ export default function GamePage() {
   /* Proficiency phase */
   if (phase === 'proficiency') {
     return (
-      <div className="game-shell">
-        <div className="tong-avatar">T</div>
-        <div className="dialogue-area">
-          {TONG_LINES.map((line, i) => (
-            <div key={i} className={i === TONG_LINES.length - 1 ? 'dialogue-line' : 'dialogue-line muted'}>
-              {line}
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="game-frame">
+          <div className="game-shell">
+            <div className="tong-avatar">T</div>
+            <div className="dialogue-area">
+              {TONG_LINES.map((line, i) => (
+                <div key={i} className={i === TONG_LINES.length - 1 ? 'dialogue-line' : 'dialogue-line muted'}>
+                  {line}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <div className="proficiency-panel">
-          {LANG_LABELS.map((lang, idx) => {
-            const val = sliders[idx];
-            const gameLvl = GAME_LEVELS[val];
-            return (
-              <div key={lang.key} className="proficiency-lang">
-                <div className="proficiency-lang-header">
-                  <span className="proficiency-lang-name">
-                    {lang.flag} {lang.name} <span className="korean">{lang.native}</span>
-                  </span>
-                  <span className="proficiency-lang-level">
-                    {gameLvl.name}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={6}
-                  step={1}
-                  value={val}
-                  onChange={(e) => handleSlider(idx, Number(e.target.value))}
-                  className="proficiency-slider"
-                />
-                {/* Tick marks for each game level */}
-                <div className="proficiency-ticks">
-                  {GAME_LEVELS.map((gl) => (
-                    <span
-                      key={gl.level}
-                      className={`proficiency-tick${gl.level === val ? ' active' : ''}`}
-                    >
-                      <span className="proficiency-tick-dot" />
-                      <span className="proficiency-tick-num">Lv.{gl.level}</span>
-                    </span>
-                  ))}
-                </div>
-                {/* Show current level description */}
-                <div className="proficiency-level-map">
-                  <span className="proficiency-level-tag">{gameLvl.name}</span>
-                  <span className="proficiency-level-question">{gameLvl.desc}</span>
-                </div>
-              </div>
-            );
-          })}
-          <button onClick={handleConfirmProficiency} style={{ marginTop: 8 }}>
-            That&apos;s me
-          </button>
+            <div className="proficiency-panel">
+              {LANG_LABELS.map((lang, idx) => {
+                const val = sliders[idx];
+                const gameLvl = GAME_LEVELS[val];
+                return (
+                  <div key={lang.key} className="proficiency-lang">
+                    <div className="proficiency-lang-header">
+                      <span className="proficiency-lang-name">
+                        {lang.flag} {lang.name} <span className="korean">{lang.native}</span>
+                      </span>
+                      <span className="proficiency-lang-level">
+                        {gameLvl.name}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={6}
+                      step={1}
+                      value={val}
+                      onChange={(e) => handleSlider(idx, Number(e.target.value))}
+                      className="proficiency-slider"
+                    />
+                    <div className="proficiency-ticks">
+                      {GAME_LEVELS.map((gl) => (
+                        <span
+                          key={gl.level}
+                          className={`proficiency-tick${gl.level === val ? ' active' : ''}`}
+                        >
+                          <span className="proficiency-tick-dot" />
+                          <span className="proficiency-tick-num">Lv.{gl.level}</span>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="proficiency-level-map">
+                      <span className="proficiency-level-tag">{gameLvl.name}</span>
+                      <span className="proficiency-level-question">{gameLvl.desc}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              <button onClick={handleConfirmProficiency} style={{ marginTop: 8 }}>
+                That&apos;s me
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -457,6 +592,8 @@ export default function GamePage() {
   /* Hangout phase — immersive VN scene */
   const cityInfo = CITY_NAMES[city] || CITY_NAMES.seoul;
   const npc = NPC_SPRITES[activeNpc] || NPC_SPRITES.haeun;
+  const rel = gameState.relationships[activeNpc];
+  const affinity = rel?.affinity ?? 10;
 
   if (sceneSummary) {
     return (
@@ -497,21 +634,6 @@ export default function GamePage() {
   return (
     <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="game-frame">
-        {/* HUD */}
-        <div className="scene-hud">
-          <div className="scene-hud-location">
-            {cityInfo.en} <span className="korean">{cityInfo.local}</span>
-            <span className="scene-hud-dot">&middot;</span>
-            {LOCATION_NAMES[location]}
-          </div>
-          <div className="scene-hud-scores">
-            <span className="scene-hud-score"><b>{score.xp}</b> XP</span>
-            <span className="scene-hud-score"><b>{score.sp}</b> SP</span>
-            <span className="scene-hud-score"><b>{score.rp}</b> RP</span>
-          </div>
-        </div>
-
-        {/* VN Scene */}
         <SceneView
           backgroundUrl="/assets/backgrounds/pojangmacha.png"
           ambientDescription="A warm pojangmacha (street food tent) on a Seoul side street"
@@ -524,6 +646,20 @@ export default function GamePage() {
           choicePrompt={choicePrompt}
           tongTip={tongTip}
           isStreaming={chatLoading}
+          hudContent={
+            <div className="scene-hud">
+              <div className="scene-hud-location">
+                {cityInfo.en} <span className="korean">{cityInfo.local}</span>
+                <span className="scene-hud-dot">&middot;</span>
+                {LOCATION_NAMES[location]}
+              </div>
+              <div className="scene-hud-scores">
+                <span className="scene-hud-score"><b>{gameState.xp}</b> XP</span>
+                <span className="scene-hud-score"><b>{score.sp}</b> SP</span>
+                <span className="scene-hud-score"><b>{Math.round(affinity)}</b> RP</span>
+              </div>
+            </div>
+          }
           onChoice={handleChoice}
           onContinue={handleContinue}
           onExerciseResult={handleExerciseResult}

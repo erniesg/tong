@@ -1,3 +1,4 @@
+@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
 :root {
@@ -1508,13 +1509,14 @@ button.game-chip:hover {
 /* Game intro & hangout flow */
 
 .game-shell {
-  min-height: 100dvh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 32px 20px;
   gap: 28px;
+  overflow-y: auto;
   background:
     radial-gradient(ellipse at 30% 20%, rgba(255, 184, 140, 0.32), transparent 50%),
     radial-gradient(ellipse at 70% 80%, rgba(15, 118, 110, 0.14), transparent 50%),
@@ -2758,25 +2760,60 @@ button.game-chip:hover {
   background: #0d0d1a;
 }
 
-@media (min-width: 480px) {
+@media (min-width: 431px) {
   .game-frame {
-    height: min(95dvh, 860px);
-    border-radius: 28px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-    margin-top: 2.5dvh;
+    height: min(100vh, 932px);
+    border-radius: 24px;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 25px 50px rgba(0, 0, 0, 0.5);
   }
 }
 
-/* ── VN Dialogue box ──────────────────────────────────────── */
-.dialogue-box {
-  background: linear-gradient(
-    180deg,
-    rgba(22, 33, 62, 0.92) 0%,
-    rgba(26, 26, 46, 0.97) 100%
-  );
-  border-top: 2px solid rgba(232, 72, 92, 0.45);
-  backdrop-filter: blur(14px);
+/* ── VN Dialogue — subtitle style ────────────────────────── */
+.dialogue-subtitle {
+  padding: 0.75rem 1.25rem;
   padding-bottom: calc(0.75rem + var(--safe-bottom));
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.25) 70%,
+    transparent 100%
+  );
+}
+
+.dialogue-speaker {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.25rem;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.dialogue-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #fff;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 0 8px rgba(0, 0, 0, 0.5);
+  min-height: 1.6em;
+}
+
+.dialogue-translation {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  margin: 0.25rem 0 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.dialogue-continue {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* ── Exercise card ────────────────────────────────────────── */
@@ -2802,7 +2839,7 @@ button.game-chip:hover {
   font-family: 'Noto Sans KR', sans-serif;
 }
 
-/* ── Name plate ───────────────────────────────────────────── */
+/* ── Name plate (legacy, kept for other uses) ────────────── */
 .name-plate {
   display: inline-block;
   padding: 2px 10px;
