@@ -69,6 +69,30 @@ curl "https://tong-api.<subdomain>.workers.dev/health"
 curl "https://tong-api.<subdomain>.workers.dev/api/v1/objectives/next?userId=demo-user-1&mode=hangout&lang=ko"
 ```
 
+## 6) Run full mock flow checks
+From repo root:
+
+```bash
+npm run test:api-flow:local
+npm run test:api-flow:worker-local
+npm run test:api-flow:cloud
+```
+
+Override endpoints when needed:
+
+```bash
+TONG_LOCAL_API_BASE_URL=http://localhost:8790 npm run test:api-flow:local
+TONG_REMOTE_API_BASE_URL=https://tong-api.<subdomain>.workers.dev npm run test:api-flow:cloud
+```
+
+These checks cover:
+1. mock ingestion run
+2. media profile signals (YT + Spotify)
+3. 72h frequency and topic insights
+4. objective generation (KO + ZH)
+5. game bootstrap
+6. hangout/learn API flow
+
 ## Notes
 - Worker state is in-memory (demo-friendly), so profile/session state can reset between isolates.
 - Keep local Node API available as fallback (`NEXT_PUBLIC_TONG_BACKEND_MODE=local-server`).
