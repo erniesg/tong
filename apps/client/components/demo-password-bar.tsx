@@ -57,8 +57,8 @@ export default function DemoPasswordBar() {
     setInput('');
   }
 
-  /* Hide the bar on the immersive game page */
-  if (pathname === '/game') return null;
+  /* Hide the bar on the immersive game page and root redirect */
+  if (pathname === '/game' || pathname === '/') return null;
 
   return (
     <div className="demo-access-bar">
