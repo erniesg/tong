@@ -286,3 +286,28 @@ export interface SpotifySyncResponse {
     spotify: number;
   };
 }
+
+export interface AgentToolDefinition {
+  name: string;
+  description: string;
+  method: 'POST';
+  path: '/api/v1/tools/invoke';
+  args: Record<string, unknown>;
+}
+
+export interface AgentToolsResponse {
+  ok: true;
+  tools: AgentToolDefinition[];
+}
+
+export interface AgentToolInvokeRequest {
+  tool: string;
+  args?: Record<string, unknown>;
+}
+
+export interface AgentToolInvokeResponse {
+  ok: boolean;
+  tool?: string;
+  error?: string;
+  result?: unknown;
+}

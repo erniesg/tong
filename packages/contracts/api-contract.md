@@ -200,6 +200,53 @@ Response:
 }
 ```
 
+## GET `/api/v1/tools`
+Response:
+```json
+{
+  "ok": true,
+  "tools": [
+    {
+      "name": "ingestion.run_mock",
+      "description": "Run mock ingestion and refresh frequency/insight/media-profile signals for a user.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "userId": "string (optional)",
+        "profile": "object (optional)",
+        "includeSources": ["youtube", "spotify"]
+      }
+    }
+  ]
+}
+```
+
+## POST `/api/v1/tools/invoke`
+Request:
+```json
+{
+  "tool": "ingestion.run_mock",
+  "args": {
+    "userId": "demo-user-1",
+    "includeSources": ["youtube"]
+  }
+}
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "tool": "ingestion.run_mock",
+  "result": {
+    "success": true,
+    "generatedAtIso": "2026-02-28T12:00:00.000Z",
+    "includeSources": ["youtube"],
+    "sourceCount": { "youtube": 3, "spotify": 0 }
+  }
+}
+```
+
 ## POST `/api/v1/game/start-or-resume`
 Request:
 ```json

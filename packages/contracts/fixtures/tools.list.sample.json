@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "tools": [
+    {
+      "name": "ingestion.run_mock",
+      "description": "Run mock ingestion and refresh frequency/insight/media-profile signals for a user.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "userId": "string (optional)",
+        "profile": "object (optional)",
+        "includeSources": [
+          "youtube",
+          "spotify"
+        ]
+      }
+    }
+  ]
+}

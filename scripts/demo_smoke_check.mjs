@@ -19,7 +19,9 @@ const requiredFiles = [
   "packages/contracts/fixtures/scene.shanghai-texting-reward.sample.json",
   "packages/contracts/fixtures/spotify.status.sample.json",
   "packages/contracts/fixtures/spotify.connect.sample.json",
-  "packages/contracts/fixtures/spotify.sync.sample.json"
+  "packages/contracts/fixtures/spotify.sync.sample.json",
+  "packages/contracts/fixtures/tools.list.sample.json",
+  "packages/contracts/fixtures/tools.invoke.sample.json"
 ];
 
 const missing = requiredFiles.filter((rel) => !fs.existsSync(path.join(root, rel)));
