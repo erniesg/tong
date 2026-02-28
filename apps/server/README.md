@@ -42,6 +42,12 @@ npm --prefix apps/server run ingest:mock
 
 Generated files are written to `apps/server/data/generated/` (gitignored).
 
+Tool retrieval smoke check:
+
+```bash
+npm run demo:tools
+```
+
 ## Isolation contract for modeling work
 
 Topic modeling and frequency logic can iterate without live connectors using:
