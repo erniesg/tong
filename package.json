@@ -9,7 +9,7 @@
     "ingest:mock": "npm --prefix apps/server run ingest:mock",
     "demo:smoke": "node scripts/demo_smoke_check.mjs",
     "setup:worktrees": "./scripts/setup-hackathon-worktrees.sh",
-    "zip": "rm -f tong.zip && zip -r tong.zip manifest.json src README.md",
+    "zip": "./scripts/build-extension-bundle.sh",
     "launch:agents": "./scripts/launch-parallel-agents.sh"
   }
 }

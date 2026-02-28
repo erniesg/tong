@@ -30,7 +30,7 @@
 - [x] Implement YouTube overlay content script using Tong API
 - [x] Implement token dictionary click/popover in extension
 - [x] Add popup links and extension test instructions
-- [ ] Match production karaoke interaction on YouTube (timed progression + romanization lane)
+- [x] Match production karaoke interaction on YouTube (timed progression + romanization lane)
 
 ## Verification + Docs
 - [x] Run `npm run demo:smoke`
