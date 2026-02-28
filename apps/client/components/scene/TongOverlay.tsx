@@ -13,7 +13,10 @@ export function TongOverlay({ message, visible, onDismiss }: TongOverlayProps) {
 
   return (
     <button className="scene-tong-overlay" type="button" onClick={onDismiss}>
-      <strong>Tong:</strong> <KoreanText text={message} />
+      <strong className="scene-tong-label">Tong:</strong>
+      <span className="scene-tong-copy">
+        <KoreanText text={message} />
+      </span>
     </button>
   );
 }
