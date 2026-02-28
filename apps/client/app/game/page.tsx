@@ -6,9 +6,14 @@ import { useChat } from 'ai/react';
 import type { CityId, LocationId, ProficiencyLevel, ScoreState, UserProficiency } from '@/lib/api';
 import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData } from '@/lib/types/hangout';
 import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
+import type { Character } from '@/lib/types/relationship';
 import { SceneView } from '@/components/scene/SceneView';
 import { generateExercise } from '@/lib/exercises/generators';
 import { summarizeExercise } from '@/lib/utils/summarize-exercise';
+import { useGameState, dispatch, getRelationship, getMasterySnapshot } from '@/lib/store/game-store';
+import { CHARACTER_MAP, HAUEN } from '@/lib/content/characters';
+import { POJANGMACHA } from '@/lib/content/pojangmacha';
+import { getRelationshipStage } from '@/lib/types/relationship';
 
 /* ── scene constants ────────────────────────────────────── */
 
@@ -27,16 +32,6 @@ const TONG_LINES = [
   "Tell me how much you know and I'll set things up.",
 ];
 
-/*
- * Game mastery levels (aligned with Pinpoint's 7-level system).
- * The self-assessment slider (0-3) maps to a starting calibration
- * within the full 0-6 level range used during gameplay.
- *
- *   Slider 0 → starts at Lv.0 SCRIPT
- *   Slider 1 → starts at Lv.1 PRONUNCIATION
- *   Slider 2 → starts at Lv.3 GRAMMAR
- *   Slider 3 → starts at Lv.5 CONVERSATION
- */
 const GAME_LEVELS = [
   { level: 0, name: 'SCRIPT',        desc: 'Can I recognise the symbols?',       tongLangPct: 5 },
   { level: 1, name: 'PRONUNCIATION', desc: 'Can I say them correctly?',           tongLangPct: 10 },
@@ -83,10 +78,37 @@ type Phase = 'intro' | 'proficiency' | 'hangout';
 
 /* ── helpers ────────────────────────────────────────────── */
 
-/** Build context block for API messages (player level, NPC, location). */
-function buildContextBlock(level: number, npcId: string, cityId: CityId, locationId: LocationId): string {
-  const ctx = JSON.stringify({ playerLevel: level, characterId: npcId, city: cityId, location: locationId });
-  return `[CONTEXT]${ctx}[/CONTEXT] `;
+/** Build rich context block for API messages using game store data. */
+function buildContextBlock(
+  level: number,
+  npcId: string,
+  cityId: CityId,
+  locationId: LocationId,
+  npcChar: Character,
+): string {
+  const rel = getRelationship(npcId);
+  const stage = getRelationshipStage(rel.affinity);
+  const mastery = getMasterySnapshot(POJANGMACHA);
+  const isFirstEncounter = rel.interactionCount === 0;
+
+  const locLevel = Math.min(level, POJANGMACHA.levels.length - 1);
+  const objectives = POJANGMACHA.levels[locLevel]?.objectives ?? [];
+
+  const ctx = JSON.stringify({
+    playerLevel: level,
+    characterId: npcId,
+    city: cityId,
+    location: locationId,
+    stage,
+    relationship: rel,
+    mastery,
+    isFirstEncounter,
+    selfAssessedLevel: level,
+    calibratedLevel: rel.interactionCount > 0 ? level : null,
+    locationLevel: locLevel,
+    objectives,
+  });
+  return `[HANGOUT_CONTEXT]${ctx}[/HANGOUT_CONTEXT] `;
 }
 
 /** Find the weakest language (lowest slider value), breaking ties left-to-right. */
@@ -102,6 +124,7 @@ function getWeakestLangIndex(sliders: [number, number, number]): number {
 
 export default function GamePage() {
   const searchParams = useSearchParams();
+  const gameState = useGameState();
 
   /* phase state — ?phase=hangout skips straight to scene */
   const skipToHangout = searchParams.get('phase') === 'hangout';
@@ -124,6 +147,9 @@ export default function GamePage() {
   const [score, setScore] = useState<ScoreState>({ xp: 0, sp: 0, rp: 0 });
   const [activeNpc, setActiveNpc] = useState<string>('haeun');
   const [playerLevel, setPlayerLevel] = useState(0);
+
+  /* NPC character ref — set during proficiency confirmation */
+  const npcRef = useRef<Character>(HAUEN);
 
   /* VN scene state */
   const [toolQueue, setToolQueue] = useState<ToolQueueItem[]>([]);
@@ -221,33 +247,41 @@ export default function GamePage() {
 
     const weakLevel = sliders[weakIdx];
     const npcId = NPC_POOL[Math.floor(Math.random() * NPC_POOL.length)];
+    const npcChar = CHARACTER_MAP[npcId] ?? HAUEN;
+    npcRef.current = npcChar;
+
     setCity(primaryCity as CityId);
     setLocation('food_street');
     setActiveNpc(npcId);
     setPlayerLevel(weakLevel);
     setScore({ xp: 0, sp: 0, rp: 0 });
+
+    // Store self-assessed level
+    dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
+
     setPhase('hangout');
     setLoading(false);
 
-    void append({ role: 'user', content: `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street')}Start the scene.` });
+    void append({
+      role: 'user',
+      content: `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street', npcChar)}Start the scene.`,
+    });
   }
 
-  /* ── useChat integration (pinpoint pattern) ──────────────── */
+  /* ── useChat integration ──────────────────────────────────── */
 
   const { append, isLoading: chatLoading } = useChat({
     api: '/api/ai/hangout',
     maxSteps: 1,
     onResponse: () => {
-      // Reset pause for each new server response
       pausedRef.current = false;
     },
     onToolCall: ({ toolCall }) => {
       const { toolName, toolCallId, args } = toolCall;
       if (processedToolCallsRef.current.has(toolCallId)) return args;
-      // Pause guard: drop tools after interactive ones in the same response
       if (pausedRef.current) {
         console.log(`[VN] onToolCall SKIPPED (paused): ${toolName}`);
-        return args; // Still return args to mark as resolved
+        return args;
       }
       processedToolCallsRef.current.add(toolCallId);
       console.log(`[VN] onToolCall: ${toolName}`, toolCallId);
@@ -257,13 +291,10 @@ export default function GamePage() {
         { toolCallId, toolName, args: args as Record<string, unknown> },
       ]);
 
-      // Pause ingestion of further tools after interactive ones
       if (toolName === 'show_exercise' || toolName === 'offer_choices') {
         pausedRef.current = true;
       }
 
-      // Return args to mark tool invocation as resolved (state: 'result')
-      // This prevents unresolved tool calls from polluting message history
       return args;
     },
     onError: (err) => {
@@ -278,21 +309,12 @@ export default function GamePage() {
   useEffect(() => {
     if (skipToHangout && !sceneStartedRef.current) {
       sceneStartedRef.current = true;
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location);
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
       void append({ role: 'user', content: `${ctx}Start the scene.` });
     }
   }, [skipToHangout, append, playerLevel, activeNpc, city, location]);
 
-  /* ── Tool queue processor (pinpoint pattern) ──────────────
-   *
-   * Key design: blocking tools (npc_speak, show_exercise, offer_choices)
-   * do `return` WITHOUT dequeuing — the item stays at toolQueue[0] and
-   * processingRef stays true. The handler (handleContinue, handleExerciseResult,
-   * handleChoice) dequeues the item and releases the lock.
-   *
-   * Non-blocking tools (tong_whisper, end_scene) fall through to the
-   * auto-advance at the bottom which dequeues and releases.
-   */
+  /* ── Tool queue processor ───────────────────────────────── */
   useEffect(() => {
     if (toolQueue.length === 0 || processingRef.current) return;
     processingRef.current = true;
@@ -315,13 +337,16 @@ export default function GamePage() {
           content: args.text,
           translation: args.translation ?? undefined,
         });
+        // Update affinity if delta provided
+        if (args.affinityDelta && args.characterId) {
+          dispatch({ type: 'UPDATE_AFFINITY', characterId: args.characterId, delta: args.affinityDelta });
+        }
         console.log('[VN] npc_speak BLOCK:', args.text.slice(0, 40));
         return; // BLOCK — wait for tap
       }
       case 'tong_whisper': {
         const args = item.args as { message: string; translation?: string | null };
         setTongTip({ message: args.message, translation: args.translation ?? undefined });
-        // If next item is exercise, block so player reads the tip first
         if (toolQueue.length > 1 && toolQueue[1].toolName === 'show_exercise') {
           console.log('[VN] tong_whisper BLOCK (exercise next)');
           return; // BLOCK
@@ -329,11 +354,21 @@ export default function GamePage() {
         break; // auto-advance
       }
       case 'show_exercise': {
-        const args = item.args as { exerciseType: string; objectiveId: string };
-        const exercise = generateExercise(args.exerciseType);
+        const args = item.args as {
+          exerciseType: string;
+          objectiveId: string;
+          hintItems?: string[] | null;
+          hintCount?: number | null;
+          hintSubType?: string | null;
+        };
+        const exercise = generateExercise(args.exerciseType, {
+          hintItems: args.hintItems ?? undefined,
+          hintCount: args.hintCount ?? undefined,
+          hintSubType: args.hintSubType ?? undefined,
+        });
         setCurrentMessage(null);
         setCurrentExercise(exercise);
-        console.log('[VN] show_exercise BLOCK:', args.exerciseType);
+        console.log('[VN] show_exercise BLOCK:', args.exerciseType, 'hints:', args.hintItems);
         return; // BLOCK — wait for exercise completion
       }
       case 'offer_choices': {
@@ -343,6 +378,11 @@ export default function GamePage() {
         setCurrentMessage(null);
         console.log('[VN] offer_choices BLOCK');
         return; // BLOCK — wait for choice
+      }
+      case 'assess_result': {
+        // Non-blocking — mastery tracking handled by exercise results
+        console.log('[VN] assess_result (non-blocking):', item.args);
+        break; // auto-advance
       }
       case 'end_scene': {
         const args = item.args as {
@@ -354,6 +394,17 @@ export default function GamePage() {
         setSceneSummary(args);
         setScore((prev) => ({ ...prev, xp: prev.xp + args.xpEarned }));
         setCurrentMessage(null);
+
+        // Dispatch store updates
+        dispatch({ type: 'ADD_XP', amount: args.xpEarned });
+        for (const ac of args.affinityChanges) {
+          dispatch({ type: 'UPDATE_AFFINITY', characterId: ac.characterId, delta: ac.delta });
+        }
+        if (args.calibratedLevel != null) {
+          dispatch({ type: 'SET_CALIBRATED_LEVEL', level: args.calibratedLevel });
+        }
+        // Increment interaction count for active NPC
+        dispatch({ type: 'INCREMENT_INTERACTION', characterId: activeNpc });
         break; // auto-advance
       }
       default:
@@ -363,17 +414,15 @@ export default function GamePage() {
     // Auto-advance: dequeue and release lock
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
-  }, [toolQueue]);
+  }, [toolQueue, activeNpc]);
 
   /* ── Hangout handlers ───────────────────────────────────── */
 
   const handleContinue = useCallback(() => {
-    // Debounce: 400ms
     const now = Date.now();
     if (now - lastContinueRef.current < 400) return;
     lastContinueRef.current = now;
 
-    // Case 1: Blocked on a tool — dequeue it and release lock
     if (processingRef.current) {
       console.log('[VN] handleContinue: dequeue blocked tool');
       setCurrentMessage(null);
@@ -382,22 +431,17 @@ export default function GamePage() {
       return;
     }
 
-    // Case 2: Scene done
     if (sceneSummary) return;
-
-    // Case 3: AI streaming
     if (chatLoading) return;
 
-    // Case 4: Dismiss lingering tong tip
     if (tongTip) {
       setTongTip(null);
       return;
     }
 
-    // Case 5: Queue empty, no exercise/choices — request next turn
     if (!currentExercise && !choices && toolQueue.length === 0) {
       console.log('[VN] handleContinue: append Continue');
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location);
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
       void append({ role: 'user', content: `${ctx}Continue.` });
     }
   }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location]);
@@ -406,7 +450,12 @@ export default function GamePage() {
     setCurrentExercise(null);
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
-    const ctx = buildContextBlock(playerLevel, activeNpc, city, location);
+
+    // Record mastery for exercise items
+    // The exercise might have vocabulary items we can track
+    dispatch({ type: 'RECORD_ITEM_RESULT', itemId: exerciseId, category: 'vocabulary', correct });
+
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
     void append({ role: 'user', content: `${ctx}${summarizeExercise(exerciseId, correct)}` });
   }, [append, playerLevel, activeNpc, city, location]);
 
@@ -415,7 +464,7 @@ export default function GamePage() {
     setChoicePrompt(null);
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
-    const ctx = buildContextBlock(playerLevel, activeNpc, city, location);
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
     void append({ role: 'user', content: `${ctx}Choice: ${choiceId}` });
   }, [append, playerLevel, activeNpc, city, location]);
 
@@ -495,7 +544,6 @@ export default function GamePage() {
                   onChange={(e) => handleSlider(idx, Number(e.target.value))}
                   className="proficiency-slider"
                 />
-                {/* Tick marks for each game level */}
                 <div className="proficiency-ticks">
                   {GAME_LEVELS.map((gl) => (
                     <span
@@ -507,7 +555,6 @@ export default function GamePage() {
                     </span>
                   ))}
                 </div>
-                {/* Show current level description */}
                 <div className="proficiency-level-map">
                   <span className="proficiency-level-tag">{gameLvl.name}</span>
                   <span className="proficiency-level-question">{gameLvl.desc}</span>
@@ -526,6 +573,8 @@ export default function GamePage() {
   /* Hangout phase — immersive VN scene */
   const cityInfo = CITY_NAMES[city] || CITY_NAMES.seoul;
   const npc = NPC_SPRITES[activeNpc] || NPC_SPRITES.haeun;
+  const rel = gameState.relationships[activeNpc];
+  const affinity = rel?.affinity ?? 10;
 
   if (sceneSummary) {
     return (
@@ -586,9 +635,9 @@ export default function GamePage() {
                 {LOCATION_NAMES[location]}
               </div>
               <div className="scene-hud-scores">
-                <span className="scene-hud-score"><b>{score.xp}</b> XP</span>
+                <span className="scene-hud-score"><b>{gameState.xp}</b> XP</span>
                 <span className="scene-hud-score"><b>{score.sp}</b> SP</span>
-                <span className="scene-hud-score"><b>{score.rp}</b> RP</span>
+                <span className="scene-hud-score"><b>{Math.round(affinity)}</b> RP</span>
               </div>
             </div>
           }
