@@ -11,6 +11,8 @@
     "deploy:worker": "npm --prefix apps/worker run deploy",
     "test:api-flow": "node scripts/mock_api_flow_check.mjs",
     "test:api-flow:local": "node scripts/mock_api_flow_check.mjs ${TONG_LOCAL_API_BASE_URL:-http://localhost:8787} --strict-state",
+    "test:api-flow:local:youtube": "node scripts/mock_api_flow_check.mjs ${TONG_LOCAL_API_BASE_URL:-http://localhost:8787} --strict-state --sources=youtube",
+    "test:api-flow:local:spotify": "node scripts/mock_api_flow_check.mjs ${TONG_LOCAL_API_BASE_URL:-http://localhost:8787} --strict-state --sources=spotify",
     "test:api-flow:worker-local": "node scripts/mock_api_flow_check.mjs ${TONG_WORKER_LOCAL_API_BASE_URL:-http://localhost:8788} --strict-state",
     "test:api-flow:cloud": "node scripts/mock_api_flow_check.mjs ${TONG_REMOTE_API_BASE_URL:-https://tong-api.erniesg.workers.dev}",
     "demo:smoke": "node scripts/demo_smoke_check.mjs",

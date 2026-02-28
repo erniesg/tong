@@ -102,6 +102,7 @@ const SPOTIFY_STATE_TTL_MS = 10 * 60 * 1000;
 const SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS = 72;
 const SPOTIFY_MAX_PAGES = 5;
 const SPOTIFY_CONNECT_DOCS_URL = 'https://developer.spotify.com/documentation/web-api';
+const INGESTION_SOURCES = new Set(['youtube', 'spotify']);
 
 const state = {
   profiles: new Map(),
@@ -208,8 +209,24 @@ function getUserIdFromSearch(searchParams) {
   return searchParams.get('userId') || DEFAULT_USER_ID;
 }
 
+function normalizeIngestionSources(value) {
+  if (value == null) return [];
+
+  const raw = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',')
+      : [];
+
+  return [...new Set(
+    raw
+      .map((item) => String(item || '').trim().toLowerCase())
+      .filter((item) => INGESTION_SOURCES.has(item)),
+  )];
+}
+
 function getSpotifyRedirectUri() {
-  return process.env.SPOTIFY_REDIRECT_URI || `http://localhost:${PORT}/api/v1/integrations/spotify/callback`;
+  return process.env.SPOTIFY_REDIRECT_URI || `http://127.0.0.1:${PORT}/api/v1/integrations/spotify/callback`;
 }
 
 function getSpotifyClientCredentials() {
@@ -306,11 +323,15 @@ function normalizeSpotifyTrackForIngestion(rawTrack, index = 0) {
   };
 }
 
-function buildIngestionSnapshotForUser(userId = DEFAULT_USER_ID) {
+function buildIngestionSnapshotForUser(userId = DEFAULT_USER_ID, options = {}) {
+  const includeSources = normalizeIngestionSources(options.includeSources);
   const snapshot = JSON.parse(fs.readFileSync(mockMediaWindowPath, 'utf8'));
   const spotifySynced = state.spotifyRecentByUser.get(userId);
 
   if (!spotifySynced?.items?.length) {
+    if (includeSources.length > 0) {
+      snapshot.sourceItems = (snapshot.sourceItems || []).filter((item) => includeSources.includes(item.source));
+    }
     return snapshot;
   }
 
@@ -322,6 +343,11 @@ function buildIngestionSnapshotForUser(userId = DEFAULT_USER_ID) {
   snapshot.windowStartIso = new Date(Date.now() - windowHours * 60 * 60 * 1000).toISOString();
   snapshot.windowEndIso = new Date().toISOString();
   snapshot.generatedAtIso = new Date().toISOString();
+
+  if (includeSources.length > 0) {
+    snapshot.sourceItems = (snapshot.sourceItems || []).filter((item) => includeSources.includes(item.source));
+  }
+
   return snapshot;
 }
 
@@ -535,8 +561,9 @@ function loadDefaultGeneratedIngestion() {
   };
 }
 
-function runIngestionForUser(userId = DEFAULT_USER_ID) {
-  const snapshot = buildIngestionSnapshotForUser(userId);
+function runIngestionForUser(userId = DEFAULT_USER_ID, options = {}) {
+  const includeSources = normalizeIngestionSources(options.includeSources);
+  const snapshot = buildIngestionSnapshotForUser(userId, { includeSources });
   const result = runMockIngestion(snapshot, {
     userId,
     profile: getProfile(userId),
@@ -547,7 +574,12 @@ function runIngestionForUser(userId = DEFAULT_USER_ID) {
   }
 
   state.ingestionByUser.set(userId, result);
-  return result;
+  return {
+    ...result,
+    _meta: {
+      includeSources,
+    },
+  };
 }
 
 function ensureIngestionForUser(userId = DEFAULT_USER_ID) {
@@ -946,10 +978,12 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req);
       const userId = body.userId || getUserIdFromSearch(url.searchParams);
       if (body.profile) upsertProfile(userId, { profile: body.profile });
-      const result = runIngestionForUser(userId);
+      const includeSources = normalizeIngestionSources(body.includeSources);
+      const result = runIngestionForUser(userId, { includeSources });
       jsonResponse(res, 200, {
         success: true,
         generatedAtIso: result.generatedAtIso,
+        includeSources: includeSources.length > 0 ? includeSources : ['youtube', 'spotify'],
         sourceCount: {
           youtube: result.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
           spotify: result.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
