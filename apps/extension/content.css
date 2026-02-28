@@ -8,14 +8,25 @@
   font-family: 'Space Grotesk', 'Noto Sans KR', sans-serif;
 }
 
+#tong-overlay-root.tong-overlay-hidden-root {
+  display: none;
+}
+
 .tong-overlay-card {
   pointer-events: auto;
-  border-radius: 13px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(9, 15, 22, 0.75);
+  background: rgba(9, 15, 22, 0.8);
   color: #ffffff;
   padding: 10px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+}
+
+.tong-status {
+  font-size: 11px;
+  color: #9bb8d8;
+  margin-bottom: 6px;
 }
 
 .tong-script {
@@ -40,6 +51,7 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
+  min-height: 28px;
 }
 
 .tong-token {
@@ -48,7 +60,8 @@
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
   font-size: 12px;
-  padding: 4px 9px;
+  line-height: 1;
+  padding: 6px 10px;
   cursor: pointer;
 }
 
@@ -64,6 +77,9 @@
   padding: 8px;
   font-size: 12px;
   line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .tong-dictionary strong {
