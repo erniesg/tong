@@ -125,6 +125,26 @@ export interface GameProgression extends ScoreState {
   currentMasteryLevel?: number;
 }
 
+export interface RelationshipState {
+  rp: number;
+  stage: string;
+  currentStageMinRp?: number;
+  nextStageRp?: number | null;
+  progressToNext?: number;
+}
+
+export interface MissionGateState {
+  status: 'locked' | 'ready' | 'passed';
+  requiredValidatedHangouts: number;
+  validatedHangouts: number;
+}
+
+export interface ProgressLoopState {
+  masteryTier: number;
+  learnReadiness: number;
+  missionGate: MissionGateState;
+}
+
 export interface StartOrResumeGameResponse {
   sessionId: string;
   city: CityId;
@@ -134,6 +154,9 @@ export interface StartOrResumeGameResponse {
   actions?: string[];
   profile?: GameProfile;
   progression?: GameProgression;
+  relationshipState?: RelationshipState;
+  progressionLoop?: ProgressLoopState;
+  engineMode?: 'dynamic_ai' | 'scripted_fallback';
 }
 
 export interface ObjectiveTargets {
@@ -175,6 +198,8 @@ export interface SceneCharacter {
   role?: string;
   mood?: string;
   avatarEmoji?: string;
+  isRomanceable?: boolean;
+  assetKey?: string | null;
 }
 
 export interface SceneCompletionSummary {
@@ -183,19 +208,37 @@ export interface SceneCompletionSummary {
   completionSignal?: string;
   turnsTaken?: number;
   successfulTurns?: number;
+  accuracy?: number;
   objectiveProgress?: number;
   scoreDelta?: ScoreState;
+  relationshipState?: RelationshipState;
+  progressionLoop?: {
+    masteryTier?: number;
+    learnReadiness?: number;
+    validatedHangouts?: number;
+    missionGateStatus?: string;
+  };
+  unlockPreview?: {
+    missionGate?: string;
+    nextMasteryTier?: number;
+    nextLocationOptions?: LocationId[];
+    learnModeObjective?: string;
+    unlocked?: boolean;
+  };
 }
 
 export interface HangoutState {
   turn: number;
   score: ScoreState;
   objectiveProgress?: ObjectiveProgressState;
+  relationshipState?: RelationshipState;
+  progressionLoop?: ProgressLoopState;
 }
 
 export interface StartHangoutResponse {
   sceneSessionId: string;
   mode?: 'hangout';
+  engineMode?: 'dynamic_ai' | 'scripted_fallback';
   city?: CityId;
   location?: LocationId;
   sceneId?: string;
@@ -213,6 +256,8 @@ export interface StartHangoutResponse {
     completionSignal: string | null;
   };
   completionSummary?: SceneCompletionSummary | null;
+  relationshipState?: RelationshipState;
+  progressionLoop?: ProgressLoopState;
   uiPolicy: {
     immersiveFirstPerson: boolean;
     allowOnlyDialogueAndHints: boolean;
@@ -221,10 +266,13 @@ export interface StartHangoutResponse {
 
 export interface RespondHangoutResponse {
   accepted: boolean;
+  engineMode?: 'dynamic_ai' | 'scripted_fallback';
   feedback: {
     tongHint: string;
     objectiveProgressDelta: number;
     objectiveProgress?: ObjectiveProgressState;
+    relationshipState?: RelationshipState;
+    progressionLoop?: ProgressLoopState;
     suggestedReplies?: string[];
   };
   nextLine: SceneLine;
@@ -236,7 +284,29 @@ export interface RespondHangoutResponse {
     completionSignal: string | null;
   };
   completionSummary?: SceneCompletionSummary | null;
+  relationshipState?: RelationshipState;
+  progressionLoop?: ProgressLoopState;
   state: HangoutState;
+}
+
+export interface MissionAssessResponse {
+  missionId: string;
+  city: CityId;
+  location: LocationId;
+  lang: 'ko' | 'ja' | 'zh';
+  ok: boolean;
+  status: 'locked' | 'passed' | 'retry';
+  missionScore?: number;
+  message: string;
+  rewards?: ScoreState;
+  progressionLoop: ProgressLoopState;
+  relationshipState?: RelationshipState;
+  unlockPreview?: {
+    nextMasteryTier?: number;
+    nextLocationOptions?: LocationId[];
+    videoCallRewardEligible?: boolean;
+    memoryCardRewardEligible?: boolean;
+  };
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -385,6 +455,27 @@ export function createLearnSession(params: CreateLearnSessionParams) {
       city: city || 'seoul',
       lang: lang || 'ko',
       objectiveId,
+    }),
+  });
+}
+
+interface MissionAssessParams {
+  userId?: string;
+  sessionId?: string;
+  city?: CityId;
+  location?: LocationId;
+  lang?: 'ko' | 'ja' | 'zh';
+}
+
+export function assessMission(params: MissionAssessParams = {}) {
+  return apiFetch<MissionAssessResponse>('/api/v1/missions/assess', {
+    method: 'POST',
+    body: JSON.stringify({
+      userId: params.userId || 'demo-user-1',
+      gameSessionId: params.sessionId,
+      city: params.city,
+      location: params.location,
+      lang: params.lang,
     }),
   });
 }

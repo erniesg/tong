@@ -58,6 +58,23 @@ const DICTIONARY_OVERRIDES = {
 const CITY_IDS = ['seoul', 'tokyo', 'shanghai'];
 const LOCATION_IDS = ['food_street', 'cafe', 'convenience_store', 'subway_hub', 'practice_studio'];
 const LANG_IDS = ['ko', 'ja', 'zh'];
+const REQUIRED_VALIDATED_HANGOUTS_FOR_MISSION = 2;
+
+const RELATIONSHIP_STAGES = [
+  { stage: 'stranger', minRp: 0 },
+  { stage: 'curious', minRp: 8 },
+  { stage: 'comfortable', minRp: 18 },
+  { stage: 'close', minRp: 32 },
+  { stage: 'bonded', minRp: 48 },
+];
+
+const PROFICIENCY_READINESS = {
+  none: 0.2,
+  beginner: 0.38,
+  intermediate: 0.58,
+  advanced: 0.78,
+  native: 0.9,
+};
 
 const CITY_BASE = {
   seoul: {
@@ -477,6 +494,69 @@ function cloneScore(score) {
   };
 }
 
+function clampNumber(value, min, max) {
+  if (Number.isNaN(value)) return min;
+  return Math.max(min, Math.min(max, value));
+}
+
+function getRelationshipStageFromRp(rp) {
+  const safeRp = Math.max(0, Number(rp || 0));
+  let current = RELATIONSHIP_STAGES[0];
+  let next = null;
+
+  for (let index = 0; index < RELATIONSHIP_STAGES.length; index += 1) {
+    const candidate = RELATIONSHIP_STAGES[index];
+    if (safeRp >= candidate.minRp) {
+      current = candidate;
+      next = RELATIONSHIP_STAGES[index + 1] || null;
+    } else {
+      break;
+    }
+  }
+
+  return { current, next };
+}
+
+function buildRelationshipState(totalRp) {
+  const safeRp = Math.max(0, Number(totalRp || 0));
+  const { current, next } = getRelationshipStageFromRp(safeRp);
+  const previousFloor = current.minRp;
+  const nextFloor = next ? next.minRp : null;
+  const progressToNext = nextFloor
+    ? clampNumber((safeRp - previousFloor) / Math.max(1, nextFloor - previousFloor), 0, 1)
+    : 1;
+
+  return {
+    rp: safeRp,
+    stage: current.stage,
+    currentStageMinRp: previousFloor,
+    nextStageRp: nextFloor,
+    progressToNext: Number(progressToNext.toFixed(2)),
+  };
+}
+
+function deriveLearnReadiness(profile, lang) {
+  const level = profile?.proficiency?.[lang] || 'beginner';
+  const base = PROFICIENCY_READINESS[level] ?? PROFICIENCY_READINESS.beginner;
+  return Number(clampNumber(base, 0, 1).toFixed(2));
+}
+
+function buildMissionGateState(session) {
+  return {
+    status: session.missionGateStatus || 'locked',
+    requiredValidatedHangouts: REQUIRED_VALIDATED_HANGOUTS_FOR_MISSION,
+    validatedHangouts: session.validatedHangouts || 0,
+  };
+}
+
+function buildProgressLoopState(session) {
+  return {
+    masteryTier: session.masteryTier || 1,
+    learnReadiness: Number(clampNumber(session.learnReadiness || 0, 0, 1).toFixed(2)),
+    missionGate: buildMissionGateState(session),
+  };
+}
+
 function normalizeCity(value, fallback = 'seoul') {
   if (CITY_IDS.includes(value)) return value;
   return fallback;
@@ -668,17 +748,32 @@ function objectivePassed(scene, session) {
   );
 }
 
+function computeTurnAccuracy(session) {
+  const totalTurns = session.transcript?.length || 0;
+  if (totalTurns === 0) return 0;
+  return Number(clampNumber((session.successfulTurns || 0) / totalTurns, 0, 1).toFixed(2));
+}
+
 function buildCompletionSummary(scene, session) {
   if (!session.completed) return null;
   const passed = objectivePassed(scene, session);
+  const totalRp = (session.baseProgression?.rp || 0) + (session.score?.rp || 0);
   return {
     objectiveId: scene.objective.objectiveId,
     status: passed ? 'passed' : 'completed_retry_available',
     completionSignal: passed ? 'objective_validated' : 'scene_complete_retry_available',
     turnsTaken: Math.min(session.turn - 1, scene.objective.requiredTurns),
     successfulTurns: session.successfulTurns,
+    accuracy: computeTurnAccuracy(session),
     objectiveProgress: Number(session.objectiveProgress.toFixed(2)),
     scoreDelta: cloneScore(session.score),
+    relationshipState: buildRelationshipState(totalRp),
+    progressionLoop: {
+      masteryTier: session.masteryTier || 1,
+      learnReadiness: Number(clampNumber(session.learnReadiness || 0, 0, 1).toFixed(2)),
+      validatedHangouts: session.validatedHangouts || 0,
+      missionGateStatus: session.missionGateStatus || 'locked',
+    },
     unlockPreview: buildUnlockPreview(scene, passed),
   };
 }
@@ -741,6 +836,12 @@ function buildObjectiveNextResponse({ city = 'seoul', location = 'food_street', 
 
 function createGameSession(userId, profile, options = {}) {
   const slice = getSceneSlice(options);
+  const nextProfile = profile || FIXTURES.gameStart.profile;
+  const progression = { ...(FIXTURES.gameStart.progression || { xp: 0, sp: 0, rp: 0 }) };
+  const validatedHangouts = 0;
+  const missionGateStatus = 'locked';
+  const masteryTier = progression.currentMasteryLevel || 1;
+  const learnReadiness = deriveLearnReadiness(nextProfile, slice.lang);
   const npc = pickCharacter({
     city: slice.city,
     preferRomance: options.preferRomance !== false,
@@ -754,12 +855,16 @@ function createGameSession(userId, profile, options = {}) {
     location: slice.location.locationId,
     lang: slice.lang,
     sceneId: slice.sceneId,
-    profile: profile || FIXTURES.gameStart.profile,
-    progression: { ...(FIXTURES.gameStart.progression || { xp: 0, sp: 0, rp: 0 }) },
+    profile: nextProfile,
+    progression,
     objectiveProgress: 0,
     successfulTurns: 0,
     npc,
     npcMood: npc.baselineMood,
+    masteryTier,
+    learnReadiness,
+    validatedHangouts,
+    missionGateStatus,
     lastHangoutSummary: null,
   };
   state.gameSessions.set(sessionId, session);
@@ -773,6 +878,8 @@ function buildGameStartResponse(session, resumed) {
     location: session.location,
     lang: session.lang,
   });
+  const relationshipState = buildRelationshipState(session.progression?.rp || 0);
+  const progressionLoop = buildProgressLoopState(session);
 
   return {
     ...FIXTURES.gameStart,
@@ -783,6 +890,9 @@ function buildGameStartResponse(session, resumed) {
     lang: scene.lang,
     profile: session.profile,
     progression: session.progression,
+    relationshipState,
+    progressionLoop,
+    engineMode: shouldUseAiHangout() ? 'dynamic_ai' : 'scripted_fallback',
     resumed,
     tongPrompt: `tong://${scene.city}/${scene.location.locationId}/hangout/v1`,
     actions: [
@@ -800,6 +910,8 @@ function buildGameStartResponse(session, resumed) {
       turnsRemaining: scene.objective.requiredTurns,
       successfulTurns: session.successfulTurns,
       objectiveProgress: Number(session.objectiveProgress.toFixed(2)),
+      relationshipState,
+      progressionLoop,
       isCompleted: false,
       completionSignal: null,
       lastTurn: null,
@@ -827,6 +939,15 @@ function createHangoutSession({
 }) {
   const scene = getSceneSlice({ city, location, lang });
   const npc = pickCharacter({ city: scene.city, preferRomance, requestedCharacterId: characterId });
+  const linkedGame = gameSessionId ? state.gameSessions.get(gameSessionId) : null;
+  const baseProgression = linkedGame?.progression ? { ...linkedGame.progression } : { xp: 0, sp: 0, rp: 0 };
+  const masteryTier = linkedGame?.masteryTier || linkedGame?.progression?.currentMasteryLevel || 1;
+  const learnReadiness =
+    typeof linkedGame?.learnReadiness === 'number'
+      ? linkedGame.learnReadiness
+      : deriveLearnReadiness(linkedGame?.profile, scene.lang);
+  const validatedHangouts = linkedGame?.validatedHangouts || 0;
+  const missionGateStatus = linkedGame?.missionGateStatus || 'locked';
   const sceneSessionId = nextSessionId('hangout');
   const session = {
     sceneSessionId,
@@ -838,11 +959,16 @@ function createHangoutSession({
     sceneId: scene.sceneId,
     objectiveId: scene.objective.objectiveId,
     npc,
+    baseProgression,
     turn: 1,
     score: { xp: 0, sp: 0, rp: 0 },
     objectiveProgress: 0,
     successfulTurns: 0,
     npcMood: npc.baselineMood,
+    masteryTier,
+    learnReadiness,
+    validatedHangouts,
+    missionGateStatus,
     completed: false,
     transcript: [],
   };
@@ -866,8 +992,75 @@ function updateGameSessionFromHangout(hangoutSession, completionSummary) {
   gameSession.lang = hangoutSession.lang;
   gameSession.sceneId = hangoutSession.sceneId;
   gameSession.npc = hangoutSession.npc;
+  gameSession.learnReadiness = Number(clampNumber((gameSession.learnReadiness || 0) + 0.04, 0, 1).toFixed(2));
+
+  if (completionSummary.completionSignal === 'objective_validated') {
+    gameSession.validatedHangouts = (gameSession.validatedHangouts || 0) + 1;
+  }
+  if (gameSession.missionGateStatus === 'passed') {
+    // keep passed until a new mastery tier reset path is introduced
+  } else if ((gameSession.validatedHangouts || 0) >= REQUIRED_VALIDATED_HANGOUTS_FOR_MISSION) {
+    gameSession.missionGateStatus = 'ready';
+  } else if (!gameSession.missionGateStatus) {
+    gameSession.missionGateStatus = 'locked';
+  }
+
+  gameSession.masteryTier = gameSession.masteryTier || gameSession.progression.currentMasteryLevel || 1;
+  gameSession.progression.currentMasteryLevel = gameSession.masteryTier;
   gameSession.lastHangoutSummary = completionSummary;
   state.gameSessions.set(gameSession.sessionId, gameSession);
+}
+
+function assessMissionForGameSession(session, scene) {
+  const gate = buildMissionGateState(session);
+  if (gate.status !== 'ready') {
+    return {
+      ok: false,
+      status: 'locked',
+      message: 'Mission gate is locked. Validate more hangouts first.',
+      progressionLoop: buildProgressLoopState(session),
+    };
+  }
+
+  const readinessWeight = session.learnReadiness || 0;
+  const validationWeight = Math.min(1, (session.validatedHangouts || 0) / REQUIRED_VALIDATED_HANGOUTS_FOR_MISSION);
+  const relationshipWeight = Math.min(1, (session.progression?.rp || 0) / 40);
+  const missionScore = Number((readinessWeight * 0.4 + validationWeight * 0.35 + relationshipWeight * 0.25).toFixed(2));
+  const passed = missionScore >= 0.72;
+  const rewards = passed ? { xp: 18, sp: 6, rp: 3 } : { xp: 4, sp: 1, rp: 0 };
+  session.progression.xp += rewards.xp;
+  session.progression.sp += rewards.sp;
+  session.progression.rp += rewards.rp;
+
+  if (passed) {
+    session.missionGateStatus = 'passed';
+    session.masteryTier = (session.masteryTier || 1) + 1;
+    session.progression.currentMasteryLevel = session.masteryTier;
+    session.validatedHangouts = 0;
+    session.learnReadiness = Number(clampNumber(session.learnReadiness + 0.08, 0, 1).toFixed(2));
+  } else {
+    session.missionGateStatus = 'ready';
+  }
+
+  state.gameSessions.set(session.sessionId, session);
+
+  return {
+    ok: true,
+    status: passed ? 'passed' : 'retry',
+    missionScore,
+    message: passed
+      ? `${scene.cityLabel} ${scene.location.label} mission passed. Mastery tier increased.`
+      : `${scene.cityLabel} mission not passed yet. Run another validated hangout and retry.`,
+    rewards,
+    progressionLoop: buildProgressLoopState(session),
+    relationshipState: buildRelationshipState(session.progression?.rp || 0),
+    unlockPreview: {
+      nextMasteryTier: session.masteryTier,
+      nextLocationOptions: buildUnlockPreview(scene, passed).nextLocationOptions,
+      videoCallRewardEligible: passed && scene.city === 'shanghai' && scene.lang === 'zh',
+      memoryCardRewardEligible: passed,
+    },
+  };
 }
 
 function jsonResponse(res, statusCode, payload) {
@@ -1020,14 +1213,25 @@ function parseJsonObject(raw) {
   }
 }
 
-async function generateAiHangoutTurn({
+function normalizeEvaluationTier(value, fallback = 'partial') {
+  if (value === 'success' || value === 'partial' || value === 'miss') return value;
+  return fallback;
+}
+
+function parseAiScoreDelta(candidate, fallback) {
+  return {
+    xp: Math.round(clampNumber(Number(candidate?.xp), 1, 20)) || fallback.xp,
+    sp: Math.round(clampNumber(Number(candidate?.sp), 0, 6)) || fallback.sp,
+    rp: Math.round(clampNumber(Number(candidate?.rp), 0, 4)) || fallback.rp,
+  };
+}
+
+async function generateAiHangoutDecision({
   scene,
   existing,
   userUtterance,
-  evaluation,
-  defaultLine,
-  defaultHint,
-  defaultReplies,
+  fallbackEvaluation,
+  turnScript,
 }) {
   if (!shouldUseAiHangout()) return null;
 
@@ -1046,7 +1250,7 @@ async function generateAiHangoutTurn({
         {
           role: 'system',
           content:
-            'You are Tong scene director for a first-person language learning hangout. Return JSON only with keys: nextLine, tongHint, suggestedReplies, mood.',
+            'You run a first-person language learning hangout. Return JSON only with: tier, objectiveProgressDelta, scoreDelta, nextLine, tongHint, suggestedReplies, mood, matchedTags, missingTags.',
         },
         {
           role: 'user',
@@ -1059,11 +1263,14 @@ async function generateAiHangoutTurn({
             objective: scene.objective,
             turn: existing.turn,
             userUtterance,
-            rubricTier: evaluation.tier,
-            matchedTags: evaluation.matchedTags,
-            missingTags: evaluation.missingTags,
+            rubricTierFallback: fallbackEvaluation.tier,
+            matchedTagsFallback: fallbackEvaluation.matchedTags,
+            missingTagsFallback: fallbackEvaluation.missingTags,
+            scriptedPrompt: turnScript.prompts,
+            scriptedHints: turnScript.tongHints,
+            scriptedReplies: turnScript.quickReplies,
             guidance:
-              'Keep immersive dialogue only. Next line should be short. suggestedReplies should be 3-5 learner-usable lines.',
+              'Evaluate the learner response for objective progress. suggestedReplies must be 3-5 short learner lines in target language.',
           }),
         },
       ],
@@ -1079,15 +1286,45 @@ async function generateAiHangoutTurn({
   const parsed = parseJsonObject(raw);
   if (!parsed || typeof parsed !== 'object') return null;
 
+  const tier = normalizeEvaluationTier(parsed.tier, fallbackEvaluation.tier);
+  const baseRewards = turnScript.rewards[tier] || fallbackEvaluation.rewards;
+  const scoreDelta = parseAiScoreDelta(parsed.scoreDelta, baseRewards);
+  const objectiveProgressDelta = Number(
+    clampNumber(Number(parsed.objectiveProgressDelta), 0.05, 0.5).toFixed(2),
+  );
   const suggestedReplies = Array.isArray(parsed.suggestedReplies)
     ? parsed.suggestedReplies.map((value) => String(value || '').trim()).filter(Boolean).slice(0, 6)
-    : defaultReplies;
+    : turnScript.quickReplies.slice(0, 6);
+  const matchedTags = Array.isArray(parsed.matchedTags)
+    ? parsed.matchedTags.map((value) => String(value || '').trim()).filter(Boolean)
+    : fallbackEvaluation.matchedTags;
+  const missingTags = Array.isArray(parsed.missingTags)
+    ? parsed.missingTags.map((value) => String(value || '').trim()).filter(Boolean)
+    : fallbackEvaluation.missingTags;
 
   return {
-    nextLine: typeof parsed.nextLine === 'string' && parsed.nextLine.trim() ? parsed.nextLine.trim() : defaultLine,
-    tongHint: typeof parsed.tongHint === 'string' && parsed.tongHint.trim() ? parsed.tongHint.trim() : defaultHint,
-    suggestedReplies: suggestedReplies.length ? suggestedReplies : defaultReplies,
-    mood: typeof parsed.mood === 'string' && parsed.mood.trim() ? parsed.mood.trim() : evaluation.mood,
+    tier,
+    matchedTags,
+    missingTags,
+    rewards: {
+      xp: scoreDelta.xp,
+      sp: scoreDelta.sp,
+      rp: scoreDelta.rp,
+      objectiveProgress: objectiveProgressDelta,
+    },
+    tongHint:
+      typeof parsed.tongHint === 'string' && parsed.tongHint.trim()
+        ? parsed.tongHint.trim()
+        : turnScript.tongHints[tier],
+    nextLine:
+      typeof parsed.nextLine === 'string' && parsed.nextLine.trim()
+        ? parsed.nextLine.trim()
+        : turnScript.prompts[tier],
+    suggestedReplies: suggestedReplies.length ? suggestedReplies : turnScript.quickReplies.slice(0, 6),
+    mood:
+      typeof parsed.mood === 'string' && parsed.mood.trim()
+        ? parsed.mood.trim()
+        : turnScript.moodByTier[tier] || fallbackEvaluation.mood,
   };
 }
 
@@ -1114,14 +1351,18 @@ async function handleHangoutRespond(body) {
 
   if (existing.completed) {
     const completionSummary = buildCompletionSummary(scene, existing);
+    const relationshipState = buildRelationshipState((existing.baseProgression?.rp || 0) + existing.score.rp);
+    const progressionLoop = buildProgressLoopState(existing);
     return {
       statusCode: 200,
       payload: {
         accepted: true,
+        engineMode: shouldUseAiHangout() ? 'dynamic_ai' : 'scripted_fallback',
         feedback: {
           tongHint: 'This hangout is already complete. Start a new scene to replay.',
           objectiveProgressDelta: 0,
           objectiveProgress: buildObjectiveProgressState(scene, existing.objectiveProgress),
+          relationshipState,
           suggestedReplies: [],
         },
         nextLine: {
@@ -1132,6 +1373,8 @@ async function handleHangoutRespond(body) {
           turn: existing.turn,
           score: cloneScore(existing.score),
           objectiveProgress: buildObjectiveProgressState(scene, existing.objectiveProgress),
+          relationshipState,
+          progressionLoop,
         },
         currentObjective: buildCurrentObjective(scene, existing.objectiveProgress, existing.successfulTurns),
         locationMeta: buildLocationMeta(scene),
@@ -1154,13 +1397,34 @@ async function handleHangoutRespond(body) {
           completionSignal: completionSummary?.completionSignal || 'hangout_complete',
         },
         completionSummary,
+        relationshipState,
+        progressionLoop,
       },
     };
   }
 
   const scriptIndex = Math.min(existing.turn - 1, scene.turnScript.length - 1);
   const turnScript = scene.turnScript[scriptIndex];
-  const evaluation = evaluateTurn(userUtterance, scene, turnScript);
+  const ruleEvaluation = evaluateTurn(userUtterance, scene, turnScript);
+  let evaluation = ruleEvaluation;
+
+  if (shouldUseAiHangout()) {
+    try {
+      const aiDecision = await generateAiHangoutDecision({
+        scene,
+        existing,
+        userUtterance,
+        fallbackEvaluation: ruleEvaluation,
+        turnScript,
+      });
+      if (aiDecision) {
+        evaluation = aiDecision;
+      }
+    } catch (error) {
+      console.warn('ai_turn_decision_failed', error instanceof Error ? error.message : 'unknown');
+    }
+  }
+
   const xpDelta = evaluation.rewards.xp;
   const spDelta = evaluation.rewards.sp;
   const rpDelta = evaluation.rewards.rp;
@@ -1194,44 +1458,32 @@ async function handleHangoutRespond(body) {
     updateGameSessionFromHangout(existing, completionSummary);
   }
 
-  const fallbackLine = existing.completed
+  const linkedGameSession = existing.gameSessionId ? state.gameSessions.get(existing.gameSessionId) : null;
+  if (linkedGameSession) {
+    existing.validatedHangouts = linkedGameSession.validatedHangouts || existing.validatedHangouts;
+    existing.missionGateStatus = linkedGameSession.missionGateStatus || existing.missionGateStatus;
+    existing.masteryTier = linkedGameSession.masteryTier || existing.masteryTier;
+    existing.learnReadiness = linkedGameSession.learnReadiness ?? existing.learnReadiness;
+  }
+  const finalCompletionSummary = existing.completed ? buildCompletionSummary(scene, existing) : completionSummary;
+
+  const nextLineText = existing.completed
     ? passed
       ? scene.completion.passedLine
       : scene.completion.retryLine
     : evaluation.nextLine;
-
-  const fallbackHint = existing.completed
+  const tongHint = existing.completed
     ? passed
       ? scene.completion.tongWrapUpPass
       : scene.completion.tongWrapUpRetry
     : evaluation.tongHint;
-  const fallbackReplies = existing.completed ? [] : getQuickRepliesForTurn(scene, existing.turn);
-
-  let nextLineText = fallbackLine;
-  let tongHint = fallbackHint;
-  let suggestedReplies = fallbackReplies;
-
-  if (!existing.completed) {
-    try {
-      const aiTurn = await generateAiHangoutTurn({
-        scene,
-        existing,
-        userUtterance,
-        evaluation,
-        defaultLine: fallbackLine,
-        defaultHint: fallbackHint,
-        defaultReplies: fallbackReplies,
-      });
-      if (aiTurn) {
-        nextLineText = aiTurn.nextLine;
-        tongHint = aiTurn.tongHint;
-        suggestedReplies = aiTurn.suggestedReplies;
-        existing.npcMood = aiTurn.mood;
-      }
-    } catch (error) {
-      console.warn('ai_turn_generation_failed', error instanceof Error ? error.message : 'unknown');
-    }
-  }
+  const suggestedReplies = existing.completed
+    ? []
+    : evaluation.suggestedReplies && evaluation.suggestedReplies.length
+      ? evaluation.suggestedReplies
+      : getQuickRepliesForTurn(scene, existing.turn);
+  const relationshipState = buildRelationshipState((existing.baseProgression?.rp || 0) + existing.score.rp);
+  const progressionLoop = buildProgressLoopState(existing);
 
   const lastTurn = {
     stepId: turnScript.stepId,
@@ -1248,10 +1500,13 @@ async function handleHangoutRespond(body) {
 
   const response = {
     accepted: true,
+    engineMode: shouldUseAiHangout() ? 'dynamic_ai' : 'scripted_fallback',
     feedback: {
       tongHint,
       objectiveProgressDelta,
       objectiveProgress: buildObjectiveProgressState(scene, existing.objectiveProgress),
+      relationshipState,
+      progressionLoop,
       suggestedReplies,
     },
     nextLine: {
@@ -1262,6 +1517,8 @@ async function handleHangoutRespond(body) {
       turn: existing.turn,
       score: cloneScore(existing.score),
       objectiveProgress: buildObjectiveProgressState(scene, existing.objectiveProgress),
+      relationshipState,
+      progressionLoop,
     },
     currentObjective: buildCurrentObjective(scene, existing.objectiveProgress, existing.successfulTurns),
     locationMeta: buildLocationMeta(scene),
@@ -1276,7 +1533,9 @@ async function handleHangoutRespond(body) {
           : 'scene_complete_retry_available'
         : null,
     },
-    completionSummary,
+    completionSummary: finalCompletionSummary,
+    relationshipState,
+    progressionLoop,
   };
 
   state.sessions.set(sceneSessionId, existing);
@@ -1384,6 +1643,15 @@ const server = http.createServer(async (req, res) => {
           });
           session.npcMood = session.npc.baselineMood;
         }
+        session.masteryTier = session.masteryTier || session.progression?.currentMasteryLevel || 1;
+        session.progression.currentMasteryLevel = session.masteryTier;
+        session.learnReadiness = deriveLearnReadiness(session.profile, requestedLang);
+        session.validatedHangouts = session.validatedHangouts || 0;
+        session.missionGateStatus = session.missionGateStatus || 'locked';
+        if (session.missionGateStatus !== 'passed') {
+          session.missionGateStatus =
+            session.validatedHangouts >= REQUIRED_VALIDATED_HANGOUTS_FOR_MISSION ? 'ready' : 'locked';
+        }
         state.gameSessions.set(session.sessionId, session);
       } else {
         session = createGameSession(userId, body.profile, {
@@ -1456,10 +1724,13 @@ const server = http.createServer(async (req, res) => {
         location: session.location,
         lang: session.lang,
       });
+      const relationshipState = buildRelationshipState((session.baseProgression?.rp || 0) + session.score.rp);
+      const progressionLoop = buildProgressLoopState(session);
 
       jsonResponse(res, 200, {
         sceneSessionId: session.sceneSessionId,
         mode: 'hangout',
+        engineMode: shouldUseAiHangout() ? 'dynamic_ai' : 'scripted_fallback',
         city: scene.city,
         location: scene.location.locationId,
         lang: scene.lang,
@@ -1471,6 +1742,9 @@ const server = http.createServer(async (req, res) => {
         state: {
           turn: session.turn,
           score: cloneScore(session.score),
+          objectiveProgress: buildObjectiveProgressState(scene, session.objectiveProgress),
+          relationshipState,
+          progressionLoop,
         },
         initialLine: {
           speaker: 'character',
@@ -1494,6 +1768,8 @@ const server = http.createServer(async (req, res) => {
         quickReplies: getQuickRepliesForTurn(scene, session.turn),
         turnState: buildTurnState(scene, session),
         objectiveProgress: buildObjectiveProgressState(scene, session.objectiveProgress),
+        relationshipState,
+        progressionLoop,
         objectiveId: body.objectiveId || scene.objective.objectiveId,
         objectiveSummary: scene.objective.summary,
         completion: {
@@ -1509,6 +1785,32 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req);
       const { statusCode, payload } = await handleHangoutRespond(body);
       jsonResponse(res, statusCode, payload);
+      return;
+    }
+
+    if (pathname === '/api/v1/missions/assess' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const userId = body.userId || 'demo-user-1';
+      const sessionId = body.gameSessionId || body.sessionId || state.gameSessionByUser.get(userId);
+      const gameSession = state.gameSessions.get(sessionId);
+      if (!gameSession) {
+        jsonResponse(res, 404, { error: 'unknown_game_session' });
+        return;
+      }
+
+      const scene = getSceneSlice({
+        city: body.city || gameSession.city,
+        location: body.location || gameSession.location,
+        lang: body.lang || gameSession.lang,
+      });
+      const result = assessMissionForGameSession(gameSession, scene);
+      jsonResponse(res, 200, {
+        missionId: `${scene.city}_${scene.location.locationId}_assessment`,
+        city: scene.city,
+        location: scene.location.locationId,
+        lang: scene.lang,
+        ...result,
+      });
       return;
     }
 
