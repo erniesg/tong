@@ -115,22 +115,22 @@ const LOCATIONS: LocationId[] = [
 
 const LOCATION_CHARACTERS_BY_CITY: Record<CityId, Record<LocationId, SceneCharacter>> = {
   seoul: {
-    food_street: { name: 'Jae', role: 'Street food buddy', avatarEmoji: 'FS', mood: 'welcoming' },
-    cafe: { name: 'Yuna', role: 'Cafe friend', avatarEmoji: 'CF', mood: 'calm' },
+    food_street: { name: 'Haeun', role: 'Primary romance route lead', avatarEmoji: 'HR', mood: 'warm' },
+    cafe: { name: 'Ding', role: 'Primary romance route lead', avatarEmoji: 'DG', mood: 'charming' },
     convenience_store: { name: 'Min', role: 'Store clerk', avatarEmoji: 'CV', mood: 'helpful' },
     subway_hub: { name: 'Haneul', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
     practice_studio: { name: 'Ara', role: 'Practice partner', avatarEmoji: 'PS', mood: 'energetic' },
   },
   tokyo: {
-    food_street: { name: 'Ren', role: 'Street food buddy', avatarEmoji: 'FS', mood: 'welcoming' },
-    cafe: { name: 'Hina', role: 'Cafe friend', avatarEmoji: 'CF', mood: 'calm' },
+    food_street: { name: 'Haeun', role: 'Primary romance route lead', avatarEmoji: 'HR', mood: 'warm' },
+    cafe: { name: 'Ding', role: 'Primary romance route lead', avatarEmoji: 'DG', mood: 'charming' },
     convenience_store: { name: 'Sora', role: 'Store clerk', avatarEmoji: 'CV', mood: 'helpful' },
     subway_hub: { name: 'Daichi', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
     practice_studio: { name: 'Mika', role: 'Practice partner', avatarEmoji: 'PS', mood: 'energetic' },
   },
   shanghai: {
-    food_street: { name: 'Lin', role: 'Street food buddy', avatarEmoji: 'FS', mood: 'welcoming' },
-    cafe: { name: 'Mei', role: 'Cafe friend', avatarEmoji: 'CF', mood: 'calm' },
+    food_street: { name: 'Haeun', role: 'Primary romance route lead', avatarEmoji: 'HR', mood: 'warm' },
+    cafe: { name: 'Ding', role: 'Primary romance route lead', avatarEmoji: 'DG', mood: 'charming' },
     convenience_store: { name: 'Bo', role: 'Store clerk', avatarEmoji: 'CV', mood: 'helpful' },
     subway_hub: { name: 'Wei', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
     practice_studio: { name: 'Qin', role: 'Practice partner', avatarEmoji: 'PS', mood: 'energetic' },
