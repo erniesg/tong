@@ -656,6 +656,18 @@ button.game-city-card.active {
   font-size: 13px;
 }
 
+.game-gauge-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.game-gauge-preset-row button {
+  flex: 1 1 140px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
 .game-slider-row {
   display: flex;
   flex-direction: column;
@@ -730,9 +742,9 @@ button.game-city-card.active {
   z-index: 1;
   gap: 8px;
   padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
-  background: rgba(12, 18, 29, 0.72);
+  background: rgba(12, 18, 29, 0.6);
   color: #f8fbff;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
 }
 
@@ -831,7 +843,6 @@ button.game-location-pill.active {
 .game-mobile-body-scene1 .game-character-card,
 .game-mobile-body-scene1 .game-progress-card,
 .game-mobile-body-scene1 .game-dialogue-feed,
-.game-mobile-body-scene1 .game-dialogue-panel,
 .game-mobile-body-scene1 .game-learn-head,
 .game-mobile-body-scene1 .game-learn-item,
 .game-mobile-body-scene1 .chat-bubble,
@@ -899,7 +910,19 @@ button.game-location-pill.active {
   gap: 10px;
   min-height: 0;
   flex: 1;
+  margin-top: auto;
   justify-content: flex-end;
+}
+
+.game-hangout-objective {
+  margin: 0;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(240, 249, 246, 0.94);
+  color: #1f2937;
+  padding: 9px 12px;
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 .game-hangout-meta {
@@ -907,11 +930,13 @@ button.game-location-pill.active {
 }
 
 .game-dialogue-panel {
-  border: 1px solid rgba(229, 214, 194, 0.95);
-  border-radius: 16px;
-  background: rgba(255, 252, 246, 0.96);
-  padding: 12px 12px 10px;
-  min-height: 130px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(16, 23, 38, 0.96), rgba(10, 16, 29, 0.96));
+  color: #f8fbff;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.32);
+  padding: 12px 12px 14px;
+  min-height: 150px;
 }
 
 .game-dialogue-panel-tappable {
@@ -926,6 +951,21 @@ button.game-location-pill.active {
   margin-bottom: 8px;
 }
 
+.game-dialogue-speaker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 4px 10px 4px 4px;
+}
+
+.game-dialogue-speaker-name {
+  color: #f8fbff;
+  font-size: 16px;
+}
+
 .game-dialogue-avatar {
   width: 32px;
   height: 32px;
@@ -935,7 +975,7 @@ button.game-location-pill.active {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #6a7382;
+  color: #d5def0;
   font-weight: 700;
 }
 
@@ -943,7 +983,7 @@ button.game-location-pill.active {
   margin: 0;
   font-size: 17px;
   line-height: 1.45;
-  color: #1f2937;
+  color: #f6f9ff;
   white-space: pre-wrap;
 }
 
@@ -1007,7 +1047,16 @@ button.game-chip {
   align-items: flex-start;
   text-align: left;
   gap: 2px;
-  padding: 9px 10px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.96);
+  color: #141f33;
+}
+
+button.game-chip:hover {
+  transform: translateY(-1px);
+  background: #ffffff;
 }
 
 .game-chip-main {
@@ -1125,6 +1174,10 @@ button.game-chip {
 @media (max-width: 560px) {
   .game-chip-grid {
     grid-template-columns: 1fr;
+  }
+
+  .game-gauge-preset-row {
+    flex-direction: column;
   }
 }
 
