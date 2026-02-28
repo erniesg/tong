@@ -282,9 +282,9 @@ export default function GamePage() {
   const [city, setCity] = useState<CityId>(DEFAULT_CITY);
   const [location, setLocation] = useState<LocationId>(DEFAULT_LOCATION);
   const [proficiencyGauge, setProficiencyGauge] = useState<Record<CjkLang, ProficiencyGaugeLevel>>({
-    ko: 4,
+    ko: 0,
     ja: 0,
-    zh: 2,
+    zh: 5,
   });
 
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -304,6 +304,10 @@ export default function GamePage() {
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
   const [userUtterance, setUserUtterance] = useState('');
   const [presetResponses, setPresetResponses] = useState<PresetResponse[]>(DEFAULT_PRESET_RESPONSES);
+  const [sceneLines, setSceneLines] = useState<SceneLine[]>([]);
+  const [sceneLineIndex, setSceneLineIndex] = useState(0);
+  const [awaitingUserTurn, setAwaitingUserTurn] = useState(false);
+  const [pendingUserLine, setPendingUserLine] = useState<string | null>(null);
 
   const [learnSessions, setLearnSessions] = useState<LearnSession[]>([]);
   const [learnMessage, setLearnMessage] = useState('');
@@ -327,6 +331,22 @@ export default function GamePage() {
         backgroundImage: `linear-gradient(180deg, rgba(14, 20, 28, 0.2), rgba(14, 20, 28, 0.68)), url(${cityConfig.backdropImage})`,
       }
     : undefined;
+  const activeSceneLine = pendingUserLine ? null : sceneLines[sceneLineIndex] || null;
+  const activeSpeakerLabel = pendingUserLine
+    ? 'You'
+    : activeSceneLine
+      ? activeSceneLine.speaker === 'tong'
+        ? 'Tong'
+        : activeSceneLine.speaker === 'you'
+          ? 'You'
+          : activeSceneLine.speakerName || character.name || `${cityConfig.label} partner`
+      : character.name || `${cityConfig.label} partner`;
+  const activeDialogueText =
+    pendingUserLine ||
+    activeSceneLine?.text ||
+    (sceneSessionId ? 'Tap start from World if you want to relaunch this scene.' : 'Open World and start your first hangout.');
+  const canTapContinue = Boolean(activeSceneLine) && !sendingTurn && !pendingUserLine;
+  const canAnswerTurn = awaitingUserTurn && Boolean(sceneSessionId) && !sendingTurn;
 
   useEffect(() => {
     const track = cityTrackRef.current;
@@ -397,6 +417,10 @@ export default function GamePage() {
     setObjective(null);
     setObjectiveRatio(0);
     setMessages([]);
+    setSceneLines([]);
+    setSceneLineIndex(0);
+    setAwaitingUserTurn(false);
+    setPendingUserLine(null);
     setUserUtterance('');
     setPresetResponses(DEFAULT_PRESET_RESPONSES);
     setCharacter(getCharacterForCityLocation(nextCity, nextLocation));
@@ -486,13 +510,29 @@ export default function GamePage() {
     setPresetResponses(replies.slice(0, 6).map((text) => ({ text, note: 'Suggested reply' })));
   }
 
-  function mergeIncomingLines(lines: SceneLine[]) {
-    const nextHint = lineToHint(lines);
-    const dialogueLines = lineToDialogue(lines);
+  function mergeIncomingLines(lines: SceneLine[], unlockInputAfter = true) {
+    const filteredLines = lines.filter((line) => line && line.text && line.text.trim());
+    const nextHint = lineToHint(filteredLines);
+    const dialogueLines = lineToDialogue(filteredLines);
     if (nextHint) setHint(nextHint);
     if (dialogueLines.length) {
       setMessages((prev) => [...prev, ...dialogueLines]);
     }
+    setPendingUserLine(null);
+    setSceneLineIndex(0);
+    setSceneLines(filteredLines);
+    setAwaitingUserTurn(filteredLines.length === 0 && unlockInputAfter);
+  }
+
+  function handleTapToContinue() {
+    if (!canTapContinue) return;
+    if (sceneLineIndex < sceneLines.length - 1) {
+      setSceneLineIndex((current) => current + 1);
+      return;
+    }
+    setSceneLines([]);
+    setSceneLineIndex(0);
+    setAwaitingUserTurn(true);
   }
 
   async function quickStartHangout() {
@@ -546,7 +586,7 @@ export default function GamePage() {
       });
 
       setSceneSessionId(hangout.sceneSessionId);
-      setStatus(`${cityConfig.label} hangout live. Use a preset phrase to test flow quickly.`);
+      setStatus(`${cityConfig.label} hangout live.`);
       setEngineMode(hangout.engineMode || game.engineMode || 'scripted_fallback');
       setCharacter((current) => mergeCharacterPayload(current, hangout.character || hangout.npc));
       setScore(hangout.state.score);
@@ -563,7 +603,7 @@ export default function GamePage() {
       applyServerReplies(hangout.quickReplies);
       const openingLines =
         hangout.initialLines && hangout.initialLines.length > 0 ? hangout.initialLines : [hangout.initialLine];
-      mergeIncomingLines(openingLines);
+      mergeIncomingLines(openingLines, true);
       return true;
     } catch (startError) {
       setError(startError instanceof Error ? startError.message : `Failed to start the ${cityConfig.label} hangout.`);
@@ -585,6 +625,10 @@ export default function GamePage() {
 
     setError(null);
     setSendingTurn(true);
+    setAwaitingUserTurn(false);
+    setSceneLines([]);
+    setSceneLineIndex(0);
+    setPendingUserLine(utterance);
     setUserUtterance('');
     setMessages((prev) => [
       ...prev,
@@ -657,7 +701,7 @@ export default function GamePage() {
 
       const nextLines =
         response.nextLines && response.nextLines.length > 0 ? response.nextLines : [response.nextLine];
-      mergeIncomingLines(nextLines);
+      mergeIncomingLines(nextLines, true);
 
       if (response.completion?.isCompleted) {
         if (response.completion.completionSignal === 'objective_validated') {
@@ -668,6 +712,8 @@ export default function GamePage() {
       }
     } catch (turnError) {
       setError(turnError instanceof Error ? turnError.message : 'Failed to send your scene response.');
+      setPendingUserLine(null);
+      setAwaitingUserTurn(true);
     } finally {
       setSendingTurn(false);
     }
@@ -1049,67 +1095,85 @@ export default function GamePage() {
 
               {mode === 'hangout' && (
                 <>
-                  <section className="game-character-card game-character-card-immersive">
-                    <span className="game-character-avatar">
-                      {characterAvatarSrc && !avatarLoadFailed ? (
-                        <img
-                          className="game-character-avatar-image"
-                          src={characterAvatarSrc}
-                          alt={`${character.name || 'Character'} avatar`}
-                          onError={() => setAvatarLoadFailed(true)}
-                        />
-                      ) : (
-                        character.avatarEmoji || selectedLang.toUpperCase()
-                      )}
-                    </span>
-                    <div>
-                      <strong>{character.name || `${cityConfig.label} partner`}</strong>
-                      <p>{character.role || 'Conversation partner'}</p>
-                      {routeState?.stage ? <p>Bond: {routeState.stage}</p> : null}
+                  <section className="game-hangout-stage">
+                    <div className="row game-hangout-meta">
+                      <span className="pill">
+                        Bond: {routeState?.stage || relationshipState?.stage || 'stranger'}
+                      </span>
+                      <span className="pill">Objective {Math.round(objectiveRatio * 100)}%</span>
                     </div>
-                  </section>
 
-                  <div className="chat-bubble chat-tong game-objective-tip">
-                    <strong>Objective:</strong> {objectiveSummary} ({Math.round(objectiveRatio * 100)}%)
-                  </div>
-
-                  <section className="game-dialogue-feed">
-                    {messages.length === 0 && (
-                      <p className="game-empty-state">Launch or restart from World to enter dialogue.</p>
-                    )}
-                    {messages.map((message) => (
-                      <div key={message.id} className={`chat-bubble ${message.speaker === 'you' ? 'chat-user' : 'chat-character'}`}>
-                        {message.text}
+                    <section
+                      className={`game-dialogue-panel ${canTapContinue ? 'game-dialogue-panel-tappable' : ''}`}
+                      onClick={canTapContinue ? handleTapToContinue : undefined}
+                      role={canTapContinue ? 'button' : undefined}
+                      tabIndex={canTapContinue ? 0 : -1}
+                      onKeyDown={(event) => {
+                        if (!canTapContinue) return;
+                        if (event.key !== 'Enter' && event.key !== ' ') return;
+                        event.preventDefault();
+                        handleTapToContinue();
+                      }}
+                    >
+                      <div className="game-dialogue-head">
+                        <div className="row" style={{ alignItems: 'center', justifyContent: 'flex-start', gap: 8 }}>
+                          {!pendingUserLine && activeSceneLine?.speaker === 'character' && (
+                            <span className="game-character-avatar game-dialogue-avatar">
+                              {characterAvatarSrc && !avatarLoadFailed ? (
+                                <img
+                                  className="game-character-avatar-image"
+                                  src={characterAvatarSrc}
+                                  alt={`${character.name || 'Character'} avatar`}
+                                  onError={() => setAvatarLoadFailed(true)}
+                                />
+                              ) : (
+                                character.avatarEmoji || selectedLang.toUpperCase()
+                              )}
+                            </span>
+                          )}
+                          <strong>{activeSpeakerLabel}</strong>
+                        </div>
+                        {canTapContinue && <span className="game-dialogue-continue">Tap to continue</span>}
                       </div>
-                    ))}
-                  </section>
+                      <p className="game-dialogue-text">{activeDialogueText}</p>
+                    </section>
 
-                  <section className="game-chip-grid">
-                    {presetResponses.map((preset) => (
-                      <button
-                        key={preset.text}
-                        className="secondary game-chip"
-                        onClick={() => void sendHangoutTurn(preset.text)}
-                        disabled={!sceneSessionId || sendingTurn}
-                      >
-                        <span className="game-chip-main">{preset.text}</span>
-                        <span className="game-chip-note">{preset.note}</span>
-                      </button>
-                    ))}
-                  </section>
+                    {canAnswerTurn && (
+                      <>
+                        <section className="game-chip-grid">
+                          {presetResponses.map((preset) => (
+                            <button
+                              key={preset.text}
+                              className="secondary game-chip"
+                              onClick={() => void sendHangoutTurn(preset.text)}
+                              disabled={!sceneSessionId || sendingTurn}
+                            >
+                              <span className="game-chip-main">{preset.text}</span>
+                              <span className="game-chip-note">{preset.note}</span>
+                            </button>
+                          ))}
+                        </section>
 
-                  <div className="stack">
-                    <textarea
-                      rows={2}
-                      value={userUtterance}
-                      placeholder="Type your own response"
-                      onChange={(event) => setUserUtterance(event.target.value)}
-                    />
-                    <button onClick={() => void sendHangoutTurn()} disabled={!sceneSessionId || !userUtterance.trim() || sendingTurn}>
-                      {sendingTurn ? 'Sending...' : 'Send response'}
-                    </button>
+                        <div className="stack game-hangout-input">
+                          <textarea
+                            rows={2}
+                            value={userUtterance}
+                            placeholder="Type your own response"
+                            onChange={(event) => setUserUtterance(event.target.value)}
+                          />
+                          <button
+                            onClick={() => void sendHangoutTurn()}
+                            disabled={!sceneSessionId || !userUtterance.trim() || sendingTurn}
+                          >
+                            {sendingTurn ? 'Sending...' : 'Send response'}
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {sendingTurn && <p className="game-status">Character is replying...</p>}
                     {error && <p className="game-error">{error}</p>}
-                  </div>
+                  </section>
                 </>
               )}
 
