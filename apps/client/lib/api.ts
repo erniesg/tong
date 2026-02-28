@@ -1,4 +1,45 @@
-const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const DEFAULT_API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+
+function normalizeApiBase(value: string): string {
+  return value.replace(/\/+$/, '');
+}
+
+function isLocalApiBase(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '[::1]' ||
+      url.hostname === '::1'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function buildApiBaseCandidates(primary: string): string[] {
+  const normalizedPrimary = normalizeApiBase(primary);
+  const candidates = [normalizedPrimary];
+
+  if (isLocalApiBase(normalizedPrimary)) {
+    for (const fallback of [
+      'http://localhost:8788',
+      'http://localhost:8787',
+      'http://127.0.0.1:8788',
+      'http://127.0.0.1:8787',
+    ]) {
+      const normalizedFallback = normalizeApiBase(fallback);
+      if (!candidates.includes(normalizedFallback)) {
+        candidates.push(normalizedFallback);
+      }
+    }
+  }
+
+  return candidates;
+}
+
+let activeApiBase = normalizeApiBase(DEFAULT_API_BASE);
 
 export interface CaptionToken {
   text: string;
@@ -350,19 +391,34 @@ export interface MissionAssessResponse {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers || {}),
-    },
-  });
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(init?.headers || {}),
+  };
+  const candidates = buildApiBaseCandidates(activeApiBase);
+  let lastError: unknown = null;
 
-  if (!response.ok) {
-    throw new Error(`Request failed (${response.status}) for ${path}`);
+  for (const base of candidates) {
+    try {
+      const response = await fetch(`${base}${path}`, {
+        ...init,
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed (${response.status}) for ${path} @ ${base}`);
+      }
+
+      activeApiBase = base;
+      return (await response.json()) as T;
+    } catch (error) {
+      lastError = error;
+      const isRetriableNetworkError = error instanceof TypeError;
+      if (!isRetriableNetworkError) break;
+    }
   }
 
-  return (await response.json()) as T;
+  throw lastError instanceof Error ? lastError : new Error(`Request failed for ${path}`);
 }
 
 export function fetchCaptions(videoId: string, lang: 'ko' | 'ja' | 'zh' = 'ko') {
@@ -557,5 +613,5 @@ export function fetchMediaProfile() {
 }
 
 export function getApiBase() {
-  return API_BASE;
+  return activeApiBase;
 }
