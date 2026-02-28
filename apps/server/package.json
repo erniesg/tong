@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/index.mjs",
-    "start": "node src/index.mjs",
+    "dev": "[ -f .env.local ] && node --env-file=.env.local --watch src/index.mjs || node --watch src/index.mjs",
+    "start": "[ -f .env.local ] && node --env-file=.env.local src/index.mjs || node src/index.mjs",
     "ingest:mock": "node src/run-mock-ingestion.mjs"
   }
 }
