@@ -250,3 +250,37 @@ export interface IngestionRunResponse {
   };
   topTerms: VocabFrequencyItem[];
 }
+
+export interface SpotifyIntegrationStatusResponse {
+  userId: string;
+  spotifyConfigured: boolean;
+  connected: boolean;
+  tokenExpiresAtIso: string | null;
+  tokenScope: string | null;
+  lastSyncAtIso: string | null;
+  lastSyncItemCount: number;
+  syncWindowHours: number | null;
+}
+
+export interface SpotifyConnectResponse {
+  userId: string;
+  connected: boolean;
+  state: string;
+  scope: string;
+  redirectUri: string;
+  authUrl: string;
+}
+
+export interface SpotifySyncResponse {
+  ok: true;
+  userId: string;
+  syncedAtIso: string;
+  windowHours: number;
+  spotifyItemCount: number;
+  spotifyRawItemCount: number;
+  topTerms: VocabFrequencyItem[];
+  sourceCount: {
+    youtube: number;
+    spotify: number;
+  };
+}

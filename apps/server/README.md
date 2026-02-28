@@ -12,6 +12,7 @@ Server defaults to `http://localhost:8787`.
 
 ## Core endpoints
 
+- `GET /`
 - `GET /health`
 - `GET /api/v1/captions/enriched?videoId=...&lang=ko`
 - `GET /api/v1/dictionary/entry?term=...&lang=ko`
@@ -26,6 +27,22 @@ Server defaults to `http://localhost:8787`.
 - `GET /api/v1/learn/sessions`
 - `POST /api/v1/learn/sessions`
 - `POST /api/v1/ingestion/run-mock`
+
+## Spotify integration endpoints (phase 1)
+
+- `GET /api/v1/integrations/spotify/status?userId=...`
+- `GET /api/v1/integrations/spotify/connect?userId=...`
+- `GET /api/v1/integrations/spotify/callback?code=...&state=...`
+- `POST /api/v1/integrations/spotify/sync`
+- `POST /api/v1/integrations/spotify/disconnect`
+
+## Spotify env setup
+
+```bash
+SPOTIFY_CLIENT_ID=...
+SPOTIFY_CLIENT_SECRET=...
+SPOTIFY_REDIRECT_URI=http://localhost:8787/api/v1/integrations/spotify/callback
+```
 
 ## Mock ingestion
 

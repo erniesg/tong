@@ -353,3 +353,82 @@ Response:
   }
 }
 ```
+
+## GET `/api/v1/integrations/spotify/status`
+Query:
+```json
+{ "userId": "demo-user-1" }
+```
+
+Response:
+```json
+{
+  "userId": "demo-user-1",
+  "spotifyConfigured": true,
+  "connected": true,
+  "tokenExpiresAtIso": "2026-02-28T17:00:00.000Z",
+  "tokenScope": "user-read-recently-played",
+  "lastSyncAtIso": "2026-02-28T16:05:00.000Z",
+  "lastSyncItemCount": 84,
+  "syncWindowHours": 72
+}
+```
+
+## GET `/api/v1/integrations/spotify/connect`
+Query:
+```json
+{ "userId": "demo-user-1" }
+```
+
+Response:
+```json
+{
+  "userId": "demo-user-1",
+  "connected": false,
+  "state": "abc123",
+  "scope": "user-read-recently-played",
+  "redirectUri": "http://localhost:8787/api/v1/integrations/spotify/callback",
+  "authUrl": "https://accounts.spotify.com/authorize?..."
+}
+```
+
+## GET `/api/v1/integrations/spotify/callback`
+Query:
+```json
+{ "code": "spotify_code", "state": "abc123" }
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "userId": "demo-user-1",
+  "connected": true,
+  "tokenExpiresAtIso": "2026-02-28T17:00:00.000Z",
+  "sync": {
+    "syncedAtIso": "2026-02-28T16:05:00.000Z",
+    "windowHours": 72,
+    "itemCount": 84,
+    "rawItemCount": 84
+  }
+}
+```
+
+## POST `/api/v1/integrations/spotify/sync`
+Request:
+```json
+{ "userId": "demo-user-1", "windowHours": 72 }
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "userId": "demo-user-1",
+  "syncedAtIso": "2026-02-28T16:05:00.000Z",
+  "windowHours": 72,
+  "spotifyItemCount": 84,
+  "spotifyRawItemCount": 84,
+  "sourceCount": { "youtube": 3, "spotify": 84 }
+}
+```

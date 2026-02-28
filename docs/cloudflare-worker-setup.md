@@ -96,6 +96,7 @@ These checks cover:
 ## Notes
 - Worker state is in-memory (demo-friendly), so profile/session state can reset between isolates.
 - Keep local Node API available as fallback (`NEXT_PUBLIC_TONG_BACKEND_MODE=local-server`).
+- Spotify OAuth connect/sync is currently implemented on `apps/server` (Node API path) for phase 1.
 - Optional legacy fallback vars are still supported:
   - `NEXT_PUBLIC_TONG_BACKEND_MODE`
   - `NEXT_PUBLIC_TONG_LOCAL_API_BASE_URL`
