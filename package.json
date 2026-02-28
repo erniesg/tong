@@ -6,6 +6,7 @@
   "scripts": {
     "demo:smoke": "node scripts/demo_smoke_check.mjs",
     "setup:worktrees": "./scripts/setup-hackathon-worktrees.sh",
-    "zip": "rm -f tong.zip && zip -r tong.zip manifest.json src README.md"
+    "zip": "rm -f tong.zip && zip -r tong.zip manifest.json src README.md",
+    "launch:agents": "./scripts/launch-parallel-agents.sh"
   }
 }

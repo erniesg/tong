@@ -117,6 +117,67 @@ Response:
 }
 ```
 
+## GET `/api/v1/player/media-profile`
+Query:
+```json
+{
+  "userId": "demo-user-1",
+  "windowDays": 3
+}
+```
+
+Response:
+```json
+{
+  "userId": "demo-user-1",
+  "windowDays": 3,
+  "generatedAtIso": "2026-02-28T12:00:00.000Z",
+  "sourceBreakdown": {
+    "youtube": {
+      "itemsConsumed": 8,
+      "minutes": 143,
+      "topMedia": [
+        {
+          "mediaId": "yt_a12",
+          "title": "K-variety snack challenge",
+          "lang": "ko",
+          "minutes": 38
+        }
+      ]
+    },
+    "spotify": {
+      "itemsConsumed": 37,
+      "minutes": 121,
+      "topMedia": [
+        {
+          "mediaId": "sp_track_001",
+          "title": "밤 산책",
+          "lang": "ko",
+          "minutes": 19
+        }
+      ]
+    }
+  },
+  "learningSignals": {
+    "topTerms": [
+      {
+        "lemma": "연습",
+        "lang": "ko",
+        "weightedScore": 0.82,
+        "dominantSource": "spotify"
+      }
+    ],
+    "clusterAffinities": [
+      {
+        "clusterId": "food-ordering",
+        "label": "Food Ordering",
+        "score": 0.69
+      }
+    ]
+  }
+}
+```
+
 ## POST `/api/v1/game/start-or-resume`
 Request:
 ```json

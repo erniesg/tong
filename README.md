@@ -37,6 +37,11 @@ Run local demo contract smoke check:
 npm run demo:smoke
 ```
 
+Launch workstream terminals in parallel (tmux, if installed):
+```bash
+npm run launch:agents
+```
+
 ## Legacy prototype (v0.1 extension)
 
 The original Chrome MV3 extension scaffold remains in:
@@ -46,3 +51,6 @@ The original Chrome MV3 extension scaffold remains in:
 - `src/data/phrases.js`
 - `src/options.*`
 - `src/background.js`
+
+
+Player-level data modeling now includes both YouTube and Spotify source breakdown samples for web insight visualizations in `packages/contracts/fixtures/player.media-profile.sample.json`.

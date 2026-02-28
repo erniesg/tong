@@ -14,6 +14,7 @@ Let any contributor run and validate the demo flow locally, even without remote 
 ```bash
 cp .env.example .env
 npm run setup:worktrees
+npm run launch:agents
 npm run demo:smoke
 ```
 
@@ -22,6 +23,7 @@ npm run demo:smoke
 2. JSON fixtures parse successfully.
 3. Core keys used by client and server are present.
 4. Objective model contains vocabulary + grammar + sentence structures.
+5. Player media profile fixture includes both YouTube + Spotify learning signals.
 
 ## Local test modes
 1. `local-mock` (default): no remote dependencies, uses fixtures.

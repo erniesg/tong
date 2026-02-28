@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(git rev-parse --show-toplevel)"
-BASE_BRANCH="${1:-master}"
+BASE_BRANCH="${1:-$(git rev-parse --abbrev-ref HEAD)}"
 
 mkdir -p "$ROOT_DIR/.worktrees"
 
