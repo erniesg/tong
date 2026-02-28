@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "Tong Hackathon Mock UI",
-  description: "Mobile-first mock demo with captions, game flow, and media personalization"
+  title: 'Tong Hackathon Demo',
+  description:
+    'Review harness for YouTube caption overlays, mobile game UI, and YouTube/Spotify ingestion insights.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

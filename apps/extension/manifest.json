@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Tong YouTube Overlay Demo",
+  "version": "0.1.0",
+  "description": "Tong hackathon extension for YouTube caption overlays and dictionary lookup.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "*://*.youtube.com/*",
+    "http://localhost:8787/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/watch*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Tong Demo",
+    "default_popup": "popup.html"
+  }
+}

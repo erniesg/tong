@@ -4,3 +4,5 @@ tong.zip
 .worktrees/
 node_modules/
 .next/
+reference-notes/
+apps/server/data/generated/
