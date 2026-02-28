@@ -95,7 +95,7 @@ export function DialogueBox({
 
       {typewriterDone && !isStreaming && onContinue && (
         <div className="dialogue-continue animate-pulse">
-          tap to continue ▼
+          Tap to continue
         </div>
       )}
     </div>

@@ -118,7 +118,7 @@ export function SceneView({
           onClick={onContinue}
         >
           <div className="text-center text-xs text-[var(--color-text-muted)] animate-pulse py-4">
-            tap to continue ▼
+            Tap to continue
           </div>
         </div>
       )}
