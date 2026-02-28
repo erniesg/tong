@@ -152,6 +152,7 @@ const DEFAULT_PRESET_RESPONSES: PresetResponse[] = [
 
 const INITIAL_HINT = 'Tong hint: Use one short polite order phrase per turn.';
 const ACTIVE_USER_ID_STORAGE_KEY = 'tong_active_user_id';
+const GAME_LOGO_PATH = '/assets/app/logo_transparent.png';
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -309,6 +310,8 @@ export default function GamePage() {
   const requiredTurns = objective?.completionCriteria.requiredTurns ?? 4;
   const objectivePercent = Math.round(objectiveRatio * 100);
   const objectiveTurnProgress = Math.min(requiredTurns, Math.round(objectiveRatio * requiredTurns));
+  const validatedHangouts = routeState?.validatedHangouts ?? progressionLoop?.missionGate.validatedHangouts ?? 0;
+  const hasCompletedFirstHangout = validatedHangouts >= 1;
 
   const scorePercent = useMemo(() => {
     return {
@@ -696,27 +699,20 @@ export default function GamePage() {
     <main className="app-shell game-shell">
       {entryPhase !== 'playing' && (
         <section className="game-opening-stage">
-          {cityConfig.backdropVideo ? (
-            <video
-              className="game-opening-backdrop"
-              poster={cityConfig.backdropImage}
-              src={cityConfig.backdropVideo}
-              autoPlay
-              muted
-              loop
-              playsInline
-            />
-          ) : (
-            <img className="game-opening-backdrop" src={cityConfig.backdropImage} alt={`${cityConfig.label} backdrop`} />
-          )}
+          <div className="game-opening-ambient" aria-hidden>
+            <span className="game-opening-blob game-opening-blob-a" />
+            <span className="game-opening-blob game-opening-blob-b" />
+            <span className="game-opening-blob game-opening-blob-c" />
+          </div>
           <div className="game-opening-scrim" />
           <div className="game-opening-content">
+            <img className="game-opening-logo" src={GAME_LOGO_PATH} alt="Tong logo" />
             <p className="game-opening-kicker">Tong</p>
             <h1 className="game-opening-title">Live a language, don&apos;t drill it.</h1>
             <p className="game-opening-copy">
               {entryPhase === 'opening'
-                ? 'Loading world state...'
-                : `Tonight starts in ${cityConfig.label}. Tong will onboard you, then drop you straight into a hangout.`}
+                ? 'Booting your world...'
+                : 'Start a new game. Tong will onboard you, then drop you straight into your first hangout.'}
             </p>
 
             {entryPhase === 'entry' && (
@@ -848,54 +844,65 @@ export default function GamePage() {
               </div>
 
               <div className="game-onboarding-grid">
-                <article className="game-map-card stack">
-                  <div className="row">
+                {hasCompletedFirstHangout ? (
+                  <article className="game-map-card stack">
+                    <div className="row">
+                      <p className="game-card-kicker" style={{ margin: 0 }}>
+                        Swipe Map
+                      </p>
+                      <span className="pill">{cityConfig.label}</span>
+                    </div>
+                    <div className="game-city-track" ref={cityTrackRef} onScroll={handleCityTrackScroll}>
+                      {CITY_DEFINITIONS.map((cityOption) => (
+                        <button
+                          key={cityOption.id}
+                          type="button"
+                          className={`game-city-card ${cityOption.id === city ? 'active' : ''}`}
+                          onClick={() => handleCityCardPress(cityOption.id)}
+                        >
+                          <div className="game-city-media">
+                            {cityOption.backdropVideo && cityOption.id === city ? (
+                              <video
+                                className="game-city-backdrop"
+                                poster={cityOption.backdropImage}
+                                src={cityOption.backdropVideo}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                              />
+                            ) : (
+                              <img
+                                className="game-city-backdrop"
+                                src={cityOption.backdropImage}
+                                alt={`${cityOption.label} backdrop`}
+                              />
+                            )}
+                            <div className="game-city-overlay">
+                              <p>{cityMapHint(cityOption.mapPosition)}</p>
+                              <strong>{cityOption.label}</strong>
+                              <span>
+                                {cityOption.languageLabel} · {cityOption.vibe}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="game-city-hint">
+                      Swipe left for Tokyo (Japanese), keep Seoul in center (Korean), and swipe right for Shanghai (Chinese).
+                    </p>
+                  </article>
+                ) : (
+                  <article className="game-map-card stack game-map-locked">
                     <p className="game-card-kicker" style={{ margin: 0 }}>
                       Swipe Map
                     </p>
-                    <span className="pill">{cityConfig.label}</span>
-                  </div>
-                  <div className="game-city-track" ref={cityTrackRef} onScroll={handleCityTrackScroll}>
-                    {CITY_DEFINITIONS.map((cityOption) => (
-                      <button
-                        key={cityOption.id}
-                        type="button"
-                        className={`game-city-card ${cityOption.id === city ? 'active' : ''}`}
-                        onClick={() => handleCityCardPress(cityOption.id)}
-                      >
-                        <div className="game-city-media">
-                          {cityOption.backdropVideo && cityOption.id === city ? (
-                            <video
-                              className="game-city-backdrop"
-                              poster={cityOption.backdropImage}
-                              src={cityOption.backdropVideo}
-                              autoPlay
-                              muted
-                              loop
-                              playsInline
-                            />
-                          ) : (
-                            <img
-                              className="game-city-backdrop"
-                              src={cityOption.backdropImage}
-                              alt={`${cityOption.label} backdrop`}
-                            />
-                          )}
-                          <div className="game-city-overlay">
-                            <p>{cityMapHint(cityOption.mapPosition)}</p>
-                            <strong>{cityOption.label}</strong>
-                            <span>
-                              {cityOption.languageLabel} · {cityOption.vibe}
-                            </span>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="game-city-hint">
-                    Swipe left for Tokyo (Japanese), keep Seoul in center (Korean), and swipe right for Shanghai (Chinese).
-                  </p>
-                </article>
+                    <p className="game-city-hint">
+                      City map video unlocks after your first completed hangout. Finish Scene 1 first.
+                    </p>
+                  </article>
+                )}
 
                 <article className="game-slider-card stack">
                   <p className="game-card-kicker" style={{ margin: 0 }}>
