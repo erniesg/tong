@@ -4,8 +4,7 @@ initOpenNextCloudflareForDev();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  transpilePackages: ['three'],
+  reactStrictMode: true
 };
 
 export default nextConfig;
