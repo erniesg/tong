@@ -757,6 +757,30 @@ function pickCharacter({ city = 'seoul', preferRomance = true, requestedCharacte
   return pickRandomNpc(safeCity);
 }
 
+function normalizeLegacyRomanceIdentity(session) {
+  if (!session) return;
+
+  if (session.activeCharacterId === 'npc_ding_man') {
+    session.activeCharacterId = 'npc_jin';
+  }
+
+  if (session.npc?.npcId === 'npc_ding_man') {
+    session.npc = {
+      ...session.npc,
+      npcId: 'npc_jin',
+      name: 'Jin',
+      assetKey: session.npc.assetKey || 'ding_man/ding_man.png',
+    };
+  }
+
+  if (session.characterProgress?.npc_ding_man) {
+    if (!session.characterProgress.npc_jin) {
+      session.characterProgress.npc_jin = session.characterProgress.npc_ding_man;
+    }
+    delete session.characterProgress.npc_ding_man;
+  }
+}
+
 function getSceneSlice({ city = 'seoul', location = 'food_street', lang } = {}) {
   const safeCity = normalizeCity(city);
   const cityBase = CITY_BASE[safeCity];
@@ -2039,6 +2063,7 @@ const server = http.createServer(async (req, res) => {
       const userId = body.userId || 'demo-user-1';
       const existingSessionId = state.gameSessionByUser.get(userId);
       let session = existingSessionId ? state.gameSessions.get(existingSessionId) : null;
+      normalizeLegacyRomanceIdentity(session);
       let resumed = false;
       const requestedCity = normalizeCity(body.city, session?.city || 'seoul');
       const requestedLocation = normalizeLocation(body.location, session?.location || 'food_street');
@@ -2118,6 +2143,7 @@ const server = http.createServer(async (req, res) => {
         ? gameSessionIdCandidate
         : null;
       const gameSession = gameSessionId ? state.gameSessions.get(gameSessionId) : null;
+      normalizeLegacyRomanceIdentity(gameSession);
       const requestedCity = normalizeCity(body.city, gameSession?.city || 'seoul');
       const requestedLocation = normalizeLocation(body.location, gameSession?.location || 'food_street');
       const requestedLang = normalizeLang(body.lang, gameSession?.lang || CITY_BASE[requestedCity].defaultLang);
