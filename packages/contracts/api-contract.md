@@ -178,6 +178,128 @@ Response:
 }
 ```
 
+## POST `/api/v1/ingestion/run-mock`
+Request:
+```json
+{
+  "userId": "demo-user-1",
+  "profile": {
+    "nativeLanguage": "en",
+    "targetLanguages": ["ko", "zh"],
+    "proficiency": { "ko": "beginner", "ja": "none", "zh": "none" }
+  }
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "generatedAtIso": "2026-02-28T12:00:00.000Z",
+  "sourceCount": { "youtube": 3, "spotify": 3 },
+  "topTerms": [
+    {
+      "lemma": "연습",
+      "lang": "ko",
+      "count": 3,
+      "sourceCount": 2,
+      "sourceBreakdown": { "youtube": 1, "spotify": 2 }
+    }
+  ]
+}
+```
+
+## Canonical Media Events Fixture (Connector-Independent)
+Used by topic modeling/frequency workstreams so they can iterate without live Spotify/YouTube sync.
+
+Path:
+`packages/contracts/fixtures/media.events.sample.json`
+
+Shape:
+```json
+{
+  "events": [
+    {
+      "eventId": "evt_001",
+      "userId": "demo-user-1",
+      "source": "youtube",
+      "mediaId": "yt_a12",
+      "title": "K-variety snack challenge",
+      "lang": "ko",
+      "minutes": 22,
+      "consumedAtIso": "2026-02-27T04:30:00.000Z",
+      "tokens": ["메뉴", "주문", "먹다", "맵다", "연습"]
+    }
+  ]
+}
+```
+
+## GET `/api/v1/tools`
+Response:
+```json
+{
+  "ok": true,
+  "tools": [
+    {
+      "name": "ingestion.run_mock",
+      "description": "Run mock ingestion and refresh frequency/insight/media-profile signals for a user.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "userId": "string (optional)",
+        "profile": "object (optional)",
+        "includeSources": ["youtube", "spotify"]
+      }
+    }
+  ]
+}
+```
+
+## POST `/api/v1/tools/invoke`
+Request:
+```json
+{
+  "tool": "vocab.insights.get",
+  "args": {
+    "userId": "demo-user-1",
+    "lang": "ko"
+  }
+}
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "tool": "vocab.insights.get",
+  "result": {
+    "windowStartIso": "2026-02-25T00:00:00.000Z",
+    "windowEndIso": "2026-02-28T00:00:00.000Z",
+    "clusters": [
+      {
+        "clusterId": "food-ordering",
+        "label": "Food Ordering",
+        "keywords": ["주문", "메뉴", "맵다"],
+        "topTerms": ["주문", "메뉴"]
+      }
+    ],
+    "items": [
+      {
+        "lemma": "주문",
+        "lang": "ko",
+        "score": 0.82,
+        "frequency": 26,
+        "burst": 1.34,
+        "clusterId": "food-ordering",
+        "objectiveLinks": [
+          { "objectiveId": "ko_food_l2_001", "reason": "High utility in next hangout" }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ## POST `/api/v1/game/start-or-resume`
 Request:
 ```json
@@ -351,5 +473,21 @@ Response:
     "speaker": "tong",
     "text": "New session started. We'll train 주문 phrases for your next hangout."
   }
+}
+```
+
+## GET `/api/v1/demo/secret-status`
+Notes:
+- Protected when `TONG_DEMO_PASSWORD` is configured.
+- Returns only configured/missing booleans, never raw secret values.
+
+Response:
+```json
+{
+  "demoPasswordEnabled": true,
+  "youtubeApiKeyConfigured": true,
+  "spotifyClientIdConfigured": true,
+  "spotifyClientSecretConfigured": true,
+  "openAiApiKeyConfigured": false
 }
 ```

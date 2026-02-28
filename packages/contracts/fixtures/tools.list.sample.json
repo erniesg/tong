@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "tools": [
+    {
+      "name": "ingestion.run_mock",
+      "description": "Run mock ingestion and refresh frequency/insight/media-profile signals for a user.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "userId": "string (optional)",
+        "profile": "object (optional)",
+        "includeSources": ["youtube", "spotify"]
+      }
+    },
+    {
+      "name": "vocab.insights.get",
+      "description": "Fetch topic clusters and objective links from ingestion.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "userId": "string (optional)",
+        "lang": "ko|ja|zh (optional)"
+      }
+    }
+  ]
+}
