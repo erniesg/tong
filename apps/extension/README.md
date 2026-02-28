@@ -18,8 +18,10 @@ Fresh Tong MV3 extension for YouTube overlay demo testing.
 - Romanization lane
 - English lane
 4. Click any token chip and verify dictionary panel updates.
+5. Navigate between YouTube pages/videos and confirm overlay survives SPA transitions.
 
 ## Notes
 
-- API target is currently hardcoded to `http://localhost:8787` in `content.js`.
+- API target defaults to `http://localhost:8787` and can be updated in the popup.
+- Content script now loads on all YouTube pages and activates on `/watch` routes.
 - This extension is intentionally minimal and demo-focused (no build step).
