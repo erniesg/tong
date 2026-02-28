@@ -58,3 +58,4 @@ npm run dev:client
 3. `/game` supports start/resume, hangout turns, XP/SP/RP updates.
 4. `/game` learn mode supports viewing previous + starting new sessions.
 5. `/insights` can run ingestion and render frequency + topic clusters.
+6. Extension shows karaoke-style subtitles with romanization and playback-synced progression on YouTube.
