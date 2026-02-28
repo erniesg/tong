@@ -16,6 +16,8 @@ cp .env.example .env
 npm run setup:worktrees
 npm run demo:smoke
 npm run ingestion:planner
+npm run ingestion:vocab:frequency
+npm run ingestion:vocab:insights
 ```
 
 ## What `demo:smoke` validates
