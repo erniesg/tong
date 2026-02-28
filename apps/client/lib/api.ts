@@ -160,6 +160,9 @@ export interface IngestionSnapshotResult {
     title: string;
     lang: 'ko' | 'ja' | 'zh';
     text: string;
+    lyricsSnippet?: string | null;
+    lyricsLang?: 'ko' | 'ja' | 'zh' | null;
+    lyricsSource?: string | null;
     playedAtIso: string | null;
   }>;
   notes: {
