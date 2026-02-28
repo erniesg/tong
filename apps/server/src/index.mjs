@@ -971,6 +971,9 @@ async function fetchYouTubeActivities(accessToken, windowHours = YOUTUBE_DEFAULT
     const payload = await response.json();
     if (!response.ok) {
       const parsed = getGoogleApiError(payload, 'youtube_activities_fetch_failed');
+      if (parsed.reason === 'forbidden') {
+        break;
+      }
       throw new Error(parsed.reason ? `${parsed.message} [${parsed.reason}]` : parsed.message);
     }
 
@@ -986,7 +989,93 @@ async function fetchYouTubeActivities(accessToken, windowHours = YOUTUBE_DEFAULT
     if (!pageToken) break;
   }
 
+  if (results.length === 0) {
+    return null;
+  }
+
   return results;
+}
+
+async function fetchYouTubeUploadsAsActivities(accessToken, windowHours = YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS) {
+  const cutoffMs = Date.now() - parseWindowHours(windowHours, YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS) * 60 * 60 * 1000;
+  const channelResponse = await fetch(
+    `${YOUTUBE_API_BASE}/channels?part=contentDetails,snippet&mine=true&maxResults=1`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+  const channelPayload = await channelResponse.json();
+  if (!channelResponse.ok) {
+    const parsed = getGoogleApiError(channelPayload, 'youtube_channels_fetch_failed');
+    throw new Error(parsed.reason ? `${parsed.message} [${parsed.reason}]` : parsed.message);
+  }
+
+  const channel = Array.isArray(channelPayload?.items) ? channelPayload.items[0] : null;
+  if (!channel) {
+    throw new Error(
+      'No YouTube channel found for this Google account. Create a YouTube channel, then reconnect and sync. [youtubeSignupRequired]',
+    );
+  }
+
+  const uploadsPlaylistId = channel?.contentDetails?.relatedPlaylists?.uploads;
+  if (!uploadsPlaylistId) {
+    throw new Error('Uploads playlist unavailable for this YouTube account. [forbidden]');
+  }
+
+  const activities = [];
+  let pageToken = null;
+  for (let page = 0; page < YOUTUBE_MAX_PAGES; page += 1) {
+    const query = new URLSearchParams({
+      part: 'snippet,contentDetails',
+      playlistId: uploadsPlaylistId,
+      maxResults: '50',
+    });
+    if (pageToken) query.set('pageToken', pageToken);
+
+    const response = await fetch(`${YOUTUBE_API_BASE}/playlistItems?${query.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      const parsed = getGoogleApiError(payload, 'youtube_playlist_items_fetch_failed');
+      throw new Error(parsed.reason ? `${parsed.message} [${parsed.reason}]` : parsed.message);
+    }
+
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    for (const item of items) {
+      const publishedAtIso = item?.snippet?.publishedAt || null;
+      const publishedAtMs = Date.parse(publishedAtIso || '');
+      if (Number.isFinite(publishedAtMs) && publishedAtMs < cutoffMs) continue;
+
+      const videoId =
+        item?.contentDetails?.videoId ||
+        item?.snippet?.resourceId?.videoId ||
+        null;
+      activities.push({
+        id: `upload_${item?.id || videoId || Math.random().toString(36).slice(2, 8)}`,
+        snippet: {
+          publishedAt: publishedAtIso || new Date().toISOString(),
+          title: item?.snippet?.title || 'YouTube Upload',
+          description: item?.snippet?.description || '',
+          channelTitle: item?.snippet?.channelTitle || channel?.snippet?.title || '',
+        },
+        contentDetails: {
+          upload: {
+            videoId,
+          },
+        },
+      });
+    }
+
+    pageToken = payload?.nextPageToken || null;
+    if (!pageToken) break;
+  }
+
+  return activities;
 }
 
 async function fetchYouTubeVideosById(accessToken, videoIds = []) {
@@ -1028,7 +1117,11 @@ async function fetchYouTubeVideosById(accessToken, videoIds = []) {
 async function syncYouTubeForUser(userId, requestedWindowHours = YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS) {
   const windowHours = parseWindowHours(requestedWindowHours, YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS);
   const accessToken = await ensureYouTubeAccessToken(userId);
-  const rawActivities = await fetchYouTubeActivities(accessToken, windowHours);
+  const activityFeed = await fetchYouTubeActivities(accessToken, windowHours);
+  const rawActivities =
+    activityFeed && activityFeed.length > 0
+      ? activityFeed
+      : await fetchYouTubeUploadsAsActivities(accessToken, windowHours);
   const videoIds = rawActivities.map((activity) => getYouTubeActivityVideoId(activity)).filter(Boolean);
   const detailsById = await fetchYouTubeVideosById(accessToken, videoIds);
 
