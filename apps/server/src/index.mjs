@@ -342,14 +342,27 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/v1/scenes/hangout/start' && req.method === 'POST') {
       const body = await readJsonBody(req);
       const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
+      const score = { xp: 0, sp: 0, rp: 0 };
       state.sessions.set(sceneSessionId, {
         userId: body.userId || 'demo-user-1',
         turn: 1,
-        score: { xp: 0, sp: 0, rp: 0 },
+        score: { ...score },
       });
       jsonResponse(res, 200, {
-        ...FIXTURES.sceneFoodHangout,
         sceneSessionId,
+        mode: 'hangout',
+        uiPolicy: {
+          immersiveFirstPerson: true,
+          allowOnlyDialogueAndHints: true,
+        },
+        state: {
+          turn: 1,
+          score,
+        },
+        initialLine: {
+          speaker: 'character',
+          text: '어서 와요! 오늘은 뭐 먹고 싶어요?',
+        },
       });
       return;
     }

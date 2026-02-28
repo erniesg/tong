@@ -105,6 +105,14 @@ export interface MediaProfileResponse {
   };
 }
 
+export type CityId = 'seoul' | 'tokyo' | 'shanghai';
+export type LocationId =
+  | 'food_street'
+  | 'cafe'
+  | 'convenience_store'
+  | 'subway_hub'
+  | 'practice_studio';
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -156,7 +164,23 @@ export function startOrResumeGame() {
   });
 }
 
-export function fetchObjectiveNext() {
+interface ObjectiveNextParams {
+  userId?: string;
+  city?: CityId;
+  location?: LocationId;
+  mode?: 'hangout' | 'learn';
+  lang?: 'ko' | 'ja' | 'zh';
+}
+
+export function fetchObjectiveNext(params: ObjectiveNextParams = {}) {
+  const search = new URLSearchParams({
+    userId: params.userId || 'demo-user-1',
+    city: params.city || 'seoul',
+    location: params.location || 'food_street',
+    mode: params.mode || 'hangout',
+    lang: params.lang || 'ko',
+  });
+
   return apiFetch<{
     objectiveId: string;
     level: number;
@@ -170,10 +194,19 @@ export function fetchObjectiveNext() {
       requiredTurns: number;
       requiredAccuracy: number;
     };
-  }>('/api/v1/objectives/next?userId=demo-user-1&city=seoul&location=food_street&mode=hangout&lang=ko');
+  }>(`/api/v1/objectives/next?${search.toString()}`);
 }
 
-export function startHangout(objectiveId: string) {
+interface StartHangoutParams {
+  objectiveId: string;
+  userId?: string;
+  city?: CityId;
+  location?: LocationId;
+  lang?: 'ko' | 'ja' | 'zh';
+}
+
+export function startHangout(params: StartHangoutParams) {
+  const { objectiveId, userId, city, location, lang } = params;
   return apiFetch<{
     sceneSessionId: string;
     initialLine: { speaker: 'character' | 'tong'; text: string };
@@ -182,10 +215,10 @@ export function startHangout(objectiveId: string) {
   }>('/api/v1/scenes/hangout/start', {
     method: 'POST',
     body: JSON.stringify({
-      userId: 'demo-user-1',
-      city: 'seoul',
-      location: 'food_street',
-      lang: 'ko',
+      userId: userId || 'demo-user-1',
+      city: city || 'seoul',
+      location: location || 'food_street',
+      lang: lang || 'ko',
       objectiveId,
     }),
   });
@@ -207,11 +240,30 @@ export function respondHangout(sceneSessionId: string, userUtterance: string) {
   });
 }
 
-export function fetchLearnSessions() {
-  return apiFetch<{ items: LearnSession[] }>('/api/v1/learn/sessions?userId=demo-user-1&city=seoul&lang=ko');
+interface LearnSessionParams {
+  userId?: string;
+  city?: CityId;
+  lang?: 'ko' | 'ja' | 'zh';
 }
 
-export function createLearnSession(objectiveId: string) {
+export function fetchLearnSessions(params: LearnSessionParams = {}) {
+  const search = new URLSearchParams({
+    userId: params.userId || 'demo-user-1',
+    city: params.city || 'seoul',
+    lang: params.lang || 'ko',
+  });
+  return apiFetch<{ items: LearnSession[] }>(`/api/v1/learn/sessions?${search.toString()}`);
+}
+
+interface CreateLearnSessionParams {
+  objectiveId: string;
+  userId?: string;
+  city?: CityId;
+  lang?: 'ko' | 'ja' | 'zh';
+}
+
+export function createLearnSession(params: CreateLearnSessionParams) {
+  const { objectiveId, userId, city, lang } = params;
   return apiFetch<{
     learnSessionId: string;
     mode: 'learn';
@@ -221,9 +273,9 @@ export function createLearnSession(objectiveId: string) {
   }>('/api/v1/learn/sessions', {
     method: 'POST',
     body: JSON.stringify({
-      userId: 'demo-user-1',
-      city: 'seoul',
-      lang: 'ko',
+      userId: userId || 'demo-user-1',
+      city: city || 'seoul',
+      lang: lang || 'ko',
       objectiveId,
     }),
   });
