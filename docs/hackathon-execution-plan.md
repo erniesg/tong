@@ -1,10 +1,10 @@
 # Hackathon Execution Plan (Tong Fresh Build)
 
 ## Intent
-Build a clean Tong demo implementation in this repository while using Pinpoint only as external reference learnings.
+Build a clean Tong demo implementation in this repository while using only internal legacy learnings as reference.
 
 ## Guardrails
-1. No direct Pinpoint code copy into Tong.
+1. No direct code copy from prior internal prototypes into Tong.
 2. Rebuild interfaces around Tong contracts under `packages/contracts`.
 3. Keep reference notes local-only under gitignored `reference-notes/`.
 
