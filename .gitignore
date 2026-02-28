@@ -1,11 +1,16 @@
 .DS_Store
+.env
+.env.*
+!.env.example
 tong.zip
 
 .worktrees/
 node_modules/
 .next/
+.open-next/
 reference-notes/
 apps/server/data/generated/
-.env
-.env.*
-.logs/
+
+# Large 3D model assets — copy from assets/presets/characters/hauen/hauen.glb
+apps/client/public/models/*.glb
+apps/client/public/models/*.fbx
