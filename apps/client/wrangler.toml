@@ -1,0 +1,21 @@
+name = "tong-berlayar-web"
+main = ".open-next/worker.js"
+compatibility_date = "2026-02-28"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+preview_urls = true
+keep_vars = true
+
+[assets]
+binding = "ASSETS"
+directory = ".open-next/assets"
+
+[vars]
+NEXT_PUBLIC_TONG_PUBLIC_DOMAIN = "tong.berlayar.ai"
+NEXT_PUBLIC_TONG_API_BASE = "https://tong-api.erniesg.workers.dev"
+NEXT_PUBLIC_TONG_EXTENSION_ZIP_URL = "https://github.com/erniesg/tong/archive/refs/heads/master.zip"
+NEXT_PUBLIC_TONG_YOUTUBE_DEMO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+NEXT_PUBLIC_TONG_DEMO_PASSWORD_HINT = "Ask demo host for access password."
+
+[observability.logs]
+enabled = true
