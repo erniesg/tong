@@ -24,7 +24,7 @@ import {
   type SceneLine,
   type ScoreState,
 } from '@/lib/api';
-import { KoreanText } from '@/components/shared/KoreanText';
+import { SceneView, type DialogueChoice } from '@/components/scene/SceneView';
 
 interface DialogueMessage {
   id: string;
@@ -290,6 +290,7 @@ export default function GamePageClient({
   const cityTrackRef = useRef<HTMLDivElement | null>(null);
   const openingVideoRef = useRef<HTMLVideoElement | null>(null);
   const autoLaunchHandledRef = useRef(false);
+  const autoLaunchRetryRef = useRef(0);
 
   const [entryPhase, setEntryPhase] = useState<EntryPhase>(initialEntryPhase);
   const [activeUserId, setActiveUserId] = useState(() => createSessionUserId());
@@ -370,12 +371,20 @@ export default function GamePageClient({
       ? activeSceneLine.text
       : isUserTurn
         ? lastNpcLine || 'Choose a reply or type your own response.'
-        : sceneSessionId
+        : loadingStart || (autoLaunchHangout && !sceneSessionId)
+          ? 'Launching your first hangout...'
+          : sceneSessionId
           ? 'Hangout live. Use World to restart this scene.'
           : 'Open World and start your first hangout.';
   const canTapContinue = Boolean(activeSceneLine) && !sendingTurn && !pendingUserLine;
   const canAnswerTurn = isUserTurn;
   const isTypewriting = canTapContinue && !dialogueTypeDone && !pendingUserLine;
+  const isDirectHangoutPending = autoLaunchHangout && !sceneSessionId && (loadingStart || !error);
+  const sceneChoices: DialogueChoice[] = presetResponses.map((preset) => ({
+    id: preset.text,
+    text: preset.text,
+    subtext: preset.note,
+  }));
 
   useEffect(() => {
     const track = cityTrackRef.current;
@@ -395,6 +404,16 @@ export default function GamePageClient({
     const nextUserId = beginNewGame('playing');
     void quickStartHangout(nextUserId);
   }, [autoLaunchHangout]);
+
+  useEffect(() => {
+    if (!autoLaunchHangout || sceneSessionId || loadingStart) return;
+    if (autoLaunchRetryRef.current >= 2) return;
+    const timer = window.setTimeout(() => {
+      autoLaunchRetryRef.current += 1;
+      void quickStartHangout(activeUserId);
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [autoLaunchHangout, sceneSessionId, loadingStart, activeUserId]);
 
   useEffect(() => {
     if (entryPhase !== 'opening') return;
@@ -1256,98 +1275,37 @@ export default function GamePageClient({
 
               {mode === 'hangout' && (
                 <>
-                  <section className="game-hangout-stage">
-                    {tongHint && (
-                      <button className="game-tong-whisper" type="button" onClick={() => setTongHint(null)}>
-                        <strong>Tong:</strong> <KoreanText text={tongHint} />
-                      </button>
-                    )}
-                    <section
-                      className={`game-dialogue-panel ${canTapContinue ? 'game-dialogue-panel-tappable' : ''}`}
-                      onClick={canTapContinue ? handleTapToContinue : undefined}
-                      role={canTapContinue ? 'button' : undefined}
-                      tabIndex={canTapContinue ? 0 : -1}
-                      onKeyDown={(event) => {
-                        if (!canTapContinue) return;
-                        if (event.key !== 'Enter' && event.key !== ' ') return;
-                        event.preventDefault();
-                        handleTapToContinue();
-                      }}
-                    >
-                      <div className="game-dialogue-head">
-                        <div className="game-dialogue-speaker">
-                          {!pendingUserLine && activeSceneLine?.speaker === 'character' && (
-                            <span className="game-character-avatar game-dialogue-avatar">
-                              {characterAvatarSrc && !avatarLoadFailed ? (
-                                <img
-                                  className="game-character-avatar-image"
-                                  src={characterAvatarSrc}
-                                  alt={`${character.name || 'Character'} avatar`}
-                                  onError={() => {
-                                    const nextIndex = avatarPathIndex + 1;
-                                    if (nextIndex < characterAvatarOptions.length) {
-                                      setAvatarPathIndex(nextIndex);
-                                      return;
-                                    }
-                                    setAvatarLoadFailed(true);
-                                  }}
-                                />
-                              ) : (
-                                character.avatarEmoji || selectedLang.toUpperCase()
-                              )}
-                            </span>
-                          )}
-                          <strong className="game-dialogue-speaker-name">{activeSpeakerLabel}</strong>
-                        </div>
-                        <span className="game-dialogue-continue">
-                          {canTapContinue ? (isTypewriting ? 'Tap to reveal' : 'Tap to continue') : canAnswerTurn ? 'Your turn' : '...'}
-                        </span>
-                      </div>
-                      <p className="game-dialogue-text">
-                        <KoreanText text={isTypewriting ? typedDialogueText : activeDialogueText} />
-                        {isTypewriting && <span className="game-type-cursor" />}
-                      </p>
-                    </section>
-
-                    {canAnswerTurn && (
-                      <>
-                        {presetResponses.length > 0 && (
-                          <section className="game-chip-grid">
-                            {presetResponses.map((preset) => (
-                              <button
-                                key={preset.text}
-                                className="secondary game-chip"
-                                onClick={() => void sendHangoutTurn(preset.text)}
-                                disabled={!sceneSessionId || sendingTurn}
-                              >
-                                <span className="game-chip-main">
-                                  <KoreanText text={preset.text} />
-                                </span>
-                              </button>
-                            ))}
-                          </section>
-                        )}
-
-                        <div className="stack game-hangout-input">
-                          <textarea
-                            rows={2}
-                            value={userUtterance}
-                            placeholder="Type your own response"
-                            onChange={(event) => setUserUtterance(event.target.value)}
-                          />
-                          <button
-                            onClick={() => void sendHangoutTurn()}
-                            disabled={!sceneSessionId || !userUtterance.trim() || sendingTurn}
-                          >
-                            {sendingTurn ? 'Sending...' : 'Send response'}
-                          </button>
-                        </div>
-                      </>
-                    )}
-
-                    {sendingTurn && <p className="game-status">Character is replying...</p>}
-                    {error && <p className="game-error">{error}</p>}
-                  </section>
+                  <SceneView
+                    backgroundUrl={city === 'seoul' ? SEOUL_FIRST_SCENE_BACKDROP : cityConfig.backdropImage}
+                    tongHint={tongHint}
+                    onDismissTong={() => setTongHint(null)}
+                    speakerName={activeSpeakerLabel}
+                    avatarUrl={!pendingUserLine && activeSceneLine?.speaker === 'character' && !avatarLoadFailed ? characterAvatarSrc : null}
+                    onAvatarError={() => {
+                      const nextIndex = avatarPathIndex + 1;
+                      if (nextIndex < characterAvatarOptions.length) {
+                        setAvatarPathIndex(nextIndex);
+                        return;
+                      }
+                      setAvatarLoadFailed(true);
+                    }}
+                    dialogueText={isTypewriting ? typedDialogueText : activeDialogueText}
+                    canContinue={canTapContinue}
+                    isTypewriting={isTypewriting}
+                    onContinue={handleTapToContinue}
+                    canAnswerTurn={canAnswerTurn}
+                    choices={sceneChoices}
+                    onChoice={(choiceId) => void sendHangoutTurn(choiceId)}
+                    choiceDisabled={!sceneSessionId || sendingTurn}
+                    userInput={userUtterance}
+                    onUserInput={setUserUtterance}
+                    onSend={() => void sendHangoutTurn()}
+                    sendDisabled={!sceneSessionId || !userUtterance.trim() || sendingTurn}
+                    sendingTurn={sendingTurn}
+                    launchPending={isDirectHangoutPending}
+                    launchError={autoLaunchHangout && !sceneSessionId ? error : null}
+                    onRetryLaunch={() => void quickStartHangout(activeUserId)}
+                  />
                 </>
               )}
 
