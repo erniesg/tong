@@ -365,6 +365,7 @@ export default function GamePage() {
           hintItems: args.hintItems ?? undefined,
           hintCount: args.hintCount ?? undefined,
           hintSubType: args.hintSubType ?? undefined,
+          objectiveId: args.objectiveId,
         });
         setCurrentMessage(null);
         setCurrentExercise(exercise);
