@@ -5,8 +5,10 @@
 tong.zip
 
 .worktrees/
+.claude/
 node_modules/
 .next/
 .open-next/
+*.tsbuildinfo
 reference-notes/
 apps/server/data/generated/
