@@ -55,12 +55,404 @@ const DICTIONARY_OVERRIDES = {
   },
 };
 
+const SEOUL_FOOD_STREET_SLICE = {
+  city: 'seoul',
+  cityLabel: 'Seoul',
+  sceneId: 'food_street_hangout_intro',
+  location: {
+    locationId: 'food_street',
+    label: 'Food Street',
+    district: 'Hongdae',
+    landmark: 'Gyeongui Line lane',
+    vibeTags: ['street-food', 'night-market', 'casual'],
+  },
+  objective: {
+    objectiveId: 'ko_food_l2_001',
+    label: 'Place a complete Korean street-food order',
+    summary: 'Choose dish, set spice level, and close politely.',
+    mode: 'hangout',
+    requiredTurns: 3,
+    requiredSuccessfulTurns: 2,
+    requiredProgressForPass: 0.75,
+    targets: {
+      vocabulary: ['떡볶이', '메뉴', '주문', '맵기'],
+      grammar: ['-주세요', '-고 싶어요'],
+      sentenceStructures: ['N + 주세요', '맵기 + degree 표현'],
+    },
+  },
+  npc: {
+    npcId: 'npc_mina_park',
+    name: 'Mina Park',
+    role: 'Street-food local friend',
+    baselineMood: 'playful',
+  },
+  turnScript: [
+    {
+      stepId: 'pick_menu',
+      requiredTags: ['food', 'polite'],
+      quickReplies: ['떡볶이 주세요.', '김밥 주세요.', '라면 하나 주세요.'],
+      prompts: {
+        start: '나 미나야! 여기 떡볶이가 유명해. 먹고 싶은 메뉴를 한국어로 말해줘.',
+        success: '좋아, 주문 톤이 자연스러워! 이제 맵기를 정해 볼까?',
+        partial: '메뉴는 좋았어. 끝에 주세요를 붙이면 더 자연스러워.',
+        miss: '메뉴 이름이랑 주세요를 같이 말해 보면 좋아.',
+      },
+      tongHints: {
+        success: 'Nice opening. You named a dish and used polite ordering language.',
+        partial: 'Good start. Add a polite ending like 주세요 for a natural order.',
+        miss: 'Try a simple pattern: 떡볶이 주세요.',
+      },
+      rewards: {
+        success: { xp: 8, sp: 2, rp: 1, objectiveProgress: 0.4 },
+        partial: { xp: 6, sp: 1, rp: 1, objectiveProgress: 0.25 },
+        miss: { xp: 4, sp: 1, rp: 0, objectiveProgress: 0.1 },
+      },
+      moodByTier: {
+        success: 'encouraged',
+        partial: 'curious',
+        miss: 'patient',
+      },
+    },
+    {
+      stepId: 'set_spice_level',
+      requiredTags: ['spice'],
+      quickReplies: ['보통맛으로 해주세요.', '덜 맵게 해주세요.', '순한맛으로 부탁해요.'],
+      prompts: {
+        success: '좋아! 마지막으로 수량까지 말해 줘.',
+        partial: '맵기 표현이 거의 맞았어. 보통맛/덜 맵게 같은 표현을 써 봐.',
+        miss: '맵기부터 정해 보자. 예: 보통맛으로 해주세요.',
+      },
+      tongHints: {
+        success: 'Great. Spice-level language sounds natural.',
+        partial: 'You are close. Add a clear spice word like 보통맛 or 덜 맵게.',
+        miss: 'Include spice preference: 안 맵게 / 보통맛 / 매운맛.',
+      },
+      rewards: {
+        success: { xp: 8, sp: 2, rp: 1, objectiveProgress: 0.35 },
+        partial: { xp: 6, sp: 1, rp: 1, objectiveProgress: 0.2 },
+        miss: { xp: 4, sp: 1, rp: 0, objectiveProgress: 0.1 },
+      },
+      moodByTier: {
+        success: 'impressed',
+        partial: 'focused',
+        miss: 'supportive',
+      },
+    },
+    {
+      stepId: 'confirm_order',
+      requiredTags: ['confirm', 'polite'],
+      quickReplies: ['한 개 주세요, 감사합니다.', '두 개 주세요.', '이렇게 주문할게요, 감사합니다.'],
+      prompts: {
+        success: '완벽해! 주문이 깔끔했어. 이제 다음 장소도 열 수 있어.',
+        partial: '좋아, 거의 끝났어. 수량이나 감사 표현을 더하면 완성돼.',
+        miss: '마무리로 수량 + 주세요를 말해 봐. 예: 한 개 주세요.',
+      },
+      tongHints: {
+        success: 'Strong finish. You confirmed the order politely.',
+        partial: 'Almost complete. Add quantity or a polite close.',
+        miss: 'Use quantity + polite ending: 한 개 주세요.',
+      },
+      rewards: {
+        success: { xp: 10, sp: 3, rp: 2, objectiveProgress: 0.35 },
+        partial: { xp: 7, sp: 2, rp: 1, objectiveProgress: 0.2 },
+        miss: { xp: 4, sp: 1, rp: 0, objectiveProgress: 0.1 },
+      },
+      moodByTier: {
+        success: 'excited',
+        partial: 'encouraging',
+        miss: 'calm',
+      },
+    },
+  ],
+  completion: {
+    passedLine: '완벽해! 이 정도면 실제 주문도 자신 있게 할 수 있어.',
+    retryLine: '흐름은 잡았어. 한 번 더 하면 바로 미션을 열 수 있어.',
+    tongWrapUpPass: 'Objective validated. Seoul mission gate is now previewed.',
+    tongWrapUpRetry: 'Scene complete. Another validated hangout will unlock the mission gate.',
+    unlockPreview: {
+      missionGate: 'seoul_food_mission_assessment',
+      nextMasteryTier: 2,
+      nextLocationOptions: ['cafe', 'convenience_store'],
+      learnModeObjective: 'ko_food_l2_002',
+    },
+  },
+};
+
+const UTTERANCE_TAG_PATTERNS = {
+  food: ['떡볶이', '김밥', '라면', '순대', '어묵', '메뉴', '주문'],
+  polite: ['주세요', '부탁', '싶어요', '할게요', '주실', '주세'],
+  spice: ['맵', '안 맵', '안맵', '덜 맵', '덜맵', '보통맛', '순한맛', '매운맛', '중간'],
+  confirm: ['하나', '한 개', '한개', '두 개', '두개', '둘', '셋', '세 개', '세개', '감사'],
+};
+
 const state = {
   profiles: new Map(),
   sessions: new Map(),
+  gameSessions: new Map(),
+  gameSessionByUser: new Map(),
   learnSessions: [...(FIXTURES.learnSessions.items || [])],
   ingestionResult: null,
+  counters: {
+    game: 1,
+    hangout: 1,
+  },
 };
+
+function nextSessionId(type) {
+  const next = state.counters[type];
+  state.counters[type] += 1;
+  if (type === 'game') return `sess_${String(next).padStart(4, '0')}`;
+  return `hang_${String(next).padStart(4, '0')}`;
+}
+
+function cloneScore(score) {
+  return {
+    xp: score.xp,
+    sp: score.sp,
+    rp: score.rp,
+  };
+}
+
+function buildLocationMeta() {
+  return {
+    city: SEOUL_FOOD_STREET_SLICE.city,
+    cityLabel: SEOUL_FOOD_STREET_SLICE.cityLabel,
+    sceneId: SEOUL_FOOD_STREET_SLICE.sceneId,
+    locationId: SEOUL_FOOD_STREET_SLICE.location.locationId,
+    locationLabel: SEOUL_FOOD_STREET_SLICE.location.label,
+    district: SEOUL_FOOD_STREET_SLICE.location.district,
+    landmark: SEOUL_FOOD_STREET_SLICE.location.landmark,
+    vibeTags: [...SEOUL_FOOD_STREET_SLICE.location.vibeTags],
+  };
+}
+
+function buildCurrentObjective(progress = 0, successfulTurns = 0) {
+  return {
+    objectiveId: SEOUL_FOOD_STREET_SLICE.objective.objectiveId,
+    mode: SEOUL_FOOD_STREET_SLICE.objective.mode,
+    label: SEOUL_FOOD_STREET_SLICE.objective.label,
+    summary: SEOUL_FOOD_STREET_SLICE.objective.summary,
+    targets: {
+      vocabulary: [...SEOUL_FOOD_STREET_SLICE.objective.targets.vocabulary],
+      grammar: [...SEOUL_FOOD_STREET_SLICE.objective.targets.grammar],
+      sentenceStructures: [...SEOUL_FOOD_STREET_SLICE.objective.targets.sentenceStructures],
+    },
+    completionCriteria: {
+      requiredTurns: SEOUL_FOOD_STREET_SLICE.objective.requiredTurns,
+      requiredSuccessfulTurns: SEOUL_FOOD_STREET_SLICE.objective.requiredSuccessfulTurns,
+      requiredProgressForPass: SEOUL_FOOD_STREET_SLICE.objective.requiredProgressForPass,
+    },
+    progress: Number(progress.toFixed(2)),
+    successfulTurns,
+  };
+}
+
+function buildNpcState(mood) {
+  return {
+    npcId: SEOUL_FOOD_STREET_SLICE.npc.npcId,
+    name: SEOUL_FOOD_STREET_SLICE.npc.name,
+    role: SEOUL_FOOD_STREET_SLICE.npc.role,
+    mood: mood || SEOUL_FOOD_STREET_SLICE.npc.baselineMood,
+  };
+}
+
+function buildCharacterPayload(mood) {
+  return {
+    id: SEOUL_FOOD_STREET_SLICE.npc.npcId,
+    name: SEOUL_FOOD_STREET_SLICE.npc.name,
+    role: SEOUL_FOOD_STREET_SLICE.npc.role,
+    mood: mood || SEOUL_FOOD_STREET_SLICE.npc.baselineMood,
+  };
+}
+
+function buildObjectiveProgressState(progress) {
+  const clamped = Number(Math.max(0, Math.min(1, progress)).toFixed(2));
+  return {
+    current: Math.round(clamped * 100),
+    target: 100,
+    percent: clamped,
+    label: 'Food-order objective',
+  };
+}
+
+function buildTurnState(session, lastTurn = null) {
+  const completedTurns = Math.min(
+    session.turn - 1,
+    SEOUL_FOOD_STREET_SLICE.objective.requiredTurns,
+  );
+  return {
+    currentTurn: session.turn,
+    completedTurns,
+    requiredTurns: SEOUL_FOOD_STREET_SLICE.objective.requiredTurns,
+    turnsRemaining: Math.max(
+      0,
+      SEOUL_FOOD_STREET_SLICE.objective.requiredTurns - completedTurns,
+    ),
+    successfulTurns: session.successfulTurns,
+    objectiveProgress: Number(session.objectiveProgress.toFixed(2)),
+    isCompleted: session.completed,
+    completionSignal: session.completed ? 'hangout_complete' : null,
+    lastTurn,
+  };
+}
+
+function buildUnlockPreview(unlocked) {
+  return {
+    ...SEOUL_FOOD_STREET_SLICE.completion.unlockPreview,
+    unlocked,
+  };
+}
+
+function objectivePassed(session) {
+  return (
+    session.successfulTurns >= SEOUL_FOOD_STREET_SLICE.objective.requiredSuccessfulTurns &&
+    session.objectiveProgress >= SEOUL_FOOD_STREET_SLICE.objective.requiredProgressForPass
+  );
+}
+
+function buildCompletionSummary(session) {
+  if (!session.completed) return null;
+  const passed = objectivePassed(session);
+  return {
+    objectiveId: SEOUL_FOOD_STREET_SLICE.objective.objectiveId,
+    status: passed ? 'passed' : 'completed_retry_available',
+    completionSignal: passed ? 'objective_validated' : 'scene_complete_retry_available',
+    turnsTaken: Math.min(session.turn - 1, SEOUL_FOOD_STREET_SLICE.objective.requiredTurns),
+    successfulTurns: session.successfulTurns,
+    objectiveProgress: Number(session.objectiveProgress.toFixed(2)),
+    scoreDelta: cloneScore(session.score),
+    unlockPreview: buildUnlockPreview(passed),
+  };
+}
+
+function extractUtteranceTags(userUtterance) {
+  const raw = String(userUtterance || '').toLowerCase();
+  const tags = new Set();
+
+  for (const [tag, patterns] of Object.entries(UTTERANCE_TAG_PATTERNS)) {
+    if (patterns.some((pattern) => raw.includes(pattern))) tags.add(tag);
+  }
+
+  return tags;
+}
+
+function evaluateTurn(userUtterance, turnScript) {
+  const tags = extractUtteranceTags(userUtterance);
+  const matchedTags = turnScript.requiredTags.filter((tag) => tags.has(tag));
+  const missingTags = turnScript.requiredTags.filter((tag) => !tags.has(tag));
+  const tier = missingTags.length === 0 ? 'success' : matchedTags.length > 0 ? 'partial' : 'miss';
+  const rewards = turnScript.rewards[tier];
+
+  return {
+    tier,
+    matchedTags,
+    missingTags,
+    rewards,
+    tongHint: turnScript.tongHints[tier],
+    nextLine: turnScript.prompts[tier],
+    mood: turnScript.moodByTier[tier],
+  };
+}
+
+function getQuickRepliesForTurn(turnNumber) {
+  const scriptIndex = Math.min(
+    Math.max(turnNumber - 1, 0),
+    SEOUL_FOOD_STREET_SLICE.turnScript.length - 1,
+  );
+  return [...(SEOUL_FOOD_STREET_SLICE.turnScript[scriptIndex].quickReplies || [])];
+}
+
+function createGameSession(userId, profile) {
+  const sessionId = nextSessionId('game');
+  const session = {
+    sessionId,
+    userId,
+    city: SEOUL_FOOD_STREET_SLICE.city,
+    sceneId: SEOUL_FOOD_STREET_SLICE.sceneId,
+    profile: profile || FIXTURES.gameStart.profile,
+    progression: { ...(FIXTURES.gameStart.progression || { xp: 0, sp: 0, rp: 0 }) },
+    objectiveProgress: 0,
+    successfulTurns: 0,
+    npcMood: SEOUL_FOOD_STREET_SLICE.npc.baselineMood,
+    lastHangoutSummary: null,
+  };
+  state.gameSessions.set(sessionId, session);
+  state.gameSessionByUser.set(userId, sessionId);
+  return session;
+}
+
+function buildGameStartResponse(session, resumed) {
+  return {
+    ...FIXTURES.gameStart,
+    sessionId: session.sessionId,
+    city: SEOUL_FOOD_STREET_SLICE.city,
+    sceneId: SEOUL_FOOD_STREET_SLICE.sceneId,
+    profile: session.profile,
+    progression: session.progression,
+    resumed,
+    tongPrompt: 'tong://seoul/food-street/hangout/v1',
+    actions: [
+      'Start Seoul Food Street Hangout',
+      'Review Food Ordering Learn Session',
+      'Open Last-3-Days Vocab Feed',
+    ],
+    currentObjective: buildCurrentObjective(session.objectiveProgress, session.successfulTurns),
+    locationMeta: buildLocationMeta(),
+    npc: buildNpcState(session.npcMood),
+    turnState: {
+      currentTurn: 1,
+      completedTurns: 0,
+      requiredTurns: SEOUL_FOOD_STREET_SLICE.objective.requiredTurns,
+      turnsRemaining: SEOUL_FOOD_STREET_SLICE.objective.requiredTurns,
+      successfulTurns: session.successfulTurns,
+      objectiveProgress: Number(session.objectiveProgress.toFixed(2)),
+      isCompleted: false,
+      completionSignal: null,
+      lastTurn: null,
+    },
+    hangoutStartRequestPreview: {
+      userId: session.userId,
+      city: SEOUL_FOOD_STREET_SLICE.city,
+      location: SEOUL_FOOD_STREET_SLICE.location.locationId,
+      objectiveId: SEOUL_FOOD_STREET_SLICE.objective.objectiveId,
+      gameSessionId: session.sessionId,
+    },
+    lastHangoutSummary: session.lastHangoutSummary,
+  };
+}
+
+function createHangoutSession({ userId, gameSessionId }) {
+  const sceneSessionId = nextSessionId('hangout');
+  const session = {
+    sceneSessionId,
+    userId,
+    gameSessionId,
+    turn: 1,
+    score: { xp: 0, sp: 0, rp: 0 },
+    objectiveProgress: 0,
+    successfulTurns: 0,
+    npcMood: SEOUL_FOOD_STREET_SLICE.npc.baselineMood,
+    completed: false,
+    transcript: [],
+  };
+  state.sessions.set(sceneSessionId, session);
+  return session;
+}
+
+function updateGameSessionFromHangout(hangoutSession, completionSummary) {
+  if (!hangoutSession.gameSessionId || !completionSummary) return;
+  const gameSession = state.gameSessions.get(hangoutSession.gameSessionId);
+  if (!gameSession) return;
+
+  gameSession.progression.xp += completionSummary.scoreDelta.xp;
+  gameSession.progression.sp += completionSummary.scoreDelta.sp;
+  gameSession.progression.rp += completionSummary.scoreDelta.rp;
+  gameSession.objectiveProgress = hangoutSession.objectiveProgress;
+  gameSession.successfulTurns = hangoutSession.successfulTurns;
+  gameSession.npcMood = hangoutSession.npcMood;
+  gameSession.lastHangoutSummary = completionSummary;
+  state.gameSessions.set(gameSession.sessionId, gameSession);
+}
 
 function jsonResponse(res, statusCode, payload) {
   res.writeHead(statusCode, {
@@ -195,38 +587,145 @@ function handleHangoutRespond(body) {
     };
   }
 
-  const goodPatterns = ['주세요', '먹', '주문', '라면', '떡볶이', '메뉴'];
-  const matched = goodPatterns.some((pattern) => userUtterance.includes(pattern));
-  const xpDelta = matched ? 8 : 4;
-  const spDelta = matched ? 2 : 1;
-  const rpDelta = matched ? 1 : 0;
+  if (existing.completed) {
+    const completionSummary = buildCompletionSummary(existing);
+    return {
+      statusCode: 200,
+      payload: {
+        accepted: true,
+        feedback: {
+          tongHint: 'This hangout is already complete. Start a new scene to replay.',
+          objectiveProgressDelta: 0,
+          objectiveProgress: buildObjectiveProgressState(existing.objectiveProgress),
+          suggestedReplies: [],
+        },
+        nextLine: {
+          speaker: 'tong',
+          text: '이 장면은 이미 완료됐어. 새 세션으로 이어서 연습하자.',
+        },
+        state: {
+          turn: existing.turn,
+          score: cloneScore(existing.score),
+          objectiveProgress: buildObjectiveProgressState(existing.objectiveProgress),
+        },
+        currentObjective: buildCurrentObjective(existing.objectiveProgress, existing.successfulTurns),
+        locationMeta: buildLocationMeta(),
+        npc: buildNpcState(existing.npcMood),
+        character: buildCharacterPayload(existing.npcMood),
+        turnState: buildTurnState(existing, {
+          stepId: 'complete',
+          tier: 'complete',
+          matchedTags: [],
+          missingTags: [],
+          delta: {
+            xp: 0,
+            sp: 0,
+            rp: 0,
+            objectiveProgressDelta: 0,
+          },
+        }),
+        completion: {
+          isCompleted: true,
+          completionSignal: completionSummary?.completionSignal || 'hangout_complete',
+        },
+        completionSummary,
+      },
+    };
+  }
+
+  const scriptIndex = Math.min(existing.turn - 1, SEOUL_FOOD_STREET_SLICE.turnScript.length - 1);
+  const turnScript = SEOUL_FOOD_STREET_SLICE.turnScript[scriptIndex];
+  const evaluation = evaluateTurn(userUtterance, turnScript);
+  const xpDelta = evaluation.rewards.xp;
+  const spDelta = evaluation.rewards.sp;
+  const rpDelta = evaluation.rewards.rp;
+  const objectiveProgressDelta = evaluation.rewards.objectiveProgress;
 
   existing.turn += 1;
   existing.score.xp += xpDelta;
   existing.score.sp += spDelta;
   existing.score.rp += rpDelta;
+  existing.objectiveProgress = Number(
+    Math.min(1, existing.objectiveProgress + objectiveProgressDelta).toFixed(2),
+  );
+  if (evaluation.tier === 'success') {
+    existing.successfulTurns += 1;
+  }
+  existing.npcMood = evaluation.mood;
+  existing.transcript.push({
+    stepId: turnScript.stepId,
+    userUtterance,
+    tier: evaluation.tier,
+    matchedTags: evaluation.matchedTags,
+    missingTags: evaluation.missingTags,
+  });
 
-  const nextLine =
-    existing.turn % 2 === 0
-      ? '좋아요, 맵기는 어느 정도로 할까요?'
-      : '좋아요! 다음 주문도 한국어로 말해 볼까요?';
+  const completedTurns = Math.min(existing.turn - 1, SEOUL_FOOD_STREET_SLICE.objective.requiredTurns);
+  existing.completed = completedTurns >= SEOUL_FOOD_STREET_SLICE.objective.requiredTurns;
+  const passed = objectivePassed(existing);
+
+  const completionSummary = buildCompletionSummary(existing);
+  if (completionSummary) {
+    updateGameSessionFromHangout(existing, completionSummary);
+  }
+
+  const nextLineText = existing.completed
+    ? passed
+      ? SEOUL_FOOD_STREET_SLICE.completion.passedLine
+      : SEOUL_FOOD_STREET_SLICE.completion.retryLine
+    : evaluation.nextLine;
+
+  const tongHint = existing.completed
+    ? passed
+      ? SEOUL_FOOD_STREET_SLICE.completion.tongWrapUpPass
+      : SEOUL_FOOD_STREET_SLICE.completion.tongWrapUpRetry
+    : evaluation.tongHint;
+  const suggestedReplies = existing.completed ? [] : getQuickRepliesForTurn(existing.turn);
+
+  const lastTurn = {
+    stepId: turnScript.stepId,
+    tier: evaluation.tier,
+    matchedTags: evaluation.matchedTags,
+    missingTags: evaluation.missingTags,
+    delta: {
+      xp: xpDelta,
+      sp: spDelta,
+      rp: rpDelta,
+      objectiveProgressDelta,
+    },
+  };
 
   const response = {
     accepted: true,
     feedback: {
-      tongHint: matched
-        ? 'Great phrasing. You used practical ordering language.'
-        : 'Try adding a food word plus polite ending like 주세요.',
-      objectiveProgressDelta: matched ? 0.25 : 0.1,
+      tongHint,
+      objectiveProgressDelta,
+      objectiveProgress: buildObjectiveProgressState(existing.objectiveProgress),
+      suggestedReplies,
     },
     nextLine: {
       speaker: 'character',
-      text: nextLine,
+      text: nextLineText,
     },
     state: {
       turn: existing.turn,
-      score: { ...existing.score },
+      score: cloneScore(existing.score),
+      objectiveProgress: buildObjectiveProgressState(existing.objectiveProgress),
     },
+    currentObjective: buildCurrentObjective(existing.objectiveProgress, existing.successfulTurns),
+    locationMeta: buildLocationMeta(),
+    npc: buildNpcState(existing.npcMood),
+    character: buildCharacterPayload(existing.npcMood),
+    turnState: buildTurnState(existing, lastTurn),
+    completion: {
+      isCompleted: existing.completed,
+      completionSignal: existing.completed
+        ? passed
+          ? 'objective_validated'
+          : 'scene_complete_retry_available'
+        : null,
+    },
+    completionSummary,
   };
 
   state.sessions.set(sceneSessionId, existing);
@@ -309,17 +808,21 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/v1/game/start-or-resume' && req.method === 'POST') {
       const body = await readJsonBody(req);
       const userId = body.userId || 'demo-user-1';
-      const sessionId = `sess_${Math.random().toString(36).slice(2, 10)}`;
-      const response = {
-        ...FIXTURES.gameStart,
-        sessionId,
-      };
-      state.sessions.set(sessionId, {
-        userId,
-        turn: 1,
-        score: { xp: 0, sp: 0, rp: 0 },
-      });
-      jsonResponse(res, 200, response);
+      const existingSessionId = state.gameSessionByUser.get(userId);
+      let session = existingSessionId ? state.gameSessions.get(existingSessionId) : null;
+      let resumed = false;
+
+      if (session) {
+        resumed = true;
+        if (body.profile) {
+          session.profile = body.profile;
+          state.gameSessions.set(session.sessionId, session);
+        }
+      } else {
+        session = createGameSession(userId, body.profile);
+      }
+
+      jsonResponse(res, 200, buildGameStartResponse(session, resumed));
       return;
     }
 
@@ -341,28 +844,57 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/v1/scenes/hangout/start' && req.method === 'POST') {
       const body = await readJsonBody(req);
-      const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
-      const score = { xp: 0, sp: 0, rp: 0 };
-      state.sessions.set(sceneSessionId, {
-        userId: body.userId || 'demo-user-1',
-        turn: 1,
-        score: { ...score },
-      });
+      const userId = body.userId || 'demo-user-1';
+      const gameSessionIdCandidate =
+        body.gameSessionId || body.sessionId || state.gameSessionByUser.get(userId);
+      const gameSessionId = state.gameSessions.has(gameSessionIdCandidate)
+        ? gameSessionIdCandidate
+        : null;
+      const session = createHangoutSession({ userId, gameSessionId });
+
       jsonResponse(res, 200, {
-        sceneSessionId,
+        sceneSessionId: session.sceneSessionId,
         mode: 'hangout',
         uiPolicy: {
           immersiveFirstPerson: true,
           allowOnlyDialogueAndHints: true,
         },
         state: {
-          turn: 1,
-          score,
+          turn: session.turn,
+          score: cloneScore(session.score),
         },
         initialLine: {
           speaker: 'character',
-          text: '어서 와요! 오늘은 뭐 먹고 싶어요?',
+          text: SEOUL_FOOD_STREET_SLICE.turnScript[0].prompts.start,
         },
+        initialLines: [
+          {
+            speaker: 'character',
+            text: SEOUL_FOOD_STREET_SLICE.turnScript[0].prompts.start,
+          },
+          {
+            speaker: 'tong',
+            text: 'Pick a dish with 주세요 first, then set spice level.',
+          },
+        ],
+        city: SEOUL_FOOD_STREET_SLICE.city,
+        sceneId: SEOUL_FOOD_STREET_SLICE.sceneId,
+        location: SEOUL_FOOD_STREET_SLICE.location.locationId,
+        locationMeta: buildLocationMeta(),
+        currentObjective: buildCurrentObjective(session.objectiveProgress, session.successfulTurns),
+        npc: buildNpcState(session.npcMood),
+        character: buildCharacterPayload(session.npcMood),
+        tongHint: 'Use menu + 주세요 first, then set spice level to complete this slice.',
+        quickReplies: getQuickRepliesForTurn(session.turn),
+        turnState: buildTurnState(session),
+        objectiveProgress: buildObjectiveProgressState(session.objectiveProgress),
+        objectiveId: SEOUL_FOOD_STREET_SLICE.objective.objectiveId,
+        objectiveSummary: SEOUL_FOOD_STREET_SLICE.objective.summary,
+        completion: {
+          isCompleted: false,
+          completionSignal: null,
+        },
+        completionSummary: null,
       });
       return;
     }

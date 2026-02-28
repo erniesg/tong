@@ -112,6 +112,132 @@ export type LocationId =
   | 'convenience_store'
   | 'subway_hub'
   | 'practice_studio';
+export type ProficiencyLevel = 'none' | 'beginner' | 'intermediate' | 'advanced' | 'native';
+export type SceneSpeaker = 'character' | 'tong' | 'you';
+
+export interface GameProfile {
+  nativeLanguage: string;
+  targetLanguages: Array<'ko' | 'ja' | 'zh'>;
+  proficiency: Partial<Record<'ko' | 'ja' | 'zh', ProficiencyLevel>>;
+}
+
+export interface GameProgression extends ScoreState {
+  currentMasteryLevel?: number;
+}
+
+export interface StartOrResumeGameResponse {
+  sessionId: string;
+  city: CityId;
+  sceneId: string;
+  location?: LocationId;
+  mode?: 'hangout' | 'learn';
+  actions?: string[];
+  profile?: GameProfile;
+  progression?: GameProgression;
+}
+
+export interface ObjectiveTargets {
+  vocabulary: string[];
+  grammar: string[];
+  sentenceStructures: string[];
+}
+
+export interface ObjectiveCompletionCriteria {
+  requiredTurns: number;
+  requiredAccuracy: number;
+}
+
+export interface ObjectiveNextResponse {
+  objectiveId: string;
+  level: number;
+  mode: 'hangout' | 'learn';
+  coreTargets: ObjectiveTargets;
+  personalizedTargets?: Array<{ lemma: string; source: string }>;
+  completionCriteria: ObjectiveCompletionCriteria;
+}
+
+export interface ObjectiveProgressState {
+  current?: number;
+  target?: number;
+  percent?: number;
+  label?: string;
+}
+
+export interface SceneLine {
+  speaker: SceneSpeaker;
+  text: string;
+  speakerName?: string;
+}
+
+export interface SceneCharacter {
+  id?: string;
+  name?: string;
+  role?: string;
+  mood?: string;
+  avatarEmoji?: string;
+}
+
+export interface SceneCompletionSummary {
+  objectiveId?: string;
+  status?: string;
+  completionSignal?: string;
+  turnsTaken?: number;
+  successfulTurns?: number;
+  objectiveProgress?: number;
+  scoreDelta?: ScoreState;
+}
+
+export interface HangoutState {
+  turn: number;
+  score: ScoreState;
+  objectiveProgress?: ObjectiveProgressState;
+}
+
+export interface StartHangoutResponse {
+  sceneSessionId: string;
+  mode?: 'hangout';
+  city?: CityId;
+  location?: LocationId;
+  sceneId?: string;
+  objectiveId?: string;
+  objectiveSummary?: string;
+  character?: SceneCharacter;
+  npc?: SceneCharacter;
+  initialLine: SceneLine;
+  initialLines?: SceneLine[];
+  state: HangoutState;
+  objectiveProgress?: ObjectiveProgressState;
+  quickReplies?: string[];
+  completion?: {
+    isCompleted: boolean;
+    completionSignal: string | null;
+  };
+  completionSummary?: SceneCompletionSummary | null;
+  uiPolicy: {
+    immersiveFirstPerson: boolean;
+    allowOnlyDialogueAndHints: boolean;
+  };
+}
+
+export interface RespondHangoutResponse {
+  accepted: boolean;
+  feedback: {
+    tongHint: string;
+    objectiveProgressDelta: number;
+    objectiveProgress?: ObjectiveProgressState;
+    suggestedReplies?: string[];
+  };
+  nextLine: SceneLine;
+  nextLines?: SceneLine[];
+  character?: SceneCharacter;
+  npc?: SceneCharacter;
+  completion?: {
+    isCompleted: boolean;
+    completionSignal: string | null;
+  };
+  completionSummary?: SceneCompletionSummary | null;
+  state: HangoutState;
+}
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -142,12 +268,7 @@ export function fetchDictionary(term: string, lang: 'ko' | 'ja' | 'zh' = 'ko') {
 }
 
 export function startOrResumeGame() {
-  return apiFetch<{
-    sessionId: string;
-    city: 'seoul' | 'tokyo' | 'shanghai';
-    sceneId: string;
-    actions: string[];
-  }>('/api/v1/game/start-or-resume', {
+  return apiFetch<StartOrResumeGameResponse>('/api/v1/game/start-or-resume', {
     method: 'POST',
     body: JSON.stringify({
       userId: 'demo-user-1',
@@ -181,20 +302,7 @@ export function fetchObjectiveNext(params: ObjectiveNextParams = {}) {
     lang: params.lang || 'ko',
   });
 
-  return apiFetch<{
-    objectiveId: string;
-    level: number;
-    mode: 'hangout' | 'learn';
-    coreTargets: {
-      vocabulary: string[];
-      grammar: string[];
-      sentenceStructures: string[];
-    };
-    completionCriteria: {
-      requiredTurns: number;
-      requiredAccuracy: number;
-    };
-  }>(`/api/v1/objectives/next?${search.toString()}`);
+  return apiFetch<ObjectiveNextResponse>(`/api/v1/objectives/next?${search.toString()}`);
 }
 
 interface StartHangoutParams {
@@ -207,12 +315,7 @@ interface StartHangoutParams {
 
 export function startHangout(params: StartHangoutParams) {
   const { objectiveId, userId, city, location, lang } = params;
-  return apiFetch<{
-    sceneSessionId: string;
-    initialLine: { speaker: 'character' | 'tong'; text: string };
-    state: { turn: number; score: ScoreState };
-    uiPolicy: { immersiveFirstPerson: boolean; allowOnlyDialogueAndHints: boolean };
-  }>('/api/v1/scenes/hangout/start', {
+  return apiFetch<StartHangoutResponse>('/api/v1/scenes/hangout/start', {
     method: 'POST',
     body: JSON.stringify({
       userId: userId || 'demo-user-1',
@@ -225,12 +328,7 @@ export function startHangout(params: StartHangoutParams) {
 }
 
 export function respondHangout(sceneSessionId: string, userUtterance: string) {
-  return apiFetch<{
-    accepted: boolean;
-    feedback: { tongHint: string; objectiveProgressDelta: number };
-    nextLine: { speaker: 'character' | 'tong'; text: string };
-    state: { turn: number; score: ScoreState };
-  }>('/api/v1/scenes/hangout/respond', {
+  return apiFetch<RespondHangoutResponse>('/api/v1/scenes/hangout/respond', {
     method: 'POST',
     body: JSON.stringify({
       sceneSessionId,
