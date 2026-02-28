@@ -19,6 +19,7 @@ Fresh Tong MV3 extension for YouTube overlay demo testing.
 - English lane
 4. Click any token chip and verify dictionary panel updates.
 5. Navigate between YouTube pages/videos and confirm overlay survives SPA transitions.
+6. Toggle overlay using popup button or keyboard shortcut `Alt+T`.
 
 ## Notes
 

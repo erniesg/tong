@@ -23,10 +23,42 @@
   backdrop-filter: blur(6px);
 }
 
+.tong-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
 .tong-status {
   font-size: 11px;
   color: #9bb8d8;
-  margin-bottom: 6px;
+  margin: 0;
+}
+
+.tong-toggle {
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.12);
+  color: #d7ecff;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.tong-toggle:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+#tong-overlay-root.tong-overlay-disabled .tong-script,
+#tong-overlay-root.tong-overlay-disabled .tong-romanized,
+#tong-overlay-root.tong-overlay-disabled .tong-english,
+#tong-overlay-root.tong-overlay-disabled .tong-token-row,
+#tong-overlay-root.tong-overlay-disabled .tong-dictionary {
+  display: none;
 }
 
 .tong-script {

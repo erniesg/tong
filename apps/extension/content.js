@@ -5,6 +5,7 @@
   const DEFAULT_API_BASE = 'http://localhost:8787';
   const API_BASE_KEY = 'tongApiBase';
   const LANG = 'ko';
+  const FIXTURE_CYCLE_PADDING_MS = 2000;
   const LOG_PREFIX = '[TongExt]';
 
   function log(...args) {
@@ -26,9 +27,14 @@
       this.videoId = null;
       this.captions = [];
       this.activeSegment = null;
+      this.activeSegmentIndex = -1;
+      this.overlayEnabled = true;
+      this.hasShownLoopModeStatus = false;
       this.dictionaryCache = new Map();
 
       this.overlayRoot = null;
+      this.toolbar = null;
+      this.toggleButton = null;
       this.scriptLine = null;
       this.romanizedLine = null;
       this.englishLine = null;
@@ -45,6 +51,8 @@
       this.onTimeUpdate = this.onTimeUpdate.bind(this);
       this.handleNavigationSignal = this.handleNavigationSignal.bind(this);
       this.handleStorageChange = this.handleStorageChange.bind(this);
+      this.handleKeydown = this.handleKeydown.bind(this);
+      this.handleRuntimeMessage = this.handleRuntimeMessage.bind(this);
 
       log('Content script booted on', window.location.href);
     }
@@ -55,6 +63,7 @@
       log('API base:', this.apiBase);
       this.installNavigationHooks();
       this.installStorageHooks();
+      this.installControlHooks();
       await this.syncWithPageState();
       log('Initialization complete');
     }
@@ -77,6 +86,59 @@
       }
       chrome.storage.onChanged.addListener(this.handleStorageChange);
       log('Storage hook installed');
+    }
+
+    installControlHooks() {
+      window.addEventListener('keydown', this.handleKeydown);
+      log('Keyboard shortcut installed (Alt+T)');
+
+      if (chrome && chrome.runtime && chrome.runtime.onMessage) {
+        chrome.runtime.onMessage.addListener(this.handleRuntimeMessage);
+        log('Runtime message hook installed');
+      }
+    }
+
+    handleKeydown(event) {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+        return;
+      }
+      if (String(event.key || '').toLowerCase() !== 't') {
+        return;
+      }
+
+      event.preventDefault();
+      this.toggleOverlayEnabled('keyboard');
+    }
+
+    handleRuntimeMessage(message, _sender, sendResponse) {
+      if (!message || typeof message !== 'object') {
+        return false;
+      }
+
+      if (message.type === 'TOGGLE_TONG_OVERLAY') {
+        const enabled = this.toggleOverlayEnabled('popup');
+        sendResponse({ ok: true, enabled });
+        return false;
+      }
+
+      if (message.type === 'SET_TONG_OVERLAY') {
+        const enabled = this.setOverlayEnabled(Boolean(message.enabled), 'popup');
+        sendResponse({ ok: true, enabled });
+        return false;
+      }
+
+      if (message.type === 'GET_TONG_OVERLAY_STATE') {
+        sendResponse({
+          ok: true,
+          enabled: this.overlayEnabled,
+          videoId: this.videoId,
+          captionCount: this.captions.length,
+          activeSegmentIndex: this.activeSegmentIndex,
+        });
+        return false;
+      }
+
+      return false;
     }
 
     async handleStorageChange(changes, areaName) {
@@ -153,6 +215,7 @@
         this.videoId = null;
         this.captions = [];
         this.activeSegment = null;
+        this.activeSegmentIndex = -1;
         this.detachVideoListeners();
         this.ensureOverlay();
         this.setVisibility(false);
@@ -236,8 +299,18 @@
         const card = document.createElement('div');
         card.className = 'tong-overlay-card';
 
+        this.toolbar = document.createElement('div');
+        this.toolbar.className = 'tong-toolbar';
+
         this.statusLine = document.createElement('div');
         this.statusLine.className = 'tong-status';
+
+        this.toggleButton = document.createElement('button');
+        this.toggleButton.type = 'button';
+        this.toggleButton.className = 'tong-toggle';
+        this.toggleButton.addEventListener('click', () => {
+          this.toggleOverlayEnabled('in-page');
+        });
 
         this.scriptLine = document.createElement('div');
         this.scriptLine.className = 'tong-script';
@@ -254,7 +327,10 @@
         this.dictionaryPanel = document.createElement('div');
         this.dictionaryPanel.className = 'tong-dictionary tong-overlay-hidden';
 
-        card.appendChild(this.statusLine);
+        this.toolbar.appendChild(this.statusLine);
+        this.toolbar.appendChild(this.toggleButton);
+
+        card.appendChild(this.toolbar);
         card.appendChild(this.scriptLine);
         card.appendChild(this.romanizedLine);
         card.appendChild(this.englishLine);
@@ -269,6 +345,8 @@
         container.appendChild(this.overlayRoot);
         log('Overlay attached to container:', container.id || container.className || container.tagName);
       }
+
+      this.syncToggleButtonLabel();
     }
 
     async reloadCaptions(videoId) {
@@ -283,6 +361,8 @@
 
       this.setStatus(`Loading captions for ${videoId}...`);
       this.activeSegment = null;
+      this.activeSegmentIndex = -1;
+      this.hasShownLoopModeStatus = false;
       this.renderSegment(null);
       this.hideDictionaryPanel();
 
@@ -334,44 +414,131 @@
       log('Status:', text);
     }
 
+    syncToggleButtonLabel() {
+      if (!this.toggleButton) return;
+      this.toggleButton.textContent = this.overlayEnabled ? 'Overlay On' : 'Overlay Off';
+    }
+
+    setOverlayEnabled(enabled, source = 'unknown') {
+      const nextEnabled = Boolean(enabled);
+      if (nextEnabled === this.overlayEnabled) {
+        this.syncToggleButtonLabel();
+        return this.overlayEnabled;
+      }
+
+      this.overlayEnabled = nextEnabled;
+      this.syncToggleButtonLabel();
+      if (this.overlayRoot) {
+        this.overlayRoot.classList.toggle('tong-overlay-disabled', !this.overlayEnabled);
+      }
+
+      log('Overlay', this.overlayEnabled ? 'enabled' : 'disabled', `(source: ${source})`);
+
+      if (this.overlayEnabled) {
+        this.setStatus('Overlay resumed.');
+        this.onTimeUpdate();
+      } else {
+        this.renderSegment(null);
+        this.hideDictionaryPanel();
+        this.setStatus('Overlay paused. Click toggle or press Alt+T.');
+      }
+
+      return this.overlayEnabled;
+    }
+
+    toggleOverlayEnabled(source = 'unknown') {
+      return this.setOverlayEnabled(!this.overlayEnabled, source);
+    }
+
     setVisibility(visible) {
       if (!this.overlayRoot) return;
       this.overlayRoot.classList.toggle('tong-overlay-hidden-root', !visible);
     }
 
     onTimeUpdate() {
-      if (!this.video || this.captions.length === 0) {
+      if (!this.overlayEnabled || !this.video || this.captions.length === 0) {
         return;
       }
 
       const currentMs = Math.floor(this.video.currentTime * 1000);
-      const next = this.findActiveSegment(currentMs);
-      const sameSegment =
-        this.activeSegment && next && this.activeSegment.startMs === next.startMs && this.activeSegment.endMs === next.endMs;
-
-      if (sameSegment) {
+      const next = this.resolveSegmentForTime(currentMs);
+      if (!next) {
+        if (this.activeSegmentIndex === -1) {
+          return;
+        }
+        this.activeSegment = null;
+        this.activeSegmentIndex = -1;
+        this.renderSegment(null);
         return;
       }
 
-      if (!this.activeSegment && !next) {
+      if (this.activeSegmentIndex === next.index) {
         return;
       }
 
-      this.activeSegment = next;
-      this.renderSegment(next);
+      this.activeSegment = next.segment;
+      this.activeSegmentIndex = next.index;
+      this.renderSegment(next.segment, next);
+
+      if (next.looped && !this.hasShownLoopModeStatus) {
+        this.hasShownLoopModeStatus = true;
+        this.setStatus(
+          `Loaded ${this.captions.length} caption segments (fixture loop mode active).`,
+        );
+      }
     }
 
-    findActiveSegment(currentMs) {
+    findSegmentIndex(currentMs) {
       for (let i = 0; i < this.captions.length; i += 1) {
         const segment = this.captions[i];
         if (currentMs >= segment.startMs && currentMs <= segment.endMs) {
-          return segment;
+          return i;
         }
       }
-      return null;
+      return -1;
     }
 
-    renderSegment(segment) {
+    resolveSegmentForTime(currentMs) {
+      const exactIndex = this.findSegmentIndex(currentMs);
+      if (exactIndex >= 0) {
+        return {
+          index: exactIndex,
+          segment: this.captions[exactIndex],
+          looped: false,
+          normalizedMs: currentMs,
+        };
+      }
+
+      if (this.captions.length === 0) {
+        return null;
+      }
+
+      // Fixture captions are short. Loop them across full playback timeline.
+      const firstStart = Number(this.captions[0].startMs || 0);
+      const lastEnd = Number(this.captions[this.captions.length - 1].endMs || firstStart + 1);
+      const cycleMs = Math.max(lastEnd + FIXTURE_CYCLE_PADDING_MS, firstStart + 1000);
+      const normalizedMs = currentMs % cycleMs;
+
+      let loopIndex = this.findSegmentIndex(normalizedMs);
+      if (loopIndex < 0) {
+        // Hold the nearest previous segment in the cycle to avoid blank overlay windows.
+        loopIndex = 0;
+        for (let i = 0; i < this.captions.length; i += 1) {
+          if (normalizedMs >= this.captions[i].startMs) {
+            loopIndex = i;
+          }
+        }
+      }
+
+      return {
+        index: loopIndex,
+        segment: this.captions[loopIndex],
+        looped: true,
+        normalizedMs,
+      };
+    }
+
+    renderSegment(segment, meta) {
       if (!this.scriptLine || !this.romanizedLine || !this.englishLine || !this.tokenRow) {
         return;
       }
@@ -389,7 +556,16 @@
       this.scriptLine.textContent = segment.surface || '';
       this.romanizedLine.textContent = segment.romanized || '';
       this.englishLine.textContent = segment.english || '';
-      log('Render segment:', `${segment.startMs}-${segment.endMs}`, segment.surface || '(empty)');
+      if (meta && meta.looped) {
+        log(
+          'Render segment (looped):',
+          `${segment.startMs}-${segment.endMs}`,
+          `normalized=${meta.normalizedMs}ms`,
+          segment.surface || '(empty)',
+        );
+      } else {
+        log('Render segment:', `${segment.startMs}-${segment.endMs}`, segment.surface || '(empty)');
+      }
 
       const tokens = Array.isArray(segment.tokens) ? segment.tokens : [];
       tokens.forEach((token) => {

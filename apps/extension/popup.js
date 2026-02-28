@@ -16,6 +16,7 @@
   const saveButton = document.getElementById('saveApiBase');
   const testButton = document.getElementById('testConnection');
   const openYouTube = document.getElementById('openYouTube');
+  const toggleOverlay = document.getElementById('toggleOverlay');
 
   function normalizeApiBase(value) {
     if (typeof value !== 'string') return '';
@@ -53,6 +54,11 @@
       throw new Error('health_payload_invalid');
     }
     return payload;
+  }
+
+  async function getActiveTab() {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tabs && tabs.length > 0 ? tabs[0] : null;
   }
 
   async function init() {
@@ -97,6 +103,27 @@
     log('Opening YouTube test video');
     await chrome.tabs.create({ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' });
     window.close();
+  });
+
+  toggleOverlay.addEventListener('click', async () => {
+    const tab = await getActiveTab();
+    if (!tab || !tab.id || !tab.url || !tab.url.includes('youtube.com')) {
+      setStatus('Open an active YouTube watch tab first.', 'warn');
+      return;
+    }
+
+    try {
+      log('Sending TOGGLE_TONG_OVERLAY to tab', tab.id);
+      const response = await chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_TONG_OVERLAY' });
+      if (response && response.ok) {
+        setStatus(`Overlay ${response.enabled ? 'enabled' : 'disabled'} in active tab.`, 'ok');
+      } else {
+        setStatus('Toggle request did not return overlay state.', 'warn');
+      }
+    } catch (err) {
+      warn('Failed to toggle overlay in active tab:', err);
+      setStatus('Could not reach content script. Refresh the YouTube tab once.', 'warn');
+    }
   });
 
   void init();
