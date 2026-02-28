@@ -1,0 +1,55 @@
+{
+  "windowStartIso": "2026-02-25T00:00:00.000Z",
+  "windowEndIso": "2026-02-28T00:00:00.000Z",
+  "generatedAtIso": "2026-02-28T12:00:00.000Z",
+  "sourceItems": [
+    {
+      "id": "yt_001",
+      "source": "youtube",
+      "title": "K-variety late night snack challenge",
+      "lang": "ko",
+      "minutes": 31,
+      "text": "오늘 떡볶이 주문 메뉴 라면 정말 맛있다 매운 음식 먹자"
+    },
+    {
+      "id": "yt_002",
+      "source": "youtube",
+      "title": "Dance practice backstage vlog",
+      "lang": "ko",
+      "minutes": 24,
+      "text": "무대 연습 노래 연습 친구 지하철 역에서 만나자"
+    },
+    {
+      "id": "yt_003",
+      "source": "youtube",
+      "title": "Shanghai street food short",
+      "lang": "zh",
+      "minutes": 18,
+      "text": "今天吃火锅 菜单 点餐 很辣 朋友 在街上 聊天"
+    },
+    {
+      "id": "sp_001",
+      "source": "spotify",
+      "title": "밤 산책",
+      "lang": "ko",
+      "minutes": 19,
+      "text": "밤 거리 친구 카페 커피 연습 노래"
+    },
+    {
+      "id": "sp_002",
+      "source": "spotify",
+      "title": "练习室火花",
+      "lang": "zh",
+      "minutes": 17,
+      "text": "舞台 练习 火 花 朋友 地铁 站"
+    },
+    {
+      "id": "sp_003",
+      "source": "spotify",
+      "title": "Tokyo cafe line",
+      "lang": "ja",
+      "minutes": 14,
+      "text": "カフェ メニュー コーヒー 友達 駅 街"
+    }
+  ]
+}

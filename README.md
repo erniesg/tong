@@ -37,6 +37,28 @@ Run local demo contract smoke check:
 npm run demo:smoke
 ```
 
+Run demo services:
+```bash
+npm --prefix apps/server install
+npm --prefix apps/client install
+npm run dev:server
+npm run dev:client
+```
+
+Run mock ingestion snapshot generation:
+```bash
+npm run ingest:mock
+```
+
+Demo review routes:
+- `http://localhost:3000/overlay`
+- `http://localhost:3000/game`
+- `http://localhost:3000/insights`
+
+Chrome extension demo path:
+- Load unpacked extension from `apps/extension` in `chrome://extensions`
+- Open any YouTube watch page to see Tong overlay lanes
+
 Launch workstream terminals in parallel (tmux, if installed):
 ```bash
 npm run launch:agents
