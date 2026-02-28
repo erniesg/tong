@@ -148,13 +148,7 @@ const LOCATION_CHARACTERS_BY_CITY: Record<CityId, Record<LocationId, SceneCharac
   },
 };
 
-const DEFAULT_PRESET_RESPONSES: PresetResponse[] = [
-  { text: '떡볶이 주세요.', note: 'Order tteokbokki' },
-  { text: '보통맛으로 해주세요.', note: 'Set spice level' },
-  { text: '한 개 주세요, 감사합니다.', note: 'Confirm quantity politely' },
-  { text: '포장해 주세요.', note: 'Ask for takeout' },
-  { text: '물도 주세요.', note: 'Ask for water' },
-];
+const EMPTY_PRESET_RESPONSES: PresetResponse[] = [];
 
 const ACTIVE_USER_ID_STORAGE_KEY = 'tong_active_user_id';
 const GAME_LOGO_PATH = '/assets/app/logo_transparent.png';
@@ -205,17 +199,27 @@ function mergeCharacterPayload(base: SceneCharacter, payload?: SceneCharacter): 
   };
 }
 
-function getCharacterAvatarPath(value?: SceneCharacter): string | null {
-  if (!value) return null;
-  if (value.assetKey) return `/assets/characters/${value.assetKey}`;
+function getCharacterAvatarPaths(value?: SceneCharacter): string[] {
+  if (!value) return [];
+  const options: string[] = [];
+  if (value.assetKey) options.push(`/assets/characters/${value.assetKey}`);
 
-  if (value.id === 'npc_haeun') return '/assets/characters/hauen/haeun.png';
-  if (value.id === 'npc_jin' || value.id === 'npc_ding_man') return '/assets/characters/ding_man/ding_man.png';
+  const safeName = (value.name || '').toLowerCase().trim();
+  const safeId = (value.id || '').toLowerCase().trim();
 
-  const safeName = (value.name || '').toLowerCase();
-  if (safeName === 'haeun') return '/assets/characters/hauen/haeun.png';
-  if (safeName === 'jin' || safeName === 'ding') return '/assets/characters/ding_man/ding_man.png';
-  return null;
+  if (safeId === 'npc_haeun' || safeName === 'haeun') {
+    options.push('/assets/characters/haeun/haeun.png');
+    options.push('/assets/characters/hauen/haeun.png');
+  }
+
+  if (safeId === 'npc_jin' || safeId === 'npc_ding_man' || safeName === 'jin' || safeName === 'ding') {
+    // Prefer explicit Jin uploads first, then legacy ding_man fallback.
+    options.push('/assets/characters/jin/jin.png');
+    options.push('/assets/characters/ding_man/avatar.png');
+    options.push('/assets/characters/ding_man/ding_man.png');
+  }
+
+  return [...new Set(options)];
 }
 
 function getCharacterForCityLocation(city: CityId, location: LocationId): SceneCharacter {
@@ -279,9 +283,10 @@ export default function GamePageClient({
 }: GamePageClientProps) {
   const cityTrackRef = useRef<HTMLDivElement | null>(null);
   const openingVideoRef = useRef<HTMLVideoElement | null>(null);
+  const autoLaunchHandledRef = useRef(false);
 
   const [entryPhase, setEntryPhase] = useState<EntryPhase>(initialEntryPhase);
-  const [activeUserId, setActiveUserId] = useState('demo-user-1');
+  const [activeUserId, setActiveUserId] = useState(() => createSessionUserId());
   const [hasSavedUserId, setHasSavedUserId] = useState(false);
   const [showSetupPanel, setShowSetupPanel] = useState(false);
 
@@ -307,11 +312,14 @@ export default function GamePageClient({
   const [status, setStatus] = useState('Set your language baseline, then start your first hangout challenge.');
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
   const [userUtterance, setUserUtterance] = useState('');
-  const [presetResponses, setPresetResponses] = useState<PresetResponse[]>(DEFAULT_PRESET_RESPONSES);
+  const [presetResponses, setPresetResponses] = useState<PresetResponse[]>(EMPTY_PRESET_RESPONSES);
   const [sceneLines, setSceneLines] = useState<SceneLine[]>([]);
   const [sceneLineIndex, setSceneLineIndex] = useState(0);
   const [awaitingUserTurn, setAwaitingUserTurn] = useState(false);
   const [pendingUserLine, setPendingUserLine] = useState<string | null>(null);
+  const [tongHint, setTongHint] = useState<string | null>(null);
+  const [typedDialogueText, setTypedDialogueText] = useState('');
+  const [dialogueTypeDone, setDialogueTypeDone] = useState(true);
 
   const [learnSessions, setLearnSessions] = useState<LearnSession[]>([]);
   const [learnMessage, setLearnMessage] = useState('');
@@ -321,6 +329,7 @@ export default function GamePageClient({
   const [loadingLearn, setLoadingLearn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  const [avatarPathIndex, setAvatarPathIndex] = useState(0);
   const [needsIntroTap, setNeedsIntroTap] = useState(false);
 
   const cityConfig = CITY_BY_ID[city];
@@ -328,7 +337,8 @@ export default function GamePageClient({
   const validatedHangouts = routeState?.validatedHangouts ?? progressionLoop?.missionGate.validatedHangouts ?? 0;
   const hasCompletedFirstHangout = validatedHangouts >= 1;
   const showSceneOneBackdrop = mode === 'hangout' && !hasCompletedFirstHangout;
-  const characterAvatarSrc = getCharacterAvatarPath(character);
+  const characterAvatarOptions = getCharacterAvatarPaths(character);
+  const characterAvatarSrc = characterAvatarOptions[avatarPathIndex] || null;
   const sceneOneBackdropLayers =
     city === 'seoul' ? [`url(${SEOUL_FIRST_SCENE_BACKDROP})`] : [`url(${cityConfig.backdropImage})`];
   const sceneOneBackdropStyle = showSceneOneBackdrop
@@ -352,6 +362,7 @@ export default function GamePageClient({
     (sceneSessionId ? 'Tap start from World if you want to relaunch this scene.' : 'Open World and start your first hangout.');
   const canTapContinue = Boolean(activeSceneLine) && !sendingTurn && !pendingUserLine;
   const canAnswerTurn = awaitingUserTurn && Boolean(sceneSessionId) && !sendingTurn;
+  const isTypewriting = canTapContinue && !dialogueTypeDone && !pendingUserLine;
 
   useEffect(() => {
     const track = cityTrackRef.current;
@@ -366,7 +377,8 @@ export default function GamePageClient({
   }, [autoNewGame]);
 
   useEffect(() => {
-    if (!autoLaunchHangout) return;
+    if (!autoLaunchHangout || autoLaunchHandledRef.current) return;
+    autoLaunchHandledRef.current = true;
     const nextUserId = beginNewGame('playing');
     void quickStartHangout(nextUserId);
   }, [autoLaunchHangout]);
@@ -411,7 +423,32 @@ export default function GamePageClient({
 
   useEffect(() => {
     setAvatarLoadFailed(false);
-  }, [characterAvatarSrc]);
+    setAvatarPathIndex(0);
+  }, [character.id, character.name, character.assetKey]);
+
+  useEffect(() => {
+    if (!activeDialogueText || pendingUserLine || !activeSceneLine || activeSceneLine.speaker === 'you') {
+      setTypedDialogueText(activeDialogueText);
+      setDialogueTypeDone(true);
+      return;
+    }
+
+    setTypedDialogueText('');
+    setDialogueTypeDone(false);
+    const source = activeDialogueText;
+    const stepSize = Math.max(1, Math.ceil(source.length / 46));
+    let index = 0;
+    const timer = window.setInterval(() => {
+      index = Math.min(source.length, index + stepSize);
+      setTypedDialogueText(source.slice(0, index));
+      if (index >= source.length) {
+        setDialogueTypeDone(true);
+        window.clearInterval(timer);
+      }
+    }, 28);
+
+    return () => window.clearInterval(timer);
+  }, [activeDialogueText, activeSceneLine, pendingUserLine]);
 
   function resetSceneState(nextLocation: LocationId, nextCity: CityId = city) {
     setSceneSessionId(null);
@@ -422,8 +459,11 @@ export default function GamePageClient({
     setSceneLineIndex(0);
     setAwaitingUserTurn(false);
     setPendingUserLine(null);
+    setTongHint(null);
     setUserUtterance('');
-    setPresetResponses(DEFAULT_PRESET_RESPONSES);
+    setPresetResponses(EMPTY_PRESET_RESPONSES);
+    setTypedDialogueText('');
+    setDialogueTypeDone(true);
     setCharacter(getCharacterForCityLocation(nextCity, nextLocation));
   }
 
@@ -520,24 +560,39 @@ export default function GamePageClient({
   }
 
   function applyServerReplies(replies?: string[]) {
-    if (!replies?.length) return;
+    if (!replies?.length) {
+      setPresetResponses(EMPTY_PRESET_RESPONSES);
+      return;
+    }
     setPresetResponses(replies.slice(0, 6).map((text) => ({ text, note: 'Suggested reply' })));
   }
 
   function mergeIncomingLines(lines: SceneLine[], unlockInputAfter = true) {
     const filteredLines = lines.filter((line) => line && line.text && line.text.trim());
-    const dialogueLines = lineToDialogue(filteredLines);
+    const tongLines = filteredLines.filter((line) => line.speaker === 'tong');
+    if (tongLines.length > 0) {
+      const latestHint = tongLines[tongLines.length - 1];
+      setTongHint(latestHint?.text?.trim() || null);
+    }
+
+    const spokenLines = filteredLines.filter((line) => line.speaker !== 'tong');
+    const dialogueLines = lineToDialogue(spokenLines);
     if (dialogueLines.length) {
       setMessages((prev) => [...prev, ...dialogueLines]);
     }
     setPendingUserLine(null);
     setSceneLineIndex(0);
-    setSceneLines(filteredLines);
-    setAwaitingUserTurn(filteredLines.length === 0 && unlockInputAfter);
+    setSceneLines(spokenLines);
+    setAwaitingUserTurn(spokenLines.length === 0 && unlockInputAfter);
   }
 
   function handleTapToContinue() {
     if (!canTapContinue) return;
+    if (isTypewriting) {
+      setTypedDialogueText(activeDialogueText);
+      setDialogueTypeDone(true);
+      return;
+    }
     if (sceneLineIndex < sceneLines.length - 1) {
       setSceneLineIndex((current) => current + 1);
       return;
@@ -599,6 +654,7 @@ export default function GamePageClient({
       });
 
       setSceneSessionId(hangout.sceneSessionId);
+      setShowSetupPanel(false);
       setStatus(`${cityConfig.label} hangout live.`);
       setEngineMode(hangout.engineMode || game.engineMode || 'scripted_fallback');
       setCharacter((current) => mergeCharacterPayload(current, hangout.character || hangout.npc));
@@ -614,6 +670,7 @@ export default function GamePageClient({
       }
 
       applyServerReplies(hangout.quickReplies);
+      setTongHint((hangout.tongHint || '').trim() || null);
       const openingLines =
         hangout.initialLines && hangout.initialLines.length > 0 ? hangout.initialLines : [hangout.initialLine];
       mergeIncomingLines(openingLines, true);
@@ -658,6 +715,7 @@ export default function GamePageClient({
       setScore(response.state.score);
       setCharacter((current) => mergeCharacterPayload(current, response.character || response.npc));
       applyServerReplies(response.feedback.suggestedReplies);
+      setTongHint((response.feedback.tongHint || '').trim() || null);
       setRelationshipState(
         response.relationshipState ||
           response.state.relationshipState ||
@@ -973,14 +1031,14 @@ export default function GamePageClient({
           >
             <div className={`mobile-head game-mobile-head ${mode === 'hangout' ? 'game-mobile-head-hangout' : ''}`}>
               <div className={`row game-head-row ${mode === 'hangout' ? 'game-head-row-hangout' : ''}`}>
-                {mode !== 'hangout' && (
-                  <div className="stack" style={{ gap: 4 }}>
-                    <p className="game-mobile-kicker">
-                      {cityConfig.label} · {LOCATION_LABELS[location]}
-                    </p>
-                    <strong>{`${cityConfig.languageLabel} learn`}</strong>
-                  </div>
-                )}
+                <div className="stack" style={{ gap: 4 }}>
+                  <p className="game-mobile-kicker">
+                    {cityConfig.label.toUpperCase()} · {LOCATION_LABELS[location].toUpperCase()}
+                  </p>
+                  <strong>
+                    {mode === 'hangout' ? `${character.name || cityConfig.label} hangout` : `${cityConfig.languageLabel} learn`}
+                  </strong>
+                </div>
                 <div className="game-head-actions">
                   <button
                     className={`secondary game-head-button ${mode === 'learn' ? 'active' : ''}`}
@@ -1138,6 +1196,11 @@ export default function GamePageClient({
               {mode === 'hangout' && (
                 <>
                   <section className="game-hangout-stage">
+                    {tongHint && (
+                      <button className="game-tong-whisper" type="button" onClick={() => setTongHint(null)}>
+                        <strong>Tong:</strong> {tongHint}
+                      </button>
+                    )}
                     <section
                       className={`game-dialogue-panel ${canTapContinue ? 'game-dialogue-panel-tappable' : ''}`}
                       onClick={canTapContinue ? handleTapToContinue : undefined}
@@ -1159,7 +1222,14 @@ export default function GamePageClient({
                                   className="game-character-avatar-image"
                                   src={characterAvatarSrc}
                                   alt={`${character.name || 'Character'} avatar`}
-                                  onError={() => setAvatarLoadFailed(true)}
+                                  onError={() => {
+                                    const nextIndex = avatarPathIndex + 1;
+                                    if (nextIndex < characterAvatarOptions.length) {
+                                      setAvatarPathIndex(nextIndex);
+                                      return;
+                                    }
+                                    setAvatarLoadFailed(true);
+                                  }}
                                 />
                               ) : (
                                 character.avatarEmoji || selectedLang.toUpperCase()
@@ -1169,27 +1239,32 @@ export default function GamePageClient({
                           <strong className="game-dialogue-speaker-name">{activeSpeakerLabel}</strong>
                         </div>
                         <span className="game-dialogue-continue">
-                          {canTapContinue ? 'Tap to continue' : canAnswerTurn ? 'Your turn' : '...'}
+                          {canTapContinue ? (isTypewriting ? 'Tap to reveal' : 'Tap to continue') : canAnswerTurn ? 'Your turn' : '...'}
                         </span>
                       </div>
-                      <p className="game-dialogue-text">{activeDialogueText}</p>
+                      <p className="game-dialogue-text">
+                        {isTypewriting ? typedDialogueText : activeDialogueText}
+                        {isTypewriting && <span className="game-type-cursor" />}
+                      </p>
                     </section>
 
                     {canAnswerTurn && (
                       <>
-                        <section className="game-chip-grid">
-                          {presetResponses.map((preset) => (
-                            <button
-                              key={preset.text}
-                              className="secondary game-chip"
-                              onClick={() => void sendHangoutTurn(preset.text)}
-                              disabled={!sceneSessionId || sendingTurn}
-                            >
-                              <span className="game-chip-main">{preset.text}</span>
-                              <span className="game-chip-note">{preset.note}</span>
-                            </button>
-                          ))}
-                        </section>
+                        {presetResponses.length > 0 && (
+                          <section className="game-chip-grid">
+                            {presetResponses.map((preset) => (
+                              <button
+                                key={preset.text}
+                                className="secondary game-chip"
+                                onClick={() => void sendHangoutTurn(preset.text)}
+                                disabled={!sceneSessionId || sendingTurn}
+                              >
+                                <span className="game-chip-main">{preset.text}</span>
+                                <span className="game-chip-note">{preset.note}</span>
+                              </button>
+                            ))}
+                          </section>
+                        )}
 
                         <div className="stack game-hangout-input">
                           <textarea
