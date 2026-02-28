@@ -37,6 +37,7 @@ interface PresetResponse {
 }
 
 type CjkLang = 'ko' | 'ja' | 'zh';
+type EntryPhase = 'opening' | 'entry' | 'onboarding' | 'playing';
 
 type MapPosition = 'left' | 'center' | 'right';
 
@@ -150,6 +151,7 @@ const DEFAULT_PRESET_RESPONSES: PresetResponse[] = [
 ];
 
 const INITIAL_HINT = 'Tong hint: Use one short polite order phrase per turn.';
+const ACTIVE_USER_ID_STORAGE_KEY = 'tong_active_user_id';
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -243,8 +245,18 @@ function cityMapHint(position: MapPosition): string {
   return 'Right lane';
 }
 
+function createSessionUserId(): string {
+  return `user_${Math.random().toString(36).slice(2, 8)}_${Date.now().toString(36)}`;
+}
+
 export default function GamePage() {
   const cityTrackRef = useRef<HTMLDivElement | null>(null);
+
+  const [entryPhase, setEntryPhase] = useState<EntryPhase>('opening');
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [activeUserId, setActiveUserId] = useState('demo-user-1');
+  const [hasSavedUserId, setHasSavedUserId] = useState(false);
+  const [showSetupPanel, setShowSetupPanel] = useState(false);
 
   const [mode, setMode] = useState<'hangout' | 'learn'>('hangout');
   const [city, setCity] = useState<CityId>(DEFAULT_CITY);
@@ -284,6 +296,15 @@ export default function GamePage() {
   const cityConfig = CITY_BY_ID[city];
   const selectedLang = cityConfig.language;
   const objectiveSummary = useMemo(() => buildObjectiveSummary(objective), [objective]);
+  const onboardingLines = useMemo(
+    () => [
+      `Tong: Welcome to Tong. You will live in ${cityConfig.label} and learn through real scenes.`,
+      'Tong: Progression loop is Learn -> Hangout -> Mission. Your RP, XP, and SP all update live.',
+      `Tong: We start at ${LOCATION_LABELS[location]}. Keep responses short and natural.`,
+      `Tong: Swipe cities any time. Center is Korean, left Japanese, right Chinese. Ready?`,
+    ],
+    [cityConfig.label, location],
+  );
 
   const requiredTurns = objective?.completionCriteria.requiredTurns ?? 4;
   const objectivePercent = Math.round(objectiveRatio * 100);
@@ -305,10 +326,24 @@ export default function GamePage() {
   }, []);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setEntryPhase('entry');
+    }, 1400);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const savedUserId = window.localStorage.getItem(ACTIVE_USER_ID_STORAGE_KEY);
+    if (!savedUserId) return;
+    setActiveUserId(savedUserId);
+    setHasSavedUserId(true);
+  }, []);
+
+  useEffect(() => {
     if (mode === 'learn') {
       void refreshLearnSessions();
     }
-  }, [mode, city, selectedLang]);
+  }, [mode, city, selectedLang, activeUserId]);
 
   function resetSceneState(nextLocation: LocationId, nextCity: CityId = city) {
     setSceneSessionId(null);
@@ -319,6 +354,37 @@ export default function GamePage() {
     setPresetResponses(DEFAULT_PRESET_RESPONSES);
     setCharacter(getCharacterForCityLocation(nextCity, nextLocation));
     setHint(INITIAL_HINT);
+  }
+
+  function persistActiveUserId(nextUserId: string) {
+    setActiveUserId(nextUserId);
+    setHasSavedUserId(true);
+    window.localStorage.setItem(ACTIVE_USER_ID_STORAGE_KEY, nextUserId);
+  }
+
+  function beginNewGame() {
+    const nextUserId = createSessionUserId();
+    persistActiveUserId(nextUserId);
+    setSessionId(null);
+    setRouteState(null);
+    setRelationshipState(null);
+    setProgressionLoop(null);
+    setScore({ xp: 0, sp: 0, rp: 0 });
+    setMessages([]);
+    setError(null);
+    setStatus('Tong is introducing your first scene...');
+    setMode('hangout');
+    setOnboardingStep(0);
+    setEntryPhase('onboarding');
+    setShowSetupPanel(false);
+    resetSceneState(location, city);
+  }
+
+  async function resumeLatestGame() {
+    if (!hasSavedUserId) return;
+    setError(null);
+    setEntryPhase('onboarding');
+    setOnboardingStep(onboardingLines.length - 1);
   }
 
   function selectCity(nextCity: CityId) {
@@ -386,6 +452,7 @@ export default function GamePage() {
       resetSceneState(location, city);
 
       const game = await startOrResumeGame({
+        userId: activeUserId,
         city,
         profile: buildProfileFromGauge(proficiencyGauge),
         randomizeCharacter,
@@ -407,6 +474,7 @@ export default function GamePage() {
       }
 
       const nextObjective = await fetchObjectiveNext({
+        userId: activeUserId,
         city,
         location,
         mode: 'hangout',
@@ -416,6 +484,7 @@ export default function GamePage() {
 
       const hangout = await startHangout({
         objectiveId: nextObjective.objectiveId,
+        userId: activeUserId,
         sessionId: game.sessionId,
         city,
         location,
@@ -443,9 +512,11 @@ export default function GamePage() {
       const openingLines =
         hangout.initialLines && hangout.initialLines.length > 0 ? hangout.initialLines : [hangout.initialLine];
       mergeIncomingLines(openingLines);
+      return true;
     } catch (startError) {
       setError(startError instanceof Error ? startError.message : `Failed to start the ${cityConfig.label} hangout.`);
       setStatus('Start failed. Try again.');
+      return false;
     } finally {
       setLoadingStart(false);
     }
@@ -554,7 +625,7 @@ export default function GamePage() {
     try {
       setLoadingLearn(true);
       setError(null);
-      const sessions = await fetchLearnSessions({ city, lang: selectedLang });
+      const sessions = await fetchLearnSessions({ userId: activeUserId, city, lang: selectedLang });
       setLearnSessions(sessions.items);
     } catch (learnError) {
       setError(learnError instanceof Error ? learnError.message : 'Failed to load learn sessions.');
@@ -569,6 +640,7 @@ export default function GamePage() {
       setError(null);
       const created = await createLearnSession({
         objectiveId: objective?.objectiveId || 'ko_food_l2_001',
+        userId: activeUserId,
         city,
         lang: selectedLang,
       });
@@ -590,6 +662,7 @@ export default function GamePage() {
     try {
       setError(null);
       const mission = await assessMission({
+        userId: activeUserId,
         sessionId,
         city,
         location,
@@ -611,354 +684,489 @@ export default function GamePage() {
     }
   }
 
+  async function completeOnboardingAndLaunch() {
+    const started = await quickStartHangout();
+    if (!started) return;
+    setEntryPhase('playing');
+    setShowSetupPanel(false);
+    setStatus(`${cityConfig.label} hangout live.`);
+  }
+
   return (
     <main className="app-shell game-shell">
-      <header className="page-header">
-        <p className="kicker">Game Quick-Start</p>
-        <h1 className="page-title">Swipe city map and launch your first hangout</h1>
-        <p className="page-copy">
-          Set CJK proficiency, swipe between Tokyo/Seoul/Shanghai, and run an objective-bound hangout or learn
-          session in one flow.
-        </p>
-        <div className="nav-links">
-          <Link href="/" className="nav-link">
-            Home
-          </Link>
-          <Link href="/overlay" className="nav-link">
-            Overlay
-          </Link>
-          <Link href="/insights" className="nav-link">
-            Insights
-          </Link>
-        </div>
-      </header>
-
-      <section className="card stack game-quickstart-card">
-        <div className="row">
-          <div className="stack" style={{ gap: 6 }}>
-            <span className="pill">City Onboarding</span>
-            <h2 className="game-section-title">CJK gauge + swipe map</h2>
-          </div>
-          <span className="pill">{sceneSessionId ? 'Hangout live' : sessionId ? 'Session ready' : 'New game'}</span>
-        </div>
-
-        <div className="game-onboarding-grid">
-          <article className="game-map-card stack">
-            <div className="row">
-              <p className="game-card-kicker" style={{ margin: 0 }}>
-                Swipe Map
-              </p>
-              <span className="pill">{cityConfig.label}</span>
-            </div>
-            <div className="game-city-track" ref={cityTrackRef} onScroll={handleCityTrackScroll}>
-              {CITY_DEFINITIONS.map((cityOption) => (
-                <button
-                  key={cityOption.id}
-                  type="button"
-                  className={`game-city-card ${cityOption.id === city ? 'active' : ''}`}
-                  onClick={() => handleCityCardPress(cityOption.id)}
-                >
-                  <div className="game-city-media">
-                    {cityOption.backdropVideo && cityOption.id === city ? (
-                      <video
-                        className="game-city-backdrop"
-                        poster={cityOption.backdropImage}
-                        src={cityOption.backdropVideo}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                      />
-                    ) : (
-                      <img
-                        className="game-city-backdrop"
-                        src={cityOption.backdropImage}
-                        alt={`${cityOption.label} backdrop`}
-                      />
-                    )}
-                    <div className="game-city-overlay">
-                      <p>{cityMapHint(cityOption.mapPosition)}</p>
-                      <strong>{cityOption.label}</strong>
-                      <span>
-                        {cityOption.languageLabel} · {cityOption.vibe}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <p className="game-city-hint">
-              Swipe left for Tokyo (Japanese), keep Seoul in center (Korean), and swipe right for Shanghai (Chinese).
+      {entryPhase !== 'playing' && (
+        <section className="game-opening-stage">
+          {cityConfig.backdropVideo ? (
+            <video
+              className="game-opening-backdrop"
+              poster={cityConfig.backdropImage}
+              src={cityConfig.backdropVideo}
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
+          ) : (
+            <img className="game-opening-backdrop" src={cityConfig.backdropImage} alt={`${cityConfig.label} backdrop`} />
+          )}
+          <div className="game-opening-scrim" />
+          <div className="game-opening-content">
+            <p className="game-opening-kicker">Tong</p>
+            <h1 className="game-opening-title">Live a language, don&apos;t drill it.</h1>
+            <p className="game-opening-copy">
+              {entryPhase === 'opening'
+                ? 'Loading world state...'
+                : `Tonight starts in ${cityConfig.label}. Tong will onboard you, then drop you straight into a hangout.`}
             </p>
-          </article>
 
-          <article className="game-slider-card stack">
-            <p className="game-card-kicker" style={{ margin: 0 }}>
-              Proficiency Sliders
-            </p>
-            <p className="game-slider-copy">Set your current level by language. Tong uses this profile at start/resume.</p>
-            {CJK_LANG_ORDER.map((lang) => {
-              const level = sliderToProficiency(proficiencyGauge[lang]);
-              return (
-                <label key={lang} className="game-slider-row">
-                  <div className="row">
-                    <strong>
-                      {LANGUAGE_LABELS[lang]} ({lang.toUpperCase()})
-                    </strong>
-                    <span>
-                      {proficiencyGauge[lang]} · {proficiencyLabel(level)}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={proficiencyGauge[lang]}
-                    onChange={(event) => handleProficiencyChange(lang, Number(event.target.value))}
-                  />
-                </label>
-              );
-            })}
-          </article>
-        </div>
-
-        <div className="game-mode-toggle">
-          <button className={mode === 'hangout' ? '' : 'secondary'} onClick={() => setMode('hangout')}>
-            Hangout Mode
-          </button>
-          <button className={mode === 'learn' ? '' : 'secondary'} onClick={() => setMode('learn')}>
-            Learn Mode
-          </button>
-        </div>
-
-        <label className="row" style={{ alignItems: 'center', gap: 8 }}>
-          <input
-            type="checkbox"
-            checked={randomizeCharacter}
-            onChange={(event) => setRandomizeCharacter(event.target.checked)}
-          />
-          <span>Randomize character on next hangout start</span>
-        </label>
-
-        <button onClick={() => void quickStartHangout()} disabled={loadingStart}>
-          {loadingStart
-            ? 'Starting...'
-            : sceneSessionId
-              ? `Restart ${cityConfig.label} Hangout`
-              : `Start or Resume ${cityConfig.label} Hangout`}
-        </button>
-
-        <p className="game-status">{status}</p>
-        {error && <p className="game-error">{error}</p>}
-      </section>
-
-      <section className="game-mobile-wrap">
-        <article className="mobile-frame game-mobile-frame">
-          <div className="mobile-head game-mobile-head">
-            <p className="game-mobile-kicker">City · Location</p>
-            <div className="row">
-              <strong>
-                {cityConfig.label} · {LOCATION_LABELS[location]}
-              </strong>
-              <span className="pill">{mode}</span>
-            </div>
-            <div className="row" style={{ alignItems: 'center' }}>
-              <span className="pill">{cityConfig.languageLabel}</span>
-              <span className="pill">{routeState?.characterName ? `Route: ${routeState.characterName}` : 'Route: pending'}</span>
-            </div>
-            <div className="row" style={{ alignItems: 'center' }}>
-              <span className="pill">Engine: {engineMode === 'dynamic_ai' ? 'Dynamic AI' : 'Scripted Fallback'}</span>
-            </div>
-            <div className="row" style={{ alignItems: 'center' }}>
-              <span className="pill">Bond: {routeState?.stage || relationshipState?.stage || 'stranger'}</span>
-              <span className="pill">
-                Gate: {progressionLoop?.missionGate.status || 'locked'} ({progressionLoop?.missionGate.validatedHangouts || 0}/
-                {progressionLoop?.missionGate.requiredValidatedHangouts || 2})
-              </span>
-            </div>
-            <div className="game-location-row">
-              {LOCATIONS.map((item) => (
-                <button
-                  key={item}
-                  className={`game-location-pill ${item === location ? 'active' : ''}`}
-                  onClick={() => handleLocationChange(item)}
-                >
-                  {LOCATION_LABELS[item]}
+            {entryPhase === 'entry' && (
+              <div className="game-opening-actions">
+                <button onClick={() => beginNewGame()}>Start New Game</button>
+                <button className="secondary" onClick={() => void resumeLatestGame()} disabled={!hasSavedUserId}>
+                  Resume Last Session
                 </button>
-              ))}
-            </div>
-          </div>
+              </div>
+            )}
 
-          <div className="mobile-body game-mobile-body">
-            {mode === 'hangout' && (
-              <>
-                <section className="game-character-card">
-                  <span className="game-character-avatar">{character.avatarEmoji || selectedLang.toUpperCase()}</span>
-                  <div>
-                    <p className="game-card-kicker">Hangout character</p>
-                    <strong>{character.name || `${cityConfig.label} friend`}</strong>
-                    <p>{character.role || 'Local conversation partner'}</p>
-                    {routeState?.memoryNotes?.length ? (
-                      <p>Recent memory: {routeState.memoryNotes[routeState.memoryNotes.length - 1]}</p>
-                    ) : null}
+            {entryPhase === 'onboarding' && (
+              <div className="card stack game-onboarding-story">
+                <p className="game-card-kicker" style={{ margin: 0 }}>
+                  Tong Onboarding
+                </p>
+                {onboardingLines.slice(0, onboardingStep + 1).map((line, index) => (
+                  <div key={`${line}_${index}`} className="chat-bubble chat-tong">
+                    {line}
                   </div>
-                </section>
+                ))}
 
-                <section className="game-progress-card stack">
-                  <div>
+                <div className="game-onboarding-grid">
+                  <article className="game-map-card stack">
+                    <p className="game-card-kicker" style={{ margin: 0 }}>
+                      City
+                    </p>
                     <div className="row">
-                      <strong>Objective progress</strong>
-                      <span>
-                        {objectiveTurnProgress}/{requiredTurns} turns
-                      </span>
+                      {CITY_ORDER.map((cityId) => (
+                        <button
+                          key={cityId}
+                          className={cityId === city ? '' : 'secondary'}
+                          onClick={() => selectCity(cityId)}
+                          type="button"
+                        >
+                          {CITY_BY_ID[cityId].label}
+                        </button>
+                      ))}
                     </div>
-                    <p className="game-objective-copy">{objectiveSummary}</p>
-                    <div className="metric-bar">
-                      <div className="metric-fill game-progress-fill" style={{ width: `${objectivePercent}%` }} />
-                    </div>
-                  </div>
+                    <p className="game-city-hint">
+                      Left Tokyo, center Seoul, right Shanghai. You can switch later from the map.
+                    </p>
+                  </article>
 
-                  <div className="stack" style={{ gap: 8 }}>
-                    <div className="row">
-                      <span>Mastery Tier</span>
-                      <span>{progressionLoop?.masteryTier || 1}</span>
-                    </div>
-                    <div>
-                      <div className="row">
-                        <span>Learn Readiness</span>
-                        <span>{Math.round((progressionLoop?.learnReadiness || 0) * 100)}%</span>
-                      </div>
-                      <div className="metric-bar">
-                        <div
-                          className="metric-fill"
-                          style={{ width: `${Math.round((progressionLoop?.learnReadiness || 0) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="row">
-                        <span>XP</span>
-                        <span>{score.xp}</span>
-                      </div>
-                      <div className="metric-bar">
-                        <div className="metric-fill" style={{ width: `${scorePercent.xp}%` }} />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="row">
-                        <span>SP</span>
-                        <span>{score.sp}</span>
-                      </div>
-                      <div className="metric-bar">
-                        <div className="metric-fill" style={{ width: `${scorePercent.sp}%` }} />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="row">
-                        <span>RP</span>
-                        <span>{score.rp}</span>
-                      </div>
-                      <div className="metric-bar">
-                        <div className="metric-fill" style={{ width: `${scorePercent.rp}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {progressionLoop?.missionGate.status === 'ready' && (
-                  <button onClick={() => void runMissionAssessment()}>Run mission assessment</button>
-                )}
-
-                <div className="chat-bubble chat-tong">
-                  <strong>Tong hint:</strong> {hint}
+                  <article className="game-slider-card stack">
+                    <p className="game-card-kicker" style={{ margin: 0 }}>
+                      Language Gauge
+                    </p>
+                    {CJK_LANG_ORDER.map((lang) => {
+                      const level = sliderToProficiency(proficiencyGauge[lang]);
+                      return (
+                        <label key={lang} className="game-slider-row">
+                          <div className="row">
+                            <strong>
+                              {LANGUAGE_LABELS[lang]} ({lang.toUpperCase()})
+                            </strong>
+                            <span>
+                              {proficiencyGauge[lang]} · {proficiencyLabel(level)}
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={proficiencyGauge[lang]}
+                            onChange={(event) => handleProficiencyChange(lang, Number(event.target.value))}
+                          />
+                        </label>
+                      );
+                    })}
+                  </article>
                 </div>
 
-                <section className="game-dialogue-feed">
-                  {messages.length === 0 && (
-                    <p className="game-empty-state">Tap start to enter dialogue, then test with a preset phrase.</p>
-                  )}
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`chat-bubble ${message.speaker === 'you' ? 'chat-user' : 'chat-character'}`}
-                    >
-                      {message.text}
-                    </div>
-                  ))}
-                </section>
-
-                <section className="game-chip-grid">
-                  {presetResponses.map((preset) => (
-                    <button
-                      key={preset.text}
-                      className="secondary game-chip"
-                      onClick={() => void sendHangoutTurn(preset.text)}
-                      disabled={!sceneSessionId || sendingTurn}
-                    >
-                      <span className="game-chip-main">{preset.text}</span>
-                      <span className="game-chip-note">{preset.note}</span>
+                <div className="game-opening-actions">
+                  {onboardingStep < onboardingLines.length - 1 ? (
+                    <button type="button" onClick={() => setOnboardingStep((current) => current + 1)}>
+                      Continue
                     </button>
-                  ))}
-                </section>
-
-                <div className="stack">
-                  <textarea
-                    rows={2}
-                    value={userUtterance}
-                    placeholder="Type your own response"
-                    onChange={(event) => setUserUtterance(event.target.value)}
-                  />
-                  <button
-                    onClick={() => void sendHangoutTurn()}
-                    disabled={!sceneSessionId || !userUtterance.trim() || sendingTurn}
-                  >
-                    {sendingTurn ? 'Sending...' : 'Send response'}
+                  ) : (
+                    <button type="button" onClick={() => void completeOnboardingAndLaunch()} disabled={loadingStart}>
+                      {loadingStart ? 'Entering Hangout...' : 'Enter First Hangout'}
+                    </button>
+                  )}
+                  <button className="secondary" type="button" onClick={() => setEntryPhase('entry')} disabled={loadingStart}>
+                    Back
                   </button>
                 </div>
-              </>
-            )}
-
-            {mode === 'learn' && (
-              <>
-                <section className="game-learn-head stack">
-                  <h3 style={{ margin: 0 }}>{cityConfig.label} learn chat sessions</h3>
-                  <p style={{ margin: 0 }}>
-                    Review previous {cityConfig.languageLabel} sessions or launch a new objective-focused drill before
-                    your next hangout.
-                  </p>
-                  <div className="row">
-                    <button className="secondary" onClick={() => void refreshLearnSessions()} disabled={loadingLearn}>
-                      View previous sessions
-                    </button>
-                    <button onClick={() => void startNewLearnSession()} disabled={loadingLearn}>
-                      Start new session
-                    </button>
-                  </div>
-                </section>
-
-                {learnMessage && <div className="chat-bubble chat-tong">Tong: {learnMessage}</div>}
-                {loadingLearn && <p>Loading learn sessions...</p>}
-                {!loadingLearn && learnSessions.length === 0 && <p>No prior sessions yet.</p>}
-
-                <section className="stack">
-                  {learnSessions.map((session) => (
-                    <article key={session.learnSessionId} className="game-learn-item">
-                      <div className="row" style={{ alignItems: 'flex-start' }}>
-                        <div>
-                          <strong>{session.title}</strong>
-                          <p>Objective: {session.objectiveId}</p>
-                        </div>
-                        <span className="pill">{new Date(session.lastMessageAt).toLocaleDateString()}</span>
-                      </div>
-                    </article>
-                  ))}
-                </section>
-              </>
+                <p className="game-status">{status}</p>
+                {error && <p className="game-error">{error}</p>}
+              </div>
             )}
           </div>
-        </article>
-      </section>
+        </section>
+      )}
+
+      {entryPhase === 'playing' && (
+        <>
+          <header className="page-header">
+            <p className="kicker">Game Story Mode</p>
+            <h1 className="page-title">Onboard with Tong, then drop into your hangout</h1>
+            <p className="page-copy">
+              Story-first flow: opening animation, onboarding, then immediate in-scene practice.
+            </p>
+            <div className="nav-links">
+              <Link href="/" className="nav-link">
+                Home
+              </Link>
+              <Link href="/overlay" className="nav-link">
+                Overlay
+              </Link>
+              <Link href="/insights" className="nav-link">
+                Insights
+              </Link>
+              <button className="nav-link" onClick={() => setShowSetupPanel((current) => !current)}>
+                {showSetupPanel ? 'Hide setup' : 'Show setup'}
+              </button>
+            </div>
+          </header>
+
+          {showSetupPanel && (
+            <section className="card stack game-quickstart-card">
+              <div className="row">
+                <div className="stack" style={{ gap: 6 }}>
+                  <span className="pill">City Onboarding</span>
+                  <h2 className="game-section-title">CJK gauge + swipe map</h2>
+                </div>
+                <span className="pill">{sceneSessionId ? 'Hangout live' : sessionId ? 'Session ready' : 'New game'}</span>
+              </div>
+
+              <div className="game-onboarding-grid">
+                <article className="game-map-card stack">
+                  <div className="row">
+                    <p className="game-card-kicker" style={{ margin: 0 }}>
+                      Swipe Map
+                    </p>
+                    <span className="pill">{cityConfig.label}</span>
+                  </div>
+                  <div className="game-city-track" ref={cityTrackRef} onScroll={handleCityTrackScroll}>
+                    {CITY_DEFINITIONS.map((cityOption) => (
+                      <button
+                        key={cityOption.id}
+                        type="button"
+                        className={`game-city-card ${cityOption.id === city ? 'active' : ''}`}
+                        onClick={() => handleCityCardPress(cityOption.id)}
+                      >
+                        <div className="game-city-media">
+                          {cityOption.backdropVideo && cityOption.id === city ? (
+                            <video
+                              className="game-city-backdrop"
+                              poster={cityOption.backdropImage}
+                              src={cityOption.backdropVideo}
+                              autoPlay
+                              muted
+                              loop
+                              playsInline
+                            />
+                          ) : (
+                            <img
+                              className="game-city-backdrop"
+                              src={cityOption.backdropImage}
+                              alt={`${cityOption.label} backdrop`}
+                            />
+                          )}
+                          <div className="game-city-overlay">
+                            <p>{cityMapHint(cityOption.mapPosition)}</p>
+                            <strong>{cityOption.label}</strong>
+                            <span>
+                              {cityOption.languageLabel} · {cityOption.vibe}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="game-city-hint">
+                    Swipe left for Tokyo (Japanese), keep Seoul in center (Korean), and swipe right for Shanghai (Chinese).
+                  </p>
+                </article>
+
+                <article className="game-slider-card stack">
+                  <p className="game-card-kicker" style={{ margin: 0 }}>
+                    Proficiency Sliders
+                  </p>
+                  <p className="game-slider-copy">Set your current level by language. Tong uses this profile at start/resume.</p>
+                  {CJK_LANG_ORDER.map((lang) => {
+                    const level = sliderToProficiency(proficiencyGauge[lang]);
+                    return (
+                      <label key={lang} className="game-slider-row">
+                        <div className="row">
+                          <strong>
+                            {LANGUAGE_LABELS[lang]} ({lang.toUpperCase()})
+                          </strong>
+                          <span>
+                            {proficiencyGauge[lang]} · {proficiencyLabel(level)}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={proficiencyGauge[lang]}
+                          onChange={(event) => handleProficiencyChange(lang, Number(event.target.value))}
+                        />
+                      </label>
+                    );
+                  })}
+                </article>
+              </div>
+
+              <div className="game-mode-toggle">
+                <button className={mode === 'hangout' ? '' : 'secondary'} onClick={() => setMode('hangout')}>
+                  Hangout Mode
+                </button>
+                <button className={mode === 'learn' ? '' : 'secondary'} onClick={() => setMode('learn')}>
+                  Learn Mode
+                </button>
+              </div>
+
+              <label className="row" style={{ alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={randomizeCharacter}
+                  onChange={(event) => setRandomizeCharacter(event.target.checked)}
+                />
+                <span>Randomize character on next hangout start</span>
+              </label>
+
+              <button onClick={() => void quickStartHangout()} disabled={loadingStart}>
+                {loadingStart
+                  ? 'Starting...'
+                  : sceneSessionId
+                    ? `Restart ${cityConfig.label} Hangout`
+                    : `Start or Resume ${cityConfig.label} Hangout`}
+              </button>
+
+              <p className="game-status">{status}</p>
+              {error && <p className="game-error">{error}</p>}
+            </section>
+          )}
+
+          <section className="game-mobile-wrap">
+            <article className="mobile-frame game-mobile-frame">
+              <div className="mobile-head game-mobile-head">
+                <p className="game-mobile-kicker">City · Location</p>
+                <div className="row">
+                  <strong>
+                    {cityConfig.label} · {LOCATION_LABELS[location]}
+                  </strong>
+                  <span className="pill">{mode}</span>
+                </div>
+                <div className="row" style={{ alignItems: 'center' }}>
+                  <span className="pill">{cityConfig.languageLabel}</span>
+                  <span className="pill">{routeState?.characterName ? `Route: ${routeState.characterName}` : 'Route: pending'}</span>
+                </div>
+                <div className="row" style={{ alignItems: 'center' }}>
+                  <span className="pill">Engine: {engineMode === 'dynamic_ai' ? 'Dynamic AI' : 'Scripted Fallback'}</span>
+                </div>
+                <div className="row" style={{ alignItems: 'center' }}>
+                  <span className="pill">Bond: {routeState?.stage || relationshipState?.stage || 'stranger'}</span>
+                  <span className="pill">
+                    Gate: {progressionLoop?.missionGate.status || 'locked'} ({progressionLoop?.missionGate.validatedHangouts || 0}/
+                    {progressionLoop?.missionGate.requiredValidatedHangouts || 2})
+                  </span>
+                </div>
+                <div className="game-location-row">
+                  {LOCATIONS.map((item) => (
+                    <button
+                      key={item}
+                      className={`game-location-pill ${item === location ? 'active' : ''}`}
+                      onClick={() => handleLocationChange(item)}
+                    >
+                      {LOCATION_LABELS[item]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mobile-body game-mobile-body">
+                {mode === 'hangout' && (
+                  <>
+                    <section className="game-character-card">
+                      <span className="game-character-avatar">{character.avatarEmoji || selectedLang.toUpperCase()}</span>
+                      <div>
+                        <p className="game-card-kicker">Hangout character</p>
+                        <strong>{character.name || `${cityConfig.label} friend`}</strong>
+                        <p>{character.role || 'Local conversation partner'}</p>
+                        {routeState?.memoryNotes?.length ? (
+                          <p>Recent memory: {routeState.memoryNotes[routeState.memoryNotes.length - 1]}</p>
+                        ) : null}
+                      </div>
+                    </section>
+
+                    <section className="game-progress-card stack">
+                      <div>
+                        <div className="row">
+                          <strong>Objective progress</strong>
+                          <span>
+                            {objectiveTurnProgress}/{requiredTurns} turns
+                          </span>
+                        </div>
+                        <p className="game-objective-copy">{objectiveSummary}</p>
+                        <div className="metric-bar">
+                          <div className="metric-fill game-progress-fill" style={{ width: `${objectivePercent}%` }} />
+                        </div>
+                      </div>
+
+                      <div className="stack" style={{ gap: 8 }}>
+                        <div className="row">
+                          <span>Mastery Tier</span>
+                          <span>{progressionLoop?.masteryTier || 1}</span>
+                        </div>
+                        <div>
+                          <div className="row">
+                            <span>Learn Readiness</span>
+                            <span>{Math.round((progressionLoop?.learnReadiness || 0) * 100)}%</span>
+                          </div>
+                          <div className="metric-bar">
+                            <div
+                              className="metric-fill"
+                              style={{ width: `${Math.round((progressionLoop?.learnReadiness || 0) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="row">
+                            <span>XP</span>
+                            <span>{score.xp}</span>
+                          </div>
+                          <div className="metric-bar">
+                            <div className="metric-fill" style={{ width: `${scorePercent.xp}%` }} />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="row">
+                            <span>SP</span>
+                            <span>{score.sp}</span>
+                          </div>
+                          <div className="metric-bar">
+                            <div className="metric-fill" style={{ width: `${scorePercent.sp}%` }} />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="row">
+                            <span>RP</span>
+                            <span>{score.rp}</span>
+                          </div>
+                          <div className="metric-bar">
+                            <div className="metric-fill" style={{ width: `${scorePercent.rp}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    {progressionLoop?.missionGate.status === 'ready' && (
+                      <button onClick={() => void runMissionAssessment()}>Run mission assessment</button>
+                    )}
+
+                    <div className="chat-bubble chat-tong">
+                      <strong>Tong hint:</strong> {hint}
+                    </div>
+
+                    <section className="game-dialogue-feed">
+                      {messages.length === 0 && (
+                        <p className="game-empty-state">Tap start to enter dialogue, then test with a preset phrase.</p>
+                      )}
+                      {messages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`chat-bubble ${message.speaker === 'you' ? 'chat-user' : 'chat-character'}`}
+                        >
+                          {message.text}
+                        </div>
+                      ))}
+                    </section>
+
+                    <section className="game-chip-grid">
+                      {presetResponses.map((preset) => (
+                        <button
+                          key={preset.text}
+                          className="secondary game-chip"
+                          onClick={() => void sendHangoutTurn(preset.text)}
+                          disabled={!sceneSessionId || sendingTurn}
+                        >
+                          <span className="game-chip-main">{preset.text}</span>
+                          <span className="game-chip-note">{preset.note}</span>
+                        </button>
+                      ))}
+                    </section>
+
+                    <div className="stack">
+                      <textarea
+                        rows={2}
+                        value={userUtterance}
+                        placeholder="Type your own response"
+                        onChange={(event) => setUserUtterance(event.target.value)}
+                      />
+                      <button
+                        onClick={() => void sendHangoutTurn()}
+                        disabled={!sceneSessionId || !userUtterance.trim() || sendingTurn}
+                      >
+                        {sendingTurn ? 'Sending...' : 'Send response'}
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {mode === 'learn' && (
+                  <>
+                    <section className="game-learn-head stack">
+                      <h3 style={{ margin: 0 }}>{cityConfig.label} learn chat sessions</h3>
+                      <p style={{ margin: 0 }}>
+                        Review previous {cityConfig.languageLabel} sessions or launch a new objective-focused drill before
+                        your next hangout.
+                      </p>
+                      <div className="row">
+                        <button className="secondary" onClick={() => void refreshLearnSessions()} disabled={loadingLearn}>
+                          View previous sessions
+                        </button>
+                        <button onClick={() => void startNewLearnSession()} disabled={loadingLearn}>
+                          Start new session
+                        </button>
+                      </div>
+                    </section>
+
+                    {learnMessage && <div className="chat-bubble chat-tong">Tong: {learnMessage}</div>}
+                    {loadingLearn && <p>Loading learn sessions...</p>}
+                    {!loadingLearn && learnSessions.length === 0 && <p>No prior sessions yet.</p>}
+
+                    <section className="stack">
+                      {learnSessions.map((session) => (
+                        <article key={session.learnSessionId} className="game-learn-item">
+                          <div className="row" style={{ alignItems: 'flex-start' }}>
+                            <div>
+                              <strong>{session.title}</strong>
+                              <p>Objective: {session.objectiveId}</p>
+                            </div>
+                            <span className="pill">{new Date(session.lastMessageAt).toLocaleDateString()}</span>
+                          </div>
+                        </article>
+                      ))}
+                    </section>
+                  </>
+                )}
+              </div>
+            </article>
+          </section>
+        </>
+      )}
     </main>
   );
 }
