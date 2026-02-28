@@ -23,6 +23,8 @@ type SpotifyStatusResult = {
   lastSyncAtIso: string | null;
   lastSyncItemCount: number;
   syncWindowHours: number | null;
+  lastSyncLyricsCount?: number;
+  lastSyncLyricsLangBreakdown?: { ko: number; ja: number; zh: number };
 };
 
 type YouTubeStatusResult = {
@@ -210,6 +212,13 @@ export default function IntegrationsPage() {
           </div>
           <p>Configured: {spotifyStatus?.spotifyConfigured ? 'yes' : 'no'}</p>
           <p>Last sync: {spotifyStatus?.lastSyncAtIso ? new Date(spotifyStatus.lastSyncAtIso).toLocaleString() : '-'}</p>
+          <p>
+            Lyrics captured:{' '}
+            {typeof spotifyStatus?.lastSyncLyricsCount === 'number' ? spotifyStatus.lastSyncLyricsCount : 0}
+            {spotifyStatus?.lastSyncLyricsLangBreakdown
+              ? ` (KO ${spotifyStatus.lastSyncLyricsLangBreakdown.ko}, ZH ${spotifyStatus.lastSyncLyricsLangBreakdown.zh}, JA ${spotifyStatus.lastSyncLyricsLangBreakdown.ja})`
+              : ''}
+          </p>
           <div className="row" style={{ justifyContent: 'flex-start', gap: 8 }}>
             <button onClick={() => void requestConnect('spotify')} disabled={Boolean(workingAction)}>
               {workingAction === 'spotify-connect' ? 'Building URL...' : 'Get Spotify auth URL'}
@@ -349,7 +358,9 @@ export default function IntegrationsPage() {
             {!snapshot?.lyricCandidates?.length && <p>No Spotify lyric candidates yet.</p>}
             {snapshot?.lyricCandidates?.slice(0, 4).map((item) => (
               <p key={item.id}>
-                <strong>{item.title}:</strong> {truncate(item.text, 120)}
+                <strong>{item.title}:</strong> {truncate(item.lyricsSnippet || item.text, 120)}{' '}
+                {item.lyricsLang ? `(${item.lyricsLang.toUpperCase()})` : ''}{' '}
+                {item.lyricsSource ? `[${item.lyricsSource}]` : ''}
               </p>
             ))}
           </div>
@@ -374,4 +385,3 @@ export default function IntegrationsPage() {
     </main>
   );
 }
-

@@ -110,6 +110,10 @@ const SPOTIFY_SCOPE = process.env.SPOTIFY_SCOPE || 'user-read-recently-played';
 const SPOTIFY_STATE_TTL_MS = 10 * 60 * 1000;
 const SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS = 72;
 const SPOTIFY_MAX_PAGES = 5;
+const SPOTIFY_LYRICS_API_BASE = process.env.SPOTIFY_LYRICS_API_BASE || 'https://lrclib.net/api';
+const SPOTIFY_LYRICS_ENABLED = String(process.env.SPOTIFY_LYRICS_ENABLED || 'true').toLowerCase() !== 'false';
+const SPOTIFY_LYRICS_MAX_TRACKS = Math.max(1, Number(process.env.SPOTIFY_LYRICS_MAX_TRACKS || 16) || 16);
+const SPOTIFY_LYRICS_MAX_CHARS = Math.max(80, Number(process.env.SPOTIFY_LYRICS_MAX_CHARS || 420) || 420);
 const SPOTIFY_CONNECT_DOCS_URL = 'https://developer.spotify.com/documentation/web-api';
 const INGESTION_SOURCES = new Set(['youtube', 'spotify']);
 
@@ -564,12 +568,70 @@ function parseWindowHours(value, fallback = SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS) {
   return Math.min(24 * 14, Math.max(1, Math.round(numeric)));
 }
 
+function getGoogleApiError(payload, fallbackMessage) {
+  const reason = payload?.error?.errors?.[0]?.reason || null;
+  const message = payload?.error?.message || payload?.error || fallbackMessage;
+  const code = payload?.error?.code || null;
+
+  if (reason === 'youtubeSignupRequired') {
+    return {
+      code,
+      reason,
+      message:
+        'No YouTube channel is linked to this Google account yet. Create a YouTube channel, then reconnect and sync.',
+    };
+  }
+
+  return {
+    code,
+    reason,
+    message,
+  };
+}
+
 function detectLangFromText(text) {
   if (typeof text !== 'string' || !text.trim()) return 'ko';
   if (/[\p{Script=Hangul}]/u.test(text)) return 'ko';
   if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(text)) return 'ja';
   if (/[\p{Script=Han}]/u.test(text)) return 'zh';
   return 'ko';
+}
+
+function detectCjkLangFromText(text) {
+  if (typeof text !== 'string' || !text.trim()) return null;
+  if (/[\p{Script=Hangul}]/u.test(text)) return 'ko';
+  if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(text)) return 'ja';
+  if (/[\p{Script=Han}]/u.test(text)) return 'zh';
+  return null;
+}
+
+function getSpotifyArtists(track) {
+  return Array.isArray(track?.artists)
+    ? track.artists.map((artist) => artist?.name).filter(Boolean).join(' ')
+    : '';
+}
+
+function getSpotifyTrackIdentity(track) {
+  if (!track || typeof track.name !== 'string') return null;
+  const artists = getSpotifyArtists(track);
+  return track.id || `${track.name}::${artists}`;
+}
+
+function compactLyricsSnippet(rawLyrics, maxChars = SPOTIFY_LYRICS_MAX_CHARS) {
+  if (typeof rawLyrics !== 'string' || !rawLyrics.trim()) return '';
+  const withoutTimestamp = rawLyrics
+    .replace(/\[[0-9]{1,2}:[0-9]{2}(?:\.[0-9]{1,3})?\]/g, ' ')
+    .replace(/\r/g, '\n');
+  const compact = withoutTimestamp
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!compact) return '';
+  return compact.length <= maxChars ? compact : `${compact.slice(0, maxChars)}...`;
 }
 
 function parseIso8601DurationToMinutes(duration, fallbackMinutes = 6) {
@@ -621,15 +683,80 @@ function normalizeYouTubeActivityForIngestion(activity, videoDetailsById, index 
   };
 }
 
-function normalizeSpotifyTrackForIngestion(rawTrack, index = 0) {
+async function fetchSpotifyTrackLyrics(track) {
+  if (!SPOTIFY_LYRICS_ENABLED || !track?.name) return null;
+  const artistName = getSpotifyArtists(track);
+  if (!artistName) return null;
+
+  const query = new URLSearchParams({
+    track_name: track.name,
+    artist_name: artistName,
+  });
+  if (Number.isFinite(Number(track.duration_ms)) && Number(track.duration_ms) > 0) {
+    query.set('duration', String(Math.round(Number(track.duration_ms) / 1000)));
+  }
+
+  try {
+    const response = await fetch(`${SPOTIFY_LYRICS_API_BASE}/get?${query.toString()}`);
+    if (response.status === 404) return null;
+    if (!response.ok) return null;
+
+    const payload = await response.json();
+    const rawLyrics =
+      typeof payload?.plainLyrics === 'string'
+        ? payload.plainLyrics
+        : typeof payload?.syncedLyrics === 'string'
+          ? payload.syncedLyrics
+          : '';
+    const snippet = compactLyricsSnippet(rawLyrics);
+    if (!snippet) return null;
+
+    const lang = detectCjkLangFromText(snippet) || detectCjkLangFromText(`${track.name} ${artistName}`);
+    if (!lang) return null;
+
+    return {
+      snippet,
+      lang,
+      source: 'lrclib',
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function buildSpotifyLyricsMap(rawItems = []) {
+  const byTrack = new Map();
+  const visited = new Set();
+  let attemptedTrackCount = 0;
+
+  for (const raw of rawItems) {
+    const track = raw?.track;
+    const trackKey = getSpotifyTrackIdentity(track);
+    if (!trackKey || visited.has(trackKey)) continue;
+    visited.add(trackKey);
+
+    if (attemptedTrackCount >= SPOTIFY_LYRICS_MAX_TRACKS) break;
+    attemptedTrackCount += 1;
+
+    const lyrics = await fetchSpotifyTrackLyrics(track);
+    if (lyrics) {
+      byTrack.set(trackKey, lyrics);
+    }
+  }
+
+  return {
+    byTrack,
+    attemptedTrackCount,
+  };
+}
+
+function normalizeSpotifyTrackForIngestion(rawTrack, index = 0, lyricsSnippet = null) {
   const track = rawTrack?.track;
   if (!track || typeof track.name !== 'string') return null;
   const playedAtIso = rawTrack.played_at || new Date().toISOString();
   const playedAtEpoch = Date.parse(playedAtIso);
-  const artists = Array.isArray(track.artists)
-    ? track.artists.map((artist) => artist?.name).filter(Boolean).join(' ')
-    : '';
-  const text = `${track.name} ${artists}`.trim();
+  const artists = getSpotifyArtists(track);
+  const text = [track.name, artists, lyricsSnippet || ''].filter(Boolean).join(' ').trim();
   const lang = detectLangFromText(text);
 
   return {
@@ -639,6 +766,7 @@ function normalizeSpotifyTrackForIngestion(rawTrack, index = 0) {
     lang,
     minutes: Number((((Number(track.duration_ms) || 0) / 60000) || 0).toFixed(2)),
     text,
+    lyricsSnippet: lyricsSnippet || null,
     playedAtIso,
   };
 }
@@ -728,6 +856,8 @@ function getSpotifyStatusPayload(userId = DEFAULT_USER_ID) {
     lastSyncAtIso: synced?.syncedAtIso || null,
     lastSyncItemCount: Array.isArray(synced?.items) ? synced.items.length : 0,
     syncWindowHours: synced?.windowHours || null,
+    lastSyncLyricsCount: Number(synced?.lyricsEnrichedCount || 0),
+    lastSyncLyricsLangBreakdown: synced?.lyricsLangBreakdown || { ko: 0, ja: 0, zh: 0 },
   };
 }
 
@@ -832,8 +962,8 @@ async function fetchYouTubeActivities(accessToken, windowHours = YOUTUBE_DEFAULT
 
     const payload = await response.json();
     if (!response.ok) {
-      const errorMessage = payload?.error?.message || payload?.error || 'youtube_activities_fetch_failed';
-      throw new Error(errorMessage);
+      const parsed = getGoogleApiError(payload, 'youtube_activities_fetch_failed');
+      throw new Error(parsed.reason ? `${parsed.message} [${parsed.reason}]` : parsed.message);
     }
 
     const items = Array.isArray(payload?.items) ? payload.items : [];
@@ -872,8 +1002,8 @@ async function fetchYouTubeVideosById(accessToken, videoIds = []) {
 
     const payload = await response.json();
     if (!response.ok) {
-      const errorMessage = payload?.error?.message || payload?.error || 'youtube_videos_fetch_failed';
-      throw new Error(errorMessage);
+      const parsed = getGoogleApiError(payload, 'youtube_videos_fetch_failed');
+      throw new Error(parsed.reason ? `${parsed.message} [${parsed.reason}]` : parsed.message);
     }
 
     const items = Array.isArray(payload?.items) ? payload.items : [];
@@ -1025,15 +1155,36 @@ async function syncSpotifyForUser(userId, requestedWindowHours = SPOTIFY_DEFAULT
   const windowHours = parseWindowHours(requestedWindowHours);
   const accessToken = await ensureSpotifyAccessToken(userId);
   const rawItems = await fetchSpotifyRecentlyPlayed(accessToken, windowHours);
+  const { byTrack: lyricsByTrack, attemptedTrackCount } = await buildSpotifyLyricsMap(rawItems);
   const normalizedItems = rawItems
-    .map((item, index) => normalizeSpotifyTrackForIngestion(item, index))
+    .map((item, index) => {
+      const trackKey = getSpotifyTrackIdentity(item?.track);
+      const lyric = trackKey ? lyricsByTrack.get(trackKey) : null;
+      const normalized = normalizeSpotifyTrackForIngestion(item, index, lyric?.snippet || null);
+      if (!normalized) return null;
+      if (lyric?.lang) normalized.lyricsLang = lyric.lang;
+      if (lyric?.source) normalized.lyricsSource = lyric.source;
+      return normalized;
+    })
     .filter(Boolean);
+
+  const lyricsEnrichedCount = normalizedItems.filter((item) => Boolean(item?.lyricsSnippet)).length;
+  const lyricsLangBreakdown = { ko: 0, ja: 0, zh: 0 };
+  for (const item of normalizedItems) {
+    const lang = item?.lyricsLang;
+    if (lang === 'ko' || lang === 'ja' || lang === 'zh') {
+      lyricsLangBreakdown[lang] += 1;
+    }
+  }
 
   state.spotifyRecentByUser.set(userId, {
     syncedAtIso: new Date().toISOString(),
     windowHours,
     items: normalizedItems,
     rawItemCount: rawItems.length,
+    lyricsEnrichedCount,
+    lyricsLangBreakdown,
+    lyricsAttemptedTrackCount: attemptedTrackCount,
   });
   state.ingestionByUser.delete(userId);
 
@@ -1043,6 +1194,9 @@ async function syncSpotifyForUser(userId, requestedWindowHours = SPOTIFY_DEFAULT
     windowHours,
     itemCount: normalizedItems.length,
     rawItemCount: rawItems.length,
+    lyricsEnrichedCount,
+    lyricsLangBreakdown,
+    lyricsAttemptedTrackCount: attemptedTrackCount,
     ingestion,
   };
 }
@@ -1436,6 +1590,9 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
           title: item.title,
           lang: item.lang,
           text: item.text,
+          lyricsSnippet: item.lyricsSnippet || null,
+          lyricsLang: item.lyricsLang || null,
+          lyricsSource: item.lyricsSource || null,
           playedAtIso: item.playedAtIso || null,
         }));
 
@@ -1457,7 +1614,7 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
               youtube:
                 'YouTube transcript candidates come from synced item text (titles/descriptions unless subtitles are ingested).',
               spotify:
-                'Spotify lyric candidates come from synced item text (track+artist unless lyrics provider is added).',
+                'Spotify lyric candidates include CJK lyrics snippets when available from LRCLIB, then feed directly into topic and frequency analysis.',
             },
           },
         },
@@ -1660,6 +1817,9 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
             windowHours: synced.windowHours,
             spotifyItemCount: synced.itemCount,
             spotifyRawItemCount: synced.rawItemCount,
+            lyricsEnrichedCount: synced.lyricsEnrichedCount,
+            lyricsLangBreakdown: synced.lyricsLangBreakdown,
+            lyricsAttemptedTrackCount: synced.lyricsAttemptedTrackCount,
             topTerms: synced.ingestion.frequency.items.slice(0, 10),
             sourceCount: {
               youtube: synced.ingestion.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
@@ -1918,6 +2078,9 @@ const server = http.createServer(async (req, res) => {
           windowHours: synced.windowHours,
           itemCount: synced.itemCount,
           rawItemCount: synced.rawItemCount,
+          lyricsEnrichedCount: synced.lyricsEnrichedCount,
+          lyricsLangBreakdown: synced.lyricsLangBreakdown,
+          lyricsAttemptedTrackCount: synced.lyricsAttemptedTrackCount,
         };
       } catch (syncError) {
         syncSummary = {
@@ -2102,6 +2265,9 @@ const server = http.createServer(async (req, res) => {
         windowHours: synced.windowHours,
         spotifyItemCount: synced.itemCount,
         spotifyRawItemCount: synced.rawItemCount,
+        lyricsEnrichedCount: synced.lyricsEnrichedCount,
+        lyricsLangBreakdown: synced.lyricsLangBreakdown,
+        lyricsAttemptedTrackCount: synced.lyricsAttemptedTrackCount,
         topTerms: synced.ingestion.frequency.items.slice(0, 10),
         sourceCount: {
           youtube: synced.ingestion.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
