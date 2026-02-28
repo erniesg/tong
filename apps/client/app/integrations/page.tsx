@@ -43,6 +43,11 @@ function truncate(text: string, max = 90) {
   return `${text.slice(0, max)}...`;
 }
 
+function buildConnectRedirectUrl(source: 'spotify' | 'youtube') {
+  const provider = source === 'spotify' ? 'spotify' : 'youtube';
+  return `${getApiBase()}/api/v1/integrations/${provider}/connect?userId=${encodeURIComponent(USER_ID)}&redirect=1`;
+}
+
 export default function IntegrationsPage() {
   const [spotifyStatus, setSpotifyStatus] = useState<SpotifyStatusResult | null>(null);
   const [youtubeStatus, setYouTubeStatus] = useState<YouTubeStatusResult | null>(null);
@@ -119,24 +124,23 @@ export default function IntegrationsPage() {
   }
 
   async function requestConnect(source: 'spotify' | 'youtube') {
+    const redirectUrl = buildConnectRedirectUrl(source);
     try {
       setError(null);
       setWorkingAction(`${source}-connect`);
-      const tool = source === 'spotify' ? 'integrations.spotify.connect' : 'integrations.youtube.connect';
-      const response = await invokeTool<{ authUrl: string }>(tool, { userId: USER_ID });
-      if (!response.ok) {
-        throw new Error(response.message || response.error || `${source} connect failed`);
+
+      if (typeof window !== 'undefined') {
+        const opened = window.open(redirectUrl, '_blank');
+        if (!opened) {
+          window.location.assign(redirectUrl);
+        }
       }
-      const authUrl = response.result?.authUrl;
-      if (!authUrl) {
-        throw new Error(`${source} connect did not return authUrl`);
-      }
+
       if (source === 'spotify') {
-        setSpotifyAuthUrl(authUrl);
+        setSpotifyAuthUrl(redirectUrl);
       } else {
-        setYouTubeAuthUrl(authUrl);
+        setYouTubeAuthUrl(redirectUrl);
       }
-      await refreshAll();
     } catch (connectError) {
       setError(connectError instanceof Error ? connectError.message : `Failed to build ${source} auth URL`);
     } finally {
@@ -247,11 +251,11 @@ export default function IntegrationsPage() {
             </button>
           </div>
           {spotifyAuthUrl && (
-            <p>
-              <a href={spotifyAuthUrl} target="_blank" rel="noreferrer">
+            <div className="row" style={{ justifyContent: 'flex-start', gap: 8 }}>
+              <a className="button secondary" href={spotifyAuthUrl} target="_blank" rel="noreferrer">
                 Open Spotify consent screen
               </a>
-            </p>
+            </div>
           )}
           {!spotifyCanLiveSync && <p>Connect Spotify first to enable live sync.</p>}
         </article>
@@ -283,11 +287,11 @@ export default function IntegrationsPage() {
             </button>
           </div>
           {youtubeAuthUrl && (
-            <p>
-              <a href={youtubeAuthUrl} target="_blank" rel="noreferrer">
+            <div className="row" style={{ justifyContent: 'flex-start', gap: 8 }}>
+              <a className="button secondary" href={youtubeAuthUrl} target="_blank" rel="noreferrer">
                 Open YouTube consent screen
               </a>
-            </p>
+            </div>
           )}
           {!youtubeCanLiveSync && <p>Connect YouTube first to enable live sync.</p>}
         </article>

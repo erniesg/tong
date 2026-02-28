@@ -330,6 +330,14 @@ function jsonResponse(res, statusCode, payload) {
   res.end(JSON.stringify(payload));
 }
 
+function redirectResponse(res, location, statusCode = 302) {
+  res.writeHead(statusCode, {
+    Location: location,
+    'Access-Control-Allow-Origin': '*',
+  });
+  res.end();
+}
+
 function noContent(res) {
   res.writeHead(204, {
     'Access-Control-Allow-Origin': '*',
@@ -2034,6 +2042,11 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      if (url.searchParams.get('redirect') === '1' || url.searchParams.get('mode') === 'redirect') {
+        redirectResponse(res, connectInfo.authUrl);
+        return;
+      }
+
       jsonResponse(res, 200, {
         userId,
         connected: Boolean(state.youtubeTokensByUser.get(userId)?.accessToken),
@@ -2162,6 +2175,11 @@ const server = http.createServer(async (req, res) => {
       const connectInfo = buildSpotifyAuthUrl(userId);
       if (!connectInfo) {
         jsonResponse(res, 503, spotifyConfigErrorPayload());
+        return;
+      }
+
+      if (url.searchParams.get('redirect') === '1' || url.searchParams.get('mode') === 'redirect') {
+        redirectResponse(res, connectInfo.authUrl);
         return;
       }
 
