@@ -12,7 +12,7 @@ Keep deployment independent from demo implementation so the same client can run:
 
 ## Backend hosting
 1. Local: run in development for integration testing.
-2. Remote option A: Cloudflare Workers stack.
+2. Remote option A: Cloudflare Workers stack (`apps/worker` + `npm run deploy:worker`).
 3. Remote option B: any Node-hosted API platform.
 
 ## Swap contract
@@ -42,3 +42,8 @@ Notes:
 
 ## Demo safety rule
 If remote host fails, switch to `local-mock` and continue the same run-of-show.
+
+## Current worker path
+1. Worker source: `apps/worker/src/index.ts`
+2. Worker config: `apps/worker/wrangler.toml`
+3. Setup/runbook: `docs/cloudflare-worker-setup.md`
