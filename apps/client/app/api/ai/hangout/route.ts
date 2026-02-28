@@ -1,4 +1,5 @@
 import { streamText, tool } from 'ai';
+import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 
 export const runtime = 'nodejs';
@@ -103,22 +104,20 @@ export async function POST(req: Request) {
     return buildFallbackResponse(messages);
   }
 
-  // AI mode — dynamic import to avoid build errors when @ai-sdk/openai isn't installed
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mod = await (import('@ai-sdk/openai' as any) as Promise<any>);
-    const openai = mod.openai;
     const modelId = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
+    console.log('[hangout] AI mode — model:', modelId, 'key prefix:', process.env.OPENAI_API_KEY?.slice(0, 12));
     const result = streamText({
       model: openai(modelId),
-      system: `You are running a visual-novel-style Korean language hangout scene at a pojangmacha (street food tent) in Seoul. You have two NPC characters available: "hauen" (Ha-eun, competitive but secretly nice, color #e8485c) and "jin" (Jin, friendly senior trainee, color #4a90d9). Use the tools to drive the scene: npc_speak for dialogue, tong_whisper for learning tips, show_exercise for exercises, and end_scene to wrap up. Keep Korean at beginner level. Always end the scene after 2-3 exercises.`,
+      system: `You are running a visual-novel-style Korean language hangout scene at a pojangmacha (street food tent) in Seoul. You have two NPC characters available: "haeun" (Ha-eun, competitive but secretly nice, color #e8485c) and "jin" (Jin, friendly senior trainee, color #4a90d9). Use the tools to drive the scene: npc_speak for dialogue, tong_whisper for learning tips, show_exercise for exercises, and end_scene to wrap up. Keep Korean at beginner level. Always end the scene after 2-3 exercises.`,
       messages,
       tools: hangoutTools,
       maxSteps: 2,
       temperature: 0.8,
     });
     return result.toDataStreamResponse();
-  } catch {
+  } catch (err) {
+    console.error('[hangout] AI error, falling back:', err);
     return buildFallbackResponse(messages);
   }
 }
