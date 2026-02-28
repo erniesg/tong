@@ -614,6 +614,47 @@ function sanitizeHintText(text, fallback = '') {
   return cleaned.slice(0, 180);
 }
 
+function sanitizeSpokenLine(text, fallback = '') {
+  if (typeof text !== 'string') return fallback;
+
+  let cleaned = text
+    .replace(/\s+/g, ' ')
+    .replace(/^(?:npc|character|dialogue|line)\s*[:\-]\s*/i, '')
+    .trim();
+
+  const quotedMatch = cleaned.match(/[“"]([^“”"]{2,260})[”"]/);
+  if (quotedMatch?.[1]) {
+    cleaned = quotedMatch[1].trim();
+  }
+
+  cleaned = cleaned
+    .replace(/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s*[:：-]\s*/u, '')
+    .replace(/^\(([^)]{0,80})\)\s*/u, '')
+    .replace(/^["“'`]+|["”'`]+$/gu, '')
+    .trim();
+
+  const narrativePrefix = cleaned.match(
+    /^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s+(?:nudges?|leans?|smiles?|grins?|laughs?|looks?|gestures?|whispers?|says?|replies?|asks?|nods?)\b[^.?!]*[.?!]\s*(.+)$/iu,
+  );
+  if (narrativePrefix?.[1]) {
+    cleaned = narrativePrefix[1].trim();
+  }
+
+  if (!cleaned) return fallback;
+  return cleaned.slice(0, 260);
+}
+
+function sanitizeSuggestedReply(text) {
+  if (typeof text !== 'string') return null;
+  const cleaned = text
+    .replace(/\s+/g, ' ')
+    .replace(/^(?:reply|option|choice)\s*[:\-]\s*/i, '')
+    .replace(/^["“'`]+|["”'`]+$/gu, '')
+    .trim();
+  if (!cleaned) return null;
+  return cleaned.slice(0, 120);
+}
+
 function mergeRouteMemoryNotes(existing = [], incoming = []) {
   const normalized = [];
   const seen = new Set();
@@ -1557,7 +1598,7 @@ async function generateAiHangoutDecision({
         {
           role: 'system',
           content:
-            'You run a first-person language learning hangout. Keep continuity with prior turns. Return JSON only with: tier, objectiveProgressDelta, scoreDelta, nextLine, tongHint, suggestedReplies, mood, matchedTags, missingTags, sceneBeat, memoryNote. Never output narrator text or markdown. Keep the dialogue immersive and in-scene only. Never use labels like "Micro-goal", "Tong:", "Tip:", "Hint:", or objective percentage/meta copy in nextLine or tongHint. ' +
+            'You run a first-person language learning hangout. Keep continuity with prior turns. Return JSON only with: tier, objectiveProgressDelta, scoreDelta, nextLine, tongHint, suggestedReplies, mood, matchedTags, missingTags, sceneBeat, memoryNote. Never output narrator text or markdown. Keep the dialogue immersive and in-scene only. nextLine must be only what the NPC says aloud, no stage directions and no third-person description. Never use labels like "Micro-goal", "Tong:", "Tip:", "Hint:", or objective percentage/meta copy in nextLine or tongHint. ' +
             languageBlendGuidance,
         },
         {
@@ -1587,7 +1628,7 @@ async function generateAiHangoutDecision({
             scriptedHints: turnScript.tongHints,
             scriptedReplies: turnScript.quickReplies,
             guidance:
-              'Evaluate objective progress and keep scene continuity. suggestedReplies must be 3-5 short learner lines in target language. memoryNote should be one short persistent route memory item if relevant. Keep tongHint concise and practical, no labels/prefixes.',
+              'Evaluate objective progress and keep scene continuity. suggestedReplies must be 3-5 short learner lines in target language. memoryNote should be one short persistent route memory item if relevant. Keep tongHint concise and practical, no labels/prefixes. nextLine is spoken dialogue only.',
           }),
         },
       ],
@@ -1610,7 +1651,7 @@ async function generateAiHangoutDecision({
     clampNumber(Number(parsed.objectiveProgressDelta), 0.05, 0.5).toFixed(2),
   );
   const suggestedReplies = Array.isArray(parsed.suggestedReplies)
-    ? parsed.suggestedReplies.map((value) => String(value || '').trim()).filter(Boolean).slice(0, 6)
+    ? parsed.suggestedReplies.map((value) => sanitizeSuggestedReply(String(value || ''))).filter(Boolean).slice(0, 6)
     : turnScript.quickReplies.slice(0, 6);
   const matchedTags = Array.isArray(parsed.matchedTags)
     ? parsed.matchedTags.map((value) => String(value || '').trim()).filter(Boolean)
@@ -1632,10 +1673,7 @@ async function generateAiHangoutDecision({
       objectiveProgress: objectiveProgressDelta,
     },
     tongHint: sanitizeHintText(parsed.tongHint, turnScript.tongHints[tier]),
-    nextLine:
-      typeof parsed.nextLine === 'string' && parsed.nextLine.trim()
-        ? parsed.nextLine.trim()
-        : turnScript.prompts[tier],
+    nextLine: sanitizeSpokenLine(parsed.nextLine, turnScript.prompts[tier]),
     suggestedReplies: suggestedReplies.length ? suggestedReplies : turnScript.quickReplies.slice(0, 6),
     mood:
       typeof parsed.mood === 'string' && parsed.mood.trim()
@@ -1670,7 +1708,7 @@ async function generateAiHangoutOpening({ scene, session, profile, routeState })
         {
           role: 'system',
           content:
-            'Generate the opening beat for a first-person language-learning hangout scene. Return JSON only with: openingLine, tongHint, quickReplies, mood. quickReplies must be 3-6 short learner lines in the target language. No markdown, no narration labels, and no labels like "Micro-goal", "Tong:", or "Hint:". ' +
+            'Generate the opening beat for a first-person language-learning hangout scene. Return JSON only with: openingLine, tongHint, quickReplies, mood. quickReplies must be 3-6 short learner lines in the target language. openingLine must be only what the NPC says aloud, with no stage directions or third-person narration. No markdown, no narration labels, and no labels like "Micro-goal", "Tong:", or "Hint:". ' +
             languageBlendGuidance,
         },
         {
@@ -1690,7 +1728,7 @@ async function generateAiHangoutOpening({ scene, session, profile, routeState })
             scriptedHint: scene.tongStartHint,
             scriptedReplies: getQuickRepliesForTurn(scene, 1),
             guidance:
-              'Open naturally and set one practical action for this turn in plain natural language. Do not prefix with labels. Keep replies practical for ordering food in this location.',
+              'Open naturally and set one practical action for this turn in plain natural language. Do not prefix with labels. Keep replies practical for ordering food in this location. openingLine is spoken dialogue only.',
           }),
         },
       ],
@@ -1706,13 +1744,10 @@ async function generateAiHangoutOpening({ scene, session, profile, routeState })
   const parsed = parseJsonObject(raw);
   if (!parsed || typeof parsed !== 'object') return null;
 
-  const openingLine =
-    typeof parsed.openingLine === 'string' && parsed.openingLine.trim()
-      ? parsed.openingLine.trim()
-      : buildHangoutOpeningLine(scene, session);
+  const openingLine = sanitizeSpokenLine(parsed.openingLine, buildHangoutOpeningLine(scene, session));
   const tongHint = sanitizeHintText(parsed.tongHint, scene.tongStartHint);
   const quickReplies = Array.isArray(parsed.quickReplies)
-    ? parsed.quickReplies.map((value) => String(value || '').trim()).filter(Boolean).slice(0, 6)
+    ? parsed.quickReplies.map((value) => sanitizeSuggestedReply(String(value || ''))).filter(Boolean).slice(0, 6)
     : [];
   const mood = typeof parsed.mood === 'string' && parsed.mood.trim() ? parsed.mood.trim() : null;
 
