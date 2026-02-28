@@ -3,7 +3,17 @@
 const args = process.argv.slice(2);
 const baseArg = args.find((arg) => !arg.startsWith('-'));
 const strictState = args.includes('--strict-state');
+const sourcesArg = args.find((arg) => arg.startsWith('--sources='));
 const apiBase = (baseArg || process.env.TONG_API_BASE_URL || 'http://localhost:8787').replace(/\/$/, '');
+const includeSources = sourcesArg
+  ? [...new Set(
+    sourcesArg
+      .slice('--sources='.length)
+      .split(',')
+      .map((source) => source.trim().toLowerCase())
+      .filter((source) => source === 'youtube' || source === 'spotify'),
+  )]
+  : [];
 
 const userId = `mock_user_${Date.now().toString(36)}`;
 const profile = {
@@ -64,9 +74,14 @@ function assertArray(value, label) {
   assert(value.length > 0, `${label} should not be empty`);
 }
 
+function expectsSource(source) {
+  return includeSources.length === 0 || includeSources.includes(source);
+}
+
 async function run() {
   console.log(`Running mock flow checks against ${apiBase}`);
   console.log(`Strict stateful checks: ${strictState ? 'enabled' : 'disabled'}`);
+  console.log(`Source scope: ${includeSources.length > 0 ? includeSources.join(', ') : 'all'}`);
 
   const health = await requestJson('/health');
   assert(health.ok, `/health failed (${health.status})`);
@@ -99,6 +114,7 @@ async function run() {
     body: JSON.stringify({
       userId,
       profile,
+      ...(includeSources.length > 0 ? { includeSources } : {}),
     }),
   });
   assert(ingest.ok, `/ingestion/run-mock failed (${ingest.status})`);
@@ -109,8 +125,18 @@ async function run() {
   const mediaProfile = await requestJson(`/api/v1/player/media-profile?windowDays=3&userId=${encodeURIComponent(userId)}`);
   assert(mediaProfile.ok, `/player/media-profile failed (${mediaProfile.status})`);
   assert(mediaProfile.data?.userId === userId, 'mediaProfile userId mismatch');
-  assert(mediaProfile.data?.sourceBreakdown?.youtube?.itemsConsumed > 0, 'youtube sourceBreakdown missing');
-  assert(mediaProfile.data?.sourceBreakdown?.spotify?.itemsConsumed > 0, 'spotify sourceBreakdown missing');
+  const ytCount = mediaProfile.data?.sourceBreakdown?.youtube?.itemsConsumed || 0;
+  const spCount = mediaProfile.data?.sourceBreakdown?.spotify?.itemsConsumed || 0;
+  if (expectsSource('youtube')) {
+    assert(ytCount > 0, 'youtube sourceBreakdown missing');
+  } else {
+    assert(ytCount === 0, `youtube sourceBreakdown should be 0 when source-scoped: ${ytCount}`);
+  }
+  if (expectsSource('spotify')) {
+    assert(spCount > 0, 'spotify sourceBreakdown missing');
+  } else {
+    assert(spCount === 0, `spotify sourceBreakdown should be 0 when source-scoped: ${spCount}`);
+  }
   assertArray(mediaProfile.data?.learningSignals?.topTerms, 'learningSignals.topTerms');
   assertArray(mediaProfile.data?.learningSignals?.clusterAffinities, 'learningSignals.clusterAffinities');
   logPass('/api/v1/player/media-profile');
@@ -227,6 +253,7 @@ async function run() {
   console.log(`- API base: ${apiBase}`);
   console.log(`- userId: ${userId}`);
   console.log(`- strict state checks: ${strictState ? 'enabled' : 'disabled'}`);
+  console.log(`- source scope: ${includeSources.length > 0 ? includeSources.join(', ') : 'all'}`);
 }
 
 run().catch((error) => {

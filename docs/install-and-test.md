@@ -41,6 +41,8 @@ These are static/mock end-to-end API checks you can run while real provider sync
 
 ```bash
 npm run test:api-flow:local
+npm run test:api-flow:local:youtube
+npm run test:api-flow:local:spotify
 npm run test:api-flow:worker-local
 npm run test:api-flow:cloud
 ```
@@ -63,7 +65,7 @@ Set env on the API server process:
 ```bash
 SPOTIFY_CLIENT_ID=...
 SPOTIFY_CLIENT_SECRET=...
-SPOTIFY_REDIRECT_URI=http://localhost:8787/api/v1/integrations/spotify/callback
+SPOTIFY_REDIRECT_URI=http://127.0.0.1:8787/api/v1/integrations/spotify/callback
 npm run dev:server
 ```
 
@@ -77,6 +79,11 @@ curl -sS "http://localhost:8787/api/v1/integrations/spotify/status?userId=demo-u
 curl -sS -X POST "http://localhost:8787/api/v1/integrations/spotify/sync" -H "content-type: application/json" -d '{"userId":"demo-user-1","windowHours":72}'
 curl -sS "http://localhost:8787/api/v1/vocab/frequency?windowDays=3&userId=demo-user-1"
 ```
+
+Spotify redirect URI note:
+1. In Spotify Dashboard, set redirect URI to `http://127.0.0.1:8787/api/v1/integrations/spotify/callback`.
+2. Do not put query params (for example `?userId=...`) in the redirect URI.
+3. `/api/v1/integrations/spotify/connect` is the endpoint that generates the auth URL; it is not the redirect URI.
 
 Note: this phase syncs Spotify recently played metadata (track/title/artist). Lyrics provider integration is a separate step.
 

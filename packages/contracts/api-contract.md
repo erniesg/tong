@@ -178,6 +178,28 @@ Response:
 }
 ```
 
+## POST `/api/v1/ingestion/run-mock`
+Request:
+```json
+{
+  "userId": "demo-user-1",
+  "includeSources": ["youtube", "spotify"]
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "generatedAtIso": "2026-02-28T12:00:00.000Z",
+  "includeSources": ["youtube", "spotify"],
+  "sourceCount": { "youtube": 3, "spotify": 3 },
+  "topTerms": [
+    { "lemma": "연습", "lang": "ko", "count": 27, "sourceCount": 9 }
+  ]
+}
+```
+
 ## POST `/api/v1/game/start-or-resume`
 Request:
 ```json
@@ -387,7 +409,7 @@ Response:
   "connected": false,
   "state": "abc123",
   "scope": "user-read-recently-played",
-  "redirectUri": "http://localhost:8787/api/v1/integrations/spotify/callback",
+  "redirectUri": "http://127.0.0.1:8787/api/v1/integrations/spotify/callback",
   "authUrl": "https://accounts.spotify.com/authorize?..."
 }
 ```

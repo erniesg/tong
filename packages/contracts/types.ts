@@ -1,5 +1,6 @@
 export type TargetLanguage = 'ko' | 'ja' | 'zh';
 export type AppLanguage = TargetLanguage | 'en';
+export type IngestionSource = 'youtube' | 'spotify';
 
 export interface EnrichedCaptionToken {
   text: string;
@@ -227,7 +228,7 @@ export interface LearnSessionCreateResponse {
 
 export interface IngestionSourceItem {
   id: string;
-  source: 'youtube' | 'spotify';
+  source: IngestionSource;
   title: string;
   lang: TargetLanguage;
   minutes: number;
@@ -244,6 +245,7 @@ export interface IngestionSnapshot {
 export interface IngestionRunResponse {
   success: true;
   generatedAtIso: string;
+  includeSources: IngestionSource[];
   sourceCount: {
     youtube: number;
     spotify: number;

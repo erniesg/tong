@@ -41,8 +41,23 @@ Server defaults to `http://localhost:8787`.
 ```bash
 SPOTIFY_CLIENT_ID=...
 SPOTIFY_CLIENT_SECRET=...
-SPOTIFY_REDIRECT_URI=http://localhost:8787/api/v1/integrations/spotify/callback
+SPOTIFY_REDIRECT_URI=http://127.0.0.1:8787/api/v1/integrations/spotify/callback
 ```
+
+`SPOTIFY_REDIRECT_URI` must exactly match the redirect URI configured in Spotify Dashboard and should point to `/api/v1/integrations/spotify/callback` (not `/connect`).
+
+## Source-scoped mock ingestion
+
+Use `includeSources` in `POST /api/v1/ingestion/run-mock` to test YouTube and Spotify separately:
+
+```json
+{
+  "userId": "demo-user-1",
+  "includeSources": ["youtube"]
+}
+```
+
+Valid sources are `youtube` and `spotify`.
 
 ## Mock ingestion
 
