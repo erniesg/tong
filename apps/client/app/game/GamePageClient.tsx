@@ -126,21 +126,21 @@ const LOCATIONS: LocationId[] = [
 const LOCATION_CHARACTERS_BY_CITY: Record<CityId, Record<LocationId, SceneCharacter>> = {
   seoul: {
     food_street: { name: 'Haeun', role: 'Primary romance route lead', avatarEmoji: 'HR', mood: 'warm' },
-    cafe: { name: 'Ding', role: 'Primary romance route lead', avatarEmoji: 'DG', mood: 'charming' },
+    cafe: { name: 'Jin', role: 'Primary romance route lead', avatarEmoji: 'JN', mood: 'charming' },
     convenience_store: { name: 'Min', role: 'Store clerk', avatarEmoji: 'CV', mood: 'helpful' },
     subway_hub: { name: 'Haneul', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
     practice_studio: { name: 'Ara', role: 'Practice partner', avatarEmoji: 'PS', mood: 'energetic' },
   },
   tokyo: {
     food_street: { name: 'Haeun', role: 'Primary romance route lead', avatarEmoji: 'HR', mood: 'warm' },
-    cafe: { name: 'Ding', role: 'Primary romance route lead', avatarEmoji: 'DG', mood: 'charming' },
+    cafe: { name: 'Jin', role: 'Primary romance route lead', avatarEmoji: 'JN', mood: 'charming' },
     convenience_store: { name: 'Sora', role: 'Store clerk', avatarEmoji: 'CV', mood: 'helpful' },
     subway_hub: { name: 'Daichi', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
     practice_studio: { name: 'Mika', role: 'Practice partner', avatarEmoji: 'PS', mood: 'energetic' },
   },
   shanghai: {
     food_street: { name: 'Haeun', role: 'Primary romance route lead', avatarEmoji: 'HR', mood: 'warm' },
-    cafe: { name: 'Ding', role: 'Primary romance route lead', avatarEmoji: 'DG', mood: 'charming' },
+    cafe: { name: 'Jin', role: 'Primary romance route lead', avatarEmoji: 'JN', mood: 'charming' },
     convenience_store: { name: 'Bo', role: 'Store clerk', avatarEmoji: 'CV', mood: 'helpful' },
     subway_hub: { name: 'Wei', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
     practice_studio: { name: 'Qin', role: 'Practice partner', avatarEmoji: 'PS', mood: 'energetic' },
@@ -160,6 +160,7 @@ const ACTIVE_USER_ID_STORAGE_KEY = 'tong_active_user_id';
 const GAME_LOGO_PATH = '/assets/app/logo_transparent.png';
 const OPENING_ANIMATION_PATH = '/assets/app/tong_opening.mp4';
 const MAX_PROFICIENCY_GAUGE_LEVEL = 6;
+const SEOUL_FIRST_SCENE_BACKDROP = '/assets/scenes/scene1.png';
 const REQUESTED_GAUGE_PRESET: Record<CjkLang, ProficiencyGaugeLevel> = {
   ko: 0,
   ja: 0,
@@ -225,11 +226,11 @@ function getCharacterAvatarPath(value?: SceneCharacter): string | null {
   if (value.assetKey) return `/assets/characters/${value.assetKey}`;
 
   if (value.id === 'npc_haeun') return '/assets/characters/hauen/haeun.png';
-  if (value.id === 'npc_ding_man') return '/assets/characters/ding_man/ding_man.png';
+  if (value.id === 'npc_jin' || value.id === 'npc_ding_man') return '/assets/characters/ding_man/ding_man.png';
 
   const safeName = (value.name || '').toLowerCase();
   if (safeName === 'haeun') return '/assets/characters/hauen/haeun.png';
-  if (safeName === 'ding') return '/assets/characters/ding_man/ding_man.png';
+  if (safeName === 'jin' || safeName === 'ding') return '/assets/characters/ding_man/ding_man.png';
   return null;
 }
 
@@ -345,9 +346,13 @@ export default function GamePageClient({
   const hasCompletedFirstHangout = validatedHangouts >= 1;
   const showSceneOneBackdrop = mode === 'hangout' && !hasCompletedFirstHangout;
   const characterAvatarSrc = getCharacterAvatarPath(character);
+  const sceneOneBackdropLayers =
+    city === 'seoul'
+      ? [`url(${SEOUL_FIRST_SCENE_BACKDROP})`, `url(${cityConfig.backdropImage})`]
+      : [`url(${cityConfig.backdropImage})`];
   const sceneOneBackdropStyle = showSceneOneBackdrop
     ? {
-        backgroundImage: `linear-gradient(180deg, rgba(14, 20, 28, 0.2), rgba(14, 20, 28, 0.68)), url(${cityConfig.backdropImage})`,
+        backgroundImage: `linear-gradient(180deg, rgba(14, 20, 28, 0.2), rgba(14, 20, 28, 0.68)), ${sceneOneBackdropLayers.join(', ')}`,
       }
     : undefined;
   const activeSceneLine = pendingUserLine ? null : sceneLines[sceneLineIndex] || null;

@@ -149,14 +149,20 @@ const ROMANCEABLE_CHARACTERS = [
     isRomanceable: true,
   },
   {
-    npcId: 'npc_ding_man',
+    npcId: 'npc_jin',
     assetKey: 'ding_man/ding_man.png',
-    name: 'Ding',
+    name: 'Jin',
     role: 'Primary romance route lead',
     baselineMood: 'charming',
     isRomanceable: true,
   },
 ];
+
+const CITY_ROMANCEABLE_CHARACTER_IDS = {
+  seoul: ['npc_haeun', 'npc_jin'],
+  tokyo: ['npc_haeun', 'npc_jin'],
+  shanghai: ['npc_haeun', 'npc_jin'],
+};
 
 const LOCATION_BASE = {
   food_street: { label: 'Food Street', vibeTags: ['street-food'] },
@@ -727,21 +733,28 @@ function pickRandomNpc(city) {
 }
 
 function pickCharacter({ city = 'seoul', preferRomance = true, requestedCharacterId } = {}) {
-  if (requestedCharacterId) {
-    const fromRomance = ROMANCEABLE_CHARACTERS.find((item) => item.npcId === requestedCharacterId);
+  const safeCity = normalizeCity(city);
+  const normalizedRequestedCharacterId =
+    requestedCharacterId === 'npc_ding_man' ? 'npc_jin' : requestedCharacterId;
+  const romancePool = ROMANCEABLE_CHARACTERS.filter((item) =>
+    (CITY_ROMANCEABLE_CHARACTER_IDS[safeCity] || []).includes(item.npcId),
+  );
+
+  if (normalizedRequestedCharacterId) {
+    const fromRomance = ROMANCEABLE_CHARACTERS.find((item) => item.npcId === normalizedRequestedCharacterId);
     if (fromRomance) return { ...fromRomance };
-    const fromPool = (CITY_CHARACTER_POOL[normalizeCity(city)] || []).find(
-      (item) => item.npcId === requestedCharacterId,
+    const fromPool = (CITY_CHARACTER_POOL[safeCity] || []).find(
+      (item) => item.npcId === normalizedRequestedCharacterId,
     );
     if (fromPool) return { ...fromPool };
   }
 
-  if (preferRomance && ROMANCEABLE_CHARACTERS.length > 0) {
-    const selected = ROMANCEABLE_CHARACTERS[Math.floor(Math.random() * ROMANCEABLE_CHARACTERS.length)];
+  if (preferRomance && romancePool.length > 0) {
+    const selected = romancePool[Math.floor(Math.random() * romancePool.length)];
     return { ...selected };
   }
 
-  return pickRandomNpc(city);
+  return pickRandomNpc(safeCity);
 }
 
 function getSceneSlice({ city = 'seoul', location = 'food_street', lang } = {}) {
