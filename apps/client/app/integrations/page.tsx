@@ -70,6 +70,8 @@ export default function IntegrationsPage() {
     () => sourceItems.filter((item) => item.source === 'youtube'),
     [sourceItems],
   );
+  const spotifyCanLiveSync = Boolean(spotifyStatus?.connected);
+  const youtubeCanLiveSync = Boolean(youtubeStatus?.connected);
 
   async function refreshAll() {
     try {
@@ -146,6 +148,12 @@ export default function IntegrationsPage() {
     try {
       setError(null);
       setWorkingAction(tool);
+      if (tool === 'integrations.spotify.sync' && !spotifyCanLiveSync) {
+        throw new Error('Spotify is not connected. Click "Get Spotify auth URL", approve, then run live sync.');
+      }
+      if (tool === 'integrations.youtube.sync' && !youtubeCanLiveSync) {
+        throw new Error('YouTube is not connected. Click "Get YouTube auth URL", approve, then run live sync.');
+      }
       const args =
         tool === 'integrations.spotify.sync' || tool === 'integrations.youtube.sync'
           ? { userId: USER_ID, windowHours: DEFAULT_WINDOW_HOURS }
@@ -226,7 +234,7 @@ export default function IntegrationsPage() {
             <button
               className="secondary"
               onClick={() => void runSync('integrations.spotify.sync')}
-              disabled={Boolean(workingAction)}
+              disabled={Boolean(workingAction) || !spotifyCanLiveSync}
             >
               {workingAction === 'integrations.spotify.sync' ? 'Syncing...' : 'Run Spotify live sync'}
             </button>
@@ -245,6 +253,7 @@ export default function IntegrationsPage() {
               </a>
             </p>
           )}
+          {!spotifyCanLiveSync && <p>Connect Spotify first to enable live sync.</p>}
         </article>
 
         <article className="card stack">
@@ -261,7 +270,7 @@ export default function IntegrationsPage() {
             <button
               className="secondary"
               onClick={() => void runSync('integrations.youtube.sync')}
-              disabled={Boolean(workingAction)}
+              disabled={Boolean(workingAction) || !youtubeCanLiveSync}
             >
               {workingAction === 'integrations.youtube.sync' ? 'Syncing...' : 'Run YouTube live sync'}
             </button>
@@ -280,6 +289,7 @@ export default function IntegrationsPage() {
               </a>
             </p>
           )}
+          {!youtubeCanLiveSync && <p>Connect YouTube first to enable live sync.</p>}
         </article>
       </section>
 
