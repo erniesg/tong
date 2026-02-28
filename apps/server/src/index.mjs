@@ -150,7 +150,7 @@ const ROMANCEABLE_CHARACTERS = [
   },
   {
     npcId: 'npc_jin',
-    assetKey: 'ding_man/ding_man.png',
+    assetKey: 'jin/jin.png',
     name: 'Jin',
     role: 'Primary romance route lead',
     baselineMood: 'charming',
@@ -835,7 +835,7 @@ function normalizeLegacyRomanceIdentity(session) {
       ...session.npc,
       npcId: 'npc_jin',
       name: 'Jin',
-      assetKey: session.npc.assetKey || 'ding_man/ding_man.png',
+      assetKey: session.npc.assetKey || 'jin/jin.png',
     };
   }
 

@@ -202,7 +202,6 @@ function mergeCharacterPayload(base: SceneCharacter, payload?: SceneCharacter): 
 function getCharacterAvatarPaths(value?: SceneCharacter): string[] {
   if (!value) return [];
   const options: string[] = [];
-  if (value.assetKey) options.push(`/assets/characters/${value.assetKey}`);
 
   const safeName = (value.name || '').toLowerCase().trim();
   const safeId = (value.id || '').toLowerCase().trim();
@@ -217,6 +216,11 @@ function getCharacterAvatarPaths(value?: SceneCharacter): string[] {
     options.push('/assets/characters/jin/jin.png');
     options.push('/assets/characters/ding_man/avatar.png');
     options.push('/assets/characters/ding_man/ding_man.png');
+  }
+
+  if (value.assetKey) {
+    // Keep server-provided asset key as fallback, but after canonical routes.
+    options.push(`/assets/characters/${value.assetKey}`);
   }
 
   return [...new Set(options)];
