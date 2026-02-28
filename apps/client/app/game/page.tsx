@@ -427,6 +427,7 @@ export default function GamePage() {
     if (processingRef.current) {
       console.log('[VN] handleContinue: dequeue blocked tool');
       setCurrentMessage(null);
+      setTongTip(null); // Clear any lingering tong tip
       setToolQueue((prev) => prev.slice(1));
       processingRef.current = false;
       return;
@@ -437,7 +438,7 @@ export default function GamePage() {
 
     if (tongTip) {
       setTongTip(null);
-      return;
+      // tongTip was auto-advanced (not blocking) — fall through to request next turn
     }
 
     if (!currentExercise && !choices && toolQueue.length === 0) {
@@ -471,7 +472,16 @@ export default function GamePage() {
 
   const handleDismissTong = useCallback(() => {
     setTongTip(null);
-  }, []);
+    if (processingRef.current) {
+      // tong_whisper was blocking (exercise next) — dequeue so processor advances
+      setToolQueue((prev) => prev.slice(1));
+      processingRef.current = false;
+    } else if (!currentExercise && !choices && toolQueue.length === 0) {
+      // tong_whisper was auto-advanced, nothing queued — request next turn
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
+      void append({ role: 'user', content: `${ctx}Continue.` });
+    }
+  }, [currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location]);
 
   /* ── renders ──────────────────────────────────────────── */
 
