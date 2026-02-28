@@ -29,6 +29,13 @@ const TOPIC_DEFINITIONS = [
 ];
 
 const TOKEN_REGEX = /[\p{Script=Hangul}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}A-Za-z]{2,}/gu;
+const PROFICIENCY_ORDER = {
+  none: 0,
+  beginner: 1,
+  intermediate: 2,
+  advanced: 3,
+  native: 4,
+};
 
 function detectScriptType(token) {
   if (/[\p{Script=Hangul}]/u.test(token)) return 'hangul';
@@ -77,7 +84,33 @@ function sortFrequencyEntries(map) {
   });
 }
 
-export function runMockIngestion(snapshot) {
+function getLanguageLearningBoost(profile, lang) {
+  if (!profile || !Array.isArray(profile.targetLanguages) || profile.targetLanguages.length === 0) {
+    return 1;
+  }
+
+  const targets = new Set(profile.targetLanguages);
+  if (!targets.has(lang)) return 0.55;
+
+  const level = profile?.proficiency?.[lang] || 'none';
+  const rank = PROFICIENCY_ORDER[level] ?? 0;
+  const masteryGap = Math.max(0, 4 - rank);
+  return Number((1 + masteryGap * 0.18).toFixed(2));
+}
+
+function stableTermJitter(userId, lemma) {
+  const seed = `${userId}:${lemma}`;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) % 10000;
+  }
+  return (hash % 17) / 1000;
+}
+
+export function runMockIngestion(snapshot, options = {}) {
+  const userId = options.userId || 'demo-user-1';
+  const profile = options.profile || null;
+
   const frequencyMap = new Map();
   const topicStats = new Map();
   const sourceBreakdown = {
@@ -202,13 +235,23 @@ export function runMockIngestion(snapshot) {
     score: Number(Math.max(0.2, 0.95 - idx * 0.15).toFixed(2)),
   }));
 
-  const totalScore =
-    topTerms.reduce((sum, item) => sum + item.count * item.sourceCount, 0) || 1;
+  const rankedTopTerms = topTerms
+    .map((item) => {
+      const baseScore = item.count * item.sourceCount;
+      const languageBoost = getLanguageLearningBoost(profile, item.lang);
+      const weightedScore = Number(
+        (baseScore * languageBoost + stableTermJitter(userId, item.lemma)).toFixed(4),
+      );
+      return { item, weightedScore };
+    })
+    .sort((a, b) => b.weightedScore - a.weightedScore);
+
+  const totalScore = rankedTopTerms.reduce((sum, entry) => sum + entry.weightedScore, 0) || 1;
   const learningSignals = {
-    topTerms: topTerms.map((item) => ({
+    topTerms: rankedTopTerms.map(({ item, weightedScore }) => ({
       lemma: item.lemma,
       lang: item.lang,
-      weightedScore: Number(((item.count * item.sourceCount) / totalScore).toFixed(2)),
+      weightedScore: Number((weightedScore / totalScore).toFixed(2)),
       dominantSource:
         (item.sourceBreakdown?.youtube || 0) >= (item.sourceBreakdown?.spotify || 0)
           ? 'youtube'
@@ -231,7 +274,7 @@ export function runMockIngestion(snapshot) {
       items: insightsItems,
     },
     mediaProfile: {
-      userId: 'demo-user-1',
+      userId,
       windowDays: 3,
       generatedAtIso: new Date().toISOString(),
       sourceBreakdown: {
