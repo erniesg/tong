@@ -147,6 +147,34 @@ const AGENT_TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'integrations.spotify.status',
+    description: 'Get Spotify connection and sync status for a user.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+    },
+  },
+  {
+    name: 'integrations.spotify.connect',
+    description: 'Generate Spotify OAuth connect URL for a user.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+    },
+  },
+  {
+    name: 'integrations.spotify.sync',
+    description: 'Run real Spotify sync for a connected user.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      windowHours: 'number (optional)',
+    },
+  },
+  {
     name: 'player.media_profile.get',
     description: 'Fetch computed media profile used by game personalization.',
     method: 'POST',
@@ -1027,6 +1055,97 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
           ok: true,
           tool: toolName,
           result: formatIngestionRunResponse(result, ['spotify']),
+        },
+      };
+    }
+    case 'integrations.spotify.status': {
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: getSpotifyStatusPayload(userId),
+        },
+      };
+    }
+    case 'integrations.spotify.connect': {
+      if (!spotifyConfigured()) {
+        return {
+          statusCode: 503,
+          payload: {
+            ok: false,
+            tool: toolName,
+            ...spotifyConfigErrorPayload(),
+          },
+        };
+      }
+      const connectInfo = buildSpotifyAuthUrl(userId);
+      if (!connectInfo) {
+        return {
+          statusCode: 503,
+          payload: {
+            ok: false,
+            tool: toolName,
+            ...spotifyConfigErrorPayload(),
+          },
+        };
+      }
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: {
+            userId,
+            connected: Boolean(state.spotifyTokensByUser.get(userId)?.accessToken),
+            state: connectInfo.stateToken,
+            scope: SPOTIFY_SCOPE,
+            redirectUri: getSpotifyRedirectUri(),
+            authUrl: connectInfo.authUrl,
+          },
+        },
+      };
+    }
+    case 'integrations.spotify.sync': {
+      if (!spotifyConfigured()) {
+        return {
+          statusCode: 503,
+          payload: {
+            ok: false,
+            tool: toolName,
+            ...spotifyConfigErrorPayload(),
+          },
+        };
+      }
+      if (!state.spotifyTokensByUser.get(userId)?.accessToken) {
+        return {
+          statusCode: 400,
+          payload: {
+            ok: false,
+            tool: toolName,
+            error: 'spotify_not_connected',
+            message: 'Connect Spotify first via integrations.spotify.connect.',
+          },
+        };
+      }
+      const synced = await syncSpotifyForUser(userId, args.windowHours);
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: {
+            userId,
+            syncedAtIso: synced.syncedAtIso,
+            windowHours: synced.windowHours,
+            spotifyItemCount: synced.itemCount,
+            spotifyRawItemCount: synced.rawItemCount,
+            topTerms: synced.ingestion.frequency.items.slice(0, 10),
+            sourceCount: {
+              youtube: synced.ingestion.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
+              spotify: synced.ingestion.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
+            },
+          },
         },
       };
     }
