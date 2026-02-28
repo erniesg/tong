@@ -21,6 +21,11 @@ npm install
 npm run client:dev
 ```
 
+If `3000` is occupied:
+```bash
+PORT=3001 npm run client:dev
+```
+
 Validate in browser:
 - [http://localhost:3000](http://localhost:3000)
 - [http://localhost:3000?demo_fast_path=true&auto_pass_checks=true](http://localhost:3000?demo_fast_path=true&auto_pass_checks=true)
