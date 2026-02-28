@@ -65,7 +65,9 @@ export function DemoShell({ data, demoFastPath, autoPassChecks }: DemoShellProps
   const [sessionMode, setSessionMode] = useState<"new" | "resume">("resume");
   const [learnPanel, setLearnPanel] = useState<"new" | "history">("history");
   const [selectedToken, setSelectedToken] = useState<ScriptToken | null>(
-    data.captions.segments[0]?.tokens[0] ?? null
+    data.captions.segments[0]?.tokens.find((token) => token.lemma === data.dictionary.term) ??
+      data.captions.segments[0]?.tokens[0] ??
+      null
   );
 
   const firstSegment = data.captions.segments[0];
@@ -131,24 +133,33 @@ export function DemoShell({ data, demoFastPath, autoPassChecks }: DemoShellProps
             <p className="term">
               {selectedToken?.lemma ?? data.dictionary.term} ({data.dictionary.lang})
             </p>
-            <p className="meaning">{data.dictionary.meaning}</p>
-            <p className="label">Examples</p>
-            <ul>
-              {data.dictionary.examples.map((example) => (
-                <li key={example}>{example}</li>
-              ))}
-            </ul>
-            <p className="label">Cross-CJK</p>
-            <div className="mini-grid">
-              <span>ZH {data.dictionary.crossCjk.zhHans}</span>
-              <span>JA {data.dictionary.crossCjk.ja}</span>
-            </div>
-            <p className="label">Readings</p>
-            <div className="mini-grid">
-              <span>KO {data.dictionary.readings.ko}</span>
-              <span>ZH {data.dictionary.readings.zhPinyin}</span>
-              <span>JA {data.dictionary.readings.jaRomaji}</span>
-            </div>
+            {selectedToken?.lemma === data.dictionary.term ? (
+              <>
+                <p className="meaning">{data.dictionary.meaning}</p>
+                <p className="label">Examples</p>
+                <ul>
+                  {data.dictionary.examples.map((example) => (
+                    <li key={example}>{example}</li>
+                  ))}
+                </ul>
+                <p className="label">Cross-CJK</p>
+                <div className="mini-grid">
+                  <span>ZH {data.dictionary.crossCjk.zhHans}</span>
+                  <span>JA {data.dictionary.crossCjk.ja}</span>
+                </div>
+                <p className="label">Readings</p>
+                <div className="mini-grid">
+                  <span>KO {data.dictionary.readings.ko}</span>
+                  <span>ZH {data.dictionary.readings.zhPinyin}</span>
+                  <span>JA {data.dictionary.readings.jaRomaji}</span>
+                </div>
+              </>
+            ) : (
+              <p className="meaning">
+                No local fixture for this token yet. In live mode this card calls
+                `GET /api/v1/dictionary/entry?term=...&lang=ko`.
+              </p>
+            )}
           </aside>
         </div>
       </section>
