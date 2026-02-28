@@ -6,3 +6,6 @@ node_modules/
 .next/
 reference-notes/
 apps/server/data/generated/
+.env
+.env.*
+.logs/
