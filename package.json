@@ -5,6 +5,8 @@
   "description": "Chrome extension + dating sim game for learning CJK languages",
   "scripts": {
     "demo:smoke": "node scripts/demo_smoke_check.mjs",
+    "ingestion:planner": "node apps/server/ingestion/generate_planner_context.mjs --userId demo-user-1 --windowDays 3 --events packages/contracts/fixtures/media.events.sample.json --now 2026-02-28T12:00:00.000Z",
+    "ingestion:planner:fixture": "node apps/server/ingestion/generate_planner_context.mjs --userId demo-user-1 --windowDays 3 --events packages/contracts/fixtures/media.events.sample.json --now 2026-02-28T12:00:00.000Z --out packages/contracts/fixtures/planner.lesson-context.sample.json",
     "setup:worktrees": "./scripts/setup-hackathon-worktrees.sh",
     "zip": "rm -f tong.zip && zip -r tong.zip manifest.json src README.md"
   }

@@ -117,6 +117,134 @@ Response:
 }
 ```
 
+## GET `/api/v1/player/media-profile`
+Query:
+```json
+{
+  "userId": "demo-user-1",
+  "windowDays": 3
+}
+```
+
+Response:
+```json
+{
+  "userId": "demo-user-1",
+  "windowDays": 3,
+  "generatedAtIso": "2026-02-28T12:00:00.000Z",
+  "sourceBreakdown": {
+    "youtube": {
+      "itemsConsumed": 3,
+      "minutes": 64,
+      "topMedia": [
+        {
+          "mediaId": "yt_a12",
+          "title": "K-variety snack challenge",
+          "lang": "ko",
+          "minutes": 38,
+          "embedUrl": "https://www.youtube.com/embed/aqz-KE-bpKQ"
+        }
+      ]
+    },
+    "spotify": {
+      "itemsConsumed": 3,
+      "minutes": 47,
+      "topMedia": [
+        {
+          "mediaId": "sp_track_001",
+          "title": "밤 산책",
+          "lang": "ko",
+          "minutes": 19,
+          "embedUrl": "https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC?utm_source=generator"
+        }
+      ]
+    }
+  },
+  "learningSignals": {
+    "topTerms": [
+      {
+        "lemma": "연습",
+        "lang": "ko",
+        "weightedScore": 1,
+        "dominantSource": "spotify"
+      }
+    ],
+    "clusterAffinities": [
+      {
+        "clusterId": "performance-energy",
+        "label": "Performance Energy",
+        "score": 1
+      }
+    ]
+  }
+}
+```
+
+## GET `/api/v1/planner/lesson-context`
+Query:
+```json
+{
+  "userId": "demo-user-1",
+  "windowDays": 3
+}
+```
+
+Response:
+```json
+{
+  "userId": "demo-user-1",
+  "windowDays": 3,
+  "generatedAtIso": "2026-02-28T12:00:00.000Z",
+  "windowStartIso": "2026-02-25T12:00:00.000Z",
+  "windowEndIso": "2026-02-28T12:00:00.000Z",
+  "sourceBreakdown": {
+    "youtube": { "itemsConsumed": 3, "minutes": 64, "topMedia": [] },
+    "spotify": { "itemsConsumed": 3, "minutes": 47, "topMedia": [] }
+  },
+  "topTerms": [
+    {
+      "lemma": "연습",
+      "lang": "ko",
+      "count": 3,
+      "weightedScore": 1,
+      "dominantSource": "spotify",
+      "clusterId": "performance-energy"
+    }
+  ],
+  "topicModel": {
+    "clusters": [
+      { "clusterId": "performance-energy", "label": "Performance Energy", "score": 1 }
+    ]
+  },
+  "plannerInput": {
+    "objectiveCandidates": [
+      {
+        "objectiveId": "zh_stage_l3_002",
+        "reason": "Performance-energy cluster is active in CN/KR media",
+        "confidence": 1
+      }
+    ],
+    "sceneCandidates": [
+      {
+        "sceneId": "shanghai_texting_mission_advanced",
+        "city": "shanghai",
+        "mode": "hangout",
+        "objectiveId": "zh_stage_l3_002"
+      }
+    ],
+    "exerciseCandidates": [
+      {
+        "type": "targeted-drill",
+        "lemma": "연습",
+        "lang": "ko",
+        "objectiveId": "zh_stage_l3_002",
+        "reason": "Frequent in spotify over last 72h"
+      }
+    ]
+  }
+}
+```
+
 ## POST `/api/v1/game/start-or-resume`
 Request:
 ```json
