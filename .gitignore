@@ -1,9 +1,13 @@
 .DS_Store
+.env
+.env.*
+!.env.example
 tong.zip
 
 .worktrees/
 node_modules/
 .next/
+.open-next/
 reference-notes/
 apps/server/data/generated/
 
