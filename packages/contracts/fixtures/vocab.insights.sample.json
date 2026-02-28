@@ -1,50 +1,384 @@
 {
-  "windowStartIso": "2026-02-25T00:00:00.000Z",
-  "windowEndIso": "2026-02-28T00:00:00.000Z",
+  "windowStartIso": "2026-02-25T12:00:00.000Z",
+  "windowEndIso": "2026-02-28T12:00:00.000Z",
   "clusters": [
     {
       "clusterId": "food-ordering",
       "label": "Food Ordering",
-      "keywords": ["주문", "메뉴", "맵다"],
-      "topTerms": ["주문", "메뉴"]
+      "keywords": [
+        "주문",
+        "메뉴",
+        "포장"
+      ],
+      "topTerms": [
+        "주문",
+        "메뉴"
+      ]
     },
     {
       "clusterId": "performance-energy",
       "label": "Performance Energy",
-      "keywords": ["불", "火", "燃える"],
-      "topTerms": ["불", "火"]
+      "keywords": [
+        "무대",
+        "연습",
+        "火"
+      ],
+      "topTerms": [
+        "무대",
+        "연습"
+      ]
+    },
+    {
+      "clusterId": "transport-navigation",
+      "label": "Transit Navigation",
+      "keywords": [
+        "station",
+        "subway",
+        "transfer"
+      ],
+      "topTerms": [
+        "station",
+        "subway"
+      ]
     }
   ],
   "items": [
     {
+      "lemma": "무대",
+      "lang": "ko",
+      "score": 1,
+      "frequency": 3,
+      "burst": 1.6,
+      "clusterId": "performance-energy",
+      "orthographyFeatures": {
+        "scriptType": "hangul",
+        "syllables": [
+          "무",
+          "대"
+        ]
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "zh_stage_l3_002",
+          "reason": "Supports Shanghai advanced texting mission vocabulary"
+        }
+      ]
+    },
+    {
       "lemma": "주문",
       "lang": "ko",
-      "score": 0.82,
-      "frequency": 26,
-      "burst": 1.34,
+      "score": 0.96,
+      "frequency": 3,
+      "burst": 1.6,
       "clusterId": "food-ordering",
       "orthographyFeatures": {
         "scriptType": "hangul",
-        "syllables": ["주", "문"]
+        "syllables": [
+          "주",
+          "문"
+        ]
       },
       "objectiveLinks": [
-        { "objectiveId": "ko_food_l2_001", "reason": "High utility in next hangout" }
+        {
+          "objectiveId": "ko_food_l2_001",
+          "reason": "High utility in next food-location hangout"
+        }
+      ]
+    },
+    {
+      "lemma": "연습",
+      "lang": "ko",
+      "score": 0.95,
+      "frequency": 3,
+      "burst": 1.6,
+      "clusterId": "performance-energy",
+      "orthographyFeatures": {
+        "scriptType": "hangul",
+        "syllables": [
+          "연",
+          "습"
+        ]
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "zh_stage_l3_002",
+          "reason": "Supports Shanghai advanced texting mission vocabulary"
+        }
+      ]
+    },
+    {
+      "lemma": "메뉴",
+      "lang": "ko",
+      "score": 0.72,
+      "frequency": 2,
+      "burst": 1.4,
+      "clusterId": "food-ordering",
+      "orthographyFeatures": {
+        "scriptType": "hangul",
+        "syllables": [
+          "메",
+          "뉴"
+        ]
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "ko_food_l2_001",
+          "reason": "High utility in next food-location hangout"
+        }
+      ]
+    },
+    {
+      "lemma": "station",
+      "lang": "en",
+      "score": 0.67,
+      "frequency": 2,
+      "burst": 1.4,
+      "clusterId": "transport-navigation",
+      "orthographyFeatures": {
+        "scriptType": "latin"
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "ja_subway_l1_001",
+          "reason": "Improves route and transfer conversation readiness"
+        }
+      ]
+    },
+    {
+      "lemma": "subway",
+      "lang": "en",
+      "score": 0.67,
+      "frequency": 2,
+      "burst": 1.4,
+      "clusterId": "transport-navigation",
+      "orthographyFeatures": {
+        "scriptType": "latin"
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "ja_subway_l1_001",
+          "reason": "Improves route and transfer conversation readiness"
+        }
       ]
     },
     {
       "lemma": "火",
       "lang": "zh",
-      "score": 0.91,
-      "frequency": 42,
-      "burst": 1.55,
+      "score": 0.5,
+      "frequency": 1,
+      "burst": 1.2,
       "clusterId": "performance-energy",
       "orthographyFeatures": {
         "scriptType": "han",
         "radical": "火",
-        "relatedForms": ["炎", "灯", "烧"]
+        "relatedForms": [
+          "炎",
+          "灯",
+          "烧"
+        ]
       },
       "objectiveLinks": [
-        { "objectiveId": "zh_stage_l3_002", "reason": "Personalized character family focus" }
+        {
+          "objectiveId": "zh_stage_l3_002",
+          "reason": "Supports Shanghai advanced texting mission vocabulary"
+        }
+      ]
+    },
+    {
+      "lemma": "燃烧",
+      "lang": "zh",
+      "score": 0.5,
+      "frequency": 1,
+      "burst": 1.2,
+      "clusterId": "performance-energy",
+      "orthographyFeatures": {
+        "scriptType": "han",
+        "radical": "火",
+        "relatedForms": [
+          "炎",
+          "灯",
+          "烧"
+        ]
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "zh_stage_l3_002",
+          "reason": "Supports Shanghai advanced texting mission vocabulary"
+        }
+      ]
+    },
+    {
+      "lemma": "练习",
+      "lang": "zh",
+      "score": 0.49,
+      "frequency": 1,
+      "burst": 1.2,
+      "clusterId": "unassigned",
+      "orthographyFeatures": {
+        "scriptType": "han",
+        "radical": "练"
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "zh_stage_l3_002",
+          "reason": "Strengthens Mandarin mission vocabulary recall"
+        }
+      ]
+    },
+    {
+      "lemma": "포장",
+      "lang": "ko",
+      "score": 0.48,
+      "frequency": 1,
+      "burst": 1.2,
+      "clusterId": "food-ordering",
+      "orthographyFeatures": {
+        "scriptType": "hangul",
+        "syllables": [
+          "포",
+          "장"
+        ]
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "ko_food_l2_001",
+          "reason": "High utility in next food-location hangout"
+        }
+      ]
+    },
+    {
+      "lemma": "맵다",
+      "lang": "ko",
+      "score": 0.47,
+      "frequency": 1,
+      "burst": 1.2,
+      "clusterId": "food-ordering",
+      "orthographyFeatures": {
+        "scriptType": "hangul",
+        "syllables": [
+          "맵",
+          "다"
+        ]
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "ko_food_l2_001",
+          "reason": "High utility in next food-location hangout"
+        }
+      ]
+    },
+    {
+      "lemma": "먹다",
+      "lang": "ko",
+      "score": 0.47,
+      "frequency": 1,
+      "burst": 1.2,
+      "clusterId": "food-ordering",
+      "orthographyFeatures": {
+        "scriptType": "hangul",
+        "syllables": [
+          "먹",
+          "다"
+        ]
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "ko_food_l2_001",
+          "reason": "High utility in next food-location hangout"
+        }
+      ]
+    },
+    {
+      "lemma": "주세요",
+      "lang": "ko",
+      "score": 0.47,
+      "frequency": 1,
+      "burst": 1.2,
+      "clusterId": "unassigned",
+      "orthographyFeatures": {
+        "scriptType": "hangul",
+        "syllables": [
+          "주",
+          "세",
+          "요"
+        ]
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "ko_food_l2_001",
+          "reason": "Reinforces Korean phrase utility for food-street scenes"
+        }
+      ]
+    },
+    {
+      "lemma": "불",
+      "lang": "ko",
+      "score": 0.46,
+      "frequency": 1,
+      "burst": 1.2,
+      "clusterId": "unassigned",
+      "orthographyFeatures": {
+        "scriptType": "hangul",
+        "syllables": [
+          "불"
+        ]
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "ko_food_l2_001",
+          "reason": "Reinforces Korean phrase utility for food-street scenes"
+        }
+      ]
+    },
+    {
+      "lemma": "transfer",
+      "lang": "en",
+      "score": 0.44,
+      "frequency": 1,
+      "burst": 1.2,
+      "clusterId": "transport-navigation",
+      "orthographyFeatures": {
+        "scriptType": "latin"
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "ja_subway_l1_001",
+          "reason": "Improves route and transfer conversation readiness"
+        }
+      ]
+    },
+    {
+      "lemma": "menu",
+      "lang": "en",
+      "score": 0.43,
+      "frequency": 1,
+      "burst": 1.2,
+      "clusterId": "unassigned",
+      "orthographyFeatures": {
+        "scriptType": "latin"
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "ja_subway_l1_001",
+          "reason": "Useful bridge terms for subway objective setup"
+        }
+      ]
+    },
+    {
+      "lemma": "order",
+      "lang": "en",
+      "score": 0.43,
+      "frequency": 1,
+      "burst": 1.2,
+      "clusterId": "unassigned",
+      "orthographyFeatures": {
+        "scriptType": "latin"
+      },
+      "objectiveLinks": [
+        {
+          "objectiveId": "ja_subway_l1_001",
+          "reason": "Useful bridge terms for subway objective setup"
+        }
       ]
     }
   ]
