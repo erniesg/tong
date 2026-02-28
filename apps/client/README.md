@@ -1,12 +1,23 @@
 # apps/client
 
-Next.js mobile-first client application.
+Next.js review app for Tong hackathon demo surfaces.
 
-Initial responsibilities:
-1. Video player page with subtitle overlay lanes.
-2. Dictionary hover/tap panel.
-3. Profile setup and "Start New Game" flow.
-4. Game scene UI with Tong assistant chat panel.
+## Run
 
-Implementation rule:
-- Use shared contracts from `packages/contracts` and mocked data first.
+```bash
+npm --prefix apps/client install
+npm --prefix apps/client run dev
+```
+
+Set API base (optional):
+
+```bash
+NEXT_PUBLIC_TONG_API_BASE=http://localhost:8787
+```
+
+## Routes
+
+- `/` launcher for demo surfaces
+- `/overlay` web caption overlay + dictionary popover
+- `/game` mobile-first game UI (start/resume, hangout, learn)
+- `/insights` ingestion controls + frequency/topic visualization
