@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
 import type { CityId, LocationId, ProficiencyLevel, ScoreState, UserProficiency } from '@/lib/api';
 import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData } from '@/lib/types/hangout';
@@ -94,8 +95,11 @@ function getWeakestLangIndex(sliders: [number, number, number]): number {
 /* ── component ──────────────────────────────────────────── */
 
 export default function GamePage() {
-  /* phase state */
-  const [phase, setPhase] = useState<Phase>('intro');
+  const searchParams = useSearchParams();
+
+  /* phase state — ?phase=hangout skips straight to scene */
+  const skipToHangout = searchParams.get('phase') === 'hangout';
+  const [phase, setPhase] = useState<Phase>(skipToHangout ? 'hangout' : 'intro');
   const [lineIndex, setLineIndex] = useState(0);
   const [displayedChars, setDisplayedChars] = useState(0);
   const [typewriterDone, setTypewriterDone] = useState(false);
@@ -126,6 +130,8 @@ export default function GamePage() {
   const processingRef = useRef(false);
   const pausedRef = useRef(false);
   const processedToolCallsRef = useRef(new Set<string>());
+  const lastContinueRef = useRef(0);
+  const sceneStartedRef = useRef(false);
 
   const currentLine = TONG_LINES[lineIndex] ?? '';
 
@@ -216,47 +222,67 @@ export default function GamePage() {
     void append({ role: 'user', content: 'Start the scene.' });
   }
 
-  /* ── useChat integration ──────────────────────────────── */
+  /* ── useChat integration (pinpoint pattern) ──────────────── */
 
-  const { messages: chatMessages, append, isLoading: chatLoading } = useChat({
+  const { append, isLoading: chatLoading } = useChat({
     api: '/api/ai/hangout',
     maxSteps: 1,
+    onResponse: () => {
+      // Reset pause for each new server response
+      pausedRef.current = false;
+    },
     onToolCall: ({ toolCall }) => {
-      console.log('[VN] onToolCall:', toolCall.toolName, toolCall.toolCallId);
-      if (processedToolCallsRef.current.has(toolCall.toolCallId)) return;
-      processedToolCallsRef.current.add(toolCall.toolCallId);
+      const { toolName, toolCallId, args } = toolCall;
+      if (processedToolCallsRef.current.has(toolCallId)) return;
+      // Pause guard: drop tools after interactive ones in the same response
+      if (pausedRef.current) {
+        console.log(`[VN] onToolCall SKIPPED (paused): ${toolName}`);
+        return;
+      }
+      processedToolCallsRef.current.add(toolCallId);
+      console.log(`[VN] onToolCall: ${toolName}`, toolCallId);
 
-      const item: ToolQueueItem = {
-        toolCallId: toolCall.toolCallId,
-        toolName: toolCall.toolName,
-        args: toolCall.args as Record<string, unknown>,
-      };
-      setToolQueue((prev) => [...prev, item]);
+      setToolQueue((prev) => [
+        ...prev,
+        { toolCallId, toolName, args: args as Record<string, unknown> },
+      ]);
+
+      // Pause ingestion of further tools after interactive ones
+      if (toolName === 'show_exercise' || toolName === 'offer_choices') {
+        pausedRef.current = true;
+      }
     },
     onError: (err) => {
       console.error('[VN] useChat error:', err);
     },
     onFinish: (msg) => {
-      console.log('[VN] onFinish:', msg.role, 'toolInvocations:', msg.toolInvocations?.length ?? 0);
+      console.log('[VN] onFinish:', msg.role, 'tools:', msg.toolInvocations?.length ?? 0);
     },
   });
 
-  // Debug: log chat messages
+  /* Auto-start scene when skipping to hangout */
   useEffect(() => {
-    if (chatMessages.length > 0) {
-      const last = chatMessages[chatMessages.length - 1];
-      console.log('[VN] chatMessages updated:', chatMessages.length, 'last:', last.role, 'toolInvocations:', last.toolInvocations?.length ?? 0);
+    if (skipToHangout && !sceneStartedRef.current) {
+      sceneStartedRef.current = true;
+      void append({ role: 'user', content: 'Start the scene.' });
     }
-  }, [chatMessages]);
+  }, [skipToHangout, append]);
 
-  /* ── Tool queue processor ───────────────────────────────── */
-
-  const processQueue = useCallback(() => {
-    if (processingRef.current || pausedRef.current || toolQueue.length === 0) return;
+  /* ── Tool queue processor (pinpoint pattern) ──────────────
+   *
+   * Key design: blocking tools (npc_speak, show_exercise, offer_choices)
+   * do `return` WITHOUT dequeuing — the item stays at toolQueue[0] and
+   * processingRef stays true. The handler (handleContinue, handleExerciseResult,
+   * handleChoice) dequeues the item and releases the lock.
+   *
+   * Non-blocking tools (tong_whisper, end_scene) fall through to the
+   * auto-advance at the bottom which dequeues and releases.
+   */
+  useEffect(() => {
+    if (toolQueue.length === 0 || processingRef.current) return;
     processingRef.current = true;
 
-    const [item, ...rest] = toolQueue;
-    setToolQueue(rest);
+    const item = toolQueue[0];
 
     switch (item.toolName) {
       case 'npc_speak': {
@@ -274,33 +300,34 @@ export default function GamePage() {
           content: args.text,
           translation: args.translation ?? undefined,
         });
-        pausedRef.current = true; // wait for tap
-        break;
+        console.log('[VN] npc_speak BLOCK:', args.text.slice(0, 40));
+        return; // BLOCK — wait for tap
       }
       case 'tong_whisper': {
         const args = item.args as { message: string; translation?: string | null };
         setTongTip({ message: args.message, translation: args.translation ?? undefined });
-        // If next item is an exercise, block here
-        if (rest.length > 0 && rest[0].toolName === 'show_exercise') {
-          pausedRef.current = true;
+        // If next item is exercise, block so player reads the tip first
+        if (toolQueue.length > 1 && toolQueue[1].toolName === 'show_exercise') {
+          console.log('[VN] tong_whisper BLOCK (exercise next)');
+          return; // BLOCK
         }
-        break;
+        break; // auto-advance
       }
       case 'show_exercise': {
         const args = item.args as { exerciseType: string; objectiveId: string };
         const exercise = generateExercise(args.exerciseType);
         setCurrentMessage(null);
         setCurrentExercise(exercise);
-        pausedRef.current = true; // wait for exercise completion
-        break;
+        console.log('[VN] show_exercise BLOCK:', args.exerciseType);
+        return; // BLOCK — wait for exercise completion
       }
       case 'offer_choices': {
         const args = item.args as { prompt: string; choices: { id: string; text: string }[] };
         setChoicePrompt(args.prompt);
         setChoices(args.choices);
         setCurrentMessage(null);
-        pausedRef.current = true; // wait for choice
-        break;
+        console.log('[VN] offer_choices BLOCK');
+        return; // BLOCK — wait for choice
       }
       case 'end_scene': {
         const args = item.args as {
@@ -312,62 +339,71 @@ export default function GamePage() {
         setSceneSummary(args);
         setScore((prev) => ({ ...prev, xp: prev.xp + args.xpEarned }));
         setCurrentMessage(null);
-        break;
+        break; // auto-advance
       }
       default:
-        // Auto-dequeue unknown tools
-        break;
+        break; // auto-advance
     }
 
+    // Auto-advance: dequeue and release lock
+    setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
   }, [toolQueue]);
 
-  useEffect(() => {
-    processQueue();
-  }, [processQueue]);
-
   /* ── Hangout handlers ───────────────────────────────────── */
 
-  function handleContinue() {
-    if (sceneSummary) return; // scene is done
+  const handleContinue = useCallback(() => {
+    // Debounce: 400ms
+    const now = Date.now();
+    if (now - lastContinueRef.current < 400) return;
+    lastContinueRef.current = now;
 
-    // If tong tip is showing and no exercise/dialogue blocking, dismiss tip
-    if (tongTip && !currentExercise && pausedRef.current) {
-      setTongTip(null);
-      pausedRef.current = false;
-      return;
-    }
-
-    // If blocked on dialogue, release
-    if (pausedRef.current) {
+    // Case 1: Blocked on a tool — dequeue it and release lock
+    if (processingRef.current) {
+      console.log('[VN] handleContinue: dequeue blocked tool');
       setCurrentMessage(null);
-      pausedRef.current = false;
+      setToolQueue((prev) => prev.slice(1));
+      processingRef.current = false;
       return;
     }
 
-    // If queue is empty and not streaming, request next turn
-    if (toolQueue.length === 0 && !chatLoading) {
+    // Case 2: Scene done
+    if (sceneSummary) return;
+
+    // Case 3: AI streaming
+    if (chatLoading) return;
+
+    // Case 4: Dismiss lingering tong tip
+    if (tongTip) {
+      setTongTip(null);
+      return;
+    }
+
+    // Case 5: Queue empty, no exercise/choices — request next turn
+    if (!currentExercise && !choices && toolQueue.length === 0) {
+      console.log('[VN] handleContinue: append Continue');
       void append({ role: 'user', content: 'Continue.' });
     }
-  }
+  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append]);
 
-  function handleExerciseResult(exerciseId: string, correct: boolean) {
+  const handleExerciseResult = useCallback((exerciseId: string, correct: boolean) => {
     setCurrentExercise(null);
-    pausedRef.current = false;
-    // Report result to AI
+    setToolQueue((prev) => prev.slice(1));
+    processingRef.current = false;
     void append({ role: 'user', content: summarizeExercise(exerciseId, correct) });
-  }
+  }, [append]);
 
-  function handleChoice(choiceId: string) {
+  const handleChoice = useCallback((choiceId: string) => {
     setChoices(null);
     setChoicePrompt(null);
-    pausedRef.current = false;
+    setToolQueue((prev) => prev.slice(1));
+    processingRef.current = false;
     void append({ role: 'user', content: `Choice: ${choiceId}` });
-  }
+  }, [append]);
 
-  function handleDismissTong() {
+  const handleDismissTong = useCallback(() => {
     setTongTip(null);
-  }
+  }, []);
 
   /* ── renders ──────────────────────────────────────────── */
 
@@ -512,21 +548,6 @@ export default function GamePage() {
   return (
     <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="game-frame">
-        {/* HUD */}
-        <div className="scene-hud">
-          <div className="scene-hud-location">
-            {cityInfo.en} <span className="korean">{cityInfo.local}</span>
-            <span className="scene-hud-dot">&middot;</span>
-            {LOCATION_NAMES[location]}
-          </div>
-          <div className="scene-hud-scores">
-            <span className="scene-hud-score"><b>{score.xp}</b> XP</span>
-            <span className="scene-hud-score"><b>{score.sp}</b> SP</span>
-            <span className="scene-hud-score"><b>{score.rp}</b> RP</span>
-          </div>
-        </div>
-
-        {/* VN Scene */}
         <SceneView
           backgroundUrl="/assets/backgrounds/pojangmacha.png"
           ambientDescription="A warm pojangmacha (street food tent) on a Seoul side street"
@@ -539,6 +560,20 @@ export default function GamePage() {
           choicePrompt={choicePrompt}
           tongTip={tongTip}
           isStreaming={chatLoading}
+          hudContent={
+            <div className="scene-hud">
+              <div className="scene-hud-location">
+                {cityInfo.en} <span className="korean">{cityInfo.local}</span>
+                <span className="scene-hud-dot">&middot;</span>
+                {LOCATION_NAMES[location]}
+              </div>
+              <div className="scene-hud-scores">
+                <span className="scene-hud-score"><b>{score.xp}</b> XP</span>
+                <span className="scene-hud-score"><b>{score.sp}</b> SP</span>
+                <span className="scene-hud-score"><b>{score.rp}</b> RP</span>
+              </div>
+            </div>
+          }
           onChoice={handleChoice}
           onContinue={handleContinue}
           onExerciseResult={handleExerciseResult}
