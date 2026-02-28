@@ -20,14 +20,35 @@
     console.error(LOG_PREFIX, ...args);
   }
 
+  function isCjkLanguage(languageCode) {
+    const code = String(languageCode || '').toLowerCase();
+    return code.startsWith('ko') || code.startsWith('ja') || code.startsWith('zh');
+  }
+
+  function toReadableName(track) {
+    if (!track) return 'unknown';
+    const name = track.name;
+    if (!name) return track.languageCode || track.vssId || 'unknown';
+    if (typeof name.simpleText === 'string' && name.simpleText.trim()) return name.simpleText.trim();
+    if (Array.isArray(name.runs) && name.runs.length > 0) {
+      return name.runs
+        .map((run) => (typeof run.text === 'string' ? run.text : ''))
+        .join('')
+        .trim();
+    }
+    return track.languageCode || track.vssId || 'unknown';
+  }
+
   class TongYouTubeOverlay {
     constructor() {
       this.apiBase = DEFAULT_API_BASE;
       this.video = null;
       this.videoId = null;
       this.captions = [];
-      this.activeSegment = null;
+      this.captionSource = 'none';
+      this.activeTrack = null;
       this.activeSegmentIndex = -1;
+      this.activeSegment = null;
       this.overlayEnabled = true;
       this.hasShownLoopModeStatus = false;
       this.dictionaryCache = new Map();
@@ -35,12 +56,12 @@
       this.overlayRoot = null;
       this.toolbar = null;
       this.toggleButton = null;
+      this.statusLine = null;
       this.scriptLine = null;
       this.romanizedLine = null;
       this.englishLine = null;
       this.tokenRow = null;
       this.dictionaryPanel = null;
-      this.statusLine = null;
 
       this.lastUrl = window.location.href;
       this.navigationPollTimer = null;
@@ -51,8 +72,8 @@
       this.onTimeUpdate = this.onTimeUpdate.bind(this);
       this.handleNavigationSignal = this.handleNavigationSignal.bind(this);
       this.handleStorageChange = this.handleStorageChange.bind(this);
-      this.handleKeydown = this.handleKeydown.bind(this);
       this.handleRuntimeMessage = this.handleRuntimeMessage.bind(this);
+      this.handleKeydown = this.handleKeydown.bind(this);
 
       log('Content script booted on', window.location.href);
     }
@@ -61,9 +82,11 @@
       log('Initializing overlay runtime...');
       this.apiBase = await this.readApiBase();
       log('API base:', this.apiBase);
+
       this.installNavigationHooks();
       this.installStorageHooks();
       this.installControlHooks();
+
       await this.syncWithPageState();
       log('Initialization complete');
     }
@@ -73,7 +96,6 @@
       document.addEventListener('yt-navigate-finish', this.handleNavigationSignal);
       window.addEventListener('popstate', this.handleNavigationSignal);
 
-      // YouTube is an SPA. Poll URL as a fallback for edge navigation paths.
       this.navigationPollTimer = window.setInterval(() => {
         this.handleNavigationSignal();
       }, 700);
@@ -84,6 +106,7 @@
         warn('chrome.storage.onChanged unavailable');
         return;
       }
+
       chrome.storage.onChanged.addListener(this.handleStorageChange);
       log('Storage hook installed');
     }
@@ -133,7 +156,8 @@
           enabled: this.overlayEnabled,
           videoId: this.videoId,
           captionCount: this.captions.length,
-          activeSegmentIndex: this.activeSegmentIndex,
+          source: this.captionSource,
+          activeTrack: this.activeTrack,
         });
         return false;
       }
@@ -152,8 +176,8 @@
       }
 
       this.apiBase = nextBase;
-      log('Detected API base storage update:', this.apiBase);
       this.setStatus(`API endpoint switched to ${this.apiBase}`);
+      log('Detected API base update:', this.apiBase);
 
       if (this.isWatchPage() && this.videoId) {
         await this.reloadCaptions(this.videoId);
@@ -172,6 +196,7 @@
             resolve(DEFAULT_API_BASE);
             return;
           }
+
           const configured = this.normalizeApiBase(result[API_BASE_KEY]);
           resolve(configured || DEFAULT_API_BASE);
         });
@@ -189,6 +214,7 @@
       if (window.location.href === this.lastUrl) {
         return;
       }
+
       log('Navigation detected:', this.lastUrl, '->', window.location.href);
       this.lastUrl = window.location.href;
       void this.syncWithPageState();
@@ -214,8 +240,11 @@
         log('Non-watch route detected; overlay hidden');
         this.videoId = null;
         this.captions = [];
+        this.captionSource = 'none';
+        this.activeTrack = null;
         this.activeSegment = null;
         this.activeSegmentIndex = -1;
+
         this.detachVideoListeners();
         this.ensureOverlay();
         this.setVisibility(false);
@@ -229,29 +258,27 @@
 
       const videoId = this.getVideoId();
       if (!videoId) {
-        log('Watch page without videoId yet');
         this.setStatus('Waiting for video ID...');
         return;
       }
 
       const video = await this.waitForVideo(15000);
       if (!video) {
-        warn('Video element not found before timeout');
         this.setStatus('Waiting for YouTube player...');
+        warn('Video element not found before timeout');
         return;
       }
 
       if (video !== this.video) {
-        log('Video element bound');
         this.detachVideoListeners();
         this.video = video;
         this.video.addEventListener('timeupdate', this.onTimeUpdate);
         this.video.addEventListener('seeking', this.onTimeUpdate);
         this.video.addEventListener('ratechange', this.onTimeUpdate);
+        log('Video element bound');
       }
 
       if (this.videoId !== videoId || this.captions.length === 0) {
-        log('Loading caption data for videoId:', videoId);
         this.videoId = videoId;
         await this.reloadCaptions(videoId);
       }
@@ -269,7 +296,6 @@
 
     async waitForVideo(timeoutMs) {
       const startedAt = Date.now();
-
       while (Date.now() - startedAt < timeoutMs) {
         const video = document.querySelector('video');
         if (video) {
@@ -292,7 +318,6 @@
       }
 
       if (!this.overlayRoot) {
-        log('Creating overlay DOM');
         this.overlayRoot = document.createElement('div');
         this.overlayRoot.id = 'tong-overlay-root';
 
@@ -338,6 +363,7 @@
         card.appendChild(this.dictionaryPanel);
 
         this.overlayRoot.appendChild(card);
+        log('Created overlay DOM');
       }
 
       if (this.overlayRoot.parentElement !== container) {
@@ -357,54 +383,309 @@
       }
 
       this.captionsAbortController = new AbortController();
-      const signal = this.captionsAbortController.signal;
-
-      this.setStatus(`Loading captions for ${videoId}...`);
       this.activeSegment = null;
       this.activeSegmentIndex = -1;
       this.hasShownLoopModeStatus = false;
+
+      this.setStatus(`Loading captions for ${videoId}...`);
       this.renderSegment(null);
       this.hideDictionaryPanel();
 
+      const liveSegments = await this.loadYouTubeCaptionSegments();
+      if (liveSegments.length > 0) {
+        this.captions = liveSegments;
+        this.captionSource = 'youtube';
+        this.setStatus(
+          `Live track: ${this.activeTrack.label} (${this.activeTrack.language}) · ${liveSegments.length} cues`,
+        );
+        log('Using live YouTube captions:', liveSegments.length, 'segments');
+        return;
+      }
+
+      warn('Live YouTube caption extraction unavailable; falling back to fixture API');
+      const fixtureSegments = await this.loadFixtureCaptionSegments(videoId, this.captionsAbortController.signal);
+      if (fixtureSegments.length > 0) {
+        this.captions = fixtureSegments;
+        this.captionSource = 'fixture';
+        this.activeTrack = null;
+        this.setStatus(`Loaded ${fixtureSegments.length} fixture segments (loop mode active).`);
+        log('Using fixture captions:', fixtureSegments.length, 'segments');
+        return;
+      }
+
+      this.captions = [];
+      this.captionSource = 'none';
+      this.activeTrack = null;
+      this.setStatus('No subtitles available on this video.');
+    }
+
+    async loadYouTubeCaptionSegments() {
+      if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+        warn('chrome.runtime.sendMessage unavailable; cannot request live YouTube cues');
+        return [];
+      }
+
       try {
-        const url = `${this.apiBase}/api/v1/captions/enriched?videoId=${encodeURIComponent(videoId)}&lang=${LANG}`;
-        log('Fetching captions:', url);
-        const response = await fetch(
-          url,
-          {
-            signal,
-            cache: 'no-store',
-          },
+        const tracksResponse = await chrome.runtime.sendMessage({ type: 'GET_YT_CAPTION_TRACKS' });
+        if (!tracksResponse || !tracksResponse.ok || !Array.isArray(tracksResponse.tracks)) {
+          warn('Track response missing or invalid:', tracksResponse);
+          return [];
+        }
+
+        const tracks = tracksResponse.tracks;
+        log('Track list received:', tracks.length);
+
+        const selectedTrack = this.selectTrack(tracks);
+        if (!selectedTrack || !selectedTrack.baseUrl) {
+          warn('No usable track with baseUrl found');
+          return [];
+        }
+
+        const subtitleUrl = this.buildSubtitleUrl(selectedTrack.baseUrl);
+        log('Fetching selected track:', selectedTrack.languageCode || 'unknown', selectedTrack.kind || 'standard');
+
+        const subtitleResponse = await chrome.runtime.sendMessage({
+          type: 'FETCH_YT_SUBTITLES',
+          url: subtitleUrl,
+        });
+
+        if (!subtitleResponse || !subtitleResponse.ok || typeof subtitleResponse.text !== 'string') {
+          warn('Subtitle fetch response invalid:', subtitleResponse);
+          return [];
+        }
+
+        const segments = this.parseSubtitlePayload(
+          subtitleResponse.text,
+          selectedTrack.languageCode || selectedTrack.vssId || LANG,
         );
 
+        if (segments.length === 0) {
+          warn('Subtitle payload parsed but yielded 0 segments');
+          return [];
+        }
+
+        this.activeTrack = {
+          language: selectedTrack.languageCode || 'unknown',
+          label: toReadableName(selectedTrack),
+          kind: selectedTrack.kind || 'manual',
+          isAutoGenerated: selectedTrack.kind === 'asr',
+        };
+
+        return segments;
+      } catch (error) {
+        errorLog('Live caption loading failed:', error);
+        return [];
+      }
+    }
+
+    selectTrack(tracks) {
+      if (!Array.isArray(tracks) || tracks.length === 0) {
+        return null;
+      }
+
+      const normalized = tracks
+        .filter((track) => track && typeof track === 'object')
+        .map((track) => ({
+          ...track,
+          languageCode: String(track.languageCode || '').trim(),
+          isAutoGenerated: track.kind === 'asr',
+          isDefault: Boolean(track.isDefault),
+        }));
+
+      const byScore = [
+        (track) => track.languageCode.startsWith('ko') && !track.isAutoGenerated && track.isDefault,
+        (track) => track.languageCode.startsWith('ko') && !track.isAutoGenerated,
+        (track) => track.languageCode.startsWith('ko'),
+        (track) => isCjkLanguage(track.languageCode) && !track.isAutoGenerated && track.isDefault,
+        (track) => isCjkLanguage(track.languageCode) && !track.isAutoGenerated,
+        (track) => isCjkLanguage(track.languageCode),
+        (track) => !track.isAutoGenerated && track.isDefault,
+        (track) => !track.isAutoGenerated,
+        () => true,
+      ];
+
+      for (let i = 0; i < byScore.length; i += 1) {
+        const selected = normalized.find(byScore[i]);
+        if (selected && selected.baseUrl) {
+          return selected;
+        }
+      }
+
+      return null;
+    }
+
+    buildSubtitleUrl(baseUrl) {
+      if (!baseUrl || typeof baseUrl !== 'string') {
+        return '';
+      }
+
+      let url = baseUrl;
+      if (/[?&]fmt=/.test(url)) {
+        url = url.replace(/([?&]fmt=)[^&]*/, '$1json3');
+      } else {
+        url += (url.includes('?') ? '&' : '?') + 'fmt=json3';
+      }
+      return url;
+    }
+
+    parseSubtitlePayload(payloadText, languageCode) {
+      if (typeof payloadText !== 'string' || !payloadText.trim()) {
+        return [];
+      }
+
+      const trimmed = payloadText.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        const jsonSegments = this.parseJson3Payload(trimmed, languageCode);
+        if (jsonSegments.length > 0) {
+          return jsonSegments;
+        }
+      }
+
+      if (trimmed.startsWith('<')) {
+        return this.parseXmlPayload(trimmed, languageCode);
+      }
+
+      return [];
+    }
+
+    parseJson3Payload(jsonText, languageCode) {
+      try {
+        const parsed = JSON.parse(jsonText);
+        const events = Array.isArray(parsed.events) ? parsed.events : [];
+
+        const segments = [];
+        for (let i = 0; i < events.length; i += 1) {
+          const event = events[i];
+          if (!event || !Array.isArray(event.segs)) {
+            continue;
+          }
+
+          const startMs = Number(event.tStartMs || 0);
+          let endMs = startMs + Number(event.dDurationMs || 0);
+          if (endMs <= startMs) {
+            const nextEvent = events[i + 1];
+            if (nextEvent && Number(nextEvent.tStartMs || 0) > startMs) {
+              endMs = Number(nextEvent.tStartMs || 0);
+            } else {
+              endMs = startMs + 1800;
+            }
+          }
+
+          const surface = this.cleanCaptionText(
+            event.segs
+              .map((seg) => (seg && typeof seg.utf8 === 'string' ? seg.utf8 : ''))
+              .join(' '),
+          );
+
+          if (!surface) {
+            continue;
+          }
+
+          segments.push(this.buildSegment(startMs, endMs, surface, languageCode, i));
+        }
+
+        return segments;
+      } catch (error) {
+        warn('JSON3 parse failed:', error);
+        return [];
+      }
+    }
+
+    parseXmlPayload(xmlText, languageCode) {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xmlText, 'text/xml');
+        const nodes = Array.from(doc.querySelectorAll('text'));
+
+        const segments = [];
+        for (let i = 0; i < nodes.length; i += 1) {
+          const node = nodes[i];
+          const startSec = Number(node.getAttribute('start') || '0');
+          const durationSec = Number(node.getAttribute('dur') || '1.8');
+          const startMs = Math.floor(startSec * 1000);
+          const endMs = Math.max(startMs + 600, Math.floor((startSec + durationSec) * 1000));
+
+          const textarea = document.createElement('textarea');
+          textarea.innerHTML = node.textContent || '';
+          const surface = this.cleanCaptionText(textarea.value);
+          if (!surface) {
+            continue;
+          }
+
+          segments.push(this.buildSegment(startMs, endMs, surface, languageCode, i));
+        }
+
+        return segments;
+      } catch (error) {
+        warn('XML parse failed:', error);
+        return [];
+      }
+    }
+
+    cleanCaptionText(text) {
+      if (typeof text !== 'string') return '';
+      return text
+        .replace(/\n+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/[♪♫]/g, '')
+        .trim();
+    }
+
+    buildSegment(startMs, endMs, surface, languageCode, index) {
+      const tokens = this.tokenize(surface, languageCode);
+      return {
+        startMs,
+        endMs,
+        surface,
+        romanized: '',
+        english: '',
+        tokens,
+        source: 'youtube',
+        index,
+      };
+    }
+
+    tokenize(surface, languageCode) {
+      const split = surface
+        .split(/\s+/)
+        .map((part) => part.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').trim())
+        .filter(Boolean);
+
+      const unique = [];
+      for (let i = 0; i < split.length; i += 1) {
+        const token = split[i];
+        if (!token) continue;
+        unique.push({
+          text: token,
+          lemma: token,
+          pos: 'token',
+          dictionaryId: `${languageCode || 'yt'}-auto-${i}`,
+        });
+        if (unique.length >= 10) break;
+      }
+      return unique;
+    }
+
+    async loadFixtureCaptionSegments(videoId, signal) {
+      try {
+        const url = `${this.apiBase}/api/v1/captions/enriched?videoId=${encodeURIComponent(videoId)}&lang=${LANG}`;
+        log('Fetching fixture fallback captions:', url);
+
+        const response = await fetch(url, { signal, cache: 'no-store' });
         if (!response.ok) {
-          throw new Error(`captions_request_failed_${response.status}`);
+          throw new Error(`fixture_caption_request_failed_${response.status}`);
         }
 
         const payload = await response.json();
         const segments = Array.isArray(payload.segments) ? payload.segments : [];
-        this.captions = segments;
-        log('Caption fetch success:', segments.length, 'segments');
-
-        if (segments.length === 0) {
-          this.setStatus(`No caption segments returned for ${videoId}.`);
-          return;
-        }
-
-        this.setStatus(`Loaded ${segments.length} caption segments.`);
+        return segments;
       } catch (error) {
         if (error && error.name === 'AbortError') {
-          log('Caption fetch aborted');
-          return;
+          log('Fixture caption fetch aborted');
+          return [];
         }
-        this.captions = [];
-        this.activeSegment = null;
-        this.renderSegment(null);
-        this.setStatus(
-          'Could not load captions. Confirm Tong API is running at ' +
-            `${this.apiBase} and allows CORS.`,
-        );
-        errorLog('Failed to load captions', error);
+        errorLog('Fixture caption fetch failed:', error);
+        return [];
       }
     }
 
@@ -421,7 +702,7 @@
 
     setOverlayEnabled(enabled, source = 'unknown') {
       const nextEnabled = Boolean(enabled);
-      if (nextEnabled === this.overlayEnabled) {
+      if (this.overlayEnabled === nextEnabled) {
         this.syncToggleButtonLabel();
         return this.overlayEnabled;
       }
@@ -461,49 +742,50 @@
       }
 
       const currentMs = Math.floor(this.video.currentTime * 1000);
-      const next = this.resolveSegmentForTime(currentMs);
-      if (!next) {
-        if (this.activeSegmentIndex === -1) {
-          return;
+      const resolved = this.resolveSegmentForTime(currentMs);
+
+      if (!resolved) {
+        if (this.activeSegmentIndex !== -1) {
+          this.activeSegment = null;
+          this.activeSegmentIndex = -1;
+          this.renderSegment(null);
         }
-        this.activeSegment = null;
-        this.activeSegmentIndex = -1;
-        this.renderSegment(null);
         return;
       }
 
-      if (this.activeSegmentIndex === next.index) {
+      if (this.activeSegmentIndex === resolved.index) {
         return;
       }
 
-      this.activeSegment = next.segment;
-      this.activeSegmentIndex = next.index;
-      this.renderSegment(next.segment, next);
+      this.activeSegment = resolved.segment;
+      this.activeSegmentIndex = resolved.index;
+      this.renderSegment(resolved.segment, resolved);
 
-      if (next.looped && !this.hasShownLoopModeStatus) {
+      if (this.captionSource === 'fixture' && resolved.looped && !this.hasShownLoopModeStatus) {
         this.hasShownLoopModeStatus = true;
-        this.setStatus(
-          `Loaded ${this.captions.length} caption segments (fixture loop mode active).`,
-        );
+        this.setStatus(`Loaded ${this.captions.length} fixture segments (loop mode active).`);
       }
-    }
-
-    findSegmentIndex(currentMs) {
-      for (let i = 0; i < this.captions.length; i += 1) {
-        const segment = this.captions[i];
-        if (currentMs >= segment.startMs && currentMs <= segment.endMs) {
-          return i;
-        }
-      }
-      return -1;
     }
 
     resolveSegmentForTime(currentMs) {
-      const exactIndex = this.findSegmentIndex(currentMs);
-      if (exactIndex >= 0) {
+      if (this.captionSource !== 'fixture') {
+        const index = this.findSegmentIndex(currentMs);
+        if (index < 0) {
+          return null;
+        }
         return {
-          index: exactIndex,
-          segment: this.captions[exactIndex],
+          index,
+          segment: this.captions[index],
+          looped: false,
+          normalizedMs: currentMs,
+        };
+      }
+
+      const directIndex = this.findSegmentIndex(currentMs);
+      if (directIndex >= 0) {
+        return {
+          index: directIndex,
+          segment: this.captions[directIndex],
           looped: false,
           normalizedMs: currentMs,
         };
@@ -513,7 +795,6 @@
         return null;
       }
 
-      // Fixture captions are short. Loop them across full playback timeline.
       const firstStart = Number(this.captions[0].startMs || 0);
       const lastEnd = Number(this.captions[this.captions.length - 1].endMs || firstStart + 1);
       const cycleMs = Math.max(lastEnd + FIXTURE_CYCLE_PADDING_MS, firstStart + 1000);
@@ -521,7 +802,6 @@
 
       let loopIndex = this.findSegmentIndex(normalizedMs);
       if (loopIndex < 0) {
-        // Hold the nearest previous segment in the cycle to avoid blank overlay windows.
         loopIndex = 0;
         for (let i = 0; i < this.captions.length; i += 1) {
           if (normalizedMs >= this.captions[i].startMs) {
@@ -538,6 +818,16 @@
       };
     }
 
+    findSegmentIndex(currentMs) {
+      for (let i = 0; i < this.captions.length; i += 1) {
+        const segment = this.captions[i];
+        if (currentMs >= Number(segment.startMs || 0) && currentMs <= Number(segment.endMs || 0)) {
+          return i;
+        }
+      }
+      return -1;
+    }
+
     renderSegment(segment, meta) {
       if (!this.scriptLine || !this.romanizedLine || !this.englishLine || !this.tokenRow) {
         return;
@@ -547,15 +837,24 @@
 
       if (!segment) {
         this.scriptLine.textContent = '';
-        this.romanizedLine.textContent = '';
+        this.romanizedLine.style.display = 'none';
+        this.englishLine.style.display = '';
         this.englishLine.textContent = 'No active subtitle at this moment.';
         log('Render: no active segment');
         return;
       }
 
       this.scriptLine.textContent = segment.surface || '';
-      this.romanizedLine.textContent = segment.romanized || '';
-      this.englishLine.textContent = segment.english || '';
+
+      const romanized = typeof segment.romanized === 'string' ? segment.romanized.trim() : '';
+      const english = typeof segment.english === 'string' ? segment.english.trim() : '';
+
+      this.romanizedLine.textContent = romanized;
+      this.romanizedLine.style.display = romanized ? '' : 'none';
+
+      this.englishLine.textContent = english;
+      this.englishLine.style.display = english ? '' : 'none';
+
       if (meta && meta.looped) {
         log(
           'Render segment (looped):',
@@ -591,8 +890,8 @@
         return;
       }
 
-      log('Dictionary lookup requested:', term);
       this.dictionaryPanel.classList.remove('tong-overlay-hidden');
+      log('Dictionary lookup requested:', term);
 
       const cached = this.dictionaryCache.get(term);
       if (cached) {
@@ -606,12 +905,7 @@
       try {
         const url = `${this.apiBase}/api/v1/dictionary/entry?term=${encodeURIComponent(term)}&lang=${LANG}`;
         log('Fetching dictionary:', url);
-        const response = await fetch(
-          url,
-          {
-            cache: 'no-store',
-          },
-        );
+        const response = await fetch(url, { cache: 'no-store' });
 
         if (!response.ok) {
           throw new Error(`dictionary_request_failed_${response.status}`);
@@ -619,8 +913,8 @@
 
         const entry = await response.json();
         this.dictionaryCache.set(term, entry);
-        log('Dictionary fetch success:', term);
         this.renderDictionaryEntry(entry);
+        log('Dictionary fetch success:', term);
       } catch (error) {
         this.renderDictionaryMessage('Dictionary lookup failed.');
         errorLog('Dictionary fetch failed for term:', term, error);
@@ -644,20 +938,20 @@
       this.dictionaryPanel.innerHTML = '';
 
       const term = document.createElement('strong');
-      term.textContent = entry.term || '-';
+      term.textContent = entry && entry.term ? entry.term : '-';
 
       const meaning = document.createElement('div');
-      meaning.textContent = entry.meaning || '-';
+      meaning.textContent = entry && entry.meaning ? entry.meaning : '-';
 
       const readings = document.createElement('div');
-      const ko = entry.readings && entry.readings.ko ? entry.readings.ko : '-';
-      const zh = entry.readings && entry.readings.zhPinyin ? entry.readings.zhPinyin : '-';
-      const ja = entry.readings && entry.readings.jaRomaji ? entry.readings.jaRomaji : '-';
+      const ko = entry && entry.readings && entry.readings.ko ? entry.readings.ko : '-';
+      const zh = entry && entry.readings && entry.readings.zhPinyin ? entry.readings.zhPinyin : '-';
+      const ja = entry && entry.readings && entry.readings.jaRomaji ? entry.readings.jaRomaji : '-';
       readings.textContent = `KO: ${ko} · ZH: ${zh} · JA: ${ja}`;
 
       const mapping = document.createElement('div');
-      const zhHans = entry.crossCjk && entry.crossCjk.zhHans ? entry.crossCjk.zhHans : '-';
-      const jaMap = entry.crossCjk && entry.crossCjk.ja ? entry.crossCjk.ja : '-';
+      const zhHans = entry && entry.crossCjk && entry.crossCjk.zhHans ? entry.crossCjk.zhHans : '-';
+      const jaMap = entry && entry.crossCjk && entry.crossCjk.ja ? entry.crossCjk.ja : '-';
       mapping.textContent = `Cross-CJK: ${zhHans} / ${jaMap}`;
 
       this.dictionaryPanel.appendChild(term);
@@ -670,11 +964,12 @@
       if (!this.video) {
         return;
       }
+
       this.video.removeEventListener('timeupdate', this.onTimeUpdate);
       this.video.removeEventListener('seeking', this.onTimeUpdate);
       this.video.removeEventListener('ratechange', this.onTimeUpdate);
-      log('Detached old video listeners');
       this.video = null;
+      log('Detached old video listeners');
     }
 
     sleep(ms) {
@@ -685,12 +980,15 @@
   }
 
   const overlay = new TongYouTubeOverlay();
+
   window.addEventListener('error', (event) => {
     errorLog('Unhandled window error:', event.error || event.message);
   });
+
   window.addEventListener('unhandledrejection', (event) => {
     errorLog('Unhandled promise rejection:', event.reason);
   });
+
   window.__tongOverlayDebug = overlay;
   log('Debug handle exposed as window.__tongOverlayDebug');
   void overlay.init();
