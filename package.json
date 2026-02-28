@@ -1,0 +1,9 @@
+{
+  "name": "tong",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome extension + dating sim game for learning CJK languages",
+  "scripts": {
+    "zip": "rm -f tong.zip && zip -r tong.zip manifest.json src README.md"
+  }
+}

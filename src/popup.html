@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tong</title>
+    <style>
+      :root {
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+      }
+      body {
+        margin: 0;
+        width: 280px;
+        padding: 16px;
+        background: #fffdf8;
+        color: #2a2734;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+      p {
+        margin: 0 0 12px;
+        font-size: 0.9rem;
+      }
+      button {
+        width: 100%;
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-weight: 600;
+        background: linear-gradient(120deg, #ff7a59, #f3b257);
+        color: #1a1a1a;
+        cursor: pointer;
+      }
+      button:hover {
+        filter: brightness(1.05);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tong</h1>
+    <p id="languageLabel">Loading your language...</p>
+    <button id="startGame">Start game</button>
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>
