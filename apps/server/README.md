@@ -9,13 +9,18 @@ npm --prefix apps/server run dev
 ```
 
 Server defaults to `http://localhost:8787`.
+If `TONG_DEMO_PASSWORD` is set, API requests must include `x-demo-password` header
+or `?demo=...` query.
+Use `GET /api/v1/demo/secret-status` to verify whether demo/YouTube/Spotify/OpenAI
+secrets are configured (booleans only).
 
 ## Core endpoints
 
-- `GET /`
 - `GET /health`
 - `GET /api/v1/captions/enriched?videoId=...&lang=ko`
 - `GET /api/v1/dictionary/entry?term=...&lang=ko`
+- `GET /api/v1/tools`
+- `POST /api/v1/tools/invoke`
 - `GET /api/v1/vocab/frequency?windowDays=3`
 - `GET /api/v1/vocab/insights?windowDays=3`
 - `GET /api/v1/player/media-profile?windowDays=3`
@@ -27,55 +32,7 @@ Server defaults to `http://localhost:8787`.
 - `GET /api/v1/learn/sessions`
 - `POST /api/v1/learn/sessions`
 - `POST /api/v1/ingestion/run-mock`
-- `GET /api/v1/tools`
-- `POST /api/v1/tools/invoke`
-
-## Spotify integration endpoints (phase 1)
-
-- `GET /api/v1/integrations/spotify/status?userId=...`
-- `GET /api/v1/integrations/spotify/connect?userId=...`
-- `GET /api/v1/integrations/spotify/callback?code=...&state=...`
-- `POST /api/v1/integrations/spotify/sync`
-- `POST /api/v1/integrations/spotify/disconnect`
-
-## Spotify env setup
-
-```bash
-SPOTIFY_CLIENT_ID=...
-SPOTIFY_CLIENT_SECRET=...
-SPOTIFY_REDIRECT_URI=http://127.0.0.1:8787/api/v1/integrations/spotify/callback
-```
-
-`SPOTIFY_REDIRECT_URI` must exactly match the redirect URI configured in Spotify Dashboard and should point to `/api/v1/integrations/spotify/callback` (not `/connect`).
-
-## Source-scoped mock ingestion
-
-Use `includeSources` in `POST /api/v1/ingestion/run-mock` to test YouTube and Spotify separately:
-
-```json
-{
-  "userId": "demo-user-1",
-  "includeSources": ["youtube"]
-}
-```
-
-Valid sources are `youtube` and `spotify`.
-
-## Agent tool API
-
-Discover available tools:
-
-```bash
-curl -sS "http://localhost:8787/api/v1/tools"
-```
-
-Invoke a tool:
-
-```bash
-curl -sS -X POST "http://localhost:8787/api/v1/tools/invoke" \
-  -H "content-type: application/json" \
-  -d '{"tool":"ingestion.run_mock","args":{"userId":"demo-user-1","includeSources":["youtube"]}}'
-```
+- `GET /api/v1/demo/secret-status`
 
 ## Mock ingestion
 
@@ -84,3 +41,16 @@ npm --prefix apps/server run ingest:mock
 ```
 
 Generated files are written to `apps/server/data/generated/` (gitignored).
+
+Tool retrieval smoke check:
+
+```bash
+npm run demo:tools
+```
+
+## Isolation contract for modeling work
+
+Topic modeling and frequency logic can iterate without live connectors using:
+
+- `apps/server/data/mock-media-window.json` (snapshot input used by mock API)
+- `packages/contracts/fixtures/media.events.sample.json` (canonical event fixture for scoring experiments)

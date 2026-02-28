@@ -9,10 +9,17 @@
       "args": {
         "userId": "string (optional)",
         "profile": "object (optional)",
-        "includeSources": [
-          "youtube",
-          "spotify"
-        ]
+        "includeSources": ["youtube", "spotify"]
+      }
+    },
+    {
+      "name": "vocab.insights.get",
+      "description": "Fetch topic clusters and objective links from ingestion.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "userId": "string (optional)",
+        "lang": "ko|ja|zh (optional)"
       }
     }
   ]

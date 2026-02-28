@@ -183,7 +183,11 @@ Request:
 ```json
 {
   "userId": "demo-user-1",
-  "includeSources": ["youtube", "spotify"]
+  "profile": {
+    "nativeLanguage": "en",
+    "targetLanguages": ["ko", "zh"],
+    "proficiency": { "ko": "beginner", "ja": "none", "zh": "none" }
+  }
 }
 ```
 
@@ -192,10 +196,40 @@ Response:
 {
   "success": true,
   "generatedAtIso": "2026-02-28T12:00:00.000Z",
-  "includeSources": ["youtube", "spotify"],
   "sourceCount": { "youtube": 3, "spotify": 3 },
   "topTerms": [
-    { "lemma": "연습", "lang": "ko", "count": 27, "sourceCount": 9 }
+    {
+      "lemma": "연습",
+      "lang": "ko",
+      "count": 3,
+      "sourceCount": 2,
+      "sourceBreakdown": { "youtube": 1, "spotify": 2 }
+    }
+  ]
+}
+```
+
+## Canonical Media Events Fixture (Connector-Independent)
+Used by topic modeling/frequency workstreams so they can iterate without live Spotify/YouTube sync.
+
+Path:
+`packages/contracts/fixtures/media.events.sample.json`
+
+Shape:
+```json
+{
+  "events": [
+    {
+      "eventId": "evt_001",
+      "userId": "demo-user-1",
+      "source": "youtube",
+      "mediaId": "yt_a12",
+      "title": "K-variety snack challenge",
+      "lang": "ko",
+      "minutes": 22,
+      "consumedAtIso": "2026-02-27T04:30:00.000Z",
+      "tokens": ["메뉴", "주문", "먹다", "맵다", "연습"]
+    }
   ]
 }
 ```
@@ -225,10 +259,10 @@ Response:
 Request:
 ```json
 {
-  "tool": "ingestion.run_mock",
+  "tool": "vocab.insights.get",
   "args": {
     "userId": "demo-user-1",
-    "includeSources": ["youtube"]
+    "lang": "ko"
   }
 }
 ```
@@ -237,12 +271,31 @@ Response:
 ```json
 {
   "ok": true,
-  "tool": "ingestion.run_mock",
+  "tool": "vocab.insights.get",
   "result": {
-    "success": true,
-    "generatedAtIso": "2026-02-28T12:00:00.000Z",
-    "includeSources": ["youtube"],
-    "sourceCount": { "youtube": 3, "spotify": 0 }
+    "windowStartIso": "2026-02-25T00:00:00.000Z",
+    "windowEndIso": "2026-02-28T00:00:00.000Z",
+    "clusters": [
+      {
+        "clusterId": "food-ordering",
+        "label": "Food Ordering",
+        "keywords": ["주문", "메뉴", "맵다"],
+        "topTerms": ["주문", "메뉴"]
+      }
+    ],
+    "items": [
+      {
+        "lemma": "주문",
+        "lang": "ko",
+        "score": 0.82,
+        "frequency": 26,
+        "burst": 1.34,
+        "clusterId": "food-ordering",
+        "objectiveLinks": [
+          { "objectiveId": "ko_food_l2_001", "reason": "High utility in next hangout" }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -423,81 +476,18 @@ Response:
 }
 ```
 
-## GET `/api/v1/integrations/spotify/status`
-Query:
-```json
-{ "userId": "demo-user-1" }
-```
+## GET `/api/v1/demo/secret-status`
+Notes:
+- Protected when `TONG_DEMO_PASSWORD` is configured.
+- Returns only configured/missing booleans, never raw secret values.
 
 Response:
 ```json
 {
-  "userId": "demo-user-1",
-  "spotifyConfigured": true,
-  "connected": true,
-  "tokenExpiresAtIso": "2026-02-28T17:00:00.000Z",
-  "tokenScope": "user-read-recently-played",
-  "lastSyncAtIso": "2026-02-28T16:05:00.000Z",
-  "lastSyncItemCount": 84,
-  "syncWindowHours": 72
-}
-```
-
-## GET `/api/v1/integrations/spotify/connect`
-Query:
-```json
-{ "userId": "demo-user-1" }
-```
-
-Response:
-```json
-{
-  "userId": "demo-user-1",
-  "connected": false,
-  "state": "abc123",
-  "scope": "user-read-recently-played",
-  "redirectUri": "http://127.0.0.1:8787/api/v1/integrations/spotify/callback",
-  "authUrl": "https://accounts.spotify.com/authorize?..."
-}
-```
-
-## GET `/api/v1/integrations/spotify/callback`
-Query:
-```json
-{ "code": "spotify_code", "state": "abc123" }
-```
-
-Response:
-```json
-{
-  "ok": true,
-  "userId": "demo-user-1",
-  "connected": true,
-  "tokenExpiresAtIso": "2026-02-28T17:00:00.000Z",
-  "sync": {
-    "syncedAtIso": "2026-02-28T16:05:00.000Z",
-    "windowHours": 72,
-    "itemCount": 84,
-    "rawItemCount": 84
-  }
-}
-```
-
-## POST `/api/v1/integrations/spotify/sync`
-Request:
-```json
-{ "userId": "demo-user-1", "windowHours": 72 }
-```
-
-Response:
-```json
-{
-  "ok": true,
-  "userId": "demo-user-1",
-  "syncedAtIso": "2026-02-28T16:05:00.000Z",
-  "windowHours": 72,
-  "spotifyItemCount": 84,
-  "spotifyRawItemCount": 84,
-  "sourceCount": { "youtube": 3, "spotify": 84 }
+  "demoPasswordEnabled": true,
+  "youtubeApiKeyConfigured": true,
+  "spotifyClientIdConfigured": true,
+  "spotifyClientSecretConfigured": true,
+  "openAiApiKeyConfigured": false
 }
 ```

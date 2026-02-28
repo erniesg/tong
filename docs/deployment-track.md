@@ -22,6 +22,24 @@ Only these env keys can change:
 2. `TONG_LOCAL_API_BASE_URL`
 3. `TONG_REMOTE_API_BASE_URL`
 
+## Secrets contract
+Store all sensitive values in server runtime secrets (Cloudflare Workers secrets or equivalent):
+1. `TONG_DEMO_PASSWORD`
+2. `YOUTUBE_CLIENT_ID`
+3. `YOUTUBE_CLIENT_SECRET`
+4. `SPOTIFY_CLIENT_ID`
+5. `SPOTIFY_CLIENT_SECRET`
+6. `TONG_SPOTIFY_CLIENT_ID`
+7. `TONG_SPOTIFY_CLIENT_SECRET`
+8. `OPENAI_API_KEY`
+9. `OAUTH_CLIENT_ID`
+10. `OAUTH_CLIENT_SECRET`
+
+Notes:
+1. OAuth client IDs are non-secret and can be public config.
+2. OAuth client secrets and API keys must never be exposed in client bundles.
+3. The API enforces demo password when `TONG_DEMO_PASSWORD` is set.
+
 ## Demo safety rule
 If remote host fails, switch to `local-mock` and continue the same run-of-show.
 
