@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tong Game</title>
+    <link rel="stylesheet" href="./game.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <h1>Tong</h1>
+        <div class="stats">
+          <span id="xp">XP: 0</span>
+          <span id="affinity">Affinity: 0</span>
+        </div>
+      </header>
+
+      <section class="controls">
+        <div id="languageTabs" class="language-tabs"></div>
+        <div class="toggles">
+          <button id="toggleRomanization" class="ghost">Toggle Romanization</button>
+          <button id="toggleTranslation" class="ghost">Toggle Translation</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="npc">
+          <div class="portrait" id="portrait"></div>
+          <div>
+            <h2 id="npcName">NPC</h2>
+            <p id="npcTitle">Character role</p>
+          </div>
+        </div>
+
+        <div class="line-block">
+          <p id="line" class="line"></p>
+          <p id="romanization" class="romanization"></p>
+          <p id="translation" class="translation"></p>
+        </div>
+
+        <div id="choices" class="choices"></div>
+        <div id="feedback" class="feedback"></div>
+        <button id="nextButton" class="next hidden">Next</button>
+      </section>
+    </main>
+
+    <script type="module" src="./game.js"></script>
+  </body>
+</html>

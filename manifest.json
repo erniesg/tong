@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Tong",
+  "description": "A Chrome extension dating sim to learn CJK languages through conversation choices.",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "Tong",
+    "default_popup": "src/popup.html"
+  },
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "permissions": ["storage", "tabs"],
+  "options_page": "src/options.html"
+}

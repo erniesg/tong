@@ -1,0 +1,188 @@
+:root {
+  --bg0: #f6efe5;
+  --bg1: #ffe1c7;
+  --ink: #2d2230;
+  --card: #fffdf9;
+  --accent: #ff7a59;
+  --accent2: #f1ab4a;
+  --muted: #6f6275;
+  --good: #1f7a4a;
+  --bad: #9f2f43;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Avenir Next", "Noto Sans", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(circle at 20% 10%, var(--bg1), var(--bg0) 55%, #e9d7c5);
+}
+
+.app {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.stats {
+  display: flex;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.controls {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.language-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.language-tabs button,
+.ghost,
+.next,
+.choice {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.language-tabs button {
+  background: #f4ebe1;
+  color: var(--ink);
+}
+
+.language-tabs button.active {
+  background: linear-gradient(120deg, var(--accent), var(--accent2));
+}
+
+.toggles {
+  display: flex;
+  gap: 8px;
+}
+
+.ghost {
+  background: #f0eef7;
+}
+
+.card {
+  margin-top: 16px;
+  background: var(--card);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 12px 30px rgba(55, 45, 38, 0.12);
+}
+
+.npc {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.portrait {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: linear-gradient(140deg, #ffd1a8, #ffc0cb);
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.npc h2 {
+  margin: 0;
+}
+
+.npc p {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+.line-block {
+  margin-top: 18px;
+}
+
+.line {
+  margin: 0;
+  font-size: 1.45rem;
+  line-height: 1.35;
+}
+
+.romanization,
+.translation {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.choices {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.choice {
+  text-align: left;
+  background: #f7f3ec;
+}
+
+.choice:hover {
+  background: #efe8dc;
+}
+
+.feedback {
+  min-height: 24px;
+  margin-top: 14px;
+  font-weight: 600;
+}
+
+.feedback.good {
+  color: var(--good);
+}
+
+.feedback.bad {
+  color: var(--bad);
+}
+
+.next {
+  margin-top: 8px;
+  background: #232038;
+  color: white;
+}
+
+.hidden {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .toggles {
+    flex-direction: column;
+  }
+}

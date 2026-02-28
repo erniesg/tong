@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tong Settings</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        background: #f8f7ff;
+        color: #252333;
+      }
+      .panel {
+        max-width: 520px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 12px 32px rgba(24, 20, 48, 0.08);
+      }
+      h1 {
+        margin: 0 0 16px;
+      }
+      label {
+        display: block;
+        margin-bottom: 12px;
+      }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-weight: 600;
+        background: #232038;
+        color: #fff;
+        cursor: pointer;
+      }
+      #status {
+        margin-top: 10px;
+        min-height: 20px;
+        color: #27543b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <h1>Tong settings</h1>
+
+      <label>
+        Default language
+        <select id="targetLanguage">
+          <option value="zh">Mandarin Chinese</option>
+          <option value="ja">Japanese</option>
+          <option value="ko">Korean</option>
+        </select>
+      </label>
+
+      <label>
+        <input id="showRomanization" type="checkbox" />
+        Show romanization by default
+      </label>
+
+      <label>
+        <input id="showTranslation" type="checkbox" />
+        Show English translation by default
+      </label>
+
+      <button id="save">Save</button>
+      <div id="status"></div>
+    </div>
+
+    <script type="module" src="./options.js"></script>
+  </body>
+</html>
