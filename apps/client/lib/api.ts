@@ -1,4 +1,33 @@
 const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const DEMO_PASSWORD_STORAGE_KEY = 'tong.demo.password';
+
+function stripDemoPasswordFromUrl() {
+  if (typeof window === 'undefined') return;
+
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('demo')) return;
+  params.delete('demo');
+  const query = params.toString();
+  const cleanUrl = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
+  window.history.replaceState({}, '', cleanUrl);
+}
+
+function getDemoPassword() {
+  if (typeof window === 'undefined') return '';
+
+  const fromStorage = window.localStorage.getItem(DEMO_PASSWORD_STORAGE_KEY);
+  if (fromStorage) return fromStorage;
+
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get('demo');
+  if (fromQuery) {
+    window.localStorage.setItem(DEMO_PASSWORD_STORAGE_KEY, fromQuery);
+    stripDemoPasswordFromUrl();
+    return fromQuery;
+  }
+
+  return '';
+}
 
 export interface CaptionToken {
   text: string;
@@ -105,6 +134,14 @@ export interface MediaProfileResponse {
   };
 }
 
+export interface SecretStatusResponse {
+  demoPasswordEnabled: boolean;
+  youtubeApiKeyConfigured: boolean;
+  spotifyClientIdConfigured: boolean;
+  spotifyClientSecretConfigured: boolean;
+  openAiApiKeyConfigured: boolean;
+}
+
 export type CityId = 'seoul' | 'tokyo' | 'shanghai';
 export type LocationId =
   | 'food_street'
@@ -114,19 +151,51 @@ export type LocationId =
   | 'practice_studio';
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const demoPassword = getDemoPassword();
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...(demoPassword ? { 'x-demo-password': demoPassword } : {}),
       ...(init?.headers || {}),
     },
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed (${response.status}) for ${path}`);
+    let serverMessage = '';
+    try {
+      const payload = (await response.json()) as { message?: string; error?: string };
+      serverMessage = payload.message || payload.error || '';
+    } catch {
+      serverMessage = '';
+    }
+
+    if (response.status === 401) {
+      throw new Error(serverMessage || 'Demo password is missing or invalid.');
+    }
+
+    throw new Error(`Request failed (${response.status}) for ${path}${serverMessage ? `: ${serverMessage}` : ''}`);
   }
 
   return (await response.json()) as T;
+}
+
+export function getStoredDemoPassword() {
+  if (typeof window === 'undefined') return '';
+  return window.localStorage.getItem(DEMO_PASSWORD_STORAGE_KEY) || '';
+}
+
+export function setStoredDemoPassword(password: string) {
+  if (typeof window === 'undefined') return;
+
+  const trimmed = password.trim();
+  if (!trimmed) return;
+  window.localStorage.setItem(DEMO_PASSWORD_STORAGE_KEY, trimmed);
+}
+
+export function clearStoredDemoPassword() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(DEMO_PASSWORD_STORAGE_KEY);
 }
 
 export function fetchCaptions(videoId: string, lang: 'ko' | 'ja' | 'zh' = 'ko') {
@@ -141,7 +210,16 @@ export function fetchDictionary(term: string, lang: 'ko' | 'ja' | 'zh' = 'ko') {
   );
 }
 
-export function startOrResumeGame() {
+export type ProficiencyLevel = 'none' | 'beginner' | 'intermediate' | 'advanced';
+
+export interface UserProficiency {
+  ko: ProficiencyLevel;
+  ja: ProficiencyLevel;
+  zh: ProficiencyLevel;
+}
+
+export function startOrResumeGame(proficiency?: UserProficiency) {
+  const prof = proficiency ?? { ko: 'beginner', ja: 'none', zh: 'none' };
   return apiFetch<{
     sessionId: string;
     city: 'seoul' | 'tokyo' | 'shanghai';
@@ -154,11 +232,7 @@ export function startOrResumeGame() {
       profile: {
         nativeLanguage: 'en',
         targetLanguages: ['ko', 'ja', 'zh'],
-        proficiency: {
-          ko: 'beginner',
-          ja: 'none',
-          zh: 'none',
-        },
+        proficiency: prof,
       },
     }),
   });
@@ -302,6 +376,10 @@ export function fetchInsights() {
 
 export function fetchMediaProfile() {
   return apiFetch<MediaProfileResponse>('/api/v1/player/media-profile?windowDays=3&userId=demo-user-1');
+}
+
+export function fetchSecretStatus() {
+  return apiFetch<SecretStatusResponse>('/api/v1/demo/secret-status');
 }
 
 export function getApiBase() {
