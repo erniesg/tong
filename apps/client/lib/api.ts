@@ -267,12 +267,20 @@ export function fetchDictionary(term: string, lang: 'ko' | 'ja' | 'zh' = 'ko') {
   );
 }
 
-export function startOrResumeGame() {
+interface StartOrResumeGameParams {
+  userId?: string;
+  city?: CityId;
+  profile?: GameProfile;
+}
+
+export function startOrResumeGame(params: StartOrResumeGameParams = {}) {
+  const userId = params.userId || 'demo-user-1';
   return apiFetch<StartOrResumeGameResponse>('/api/v1/game/start-or-resume', {
     method: 'POST',
     body: JSON.stringify({
-      userId: 'demo-user-1',
-      profile: {
+      userId,
+      city: params.city || 'seoul',
+      profile: params.profile || {
         nativeLanguage: 'en',
         targetLanguages: ['ko', 'ja', 'zh'],
         proficiency: {
@@ -308,17 +316,19 @@ export function fetchObjectiveNext(params: ObjectiveNextParams = {}) {
 interface StartHangoutParams {
   objectiveId: string;
   userId?: string;
+  sessionId?: string;
   city?: CityId;
   location?: LocationId;
   lang?: 'ko' | 'ja' | 'zh';
 }
 
 export function startHangout(params: StartHangoutParams) {
-  const { objectiveId, userId, city, location, lang } = params;
+  const { objectiveId, userId, sessionId, city, location, lang } = params;
   return apiFetch<StartHangoutResponse>('/api/v1/scenes/hangout/start', {
     method: 'POST',
     body: JSON.stringify({
       userId: userId || 'demo-user-1',
+      gameSessionId: sessionId,
       city: city || 'seoul',
       location: location || 'food_street',
       lang: lang || 'ko',
