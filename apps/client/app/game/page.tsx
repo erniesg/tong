@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   createLearnSession,
   fetchLearnSessions,
@@ -12,19 +12,26 @@ import {
   type CityId,
   type LearnSession,
   type LocationId,
+  type ObjectiveNextResponse,
+  type ObjectiveProgressState,
+  type SceneCharacter,
+  type SceneLine,
   type ScoreState,
 } from '@/lib/api';
 
-interface ChatMessage {
-  speaker: 'character' | 'tong' | 'you';
+interface DialogueMessage {
+  id: string;
+  speaker: 'character' | 'you';
   text: string;
 }
 
-const CITY_LABELS: Record<CityId, string> = {
-  seoul: 'Seoul',
-  tokyo: 'Tokyo',
-  shanghai: 'Shanghai',
-};
+interface PresetResponse {
+  text: string;
+  note: string;
+}
+
+const SEOUL: CityId = 'seoul';
+const DEFAULT_LOCATION: LocationId = 'food_street';
 
 const LOCATION_LABELS: Record<LocationId, string> = {
   food_street: 'Food Street',
@@ -42,118 +49,309 @@ const LOCATIONS: LocationId[] = [
   'practice_studio',
 ];
 
+const LOCATION_CHARACTERS: Record<LocationId, SceneCharacter> = {
+  food_street: { name: 'Jae', role: 'Street food buddy', avatarEmoji: 'FS', mood: 'welcoming' },
+  cafe: { name: 'Yuna', role: 'Cafe friend', avatarEmoji: 'CF', mood: 'calm' },
+  convenience_store: { name: 'Min', role: 'Store clerk', avatarEmoji: 'CV', mood: 'helpful' },
+  subway_hub: { name: 'Haneul', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
+  practice_studio: { name: 'Ara', role: 'Practice partner', avatarEmoji: 'PS', mood: 'energetic' },
+};
+
+const DEFAULT_PRESET_RESPONSES: PresetResponse[] = [
+  { text: '떡볶이 주세요.', note: 'Order tteokbokki' },
+  { text: '보통맛으로 해주세요.', note: 'Set spice level' },
+  { text: '한 개 주세요, 감사합니다.', note: 'Confirm quantity politely' },
+  { text: '포장해 주세요.', note: 'Ask for takeout' },
+  { text: '물도 주세요.', note: 'Ask for water' },
+];
+
+const INITIAL_HINT = 'Tong hint: Use one short polite order phrase per turn.';
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function lineToHint(lines: SceneLine[]): string | null {
+  for (const line of lines) {
+    if (line.speaker === 'tong' && line.text.trim()) return line.text;
+  }
+  return null;
+}
+
+function isDialogueLine(line: SceneLine): line is SceneLine & { speaker: 'character' | 'you' } {
+  return (line.speaker === 'character' || line.speaker === 'you') && Boolean(line.text.trim());
+}
+
+function lineToDialogue(lines: SceneLine[]): DialogueMessage[] {
+  return lines
+    .filter(isDialogueLine)
+    .map((line) => ({
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      speaker: line.speaker,
+      text: line.text,
+    }));
+}
+
+function getObjectiveRatio(progress?: ObjectiveProgressState): number | null {
+  if (!progress) return null;
+  if (typeof progress.percent === 'number') {
+    return clamp01(progress.percent > 1 ? progress.percent / 100 : progress.percent);
+  }
+  if (typeof progress.current === 'number' && typeof progress.target === 'number' && progress.target > 0) {
+    return clamp01(progress.current / progress.target);
+  }
+  return null;
+}
+
+function buildObjectiveSummary(objective: ObjectiveNextResponse | null): string {
+  if (!objective) return 'Validate practical food-order language in context.';
+  const vocab = objective.coreTargets.vocabulary.slice(0, 2).join(', ');
+  const grammar = objective.coreTargets.grammar[0];
+  if (!vocab && !grammar) return 'Validate practical food-order language in context.';
+  if (vocab && grammar) return `Use ${vocab} with ${grammar}.`;
+  return `Use ${vocab || grammar} naturally in scene dialogue.`;
+}
+
+function mergeCharacterPayload(base: SceneCharacter, payload?: SceneCharacter): SceneCharacter {
+  if (!payload) return base;
+  return {
+    ...base,
+    ...payload,
+    avatarEmoji: payload.avatarEmoji || base.avatarEmoji,
+  };
+}
+
 export default function GamePage() {
-  const [loading, setLoading] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [objectiveId, setObjectiveId] = useState('ko_food_l2_001');
-  const [targets, setTargets] = useState<{ vocabulary: string[]; grammar: string[]; sentenceStructures: string[] }>({
-    vocabulary: [],
-    grammar: [],
-    sentenceStructures: [],
-  });
-
   const [mode, setMode] = useState<'hangout' | 'learn'>('hangout');
-  const [selectedCity, setSelectedCity] = useState<CityId>('seoul');
-  const [selectedLocation, setSelectedLocation] = useState<LocationId>('food_street');
+  const [location, setLocation] = useState<LocationId>(DEFAULT_LOCATION);
 
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [sceneSessionId, setSceneSessionId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [objective, setObjective] = useState<ObjectiveNextResponse | null>(null);
+  const [objectiveRatio, setObjectiveRatio] = useState(0);
+  const [character, setCharacter] = useState<SceneCharacter>(LOCATION_CHARACTERS[DEFAULT_LOCATION]);
+
   const [score, setScore] = useState<ScoreState>({ xp: 0, sp: 0, rp: 0 });
-  const [hint, setHint] = useState('Tong hints will appear here during hangout turns.');
+  const [hint, setHint] = useState(INITIAL_HINT);
+  const [status, setStatus] = useState('Tap once to start or resume and jump into the first Seoul hangout.');
+  const [messages, setMessages] = useState<DialogueMessage[]>([]);
   const [userUtterance, setUserUtterance] = useState('');
+  const [presetResponses, setPresetResponses] = useState<PresetResponse[]>(DEFAULT_PRESET_RESPONSES);
 
   const [learnSessions, setLearnSessions] = useState<LearnSession[]>([]);
   const [learnMessage, setLearnMessage] = useState('');
 
-  const progress = useMemo(() => {
-    const xp = Math.min(100, score.xp * 2.5);
-    const sp = Math.min(100, score.sp * 8);
-    const rp = Math.min(100, score.rp * 10);
-    return { xp, sp, rp };
+  const [loadingStart, setLoadingStart] = useState(false);
+  const [sendingTurn, setSendingTurn] = useState(false);
+  const [loadingLearn, setLoadingLearn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const objectiveSummary = useMemo(() => buildObjectiveSummary(objective), [objective]);
+
+  const requiredTurns = objective?.completionCriteria.requiredTurns ?? 4;
+  const objectivePercent = Math.round(objectiveRatio * 100);
+  const objectiveTurnProgress = Math.min(requiredTurns, Math.round(objectiveRatio * requiredTurns));
+
+  const scorePercent = useMemo(() => {
+    return {
+      xp: Math.min(100, score.xp * 2.5),
+      sp: Math.min(100, score.sp * 8),
+      rp: Math.min(100, score.rp * 10),
+    };
   }, [score]);
 
-  async function bootstrapSession() {
-    try {
-      setLoading(true);
-      const [game, objective, sessions] = await Promise.all([
-        startOrResumeGame(),
-        fetchObjectiveNext({
-          city: selectedCity,
-          location: selectedLocation,
-          mode: 'hangout',
-          lang: 'ko',
-        }),
-        fetchLearnSessions({ city: selectedCity, lang: 'ko' }),
-      ]);
-
-      setSessionId(game.sessionId);
-      setObjectiveId(objective.objectiveId);
-      setTargets(objective.coreTargets);
-      setLearnSessions(sessions.items);
-      setMessages([]);
-      setScore({ xp: 0, sp: 0, rp: 0 });
-      setSceneSessionId(null);
-      setHint('Session ready. Start hangout to enter scene dialogue.');
-      return objective.objectiveId;
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (mode === 'learn' && learnSessions.length === 0) {
+      void refreshLearnSessions();
     }
-  }
+  }, [mode]);
 
-  async function beginHangout() {
-    let activeObjectiveId = objectiveId;
-    if (!sessionId) {
-      activeObjectiveId = await bootstrapSession();
-    }
-
-    const hangout = await startHangout({
-      objectiveId: activeObjectiveId,
-      city: selectedCity,
-      location: selectedLocation,
-      lang: 'ko',
-    });
-    setSceneSessionId(hangout.sceneSessionId);
-    setMessages([{ speaker: hangout.initialLine.speaker, text: hangout.initialLine.text }]);
-    setScore(hangout.state.score);
-    setHint('Stay in-character and use objective vocabulary in each response.');
-  }
-
-  async function sendHangoutTurn() {
-    if (!sceneSessionId || !userUtterance.trim()) return;
-
-    const utterance = userUtterance.trim();
+  function resetSceneState(nextLocation: LocationId) {
+    setSceneSessionId(null);
+    setObjective(null);
+    setObjectiveRatio(0);
+    setMessages([]);
     setUserUtterance('');
-    setMessages((prev) => [...prev, { speaker: 'you', text: utterance }]);
+    setPresetResponses(DEFAULT_PRESET_RESPONSES);
+    setCharacter(LOCATION_CHARACTERS[nextLocation]);
+    setHint(INITIAL_HINT);
+  }
 
-    const response = await respondHangout(sceneSessionId, utterance);
-    setMessages((prev) => [...prev, { speaker: response.nextLine.speaker, text: response.nextLine.text }]);
-    setScore(response.state.score);
-    setHint(response.feedback.tongHint);
+  function handleLocationChange(nextLocation: LocationId) {
+    setLocation(nextLocation);
+    resetSceneState(nextLocation);
+    setStatus(`Seoul · ${LOCATION_LABELS[nextLocation]} selected. Start or resume to enter the scene.`);
+  }
+
+  function applyServerReplies(replies?: string[]) {
+    if (!replies?.length) return;
+    setPresetResponses(replies.slice(0, 6).map((text) => ({ text, note: 'Suggested reply' })));
+  }
+
+  function mergeIncomingLines(lines: SceneLine[]) {
+    const nextHint = lineToHint(lines);
+    const dialogueLines = lineToDialogue(lines);
+    if (nextHint) setHint(nextHint);
+    if (dialogueLines.length) {
+      setMessages((prev) => [...prev, ...dialogueLines]);
+    }
+  }
+
+  async function quickStartHangout() {
+    try {
+      setLoadingStart(true);
+      setError(null);
+      setMode('hangout');
+      setStatus(`Preparing Seoul · ${LOCATION_LABELS[location]}...`);
+      resetSceneState(location);
+
+      const game = await startOrResumeGame();
+      setSessionId(game.sessionId);
+      if (game.progression) {
+        setScore({
+          xp: game.progression.xp,
+          sp: game.progression.sp,
+          rp: game.progression.rp,
+        });
+      } else {
+        setScore({ xp: 0, sp: 0, rp: 0 });
+      }
+
+      const nextObjective = await fetchObjectiveNext({
+        city: SEOUL,
+        location,
+        mode: 'hangout',
+        lang: 'ko',
+      });
+      setObjective(nextObjective);
+
+      const hangout = await startHangout({
+        objectiveId: nextObjective.objectiveId,
+        city: SEOUL,
+        location,
+        lang: 'ko',
+      });
+
+      setSceneSessionId(hangout.sceneSessionId);
+      setStatus('Hangout live. Use a preset phrase to test flow quickly.');
+      setCharacter((current) => mergeCharacterPayload(current, hangout.character || hangout.npc));
+      setScore(hangout.state.score);
+
+      const startProgress =
+        getObjectiveRatio(hangout.state.objectiveProgress) ?? getObjectiveRatio(hangout.objectiveProgress);
+      if (startProgress !== null) {
+        setObjectiveRatio(startProgress);
+      }
+
+      applyServerReplies(hangout.quickReplies);
+      const openingLines =
+        hangout.initialLines && hangout.initialLines.length > 0 ? hangout.initialLines : [hangout.initialLine];
+      mergeIncomingLines(openingLines);
+    } catch (startError) {
+      setError(startError instanceof Error ? startError.message : 'Failed to start the Seoul hangout.');
+      setStatus('Start failed. Try again.');
+    } finally {
+      setLoadingStart(false);
+    }
+  }
+
+  async function sendHangoutTurn(presetText?: string) {
+    if (!sceneSessionId) {
+      setError('Start or resume first to open the hangout scene.');
+      return;
+    }
+
+    const utterance = (presetText ?? userUtterance).trim();
+    if (!utterance || sendingTurn) return;
+
+    setError(null);
+    setSendingTurn(true);
+    setUserUtterance('');
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        speaker: 'you',
+        text: utterance,
+      },
+    ]);
+
+    try {
+      const response = await respondHangout(sceneSessionId, utterance);
+      setScore(response.state.score);
+      setHint(response.feedback.tongHint || INITIAL_HINT);
+      setCharacter((current) => mergeCharacterPayload(current, response.character || response.npc));
+      applyServerReplies(response.feedback.suggestedReplies);
+
+      setObjectiveRatio((previous) => {
+        const fromState = getObjectiveRatio(response.state.objectiveProgress);
+        if (fromState !== null) return fromState;
+
+        const fromFeedback = getObjectiveRatio(response.feedback.objectiveProgress);
+        if (fromFeedback !== null) return fromFeedback;
+
+        const delta = response.feedback.objectiveProgressDelta;
+        const normalizedDelta = delta > 1 ? delta / 100 : delta;
+        return clamp01(previous + normalizedDelta);
+      });
+
+      const nextLines =
+        response.nextLines && response.nextLines.length > 0 ? response.nextLines : [response.nextLine];
+      mergeIncomingLines(nextLines);
+
+      if (response.completion?.isCompleted) {
+        if (response.completion.completionSignal === 'objective_validated') {
+          setStatus('Objective validated. Seoul mission gate preview unlocked.');
+        } else {
+          setStatus('Scene complete. Retry once more to fully validate objective.');
+        }
+      }
+    } catch (turnError) {
+      setError(turnError instanceof Error ? turnError.message : 'Failed to send your scene response.');
+    } finally {
+      setSendingTurn(false);
+    }
   }
 
   async function refreshLearnSessions() {
-    const sessions = await fetchLearnSessions({ city: selectedCity, lang: 'ko' });
-    setLearnSessions(sessions.items);
+    try {
+      setLoadingLearn(true);
+      setError(null);
+      const sessions = await fetchLearnSessions({ city: SEOUL, lang: 'ko' });
+      setLearnSessions(sessions.items);
+    } catch (learnError) {
+      setError(learnError instanceof Error ? learnError.message : 'Failed to load learn sessions.');
+    } finally {
+      setLoadingLearn(false);
+    }
   }
 
   async function startNewLearnSession() {
-    const created = await createLearnSession({
-      objectiveId,
-      city: selectedCity,
-      lang: 'ko',
-    });
-    setLearnMessage(created.firstMessage.text);
-    await refreshLearnSessions();
+    try {
+      setLoadingLearn(true);
+      setError(null);
+      const created = await createLearnSession({
+        objectiveId: objective?.objectiveId || 'ko_food_l2_001',
+        city: SEOUL,
+        lang: 'ko',
+      });
+      setLearnMessage(created.firstMessage.text);
+      await refreshLearnSessions();
+    } catch (learnError) {
+      setError(learnError instanceof Error ? learnError.message : 'Failed to start learn session.');
+    } finally {
+      setLoadingLearn(false);
+    }
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell game-shell">
       <header className="page-header">
-        <p className="kicker">Mobile Game Review</p>
-        <h1 className="page-title">Objective-specific session flow (mobile-first)</h1>
+        <p className="kicker">Game Quick-Start</p>
+        <h1 className="page-title">Seoul new game to first hangout</h1>
         <p className="page-copy">
-          This screen validates start/resume, city/location selection, hangout progression, and learn session
-          history/new session behavior.
+          Mobile-first flow with one-tap start or resume, objective progression, and fast response chips for demo
+          testing.
         </p>
         <div className="nav-links">
           <Link href="/" className="nav-link">
@@ -168,177 +366,195 @@ export default function GamePage() {
         </div>
       </header>
 
-      <section className="grid grid-2" style={{ alignItems: 'flex-start' }}>
-        <article className="card stack">
-          <div className="row">
-            <h3>Session Setup</h3>
-            <span className="pill">{sessionId ? 'Session active' : 'Not started'}</span>
+      <section className="card stack game-quickstart-card">
+        <div className="row">
+          <div className="stack" style={{ gap: 6 }}>
+            <span className="pill">Seoul Quick Start</span>
+            <h2 className="game-section-title">One tap to first hangout</h2>
           </div>
-          <button onClick={() => void bootstrapSession()} disabled={loading}>
-            {loading ? 'Starting...' : 'Start or Resume'}
-          </button>
+          <span className="pill">{sceneSessionId ? 'Hangout live' : sessionId ? 'Session ready' : 'New game'}</span>
+        </div>
 
-          <div className="stack">
-            <span className="pill">City</span>
-            <div className="row" style={{ flexWrap: 'wrap' }}>
-              {(Object.keys(CITY_LABELS) as CityId[]).map((city) => (
+        <div className="game-mode-toggle">
+          <button className={mode === 'hangout' ? '' : 'secondary'} onClick={() => setMode('hangout')}>
+            Hangout Mode
+          </button>
+          <button className={mode === 'learn' ? '' : 'secondary'} onClick={() => setMode('learn')}>
+            Learn Mode
+          </button>
+        </div>
+
+        <button onClick={() => void quickStartHangout()} disabled={loadingStart}>
+          {loadingStart ? 'Starting...' : sceneSessionId ? 'Restart Seoul Hangout' : 'Start or Resume Seoul Hangout'}
+        </button>
+
+        <p className="game-status">{status}</p>
+        {error && <p className="game-error">{error}</p>}
+      </section>
+
+      <section className="game-mobile-wrap">
+        <article className="mobile-frame game-mobile-frame">
+          <div className="mobile-head game-mobile-head">
+            <p className="game-mobile-kicker">City · Location</p>
+            <div className="row">
+              <strong>
+                Seoul · {LOCATION_LABELS[location]}
+              </strong>
+              <span className="pill">{mode}</span>
+            </div>
+            <div className="game-location-row">
+              {LOCATIONS.map((item) => (
                 <button
-                  key={city}
-                  className={selectedCity === city ? undefined : 'secondary'}
-                  onClick={() => setSelectedCity(city)}
+                  key={item}
+                  className={`game-location-pill ${item === location ? 'active' : ''}`}
+                  onClick={() => handleLocationChange(item)}
                 >
-                  {CITY_LABELS[city]}
+                  {LOCATION_LABELS[item]}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="stack">
-            <span className="pill">Location</span>
-            <select
-              value={selectedLocation}
-              onChange={(event) => setSelectedLocation(event.target.value as LocationId)}
-            >
-              {LOCATIONS.map((location) => (
-                <option key={location} value={location}>
-                  {LOCATION_LABELS[location]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="stack">
-            <span className="pill">Objective {objectiveId}</span>
-            <p>Vocabulary: {targets.vocabulary.join(', ') || '-'}</p>
-            <p>Grammar: {targets.grammar.join(', ') || '-'}</p>
-            <p>Sentence: {targets.sentenceStructures.join(', ') || '-'}</p>
-          </div>
-
-          <div className="row">
-            <button className={mode === 'hangout' ? undefined : 'secondary'} onClick={() => setMode('hangout')}>
-              Hangout Mode
-            </button>
-            <button className={mode === 'learn' ? undefined : 'secondary'} onClick={() => setMode('learn')}>
-              Learn Mode
-            </button>
-          </div>
-        </article>
-
-        <article className="mobile-frame">
-          <div className="mobile-head">
-            <div className="row">
-              <strong>
-                {CITY_LABELS[selectedCity]} · {LOCATION_LABELS[selectedLocation]}
-              </strong>
-              <span className="pill">{mode}</span>
-            </div>
-          </div>
-
-          <div className="mobile-body">
+          <div className="mobile-body game-mobile-body">
             {mode === 'hangout' && (
               <>
-                <div className="row">
-                  <button onClick={() => void beginHangout()} disabled={!sessionId && loading}>
-                    {sceneSessionId ? 'Restart Hangout' : 'Start Hangout'}
-                  </button>
-                </div>
+                <section className="game-character-card">
+                  <span className="game-character-avatar">{character.avatarEmoji || 'KO'}</span>
+                  <div>
+                    <p className="game-card-kicker">Hangout character</p>
+                    <strong>{character.name || 'Seoul friend'}</strong>
+                    <p>{character.role || 'Local conversation partner'}</p>
+                  </div>
+                </section>
 
-                <div className="stack">
-                  <p className="korean" style={{ margin: 0, color: '#0f766e', fontWeight: 600 }}>
-                    Tong hint: {hint}
-                  </p>
-                  {messages.length === 0 && <p>Start a hangout to begin the first-person dialogue flow.</p>}
+                <section className="game-progress-card stack">
+                  <div>
+                    <div className="row">
+                      <strong>Objective progress</strong>
+                      <span>
+                        {objectiveTurnProgress}/{requiredTurns} turns
+                      </span>
+                    </div>
+                    <p className="game-objective-copy">{objectiveSummary}</p>
+                    <div className="metric-bar">
+                      <div className="metric-fill game-progress-fill" style={{ width: `${objectivePercent}%` }} />
+                    </div>
+                  </div>
 
-                  {messages.map((message, index) => {
-                    const toneClass =
-                      message.speaker === 'you'
-                        ? 'chat-user'
-                        : message.speaker === 'tong'
-                          ? 'chat-tong'
-                          : 'chat-character';
-                    return (
-                      <div key={`${message.speaker}-${index}`} className={`chat-bubble ${toneClass}`}>
-                        <strong style={{ textTransform: 'capitalize' }}>{message.speaker}:</strong> {message.text}
+                  <div className="stack" style={{ gap: 8 }}>
+                    <div>
+                      <div className="row">
+                        <span>XP</span>
+                        <span>{score.xp}</span>
                       </div>
-                    );
-                  })}
+                      <div className="metric-bar">
+                        <div className="metric-fill" style={{ width: `${scorePercent.xp}%` }} />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="row">
+                        <span>SP</span>
+                        <span>{score.sp}</span>
+                      </div>
+                      <div className="metric-bar">
+                        <div className="metric-fill" style={{ width: `${scorePercent.sp}%` }} />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="row">
+                        <span>RP</span>
+                        <span>{score.rp}</span>
+                      </div>
+                      <div className="metric-bar">
+                        <div className="metric-fill" style={{ width: `${scorePercent.rp}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <div className="chat-bubble chat-tong">
+                  <strong>Tong hint:</strong> {hint}
                 </div>
+
+                <section className="game-dialogue-feed">
+                  {messages.length === 0 && (
+                    <p className="game-empty-state">Tap start to enter dialogue, then test with a preset phrase.</p>
+                  )}
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`chat-bubble ${message.speaker === 'you' ? 'chat-user' : 'chat-character'}`}
+                    >
+                      {message.text}
+                    </div>
+                  ))}
+                </section>
+
+                <section className="game-chip-grid">
+                  {presetResponses.map((preset) => (
+                    <button
+                      key={preset.text}
+                      className="secondary game-chip"
+                      onClick={() => void sendHangoutTurn(preset.text)}
+                      disabled={!sceneSessionId || sendingTurn}
+                    >
+                      <span className="game-chip-main">{preset.text}</span>
+                      <span className="game-chip-note">{preset.note}</span>
+                    </button>
+                  ))}
+                </section>
 
                 <div className="stack">
                   <textarea
                     rows={2}
                     value={userUtterance}
-                    placeholder="Type your in-scene response (e.g., 떡볶이 주세요)"
+                    placeholder="Type your own response"
                     onChange={(event) => setUserUtterance(event.target.value)}
                   />
-                  <button onClick={() => void sendHangoutTurn()} disabled={!sceneSessionId || !userUtterance.trim()}>
-                    Send turn
+                  <button
+                    onClick={() => void sendHangoutTurn()}
+                    disabled={!sceneSessionId || !userUtterance.trim() || sendingTurn}
+                  >
+                    {sendingTurn ? 'Sending...' : 'Send response'}
                   </button>
-                </div>
-
-                <div className="stack">
-                  <div>
-                    <div className="row">
-                      <span>XP</span>
-                      <span>{score.xp}</span>
-                    </div>
-                    <div className="metric-bar">
-                      <div className="metric-fill" style={{ width: `${progress.xp}%` }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="row">
-                      <span>SP</span>
-                      <span>{score.sp}</span>
-                    </div>
-                    <div className="metric-bar">
-                      <div className="metric-fill" style={{ width: `${progress.sp}%` }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="row">
-                      <span>RP</span>
-                      <span>{score.rp}</span>
-                    </div>
-                    <div className="metric-bar">
-                      <div className="metric-fill" style={{ width: `${progress.rp}%` }} />
-                    </div>
-                  </div>
                 </div>
               </>
             )}
 
             {mode === 'learn' && (
               <>
-                <div className="stack">
-                  <h3 style={{ margin: 0 }}>Learn Sessions</h3>
-                  <p style={{ margin: 0 }}>View previous sessions and start a new objective-focused drill.</p>
+                <section className="game-learn-head stack">
+                  <h3 style={{ margin: 0 }}>Learn chat sessions</h3>
+                  <p style={{ margin: 0 }}>
+                    Review previous Seoul sessions or launch a new objective-focused drill before your next hangout.
+                  </p>
                   <div className="row">
-                    <button className="secondary" onClick={() => void refreshLearnSessions()}>
+                    <button className="secondary" onClick={() => void refreshLearnSessions()} disabled={loadingLearn}>
                       View previous sessions
                     </button>
-                    <button onClick={() => void startNewLearnSession()}>Start new session</button>
+                    <button onClick={() => void startNewLearnSession()} disabled={loadingLearn}>
+                      Start new session
+                    </button>
                   </div>
-                </div>
+                </section>
 
                 {learnMessage && <div className="chat-bubble chat-tong">Tong: {learnMessage}</div>}
+                {loadingLearn && <p>Loading learn sessions...</p>}
+                {!loadingLearn && learnSessions.length === 0 && <p>No prior sessions yet.</p>}
 
-                <div className="stack">
-                  {learnSessions.length === 0 && <p>No prior sessions loaded yet.</p>}
+                <section className="stack">
                   {learnSessions.map((session) => (
-                    <div key={session.learnSessionId} className="card" style={{ padding: 12 }}>
+                    <article key={session.learnSessionId} className="game-learn-item">
                       <div className="row" style={{ alignItems: 'flex-start' }}>
                         <div>
                           <strong>{session.title}</strong>
-                          <p style={{ margin: 0 }}>Objective: {session.objectiveId}</p>
+                          <p>Objective: {session.objectiveId}</p>
                         </div>
-                        <span className="pill">{new Date(session.lastMessageAt).toLocaleString()}</span>
+                        <span className="pill">{new Date(session.lastMessageAt).toLocaleDateString()}</span>
                       </div>
-                    </div>
+                    </article>
                   ))}
-                </div>
+                </section>
               </>
             )}
           </div>
