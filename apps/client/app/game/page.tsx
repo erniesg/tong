@@ -19,6 +19,7 @@ import {
   type ProgressLoopState,
   type ProficiencyLevel,
   type RelationshipState,
+  type RouteState,
   type SceneCharacter,
   type SceneLine,
   type ScoreState,
@@ -262,8 +263,10 @@ export default function GamePage() {
 
   const [score, setScore] = useState<ScoreState>({ xp: 0, sp: 0, rp: 0 });
   const [relationshipState, setRelationshipState] = useState<RelationshipState | null>(null);
+  const [routeState, setRouteState] = useState<RouteState | null>(null);
   const [progressionLoop, setProgressionLoop] = useState<ProgressLoopState | null>(null);
   const [engineMode, setEngineMode] = useState<'dynamic_ai' | 'scripted_fallback'>('scripted_fallback');
+  const [randomizeCharacter, setRandomizeCharacter] = useState(false);
   const [hint, setHint] = useState(INITIAL_HINT);
   const [status, setStatus] = useState('Set CJK sliders, swipe the map, then start your first hangout.');
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
@@ -385,10 +388,13 @@ export default function GamePage() {
       const game = await startOrResumeGame({
         city,
         profile: buildProfileFromGauge(proficiencyGauge),
+        randomizeCharacter,
+        preferRomance: true,
       });
       setSessionId(game.sessionId);
       setEngineMode(game.engineMode || 'scripted_fallback');
       setRelationshipState(game.relationshipState || null);
+      setRouteState(game.routeState || null);
       setProgressionLoop(game.progressionLoop || null);
       if (game.progression) {
         setScore({
@@ -414,6 +420,8 @@ export default function GamePage() {
         city,
         location,
         lang: selectedLang,
+        randomizeCharacter,
+        preferRomance: true,
       });
 
       setSceneSessionId(hangout.sceneSessionId);
@@ -422,6 +430,7 @@ export default function GamePage() {
       setCharacter((current) => mergeCharacterPayload(current, hangout.character || hangout.npc));
       setScore(hangout.state.score);
       setRelationshipState(hangout.relationshipState || hangout.state.relationshipState || null);
+      setRouteState(hangout.routeState || hangout.state.routeState || game.routeState || null);
       setProgressionLoop(hangout.progressionLoop || hangout.state.progressionLoop || null);
 
       const startProgress =
@@ -475,6 +484,14 @@ export default function GamePage() {
           response.state.relationshipState ||
           response.feedback.relationshipState ||
           response.completionSummary?.relationshipState ||
+          null,
+      );
+      setRouteState(
+        response.routeState ||
+          response.state.routeState ||
+          response.feedback.routeState ||
+          response.completionSummary?.routeState ||
+          routeState ||
           null,
       );
       setProgressionLoop(
@@ -580,6 +597,7 @@ export default function GamePage() {
       });
       setProgressionLoop(mission.progressionLoop);
       setRelationshipState(mission.relationshipState || null);
+      setRouteState(mission.routeState || routeState || null);
       if (mission.rewards) {
         setScore((previous) => ({
           xp: previous.xp + mission.rewards!.xp,
@@ -714,6 +732,15 @@ export default function GamePage() {
           </button>
         </div>
 
+        <label className="row" style={{ alignItems: 'center', gap: 8 }}>
+          <input
+            type="checkbox"
+            checked={randomizeCharacter}
+            onChange={(event) => setRandomizeCharacter(event.target.checked)}
+          />
+          <span>Randomize character on next hangout start</span>
+        </label>
+
         <button onClick={() => void quickStartHangout()} disabled={loadingStart}>
           {loadingStart
             ? 'Starting...'
@@ -738,13 +765,13 @@ export default function GamePage() {
             </div>
             <div className="row" style={{ alignItems: 'center' }}>
               <span className="pill">{cityConfig.languageLabel}</span>
-              <span className="pill">RP in use (replaces affinity)</span>
+              <span className="pill">{routeState?.characterName ? `Route: ${routeState.characterName}` : 'Route: pending'}</span>
             </div>
             <div className="row" style={{ alignItems: 'center' }}>
               <span className="pill">Engine: {engineMode === 'dynamic_ai' ? 'Dynamic AI' : 'Scripted Fallback'}</span>
             </div>
             <div className="row" style={{ alignItems: 'center' }}>
-              <span className="pill">Bond: {relationshipState?.stage || 'stranger'}</span>
+              <span className="pill">Bond: {routeState?.stage || relationshipState?.stage || 'stranger'}</span>
               <span className="pill">
                 Gate: {progressionLoop?.missionGate.status || 'locked'} ({progressionLoop?.missionGate.validatedHangouts || 0}/
                 {progressionLoop?.missionGate.requiredValidatedHangouts || 2})
@@ -772,6 +799,9 @@ export default function GamePage() {
                     <p className="game-card-kicker">Hangout character</p>
                     <strong>{character.name || `${cityConfig.label} friend`}</strong>
                     <p>{character.role || 'Local conversation partner'}</p>
+                    {routeState?.memoryNotes?.length ? (
+                      <p>Recent memory: {routeState.memoryNotes[routeState.memoryNotes.length - 1]}</p>
+                    ) : null}
                   </div>
                 </section>
 
