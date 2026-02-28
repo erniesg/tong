@@ -43,7 +43,7 @@ export function DialogueBox({
           )}
           <strong>{speakerName}</strong>
         </div>
-        <span className="scene-dialogue-status">{canContinue ? (isTypewriting ? 'TAP TO REVEAL' : 'TAP TO CONTINUE') : 'YOUR TURN'}</span>
+        <span className="scene-dialogue-status">{canContinue ? 'TAP TO CONTINUE' : 'YOUR TURN'}</span>
       </header>
       <p className="scene-dialogue-copy">
         <KoreanText text={content} />
