@@ -114,6 +114,130 @@ const state = {
   spotifyRecentByUser: new Map(),
 };
 
+const AGENT_TOOL_DEFINITIONS = [
+  {
+    name: 'ingestion.run_mock',
+    description: 'Run mock ingestion and refresh frequency/insight/media-profile signals for a user.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      profile: 'object (optional)',
+      includeSources: ['youtube', 'spotify'],
+    },
+  },
+  {
+    name: 'integrations.youtube.sync_mock',
+    description: 'Refresh mock ingestion from YouTube-only source items.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      profile: 'object (optional)',
+    },
+  },
+  {
+    name: 'integrations.spotify.sync_mock',
+    description: 'Refresh mock ingestion from Spotify-only source items.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      profile: 'object (optional)',
+    },
+  },
+  {
+    name: 'player.media_profile.get',
+    description: 'Fetch computed media profile used by game personalization.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+    },
+  },
+  {
+    name: 'vocab.frequency.get',
+    description: 'Fetch 3-day vocab frequency rankings.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+    },
+  },
+  {
+    name: 'vocab.insights.get',
+    description: 'Fetch topic clusters and objective links from ingestion.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      lang: 'ko|ja|zh (optional)',
+    },
+  },
+  {
+    name: 'objectives.next.get',
+    description: 'Get next objective for learn/hangout mode.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      mode: 'hangout|learn (optional)',
+      lang: 'ko|ja|zh (optional)',
+    },
+  },
+  {
+    name: 'game.start_or_resume',
+    description: 'Start or resume game session from profile + ingestion context.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      profile: 'object (optional)',
+    },
+  },
+  {
+    name: 'scenes.hangout.start',
+    description: 'Start a stateful hangout scene session.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+    },
+  },
+  {
+    name: 'scenes.hangout.respond',
+    description: 'Submit user utterance and advance a stateful hangout scene.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      sceneSessionId: 'string (required)',
+      userUtterance: 'string (required)',
+      toolContext: 'object (optional)',
+    },
+  },
+  {
+    name: 'learn.sessions.list',
+    description: 'List recent learn sessions.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+    },
+  },
+  {
+    name: 'learn.sessions.create',
+    description: 'Create a new objective-bound learn session.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      objectiveId: 'string (optional)',
+      city: 'string (optional)',
+      lang: 'ko|ja|zh (optional)',
+    },
+  },
+];
+
 function jsonResponse(res, statusCode, payload) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -207,6 +331,11 @@ function cloneJson(value) {
 
 function getUserIdFromSearch(searchParams) {
   return searchParams.get('userId') || DEFAULT_USER_ID;
+}
+
+function normalizeObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value;
 }
 
 function normalizeIngestionSources(value) {
@@ -349,6 +478,19 @@ function buildIngestionSnapshotForUser(userId = DEFAULT_USER_ID, options = {}) {
   }
 
   return snapshot;
+}
+
+function formatIngestionRunResponse(result, includeSources = []) {
+  return {
+    success: true,
+    generatedAtIso: result.generatedAtIso,
+    includeSources: includeSources.length > 0 ? includeSources : ['youtube', 'spotify'],
+    sourceCount: {
+      youtube: result.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
+      spotify: result.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
+    },
+    topTerms: result.frequency.items.slice(0, 10),
+  };
 }
 
 function getSpotifyStatusPayload(userId = DEFAULT_USER_ID) {
@@ -779,6 +921,247 @@ function handleHangoutRespond(body) {
   return { statusCode: 200, payload: response };
 }
 
+function buildGameSession(userId, profile) {
+  const sessionId = `sess_${Math.random().toString(36).slice(2, 10)}`;
+  const response = {
+    ...buildGameStartResponse(userId, profile),
+    sessionId,
+  };
+  state.sessions.set(sessionId, {
+    userId,
+    turn: 1,
+    score: { xp: 0, sp: 0, rp: 0 },
+  });
+  return response;
+}
+
+function startHangoutScene(userId = DEFAULT_USER_ID) {
+  const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
+  const score = { xp: 0, sp: 0, rp: 0 };
+  state.sessions.set(sceneSessionId, {
+    userId,
+    turn: 1,
+    score: { ...score },
+  });
+  return {
+    sceneSessionId,
+    mode: 'hangout',
+    uiPolicy: {
+      immersiveFirstPerson: true,
+      allowOnlyDialogueAndHints: true,
+    },
+    state: {
+      turn: 1,
+      score,
+    },
+    initialLine: {
+      speaker: 'character',
+      text: '어서 와요! 오늘은 뭐 먹고 싶어요?',
+    },
+  };
+}
+
+function listLearnSessions() {
+  return [...state.learnSessions].sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt));
+}
+
+function createLearnSession(body = {}) {
+  const learnSessionId = `learn_${Math.random().toString(36).slice(2, 8)}`;
+  const title = `Food Street ${body.objectiveId || 'Objective'} Drill`;
+  const item = {
+    learnSessionId,
+    title,
+    objectiveId: body.objectiveId || 'ko_food_l2_001',
+    lastMessageAt: new Date().toISOString(),
+  };
+  state.learnSessions.unshift(item);
+
+  return {
+    learnSessionId,
+    mode: 'learn',
+    uiTheme: 'kakao_like',
+    objectiveId: item.objectiveId,
+    firstMessage: {
+      speaker: 'tong',
+      text: "New session started. We'll train 주문 phrases for your next hangout.",
+    },
+  };
+}
+
+async function invokeAgentTool(toolName, rawArgs = {}) {
+  const args = normalizeObject(rawArgs);
+  const userId = typeof args.userId === 'string' && args.userId.trim() ? args.userId : DEFAULT_USER_ID;
+
+  switch (toolName) {
+    case 'ingestion.run_mock': {
+      if (args.profile) upsertProfile(userId, { profile: args.profile });
+      const includeSources = normalizeIngestionSources(args.includeSources);
+      const result = runIngestionForUser(userId, { includeSources });
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: formatIngestionRunResponse(result, includeSources),
+        },
+      };
+    }
+    case 'integrations.youtube.sync_mock': {
+      if (args.profile) upsertProfile(userId, { profile: args.profile });
+      const result = runIngestionForUser(userId, { includeSources: ['youtube'] });
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: formatIngestionRunResponse(result, ['youtube']),
+        },
+      };
+    }
+    case 'integrations.spotify.sync_mock': {
+      if (args.profile) upsertProfile(userId, { profile: args.profile });
+      const result = runIngestionForUser(userId, { includeSources: ['spotify'] });
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: formatIngestionRunResponse(result, ['spotify']),
+        },
+      };
+    }
+    case 'player.media_profile.get': {
+      const ingestion = ensureIngestionForUser(userId);
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: ingestion.mediaProfile || { ...FIXTURES.mediaProfile, userId },
+        },
+      };
+    }
+    case 'vocab.frequency.get': {
+      const ingestion = ensureIngestionForUser(userId);
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: ingestion.frequency || FIXTURES.frequency,
+        },
+      };
+    }
+    case 'vocab.insights.get': {
+      const ingestion = ensureIngestionForUser(userId);
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: ingestion.insights || FIXTURES.insights,
+        },
+      };
+    }
+    case 'objectives.next.get': {
+      const mode = args.mode === 'learn' ? 'learn' : 'hangout';
+      const lang = args.lang === 'ja' || args.lang === 'zh' ? args.lang : 'ko';
+      const objective = buildPersonalizedObjective({ userId, mode, lang });
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: objective,
+        },
+      };
+    }
+    case 'game.start_or_resume': {
+      const incomingProfile = args.profile ? upsertProfile(userId, { profile: args.profile }) : null;
+      const response = buildGameSession(userId, incomingProfile);
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: response,
+        },
+      };
+    }
+    case 'scenes.hangout.start': {
+      const response = startHangoutScene(userId);
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: response,
+        },
+      };
+    }
+    case 'scenes.hangout.respond': {
+      const sceneSessionId = typeof args.sceneSessionId === 'string' ? args.sceneSessionId.trim() : '';
+      const userUtterance = typeof args.userUtterance === 'string' ? args.userUtterance : '';
+      if (!sceneSessionId || !userUtterance) {
+        return {
+          statusCode: 400,
+          payload: {
+            ok: false,
+            tool: toolName,
+            error: 'sceneSessionId_and_userUtterance_required',
+          },
+        };
+      }
+      const result = handleHangoutRespond({
+        sceneSessionId,
+        userUtterance,
+        toolContext: normalizeObject(args.toolContext),
+      });
+      return {
+        statusCode: result.statusCode,
+        payload: {
+          ok: result.statusCode === 200,
+          tool: toolName,
+          ...(result.statusCode === 200 ? { result: result.payload } : result.payload),
+        },
+      };
+    }
+    case 'learn.sessions.list': {
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: {
+            items: listLearnSessions(),
+          },
+        },
+      };
+    }
+    case 'learn.sessions.create': {
+      const response = createLearnSession(args);
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: response,
+        },
+      };
+    }
+    default:
+      return {
+        statusCode: 404,
+        payload: {
+          ok: false,
+          error: 'unknown_tool',
+          tool: toolName,
+          availableTools: AGENT_TOOL_DEFINITIONS.map((definition) => definition.name),
+        },
+      };
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     if (!req.url) {
@@ -805,6 +1188,31 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/health') {
       jsonResponse(res, 200, { ok: true, service: 'tong-server' });
+      return;
+    }
+
+    if (pathname === '/api/v1/tools' && req.method === 'GET') {
+      jsonResponse(res, 200, {
+        ok: true,
+        tools: AGENT_TOOL_DEFINITIONS,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/tools/invoke' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const toolName = typeof body.tool === 'string' ? body.tool.trim() : '';
+      if (!toolName) {
+        jsonResponse(res, 400, {
+          ok: false,
+          error: 'tool_required',
+          message: 'Provide body.tool to invoke a registered agent tool.',
+        });
+        return;
+      }
+
+      const invocation = await invokeAgentTool(toolName, body.args);
+      jsonResponse(res, invocation.statusCode, invocation.payload);
       return;
     }
 
@@ -980,16 +1388,7 @@ const server = http.createServer(async (req, res) => {
       if (body.profile) upsertProfile(userId, { profile: body.profile });
       const includeSources = normalizeIngestionSources(body.includeSources);
       const result = runIngestionForUser(userId, { includeSources });
-      jsonResponse(res, 200, {
-        success: true,
-        generatedAtIso: result.generatedAtIso,
-        includeSources: includeSources.length > 0 ? includeSources : ['youtube', 'spotify'],
-        sourceCount: {
-          youtube: result.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
-          spotify: result.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
-        },
-        topTerms: result.frequency.items.slice(0, 10),
-      });
+      jsonResponse(res, 200, formatIngestionRunResponse(result, includeSources));
       return;
     }
 
@@ -997,16 +1396,7 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req);
       const userId = body.userId || DEFAULT_USER_ID;
       const incomingProfile = body.profile ? upsertProfile(userId, { profile: body.profile }) : null;
-      const sessionId = `sess_${Math.random().toString(36).slice(2, 10)}`;
-      const response = {
-        ...buildGameStartResponse(userId, incomingProfile),
-        sessionId,
-      };
-      state.sessions.set(sessionId, {
-        userId,
-        turn: 1,
-        score: { xp: 0, sp: 0, rp: 0 },
-      });
+      const response = buildGameSession(userId, incomingProfile);
       jsonResponse(res, 200, response);
       return;
     }
@@ -1037,29 +1427,7 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/v1/scenes/hangout/start' && req.method === 'POST') {
       const body = await readJsonBody(req);
-      const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
-      const score = { xp: 0, sp: 0, rp: 0 };
-      state.sessions.set(sceneSessionId, {
-        userId: body.userId || 'demo-user-1',
-        turn: 1,
-        score: { ...score },
-      });
-      jsonResponse(res, 200, {
-        sceneSessionId,
-        mode: 'hangout',
-        uiPolicy: {
-          immersiveFirstPerson: true,
-          allowOnlyDialogueAndHints: true,
-        },
-        state: {
-          turn: 1,
-          score,
-        },
-        initialLine: {
-          speaker: 'character',
-          text: '어서 와요! 오늘은 뭐 먹고 싶어요?',
-        },
-      });
+      jsonResponse(res, 200, startHangoutScene(body.userId || DEFAULT_USER_ID));
       return;
     }
 
@@ -1071,35 +1439,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === '/api/v1/learn/sessions' && req.method === 'GET') {
-      const items = [...state.learnSessions].sort((a, b) =>
-        b.lastMessageAt.localeCompare(a.lastMessageAt),
-      );
-      jsonResponse(res, 200, { items });
+      jsonResponse(res, 200, { items: listLearnSessions() });
       return;
     }
 
     if (pathname === '/api/v1/learn/sessions' && req.method === 'POST') {
       const body = await readJsonBody(req);
-      const learnSessionId = `learn_${Math.random().toString(36).slice(2, 8)}`;
-      const title = `Food Street ${body.objectiveId || 'Objective'} Drill`;
-      const item = {
-        learnSessionId,
-        title,
-        objectiveId: body.objectiveId || 'ko_food_l2_001',
-        lastMessageAt: new Date().toISOString(),
-      };
-      state.learnSessions.unshift(item);
-
-      jsonResponse(res, 200, {
-        learnSessionId,
-        mode: 'learn',
-        uiTheme: 'kakao_like',
-        objectiveId: item.objectiveId,
-        firstMessage: {
-          speaker: 'tong',
-          text: "New session started. We'll train 주문 phrases for your next hangout.",
-        },
-      });
+      jsonResponse(res, 200, createLearnSession(body));
       return;
     }
 

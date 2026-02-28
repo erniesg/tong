@@ -27,6 +27,8 @@ Server defaults to `http://localhost:8787`.
 - `GET /api/v1/learn/sessions`
 - `POST /api/v1/learn/sessions`
 - `POST /api/v1/ingestion/run-mock`
+- `GET /api/v1/tools`
+- `POST /api/v1/tools/invoke`
 
 ## Spotify integration endpoints (phase 1)
 
@@ -58,6 +60,22 @@ Use `includeSources` in `POST /api/v1/ingestion/run-mock` to test YouTube and Sp
 ```
 
 Valid sources are `youtube` and `spotify`.
+
+## Agent tool API
+
+Discover available tools:
+
+```bash
+curl -sS "http://localhost:8787/api/v1/tools"
+```
+
+Invoke a tool:
+
+```bash
+curl -sS -X POST "http://localhost:8787/api/v1/tools/invoke" \
+  -H "content-type: application/json" \
+  -d '{"tool":"ingestion.run_mock","args":{"userId":"demo-user-1","includeSources":["youtube"]}}'
+```
 
 ## Mock ingestion
 

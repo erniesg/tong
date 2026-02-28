@@ -59,6 +59,29 @@ If `8787` is occupied by another worktree, override local base for the npm scrip
 TONG_LOCAL_API_BASE_URL=http://localhost:8790 npm run test:api-flow:local
 ```
 
+## Agent tool API (local)
+List available tools:
+
+```bash
+curl -sS "http://localhost:8787/api/v1/tools"
+```
+
+Invoke mock YouTube-only ingestion:
+
+```bash
+curl -sS -X POST "http://localhost:8787/api/v1/tools/invoke" \
+  -H "content-type: application/json" \
+  -d '{"tool":"integrations.youtube.sync_mock","args":{"userId":"demo-user-1"}}'
+```
+
+Invoke objective generation (agent-ready):
+
+```bash
+curl -sS -X POST "http://localhost:8787/api/v1/tools/invoke" \
+  -H "content-type: application/json" \
+  -d '{"tool":"objectives.next.get","args":{"userId":"demo-user-1","mode":"hangout","lang":"ko"}}'
+```
+
 ## Spotify real-connect test (phase 1)
 Set env on the API server process:
 
