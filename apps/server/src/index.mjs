@@ -561,7 +561,7 @@ function resolveTargetProficiency(profile, lang) {
 function buildLanguageBlendGuidance(nativeLanguage, targetProficiency, relationshipStage) {
   const safeNativeLanguage = String(nativeLanguage || 'en').trim() || 'en';
   let targetLanguageShare = 0.22;
-  if (targetProficiency === 'none') targetLanguageShare = 0.08;
+  if (targetProficiency === 'none') targetLanguageShare = 0.05;
   if (targetProficiency === 'beginner') targetLanguageShare = 0.22;
   if (targetProficiency === 'intermediate') targetLanguageShare = 0.55;
   if (targetProficiency === 'advanced') targetLanguageShare = 0.8;
@@ -575,7 +575,7 @@ function buildLanguageBlendGuidance(nativeLanguage, targetProficiency, relations
   const targetPercent = Math.round(targetLanguageShare * 100);
   const nativePercent = Math.round(nativeLanguageShare * 100);
 
-  return `Language blend policy: use about ${targetPercent}% target language and ${nativePercent}% ${safeNativeLanguage}. Keep lines short and natural for ${targetProficiency} proficiency.`;
+  return `Language blend policy: use about ${targetPercent}% target language and ${nativePercent}% ${safeNativeLanguage}. Keep lines short and natural for ${targetProficiency} proficiency. No meta labels, no coaching prefixes, no objective summaries in dialogue.`;
 }
 
 function buildMissionGateState(session) {
@@ -599,6 +599,19 @@ function sanitizeRouteMemoryNote(note) {
   const trimmed = note.replace(/\s+/g, ' ').trim();
   if (!trimmed) return null;
   return trimmed.slice(0, 180);
+}
+
+function sanitizeHintText(text, fallback = '') {
+  if (typeof text !== 'string') return fallback;
+  const cleaned = text
+    .replace(/^tong\s*[:\-]\s*/i, '')
+    .replace(/^micro[\s-]*goal\s*[:\-]\s*/i, '')
+    .replace(/^tip\s*[:\-]\s*/i, '')
+    .replace(/^hint\s*[:\-]\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return fallback;
+  return cleaned.slice(0, 180);
 }
 
 function mergeRouteMemoryNotes(existing = [], incoming = []) {
@@ -1544,7 +1557,7 @@ async function generateAiHangoutDecision({
         {
           role: 'system',
           content:
-            'You run a first-person language learning hangout. Keep continuity with prior turns. Return JSON only with: tier, objectiveProgressDelta, scoreDelta, nextLine, tongHint, suggestedReplies, mood, matchedTags, missingTags, sceneBeat, memoryNote. Never output narrator text or markdown. Keep the dialogue immersive and in-scene only. ' +
+            'You run a first-person language learning hangout. Keep continuity with prior turns. Return JSON only with: tier, objectiveProgressDelta, scoreDelta, nextLine, tongHint, suggestedReplies, mood, matchedTags, missingTags, sceneBeat, memoryNote. Never output narrator text or markdown. Keep the dialogue immersive and in-scene only. Never use labels like "Micro-goal", "Tong:", "Tip:", "Hint:", or objective percentage/meta copy in nextLine or tongHint. ' +
             languageBlendGuidance,
         },
         {
@@ -1574,7 +1587,7 @@ async function generateAiHangoutDecision({
             scriptedHints: turnScript.tongHints,
             scriptedReplies: turnScript.quickReplies,
             guidance:
-              'Evaluate objective progress and keep scene continuity. suggestedReplies must be 3-5 short learner lines in target language. memoryNote should be one short persistent route memory item if relevant.',
+              'Evaluate objective progress and keep scene continuity. suggestedReplies must be 3-5 short learner lines in target language. memoryNote should be one short persistent route memory item if relevant. Keep tongHint concise and practical, no labels/prefixes.',
           }),
         },
       ],
@@ -1618,10 +1631,7 @@ async function generateAiHangoutDecision({
       rp: scoreDelta.rp,
       objectiveProgress: objectiveProgressDelta,
     },
-    tongHint:
-      typeof parsed.tongHint === 'string' && parsed.tongHint.trim()
-        ? parsed.tongHint.trim()
-        : turnScript.tongHints[tier],
+    tongHint: sanitizeHintText(parsed.tongHint, turnScript.tongHints[tier]),
     nextLine:
       typeof parsed.nextLine === 'string' && parsed.nextLine.trim()
         ? parsed.nextLine.trim()
@@ -1660,7 +1670,7 @@ async function generateAiHangoutOpening({ scene, session, profile, routeState })
         {
           role: 'system',
           content:
-            'Generate the opening beat for a first-person language-learning hangout scene. Return JSON only with: openingLine, tongHint, quickReplies, mood. quickReplies must be 3-6 short learner lines in the target language. No markdown, no narration labels. ' +
+            'Generate the opening beat for a first-person language-learning hangout scene. Return JSON only with: openingLine, tongHint, quickReplies, mood. quickReplies must be 3-6 short learner lines in the target language. No markdown, no narration labels, and no labels like "Micro-goal", "Tong:", or "Hint:". ' +
             languageBlendGuidance,
         },
         {
@@ -1680,7 +1690,7 @@ async function generateAiHangoutOpening({ scene, session, profile, routeState })
             scriptedHint: scene.tongStartHint,
             scriptedReplies: getQuickRepliesForTurn(scene, 1),
             guidance:
-              'Open naturally, set one clear micro-goal for this turn, and keep replies practical for ordering food in this location.',
+              'Open naturally and set one practical action for this turn in plain natural language. Do not prefix with labels. Keep replies practical for ordering food in this location.',
           }),
         },
       ],
@@ -1700,8 +1710,7 @@ async function generateAiHangoutOpening({ scene, session, profile, routeState })
     typeof parsed.openingLine === 'string' && parsed.openingLine.trim()
       ? parsed.openingLine.trim()
       : buildHangoutOpeningLine(scene, session);
-  const tongHint =
-    typeof parsed.tongHint === 'string' && parsed.tongHint.trim() ? parsed.tongHint.trim() : scene.tongStartHint;
+  const tongHint = sanitizeHintText(parsed.tongHint, scene.tongStartHint);
   const quickReplies = Array.isArray(parsed.quickReplies)
     ? parsed.quickReplies.map((value) => String(value || '').trim()).filter(Boolean).slice(0, 6)
     : [];
