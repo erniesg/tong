@@ -95,6 +95,15 @@ const DEFAULT_OBJECTIVE_BY_LANG = {
   ja: 'ko_city_l2_003',
   zh: 'zh_stage_l3_002',
 };
+const YOUTUBE_AUTH_URL = process.env.YOUTUBE_AUTH_URL || 'https://accounts.google.com/o/oauth2/v2/auth';
+const YOUTUBE_TOKEN_URL = process.env.YOUTUBE_TOKEN_URL || 'https://oauth2.googleapis.com/token';
+const YOUTUBE_API_BASE = process.env.YOUTUBE_API_BASE || 'https://www.googleapis.com/youtube/v3';
+const YOUTUBE_SCOPE = process.env.YOUTUBE_SCOPE || 'https://www.googleapis.com/auth/youtube.readonly';
+const YOUTUBE_STATE_TTL_MS = 10 * 60 * 1000;
+const YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS = 72;
+const YOUTUBE_MAX_PAGES = 5;
+const YOUTUBE_MAX_ITEMS_PER_SYNC = 120;
+const YOUTUBE_CONNECT_DOCS_URL = 'https://developers.google.com/youtube/v3/getting-started';
 const SPOTIFY_ACCOUNTS_BASE = process.env.SPOTIFY_ACCOUNTS_BASE || 'https://accounts.spotify.com';
 const SPOTIFY_API_BASE = process.env.SPOTIFY_API_BASE || 'https://api.spotify.com/v1';
 const SPOTIFY_SCOPE = process.env.SPOTIFY_SCOPE || 'user-read-recently-played';
@@ -109,6 +118,9 @@ const state = {
   sessions: new Map(),
   learnSessions: [...(FIXTURES.learnSessions.items || [])],
   ingestionByUser: new Map(),
+  youtubeAuthStates: new Map(),
+  youtubeTokensByUser: new Map(),
+  youtubeRecentByUser: new Map(),
   spotifyAuthStates: new Map(),
   spotifyTokensByUser: new Map(),
   spotifyRecentByUser: new Map(),
@@ -134,6 +146,34 @@ const AGENT_TOOL_DEFINITIONS = [
     args: {
       userId: 'string (optional)',
       profile: 'object (optional)',
+    },
+  },
+  {
+    name: 'integrations.youtube.status',
+    description: 'Get YouTube connection and sync status for a user.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+    },
+  },
+  {
+    name: 'integrations.youtube.connect',
+    description: 'Generate YouTube OAuth connect URL for a user.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+    },
+  },
+  {
+    name: 'integrations.youtube.sync',
+    description: 'Run real YouTube sync for a connected user.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      windowHours: 'number (optional)',
     },
   },
   {
@@ -382,6 +422,70 @@ function normalizeIngestionSources(value) {
   )];
 }
 
+function getYouTubeRedirectUri() {
+  return process.env.YOUTUBE_REDIRECT_URI || `http://127.0.0.1:${PORT}/api/v1/integrations/youtube/callback`;
+}
+
+function getYouTubeClientCredentials() {
+  const clientId = process.env.YOUTUBE_CLIENT_ID;
+  const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+  return { clientId, clientSecret };
+}
+
+function youtubeConfigured() {
+  return Boolean(getYouTubeClientCredentials());
+}
+
+function youtubeConfigErrorPayload() {
+  return {
+    error: 'youtube_not_configured',
+    message: 'Set YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET on the API server.',
+    docs: YOUTUBE_CONNECT_DOCS_URL,
+  };
+}
+
+function cleanupYouTubeAuthStates() {
+  const now = Date.now();
+  for (const [stateToken, payload] of state.youtubeAuthStates.entries()) {
+    if (!payload?.createdAtMs || now - payload.createdAtMs > YOUTUBE_STATE_TTL_MS) {
+      state.youtubeAuthStates.delete(stateToken);
+    }
+  }
+}
+
+function createYouTubeState(userId) {
+  cleanupYouTubeAuthStates();
+  const stateToken = crypto.randomBytes(18).toString('hex');
+  state.youtubeAuthStates.set(stateToken, {
+    userId,
+    createdAtMs: Date.now(),
+  });
+  return stateToken;
+}
+
+function buildYouTubeAuthUrl(userId) {
+  const creds = getYouTubeClientCredentials();
+  if (!creds) return null;
+
+  const stateToken = createYouTubeState(userId);
+  const search = new URLSearchParams({
+    response_type: 'code',
+    client_id: creds.clientId,
+    redirect_uri: getYouTubeRedirectUri(),
+    scope: YOUTUBE_SCOPE,
+    access_type: 'offline',
+    prompt: 'consent',
+    include_granted_scopes: 'true',
+    state: stateToken,
+  });
+
+  return {
+    stateToken,
+    authUrl: `${YOUTUBE_AUTH_URL}?${search.toString()}`,
+  };
+}
+
 function getSpotifyRedirectUri() {
   return process.env.SPOTIFY_REDIRECT_URI || `http://127.0.0.1:${PORT}/api/v1/integrations/spotify/callback`;
 }
@@ -458,6 +562,55 @@ function detectLangFromText(text) {
   return 'ko';
 }
 
+function parseIso8601DurationToMinutes(duration, fallbackMinutes = 6) {
+  if (typeof duration !== 'string' || !duration.startsWith('P')) return fallbackMinutes;
+  const match = duration.match(/P(?:([0-9]+)D)?(?:T(?:([0-9]+)H)?(?:([0-9]+)M)?(?:([0-9]+)S)?)?/);
+  if (!match) return fallbackMinutes;
+
+  const days = Number(match[1] || 0);
+  const hours = Number(match[2] || 0);
+  const minutes = Number(match[3] || 0);
+  const seconds = Number(match[4] || 0);
+  const totalSeconds = days * 86400 + hours * 3600 + minutes * 60 + seconds;
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return fallbackMinutes;
+  return Number((totalSeconds / 60).toFixed(2));
+}
+
+function getYouTubeActivityVideoId(activity) {
+  return (
+    activity?.contentDetails?.upload?.videoId ||
+    activity?.contentDetails?.playlistItem?.resourceId?.videoId ||
+    activity?.contentDetails?.like?.resourceId?.videoId ||
+    activity?.contentDetails?.recommendation?.resourceId?.videoId ||
+    null
+  );
+}
+
+function normalizeYouTubeActivityForIngestion(activity, videoDetailsById, index = 0) {
+  const activitySnippet = activity?.snippet || {};
+  const videoId = getYouTubeActivityVideoId(activity);
+  const videoDetails = videoId ? videoDetailsById.get(videoId) : null;
+  const videoSnippet = videoDetails?.snippet || {};
+  const contentDetails = videoDetails?.contentDetails || {};
+
+  const title = videoSnippet.title || activitySnippet.title || 'YouTube Activity';
+  const channelTitle = videoSnippet.channelTitle || activitySnippet.channelTitle || '';
+  const description = videoSnippet.description || activitySnippet.description || '';
+  const text = `${title} ${channelTitle} ${description}`.trim();
+  const playedAtIso = activitySnippet.publishedAt || new Date().toISOString();
+  const playedAtEpoch = Date.parse(playedAtIso);
+
+  return {
+    id: `yt_recent_${videoId || activity?.id || 'activity'}_${Number.isFinite(playedAtEpoch) ? playedAtEpoch : index}`,
+    source: 'youtube',
+    title,
+    lang: detectLangFromText(text),
+    minutes: parseIso8601DurationToMinutes(contentDetails.duration, 8),
+    text,
+    playedAtIso,
+  };
+}
+
 function normalizeSpotifyTrackForIngestion(rawTrack, index = 0) {
   const track = rawTrack?.track;
   if (!track || typeof track.name !== 'string') return null;
@@ -483,23 +636,38 @@ function normalizeSpotifyTrackForIngestion(rawTrack, index = 0) {
 function buildIngestionSnapshotForUser(userId = DEFAULT_USER_ID, options = {}) {
   const includeSources = normalizeIngestionSources(options.includeSources);
   const snapshot = JSON.parse(fs.readFileSync(mockMediaWindowPath, 'utf8'));
+  const youtubeSynced = state.youtubeRecentByUser.get(userId);
   const spotifySynced = state.spotifyRecentByUser.get(userId);
+  const hasYouTube = Array.isArray(youtubeSynced?.items) && youtubeSynced.items.length > 0;
+  const hasSpotify = Array.isArray(spotifySynced?.items) && spotifySynced.items.length > 0;
 
-  if (!spotifySynced?.items?.length) {
+  if (!hasYouTube && !hasSpotify) {
     if (includeSources.length > 0) {
       snapshot.sourceItems = (snapshot.sourceItems || []).filter((item) => includeSources.includes(item.source));
     }
     return snapshot;
   }
 
-  const nonSpotify = (snapshot.sourceItems || []).filter((item) => item.source !== 'spotify');
-  const syncedItems = spotifySynced.items;
-  const windowHours = parseWindowHours(spotifySynced.windowHours, SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS);
+  const nowIso = new Date().toISOString();
+  let sourceItems = [...(snapshot.sourceItems || [])];
+  const windowHours = [];
 
-  snapshot.sourceItems = [...nonSpotify, ...syncedItems];
-  snapshot.windowStartIso = new Date(Date.now() - windowHours * 60 * 60 * 1000).toISOString();
-  snapshot.windowEndIso = new Date().toISOString();
-  snapshot.generatedAtIso = new Date().toISOString();
+  if (hasYouTube) {
+    sourceItems = sourceItems.filter((item) => item.source !== 'youtube');
+    sourceItems.push(...youtubeSynced.items);
+    windowHours.push(parseWindowHours(youtubeSynced.windowHours, YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS));
+  }
+  if (hasSpotify) {
+    sourceItems = sourceItems.filter((item) => item.source !== 'spotify');
+    sourceItems.push(...spotifySynced.items);
+    windowHours.push(parseWindowHours(spotifySynced.windowHours, SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS));
+  }
+
+  const scopedWindowHours = windowHours.length > 0 ? Math.max(...windowHours) : SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS;
+  snapshot.sourceItems = sourceItems;
+  snapshot.windowStartIso = new Date(Date.now() - scopedWindowHours * 60 * 60 * 1000).toISOString();
+  snapshot.windowEndIso = nowIso;
+  snapshot.generatedAtIso = nowIso;
 
   if (includeSources.length > 0) {
     snapshot.sourceItems = (snapshot.sourceItems || []).filter((item) => includeSources.includes(item.source));
@@ -521,6 +689,22 @@ function formatIngestionRunResponse(result, includeSources = []) {
   };
 }
 
+function getYouTubeStatusPayload(userId = DEFAULT_USER_ID) {
+  const token = state.youtubeTokensByUser.get(userId);
+  const synced = state.youtubeRecentByUser.get(userId);
+
+  return {
+    userId,
+    youtubeConfigured: youtubeConfigured(),
+    connected: Boolean(token?.accessToken),
+    tokenExpiresAtIso: token?.expiresAtEpochMs ? new Date(token.expiresAtEpochMs).toISOString() : null,
+    tokenScope: token?.scope || null,
+    lastSyncAtIso: synced?.syncedAtIso || null,
+    lastSyncItemCount: Array.isArray(synced?.items) ? synced.items.length : 0,
+    syncWindowHours: synced?.windowHours || null,
+  };
+}
+
 function getSpotifyStatusPayload(userId = DEFAULT_USER_ID) {
   const token = state.spotifyTokensByUser.get(userId);
   const synced = state.spotifyRecentByUser.get(userId);
@@ -534,6 +718,192 @@ function getSpotifyStatusPayload(userId = DEFAULT_USER_ID) {
     lastSyncAtIso: synced?.syncedAtIso || null,
     lastSyncItemCount: Array.isArray(synced?.items) ? synced.items.length : 0,
     syncWindowHours: synced?.windowHours || null,
+  };
+}
+
+async function fetchYouTubeToken(params) {
+  const creds = getYouTubeClientCredentials();
+  if (!creds) {
+    throw new Error('youtube_not_configured');
+  }
+
+  const response = await fetch(YOUTUBE_TOKEN_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      ...params,
+      client_id: creds.clientId,
+      client_secret: creds.clientSecret,
+    }).toString(),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error_description || data?.error || 'youtube_token_exchange_failed');
+  }
+  return data;
+}
+
+async function exchangeYouTubeCodeForToken(code) {
+  const tokenData = await fetchYouTubeToken({
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: getYouTubeRedirectUri(),
+  });
+
+  return {
+    accessToken: tokenData.access_token,
+    refreshToken: tokenData.refresh_token,
+    tokenType: tokenData.token_type,
+    scope: tokenData.scope || YOUTUBE_SCOPE,
+    expiresAtEpochMs: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000,
+    obtainedAtIso: new Date().toISOString(),
+  };
+}
+
+async function refreshYouTubeAccessToken(userId) {
+  const existing = state.youtubeTokensByUser.get(userId);
+  if (!existing?.refreshToken) {
+    throw new Error('youtube_refresh_token_missing');
+  }
+
+  const tokenData = await fetchYouTubeToken({
+    grant_type: 'refresh_token',
+    refresh_token: existing.refreshToken,
+  });
+
+  const refreshed = {
+    ...existing,
+    accessToken: tokenData.access_token,
+    refreshToken: tokenData.refresh_token || existing.refreshToken,
+    tokenType: tokenData.token_type || existing.tokenType,
+    scope: tokenData.scope || existing.scope,
+    expiresAtEpochMs: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000,
+    obtainedAtIso: new Date().toISOString(),
+  };
+
+  state.youtubeTokensByUser.set(userId, refreshed);
+  return refreshed.accessToken;
+}
+
+async function ensureYouTubeAccessToken(userId) {
+  const token = state.youtubeTokensByUser.get(userId);
+  if (!token?.accessToken) {
+    throw new Error('youtube_not_connected');
+  }
+
+  if (token.expiresAtEpochMs && token.expiresAtEpochMs > Date.now() + 60 * 1000) {
+    return token.accessToken;
+  }
+
+  return refreshYouTubeAccessToken(userId);
+}
+
+async function fetchYouTubeActivities(accessToken, windowHours = YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS) {
+  const cutoffMs = Date.now() - parseWindowHours(windowHours, YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS) * 60 * 60 * 1000;
+  const results = [];
+  let pageToken = null;
+
+  for (let page = 0; page < YOUTUBE_MAX_PAGES; page += 1) {
+    const query = new URLSearchParams({
+      part: 'snippet,contentDetails',
+      mine: 'true',
+      maxResults: '50',
+    });
+    if (pageToken) query.set('pageToken', pageToken);
+
+    const response = await fetch(`${YOUTUBE_API_BASE}/activities?${query.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      const errorMessage = payload?.error?.message || payload?.error || 'youtube_activities_fetch_failed';
+      throw new Error(errorMessage);
+    }
+
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    for (const item of items) {
+      const publishedAtMs = Date.parse(item?.snippet?.publishedAt || '');
+      if (!Number.isFinite(publishedAtMs) || publishedAtMs >= cutoffMs) {
+        results.push(item);
+      }
+    }
+
+    pageToken = payload?.nextPageToken || null;
+    if (!pageToken) break;
+  }
+
+  return results;
+}
+
+async function fetchYouTubeVideosById(accessToken, videoIds = []) {
+  const deduped = [...new Set(videoIds.filter(Boolean))];
+  const detailsById = new Map();
+  if (deduped.length === 0) return detailsById;
+
+  for (let i = 0; i < deduped.length; i += 50) {
+    const chunk = deduped.slice(i, i + 50);
+    const query = new URLSearchParams({
+      part: 'snippet,contentDetails',
+      id: chunk.join(','),
+      maxResults: String(chunk.length),
+    });
+
+    const response = await fetch(`${YOUTUBE_API_BASE}/videos?${query.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      const errorMessage = payload?.error?.message || payload?.error || 'youtube_videos_fetch_failed';
+      throw new Error(errorMessage);
+    }
+
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    for (const item of items) {
+      if (item?.id) {
+        detailsById.set(item.id, item);
+      }
+    }
+  }
+
+  return detailsById;
+}
+
+async function syncYouTubeForUser(userId, requestedWindowHours = YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS) {
+  const windowHours = parseWindowHours(requestedWindowHours, YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS);
+  const accessToken = await ensureYouTubeAccessToken(userId);
+  const rawActivities = await fetchYouTubeActivities(accessToken, windowHours);
+  const videoIds = rawActivities.map((activity) => getYouTubeActivityVideoId(activity)).filter(Boolean);
+  const detailsById = await fetchYouTubeVideosById(accessToken, videoIds);
+
+  const normalizedItems = rawActivities
+    .map((activity, index) => normalizeYouTubeActivityForIngestion(activity, detailsById, index))
+    .filter(Boolean)
+    .slice(0, YOUTUBE_MAX_ITEMS_PER_SYNC);
+
+  state.youtubeRecentByUser.set(userId, {
+    syncedAtIso: new Date().toISOString(),
+    windowHours,
+    items: normalizedItems,
+    rawItemCount: rawActivities.length,
+  });
+  state.ingestionByUser.delete(userId);
+
+  const ingestion = runIngestionForUser(userId);
+  return {
+    syncedAtIso: state.youtubeRecentByUser.get(userId).syncedAtIso,
+    windowHours,
+    itemCount: normalizedItems.length,
+    rawItemCount: rawActivities.length,
+    ingestion,
   };
 }
 
@@ -1046,6 +1416,97 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
         },
       };
     }
+    case 'integrations.youtube.status': {
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: getYouTubeStatusPayload(userId),
+        },
+      };
+    }
+    case 'integrations.youtube.connect': {
+      if (!youtubeConfigured()) {
+        return {
+          statusCode: 503,
+          payload: {
+            ok: false,
+            tool: toolName,
+            ...youtubeConfigErrorPayload(),
+          },
+        };
+      }
+      const connectInfo = buildYouTubeAuthUrl(userId);
+      if (!connectInfo) {
+        return {
+          statusCode: 503,
+          payload: {
+            ok: false,
+            tool: toolName,
+            ...youtubeConfigErrorPayload(),
+          },
+        };
+      }
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: {
+            userId,
+            connected: Boolean(state.youtubeTokensByUser.get(userId)?.accessToken),
+            state: connectInfo.stateToken,
+            scope: YOUTUBE_SCOPE,
+            redirectUri: getYouTubeRedirectUri(),
+            authUrl: connectInfo.authUrl,
+          },
+        },
+      };
+    }
+    case 'integrations.youtube.sync': {
+      if (!youtubeConfigured()) {
+        return {
+          statusCode: 503,
+          payload: {
+            ok: false,
+            tool: toolName,
+            ...youtubeConfigErrorPayload(),
+          },
+        };
+      }
+      if (!state.youtubeTokensByUser.get(userId)?.accessToken) {
+        return {
+          statusCode: 400,
+          payload: {
+            ok: false,
+            tool: toolName,
+            error: 'youtube_not_connected',
+            message: 'Connect YouTube first via integrations.youtube.connect.',
+          },
+        };
+      }
+      const synced = await syncYouTubeForUser(userId, args.windowHours);
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: {
+            userId,
+            syncedAtIso: synced.syncedAtIso,
+            windowHours: synced.windowHours,
+            youtubeItemCount: synced.itemCount,
+            youtubeRawItemCount: synced.rawItemCount,
+            topTerms: synced.ingestion.frequency.items.slice(0, 10),
+            sourceCount: {
+              youtube: synced.ingestion.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
+              spotify: synced.ingestion.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
+            },
+          },
+        },
+      };
+    }
     case 'integrations.spotify.sync_mock': {
       if (args.profile) upsertProfile(userId, { profile: args.profile });
       const result = runIngestionForUser(userId, { includeSources: ['spotify'] });
@@ -1332,6 +1793,134 @@ const server = http.createServer(async (req, res) => {
 
       const invocation = await invokeAgentTool(toolName, body.args);
       jsonResponse(res, invocation.statusCode, invocation.payload);
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/youtube/status' && req.method === 'GET') {
+      const userId = getUserIdFromSearch(url.searchParams);
+      jsonResponse(res, 200, getYouTubeStatusPayload(userId));
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/youtube/connect' && req.method === 'GET') {
+      const userId = getUserIdFromSearch(url.searchParams);
+      if (!youtubeConfigured()) {
+        jsonResponse(res, 503, youtubeConfigErrorPayload());
+        return;
+      }
+
+      const connectInfo = buildYouTubeAuthUrl(userId);
+      if (!connectInfo) {
+        jsonResponse(res, 503, youtubeConfigErrorPayload());
+        return;
+      }
+
+      jsonResponse(res, 200, {
+        userId,
+        connected: Boolean(state.youtubeTokensByUser.get(userId)?.accessToken),
+        state: connectInfo.stateToken,
+        scope: YOUTUBE_SCOPE,
+        redirectUri: getYouTubeRedirectUri(),
+        authUrl: connectInfo.authUrl,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/youtube/callback' && req.method === 'GET') {
+      if (!youtubeConfigured()) {
+        jsonResponse(res, 503, youtubeConfigErrorPayload());
+        return;
+      }
+
+      const code = url.searchParams.get('code');
+      const stateToken = url.searchParams.get('state');
+      if (!code || !stateToken) {
+        jsonResponse(res, 400, { error: 'youtube_callback_missing_code_or_state' });
+        return;
+      }
+
+      cleanupYouTubeAuthStates();
+      const pending = state.youtubeAuthStates.get(stateToken);
+      state.youtubeAuthStates.delete(stateToken);
+      if (!pending?.userId) {
+        jsonResponse(res, 400, { error: 'youtube_invalid_state' });
+        return;
+      }
+
+      const tokens = await exchangeYouTubeCodeForToken(code);
+      state.youtubeTokensByUser.set(pending.userId, tokens);
+      state.ingestionByUser.delete(pending.userId);
+
+      let syncSummary = null;
+      try {
+        const synced = await syncYouTubeForUser(pending.userId, YOUTUBE_DEFAULT_SYNC_WINDOW_HOURS);
+        syncSummary = {
+          syncedAtIso: synced.syncedAtIso,
+          windowHours: synced.windowHours,
+          itemCount: synced.itemCount,
+          rawItemCount: synced.rawItemCount,
+        };
+      } catch (syncError) {
+        syncSummary = {
+          error: syncError instanceof Error ? syncError.message : 'youtube_sync_failed',
+        };
+      }
+
+      jsonResponse(res, 200, {
+        ok: true,
+        userId: pending.userId,
+        connected: true,
+        tokenExpiresAtIso: new Date(tokens.expiresAtEpochMs).toISOString(),
+        sync: syncSummary,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/youtube/disconnect' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const userId = body.userId || getUserIdFromSearch(url.searchParams);
+      state.youtubeTokensByUser.delete(userId);
+      state.youtubeRecentByUser.delete(userId);
+      state.ingestionByUser.delete(userId);
+
+      jsonResponse(res, 200, {
+        ok: true,
+        userId,
+        disconnected: true,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/youtube/sync' && req.method === 'POST') {
+      if (!youtubeConfigured()) {
+        jsonResponse(res, 503, youtubeConfigErrorPayload());
+        return;
+      }
+
+      const body = await readJsonBody(req);
+      const userId = body.userId || getUserIdFromSearch(url.searchParams);
+      if (!state.youtubeTokensByUser.get(userId)?.accessToken) {
+        jsonResponse(res, 400, {
+          error: 'youtube_not_connected',
+          message: 'Connect YouTube first via /api/v1/integrations/youtube/connect.',
+        });
+        return;
+      }
+
+      const synced = await syncYouTubeForUser(userId, body.windowHours);
+      jsonResponse(res, 200, {
+        ok: true,
+        userId,
+        syncedAtIso: synced.syncedAtIso,
+        windowHours: synced.windowHours,
+        youtubeItemCount: synced.itemCount,
+        youtubeRawItemCount: synced.rawItemCount,
+        topTerms: synced.ingestion.frequency.items.slice(0, 10),
+        sourceCount: {
+          youtube: synced.ingestion.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
+          spotify: synced.ingestion.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
+        },
+      });
       return;
     }
 
