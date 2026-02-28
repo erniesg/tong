@@ -3,7 +3,7 @@
   "name": "Tong YouTube Overlay Demo",
   "version": "0.1.0",
   "description": "Tong hackathon extension for YouTube caption overlays and dictionary lookup.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "tabs"],
   "host_permissions": [
     "*://*.youtube.com/*",
     "http://localhost:8787/*"
