@@ -52,6 +52,15 @@ export default function HomePage() {
             Open /insights
           </Link>
         </article>
+
+        <article className="card stack">
+          <span className="pill">3D Selfie</span>
+          <h3>Selfie with Hauen</h3>
+          <p>Front-facing camera with 3D character overlay. Drag to position, pinch to scale, snap a selfie.</p>
+          <Link className="button" href="/selfie">
+            Open /selfie
+          </Link>
+        </article>
       </section>
 
       <section className="card" style={{ marginTop: 16 }}>
