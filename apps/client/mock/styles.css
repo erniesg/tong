@@ -1,0 +1,176 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  --bg: #0e1221;
+  --panel: #161c31;
+  --panel-border: #253055;
+  --accent: #89a7ff;
+  --text: #ebf0ff;
+  --muted: #afbad9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  padding: 1rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.3rem;
+}
+
+h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+p {
+  margin: 0;
+  color: var(--muted);
+}
+
+main {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0 0.75rem 1rem;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+.embed-wrap {
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #2a3865;
+}
+
+.embed-wrap iframe {
+  width: 100%;
+  min-height: 220px;
+  border: none;
+}
+
+.embed-wrap.spotify iframe {
+  min-height: 152px;
+}
+
+.caption-overlay {
+  margin-top: 0.75rem;
+  background: #111930;
+  border: 1px solid #2a365e;
+  border-radius: 8px;
+  padding: 0.6rem;
+}
+
+.caption-line {
+  margin-bottom: 0.4rem;
+}
+
+.romanized,
+.english,
+.meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.token {
+  background: #243767;
+  border: 1px solid #4c6acc;
+  color: #e8eeff;
+  border-radius: 999px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.stats-grid {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.stat-card,
+.list li,
+.state {
+  background: #10172b;
+  border: 1px solid #263357;
+  border-radius: 8px;
+  padding: 0.6rem;
+}
+
+.list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.list.ordered {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+
+.list.ordered li {
+  margin-bottom: 0.4rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+button {
+  border: 1px solid #4c6acc;
+  color: #eef2ff;
+  background: #29407a;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+}
+
+button.secondary {
+  background: transparent;
+}
+
+.popover {
+  position: fixed;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  border: 1px solid #506dde;
+  border-radius: 10px;
+  background: #08112b;
+  padding: 0.8rem;
+}
+
+.hidden {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  main {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

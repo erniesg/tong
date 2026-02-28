@@ -37,6 +37,12 @@ Run local demo contract smoke check:
 npm run demo:smoke
 ```
 
+
+Run fixture-driven mock UI (YouTube + Spotify + game flow):
+```bash
+npm run mock:ui
+```
+
 ## Legacy prototype (v0.1 extension)
 
 The original Chrome MV3 extension scaffold remains in:

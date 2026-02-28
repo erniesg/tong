@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tong Demo Mock UI</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Tong Hackathon Mock UI</h1>
+      <p>Mobile-first preview with YouTube + Spotify + fixture-driven game flow.</p>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>1) Korean clip + enriched captions</h2>
+        <div class="embed-wrap">
+          <iframe
+            title="YouTube demo clip"
+            src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen
+          ></iframe>
+        </div>
+        <div id="caption-overlay" class="caption-overlay"></div>
+      </section>
+
+      <section class="panel">
+        <h2>2) Spotify + YouTube learning signal visualizer</h2>
+        <div class="embed-wrap spotify">
+          <iframe
+            title="Spotify embed"
+            src="https://open.spotify.com/embed/track/11dFghVXANMlKmJXsNCbNl?utm_source=generator"
+            loading="lazy"
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          ></iframe>
+        </div>
+        <div id="media-signals" class="stats-grid"></div>
+      </section>
+
+      <section class="panel">
+        <h2>3) Last 3 days vocab feed</h2>
+        <ul id="vocab-feed" class="list"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>4) Start/resume + objective state</h2>
+        <div id="session-state" class="state"></div>
+      </section>
+
+      <section class="panel">
+        <h2>5) Learn mode (chat-style sessions)</h2>
+        <div class="actions">
+          <button type="button">Start New Session</button>
+          <button type="button" class="secondary">View Previous Sessions</button>
+        </div>
+        <ul id="learn-sessions" class="list"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>6) First food-location hangout scene</h2>
+        <ol id="food-scene" class="list ordered"></ol>
+      </section>
+
+      <section class="panel">
+        <h2>7) Advanced Shanghai texting mission + reward unlock</h2>
+        <ol id="texting-scene" class="list ordered"></ol>
+      </section>
+    </main>
+
+    <aside id="dictionary-popover" class="popover hidden" aria-live="polite"></aside>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
