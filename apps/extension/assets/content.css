@@ -1,0 +1,232 @@
+/* Tong content script styles */
+
+/* Word group hover: subtle dotted underline for immediate feedback */
+[data-word-group]:hover {
+  text-decoration: underline dotted rgba(251, 191, 36, 0.6);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+
+/* Tooltip container — has transparent padding zone so mouse can reach it from the word */
+.tong-tooltip {
+  position: absolute;
+  z-index: 10001;
+  pointer-events: auto;
+  background: rgba(15, 15, 15, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-width: 200px;
+  max-width: 340px;
+  color: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  text-align: left;
+  /* Invisible catch zone around tooltip so mouse doesn't lose it in the gap */
+  margin-bottom: -12px;
+  padding-bottom: 22px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.tong-tooltip.visible {
+  opacity: 1;
+}
+
+/* Tooltip header: word + romanization + POS badge */
+.tong-tooltip-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.tong-tooltip-word {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.tong-tooltip-romanization {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Learning variant (e.g., simplified form when learning zh) */
+.tong-tooltip-variant {
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(251, 191, 36, 0.6);
+}
+
+/* POS badge */
+.tong-tooltip-pos-badge {
+  font-size: 10px;
+  color: rgba(251, 191, 36, 0.85);
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-weight: 500;
+  text-transform: lowercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* Translation line */
+.tong-tooltip-translation {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 6px;
+}
+
+/* Dictionary entries (bilingual synonyms) */
+.tong-tooltip-dict {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 3px;
+}
+
+.tong-tooltip-dict-pos {
+  color: rgba(251, 191, 36, 0.7);
+  font-style: italic;
+  margin-right: 2px;
+}
+
+/* Definitions section (from dt=md) */
+.tong-tooltip-defs {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tong-tooltip-def {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 4px;
+}
+
+.tong-tooltip-def-example {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+  margin-top: 1px;
+  padding-left: 8px;
+}
+
+/* Usage examples section (from dt=ex) */
+.tong-tooltip-examples {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tong-tooltip-examples-label {
+  font-size: 10px;
+  color: rgba(251, 191, 36, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+  font-weight: 600;
+}
+
+.tong-tooltip-example {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 6px;
+  padding-left: 8px;
+  border-left: 2px solid rgba(251, 191, 36, 0.2);
+}
+
+.tong-tooltip-example-trans {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+  margin-top: 1px;
+}
+
+/* Context sentence */
+.tong-tooltip-context {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 6px;
+}
+
+.tong-tooltip-context mark {
+  background: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Hanja word display (Korean → Hanja mapping) */
+.tong-tooltip-hanja-word {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+/* Character breakdown section */
+.tong-tooltip-chars {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tong-tooltip-char-entry {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+  align-items: flex-start;
+}
+
+.tong-tooltip-char-glyph {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fbbf24;
+  line-height: 1.2;
+  flex-shrink: 0;
+  min-width: 28px;
+  text-align: center;
+}
+
+.tong-tooltip-char-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.tong-tooltip-char-readings {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.3px;
+}
+
+.tong-tooltip-char-def {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 1px;
+}
+
+.tong-tooltip-char-etym {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: normal;
+  margin-top: 1px;
+}
+
+/* Loading state */
+.tong-tooltip-loading {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  font-style: italic;
+}
