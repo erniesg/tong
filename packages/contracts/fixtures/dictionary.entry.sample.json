@@ -1,0 +1,15 @@
+{
+  "term": "먹다",
+  "lang": "ko",
+  "meaning": "to eat",
+  "examples": ["밥을 먹다", "같이 먹자"],
+  "crossCjk": {
+    "zhHans": "吃",
+    "ja": "食べる"
+  },
+  "readings": {
+    "ko": "meokda",
+    "zhPinyin": "chi",
+    "jaRomaji": "taberu"
+  }
+}

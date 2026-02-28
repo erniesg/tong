@@ -1,0 +1,56 @@
+{
+  "cities": ["seoul", "tokyo", "shanghai"],
+  "locations": [
+    "food_street",
+    "cafe",
+    "convenience_store",
+    "subway_hub",
+    "practice_studio"
+  ],
+  "modes": ["hangout", "learn"],
+  "modeUiPolicies": {
+    "hangout": {
+      "immersiveFirstPerson": true,
+      "allowOnlyDialogueAndHints": true
+    },
+    "learn": {
+      "chatStyleByCity": {
+        "seoul": "kakao_like",
+        "tokyo": "line_like",
+        "shanghai": "wechat_like"
+      },
+      "supportsHistoryView": true,
+      "supportsStartNewSession": true
+    }
+  },
+  "currencies": ["xp", "sp", "rp"],
+  "masteryLevels": [
+    { "level": 0, "id": "script", "label": "SCRIPT" },
+    { "level": 1, "id": "pronunciation", "label": "PRONUNCIATION" },
+    { "level": 2, "id": "vocabulary", "label": "VOCABULARY" },
+    { "level": 3, "id": "grammar", "label": "GRAMMAR" },
+    { "level": 4, "id": "sentences", "label": "SENTENCES" },
+    { "level": 5, "id": "conversation", "label": "CONVERSATION" },
+    { "level": 6, "id": "mastery", "label": "MASTERY" }
+  ],
+  "unlockRules": {
+    "hangoutsRequiredForMission": 3,
+    "missionPassRequiredForTierUnlock": true,
+    "spSpendRequiredForLocationUnlock": true
+  },
+  "objectiveRequirements": {
+    "requiredTargetTypes": ["vocabulary", "grammar", "sentenceStructures"],
+    "allowOrthographyFocus": true,
+    "allowPersonalizedTargets": true,
+    "requiresObjectiveSpecificSessions": true
+  },
+  "advancedRewardFlow": {
+    "routeCity": "shanghai",
+    "requiresLevelAtLeast": 5,
+    "steps": [
+      "texting_mission",
+      "video_call_reward",
+      "polaroid_collectible_unlock"
+    ]
+  }
+}

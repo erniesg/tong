@@ -1,0 +1,26 @@
+{
+  "videoId": "karina-variety-demo",
+  "segments": [
+    {
+      "startMs": 11600,
+      "endMs": 14200,
+      "surface": "오늘 뭐 먹을까?",
+      "romanized": "oneul mwo meogeulkka",
+      "english": "What should we eat today?",
+      "tokens": [
+        {
+          "text": "오늘",
+          "lemma": "오늘",
+          "pos": "noun",
+          "dictionaryId": "ko-001"
+        },
+        {
+          "text": "먹을까",
+          "lemma": "먹다",
+          "pos": "verb",
+          "dictionaryId": "ko-441"
+        }
+      ]
+    }
+  ]
+}

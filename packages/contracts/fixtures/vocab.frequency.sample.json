@@ -1,0 +1,18 @@
+{
+  "windowStartIso": "2026-02-25T00:00:00.000Z",
+  "windowEndIso": "2026-02-28T00:00:00.000Z",
+  "items": [
+    {
+      "lemma": "연습",
+      "lang": "ko",
+      "count": 21,
+      "sourceCount": 7
+    },
+    {
+      "lemma": "무대",
+      "lang": "ko",
+      "count": 18,
+      "sourceCount": 5
+    }
+  ]
+}

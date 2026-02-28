@@ -4,6 +4,8 @@
   "private": true,
   "description": "Chrome extension + dating sim game for learning CJK languages",
   "scripts": {
+    "demo:smoke": "node scripts/demo_smoke_check.mjs",
+    "setup:worktrees": "./scripts/setup-hackathon-worktrees.sh",
     "zip": "rm -f tong.zip && zip -r tong.zip manifest.json src README.md"
   }
 }

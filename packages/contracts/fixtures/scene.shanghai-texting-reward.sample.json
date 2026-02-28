@@ -1,0 +1,25 @@
+{
+  "sceneId": "shanghai_texting_mission_advanced",
+  "city": "shanghai",
+  "location": "cafe",
+  "mode": "hangout",
+  "requires": {
+    "masteryLevelAtLeast": 5,
+    "relationshipTierAtLeast": 3
+  },
+  "steps": [
+    {
+      "type": "texting_mission",
+      "channelStyle": "wechat_like",
+      "objective": "Complete message objectives using target grammar and tone"
+    },
+    {
+      "type": "reward_unlock",
+      "unlock": "video_call_event"
+    },
+    {
+      "type": "reward_unlock",
+      "unlock": "polaroid_collectible_card"
+    }
+  ]
+}

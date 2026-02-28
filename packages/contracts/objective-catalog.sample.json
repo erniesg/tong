@@ -1,0 +1,39 @@
+{
+  "lang": "ko",
+  "city": "seoul",
+  "location": "food_street",
+  "objectives": [
+    {
+      "objectiveId": "ko_food_l0_001",
+      "level": 0,
+      "mode": "learn",
+      "coreTargets": {
+        "vocabulary": ["떡볶이", "김밥", "메뉴"],
+        "grammar": ["topic marker 은/는"],
+        "sentenceStructures": ["N은/는 N이다"]
+      },
+      "completionCriteria": {
+        "requiredTurns": 3,
+        "requiredAccuracy": 0.7
+      }
+    },
+    {
+      "objectiveId": "ko_food_l2_001",
+      "level": 2,
+      "mode": "hangout",
+      "coreTargets": {
+        "vocabulary": ["주문", "맵다", "포장"],
+        "grammar": ["-고 싶어요", "-주세요"],
+        "sentenceStructures": ["N 주세요", "N이/가 adjective"]
+      },
+      "personalizedTargets": [
+        { "source": "youtube", "lemma": "무대" },
+        { "source": "spotify", "lemma": "연습" }
+      ],
+      "completionCriteria": {
+        "requiredTurns": 4,
+        "requiredAccuracy": 0.75
+      }
+    }
+  ]
+}

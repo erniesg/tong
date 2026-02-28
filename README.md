@@ -1,35 +1,48 @@
 # Tong
 
-Tong is a Chrome extension + dating-sim style mini game for learning Chinese, Japanese, and Korean through dialogue choices.
+Tong is evolving from a Chrome extension prototype into a multi-platform, mobile-first app using Next.js + Capacitor.
 
-## Current scope (v0.1)
+## Hackathon track (active)
 
-- Chrome MV3 extension scaffold
-- Popup launcher for game page
-- Branching conversation loop with score + affinity
-- Built-in language packs: Mandarin, Japanese, Korean
-- Options page to set defaults
+Goal:
+- One demo flow running on web + iOS + Android.
+- Client and server developed in parallel via separate worktrees/branches.
 
-## Run locally
+Key docs:
+- `AGENTS.md`
+- `docs/hackathon-architecture.md`
+- `docs/hackathon-workstreams.md`
+- `docs/demo-run-of-show.md`
+- `docs/mastery-and-progression.md`
+- `docs/interaction-modes.md`
+- `docs/vocab-modeling-and-clustering.md`
+- `docs/agent-execution-board.md`
+- `docs/critical-tests.md`
+- `docs/mock-ui-and-assets-track.md`
+- `docs/install-and-test.md`
+- `docs/deployment-track.md`
+- `packages/contracts/api-contract.md`
+- `packages/contracts/game-loop.json`
+- `packages/contracts/objective-catalog.sample.json`
 
-1. Open Chrome and go to `chrome://extensions`.
-2. Enable Developer mode.
-3. Click **Load unpacked** and select this `tong/` folder.
-4. Click the Tong extension icon and press **Start game**.
+Create parallel worktrees:
+```bash
+cp .env.example .env
+chmod +x scripts/setup-hackathon-worktrees.sh
+./scripts/setup-hackathon-worktrees.sh
+```
 
-## Project structure
+Run local demo contract smoke check:
+```bash
+npm run demo:smoke
+```
 
-- `manifest.json`: extension config
-- `src/popup.*`: quick launcher
-- `src/game.*`: playable story UI + logic
-- `src/data/phrases.js`: language/story content
-- `src/options.*`: default settings
-- `src/background.js`: install-time defaults
+## Legacy prototype (v0.1 extension)
 
-## Next steps
-
-1. Add more characters and route trees per language level.
-2. Add spaced repetition by tracking missed phrases.
-3. Add audio playback per line (native speaker voice assets).
-4. Add a save system + weekly streak progression.
-5. Add adaptive translation hints based on learner performance.
+The original Chrome MV3 extension scaffold remains in:
+- `manifest.json`
+- `src/popup.*`
+- `src/game.*`
+- `src/data/phrases.js`
+- `src/options.*`
+- `src/background.js`
