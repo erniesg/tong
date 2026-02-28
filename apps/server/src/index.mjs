@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '../../..');
 
 const PORT = Number(process.env.PORT || 8787);
+const DEMO_PASSWORD = String(process.env.TONG_DEMO_PASSWORD || '').trim();
 
 function loadJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
@@ -27,6 +28,46 @@ const FIXTURES = {
 };
 
 const mockMediaWindowPath = path.join(repoRoot, 'apps/server/data/mock-media-window.json');
+const DEFAULT_USER_ID = 'demo-user-1';
+const PROFICIENCY_RANK = {
+  none: 0,
+  beginner: 1,
+  intermediate: 2,
+  advanced: 3,
+  native: 4,
+};
+const CLUSTER_CITY_MAP = {
+  'food-ordering': 'seoul',
+  'performance-energy': 'shanghai',
+  'city-social': 'tokyo',
+  general: 'seoul',
+};
+const CLUSTER_LOCATION_MAP = {
+  'food-ordering': 'food_street',
+  'performance-energy': 'practice_studio',
+  'city-social': 'subway_hub',
+  general: 'food_street',
+};
+const LANG_TARGETS = {
+  ko: {
+    grammar: ['-고 싶어요', '-주세요'],
+    sentenceStructures: ['N + 주세요', 'N이/가 + adjective'],
+  },
+  ja: {
+    grammar: ['〜たいです', '〜ください'],
+    sentenceStructures: ['N を ください', 'N は adjective です'],
+  },
+  zh: {
+    grammar: ['想 + verb', '请 + verb'],
+    sentenceStructures: ['请给我 + N', 'N 很 + adjective'],
+  },
+};
+const DEFAULT_OBJECTIVE_BY_LANG = {
+  ko: 'ko_food_l2_001',
+  ja: 'ko_city_l2_003',
+  zh: 'zh_stage_l3_002',
+};
+const INGESTION_SOURCES = new Set(['youtube', 'spotify']);
 
 const DICTIONARY_OVERRIDES = {
   '오늘': {
@@ -59,15 +100,78 @@ const state = {
   profiles: new Map(),
   sessions: new Map(),
   learnSessions: [...(FIXTURES.learnSessions.items || [])],
-  ingestionResult: null,
+  ingestionByUser: new Map(),
 };
+
+const AGENT_TOOL_DEFINITIONS = [
+  {
+    name: 'ingestion.run_mock',
+    description: 'Run mock ingestion and refresh frequency/insight/media-profile signals for a user.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      profile: 'object (optional)',
+      includeSources: ['youtube', 'spotify'],
+    },
+  },
+  {
+    name: 'ingestion.snapshot.get',
+    description: 'Get current source items for a user to validate ingestible transcript/lyric text signals.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      includeSources: ['youtube', 'spotify'],
+    },
+  },
+  {
+    name: 'player.media_profile.get',
+    description: 'Fetch computed media profile used by game personalization.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+    },
+  },
+  {
+    name: 'vocab.frequency.get',
+    description: 'Fetch 3-day vocab frequency rankings.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+    },
+  },
+  {
+    name: 'vocab.insights.get',
+    description: 'Fetch topic clusters and objective links from ingestion.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      lang: 'ko|ja|zh (optional)',
+    },
+  },
+  {
+    name: 'objectives.next.get',
+    description: 'Get next objective for learn/hangout mode.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      userId: 'string (optional)',
+      mode: 'hangout|learn (optional)',
+      lang: 'ko|ja|zh (optional)',
+    },
+  },
+];
 
 function jsonResponse(res, statusCode, payload) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Demo-Password',
   });
   res.end(JSON.stringify(payload));
 }
@@ -76,9 +180,25 @@ function noContent(res) {
   res.writeHead(204, {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Demo-Password',
   });
   res.end();
+}
+
+function getHeaderValue(req, key) {
+  const value = req.headers[key];
+  if (Array.isArray(value)) return value[0] || '';
+  return value || '';
+}
+
+function isDemoAuthorized(req, url) {
+  if (!DEMO_PASSWORD) return true;
+
+  const provided =
+    String(getHeaderValue(req, 'x-demo-password')).trim() ||
+    String(url.searchParams.get('demo') || '').trim();
+
+  return provided === DEMO_PASSWORD;
 }
 
 async function readJsonBody(req) {
@@ -92,6 +212,45 @@ function getLang(query) {
   const lang = query.get('lang') || 'ko';
   if (lang === 'ko' || lang === 'ja' || lang === 'zh') return lang;
   return 'ko';
+}
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getUserIdFromQuery(query) {
+  return String(query.get('userId') || DEFAULT_USER_ID).trim() || DEFAULT_USER_ID;
+}
+
+function normalizeProfileRecord(input) {
+  if (!input || typeof input !== 'object') return null;
+  if (input.profile && typeof input.profile === 'object') return input.profile;
+
+  const hasProfileShape =
+    typeof input.nativeLanguage === 'string' &&
+    Array.isArray(input.targetLanguages) &&
+    input.proficiency &&
+    typeof input.proficiency === 'object';
+  return hasProfileShape ? input : null;
+}
+
+function getProfile(userId = DEFAULT_USER_ID) {
+  const raw = state.profiles.get(userId);
+  return normalizeProfileRecord(raw);
+}
+
+function getWeakestTargetLanguage(profile) {
+  if (!profile || !Array.isArray(profile.targetLanguages) || profile.targetLanguages.length === 0) {
+    return 'ko';
+  }
+
+  return [...profile.targetLanguages]
+    .filter((lang) => lang === 'ko' || lang === 'ja' || lang === 'zh')
+    .sort((a, b) => {
+      const rankA = PROFICIENCY_RANK[profile?.proficiency?.[a] || 'none'] ?? 0;
+      const rankB = PROFICIENCY_RANK[profile?.proficiency?.[b] || 'none'] ?? 0;
+      return rankA - rankB;
+    })[0] || 'ko';
 }
 
 function getCaptionsForVideo(videoId = 'karina-variety-demo') {
@@ -154,31 +313,203 @@ function loadOrFallback(name, fallback) {
   return generated || fallback;
 }
 
-function runIngestion() {
-  const snapshot = JSON.parse(fs.readFileSync(mockMediaWindowPath, 'utf8'));
-  const result = runMockIngestion(snapshot);
-  writeGeneratedSnapshots(result);
-  state.ingestionResult = result;
-  return result;
+function normalizeIngestionSources(input) {
+  if (!Array.isArray(input)) return [];
+  return [...new Set(
+    input
+      .map((value) => String(value || '').trim().toLowerCase())
+      .filter((value) => INGESTION_SOURCES.has(value)),
+  )];
 }
 
-function ensureIngestion() {
-  if (state.ingestionResult) return state.ingestionResult;
+function buildIngestionSnapshotForUser(options = {}) {
+  const includeSources = normalizeIngestionSources(options.includeSources);
+  const snapshot = JSON.parse(fs.readFileSync(mockMediaWindowPath, 'utf8'));
+  if (includeSources.length > 0) {
+    snapshot.sourceItems = (snapshot.sourceItems || []).filter((item) => includeSources.includes(item.source));
+  }
+  return snapshot;
+}
 
+function loadDefaultGeneratedIngestion() {
   const frequency = loadGeneratedSnapshot('frequency');
   const insights = loadGeneratedSnapshot('insights');
   const mediaProfile = loadGeneratedSnapshot('media-profile');
-  if (frequency && insights && mediaProfile) {
-    state.ingestionResult = {
-      generatedAtIso: mediaProfile.generatedAtIso || new Date().toISOString(),
-      frequency,
-      insights,
-      mediaProfile,
-    };
-    return state.ingestionResult;
+  if (!frequency || !insights || !mediaProfile) return null;
+
+  return {
+    generatedAtIso: mediaProfile.generatedAtIso || new Date().toISOString(),
+    frequency,
+    insights,
+    mediaProfile: {
+      ...mediaProfile,
+      userId: mediaProfile.userId || DEFAULT_USER_ID,
+      learningSignals: mediaProfile.learningSignals || FIXTURES.mediaProfile.learningSignals,
+    },
+  };
+}
+
+function runIngestionForUser(userId = DEFAULT_USER_ID, options = {}) {
+  const includeSources = normalizeIngestionSources(options.includeSources);
+  const snapshot = buildIngestionSnapshotForUser({ includeSources });
+  const result = runMockIngestion(snapshot, {
+    userId,
+  });
+
+  if (userId === DEFAULT_USER_ID && includeSources.length === 0) {
+    writeGeneratedSnapshots(result);
   }
 
-  return runIngestion();
+  state.ingestionByUser.set(userId, result);
+  return result;
+}
+
+function ensureIngestionForUser(userId = DEFAULT_USER_ID) {
+  const existing = state.ingestionByUser.get(userId);
+  if (existing) return existing;
+
+  if (userId === DEFAULT_USER_ID && !getProfile(userId)) {
+    const generated = loadDefaultGeneratedIngestion();
+    if (generated) {
+      state.ingestionByUser.set(userId, generated);
+      return generated;
+    }
+  }
+
+  return runIngestionForUser(userId);
+}
+
+function formatIngestionRunResponse(result) {
+  return {
+    success: true,
+    generatedAtIso: result.generatedAtIso,
+    sourceCount: {
+      youtube: result.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
+      spotify: result.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
+    },
+    topTerms: result.frequency.items.slice(0, 10),
+  };
+}
+
+function normalizeObject(input) {
+  return input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+}
+
+function getDominantClusterId(ingestion) {
+  return (
+    ingestion?.mediaProfile?.learningSignals?.clusterAffinities?.[0]?.clusterId ||
+    ingestion?.insights?.clusters?.[0]?.clusterId ||
+    'food-ordering'
+  );
+}
+
+function objectiveMatchesLanguage(objectiveId, lang) {
+  return typeof objectiveId === 'string' && objectiveId.startsWith(`${lang}_`);
+}
+
+function buildPersonalizedObjective({ userId = DEFAULT_USER_ID, mode = 'hangout', lang = 'ko' }) {
+  const ingestion = ensureIngestionForUser(userId);
+  const baseObjective = cloneJson(FIXTURES.objectivesNext);
+  const dominantClusterId = getDominantClusterId(ingestion);
+  const dominantCluster =
+    ingestion?.insights?.clusters?.find((cluster) => cluster.clusterId === dominantClusterId) ||
+    ingestion?.insights?.clusters?.[0];
+
+  const insightItems = Array.isArray(ingestion?.insights?.items) ? ingestion.insights.items : [];
+  const langItems = insightItems.filter((item) => item.lang === lang);
+  const scopedItems = langItems.length > 0 ? langItems : insightItems;
+  const scopedClusterItems = dominantCluster
+    ? scopedItems.filter((item) => item.clusterId === dominantCluster.clusterId)
+    : scopedItems;
+
+  let objectiveId =
+    scopedClusterItems[0]?.objectiveLinks?.[0]?.objectiveId ||
+    scopedItems[0]?.objectiveLinks?.[0]?.objectiveId ||
+    baseObjective.objectiveId ||
+    DEFAULT_OBJECTIVE_BY_LANG[lang];
+
+  if (!objectiveMatchesLanguage(objectiveId, lang)) {
+    const languageAlignedObjective =
+      scopedItems.find((item) => objectiveMatchesLanguage(item?.objectiveLinks?.[0]?.objectiveId, lang))
+        ?.objectiveLinks?.[0]?.objectiveId || DEFAULT_OBJECTIVE_BY_LANG[lang];
+
+    if (languageAlignedObjective) {
+      objectiveId = languageAlignedObjective;
+    }
+  }
+
+  const vocabCandidates = [
+    ...scopedClusterItems.map((item) => item.lemma),
+    ...scopedItems.map((item) => item.lemma),
+    ...(dominantCluster?.topTerms || []),
+  ];
+  const vocabulary = [...new Set(vocabCandidates)].slice(0, 3);
+
+  const topTerms = ingestion?.mediaProfile?.learningSignals?.topTerms || [];
+  const preferredTerms = topTerms.filter((item) => item.lang === lang);
+  const personalizedBase = preferredTerms.length > 0 ? preferredTerms : topTerms;
+  const personalizedTargets = personalizedBase.slice(0, 3).map((item) => ({
+    lemma: item.lemma,
+    source: item.dominantSource,
+  }));
+
+  return {
+    ...baseObjective,
+    objectiveId,
+    mode,
+    coreTargets: {
+      vocabulary:
+        vocabulary.length > 0 ? vocabulary : [...(baseObjective.coreTargets?.vocabulary || [])],
+      grammar: [...(LANG_TARGETS[lang]?.grammar || LANG_TARGETS.ko.grammar)],
+      sentenceStructures: [
+        ...(LANG_TARGETS[lang]?.sentenceStructures || LANG_TARGETS.ko.sentenceStructures),
+      ],
+    },
+    personalizedTargets:
+      personalizedTargets.length > 0
+        ? personalizedTargets
+        : cloneJson(baseObjective.personalizedTargets || []),
+  };
+}
+
+function buildGameStartResponse(userId, incomingProfile) {
+  const profile = incomingProfile || getProfile(userId) || FIXTURES.gameStart.profile;
+  const weakestLang = getWeakestTargetLanguage(profile);
+  const objective = buildPersonalizedObjective({ userId, mode: 'hangout', lang: weakestLang });
+  const dominantClusterId = getDominantClusterId(ensureIngestionForUser(userId));
+  const city = CLUSTER_CITY_MAP[dominantClusterId] || FIXTURES.gameStart.city || 'seoul';
+  const location = CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
+
+  return {
+    ...cloneJson(FIXTURES.gameStart),
+    city,
+    sceneId: `${location}_hangout_intro`,
+    actions: [
+      'Start hangout validation',
+      'Review personalized learn targets',
+      `Practice ${weakestLang.toUpperCase()} objective ${objective.objectiveId}`,
+    ],
+  };
+}
+
+function getSecretStatus() {
+  const youtubeConfigured = Boolean(
+    process.env.TONG_YOUTUBE_API_KEY ||
+      (process.env.YOUTUBE_CLIENT_ID && process.env.YOUTUBE_CLIENT_SECRET) ||
+      (process.env.TONG_YOUTUBE_CLIENT_ID && process.env.TONG_YOUTUBE_CLIENT_SECRET),
+  );
+  const spotifyConfigured = Boolean(
+    (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) ||
+      (process.env.TONG_SPOTIFY_CLIENT_ID && process.env.TONG_SPOTIFY_CLIENT_SECRET),
+  );
+
+  return {
+    demoPasswordEnabled: Boolean(DEMO_PASSWORD),
+    youtubeApiKeyConfigured: youtubeConfigured,
+    spotifyClientIdConfigured: spotifyConfigured,
+    spotifyClientSecretConfigured: spotifyConfigured,
+    openAiApiKeyConfigured: Boolean(process.env.OPENAI_API_KEY),
+  };
 }
 
 function handleHangoutRespond(body) {
@@ -233,6 +564,167 @@ function handleHangoutRespond(body) {
   return { statusCode: 200, payload: response };
 }
 
+function startHangoutScene(userId = DEFAULT_USER_ID) {
+  const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
+  const score = { xp: 0, sp: 0, rp: 0 };
+  state.sessions.set(sceneSessionId, {
+    userId,
+    turn: 1,
+    score: { ...score },
+  });
+  return {
+    sceneSessionId,
+    mode: 'hangout',
+    uiPolicy: {
+      immersiveFirstPerson: true,
+      allowOnlyDialogueAndHints: true,
+    },
+    state: {
+      turn: 1,
+      score,
+    },
+    initialLine: {
+      speaker: 'character',
+      text: '어서 와요! 오늘은 뭐 먹고 싶어요?',
+    },
+  };
+}
+
+function listLearnSessions() {
+  return [...state.learnSessions].sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt));
+}
+
+function createLearnSession(body = {}) {
+  const learnSessionId = `learn_${Math.random().toString(36).slice(2, 8)}`;
+  const title = `Food Street ${body.objectiveId || 'Objective'} Drill`;
+  const item = {
+    learnSessionId,
+    title,
+    objectiveId: body.objectiveId || 'ko_food_l2_001',
+    lastMessageAt: new Date().toISOString(),
+  };
+  state.learnSessions.unshift(item);
+
+  return {
+    learnSessionId,
+    mode: 'learn',
+    uiTheme: 'kakao_like',
+    objectiveId: item.objectiveId,
+    firstMessage: {
+      speaker: 'tong',
+      text: "New session started. We'll train 주문 phrases for your next hangout.",
+    },
+  };
+}
+
+async function invokeAgentTool(toolName, rawArgs = {}) {
+  const args = normalizeObject(rawArgs);
+  const userId = typeof args.userId === 'string' && args.userId.trim() ? args.userId : DEFAULT_USER_ID;
+
+  switch (toolName) {
+    case 'ingestion.run_mock': {
+      if (args.profile && typeof args.profile === 'object') {
+        state.profiles.set(userId, { userId, profile: args.profile });
+      }
+      const includeSources = normalizeIngestionSources(args.includeSources);
+      const result = runIngestionForUser(userId, { includeSources });
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: {
+            ...formatIngestionRunResponse(result),
+            includeSources: includeSources.length > 0 ? includeSources : ['youtube', 'spotify'],
+          },
+        },
+      };
+    }
+    case 'ingestion.snapshot.get': {
+      const includeSources = normalizeIngestionSources(args.includeSources);
+      const snapshot = buildIngestionSnapshotForUser({ includeSources });
+      const sourceItems = Array.isArray(snapshot.sourceItems) ? snapshot.sourceItems : [];
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: {
+            userId,
+            includeSources: includeSources.length > 0 ? includeSources : ['youtube', 'spotify'],
+            windowStartIso: snapshot.windowStartIso || null,
+            windowEndIso: snapshot.windowEndIso || null,
+            generatedAtIso: snapshot.generatedAtIso || null,
+            sourceItems,
+          },
+        },
+      };
+    }
+    case 'player.media_profile.get': {
+      const ingestion = ensureIngestionForUser(userId);
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: ingestion.mediaProfile || { ...FIXTURES.mediaProfile, userId },
+        },
+      };
+    }
+    case 'vocab.frequency.get': {
+      const ingestion = ensureIngestionForUser(userId);
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: ingestion.frequency || FIXTURES.frequency,
+        },
+      };
+    }
+    case 'vocab.insights.get': {
+      const ingestion = ensureIngestionForUser(userId);
+      const lang = args.lang === 'ja' || args.lang === 'zh' || args.lang === 'ko' ? args.lang : null;
+      const result = lang
+        ? {
+            ...ingestion.insights,
+            items: (ingestion.insights?.items || []).filter((item) => item.lang === lang),
+          }
+        : ingestion.insights;
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: result || FIXTURES.insights,
+        },
+      };
+    }
+    case 'objectives.next.get': {
+      const mode = args.mode === 'learn' ? 'learn' : 'hangout';
+      const lang = args.lang === 'ja' || args.lang === 'zh' ? args.lang : 'ko';
+      const objective = buildPersonalizedObjective({ userId, mode, lang });
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: objective,
+        },
+      };
+    }
+    default:
+      return {
+        statusCode: 404,
+        payload: {
+          ok: false,
+          error: 'tool_not_found',
+          tool: toolName,
+        },
+      };
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     if (!req.url) {
@@ -253,6 +745,14 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (!isDemoAuthorized(req, url)) {
+      jsonResponse(res, 401, {
+        error: 'demo_password_required',
+        message: 'Provide a valid demo password via x-demo-password header or ?demo= query.',
+      });
+      return;
+    }
+
     if (pathname === '/api/v1/captions/enriched' && req.method === 'GET') {
       const videoId = url.searchParams.get('videoId') || 'karina-variety-demo';
       const lang = getLang(url.searchParams);
@@ -270,50 +770,93 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/api/v1/tools' && req.method === 'GET') {
+      jsonResponse(res, 200, {
+        ok: true,
+        tools: AGENT_TOOL_DEFINITIONS,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/tools/invoke' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const toolName = typeof body.tool === 'string' ? body.tool : '';
+      if (!toolName) {
+        jsonResponse(res, 400, {
+          ok: false,
+          error: 'tool_required',
+        });
+        return;
+      }
+      const { statusCode, payload } = await invokeAgentTool(toolName, body.args);
+      jsonResponse(res, statusCode, payload);
+      return;
+    }
+
     if (pathname === '/api/v1/vocab/frequency' && req.method === 'GET') {
-      const ingestion = ensureIngestion();
-      jsonResponse(res, 200, loadOrFallback('frequency', ingestion.frequency || FIXTURES.frequency));
+      const userId = getUserIdFromQuery(url.searchParams);
+      const ingestion = ensureIngestionForUser(userId);
+      jsonResponse(
+        res,
+        200,
+        userId === DEFAULT_USER_ID
+          ? loadOrFallback('frequency', ingestion.frequency || FIXTURES.frequency)
+          : ingestion.frequency || FIXTURES.frequency,
+      );
       return;
     }
 
     if (pathname === '/api/v1/vocab/insights' && req.method === 'GET') {
-      const ingestion = ensureIngestion();
-      jsonResponse(res, 200, loadOrFallback('insights', ingestion.insights || FIXTURES.insights));
+      const userId = getUserIdFromQuery(url.searchParams);
+      const ingestion = ensureIngestionForUser(userId);
+      jsonResponse(
+        res,
+        200,
+        userId === DEFAULT_USER_ID
+          ? loadOrFallback('insights', ingestion.insights || FIXTURES.insights)
+          : ingestion.insights || FIXTURES.insights,
+      );
       return;
     }
 
     if (pathname === '/api/v1/player/media-profile' && req.method === 'GET') {
-      const ingestion = ensureIngestion();
+      const userId = getUserIdFromQuery(url.searchParams);
+      const ingestion = ensureIngestionForUser(userId);
       jsonResponse(
         res,
         200,
-        loadOrFallback('media-profile', ingestion.mediaProfile || FIXTURES.mediaProfile),
+        userId === DEFAULT_USER_ID
+          ? loadOrFallback('media-profile', ingestion.mediaProfile || FIXTURES.mediaProfile)
+          : ingestion.mediaProfile || { ...FIXTURES.mediaProfile, userId },
       );
       return;
     }
 
     if (pathname === '/api/v1/ingestion/run-mock' && req.method === 'POST') {
-      const result = runIngestion();
-      jsonResponse(res, 200, {
-        success: true,
-        generatedAtIso: result.generatedAtIso,
-        sourceCount: {
-          youtube: result.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
-          spotify: result.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
-        },
-        topTerms: result.frequency.items.slice(0, 10),
-      });
+      const body = await readJsonBody(req);
+      const userId = body.userId || getUserIdFromQuery(url.searchParams);
+      if (body?.profile && typeof body.profile === 'object') {
+        state.profiles.set(userId, { userId, profile: body.profile });
+      }
+      const includeSources = normalizeIngestionSources(body.includeSources);
+      const result = runIngestionForUser(userId, { includeSources });
+      jsonResponse(res, 200, formatIngestionRunResponse(result));
+      return;
+    }
+
+    if (pathname === '/api/v1/demo/secret-status' && req.method === 'GET') {
+      jsonResponse(res, 200, getSecretStatus());
       return;
     }
 
     if (pathname === '/api/v1/game/start-or-resume' && req.method === 'POST') {
       const body = await readJsonBody(req);
-      const userId = body.userId || 'demo-user-1';
+      const userId = body.userId || DEFAULT_USER_ID;
+      if (body.profile) {
+        state.profiles.set(userId, { userId, profile: body.profile });
+      }
       const sessionId = `sess_${Math.random().toString(36).slice(2, 10)}`;
-      const response = {
-        ...FIXTURES.gameStart,
-        sessionId,
-      };
+      const response = { ...buildGameStartResponse(userId, body.profile), sessionId };
       state.sessions.set(sessionId, {
         userId,
         turn: 1,
@@ -329,41 +872,37 @@ const server = http.createServer(async (req, res) => {
         jsonResponse(res, 400, { error: 'userId_required' });
         return;
       }
-      state.profiles.set(body.userId, body);
-      jsonResponse(res, 200, { ok: true, profile: body });
+      const profile = normalizeProfileRecord(body) || normalizeProfileRecord(body.profile);
+      const record = profile ? { userId: body.userId, profile } : body;
+      state.profiles.set(body.userId, record);
+      jsonResponse(res, 200, { ok: true, profile: record });
       return;
     }
 
     if (pathname === '/api/v1/objectives/next' && req.method === 'GET') {
-      jsonResponse(res, 200, FIXTURES.objectivesNext);
+      const explicitLang = url.searchParams.get('lang');
+      const lang = getLang(url.searchParams);
+      const mode = url.searchParams.get('mode') === 'learn' ? 'learn' : 'hangout';
+      const userId = getUserIdFromQuery(url.searchParams);
+      const profile = getProfile(userId);
+      const selectedLang =
+        explicitLang && (explicitLang === 'ko' || explicitLang === 'ja' || explicitLang === 'zh')
+          ? lang
+          : profile
+            ? getWeakestTargetLanguage(profile)
+            : lang;
+      const objective = buildPersonalizedObjective({
+        userId,
+        mode,
+        lang: selectedLang,
+      });
+      jsonResponse(res, 200, objective);
       return;
     }
 
     if (pathname === '/api/v1/scenes/hangout/start' && req.method === 'POST') {
       const body = await readJsonBody(req);
-      const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
-      const score = { xp: 0, sp: 0, rp: 0 };
-      state.sessions.set(sceneSessionId, {
-        userId: body.userId || 'demo-user-1',
-        turn: 1,
-        score: { ...score },
-      });
-      jsonResponse(res, 200, {
-        sceneSessionId,
-        mode: 'hangout',
-        uiPolicy: {
-          immersiveFirstPerson: true,
-          allowOnlyDialogueAndHints: true,
-        },
-        state: {
-          turn: 1,
-          score,
-        },
-        initialLine: {
-          speaker: 'character',
-          text: '어서 와요! 오늘은 뭐 먹고 싶어요?',
-        },
-      });
+      jsonResponse(res, 200, startHangoutScene(body.userId || DEFAULT_USER_ID));
       return;
     }
 
@@ -375,35 +914,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === '/api/v1/learn/sessions' && req.method === 'GET') {
-      const items = [...state.learnSessions].sort((a, b) =>
-        b.lastMessageAt.localeCompare(a.lastMessageAt),
-      );
-      jsonResponse(res, 200, { items });
+      jsonResponse(res, 200, { items: listLearnSessions() });
       return;
     }
 
     if (pathname === '/api/v1/learn/sessions' && req.method === 'POST') {
       const body = await readJsonBody(req);
-      const learnSessionId = `learn_${Math.random().toString(36).slice(2, 8)}`;
-      const title = `Food Street ${body.objectiveId || 'Objective'} Drill`;
-      const item = {
-        learnSessionId,
-        title,
-        objectiveId: body.objectiveId || 'ko_food_l2_001',
-        lastMessageAt: new Date().toISOString(),
-      };
-      state.learnSessions.unshift(item);
-
-      jsonResponse(res, 200, {
-        learnSessionId,
-        mode: 'learn',
-        uiTheme: 'kakao_like',
-        objectiveId: item.objectiveId,
-        firstMessage: {
-          speaker: 'tong',
-          text: "New session started. We'll train 주문 phrases for your next hangout.",
-        },
-      });
+      jsonResponse(res, 200, createLearnSession(body));
       return;
     }
 
@@ -416,7 +933,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-ensureIngestion();
+ensureIngestionForUser(DEFAULT_USER_ID);
 
 server.listen(PORT, () => {
   console.log(`Tong mock server listening on http://localhost:${PORT}`);
