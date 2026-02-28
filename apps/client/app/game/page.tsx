@@ -218,10 +218,11 @@ export default function GamePage() {
 
   /* ── useChat integration ──────────────────────────────── */
 
-  const { append, isLoading: chatLoading } = useChat({
+  const { messages: chatMessages, append, isLoading: chatLoading } = useChat({
     api: '/api/ai/hangout',
     maxSteps: 1,
     onToolCall: ({ toolCall }) => {
+      console.log('[VN] onToolCall:', toolCall.toolName, toolCall.toolCallId);
       if (processedToolCallsRef.current.has(toolCall.toolCallId)) return;
       processedToolCallsRef.current.add(toolCall.toolCallId);
 
@@ -232,7 +233,21 @@ export default function GamePage() {
       };
       setToolQueue((prev) => [...prev, item]);
     },
+    onError: (err) => {
+      console.error('[VN] useChat error:', err);
+    },
+    onFinish: (msg) => {
+      console.log('[VN] onFinish:', msg.role, 'toolInvocations:', msg.toolInvocations?.length ?? 0);
+    },
   });
+
+  // Debug: log chat messages
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      const last = chatMessages[chatMessages.length - 1];
+      console.log('[VN] chatMessages updated:', chatMessages.length, 'last:', last.role, 'toolInvocations:', last.toolInvocations?.length ?? 0);
+    }
+  }, [chatMessages]);
 
   /* ── Tool queue processor ───────────────────────────────── */
 
