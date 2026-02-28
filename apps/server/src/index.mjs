@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import http from 'node:http';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadGeneratedSnapshot, runMockIngestion, writeGeneratedSnapshots } from './ingestion.mjs';
@@ -94,12 +95,22 @@ const DEFAULT_OBJECTIVE_BY_LANG = {
   ja: 'ko_city_l2_003',
   zh: 'zh_stage_l3_002',
 };
+const SPOTIFY_ACCOUNTS_BASE = process.env.SPOTIFY_ACCOUNTS_BASE || 'https://accounts.spotify.com';
+const SPOTIFY_API_BASE = process.env.SPOTIFY_API_BASE || 'https://api.spotify.com/v1';
+const SPOTIFY_SCOPE = process.env.SPOTIFY_SCOPE || 'user-read-recently-played';
+const SPOTIFY_STATE_TTL_MS = 10 * 60 * 1000;
+const SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS = 72;
+const SPOTIFY_MAX_PAGES = 5;
+const SPOTIFY_CONNECT_DOCS_URL = 'https://developer.spotify.com/documentation/web-api';
 
 const state = {
   profiles: new Map(),
   sessions: new Map(),
   learnSessions: [...(FIXTURES.learnSessions.items || [])],
   ingestionByUser: new Map(),
+  spotifyAuthStates: new Map(),
+  spotifyTokensByUser: new Map(),
+  spotifyRecentByUser: new Map(),
 };
 
 function jsonResponse(res, statusCode, payload) {
@@ -197,6 +208,269 @@ function getUserIdFromSearch(searchParams) {
   return searchParams.get('userId') || DEFAULT_USER_ID;
 }
 
+function getSpotifyRedirectUri() {
+  return process.env.SPOTIFY_REDIRECT_URI || `http://localhost:${PORT}/api/v1/integrations/spotify/callback`;
+}
+
+function getSpotifyClientCredentials() {
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+  return { clientId, clientSecret };
+}
+
+function spotifyConfigured() {
+  return Boolean(getSpotifyClientCredentials());
+}
+
+function spotifyConfigErrorPayload() {
+  return {
+    error: 'spotify_not_configured',
+    message: 'Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET on the API server.',
+    docs: SPOTIFY_CONNECT_DOCS_URL,
+  };
+}
+
+function cleanupSpotifyAuthStates() {
+  const now = Date.now();
+  for (const [stateToken, payload] of state.spotifyAuthStates.entries()) {
+    if (!payload?.createdAtMs || now - payload.createdAtMs > SPOTIFY_STATE_TTL_MS) {
+      state.spotifyAuthStates.delete(stateToken);
+    }
+  }
+}
+
+function createSpotifyState(userId) {
+  cleanupSpotifyAuthStates();
+  const stateToken = crypto.randomBytes(18).toString('hex');
+  state.spotifyAuthStates.set(stateToken, {
+    userId,
+    createdAtMs: Date.now(),
+  });
+  return stateToken;
+}
+
+function buildSpotifyAuthUrl(userId) {
+  const creds = getSpotifyClientCredentials();
+  if (!creds) return null;
+
+  const stateToken = createSpotifyState(userId);
+  const search = new URLSearchParams({
+    response_type: 'code',
+    client_id: creds.clientId,
+    redirect_uri: getSpotifyRedirectUri(),
+    scope: SPOTIFY_SCOPE,
+    state: stateToken,
+    show_dialog: 'true',
+  });
+
+  return {
+    stateToken,
+    authUrl: `${SPOTIFY_ACCOUNTS_BASE}/authorize?${search.toString()}`,
+  };
+}
+
+function parseWindowHours(value, fallback = SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return fallback;
+  return Math.min(24 * 14, Math.max(1, Math.round(numeric)));
+}
+
+function detectLangFromText(text) {
+  if (typeof text !== 'string' || !text.trim()) return 'ko';
+  if (/[\p{Script=Hangul}]/u.test(text)) return 'ko';
+  if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(text)) return 'ja';
+  if (/[\p{Script=Han}]/u.test(text)) return 'zh';
+  return 'ko';
+}
+
+function normalizeSpotifyTrackForIngestion(rawTrack, index = 0) {
+  const track = rawTrack?.track;
+  if (!track || typeof track.name !== 'string') return null;
+  const playedAtIso = rawTrack.played_at || new Date().toISOString();
+  const playedAtEpoch = Date.parse(playedAtIso);
+  const artists = Array.isArray(track.artists)
+    ? track.artists.map((artist) => artist?.name).filter(Boolean).join(' ')
+    : '';
+  const text = `${track.name} ${artists}`.trim();
+  const lang = detectLangFromText(text);
+
+  return {
+    id: `sp_recent_${track.id || 'track'}_${Number.isFinite(playedAtEpoch) ? playedAtEpoch : index}`,
+    source: 'spotify',
+    title: track.name,
+    lang,
+    minutes: Number((((Number(track.duration_ms) || 0) / 60000) || 0).toFixed(2)),
+    text,
+    playedAtIso,
+  };
+}
+
+function buildIngestionSnapshotForUser(userId = DEFAULT_USER_ID) {
+  const snapshot = JSON.parse(fs.readFileSync(mockMediaWindowPath, 'utf8'));
+  const spotifySynced = state.spotifyRecentByUser.get(userId);
+
+  if (!spotifySynced?.items?.length) {
+    return snapshot;
+  }
+
+  const nonSpotify = (snapshot.sourceItems || []).filter((item) => item.source !== 'spotify');
+  const syncedItems = spotifySynced.items;
+  const windowHours = parseWindowHours(spotifySynced.windowHours, SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS);
+
+  snapshot.sourceItems = [...nonSpotify, ...syncedItems];
+  snapshot.windowStartIso = new Date(Date.now() - windowHours * 60 * 60 * 1000).toISOString();
+  snapshot.windowEndIso = new Date().toISOString();
+  snapshot.generatedAtIso = new Date().toISOString();
+  return snapshot;
+}
+
+function getSpotifyStatusPayload(userId = DEFAULT_USER_ID) {
+  const token = state.spotifyTokensByUser.get(userId);
+  const synced = state.spotifyRecentByUser.get(userId);
+
+  return {
+    userId,
+    spotifyConfigured: spotifyConfigured(),
+    connected: Boolean(token?.accessToken),
+    tokenExpiresAtIso: token?.expiresAtEpochMs ? new Date(token.expiresAtEpochMs).toISOString() : null,
+    tokenScope: token?.scope || null,
+    lastSyncAtIso: synced?.syncedAtIso || null,
+    lastSyncItemCount: Array.isArray(synced?.items) ? synced.items.length : 0,
+    syncWindowHours: synced?.windowHours || null,
+  };
+}
+
+async function fetchSpotifyToken(params) {
+  const creds = getSpotifyClientCredentials();
+  if (!creds) {
+    throw new Error('spotify_not_configured');
+  }
+
+  const authHeader = Buffer.from(`${creds.clientId}:${creds.clientSecret}`).toString('base64');
+  const response = await fetch(`${SPOTIFY_ACCOUNTS_BASE}/api/token`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${authHeader}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams(params).toString(),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error_description || data?.error || 'spotify_token_exchange_failed');
+  }
+  return data;
+}
+
+async function exchangeSpotifyCodeForToken(code) {
+  const tokenData = await fetchSpotifyToken({
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: getSpotifyRedirectUri(),
+  });
+
+  return {
+    accessToken: tokenData.access_token,
+    refreshToken: tokenData.refresh_token,
+    tokenType: tokenData.token_type,
+    scope: tokenData.scope || SPOTIFY_SCOPE,
+    expiresAtEpochMs: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000,
+    obtainedAtIso: new Date().toISOString(),
+  };
+}
+
+async function refreshSpotifyAccessToken(userId) {
+  const existing = state.spotifyTokensByUser.get(userId);
+  if (!existing?.refreshToken) {
+    throw new Error('spotify_refresh_token_missing');
+  }
+
+  const tokenData = await fetchSpotifyToken({
+    grant_type: 'refresh_token',
+    refresh_token: existing.refreshToken,
+  });
+
+  const refreshed = {
+    ...existing,
+    accessToken: tokenData.access_token,
+    refreshToken: tokenData.refresh_token || existing.refreshToken,
+    tokenType: tokenData.token_type || existing.tokenType,
+    scope: tokenData.scope || existing.scope,
+    expiresAtEpochMs: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000,
+    obtainedAtIso: new Date().toISOString(),
+  };
+
+  state.spotifyTokensByUser.set(userId, refreshed);
+  return refreshed.accessToken;
+}
+
+async function ensureSpotifyAccessToken(userId) {
+  const token = state.spotifyTokensByUser.get(userId);
+  if (!token?.accessToken) {
+    throw new Error('spotify_not_connected');
+  }
+
+  if (token.expiresAtEpochMs && token.expiresAtEpochMs > Date.now() + 60 * 1000) {
+    return token.accessToken;
+  }
+
+  return refreshSpotifyAccessToken(userId);
+}
+
+async function fetchSpotifyRecentlyPlayed(accessToken, windowHours = SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS) {
+  const afterMs = Date.now() - parseWindowHours(windowHours) * 60 * 60 * 1000;
+  let nextUrl = `${SPOTIFY_API_BASE}/me/player/recently-played?limit=50&after=${afterMs}`;
+  const results = [];
+
+  for (let page = 0; page < SPOTIFY_MAX_PAGES && nextUrl; page += 1) {
+    const response = await fetch(nextUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      const errorMessage = payload?.error?.message || payload?.error || 'spotify_recently_played_failed';
+      throw new Error(errorMessage);
+    }
+
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    results.push(...items);
+    nextUrl = payload?.next || null;
+  }
+
+  return results;
+}
+
+async function syncSpotifyForUser(userId, requestedWindowHours = SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS) {
+  const windowHours = parseWindowHours(requestedWindowHours);
+  const accessToken = await ensureSpotifyAccessToken(userId);
+  const rawItems = await fetchSpotifyRecentlyPlayed(accessToken, windowHours);
+  const normalizedItems = rawItems
+    .map((item, index) => normalizeSpotifyTrackForIngestion(item, index))
+    .filter(Boolean);
+
+  state.spotifyRecentByUser.set(userId, {
+    syncedAtIso: new Date().toISOString(),
+    windowHours,
+    items: normalizedItems,
+    rawItemCount: rawItems.length,
+  });
+  state.ingestionByUser.delete(userId);
+
+  const ingestion = runIngestionForUser(userId);
+  return {
+    syncedAtIso: state.spotifyRecentByUser.get(userId).syncedAtIso,
+    windowHours,
+    itemCount: normalizedItems.length,
+    rawItemCount: rawItems.length,
+    ingestion,
+  };
+}
+
 function normalizeProfile(rawProfile) {
   if (!rawProfile || typeof rawProfile !== 'object') return null;
 
@@ -262,7 +536,7 @@ function loadDefaultGeneratedIngestion() {
 }
 
 function runIngestionForUser(userId = DEFAULT_USER_ID) {
-  const snapshot = JSON.parse(fs.readFileSync(mockMediaWindowPath, 'utf8'));
+  const snapshot = buildIngestionSnapshotForUser(userId);
   const result = runMockIngestion(snapshot, {
     userId,
     profile: getProfile(userId),
@@ -488,8 +762,145 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
     const pathname = url.pathname;
 
+    if (pathname === '/' && req.method === 'GET') {
+      jsonResponse(res, 200, {
+        ok: true,
+        service: 'tong-server',
+        message: 'Use /health or /api/v1/* endpoints.',
+      });
+      return;
+    }
+
     if (pathname === '/health') {
       jsonResponse(res, 200, { ok: true, service: 'tong-server' });
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/spotify/status' && req.method === 'GET') {
+      const userId = getUserIdFromSearch(url.searchParams);
+      jsonResponse(res, 200, getSpotifyStatusPayload(userId));
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/spotify/connect' && req.method === 'GET') {
+      const userId = getUserIdFromSearch(url.searchParams);
+      if (!spotifyConfigured()) {
+        jsonResponse(res, 503, spotifyConfigErrorPayload());
+        return;
+      }
+
+      const connectInfo = buildSpotifyAuthUrl(userId);
+      if (!connectInfo) {
+        jsonResponse(res, 503, spotifyConfigErrorPayload());
+        return;
+      }
+
+      jsonResponse(res, 200, {
+        userId,
+        connected: Boolean(state.spotifyTokensByUser.get(userId)?.accessToken),
+        state: connectInfo.stateToken,
+        scope: SPOTIFY_SCOPE,
+        redirectUri: getSpotifyRedirectUri(),
+        authUrl: connectInfo.authUrl,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/spotify/callback' && req.method === 'GET') {
+      if (!spotifyConfigured()) {
+        jsonResponse(res, 503, spotifyConfigErrorPayload());
+        return;
+      }
+
+      const code = url.searchParams.get('code');
+      const stateToken = url.searchParams.get('state');
+      if (!code || !stateToken) {
+        jsonResponse(res, 400, { error: 'spotify_callback_missing_code_or_state' });
+        return;
+      }
+
+      cleanupSpotifyAuthStates();
+      const pending = state.spotifyAuthStates.get(stateToken);
+      state.spotifyAuthStates.delete(stateToken);
+      if (!pending?.userId) {
+        jsonResponse(res, 400, { error: 'spotify_invalid_state' });
+        return;
+      }
+
+      const tokens = await exchangeSpotifyCodeForToken(code);
+      state.spotifyTokensByUser.set(pending.userId, tokens);
+      state.ingestionByUser.delete(pending.userId);
+
+      let syncSummary = null;
+      try {
+        const synced = await syncSpotifyForUser(pending.userId, SPOTIFY_DEFAULT_SYNC_WINDOW_HOURS);
+        syncSummary = {
+          syncedAtIso: synced.syncedAtIso,
+          windowHours: synced.windowHours,
+          itemCount: synced.itemCount,
+          rawItemCount: synced.rawItemCount,
+        };
+      } catch (syncError) {
+        syncSummary = {
+          error: syncError instanceof Error ? syncError.message : 'spotify_sync_failed',
+        };
+      }
+
+      jsonResponse(res, 200, {
+        ok: true,
+        userId: pending.userId,
+        connected: true,
+        tokenExpiresAtIso: new Date(tokens.expiresAtEpochMs).toISOString(),
+        sync: syncSummary,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/spotify/disconnect' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const userId = body.userId || getUserIdFromSearch(url.searchParams);
+      state.spotifyTokensByUser.delete(userId);
+      state.spotifyRecentByUser.delete(userId);
+      state.ingestionByUser.delete(userId);
+
+      jsonResponse(res, 200, {
+        ok: true,
+        userId,
+        disconnected: true,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/spotify/sync' && req.method === 'POST') {
+      if (!spotifyConfigured()) {
+        jsonResponse(res, 503, spotifyConfigErrorPayload());
+        return;
+      }
+
+      const body = await readJsonBody(req);
+      const userId = body.userId || getUserIdFromSearch(url.searchParams);
+      if (!state.spotifyTokensByUser.get(userId)?.accessToken) {
+        jsonResponse(res, 400, {
+          error: 'spotify_not_connected',
+          message: 'Connect Spotify first via /api/v1/integrations/spotify/connect.',
+        });
+        return;
+      }
+
+      const synced = await syncSpotifyForUser(userId, body.windowHours);
+      jsonResponse(res, 200, {
+        ok: true,
+        userId,
+        syncedAtIso: synced.syncedAtIso,
+        windowHours: synced.windowHours,
+        spotifyItemCount: synced.itemCount,
+        spotifyRawItemCount: synced.rawItemCount,
+        topTerms: synced.ingestion.frequency.items.slice(0, 10),
+        sourceCount: {
+          youtube: synced.ingestion.mediaProfile.sourceBreakdown.youtube.itemsConsumed,
+          spotify: synced.ingestion.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
+        },
+      });
       return;
     }
 

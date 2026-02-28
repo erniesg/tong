@@ -57,6 +57,29 @@ If `8787` is occupied by another worktree, override local base for the npm scrip
 TONG_LOCAL_API_BASE_URL=http://localhost:8790 npm run test:api-flow:local
 ```
 
+## Spotify real-connect test (phase 1)
+Set env on the API server process:
+
+```bash
+SPOTIFY_CLIENT_ID=...
+SPOTIFY_CLIENT_SECRET=...
+SPOTIFY_REDIRECT_URI=http://localhost:8787/api/v1/integrations/spotify/callback
+npm run dev:server
+```
+
+Then:
+1. Open: `http://localhost:8787/api/v1/integrations/spotify/connect?userId=demo-user-1`
+2. Visit returned `authUrl` and approve Spotify access.
+3. After callback succeeds, run:
+
+```bash
+curl -sS "http://localhost:8787/api/v1/integrations/spotify/status?userId=demo-user-1"
+curl -sS -X POST "http://localhost:8787/api/v1/integrations/spotify/sync" -H "content-type: application/json" -d '{"userId":"demo-user-1","windowHours":72}'
+curl -sS "http://localhost:8787/api/v1/vocab/frequency?windowDays=3&userId=demo-user-1"
+```
+
+Note: this phase syncs Spotify recently played metadata (track/title/artist). Lyrics provider integration is a separate step.
+
 ## Web review routes
 1. Overlay: `http://localhost:3000/overlay`
 2. Mobile game UI: `http://localhost:3000/game`
