@@ -3,58 +3,148 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tong Demo</title>
+    <title>Tong Extension</title>
     <style>
       body {
-        width: 280px;
+        width: 300px;
         margin: 0;
         padding: 14px;
-        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
         color: #1f2937;
         background: #fffaf3;
       }
+
       h1 {
         margin: 0 0 8px;
         font-size: 16px;
       }
+
       p {
-        margin: 0 0 12px;
+        margin: 0 0 10px;
         font-size: 12px;
         line-height: 1.45;
         color: #5b6472;
       }
+
+      label {
+        display: block;
+        margin: 10px 0 4px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #4a5565;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #e9d8c5;
+        border-radius: 10px;
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+
+      .row {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      button {
+        flex: 1;
+        border: 1px solid #dfc8ae;
+        border-radius: 10px;
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        background: #fff;
+        color: #1f2937;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #fff1e2;
+      }
+
+      .status {
+        margin-top: 10px;
+        font-size: 11px;
+        border-radius: 8px;
+        padding: 8px;
+        border: 1px solid #e9d8c5;
+        background: #fff;
+        color: #4b5563;
+      }
+
+      .status.ok {
+        border-color: #93c5aa;
+        background: #f0fff5;
+        color: #0f5132;
+      }
+
+      .status.warn {
+        border-color: #f2cc8f;
+        background: #fff8eb;
+        color: #7c4a03;
+      }
+
+      .status.pending {
+        border-color: #b6c4dc;
+        background: #f3f7ff;
+        color: #334155;
+      }
+
       .link {
         display: block;
-        margin: 6px 0;
+        margin-top: 8px;
         padding: 8px 10px;
         border-radius: 10px;
         border: 1px solid #e9d8c5;
-        background: white;
+        background: #fff;
         text-decoration: none;
         color: #1f2937;
         font-size: 12px;
         font-weight: 600;
       }
+
       .link:hover {
         background: #fff1e2;
       }
+
       code {
         font-size: 11px;
         background: #f9efe4;
         border-radius: 6px;
-        padding: 2px 5px;
+        padding: 1px 5px;
       }
     </style>
   </head>
   <body>
-    <h1>Tong Extension Demo</h1>
+    <h1>Tong YouTube Overlay</h1>
     <p>
-      Open a YouTube watch page to see triple-lane overlays. API target defaults to
-      <code>http://localhost:8787</code>.
+      Overlay runs directly on YouTube watch pages. Keep Tong server running at
+      <code>localhost:8787</code>.
     </p>
 
-    <a class="link" href="http://localhost:3000/overlay" target="_blank" rel="noreferrer">Open Web Overlay Review</a>
-    <a class="link" href="http://localhost:3000/game" target="_blank" rel="noreferrer">Open Mobile Game UI</a>
-    <a class="link" href="http://localhost:3000/insights" target="_blank" rel="noreferrer">Open Ingestion Insights</a>
+    <label for="apiBase">Tong API Base</label>
+    <input id="apiBase" value="http://localhost:8787" />
+
+    <div class="row">
+      <button id="saveApiBase" type="button">Save</button>
+      <button id="testConnection" type="button">Test API</button>
+    </div>
+
+    <div id="statusText" class="status">Checking API health...</div>
+
+    <div class="row">
+      <button id="openYouTube" type="button">Open YouTube</button>
+    </div>
+
+    <a class="link" href="http://localhost:3002/overlay" target="_blank" rel="noreferrer">Open Web Overlay (3002)</a>
+    <a class="link" href="http://localhost:3002/game" target="_blank" rel="noreferrer">Open Game UI (3002)</a>
+    <a class="link" href="http://localhost:3002/insights" target="_blank" rel="noreferrer">Open Insights (3002)</a>
+
+    <script src="popup.js"></script>
   </body>
 </html>
