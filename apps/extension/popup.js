@@ -1,6 +1,15 @@
 (() => {
   const API_BASE_KEY = 'tongApiBase';
   const DEFAULT_API_BASE = 'http://localhost:8787';
+  const LOG_PREFIX = '[TongExt][Popup]';
+
+  function log(...args) {
+    console.log(LOG_PREFIX, ...args);
+  }
+
+  function warn(...args) {
+    console.warn(LOG_PREFIX, ...args);
+  }
 
   const apiBaseInput = document.getElementById('apiBase');
   const statusText = document.getElementById('statusText');
@@ -16,6 +25,7 @@
   function setStatus(text, tone) {
     statusText.textContent = text;
     statusText.className = tone ? `status ${tone}` : 'status';
+    log('Status:', text);
   }
 
   function readStoredApiBase() {
@@ -46,13 +56,16 @@
   }
 
   async function init() {
+    log('Popup initialized');
     const initialBase = await readStoredApiBase();
     apiBaseInput.value = initialBase;
+    log('Loaded API base:', initialBase);
 
     try {
       await checkHealth(initialBase);
       setStatus(`Connected to ${initialBase}`, 'ok');
     } catch {
+      warn('Health check failed for', initialBase);
       setStatus(`Cannot reach ${initialBase}. Start server with npm run dev:server.`, 'warn');
     }
   }
@@ -60,6 +73,7 @@
   saveButton.addEventListener('click', async () => {
     const nextBase = normalizeApiBase(apiBaseInput.value) || DEFAULT_API_BASE;
     apiBaseInput.value = nextBase;
+    log('Saving API base:', nextBase);
 
     await saveStoredApiBase(nextBase);
     setStatus(`Saved API endpoint: ${nextBase}`, 'ok');
@@ -67,17 +81,20 @@
 
   testButton.addEventListener('click', async () => {
     const base = normalizeApiBase(apiBaseInput.value) || DEFAULT_API_BASE;
+    log('Testing API base:', base);
     setStatus('Checking API health...', 'pending');
 
     try {
       await checkHealth(base);
       setStatus(`Connected to ${base}`, 'ok');
     } catch {
+      warn('API health check failed for', base);
       setStatus(`Failed to reach ${base}`, 'warn');
     }
   });
 
   openYouTube.addEventListener('click', async () => {
+    log('Opening YouTube test video');
     await chrome.tabs.create({ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' });
     window.close();
   });

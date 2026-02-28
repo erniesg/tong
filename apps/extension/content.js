@@ -5,6 +5,19 @@
   const DEFAULT_API_BASE = 'http://localhost:8787';
   const API_BASE_KEY = 'tongApiBase';
   const LANG = 'ko';
+  const LOG_PREFIX = '[TongExt]';
+
+  function log(...args) {
+    console.log(LOG_PREFIX, ...args);
+  }
+
+  function warn(...args) {
+    console.warn(LOG_PREFIX, ...args);
+  }
+
+  function errorLog(...args) {
+    console.error(LOG_PREFIX, ...args);
+  }
 
   class TongYouTubeOverlay {
     constructor() {
@@ -32,16 +45,22 @@
       this.onTimeUpdate = this.onTimeUpdate.bind(this);
       this.handleNavigationSignal = this.handleNavigationSignal.bind(this);
       this.handleStorageChange = this.handleStorageChange.bind(this);
+
+      log('Content script booted on', window.location.href);
     }
 
     async init() {
+      log('Initializing overlay runtime...');
       this.apiBase = await this.readApiBase();
+      log('API base:', this.apiBase);
       this.installNavigationHooks();
       this.installStorageHooks();
       await this.syncWithPageState();
+      log('Initialization complete');
     }
 
     installNavigationHooks() {
+      log('Installing YouTube navigation hooks');
       document.addEventListener('yt-navigate-finish', this.handleNavigationSignal);
       window.addEventListener('popstate', this.handleNavigationSignal);
 
@@ -53,9 +72,11 @@
 
     installStorageHooks() {
       if (!chrome || !chrome.storage || !chrome.storage.onChanged) {
+        warn('chrome.storage.onChanged unavailable');
         return;
       }
       chrome.storage.onChanged.addListener(this.handleStorageChange);
+      log('Storage hook installed');
     }
 
     async handleStorageChange(changes, areaName) {
@@ -69,6 +90,7 @@
       }
 
       this.apiBase = nextBase;
+      log('Detected API base storage update:', this.apiBase);
       this.setStatus(`API endpoint switched to ${this.apiBase}`);
 
       if (this.isWatchPage() && this.videoId) {
@@ -84,6 +106,7 @@
       return new Promise((resolve) => {
         chrome.storage.sync.get([API_BASE_KEY], (result) => {
           if (chrome.runtime && chrome.runtime.lastError) {
+            warn('Failed to read API base from storage; using default');
             resolve(DEFAULT_API_BASE);
             return;
           }
@@ -104,6 +127,7 @@
       if (window.location.href === this.lastUrl) {
         return;
       }
+      log('Navigation detected:', this.lastUrl, '->', window.location.href);
       this.lastUrl = window.location.href;
       void this.syncWithPageState();
     }
@@ -111,6 +135,7 @@
     async syncWithPageState() {
       if (this.syncInFlight) {
         this.needsResync = true;
+        log('syncWithPageState requested during active sync; queueing resync');
         return;
       }
 
@@ -124,6 +149,7 @@
 
     async syncOnce() {
       if (!this.isWatchPage()) {
+        log('Non-watch route detected; overlay hidden');
         this.videoId = null;
         this.captions = [];
         this.activeSegment = null;
@@ -140,17 +166,20 @@
 
       const videoId = this.getVideoId();
       if (!videoId) {
+        log('Watch page without videoId yet');
         this.setStatus('Waiting for video ID...');
         return;
       }
 
       const video = await this.waitForVideo(15000);
       if (!video) {
+        warn('Video element not found before timeout');
         this.setStatus('Waiting for YouTube player...');
         return;
       }
 
       if (video !== this.video) {
+        log('Video element bound');
         this.detachVideoListeners();
         this.video = video;
         this.video.addEventListener('timeupdate', this.onTimeUpdate);
@@ -159,6 +188,7 @@
       }
 
       if (this.videoId !== videoId || this.captions.length === 0) {
+        log('Loading caption data for videoId:', videoId);
         this.videoId = videoId;
         await this.reloadCaptions(videoId);
       }
@@ -185,6 +215,7 @@
         await this.sleep(250);
       }
 
+      warn('waitForVideo timeout after', timeoutMs, 'ms');
       return null;
     }
 
@@ -193,10 +224,12 @@
         document.querySelector('#movie_player') || document.querySelector('.html5-video-player') || document.body;
 
       if (!container) {
+        warn('Overlay container not found');
         return;
       }
 
       if (!this.overlayRoot) {
+        log('Creating overlay DOM');
         this.overlayRoot = document.createElement('div');
         this.overlayRoot.id = 'tong-overlay-root';
 
@@ -234,6 +267,7 @@
       if (this.overlayRoot.parentElement !== container) {
         this.overlayRoot.remove();
         container.appendChild(this.overlayRoot);
+        log('Overlay attached to container:', container.id || container.className || container.tagName);
       }
     }
 
@@ -253,8 +287,10 @@
       this.hideDictionaryPanel();
 
       try {
+        const url = `${this.apiBase}/api/v1/captions/enriched?videoId=${encodeURIComponent(videoId)}&lang=${LANG}`;
+        log('Fetching captions:', url);
         const response = await fetch(
-          `${this.apiBase}/api/v1/captions/enriched?videoId=${encodeURIComponent(videoId)}&lang=${LANG}`,
+          url,
           {
             signal,
             cache: 'no-store',
@@ -268,6 +304,7 @@
         const payload = await response.json();
         const segments = Array.isArray(payload.segments) ? payload.segments : [];
         this.captions = segments;
+        log('Caption fetch success:', segments.length, 'segments');
 
         if (segments.length === 0) {
           this.setStatus(`No caption segments returned for ${videoId}.`);
@@ -277,6 +314,7 @@
         this.setStatus(`Loaded ${segments.length} caption segments.`);
       } catch (error) {
         if (error && error.name === 'AbortError') {
+          log('Caption fetch aborted');
           return;
         }
         this.captions = [];
@@ -286,13 +324,14 @@
           'Could not load captions. Confirm Tong API is running at ' +
             `${this.apiBase} and allows CORS.`,
         );
-        console.warn('[Tong Extension] Failed to load captions', error);
+        errorLog('Failed to load captions', error);
       }
     }
 
     setStatus(text) {
       if (!this.statusLine) return;
       this.statusLine.textContent = text;
+      log('Status:', text);
     }
 
     setVisibility(visible) {
@@ -343,12 +382,14 @@
         this.scriptLine.textContent = '';
         this.romanizedLine.textContent = '';
         this.englishLine.textContent = 'No active subtitle at this moment.';
+        log('Render: no active segment');
         return;
       }
 
       this.scriptLine.textContent = segment.surface || '';
       this.romanizedLine.textContent = segment.romanized || '';
       this.englishLine.textContent = segment.english || '';
+      log('Render segment:', `${segment.startMs}-${segment.endMs}`, segment.surface || '(empty)');
 
       const tokens = Array.isArray(segment.tokens) ? segment.tokens : [];
       tokens.forEach((token) => {
@@ -374,10 +415,12 @@
         return;
       }
 
+      log('Dictionary lookup requested:', term);
       this.dictionaryPanel.classList.remove('tong-overlay-hidden');
 
       const cached = this.dictionaryCache.get(term);
       if (cached) {
+        log('Dictionary cache hit:', term);
         this.renderDictionaryEntry(cached);
         return;
       }
@@ -385,8 +428,10 @@
       this.renderDictionaryMessage('Loading dictionary...');
 
       try {
+        const url = `${this.apiBase}/api/v1/dictionary/entry?term=${encodeURIComponent(term)}&lang=${LANG}`;
+        log('Fetching dictionary:', url);
         const response = await fetch(
-          `${this.apiBase}/api/v1/dictionary/entry?term=${encodeURIComponent(term)}&lang=${LANG}`,
+          url,
           {
             cache: 'no-store',
           },
@@ -398,10 +443,11 @@
 
         const entry = await response.json();
         this.dictionaryCache.set(term, entry);
+        log('Dictionary fetch success:', term);
         this.renderDictionaryEntry(entry);
       } catch (error) {
         this.renderDictionaryMessage('Dictionary lookup failed.');
-        console.warn('[Tong Extension] Dictionary fetch failed', error);
+        errorLog('Dictionary fetch failed for term:', term, error);
       }
     }
 
@@ -451,6 +497,7 @@
       this.video.removeEventListener('timeupdate', this.onTimeUpdate);
       this.video.removeEventListener('seeking', this.onTimeUpdate);
       this.video.removeEventListener('ratechange', this.onTimeUpdate);
+      log('Detached old video listeners');
       this.video = null;
     }
 
@@ -462,5 +509,13 @@
   }
 
   const overlay = new TongYouTubeOverlay();
+  window.addEventListener('error', (event) => {
+    errorLog('Unhandled window error:', event.error || event.message);
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    errorLog('Unhandled promise rejection:', event.reason);
+  });
+  window.__tongOverlayDebug = overlay;
+  log('Debug handle exposed as window.__tongOverlayDebug');
   void overlay.init();
 })();
