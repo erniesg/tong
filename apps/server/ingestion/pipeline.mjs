@@ -185,7 +185,11 @@ export function loadEvents(eventsPath) {
 
 export function buildPlannerContext({ userId, events, windowDays = 3, nowIso }) {
   const eventDates = events.map((event) => parseIso(event.consumedAtIso));
-  const windowEnd = nowIso ? parseIso(nowIso) : new Date(Math.max(...eventDates.map((d) => d.getTime())));
+  const windowEnd = nowIso
+    ? parseIso(nowIso)
+    : eventDates.length > 0
+      ? new Date(Math.max(...eventDates.map((d) => d.getTime())))
+      : new Date();
   const windowStart = new Date(windowEnd.getTime() - windowDays * 24 * 60 * 60 * 1000);
 
   const filtered = events.filter((event) => {
