@@ -28,6 +28,9 @@ const FIXTURES = {
 };
 
 const mockMediaWindowPath = path.join(repoRoot, 'apps/server/data/mock-media-window.json');
+const integrationsStatePath =
+  process.env.TONG_INTEGRATIONS_STATE_PATH ||
+  path.join(repoRoot, 'apps/server/data/generated/integrations-state.json');
 
 const DICTIONARY_OVERRIDES = {
   '오늘': {
@@ -129,6 +132,49 @@ const state = {
   spotifyTokensByUser: new Map(),
   spotifyRecentByUser: new Map(),
 };
+
+function mapToObject(map) {
+  return Object.fromEntries(map.entries());
+}
+
+function objectToMap(obj) {
+  if (!obj || typeof obj !== 'object') return new Map();
+  return new Map(Object.entries(obj));
+}
+
+function persistIntegrationState() {
+  const payload = {
+    version: 1,
+    updatedAtIso: new Date().toISOString(),
+    youtubeTokensByUser: mapToObject(state.youtubeTokensByUser),
+    youtubeRecentByUser: mapToObject(state.youtubeRecentByUser),
+    spotifyTokensByUser: mapToObject(state.spotifyTokensByUser),
+    spotifyRecentByUser: mapToObject(state.spotifyRecentByUser),
+  };
+
+  try {
+    fs.mkdirSync(path.dirname(integrationsStatePath), { recursive: true });
+    fs.writeFileSync(integrationsStatePath, JSON.stringify(payload, null, 2));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown_error';
+    console.warn(`[Tong Server] Failed to persist integration state: ${message}`);
+  }
+}
+
+function restoreIntegrationState() {
+  try {
+    if (!fs.existsSync(integrationsStatePath)) return;
+
+    const payload = JSON.parse(fs.readFileSync(integrationsStatePath, 'utf8'));
+    state.youtubeTokensByUser = objectToMap(payload.youtubeTokensByUser);
+    state.youtubeRecentByUser = objectToMap(payload.youtubeRecentByUser);
+    state.spotifyTokensByUser = objectToMap(payload.spotifyTokensByUser);
+    state.spotifyRecentByUser = objectToMap(payload.spotifyRecentByUser);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown_error';
+    console.warn(`[Tong Server] Failed to restore integration state: ${message}`);
+  }
+}
 
 const AGENT_TOOL_DEFINITIONS = [
   {
@@ -933,6 +979,7 @@ async function refreshYouTubeAccessToken(userId) {
   };
 
   state.youtubeTokensByUser.set(userId, refreshed);
+  persistIntegrationState();
   return refreshed.accessToken;
 }
 
@@ -1136,6 +1183,7 @@ async function syncYouTubeForUser(userId, requestedWindowHours = YOUTUBE_DEFAULT
     items: normalizedItems,
     rawItemCount: rawActivities.length,
   });
+  persistIntegrationState();
   state.ingestionByUser.delete(userId);
 
   const ingestion = runIngestionForUser(userId);
@@ -1210,6 +1258,7 @@ async function refreshSpotifyAccessToken(userId) {
   };
 
   state.spotifyTokensByUser.set(userId, refreshed);
+  persistIntegrationState();
   return refreshed.accessToken;
 }
 
@@ -1287,6 +1336,7 @@ async function syncSpotifyForUser(userId, requestedWindowHours = SPOTIFY_DEFAULT
     lyricsLangBreakdown,
     lyricsAttemptedTrackCount: attemptedTrackCount,
   });
+  persistIntegrationState();
   state.ingestionByUser.delete(userId);
 
   const ingestion = runIngestionForUser(userId);
@@ -2174,6 +2224,7 @@ const server = http.createServer(async (req, res) => {
 
       const tokens = await exchangeYouTubeCodeForToken(code);
       state.youtubeTokensByUser.set(pending.userId, tokens);
+      persistIntegrationState();
       state.ingestionByUser.delete(pending.userId);
 
       let syncSummary = null;
@@ -2209,6 +2260,7 @@ const server = http.createServer(async (req, res) => {
       const userId = body.userId || getUserIdFromSearch(url.searchParams);
       state.youtubeTokensByUser.delete(userId);
       state.youtubeRecentByUser.delete(userId);
+      persistIntegrationState();
       state.ingestionByUser.delete(userId);
 
       jsonResponse(res, 200, {
@@ -2310,6 +2362,7 @@ const server = http.createServer(async (req, res) => {
 
       const tokens = await exchangeSpotifyCodeForToken(code);
       state.spotifyTokensByUser.set(pending.userId, tokens);
+      persistIntegrationState();
       state.ingestionByUser.delete(pending.userId);
 
       let syncSummary = null;
@@ -2342,6 +2395,7 @@ const server = http.createServer(async (req, res) => {
       const userId = body.userId || getUserIdFromSearch(url.searchParams);
       state.spotifyTokensByUser.delete(userId);
       state.spotifyRecentByUser.delete(userId);
+      persistIntegrationState();
       state.ingestionByUser.delete(userId);
 
       jsonResponse(res, 200, {
@@ -2502,6 +2556,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+restoreIntegrationState();
 ensureIngestionForUser(DEFAULT_USER_ID);
 
 server.listen(PORT, () => {
