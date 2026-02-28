@@ -234,6 +234,72 @@ Shape:
 }
 ```
 
+## GET `/api/v1/tools`
+Response:
+```json
+{
+  "ok": true,
+  "tools": [
+    {
+      "name": "ingestion.run_mock",
+      "description": "Run mock ingestion and refresh frequency/insight/media-profile signals for a user.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "userId": "string (optional)",
+        "profile": "object (optional)",
+        "includeSources": ["youtube", "spotify"]
+      }
+    }
+  ]
+}
+```
+
+## POST `/api/v1/tools/invoke`
+Request:
+```json
+{
+  "tool": "vocab.insights.get",
+  "args": {
+    "userId": "demo-user-1",
+    "lang": "ko"
+  }
+}
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "tool": "vocab.insights.get",
+  "result": {
+    "windowStartIso": "2026-02-25T00:00:00.000Z",
+    "windowEndIso": "2026-02-28T00:00:00.000Z",
+    "clusters": [
+      {
+        "clusterId": "food-ordering",
+        "label": "Food Ordering",
+        "keywords": ["주문", "메뉴", "맵다"],
+        "topTerms": ["주문", "메뉴"]
+      }
+    ],
+    "items": [
+      {
+        "lemma": "주문",
+        "lang": "ko",
+        "score": 0.82,
+        "frequency": 26,
+        "burst": 1.34,
+        "clusterId": "food-ordering",
+        "objectiveLinks": [
+          { "objectiveId": "ko_food_l2_001", "reason": "High utility in next hangout" }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ## POST `/api/v1/game/start-or-resume`
 Request:
 ```json

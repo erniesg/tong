@@ -37,3 +37,17 @@ Template:
   - Objective language selection now defaults to weakest profile target only when `lang` query is omitted; clients that always send `lang` keep explicit behavior.
   - Ingestion remains single-cache for default user in this root server; per-user ingestion cache still lives in `codex/server-ingestion-sync`.
 - Next owner: `codex/server-ingestion-sync` (adapter from live connector payloads to canonical events)
+
+## 2026-02-28 (Tool Retrieval Surface)
+- Date: 2026-02-28
+- Branch/worktree: `codex/tong-bg-cutout-iter1` (shared root workspace)
+- What changed:
+  - Added per-user ingestion cache and source-scoped mock ingestion execution in root server.
+  - Added `GET /api/v1/tools` and `POST /api/v1/tools/invoke` so curriculum/game consumers can retrieve modeled data through a tool-style interface before live connectors land.
+  - Wired existing frequency/insights/media-profile endpoints to respect `userId` and per-user ingestion state.
+- Contract changes:
+  - Added tool response/request interfaces and fixtures for `tools.list` and `tools.invoke`.
+  - Documented tool endpoints in API contract and server README.
+- Integration risks:
+  - Tool invocation coverage currently focuses on ingestion/objective retrieval tools; connector OAuth tool set remains in `codex/server-ingestion-sync`.
+- Next owner: `codex/server-ingestion-sync` (merge/parity for live connector tool coverage)
