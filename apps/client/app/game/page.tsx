@@ -9,12 +9,11 @@ import {
   respondHangout,
   startHangout,
   startOrResumeGame,
+  type CityId,
   type LearnSession,
+  type LocationId,
   type ScoreState,
 } from '@/lib/api';
-
-type CityId = 'seoul' | 'tokyo' | 'shanghai';
-type LocationId = 'food_street' | 'cafe' | 'convenience_store' | 'subway_hub' | 'practice_studio';
 
 interface ChatMessage {
   speaker: 'character' | 'tong' | 'you';
@@ -78,8 +77,13 @@ export default function GamePage() {
       setLoading(true);
       const [game, objective, sessions] = await Promise.all([
         startOrResumeGame(),
-        fetchObjectiveNext(),
-        fetchLearnSessions(),
+        fetchObjectiveNext({
+          city: selectedCity,
+          location: selectedLocation,
+          mode: 'hangout',
+          lang: 'ko',
+        }),
+        fetchLearnSessions({ city: selectedCity, lang: 'ko' }),
       ]);
 
       setSessionId(game.sessionId);
@@ -90,17 +94,24 @@ export default function GamePage() {
       setScore({ xp: 0, sp: 0, rp: 0 });
       setSceneSessionId(null);
       setHint('Session ready. Start hangout to enter scene dialogue.');
+      return objective.objectiveId;
     } finally {
       setLoading(false);
     }
   }
 
   async function beginHangout() {
+    let activeObjectiveId = objectiveId;
     if (!sessionId) {
-      await bootstrapSession();
+      activeObjectiveId = await bootstrapSession();
     }
 
-    const hangout = await startHangout(objectiveId);
+    const hangout = await startHangout({
+      objectiveId: activeObjectiveId,
+      city: selectedCity,
+      location: selectedLocation,
+      lang: 'ko',
+    });
     setSceneSessionId(hangout.sceneSessionId);
     setMessages([{ speaker: hangout.initialLine.speaker, text: hangout.initialLine.text }]);
     setScore(hangout.state.score);
@@ -121,12 +132,16 @@ export default function GamePage() {
   }
 
   async function refreshLearnSessions() {
-    const sessions = await fetchLearnSessions();
+    const sessions = await fetchLearnSessions({ city: selectedCity, lang: 'ko' });
     setLearnSessions(sessions.items);
   }
 
   async function startNewLearnSession() {
-    const created = await createLearnSession(objectiveId);
+    const created = await createLearnSession({
+      objectiveId,
+      city: selectedCity,
+      lang: 'ko',
+    });
     setLearnMessage(created.firstMessage.text);
     await refreshLearnSessions();
   }
