@@ -1,4 +1,12 @@
-const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const FALLBACK_BACKEND_MODE = process.env.NEXT_PUBLIC_TONG_BACKEND_MODE || 'local-server';
+const FALLBACK_LOCAL_API_BASE =
+  process.env.NEXT_PUBLIC_TONG_LOCAL_API_BASE_URL || process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const FALLBACK_REMOTE_API_BASE =
+  process.env.NEXT_PUBLIC_TONG_REMOTE_API_BASE_URL || process.env.NEXT_PUBLIC_TONG_API_BASE || FALLBACK_LOCAL_API_BASE;
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (FALLBACK_BACKEND_MODE === 'remote-server' ? FALLBACK_REMOTE_API_BASE : FALLBACK_LOCAL_API_BASE);
 
 export interface CaptionToken {
   text: string;

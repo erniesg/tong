@@ -30,6 +30,12 @@ In terminal 2:
 npm run dev:client
 ```
 
+Optional terminal 3 (Cloudflare Worker local runtime):
+```bash
+npm --prefix apps/worker install
+npm run dev:worker
+```
+
 ## Web review routes
 1. Overlay: `http://localhost:3000/overlay`
 2. Mobile game UI: `http://localhost:3000/game`
@@ -59,3 +65,10 @@ npm run dev:client
 4. `/game` learn mode supports viewing previous + starting new sessions.
 5. `/insights` can run ingestion and render frequency + topic clusters.
 6. Extension shows karaoke-style subtitles with romanization and playback-synced progression on YouTube.
+
+## Local + Cloud parallel mode
+1. Deploy Worker once: `npm run deploy:worker`
+2. Follow `docs/cloudflare-worker-setup.md`
+3. Switch client backend by setting:
+- `NEXT_PUBLIC_API_BASE_URL=http://localhost:8787` (Node API)
+- `NEXT_PUBLIC_API_BASE_URL=https://tong-api-worker.<subdomain>.workers.dev` (Cloud Worker API)
