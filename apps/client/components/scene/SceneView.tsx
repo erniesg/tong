@@ -10,21 +10,24 @@ import { ExerciseRenderer } from '../exercises/ExerciseRenderer';
 
 interface SceneViewProps {
   backgroundUrl: string;
-  ambientDescription: string;
-  npcName: string;
-  npcColor: string;
-  npcSpriteUrl: string;
-  currentMessage: SessionMessage | null;
-  currentExercise: ExerciseData | null;
-  choices: DialogueChoice[] | null;
+  ambientDescription?: string;
+  npcName?: string;
+  npcColor?: string;
+  npcSpriteUrl?: string;
+  currentMessage?: SessionMessage | null;
+  currentExercise?: ExerciseData | null;
+  choices?: DialogueChoice[] | null;
   choicePrompt?: string | null;
-  tongTip: { message: string; translation?: string } | null;
-  isStreaming: boolean;
+  tongTip?: { message: string; translation?: string } | null;
+  isStreaming?: boolean;
   hudContent?: React.ReactNode;
-  onChoice: (choiceId: string) => void;
-  onContinue: () => void;
-  onExerciseResult: (exerciseId: string, correct: boolean) => void;
-  onDismissTong: () => void;
+  onChoice?: (choiceId: string) => void;
+  onContinue?: () => void;
+  onExerciseResult?: (exerciseId: string, correct: boolean) => void;
+  onDismissTong?: () => void;
+  // Extended props used by GamePageClient VN mode
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
 }
 
 const SPEAKER_COLORS: Record<string, string> = {
@@ -36,21 +39,21 @@ const SPEAKER_COLORS: Record<string, string> = {
 
 export function SceneView({
   backgroundUrl,
-  ambientDescription,
-  npcName,
-  npcColor,
-  npcSpriteUrl,
-  currentMessage,
-  currentExercise,
-  choices,
+  ambientDescription = '',
+  npcName = '',
+  npcColor = 'var(--color-primary)',
+  npcSpriteUrl = '',
+  currentMessage = null,
+  currentExercise = null,
+  choices = null,
   choicePrompt,
-  tongTip,
-  isStreaming,
+  tongTip = null,
+  isStreaming = false,
   hudContent,
-  onChoice,
-  onContinue,
-  onExerciseResult,
-  onDismissTong,
+  onChoice = () => {},
+  onContinue = () => {},
+  onExerciseResult = () => {},
+  onDismissTong = () => {},
 }: SceneViewProps) {
   const getSpeakerName = (msg: SessionMessage): string | undefined => {
     if (msg.role === 'narrator' || msg.role === 'system') return undefined;

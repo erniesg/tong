@@ -2,28 +2,85 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
-  createLearnSession,
-  fetchLearnSessions,
   fetchObjectiveNext,
   respondHangout,
   startHangout,
   startOrResumeGame,
   type CityId,
-  type GameProfile,
-  type HangoutRenderOp,
-  type LearnSession,
   type LocationId,
-  type ObjectiveNextResponse,
-  type ObjectiveProgressState,
   type ProficiencyLevel,
-  type ProgressLoopState,
-  type RelationshipState,
-  type RouteState,
-  type SceneCharacter,
-  type SceneLine,
   type ScoreState,
 } from '@/lib/api';
-import { SceneView, type DialogueChoice } from '@/components/scene/SceneView';
+
+/* ── Inline types — not exported from api.ts ──────────────── */
+interface GameProfile {
+  nativeLanguage: string;
+  targetLanguages: string[];
+  proficiency: Record<string, ProficiencyLevel>;
+}
+
+interface HangoutRenderOp {
+  tool: string;
+  text?: string;
+  speakerName?: string;
+  choices?: string[];
+  [key: string]: unknown;
+}
+
+interface ObjectiveNextResponse {
+  objectiveId: string;
+  title?: string;
+  [key: string]: unknown;
+}
+
+interface ObjectiveProgressState {
+  percent?: number;
+  current?: number;
+  target?: number;
+}
+
+interface ProgressLoopState {
+  masteryTier: number;
+  learnReadiness: number;
+  missionGate: {
+    status: string;
+    validatedHangouts: number;
+    requiredValidatedHangouts: number;
+  };
+}
+
+interface RelationshipState {
+  stage?: string;
+  [key: string]: unknown;
+}
+
+interface RouteState {
+  stage?: string;
+  [key: string]: unknown;
+}
+
+interface SceneCharacter {
+  name?: string;
+  id?: string;
+  role?: string;
+  avatarEmoji?: string;
+  mood?: string;
+  assetKey?: string;
+  [key: string]: unknown;
+}
+
+interface SceneLine {
+  speaker: 'character' | 'you' | 'tong' | 'narrator';
+  text: string;
+  speakerName?: string;
+}
+import { SceneView } from '@/components/scene/SceneView';
+
+interface DialogueChoice {
+  id: string;
+  text: string;
+}
+import { LearnPanel } from '@/components/learn/LearnPanel';
 
 type CjkLang = 'ko' | 'ja' | 'zh';
 type EntryPhase = 'opening' | 'entry' | 'onboarding' | 'playing';
@@ -310,11 +367,10 @@ export default function GamePageClient({
 
   const [loadingStart, setLoadingStart] = useState(initialEntryPhase === 'playing' && autoLaunchHangout);
   const [sendingTurn, setSendingTurn] = useState(false);
-  const [loadingLearn, setLoadingLearn] = useState(false);
+  // Learn state removed — now handled by LearnPanel
   const [needsIntroTap, setNeedsIntroTap] = useState(false);
 
-  const [learnSessions, setLearnSessions] = useState<LearnSession[]>([]);
-  const [learnMessage, setLearnMessage] = useState('');
+  // learnSessions + learnMessage removed — now handled by LearnPanel
 
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const [avatarPathIndex, setAvatarPathIndex] = useState(0);
@@ -415,10 +471,7 @@ export default function GamePageClient({
     }
   }, [entryPhase]);
 
-  useEffect(() => {
-    if (mode !== 'learn' || entryPhase !== 'playing') return;
-    void refreshLearnSessions();
-  }, [mode, entryPhase, city, selectedLang, activeUserId]);
+  // Learn sessions refresh removed — now handled by LearnPanel
 
   useEffect(() => {
     setAvatarLoadFailed(false);
@@ -765,37 +818,7 @@ export default function GamePageClient({
     }
   }
 
-  async function refreshLearnSessions() {
-    try {
-      setLoadingLearn(true);
-      setError(null);
-      const sessions = await fetchLearnSessions({ userId: activeUserId, city, lang: selectedLang });
-      setLearnSessions(sessions.items);
-    } catch (learnError) {
-      setError(learnError instanceof Error ? learnError.message : 'Failed to load learn sessions.');
-    } finally {
-      setLoadingLearn(false);
-    }
-  }
-
-  async function startNewLearnSession() {
-    try {
-      setLoadingLearn(true);
-      setError(null);
-      const created = await createLearnSession({
-        objectiveId: objective?.objectiveId || 'ko_food_l2_001',
-        userId: activeUserId,
-        city,
-        lang: selectedLang,
-      });
-      setLearnMessage(created.firstMessage.text);
-      await refreshLearnSessions();
-    } catch (learnError) {
-      setError(learnError instanceof Error ? learnError.message : 'Failed to start learn session.');
-    } finally {
-      setLoadingLearn(false);
-    }
-  }
+  // refreshLearnSessions + startNewLearnSession removed — now handled by LearnPanel
 
   async function completeOnboardingAndLaunch() {
     setEntryPhase('playing');
@@ -1082,34 +1105,13 @@ export default function GamePageClient({
                     isLoading={loadingStart}
                   />
                 ) : (
-                  <section className="tg-learn-panel">
-                    <div className="tg-learn-header">
-                      <h3>{cityConfig.label} learn sessions</h3>
-                      <p>Session history + objective-focused drills.</p>
-                      <div className="tg-actions">
-                        <button className="tg-secondary" type="button" onClick={() => void refreshLearnSessions()}>
-                          View previous sessions
-                        </button>
-                        <button type="button" onClick={() => void startNewLearnSession()}>
-                          Start new session
-                        </button>
-                      </div>
-                    </div>
-
-                    {learnMessage && <p className="tg-learn-message">Tong: {learnMessage}</p>}
-                    {loadingLearn && <p className="tg-status">Loading learn sessions...</p>}
-                    {!loadingLearn && learnSessions.length === 0 && <p className="tg-status">No sessions yet.</p>}
-
-                    <div className="tg-learn-list">
-                      {learnSessions.map((session) => (
-                        <article key={session.learnSessionId} className="tg-learn-item">
-                          <strong>{session.title}</strong>
-                          <p>{session.objectiveId}</p>
-                          <span>{new Date(session.lastMessageAt).toLocaleDateString()}</span>
-                        </article>
-                      ))}
-                    </div>
-                  </section>
+                  <LearnPanel
+                    cityId={city}
+                    locationId={location}
+                    userId={activeUserId}
+                    objectiveId={objective?.objectiveId}
+                    lang={selectedLang}
+                  />
                 )}
               </div>
 
