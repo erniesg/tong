@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tong Design System</title>
-<!-- Generated: 2026-02-28T17:37:01.055Z | 9 variables, 36 classes, 0 keyframes -->
+<!-- Generated: 2026-03-01T07:35:47.637Z | 67 variables, 197 classes, 10 keyframes -->
 <style>
 /* ══════════════════════════════════════════════════════════════
    BLOCK 1: globals.css — verbatim embed (single source of truth)
    ══════════════════════════════════════════════════════════════ */
+@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
 :root {
@@ -49,6 +50,36 @@ main.app-shell {
   max-width: 1080px;
   margin: 0 auto;
   padding: 24px 18px 56px;
+}
+
+.demo-access-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(6px);
+  background: rgba(253, 246, 236, 0.9);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.demo-access-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.demo-access-row input {
+  min-width: 180px;
+}
+
+.demo-access-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .page-header {
@@ -127,6 +158,19 @@ main.app-shell {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.step-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--ink);
+}
+
+.step-list li {
+  line-height: 1.45;
 }
 
 .row {
@@ -213,10 +257,20 @@ textarea:focus {
   background: #fff;
   font-size: 13px;
   font-weight: 600;
+  color: var(--ink);
 }
 
 .nav-link:hover {
   background: #fff2e3;
+}
+
+button.nav-link {
+  padding: 9px 12px;
+  transform: none;
+}
+
+button.nav-link:hover {
+  transform: none;
 }
 
 .video-frame {
@@ -307,28 +361,49 @@ textarea:focus {
   overflow: auto;
 }
 
-.chat-bubble {
-  border-radius: 14px;
-  padding: 10px 12px;
-  font-size: 14px;
-  line-height: 1.45;
+.game-shell {
+  max-width: 920px;
 }
 
-.chat-character {
-  background: #f8f1ff;
-  border: 1px solid #dfd0f5;
+.tong-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #e8a020);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(255, 107, 44, 0.25);
+  flex-shrink: 0;
 }
 
-.chat-tong {
-  background: #effcf8;
-  border: 1px solid #bce9dd;
+.ko-token {
+  position: relative;
+  border-bottom: 1px dotted rgba(240, 192, 64, 0.55);
+  cursor: help;
 }
 
-.chat-user {
-  background: #fff2e6;
-  border: 1px solid #f3d4b8;
-  margin-left: auto;
+.ko-token:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(100% + 8px);
+  background: rgba(12, 18, 29, 0.96);
+  color: #f9fbff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 6px 8px;
+  white-space: nowrap;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  z-index: 45;
+  pointer-events: none;
 }
+
 
 .metric-bar {
   height: 10px;
@@ -368,6 +443,308 @@ textarea:focus {
   background: linear-gradient(90deg, #ff8f46, #ffc16f);
 }
 
+
+.dialogue-area {
+  width: 100%;
+  max-width: 400px;
+  min-height: 80px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dialogue-line {
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.dialogue-line.muted {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.typewriter-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--accent);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink 0.7s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.proficiency-panel {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeSlideUp 0.4s ease;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.proficiency-lang {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.proficiency-lang-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.proficiency-lang-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.proficiency-lang-level {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.proficiency-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+  outline: none;
+  cursor: pointer;
+}
+
+.proficiency-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(255, 107, 44, 0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.proficiency-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.proficiency-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.proficiency-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(255, 107, 44, 0.3);
+  cursor: pointer;
+}
+
+
+.proficiency-ticks {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.proficiency-tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.proficiency-tick:first-child {
+  align-items: flex-start;
+}
+
+.proficiency-tick:last-child {
+  align-items: flex-end;
+}
+
+.proficiency-tick-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.proficiency-tick.active .proficiency-tick-dot {
+  background: var(--accent);
+  transform: scale(1.3);
+}
+
+.proficiency-tick-num {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+
+.proficiency-tick.active .proficiency-tick-num {
+  color: var(--accent);
+}
+
+.proficiency-tick-label {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.proficiency-tick.active .proficiency-tick-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+
+/* Level mapping row */
+.proficiency-level-map {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(15, 118, 110, 0.06);
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  border-radius: 10px;
+  margin-top: 2px;
+}
+
+.proficiency-level-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mint);
+  background: rgba(15, 118, 110, 0.12);
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.proficiency-level-question {
+  font-size: 11px;
+  color: var(--muted);
+  flex: 1;
+  min-width: 0;
+}
+
+
+.btn-go {
+  font-size: 18px;
+  padding: 14px 36px;
+  border-radius: 16px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(255, 107, 44, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-go:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(255, 107, 44, 0.4);
+}
+
+.btn-go:active {
+  transform: scale(0.97);
+}
+
+.btn-skip {
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--muted);
+  opacity: 0.5;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+.btn-skip:hover {
+  opacity: 1;
+}
+
+/* Immersive scene — layered visual-novel style */
+
+.scene-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  user-select: none;
+  font-family: 'Space Grotesk', 'Noto Sans KR', sans-serif;
+  color: #eee;
+}
+
+/* Layer 2: HUD */
+.scene-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+}
+
+.scene-hud-location {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+}
+
+.scene-hud-dot {
+  margin: 0 6px;
+  color: rgba(255,255,255,0.35);
+}
+
+.scene-hud-scores {
+  display: flex;
+  gap: 14px;
+}
+
+.scene-hud-score {
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.04em;
+}
+
+.scene-hud-score b {
+  color: #f0c040;
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+
 @media (max-width: 900px) {
   .grid-3,
   .grid-2 {
@@ -378,6 +755,1296 @@ textarea:focus {
     padding: 18px 14px 44px;
   }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Tong game parity shell                                                     */
+/* -------------------------------------------------------------------------- */
+
+.tg-shell {
+  min-height: 100dvh;
+  min-height: 100vh;
+}
+
+.tg-stage {
+  position: relative;
+  min-height: 100dvh;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  background: #020717;
+}
+
+.tg-stage-playing {
+  background: #000;
+}
+
+.tg-ambient {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.tg-blob {
+  position: absolute;
+  filter: blur(40px);
+  opacity: 0.38;
+}
+
+.tg-blob-a {
+  width: 46vw;
+  height: 46vw;
+  max-width: 360px;
+  max-height: 360px;
+  left: -12%;
+  top: -8%;
+  background: radial-gradient(circle, rgba(90, 132, 255, 0.5), rgba(90, 132, 255, 0));
+}
+
+.tg-blob-b {
+  width: 56vw;
+  height: 56vw;
+  max-width: 420px;
+  max-height: 420px;
+  right: -20%;
+  bottom: -20%;
+  background: radial-gradient(circle, rgba(16, 74, 152, 0.62), rgba(16, 74, 152, 0));
+}
+
+.tg-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(7, 11, 26, 0.26), rgba(1, 4, 12, 0.8));
+}
+
+.tg-phone {
+  position: relative;
+  width: min(100%, 390px);
+  min-height: min(92dvh, 840px);
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, #151d3a 0%, #10172f 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 22px 42px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  z-index: 1;
+}
+
+.tg-phone-entry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tg-phone-playing {
+  display: flex;
+  flex-direction: column;
+}
+
+.tg-opening-video-wrap {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: #000;
+  position: relative;
+}
+
+.tg-opening-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tg-opening-loading {
+  position: absolute;
+  bottom: 20px;
+  font-size: 13px;
+  color: rgba(238, 244, 255, 0.72);
+}
+
+.tg-text-link {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  border: 0;
+  background: transparent;
+  color: rgba(237, 245, 255, 0.8);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tg-entry-panel {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 20px;
+  text-align: center;
+}
+
+.tg-logo {
+  width: 118px;
+  height: auto;
+}
+
+.tg-brand {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #f3ca98;
+}
+
+.tg-title {
+  margin: 0;
+  font-size: clamp(32px, 8vw, 54px);
+  line-height: 0.98;
+  font-weight: 800;
+  color: #eef2fa;
+}
+
+.tg-title span {
+  display: block;
+}
+
+.tg-title-accent {
+  background: linear-gradient(96deg, #fce1c4 12%, #dcf6c8 88%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.tg-copy {
+  margin: 0;
+  color: rgba(223, 231, 246, 0.86);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.tg-actions {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+}
+
+.tg-actions button {
+  flex: 1;
+}
+
+.tg-city-list {
+  width: 100%;
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  color: rgba(196, 205, 224, 0.7);
+  font-size: 11px;
+  text-align: left;
+}
+
+.tg-onboarding-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+}
+
+.tg-onboarding-avatar {
+  width: 74px;
+  height: 74px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 2px;
+  background: linear-gradient(135deg, #f3d36a, #e4b43a);
+  color: #1d2032;
+  font-size: 38px;
+  font-weight: 800;
+  box-shadow: 0 0 24px rgba(243, 211, 106, 0.36);
+}
+
+.tg-onboarding-line {
+  margin: 0;
+  text-align: center;
+  color: rgba(222, 230, 243, 0.88);
+  font-size: 16px;
+}
+
+.tg-onboarding-line-strong {
+  color: #f0f4fc;
+  font-weight: 600;
+}
+
+.tg-slider-card {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(246, 249, 255, 0.07);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tg-slider-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tg-slider-card header p {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #c0c9dd;
+  font-weight: 700;
+}
+
+.tg-slider-card header span {
+  font-size: 11px;
+  color: #d9e0ee;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+.tg-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tg-slider-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tg-slider-head strong {
+  font-size: 17px;
+  color: #edf2fc;
+}
+
+.tg-slider-head span {
+  font-size: 14px;
+  color: #dce4f5;
+}
+
+.tg-slider-row small {
+  color: rgba(210, 220, 240, 0.82);
+  font-size: 12px;
+}
+
+.tg-slider-row input[type='range'] {
+  width: 100%;
+}
+
+.tg-preset-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tg-status,
+.tg-error {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+}
+
+.tg-status {
+  color: rgba(213, 222, 240, 0.84);
+}
+
+.tg-error {
+  color: #ffb2b2;
+}
+
+.tg-playing-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tg-scene-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px 8px;
+  background: linear-gradient(180deg, rgba(11, 22, 49, 0.96), rgba(11, 22, 49, 0.78));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 3;
+}
+
+.tg-scene-kicker {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(222, 229, 244, 0.88);
+  font-weight: 700;
+}
+
+.tg-scene-title {
+  display: block;
+  margin-top: 2px;
+  font-size: 29px;
+  color: #f3f7ff;
+  line-height: 1;
+}
+
+.tg-scene-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tg-chip {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #f2f6ff;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tg-chip.active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.tg-world-sheet {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(8, 16, 37, 0.94);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 2;
+}
+
+.tg-world-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tg-city-pill,
+.tg-location-pill {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #f1f6ff;
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
+.tg-city-pill.active,
+.tg-location-pill.active {
+  background: #ff7f44;
+  border-color: #ff7f44;
+  color: #fff;
+}
+
+.tg-world-sheet > button {
+  width: 100%;
+}
+
+.tg-scene-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.tg-footer-status {
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 17, 34, 0.94);
+}
+
+.tg-footer-status p {
+  margin: 0;
+  font-size: 11px;
+  color: rgba(220, 228, 243, 0.82);
+}
+
+.tg-learn-panel {
+  height: 100%;
+  overflow: auto;
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(9, 17, 34, 0.94), rgba(7, 14, 28, 0.94));
+}
+
+.tg-learn-header h3,
+.tg-learn-header p {
+  margin: 0;
+}
+
+.tg-learn-header p {
+  margin-top: 4px;
+  color: rgba(213, 222, 240, 0.86);
+  font-size: 13px;
+}
+
+.tg-learn-message {
+  margin: 10px 0 0;
+  border-radius: 12px;
+  border: 1px solid rgba(188, 233, 221, 0.36);
+  background: rgba(239, 252, 248, 0.95);
+  color: #163549;
+  padding: 10px;
+  font-size: 14px;
+}
+
+.tg-learn-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tg-learn-item {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 10px;
+}
+
+.tg-learn-item strong {
+  display: block;
+  font-size: 14px;
+  color: #f0f5ff;
+}
+
+.tg-learn-item p {
+  margin: 3px 0;
+  font-size: 12px;
+  color: rgba(213, 221, 240, 0.9);
+}
+
+.tg-learn-item span {
+  font-size: 11px;
+  color: rgba(197, 208, 232, 0.86);
+}
+
+
+@media (max-width: 430px) {
+  .tg-stage {
+    padding: 0;
+  }
+
+  .tg-phone {
+    width: 100%;
+    min-height: 100dvh;
+    min-height: 100vh;
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .tg-title {
+    font-size: 56px;
+  }
+}
+
+/* ── VN Dark-theme variables ──────────────────────────────── */
+:root {
+  --color-primary: #e8485c;
+  --color-primary-dark: #c93a4e;
+  --color-bg-dark: #1a1a2e;
+  --color-bg-card: #16213e;
+  --color-accent-gold: #f0c040;
+  --color-accent-green: #34d399;
+  --color-text: #eee;
+  --color-text-muted: rgba(255, 255, 255, 0.55);
+  --color-text-secondary: rgba(255, 255, 255, 0.7);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Phone-frame container ────────────────────────────────── */
+.game-frame {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  height: 100dvh;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #0d0d1a;
+}
+
+@media (min-width: 431px) {
+  .game-frame {
+    height: min(100vh, 932px);
+    border-radius: 24px;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 25px 50px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* ── VN Dialogue — subtitle style ────────────────────────── */
+.dialogue-subtitle {
+  padding: 0.75rem 1.25rem;
+  padding-bottom: calc(0.75rem + var(--safe-bottom));
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.25) 70%,
+    transparent 100%
+  );
+}
+
+.dialogue-speaker {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.25rem;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.dialogue-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #fff;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 0 8px rgba(0, 0, 0, 0.5);
+  min-height: 1.6em;
+}
+
+.dialogue-translation {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  margin: 0.25rem 0 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.dialogue-continue {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ── Exercise card ────────────────────────────────────────── */
+.exercise-card {
+  background: rgba(22, 33, 62, 0.95);
+  border-top: 2px solid rgba(232, 72, 92, 0.35);
+  backdrop-filter: blur(14px);
+  border-radius: 12px 12px 0 0;
+  color: var(--color-text);
+}
+
+/* ── Tong whisper overlay ─────────────────────────────────── */
+.tong-whisper {
+  background: rgba(240, 192, 64, 0.12);
+  border: 1px solid rgba(240, 192, 64, 0.3);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+/* ── Korean text styling ──────────────────────────────────── */
+.text-ko {
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+/* ── Name plate (legacy, kept for other uses) ────────────── */
+.name-plate {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Animations ───────────────────────────────────────────── */
+.slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.5s ease-out;
+}
+
+@keyframes slideInLeft {
+  from { transform: translate(-60%, 0); opacity: 0; }
+  to   { transform: translate(-50%, 0); opacity: 1; }
+}
+
+.slide-in-right {
+  animation: slideInRight 0.5s ease-out;
+}
+
+@keyframes slideInRight {
+  from { transform: translate(-40%, 0); opacity: 0; }
+  to   { transform: translate(-50%, 0); opacity: 1; }
+}
+
+/* ── Korean tooltip (portal) ──────────────────────────────── */
+.korean-tooltip {
+  pointer-events: auto;
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   City-themed messaging skins (Learn mode)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Seoul: KakaoTalk ──────────────────────────────────────── */
+[data-city-skin="seoul"] {
+  --msg-npc-bubble: #f0c040;
+  --msg-npc-text: #1a1a1a;
+  --msg-npc-border: #d9a820;
+  --msg-user-bubble: #ffffff;
+  --msg-user-text: #1a1a1a;
+  --msg-user-border: #e0d6c2;
+  --msg-accent: #f0c040;
+  --msg-accent-text: #1a1a1a;
+  --msg-avatar-bg: #f0c040;
+  --msg-bubble-radius: 18px;
+  --msg-bg: #abc1d1;
+  --msg-header-bg: #3c4043;
+  --msg-correct: #2ecc71;
+  --msg-incorrect: #e74c3c;
+  --msg-teaching-bg: #fff9e6;
+  --msg-teaching-border: #f0c040;
+}
+
+/* ── Tokyo: LINE ──────────────────────────────────────────── */
+[data-city-skin="tokyo"] {
+  --msg-npc-bubble: #06c755;
+  --msg-npc-text: #ffffff;
+  --msg-npc-border: #05a648;
+  --msg-user-bubble: #ffffff;
+  --msg-user-text: #1a1a1a;
+  --msg-user-border: #e0e0e0;
+  --msg-accent: #06c755;
+  --msg-accent-text: #ffffff;
+  --msg-avatar-bg: #06c755;
+  --msg-bubble-radius: 20px;
+  --msg-bg: #7494a5;
+  --msg-header-bg: #2e2e2e;
+  --msg-correct: #06c755;
+  --msg-incorrect: #ff4444;
+  --msg-teaching-bg: #e8f9ef;
+  --msg-teaching-border: #06c755;
+}
+
+/* ── Shanghai: WeChat ──────────────────────────────────────── */
+[data-city-skin="shanghai"] {
+  --msg-npc-bubble: #07c160;
+  --msg-npc-text: #ffffff;
+  --msg-npc-border: #06a350;
+  --msg-user-bubble: #95ec69;
+  --msg-user-text: #1a1a1a;
+  --msg-user-border: #7dd95a;
+  --msg-accent: #07c160;
+  --msg-accent-text: #ffffff;
+  --msg-avatar-bg: #07c160;
+  --msg-bubble-radius: 6px;
+  --msg-bg: #ededed;
+  --msg-header-bg: #2e2e2e;
+  --msg-correct: #07c160;
+  --msg-incorrect: #fa5151;
+  --msg-teaching-bg: #e8f9ef;
+  --msg-teaching-border: #07c160;
+}
+
+/* ── Chat layout ────────────────────────────────────────────── */
+.learn-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--msg-bg, #abc1d1);
+  overflow: hidden;
+}
+
+.learn-chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Chat row ───────────────────────────────────────────────── */
+.chat-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 85%;
+}
+
+.chat-row--left {
+  align-self: flex-start;
+}
+
+.chat-row--right {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.chat-row__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--msg-avatar-bg, #f0c040);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.chat-row__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chat-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-row__name {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.5);
+  padding-left: 4px;
+}
+
+/* ── Bubble base ────────────────────────────────────────────── */
+.msg-bubble {
+  position: relative;
+  padding: 8px 12px;
+  border-radius: var(--msg-bubble-radius, 18px);
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+  max-width: 280px;
+}
+
+.msg-bubble--npc {
+  background: var(--msg-npc-bubble, #f0c040);
+  color: var(--msg-npc-text, #1a1a1a);
+  border: 1px solid var(--msg-npc-border, transparent);
+}
+
+.msg-bubble--user {
+  background: var(--msg-user-bubble, #fff);
+  color: var(--msg-user-text, #1a1a1a);
+  border: 1px solid var(--msg-user-border, transparent);
+}
+
+/* ── Bubble tails ───────────────────────────────────────────── */
+.bubble-tail-left::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  bottom: 6px;
+  width: 0;
+  height: 0;
+  border-right: 6px solid var(--msg-npc-bubble, #f0c040);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.bubble-tail-right::before {
+  content: '';
+  position: absolute;
+  right: -6px;
+  bottom: 6px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid var(--msg-user-bubble, #fff);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.bubble-tail-left-green::before {
+  border-right-color: var(--msg-correct, #2ecc71);
+}
+
+.bubble-tail-left-red::before {
+  border-right-color: var(--msg-incorrect, #e74c3c);
+}
+
+/* ── Teaching card ──────────────────────────────────────────── */
+.teaching-card {
+  background: var(--msg-teaching-bg, #fff9e6);
+  border: 1px solid var(--msg-teaching-border, #f0c040);
+  border-radius: var(--msg-bubble-radius, 18px);
+  padding: 12px;
+  max-width: 300px;
+}
+
+.teaching-card__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--msg-npc-text, #1a1a1a);
+  margin-bottom: 8px;
+}
+
+.teaching-card__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 6px;
+}
+
+.teaching-card__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.teaching-card__item:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.teaching-card__char {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.teaching-card__roman {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+/* ── Feedback bubble ────────────────────────────────────────── */
+.feedback-bubble {
+  padding: 8px 12px;
+  border-radius: var(--msg-bubble-radius, 18px);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 280px;
+}
+
+.feedback-bubble--correct {
+  background: var(--msg-correct, #2ecc71);
+  color: #fff;
+}
+
+.feedback-bubble--incorrect {
+  background: var(--msg-incorrect, #e74c3c);
+  color: #fff;
+}
+
+/* ── Menu choices ───────────────────────────────────────────── */
+.menu-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  max-width: 300px;
+}
+
+.menu-choices__btn {
+  padding: 10px 8px;
+  border-radius: 12px;
+  border: 1.5px solid var(--msg-accent, #f0c040);
+  background: transparent;
+  color: var(--msg-npc-text, #1a1a1a);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.menu-choices__btn:hover:not(:disabled) {
+  background: var(--msg-accent, #f0c040);
+  color: var(--msg-accent-text, #1a1a1a);
+}
+
+.menu-choices__btn--selected {
+  background: var(--msg-accent, #f0c040);
+  color: var(--msg-accent-text, #1a1a1a);
+  border-color: var(--msg-accent, #f0c040);
+}
+
+.menu-choices__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Session summary ────────────────────────────────────────── */
+.session-summary {
+  background: var(--msg-teaching-bg, #fff9e6);
+  border: 1px solid var(--msg-teaching-border, #f0c040);
+  border-radius: var(--msg-bubble-radius, 18px);
+  padding: 16px;
+  max-width: 320px;
+}
+
+.session-summary__title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.session-summary__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.session-summary__stat {
+  text-align: center;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+}
+
+.session-summary__stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--msg-accent, #f0c040);
+}
+
+.session-summary__stat-label {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.session-summary__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.session-summary__item {
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+}
+
+.session-summary__level-up {
+  text-align: center;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--msg-accent, #f0c040);
+  color: var(--msg-accent-text, #1a1a1a);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* ── Exercise modal (portal) ────────────────────────────────── */
+.exercise-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.exercise-modal-backdrop--dismissing {
+  animation: fadeOut 0.3s ease-out forwards;
+}
+
+.exercise-modal-content {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px;
+  width: 90%;
+  max-width: 400px;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+.exercise-modal-content--dismissing {
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(40px); opacity: 0; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* ── Typing indicator ───────────────────────────────────────── */
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 10px 14px;
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  animation: typingBounce 1.2s infinite;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+}
+
+/* ── Session picker ─────────────────────────────────────────── */
+.session-picker {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.session-picker__header {
+  text-align: center;
+}
+
+.session-picker__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--msg-npc-text, #1a1a1a);
+}
+
+.session-picker__subtitle {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+  margin-top: 2px;
+}
+
+.session-picker__start-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: var(--msg-accent, #f0c040);
+  color: var(--msg-accent-text, #1a1a1a);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.session-picker__start-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.session-picker__start-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.session-picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-picker__item {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.session-picker__item:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.session-picker__item-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.session-picker__item-meta {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+  margin-top: 2px;
+}
+
+/* ── Sentence builder exercise ──────────────────────────────── */
+.sentence-builder__tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px;
+  border: 2px dashed rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.sentence-builder__tile {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--msg-accent, #f0c040);
+  color: var(--msg-accent-text, #1a1a1a);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.sentence-builder__tile--placed {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sentence-builder__tile--answer {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--msg-npc-text, #1a1a1a);
+}
+
+/* ── Fill-blank exercise ────────────────────────────────────── */
+.fill-blank__sentence {
+  font-size: 18px;
+  line-height: 1.6;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.fill-blank__blank {
+  display: inline-block;
+  min-width: 60px;
+  border-bottom: 2px solid var(--msg-accent, #f0c040);
+  padding: 2px 4px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--msg-accent, #f0c040);
+}
+
+.fill-blank__options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.fill-blank__grammar-note {
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--msg-teaching-bg, #fff9e6);
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+/* ── Pronunciation select exercise ──────────────────────────── */
+.pron-select__target {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.pron-select__options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pron-select__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 14px;
+}
+
+.pron-select__option:hover:not(:disabled) {
+  border-color: var(--msg-accent, #f0c040);
+}
+
+.pron-select__option--selected {
+  border-color: var(--msg-accent, #f0c040);
+  background: rgba(240, 192, 64, 0.1);
+}
+
+.pron-select__option--correct {
+  border-color: var(--msg-correct, #2ecc71);
+  background: rgba(46, 204, 113, 0.1);
+}
+
+.pron-select__option--incorrect {
+  border-color: var(--msg-incorrect, #e74c3c);
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.pron-select__play-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--msg-accent, #f0c040);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 
 </style>
 <style>
@@ -493,6 +2160,86 @@ textarea:focus {
 
 <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--muted);">Core Tokens</h3>
 <div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #e8485c;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Color Primary</div>
+      <div class="ds-color-value">#e8485c</div>
+      <div class="ds-color-token">--color-primary</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #c93a4e;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Color Primary Dark</div>
+      <div class="ds-color-value">#c93a4e</div>
+      <div class="ds-color-token">--color-primary-dark</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #1a1a2e;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Color Bg Dark</div>
+      <div class="ds-color-value">#1a1a2e</div>
+      <div class="ds-color-token">--color-bg-dark</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #16213e;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Color Bg Card</div>
+      <div class="ds-color-value">#16213e</div>
+      <div class="ds-color-token">--color-bg-card</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #f0c040;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Color Accent Gold</div>
+      <div class="ds-color-value">#f0c040</div>
+      <div class="ds-color-token">--color-accent-gold</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #34d399;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Color Accent Green</div>
+      <div class="ds-color-value">#34d399</div>
+      <div class="ds-color-token">--color-accent-green</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #eee;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Color Text</div>
+      <div class="ds-color-value">#eee</div>
+      <div class="ds-color-token">--color-text</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(255, 255, 255, 0.55);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Color Text Muted</div>
+      <div class="ds-color-value">rgba(255, 255, 255, 0.55)</div>
+      <div class="ds-color-token">--color-text-muted</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(255, 255, 255, 0.7);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Color Text Secondary</div>
+      <div class="ds-color-value">rgba(255, 255, 255, 0.7)</div>
+      <div class="ds-color-token">--color-text-secondary</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: env(safe-area-inset-bottom, 0px);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Safe Bottom</div>
+      <div class="ds-color-value">env(safe-area-inset-bottom, 0px)</div>
+      <div class="ds-color-token">--safe-bottom</div>
+    </div>
+  </div>
 </div>
 
 <h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
@@ -569,6 +2316,402 @@ textarea:focus {
       <div class="ds-color-name">Mint Soft</div>
       <div class="ds-color-value">#d1fae5</div>
       <div class="ds-color-token">--mint-soft</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme ([data-city-skin="seoul"])</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #f0c040;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Npc Bubble</div>
+      <div class="ds-color-value">#f0c040</div>
+      <div class="ds-color-token">--msg-npc-bubble</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #1a1a1a;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Npc Text</div>
+      <div class="ds-color-value">#1a1a1a</div>
+      <div class="ds-color-token">--msg-npc-text</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #d9a820;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Npc Border</div>
+      <div class="ds-color-value">#d9a820</div>
+      <div class="ds-color-token">--msg-npc-border</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #ffffff;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg User Bubble</div>
+      <div class="ds-color-value">#ffffff</div>
+      <div class="ds-color-token">--msg-user-bubble</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #1a1a1a;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg User Text</div>
+      <div class="ds-color-value">#1a1a1a</div>
+      <div class="ds-color-token">--msg-user-text</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #e0d6c2;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg User Border</div>
+      <div class="ds-color-value">#e0d6c2</div>
+      <div class="ds-color-token">--msg-user-border</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #f0c040;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Accent</div>
+      <div class="ds-color-value">#f0c040</div>
+      <div class="ds-color-token">--msg-accent</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #1a1a1a;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Accent Text</div>
+      <div class="ds-color-value">#1a1a1a</div>
+      <div class="ds-color-token">--msg-accent-text</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #f0c040;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Avatar Bg</div>
+      <div class="ds-color-value">#f0c040</div>
+      <div class="ds-color-token">--msg-avatar-bg</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: 18px;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Bubble Radius</div>
+      <div class="ds-color-value">18px</div>
+      <div class="ds-color-token">--msg-bubble-radius</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #abc1d1;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Bg</div>
+      <div class="ds-color-value">#abc1d1</div>
+      <div class="ds-color-token">--msg-bg</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #3c4043;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Header Bg</div>
+      <div class="ds-color-value">#3c4043</div>
+      <div class="ds-color-token">--msg-header-bg</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #2ecc71;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Correct</div>
+      <div class="ds-color-value">#2ecc71</div>
+      <div class="ds-color-token">--msg-correct</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #e74c3c;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Incorrect</div>
+      <div class="ds-color-value">#e74c3c</div>
+      <div class="ds-color-token">--msg-incorrect</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #fff9e6;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Teaching Bg</div>
+      <div class="ds-color-value">#fff9e6</div>
+      <div class="ds-color-token">--msg-teaching-bg</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #f0c040;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Teaching Border</div>
+      <div class="ds-color-value">#f0c040</div>
+      <div class="ds-color-token">--msg-teaching-border</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme ([data-city-skin="tokyo"])</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #06c755;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Npc Bubble</div>
+      <div class="ds-color-value">#06c755</div>
+      <div class="ds-color-token">--msg-npc-bubble</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #ffffff;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Npc Text</div>
+      <div class="ds-color-value">#ffffff</div>
+      <div class="ds-color-token">--msg-npc-text</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #05a648;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Npc Border</div>
+      <div class="ds-color-value">#05a648</div>
+      <div class="ds-color-token">--msg-npc-border</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #ffffff;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg User Bubble</div>
+      <div class="ds-color-value">#ffffff</div>
+      <div class="ds-color-token">--msg-user-bubble</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #1a1a1a;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg User Text</div>
+      <div class="ds-color-value">#1a1a1a</div>
+      <div class="ds-color-token">--msg-user-text</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #e0e0e0;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg User Border</div>
+      <div class="ds-color-value">#e0e0e0</div>
+      <div class="ds-color-token">--msg-user-border</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #06c755;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Accent</div>
+      <div class="ds-color-value">#06c755</div>
+      <div class="ds-color-token">--msg-accent</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #ffffff;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Accent Text</div>
+      <div class="ds-color-value">#ffffff</div>
+      <div class="ds-color-token">--msg-accent-text</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #06c755;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Avatar Bg</div>
+      <div class="ds-color-value">#06c755</div>
+      <div class="ds-color-token">--msg-avatar-bg</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: 20px;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Bubble Radius</div>
+      <div class="ds-color-value">20px</div>
+      <div class="ds-color-token">--msg-bubble-radius</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #7494a5;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Bg</div>
+      <div class="ds-color-value">#7494a5</div>
+      <div class="ds-color-token">--msg-bg</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #2e2e2e;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Header Bg</div>
+      <div class="ds-color-value">#2e2e2e</div>
+      <div class="ds-color-token">--msg-header-bg</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #06c755;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Correct</div>
+      <div class="ds-color-value">#06c755</div>
+      <div class="ds-color-token">--msg-correct</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #ff4444;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Incorrect</div>
+      <div class="ds-color-value">#ff4444</div>
+      <div class="ds-color-token">--msg-incorrect</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #e8f9ef;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Teaching Bg</div>
+      <div class="ds-color-value">#e8f9ef</div>
+      <div class="ds-color-token">--msg-teaching-bg</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #06c755;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Teaching Border</div>
+      <div class="ds-color-value">#06c755</div>
+      <div class="ds-color-token">--msg-teaching-border</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme ([data-city-skin="shanghai"])</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #07c160;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Npc Bubble</div>
+      <div class="ds-color-value">#07c160</div>
+      <div class="ds-color-token">--msg-npc-bubble</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #ffffff;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Npc Text</div>
+      <div class="ds-color-value">#ffffff</div>
+      <div class="ds-color-token">--msg-npc-text</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #06a350;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Npc Border</div>
+      <div class="ds-color-value">#06a350</div>
+      <div class="ds-color-token">--msg-npc-border</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #95ec69;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg User Bubble</div>
+      <div class="ds-color-value">#95ec69</div>
+      <div class="ds-color-token">--msg-user-bubble</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #1a1a1a;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg User Text</div>
+      <div class="ds-color-value">#1a1a1a</div>
+      <div class="ds-color-token">--msg-user-text</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #7dd95a;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg User Border</div>
+      <div class="ds-color-value">#7dd95a</div>
+      <div class="ds-color-token">--msg-user-border</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #07c160;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Accent</div>
+      <div class="ds-color-value">#07c160</div>
+      <div class="ds-color-token">--msg-accent</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #ffffff;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Accent Text</div>
+      <div class="ds-color-value">#ffffff</div>
+      <div class="ds-color-token">--msg-accent-text</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #07c160;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Avatar Bg</div>
+      <div class="ds-color-value">#07c160</div>
+      <div class="ds-color-token">--msg-avatar-bg</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: 6px;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Bubble Radius</div>
+      <div class="ds-color-value">6px</div>
+      <div class="ds-color-token">--msg-bubble-radius</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #ededed;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Bg</div>
+      <div class="ds-color-value">#ededed</div>
+      <div class="ds-color-token">--msg-bg</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #2e2e2e;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Header Bg</div>
+      <div class="ds-color-value">#2e2e2e</div>
+      <div class="ds-color-token">--msg-header-bg</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #07c160;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Correct</div>
+      <div class="ds-color-value">#07c160</div>
+      <div class="ds-color-token">--msg-correct</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #fa5151;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Incorrect</div>
+      <div class="ds-color-value">#fa5151</div>
+      <div class="ds-color-token">--msg-incorrect</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #e8f9ef;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Teaching Bg</div>
+      <div class="ds-color-value">#e8f9ef</div>
+      <div class="ds-color-token">--msg-teaching-bg</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #07c160;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Msg Teaching Border</div>
+      <div class="ds-color-value">#07c160</div>
+      <div class="ds-color-token">--msg-teaching-border</div>
     </div>
   </div>
 </div>
@@ -804,6 +2947,11 @@ textarea:focus {
         <button class="ghost">Ghost</button>
         <button disabled>Disabled</button>
       </div>
+      <div class="ds-component-label">Game CTAs</div>
+      <div class="ds-component-row">
+        <button class="btn-go">Let's go</button>
+        <button class="btn-skip">Skip</button>
+      </div>
     </div>
   </section>
 
@@ -930,26 +3078,21 @@ textarea:focus {
 
   <hr class="ds-divider">
 
-  <!-- 11. CHAT BUBBLES -->
+  <!-- 11. DEMO ACCESS BAR -->
   <section class="ds-section">
     <div class="ds-section-title">11 / Components</div>
-    <h2 class="ds-section-heading">Chat Bubbles</h2>
-    <p class="ds-section-desc">Character-specific color coding for the conversation UI.</p>
+    <h2 class="ds-section-heading">Demo Access Bar</h2>
+    <p class="ds-section-desc">Sticky password bar shown in demo/preview mode.</p>
 
 
     <div class="ds-component-card">
-      <div style="display: flex; flex-direction: column; gap: 10px; max-width: 400px;">
-        <div class="chat-bubble chat-character">
-          <strong style="font-size: 12px;">Ha-eun</strong><br>
-          <span class="korean">&#xC548;&#xB155;&#xD558;&#xC138;&#xC694;! &#xC624;&#xB298; &#xBB50; &#xD560; &#xAC70;&#xC608;&#xC694;?</span>
+      <div class="demo-access-bar" style="position: relative;">
+        <div class="demo-access-row">
+          <span style="font-size: 13px; font-weight: 600;">Demo access</span>
+          <input type="password" placeholder="Enter password" style="max-width: 180px;">
+          <button style="font-size: 12px; padding: 6px 12px;">Unlock</button>
         </div>
-        <div class="chat-bubble chat-tong">
-          <strong style="font-size: 12px; color: var(--mint);">Tong</strong><br>
-          Try asking about her weekend plans!
-        </div>
-        <div class="chat-bubble chat-user">
-          <span class="korean">&#xC8FC;&#xB9D0;&#xC5D0; &#xBB50; &#xD574;&#xC694;?</span>
-        </div>
+        <p class="demo-access-hint">Contact us for the demo password.</p>
       </div>
     </div>
   </section>
@@ -1081,11 +3224,11 @@ textarea:focus {
         <div style="font-size: 12px; color: var(--muted);">Cafe Scene</div>
       </div>
       <div class="mobile-body" style="max-height: 200px;">
-        <div class="chat-bubble chat-character">
+        <div style="border-radius: 14px; padding: 10px 12px; font-size: 14px; background: #f8f1ff; border: 1px solid #dfd0f5;">
           <strong style="font-size: 12px;">Ha-eun</strong><br>
           <span class="korean">&#xC5B4;&#xC11C; &#xC624;&#xC138;&#xC694;!</span>
         </div>
-        <div class="chat-bubble chat-user">
+        <div style="border-radius: 14px; padding: 10px 12px; font-size: 14px; background: #fff2e6; border: 1px solid #f3d4b8; margin-left: auto;">
           <span class="korean">&#xB124;!</span>
         </div>
       </div>
@@ -1124,7 +3267,525 @@ textarea:focus {
     <h2 class="ds-section-heading">Animations</h2>
     <p class="ds-section-desc">All @keyframes defined in globals.css.</p>
 
-<p style="color: var(--muted); font-size: 14px;">No @keyframes found in globals.css.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px;">
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">blink</div>
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: blink 2s ease infinite;">
+      blink
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">fadeSlideUp</div>
+    <div class="ds-anim-box" style="background: #0f766e; animation: fadeSlideUp 2s ease infinite;">
+      fadeSlideUp
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">slideUp</div>
+    <div class="ds-anim-box" style="background: #4a90d9; animation: slideUp 2s ease infinite;">
+      slideUp
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">fadeIn</div>
+    <div class="ds-anim-box" style="background: #e8485c; animation: fadeIn 2s ease infinite;">
+      fadeIn
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">slideInLeft</div>
+    <div class="ds-anim-box" style="background: #f0c040; animation: slideInLeft 2s ease infinite;">
+      slideInLeft
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">slideInRight</div>
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: slideInRight 2s ease infinite;">
+      slideInRight
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">slideUp</div>
+    <div class="ds-anim-box" style="background: #06b6d4; animation: slideUp 2s ease infinite;">
+      slideUp
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">slideDown</div>
+    <div class="ds-anim-box" style="background: #ec4899; animation: slideDown 2s ease infinite;">
+      slideDown
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">fadeOut</div>
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: fadeOut 2s ease infinite;">
+      fadeOut
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">typingBounce</div>
+    <div class="ds-anim-box" style="background: #0f766e; animation: typingBounce 2s ease infinite;">
+      typingBounce
+    </div>
+  </div>
+</div>
+  </section>
+
+  <hr class="ds-divider">
+
+  <!-- 18. GAME SHELL & HUD -->
+  <section class="ds-section">
+    <div class="ds-section-title">18 / Game Mode</div>
+    <h2 class="ds-section-heading">Game Shell & HUD</h2>
+    <p class="ds-section-desc">Top-level game container and heads-up display for scores and location.</p>
+
+
+    <div class="ds-component-card" style="background: #0d0d1a; color: #eee; border-radius: 18px; padding: 0; overflow: hidden;">
+      <div style="position: relative; min-height: 120px;">
+        <div class="scene-hud" style="position: relative; background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);">
+          <div>
+            <span class="scene-hud-location">Hongdae</span>
+            <span class="scene-hud-dot">&middot;</span>
+            <span class="scene-hud-location">Cafe</span>
+          </div>
+          <div class="scene-hud-scores">
+            <span class="scene-hud-score"><b>12</b> XP</span>
+            <span class="scene-hud-score"><b>3</b> Streak</span>
+          </div>
+        </div>
+        <div style="padding: 12px; color: rgba(255,255,255,0.5); font-size: 13px;">
+          .game-frame &gt; .scene-root &gt; .scene-hud
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="ds-divider">
+
+  <!-- 19. TONG ENTRY (OPENING) -->
+  <section class="ds-section">
+    <div class="ds-section-title">19 / Game Mode</div>
+    <h2 class="ds-section-heading">Tong Entry (Opening)</h2>
+    <p class="ds-section-desc">Ambient background, phone container, and branded entry panel.</p>
+
+
+    <div class="ds-component-card" style="background: #020717; border-radius: 18px; padding: 20px; color: #eef2fa;">
+      <div style="position: relative; max-width: 300px; margin: 0 auto;">
+        <div style="border: 1px solid rgba(255,255,255,0.14); border-radius: 28px; background: linear-gradient(180deg, #151d3a, #10172f); padding: 22px 20px; text-align: center;">
+          <div style="width: 64px; height: 64px; margin: 0 auto 8px; border-radius: 50%; background: linear-gradient(135deg, #f3d36a, #e4b43a); display: grid; place-items: center; font-size: 28px; font-weight: 800; color: #1d2032;">T</div>
+          <p class="tg-brand">TONG</p>
+          <h1 class="tg-title" style="font-size: 36px;">Learn<br><span class="tg-title-accent">Korean</span></h1>
+          <p class="tg-copy">Immersive language learning through conversation</p>
+          <div class="tg-actions" style="margin-top: 12px;">
+            <button style="flex: 1;">Start</button>
+            <button class="secondary" style="flex: 1; border-color: rgba(255,255,255,0.2); color: #eee;">Sign in</button>
+          </div>
+          <div class="tg-city-list" style="margin-top: 12px;">
+            <span>Seoul</span><span>Tokyo</span><span>Shanghai</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="ds-divider">
+
+  <!-- 20. TONG ONBOARDING -->
+  <section class="ds-section">
+    <div class="ds-section-title">20 / Game Mode</div>
+    <h2 class="ds-section-heading">Tong Onboarding</h2>
+    <p class="ds-section-desc">Language proficiency sliders, preset buttons, and status messages.</p>
+
+
+    <div class="ds-component-card" style="background: #10172f; border-radius: 18px; padding: 0; overflow: hidden; max-width: 360px; color: #eef2fa;">
+      <div class="tg-onboarding-panel">
+        <div class="tg-onboarding-avatar">T</div>
+        <p class="tg-onboarding-line">How much <span class="tg-onboarding-line-strong">Korean</span> do you know?</p>
+        <div class="tg-slider-card">
+          <header>
+            <p>Korean</p>
+            <span>Beginner</span>
+          </header>
+          <div class="tg-slider-row">
+            <div class="tg-slider-head">
+              <strong>Korean</strong>
+              <span>1 / 5</span>
+            </div>
+            <input type="range" min="1" max="5" value="1" style="width: 100%;">
+            <small>No experience</small>
+          </div>
+        </div>
+        <div class="tg-preset-row">
+          <button class="secondary" style="font-size: 12px; padding: 8px; border-color: rgba(255,255,255,0.2); color: #eee;">Complete Beginner</button>
+          <button class="secondary" style="font-size: 12px; padding: 8px; border-color: rgba(255,255,255,0.2); color: #eee;">Some Basics</button>
+          <button class="secondary" style="font-size: 12px; padding: 8px; border-color: rgba(255,255,255,0.2); color: #eee;">Conversational</button>
+        </div>
+        <p class="tg-status">Ready to begin</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="ds-divider">
+
+  <!-- 21. TONG PLAYING SHELL -->
+  <section class="ds-section">
+    <div class="ds-section-title">21 / Game Mode</div>
+    <h2 class="ds-section-heading">Tong Playing Shell</h2>
+    <p class="ds-section-desc">In-game header, world sheet, scene body, and footer status.</p>
+
+
+    <div class="ds-component-card" style="background: #000; border-radius: 18px; padding: 0; overflow: hidden; max-width: 360px;">
+      <div style="background: linear-gradient(180deg, rgba(11,22,49,0.96), rgba(11,22,49,0.78)); border-bottom: 1px solid rgba(255,255,255,0.12); padding: 10px 14px 8px; color: #f3f7ff;">
+        <p class="tg-scene-kicker">Hangout</p>
+        <span class="tg-scene-title" style="font-size: 22px;">Hongdae</span>
+        <div class="tg-scene-actions" style="margin-top: 6px;">
+          <button class="tg-chip active">Chat</button>
+          <button class="tg-chip">Learn</button>
+        </div>
+      </div>
+      <div style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(8,16,37,0.94); display: flex; gap: 8px;">
+        <button class="tg-city-pill active">Seoul</button>
+        <button class="tg-location-pill">Cafe</button>
+        <button class="tg-location-pill">Street</button>
+      </div>
+      <div style="padding: 8px 12px; background: rgba(10,17,34,0.94); border-top: 1px solid rgba(255,255,255,0.12);">
+        <p style="margin: 0; font-size: 11px; color: rgba(220,228,243,0.82);">Greet Ha-eun at the cafe</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="ds-divider">
+
+  <!-- 22. VN DIALOGUE -->
+  <section class="ds-section">
+    <div class="ds-section-title">22 / Game Mode</div>
+    <h2 class="ds-section-heading">VN Dialogue</h2>
+    <p class="ds-section-desc">Visual-novel subtitle overlay for character speech.</p>
+
+
+    <div class="ds-component-card" style="background: #1a1a2e; border-radius: 18px; padding: 0; overflow: hidden; min-height: 180px; position: relative;">
+      <div style="position: absolute; inset: 0; background: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22/>') center/cover; background-color: #2a2a4e;"></div>
+      <div class="dialogue-subtitle" style="position: absolute; bottom: 0; left: 0; right: 0;">
+        <div class="dialogue-speaker" style="color: #f0c040;">HA-EUN</div>
+        <div class="dialogue-text">&#xC548;&#xB155;&#xD558;&#xC138;&#xC694;! &#xC624;&#xB298; &#xBB50; &#xD560; &#xAC70;&#xC608;&#xC694;?</div>
+        <div class="dialogue-translation">Hello! What are you going to do today?</div>
+        <div class="dialogue-continue">Tap to continue</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="ds-divider">
+
+  <!-- 23. PROFICIENCY GAUGE -->
+  <section class="ds-section">
+    <div class="ds-section-title">23 / Game Mode</div>
+    <h2 class="ds-section-heading">Proficiency Gauge</h2>
+    <p class="ds-section-desc">Language level sliders with tick marks and CEFR mapping.</p>
+
+
+    <div class="ds-component-card" style="max-width: 400px;">
+      <div class="proficiency-panel" style="animation: none;">
+        <div class="proficiency-lang">
+          <div class="proficiency-lang-header">
+            <span class="proficiency-lang-name">Korean</span>
+            <span class="proficiency-lang-level">Beginner</span>
+          </div>
+          <input type="range" class="proficiency-slider" min="0" max="4" value="1">
+          <div class="proficiency-ticks">
+            <div class="proficiency-tick">
+              <div class="proficiency-tick-dot"></div>
+              <div class="proficiency-tick-num">0</div>
+              <div class="proficiency-tick-label">None</div>
+            </div>
+            <div class="proficiency-tick active">
+              <div class="proficiency-tick-dot"></div>
+              <div class="proficiency-tick-num">1</div>
+              <div class="proficiency-tick-label">Basic</div>
+            </div>
+            <div class="proficiency-tick">
+              <div class="proficiency-tick-dot"></div>
+              <div class="proficiency-tick-num">2</div>
+              <div class="proficiency-tick-label">Elementary</div>
+            </div>
+            <div class="proficiency-tick">
+              <div class="proficiency-tick-dot"></div>
+              <div class="proficiency-tick-num">3</div>
+              <div class="proficiency-tick-label">Intermediate</div>
+            </div>
+            <div class="proficiency-tick">
+              <div class="proficiency-tick-dot"></div>
+              <div class="proficiency-tick-num">4</div>
+              <div class="proficiency-tick-label">Advanced</div>
+            </div>
+          </div>
+          <div class="proficiency-level-map">
+            <span class="proficiency-level-tag">TOPIK I</span>
+            <span class="proficiency-level-question">Can you read Hangul?</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="ds-divider">
+
+  <!-- 24. CHAT MESSAGING -->
+  <section class="ds-section">
+    <div class="ds-section-title">24 / Game Mode</div>
+    <h2 class="ds-section-heading">Chat Messaging</h2>
+    <p class="ds-section-desc">Themed messaging UI with city skins (KakaoTalk, LINE, WeChat).</p>
+
+
+    <div class="ds-component-card" data-city-skin="seoul" style="padding: 0; overflow: hidden; border-radius: 18px; max-width: 360px;">
+      <div class="learn-chat-container" style="height: 240px;">
+        <div class="learn-chat-scroll">
+          <div class="chat-row chat-row--left">
+            <div class="chat-row__avatar">&#x1F425;</div>
+            <div class="chat-row__body">
+              <div class="chat-row__name">Ha-eun</div>
+              <div class="msg-bubble msg-bubble--npc bubble-tail-left">
+                <span class="korean">&#xC548;&#xB155;&#xD558;&#xC138;&#xC694;!</span>
+              </div>
+            </div>
+          </div>
+          <div class="chat-row chat-row--right">
+            <div class="chat-row__body">
+              <div class="msg-bubble msg-bubble--user bubble-tail-right">
+                <span class="korean">&#xC548;&#xB155;!</span>
+              </div>
+            </div>
+          </div>
+          <div class="chat-row chat-row--left">
+            <div class="chat-row__avatar">&#x1F425;</div>
+            <div class="chat-row__body">
+              <div class="msg-bubble msg-bubble--npc bubble-tail-left-green" style="background: var(--msg-correct); color: #fff;">
+                Correct!
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="ds-divider">
+
+  <!-- 25. EXERCISES -->
+  <section class="ds-section">
+    <div class="ds-section-title">25 / Game Mode</div>
+    <h2 class="ds-section-heading">Exercises</h2>
+    <p class="ds-section-desc">Interactive exercise types: fill-blank, pronunciation select, sentence builder.</p>
+
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="ds-component-card" data-city-skin="seoul">
+        <div class="ds-component-label">Fill in the Blank</div>
+        <div class="fill-blank__sentence">
+          &#xC800;&#xB294; <span class="fill-blank__blank">&#xD559;&#xC0DD;</span> &#xC785;&#xB2C8;&#xB2E4;
+        </div>
+        <div class="fill-blank__options">
+          <button class="secondary" style="font-size: 13px; padding: 8px;">&#xD559;&#xC0DD;</button>
+          <button class="secondary" style="font-size: 13px; padding: 8px;">&#xC120;&#xC0DD;&#xB2D8;</button>
+        </div>
+        <div class="fill-blank__grammar-note">Topic particle: &#xC740;/&#xB294; marks the topic of a sentence.</div>
+      </div>
+      <div class="ds-component-card" data-city-skin="seoul">
+        <div class="ds-component-label">Sentence Builder</div>
+        <div class="sentence-builder__tiles" style="min-height: 44px; margin-bottom: 10px;">
+          <span class="sentence-builder__tile sentence-builder__tile--answer">&#xC800;&#xB294;</span>
+          <span class="sentence-builder__tile sentence-builder__tile--answer">&#xD559;&#xC0DD;</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <span class="sentence-builder__tile sentence-builder__tile--placed">&#xC800;&#xB294;</span>
+          <span class="sentence-builder__tile">&#xC785;&#xB2C8;&#xB2E4;</span>
+          <span class="sentence-builder__tile sentence-builder__tile--placed">&#xD559;&#xC0DD;</span>
+        </div>
+      </div>
+    </div>
+    <div class="ds-component-card" data-city-skin="seoul" style="margin-top: 16px; max-width: 300px;">
+      <div class="ds-component-label">Pronunciation Select</div>
+      <div class="pron-select__target">&#xD55C;</div>
+      <div class="pron-select__options">
+        <button class="pron-select__option pron-select__option--correct">
+          <span class="pron-select__play-icon">&#x25B6;</span>
+          <span>han</span>
+        </button>
+        <button class="pron-select__option">
+          <span class="pron-select__play-icon">&#x25B6;</span>
+          <span>hun</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <hr class="ds-divider">
+
+  <!-- 26. TEACHING & FEEDBACK -->
+  <section class="ds-section">
+    <div class="ds-section-title">26 / Game Mode</div>
+    <h2 class="ds-section-heading">Teaching & Feedback</h2>
+    <p class="ds-section-desc">Teaching cards for vocabulary and feedback bubbles for exercise results.</p>
+
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;" data-city-skin="seoul">
+      <div class="ds-component-card" style="padding: 0;">
+        <div class="teaching-card" style="max-width: none;">
+          <div class="teaching-card__title">Basic Vowels</div>
+          <div class="teaching-card__grid">
+            <div class="teaching-card__item">
+              <span class="teaching-card__char">&#xC544;</span>
+              <span class="teaching-card__roman">a</span>
+            </div>
+            <div class="teaching-card__item">
+              <span class="teaching-card__char">&#xC5B4;</span>
+              <span class="teaching-card__roman">eo</span>
+            </div>
+            <div class="teaching-card__item">
+              <span class="teaching-card__char">&#xC624;</span>
+              <span class="teaching-card__roman">o</span>
+            </div>
+            <div class="teaching-card__item">
+              <span class="teaching-card__char">&#xC6B0;</span>
+              <span class="teaching-card__roman">u</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ds-component-card">
+        <div class="ds-component-label">Feedback Bubbles</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="feedback-bubble feedback-bubble--correct">Great job! That's correct.</div>
+          <div class="feedback-bubble feedback-bubble--incorrect">Not quite. Try again!</div>
+        </div>
+        <div class="ds-component-label" style="margin-top: 12px;">Menu Choices</div>
+        <div class="menu-choices">
+          <button class="menu-choices__btn menu-choices__btn--selected">Greetings</button>
+          <button class="menu-choices__btn">Food</button>
+          <button class="menu-choices__btn">Directions</button>
+          <button class="menu-choices__btn">Shopping</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="ds-divider">
+
+  <!-- 27. SESSION UI -->
+  <section class="ds-section">
+    <div class="ds-section-title">27 / Game Mode</div>
+    <h2 class="ds-section-heading">Session UI</h2>
+    <p class="ds-section-desc">Session picker, summary, and typing indicator.</p>
+
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;" data-city-skin="seoul">
+      <div class="ds-component-card" style="padding: 0; overflow: hidden; border-radius: 18px;">
+        <div class="session-picker" style="height: auto; background: var(--msg-bg, #abc1d1);">
+          <div class="session-picker__header">
+            <div class="session-picker__title">Choose a Lesson</div>
+            <div class="session-picker__subtitle">Seoul &middot; Beginner</div>
+          </div>
+          <div class="session-picker__list">
+            <div class="session-picker__item">
+              <div class="session-picker__item-title">Greetings</div>
+              <div class="session-picker__item-meta">5 min &middot; 10 words</div>
+            </div>
+            <div class="session-picker__item">
+              <div class="session-picker__item-title">Ordering Food</div>
+              <div class="session-picker__item-meta">8 min &middot; 15 words</div>
+            </div>
+          </div>
+          <button class="session-picker__start-btn">Start Lesson</button>
+        </div>
+      </div>
+      <div class="ds-component-card">
+        <div class="session-summary" style="max-width: none;">
+          <div class="session-summary__title">Session Complete!</div>
+          <div class="session-summary__stats">
+            <div class="session-summary__stat">
+              <div class="session-summary__stat-value">8</div>
+              <div class="session-summary__stat-label">Words</div>
+            </div>
+            <div class="session-summary__stat">
+              <div class="session-summary__stat-value">85%</div>
+              <div class="session-summary__stat-label">Accuracy</div>
+            </div>
+          </div>
+          <div class="session-summary__items">
+            <span class="session-summary__item">&#xC548;&#xB155;</span>
+            <span class="session-summary__item">&#xAC10;&#xC0AC;</span>
+            <span class="session-summary__item">&#xB9DB;&#xC788;&#xC5B4;&#xC694;</span>
+          </div>
+          <div class="session-summary__level-up">Level Up! Beginner 2</div>
+        </div>
+        <div class="ds-component-label" style="margin-top: 12px;">Typing Indicator</div>
+        <div class="typing-indicator" style="background: var(--msg-npc-bubble, #f0c040); border-radius: 18px; display: inline-flex;">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="ds-divider">
+
+  <!-- 28. KOREAN TEXT -->
+  <section class="ds-section">
+    <div class="ds-section-title">28 / Game Mode</div>
+    <h2 class="ds-section-heading">Korean Text</h2>
+    <p class="ds-section-desc">Tooltip tokens, whisper overlays, and CJK font styling.</p>
+
+
+    <div class="ds-component-card">
+      <div class="ds-component-label">Korean Tokens (hover for tooltip)</div>
+      <p style="font-size: 18px; line-height: 2;">
+        <span class="ko-token" data-tooltip="hello">&#xC548;&#xB155;&#xD558;&#xC138;&#xC694;</span>!
+        <span class="ko-token" data-tooltip="today">&#xC624;&#xB298;</span>
+        <span class="ko-token" data-tooltip="weather (subject)">&#xB0A0;&#xC528;&#xAC00;</span>
+        <span class="ko-token" data-tooltip="good">&#xC88B;&#xC544;&#xC694;</span>.
+      </p>
+      <div class="ds-component-label" style="margin-top: 12px;">Name Plates</div>
+      <div style="display: flex; gap: 8px;">
+        <span class="name-plate" style="background: #e8485c;">Ha-eun</span>
+        <span class="name-plate" style="background: #f0c040; color: #1a1a2e;">Tong</span>
+      </div>
+      <div class="ds-component-label" style="margin-top: 12px;">Tong Whisper</div>
+      <div class="tong-whisper" style="padding: 12px 14px; max-width: 320px;">
+        <strong style="color: #f0c040; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;">Tong</strong>
+        <p style="margin: 4px 0 0; font-size: 13px; color: rgba(255,255,255,0.88); line-height: 1.45;">Try using the formal ending &#xD569;&#xB2C8;&#xB2E4; here!</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="ds-divider">
+
+  <!-- 29. ANIMATION UTILITIES -->
+  <section class="ds-section">
+    <div class="ds-section-title">29 / Foundation</div>
+    <h2 class="ds-section-heading">Animation Utilities</h2>
+    <p class="ds-section-desc">CSS utility classes for entry animations on components.</p>
+
+
+    <div class="ds-component-card">
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: center;">
+        <div>
+          <div class="slide-up" style="background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; font-size: 13px; font-weight: 600;">slide-up</div>
+          <div style="font-size: 11px; color: var(--muted); margin-top: 6px;">.slide-up</div>
+        </div>
+        <div>
+          <div class="fade-in" style="background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; font-size: 13px; font-weight: 600;">fade-in</div>
+          <div style="font-size: 11px; color: var(--muted); margin-top: 6px;">.fade-in</div>
+        </div>
+        <div>
+          <div class="slide-in-left" style="background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; font-size: 13px; font-weight: 600; position: relative; left: 50%; transform: translateX(-50%);">left</div>
+          <div style="font-size: 11px; color: var(--muted); margin-top: 6px;">.slide-in-left</div>
+        </div>
+        <div>
+          <div class="slide-in-right" style="background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; font-size: 13px; font-weight: 600; position: relative; left: 50%; transform: translateX(-50%);">right</div>
+          <div style="font-size: 11px; color: var(--muted); margin-top: 6px;">.slide-in-right</div>
+        </div>
+      </div>
+    </div>
   </section>
 
 </div>
