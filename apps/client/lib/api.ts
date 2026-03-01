@@ -210,7 +210,7 @@ export function fetchDictionary(term: string, lang: 'ko' | 'ja' | 'zh' = 'ko') {
   );
 }
 
-export type ProficiencyLevel = 'none' | 'beginner' | 'intermediate' | 'advanced';
+export type ProficiencyLevel = 'none' | 'beginner' | 'intermediate' | 'advanced' | 'native';
 
 export interface UserProficiency {
   ko: ProficiencyLevel;
@@ -218,23 +218,26 @@ export interface UserProficiency {
   zh: ProficiencyLevel;
 }
 
-export function startOrResumeGame(proficiency?: UserProficiency) {
-  const prof = proficiency ?? { ko: 'beginner', ja: 'none', zh: 'none' };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function startOrResumeGame(params?: any) {
+  const prof = params?.proficiency ?? params ?? { ko: 'beginner', ja: 'none', zh: 'none' };
+  const userId = params?.userId ?? 'demo-user-1';
+  const city = params?.city ?? 'seoul';
+  const profile = params?.profile ?? {
+    nativeLanguage: 'en',
+    targetLanguages: ['ko', 'ja', 'zh'],
+    proficiency: prof,
+  };
   return apiFetch<{
     sessionId: string;
     city: 'seoul' | 'tokyo' | 'shanghai';
     sceneId: string;
     actions: string[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    [key: string]: any;
   }>('/api/v1/game/start-or-resume', {
     method: 'POST',
-    body: JSON.stringify({
-      userId: 'demo-user-1',
-      profile: {
-        nativeLanguage: 'en',
-        targetLanguages: ['ko', 'ja', 'zh'],
-        proficiency: prof,
-      },
-    }),
+    body: JSON.stringify({ userId, city, profile, preferRomance: params?.preferRomance }),
   });
 }
 
@@ -274,18 +277,25 @@ export function fetchObjectiveNext(params: ObjectiveNextParams = {}) {
 interface StartHangoutParams {
   objectiveId: string;
   userId?: string;
+  sessionId?: string;
   city?: CityId;
   location?: LocationId;
   lang?: 'ko' | 'ja' | 'zh';
+  characterId?: string;
+  preferRomance?: boolean;
+  [key: string]: unknown;
 }
 
 export function startHangout(params: StartHangoutParams) {
-  const { objectiveId, userId, city, location, lang } = params;
+  const { objectiveId, userId, city, location, lang, ...rest } = params;
   return apiFetch<{
     sceneSessionId: string;
     initialLine: { speaker: 'character' | 'tong'; text: string };
-    state: { turn: number; score: ScoreState };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    state: { turn: number; score: ScoreState; [k: string]: any };
     uiPolicy: { immersiveFirstPerson: boolean; allowOnlyDialogueAndHints: boolean };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    [key: string]: any;
   }>('/api/v1/scenes/hangout/start', {
     method: 'POST',
     body: JSON.stringify({
@@ -294,16 +304,22 @@ export function startHangout(params: StartHangoutParams) {
       location: location || 'food_street',
       lang: lang || 'ko',
       objectiveId,
+      ...rest,
     }),
   });
 }
 
 export function respondHangout(sceneSessionId: string, userUtterance: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return apiFetch<{
     accepted: boolean;
-    feedback: { tongHint: string; objectiveProgressDelta: number };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    feedback: { tongHint: string; objectiveProgressDelta: number; [k: string]: any };
     nextLine: { speaker: 'character' | 'tong'; text: string };
-    state: { turn: number; score: ScoreState };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    state: { turn: number; score: ScoreState; [k: string]: any };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    [key: string]: any;
   }>('/api/v1/scenes/hangout/respond', {
     method: 'POST',
     body: JSON.stringify({

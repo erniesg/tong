@@ -1,4 +1,12 @@
-import type { MatchingExercise, MultipleChoiceExercise, DragDropExercise, ExerciseData } from '@/lib/types/hangout';
+import type {
+  MatchingExercise,
+  MultipleChoiceExercise,
+  DragDropExercise,
+  SentenceBuilderExercise,
+  FillBlankExercise,
+  PronunciationSelectExercise,
+  ExerciseData,
+} from '@/lib/types/hangout';
 
 export interface ExerciseHints {
   hintItems?: string[];
@@ -309,6 +317,228 @@ function generateDragDrop(
   };
 }
 
+/* ── Sentence builder data ───────────────────────────────── */
+
+interface SentencePattern {
+  words: string[];
+  correctOrder: string[];
+  distractors: string[];
+  prompt: string;
+  explanation: string;
+}
+
+const SENTENCE_PATTERNS: SentencePattern[] = [
+  {
+    words: ['주세요', '떡볶이'],
+    correctOrder: ['떡볶이', '주세요'],
+    distractors: ['감사합니다', '맵다'],
+    prompt: 'Build: "Tteokbokki please"',
+    explanation: '떡볶이 주세요 = Tteokbokki please (N + 주세요)',
+  },
+  {
+    words: ['주세요', '물'],
+    correctOrder: ['물', '주세요'],
+    distractors: ['먹다', '짜다'],
+    prompt: 'Build: "Water please"',
+    explanation: '물 주세요 = Water please (N + 주세요)',
+  },
+  {
+    words: ['을', '김밥', '주세요'],
+    correctOrder: ['김밥', '을', '주세요'],
+    distractors: ['달다'],
+    prompt: 'Build: "Gimbap please" (with particle)',
+    explanation: '김밥을 주세요 = Please give me gimbap (N+을/를 주세요)',
+  },
+  {
+    words: ['를', '라면', '주세요'],
+    correctOrder: ['라면', '을', '주세요'],
+    distractors: ['맵다'],
+    prompt: 'Build: "Ramen please" (with particle)',
+    explanation: '라면을 주세요 = Please give me ramen (N+을/를 주세요)',
+  },
+  {
+    words: ['개', '세', '주세요', '떡볶이'],
+    correctOrder: ['떡볶이', '세', '개', '주세요'],
+    distractors: [],
+    prompt: 'Build: "Three tteokbokki please"',
+    explanation: '떡볶이 세 개 주세요 = Three tteokbokki please (N + counter + 주세요)',
+  },
+];
+
+/* ── Fill-blank data ────────────────────────────────────────── */
+
+interface FillBlankPattern {
+  sentence: string;
+  blankIndex: number;
+  correct: string;
+  distractors: string[];
+  grammarNote: string;
+  prompt: string;
+}
+
+const FILL_BLANK_PATTERNS: FillBlankPattern[] = [
+  {
+    sentence: '떡볶이 ___ 주세요',
+    blankIndex: 1,
+    correct: '을',
+    distractors: ['를', '은', '이'],
+    grammarNote: '을 is used after consonant-ending nouns (떡볶이 ends with ㅣ vowel, but 을 is common in casual speech)',
+    prompt: 'Fill in the correct particle',
+  },
+  {
+    sentence: '물 ___ 주세요',
+    blankIndex: 1,
+    correct: '을',
+    distractors: ['를', '은', '이'],
+    grammarNote: '을 is the object particle after consonant-ending nouns (물 ends with ㄹ)',
+    prompt: 'Fill in the correct particle',
+  },
+  {
+    sentence: '김밥 ___ 맛있다',
+    blankIndex: 1,
+    correct: '이',
+    distractors: ['을', '는', '를'],
+    grammarNote: '이 is the subject particle after consonant-ending nouns',
+    prompt: 'Fill in the correct particle',
+  },
+  {
+    sentence: '라면 ___ 개 주세요',
+    blankIndex: 1,
+    correct: '세',
+    distractors: ['하나', '다섯', '두'],
+    grammarNote: '세 = three (native Korean number before counter)',
+    prompt: 'Fill in the correct number',
+  },
+  {
+    sentence: '여기 ___ 얼마예요?',
+    blankIndex: 1,
+    correct: '이거',
+    distractors: ['저거', '그거', '뭐'],
+    grammarNote: '이거 = this thing (pointing at something near you)',
+    prompt: 'Fill in: "How much is this here?"',
+  },
+];
+
+/* ── Pronunciation jamo pool ────────────────────────────────── */
+
+const JAMO_SOUNDS: { char: string; romanization: string; sound: string }[] = [
+  { char: 'ㄱ', romanization: 'giyeok', sound: 'g/k' },
+  { char: 'ㄴ', romanization: 'nieun', sound: 'n' },
+  { char: 'ㄷ', romanization: 'digeut', sound: 'd/t' },
+  { char: 'ㄹ', romanization: 'rieul', sound: 'r/l' },
+  { char: 'ㅁ', romanization: 'mieum', sound: 'm' },
+  { char: 'ㅂ', romanization: 'bieup', sound: 'b/p' },
+  { char: 'ㅅ', romanization: 'siot', sound: 's' },
+  { char: 'ㅈ', romanization: 'jieut', sound: 'j' },
+  { char: 'ㅎ', romanization: 'hieut', sound: 'h' },
+  { char: 'ㅏ', romanization: 'a', sound: 'ah' },
+  { char: 'ㅓ', romanization: 'eo', sound: 'uh' },
+  { char: 'ㅗ', romanization: 'o', sound: 'oh' },
+  { char: 'ㅜ', romanization: 'u', sound: 'oo' },
+  { char: 'ㅡ', romanization: 'eu', sound: 'eu' },
+  { char: 'ㅣ', romanization: 'i', sound: 'ee' },
+];
+
+/* ── New generators ─────────────────────────────────────────── */
+
+function generateSentenceBuilder(
+  _pool: VocabItem[],
+  objectiveId: string,
+  hintItems?: string[],
+): SentenceBuilderExercise {
+  // Pick a pattern, preferring ones matching hintItems
+  let pattern = SENTENCE_PATTERNS[Math.floor(Math.random() * SENTENCE_PATTERNS.length)];
+  if (hintItems && hintItems.length > 0) {
+    const matching = SENTENCE_PATTERNS.filter((p) =>
+      p.correctOrder.some((w) => hintItems.includes(w)),
+    );
+    if (matching.length > 0) {
+      pattern = matching[Math.floor(Math.random() * matching.length)];
+    }
+  }
+
+  const allTiles = shuffle([...pattern.words, ...pattern.distractors]);
+
+  return {
+    type: 'sentence_builder',
+    id: nextId(),
+    objectiveId,
+    difficulty: pattern.correctOrder.length > 3 ? 3 : 2,
+    prompt: pattern.prompt,
+    wordTiles: allTiles,
+    correctOrder: pattern.correctOrder,
+    distractors: pattern.distractors,
+    explanation: pattern.explanation,
+  };
+}
+
+function generateFillBlank(
+  _pool: VocabItem[],
+  objectiveId: string,
+  hintItems?: string[],
+): FillBlankExercise {
+  let pattern = FILL_BLANK_PATTERNS[Math.floor(Math.random() * FILL_BLANK_PATTERNS.length)];
+  if (hintItems && hintItems.length > 0) {
+    const matching = FILL_BLANK_PATTERNS.filter((p) =>
+      hintItems.some((h) => p.sentence.includes(h) || p.correct === h),
+    );
+    if (matching.length > 0) {
+      pattern = matching[Math.floor(Math.random() * matching.length)];
+    }
+  }
+
+  const options = shuffle([
+    { id: 'correct', text: pattern.correct },
+    ...pattern.distractors.map((d, i) => ({ id: `d${i}`, text: d })),
+  ]);
+
+  return {
+    type: 'fill_blank',
+    id: nextId(),
+    objectiveId,
+    difficulty: 2,
+    prompt: pattern.prompt,
+    sentence: pattern.sentence,
+    blankIndex: pattern.blankIndex,
+    options,
+    correctOptionId: 'correct',
+    grammarNote: pattern.grammarNote,
+    explanation: `${pattern.sentence.replace('___', pattern.correct)}`,
+  };
+}
+
+function generatePronunciationSelect(
+  _pool: VocabItem[],
+  objectiveId: string,
+  hintItems?: string[],
+): PronunciationSelectExercise {
+  const available = [...JAMO_SOUNDS];
+  let target = available[Math.floor(Math.random() * available.length)];
+
+  if (hintItems && hintItems.length > 0) {
+    const matched = available.find((j) => hintItems.includes(j.char));
+    if (matched) target = matched;
+  }
+
+  const distractors = shuffle(available.filter((j) => j.char !== target.char)).slice(0, 3);
+  const allOptions = shuffle([
+    { id: 'correct', label: target.sound, romanization: target.romanization },
+    ...distractors.map((d, i) => ({ id: `d${i}`, label: d.sound, romanization: d.romanization })),
+  ]);
+
+  return {
+    type: 'pronunciation_select',
+    id: nextId(),
+    objectiveId,
+    difficulty: 1,
+    prompt: `What sound does this character make?`,
+    targetText: target.char,
+    audioOptions: allOptions,
+    correctOptionId: 'correct',
+    explanation: `${target.char} (${target.romanization}) makes the "${target.sound}" sound`,
+  };
+}
+
 /** Route from exercise type + hints to a generated exercise using the right data pool. */
 export function generateExercise(exerciseType: string, hints?: ExerciseHints): ExerciseData {
   const hintItems = hints?.hintItems;
@@ -325,6 +555,12 @@ export function generateExercise(exerciseType: string, hints?: ExerciseHints): E
       return generateMultipleChoice(pool, objectiveId, hintItems, hintSubType);
     case 'drag_drop':
       return generateDragDrop(pool, objectiveId, count ?? 4, hintItems, hintSubType);
+    case 'sentence_builder':
+      return generateSentenceBuilder(pool, objectiveId, hintItems);
+    case 'fill_blank':
+      return generateFillBlank(pool, objectiveId, hintItems);
+    case 'pronunciation_select':
+      return generatePronunciationSelect(pool, objectiveId, hintItems);
     default:
       return generateMatching(pool, objectiveId, count ?? 5, hintItems, hintSubType);
   }

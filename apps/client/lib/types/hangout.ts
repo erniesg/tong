@@ -69,4 +69,48 @@ export interface MatchingExercise {
   pairs: { left: string; right: string }[];
 }
 
-export type ExerciseData = MultipleChoiceExercise | DragDropExercise | MatchingExercise;
+export interface SentenceBuilderExercise {
+  type: 'sentence_builder';
+  id: string;
+  objectiveId: string;
+  difficulty: number;
+  prompt: string;
+  wordTiles: string[];
+  correctOrder: string[];
+  distractors?: string[];
+  explanation?: string;
+}
+
+export interface FillBlankExercise {
+  type: 'fill_blank';
+  id: string;
+  objectiveId: string;
+  difficulty: number;
+  prompt: string;
+  sentence: string;
+  blankIndex: number;
+  options: { id: string; text: string }[];
+  correctOptionId: string;
+  grammarNote?: string;
+  explanation?: string;
+}
+
+export interface PronunciationSelectExercise {
+  type: 'pronunciation_select';
+  id: string;
+  objectiveId: string;
+  difficulty: number;
+  prompt: string;
+  targetText: string;
+  audioOptions: { id: string; label: string; romanization: string }[];
+  correctOptionId: string;
+  explanation?: string;
+}
+
+export type ExerciseData =
+  | MultipleChoiceExercise
+  | DragDropExercise
+  | MatchingExercise
+  | SentenceBuilderExercise
+  | FillBlankExercise
+  | PronunciationSelectExercise;
