@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useCallback } from 'react';
 import type { SessionMessage, ExerciseData } from '@/lib/types/hangout';
 import type { TargetLang } from '@/components/shared/KoreanText';
 import { Background } from './Background';
@@ -7,11 +8,15 @@ import { CharacterSprite } from './CharacterSprite';
 import { DialogueBox } from './DialogueBox';
 import { ChoiceButtons, type DialogueChoice } from './ChoiceButtons';
 import { TongOverlay } from './TongOverlay';
+import { CinematicOverlay } from './CinematicOverlay';
 import { ExerciseRenderer } from '../exercises/ExerciseRenderer';
 
 interface SceneViewProps {
   backgroundUrl: string;
+  backgroundTransition?: 'fade' | 'cut';
   ambientDescription?: string;
+  cinematic?: { videoUrl: string; caption?: string; autoAdvance: boolean } | null;
+  onCinematicEnd?: () => void;
   npcName?: string;
   npcColor?: string;
   npcSpriteUrl?: string;
@@ -42,7 +47,10 @@ const SPEAKER_COLORS: Record<string, string> = {
 
 export function SceneView({
   backgroundUrl,
+  backgroundTransition,
   ambientDescription = '',
+  cinematic = null,
+  onCinematicEnd = () => {},
   npcName = '',
   npcColor = 'var(--color-primary)',
   npcSpriteUrl = '',
@@ -60,6 +68,15 @@ export function SceneView({
   onExerciseResult = () => {},
   onDismissTong = () => {},
 }: SceneViewProps) {
+  const prevBackdropRef = useRef(backgroundUrl);
+  const backdropTransition = backgroundTransition === 'fade' && prevBackdropRef.current !== backgroundUrl;
+  if (prevBackdropRef.current !== backgroundUrl) {
+    prevBackdropRef.current = backgroundUrl;
+  }
+
+  const handleCinematicEnd = useCallback(() => {
+    onCinematicEnd();
+  }, [onCinematicEnd]);
   const getSpeakerName = (msg: SessionMessage): string | undefined => {
     if (msg.role === 'narrator' || msg.role === 'system') return undefined;
     if (msg.role === 'tong') return 'Tong';
@@ -78,7 +95,17 @@ export function SceneView({
       {hudContent}
 
       {/* Layer 1: Background */}
-      <Background imageUrl={backgroundUrl} ambientDescription={ambientDescription} />
+      <Background imageUrl={backgroundUrl} ambientDescription={ambientDescription} fade={backdropTransition} />
+
+      {/* Cinematic overlay (above everything when playing) */}
+      {cinematic && (
+        <CinematicOverlay
+          videoUrl={cinematic.videoUrl}
+          caption={cinematic.caption}
+          autoAdvance={cinematic.autoAdvance}
+          onEnd={handleCinematicEnd}
+        />
+      )}
 
       {/* Layer 2: Character sprite */}
       <CharacterSprite

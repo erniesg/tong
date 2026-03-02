@@ -3,9 +3,10 @@
 interface BackgroundProps {
   imageUrl: string;
   ambientDescription?: string;
+  fade?: boolean;
 }
 
-export function Background({ imageUrl, ambientDescription }: BackgroundProps) {
+export function Background({ imageUrl, ambientDescription, fade = false }: BackgroundProps) {
   return (
     <div className="absolute inset-0 overflow-hidden">
       {imageUrl ? (
@@ -14,7 +15,11 @@ export function Background({ imageUrl, ambientDescription }: BackgroundProps) {
           src={imageUrl}
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
-          style={{ objectPosition: 'center bottom' }}
+          style={{
+            objectPosition: 'center bottom',
+            transition: fade ? 'opacity 0.5s ease-in-out' : undefined,
+            animation: fade ? 'backdrop-fade-in 0.5s ease-in-out' : undefined,
+          }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
         />
       ) : ambientDescription ? (

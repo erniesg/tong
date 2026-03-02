@@ -94,6 +94,24 @@ const hangoutTools = {
     }),
     execute: async (args) => args,
   }),
+  set_backdrop: tool({
+    description: 'Change the scene backdrop. Use to transition between areas within a location (e.g., from outside to inside the stall, from counter to kitchen).',
+    parameters: z.object({
+      backdropUrl: z.string().describe('Path to the backdrop image, e.g. /assets/backdrops/seoul/pojangmacha.png'),
+      transition: z.enum(['fade', 'cut']).describe('Transition type: fade (smooth 0.5s) or cut (instant)'),
+      ambientDescription: z.string().nullable().describe('Ambient text shown if image fails to load, or null'),
+    }),
+    execute: async (args) => args,
+  }),
+  play_cinematic: tool({
+    description: 'Play a short video clip (location establishing shot, character intro, scene transition). The scene pauses until playback ends. Use sparingly — only for key dramatic moments.',
+    parameters: z.object({
+      videoUrl: z.string().describe('URL of the video clip to play'),
+      caption: z.string().nullable().describe('Optional text overlay during playback, or null'),
+      autoAdvance: z.boolean().describe('If true, auto-advance after playback. If false, wait for player tap.'),
+    }),
+    execute: async (args) => args,
+  }),
 };
 
 /**
