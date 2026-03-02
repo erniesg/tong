@@ -148,7 +148,12 @@ export type LocationId =
   | 'cafe'
   | 'convenience_store'
   | 'subway_hub'
-  | 'practice_studio';
+  | 'practice_studio'
+  // Shanghai
+  | 'metro_station'
+  | 'bbq_stall'
+  | 'milk_tea_shop'
+  | 'dumpling_shop';
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const demoPassword = getDemoPassword();

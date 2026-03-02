@@ -17,30 +17,35 @@ const CITY_META: Record<CityId, { en: string; local: string; hasVideo: boolean }
   shanghai: { en: 'Shanghai', local: '上海', hasVideo: true },
 };
 
-// Korean labels match the actual signs visible in the Seoul video
-const LOCATION_NAMES: Record<LocationId, { en: string; ko: string }> = {
-  food_street:       { en: 'Food Street',       ko: '먹자골목' },
-  cafe:              { en: 'Cafe',               ko: '카페' },
-  convenience_store: { en: 'Convenience Store',  ko: 'CU 편의점' },
-  subway_hub:        { en: 'Subway Hub',         ko: '지하철' },
-  practice_studio:   { en: 'Chimaek Place',      ko: '치맥' },
-};
+/* ── Per-city location configs ────────────────────────────────── */
 
-// Pin positions matched to Seoul video landmarks (from annotated still):
-// - practice_studio (치맥): rooftop chicken+beer restaurant, top-left
-// - convenience_store (CU): green CU storefront, mid-left
-// - subway_hub (지하철): subway entrance with blue sign, center-bottom
-// - cafe (카페): pink building + cake display, mid-right
-// - food_street (먹자골목): orange tent + steaming hotpot, bottom-left
-const LOCATION_POSITIONS: Record<LocationId, { top: string; left: string }> = {
-  practice_studio:   { top: '22%', left: '25%' },
-  convenience_store: { top: '48%', left: '22%' },
-  subway_hub:        { top: '68%', left: '48%' },
-  cafe:              { top: '52%', left: '82%' },
-  food_street:       { top: '88%', left: '25%' },
-};
+interface LocationConfig {
+  id: LocationId;
+  en: string;
+  local: string;
+  top: string;
+  left: string;
+}
 
-const ALL_LOCATIONS: LocationId[] = ['food_street', 'cafe', 'convenience_store', 'subway_hub', 'practice_studio'];
+const CITY_LOCATIONS: Record<CityId, LocationConfig[]> = {
+  seoul: [
+    // Positions matched to Seoul video landmarks
+    { id: 'practice_studio',   en: 'Chimaek Place',      local: '치맥',       top: '22%', left: '25%' },
+    { id: 'convenience_store', en: 'Convenience Store',   local: 'CU 편의점',  top: '48%', left: '22%' },
+    { id: 'subway_hub',        en: 'Subway Hub',          local: '지하철',     top: '68%', left: '48%' },
+    { id: 'cafe',              en: 'Cafe',                local: '카페',       top: '52%', left: '82%' },
+    { id: 'food_street',       en: 'Food Street',         local: '먹자골목',   top: '88%', left: '25%' },
+  ],
+  shanghai: [
+    // Positions matched to Shanghai video landmarks (generic local names)
+    { id: 'metro_station',     en: 'Metro Station',       local: '地铁站',     top: '28%', left: '18%' },
+    { id: 'bbq_stall',         en: 'BBQ Stall',           local: '烧烤摊',     top: '22%', left: '82%' },
+    { id: 'convenience_store', en: 'Convenience Store',   local: '便利店',     top: '58%', left: '72%' },
+    { id: 'milk_tea_shop',     en: 'Milk Tea Shop',       local: '奶茶店',     top: '75%', left: '22%' },
+    { id: 'dumpling_shop',     en: 'Dumpling Shop',       local: '小笼包店',   top: '88%', left: '75%' },
+  ],
+  tokyo: [],
+};
 
 const SWIPE_THRESHOLD = 50;
 const DISSOLVE_SECONDS = 1.5;
@@ -77,8 +82,8 @@ export function CityMap({
 
   const city = CITY_ORDER[activeCityIndex];
   const meta = CITY_META[city];
-  const comingSoon = !meta.hasVideo && city !== 'seoul';
-  const isSeoul = city === 'seoul';
+  const comingSoon = !meta.hasVideo;
+  const locations = CITY_LOCATIONS[city] ?? [];
 
   /* ── Two-video dissolve loop ─────────────────────────────── */
 
@@ -262,40 +267,42 @@ export function CityMap({
         <div className="city-map__title-local">{meta.local}</div>
       </div>
 
-      {/* Location pins (only for Seoul) */}
-      {isSeoul && ALL_LOCATIONS.map((locId) => {
-        const pos = LOCATION_POSITIONS[locId];
-        const names = LOCATION_NAMES[locId];
-        const unlocked = isLocationUnlocked(city, locId);
+      {/* Location pins */}
+      {locations.map((loc) => {
+        const unlocked = isLocationUnlocked(city, loc.id);
         return (
           <LocationPin
-            key={locId}
-            locationId={locId}
-            label={names.en}
-            labelKo={names.ko}
-            top={pos.top}
-            left={pos.left}
+            key={loc.id}
+            locationId={loc.id}
+            label={loc.en}
+            labelKo={loc.local}
+            top={loc.top}
+            left={loc.left}
             unlocked={unlocked}
-            active={selectedLocation === locId}
+            active={selectedLocation === loc.id}
             onTap={handlePinTap}
           />
         );
       })}
 
       {/* Bottom sheet */}
-      {selectedLocation && (
-        <LocationSheet
-          locationId={selectedLocation}
-          locationName={LOCATION_NAMES[selectedLocation].en}
-          locationNameKo={LOCATION_NAMES[selectedLocation].ko}
-          hangoutCount={getLocationHangoutCount(city, selectedLocation)}
-          missionAvailable={isMissionAvailable(city, selectedLocation)}
-          comingSoon={comingSoon}
-          onHangout={() => onStartHangout(city, selectedLocation)}
-          onLearn={() => onStartLearn(city, selectedLocation)}
-          onDismiss={() => onSelectLocation(null)}
-        />
-      )}
+      {selectedLocation && (() => {
+        const loc = locations.find((l) => l.id === selectedLocation);
+        if (!loc) return null;
+        return (
+          <LocationSheet
+            locationId={selectedLocation}
+            locationName={loc.en}
+            locationNameKo={loc.local}
+            hangoutCount={getLocationHangoutCount(city, selectedLocation)}
+            missionAvailable={isMissionAvailable(city, selectedLocation)}
+            comingSoon={comingSoon}
+            onHangout={() => onStartHangout(city, selectedLocation)}
+            onLearn={() => onStartLearn(city, selectedLocation)}
+            onDismiss={() => onSelectLocation(null)}
+          />
+        );
+      })()}
 
       {/* Navigation arrows */}
       {activeCityIndex > 0 && (

@@ -82,7 +82,7 @@ const DICTIONARY: Record<string, { romanization: string; translation: string }> 
   '가자': { romanization: 'gaja', translation: "let's go" },
   '먹자': { romanization: 'meokja', translation: "let's eat" },
 
-  // City map locations
+  // City map locations (Seoul)
   '먹자골목': { romanization: 'meokja golmok', translation: 'Food Street' },
   '카페': { romanization: 'kape', translation: 'Cafe' },
   '편의점': { romanization: 'pyeonuijeom', translation: 'Convenience Store' },
@@ -91,6 +91,22 @@ const DICTIONARY: Record<string, { romanization: string; translation: string }> 
   '지하철역': { romanization: 'jihacheol-yeok', translation: 'Subway Station' },
   '연습실': { romanization: 'yeonseupssil', translation: 'Practice Studio' },
   '서울': { romanization: 'seoul', translation: 'Seoul' },
+
+  // City map locations (Shanghai) — Chinese with pinyin
+  '地铁站': { romanization: 'dìtiě zhàn', translation: 'Metro station' },
+  '烧烤摊': { romanization: 'shāokǎo tān', translation: 'BBQ grill stall' },
+  '便利店': { romanization: 'biànlì diàn', translation: 'Convenience store' },
+  '奶茶店': { romanization: 'nǎichá diàn', translation: 'Milk tea shop' },
+  '小笼包店': { romanization: 'xiǎolóng bāo diàn', translation: 'Dumpling shop' },
+  '上海': { romanization: 'shànghǎi', translation: 'Shanghai' },
+  '你好': { romanization: 'nǐ hǎo', translation: 'hello' },
+  '谢谢': { romanization: 'xièxie', translation: 'thank you' },
+  '好吃': { romanization: 'hǎo chī', translation: 'delicious' },
+  '多少钱': { romanization: 'duōshǎo qián', translation: 'how much?' },
+  '奶茶': { romanization: 'nǎichá', translation: 'milk tea' },
+  '小笼包': { romanization: 'xiǎolóng bāo', translation: 'soup dumplings' },
+  '地铁': { romanization: 'dìtiě', translation: 'subway / metro' },
+  '烧烤': { romanization: 'shāokǎo', translation: 'BBQ / grill' },
 };
 
 const JAMO_DICT: Record<string, { romanization: string; name: string }> = {
@@ -118,12 +134,23 @@ const JAMO_DICT: Record<string, { romanization: string; name: string }> = {
   'ㅔ': { romanization: 'e', name: 'e' },
 };
 
+function isCJK(char: string): boolean {
+  const code = char.charCodeAt(0);
+  return (
+    // CJK Unified Ideographs (Chinese/Japanese Kanji)
+    (code >= 0x4e00 && code <= 0x9fff) ||
+    // CJK Extension A
+    (code >= 0x3400 && code <= 0x4dbf)
+  );
+}
+
 function isKorean(char: string): boolean {
   const code = char.charCodeAt(0);
   return (
     (code >= 0xac00 && code <= 0xd7a3) ||
     (code >= 0x3131 && code <= 0x3163) ||
-    (code >= 0x1100 && code <= 0x11ff)
+    (code >= 0x1100 && code <= 0x11ff) ||
+    isCJK(char)
   );
 }
 

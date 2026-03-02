@@ -72,7 +72,7 @@ function createInitialState(): GameState {
     calibratedLevel: null,
     locationLevels: {},
     locationHangoutCounts: {},
-    unlockedLocations: { 'seoul:food_street': true },
+    unlockedLocations: { 'seoul:food_street': true, 'shanghai:dumpling_shop': true },
   };
 }
 
