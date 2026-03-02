@@ -24,10 +24,10 @@ export function TongOverlay({ message, translation, visible, onDismiss }: TongOv
       <div className="flex items-start gap-2">
         <span className="shrink-0 text-lg">💡</span>
         <div className="min-w-0">
-          <p className="text-xs font-bold text-[var(--color-accent-gold)] m-0">Tong</p>
-          <p className="mt-0.5 text-sm text-ko leading-snug m-0"><KoreanText text={message} /></p>
+          <p className="text-xs font-bold tong-whisper__label m-0">Tong</p>
+          <p className="mt-0.5 text-sm text-ko leading-snug tong-whisper__body m-0"><KoreanText text={message} /></p>
           {translation && (
-            <p className="mt-1 text-xs text-[var(--color-text-muted)] italic m-0">{translation}</p>
+            <p className="mt-1 text-xs tong-whisper__translation italic m-0">{translation}</p>
           )}
         </div>
       </div>
