@@ -23,7 +23,7 @@ const TTS_ACCESS_TOKEN = () => process.env.VOLCENGINE_TTS_ACCESS_TOKEN || '';
 const TTS_CLUSTER = () => process.env.VOLCENGINE_TTS_CLUSTER || 'volcano_tts';
 
 // Default models – can be overridden per-request
-const DEFAULT_IMAGE_MODEL = 'doubao-seedream-4-5-251128';
+const DEFAULT_IMAGE_MODEL = 'doubao-seedream-5-0-260128';
 const DEFAULT_VIDEO_MODEL = 'doubao-seedance-1-5-pro-251215';
 const DEFAULT_TTS_VOICE = 'BV700_V2_streaming';
 
@@ -369,6 +369,158 @@ export async function synthesizeSpeech(args) {
   return {
     audioBase64: data.data,
     encoding,
+  };
+}
+
+// ── 4. Backdrop Generation (Hangout Scenes) ─────────────────────────
+
+const BACKDROP_STYLE =
+  'photorealistic, detailed environment, atmospheric lighting, ' +
+  'no people, no characters, empty scene ready for character overlay, shallow depth of field, ' +
+  'shot on Sony A7IV, 35mm lens, natural color grading, 9:16 portrait orientation';
+
+const TIME_LIGHTING = {
+  morning: 'soft golden morning light, long shadows, warm sunrise tones',
+  day: 'bright natural daylight, clear sky, vibrant colors',
+  afternoon: 'warm afternoon sun, amber tones, relaxed atmosphere',
+  evening: 'orange-pink sunset glow, transitional lighting, golden hour',
+  night: 'nighttime, warm artificial lighting, lanterns and neon glow, dark sky, cozy atmosphere',
+  rain: 'overcast, rain falling, wet reflections on surfaces, moody grey tones, puddles',
+};
+
+const MOOD_MODIFIERS = {
+  warm: 'warm color palette, inviting, comfortable',
+  cool: 'cool blue tones, calm, serene',
+  energetic: 'vibrant saturated colors, lively, bustling',
+  melancholy: 'muted desaturated tones, quiet, reflective',
+  mysterious: 'dramatic shadows, fog, dim lighting, intriguing',
+  romantic: 'soft pink and purple tones, dreamy bokeh, fairy lights',
+};
+
+const LOCATION_PRESETS = {
+  pojangmacha: {
+    base: 'Korean pojangmacha street food tent, plastic stools, steaming pots on counter, soju bottles, snack menu hanging, narrow alley setting',
+    defaultTime: 'night',
+    defaultMood: 'warm',
+  },
+  cafe: {
+    base: 'Modern Korean cafe interior, wooden tables, plants, large windows, coffee equipment on counter, aesthetic minimalist decor',
+    defaultTime: 'afternoon',
+    defaultMood: 'warm',
+  },
+  park: {
+    base: 'Seoul city park, trees and benches, walking path, distant skyline, cherry blossom trees',
+    defaultTime: 'day',
+    defaultMood: 'cool',
+  },
+  subway: {
+    base: 'Seoul subway station platform, clean tiled walls, route map, fluorescent lighting, numbered platform signs in Korean',
+    defaultTime: 'day',
+    defaultMood: 'energetic',
+  },
+  classroom: {
+    base: 'Korean language school classroom, whiteboard with hangul, individual desks, bright fluorescent lights, study materials',
+    defaultTime: 'day',
+    defaultMood: 'cool',
+  },
+  convenience_store: {
+    base: 'Korean convenience store interior, bright shelves, ramen section, kimbap counter, glass refrigerators',
+    defaultTime: 'night',
+    defaultMood: 'cool',
+  },
+  rooftop: {
+    base: 'Seoul rooftop with city skyline view, string lights, folding chairs, small garden pots, Namsan Tower in distance',
+    defaultTime: 'evening',
+    defaultMood: 'romantic',
+  },
+  market: {
+    base: 'Traditional Korean market, colorful stalls, hanging signs in Korean, dried goods, crowded alley, overhead tarps',
+    defaultTime: 'day',
+    defaultMood: 'energetic',
+  },
+  pc_bang: {
+    base: 'Korean PC bang interior, rows of gaming monitors with RGB lighting, gaming chairs, dark ambient with screen glow',
+    defaultTime: 'night',
+    defaultMood: 'cool',
+  },
+  hanok: {
+    base: 'Traditional Korean hanok courtyard, wooden columns, tiled roof, stone path, garden with pine trees',
+    defaultTime: 'afternoon',
+    defaultMood: 'warm',
+  },
+};
+
+/**
+ * Build a complete prompt from location/time/mood components.
+ */
+function buildBackdropPrompt({ location, customPrompt, timeOfDay, mood }) {
+  const parts = [];
+
+  if (location && LOCATION_PRESETS[location]) {
+    const preset = LOCATION_PRESETS[location];
+    parts.push(preset.base);
+    timeOfDay = timeOfDay || preset.defaultTime;
+    mood = mood || preset.defaultMood;
+  } else if (customPrompt) {
+    parts.push(customPrompt);
+  }
+
+  if (timeOfDay && TIME_LIGHTING[timeOfDay]) parts.push(TIME_LIGHTING[timeOfDay]);
+  if (mood && MOOD_MODIFIERS[mood]) parts.push(MOOD_MODIFIERS[mood]);
+  parts.push(BACKDROP_STYLE);
+
+  return parts.join(', ');
+}
+
+/**
+ * Generate a hangout backdrop image.
+ *
+ * @param {object} args
+ * @param {string} [args.location]     - Preset location name (pojangmacha, cafe, park, etc.)
+ * @param {string} [args.customPrompt] - Custom scene description (combined with location if both given)
+ * @param {string} [args.timeOfDay]    - morning|day|afternoon|evening|night|rain
+ * @param {string} [args.mood]         - warm|cool|energetic|melancholy|mysterious|romantic
+ * @param {string} [args.model]        - Model ID override
+ * @param {string} [args.size]         - WxH like '1440x2560' (default: 9:16 portrait)
+ * @param {number} [args.seed]         - Random seed for reproducibility
+ * @returns {Promise<{images: Array, model: string, prompt: string, location?: string}>}
+ */
+export async function generateBackdrop(args) {
+  const prompt = buildBackdropPrompt({
+    location: args.location,
+    customPrompt: args.customPrompt,
+    timeOfDay: args.timeOfDay,
+    mood: args.mood,
+  });
+
+  const result = await generateImage({
+    prompt,
+    model: args.model,
+    size: args.size || '1440x2560',
+    seed: args.seed,
+    responseFormat: args.responseFormat || 'url',
+  });
+
+  return {
+    ...result,
+    prompt,
+    location: args.location || undefined,
+  };
+}
+
+/**
+ * Get available location presets and their defaults.
+ */
+export function getBackdropPresets() {
+  return {
+    locations: Object.entries(LOCATION_PRESETS).map(([id, preset]) => ({
+      id,
+      description: preset.base,
+      defaultTime: preset.defaultTime,
+      defaultMood: preset.defaultMood,
+    })),
+    timeOptions: Object.keys(TIME_LIGHTING),
+    moodOptions: Object.keys(MOOD_MODIFIERS),
   };
 }
 

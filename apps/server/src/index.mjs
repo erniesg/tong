@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { loadGeneratedSnapshot, runMockIngestion, writeGeneratedSnapshots } from './ingestion.mjs';
 import {
   generateImage,
+  generateBackdrop,
+  getBackdropPresets,
   createVideoTask,
   getVideoTask,
   listVideoTasks,
@@ -181,13 +183,35 @@ const AGENT_TOOL_DEFINITIONS = [
     args: {},
   },
   {
+    name: 'volcengine.backdrop.generate',
+    description: 'Generate a hangout scene backdrop using location presets with time-of-day and mood. Uses Seedream 5.0 with VN-style prompt templates.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      location: 'string (optional) – preset: pojangmacha|cafe|park|subway|classroom|convenience_store|rooftop|market|pc_bang|hanok',
+      customPrompt: 'string (optional) – custom scene description, combined with location if both given',
+      timeOfDay: 'morning|day|afternoon|evening|night|rain (optional, defaults from preset)',
+      mood: 'warm|cool|energetic|melancholy|mysterious|romantic (optional, defaults from preset)',
+      model: 'string (optional) – model ID, default doubao-seedream-5-0-260128',
+      size: 'string (optional) – WxH e.g. "1440x2560" (default: 9:16 portrait 1440x2560)',
+      seed: 'number (optional) – for reproducibility',
+    },
+  },
+  {
+    name: 'volcengine.backdrop.presets',
+    description: 'List available backdrop location presets, time-of-day options, and mood options.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {},
+  },
+  {
     name: 'volcengine.image.generate',
     description: 'Generate images from a text prompt using ByteDance Seedream model.',
     method: 'POST',
     path: '/api/v1/tools/invoke',
     args: {
       prompt: 'string (required) – description of the image to generate',
-      model: 'string (optional) – model ID, default doubao-seedream-4-5-251128',
+      model: 'string (optional) – model ID, default doubao-seedream-5-0-260128',
       size: '1K|2K|4K (optional, default 2K)',
       n: 'number 1-4 (optional, default 1)',
       seed: 'number (optional) – for reproducibility',
@@ -805,6 +829,26 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
           tool: toolName,
           result: getVolcengineStatus(),
         },
+      };
+    }
+    case 'volcengine.backdrop.generate': {
+      try {
+        const result = await generateBackdrop(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'volcengine.backdrop.presets': {
+      return {
+        statusCode: 200,
+        payload: { ok: true, tool: toolName, result: getBackdropPresets() },
       };
     }
     case 'volcengine.image.generate': {

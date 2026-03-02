@@ -115,7 +115,7 @@ const ACTIVE_USER_ID_STORAGE_KEY = 'tong_active_user_id';
 
 const GAME_LOGO_PATH = '/assets/app/logo_transparent.png';
 const OPENING_ANIMATION_PATH = '/assets/app/tong_opening.mp4';
-const SEOUL_FIRST_SCENE_BACKDROP = '/assets/scenes/scene1.png';
+const SEOUL_FIRST_SCENE_BACKDROP = '/assets/backdrops/seoul/pojangmacha.png';
 
 const MAX_PROFICIENCY_GAUGE_LEVEL: ProficiencyGaugeLevel = 6;
 const REQUESTED_GAUGE_PRESET: Record<CjkLang, ProficiencyGaugeLevel> = {
