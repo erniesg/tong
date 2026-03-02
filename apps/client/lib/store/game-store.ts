@@ -3,6 +3,7 @@ import type { Relationship } from '../types/relationship';
 import { getRelationshipStage, defaultRelationship } from '../types/relationship';
 import type { ItemMastery, MasterySnapshot } from '../types/mastery';
 import { computeMasteryLevel } from '../types/mastery';
+import { sm2, qualityFromCorrect, defaultSRSFields } from '../curriculum/srs';
 import type { Location } from '../types/objectives';
 import type { AppLang, CityId } from '../api';
 
@@ -27,6 +28,7 @@ export type GameAction =
   | { type: 'UPDATE_AFFINITY'; characterId: string; delta: number }
   | { type: 'RECORD_ITEM_RESULT'; itemId: string; category: 'script' | 'vocabulary' | 'grammar'; correct: boolean }
   | { type: 'ADD_XP'; amount: number }
+  | { type: 'ADD_SP'; amount: number }
   | { type: 'SET_CALIBRATED_LEVEL'; level: number }
   | { type: 'SET_SELF_ASSESSED_LEVEL'; level: number }
   | { type: 'SET_RELATIONSHIP'; characterId: string; relationship: Relationship }
@@ -47,7 +49,7 @@ function loadState(): GameState {
       const parsed = JSON.parse(raw);
       // Backfill fields added after initial release
       const defaults = createInitialState();
-      return {
+      const state: GameState = {
         ...defaults,
         ...parsed,
         locationHangoutCounts: parsed.locationHangoutCounts ?? defaults.locationHangoutCounts,
@@ -56,6 +58,17 @@ function loadState(): GameState {
           ? { ...defaults.explainIn, ...parsed.explainIn }
           : defaults.explainIn,
       };
+      // Backfill SRS fields for existing mastery entries
+      if (state.itemMastery) {
+        for (const key of Object.keys(state.itemMastery)) {
+          const m = state.itemMastery[key];
+          if (m && m.easeFactor === undefined) {
+            const srsDefaults = defaultSRSFields();
+            state.itemMastery[key] = { ...m, ...srsDefaults };
+          }
+        }
+      }
+      return state;
     }
   } catch { /* ignore */ }
   return createInitialState();
@@ -104,6 +117,12 @@ function reduce(state: GameState, action: GameAction): GameState {
       const correct = (existing?.correct ?? 0) + (action.correct ? 1 : 0);
       const incorrect = (existing?.incorrect ?? 0) + (action.correct ? 0 : 1);
       const total = correct + incorrect;
+
+      // Compute SRS update
+      const prevSRS = existing ?? { easeFactor: 2.5, interval: 0, repetitions: 0 };
+      const quality = qualityFromCorrect(action.correct);
+      const srsUpdate = sm2(action.correct, quality, prevSRS);
+
       return {
         ...state,
         itemMastery: {
@@ -115,12 +134,15 @@ function reduce(state: GameState, action: GameAction): GameState {
             incorrect,
             lastSeen: Date.now(),
             masteryLevel: computeMasteryLevel(correct, total),
+            ...srsUpdate,
           },
         },
       };
     }
     case 'ADD_XP':
       return { ...state, xp: state.xp + action.amount };
+    case 'ADD_SP':
+      return { ...state, sp: state.sp + action.amount };
     case 'SET_CALIBRATED_LEVEL':
       return { ...state, calibratedLevel: action.level };
     case 'SET_SELF_ASSESSED_LEVEL':

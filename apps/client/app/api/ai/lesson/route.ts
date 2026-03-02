@@ -28,13 +28,15 @@ const lessonTools = {
     execute: async (args) => args,
   }),
   show_exercise: tool({
-    description: 'Show an interactive exercise. After calling this, STOP and wait for the player result.',
+    description: 'Show an interactive exercise. After calling this, STOP and wait for the player result. PREFERRED: provide exerciseData with the complete exercise object for contextual, adaptive exercises. FALLBACK: set exerciseData to null and the client generates locally from hints.',
     parameters: z.object({
       exerciseType: z.enum([
         'matching', 'multiple_choice', 'drag_drop',
         'sentence_builder', 'fill_blank', 'pronunciation_select',
+        'pattern_recognition', 'stroke_tracing', 'error_correction', 'free_input',
       ]).describe('Exercise UI type'),
       objectiveId: z.string().describe('Learning objective this tests'),
+      exerciseData: z.record(z.unknown()).nullable().describe('Complete exercise object. When provided, client uses it directly. When null, client generates locally from hints. ID convention: "ai-{type}-{timestamp}".'),
       hintItems: z.array(z.string()).nullable().describe('Specific Korean chars/words to include in the exercise, or null'),
       hintCount: z.number().nullable().describe('How many items the exercise should contain, or null for default'),
       hintSubType: z.enum(['sound_quiz', 'visual_recognition']).nullable().describe('Exercise flavor for script exercises, or null'),
@@ -244,6 +246,7 @@ function buildFallbackResponse(messages: any[]) {
       args: {
         exerciseType: 'matching',
         objectiveId: 'ko-script-consonants',
+        exerciseData: null,
         hintItems: ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ'],
         hintCount: 5,
         hintSubType: 'sound_quiz',
@@ -275,6 +278,7 @@ function buildFallbackResponse(messages: any[]) {
       args: {
         exerciseType: 'pronunciation_select',
         objectiveId: 'ko-script-vowels',
+        exerciseData: null,
         hintItems: ['ㅏ', 'ㅓ', 'ㅗ', 'ㅜ'],
         hintCount: 4,
         hintSubType: null,
@@ -306,6 +310,7 @@ function buildFallbackResponse(messages: any[]) {
       args: {
         exerciseType: 'multiple_choice',
         objectiveId: 'ko-vocab-food-items',
+        exerciseData: null,
         hintItems: ['떡볶이', '김밥', '라면', '순대'],
         hintCount: 4,
         hintSubType: null,

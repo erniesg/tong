@@ -7,6 +7,11 @@ export interface ItemMastery {
   incorrect: number;
   lastSeen: number;        // Date.now()
   masteryLevel: MasteryLevel;
+  // SRS fields (SM-2 algorithm)
+  easeFactor: number;      // default 2.5, min 1.3
+  interval: number;        // days until next review
+  nextReview: number;      // timestamp (ms)
+  repetitions: number;     // consecutive correct
 }
 
 export interface MasterySnapshot {

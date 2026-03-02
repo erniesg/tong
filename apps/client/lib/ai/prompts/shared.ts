@@ -1,7 +1,13 @@
 import type { Character, Relationship, RelationshipStage } from '../../types/relationship';
 import { computeTargetLangPercent } from '../../types/relationship';
 import type { MasterySnapshot } from '../../types/mastery';
+import type { ItemMastery } from '../../types/mastery';
 import type { LearningObjective } from '../../types/objectives';
+import { getUnlockedObjectives, getCompletedObjectives } from '../../curriculum/prerequisites';
+import { getDueItems } from '../../curriculum/srs';
+import { HANGUL_DESIGN_PRINCIPLES, type DesignPrinciple } from '../../content/scripts/hangul';
+import { PINYIN_DESIGN_PRINCIPLES } from '../../content/scripts/pinyin';
+import { KANA_DESIGN_PRINCIPLES } from '../../content/scripts/kana';
 
 const LEVEL_NAMES: Record<number, string> = {
   0: 'SCRIPT',
@@ -101,4 +107,75 @@ export function formatLanguageRatio(
   2-3: simple sentences with known grammar
   4-5: natural sentences, explain grammar in target language
   6: speak almost entirely in target language`;
+}
+
+/**
+ * Format curriculum state block for AI prompts.
+ * Includes unlocked objectives, due review items, and relevant design principles.
+ */
+export function formatCurriculumBlock(
+  allObjectives: LearningObjective[],
+  itemMastery: Record<string, ItemMastery>,
+): string {
+  const unlocked = getUnlockedObjectives(allObjectives, itemMastery);
+  const completed = getCompletedObjectives(allObjectives, itemMastery);
+  const dueItems = getDueItems(itemMastery).slice(0, 20);
+
+  const unlockedNotComplete = unlocked.filter(
+    (o) => !completed.some((c) => c.id === o.id),
+  );
+
+  let block = `CURRICULUM STATE:
+- Completed objectives: ${completed.map((o) => o.id).join(', ') || '(none)'}
+- Available objectives: ${unlockedNotComplete.map((o) => `${o.id} (${o.title})`).join(', ') || '(none — all done or blocked)'}
+- Locked objectives: ${allObjectives.filter((o) => !unlocked.some((u) => u.id === o.id)).map((o) => `${o.id} [needs: ${o.prerequisites.join(', ')}]`).join(', ') || '(none)'}`;
+
+  if (dueItems.length > 0) {
+    block += `\n- Items due for review (SRS): ${dueItems.join(', ')}`;
+  }
+
+  return block;
+}
+
+/**
+ * Format Hangul design principles for the AI to reference when teaching.
+ */
+export function formatDesignPrinciplesBlock(
+  relevantPrinciples?: DesignPrinciple[],
+): string {
+  const principles = relevantPrinciples ?? HANGUL_DESIGN_PRINCIPLES;
+  if (principles.length === 0) return '';
+
+  // Determine header based on content
+  const isHangul = principles === HANGUL_DESIGN_PRINCIPLES || principles.some((p) => p.id.includes('consonant-organ') || p.id.includes('syllable-blocks'));
+  const isPinyin = principles.some((p) => p.id.includes('tone') || p.id.includes('radical'));
+  const isKana = principles.some((p) => p.id.includes('hiragana') || p.id.includes('katakana') || p.id.includes('dakuten'));
+
+  const header = isPinyin
+    ? 'CHINESE SCRIPT PRINCIPLES'
+    : isKana
+      ? 'JAPANESE KANA PRINCIPLES'
+      : isHangul
+        ? 'HANGUL DESIGN PRINCIPLES'
+        : 'SCRIPT DESIGN PRINCIPLES';
+
+  return `${header} (use these to teach WHY characters work this way):
+${principles.map((p) => `- ${p.title}: ${p.teachingHook}
+  Examples: ${p.examples.map((e) => `${e.chars} — ${e.explanation}`).join('; ')}`).join('\n')}`;
+}
+
+/**
+ * Format script system block per language using structured design principles.
+ */
+export function formatScriptSystemBlock(language: 'ko' | 'zh' | 'ja'): string {
+  switch (language) {
+    case 'ko':
+      return formatDesignPrinciplesBlock();
+    case 'zh':
+      return formatDesignPrinciplesBlock(PINYIN_DESIGN_PRINCIPLES);
+    case 'ja':
+      return formatDesignPrinciplesBlock(KANA_DESIGN_PRINCIPLES);
+    default:
+      return '';
+  }
 }

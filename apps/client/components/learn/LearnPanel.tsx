@@ -4,10 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useChat } from 'ai/react';
 import type { ExerciseData } from '@/lib/types/hangout';
 import { generateExercise, type ExerciseHints } from '@/lib/exercises/generators';
+import { isValidExerciseData } from '@/lib/exercises/validate';
+import { extractTargetItems } from '@/lib/exercises/extract-targets';
 import { getCitySkin } from '@/lib/theme/city-skins';
 import { dispatch as gameDispatch, useGameState, getMasterySnapshot } from '@/lib/store/game-store';
 import { dispatchSession, useSessionState, type CompletedSession } from '@/lib/store/session-store';
-import { POJANGMACHA } from '@/lib/content/pojangmacha';
+import { getLocationOrDefault } from '@/lib/content/locations';
 
 import { ChatRow } from './ChatRow';
 import { TongBubble } from './TongBubble';
@@ -63,7 +65,7 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
 
   /* ── Build context block for AI messages ──────────────── */
   const buildContextBlock = useCallback(() => {
-    const location = POJANGMACHA;
+    const location = getLocationOrDefault(cityId, locationId);
     const level = gameState.calibratedLevel ?? gameState.selfAssessedLevel ?? 0;
     const effLevel = Math.min(level, location.levels.length - 1);
     const mastery = getMasterySnapshot(location);
@@ -137,13 +139,18 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
         }
 
         case 'show_exercise': {
-          const hints: ExerciseHints = {
-            objectiveId: (args.objectiveId as string) ?? objectiveId ?? 'ko-vocab-food-items',
-            hintItems: (args.hintItems as string[] | null) ?? undefined,
-            hintCount: (args.hintCount as number | null) ?? undefined,
-            hintSubType: (args.hintSubType as string | null) ?? undefined,
-          };
-          const exercise = generateExercise(args.exerciseType as string, hints);
+          let exercise: ExerciseData;
+          if (isValidExerciseData(args.exerciseData)) {
+            exercise = args.exerciseData;
+          } else {
+            const hints: ExerciseHints = {
+              objectiveId: (args.objectiveId as string) ?? objectiveId ?? 'ko-vocab-food-items',
+              hintItems: (args.hintItems as string[] | null) ?? undefined,
+              hintCount: (args.hintCount as number | null) ?? undefined,
+              hintSubType: (args.hintSubType as string | null) ?? undefined,
+            };
+            exercise = generateExercise(args.exerciseType as string, hints);
+          }
 
           setExerciseMap((prev) => ({ ...prev, [exercise.id]: exercise }));
           setChatEntries((prev) => [
@@ -206,8 +213,9 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
             },
           ]);
 
-          // Award XP
+          // Award XP and SP
           gameDispatch({ type: 'ADD_XP', amount: xpEarned });
+          gameDispatch({ type: 'ADD_SP', amount: Math.round(xpEarned * 0.3) });
           break;
         }
       }
@@ -246,16 +254,18 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
       // Update session store
       dispatchSession({ type: 'RECORD_EXERCISE_RESULT', correct });
 
-      // Update game store mastery
+      // Update game store mastery — dispatch per-item results using actual target words
       const exercise = exerciseMap[exerciseId];
       if (exercise) {
-        const isScript = exercise.objectiveId.includes('script') || exercise.objectiveId.includes('pron');
-        gameDispatch({
-          type: 'RECORD_ITEM_RESULT',
-          itemId: exercise.objectiveId,
-          category: isScript ? 'script' : 'vocabulary',
-          correct,
-        });
+        const targets = extractTargetItems(exercise);
+        for (const target of targets) {
+          gameDispatch({
+            type: 'RECORD_ITEM_RESULT',
+            itemId: target.itemId,
+            category: target.category,
+            correct,
+          });
+        }
       }
 
       // Add user response entry

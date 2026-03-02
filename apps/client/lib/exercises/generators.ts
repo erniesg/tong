@@ -5,14 +5,30 @@ import type {
   SentenceBuilderExercise,
   FillBlankExercise,
   PronunciationSelectExercise,
+  PatternRecognitionExercise,
+  StrokeTracingExercise,
+  ErrorCorrectionExercise,
+  FreeInputExercise,
   ExerciseData,
 } from '@/lib/types/hangout';
+import { VOCABULARY_TARGETS } from '@/lib/content/pojangmacha';
+import type { ItemMastery } from '@/lib/types/mastery';
+import { getDueItems, getNewItems } from '@/lib/curriculum/srs';
+import { HANGUL_DESIGN_PRINCIPLES } from '@/lib/content/scripts/hangul';
+import { PINYIN_DESIGN_PRINCIPLES } from '@/lib/content/scripts/pinyin';
+import { KANA_DESIGN_PRINCIPLES } from '@/lib/content/scripts/kana';
+import { getLocationVocab, getRegisteredLocationKeys } from '@/lib/content/locations';
+import type { DesignPrinciple } from '@/lib/content/scripts/hangul';
 
 export interface ExerciseHints {
   hintItems?: string[];
   hintCount?: number;
   hintSubType?: string;
   objectiveId?: string;
+  mastery?: Record<string, ItemMastery>;
+  language?: 'ko' | 'zh' | 'ja';
+  cityId?: string;
+  locationId?: string;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -28,9 +44,14 @@ function pick<T>(arr: T[], n: number): T[] {
   return shuffle(arr).slice(0, n);
 }
 
-let exerciseCounter = 0;
-function nextId(): string {
-  return `ex-${Date.now()}-${exerciseCounter++}`;
+/** Content-based stable ID: same content → same ID → mastery accumulates. */
+function stableId(type: string, objectiveId: string, items: string[]): string {
+  const key = `${type}:${objectiveId}:${items.sort().join(',')}`;
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0;
+  }
+  return `ex-${type}-${(hash >>> 0).toString(36)}`;
 }
 
 /* ── Generic item type used across all data pools ─────────── */
@@ -75,72 +96,35 @@ const VOWELS: VocabItem[] = [
 
 const ALL_JAMO: VocabItem[] = [...CONSONANTS, ...VOWELS];
 
-/* ── Menu reading data (Level 0 script) ───────────────────── */
+/* ── Vocab pools derived from location content ────────────── */
 
-const MENU_WORDS: VocabItem[] = [
-  { word: '오뎅', translation: 'fish cake', romanization: 'odeng' },
-  { word: '떡볶이', translation: 'spicy rice cakes', romanization: 'tteokbokki' },
-  { word: '라면', translation: 'instant noodles', romanization: 'ramyeon' },
-  { word: '순대', translation: 'blood sausage', romanization: 'sundae' },
-];
+/** Convert VocabularyTarget[] to VocabItem[] by category. */
+function vocabByCategory(category: string): VocabItem[] {
+  return VOCABULARY_TARGETS
+    .filter((v) => v.category === category)
+    .map((v) => ({ word: v.word, translation: v.translation, romanization: v.romanization }));
+}
 
-/* ── Vocabulary data (Level 2) ────────────────────────────── */
+const MENU_WORDS: VocabItem[] = VOCABULARY_TARGETS
+  .filter((v) => v.level === 0 && v.category === 'food_item')
+  .map((v) => ({ word: v.word, translation: v.translation, romanization: v.romanization }));
 
 const FOOD_VOCAB: VocabItem[] = [
-  { word: '떡볶이', translation: 'spicy rice cakes', romanization: 'tteokbokki' },
-  { word: '김밥', translation: 'seaweed rice roll', romanization: 'gimbap' },
-  { word: '라면', translation: 'ramen noodles', romanization: 'ramyeon' },
-  { word: '순대', translation: 'blood sausage', romanization: 'sundae' },
-  { word: '오뎅', translation: 'fish cake skewer', romanization: 'odeng' },
-  { word: '튀김', translation: 'fried snacks', romanization: 'twigim' },
-  { word: '소주', translation: 'soju (rice liquor)', romanization: 'soju' },
-  { word: '막걸리', translation: 'rice wine', romanization: 'makgeolli' },
-  { word: '물', translation: 'water', romanization: 'mul' },
-  { word: '밥', translation: 'rice / meal', romanization: 'bap' },
-  { word: '만두', translation: 'dumplings', romanization: 'mandu' },
-  { word: '꼬치', translation: 'skewers', romanization: 'kkochi' },
-  { word: '호떡', translation: 'sweet pancake', romanization: 'hotteok' },
-  { word: '김치', translation: 'kimchi', romanization: 'gimchi' },
-  { word: '비빔밥', translation: 'mixed rice', romanization: 'bibimbap' },
+  ...vocabByCategory('food_item'),
+  ...vocabByCategory('drink'),
 ];
 
-const TASTE_VOCAB: VocabItem[] = [
-  { word: '맵다', translation: 'spicy', romanization: 'maepda' },
-  { word: '달다', translation: 'sweet', romanization: 'dalda' },
-  { word: '짜다', translation: 'salty', romanization: 'jjada' },
-  { word: '맛있다', translation: 'delicious', romanization: 'masitda' },
-  { word: '맛없다', translation: 'not tasty', romanization: 'maseopda' },
-];
-
-const NUMBER_VOCAB: VocabItem[] = [
-  { word: '하나', translation: 'one', romanization: 'hana' },
-  { word: '둘', translation: 'two', romanization: 'dul' },
-  { word: '셋', translation: 'three', romanization: 'set' },
-  { word: '넷', translation: 'four', romanization: 'net' },
-  { word: '다섯', translation: 'five', romanization: 'daseot' },
-];
-
-const VERB_VOCAB: VocabItem[] = [
-  { word: '먹다', translation: 'to eat', romanization: 'meokda' },
-  { word: '주다', translation: 'to give', romanization: 'juda' },
-  { word: '마시다', translation: 'to drink', romanization: 'masida' },
-  { word: '사다', translation: 'to buy', romanization: 'sada' },
-  { word: '시키다', translation: 'to order', romanization: 'sikida' },
-];
-
-const COURTESY_VOCAB: VocabItem[] = [
-  { word: '주세요', translation: 'please (give me)', romanization: 'juseyo' },
-  { word: '감사합니다', translation: 'thank you', romanization: 'gamsahamnida' },
-  { word: '잠시만요', translation: 'just a moment', romanization: 'jamsimanyo' },
-  { word: '여기요', translation: 'excuse me (here)', romanization: 'yeogiyo' },
-  { word: '얼마예요', translation: 'how much?', romanization: 'eolmayeyo' },
-];
+const TASTE_VOCAB: VocabItem[] = vocabByCategory('taste');
+const NUMBER_VOCAB: VocabItem[] = vocabByCategory('number');
+const VERB_VOCAB: VocabItem[] = vocabByCategory('verb');
+const COURTESY_VOCAB: VocabItem[] = vocabByCategory('courtesy');
 
 /** All vocab pools combined for fallback matching. */
-const ALL_VOCAB: VocabItem[] = [
-  ...FOOD_VOCAB, ...TASTE_VOCAB, ...NUMBER_VOCAB,
-  ...VERB_VOCAB, ...COURTESY_VOCAB, ...MENU_WORDS,
-];
+const ALL_VOCAB: VocabItem[] = VOCABULARY_TARGETS.map((v) => ({
+  word: v.word,
+  translation: v.translation,
+  romanization: v.romanization,
+}));
 
 /* ── Pool selection by objectiveId ────────────────────────── */
 
@@ -161,15 +145,79 @@ function getPoolForObjective(objectiveId?: string): VocabItem[] {
 }
 
 /**
- * Select items from the right pool, prioritizing hintItems.
+ * Get vocab pool for a specific city/location, falling back to Korean pools.
+ * For non-Korean languages, pull from the location registry.
+ */
+function getPoolForLocation(
+  language: 'ko' | 'zh' | 'ja',
+  cityId?: string,
+  locationId?: string,
+  objectiveId?: string,
+): VocabItem[] {
+  if (language === 'ko') return getPoolForObjective(objectiveId);
+
+  // For Chinese/Japanese: try location-specific vocab first
+  if (cityId && locationId) {
+    const locVocab = getLocationVocab(cityId, locationId);
+    if (locVocab.length > 0) return locVocab;
+  }
+
+  // Fallback: aggregate all vocab from the city's registered locations
+  const cityId_ = language === 'zh' ? 'shanghai' : 'tokyo';
+  const cityPrefix = `${cityId_}:`;
+  const cityLocationKeys = getRegisteredLocationKeys().filter((k) => k.startsWith(cityPrefix));
+  const allVocab: VocabItem[] = [];
+  for (const key of cityLocationKeys) {
+    const locId = key.slice(cityPrefix.length);
+    allVocab.push(...getLocationVocab(cityId_, locId));
+  }
+  return allVocab.length > 0 ? allVocab : getPoolForObjective(objectiveId);
+}
+
+/** Get design principles for a given language. */
+function getDesignPrinciplesForLanguage(language: 'ko' | 'zh' | 'ja'): DesignPrinciple[] {
+  switch (language) {
+    case 'ko': return HANGUL_DESIGN_PRINCIPLES;
+    case 'zh': return PINYIN_DESIGN_PRINCIPLES;
+    case 'ja': return KANA_DESIGN_PRINCIPLES;
+  }
+}
+
+/**
+ * Select items from the right pool, prioritizing hintItems and SRS due items.
  * Falls back across ALL pools if hints don't match the primary pool.
  */
 function selectItems(
   count: number,
   pool: VocabItem[],
   hintItems?: string[],
+  mastery?: Record<string, ItemMastery>,
 ): VocabItem[] {
   if (!hintItems || hintItems.length === 0) {
+    // SRS-aware: prioritize due items, then unseen, then rest
+    if (mastery && Object.keys(mastery).length > 0) {
+      const poolWords = pool.map((v) => v.word);
+      const dueWords = getDueItems(mastery).filter((w) => poolWords.includes(w));
+      const newWords = getNewItems(mastery, poolWords);
+      const prioritized: VocabItem[] = [];
+      // Add due items first
+      for (const w of dueWords) {
+        const item = pool.find((v) => v.word === w);
+        if (item && prioritized.length < count) prioritized.push(item);
+      }
+      // Then unseen items
+      for (const w of newWords) {
+        const item = pool.find((v) => v.word === w);
+        if (item && prioritized.length < count) prioritized.push(item);
+      }
+      // Pad with random from pool if needed
+      if (prioritized.length < count) {
+        const used = new Set(prioritized.map((v) => v.word));
+        const rest = pool.filter((v) => !used.has(v.word));
+        prioritized.push(...pick(rest, count - prioritized.length));
+      }
+      if (prioritized.length > 0) return shuffle(prioritized);
+    }
     return pick(pool, Math.min(count, pool.length));
   }
 
@@ -204,14 +252,15 @@ function generateMatching(
   count: number,
   hintItems?: string[],
   hintSubType?: string,
+  mastery?: Record<string, ItemMastery>,
 ): MatchingExercise {
-  const selected = selectItems(count, pool, hintItems);
+  const selected = selectItems(count, pool, hintItems, mastery);
   const isScript = objectiveId.includes('script') || objectiveId.includes('pron');
   const isSound = hintSubType === 'sound_quiz';
 
   return {
     type: 'matching',
-    id: nextId(),
+    id: stableId('matching', objectiveId, selected.map((v) => v.word)),
     objectiveId,
     difficulty: isScript ? 1 : 2,
     prompt: isSound
@@ -231,8 +280,9 @@ function generateMultipleChoice(
   objectiveId: string,
   hintItems?: string[],
   hintSubType?: string,
+  mastery?: Record<string, ItemMastery>,
 ): MultipleChoiceExercise {
-  const selected = selectItems(4, pool, hintItems);
+  const selected = selectItems(4, pool, hintItems, mastery);
   const target = selected[0];
   const isScript = objectiveId.includes('script') || objectiveId.includes('pron');
   const isVisual = hintSubType === 'visual_recognition';
@@ -265,7 +315,7 @@ function generateMultipleChoice(
 
   return {
     type: 'multiple_choice',
-    id: nextId(),
+    id: stableId('mc', objectiveId, [target.word]),
     objectiveId,
     difficulty: isScript ? 1 : 2,
     prompt,
@@ -281,8 +331,9 @@ function generateDragDrop(
   count: number,
   hintItems?: string[],
   hintSubType?: string,
+  mastery?: Record<string, ItemMastery>,
 ): DragDropExercise {
-  const selected = selectItems(count, pool, hintItems);
+  const selected = selectItems(count, pool, hintItems, mastery);
   const isScript = objectiveId.includes('script') || objectiveId.includes('pron');
   const isSound = hintSubType === 'sound_quiz';
 
@@ -303,7 +354,7 @@ function generateDragDrop(
 
   return {
     type: 'drag_drop',
-    id: nextId(),
+    id: stableId('dd', objectiveId, selected.map((v) => v.word)),
     objectiveId,
     difficulty: isScript ? 1 : 2,
     prompt: isSound
@@ -461,7 +512,7 @@ function generateSentenceBuilder(
 
   return {
     type: 'sentence_builder',
-    id: nextId(),
+    id: stableId('sb', objectiveId, pattern.correctOrder),
     objectiveId,
     difficulty: pattern.correctOrder.length > 3 ? 3 : 2,
     prompt: pattern.prompt,
@@ -494,7 +545,7 @@ function generateFillBlank(
 
   return {
     type: 'fill_blank',
-    id: nextId(),
+    id: stableId('fb', objectiveId, [pattern.correct, pattern.sentence]),
     objectiveId,
     difficulty: 2,
     prompt: pattern.prompt,
@@ -528,7 +579,7 @@ function generatePronunciationSelect(
 
   return {
     type: 'pronunciation_select',
-    id: nextId(),
+    id: stableId('ps', objectiveId, [target.char]),
     objectiveId,
     difficulty: 1,
     prompt: `What sound does this character make?`,
@@ -539,29 +590,173 @@ function generatePronunciationSelect(
   };
 }
 
+/* ── New Phase 4 generators ──────────────────────────────────── */
+
+function generatePatternRecognition(
+  objectiveId: string,
+  language: 'ko' | 'zh' | 'ja' = 'ko',
+): PatternRecognitionExercise {
+  // Pick a random design principle from the appropriate language
+  const principles = getDesignPrinciplesForLanguage(language);
+  const principle = principles[Math.floor(Math.random() * principles.length)];
+  const correctIdx = Math.floor(Math.random() * Math.min(principle.examples.length, 4));
+
+  // Build pairs: correct example + distractors from other principles
+  const pairs = [principle.examples[correctIdx]];
+  const otherPrinciples = principles.filter((p) => p.id !== principle.id);
+  for (const other of shuffle(otherPrinciples).slice(0, 2)) {
+    const ex = other.examples[Math.floor(Math.random() * other.examples.length)];
+    pairs.push(ex);
+  }
+
+  const shuffledPairs = shuffle(pairs);
+  const correctShuffledIdx = shuffledPairs.findIndex(
+    (p) => p.chars === principle.examples[correctIdx].chars,
+  );
+
+  return {
+    type: 'pattern_recognition',
+    id: stableId('pr', objectiveId, [principle.id, principle.examples[correctIdx].chars]),
+    objectiveId,
+    difficulty: 2,
+    prompt: `Which example shows "${principle.title}"?`,
+    pairs: shuffledPairs,
+    correctPairIndex: correctShuffledIdx,
+    principleId: principle.id,
+    explanation: principle.teachingHook,
+  };
+}
+
+function generateStrokeTracing(
+  pool: VocabItem[],
+  objectiveId: string,
+  hintItems?: string[],
+): StrokeTracingExercise {
+  // Pick a target character
+  let target: string;
+  if (hintItems && hintItems.length > 0) {
+    target = hintItems[Math.floor(Math.random() * hintItems.length)];
+  } else {
+    const item = pool[Math.floor(Math.random() * pool.length)];
+    target = item.word.charAt(0); // first character
+  }
+
+  return {
+    type: 'stroke_tracing',
+    id: stableId('st', objectiveId, [target]),
+    objectiveId,
+    difficulty: 1,
+    prompt: `Trace the character: ${target}`,
+    targetChar: target,
+    ghostOverlay: true,
+    explanation: `Practice writing ${target} to build muscle memory.`,
+  };
+}
+
+function generateErrorCorrection(
+  _pool: VocabItem[],
+  objectiveId: string,
+): ErrorCorrectionExercise {
+  // Predefined error correction patterns for Korean grammar
+  const patterns = [
+    {
+      sentence: '떡볶이 를 주세요',
+      errorWordIndex: 1,
+      correct: '을',
+      distractors: ['는', '이'],
+      explanation: '떡볶이 ends with a vowel (ㅣ), so use 를, but the sentence incorrectly uses 를 spacing — the particle attaches directly.',
+    },
+    {
+      sentence: '물 이 마시다',
+      errorWordIndex: 1,
+      correct: '을',
+      distractors: ['는', '가'],
+      explanation: '물 (water) is the object being drunk, so use object particle 을, not subject particle 이.',
+    },
+    {
+      sentence: '김밥 두 장 주세요',
+      errorWordIndex: 2,
+      correct: '개',
+      distractors: ['병', '잔'],
+      explanation: '장 is for flat things (paper). For food items, use 개 (general counter).',
+    },
+  ];
+
+  const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+  const options = shuffle([
+    { id: 'correct', text: pattern.correct },
+    ...pattern.distractors.map((d, i) => ({ id: `d${i}`, text: d })),
+  ]);
+
+  return {
+    type: 'error_correction',
+    id: stableId('ec', objectiveId, [pattern.sentence, pattern.correct]),
+    objectiveId,
+    difficulty: 3,
+    prompt: 'Find and fix the error in this sentence:',
+    sentence: pattern.sentence,
+    errorWordIndex: pattern.errorWordIndex,
+    options,
+    correctOptionId: 'correct',
+    explanation: pattern.explanation,
+  };
+}
+
+function generateFreeInput(
+  pool: VocabItem[],
+  objectiveId: string,
+  hintItems?: string[],
+): FreeInputExercise {
+  const selected = hintItems && hintItems.length > 0
+    ? pool.find((v) => hintItems.includes(v.word)) ?? pool[0]
+    : pool[Math.floor(Math.random() * pool.length)];
+
+  return {
+    type: 'free_input',
+    id: stableId('fi', objectiveId, [selected.word]),
+    objectiveId,
+    difficulty: 2,
+    prompt: `Type the Korean word for "${selected.translation}":`,
+    expectedAnswers: [selected.word],
+    hint: `Romanization: ${selected.romanization}`,
+    explanation: `${selected.word} (${selected.romanization}) = ${selected.translation}`,
+  };
+}
+
 /** Route from exercise type + hints to a generated exercise using the right data pool. */
 export function generateExercise(exerciseType: string, hints?: ExerciseHints): ExerciseData {
   const hintItems = hints?.hintItems;
   const count = hints?.hintCount;
   const hintSubType = hints?.hintSubType;
   const objectiveId = hints?.objectiveId ?? 'ko-vocab-food-items';
+  const mastery = hints?.mastery;
+  const language = hints?.language ?? 'ko';
 
-  const pool = getPoolForObjective(objectiveId);
+  // Language-aware pool selection
+  const pool = getPoolForLocation(language, hints?.cityId, hints?.locationId, objectiveId);
 
   switch (exerciseType) {
     case 'matching':
-      return generateMatching(pool, objectiveId, count ?? 5, hintItems, hintSubType);
+      return generateMatching(pool, objectiveId, count ?? 5, hintItems, hintSubType, mastery);
     case 'multiple_choice':
-      return generateMultipleChoice(pool, objectiveId, hintItems, hintSubType);
+      return generateMultipleChoice(pool, objectiveId, hintItems, hintSubType, mastery);
     case 'drag_drop':
-      return generateDragDrop(pool, objectiveId, count ?? 4, hintItems, hintSubType);
+      return generateDragDrop(pool, objectiveId, count ?? 4, hintItems, hintSubType, mastery);
     case 'sentence_builder':
       return generateSentenceBuilder(pool, objectiveId, hintItems);
     case 'fill_blank':
       return generateFillBlank(pool, objectiveId, hintItems);
     case 'pronunciation_select':
       return generatePronunciationSelect(pool, objectiveId, hintItems);
+    case 'pattern_recognition':
+      return generatePatternRecognition(objectiveId, language);
+    case 'stroke_tracing':
+      return generateStrokeTracing(pool, objectiveId, hintItems);
+    case 'error_correction':
+      return generateErrorCorrection(pool, objectiveId);
+    case 'free_input':
+      return generateFreeInput(pool, objectiveId, hintItems);
     default:
-      return generateMatching(pool, objectiveId, count ?? 5, hintItems, hintSubType);
+      return generateMatching(pool, objectiveId, count ?? 5, hintItems, hintSubType, mastery);
   }
 }
