@@ -195,7 +195,7 @@ button,
 }
 
 /* Inside game-frame: reset — components style themselves */
-.game-frame button:not(.btn-go):not(.btn-skip):not([class*="location-sheet"]):not([class*="exercise"]) {
+.game-frame button:not(.btn-go):not(.btn-skip):not([class*="location-drawer"]):not([class*="exercise"]) {
   background: transparent;
   color: inherit;
   padding: 0;
@@ -728,12 +728,9 @@ button.nav-link:hover {
   z-index: 11;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
-  padding-top: calc(4px + env(safe-area-inset-top, 0px));
-  background: rgba(0,0,0,0.4);
-  backdrop-filter: blur(6px);
-  border-radius: 0 0 10px 10px;
+  padding: 6px 14px;
+  padding-top: calc(6px + env(safe-area-inset-top, 0px));
+  background: none;
   cursor: pointer;
   user-select: none;
 }
@@ -2307,6 +2304,7 @@ button.nav-link:hover {
   color: rgba(255, 255, 255, 0.75);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
   margin-top: 2px;
+  pointer-events: auto;
 }
 
 /* ── Location pin ───────────────────────────────────────────── */
@@ -2382,7 +2380,7 @@ button.nav-link:hover {
   50% { transform: scale(1.25); box-shadow: 0 2px 16px rgba(240, 192, 64, 0.6); }
 }
 
-/* ── Location sheet (bottom sheet) ──────────────────────────── */
+/* ── Location drawer (top swipe-down, like HUD) ───────────── */
 
 .location-sheet-backdrop {
   position: absolute;
@@ -2392,169 +2390,170 @@ button.nav-link:hover {
   animation: fadeIn 0.2s ease-out;
 }
 
-.location-sheet {
+.location-drawer {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 11;
-  background: linear-gradient(180deg, rgba(18, 24, 48, 0.97) 0%, rgba(12, 16, 32, 0.99) 100%);
+  background: rgba(12, 16, 32, 0.92);
   backdrop-filter: blur(20px);
-  border-radius: 24px 24px 0 0;
-  padding: 12px 20px calc(24px + var(--safe-bottom));
-  animation: sheetSlideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  border-radius: 20px 20px 0 0;
+  padding: 12px 16px calc(16px + var(--safe-bottom, 0px));
+  animation: drawerSlideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.location-sheet__handle {
-  width: 36px;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.2);
-  margin: 0 auto 16px;
-}
-
-.location-sheet__header {
+.location-drawer__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
-.location-sheet__names {
+.location-drawer__names {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  gap: 8px;
 }
 
-.location-sheet__name-ko {
-  font-size: 22px;
+.location-drawer__name-local {
+  font-size: 20px;
   font-weight: 700;
   color: #fff;
   letter-spacing: 0.02em;
 }
 
-.location-sheet__name-en {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
+.location-drawer__name-en {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
   font-weight: 500;
 }
 
-.location-sheet__badge {
-  font-size: 13px;
+.location-drawer__badge {
+  font-size: 12px;
   color: var(--color-accent-gold, #f0c040);
   background: rgba(240, 192, 64, 0.12);
   border: 1px solid rgba(240, 192, 64, 0.2);
   border-radius: 999px;
-  padding: 5px 12px;
+  padding: 3px 10px;
   font-weight: 700;
 }
 
-.location-sheet__actions {
+.location-drawer__actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
-/* Base button: card-like with icon + text */
-.location-sheet__btn {
+/* Base button */
+.location-drawer__btn {
   width: 100%;
-  padding: 14px 16px;
-  border-radius: 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
   border: none;
   outline: none;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   text-align: left;
-  position: relative;
   -webkit-tap-highlight-color: transparent;
 }
 
-.location-sheet__btn:focus {
-  outline: none;
-}
+.location-drawer__btn:focus { outline: none; }
 
-.location-sheet__btn:hover:not(:disabled) {
+.location-drawer__btn:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
-.location-sheet__btn:active:not(:disabled) {
+.location-drawer__btn:active:not(:disabled) {
   transform: scale(0.98);
 }
 
-.location-sheet__btn:disabled {
-  cursor: default;
-}
+.location-drawer__btn:disabled { cursor: default; }
 
-.location-sheet__btn-icon {
-  font-size: 20px;
+.location-drawer__btn-icon {
+  font-size: 18px;
   flex-shrink: 0;
-  width: 32px;
+  width: 28px;
   text-align: center;
 }
 
-.location-sheet__btn-text {
+.location-drawer__btn-text {
   display: flex;
   flex-direction: column;
   gap: 1px;
   flex: 1;
 }
 
-.location-sheet__btn-label {
-  font-size: 15px;
+.location-drawer__btn-label {
+  font-size: 14px;
   font-weight: 700;
 }
 
-.location-sheet__btn-desc {
-  font-size: 11px;
+.location-drawer__btn-desc {
+  font-size: 10px;
   font-weight: 400;
   opacity: 0.6;
 }
 
-/* Hangout: primary, vivid */
-.location-sheet__btn--hangout {
-  background: linear-gradient(135deg, #e8485c 0%, #d63850 100%);
-  color: #fff;
-  box-shadow: 0 2px 12px rgba(232, 72, 92, 0.25);
+.location-drawer__sp-cost {
+  margin-left: 8px;
+  font-size: 11px;
+  opacity: 0.7;
+  font-weight: 500;
 }
 
-/* Learn: secondary, subtle */
-.location-sheet__btn--learn {
+/* Learn: primary, on top */
+.location-drawer__btn--learn {
+  background: linear-gradient(135deg, #4a90d9 0%, #3a7bc8 100%);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(74, 144, 217, 0.25);
+}
+
+/* Hangout: secondary */
+.location-drawer__btn--hangout {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
 
-/* Mission: gold when available, dark+locked when not */
-.location-sheet__btn--mission {
-  background: linear-gradient(135deg, #f0c040 0%, #e0a820 100%);
-  color: #1a1a2e;
-  box-shadow: 0 2px 12px rgba(240, 192, 64, 0.2);
-}
-
-.location-sheet__btn--mission.location-sheet__btn--locked {
+/* Mission: always locked for now */
+.location-drawer__btn--mission {
   background: rgba(255, 255, 255, 0.04);
   color: rgba(255, 255, 255, 0.35);
   box-shadow: none;
 }
 
-.location-sheet__btn--locked .location-sheet__btn-desc {
+.location-drawer__btn--locked {
   opacity: 0.5;
 }
 
-.location-sheet__hint {
+.location-drawer__btn--locked .location-drawer__btn-desc {
+  opacity: 0.5;
+}
+
+.location-drawer__hint {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.45);
   text-align: center;
   margin-top: 4px;
 }
 
-@keyframes sheetSlideUp {
+.location-drawer__handle {
+  text-align: center;
+  padding: 6px 0 2px;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  user-select: none;
+}
+
+@keyframes drawerSlideUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
 }

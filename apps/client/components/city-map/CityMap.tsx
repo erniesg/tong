@@ -298,6 +298,7 @@ export function CityMap({
             locationId={selectedLocation}
             locationName={loc.en}
             locationNameKo={loc.local}
+            targetLang={targetLang}
             hangoutCount={getLocationHangoutCount(city, selectedLocation)}
             missionAvailable={isMissionAvailable(city, selectedLocation)}
             comingSoon={comingSoon}
