@@ -401,3 +401,119 @@ export function fetchSecretStatus() {
 export function getApiBase() {
   return API_BASE;
 }
+
+// ── Tool invocation (generic) ────────────────────────────────────────
+
+export interface ToolInvokeResponse<T = unknown> {
+  ok: boolean;
+  tool?: string;
+  error?: string;
+  result?: T;
+}
+
+export function invokeTool<T = unknown>(tool: string, args: Record<string, unknown> = {}) {
+  return apiFetch<ToolInvokeResponse<T>>('/api/v1/tools/invoke', {
+    method: 'POST',
+    body: JSON.stringify({ tool, args }),
+  });
+}
+
+export function fetchTools() {
+  return apiFetch<{
+    ok: true;
+    tools: Array<{ name: string; description: string; args: Record<string, unknown> }>;
+  }>('/api/v1/tools');
+}
+
+// ── Volcengine / ByteDance tools ─────────────────────────────────────
+
+export interface VolcImageResult {
+  url?: string;
+  b64Json?: string;
+}
+
+export interface VolcImageGenerateResult {
+  images: VolcImageResult[];
+  model: string;
+  seed?: number;
+}
+
+export function volcImageGenerate(args: {
+  prompt: string;
+  model?: string;
+  size?: '1K' | '2K' | '4K';
+  n?: number;
+  seed?: number;
+  guidanceScale?: number;
+  responseFormat?: 'url' | 'b64_json';
+}) {
+  return invokeTool<VolcImageGenerateResult>('volcengine.image.generate', args);
+}
+
+export type VolcVideoStatus = 'queued' | 'running' | 'succeeded' | 'failed';
+
+export interface VolcVideoTask {
+  id: string;
+  model: string;
+  status: VolcVideoStatus;
+  videoUrl?: string;
+  seed?: number;
+  resolution?: string;
+  ratio?: string;
+  duration?: number;
+  createdAt: number;
+  updatedAt: number;
+  error?: string;
+}
+
+export function volcVideoCreate(args: {
+  content: Array<{ type: 'text'; text: string } | { type: 'image_url'; imageUrl: string }>;
+  model?: string;
+  resolution?: '480p' | '720p' | '1080p' | '2K';
+  ratio?: '16:9' | '9:16' | '4:3' | '1:1';
+  duration?: number;
+  seed?: number;
+  generateAudio?: boolean;
+  serviceTier?: 'default' | 'flex';
+  callbackUrl?: string;
+}) {
+  return invokeTool<VolcVideoTask>('volcengine.video.create', args);
+}
+
+export function volcVideoGet(taskId: string) {
+  return invokeTool<VolcVideoTask>('volcengine.video.get', { taskId });
+}
+
+export function volcVideoList(args: { limit?: number; after?: string } = {}) {
+  return invokeTool<{ tasks: VolcVideoTask[]; hasMore: boolean }>('volcengine.video.list', args);
+}
+
+export interface VolcTTSResult {
+  audioBase64: string;
+  encoding: string;
+  durationMs?: number;
+}
+
+export function volcTTSSynthesize(args: {
+  text: string;
+  voiceType?: string;
+  encoding?: 'mp3' | 'wav' | 'ogg' | 'pcm';
+  speedRatio?: number;
+  volumeRatio?: number;
+  pitchRatio?: number;
+  emotion?: string;
+  language?: 'en' | 'cn' | 'ja' | 'ko';
+}) {
+  return invokeTool<VolcTTSResult>('volcengine.tts.synthesize', args);
+}
+
+export function volcStatus() {
+  return invokeTool<{
+    arkApiKeyConfigured: boolean;
+    ttsAppIdConfigured: boolean;
+    ttsAccessTokenConfigured: boolean;
+    defaultImageModel: string;
+    defaultVideoModel: string;
+    defaultTtsVoice: string;
+  }>('volcengine.status');
+}
