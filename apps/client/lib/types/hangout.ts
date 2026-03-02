@@ -107,10 +107,61 @@ export interface PronunciationSelectExercise {
   explanation?: string;
 }
 
+export interface PatternRecognitionExercise {
+  type: 'pattern_recognition';
+  id: string;
+  objectiveId: string;
+  difficulty: number;
+  prompt: string;
+  pairs: { chars: string; explanation: string }[];
+  correctPairIndex: number;
+  principleId: string;
+  explanation?: string;
+}
+
+export interface StrokeTracingExercise {
+  type: 'stroke_tracing';
+  id: string;
+  objectiveId: string;
+  difficulty: number;
+  prompt: string;
+  targetChar: string;
+  ghostOverlay: boolean;
+  explanation?: string;
+}
+
+export interface ErrorCorrectionExercise {
+  type: 'error_correction';
+  id: string;
+  objectiveId: string;
+  difficulty: number;
+  prompt: string;
+  sentence: string;
+  errorWordIndex: number;
+  options: { id: string; text: string }[];
+  correctOptionId: string;
+  explanation?: string;
+}
+
+export interface FreeInputExercise {
+  type: 'free_input';
+  id: string;
+  objectiveId: string;
+  difficulty: number;
+  prompt: string;
+  expectedAnswers: string[];
+  hint?: string;
+  explanation?: string;
+}
+
 export type ExerciseData =
   | MultipleChoiceExercise
   | DragDropExercise
   | MatchingExercise
   | SentenceBuilderExercise
   | FillBlankExercise
-  | PronunciationSelectExercise;
+  | PronunciationSelectExercise
+  | PatternRecognitionExercise
+  | StrokeTracingExercise
+  | ErrorCorrectionExercise
+  | FreeInputExercise;

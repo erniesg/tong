@@ -9,10 +9,13 @@ import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
 import type { Character } from '@/lib/types/relationship';
 import { SceneView } from '@/components/scene/SceneView';
 import { generateExercise } from '@/lib/exercises/generators';
+import { isValidExerciseData } from '@/lib/exercises/validate';
+import { extractTargetItems } from '@/lib/exercises/extract-targets';
 import { summarizeExercise } from '@/lib/utils/summarize-exercise';
 import { useGameState, dispatch, getRelationship, getMasterySnapshot } from '@/lib/store/game-store';
 import { CHARACTER_MAP, HAUEN } from '@/lib/content/characters';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
+import { getLocationOrDefault } from '@/lib/content/locations';
 import { getRelationshipStage } from '@/lib/types/relationship';
 import { CityMap, CITY_ORDER } from '@/components/city-map/CityMap';
 import { LearnPanel } from '@/components/learn/LearnPanel';
@@ -109,13 +112,14 @@ function buildContextBlock(
   explainIn: AppLang = 'en',
 ): string {
   // explainIn is resolved per-city by the caller
+  const loc = getLocationOrDefault(cityId, locationId);
   const rel = getRelationship(npcId);
   const stage = getRelationshipStage(rel.affinity);
-  const mastery = getMasterySnapshot(POJANGMACHA);
+  const mastery = getMasterySnapshot(loc);
   const isFirstEncounter = rel.interactionCount === 0;
 
-  const locLevel = Math.min(level, POJANGMACHA.levels.length - 1);
-  const objectives = POJANGMACHA.levels[locLevel]?.objectives ?? [];
+  const locLevel = Math.min(level, loc.levels.length - 1);
+  const objectives = loc.levels[locLevel]?.objectives ?? [];
 
   const ctx = JSON.stringify({
     playerLevel: level,
@@ -197,6 +201,7 @@ export default function GamePage() {
   const processedToolCallsRef = useRef(new Set<string>());
   const lastContinueRef = useRef(0);
   const sceneStartedRef = useRef(false);
+  const lastExerciseRef = useRef<ExerciseData | null>(null);
 
   const currentLine = TONG_LINES[lineIndex] ?? '';
 
@@ -389,18 +394,25 @@ export default function GamePage() {
         const args = item.args as {
           exerciseType: string;
           objectiveId: string;
+          exerciseData?: Record<string, unknown> | null;
           hintItems?: string[] | null;
           hintCount?: number | null;
           hintSubType?: string | null;
         };
-        const exercise = generateExercise(args.exerciseType, {
-          hintItems: args.hintItems ?? undefined,
-          hintCount: args.hintCount ?? undefined,
-          hintSubType: args.hintSubType ?? undefined,
-          objectiveId: args.objectiveId,
-        });
+        let exercise: ExerciseData;
+        if (isValidExerciseData(args.exerciseData)) {
+          exercise = args.exerciseData;
+        } else {
+          exercise = generateExercise(args.exerciseType, {
+            hintItems: args.hintItems ?? undefined,
+            hintCount: args.hintCount ?? undefined,
+            hintSubType: args.hintSubType ?? undefined,
+            objectiveId: args.objectiveId,
+          });
+        }
         setCurrentMessage(null);
         setCurrentExercise(exercise);
+        lastExerciseRef.current = exercise;
         sessionLogger.logExerciseShown(args.exerciseType, exercise.id, { objectiveId: args.objectiveId, hintItems: args.hintItems });
         return; // BLOCK — wait for exercise completion
       }
@@ -413,8 +425,26 @@ export default function GamePage() {
         return; // BLOCK — wait for choice
       }
       case 'assess_result': {
-        // Non-blocking — mastery tracking handled by exercise results
-        console.log('[VN] assess_result (non-blocking):', item.args);
+        const args = item.args as {
+          objectiveId: string;
+          score: number;
+          feedback: string;
+        };
+        // Find all target items for this objective from the location data
+        const loc = getLocationOrDefault(city, location);
+        const allObjectives = loc.levels.flatMap((l) => l.objectives);
+        const objective = allObjectives.find((o) => o.id === args.objectiveId);
+        if (objective) {
+          const isScript = objective.category === 'script' || objective.category === 'pronunciation';
+          const isGrammar = objective.category === 'grammar';
+          const category: 'script' | 'vocabulary' | 'grammar' = isScript ? 'script' : isGrammar ? 'grammar' : 'vocabulary';
+          // Mark items as seen/correct based on assessment score
+          const correct = args.score >= 70;
+          for (const itemId of objective.targetItems) {
+            dispatch({ type: 'RECORD_ITEM_RESULT', itemId, category, correct });
+          }
+        }
+        console.log('[VN] assess_result dispatched:', args.objectiveId, args.score);
         break; // auto-advance
       }
       case 'end_scene': {
@@ -433,6 +463,7 @@ export default function GamePage() {
 
         // Dispatch store updates
         dispatch({ type: 'ADD_XP', amount: args.xpEarned });
+        dispatch({ type: 'ADD_SP', amount: Math.round(args.xpEarned * 0.5) });
         for (const ac of args.affinityChanges) {
           dispatch({ type: 'UPDATE_AFFINITY', characterId: ac.characterId, delta: ac.delta });
         }
@@ -491,7 +522,15 @@ export default function GamePage() {
     processingRef.current = false;
 
     sessionLogger.logExerciseResult(exerciseId, correct);
-    dispatch({ type: 'RECORD_ITEM_RESULT', itemId: exerciseId, category: 'vocabulary', correct });
+
+    // Dispatch per-item mastery results using actual target words
+    const exercise = lastExerciseRef.current;
+    if (exercise) {
+      const targets = extractTargetItems(exercise);
+      for (const target of targets) {
+        dispatch({ type: 'RECORD_ITEM_RESULT', itemId: target.itemId, category: target.category, correct });
+      }
+    }
 
     const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en');
     const msg = `${ctx}${summarizeExercise(exerciseId, correct)}`;
@@ -654,6 +693,14 @@ export default function GamePage() {
     const npcChar = CHARACTER_MAP[npcId] ?? HAUEN;
     npcRef.current = npcChar;
     const level = gameState.calibratedLevel ?? gameState.selfAssessedLevel ?? 0;
+
+    // Deduct SP cost for hangout (first is free, then 10, 25, 50)
+    const hangoutCount = gameState.locationHangoutCounts[`${cityId}:${locationId}`] ?? 0;
+    const spCosts = [0, 10, 25, 50];
+    const spCost = spCosts[Math.min(hangoutCount, spCosts.length - 1)] ?? 50;
+    if (spCost > 0) {
+      dispatch({ type: 'ADD_SP', amount: -spCost });
+    }
 
     setCity(cityId);
     setLocation(locationId);
@@ -822,7 +869,7 @@ export default function GamePage() {
               </div>
               <div className="scene-hud-scores">
                 <span className="scene-hud-score"><b>{gameState.xp}</b> XP</span>
-                <span className="scene-hud-score"><b>{score.sp}</b> SP</span>
+                <span className="scene-hud-score"><b>{gameState.sp}</b> SP</span>
                 <span className="scene-hud-score"><b>{Math.round(affinity)}</b> RP</span>
                 <select
                   className="scene-hud-lang-pill"

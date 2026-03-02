@@ -298,6 +298,7 @@ export function CityMap({
             hangoutCount={getLocationHangoutCount(city, selectedLocation)}
             missionAvailable={isMissionAvailable(city, selectedLocation)}
             comingSoon={comingSoon}
+            playerSp={gameState.sp}
             onHangout={() => onStartHangout(city, selectedLocation)}
             onLearn={() => onStartLearn(city, selectedLocation)}
             onDismiss={() => onSelectLocation(null)}

@@ -48,12 +48,15 @@ const hangoutTools = {
     execute: async (args) => args,
   }),
   show_exercise: tool({
-    description: 'Show an interactive exercise. After calling this, STOP and wait for the player result.',
+    description: 'Show an interactive exercise. After calling this, STOP and wait for the player result. PREFERRED: provide exerciseData with the complete exercise object for contextual, adaptive exercises. FALLBACK: set exerciseData to null and the client generates locally from hints.',
     parameters: z.object({
       exerciseType: z.enum([
         'drag_drop', 'matching', 'multiple_choice',
+        'sentence_builder', 'fill_blank', 'pronunciation_select',
+        'pattern_recognition', 'stroke_tracing', 'error_correction', 'free_input',
       ]).describe('Exercise UI type'),
       objectiveId: z.string().describe('Learning objective this tests'),
+      exerciseData: z.record(z.unknown()).nullable().describe('Complete exercise object. When provided, client uses it directly. When null, client generates locally from hints. ID convention: "ai-{type}-{timestamp}".'),
       context: z.string().nullable().describe('Scene context for exercise prompt, or null'),
       hintItems: z.array(z.string()).nullable().describe('Specific characters/words to include in the exercise. The exercise generator will prioritize these items. null if no specific items.'),
       hintCount: z.number().nullable().describe('How many items the exercise should contain. null for default.'),
@@ -341,6 +344,7 @@ function buildFallbackResponse(characterId: string, isFirstEncounter: boolean, m
       args: {
         exerciseType: 'matching',
         objectiveId: 'ko-vocab-food-items',
+        exerciseData: null,
         context: isHauen
           ? "Ha-eun points at the menu with a smirk."
           : "Jin points at the menu board warmly.",
@@ -385,6 +389,7 @@ function buildFallbackResponse(characterId: string, isFirstEncounter: boolean, m
       args: {
         exerciseType: 'multiple_choice',
         objectiveId: 'ko-vocab-food-items',
+        exerciseData: null,
         context: isHauen
           ? "Ha-eun raises an eyebrow."
           : "Jin nods encouragingly.",
@@ -423,6 +428,7 @@ function buildFallbackResponse(characterId: string, isFirstEncounter: boolean, m
       args: {
         exerciseType: 'drag_drop',
         objectiveId: 'ko-vocab-food-items',
+        exerciseData: null,
         context: isHauen ? "Ha-eun watches closely." : "Jin smiles.",
         hintItems: ['소주', '김치', '호떡', '비빔밥'],
         hintCount: 4,
