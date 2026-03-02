@@ -16,6 +16,8 @@ export interface LearningObjective {
   targetItems: string[];
   targetCount: number;
   assessmentThreshold: number;
+  prerequisites: string[];   // IDs of objectives that must be completed first
+  tags: string[];            // searchable tags for AI to reference
 }
 
 export interface VocabularyTarget {

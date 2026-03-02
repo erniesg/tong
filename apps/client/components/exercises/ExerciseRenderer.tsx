@@ -7,6 +7,10 @@ import { Matching } from './Matching';
 import { SentenceBuilder } from './SentenceBuilder';
 import { FillBlank } from './FillBlank';
 import { PronunciationSelect } from './PronunciationSelect';
+import { PatternRecognition } from './PatternRecognition';
+import { StrokeTracing } from './StrokeTracing';
+import { ErrorCorrection } from './ErrorCorrection';
+import { FreeInput } from './FreeInput';
 
 interface ExerciseRendererProps {
   exercise: ExerciseData;
@@ -27,6 +31,14 @@ export function ExerciseRenderer({ exercise, onResult }: ExerciseRendererProps) 
       return <FillBlank exercise={exercise} onResult={onResult} />;
     case 'pronunciation_select':
       return <PronunciationSelect exercise={exercise} onResult={onResult} />;
+    case 'pattern_recognition':
+      return <PatternRecognition exercise={exercise} onResult={onResult} />;
+    case 'stroke_tracing':
+      return <StrokeTracing exercise={exercise} onResult={onResult} />;
+    case 'error_correction':
+      return <ErrorCorrection exercise={exercise} onResult={onResult} />;
+    case 'free_input':
+      return <FreeInput exercise={exercise} onResult={onResult} />;
     default:
       return (
         <div className="exercise-card p-4 text-center text-[var(--color-text-muted)]">

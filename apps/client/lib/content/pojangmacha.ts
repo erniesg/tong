@@ -10,6 +10,8 @@ const LEVEL_0_OBJECTIVES: LearningObjective[] = [
     targetItems: ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'],
     targetCount: 14,
     assessmentThreshold: 0.8,
+    prerequisites: [],
+    tags: ['hangul', 'consonants', 'jamo', 'script'],
   },
   {
     id: 'ko-script-vowels-basic',
@@ -20,6 +22,8 @@ const LEVEL_0_OBJECTIVES: LearningObjective[] = [
     targetItems: ['ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ'],
     targetCount: 10,
     assessmentThreshold: 0.8,
+    prerequisites: [],
+    tags: ['hangul', 'vowels', 'jamo', 'script'],
   },
   {
     id: 'ko-script-blocks-2part',
@@ -30,6 +34,8 @@ const LEVEL_0_OBJECTIVES: LearningObjective[] = [
     targetItems: ['가', '나', '다', '라', '마', '바', '사', '아', '자', '카', '타', '파', '하'],
     targetCount: 13,
     assessmentThreshold: 0.7,
+    prerequisites: ['ko-script-consonants-basic', 'ko-script-vowels-basic'],
+    tags: ['hangul', 'syllable-blocks', 'script'],
   },
   {
     id: 'ko-script-menu-reading',
@@ -40,6 +46,8 @@ const LEVEL_0_OBJECTIVES: LearningObjective[] = [
     targetItems: ['오뎅', '떡볶이', '라면', '순대'],
     targetCount: 4,
     assessmentThreshold: 0.75,
+    prerequisites: ['ko-script-blocks-2part'],
+    tags: ['hangul', 'reading', 'food', 'menu'],
   },
 ];
 
@@ -53,6 +61,8 @@ const LEVEL_1_OBJECTIVES: LearningObjective[] = [
     targetItems: ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ', 'ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ'],
     targetCount: 24,
     assessmentThreshold: 0.8,
+    prerequisites: ['ko-script-consonants-basic', 'ko-script-vowels-basic'],
+    tags: ['pronunciation', 'jamo', 'audio'],
   },
   {
     id: 'ko-pron-batchim',
@@ -63,6 +73,8 @@ const LEVEL_1_OBJECTIVES: LearningObjective[] = [
     targetItems: ['ㄱ받침', 'ㄴ받침', 'ㄹ받침', 'ㅁ받침', 'ㅂ받침', 'ㅇ받침', 'ㄷ받침'],
     targetCount: 7,
     assessmentThreshold: 0.7,
+    prerequisites: ['ko-pron-jamo-all'],
+    tags: ['pronunciation', 'batchim', 'final-consonant'],
   },
   {
     id: 'ko-pron-food-words',
@@ -73,6 +85,8 @@ const LEVEL_1_OBJECTIVES: LearningObjective[] = [
     targetItems: ['떡볶이', '라면', '오뎅', '순대', '김밥', '어묵', '만두', '튀김', '꼬치', '호떡', '붕어빵', '떡꼬치', '소떡소떡', '핫도그', '군고구마', '비빔밥', '볶음밥', '잡채', '김치', '콜라'],
     targetCount: 20,
     assessmentThreshold: 0.75,
+    prerequisites: ['ko-script-menu-reading'],
+    tags: ['pronunciation', 'food', 'words'],
   },
 ];
 
@@ -86,6 +100,8 @@ const LEVEL_2_OBJECTIVES: LearningObjective[] = [
     targetItems: ['떡볶이', '라면', '오뎅', '순대', '김밥', '어묵', '만두', '튀김', '꼬치', '호떡', '붕어빵', '비빔밥', '볶음밥', '김치', '콜라', '물', '주스', '소주', '맥주', '사이다'],
     targetCount: 20,
     assessmentThreshold: 0.8,
+    prerequisites: ['ko-pron-food-words'],
+    tags: ['vocabulary', 'food', 'nouns'],
   },
   {
     id: 'ko-vocab-taste-words',
@@ -96,6 +112,8 @@ const LEVEL_2_OBJECTIVES: LearningObjective[] = [
     targetItems: ['맵다', '달다', '짜다', '맛있다', '맛없다', '시다', '쓰다', '뜨겁다', '차갑다', '맵지 않다'],
     targetCount: 10,
     assessmentThreshold: 0.8,
+    prerequisites: ['ko-vocab-food-items'],
+    tags: ['vocabulary', 'taste', 'adjectives'],
   },
   {
     id: 'ko-vocab-numbers',
@@ -106,6 +124,8 @@ const LEVEL_2_OBJECTIVES: LearningObjective[] = [
     targetItems: ['하나', '둘', '셋', '넷', '다섯'],
     targetCount: 5,
     assessmentThreshold: 0.9,
+    prerequisites: ['ko-vocab-food-items'],
+    tags: ['vocabulary', 'numbers', 'ordering'],
   },
   {
     id: 'ko-vocab-basic-verbs',
@@ -116,6 +136,8 @@ const LEVEL_2_OBJECTIVES: LearningObjective[] = [
     targetItems: ['먹다', '주다', '마시다', '사다', '시키다'],
     targetCount: 5,
     assessmentThreshold: 0.8,
+    prerequisites: ['ko-vocab-food-items'],
+    tags: ['vocabulary', 'verbs', 'action'],
   },
   {
     id: 'ko-vocab-courtesy',
@@ -126,6 +148,8 @@ const LEVEL_2_OBJECTIVES: LearningObjective[] = [
     targetItems: ['주세요', '감사합니다', '잠시만요', '여기요', '얼마예요'],
     targetCount: 5,
     assessmentThreshold: 0.9,
+    prerequisites: ['ko-vocab-food-items'],
+    tags: ['vocabulary', 'courtesy', 'phrases', 'polite'],
   },
 ];
 
@@ -139,6 +163,8 @@ const LEVEL_3_OBJECTIVES: LearningObjective[] = [
     targetItems: ['N+주세요'],
     targetCount: 1,
     assessmentThreshold: 0.85,
+    prerequisites: ['ko-vocab-courtesy', 'ko-vocab-food-items'],
+    tags: ['grammar', 'ordering', 'polite', 'juseyo'],
   },
   {
     id: 'ko-gram-object-particle',
@@ -149,6 +175,8 @@ const LEVEL_3_OBJECTIVES: LearningObjective[] = [
     targetItems: ['을/를'],
     targetCount: 1,
     assessmentThreshold: 0.8,
+    prerequisites: ['ko-gram-juseyo'],
+    tags: ['grammar', 'particles', 'object-marker'],
   },
   {
     id: 'ko-gram-counters',
@@ -159,6 +187,8 @@ const LEVEL_3_OBJECTIVES: LearningObjective[] = [
     targetItems: ['N+개', '하나/둘/셋+개'],
     targetCount: 2,
     assessmentThreshold: 0.8,
+    prerequisites: ['ko-vocab-numbers', 'ko-gram-juseyo'],
+    tags: ['grammar', 'counters', 'numbers', 'ordering'],
   },
 ];
 

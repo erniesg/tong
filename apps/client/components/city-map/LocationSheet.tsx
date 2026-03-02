@@ -2,6 +2,13 @@
 
 import type { LocationId } from '@/lib/api';
 
+/** SP cost scales with hangout count (first is free, then 10, 25, 50). */
+const SP_COSTS = [0, 10, 25, 50];
+
+function getSpCost(hangoutCount: number): number {
+  return SP_COSTS[Math.min(hangoutCount, SP_COSTS.length - 1)] ?? 50;
+}
+
 interface LocationSheetProps {
   locationId: LocationId;
   locationName: string;
@@ -9,6 +16,7 @@ interface LocationSheetProps {
   hangoutCount: number;
   missionAvailable: boolean;
   comingSoon: boolean;
+  playerSp: number;
   onHangout: () => void;
   onLearn: () => void;
   onDismiss: () => void;
@@ -20,11 +28,14 @@ export function LocationSheet({
   hangoutCount,
   missionAvailable,
   comingSoon,
+  playerSp,
   onHangout,
   onLearn,
   onDismiss,
 }: LocationSheetProps) {
   const missionsNeeded = Math.max(0, 3 - hangoutCount);
+  const spCost = getSpCost(hangoutCount);
+  const canAfford = playerSp >= spCost;
 
   return (
     <>
@@ -53,14 +64,29 @@ export function LocationSheet({
           <div className="location-sheet__actions">
             {/* Primary: Hangout */}
             <button
-              className="location-sheet__btn location-sheet__btn--hangout"
-              onClick={onHangout}
+              className={`location-sheet__btn location-sheet__btn--hangout${!canAfford ? ' location-sheet__btn--locked' : ''}`}
+              onClick={canAfford ? onHangout : undefined}
+              disabled={!canAfford}
               type="button"
             >
               <span className="location-sheet__btn-icon" role="img" aria-label="hangout">🤜</span>
               <span className="location-sheet__btn-text">
-                <span className="location-sheet__btn-label">Hangout</span>
-                <span className="location-sheet__btn-desc">Practice conversation with locals</span>
+                <span className="location-sheet__btn-label">
+                  Hangout
+                  {spCost > 0 && (
+                    <span className="location-sheet__sp-cost" style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>
+                      {spCost} SP
+                    </span>
+                  )}
+                  {spCost === 0 && (
+                    <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>Free</span>
+                  )}
+                </span>
+                <span className="location-sheet__btn-desc">
+                  {canAfford
+                    ? 'Practice conversation with locals'
+                    : `Need ${spCost} SP (you have ${playerSp})`}
+                </span>
               </span>
             </button>
 

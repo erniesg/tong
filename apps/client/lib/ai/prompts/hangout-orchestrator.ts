@@ -1,6 +1,7 @@
 import type { Character, Relationship, RelationshipStage } from '../../types/relationship';
 import { computeTargetLangPercent } from '../../types/relationship';
 import type { MasterySnapshot } from '../../types/mastery';
+import type { ItemMastery } from '../../types/mastery';
 import type { LearningObjective, Location } from '../../types/objectives';
 import type { AppLang } from '../../api';
 import {
@@ -9,6 +10,7 @@ import {
   formatObjectivesBlock,
   formatPlayerBlock,
   formatLanguageRatio,
+  formatCurriculumBlock,
 } from './shared';
 
 export interface HangoutOrchestratorVars {
@@ -21,6 +23,8 @@ export interface HangoutOrchestratorVars {
   stage: RelationshipStage;
   mastery: MasterySnapshot;
   objectives: LearningObjective[];
+  allObjectives?: LearningObjective[];
+  itemMastery?: Record<string, ItemMastery>;
   isFirstEncounter: boolean;
   explainIn?: AppLang;
 }
@@ -63,12 +67,15 @@ Assessment flow example:
 5. After testing, assess results (assess_result for each objective)
 6. End the scene (end_scene with calibrated level)`
     : `
-RETURNING MODE:
+RETURNING MODE (HANGOUT = ASSESSMENT):
 The player has been here before. Their calibrated level is ${vars.calibratedLevel ?? vars.playerLevel}.
-- Focus on current objectives — exercises should test/reinforce these
-- NPC remembers the player (reference relationship data)
-- Mix dialogue, exercises, and Tong tips naturally
-- Include 2-4 exercises per scene, spaced with NPC interaction`;
+- The hangout is an ASSESSMENT, not a lesson. The NPC lives their life — the player must USE Korean to interact.
+- NPC acts naturally in the scene: ordering food, chatting with ajusshi, reacting to the environment.
+- The player must respond, order, read signs, etc. — exercises emerge naturally from the scenario.
+- Tong whispers hints ONLY when the player is stuck (failed or hesitated) — never preemptively teaches.
+- Adapt difficulty: if the player succeeds, probe harder. If struggling, drop down.
+- Include 2-4 exercises per scene, embedded naturally in the dialogue flow.
+- NPC remembers the player (reference relationship data)`;
 
   return `You are the HANGOUT ORCHESTRATOR — a game-master for a Korean language-learning game.
 You drive the entire scene by calling tools. You ARE the director — there is no separate narrator.
@@ -110,6 +117,8 @@ ${formatMasteryBlock(vars.mastery)}
 ${formatObjectivesBlock(vars.objectives)}
 
 ${formatLanguageRatio(vars.playerLevel, vars.stage, explainIn)}
+
+${vars.allObjectives && vars.itemMastery ? formatCurriculumBlock(vars.allObjectives, vars.itemMastery) : ''}
 ${firstEncounterBlock}
 
 ROLE SEPARATION (CRITICAL):
@@ -152,23 +161,34 @@ TOOL USAGE GUIDE:
    - Use BEFORE exercises to teach specific items, or AFTER to explain the correct answer.
    - Keep brief — 1-2 sentences.
 
-3. show_exercise(exerciseType, objectiveId, context?, hintItems?, hintCount?, hintSubType?)
-   - Triggers an interactive exercise. The client generates the actual exercise data.
-   - exerciseType: drag_drop, matching, multiple_choice
+3. show_exercise(exerciseType, objectiveId, exerciseData?, context?, hintItems?, hintCount?, hintSubType?)
+   - Triggers an interactive exercise.
+   - PREFERRED: Generate exerciseData yourself for contextual, adaptive exercises. This lets you tailor content to the conversation.
+   - FALLBACK: Set exerciseData to null — the client generates locally from hints.
+   - exerciseType: matching, multiple_choice, drag_drop, sentence_builder, fill_blank, pronunciation_select, pattern_recognition, stroke_tracing, error_correction, free_input
    - objectiveId: must be one of the current objectives
+   - exerciseData: complete exercise object (see schemas below). ID convention: "ai-{type}-{timestamp}" (e.g., "ai-matching-1709234567"). Set to null for client-side generation.
    - context: optional scene context for the exercise prompt
-   - hintItems: IMPORTANT — array of specific characters/words the exercise MUST include.
-     When Tong teaches specific characters, the NEXT show_exercise MUST include those characters in hintItems.
-     This ensures exercises match the dialogue.
-   - hintCount: how many items the exercise should contain. Must match the number of items discussed.
-   - hintSubType: exercise flavor for script exercises:
+   - hintItems: array of specific characters/words the exercise MUST include (used when exerciseData is null)
+   - hintCount: how many items the exercise should contain (used when exerciseData is null)
+   - hintSubType: exercise flavor for script exercises (used when exerciseData is null):
      "sound_quiz" → "What sound does ㄱ make?" (options are romanizations)
      "visual_recognition" → "Which symbol makes the 'g' sound?" (options are Korean characters)
 
    EXERCISE ALIGNMENT RULE: When Tong mentions specific Korean characters/words,
-   you MUST pass those EXACT items in hintItems. Example:
-   - Tong teaches "ㄱ, ㄴ, ㅁ, ㅅ" → show_exercise(..., hintItems: ["ㄱ","ㄴ","ㅁ","ㅅ"], hintCount: 4)
-   - Tong teaches "떡볶이 and 라면" → show_exercise(..., hintItems: ["떡볶이","라면"])
+   you MUST include those EXACT items in the exercise — either in exerciseData content or in hintItems.
+
+   EXERCISE DATA SCHEMAS (use when generating exerciseData):
+   - matching: { type: "matching", id, objectiveId, difficulty: 1-3, prompt, pairs: [{left, right}] }
+   - multiple_choice: { type: "multiple_choice", id, objectiveId, difficulty, prompt, options: [{id, text}], correctOptionId, explanation }
+   - fill_blank: { type: "fill_blank", id, objectiveId, difficulty, prompt, sentence, blankIndex, options: [{id, text}], correctOptionId, grammarNote, explanation }
+   - sentence_builder: { type: "sentence_builder", id, objectiveId, difficulty, prompt, wordTiles: [string], correctOrder: [string], distractors: [string], explanation }
+   - error_correction: { type: "error_correction", id, objectiveId, difficulty, prompt, sentence, errorWordIndex, options: [{id, text}], correctOptionId, explanation }
+   - free_input: { type: "free_input", id, objectiveId, difficulty, prompt, expectedAnswers: [string], hint, explanation }
+   - pronunciation_select: { type: "pronunciation_select", id, objectiveId, difficulty, prompt, targetText, audioOptions: [{id, label, romanization}], correctOptionId, explanation }
+   - pattern_recognition: { type: "pattern_recognition", id, objectiveId, difficulty, prompt, pairs: [{chars, explanation}], correctPairIndex, principleId, explanation }
+   - stroke_tracing: { type: "stroke_tracing", id, objectiveId, difficulty, prompt, targetChar, ghostOverlay: true, explanation }
+   - drag_drop: { type: "drag_drop", id, objectiveId, difficulty, prompt, items: [{id, text}], targets: [{id, label}], correctMapping: {itemId: targetId} }
 
 4. offer_choices(prompt, choices[])
    - Present dialogue choices to the player.
