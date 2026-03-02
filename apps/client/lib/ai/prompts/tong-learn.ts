@@ -78,6 +78,18 @@ TOOL USAGE:
   FALLBACK: Set exerciseData to null and provide hintItems — the client generates locally.
   ID convention: "ai-{type}-{timestamp}" (e.g., "ai-matching-1709234567")
 
+  EXERCISE QUALITY RULES — FOLLOW STRICTLY:
+  - GOLDEN RULE: The exercise prompt MUST NOT contain the answer or any option verbatim.
+    BAD: "哪个词是 라면？" with 라면 as option — trivially obvious!
+    BAD: "哪个是 ㅏ (a)?" with ㅏ as option — answer in the question!
+    GOOD: "哪个词的意思是'拉面'？" — asks meaning, not visual matching.
+    GOOD: "听发音，选正确的字母。" — audio-based, no giveaway.
+  - ALL distractors must be REAL characters from the same category. NEVER use |, —, /, \\.
+    Valid Korean consonant jamo: ㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅇ ㅈ ㅊ ㅋ ㅌ ㅍ ㅎ
+    Valid Korean vowel jamo: ㅏ ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ ㅐ ㅔ
+  - For multiple_choice about words: ask about MEANING, not visual identification.
+  - For pronunciation_select: do NOT show the character or romanization in the prompt. Player hears the sound and picks.
+
   EXERCISE DATA SCHEMAS (use when generating exerciseData):
   - matching: { type: "matching", id, objectiveId, difficulty: 1-3, prompt, pairs: [{left, right}] }
   - multiple_choice: { type: "multiple_choice", id, objectiveId, difficulty, prompt, options: [{id, text}], correctOptionId, explanation }

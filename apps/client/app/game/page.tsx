@@ -18,11 +18,13 @@ import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import { getLocationOrDefault, getLanguageForCity } from '@/lib/content/locations';
 import { getRelationshipStage } from '@/lib/types/relationship';
 import { CityMap, CITY_ORDER } from '@/components/city-map/CityMap';
+import { KoreanText } from '@/components/shared/KoreanText';
 import { LearnPanel } from '@/components/learn/LearnPanel';
 import { sessionLogger } from '@/lib/debug/session-logger';
 import { UILangProvider } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
 import type { UILang } from '@/lib/i18n/ui-strings';
+import { GameHUD } from '@/components/hud/GameHUD';
 
 /* ── scene constants ────────────────────────────────────── */
 
@@ -194,9 +196,6 @@ export default function GamePage() {
   const [mapCityIndex, setMapCityIndex] = useState(1); // default Seoul
   const [selectedLocation, setSelectedLocation] = useState<LocationId | null>(null);
 
-  /* HUD swipe-down state */
-  const [hudOpen, setHudOpen] = useState(false);
-  const hudTouchStartRef = useRef<number>(0);
 
   /* NPC character ref — set during proficiency confirmation */
   const npcRef = useRef<Character>(HAUEN);
@@ -532,10 +531,6 @@ export default function GamePage() {
   }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
 
   const handleExerciseResult = useCallback((exerciseId: string, correct: boolean) => {
-    setCurrentExercise(null);
-    setToolQueue((prev) => prev.slice(1));
-    processingRef.current = false;
-
     sessionLogger.logExerciseResult(exerciseId, correct);
 
     // Dispatch per-item mastery results using actual target words
@@ -547,10 +542,17 @@ export default function GamePage() {
       }
     }
 
-    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en');
-    const msg = `${ctx}${summarizeExercise(exerciseId, correct)}`;
-    sessionLogger.logAIRequest(msg);
-    void append({ role: 'user', content: msg });
+    // Delay clearing the exercise so user can see feedback (Correct!/Wrong) for 1.5s
+    setTimeout(() => {
+      setCurrentExercise(null);
+      setToolQueue((prev) => prev.slice(1));
+      processingRef.current = false;
+
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en');
+      const msg = `${ctx}${summarizeExercise(exerciseId, correct)}`;
+      sessionLogger.logAIRequest(msg);
+      void append({ role: 'user', content: msg });
+    }, 1500);
   }, [append, playerLevel, activeNpc, city, location, gameState.explainIn]);
 
   const handleChoice = useCallback((choiceId: string) => {
@@ -769,17 +771,12 @@ export default function GamePage() {
             onStartLearn={handleMapLearn}
             gameState={gameState}
           />
-          <div className="explain-in-pill">
-            <select
-              className="explain-in-pill-select"
-              value={gameState.explainIn[mapCity] ?? 'en'}
-              onChange={(e) => dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: mapCity, lang: e.target.value as AppLang })}
-            >
-              {EXPLAIN_LANG_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
+          <GameHUD
+            xp={gameState.xp}
+            sp={gameState.sp}
+            cityId={mapCity}
+            explainLang={(gameState.explainIn[mapCity] ?? 'en') as AppLang}
+          />
         </div>
       </div>
       </UILangProvider>
@@ -837,7 +834,7 @@ export default function GamePage() {
             <div style={{ textAlign: 'center', color: 'var(--color-text)' }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
               <h2 style={{ margin: '0 0 8px', color: 'var(--color-accent-gold)', fontSize: 24 }}>{t('scene_complete', explainLang)}</h2>
-              <p style={{ margin: '0 0 20px', color: 'var(--color-text-muted)', fontSize: 14 }}>{sceneSummary.summary}</p>
+              <p style={{ margin: '0 0 20px', color: 'var(--color-text-muted)', fontSize: 14 }}><KoreanText text={sceneSummary.summary} targetLang={targetLang} /></p>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 24 }}>
                 <div>
                   <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-accent-gold)' }}>+{sceneSummary.xpEarned}</div>
@@ -872,25 +869,10 @@ export default function GamePage() {
     );
   }
   const continueLabel = CONTINUE_LABELS[explainLang] ?? CONTINUE_LABELS.en;
-  const currentFlag = EXPLAIN_LANG_OPTIONS.find((o) => o.value === explainLang)?.flag ?? '🇬🇧';
 
   return (
     <UILangProvider value={explainLang}>
-    <div
-      className="scene-root"
-      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      onTouchStart={(e) => { hudTouchStartRef.current = e.touches[0].clientY; }}
-      onTouchEnd={(e) => {
-        const dy = e.changedTouches[0].clientY - hudTouchStartRef.current;
-        // Only handle swipe in the top 80px zone
-        if (hudTouchStartRef.current < 80) {
-          if (dy > 40) setHudOpen(true);
-          if (dy < -40) setHudOpen(false);
-        } else if (hudOpen && dy < -40) {
-          setHudOpen(false);
-        }
-      }}
-    >
+    <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="game-frame">
         <SceneView
           backgroundUrl="/assets/backgrounds/pojangmacha.png"
@@ -907,41 +889,14 @@ export default function GamePage() {
           targetLang={targetLang}
           continueLabel={continueLabel}
           hudContent={
-            <>
-              {/* Pull tab — always visible */}
-              <div
-                className="scene-hud-pull-tab"
-                onClick={() => setHudOpen((o) => !o)}
-              >
-                <span className="scene-hud-pull-tab-chevron">{hudOpen ? '▲' : '▼'}</span>
-              </div>
-              {/* HUD drawer */}
-              <div className={`scene-hud ${hudOpen ? 'scene-hud--open' : ''}`}>
-                <div className="scene-hud-location">
-                  {cityInfo.en} <span className="korean">{cityInfo.local}</span>
-                  <span className="scene-hud-dot">&middot;</span>
-                  {LOCATION_NAMES[location]}
-                </div>
-                <div className="scene-hud-scores">
-                  <span className="scene-hud-score"><b>{gameState.xp}</b> XP</span>
-                  <span className="scene-hud-score"><b>{gameState.sp}</b> SP</span>
-                  <span className="scene-hud-score"><b>{Math.round(affinity)}</b> RP</span>
-                </div>
-                <div className="scene-hud-flags">
-                  {EXPLAIN_LANG_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      className={`scene-hud-flag-btn${explainLang === opt.value ? ' active' : ''}`}
-                      onClick={() => dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: city, lang: opt.value })}
-                      type="button"
-                      title={opt.label}
-                    >
-                      {opt.flag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
+            <GameHUD
+              xp={gameState.xp}
+              sp={gameState.sp}
+              rp={Math.round(affinity)}
+              locationLabel={<>{cityInfo.en} <span className="korean">{cityInfo.local}</span><span className="scene-hud-dot">&middot;</span>{LOCATION_NAMES[location]}</>}
+              cityId={city}
+              explainLang={explainLang as AppLang}
+            />
           }
           onChoice={handleChoice}
           onContinue={handleContinue}
