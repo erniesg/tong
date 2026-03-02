@@ -1,16 +1,17 @@
 'use client';
 
 import { cn } from '@/lib/utils/cn';
-import { KoreanText } from '@/components/shared/KoreanText';
+import { KoreanText, type TargetLang } from '@/components/shared/KoreanText';
 
 interface TongOverlayProps {
   message: string;
   translation?: string;
   visible: boolean;
+  targetLang?: TargetLang;
   onDismiss?: () => void;
 }
 
-export function TongOverlay({ message, translation, visible, onDismiss }: TongOverlayProps) {
+export function TongOverlay({ message, translation, visible, targetLang = 'ko', onDismiss }: TongOverlayProps) {
   if (!visible) return null;
 
   return (
@@ -25,7 +26,7 @@ export function TongOverlay({ message, translation, visible, onDismiss }: TongOv
         <span className="shrink-0 text-lg">💡</span>
         <div className="min-w-0">
           <p className="text-xs font-bold tong-whisper__label m-0">Tong</p>
-          <p className="mt-0.5 text-sm text-ko leading-snug tong-whisper__body m-0"><KoreanText text={message} /></p>
+          <p className="mt-0.5 text-sm text-ko leading-snug tong-whisper__body m-0"><KoreanText text={message} targetLang={targetLang} /></p>
           {translation && (
             <p className="mt-1 text-xs tong-whisper__translation italic m-0">{translation}</p>
           )}

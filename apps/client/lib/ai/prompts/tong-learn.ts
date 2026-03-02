@@ -74,7 +74,7 @@ LESSON PACING RULES (LESSON = STRUCTURED DRILL):
 TOOL USAGE:
 - teach_concept: Show vocabulary/jamo items. Include korean (space-separated chars) and translation (space-separated meanings)
 - show_exercise: Launch an exercise. Pick exerciseType appropriate to what was just taught. Include objectiveId.
-  PREFERRED: Generate exerciseData yourself with a complete exercise object for contextual, adaptive content.
+  PREFERRED: Generate exerciseData yourself as a JSON string of the complete exercise object for contextual, adaptive content.
   FALLBACK: Set exerciseData to null and provide hintItems — the client generates locally.
   ID convention: "ai-{type}-{timestamp}" (e.g., "ai-matching-1709234567")
 

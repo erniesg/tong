@@ -7,6 +7,7 @@ import { getLocationHangoutCount, isLocationUnlocked, isMissionAvailable } from 
 import { LocationPin } from './LocationPin';
 import { LocationSheet } from './LocationSheet';
 import { KoreanText } from '@/components/shared/KoreanText';
+import { getLanguageForCity } from '@/lib/content/locations';
 
 /* ── Constants ──────────────────────────────────────────────── */
 
@@ -85,6 +86,7 @@ export function CityMap({
   const meta = CITY_META[city];
   const comingSoon = !meta.hasVideo;
   const locations = CITY_LOCATIONS[city] ?? [];
+  const targetLang = getLanguageForCity(city);
 
   /* ── Two-video dissolve loop ─────────────────────────────── */
 
@@ -265,7 +267,7 @@ export function CityMap({
       {/* City title */}
       <div className="city-map__title">
         <div className="city-map__title-en">{meta.en}</div>
-        <div className="city-map__title-local"><KoreanText text={meta.local} /></div>
+        <div className="city-map__title-local"><KoreanText text={meta.local} targetLang={targetLang} /></div>
       </div>
 
       {/* Location pins */}
@@ -282,6 +284,7 @@ export function CityMap({
             unlocked={unlocked}
             active={selectedLocation === loc.id}
             onTap={handlePinTap}
+            targetLang={targetLang}
           />
         );
       })}

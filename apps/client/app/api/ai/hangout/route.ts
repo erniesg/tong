@@ -56,7 +56,7 @@ const hangoutTools = {
         'pattern_recognition', 'stroke_tracing', 'error_correction', 'free_input',
       ]).describe('Exercise UI type'),
       objectiveId: z.string().describe('Learning objective this tests'),
-      exerciseData: z.record(z.unknown()).nullable().describe('Complete exercise object. When provided, client uses it directly. When null, client generates locally from hints. ID convention: "ai-{type}-{timestamp}".'),
+      exerciseData: z.string().nullable().describe('JSON-encoded complete exercise object. When provided, client parses and uses it directly. When null, client generates locally from hints. ID convention: "ai-{type}-{timestamp}".'),
       context: z.string().nullable().describe('Scene context for exercise prompt, or null'),
       hintItems: z.array(z.string()).nullable().describe('Specific characters/words to include in the exercise. The exercise generator will prioritize these items. null if no specific items.'),
       hintCount: z.number().nullable().describe('How many items the exercise should contain. null for default.'),

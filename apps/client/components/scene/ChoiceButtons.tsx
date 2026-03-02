@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils/cn';
-import { KoreanText } from '@/components/shared/KoreanText';
+import { KoreanText, type TargetLang } from '@/components/shared/KoreanText';
 
 export interface DialogueChoice {
   id: string;
@@ -14,14 +14,15 @@ interface ChoiceButtonsProps {
   prompt?: string | null;
   onSelect: (choiceId: string) => void;
   disabled?: boolean;
+  targetLang?: TargetLang;
 }
 
-export function ChoiceButtons({ choices, prompt, onSelect, disabled }: ChoiceButtonsProps) {
+export function ChoiceButtons({ choices, prompt, onSelect, disabled, targetLang = 'ko' }: ChoiceButtonsProps) {
   return (
     <div className="absolute bottom-0 left-0 right-0 p-4 pb-[calc(1rem+var(--safe-bottom))] flex flex-col gap-2 slide-up">
       {prompt && (
         <div className="text-sm text-[var(--color-text-secondary)] mb-1 px-1">
-          <KoreanText text={prompt} />
+          <KoreanText text={prompt} targetLang={targetLang} />
         </div>
       )}
       {choices.map((choice, i) => (
@@ -38,7 +39,7 @@ export function ChoiceButtons({ choices, prompt, onSelect, disabled }: ChoiceBut
           )}
           style={{ animationDelay: `${i * 80}ms` }}
         >
-          <span className="text-ko text-sm font-medium"><KoreanText text={choice.text} /></span>
+          <span className="text-ko text-sm font-medium"><KoreanText text={choice.text} targetLang={targetLang} /></span>
           {choice.subtext && (
             <span className="block mt-1 text-xs text-[var(--color-text-muted)]">
               {choice.subtext}

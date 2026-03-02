@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useChat } from 'ai/react';
 import type { ExerciseData } from '@/lib/types/hangout';
 import { generateExercise, type ExerciseHints } from '@/lib/exercises/generators';
-import { isValidExerciseData } from '@/lib/exercises/validate';
+import { parseExerciseData } from '@/lib/exercises/validate';
 import { extractTargetItems } from '@/lib/exercises/extract-targets';
 import { getCitySkin } from '@/lib/theme/city-skins';
 import { dispatch as gameDispatch, useGameState, getMasterySnapshot } from '@/lib/store/game-store';
@@ -140,8 +140,9 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
 
         case 'show_exercise': {
           let exercise: ExerciseData;
-          if (isValidExerciseData(args.exerciseData)) {
-            exercise = args.exerciseData;
+          const parsed = parseExerciseData(args.exerciseData);
+          if (parsed) {
+            exercise = parsed;
           } else {
             const hints: ExerciseHints = {
               objectiveId: (args.objectiveId as string) ?? objectiveId ?? 'ko-vocab-food-items',

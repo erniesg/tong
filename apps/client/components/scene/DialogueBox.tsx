@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { KoreanText } from '@/components/shared/KoreanText';
+import { KoreanText, type TargetLang } from '@/components/shared/KoreanText';
 
 interface DialogueBoxProps {
   speakerName?: string;
@@ -9,6 +9,8 @@ interface DialogueBoxProps {
   content: string;
   translation?: string;
   isStreaming?: boolean;
+  targetLang?: TargetLang;
+  continueLabel?: string;
   onContinue?: () => void;
 }
 
@@ -21,6 +23,8 @@ export function DialogueBox({
   content,
   translation,
   isStreaming,
+  targetLang = 'ko',
+  continueLabel = 'Tap to continue',
   onContinue,
 }: DialogueBoxProps) {
   const [displayedChars, setDisplayedChars] = useState(0);
@@ -80,7 +84,7 @@ export function DialogueBox({
 
       <div className="dialogue-text text-ko">
         {typewriterDone ? (
-          <KoreanText text={content} />
+          <KoreanText text={content} targetLang={targetLang} />
         ) : (
           <>
             {visibleText}
@@ -95,7 +99,7 @@ export function DialogueBox({
 
       {typewriterDone && !isStreaming && onContinue && (
         <div className="dialogue-continue animate-pulse">
-          Tap to continue
+          {continueLabel}
         </div>
       )}
     </div>

@@ -719,6 +719,36 @@ button.nav-link:hover {
 }
 
 /* Layer 2: HUD */
+/* ── HUD pull tab (always visible at top) ──────────────────── */
+.scene-hud-pull-tab {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  padding-top: calc(4px + env(safe-area-inset-top, 0px));
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(6px);
+  border-radius: 0 0 10px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.scene-hud-pull-tab-flag {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.scene-hud-pull-tab-chevron {
+  font-size: 8px;
+  color: rgba(255,255,255,0.5);
+}
+
+/* ── HUD drawer (hidden by default, slides down) ──────────── */
 .scene-hud {
   position: absolute;
   top: 0;
@@ -726,11 +756,24 @@ button.nav-link:hover {
   right: 0;
   z-index: 10;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 14px 18px;
   padding-top: calc(14px + env(safe-area-inset-top, 0px));
-  background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(8px);
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.scene-hud--open {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .scene-hud-location {
@@ -761,22 +804,33 @@ button.nav-link:hover {
   margin-right: 2px;
 }
 
-.scene-hud-lang-pill {
-  font-size: 11px;
-  background: rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.7);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 10px;
-  padding: 2px 8px;
-  cursor: pointer;
-  outline: none;
-  appearance: none;
-  -webkit-appearance: none;
+/* ── Flag buttons ──────────────────────────────────────────── */
+.scene-hud-flags {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  justify-content: center;
+  padding-top: 4px;
 }
 
-.scene-hud-lang-pill:hover {
-  background: rgba(255,255,255,0.18);
-  color: #fff;
+.scene-hud-flag-btn {
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.scene-hud-flag-btn:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.scene-hud-flag-btn.active {
+  border-color: #f0c040;
+  background: rgba(240,192,64,0.15);
 }
 
 /* Explain-in section on proficiency screen */

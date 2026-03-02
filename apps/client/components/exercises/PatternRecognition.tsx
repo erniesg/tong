@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils/cn';
 import type { PatternRecognitionExercise } from '@/lib/types/hangout';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: PatternRecognitionExercise;
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export function PatternRecognition({ exercise, onResult }: Props) {
+  const lang = useUILang();
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const isCorrect = selected === exercise.correctPairIndex;
@@ -63,7 +66,7 @@ export function PatternRecognition({ exercise, onResult }: Props) {
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
           )}
         >
-          Check
+          {t('check', lang)}
         </button>
       )}
 
@@ -76,7 +79,7 @@ export function PatternRecognition({ exercise, onResult }: Props) {
               : 'bg-red-500/20 text-red-400',
           )}
         >
-          {isCorrect ? 'Correct!' : `The correct answer is "${exercise.pairs[exercise.correctPairIndex]?.chars}"`}
+          {isCorrect ? t('correct', lang) : `${t('answer_is', lang)} "${exercise.pairs[exercise.correctPairIndex]?.chars}"`}
         </div>
       )}
     </div>

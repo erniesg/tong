@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils/cn';
 import type { DragDropExercise } from '@/lib/types/hangout';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: DragDropExercise;
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export function DragDrop({ exercise, onResult }: Props) {
+  const lang = useUILang();
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -112,7 +115,7 @@ export function DragDrop({ exercise, onResult }: Props) {
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed'
           )}
         >
-          Check
+          {t('check', lang)}
         </button>
       ) : (
         <div
@@ -121,7 +124,7 @@ export function DragDrop({ exercise, onResult }: Props) {
             allCorrect ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]' : 'bg-red-500/20 text-red-400'
           )}
         >
-          {allCorrect ? 'All correct!' : 'Some are in the wrong place — review and try again!'}
+          {allCorrect ? t('all_correct', lang) : t('some_wrong', lang)}
         </div>
       )}
     </div>
