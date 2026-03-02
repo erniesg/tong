@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
-import type { CityId, LocationId, ProficiencyLevel, ScoreState, UserProficiency } from '@/lib/api';
+import type { CityId, LocationId, ProficiencyLevel, ScoreState, UserProficiency, AppLang } from '@/lib/api';
 import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData } from '@/lib/types/hangout';
 import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
 import type { Character } from '@/lib/types/relationship';
@@ -57,6 +57,28 @@ const LANG_LABELS: { key: keyof UserProficiency; name: string; native: string; f
 
 const LANG_TO_CITY: Record<string, CityId> = { ko: 'seoul', ja: 'tokyo', zh: 'shanghai' };
 
+const EXPLAIN_LANG_OPTIONS: { value: AppLang; label: string }[] = [
+  { value: 'en', label: 'English' },
+  { value: 'ko', label: '한국어' },
+  { value: 'ja', label: '日本語' },
+  { value: 'zh', label: '中文' },
+];
+
+/** Derive explainIn from proficiency sliders: highest CJK at level 5+ wins, else English. */
+function deriveExplainIn(sliders: [number, number, number]): AppLang {
+  const langKeys: AppLang[] = ['ko', 'ja', 'zh'];
+  let bestIdx = -1;
+  let bestVal = -1;
+  for (let i = 0; i < sliders.length; i++) {
+    if (sliders[i] > bestVal) {
+      bestVal = sliders[i];
+      bestIdx = i;
+    }
+  }
+  if (bestVal >= 5 && bestIdx >= 0) return langKeys[bestIdx];
+  return 'en';
+}
+
 const CITY_NAMES: Record<CityId, { en: string; local: string }> = {
   seoul: { en: 'Seoul', local: '서울' },
   tokyo: { en: 'Tokyo', local: '東京' },
@@ -93,6 +115,7 @@ function buildContextBlock(
   cityId: CityId,
   locationId: LocationId,
   npcChar: Character,
+  explainIn: AppLang = 'en',
 ): string {
   const rel = getRelationship(npcId);
   const stage = getRelationshipStage(rel.affinity);
@@ -115,6 +138,7 @@ function buildContextBlock(
     calibratedLevel: rel.interactionCount > 0 ? level : null,
     locationLevel: locLevel,
     objectives,
+    explainIn,
   });
   return `[HANGOUT_CONTEXT]${ctx}[/HANGOUT_CONTEXT] `;
 }
@@ -150,6 +174,9 @@ export default function GamePage() {
 
   /* proficiency sliders (0-6 each, maps directly to GAME_LEVELS) */
   const [sliders, setSliders] = useState<[number, number, number]>([0, 0, 0]);
+
+  /* explainIn — derived from sliders, overridable */
+  const [explainInLocal, setExplainInLocal] = useState<AppLang>(gameState.explainIn ?? 'en');
 
   /* hangout state */
   const [loading, setLoading] = useState(false);
@@ -249,6 +276,7 @@ export default function GamePage() {
     setSliders((prev) => {
       const next = [...prev] as [number, number, number];
       next[langIdx] = value;
+      setExplainInLocal(deriveExplainIn(next));
       return next;
     });
   }
@@ -272,13 +300,14 @@ export default function GamePage() {
     setPlayerLevel(weakLevel);
     setScore({ xp: 0, sp: 0, rp: 0 });
 
-    // Store self-assessed level
+    // Store self-assessed level and explain language
     dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
+    dispatch({ type: 'SET_EXPLAIN_LANGUAGE', lang: explainInLocal });
 
     setPhase('hangout');
     setLoading(false);
 
-    const startMsg = `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street', npcChar)}Start the scene.`;
+    const startMsg = `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street', npcChar, explainInLocal)}Start the scene.`;
     sessionLogger.start({ mode: 'hangout', cityId: primaryCity, locationId: 'food_street', npcId, playerLevel: weakLevel });
     sessionLogger.logAIRequest(startMsg);
     void append({ role: 'user', content: startMsg });
@@ -325,10 +354,10 @@ export default function GamePage() {
   useEffect(() => {
     if (skipToHangout && !sceneStartedRef.current) {
       sceneStartedRef.current = true;
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn);
       void append({ role: 'user', content: `${ctx}Start the scene.` });
     }
-  }, [skipToHangout, append, playerLevel, activeNpc, city, location]);
+  }, [skipToHangout, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
 
   /* ── Tool queue processor ───────────────────────────────── */
   useEffect(() => {
@@ -461,13 +490,13 @@ export default function GamePage() {
     }
 
     if (!currentExercise && !choices && toolQueue.length === 0) {
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn);
       const msg = `${ctx}Continue.`;
       sessionLogger.logUserTap('continue');
       sessionLogger.logAIRequest(msg);
       void append({ role: 'user', content: msg });
     }
-  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location]);
+  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
 
   const handleExerciseResult = useCallback((exerciseId: string, correct: boolean) => {
     setCurrentExercise(null);
@@ -477,11 +506,11 @@ export default function GamePage() {
     sessionLogger.logExerciseResult(exerciseId, correct);
     dispatch({ type: 'RECORD_ITEM_RESULT', itemId: exerciseId, category: 'vocabulary', correct });
 
-    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn);
     const msg = `${ctx}${summarizeExercise(exerciseId, correct)}`;
     sessionLogger.logAIRequest(msg);
     void append({ role: 'user', content: msg });
-  }, [append, playerLevel, activeNpc, city, location]);
+  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn]);
 
   const handleChoice = useCallback((choiceId: string) => {
     setChoices(null);
@@ -489,11 +518,11 @@ export default function GamePage() {
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
     sessionLogger.logChoiceSelected(choiceId);
-    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn);
     const msg = `${ctx}Choice: ${choiceId}`;
     sessionLogger.logAIRequest(msg);
     void append({ role: 'user', content: msg });
-  }, [append, playerLevel, activeNpc, city, location]);
+  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn]);
 
   const handleDismissTong = useCallback(() => {
     setTongTip(null);
@@ -503,10 +532,10 @@ export default function GamePage() {
       processingRef.current = false;
     } else if (!currentExercise && !choices && toolQueue.length === 0) {
       // tong_whisper was auto-advanced, nothing queued — request next turn
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn);
       void append({ role: 'user', content: `${ctx}Continue.` });
     }
-  }, [currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location]);
+  }, [currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
 
   /* ── renders ──────────────────────────────────────────── */
 
@@ -604,6 +633,18 @@ export default function GamePage() {
                   </div>
                 );
               })}
+              <div className="explain-in-row">
+                <span className="explain-in-label">Tong will explain in:</span>
+                <select
+                  className="explain-in-select"
+                  value={explainInLocal}
+                  onChange={(e) => setExplainInLocal(e.target.value as AppLang)}
+                >
+                  {EXPLAIN_LANG_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
               <button className="btn-go" onClick={handleConfirmProficiency} style={{ width: '100%', marginTop: 8 }}>
                 That&apos;s me
               </button>
@@ -643,7 +684,7 @@ export default function GamePage() {
 
     setPhase('hangout');
 
-    const startMsg = `${buildContextBlock(level, npcId, cityId, locationId, npcChar)}Start the scene.`;
+    const startMsg = `${buildContextBlock(level, npcId, cityId, locationId, npcChar, gameState.explainIn)}Start the scene.`;
     sessionLogger.start({ mode: 'hangout', cityId, locationId, npcId, playerLevel: level });
     sessionLogger.logAIRequest(startMsg);
     void append({ role: 'user', content: startMsg });
@@ -671,6 +712,17 @@ export default function GamePage() {
             onStartLearn={handleMapLearn}
             gameState={gameState}
           />
+          <div className="explain-in-pill">
+            <select
+              className="explain-in-pill-select"
+              value={gameState.explainIn}
+              onChange={(e) => dispatch({ type: 'SET_EXPLAIN_LANGUAGE', lang: e.target.value as AppLang })}
+            >
+              {EXPLAIN_LANG_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
     );
@@ -780,6 +832,15 @@ export default function GamePage() {
                 <span className="scene-hud-score"><b>{gameState.xp}</b> XP</span>
                 <span className="scene-hud-score"><b>{score.sp}</b> SP</span>
                 <span className="scene-hud-score"><b>{Math.round(affinity)}</b> RP</span>
+                <select
+                  className="scene-hud-lang-pill"
+                  value={gameState.explainIn}
+                  onChange={(e) => dispatch({ type: 'SET_EXPLAIN_LANGUAGE', lang: e.target.value as AppLang })}
+                >
+                  {EXPLAIN_LANG_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
             </div>
           }

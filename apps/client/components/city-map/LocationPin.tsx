@@ -24,7 +24,6 @@ export function LocationPin({ locationId, label, labelKo, top, left, unlocked, a
       className={`location-pin${unlocked ? ' location-pin--unlocked' : ' location-pin--locked'}${active ? ' location-pin--active' : ''}`}
       style={{ top, left }}
       role={unlocked ? 'button' : undefined}
-      title={!unlocked ? `${label} (locked)` : undefined}
     >
       <div className="location-pin__dot" onClick={handleClick} />
       <span className="location-pin__label" onClick={handleClick}>

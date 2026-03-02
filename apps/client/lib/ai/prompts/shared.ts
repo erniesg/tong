@@ -80,13 +80,22 @@ export function formatPlayerBlock(
   return block;
 }
 
+const EXPLAIN_LANG_NAMES: Record<string, string> = {
+  en: 'English',
+  ko: 'Korean',
+  ja: 'Japanese',
+  zh: 'Chinese',
+};
+
 export function formatLanguageRatio(
   playerLevel: number,
   stage: RelationshipStage,
+  explainIn: string = 'en',
 ): string {
   const pct = computeTargetLangPercent(playerLevel, stage);
+  const explainLangName = EXPLAIN_LANG_NAMES[explainIn] ?? 'English';
   return `LANGUAGE RATIO:
-- Use ~${pct}% Korean, rest English
+- Use ~${pct}% Korean, rest ${explainLangName}
 - Level ${playerLevel} guidelines:
   0-1: single words, basic greetings only
   2-3: simple sentences with known grammar
