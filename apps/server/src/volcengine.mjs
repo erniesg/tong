@@ -1,10 +1,13 @@
 /**
- * Volcengine / ByteDance API client for image generation, video generation, and TTS.
+ * Media generation API client — Volcengine (ByteDance) + ElevenLabs.
  *
- * Three separate services:
- *   1. Image gen (Seedream)  – Ark platform, sync
- *   2. Video gen (Seedance)  – Ark platform, async task-based
- *   3. TTS                   – Speech platform, sync
+ * Services:
+ *   1. Image gen (Seedream)        – Volcengine Ark, sync
+ *   2. Video gen (Seedance)        – Volcengine Ark, async task-based
+ *   3. TTS (Volcengine)            – ByteDance Speech platform, sync
+ *   4. Sound effects (ElevenLabs)  – Text → SFX, sync
+ *   5. Music gen (ElevenLabs)      – Text → music, sync/streaming
+ *   6. TTS (ElevenLabs)            – Text → speech, sync
  *
  * All functions are designed to be called from the tool invocation layer.
  * API keys are read from environment variables and never exposed to the client.
@@ -12,6 +15,7 @@
 
 // ── Configuration ────────────────────────────────────────────────────
 
+// Volcengine / ByteDance
 const ARK_API_BASE =
   process.env.VOLCENGINE_ARK_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3';
 const ARK_API_KEY = () => process.env.VOLCENGINE_ARK_API_KEY || '';
@@ -21,6 +25,11 @@ const TTS_API_BASE =
 const TTS_APP_ID = () => process.env.VOLCENGINE_TTS_APP_ID || '';
 const TTS_ACCESS_TOKEN = () => process.env.VOLCENGINE_TTS_ACCESS_TOKEN || '';
 const TTS_CLUSTER = () => process.env.VOLCENGINE_TTS_CLUSTER || 'volcano_tts';
+
+// ElevenLabs
+const ELEVENLABS_API_BASE =
+  process.env.ELEVENLABS_API_BASE_URL || 'https://api.elevenlabs.io/v1';
+const ELEVENLABS_API_KEY = () => process.env.ELEVENLABS_API_KEY || '';
 
 // Default models – can be overridden per-request
 const DEFAULT_IMAGE_MODEL = 'doubao-seedream-5-0-260128';
@@ -110,16 +119,28 @@ export async function generateImage(args) {
  * Returns a task object with `id` and `status: 'queued'`.
  * Use `getVideoTask()` to poll for completion.
  *
+ * Content modes:
+ *   Text-to-video:     [{type:'text', text:'...'}]
+ *   Image-to-video:    [{type:'text', text:'...'}, {type:'image_url', imageUrl:'...'}]
+ *   First+last frame:  [{type:'text', text:'...'}, {type:'image_url', imageUrl:'first'}, {type:'image_url', imageUrl:'last'}]
+ *   Reference images:  [{type:'text', text:'...'}, ...up to 4 {type:'image_url'}]
+ *   From draft:        [{type:'draft_task', draftTaskId:'cgt-...'}]
+ *
  * @param {object} args
- * @param {string}   [args.model]         - Model ID
- * @param {Array}    args.content         - Content items [{type:'text',text:'...'}, {type:'image_url',imageUrl:'...'}]
- * @param {string}   [args.resolution]    - '480p' | '720p' | '1080p' | '2K'
- * @param {string}   [args.ratio]         - '16:9' | '9:16' | '4:3' | '1:1' etc.
- * @param {number}   [args.duration]      - Video length 4-15 seconds
- * @param {number}   [args.seed]          - Random seed
- * @param {boolean}  [args.generateAudio] - Generate audio track (Seedance 1.5+)
- * @param {string}   [args.serviceTier]   - 'default' | 'flex' (flex = 50% cheaper, slower)
- * @param {string}   [args.callbackUrl]   - Webhook URL for status updates
+ * @param {string}   [args.model]           - Model ID (default: doubao-seedance-1-5-pro-251215)
+ * @param {Array}    args.content           - Content items (see modes above)
+ * @param {string}   [args.resolution]      - '480p' | '720p' | '1080p' (default: '720p')
+ * @param {string}   [args.ratio]           - '16:9' | '9:16' | '21:9' | '1:1' | 'adaptive' (default: '9:16')
+ * @param {number}   [args.duration]        - Video length in seconds (default: 5)
+ * @param {number}   [args.frames]          - Frame count (alternative to duration)
+ * @param {number}   [args.seed]            - Random seed for reproducibility
+ * @param {boolean}  [args.cameraFixed]     - Lock camera (useful for talking-head shots)
+ * @param {boolean}  [args.returnLastFrame] - Return last frame for clip chaining
+ * @param {boolean}  [args.generateAudio]   - Generate ambient audio (Seedance 1.5+)
+ * @param {boolean}  [args.draft]           - Draft mode: 480p preview at ~60% cost, 7-day validity
+ * @param {string}   [args.serviceTier]     - 'default' | 'flex' (flex = 50% cheaper, slower)
+ * @param {string}   [args.callbackUrl]     - Webhook URL for status updates
+ * @param {boolean}  [args.watermark]       - Add watermark (default: false)
  * @returns {Promise<object>} Task object
  */
 export async function createVideoTask(args) {
@@ -136,19 +157,30 @@ export async function createVideoTask(args) {
         image_url: { url: item.imageUrl || item.url },
       };
     }
+    if (item.type === 'draft_task') {
+      return {
+        type: 'draft_task',
+        draft_task: { id: item.draftTaskId || item.id },
+      };
+    }
     return { type: 'text', text: item.text };
   });
 
   const body = {
     model: args.model || DEFAULT_VIDEO_MODEL,
     content,
+    ratio: args.ratio || '9:16',
+    watermark: args.watermark ?? false,
   };
 
   if (args.resolution) body.resolution = args.resolution;
-  if (args.ratio) body.ratio = args.ratio;
   if (args.duration != null) body.duration = args.duration;
+  if (args.frames != null) body.frames = args.frames;
   if (args.seed != null) body.seed = args.seed;
+  if (args.cameraFixed != null) body.camera_fixed = args.cameraFixed;
+  if (args.returnLastFrame != null) body.return_last_frame = args.returnLastFrame;
   if (args.generateAudio != null) body.generate_audio = args.generateAudio;
+  if (args.draft != null) body.draft = args.draft;
   if (args.serviceTier) body.service_tier = args.serviceTier;
   if (args.callbackUrl) body.callback_url = args.callbackUrl;
 
@@ -250,11 +282,11 @@ export async function listVideoTasks(args = {}) {
  * Poll a video task until completion or timeout.
  *
  * @param {string} taskId           - Task ID
- * @param {number} [intervalMs=3000] - Poll interval in ms
- * @param {number} [timeoutMs=300000] - Max wait time (5 min default)
+ * @param {number} [intervalMs=10000] - Poll interval in ms (API recommends 10s)
+ * @param {number} [timeoutMs=600000] - Max wait time (10 min default)
  * @returns {Promise<object>} Completed task
  */
-export async function waitForVideoTask(taskId, intervalMs = 3000, timeoutMs = 300000) {
+export async function waitForVideoTask(taskId, intervalMs = 10000, timeoutMs = 600000) {
   const start = Date.now();
 
   while (Date.now() - start < timeoutMs) {
@@ -276,10 +308,15 @@ function normalizeVideoTask(data) {
     model: data.model,
     status: data.status,
     videoUrl: data.content?.video_url || data.video_url || undefined,
+    lastFrameUrl: data.content?.last_frame_url || undefined,
     seed: data.seed,
     resolution: data.resolution,
     ratio: data.ratio,
     duration: data.duration,
+    fps: data.framespersecond || undefined,
+    draft: data.draft || false,
+    serviceTier: data.service_tier || 'default',
+    usage: data.usage || undefined,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
     error: data.error || undefined,
@@ -372,7 +409,179 @@ export async function synthesizeSpeech(args) {
   };
 }
 
-// ── 4. Backdrop Generation (Hangout Scenes) ─────────────────────────
+// ── 4. ElevenLabs Sound Effects ──────────────────────────────────────
+
+function elevenlabsHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'xi-api-key': ELEVENLABS_API_KEY(),
+  };
+}
+
+/**
+ * Generate a sound effect from a text description.
+ *
+ * @param {object} args
+ * @param {string}  args.text             - Description of the sound effect
+ * @param {number}  [args.durationSeconds] - 0.5–30 (auto if omitted)
+ * @param {boolean} [args.loop]           - Seamlessly looping (v2 only)
+ * @param {number}  [args.promptInfluence] - 0–1, prompt adherence (default: 0.3)
+ * @param {string}  [args.outputFormat]   - e.g. 'mp3_44100_128' (default)
+ * @returns {Promise<{audioBase64: string, format: string}>}
+ */
+export async function generateSoundEffect(args) {
+  const apiKey = ELEVENLABS_API_KEY();
+  if (!apiKey) {
+    throw new Error('ELEVENLABS_API_KEY is not configured');
+  }
+
+  const body = {
+    text: args.text,
+    model_id: 'eleven_text_to_sound_v2',
+  };
+
+  if (args.durationSeconds != null) body.duration_seconds = args.durationSeconds;
+  if (args.loop != null) body.loop = args.loop;
+  if (args.promptInfluence != null) body.prompt_influence = args.promptInfluence;
+
+  const format = args.outputFormat || 'mp3_44100_128';
+  const url = `${ELEVENLABS_API_BASE}/sound-generation`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: elevenlabsHeaders(),
+    body: JSON.stringify({ ...body, output_format: format }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`ElevenLabs SFX API error (${response.status}): ${text}`);
+  }
+
+  const buffer = await response.arrayBuffer();
+  return {
+    audioBase64: Buffer.from(buffer).toString('base64'),
+    format,
+  };
+}
+
+// ── 5. ElevenLabs Music Generation ──────────────────────────────────
+
+/**
+ * Generate music from a text prompt or composition plan.
+ *
+ * @param {object} args
+ * @param {string}  [args.prompt]            - Simple text prompt (cannot combine with compositionPlan)
+ * @param {object}  [args.compositionPlan]   - Structured plan with sections, styles, lyrics
+ * @param {number}  [args.musicLengthMs]     - 3000–600000 ms (only with prompt)
+ * @param {boolean} [args.forceInstrumental] - No vocals (default: false, only with prompt)
+ * @param {number}  [args.seed]              - For reproducibility (only with compositionPlan)
+ * @param {string}  [args.outputFormat]      - e.g. 'mp3_44100_128'
+ * @returns {Promise<{audioBase64: string, format: string}>}
+ */
+export async function generateMusic(args) {
+  const apiKey = ELEVENLABS_API_KEY();
+  if (!apiKey) {
+    throw new Error('ELEVENLABS_API_KEY is not configured');
+  }
+
+  const body = {
+    model_id: 'music_v1',
+  };
+
+  if (args.prompt) {
+    body.prompt = args.prompt;
+    if (args.musicLengthMs != null) body.music_length_ms = args.musicLengthMs;
+    if (args.forceInstrumental != null) body.force_instrumental = args.forceInstrumental;
+  } else if (args.compositionPlan) {
+    body.composition_plan = args.compositionPlan;
+    if (args.seed != null) body.seed = args.seed;
+  } else {
+    throw new Error('Either prompt or compositionPlan is required');
+  }
+
+  const format = args.outputFormat || 'mp3_44100_128';
+  const url = `${ELEVENLABS_API_BASE}/music`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: elevenlabsHeaders(),
+    body: JSON.stringify({ ...body, output_format: format }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`ElevenLabs Music API error (${response.status}): ${text}`);
+  }
+
+  const buffer = await response.arrayBuffer();
+  return {
+    audioBase64: Buffer.from(buffer).toString('base64'),
+    format,
+  };
+}
+
+// ── 6. ElevenLabs Text-to-Speech ────────────────────────────────────
+
+/**
+ * Generate speech from text using ElevenLabs voices.
+ *
+ * @param {object} args
+ * @param {string}  args.text            - Text to speak
+ * @param {string}  args.voiceId         - ElevenLabs voice ID
+ * @param {string}  [args.modelId]       - 'eleven_multilingual_v2' (default) | 'eleven_turbo_v2_5'
+ * @param {string}  [args.languageCode]  - ISO 639-1 code (e.g. 'ko', 'ja', 'zh', 'en')
+ * @param {number}  [args.stability]     - 0–1 (default ~0.5)
+ * @param {number}  [args.similarityBoost] - 0–1 (default ~0.75)
+ * @param {number}  [args.speed]         - Speech speed (1.0 = normal)
+ * @param {string}  [args.outputFormat]  - e.g. 'mp3_44100_128'
+ * @returns {Promise<{audioBase64: string, format: string}>}
+ */
+export async function elevenlabsTTS(args) {
+  const apiKey = ELEVENLABS_API_KEY();
+  if (!apiKey) {
+    throw new Error('ELEVENLABS_API_KEY is not configured');
+  }
+
+  if (!args.voiceId) {
+    throw new Error('voiceId is required for ElevenLabs TTS');
+  }
+
+  const body = {
+    text: args.text,
+    model_id: args.modelId || 'eleven_multilingual_v2',
+  };
+
+  if (args.languageCode) body.language_code = args.languageCode;
+
+  const voiceSettings = {};
+  if (args.stability != null) voiceSettings.stability = args.stability;
+  if (args.similarityBoost != null) voiceSettings.similarity_boost = args.similarityBoost;
+  if (args.speed != null) voiceSettings.speed = args.speed;
+  if (Object.keys(voiceSettings).length > 0) body.voice_settings = voiceSettings;
+
+  const format = args.outputFormat || 'mp3_44100_128';
+  const url = `${ELEVENLABS_API_BASE}/text-to-speech/${args.voiceId}?output_format=${format}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: elevenlabsHeaders(),
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`ElevenLabs TTS API error (${response.status}): ${text}`);
+  }
+
+  const buffer = await response.arrayBuffer();
+  return {
+    audioBase64: Buffer.from(buffer).toString('base64'),
+    format,
+  };
+}
+
+// ── 7. Backdrop Generation (Hangout Scenes) ─────────────────────────
 
 const BACKDROP_STYLE =
   'photorealistic, detailed environment, atmospheric lighting, ' +
@@ -543,6 +752,7 @@ export function getVolcengineStatus() {
     ttsAppIdConfigured: Boolean(TTS_APP_ID()),
     ttsAccessTokenConfigured: Boolean(TTS_ACCESS_TOKEN()),
     ttsCuster: TTS_CLUSTER(),
+    elevenlabsApiKeyConfigured: Boolean(ELEVENLABS_API_KEY()),
     defaultImageModel: DEFAULT_IMAGE_MODEL,
     defaultVideoModel: DEFAULT_VIDEO_MODEL,
     defaultTtsVoice: DEFAULT_TTS_VOICE,
