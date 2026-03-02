@@ -761,6 +761,83 @@ button.nav-link:hover {
   margin-right: 2px;
 }
 
+.scene-hud-lang-pill {
+  font-size: 11px;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.scene-hud-lang-pill:hover {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+}
+
+/* Explain-in row on proficiency screen */
+.explain-in-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+}
+
+.explain-in-label {
+  font-size: 13px;
+  color: rgba(255,255,255,0.6);
+}
+
+.explain-in-select {
+  font-size: 13px;
+  background: rgba(255,255,255,0.1);
+  color: #f0c040;
+  border: 1px solid rgba(240,192,64,0.3);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  outline: none;
+}
+
+.explain-in-select:hover {
+  background: rgba(255,255,255,0.16);
+}
+
+/* Language pill on city map */
+.explain-in-pill {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 20;
+}
+
+.explain-in-pill-select {
+  font-size: 11px;
+  background: rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.75);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  outline: none;
+  backdrop-filter: blur(4px);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.explain-in-pill-select:hover {
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+}
 
 @media (max-width: 900px) {
   .grid-3,

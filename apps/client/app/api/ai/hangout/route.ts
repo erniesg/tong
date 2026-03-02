@@ -183,6 +183,7 @@ export async function POST(req: Request) {
         mastery,
         objectives: ctx.objectives ?? POJANGMACHA.levels[effLevel]?.objectives ?? [],
         isFirstEncounter: ctx.isFirstEncounter ?? true,
+        explainIn: ctx.explainIn ?? 'en',
       };
     }
   } catch { /* ignore parse errors */ }

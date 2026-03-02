@@ -215,6 +215,8 @@ export function fetchDictionary(term: string, lang: 'ko' | 'ja' | 'zh' = 'ko') {
   );
 }
 
+export type AppLang = 'en' | 'ko' | 'ja' | 'zh';
+
 export type ProficiencyLevel = 'none' | 'beginner' | 'intermediate' | 'advanced' | 'native';
 
 export interface UserProficiency {
