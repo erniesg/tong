@@ -7,7 +7,7 @@ import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: MultipleChoiceExercise;
-  onResult: (correct: boolean) => void;
+  onResult: (correct: boolean, summary?: string) => void;
 }
 
 export function MultipleChoice({ exercise, onResult }: Props) {
@@ -24,7 +24,12 @@ export function MultipleChoice({ exercise, onResult }: Props) {
   const handleSubmit = () => {
     if (!selected || submitted) return;
     setSubmitted(true);
-    onResult(isCorrect);
+    const selectedOption = exercise.options.find((o) => o.id === selected);
+    onResult(isCorrect, JSON.stringify({
+      kind: 'pick',
+      selected: selectedOption?.text ?? '',
+      answer: correctOption?.text ?? '',
+    }));
   };
 
   const correctOption = exercise.options.find((o) => o.id === exercise.correctOptionId);

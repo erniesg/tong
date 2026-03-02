@@ -17,7 +17,7 @@ const JAMO_TO_SYLLABLE: Record<string, string> = {
 
 interface Props {
   exercise: PronunciationSelectExercise;
-  onResult: (correct: boolean) => void;
+  onResult: (correct: boolean, summary?: string) => void;
 }
 
 export function PronunciationSelect({ exercise, onResult }: Props) {

@@ -8,7 +8,7 @@ import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: PatternRecognitionExercise;
-  onResult: (correct: boolean) => void;
+  onResult: (correct: boolean, summary?: string) => void;
 }
 
 export function PatternRecognition({ exercise, onResult }: Props) {

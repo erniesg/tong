@@ -7,7 +7,7 @@ import { ExerciseRenderer } from '@/components/exercises/ExerciseRenderer';
 
 interface ExerciseModalProps {
   exercise: ExerciseData;
-  onResult: (exerciseId: string, correct: boolean) => void;
+  onResult: (exerciseId: string, correct: boolean, summary?: string) => void;
   readOnly?: boolean;
 }
 
@@ -16,14 +16,14 @@ export function ExerciseModal({ exercise, onResult, readOnly }: ExerciseModalPro
   const [resultDone, setResultDone] = useState(false);
 
   const handleResult = useCallback(
-    (correct: boolean) => {
+    (correct: boolean, summary?: string) => {
       if (readOnly || resultDone) return;
       setResultDone(true);
       // Delay dismiss so user sees feedback
       setTimeout(() => {
         setDismissing(true);
         setTimeout(() => {
-          onResult(exercise.id, correct);
+          onResult(exercise.id, correct, summary);
         }, 300);
       }, 1500);
     },

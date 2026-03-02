@@ -11,6 +11,9 @@ import { dispatch as gameDispatch, useGameState, getMasterySnapshot } from '@/li
 import { dispatchSession, useSessionState, type CompletedSession } from '@/lib/store/session-store';
 import { getLocationOrDefault } from '@/lib/content/locations';
 
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
+
 import { ChatRow } from './ChatRow';
 import { TongBubble } from './TongBubble';
 import { TeachingCard } from './TeachingCard';
@@ -36,16 +39,24 @@ interface LearnPanelProps {
   userId: string;
   objectiveId?: string;
   lang: string;
+  /** Skip the session picker and auto-start a new session on mount. */
+  autoStart?: boolean;
+  /** If provided, open this session in review mode instead of starting a new one. */
+  initialReviewSession?: CompletedSession;
 }
 
 /* ── Component ────────────────────────────────────────────── */
 
-export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps) {
+export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initialReviewSession }: LearnPanelProps) {
   const skin = getCitySkin(cityId);
   const gameState = useGameState();
   const sessionState = useSessionState();
+  const uiLang = useUILang();
 
-  const [mode, setMode] = useState<PanelMode>('picker');
+  const learnTitleKey = { seoul: 'learn_korean', tokyo: 'learn_japanese', shanghai: 'learn_chinese' }[cityId] ?? 'learn_korean';
+  const tongName = { en: 'Tong', ko: '통', ja: 'トン', zh: '小通' }[uiLang] ?? 'Tong';
+
+  const [mode, setMode] = useState<PanelMode>(initialReviewSession ? 'review' : (autoStart ? 'active' : 'picker'));
   const [chatEntries, setChatEntries] = useState<ChatEntry[]>([]);
   const [exerciseMap, setExerciseMap] = useState<Record<string, ExerciseData>>({});
   const [activeExercise, setActiveExercise] = useState<ExerciseData | null>(null);
@@ -72,6 +83,15 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
     const objectives = location.levels[effLevel]?.objectives ?? [];
     const active = sessionState.activeSession;
 
+    // Filter itemMastery to relevant keys (jamo + location vocab) to keep payload small
+    const allJamo = 'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ'.split('');
+    const vocabTargets = location.vocabularyTargets?.map((v) => v.word) ?? [];
+    const relevantKeys = new Set([...allJamo, ...vocabTargets]);
+    const filteredMastery: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(gameState.itemMastery)) {
+      if (relevantKeys.has(key)) filteredMastery[key] = val;
+    }
+
     const ctx = {
       playerLevel: level,
       selfAssessedLevel: gameState.selfAssessedLevel,
@@ -80,8 +100,10 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
       objectives,
       cityId,
       locationId,
+      explainIn: gameState.explainIn[cityId as keyof typeof gameState.explainIn] ?? 'en',
       sessionExercisesCompleted: active?.exercisesCompleted ?? 0,
       sessionExercisesCorrect: active?.exercisesCorrect ?? 0,
+      itemMastery: filteredMastery,
     };
 
     return `[LEARN_CONTEXT]${JSON.stringify(ctx)}[/LEARN_CONTEXT]`;
@@ -91,7 +113,7 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
   const { append, isLoading } = useChat({
     api: '/api/ai/lesson',
     id: `learn-${sessionState.activeSession?.id ?? 'none'}`,
-    maxSteps: 1,
+    maxSteps: 4,
     onResponse: () => {
       pausedRef.current = false;
     },
@@ -149,6 +171,7 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
               hintItems: (args.hintItems as string[] | null) ?? undefined,
               hintCount: (args.hintCount as number | null) ?? undefined,
               hintSubType: (args.hintSubType as string | null) ?? undefined,
+              mastery: gameState.itemMastery,
             };
             exercise = generateExercise(args.exerciseType as string, hints);
           }
@@ -158,7 +181,7 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
             ...prev,
             { id: toolCallId, kind: 'exercise_prompt', data: { exerciseId: exercise.id } },
           ]);
-          setActiveExercise(exercise);
+          // Don't auto-open — let the user tap the exercise prompt to open it
           break;
         }
 
@@ -247,9 +270,30 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
     });
   }, [cityId, locationId, objectiveId, append, buildContextBlock]);
 
+  /* ── Auto-start on mount ───────────────────────────── */
+  const didAutoStart = useRef(false);
+  useEffect(() => {
+    if (autoStart && !didAutoStart.current && !initialReviewSession) {
+      didAutoStart.current = true;
+      startSession();
+    }
+  }, [autoStart, initialReviewSession, startSession]);
+
+  /* ── Load initial review session ───────────────────── */
+  const didLoadReview = useRef(false);
+  useEffect(() => {
+    if (initialReviewSession && !didLoadReview.current) {
+      didLoadReview.current = true;
+      setChatEntries(initialReviewSession.messages as ChatEntry[]);
+      setExerciseMap(initialReviewSession.exerciseMap ?? {});
+      setReviewSession(initialReviewSession);
+      setMode('review');
+    }
+  }, [initialReviewSession]);
+
   /* ── Handle exercise result ──────────────────────────── */
   const handleExerciseResult = useCallback(
-    (exerciseId: string, correct: boolean) => {
+    (exerciseId: string, correct: boolean, summary?: string) => {
       setActiveExercise(null);
 
       // Update session store
@@ -269,13 +313,19 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
         }
       }
 
-      // Add user response entry
+      // Add result card showing exercise type + score/selection
+      const ex = exerciseMap[exerciseId];
       setChatEntries((prev) => [
         ...prev,
         {
           id: `user-ex-${exerciseId}`,
           kind: 'user_text',
-          data: { text: correct ? 'Got it right!' : 'Missed that one.' },
+          data: {
+            isResult: true,
+            correct,
+            exerciseType: ex?.type ?? 'exercise',
+            exerciseSummary: summary ?? '',
+          },
         },
       ]);
 
@@ -308,22 +358,30 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
     [append, buildContextBlock],
   );
 
-  /* ── Save completed session ──────────────────────────── */
-  const handleSessionDone = useCallback(() => {
+  /* ── Save session helper ────────────────────────────── */
+  const saveCurrentSession = useCallback(() => {
     const summaryEntry = chatEntries.find((e) => e.kind === 'summary');
     const summary = (summaryEntry?.data.summary as string) ?? 'Session completed';
-
     dispatchSession({
       type: 'SAVE_COMPLETED_SESSION',
       summary,
       messages: chatEntries,
       exerciseMap,
     });
-
-    setMode('picker');
-    setChatEntries([]);
-    setExerciseMap({});
   }, [chatEntries, exerciseMap]);
+
+  /* ── Review this session after done ────────────────── */
+  const handleReviewThis = useCallback(() => {
+    saveCurrentSession();
+    // Stay in the chat scroll but switch to review mode
+    setMode('review');
+  }, [saveCurrentSession]);
+
+  /* ── Start a new session after done ────────────────── */
+  const handleNewSession = useCallback(() => {
+    saveCurrentSession();
+    startSession();
+  }, [saveCurrentSession, startSession]);
 
   /* ── Review a past session ───────────────────────────── */
   const openReview = useCallback((session: CompletedSession) => {
@@ -342,8 +400,8 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
       {mode === 'picker' && (
         <div className="session-picker">
           <div className="session-picker__header">
-            <div className="session-picker__title">Learn Korean</div>
-            <div className="session-picker__subtitle">Practice with Tong, your learning companion</div>
+            <div className="session-picker__title">{t(learnTitleKey, uiLang)}</div>
+            <div className="session-picker__subtitle">{t('practice_with_tong', uiLang)}</div>
           </div>
 
           <button
@@ -351,14 +409,14 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
             onClick={startSession}
             type="button"
           >
-            Start new session
+            {t('start_new_session', uiLang)}
           </button>
 
           {citySessions.length > 0 && (
             <div className="session-picker__list">
-              <div className="text-xs font-semibold opacity-50 mb-1">Past sessions</div>
+              <div className="session-picker__list-label">{t('past_sessions', uiLang)}</div>
               {citySessions.map((session) => {
-                const accuracy = session.exercisesCompleted > 0
+                const acc = session.exercisesCompleted > 0
                   ? Math.round((session.exercisesCorrect / session.exercisesCompleted) * 100)
                   : 0;
                 return (
@@ -368,12 +426,16 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
                     onClick={() => openReview(session)}
                     type="button"
                   >
+                    <div className="session-picker__item-header">
+                      <span className="session-picker__item-acc">{acc}%</span>
+                      <span className="session-picker__item-date">{new Date(session.startedAt).toLocaleDateString()}</span>
+                    </div>
                     <div className="session-picker__item-title">
-                      {session.summary.slice(0, 60)}
-                      {session.summary.length > 60 ? '...' : ''}
+                      {session.summary.slice(0, 80)}
+                      {session.summary.length > 80 ? '…' : ''}
                     </div>
                     <div className="session-picker__item-meta">
-                      {accuracy}% accuracy · {session.exercisesCompleted} exercises · {new Date(session.startedAt).toLocaleDateString()}
+                      {session.exercisesCompleted} {t('exercises_label', uiLang)} · {session.exercisesCorrect} {t('correct_count', uiLang)}
                     </div>
                   </button>
                 );
@@ -385,29 +447,13 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
 
       {(mode === 'active' || mode === 'review') && (
         <>
-          {mode === 'review' && (
-            <div className="px-3 py-2 text-center text-xs opacity-60 bg-white/20">
-              Reviewing past session ·{' '}
-              <button
-                className="underline"
-                onClick={() => {
-                  setMode('picker');
-                  setReviewSession(null);
-                  setChatEntries([]);
-                }}
-                type="button"
-              >
-                Back
-              </button>
-            </div>
-          )}
 
           <div ref={scrollRef} className="learn-chat-scroll">
             {chatEntries.map((entry) => {
               switch (entry.kind) {
                 case 'tong_text':
                   return (
-                    <ChatRow key={entry.id} side="left" name="Tong" avatarEmoji="🐾">
+                    <ChatRow key={entry.id} side="left" name={tongName} avatarEmoji="🐾">
                       <TongBubble text={entry.data.text as string} />
                     </ChatRow>
                   );
@@ -428,12 +474,18 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
                   return (
                     <ChatRow key={entry.id} side="left" avatarEmoji="✏️">
                       <button
-                        className="msg-bubble msg-bubble--npc text-sm font-medium"
+                        className="learn-exercise-prompt-btn"
                         onClick={() => mode !== 'review' && ex && setActiveExercise(ex)}
                         type="button"
                       >
-                        {ex ? `Exercise: ${ex.prompt ?? ex.type}` : 'Exercise'}
-                        {mode !== 'review' && ' (tap to open)'}
+                        <span className="learn-exercise-prompt-btn__label">
+                          ✏️ {t(`ex_${ex?.type}`, uiLang) || ex?.type?.replace('_', ' ') || 'Exercise'}
+                        </span>
+                        {mode !== 'review' && (
+                          <span className="learn-exercise-prompt-btn__cta">
+                            {t('tap_to_start_exercise', uiLang)} →
+                          </span>
+                        )}
                       </button>
                     </ChatRow>
                   );
@@ -480,13 +532,63 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
                         exercisesCorrect={entry.data.exercisesCorrect as number}
                         xpEarned={entry.data.xpEarned as number}
                         learnedItems={entry.data.learnedItems as { char: string; romanization?: string }[]}
-                        onDone={mode === 'active' ? handleSessionDone : undefined}
+                        onReview={mode === 'active' ? handleReviewThis : undefined}
+                        onNewSession={mode === 'active' ? handleNewSession : undefined}
                       />
                     </ChatRow>
                   );
                 }
 
-                case 'user_text':
+                case 'user_text': {
+                  const isResult = entry.data.isResult as boolean | undefined;
+                  const isCorrect = entry.data.correct as boolean | undefined;
+                  if (isResult) {
+                    const exType = (entry.data.exerciseType as string) ?? '';
+                    const exSummary = (entry.data.exerciseSummary as string) ?? '';
+                    const typeIcons: Record<string, string> = {
+                      matching: '🔗', multiple_choice: '🔘', drag_drop: '🎯',
+                      sentence_builder: '🧩', fill_blank: '📝', pronunciation_select: '🔊',
+                      pattern_recognition: '🔍', stroke_tracing: '✍️', error_correction: '🔧', free_input: '💬',
+                    };
+                    const icon = typeIcons[exType] ?? '✏️';
+                    const typeLabel = t(`ex_${exType}`, uiLang) || exType.replace('_', ' ');
+
+                    // Parse structured summary
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    let detail: any = null;
+                    try { detail = JSON.parse(exSummary); } catch { /* plain string or empty */ }
+
+                    return (
+                      <ChatRow key={entry.id} side="right">
+                        <div className={`learn-result-card ${isCorrect ? 'learn-result-card--correct' : 'learn-result-card--wrong'}`}>
+                          <span className="learn-result-card__icon">{isCorrect ? '✓' : '✗'}</span>
+                          <div className="learn-result-card__body">
+                            <span className="learn-result-card__type">{icon} {typeLabel}</span>
+                            {detail?.kind === 'pairs' && (
+                              <div className="learn-result-card__pairs">
+                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                {(detail.items as any[]).map((p: { left: string; right: string; ok: boolean }, i: number) => (
+                                  <span key={i} className={`learn-result-card__pair ${p.ok ? 'learn-result-card__pair--ok' : 'learn-result-card__pair--wrong'}`}>
+                                    <span className="text-ko">{p.left}</span>
+                                    <span className="learn-result-card__arrow">{p.ok ? '→' : '✗'}</span>
+                                    <span>{p.right}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {detail?.kind === 'pick' && (
+                              <div className="learn-result-card__pick">
+                                <span className="text-ko">{detail.selected}</span>
+                                {!isCorrect && (
+                                  <span className="learn-result-card__correct-answer">→ {detail.answer}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </ChatRow>
+                    );
+                  }
                   return (
                     <ChatRow key={entry.id} side="right">
                       <div className="msg-bubble msg-bubble--user bubble-tail-right">
@@ -494,15 +596,16 @@ export function LearnPanel({ cityId, locationId, objectiveId }: LearnPanelProps)
                       </div>
                     </ChatRow>
                   );
+                }
 
                 default:
                   return null;
               }
             })}
 
-            {/* Loading indicator */}
-            {isLoading && (
-              <ChatRow side="left" avatarEmoji="🐾" name="Tong">
+            {/* Loading indicator — hide if session already has summary */}
+            {isLoading && !chatEntries.some((e) => e.kind === 'summary') && (
+              <ChatRow side="left" avatarEmoji="🐾" name={tongName}>
                 <div className="msg-bubble msg-bubble--npc">
                   <div className="typing-indicator">
                     <span className="typing-dot" />

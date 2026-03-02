@@ -8,7 +8,7 @@ import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: MatchingExercise;
-  onResult: (correct: boolean) => void;
+  onResult: (correct: boolean, summary?: string) => void;
 }
 
 export function Matching({ exercise, onResult }: Props) {
@@ -92,7 +92,12 @@ export function Matching({ exercise, onResult }: Props) {
   const handleSubmit = () => {
     if (submitted || !allFilled) return;
     setSubmitted(true);
-    onResult(isAllCorrect);
+    const details = Object.entries(matches).map(([leftIdx, rightIdx]) => ({
+      left: exercise.pairs[Number(leftIdx)].left,
+      right: exercise.pairs[Number(rightIdx)].right,
+      ok: Number(leftIdx) === Number(rightIdx),
+    }));
+    onResult(isAllCorrect, JSON.stringify({ kind: 'pairs', items: details }));
   };
 
   return (
@@ -111,7 +116,7 @@ export function Matching({ exercise, onResult }: Props) {
               onClick={() => handleWordBankClick(rightIdx)}
               disabled={submitted}
               className={cn(
-                'rounded-lg px-3 py-2 text-ko font-medium transition border',
+                'rounded-lg px-3 py-2 text-ko font-medium transition border text-white text-base',
                 !isPlaced && !isSelected && 'border-white/20 hover:border-white/40',
                 isSelected && 'border-[var(--color-primary)] bg-[var(--color-primary)]/20 scale-105',
                 isPlaced && 'opacity-30 border-white/10 cursor-default',
@@ -150,7 +155,7 @@ export function Matching({ exercise, onResult }: Props) {
                 submitted && 'cursor-default'
               )}
             >
-              <span className="text-sm text-[var(--color-text-secondary)] min-w-[80px]">
+              <span className="text-ko text-base text-white font-medium min-w-[80px]">
                 {pair.left}
               </span>
               <div className={cn(
@@ -163,7 +168,7 @@ export function Matching({ exercise, onResult }: Props) {
               )}>
                 {matchedText ? (
                   <span className={cn(
-                    'text-ko font-medium',
+                    'text-ko font-medium text-white text-base',
                     isWrong && 'line-through text-red-400'
                   )}>{matchedText}</span>
                 ) : (

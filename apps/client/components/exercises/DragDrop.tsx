@@ -8,7 +8,7 @@ import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: DragDropExercise;
-  onResult: (correct: boolean) => void;
+  onResult: (correct: boolean, summary?: string) => void;
 }
 
 export function DragDrop({ exercise, onResult }: Props) {
@@ -42,7 +42,17 @@ export function DragDrop({ exercise, onResult }: Props) {
   const handleSubmit = () => {
     if (submitted || Object.keys(mapping).length < exercise.items.length) return;
     setSubmitted(true);
-    onResult(allCorrect);
+    const details = exercise.items.map((item) => {
+      const targetId = mapping[item.id];
+      const target = exercise.targets.find((t) => t.id === targetId);
+      const correctTargetId = exercise.correctMapping[item.id];
+      return {
+        left: item.text,
+        right: target?.label ?? '?',
+        ok: targetId === correctTargetId,
+      };
+    });
+    onResult(allCorrect, JSON.stringify({ kind: 'pairs', items: details }));
   };
 
   return (

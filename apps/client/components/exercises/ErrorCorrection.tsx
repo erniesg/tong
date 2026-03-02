@@ -8,7 +8,7 @@ import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: ErrorCorrectionExercise;
-  onResult: (correct: boolean) => void;
+  onResult: (correct: boolean, summary?: string) => void;
 }
 
 export function ErrorCorrection({ exercise, onResult }: Props) {
