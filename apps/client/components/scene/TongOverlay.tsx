@@ -16,7 +16,7 @@ export function TongOverlay({ message, translation, visible, onDismiss }: TongOv
   return (
     <div
       className={cn(
-        'tong-whisper absolute z-30 left-3 right-3 top-3 p-3 transition-all duration-300 fade-in',
+        'tong-whisper absolute z-30 left-3 right-3 top-14 p-3 transition-all duration-300 fade-in',
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
       )}
       onClick={onDismiss}
