@@ -61,6 +61,7 @@ interface CityMapProps {
   onSelectLocation: (loc: LocationId | null) => void;
   onStartHangout: (cityId: CityId, locationId: LocationId) => void;
   onStartLearn: (cityId: CityId, locationId: LocationId) => void;
+  onReviewSession?: (session: import('@/lib/store/session-store').CompletedSession) => void;
   gameState: GameState;
 }
 
@@ -73,6 +74,7 @@ export function CityMap({
   onSelectLocation,
   onStartHangout,
   onStartLearn,
+  onReviewSession,
   gameState,
 }: CityMapProps) {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -299,12 +301,14 @@ export function CityMap({
             locationName={loc.en}
             locationNameKo={loc.local}
             targetLang={targetLang}
+            cityId={city}
             hangoutCount={getLocationHangoutCount(city, selectedLocation)}
             missionAvailable={isMissionAvailable(city, selectedLocation)}
             comingSoon={comingSoon}
             playerSp={gameState.sp}
             onHangout={() => onStartHangout(city, selectedLocation)}
             onLearn={() => onStartLearn(city, selectedLocation)}
+            onReviewSession={onReviewSession}
             onDismiss={() => onSelectLocation(null)}
           />
         );
