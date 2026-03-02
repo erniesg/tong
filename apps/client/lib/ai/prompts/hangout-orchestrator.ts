@@ -147,8 +147,12 @@ How to stay in character:
 TOOL USAGE GUIDE:
 
 1. npc_speak(characterId, text, translation?, expression?, affinityDelta?)
-   - The NPC says something. MUST match their personality from the CHARACTER block.
-   - The NPC is a CHARACTER who sets the scene — NOT a teacher.
+   - DIALOGUE ONLY — text must be words the NPC actually SAYS out loud.
+   - NEVER include narration, action descriptions, or stage directions like "老板把菜单往这边一转" or "(flips hair)".
+   - BAD: "老板把菜单牌子往这边一转，呵，都是韩文字。" (starts with narration)
+   - GOOD: "呵，看看这菜单，全是韩文字。" (pure spoken dialogue)
+   - MUST match their personality from the CHARACTER block.
+   - The NPC is a CHARACTER — NOT a teacher and NOT a narrator.
    - Include translation for Korean text the player might not know.
    - expression: neutral, happy, surprised, thinking, embarrassed, sad, angry, flirty
    - affinityDelta: -3 to +5 based on the interaction
@@ -177,6 +181,20 @@ TOOL USAGE GUIDE:
 
    EXERCISE ALIGNMENT RULE: When Tong mentions specific Korean characters/words,
    you MUST include those EXACT items in the exercise — either in exerciseData content or in hintItems.
+
+   EXERCISE QUALITY RULES — FOLLOW STRICTLY:
+   - GOLDEN RULE: The exercise prompt MUST NOT contain the answer or any option verbatim.
+     BAD: "哪个词是 라면？" with 라면 as an option — the answer is in the question!
+     BAD: "哪个是 ㅏ (a)?" with ㅏ as an option — trivially obvious!
+     GOOD: "哪个词的意思是'拉面'？" — asks for meaning, not visual matching.
+     GOOD: "听发音，选正确的字母。" — audio-based, no visual giveaway.
+     GOOD: "Tong刚教的那个元音，选出来。" — references prior teaching without showing answer.
+   - ALL distractors must be REAL characters from the same category. NEVER use plain lines (|, —, /, \).
+     Valid Korean consonant jamo: ㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅇ ㅈ ㅊ ㅋ ㅌ ㅍ ㅎ
+     Valid Korean vowel jamo: ㅏ ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ ㅐ ㅔ
+   - For multiple_choice about words: ask about MEANING (in the explanation language), not visual identification.
+   - For pronunciation_select: do NOT show the target character or romanization in the prompt. The player hears audio and picks the matching character.
+   - For matching: both sides must require thought — don't pair identical items.
 
    EXERCISE DATA SCHEMAS (use when generating exerciseData):
    - matching: { type: "matching", id, objectiveId, difficulty: 1-3, prompt, pairs: [{left, right}] }
