@@ -178,15 +178,30 @@ button,
   font-weight: 600;
   border-radius: 12px;
   padding: 10px 14px;
-  background: var(--accent);
-  color: #fff;
   transition: transform 140ms ease, background 140ms ease;
 }
 
-button:hover,
-.button:hover {
+/* Default button style for app shell pages */
+.app-shell button,
+.app-shell .button {
+  background: var(--accent);
+  color: #fff;
+}
+
+.app-shell button:hover,
+.app-shell .button:hover {
   transform: translateY(-1px);
   background: var(--accent-dark);
+}
+
+/* Inside game-frame: reset — components style themselves */
+.game-frame button:not(.btn-go):not(.btn-skip):not([class*="location-sheet"]):not([class*="exercise"]) {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-weight: inherit;
+  font-size: inherit;
 }
 
 button.secondary,
@@ -351,21 +366,28 @@ button.nav-link:hover {
 }
 
 .game-shell {
-  max-width: 920px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 20px 32px;
+  overflow-y: auto;
 }
 
 .tong-avatar {
-  width: 96px;
-  height: 96px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #e8a020);
+  background: linear-gradient(135deg, var(--color-accent-gold), #e8a020);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 42px;
+  font-size: 28px;
   font-weight: 700;
-  color: #fff;
-  box-shadow: 0 8px 32px rgba(255, 107, 44, 0.25);
+  color: #1a1a2e;
+  box-shadow: 0 4px 20px rgba(240, 192, 64, 0.3);
   flex-shrink: 0;
 }
 
@@ -446,19 +468,19 @@ button.nav-link:hover {
 .dialogue-line {
   font-size: 17px;
   line-height: 1.5;
-  color: var(--ink);
+  color: rgba(240, 244, 255, 0.92);
 }
 
 .dialogue-line.muted {
   font-size: 15px;
-  color: var(--muted);
+  color: rgba(200, 210, 230, 0.5);
 }
 
 .typewriter-cursor {
   display: inline-block;
   width: 2px;
   height: 1em;
-  background: var(--accent);
+  background: var(--color-accent-gold);
   margin-left: 2px;
   vertical-align: text-bottom;
   animation: blink 0.7s step-end infinite;
@@ -473,7 +495,8 @@ button.nav-link:hover {
   max-width: 400px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+  padding: 16px;
   animation: fadeSlideUp 0.4s ease;
 }
 
@@ -485,7 +508,11 @@ button.nav-link:hover {
 .proficiency-lang {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .proficiency-lang-header {
@@ -495,15 +522,17 @@ button.nav-link:hover {
 }
 
 .proficiency-lang-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-  color: var(--ink);
+  color: rgba(240, 244, 255, 0.92);
 }
 
 .proficiency-lang-level {
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 500;
+  font-size: 11px;
+  color: var(--color-accent-gold);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .proficiency-slider {
@@ -512,7 +541,7 @@ button.nav-link:hover {
   width: 100%;
   height: 6px;
   border-radius: 999px;
-  background: var(--line);
+  background: rgba(255, 255, 255, 0.12);
   outline: none;
   cursor: pointer;
 }
@@ -520,12 +549,12 @@ button.nav-link:hover {
 .proficiency-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: var(--accent);
-  border: 3px solid #fff;
-  box-shadow: 0 2px 8px rgba(255, 107, 44, 0.3);
+  background: var(--color-accent-gold);
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 10px rgba(240, 192, 64, 0.4);
   cursor: pointer;
   transition: transform 0.15s ease;
 }
@@ -537,16 +566,16 @@ button.nav-link:hover {
 .proficiency-slider::-moz-range-track {
   height: 6px;
   border-radius: 999px;
-  background: var(--line);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .proficiency-slider::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: var(--accent);
-  border: 3px solid #fff;
-  box-shadow: 0 2px 8px rgba(255, 107, 44, 0.3);
+  background: var(--color-accent-gold);
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 10px rgba(240, 192, 64, 0.4);
   cursor: pointer;
 }
 
@@ -575,38 +604,38 @@ button.nav-link:hover {
 }
 
 .proficiency-tick-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--line);
+  background: rgba(255, 255, 255, 0.2);
   transition: background 0.15s ease, transform 0.15s ease;
 }
 
 .proficiency-tick.active .proficiency-tick-dot {
-  background: var(--accent);
-  transform: scale(1.3);
+  background: var(--color-accent-gold);
+  transform: scale(1.4);
 }
 
 .proficiency-tick-num {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.35);
   transition: color 0.15s ease;
 }
 
 .proficiency-tick.active .proficiency-tick-num {
-  color: var(--accent);
+  color: var(--color-accent-gold);
 }
 
 .proficiency-tick-label {
   font-size: 10px;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.3);
   white-space: nowrap;
   transition: color 0.15s ease;
 }
 
 .proficiency-tick.active .proficiency-tick-label {
-  color: var(--ink);
+  color: rgba(240, 244, 255, 0.9);
   font-weight: 600;
 }
 
@@ -616,9 +645,9 @@ button.nav-link:hover {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  background: rgba(15, 118, 110, 0.06);
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  padding: 8px 10px;
+  background: rgba(240, 192, 64, 0.08);
+  border: 1px solid rgba(240, 192, 64, 0.15);
   border-radius: 10px;
   margin-top: 2px;
 }
@@ -628,16 +657,16 @@ button.nav-link:hover {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--mint);
-  background: rgba(15, 118, 110, 0.12);
-  padding: 2px 7px;
+  color: var(--color-accent-gold);
+  background: rgba(240, 192, 64, 0.15);
+  padding: 3px 8px;
   border-radius: 6px;
   white-space: nowrap;
 }
 
 .proficiency-level-question {
-  font-size: 11px;
-  color: var(--muted);
+  font-size: 12px;
+  color: rgba(220, 228, 245, 0.75);
   flex: 1;
   min-width: 0;
 }
@@ -647,18 +676,18 @@ button.nav-link:hover {
   font-size: 18px;
   padding: 14px 36px;
   border-radius: 16px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--color-accent-gold);
+  color: #1a1a2e;
   font-weight: 700;
   border: none;
   cursor: pointer;
-  box-shadow: 0 6px 20px rgba(255, 107, 44, 0.3);
+  box-shadow: 0 6px 20px rgba(240, 192, 64, 0.3);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn-go:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(255, 107, 44, 0.4);
+  box-shadow: 0 8px 28px rgba(240, 192, 64, 0.45);
 }
 
 .btn-go:active {
@@ -669,14 +698,13 @@ button.nav-link:hover {
   background: none;
   border: none;
   font-size: 13px;
-  color: var(--muted);
-  opacity: 0.5;
+  color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
   padding: 6px 10px;
 }
 
 .btn-skip:hover {
-  opacity: 1;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* Immersive scene — layered visual-novel style */
@@ -1337,29 +1365,25 @@ button.nav-link:hover {
 
 /* ── Tong whisper overlay ─────────────────────────────────── */
 .tong-whisper {
-  background: rgba(240, 192, 64, 0.18);
-  border: 1px solid rgba(240, 192, 64, 0.45);
+  background: rgba(15, 20, 40, 0.88);
+  border: 1px solid rgba(240, 192, 64, 0.4);
   border-radius: 14px;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(16px);
   cursor: pointer;
-  /* Ensure text is legible on any background the overlay sits on */
-  color: #1a1a1a;
+  color: #eef2ff;
 }
 
 .tong-whisper__label {
-  color: #a07808;
+  color: var(--color-accent-gold);
 }
 
 .tong-whisper__body {
-  color: #1a1a1a;
+  color: rgba(240, 244, 255, 0.92);
 }
 
 .tong-whisper__translation {
-  color: #4a4a4a;
+  color: rgba(220, 228, 245, 0.6);
 }
-
-/* On dark backgrounds (VN scene) the overlay backdrop provides enough contrast
-   and the dark text still reads well against the semi-opaque gold background. */
 
 /* ── Korean text styling ──────────────────────────────────── */
 .text-ko {
@@ -2058,5 +2082,400 @@ button.nav-link:hover {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   City Map
+   ══════════════════════════════════════════════════════════════ */
+
+.city-map {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.city-map__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.city-map__bg--dissolve {
+  transition: opacity 1.5s ease-in-out;
+}
+
+.city-map__bg--greyscale {
+  filter: grayscale(1) brightness(0.7);
+}
+
+.city-map__coming-soon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.08em;
+  z-index: 3;
+}
+
+.city-map__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(0, 0, 0, 0.1) 30%,
+    rgba(0, 0, 0, 0.05) 60%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+.city-map__title {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 20px 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.city-map__title-en {
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  line-height: 1;
+}
+
+.city-map__title-local {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.75);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  margin-top: 2px;
+}
+
+/* ── Location pin ───────────────────────────────────────────── */
+
+.location-pin {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s, filter 0.2s;
+}
+
+.location-pin--unlocked {
+  cursor: pointer;
+}
+
+.location-pin--unlocked .location-pin__dot {
+  background: var(--color-accent-gold, #f0c040);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 12px rgba(240, 192, 64, 0.3);
+}
+
+.location-pin--unlocked:hover .location-pin__dot {
+  transform: scale(1.15);
+}
+
+.location-pin--active .location-pin__dot {
+  animation: pinPulse 1.5s ease-in-out infinite;
+}
+
+.location-pin--locked {
+  opacity: 0.45;
+  cursor: default;
+  filter: grayscale(0.6);
+}
+
+.location-pin--locked .location-pin__dot {
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: none;
+}
+
+.location-pin__dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.location-pin__label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+}
+
+/* Remove dotted underline from Korean text inside pins — tooltip still works on tap */
+.location-pin__label .text-ko {
+  border: none !important;
+}
+
+@keyframes pinPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); }
+  50% { transform: scale(1.25); box-shadow: 0 2px 16px rgba(240, 192, 64, 0.6); }
+}
+
+/* ── Location sheet (bottom sheet) ──────────────────────────── */
+
+.location-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.location-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 11;
+  background: linear-gradient(180deg, rgba(18, 24, 48, 0.97) 0%, rgba(12, 16, 32, 0.99) 100%);
+  backdrop-filter: blur(20px);
+  border-radius: 24px 24px 0 0;
+  padding: 12px 20px calc(24px + var(--safe-bottom));
+  animation: sheetSlideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.location-sheet__handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 auto 16px;
+}
+
+.location-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.location-sheet__names {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.location-sheet__name-ko {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.location-sheet__name-en {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+}
+
+.location-sheet__badge {
+  font-size: 13px;
+  color: var(--color-accent-gold, #f0c040);
+  background: rgba(240, 192, 64, 0.12);
+  border: 1px solid rgba(240, 192, 64, 0.2);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-weight: 700;
+}
+
+.location-sheet__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Base button: card-like with icon + text */
+.location-sheet__btn {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.location-sheet__btn:focus {
+  outline: none;
+}
+
+.location-sheet__btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.location-sheet__btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.location-sheet__btn:disabled {
+  cursor: default;
+}
+
+.location-sheet__btn-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+}
+
+.location-sheet__btn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.location-sheet__btn-label {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.location-sheet__btn-desc {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.6;
+}
+
+/* Hangout: primary, vivid */
+.location-sheet__btn--hangout {
+  background: linear-gradient(135deg, #e8485c 0%, #d63850 100%);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(232, 72, 92, 0.25);
+}
+
+/* Learn: secondary, subtle */
+.location-sheet__btn--learn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+/* Mission: gold when available, dark+locked when not */
+.location-sheet__btn--mission {
+  background: linear-gradient(135deg, #f0c040 0%, #e0a820 100%);
+  color: #1a1a2e;
+  box-shadow: 0 2px 12px rgba(240, 192, 64, 0.2);
+}
+
+.location-sheet__btn--mission.location-sheet__btn--locked {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.35);
+  box-shadow: none;
+}
+
+.location-sheet__btn--locked .location-sheet__btn-desc {
+  opacity: 0.5;
+}
+
+.location-sheet__hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
+  margin-top: 4px;
+}
+
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ── City indicator dots ────────────────────────────────────── */
+
+.city-map__dots {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 6;
+}
+
+.city-map__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  transition: all 0.3s;
+}
+
+.city-map__dot--active {
+  background: #fff;
+  transform: scale(1.3);
+}
+
+/* ── Navigation arrows (clickable divs) ────────────────────── */
+
+.city-map__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(6px);
+  transition: background 0.15s, transform 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+
+.city-map__arrow:hover {
+  background: rgba(0, 0, 0, 0.65);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.city-map__arrow--left {
+  left: 10px;
+}
+
+.city-map__arrow--right {
+  right: 10px;
 }
 

@@ -94,7 +94,7 @@ export function SceneView({
 
       {/* Layer 4: Interactive area at bottom */}
       {currentExercise ? (
-        <div className="absolute bottom-0 left-0 right-0 max-h-[55vh] overflow-y-auto slide-up">
+        <div className="absolute bottom-0 left-0 right-0 max-h-[70vh] overflow-y-auto slide-up">
           <ExerciseRenderer
             exercise={currentExercise}
             onResult={(correct) => onExerciseResult(currentExercise.id, correct)}

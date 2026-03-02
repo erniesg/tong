@@ -14,6 +14,9 @@ import { useGameState, dispatch, getRelationship, getMasterySnapshot } from '@/l
 import { CHARACTER_MAP, HAUEN } from '@/lib/content/characters';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import { getRelationshipStage } from '@/lib/types/relationship';
+import { CityMap, CITY_ORDER } from '@/components/city-map/CityMap';
+import { LearnPanel } from '@/components/learn/LearnPanel';
+import { sessionLogger } from '@/lib/debug/session-logger';
 
 /* ── scene constants ────────────────────────────────────── */
 
@@ -33,13 +36,13 @@ const TONG_LINES = [
 ];
 
 const GAME_LEVELS = [
-  { level: 0, name: 'SCRIPT',        desc: 'Can I recognise the symbols?',       tongLangPct: 5 },
-  { level: 1, name: 'PRONUNCIATION', desc: 'Can I say them correctly?',           tongLangPct: 10 },
-  { level: 2, name: 'VOCABULARY',    desc: 'Do I know what they mean?',           tongLangPct: 20 },
-  { level: 3, name: 'GRAMMAR',       desc: 'Can I build sentences?',              tongLangPct: 35 },
-  { level: 4, name: 'SENTENCES',     desc: 'Can I express ideas?',                tongLangPct: 50 },
-  { level: 5, name: 'CONVERSATION',  desc: 'Can I hold a conversation?',          tongLangPct: 70 },
-  { level: 6, name: 'MASTERY',       desc: 'Can I think in this language?',       tongLangPct: 90 },
+  { level: 0, name: 'SCRIPT',        desc: 'Learning to read the symbols',        tongLangPct: 5 },
+  { level: 1, name: 'PRONUNCIATION', desc: 'Starting to sound things out',        tongLangPct: 10 },
+  { level: 2, name: 'VOCABULARY',    desc: 'Building a word bank',                tongLangPct: 20 },
+  { level: 3, name: 'GRAMMAR',       desc: 'Forming basic sentences',             tongLangPct: 35 },
+  { level: 4, name: 'SENTENCES',     desc: 'Expressing ideas clearly',            tongLangPct: 50 },
+  { level: 5, name: 'CONVERSATION',  desc: 'Holding real conversations',          tongLangPct: 70 },
+  { level: 6, name: 'MASTERY',       desc: 'Thinking in this language',           tongLangPct: 90 },
 ] as const;
 
 const SLIDER_TO_LEVEL: ProficiencyLevel[] = ['none', 'none', 'beginner', 'beginner', 'intermediate', 'advanced', 'advanced'];
@@ -74,7 +77,7 @@ const PAUSE_BETWEEN_LINES_MS = 600;
 
 /* ── types ──────────────────────────────────────────────── */
 
-type Phase = 'intro' | 'proficiency' | 'hangout';
+type Phase = 'intro' | 'proficiency' | 'hangout' | 'city_map' | 'learn';
 
 /* ── helpers ────────────────────────────────────────────── */
 
@@ -126,9 +129,13 @@ export default function GamePage() {
   const searchParams = useSearchParams();
   const gameState = useGameState();
 
-  /* phase state — ?phase=hangout skips straight to scene */
-  const skipToHangout = searchParams.get('phase') === 'hangout';
-  const [phase, setPhase] = useState<Phase>(skipToHangout ? 'hangout' : 'intro');
+  /* phase state — ?phase=hangout|city_map skips straight there */
+  const phaseParam = searchParams.get('phase');
+  const skipToHangout = phaseParam === 'hangout';
+  const skipToCityMap = phaseParam === 'city_map';
+  const [phase, setPhase] = useState<Phase>(
+    skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : 'intro'
+  );
   const [lineIndex, setLineIndex] = useState(0);
   const [displayedChars, setDisplayedChars] = useState(0);
   const [typewriterDone, setTypewriterDone] = useState(false);
@@ -147,6 +154,10 @@ export default function GamePage() {
   const [score, setScore] = useState<ScoreState>({ xp: 0, sp: 0, rp: 0 });
   const [activeNpc, setActiveNpc] = useState<string>('haeun');
   const [playerLevel, setPlayerLevel] = useState(0);
+
+  /* city map state */
+  const [mapCityIndex, setMapCityIndex] = useState(1); // default Seoul
+  const [selectedLocation, setSelectedLocation] = useState<LocationId | null>(null);
 
   /* NPC character ref — set during proficiency confirmation */
   const npcRef = useRef<Character>(HAUEN);
@@ -262,10 +273,10 @@ export default function GamePage() {
     setPhase('hangout');
     setLoading(false);
 
-    void append({
-      role: 'user',
-      content: `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street', npcChar)}Start the scene.`,
-    });
+    const startMsg = `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street', npcChar)}Start the scene.`;
+    sessionLogger.start({ mode: 'hangout', cityId: primaryCity, locationId: 'food_street', npcId, playerLevel: weakLevel });
+    sessionLogger.logAIRequest(startMsg);
+    void append({ role: 'user', content: startMsg });
   }
 
   /* ── useChat integration ──────────────────────────────────── */
@@ -284,7 +295,7 @@ export default function GamePage() {
         return args;
       }
       processedToolCallsRef.current.add(toolCallId);
-      console.log(`[VN] onToolCall: ${toolName}`, toolCallId);
+      sessionLogger.logToolCall(toolName, toolCallId, args as Record<string, unknown>);
 
       setToolQueue((prev) => [
         ...prev,
@@ -298,10 +309,10 @@ export default function GamePage() {
       return args;
     },
     onError: (err) => {
-      console.error('[VN] useChat error:', err);
+      sessionLogger.logError('useChat error', err?.message ?? err);
     },
     onFinish: (msg) => {
-      console.log('[VN] onFinish:', msg.role, 'tools:', msg.toolInvocations?.length ?? 0);
+      sessionLogger.logAIResponse(msg.role, msg.toolInvocations?.length ?? 0);
     },
   });
 
@@ -369,7 +380,7 @@ export default function GamePage() {
         });
         setCurrentMessage(null);
         setCurrentExercise(exercise);
-        console.log('[VN] show_exercise BLOCK:', args.exerciseType, 'hints:', args.hintItems);
+        sessionLogger.logExerciseShown(args.exerciseType, exercise.id, { objectiveId: args.objectiveId, hintItems: args.hintItems });
         return; // BLOCK — wait for exercise completion
       }
       case 'offer_choices': {
@@ -377,7 +388,7 @@ export default function GamePage() {
         setChoicePrompt(args.prompt);
         setChoices(args.choices);
         setCurrentMessage(null);
-        console.log('[VN] offer_choices BLOCK');
+        sessionLogger.logChoiceShown(args.prompt, args.choices);
         return; // BLOCK — wait for choice
       }
       case 'assess_result': {
@@ -395,6 +406,9 @@ export default function GamePage() {
         setSceneSummary(args);
         setScore((prev) => ({ ...prev, xp: prev.xp + args.xpEarned }));
         setCurrentMessage(null);
+
+        sessionLogger.logSceneSummary(args);
+        sessionLogger.end();
 
         // Dispatch store updates
         dispatch({ type: 'ADD_XP', amount: args.xpEarned });
@@ -442,9 +456,11 @@ export default function GamePage() {
     }
 
     if (!currentExercise && !choices && toolQueue.length === 0) {
-      console.log('[VN] handleContinue: append Continue');
       const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
-      void append({ role: 'user', content: `${ctx}Continue.` });
+      const msg = `${ctx}Continue.`;
+      sessionLogger.logUserTap('continue');
+      sessionLogger.logAIRequest(msg);
+      void append({ role: 'user', content: msg });
     }
   }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location]);
 
@@ -453,12 +469,13 @@ export default function GamePage() {
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
 
-    // Record mastery for exercise items
-    // The exercise might have vocabulary items we can track
+    sessionLogger.logExerciseResult(exerciseId, correct);
     dispatch({ type: 'RECORD_ITEM_RESULT', itemId: exerciseId, category: 'vocabulary', correct });
 
     const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
-    void append({ role: 'user', content: `${ctx}${summarizeExercise(exerciseId, correct)}` });
+    const msg = `${ctx}${summarizeExercise(exerciseId, correct)}`;
+    sessionLogger.logAIRequest(msg);
+    void append({ role: 'user', content: msg });
   }, [append, playerLevel, activeNpc, city, location]);
 
   const handleChoice = useCallback((choiceId: string) => {
@@ -466,8 +483,11 @@ export default function GamePage() {
     setChoicePrompt(null);
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
+    sessionLogger.logChoiceSelected(choiceId);
     const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current);
-    void append({ role: 'user', content: `${ctx}Choice: ${choiceId}` });
+    const msg = `${ctx}Choice: ${choiceId}`;
+    sessionLogger.logAIRequest(msg);
+    void append({ role: 'user', content: msg });
   }, [append, playerLevel, activeNpc, city, location]);
 
   const handleDismissTong = useCallback(() => {
@@ -579,10 +599,103 @@ export default function GamePage() {
                   </div>
                 );
               })}
-              <button onClick={handleConfirmProficiency} style={{ marginTop: 8 }}>
+              <button className="btn-go" onClick={handleConfirmProficiency} style={{ width: '100%', marginTop: 8 }}>
                 That&apos;s me
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── City map handlers ────────────────────────────────────── */
+
+  function handleMapHangout(cityId: CityId, locationId: LocationId) {
+    const npcId = NPC_POOL[Math.floor(Math.random() * NPC_POOL.length)];
+    const npcChar = CHARACTER_MAP[npcId] ?? HAUEN;
+    npcRef.current = npcChar;
+    const level = gameState.calibratedLevel ?? gameState.selfAssessedLevel ?? 0;
+
+    setCity(cityId);
+    setLocation(locationId);
+    setActiveNpc(npcId);
+    setPlayerLevel(level);
+    setScore({ xp: 0, sp: 0, rp: 0 });
+    setSelectedLocation(null);
+
+    // Reset scene state
+    setToolQueue([]);
+    setCurrentMessage(null);
+    setTongTip(null);
+    setChoices(null);
+    setChoicePrompt(null);
+    setCurrentExercise(null);
+    setSceneSummary(null);
+    processingRef.current = false;
+    pausedRef.current = false;
+    processedToolCallsRef.current.clear();
+
+    setPhase('hangout');
+
+    const startMsg = `${buildContextBlock(level, npcId, cityId, locationId, npcChar)}Start the scene.`;
+    sessionLogger.start({ mode: 'hangout', cityId, locationId, npcId, playerLevel: level });
+    sessionLogger.logAIRequest(startMsg);
+    void append({ role: 'user', content: startMsg });
+  }
+
+  function handleMapLearn(cityId: CityId, locationId: LocationId) {
+    setCity(cityId);
+    setLocation(locationId);
+    setSelectedLocation(null);
+    setPhase('learn');
+  }
+
+  /* ── City map phase ──────────────────────────────────────── */
+
+  if (phase === 'city_map') {
+    return (
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="game-frame">
+          <CityMap
+            activeCityIndex={mapCityIndex}
+            onCityChange={(idx) => { setMapCityIndex(idx); setSelectedLocation(null); }}
+            selectedLocation={selectedLocation}
+            onSelectLocation={setSelectedLocation}
+            onStartHangout={handleMapHangout}
+            onStartLearn={handleMapLearn}
+            gameState={gameState}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Learn phase ─────────────────────────────────────────── */
+
+  if (phase === 'learn') {
+    return (
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="game-frame" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <button
+              onClick={() => setPhase('city_map')}
+              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', padding: '4px 8px' }}
+              type="button"
+            >
+              &larr;
+            </button>
+            <span style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>
+              {CITY_NAMES[city]?.en ?? 'Seoul'} &middot; {LOCATION_NAMES[location]}
+            </span>
+          </div>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <LearnPanel
+              cityId={city}
+              locationId={location}
+              userId="local"
+              lang="ko"
+            />
           </div>
         </div>
       </div>
@@ -621,7 +734,12 @@ export default function GamePage() {
             </div>
             <button
               className="btn-go"
-              onClick={() => { setSceneSummary(null); setPhase('proficiency'); }}
+              onClick={() => {
+                dispatch({ type: 'INCREMENT_LOCATION_HANGOUT', cityId: city, locationId: location });
+                setSceneSummary(null);
+                setSelectedLocation(null);
+                setPhase('city_map');
+              }}
             >
               Done
             </button>
