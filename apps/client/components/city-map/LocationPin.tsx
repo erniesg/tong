@@ -1,7 +1,7 @@
 'use client';
 
 import type { LocationId } from '@/lib/api';
-import { KoreanText } from '@/components/shared/KoreanText';
+import { KoreanText, type TargetLang } from '@/components/shared/KoreanText';
 
 interface LocationPinProps {
   locationId: LocationId;
@@ -12,9 +12,10 @@ interface LocationPinProps {
   unlocked: boolean;
   active: boolean;
   onTap: (locationId: LocationId) => void;
+  targetLang?: TargetLang;
 }
 
-export function LocationPin({ locationId, label, labelKo, top, left, unlocked, active, onTap }: LocationPinProps) {
+export function LocationPin({ locationId, label, labelKo, top, left, unlocked, active, onTap, targetLang = 'ko' }: LocationPinProps) {
   const handleClick = () => {
     if (unlocked) onTap(locationId);
   };
@@ -27,7 +28,7 @@ export function LocationPin({ locationId, label, labelKo, top, left, unlocked, a
     >
       <div className="location-pin__dot" onClick={handleClick} />
       <span className="location-pin__label" onClick={handleClick}>
-        <KoreanText text={labelKo} />
+        <KoreanText text={labelKo} targetLang={targetLang} />
       </span>
     </div>
   );

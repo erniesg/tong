@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import type { MultipleChoiceExercise } from '@/lib/types/hangout';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: MultipleChoiceExercise;
@@ -9,6 +11,7 @@ interface Props {
 }
 
 export function MultipleChoice({ exercise, onResult }: Props) {
+  const lang = useUILang();
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const isCorrect = selected === exercise.correctOptionId;
@@ -70,10 +73,10 @@ export function MultipleChoice({ exercise, onResult }: Props) {
             >
               <span>{opt.text}</span>
               {submitted && isCorrectOption && (
-                <span style={{ color: '#34d399', fontSize: 12, fontWeight: 600 }}>Correct</span>
+                <span style={{ color: '#34d399', fontSize: 12, fontWeight: 600 }}>{t('correct', lang)}</span>
               )}
               {showWrong && (
-                <span style={{ color: '#f87171', fontSize: 12, fontWeight: 600 }}>Your pick</span>
+                <span style={{ color: '#f87171', fontSize: 12, fontWeight: 600 }}>{t('your_pick', lang)}</span>
               )}
             </button>
           );
@@ -102,7 +105,7 @@ export function MultipleChoice({ exercise, onResult }: Props) {
             transition: 'all 0.15s',
           }}
         >
-          Check
+          {t('check', lang)}
         </button>
       )}
 
@@ -120,8 +123,8 @@ export function MultipleChoice({ exercise, onResult }: Props) {
           }}
         >
           {isCorrect
-            ? 'Correct!'
-            : `The answer is "${correctOption?.text ?? ''}"`}
+            ? t('correct', lang)
+            : `${t('answer_is', lang)} "${correctOption?.text ?? ''}"`}
         </div>
       )}
     </div>

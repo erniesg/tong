@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils/cn';
 import type { ErrorCorrectionExercise } from '@/lib/types/hangout';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: ErrorCorrectionExercise;
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export function ErrorCorrection({ exercise, onResult }: Props) {
+  const lang = useUILang();
   const [selectedWord, setSelectedWord] = useState<number | null>(null);
   const [selectedCorrection, setSelectedCorrection] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -52,7 +55,7 @@ export function ErrorCorrection({ exercise, onResult }: Props) {
       {/* Correction options */}
       {selectedWord !== null && (
         <>
-          <p className="text-sm text-[var(--color-text-muted)] mb-2 m-0">Replace with:</p>
+          <p className="text-sm text-[var(--color-text-muted)] mb-2 m-0">{t('replace_with', lang)}</p>
           <div className="pron-select__options">
             {exercise.options.map((opt) => {
               const isThis = selectedCorrection === opt.id;
@@ -93,7 +96,7 @@ export function ErrorCorrection({ exercise, onResult }: Props) {
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
           )}
         >
-          Check
+          {t('check', lang)}
         </button>
       )}
 
@@ -106,7 +109,7 @@ export function ErrorCorrection({ exercise, onResult }: Props) {
               : 'bg-red-500/20 text-red-400',
           )}
         >
-          {isCorrect ? 'Correct!' : `The error was "${words[exercise.errorWordIndex]}" — correct: "${exercise.options.find((o) => o.id === exercise.correctOptionId)?.text}"`}
+          {isCorrect ? t('correct', lang) : `${t('error_was', lang)} "${words[exercise.errorWordIndex]}" — ${t('correct_word', lang)} "${exercise.options.find((o) => o.id === exercise.correctOptionId)?.text}"`}
         </div>
       )}
     </div>

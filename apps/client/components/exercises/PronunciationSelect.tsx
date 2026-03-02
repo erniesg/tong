@@ -3,6 +3,8 @@
 import { useState, useCallback } from 'react';
 import { cn } from '@/lib/utils/cn';
 import type { PronunciationSelectExercise } from '@/lib/types/hangout';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
 
 /** Map bare jamo to pronounceable syllables for TTS. */
 const JAMO_TO_SYLLABLE: Record<string, string> = {
@@ -19,6 +21,7 @@ interface Props {
 }
 
 export function PronunciationSelect({ exercise, onResult }: Props) {
+  const lang = useUILang();
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const isCorrect = selected === exercise.correctOptionId;
@@ -44,24 +47,22 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
     <div className="exercise-card p-5">
       <p className="text-lg font-medium mb-4 text-ko m-0">{exercise.prompt}</p>
 
-      {/* Target character — tap to hear */}
+      {/* Play sound button — tap to hear the target pronunciation */}
       <div
-        className="pron-select__target text-ko"
+        className="pron-select__target"
         onClick={() => playSound(exercise.targetText)}
         style={{ cursor: 'pointer' }}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => e.key === 'Enter' && playSound(exercise.targetText)}
       >
-        {exercise.targetText}
-        <span className="pron-select__target-speaker" aria-label="Play sound">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.5, marginLeft: 8 }}>
-            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-          </svg>
-        </span>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.7 }}>
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+        </svg>
+        <span className="pron-select__target-label">{t('tap_to_play', lang)}</span>
       </div>
 
-      {/* Audio options */}
+      {/* Character options — show only the character, no romanization */}
       <div className="pron-select__options">
         {exercise.audioOptions.map((opt) => {
           const isThis = selected === opt.id;
@@ -79,22 +80,11 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
                 submitted && isThis && !isCorrect && 'pron-select__option--incorrect',
               )}
             >
-              <span
-                className="pron-select__play-icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  playSound(opt.label);
-                }}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && playSound(opt.label)}
-              >
-                <svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor">
-                  <path d="M0 0l12 7-12 7z" />
-                </svg>
-              </span>
-              <span className="text-ko">{opt.label}</span>
-              <span className="text-sm text-[var(--color-text-muted)] ml-auto">{opt.romanization}</span>
+              <span className="text-ko text-2xl">{opt.label}</span>
+              {/* Show romanization only after submit for learning */}
+              {submitted && (
+                <span className="text-sm text-[var(--color-text-muted)] ml-auto">({opt.romanization})</span>
+              )}
             </button>
           );
         })}
@@ -115,7 +105,7 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
           )}
         >
-          Check
+          {t('check', lang)}
         </button>
       )}
 
@@ -128,7 +118,7 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
               : 'bg-red-500/20 text-red-400',
           )}
         >
-          {isCorrect ? 'Correct!' : `The correct pronunciation is "${exercise.audioOptions.find((o) => o.id === exercise.correctOptionId)?.label}"`}
+          {isCorrect ? t('correct', lang) : `${t('correct_pronunciation', lang)} "${exercise.audioOptions.find((o) => o.id === exercise.correctOptionId)?.label}"`}
         </div>
       )}
     </div>

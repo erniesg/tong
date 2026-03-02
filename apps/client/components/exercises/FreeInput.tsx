@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils/cn';
 import type { FreeInputExercise } from '@/lib/types/hangout';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: FreeInputExercise;
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export function FreeInput({ exercise, onResult }: Props) {
+  const lang = useUILang();
   const [input, setInput] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -46,7 +49,7 @@ export function FreeInput({ exercise, onResult }: Props) {
         onChange={(e) => !submitted && setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         disabled={submitted}
-        placeholder="Type your answer..."
+        placeholder={t('type_answer', lang)}
         className="w-full rounded-lg px-4 py-3 text-lg text-ko"
         style={{
           background: 'rgba(255,255,255,0.08)',
@@ -73,7 +76,7 @@ export function FreeInput({ exercise, onResult }: Props) {
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
           )}
         >
-          Check
+          {t('check', lang)}
         </button>
       )}
 
@@ -87,8 +90,8 @@ export function FreeInput({ exercise, onResult }: Props) {
           )}
         >
           {isCorrect
-            ? 'Correct!'
-            : `Expected: ${exercise.expectedAnswers.join(' or ')}`}
+            ? t('correct', lang)
+            : `${t('expected', lang)} ${exercise.expectedAnswers.join(` ${t('or', lang)} `)}`}
         </div>
       )}
     </div>

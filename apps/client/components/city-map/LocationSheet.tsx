@@ -1,6 +1,8 @@
 'use client';
 
 import type { LocationId } from '@/lib/api';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
 
 /** SP cost scales with hangout count (first is free, then 10, 25, 50). */
 const SP_COSTS = [0, 10, 25, 50];
@@ -33,6 +35,7 @@ export function LocationSheet({
   onLearn,
   onDismiss,
 }: LocationSheetProps) {
+  const lang = useUILang();
   const missionsNeeded = Math.max(0, 3 - hangoutCount);
   const spCost = getSpCost(hangoutCount);
   const canAfford = playerSp >= spCost;
@@ -43,7 +46,7 @@ export function LocationSheet({
       <div className="location-sheet">
         <div className="location-sheet__handle" />
 
-        {/* Header: Korean name big, English small */}
+        {/* Header: local name big, English small */}
         <div className="location-sheet__header">
           <div className="location-sheet__names">
             <span className="location-sheet__name-ko">{locationNameKo}</span>
@@ -58,7 +61,7 @@ export function LocationSheet({
 
         {comingSoon ? (
           <div className="location-sheet__actions">
-            <p className="location-sheet__hint">This city is coming soon!</p>
+            <p className="location-sheet__hint">{t('coming_soon', lang)}</p>
           </div>
         ) : (
           <div className="location-sheet__actions">
@@ -72,20 +75,20 @@ export function LocationSheet({
               <span className="location-sheet__btn-icon" role="img" aria-label="hangout">🤜</span>
               <span className="location-sheet__btn-text">
                 <span className="location-sheet__btn-label">
-                  Hangout
+                  {t('hangout', lang)}
                   {spCost > 0 && (
                     <span className="location-sheet__sp-cost" style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>
                       {spCost} SP
                     </span>
                   )}
                   {spCost === 0 && (
-                    <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>Free</span>
+                    <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>{t('free', lang)}</span>
                   )}
                 </span>
                 <span className="location-sheet__btn-desc">
                   {canAfford
-                    ? 'Practice conversation with locals'
-                    : `Need ${spCost} SP (you have ${playerSp})`}
+                    ? t('hangout_desc', lang)
+                    : `${t('need_sp', lang)} ${spCost} SP (${t('you_have', lang)} ${playerSp})`}
                 </span>
               </span>
             </button>
@@ -98,8 +101,8 @@ export function LocationSheet({
             >
               <span className="location-sheet__btn-icon" role="img" aria-label="learn">📖</span>
               <span className="location-sheet__btn-text">
-                <span className="location-sheet__btn-label">Learn</span>
-                <span className="location-sheet__btn-desc">Study vocabulary & grammar</span>
+                <span className="location-sheet__btn-label">{t('learn', lang)}</span>
+                <span className="location-sheet__btn-desc">{t('learn_desc', lang)}</span>
               </span>
             </button>
 
@@ -111,13 +114,13 @@ export function LocationSheet({
             >
               <span className="location-sheet__btn-icon" role="img" aria-label="mission">{missionAvailable ? '⭐' : '🔒'}</span>
               <span className="location-sheet__btn-text">
-                <span className="location-sheet__btn-label">Mission</span>
+                <span className="location-sheet__btn-label">{t('mission', lang)}</span>
                 <span className="location-sheet__btn-desc">
                   {missionAvailable
-                    ? 'Clear this location!'
+                    ? t('mission_clear', lang)
                     : missionsNeeded > 0
-                      ? `Complete ${missionsNeeded} more hangout${missionsNeeded !== 1 ? 's' : ''} to unlock`
-                      : 'Demonstrate mastery to unlock'}
+                      ? `${missionsNeeded} ${t('mission_hangouts_needed', lang)}`
+                      : t('mission_mastery', lang)}
                 </span>
               </span>
             </button>

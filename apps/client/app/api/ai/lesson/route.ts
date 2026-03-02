@@ -36,7 +36,7 @@ const lessonTools = {
         'pattern_recognition', 'stroke_tracing', 'error_correction', 'free_input',
       ]).describe('Exercise UI type'),
       objectiveId: z.string().describe('Learning objective this tests'),
-      exerciseData: z.record(z.unknown()).nullable().describe('Complete exercise object. When provided, client uses it directly. When null, client generates locally from hints. ID convention: "ai-{type}-{timestamp}".'),
+      exerciseData: z.string().nullable().describe('JSON-encoded complete exercise object. When provided, client parses and uses it directly. When null, client generates locally from hints. ID convention: "ai-{type}-{timestamp}".'),
       hintItems: z.array(z.string()).nullable().describe('Specific Korean chars/words to include in the exercise, or null'),
       hintCount: z.number().nullable().describe('How many items the exercise should contain, or null for default'),
       hintSubType: z.enum(['sound_quiz', 'visual_recognition']).nullable().describe('Exercise flavor for script exercises, or null'),

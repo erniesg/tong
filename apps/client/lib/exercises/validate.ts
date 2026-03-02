@@ -1,13 +1,26 @@
 import type { ExerciseData } from '@/lib/types/hangout';
 
 /**
- * Validate that AI-provided exerciseData has the minimum required shape.
- * Rejects malformed data so the client falls back to local generation.
+ * Parse and validate AI-provided exerciseData.
+ * Accepts a JSON string or object. Returns null if invalid.
  */
-export function isValidExerciseData(data: unknown): data is ExerciseData {
-  if (!data || typeof data !== 'object') return false;
+export function parseExerciseData(raw: unknown): ExerciseData | null {
+  if (!raw) return null;
+
+  let data: unknown = raw;
+  if (typeof raw === 'string') {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!data || typeof data !== 'object') return null;
   const d = data as Record<string, unknown>;
-  return typeof d.type === 'string'
-    && typeof d.id === 'string'
-    && typeof d.objectiveId === 'string';
+  if (typeof d.type !== 'string' || typeof d.id !== 'string' || typeof d.objectiveId !== 'string') {
+    return null;
+  }
+
+  return data as ExerciseData;
 }

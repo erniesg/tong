@@ -167,7 +167,7 @@ TOOL USAGE GUIDE:
    - FALLBACK: Set exerciseData to null — the client generates locally from hints.
    - exerciseType: matching, multiple_choice, drag_drop, sentence_builder, fill_blank, pronunciation_select, pattern_recognition, stroke_tracing, error_correction, free_input
    - objectiveId: must be one of the current objectives
-   - exerciseData: complete exercise object (see schemas below). ID convention: "ai-{type}-{timestamp}" (e.g., "ai-matching-1709234567"). Set to null for client-side generation.
+   - exerciseData: JSON string of the complete exercise object (see schemas below). ID convention: "ai-{type}-{timestamp}" (e.g., "ai-matching-1709234567"). Set to null for client-side generation.
    - context: optional scene context for the exercise prompt
    - hintItems: array of specific characters/words the exercise MUST include (used when exerciseData is null)
    - hintCount: how many items the exercise should contain (used when exerciseData is null)

@@ -2,10 +2,88 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { getCachedTranslation, requestTranslations, onTranslationsReady } from '@/lib/i18n/translation-cache';
+
+/* ── Target language type ──────────────────────────────────── */
+export type TargetLang = 'ko' | 'zh' | 'ja';
+
+/* ── Pinyin map for common Chinese characters ──────────────── */
+const PINYIN_MAP: Record<string, string> = {
+  '我': 'wǒ', '你': 'nǐ', '他': 'tā', '她': 'tā', '它': 'tā',
+  '是': 'shì', '的': 'de', '了': 'le', '在': 'zài', '有': 'yǒu',
+  '不': 'bù', '人': 'rén', '这': 'zhè', '那': 'nà', '来': 'lái',
+  '去': 'qù', '到': 'dào', '说': 'shuō', '看': 'kàn', '吃': 'chī',
+  '喝': 'hē', '做': 'zuò', '想': 'xiǎng', '要': 'yào', '会': 'huì',
+  '能': 'néng', '可': 'kě', '以': 'yǐ', '和': 'hé', '也': 'yě',
+  '都': 'dōu', '就': 'jiù', '还': 'hái', '很': 'hěn', '太': 'tài',
+  '好': 'hǎo', '大': 'dà', '小': 'xiǎo', '多': 'duō', '少': 'shǎo',
+  '什': 'shén', '么': 'me', '谁': 'shéi', '哪': 'nǎ', '里': 'lǐ',
+  '哪里': 'nǎlǐ', '怎': 'zěn', '为': 'wèi',
+  '一': 'yī', '二': 'èr', '三': 'sān', '四': 'sì', '五': 'wǔ',
+  '六': 'liù', '七': 'qī', '八': 'bā', '九': 'jiǔ', '十': 'shí',
+  '百': 'bǎi', '千': 'qiān', '万': 'wàn',
+  '上': 'shàng', '下': 'xià', '中': 'zhōng', '前': 'qián', '后': 'hòu',
+  '左': 'zuǒ', '右': 'yòu', '东': 'dōng', '西': 'xī', '南': 'nán', '北': 'běi',
+  '天': 'tiān', '地': 'dì', '水': 'shuǐ', '火': 'huǒ', '山': 'shān',
+  '日': 'rì', '月': 'yuè', '年': 'nián', '时': 'shí', '点': 'diǎn',
+  '钟': 'zhōng', '分': 'fēn', '今': 'jīn', '明': 'míng', '昨': 'zuó',
+  '吗': 'ma', '呢': 'ne', '啊': 'a', '哦': 'ó', '嗯': 'ǹg',
+  '没': 'méi', '对': 'duì', '错': 'cuò', '知': 'zhī', '道': 'dào',
+  '叫': 'jiào', '名': 'míng', '字': 'zì', '家': 'jiā', '学': 'xué',
+  '生': 'shēng', '老': 'lǎo', '师': 'shī', '朋': 'péng', '友': 'yǒu',
+  '先': 'xiān', '再': 'zài', '见': 'jiàn',
+  '请': 'qǐng', '问': 'wèn', '给': 'gěi', '把': 'bǎ', '让': 'ràng',
+  '从': 'cóng', '跟': 'gēn', '比': 'bǐ', '被': 'bèi',
+  '开': 'kāi', '关': 'guān', '买': 'mǎi', '卖': 'mài', '走': 'zǒu',
+  '跑': 'pǎo', '坐': 'zuò', '站': 'zhàn', '等': 'děng', '用': 'yòng',
+  '找': 'zhǎo', '回': 'huí', '住': 'zhù', '听': 'tīng', '写': 'xiě',
+  '读': 'dú', '打': 'dǎ', '玩': 'wán', '睡': 'shuì', '觉': 'jiào',
+  '穿': 'chuān', '带': 'dài', '放': 'fàng', '拿': 'ná', '送': 'sòng',
+  '高': 'gāo', '低': 'dī', '长': 'cháng', '短': 'duǎn', '快': 'kuài',
+  '慢': 'màn', '新': 'xīn', '旧': 'jiù', '冷': 'lěng', '热': 'rè',
+  '贵': 'guì', '便': 'pián', '宜': 'yi', '近': 'jìn', '远': 'yuǎn',
+  '早': 'zǎo', '晚': 'wǎn', '饿': 'è', '累': 'lèi', '忙': 'máng',
+  '红': 'hóng', '白': 'bái', '黑': 'hēi', '蓝': 'lán', '绿': 'lǜ',
+  '黄': 'huáng',
+  // Food & drink
+  '饭': 'fàn', '菜': 'cài', '肉': 'ròu', '鱼': 'yú', '鸡': 'jī',
+  '蛋': 'dàn', '面': 'miàn', '包': 'bāo', '米': 'mǐ', '汤': 'tāng',
+  '茶': 'chá', '酒': 'jiǔ', '奶': 'nǎi', '糖': 'táng', '盐': 'yán',
+  '油': 'yóu', '醋': 'cù', '辣': 'là', '甜': 'tián', '酸': 'suān',
+  '苦': 'kǔ', '咸': 'xián', '冰': 'bīng', '杯': 'bēi',
+  // Transport / places
+  '车': 'chē', '路': 'lù', '铁': 'tiě', '口': 'kǒu', '换': 'huàn',
+  '乘': 'chéng', '票': 'piào', '出': 'chū', '入': 'rù', '门': 'mén',
+  '店': 'diàn', '号': 'hào', '街': 'jiē', '市': 'shì', '城': 'chéng',
+  '海': 'hǎi', '河': 'hé', '桥': 'qiáo',
+  // Common phrases chars
+  '谢': 'xiè', '欢': 'huān', '迎': 'yíng', '客': 'kè', '气': 'qì',
+  '意': 'yì', '思': 'sī', '喜': 'xǐ', '怕': 'pà', '爱': 'ài',
+  '帅': 'shuài', '美': 'měi', '漂': 'piào', '亮': 'liàng',
+  '真': 'zhēn', '最': 'zuì', '刚': 'gāng', '已': 'yǐ',
+  '经': 'jīng', '正': 'zhèng', '别': 'bié',
+  // Shanghai-specific
+  '笼': 'lóng', '烧': 'shāo', '烤': 'kǎo', '串': 'chuàn', '摊': 'tān',
+  '珍': 'zhēn', '珠': 'zhū', '龙': 'lóng', '虾': 'xiā', '饺': 'jiǎo',
+  '姜': 'jiāng', '袋': 'dài', '子': 'zi', '扫': 'sǎo', '码': 'mǎ',
+  '泉': 'quán', '矿': 'kuàng', '叶': 'yè', '团': 'tuán',
+  '羊': 'yáng', '啤': 'pí', '钱': 'qián', '碗': 'wǎn',
+  '利': 'lì', '便利': 'biànlì',
+  // Conversation / feelings
+  '行': 'xíng', '可以': 'kěyǐ', '当': 'dāng', '然': 'rán',
+  '如': 'rú', '果': 'guǒ', '因': 'yīn', '所': 'suǒ',
+  '但': 'dàn', '而': 'ér', '或': 'huò', '者': 'zhě',
+  '过': 'guò', '完': 'wán', '起': 'qǐ', '得': 'de',
+  '着': 'zhe', '像': 'xiàng', '样': 'yàng', '种': 'zhǒng',
+  '边': 'biān', '头': 'tóu', '身': 'shēn', '体': 'tǐ',
+  '手': 'shǒu', '脚': 'jiǎo', '眼': 'yǎn', '耳': 'ěr', '嘴': 'zuǐ',
+  '脸': 'liǎn', '心': 'xīn',
+  '练': 'liàn', '习': 'xí',
+};
 
 /**
- * Dictionary lookup for Korean words.
- * Built-in vocabulary for the pojangmacha scene.
+ * Dictionary lookup for known words.
  */
 const DICTIONARY: Record<string, { romanization: string; translation: string }> = {
   // Greetings & basics
@@ -44,6 +122,16 @@ const DICTIONARY: Record<string, { romanization: string; translation: string }> 
   '매워': { romanization: 'mae-wo', translation: "it's spicy" },
   '물': { romanization: 'mul', translation: 'water' },
   '메뉴': { romanization: 'me-nyu', translation: 'menu' },
+  '먹었어': { romanization: 'meog-eoss-eo', translation: 'ate / have eaten' },
+  '어묵': { romanization: 'eo-muk', translation: 'fish cake' },
+  '호떡': { romanization: 'ho-tteok', translation: 'sweet pancake' },
+  '볶음밥': { romanization: 'bokk-eum-bap', translation: 'fried rice' },
+  '국물': { romanization: 'guk-mul', translation: 'broth / soup' },
+  '닭갈비': { romanization: 'dak-gal-bi', translation: 'spicy chicken stir-fry' },
+  '비빔밥': { romanization: 'bi-bim-bap', translation: 'mixed rice bowl' },
+  '만두': { romanization: 'man-du', translation: 'dumpling' },
+  '치킨': { romanization: 'chi-kin', translation: 'fried chicken' },
+  '맥주': { romanization: 'maek-ju', translation: 'beer' },
 
   // People & relationships
   '선배': { romanization: 'seon-bae', translation: 'senior' },
@@ -95,7 +183,7 @@ const DICTIONARY: Record<string, { romanization: string; translation: string }> 
   // City names (Japanese)
   '東京': { romanization: 'tō-kyō', translation: 'Tokyo' },
 
-  // City map locations (Shanghai) — Chinese with pinyin
+  // Chinese words with pinyin
   '地铁站': { romanization: 'dì-tiě zhàn', translation: 'Metro station' },
   '烧烤摊': { romanization: 'shāo-kǎo tān', translation: 'BBQ grill stall' },
   '便利店': { romanization: 'biàn-lì diàn', translation: 'Convenience store' },
@@ -110,7 +198,18 @@ const DICTIONARY: Record<string, { romanization: string; translation: string }> 
   '小笼包': { romanization: 'xiǎo-lóng bāo', translation: 'soup dumplings' },
   '地铁': { romanization: 'dì-tiě', translation: 'subway / metro' },
   '烧烤': { romanization: 'shāo-kǎo', translation: 'BBQ / grill' },
+  '我是谁': { romanization: 'wǒ shì shéi', translation: 'who am I' },
+  '在哪': { romanization: 'zài nǎ', translation: 'where' },
+  '这里': { romanization: 'zhè-lǐ', translation: 'here' },
+  '弘大': { romanization: 'hóng-dà', translation: 'Hongdae' },
+  '附近': { romanization: 'fù-jìn', translation: 'nearby' },
+  '路边': { romanization: 'lù-biān', translation: 'roadside' },
+  '帐篷': { romanization: 'zhàng-péng', translation: 'tent' },
+  '小吃': { romanization: 'xiǎo-chī', translation: 'snacks / street food' },
+  '练完': { romanization: 'liàn-wán', translation: 'finished practice' },
+  '刚练完': { romanization: 'gāng liàn-wán', translation: 'just finished practice' },
 };
+
 
 const JAMO_DICT: Record<string, { romanization: string; name: string }> = {
   'ㄱ': { romanization: 'g/k', name: 'giyeok' },
@@ -137,49 +236,82 @@ const JAMO_DICT: Record<string, { romanization: string; name: string }> = {
   'ㅔ': { romanization: 'e', name: 'e' },
 };
 
-function isCJK(char: string): boolean {
-  const code = char.charCodeAt(0);
-  return (
-    // CJK Unified Ideographs (Chinese/Japanese Kanji)
-    (code >= 0x4e00 && code <= 0x9fff) ||
-    // CJK Extension A
-    (code >= 0x3400 && code <= 0x4dbf)
-  );
+/* ── Character classification ──────────────────────────────── */
+
+function isHangulSyllable(code: number): boolean {
+  return code >= 0xac00 && code <= 0xd7a3;
 }
 
-function isKorean(char: string): boolean {
-  const code = char.charCodeAt(0);
-  return (
-    (code >= 0xac00 && code <= 0xd7a3) ||
-    (code >= 0x3131 && code <= 0x3163) ||
-    (code >= 0x1100 && code <= 0x11ff) ||
-    isCJK(char)
-  );
+function isHangulJamo(code: number): boolean {
+  return (code >= 0x3131 && code <= 0x3163) || (code >= 0x1100 && code <= 0x11ff);
 }
 
-function segmentText(text: string): { text: string; isKorean: boolean }[] {
+function isCJKIdeograph(code: number): boolean {
+  return (code >= 0x4e00 && code <= 0x9fff) || (code >= 0x3400 && code <= 0x4dbf);
+}
+
+function isJapaneseKana(code: number): boolean {
+  return (code >= 0x3040 && code <= 0x309f) || (code >= 0x30a0 && code <= 0x30ff);
+}
+
+/** Check if a character belongs to the target language's script. */
+function isTargetChar(char: string, targetLang: TargetLang): boolean {
+  const code = char.charCodeAt(0);
+  switch (targetLang) {
+    case 'ko':
+      // Korean: Hangul syllables + Jamo only. NOT CJK ideographs.
+      return isHangulSyllable(code) || isHangulJamo(code);
+    case 'zh':
+      // Chinese: CJK ideographs only.
+      return isCJKIdeograph(code);
+    case 'ja':
+      // Japanese: Kana + CJK ideographs (kanji).
+      return isJapaneseKana(code) || isCJKIdeograph(code);
+    default:
+      return false;
+  }
+}
+
+/* ── Text segmentation ─────────────────────────────────────── */
+
+function segmentText(text: string, targetLang: TargetLang): { text: string; isTarget: boolean }[] {
   if (!text) return [];
-  const segments: { text: string; isKorean: boolean }[] = [];
+  const segments: { text: string; isTarget: boolean }[] = [];
   let current = '';
-  let currentIsKorean = false;
+  let currentIsTarget = false;
 
   for (const char of text) {
-    const charIsKorean = isKorean(char);
+    const charIsTarget = isTargetChar(char, targetLang);
     if (current.length === 0) {
       current = char;
-      currentIsKorean = charIsKorean;
-    } else if (charIsKorean === currentIsKorean) {
+      currentIsTarget = charIsTarget;
+    } else if (charIsTarget === currentIsTarget) {
       current += char;
     } else {
-      segments.push({ text: current, isKorean: currentIsKorean });
+      segments.push({ text: current, isTarget: currentIsTarget });
       current = char;
-      currentIsKorean = charIsKorean;
+      currentIsTarget = charIsTarget;
     }
   }
   if (current) {
-    segments.push({ text: current, isKorean: currentIsKorean });
+    segments.push({ text: current, isTarget: currentIsTarget });
   }
   return segments;
+}
+
+/* ── Romanization ──────────────────────────────────────────── */
+
+function romanizeSyllable(char: string): string | null {
+  const code = char.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return null;
+  const INITIALS = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h'];
+  const MEDIALS = ['a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae', 'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i'];
+  const FINALS = ['', 'g', 'kk', 'gs', 'n', 'nj', 'nh', 'd', 'l', 'lg', 'lm', 'lb', 'ls', 'lt', 'lp', 'lh', 'm', 'b', 'bs', 's', 'ss', 'ng', 'j', 'ch', 'k', 't', 'p', 'h'];
+  const offset = code - 0xac00;
+  const initial = Math.floor(offset / (21 * 28));
+  const medial = Math.floor((offset % (21 * 28)) / 28);
+  const final = offset % 28;
+  return `${INITIALS[initial]}${MEDIALS[medial]}${FINALS[final]}`;
 }
 
 function lookupWord(word: string): { romanization: string; translation: string } | null {
@@ -198,54 +330,91 @@ function lookupWord(word: string): { romanization: string; translation: string }
   return null;
 }
 
-function romanizeSyllable(char: string): string | null {
-  const code = char.charCodeAt(0);
-  if (code < 0xac00 || code > 0xd7a3) return null;
-  const INITIALS = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h'];
-  const MEDIALS = ['a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae', 'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i'];
-  const FINALS = ['', 'g', 'kk', 'gs', 'n', 'nj', 'nh', 'd', 'l', 'lg', 'lm', 'lb', 'ls', 'lt', 'lp', 'lh', 'm', 'b', 'bs', 's', 'ss', 'ng', 'j', 'ch', 'k', 't', 'p', 'h'];
-  const offset = code - 0xac00;
-  const initial = Math.floor(offset / (21 * 28));
-  const medial = Math.floor((offset % (21 * 28)) / 28);
-  const final = offset % 28;
-  return `${INITIALS[initial]}${MEDIALS[medial]}${FINALS[final]}`;
-}
-
-function getTooltipInfo(word: string): { romanization: string; translation?: string } | null {
+function getTooltipInfo(word: string, targetLang: TargetLang, explainLang: string): { romanization: string; translation?: string } | null {
   const dictResult = lookupWord(word);
-  if (dictResult) return dictResult;
+
+  // Resolve translation: check dynamic cache first, then static dictionary (English only)
+  const resolveTranslation = (w: string, englishFallback?: string): string | undefined => {
+    // Dynamic cache (AI-translated into user's preferred language)
+    const cached = getCachedTranslation(w, targetLang, explainLang);
+    if (cached) return cached;
+    // If user wants English, use the static dictionary translation
+    if (explainLang === 'en' && englishFallback) return englishFallback;
+    // No translation yet — it'll arrive async from the cache
+    return undefined;
+  };
+
+  if (dictResult) {
+    return {
+      romanization: dictResult.romanization,
+      translation: resolveTranslation(word, dictResult.translation),
+    };
+  }
+
   const chars = [...word];
+
+  if (targetLang === 'zh') {
+    // Chinese: use pinyin map for each character
+    const pinyinParts = chars.map((ch) => PINYIN_MAP[ch] ?? ch);
+    const romanized = pinyinParts.join(' ');
+    if (pinyinParts.some((p, i) => p !== chars[i])) {
+      return { romanization: romanized, translation: resolveTranslation(word) };
+    }
+    return null;
+  }
+
+  // Korean: use syllable decomposition
   const romanized = chars.map((ch) => {
     if (JAMO_DICT[ch]) return JAMO_DICT[ch].romanization;
     return romanizeSyllable(ch) ?? ch;
   }).join('-');
   if (romanized && romanized !== word) {
-    return { romanization: romanized };
+    return { romanization: romanized, translation: resolveTranslation(word) };
   }
   return null;
 }
 
+/* ── Component ─────────────────────────────────────────────── */
+
 interface KoreanTextProps {
   text: string;
+  targetLang?: TargetLang;
 }
 
-export function KoreanText({ text }: KoreanTextProps) {
+export function KoreanText({ text, targetLang = 'ko' }: KoreanTextProps) {
+  const explainLang = useUILang();
   const [activeWord, setActiveWord] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const [tooltipInfo, setTooltipInfo] = useState<{ romanization: string; translation?: string } | null>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [mounted, setMounted] = useState(false);
+  const [, setTranslationTick] = useState(0);
 
   useEffect(() => { setMounted(true); }, []);
 
+  // Pre-fetch translations for all target-language words when text renders
+  const segments = segmentText(text, targetLang);
+  useEffect(() => {
+    if (explainLang === 'en' || explainLang === targetLang) return; // English uses static dict, same-lang needs no translation
+    const targetWords = segments.filter((s) => s.isTarget).map((s) => s.text.trim()).filter(Boolean);
+    if (targetWords.length > 0) {
+      requestTranslations(targetWords, targetLang, explainLang);
+    }
+  }, [text, targetLang, explainLang]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-render when async translations arrive
+  useEffect(() => {
+    return onTranslationsReady(() => setTranslationTick((n) => n + 1));
+  }, []);
+
   const showTooltip = useCallback((word: string, target: HTMLElement) => {
-    const info = getTooltipInfo(word.trim());
+    const info = getTooltipInfo(word.trim(), targetLang, explainLang);
     if (!info) return;
     const rect = target.getBoundingClientRect();
     setActiveWord(word);
     setTooltipInfo(info);
     setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
-  }, []);
+  }, [targetLang, explainLang]);
 
   const hideTooltip = useCallback(() => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -264,14 +433,13 @@ export function KoreanText({ text }: KoreanTextProps) {
     showTooltip(word, e.currentTarget as HTMLElement);
   }, [activeWord, showTooltip]);
 
-  const segments = segmentText(text);
   const tooltipVisible = activeWord && tooltipInfo && tooltipPos;
 
   return (
     <>
       <span className="relative inline">
         {segments.map((seg, i) => {
-          if (!seg.isKorean) {
+          if (!seg.isTarget) {
             return <span key={i}>{seg.text}</span>;
           }
           return (
