@@ -476,6 +476,163 @@ Response:
 }
 ```
 
+## Volcengine / ByteDance Tools
+
+All Volcengine tools are invoked via `POST /api/v1/tools/invoke`.
+
+### `volcengine.status` – Check API config
+```json
+{ "tool": "volcengine.status", "args": {} }
+```
+Response:
+```json
+{
+  "ok": true,
+  "tool": "volcengine.status",
+  "result": {
+    "arkApiKeyConfigured": true,
+    "ttsAppIdConfigured": true,
+    "ttsAccessTokenConfigured": true,
+    "defaultImageModel": "doubao-seedream-4-5-251128",
+    "defaultVideoModel": "doubao-seedance-1-5-pro-251215",
+    "defaultTtsVoice": "BV700_V2_streaming"
+  }
+}
+```
+
+### `volcengine.image.generate` – Image generation (Seedream)
+Synchronous. Returns image URLs directly.
+```json
+{
+  "tool": "volcengine.image.generate",
+  "args": {
+    "prompt": "A Korean street food stall at night, warm lighting, realistic",
+    "size": "2K",
+    "n": 1,
+    "seed": 42
+  }
+}
+```
+Response:
+```json
+{
+  "ok": true,
+  "tool": "volcengine.image.generate",
+  "result": {
+    "images": [{ "url": "https://..." }],
+    "model": "doubao-seedream-4-5-251128",
+    "seed": 42
+  }
+}
+```
+
+### `volcengine.video.create` – Video generation (Seedance)
+Async task-based. Returns task ID for polling.
+```json
+{
+  "tool": "volcengine.video.create",
+  "args": {
+    "content": [
+      { "type": "image_url", "imageUrl": "https://example.com/frame.jpg" },
+      { "type": "text", "text": "The character turns and smiles at the camera" }
+    ],
+    "resolution": "1080p",
+    "ratio": "16:9",
+    "duration": 5,
+    "generateAudio": true
+  }
+}
+```
+Response:
+```json
+{
+  "ok": true,
+  "tool": "volcengine.video.create",
+  "result": {
+    "id": "cgt-2026xxxx",
+    "model": "doubao-seedance-1-5-pro-251215",
+    "status": "queued",
+    "resolution": "1080p",
+    "ratio": "16:9",
+    "duration": 5,
+    "createdAt": 1709366400,
+    "updatedAt": 1709366400
+  }
+}
+```
+
+### `volcengine.video.get` – Poll video task status
+```json
+{
+  "tool": "volcengine.video.get",
+  "args": { "taskId": "cgt-2026xxxx" }
+}
+```
+Response (when completed):
+```json
+{
+  "ok": true,
+  "tool": "volcengine.video.get",
+  "result": {
+    "id": "cgt-2026xxxx",
+    "model": "doubao-seedance-1-5-pro-251215",
+    "status": "succeeded",
+    "videoUrl": "https://...",
+    "seed": 42,
+    "resolution": "1080p",
+    "ratio": "16:9",
+    "duration": 5,
+    "createdAt": 1709366400,
+    "updatedAt": 1709366500
+  }
+}
+```
+
+### `volcengine.video.list` – List video tasks
+```json
+{
+  "tool": "volcengine.video.list",
+  "args": { "limit": 10 }
+}
+```
+Response:
+```json
+{
+  "ok": true,
+  "tool": "volcengine.video.list",
+  "result": {
+    "tasks": [{ "id": "cgt-...", "status": "succeeded", "videoUrl": "..." }],
+    "hasMore": false
+  }
+}
+```
+
+### `volcengine.tts.synthesize` – Text-to-speech
+Synchronous. Returns base64-encoded audio.
+```json
+{
+  "tool": "volcengine.tts.synthesize",
+  "args": {
+    "text": "안녕하세요! 오늘 뭐 먹고 싶어요?",
+    "voiceType": "BV700_V2_streaming",
+    "encoding": "mp3",
+    "language": "ko",
+    "speedRatio": 0.9
+  }
+}
+```
+Response:
+```json
+{
+  "ok": true,
+  "tool": "volcengine.tts.synthesize",
+  "result": {
+    "audioBase64": "SUQzBAAAAAAAI1RTU0UAAAAP...",
+    "encoding": "mp3"
+  }
+}
+```
+
 ## GET `/api/v1/demo/secret-status`
 Notes:
 - Protected when `TONG_DEMO_PASSWORD` is configured.

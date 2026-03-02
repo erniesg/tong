@@ -299,3 +299,94 @@ export interface DemoSecretStatusResponse {
   spotifyClientSecretConfigured: boolean;
   openAiApiKeyConfigured: boolean;
 }
+
+// ── Volcengine / ByteDance API types ────────────────────────────────
+
+/** Image generation request (Seedream) */
+export interface VolcImageGenerateArgs {
+  prompt: string;
+  model?: string;
+  size?: '1K' | '2K' | '4K';
+  n?: number;
+  seed?: number;
+  guidanceScale?: number;
+  responseFormat?: 'url' | 'b64_json';
+}
+
+export interface VolcImageResult {
+  url?: string;
+  b64Json?: string;
+}
+
+export interface VolcImageGenerateResponse {
+  images: VolcImageResult[];
+  model: string;
+  seed?: number;
+}
+
+/** Video generation task (Seedance) – async, task-based */
+export type VolcVideoStatus = 'queued' | 'running' | 'succeeded' | 'failed';
+
+export interface VolcVideoContentItem {
+  type: 'text' | 'image_url';
+  text?: string;
+  imageUrl?: string;
+}
+
+export interface VolcVideoCreateArgs {
+  model?: string;
+  content: VolcVideoContentItem[];
+  resolution?: '480p' | '720p' | '1080p' | '2K';
+  ratio?: '16:9' | '9:16' | '4:3' | '3:4' | '1:1';
+  duration?: number;
+  seed?: number;
+  generateAudio?: boolean;
+  serviceTier?: 'default' | 'flex';
+  callbackUrl?: string;
+}
+
+export interface VolcVideoTask {
+  id: string;
+  model: string;
+  status: VolcVideoStatus;
+  videoUrl?: string;
+  seed?: number;
+  resolution?: string;
+  ratio?: string;
+  duration?: number;
+  createdAt: number;
+  updatedAt: number;
+  error?: string;
+}
+
+export interface VolcVideoGetArgs {
+  taskId: string;
+}
+
+export interface VolcVideoListArgs {
+  limit?: number;
+  after?: string;
+}
+
+export interface VolcVideoListResponse {
+  tasks: VolcVideoTask[];
+  hasMore: boolean;
+}
+
+/** Text-to-speech (Volcengine TTS) */
+export interface VolcTTSSynthesizeArgs {
+  text: string;
+  voiceType?: string;
+  encoding?: 'mp3' | 'wav' | 'ogg' | 'pcm';
+  speedRatio?: number;
+  volumeRatio?: number;
+  pitchRatio?: number;
+  emotion?: string;
+  language?: 'en' | 'cn' | 'ja' | 'ko' | 'zh';
+}
+
+export interface VolcTTSSynthesizeResponse {
+  audioBase64: string;
+  encoding: string;
+  durationMs?: number;
+}

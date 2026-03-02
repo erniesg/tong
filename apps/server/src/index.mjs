@@ -3,6 +3,14 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadGeneratedSnapshot, runMockIngestion, writeGeneratedSnapshots } from './ingestion.mjs';
+import {
+  generateImage,
+  createVideoTask,
+  getVideoTask,
+  listVideoTasks,
+  synthesizeSpeech,
+  getVolcengineStatus,
+} from './volcengine.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -162,6 +170,81 @@ const AGENT_TOOL_DEFINITIONS = [
       userId: 'string (optional)',
       mode: 'hangout|learn (optional)',
       lang: 'ko|ja|zh (optional)',
+    },
+  },
+  // ── Volcengine / ByteDance tools ──────────────────────────────
+  {
+    name: 'volcengine.status',
+    description: 'Check Volcengine API credential configuration status.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {},
+  },
+  {
+    name: 'volcengine.image.generate',
+    description: 'Generate images from a text prompt using ByteDance Seedream model.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      prompt: 'string (required) – description of the image to generate',
+      model: 'string (optional) – model ID, default doubao-seedream-4-5-251128',
+      size: '1K|2K|4K (optional, default 2K)',
+      n: 'number 1-4 (optional, default 1)',
+      seed: 'number (optional) – for reproducibility',
+      guidanceScale: 'number 1.0-20.0 (optional, default 7.5)',
+      responseFormat: 'url|b64_json (optional, default url)',
+    },
+  },
+  {
+    name: 'volcengine.video.create',
+    description: 'Create a video generation task (text-to-video or image-to-video) using ByteDance Seedance. Returns a task ID for polling.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      content: 'array (required) – [{type:"text",text:"..."}, {type:"image_url",imageUrl:"..."}]',
+      model: 'string (optional) – model ID, default doubao-seedance-1-5-pro-251215',
+      resolution: '480p|720p|1080p|2K (optional)',
+      ratio: '16:9|9:16|4:3|1:1 (optional)',
+      duration: 'number 4-15 (optional) – video length in seconds',
+      seed: 'number (optional)',
+      generateAudio: 'boolean (optional) – generate audio track',
+      serviceTier: 'default|flex (optional) – flex is 50% cheaper but slower',
+      callbackUrl: 'string (optional) – webhook URL for status updates',
+    },
+  },
+  {
+    name: 'volcengine.video.get',
+    description: 'Get the status and result of a video generation task. Poll until status is succeeded or failed.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      taskId: 'string (required) – task ID from volcengine.video.create',
+    },
+  },
+  {
+    name: 'volcengine.video.list',
+    description: 'List video generation tasks with their statuses.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      limit: 'number (optional, default 20)',
+      after: 'string (optional) – pagination cursor',
+    },
+  },
+  {
+    name: 'volcengine.tts.synthesize',
+    description: 'Synthesize speech from text using ByteDance TTS. Returns base64-encoded audio.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      text: 'string (required) – text to speak',
+      voiceType: 'string (optional) – voice ID, default BV700_V2_streaming',
+      encoding: 'mp3|wav|ogg|pcm (optional, default mp3)',
+      speedRatio: 'number 0.5-2.0 (optional, default 1.0)',
+      volumeRatio: 'number 0.5-2.0 (optional, default 1.0)',
+      pitchRatio: 'number 0.5-2.0 (optional, default 1.0)',
+      emotion: 'string (optional) – e.g. happy, sad, energetic',
+      language: 'en|cn|ja|ko (optional)',
     },
   },
 ];
@@ -712,6 +795,87 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
           result: objective,
         },
       };
+    }
+    // ── Volcengine tools ─────────────────────────────────────────
+    case 'volcengine.status': {
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: getVolcengineStatus(),
+        },
+      };
+    }
+    case 'volcengine.image.generate': {
+      try {
+        const result = await generateImage(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'volcengine.video.create': {
+      try {
+        const result = await createVideoTask(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'volcengine.video.get': {
+      try {
+        const result = await getVideoTask(args.taskId);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'volcengine.video.list': {
+      try {
+        const result = await listVideoTasks(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'volcengine.tts.synthesize': {
+      try {
+        const result = await synthesizeSpeech(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
     }
     default:
       return {
