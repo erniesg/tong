@@ -81,6 +81,16 @@ const DICTIONARY: Record<string, { romanization: string; translation: string }> 
   // Useful phrases
   '가자': { romanization: 'gaja', translation: "let's go" },
   '먹자': { romanization: 'meokja', translation: "let's eat" },
+
+  // City map locations
+  '먹자골목': { romanization: 'meokja golmok', translation: 'Food Street' },
+  '카페': { romanization: 'kape', translation: 'Cafe' },
+  '편의점': { romanization: 'pyeonuijeom', translation: 'Convenience Store' },
+  '지하철': { romanization: 'jihacheol', translation: 'Subway' },
+  '치맥': { romanization: 'chimaek', translation: 'Chicken + Beer place' },
+  '지하철역': { romanization: 'jihacheol-yeok', translation: 'Subway Station' },
+  '연습실': { romanization: 'yeonseupssil', translation: 'Practice Studio' },
+  '서울': { romanization: 'seoul', translation: 'Seoul' },
 };
 
 const JAMO_DICT: Record<string, { romanization: string; name: string }> = {

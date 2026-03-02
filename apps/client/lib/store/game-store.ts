@@ -15,6 +15,8 @@ export interface GameState {
   selfAssessedLevel: number | null;
   calibratedLevel: number | null;
   locationLevels: Record<string, { level: number }>;
+  locationHangoutCounts: Record<string, number>;   // key: "seoul:food_street"
+  unlockedLocations: Record<string, boolean>;       // key: "seoul:cafe"
 }
 
 /* ── Actions ────────────────────────────────────────────── */
@@ -26,7 +28,9 @@ export type GameAction =
   | { type: 'SET_CALIBRATED_LEVEL'; level: number }
   | { type: 'SET_SELF_ASSESSED_LEVEL'; level: number }
   | { type: 'SET_RELATIONSHIP'; characterId: string; relationship: Relationship }
-  | { type: 'INCREMENT_INTERACTION'; characterId: string };
+  | { type: 'INCREMENT_INTERACTION'; characterId: string }
+  | { type: 'INCREMENT_LOCATION_HANGOUT'; cityId: string; locationId: string }
+  | { type: 'UNLOCK_LOCATION'; cityId: string; locationId: string };
 
 /* ── Persistence ────────────────────────────────────────── */
 
@@ -36,7 +40,17 @@ function loadState(): GameState {
   if (typeof window === 'undefined') return createInitialState();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as GameState;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Backfill fields added after initial release
+      const defaults = createInitialState();
+      return {
+        ...defaults,
+        ...parsed,
+        locationHangoutCounts: parsed.locationHangoutCounts ?? defaults.locationHangoutCounts,
+        unlockedLocations: parsed.unlockedLocations ?? defaults.unlockedLocations,
+      };
+    }
   } catch { /* ignore */ }
   return createInitialState();
 }
@@ -57,6 +71,8 @@ function createInitialState(): GameState {
     selfAssessedLevel: null,
     calibratedLevel: null,
     locationLevels: {},
+    locationHangoutCounts: {},
+    unlockedLocations: { 'seoul:food_street': true },
   };
 }
 
@@ -124,6 +140,26 @@ function reduce(state: GameState, action: GameAction): GameState {
         },
       };
     }
+    case 'INCREMENT_LOCATION_HANGOUT': {
+      const key = `${action.cityId}:${action.locationId}`;
+      return {
+        ...state,
+        locationHangoutCounts: {
+          ...state.locationHangoutCounts,
+          [key]: (state.locationHangoutCounts[key] ?? 0) + 1,
+        },
+      };
+    }
+    case 'UNLOCK_LOCATION': {
+      const key = `${action.cityId}:${action.locationId}`;
+      return {
+        ...state,
+        unlockedLocations: {
+          ...state.unlockedLocations,
+          [key]: true,
+        },
+      };
+    }
     default:
       return state;
   }
@@ -170,6 +206,18 @@ export function useGameState(): GameState {
 
 export function getRelationship(characterId: string): Relationship {
   return state.relationships[characterId] ?? defaultRelationship(characterId);
+}
+
+export function getLocationHangoutCount(cityId: string, locationId: string): number {
+  return state.locationHangoutCounts[`${cityId}:${locationId}`] ?? 0;
+}
+
+export function isLocationUnlocked(cityId: string, locationId: string): boolean {
+  return state.unlockedLocations[`${cityId}:${locationId}`] ?? false;
+}
+
+export function isMissionAvailable(cityId: string, locationId: string): boolean {
+  return getLocationHangoutCount(cityId, locationId) >= 3;
 }
 
 export function getMasterySnapshot(location: Location): MasterySnapshot {

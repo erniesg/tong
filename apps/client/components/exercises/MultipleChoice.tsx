@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { cn } from '@/lib/utils/cn';
 import type { MultipleChoiceExercise } from '@/lib/types/hangout';
 
 interface Props {
@@ -27,41 +26,54 @@ export function MultipleChoice({ exercise, onResult }: Props) {
 
   const correctOption = exercise.options.find((o) => o.id === exercise.correctOptionId);
 
-  return (
-    <div className="exercise-card p-5">
-      <p className="text-lg font-medium mb-4 text-ko m-0">{exercise.prompt}</p>
+  function getOptionStyle(optId: string): React.CSSProperties {
+    const isThis = selected === optId;
+    const isCorrectOption = optId === exercise.correctOptionId;
+    const showCorrect = submitted && isCorrectOption;
+    const showWrong = submitted && isThis && !isCorrect;
+    const dimmed = submitted && !isCorrectOption && !isThis;
 
-      <div className="flex flex-col gap-3">
+    if (showCorrect) return { border: '2px solid #34d399', background: 'rgba(52, 211, 153, 0.15)' };
+    if (showWrong) return { border: '2px solid #ef4444', background: 'rgba(239, 68, 68, 0.15)' };
+    if (dimmed) return { border: '2px solid rgba(255,255,255,0.06)', opacity: 0.35 };
+    if (isThis) return { border: '2px solid #f0c040', background: 'rgba(240, 192, 64, 0.2)' };
+    return { border: '2px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)' };
+  }
+
+  return (
+    <div className="exercise-card" style={{ padding: 20 }}>
+      <p style={{ fontSize: 18, fontWeight: 500, marginBottom: 16, margin: '0 0 16px' }}>{exercise.prompt}</p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {exercise.options.map((opt) => {
-          const isThis = selected === opt.id;
           const isCorrectOption = opt.id === exercise.correctOptionId;
-          const showCorrect = submitted && isCorrectOption;
+          const isThis = selected === opt.id;
           const showWrong = submitted && isThis && !isCorrect;
 
           return (
             <button
               key={opt.id}
               onClick={() => handleSelect(opt.id)}
-              className={cn(
-                'rounded-lg px-4 py-3 text-left transition-all border flex items-center justify-between',
-                'text-ko',
-                !submitted && !isThis && 'border-white/10 hover:border-white/30',
-                !submitted && isThis && 'border-[var(--color-accent-gold)] bg-[var(--color-accent-gold)]/10',
-                showCorrect && 'border-[var(--color-accent-green)] bg-[var(--color-accent-green)]/10',
-                showWrong && 'border-red-500 bg-red-500/10',
-                submitted && !isCorrectOption && !isThis && 'opacity-40',
-              )}
+              style={{
+                ...getOptionStyle(opt.id),
+                borderRadius: 12,
+                padding: '12px 16px',
+                textAlign: 'left',
+                fontSize: 16,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: submitted ? 'default' : 'pointer',
+                transition: 'all 0.15s',
+              }}
             >
               <span>{opt.text}</span>
               {submitted && isCorrectOption && (
-                <span className="text-[var(--color-accent-green)] text-xs font-semibold ml-2">
-                  Correct answer
-                </span>
+                <span style={{ color: '#34d399', fontSize: 12, fontWeight: 600 }}>Correct</span>
               )}
-              {submitted && showWrong && (
-                <span className="text-red-400 text-xs font-semibold ml-2">
-                  Your pick
-                </span>
+              {showWrong && (
+                <span style={{ color: '#f87171', fontSize: 12, fontWeight: 600 }}>Your pick</span>
               )}
             </button>
           );
@@ -69,19 +81,26 @@ export function MultipleChoice({ exercise, onResult }: Props) {
       </div>
 
       {submitted && exercise.explanation && (
-        <p className="mt-3 text-sm text-[var(--color-text-muted)] m-0">{exercise.explanation}</p>
+        <p style={{ marginTop: 12, fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>{exercise.explanation}</p>
       )}
 
       {!submitted && (
         <button
           onClick={handleSubmit}
           disabled={!selected}
-          className={cn(
-            'mt-4 w-full rounded-lg py-3 font-semibold transition',
-            selected
-              ? 'bg-[var(--color-accent-gold)] text-[#1a1a2e] hover:brightness-110'
-              : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed'
-          )}
+          style={{
+            marginTop: 16,
+            width: '100%',
+            borderRadius: 12,
+            padding: '13px 0',
+            fontWeight: 600,
+            fontSize: 15,
+            border: 'none',
+            cursor: selected ? 'pointer' : 'not-allowed',
+            background: selected ? '#f0c040' : 'rgba(255,255,255,0.08)',
+            color: selected ? '#1a1a2e' : 'rgba(255,255,255,0.4)',
+            transition: 'all 0.15s',
+          }}
         >
           Check
         </button>
@@ -89,10 +108,16 @@ export function MultipleChoice({ exercise, onResult }: Props) {
 
       {submitted && (
         <div
-          className={cn(
-            'mt-4 rounded-lg px-4 py-3 text-center text-sm',
-            isCorrect ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]' : 'bg-red-500/20 text-red-400'
-          )}
+          style={{
+            marginTop: 16,
+            borderRadius: 12,
+            padding: '12px 16px',
+            textAlign: 'center',
+            fontSize: 14,
+            fontWeight: 600,
+            background: isCorrect ? 'rgba(52, 211, 153, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+            color: isCorrect ? '#34d399' : '#f87171',
+          }}
         >
           {isCorrect
             ? 'Correct!'
