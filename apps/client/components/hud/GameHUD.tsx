@@ -49,11 +49,13 @@ export function GameHUD({ xp, sp, rp, locationLabel, cityId, explainLang }: Game
   }, [open]);
 
   return (
-    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, pointerEvents: 'none' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <>
       {/* Pull tab — always visible */}
       <div
         className="scene-hud-pull-tab"
         onClick={() => setOpen((o) => !o)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <span className="scene-hud-pull-tab-chevron">{open ? '▲' : '▼'}</span>
       </div>
@@ -83,6 +85,6 @@ export function GameHUD({ xp, sp, rp, locationLabel, cityId, explainLang }: Game
           ))}
         </div>
       </div>
-    </div>
+    </>
   );
 }

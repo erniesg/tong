@@ -1,10 +1,11 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
 import type { LocationId } from '@/lib/api';
 import { useUILang } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
 import { KoreanText } from '@/components/shared/KoreanText';
+import { useSessionState, type CompletedSession } from '@/lib/store/session-store';
 
 /** SP cost scales with hangout count (first is free, then 10, 25, 50). */
 const SP_COSTS = [0, 10, 25, 50];
@@ -18,12 +19,14 @@ interface LocationSheetProps {
   locationName: string;
   locationNameKo: string;
   targetLang?: 'ko' | 'ja' | 'zh';
+  cityId: string;
   hangoutCount: number;
   missionAvailable: boolean;
   comingSoon: boolean;
   playerSp: number;
   onHangout: () => void;
   onLearn: () => void;
+  onReviewSession?: (session: CompletedSession) => void;
   onDismiss: () => void;
 }
 
@@ -31,18 +34,26 @@ export function LocationSheet({
   locationName,
   locationNameKo,
   targetLang = 'ko',
+  cityId,
   hangoutCount,
   missionAvailable,
   comingSoon,
   playerSp,
   onHangout,
   onLearn,
+  onReviewSession,
   onDismiss,
 }: LocationSheetProps) {
   const lang = useUILang();
+  const sessionState = useSessionState();
+  const [showPastSessions, setShowPastSessions] = useState(false);
   const missionsNeeded = Math.max(0, 3 - hangoutCount);
   const spCost = getSpCost(hangoutCount);
   const canAfford = playerSp >= spCost;
+
+  const locationSessions = sessionState.completedSessions.filter(
+    (s) => s.cityId === cityId,
+  );
 
   /* Swipe down to dismiss */
   const touchStartRef = useRef<number>(0);
@@ -80,7 +91,7 @@ export function LocationSheet({
           <p className="location-drawer__hint">{t('coming_soon', lang)}</p>
         ) : (
           <div className="location-drawer__actions">
-            {/* Learn: primary, on top */}
+            {/* Learn: primary, on top — starts new session immediately */}
             <button
               className="location-drawer__btn location-drawer__btn--learn"
               onClick={onLearn}
@@ -92,6 +103,44 @@ export function LocationSheet({
                 <span className="location-drawer__btn-desc">{t('learn_desc', lang)}</span>
               </span>
             </button>
+
+            {/* Past sessions — expandable */}
+            {locationSessions.length > 0 && (
+              <div className="location-drawer__past-sessions">
+                <button
+                  className="location-drawer__past-toggle"
+                  onClick={() => setShowPastSessions((v) => !v)}
+                  type="button"
+                >
+                  {t('past_sessions', lang)} ({locationSessions.length})
+                  <span style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.6 }}>{showPastSessions ? '▲' : '▼'}</span>
+                </button>
+                {showPastSessions && (
+                  <div className="location-drawer__session-list">
+                    {locationSessions.slice(0, 5).map((session) => {
+                      const acc = session.exercisesCompleted > 0
+                        ? Math.round((session.exercisesCorrect / session.exercisesCompleted) * 100)
+                        : 0;
+                      return (
+                        <button
+                          key={session.id}
+                          className="location-drawer__session-item"
+                          onClick={() => onReviewSession?.(session)}
+                          type="button"
+                        >
+                          <span className="location-drawer__session-summary">
+                            {session.summary.slice(0, 50)}{session.summary.length > 50 ? '…' : ''}
+                          </span>
+                          <span className="location-drawer__session-meta">
+                            {acc}% · {session.exercisesCompleted} ex · {new Date(session.startedAt).toLocaleDateString()}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Hangout: secondary */}
             <button
