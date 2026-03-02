@@ -175,6 +175,10 @@ const LOCATION_LABELS: Record<LocationId, string> = {
   convenience_store: 'Convenience Store',
   subway_hub: 'Subway Hub',
   practice_studio: 'Practice Studio',
+  metro_station: 'Metro Station',
+  bbq_stall: 'BBQ Stall',
+  milk_tea_shop: 'Milk Tea Shop',
+  dumpling_shop: 'Dumpling Shop',
 };
 
 const LOCATIONS: LocationId[] = [
@@ -192,6 +196,10 @@ const LOCATION_CHARACTERS_BY_CITY: Record<CityId, Record<LocationId, SceneCharac
     convenience_store: { name: 'Min', role: 'Store clerk', avatarEmoji: 'CV', mood: 'helpful' },
     subway_hub: { name: 'Haneul', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
     practice_studio: { name: 'Ara', role: 'Practice partner', avatarEmoji: 'PS', mood: 'energetic' },
+    metro_station: { name: 'Haneul', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
+    bbq_stall: { name: 'Ara', role: 'Grill vendor', avatarEmoji: 'BB', mood: 'lively' },
+    milk_tea_shop: { name: 'Jin', role: 'Tea connoisseur', avatarEmoji: 'MT', mood: 'chill' },
+    dumpling_shop: { name: 'Min', role: 'Dumpling chef', avatarEmoji: 'DM', mood: 'proud' },
   },
   tokyo: {
     food_street: { name: 'Haeun', role: 'Primary romance route lead', avatarEmoji: 'HR', mood: 'warm' },
@@ -199,13 +207,21 @@ const LOCATION_CHARACTERS_BY_CITY: Record<CityId, Record<LocationId, SceneCharac
     convenience_store: { name: 'Sora', role: 'Store clerk', avatarEmoji: 'CV', mood: 'helpful' },
     subway_hub: { name: 'Daichi', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
     practice_studio: { name: 'Mika', role: 'Practice partner', avatarEmoji: 'PS', mood: 'energetic' },
+    metro_station: { name: 'Daichi', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
+    bbq_stall: { name: 'Kenji', role: 'Grill master', avatarEmoji: 'BB', mood: 'lively' },
+    milk_tea_shop: { name: 'Yui', role: 'Tea server', avatarEmoji: 'MT', mood: 'sweet' },
+    dumpling_shop: { name: 'Takeshi', role: 'Gyoza vendor', avatarEmoji: 'DM', mood: 'cheerful' },
   },
   shanghai: {
-    food_street: { name: 'Haeun', role: 'Primary romance route lead', avatarEmoji: 'HR', mood: 'warm' },
-    cafe: { name: 'Jin', role: 'Primary romance route lead', avatarEmoji: 'JN', mood: 'charming' },
+    food_street: { name: 'Mei', role: 'Street food guide', avatarEmoji: 'FS', mood: 'warm' },
+    cafe: { name: 'Lian', role: 'Cafe regular', avatarEmoji: 'CF', mood: 'charming' },
     convenience_store: { name: 'Bo', role: 'Store clerk', avatarEmoji: 'CV', mood: 'helpful' },
     subway_hub: { name: 'Wei', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
     practice_studio: { name: 'Qin', role: 'Practice partner', avatarEmoji: 'PS', mood: 'energetic' },
+    metro_station: { name: 'Wei', role: 'Commuter guide', avatarEmoji: 'MT', mood: 'focused' },
+    bbq_stall: { name: 'Da Peng', role: 'BBQ vendor', avatarEmoji: 'BB', mood: 'boisterous' },
+    milk_tea_shop: { name: 'Lian', role: 'Tea enthusiast', avatarEmoji: 'NC', mood: 'bubbly' },
+    dumpling_shop: { name: 'Mei', role: 'Dumpling auntie', avatarEmoji: 'XL', mood: 'warm' },
   },
 };
 

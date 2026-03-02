@@ -69,6 +69,11 @@ const LOCATION_NAMES: Record<LocationId, string> = {
   convenience_store: 'Convenience Store',
   subway_hub: 'Subway Hub',
   practice_studio: 'Practice Studio',
+  // Shanghai
+  metro_station: 'Metro Station',
+  bbq_stall: 'BBQ Stall',
+  milk_tea_shop: 'Milk Tea Shop',
+  dumpling_shop: 'Dumpling Shop',
 };
 
 const CHARS_PER_TICK = 2;
