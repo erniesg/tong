@@ -4,7 +4,7 @@ import { getRelationshipStage, defaultRelationship } from '../types/relationship
 import type { ItemMastery, MasterySnapshot } from '../types/mastery';
 import { computeMasteryLevel } from '../types/mastery';
 import type { Location } from '../types/objectives';
-import type { AppLang } from '../api';
+import type { AppLang, CityId } from '../api';
 
 /* ── State shape ────────────────────────────────────────── */
 
@@ -18,7 +18,7 @@ export interface GameState {
   locationLevels: Record<string, { level: number }>;
   locationHangoutCounts: Record<string, number>;   // key: "seoul:food_street"
   unlockedLocations: Record<string, boolean>;       // key: "seoul:cafe"
-  explainIn: AppLang;                               // language Tong explains in
+  explainIn: Record<CityId, AppLang>;                // per-city language Tong explains in
 }
 
 /* ── Actions ────────────────────────────────────────────── */
@@ -33,7 +33,7 @@ export type GameAction =
   | { type: 'INCREMENT_INTERACTION'; characterId: string }
   | { type: 'INCREMENT_LOCATION_HANGOUT'; cityId: string; locationId: string }
   | { type: 'UNLOCK_LOCATION'; cityId: string; locationId: string }
-  | { type: 'SET_EXPLAIN_LANGUAGE'; lang: AppLang };
+  | { type: 'SET_EXPLAIN_LANGUAGE'; cityId: CityId; lang: AppLang };
 
 /* ── Persistence ────────────────────────────────────────── */
 
@@ -52,7 +52,9 @@ function loadState(): GameState {
         ...parsed,
         locationHangoutCounts: parsed.locationHangoutCounts ?? defaults.locationHangoutCounts,
         unlockedLocations: parsed.unlockedLocations ?? defaults.unlockedLocations,
-        explainIn: parsed.explainIn ?? defaults.explainIn,
+        explainIn: (parsed.explainIn && typeof parsed.explainIn === 'object')
+          ? { ...defaults.explainIn, ...parsed.explainIn }
+          : defaults.explainIn,
       };
     }
   } catch { /* ignore */ }
@@ -77,7 +79,7 @@ function createInitialState(): GameState {
     locationLevels: {},
     locationHangoutCounts: {},
     unlockedLocations: { 'seoul:food_street': true, 'shanghai:dumpling_shop': true },
-    explainIn: 'en',
+    explainIn: { seoul: 'en', tokyo: 'en', shanghai: 'en' },
   };
 }
 
@@ -166,7 +168,7 @@ function reduce(state: GameState, action: GameAction): GameState {
       };
     }
     case 'SET_EXPLAIN_LANGUAGE':
-      return { ...state, explainIn: action.lang };
+      return { ...state, explainIn: { ...state.explainIn, [action.cityId]: action.lang } };
     default:
       return state;
   }
