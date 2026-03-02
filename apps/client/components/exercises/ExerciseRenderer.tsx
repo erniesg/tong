@@ -14,7 +14,7 @@ import { FreeInput } from './FreeInput';
 
 interface ExerciseRendererProps {
   exercise: ExerciseData;
-  onResult: (correct: boolean) => void;
+  onResult: (correct: boolean, summary?: string) => void;
 }
 
 export function ExerciseRenderer({ exercise, onResult }: ExerciseRendererProps) {

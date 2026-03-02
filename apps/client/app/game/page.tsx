@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
 import type { CityId, LocationId, ProficiencyLevel, ScoreState, UserProficiency, AppLang } from '@/lib/api';
 import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData } from '@/lib/types/hangout';
+import type { CompletedSession } from '@/lib/store/session-store';
 import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
 import type { Character } from '@/lib/types/relationship';
 import { SceneView } from '@/components/scene/SceneView';
@@ -28,9 +29,9 @@ import { GameHUD } from '@/components/hud/GameHUD';
 
 /* ── scene constants ────────────────────────────────────── */
 
-const NPC_SPRITES: Record<string, { name: string; nameLocal: string; src: string; color: string }> = {
-  haeun: { name: 'Ha-eun', nameLocal: '하은', src: '/assets/characters/haeun/haeun.png', color: '#e8485c' },
-  jin: { name: 'Jin', nameLocal: '진', src: '/assets/characters/jin/jin.png', color: '#4a90d9' },
+const NPC_SPRITES: Record<string, { name: string; nameLocal: string; nameZh: string; src: string; color: string }> = {
+  haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: '/assets/characters/haeun/haeun.png', color: '#e8485c' },
+  jin: { name: 'Jin', nameLocal: '진', nameZh: '珍', src: '/assets/characters/jin/jin.png', color: '#4a90d9' },
 };
 
 const NPC_POOL = ['haeun', 'jin'] as const;
@@ -195,6 +196,7 @@ export default function GamePage() {
   /* city map state */
   const [mapCityIndex, setMapCityIndex] = useState(1); // default Seoul
   const [selectedLocation, setSelectedLocation] = useState<LocationId | null>(null);
+  const [reviewSession, setReviewSession] = useState<CompletedSession | null>(null);
 
 
   /* NPC character ref — set during proficiency confirmation */
@@ -750,6 +752,15 @@ export default function GamePage() {
     setCity(cityId);
     setLocation(locationId);
     setSelectedLocation(null);
+    setReviewSession(null);
+    setPhase('learn');
+  }
+
+  function handleMapReviewSession(session: CompletedSession) {
+    setCity(session.cityId as CityId);
+    setLocation(session.locationId as LocationId);
+    setSelectedLocation(null);
+    setReviewSession(session);
     setPhase('learn');
   }
 
@@ -769,6 +780,7 @@ export default function GamePage() {
             onSelectLocation={setSelectedLocation}
             onStartHangout={handleMapHangout}
             onStartLearn={handleMapLearn}
+            onReviewSession={handleMapReviewSession}
             gameState={gameState}
           />
           <GameHUD
@@ -800,7 +812,7 @@ export default function GamePage() {
               &larr;
             </button>
             <span style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>
-              {CITY_NAMES[city]?.en ?? 'Seoul'} &middot; {LOCATION_NAMES[location]}
+              {CITY_NAMES[city]?.local ?? ''} {CITY_NAMES[city]?.en ?? ''} &middot; {t(`loc_${location}`, learnUiLang)}
             </span>
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
@@ -809,6 +821,8 @@ export default function GamePage() {
               locationId={location}
               userId="local"
               lang="ko"
+              autoStart={!reviewSession}
+              initialReviewSession={reviewSession ?? undefined}
             />
           </div>
         </div>
@@ -893,7 +907,7 @@ export default function GamePage() {
               xp={gameState.xp}
               sp={gameState.sp}
               rp={Math.round(affinity)}
-              locationLabel={<>{cityInfo.en} <span className="korean">{cityInfo.local}</span><span className="scene-hud-dot">&middot;</span>{LOCATION_NAMES[location]}</>}
+              locationLabel={<>{cityInfo.en} <span className="korean">{cityInfo.local}</span><span className="scene-hud-dot">&middot;</span>{t(`loc_${location}`, explainLang)}</>}
               cityId={city}
               explainLang={explainLang as AppLang}
             />

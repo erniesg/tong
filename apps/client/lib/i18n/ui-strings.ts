@@ -6,6 +6,19 @@
 export type UILang = 'en' | 'ko' | 'ja' | 'zh';
 
 const STRINGS: Record<string, Record<UILang, string>> = {
+  // Exercise type labels (for result cards)
+  'ex_matching': { en: 'Matching', ko: '매칭', ja: 'マッチング', zh: '配对' },
+  'ex_multiple_choice': { en: 'Multiple Choice', ko: '객관식', ja: '選択問題', zh: '选择题' },
+  'ex_drag_drop': { en: 'Drag & Drop', ko: '드래그 앤 드롭', ja: 'ドラッグ＆ドロップ', zh: '拖放' },
+  'ex_sentence_builder': { en: 'Sentence Builder', ko: '문장 만들기', ja: '文章組み立て', zh: '造句' },
+  'ex_fill_blank': { en: 'Fill in the Blank', ko: '빈칸 채우기', ja: '穴埋め', zh: '填空' },
+  'ex_pronunciation_select': { en: 'Pronunciation', ko: '발음', ja: '発音', zh: '发音' },
+  'ex_pattern_recognition': { en: 'Pattern', ko: '패턴', ja: 'パターン', zh: '规律' },
+  'ex_stroke_tracing': { en: 'Tracing', ko: '따라 쓰기', ja: 'なぞり書き', zh: '描写' },
+  'ex_error_correction': { en: 'Error Fix', ko: '오류 수정', ja: '誤り修正', zh: '纠错' },
+  'ex_free_input': { en: 'Free Input', ko: '자유 입력', ja: '自由入力', zh: '自由输入' },
+  'you_chose': { en: 'You chose', ko: '선택:', ja: '選択:', zh: '你选了' },
+
   // Buttons
   check: { en: 'Check', ko: '확인', ja: '確認', zh: '检查' },
   clear: { en: 'Clear', ko: '지우기', ja: 'クリア', zh: '清除' },
@@ -54,6 +67,43 @@ const STRINGS: Record<string, Record<UILang, string>> = {
   'need_sp': { en: 'Need', ko: '필요', ja: '必要', zh: '需要' },
   'you_have': { en: 'you have', ko: '보유', ja: '所持', zh: '你有' },
   'coming_soon': { en: 'This city is coming soon!', ko: '이 도시는 곧 공개됩니다!', ja: 'この都市はもうすぐ!', zh: '这个城市即将开放！' },
+
+  // Exercise prompt & result
+  'tap_to_start_exercise': { en: 'Tap to start exercise', ko: '눌러서 연습 시작', ja: 'タップして練習開始', zh: '点击开始练习' },
+  'got_it_right': { en: 'Got it right!', ko: '맞았어!', ja: '正解だった！', zh: '答对了！' },
+  'missed_that': { en: 'Missed that one.', ko: '틀렸어...', ja: '間違えた…', zh: '答错了…' },
+
+  // Session picker
+  'learn_korean': { en: 'Learn Korean', ko: '한국어 배우기', ja: '韓国語を学ぶ', zh: '学韩语' },
+  'learn_japanese': { en: 'Learn Japanese', ko: '일본어 배우기', ja: '日本語を学ぶ', zh: '学日语' },
+  'learn_chinese': { en: 'Learn Chinese', ko: '중국어 배우기', ja: '中国語を学ぶ', zh: '学中文' },
+  'practice_with_tong': { en: 'Practice with Tong, your learning companion', ko: '통과 함께 연습하세요', ja: 'トンと一緒に練習しよう', zh: '和小通一起练习吧' },
+  'start_new_session': { en: 'Start new session', ko: '새 세션 시작', ja: '新しいセッションを開始', zh: '开始新课程' },
+  'past_sessions': { en: 'Past sessions', ko: '이전 세션', ja: '過去のセッション', zh: '历史课程' },
+
+  // Session summary
+  'session_complete': { en: 'Session complete!', ko: '수업 완료!', ja: 'セッション完了！', zh: '课程完成！' },
+  'accuracy': { en: 'Accuracy', ko: '정확도', ja: '正答率', zh: '正确率' },
+  'exercises_label': { en: 'Exercises', ko: '연습', ja: '練習', zh: '练习' },
+  'correct_count': { en: 'Correct', ko: '정답', ja: '正解', zh: '正确' },
+  'level_up': { en: 'Level up!', ko: '레벨 업!', ja: 'レベルアップ！', zh: '升级！' },
+
+  // Review mode
+  'reviewing_session': { en: 'Reviewing past session', ko: '이전 수업 보기', ja: '過去のセッションを確認中', zh: '查看历史课程' },
+  'back': { en: 'Back', ko: '뒤로', ja: '戻る', zh: '返回' },
+  'review_session': { en: 'Review', ko: '복습', ja: '復習', zh: '回顾' },
+  'new_session': { en: 'New session', ko: '새 수업', ja: '新しいセッション', zh: '新课程' },
+
+  // Location names
+  'loc_food_street': { en: 'Food Street', ko: '먹자골목', ja: 'フードストリート', zh: '小吃街' },
+  'loc_cafe': { en: 'Cafe', ko: '카페', ja: 'カフェ', zh: '咖啡馆' },
+  'loc_convenience_store': { en: 'Convenience Store', ko: '편의점', ja: 'コンビニ', zh: '便利店' },
+  'loc_subway_hub': { en: 'Subway Hub', ko: '지하철역', ja: '地下鉄駅', zh: '地铁站' },
+  'loc_practice_studio': { en: 'Practice Studio', ko: '연습실', ja: '練習スタジオ', zh: '练习室' },
+  'loc_metro_station': { en: 'Metro Station', ko: '지하철역', ja: 'メトロ駅', zh: '地铁站' },
+  'loc_bbq_stall': { en: 'BBQ Stall', ko: 'BBQ 포장마차', ja: 'BBQ屋台', zh: '烧烤摊' },
+  'loc_milk_tea_shop': { en: 'Milk Tea Shop', ko: '밀크티 가게', ja: 'ミルクティー屋', zh: '奶茶店' },
+  'loc_dumpling_shop': { en: 'Dumpling Shop', ko: '만두 가게', ja: '餃子屋', zh: '饺子馆' },
 
   // City map
   'explain_in': { en: 'Explain in:', ko: '설명 언어:', ja: '説明言語:', zh: '说明语言：' },
