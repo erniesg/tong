@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils/cn';
 import type { SentenceBuilderExercise } from '@/lib/types/hangout';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: SentenceBuilderExercise;
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export function SentenceBuilder({ exercise, onResult }: Props) {
+  const lang = useUILang();
   const [placed, setPlaced] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
 
@@ -54,7 +57,7 @@ export function SentenceBuilder({ exercise, onResult }: Props) {
           </button>
         ))}
         {placed.length === 0 && (
-          <span className="text-sm text-[var(--color-text-muted)] py-1">Tap tiles to build your sentence</span>
+          <span className="text-sm text-[var(--color-text-muted)] py-1">{t('tap_tiles', lang)}</span>
         )}
       </div>
 
@@ -90,7 +93,7 @@ export function SentenceBuilder({ exercise, onResult }: Props) {
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
           )}
         >
-          Check
+          {t('check', lang)}
         </button>
       )}
 
@@ -103,7 +106,7 @@ export function SentenceBuilder({ exercise, onResult }: Props) {
               : 'bg-red-500/20 text-red-400',
           )}
         >
-          {isCorrect ? 'Correct!' : `Correct order: ${exercise.correctOrder.join(' ')}`}
+          {isCorrect ? t('correct', lang) : `${t('correct_order', lang)} ${exercise.correctOrder.join(' ')}`}
         </div>
       )}
     </div>

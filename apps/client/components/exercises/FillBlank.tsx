@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils/cn';
 import type { FillBlankExercise } from '@/lib/types/hangout';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: FillBlankExercise;
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export function FillBlank({ exercise, onResult }: Props) {
+  const lang = useUILang();
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const isCorrect = selected === exercise.correctOptionId;
@@ -79,7 +82,7 @@ export function FillBlank({ exercise, onResult }: Props) {
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
           )}
         >
-          Check
+          {t('check', lang)}
         </button>
       )}
 
@@ -92,7 +95,7 @@ export function FillBlank({ exercise, onResult }: Props) {
               : 'bg-red-500/20 text-red-400',
           )}
         >
-          {isCorrect ? 'Correct!' : `The answer is "${correctText}"`}
+          {isCorrect ? t('correct', lang) : `${t('answer_is', lang)} "${correctText}"`}
         </div>
       )}
     </div>

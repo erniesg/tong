@@ -9,17 +9,20 @@ import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
 import type { Character } from '@/lib/types/relationship';
 import { SceneView } from '@/components/scene/SceneView';
 import { generateExercise } from '@/lib/exercises/generators';
-import { isValidExerciseData } from '@/lib/exercises/validate';
+import { parseExerciseData } from '@/lib/exercises/validate';
 import { extractTargetItems } from '@/lib/exercises/extract-targets';
 import { summarizeExercise } from '@/lib/utils/summarize-exercise';
 import { useGameState, dispatch, getRelationship, getMasterySnapshot } from '@/lib/store/game-store';
 import { CHARACTER_MAP, HAUEN } from '@/lib/content/characters';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
-import { getLocationOrDefault } from '@/lib/content/locations';
+import { getLocationOrDefault, getLanguageForCity } from '@/lib/content/locations';
 import { getRelationshipStage } from '@/lib/types/relationship';
 import { CityMap, CITY_ORDER } from '@/components/city-map/CityMap';
 import { LearnPanel } from '@/components/learn/LearnPanel';
 import { sessionLogger } from '@/lib/debug/session-logger';
+import { UILangProvider } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
+import type { UILang } from '@/lib/i18n/ui-strings';
 
 /* ── scene constants ────────────────────────────────────── */
 
@@ -60,12 +63,19 @@ const LANG_LABELS: { key: keyof UserProficiency; name: string; native: string; f
 
 const LANG_TO_CITY: Record<string, CityId> = { ko: 'seoul', ja: 'tokyo', zh: 'shanghai' };
 
-const EXPLAIN_LANG_OPTIONS: { value: AppLang; label: string }[] = [
-  { value: 'en', label: 'English' },
-  { value: 'ko', label: '한국어' },
-  { value: 'ja', label: '日本語' },
-  { value: 'zh', label: '中文' },
+const EXPLAIN_LANG_OPTIONS: { value: AppLang; label: string; flag: string }[] = [
+  { value: 'en', label: 'English', flag: '🇬🇧' },
+  { value: 'ko', label: '한국어', flag: '🇰🇷' },
+  { value: 'ja', label: '日本語', flag: '🇯🇵' },
+  { value: 'zh', label: '中文', flag: '🇨🇳' },
 ];
+
+const CONTINUE_LABELS: Record<string, string> = {
+  en: 'Tap to continue',
+  ko: '탭하여 계속',
+  ja: 'タップして続く',
+  zh: '点击继续',
+};
 
 const CITY_EXPLAIN_ROWS: { cityId: CityId; label: string; target: string }[] = [
   { cityId: 'seoul', label: 'Seoul', target: 'Korean' },
@@ -183,6 +193,10 @@ export default function GamePage() {
   /* city map state */
   const [mapCityIndex, setMapCityIndex] = useState(1); // default Seoul
   const [selectedLocation, setSelectedLocation] = useState<LocationId | null>(null);
+
+  /* HUD swipe-down state */
+  const [hudOpen, setHudOpen] = useState(false);
+  const hudTouchStartRef = useRef<number>(0);
 
   /* NPC character ref — set during proficiency confirmation */
   const npcRef = useRef<Character>(HAUEN);
@@ -400,8 +414,9 @@ export default function GamePage() {
           hintSubType?: string | null;
         };
         let exercise: ExerciseData;
-        if (isValidExerciseData(args.exerciseData)) {
-          exercise = args.exerciseData;
+        const parsed = parseExerciseData(args.exerciseData);
+        if (parsed) {
+          exercise = parsed;
         } else {
           exercise = generateExercise(args.exerciseType, {
             hintItems: args.hintItems ?? undefined,
@@ -739,7 +754,10 @@ export default function GamePage() {
   /* ── City map phase ──────────────────────────────────────── */
 
   if (phase === 'city_map') {
+    const mapCity = CITY_ORDER[mapCityIndex];
+    const mapUiLang = (gameState.explainIn[mapCity] ?? 'en') as UILang;
     return (
+      <UILangProvider value={mapUiLang}>
       <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="game-frame">
           <CityMap
@@ -754,8 +772,8 @@ export default function GamePage() {
           <div className="explain-in-pill">
             <select
               className="explain-in-pill-select"
-              value={gameState.explainIn[CITY_ORDER[mapCityIndex]] ?? 'en'}
-              onChange={(e) => dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: CITY_ORDER[mapCityIndex], lang: e.target.value as AppLang })}
+              value={gameState.explainIn[mapCity] ?? 'en'}
+              onChange={(e) => dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: mapCity, lang: e.target.value as AppLang })}
             >
               {EXPLAIN_LANG_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -764,13 +782,16 @@ export default function GamePage() {
           </div>
         </div>
       </div>
+      </UILangProvider>
     );
   }
 
   /* ── Learn phase ─────────────────────────────────────────── */
 
   if (phase === 'learn') {
+    const learnUiLang = (gameState.explainIn[city] ?? 'en') as UILang;
     return (
+      <UILangProvider value={learnUiLang}>
       <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="game-frame" style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
@@ -795,6 +816,7 @@ export default function GamePage() {
           </div>
         </div>
       </div>
+      </UILangProvider>
     );
   }
 
@@ -804,49 +826,71 @@ export default function GamePage() {
   const rel = gameState.relationships[activeNpc];
   const affinity = rel?.affinity ?? 10;
 
+  const targetLang = getLanguageForCity(city);
+  const explainLang = (gameState.explainIn[city] ?? 'en') as UILang;
+
   if (sceneSummary) {
     return (
-      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="game-frame" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-dark)', padding: '2rem' }}>
-          <div style={{ textAlign: 'center', color: 'var(--color-text)' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-            <h2 style={{ margin: '0 0 8px', color: 'var(--color-accent-gold)', fontSize: 24 }}>Scene Complete!</h2>
-            <p style={{ margin: '0 0 20px', color: 'var(--color-text-muted)', fontSize: 14 }}>{sceneSummary.summary}</p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 24 }}>
-              <div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-accent-gold)' }}>+{sceneSummary.xpEarned}</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>XP earned</div>
-              </div>
-              {sceneSummary.affinityChanges.map((ac) => (
-                <div key={ac.characterId}>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: ac.delta > 0 ? 'var(--color-accent-green)' : '#e8485c' }}>
-                    {ac.delta > 0 ? '+' : ''}{ac.delta}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-                    {(NPC_SPRITES[ac.characterId] || NPC_SPRITES.haeun).name}
-                  </div>
+      <UILangProvider value={explainLang}>
+        <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="game-frame" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-dark)', padding: '2rem' }}>
+            <div style={{ textAlign: 'center', color: 'var(--color-text)' }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
+              <h2 style={{ margin: '0 0 8px', color: 'var(--color-accent-gold)', fontSize: 24 }}>{t('scene_complete', explainLang)}</h2>
+              <p style={{ margin: '0 0 20px', color: 'var(--color-text-muted)', fontSize: 14 }}>{sceneSummary.summary}</p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 24 }}>
+                <div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-accent-gold)' }}>+{sceneSummary.xpEarned}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{t('xp_earned', explainLang)}</div>
                 </div>
-              ))}
+                {sceneSummary.affinityChanges.map((ac) => (
+                  <div key={ac.characterId}>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: ac.delta > 0 ? 'var(--color-accent-green)' : '#e8485c' }}>
+                      {ac.delta > 0 ? '+' : ''}{ac.delta}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                      {(NPC_SPRITES[ac.characterId] || NPC_SPRITES.haeun).name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                className="btn-go"
+                onClick={() => {
+                  dispatch({ type: 'INCREMENT_LOCATION_HANGOUT', cityId: city, locationId: location });
+                  setSceneSummary(null);
+                  setSelectedLocation(null);
+                  setPhase('city_map');
+                }}
+              >
+                {t('done', explainLang)}
+              </button>
             </div>
-            <button
-              className="btn-go"
-              onClick={() => {
-                dispatch({ type: 'INCREMENT_LOCATION_HANGOUT', cityId: city, locationId: location });
-                setSceneSummary(null);
-                setSelectedLocation(null);
-                setPhase('city_map');
-              }}
-            >
-              Done
-            </button>
           </div>
         </div>
-      </div>
+      </UILangProvider>
     );
   }
+  const continueLabel = CONTINUE_LABELS[explainLang] ?? CONTINUE_LABELS.en;
+  const currentFlag = EXPLAIN_LANG_OPTIONS.find((o) => o.value === explainLang)?.flag ?? '🇬🇧';
 
   return (
-    <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <UILangProvider value={explainLang}>
+    <div
+      className="scene-root"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      onTouchStart={(e) => { hudTouchStartRef.current = e.touches[0].clientY; }}
+      onTouchEnd={(e) => {
+        const dy = e.changedTouches[0].clientY - hudTouchStartRef.current;
+        // Only handle swipe in the top 80px zone
+        if (hudTouchStartRef.current < 80) {
+          if (dy > 40) setHudOpen(true);
+          if (dy < -40) setHudOpen(false);
+        } else if (hudOpen && dy < -40) {
+          setHudOpen(false);
+        }
+      }}
+    >
       <div className="game-frame">
         <SceneView
           backgroundUrl="/assets/backgrounds/pojangmacha.png"
@@ -860,28 +904,44 @@ export default function GamePage() {
           choicePrompt={choicePrompt}
           tongTip={tongTip}
           isStreaming={chatLoading}
+          targetLang={targetLang}
+          continueLabel={continueLabel}
           hudContent={
-            <div className="scene-hud">
-              <div className="scene-hud-location">
-                {cityInfo.en} <span className="korean">{cityInfo.local}</span>
-                <span className="scene-hud-dot">&middot;</span>
-                {LOCATION_NAMES[location]}
+            <>
+              {/* Pull tab — always visible */}
+              <div
+                className="scene-hud-pull-tab"
+                onClick={() => setHudOpen((o) => !o)}
+              >
+                <span className="scene-hud-pull-tab-chevron">{hudOpen ? '▲' : '▼'}</span>
               </div>
-              <div className="scene-hud-scores">
-                <span className="scene-hud-score"><b>{gameState.xp}</b> XP</span>
-                <span className="scene-hud-score"><b>{gameState.sp}</b> SP</span>
-                <span className="scene-hud-score"><b>{Math.round(affinity)}</b> RP</span>
-                <select
-                  className="scene-hud-lang-pill"
-                  value={gameState.explainIn[city] ?? 'en'}
-                  onChange={(e) => dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: city, lang: e.target.value as AppLang })}
-                >
+              {/* HUD drawer */}
+              <div className={`scene-hud ${hudOpen ? 'scene-hud--open' : ''}`}>
+                <div className="scene-hud-location">
+                  {cityInfo.en} <span className="korean">{cityInfo.local}</span>
+                  <span className="scene-hud-dot">&middot;</span>
+                  {LOCATION_NAMES[location]}
+                </div>
+                <div className="scene-hud-scores">
+                  <span className="scene-hud-score"><b>{gameState.xp}</b> XP</span>
+                  <span className="scene-hud-score"><b>{gameState.sp}</b> SP</span>
+                  <span className="scene-hud-score"><b>{Math.round(affinity)}</b> RP</span>
+                </div>
+                <div className="scene-hud-flags">
                   {EXPLAIN_LANG_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <button
+                      key={opt.value}
+                      className={`scene-hud-flag-btn${explainLang === opt.value ? ' active' : ''}`}
+                      onClick={() => dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: city, lang: opt.value })}
+                      type="button"
+                      title={opt.label}
+                    >
+                      {opt.flag}
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
-            </div>
+            </>
           }
           onChoice={handleChoice}
           onContinue={handleContinue}
@@ -890,5 +950,6 @@ export default function GamePage() {
         />
       </div>
     </div>
+    </UILangProvider>
   );
 }

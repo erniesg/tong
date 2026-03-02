@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils/cn';
 import type { MatchingExercise } from '@/lib/types/hangout';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: MatchingExercise;
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export function Matching({ exercise, onResult }: Props) {
+  const lang = useUILang();
   const [matches, setMatches] = useState<Record<number, number>>({});
   const [selectedWord, setSelectedWord] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
@@ -165,7 +168,7 @@ export function Matching({ exercise, onResult }: Props) {
                   )}>{matchedText}</span>
                 ) : (
                   <span className="text-xs text-[var(--color-text-muted)]">
-                    {isSlotSelected ? 'pick a word ↑' : selectedWord !== null ? 'tap to place' : ''}
+                    {isSlotSelected ? t('pick_word', lang) : selectedWord !== null ? t('tap_to_place', lang) : ''}
                   </span>
                 )}
               </div>
@@ -190,8 +193,8 @@ export function Matching({ exercise, onResult }: Props) {
             : 'bg-red-500/20 text-red-400'
         )}>
           {isAllCorrect
-            ? 'Perfect — all matched!'
-            : `${Object.entries(matches).filter(([l, r]) => Number(l) === Number(r)).length}/${exercise.pairs.length} correct`
+            ? t('perfect_match', lang)
+            : `${Object.entries(matches).filter(([l, r]) => Number(l) === Number(r)).length}/${exercise.pairs.length} ${t('n_of_total_correct', lang)}`
           }
         </div>
       )}
@@ -207,7 +210,7 @@ export function Matching({ exercise, onResult }: Props) {
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed'
           )}
         >
-          Check ({matchCount}/{exercise.pairs.length})
+          {`${t('check', lang)} (${matchCount}/${exercise.pairs.length})`}
         </button>
       )}
     </div>

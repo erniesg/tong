@@ -3,6 +3,8 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils/cn';
 import type { StrokeTracingExercise } from '@/lib/types/hangout';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
 
 interface Props {
   exercise: StrokeTracingExercise;
@@ -15,6 +17,7 @@ interface Point {
 }
 
 export function StrokeTracing({ exercise, onResult }: Props) {
+  const lang = useUILang();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [drawing, setDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
@@ -165,7 +168,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             onClick={handleClear}
             className="flex-1 rounded-lg py-3 font-semibold bg-white/10 text-[var(--color-text-muted)] transition hover:bg-white/20"
           >
-            Clear
+            {t('clear', lang)}
           </button>
           <button
             onClick={handleSubmit}
@@ -177,7 +180,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
                 : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
             )}
           >
-            Done
+            {t('done', lang)}
           </button>
         </div>
       )}
@@ -188,7 +191,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
 
       {submitted && (
         <div className="mt-4 rounded-lg px-4 py-3 text-center text-sm bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]">
-          Great practice! Drawing helps your muscle memory.
+          {t('stroke_done', lang)}
         </div>
       )}
     </div>

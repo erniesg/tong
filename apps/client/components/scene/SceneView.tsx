@@ -1,6 +1,7 @@
 'use client';
 
 import type { SessionMessage, ExerciseData } from '@/lib/types/hangout';
+import type { TargetLang } from '@/components/shared/KoreanText';
 import { Background } from './Background';
 import { CharacterSprite } from './CharacterSprite';
 import { DialogueBox } from './DialogueBox';
@@ -21,6 +22,8 @@ interface SceneViewProps {
   tongTip?: { message: string; translation?: string } | null;
   isStreaming?: boolean;
   hudContent?: React.ReactNode;
+  targetLang?: TargetLang;
+  continueLabel?: string;
   onChoice?: (choiceId: string) => void;
   onContinue?: () => void;
   onExerciseResult?: (exerciseId: string, correct: boolean) => void;
@@ -50,6 +53,8 @@ export function SceneView({
   tongTip = null,
   isStreaming = false,
   hudContent,
+  targetLang = 'ko',
+  continueLabel = 'Tap to continue',
   onChoice = () => {},
   onContinue = () => {},
   onExerciseResult = () => {},
@@ -89,6 +94,7 @@ export function SceneView({
         message={tongTip?.message ?? ''}
         translation={tongTip?.translation}
         visible={!!tongTip}
+        targetLang={targetLang}
         onDismiss={onDismissTong}
       />
 
@@ -101,7 +107,7 @@ export function SceneView({
           />
         </div>
       ) : choices ? (
-        <ChoiceButtons choices={choices} prompt={choicePrompt} onSelect={onChoice} disabled={isStreaming} />
+        <ChoiceButtons choices={choices} prompt={choicePrompt} onSelect={onChoice} disabled={isStreaming} targetLang={targetLang} />
       ) : currentMessage ? (
         <DialogueBox
           speakerName={getSpeakerName(currentMessage)}
@@ -109,6 +115,8 @@ export function SceneView({
           content={currentMessage.content}
           translation={currentMessage.translation}
           isStreaming={isStreaming}
+          targetLang={targetLang}
+          continueLabel={continueLabel}
           onContinue={onContinue}
         />
       ) : isStreaming ? (
@@ -121,7 +129,7 @@ export function SceneView({
           onClick={onContinue}
         >
           <div className="text-center text-xs text-[var(--color-text-muted)] animate-pulse py-4">
-            Tap to continue
+            {continueLabel}
           </div>
         </div>
       )}
