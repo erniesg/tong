@@ -2,6 +2,7 @@ import type { Character, Relationship, RelationshipStage } from '../../types/rel
 import { computeTargetLangPercent } from '../../types/relationship';
 import type { MasterySnapshot } from '../../types/mastery';
 import type { LearningObjective, Location } from '../../types/objectives';
+import type { AppLang } from '../../api';
 import {
   formatCharacterBlock,
   formatMasteryBlock,
@@ -21,6 +22,7 @@ export interface HangoutOrchestratorVars {
   mastery: MasterySnapshot;
   objectives: LearningObjective[];
   isFirstEncounter: boolean;
+  explainIn?: AppLang;
 }
 
 /**
@@ -30,8 +32,17 @@ export interface HangoutOrchestratorVars {
  * NPCs never explain language concepts — they react, banter, and set the scene.
  * Tong handles ALL teaching, hints, tips, and exercise setup.
  */
+const EXPLAIN_LANG_NAMES: Record<string, string> = {
+  en: 'English',
+  ko: 'Korean',
+  ja: 'Japanese',
+  zh: 'Chinese',
+};
+
 export function buildHangoutOrchestratorPrompt(vars: HangoutOrchestratorVars): string {
   const langPct = computeTargetLangPercent(vars.playerLevel, vars.stage);
+  const explainIn = vars.explainIn ?? 'en';
+  const explainLangName = EXPLAIN_LANG_NAMES[explainIn] ?? 'English';
 
   const firstEncounterBlock = vars.isFirstEncounter
     ? `
@@ -66,7 +77,7 @@ ${langPct <= 10 ? `
 ##############################################
 ## CRITICAL — LANGUAGE LEVEL 0 (BEGINNER) ##
 ##############################################
-The player knows ZERO Korean. The NPC's "text" field must be 90-100% ENGLISH.
+The player knows ZERO Korean. The NPC's "text" field must be 90-100% ${explainLangName.toUpperCase()}.
 Only sprinkle in individual Korean WORDS (food names, 안녕, 주세요).
 Do NOT write Korean sentences. The player cannot read or understand them.
 NEVER put translations in parentheses like "포장마차 (street food stall)" — the UI auto-generates tooltips on hover for Korean words. Just write the Korean word directly.
@@ -78,8 +89,8 @@ Set "translation" to null — tooltips handle it.
 ` : ''}
 RULES:
 - NO NARRATOR VOICE. Only the NPC and Tong speak. Never output plain text — only tool calls.
-- LANGUAGE RATIO IS STRICT: NPC "text" must be ~${langPct}% Korean, rest ENGLISH.
-  ${langPct <= 10 ? `REPEAT: The player is a COMPLETE BEGINNER. Speak in ENGLISH with occasional Korean words.` : langPct <= 30 ? `At ${langPct}%, use mostly English with some Korean words and short phrases. Always provide translations.` : `At ${langPct}%, mix Korean and English naturally.`}
+- LANGUAGE RATIO IS STRICT: NPC "text" must be ~${langPct}% Korean, rest ${explainLangName.toUpperCase()}.
+  ${langPct <= 10 ? `REPEAT: The player is a COMPLETE BEGINNER. Speak in ${explainLangName.toUpperCase()} with occasional Korean words.` : langPct <= 30 ? `At ${langPct}%, use mostly ${explainLangName} with some Korean words and short phrases. Always provide translations.` : `At ${langPct}%, mix Korean and ${explainLangName} naturally.`}
 - show_exercise and offer_choices PAUSE the stream — the player must interact before you continue.
 - IMPORTANT: After show_exercise or offer_choices, STOP. Do NOT send more tool calls until the player responds.
 - CRITICAL: NEVER send show_exercise without a preceding tong_whisper in the SAME turn that teaches the material. Tong MUST teach before every exercise.
@@ -98,7 +109,7 @@ ${formatMasteryBlock(vars.mastery)}
 
 ${formatObjectivesBlock(vars.objectives)}
 
-${formatLanguageRatio(vars.playerLevel, vars.stage)}
+${formatLanguageRatio(vars.playerLevel, vars.stage, explainIn)}
 ${firstEncounterBlock}
 
 ROLE SEPARATION (CRITICAL):

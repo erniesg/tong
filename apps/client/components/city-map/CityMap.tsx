@@ -6,6 +6,7 @@ import type { GameState } from '@/lib/store/game-store';
 import { getLocationHangoutCount, isLocationUnlocked, isMissionAvailable } from '@/lib/store/game-store';
 import { LocationPin } from './LocationPin';
 import { LocationSheet } from './LocationSheet';
+import { KoreanText } from '@/components/shared/KoreanText';
 
 /* ── Constants ──────────────────────────────────────────────── */
 
@@ -31,7 +32,7 @@ const CITY_LOCATIONS: Record<CityId, LocationConfig[]> = {
   seoul: [
     // Positions matched to Seoul video landmarks
     { id: 'practice_studio',   en: 'Chimaek Place',      local: '치맥',       top: '22%', left: '25%' },
-    { id: 'convenience_store', en: 'Convenience Store',   local: 'CU 편의점',  top: '48%', left: '22%' },
+    { id: 'convenience_store', en: 'Convenience Store',   local: '편의점',     top: '48%', left: '22%' },
     { id: 'subway_hub',        en: 'Subway Hub',          local: '지하철',     top: '68%', left: '48%' },
     { id: 'cafe',              en: 'Cafe',                local: '카페',       top: '52%', left: '82%' },
     { id: 'food_street',       en: 'Food Street',         local: '먹자골목',   top: '88%', left: '25%' },
@@ -264,7 +265,7 @@ export function CityMap({
       {/* City title */}
       <div className="city-map__title">
         <div className="city-map__title-en">{meta.en}</div>
-        <div className="city-map__title-local">{meta.local}</div>
+        <div className="city-map__title-local"><KoreanText text={meta.local} /></div>
       </div>
 
       {/* Location pins */}

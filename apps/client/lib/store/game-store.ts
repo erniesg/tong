@@ -4,6 +4,7 @@ import { getRelationshipStage, defaultRelationship } from '../types/relationship
 import type { ItemMastery, MasterySnapshot } from '../types/mastery';
 import { computeMasteryLevel } from '../types/mastery';
 import type { Location } from '../types/objectives';
+import type { AppLang } from '../api';
 
 /* ── State shape ────────────────────────────────────────── */
 
@@ -17,6 +18,7 @@ export interface GameState {
   locationLevels: Record<string, { level: number }>;
   locationHangoutCounts: Record<string, number>;   // key: "seoul:food_street"
   unlockedLocations: Record<string, boolean>;       // key: "seoul:cafe"
+  explainIn: AppLang;                               // language Tong explains in
 }
 
 /* ── Actions ────────────────────────────────────────────── */
@@ -30,7 +32,8 @@ export type GameAction =
   | { type: 'SET_RELATIONSHIP'; characterId: string; relationship: Relationship }
   | { type: 'INCREMENT_INTERACTION'; characterId: string }
   | { type: 'INCREMENT_LOCATION_HANGOUT'; cityId: string; locationId: string }
-  | { type: 'UNLOCK_LOCATION'; cityId: string; locationId: string };
+  | { type: 'UNLOCK_LOCATION'; cityId: string; locationId: string }
+  | { type: 'SET_EXPLAIN_LANGUAGE'; lang: AppLang };
 
 /* ── Persistence ────────────────────────────────────────── */
 
@@ -49,6 +52,7 @@ function loadState(): GameState {
         ...parsed,
         locationHangoutCounts: parsed.locationHangoutCounts ?? defaults.locationHangoutCounts,
         unlockedLocations: parsed.unlockedLocations ?? defaults.unlockedLocations,
+        explainIn: parsed.explainIn ?? defaults.explainIn,
       };
     }
   } catch { /* ignore */ }
@@ -73,6 +77,7 @@ function createInitialState(): GameState {
     locationLevels: {},
     locationHangoutCounts: {},
     unlockedLocations: { 'seoul:food_street': true, 'shanghai:dumpling_shop': true },
+    explainIn: 'en',
   };
 }
 
@@ -160,6 +165,8 @@ function reduce(state: GameState, action: GameAction): GameState {
         },
       };
     }
+    case 'SET_EXPLAIN_LANGUAGE':
+      return { ...state, explainIn: action.lang };
     default:
       return state;
   }
