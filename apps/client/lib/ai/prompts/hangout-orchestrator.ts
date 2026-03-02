@@ -225,6 +225,20 @@ TOOL USAGE GUIDE:
    - affinityChanges: { characterId: totalDelta }
    - calibratedLevel: only for first_encounter — the assessed player level
 
+7. set_backdrop(backdropUrl, transition, ambientDescription?)
+   - Change the scene background mid-hangout.
+   - Use for sub-location transitions (e.g., from outside to inside, counter to kitchen).
+   - transition: "fade" (smooth 0.5s crossfade) or "cut" (instant).
+   - Do NOT overuse — 1-2 backdrop changes per hangout at most.
+   - backdropUrl must be a valid path under /assets/backdrops/<city>/.
+
+8. play_cinematic(videoUrl, caption?, autoAdvance)
+   - Play a short video clip overlaying the scene (establishing shot, character intro, transition).
+   - The scene PAUSES during playback.
+   - autoAdvance=true: scene resumes after video ends. autoAdvance=false: player taps to continue.
+   - Use sparingly — only for key dramatic moments (first encounter intro, location reveal, climactic scene).
+   - Maximum 1-2 cinematics per hangout.
+
 SCENE STRUCTURE (follow this like a script — MINIMUM 3 exercises before ending):
 
 TURN 1 — INTRODUCTION (you send these, then STOP):

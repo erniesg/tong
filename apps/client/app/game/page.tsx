@@ -210,6 +210,8 @@ export default function GamePage() {
   const [choicePrompt, setChoicePrompt] = useState<string | null>(null);
   const [currentExercise, setCurrentExercise] = useState<ExerciseData | null>(null);
   const [sceneSummary, setSceneSummary] = useState<SceneSummary | null>(null);
+  const [dynamicBackdrop, setDynamicBackdrop] = useState<{ url: string; transition: 'fade' | 'cut'; ambientDescription?: string } | null>(null);
+  const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; autoAdvance: boolean } | null>(null);
 
   const processingRef = useRef(false);
   const pausedRef = useRef(false);
@@ -490,6 +492,34 @@ export default function GamePage() {
         dispatch({ type: 'INCREMENT_INTERACTION', characterId: activeNpc });
         break; // auto-advance
       }
+      case 'set_backdrop': {
+        const args = item.args as {
+          backdropUrl: string;
+          transition: 'fade' | 'cut';
+          ambientDescription?: string | null;
+        };
+        setDynamicBackdrop({
+          url: args.backdropUrl,
+          transition: args.transition,
+          ambientDescription: args.ambientDescription ?? undefined,
+        });
+        console.log('[VN] set_backdrop:', args.backdropUrl, args.transition);
+        break; // auto-advance
+      }
+      case 'play_cinematic': {
+        const args = item.args as {
+          videoUrl: string;
+          caption?: string | null;
+          autoAdvance: boolean;
+        };
+        setCinematic({
+          videoUrl: args.videoUrl,
+          caption: args.caption ?? undefined,
+          autoAdvance: args.autoAdvance,
+        });
+        console.log('[VN] play_cinematic BLOCK:', args.videoUrl);
+        return; // BLOCK — wait for video end or tap
+      }
       default:
         break; // auto-advance
     }
@@ -568,6 +598,12 @@ export default function GamePage() {
     sessionLogger.logAIRequest(msg);
     void append({ role: 'user', content: msg });
   }, [append, playerLevel, activeNpc, city, location, gameState.explainIn]);
+
+  const handleCinematicEnd = useCallback(() => {
+    setCinematic(null);
+    setToolQueue((prev) => prev.slice(1));
+    processingRef.current = false;
+  }, []);
 
   const handleDismissTong = useCallback(() => {
     setTongTip(null);
@@ -736,6 +772,8 @@ export default function GamePage() {
     setChoicePrompt(null);
     setCurrentExercise(null);
     setSceneSummary(null);
+    setDynamicBackdrop(null);
+    setCinematic(null);
     processingRef.current = false;
     pausedRef.current = false;
     processedToolCallsRef.current.clear();
@@ -889,8 +927,11 @@ export default function GamePage() {
     <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="game-frame">
         <SceneView
-          backgroundUrl="/assets/backdrops/seoul/pojangmacha.png"
-          ambientDescription="A warm pojangmacha (street food tent) on a Seoul side street"
+          backgroundUrl={dynamicBackdrop?.url ?? '/assets/backdrops/seoul/pojangmacha.png'}
+          backgroundTransition={dynamicBackdrop?.transition}
+          ambientDescription={dynamicBackdrop?.ambientDescription ?? 'A warm pojangmacha (street food tent) on a Seoul side street'}
+          cinematic={cinematic}
+          onCinematicEnd={handleCinematicEnd}
           npcName={npc.name}
           npcColor={npc.color}
           npcSpriteUrl={npc.src}
