@@ -9,8 +9,12 @@ import {
   getBackdropPresets,
   createVideoTask,
   getVideoTask,
+  waitForVideoTask,
   listVideoTasks,
   synthesizeSpeech,
+  generateSoundEffect,
+  generateMusic,
+  elevenlabsTTS,
   getVolcengineStatus,
 } from './volcengine.mjs';
 
@@ -221,24 +225,29 @@ const AGENT_TOOL_DEFINITIONS = [
   },
   {
     name: 'volcengine.video.create',
-    description: 'Create a video generation task (text-to-video or image-to-video) using ByteDance Seedance. Returns a task ID for polling.',
+    description: 'Create a video generation task using ByteDance Seedance. Supports text-to-video, image-to-video (first frame), first+last frame transitions, reference images (1-4 for style consistency), and draft-to-full promotion. Default 9:16 portrait. Returns task ID for polling.',
     method: 'POST',
     path: '/api/v1/tools/invoke',
     args: {
-      content: 'array (required) – [{type:"text",text:"..."}, {type:"image_url",imageUrl:"..."}]',
+      content: 'array (required) – content items. Modes: [{type:"text",text:"..."}] for text-to-video | add {type:"image_url",imageUrl:"..."} for first frame | add two image_urls for first+last frame | up to 4 image_urls for reference | [{type:"draft_task",draftTaskId:"cgt-..."}] to promote draft',
       model: 'string (optional) – model ID, default doubao-seedance-1-5-pro-251215',
-      resolution: '480p|720p|1080p|2K (optional)',
-      ratio: '16:9|9:16|4:3|1:1 (optional)',
-      duration: 'number 4-15 (optional) – video length in seconds',
-      seed: 'number (optional)',
-      generateAudio: 'boolean (optional) – generate audio track',
+      resolution: '480p|720p|1080p (optional, default 720p)',
+      ratio: '16:9|9:16|21:9|1:1|adaptive (optional, default 9:16)',
+      duration: 'number (optional) – video length in seconds (default 5)',
+      frames: 'number (optional) – frame count (alternative to duration)',
+      seed: 'number (optional) – for reproducibility',
+      cameraFixed: 'boolean (optional) – lock camera for talking-head shots',
+      returnLastFrame: 'boolean (optional) – return last frame URL for clip chaining',
+      generateAudio: 'boolean (optional) – generate ambient audio track',
+      draft: 'boolean (optional) – draft mode: 480p preview at ~60% cost, 7-day validity, no last frame',
       serviceTier: 'default|flex (optional) – flex is 50% cheaper but slower',
       callbackUrl: 'string (optional) – webhook URL for status updates',
+      watermark: 'boolean (optional, default false)',
     },
   },
   {
     name: 'volcengine.video.get',
-    description: 'Get the status and result of a video generation task. Poll until status is succeeded or failed.',
+    description: 'Get the status and result of a video generation task. Status: queued → running → succeeded|failed. Response includes videoUrl, lastFrameUrl (if returnLastFrame was set), usage tokens, seed.',
     method: 'POST',
     path: '/api/v1/tools/invoke',
     args: {
@@ -246,8 +255,19 @@ const AGENT_TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'volcengine.video.wait',
+    description: 'Poll a video task until succeeded or failed. Blocks up to 10 minutes, polling every 10s. Returns the completed task with videoUrl. Use for synchronous workflows.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      taskId: 'string (required) – task ID from volcengine.video.create',
+      intervalMs: 'number (optional, default 10000) – poll interval in ms',
+      timeoutMs: 'number (optional, default 600000) – max wait time in ms',
+    },
+  },
+  {
     name: 'volcengine.video.list',
-    description: 'List video generation tasks with their statuses.',
+    description: 'List video generation tasks with their statuses. Tasks auto-delete after 24h.',
     method: 'POST',
     path: '/api/v1/tools/invoke',
     args: {
@@ -269,6 +289,50 @@ const AGENT_TOOL_DEFINITIONS = [
       pitchRatio: 'number 0.5-2.0 (optional, default 1.0)',
       emotion: 'string (optional) – e.g. happy, sad, energetic',
       language: 'en|cn|ja|ko (optional)',
+    },
+  },
+  // ── ElevenLabs tools ──────────────────────────────────────────
+  {
+    name: 'elevenlabs.sfx.generate',
+    description: 'Generate a sound effect from a text description using ElevenLabs. Returns base64 audio. Great for ambient loops per location (e.g. "Korean street food stall sizzling, chatter, night traffic"), UI sounds, or scene transitions.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      text: 'string (required) – description of the sound effect',
+      durationSeconds: 'number 0.5-30 (optional) – auto if omitted',
+      loop: 'boolean (optional) – seamlessly looping audio (v2 model)',
+      promptInfluence: 'number 0-1 (optional, default 0.3) – higher = more prompt adherence',
+      outputFormat: 'string (optional, default mp3_44100_128)',
+    },
+  },
+  {
+    name: 'elevenlabs.music.generate',
+    description: 'Generate music from a text prompt or structured composition plan using ElevenLabs. Returns base64 audio. For BGM per location/mood, character themes, scene transitions. 3s–5min duration. Paid tier required.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      prompt: 'string (optional) – simple text prompt like "lo-fi Korean cafe vibes, warm acoustic guitar". Cannot combine with compositionPlan',
+      compositionPlan: 'object (optional) – structured plan with positiveGlobalStyles, negativeGlobalStyles, sections[]. Cannot combine with prompt',
+      musicLengthMs: 'number 3000-600000 (optional) – only with prompt mode',
+      forceInstrumental: 'boolean (optional, default false) – no vocals, only with prompt',
+      seed: 'number (optional) – for reproducibility, only with compositionPlan',
+      outputFormat: 'string (optional, default mp3_44100_128)',
+    },
+  },
+  {
+    name: 'elevenlabs.tts.speak',
+    description: 'Generate speech from text using ElevenLabs voices. Multilingual with natural intonation. Returns base64 audio. Use for character voice lines (haeun, jin) in cinematic clips or dialogue.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      text: 'string (required) – text to speak',
+      voiceId: 'string (required) – ElevenLabs voice ID',
+      modelId: 'string (optional) – eleven_multilingual_v2 (default) | eleven_turbo_v2_5',
+      languageCode: 'string (optional) – ISO 639-1 code: ko, ja, zh, en',
+      stability: 'number 0-1 (optional) – emotional range',
+      similarityBoost: 'number 0-1 (optional) – voice fidelity',
+      speed: 'number (optional) – speech speed, 1.0 = normal',
+      outputFormat: 'string (optional, default mp3_44100_128)',
     },
   },
 ];
@@ -893,6 +957,24 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
         };
       }
     }
+    case 'volcengine.video.wait': {
+      try {
+        const result = await waitForVideoTask(
+          args.taskId,
+          args.intervalMs || 10000,
+          args.timeoutMs || 600000,
+        );
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
     case 'volcengine.video.list': {
       try {
         const result = await listVideoTasks(args);
@@ -910,6 +992,49 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
     case 'volcengine.tts.synthesize': {
       try {
         const result = await synthesizeSpeech(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    // ── ElevenLabs tools ─────────────────────────────────────────
+    case 'elevenlabs.sfx.generate': {
+      try {
+        const result = await generateSoundEffect(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'elevenlabs.music.generate': {
+      try {
+        const result = await generateMusic(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'elevenlabs.tts.speak': {
+      try {
+        const result = await elevenlabsTTS(args);
         return {
           statusCode: 200,
           payload: { ok: true, tool: toolName, result },
