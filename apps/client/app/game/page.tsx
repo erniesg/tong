@@ -889,7 +889,7 @@ export default function GamePage() {
     <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="game-frame">
         <SceneView
-          backgroundUrl="/assets/backgrounds/pojangmacha.png"
+          backgroundUrl="/assets/backdrops/seoul/pojangmacha.png"
           ambientDescription="A warm pojangmacha (street food tent) on a Seoul side street"
           npcName={npc.name}
           npcColor={npc.color}
