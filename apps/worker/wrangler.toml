@@ -3,5 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2026-02-28"
 workers_dev = true
 
+[[d1_databases]]
+binding = "DB"
+database_name = "tong-signups"
+database_id = "8554e675-5b60-48b1-b330-f50be1a81859"
+
 [observability]
 enabled = true
