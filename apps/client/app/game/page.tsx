@@ -55,9 +55,9 @@ const SLIDER_TO_LEVEL: ProficiencyLevel[] = ['none', 'none', 'beginner', 'beginn
 const LANG_KEYS: (keyof UserProficiency)[] = ['ko', 'ja', 'zh'];
 
 const LANG_LABELS: { key: keyof UserProficiency; name: string; native: string; flag: string }[] = [
-  { key: 'ko', name: 'Korean', native: '한국어', flag: '🇰🇷' },
-  { key: 'ja', name: 'Japanese', native: '日本語', flag: '🇯🇵' },
   { key: 'zh', name: 'Chinese', native: '中文', flag: '🇨🇳' },
+  { key: 'ja', name: 'Japanese', native: '日本語', flag: '🇯🇵' },
+  { key: 'ko', name: 'Korean', native: '한국어', flag: '🇰🇷' },
 ];
 
 const LANG_TO_CITY: Record<string, CityId> = { ko: 'seoul', ja: 'tokyo', zh: 'shanghai' };
@@ -77,9 +77,9 @@ const CONTINUE_LABELS: Record<string, string> = {
 };
 
 const CITY_EXPLAIN_ROWS: { cityId: CityId; label: string; target: string }[] = [
-  { cityId: 'seoul', label: 'Seoul', target: 'Korean' },
-  { cityId: 'tokyo', label: 'Tokyo', target: 'Japanese' },
   { cityId: 'shanghai', label: 'Shanghai', target: 'Chinese' },
+  { cityId: 'tokyo', label: 'Tokyo', target: 'Japanese' },
+  { cityId: 'seoul', label: 'Seoul', target: 'Korean' },
 ];
 
 const CITY_NAMES: Record<CityId, { en: string; local: string }> = {
@@ -176,12 +176,31 @@ export default function GamePage() {
   );
   const openingVideoRef = useRef<HTMLVideoElement>(null);
 
-  /* tong-intro typewriter */
-  const TONG_INTRO_LINES = [
-    "Hi! I\u2019m Tong.",
-    "I\u2019ll be your guide across Seoul, Tokyo, and Shanghai.",
-    "We\u2019ll meet locals, learn their languages, and live the drama together.",
+  /* tong-intro typewriter — random set each playthrough */
+  const TONG_INTRO_SETS = [
+    [
+      "They call me Tong. I connect people \u2014 it\u2019s what I do.",
+      "Learn the words. Read the room. Build the bonds.",
+      "Three cities are about to change your life.",
+    ],
+    [
+      "I\u2019m Tong. I\u2019ve been waiting for you.",
+      "Seoul, Tokyo, Shanghai \u2014 each one has something you need.",
+      "Speak their language, earn their trust, and doors will open.",
+    ],
+    [
+      "The name\u2019s Tong. Think of me as your edge.",
+      "Nobody makes it in this industry without the right connections.",
+      "Lucky for you, I know everyone. Let\u2019s get started.",
+    ],
+    [
+      "I\u2019m Tong. Every star you\u2019ve heard of? They started exactly where you are.",
+      "Three cities. Three languages. One shot to make it.",
+      "Stay sharp and follow my lead.",
+    ],
   ];
+  const [introSetIdx] = useState(() => Math.floor(Math.random() * TONG_INTRO_SETS.length));
+  const TONG_INTRO_LINES = TONG_INTRO_SETS[introSetIdx];
   const CHARS_PER_TICK = 2;
   const TICK_MS = 30;
   const [introLineIdx, setIntroLineIdx] = useState(0);
@@ -613,11 +632,6 @@ export default function GamePage() {
           <div className="tg-menu">
             <div className="tg-menu-logo">
               <img className="tg-menu-logo-img" src="/assets/app/logo_transparent.png" alt="Tong" />
-              <div className="tg-brand-cycle">
-                <span>tōng</span>
-                <span>통</span>
-                <span>つう</span>
-              </div>
             </div>
             <p className="tg-menu-tagline">
               Live the drama. <span className="tg-menu-tagline-accent">Learn the language.</span>
@@ -701,7 +715,7 @@ export default function GamePage() {
                   <div key={lang.key} className="proficiency-lang">
                     <div className="proficiency-lang-header">
                       <span className="proficiency-lang-name">
-                        {lang.flag} {lang.name} <span className="korean">{lang.native}</span>
+                        {lang.flag} {lang.name}
                       </span>
                       <span className="proficiency-lang-level">
                         {gameLvl.name}
@@ -716,29 +730,15 @@ export default function GamePage() {
                       onChange={(e) => handleSlider(idx, Number(e.target.value))}
                       className="proficiency-slider"
                     />
-                    <div className="proficiency-ticks">
-                      {GAME_LEVELS.map((gl) => (
-                        <span
-                          key={gl.level}
-                          className={`proficiency-tick${gl.level === val ? ' active' : ''}`}
-                        >
-                          <span className="proficiency-tick-dot" />
-                          <span className="proficiency-tick-num">Lv.{gl.level}</span>
-                        </span>
-                      ))}
-                    </div>
-                    <div className="proficiency-level-map">
-                      <span className="proficiency-level-tag">{gameLvl.name}</span>
-                      <span className="proficiency-level-question">{gameLvl.desc}</span>
-                    </div>
+                    <p className="proficiency-desc">Lv.{gameLvl.level} — {gameLvl.desc}</p>
                   </div>
                 );
               })}
               <div className="explain-in-section">
-                <span className="explain-in-heading">Tong explains in:</span>
+                <span className="explain-in-heading">Learn each language in:</span>
                 {CITY_EXPLAIN_ROWS.map((row) => (
                   <div key={row.cityId} className="explain-in-row">
-                    <span className="explain-in-label">{row.label} ({row.target})</span>
+                    <span className="explain-in-label">{row.target}</span>
                     <select
                       className="explain-in-select"
                       value={gameState.explainIn[row.cityId] ?? 'en'}
