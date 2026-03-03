@@ -83,7 +83,7 @@ interface DialogueChoice {
 import { LearnPanel } from '@/components/learn/LearnPanel';
 
 type CjkLang = 'ko' | 'ja' | 'zh';
-type EntryPhase = 'opening' | 'entry' | 'onboarding' | 'playing';
+type EntryPhase = 'opening' | 'entry' | 'tong-intro' | 'onboarding' | 'playing';
 type ProficiencyGaugeLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 type MapPosition = 'left' | 'center' | 'right';
 
@@ -115,6 +115,7 @@ const ACTIVE_USER_ID_STORAGE_KEY = 'tong_active_user_id';
 
 const GAME_LOGO_PATH = '/assets/app/logo_transparent.png';
 const OPENING_ANIMATION_PATH = '/assets/app/tong_opening.mp4';
+const TONG_INTRO_PATH = '/assets/tong_intro.webm';
 const SEOUL_FIRST_SCENE_BACKDROP = '/assets/backdrops/seoul/pojangmacha.png';
 
 const MAX_PROFICIENCY_GAUGE_LEVEL: ProficiencyGaugeLevel = 6;
@@ -909,7 +910,7 @@ export default function GamePageClient({
   }
 
   function handleStartFromMenu() {
-    beginNewGame('onboarding');
+    beginNewGame('tong-intro');
   }
 
   const shouldShowAvatar = !pendingUserLine && (activeSceneLine?.speaker === 'character' || isUserTurn);
@@ -977,6 +978,25 @@ export default function GamePageClient({
                 <span>Tokyo — Coming Soon</span>
                 <span>Shanghai — Coming Soon</span>
               </div>
+            </div>
+          )}
+
+          {entryPhase === 'tong-intro' && (
+            <div className="tg-tong-intro">
+              <video
+                className="tg-tong-intro-video"
+                src={TONG_INTRO_PATH}
+                autoPlay
+                muted
+                playsInline
+                preload="auto"
+                onEnded={() => setEntryPhase('onboarding')}
+                onError={() => setEntryPhase('onboarding')}
+              />
+              <p className="tg-tong-intro-name">Tong</p>
+              <button className="btn-skip tg-skip-bottom" type="button" onClick={() => setEntryPhase('onboarding')}>
+                Skip
+              </button>
             </div>
           )}
 
