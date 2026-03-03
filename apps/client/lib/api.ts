@@ -153,7 +153,13 @@ export type LocationId =
   | 'metro_station'
   | 'bbq_stall'
   | 'milk_tea_shop'
-  | 'dumpling_shop';
+  | 'dumpling_shop'
+  // Tokyo
+  | 'train_station'
+  | 'izakaya'
+  | 'konbini'
+  | 'tea_house'
+  | 'ramen_shop';
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const demoPassword = getDemoPassword();

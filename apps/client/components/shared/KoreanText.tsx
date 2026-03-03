@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useUILang } from '@/lib/i18n/UILangContext';
 import { getCachedTranslation, requestTranslations, onTranslationsReady } from '@/lib/i18n/translation-cache';
+import { HIRAGANA, KATAKANA } from '@/lib/content/scripts/kana';
 
 /* ── Target language type ──────────────────────────────────── */
 export type TargetLang = 'ko' | 'zh' | 'ja';
@@ -180,8 +181,14 @@ const DICTIONARY: Record<string, { romanization: string; translation: string }> 
   '연습실': { romanization: 'yeon-seup-ssil', translation: 'Practice Studio' },
   '서울': { romanization: 'seo-ul', translation: 'Seoul' },
 
-  // City names (Japanese)
+  // City names & locations (Japanese)
   '東京': { romanization: 'tō-kyō', translation: 'Tokyo' },
+  '駅': { romanization: 'eki', translation: 'station' },
+  '居酒屋': { romanization: 'i-za-ka-ya', translation: 'izakaya (Japanese pub)' },
+  'コンビニ': { romanization: 'kon-bi-ni', translation: 'convenience store' },
+  '茶屋': { romanization: 'cha-ya', translation: 'tea house' },
+  'ラーメン屋': { romanization: 'rā-men-ya', translation: 'ramen shop' },
+  'ラーメン': { romanization: 'rā-men', translation: 'ramen' },
 
   // Chinese words with pinyin
   '地铁站': { romanization: 'dì-tiě zhàn', translation: 'Metro station' },
@@ -235,6 +242,17 @@ const JAMO_DICT: Record<string, { romanization: string; name: string }> = {
   'ㅐ': { romanization: 'ae', name: 'ae' },
   'ㅔ': { romanization: 'e', name: 'e' },
 };
+
+/* ── Kana → romaji map ────────────────────────────────────── */
+
+const KANA_ROMAJI: Record<string, string> = {};
+for (const k of HIRAGANA) KANA_ROMAJI[k.kana] = k.romaji;
+for (const k of KATAKANA) KANA_ROMAJI[k.kana] = k.romaji;
+// Long vowel mark (katakana)
+KANA_ROMAJI['ー'] = '-';
+// Small kana
+KANA_ROMAJI['っ'] = '(pause)';
+KANA_ROMAJI['ッ'] = '(pause)';
 
 /* ── Character classification ──────────────────────────────── */
 
@@ -358,6 +376,20 @@ function getTooltipInfo(word: string, targetLang: TargetLang, explainLang: strin
     const pinyinParts = chars.map((ch) => PINYIN_MAP[ch] ?? ch);
     const romanized = pinyinParts.join(' ');
     if (pinyinParts.some((p, i) => p !== chars[i])) {
+      return { romanization: romanized, translation: resolveTranslation(word) };
+    }
+    return null;
+  }
+
+  if (targetLang === 'ja') {
+    // Japanese: kana → romaji, kanji → pinyin map fallback (many kanji share readings)
+    const parts = chars.map((ch) => {
+      if (KANA_ROMAJI[ch]) return KANA_ROMAJI[ch];
+      if (PINYIN_MAP[ch]) return PINYIN_MAP[ch]; // kanji often share Chinese readings as hint
+      return ch;
+    });
+    const romanized = parts.join('');
+    if (parts.some((p, i) => p !== chars[i])) {
       return { romanization: romanized, translation: resolveTranslation(word) };
     }
     return null;
