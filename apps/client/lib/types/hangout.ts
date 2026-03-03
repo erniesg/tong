@@ -134,6 +134,22 @@ export interface StrokeTracingExercise {
   exampleWords?: { word: string; romanization: string; meaning: string }[];
 }
 
+export interface BlockCrushExercise {
+  type: 'block_crush';
+  id: string;
+  objectiveId: string;
+  difficulty: number;
+  prompt: string;
+  language: 'ko' | 'zh' | 'ja';
+  /** Target character to assemble */
+  targetChar: string;
+  /** Component pieces and their slots */
+  components: { piece: string; slot: string; colorHint: string }[];
+  romanization: string;
+  meaning: string;
+  explanation?: string;
+}
+
 export interface ErrorCorrectionExercise {
   type: 'error_correction';
   id: string;
@@ -167,5 +183,6 @@ export type ExerciseData =
   | PronunciationSelectExercise
   | PatternRecognitionExercise
   | StrokeTracingExercise
+  | BlockCrushExercise
   | ErrorCorrectionExercise
   | FreeInputExercise;

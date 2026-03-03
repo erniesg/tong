@@ -64,6 +64,9 @@ export function extractTargetItems(
     case 'stroke_tracing':
       return [{ itemId: exercise.targetChar, category }];
 
+    case 'block_crush':
+      return [{ itemId: exercise.targetChar, category: 'script' as const }];
+
     case 'error_correction': {
       const correctOpt = exercise.options.find(
         (o) => o.id === exercise.correctOptionId,

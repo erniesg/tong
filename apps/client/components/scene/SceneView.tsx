@@ -15,7 +15,7 @@ interface SceneViewProps {
   backgroundUrl: string;
   backgroundTransition?: 'fade' | 'cut';
   ambientDescription?: string;
-  cinematic?: { videoUrl: string; caption?: string; autoAdvance: boolean } | null;
+  cinematic?: { videoUrl: string; caption?: string; autoAdvance: boolean; muted?: boolean } | null;
   onCinematicEnd?: () => void;
   npcName?: string;
   npcColor?: string;
@@ -103,6 +103,7 @@ export function SceneView({
           videoUrl={cinematic.videoUrl}
           caption={cinematic.caption}
           autoAdvance={cinematic.autoAdvance}
+          muted={cinematic.muted ?? true}
           onEnd={handleCinematicEnd}
         />
       )}

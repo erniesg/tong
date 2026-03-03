@@ -11,6 +11,7 @@ import { PatternRecognition } from './PatternRecognition';
 import { StrokeTracing } from './StrokeTracing';
 import { ErrorCorrection } from './ErrorCorrection';
 import { FreeInput } from './FreeInput';
+import { BlockCrush } from './BlockCrush';
 
 interface ExerciseRendererProps {
   exercise: ExerciseData;
@@ -35,6 +36,8 @@ export function ExerciseRenderer({ exercise, onResult }: ExerciseRendererProps) 
       return <PatternRecognition exercise={exercise} onResult={onResult} />;
     case 'stroke_tracing':
       return <StrokeTracing exercise={exercise} onResult={onResult} />;
+    case 'block_crush':
+      return <BlockCrush exercise={exercise} onResult={onResult} />;
     case 'error_correction':
       return <ErrorCorrection exercise={exercise} onResult={onResult} />;
     case 'free_input':

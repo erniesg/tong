@@ -14,7 +14,9 @@ import { parseExerciseData } from '@/lib/exercises/validate';
 import { extractTargetItems } from '@/lib/exercises/extract-targets';
 import { summarizeExercise } from '@/lib/utils/summarize-exercise';
 import { useGameState, dispatch, getRelationship, getMasterySnapshot } from '@/lib/store/game-store';
-import { CHARACTER_MAP, HAUEN } from '@/lib/content/characters';
+import { CHARACTER_MAP, HAUEN, TUTORIAL_VIDEO_CONFIG } from '@/lib/content/characters';
+import { useVideoGeneration } from '@/lib/hooks/useVideoGeneration';
+import { HeartMeter } from '@/components/scene/HeartMeter';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import { getLocationOrDefault, getLanguageForCity } from '@/lib/content/locations';
 import { getRelationshipStage } from '@/lib/types/relationship';
@@ -122,6 +124,14 @@ function buildContextBlock(
   locationId: LocationId,
   npcChar: Character,
   explainIn: AppLang = 'en',
+  tutorialCtx?: {
+    isTutorial: boolean;
+    playerName: string;
+    videoStatus: 'generating' | 'ready' | 'failed';
+    exitVideoUrl: string | null;
+    exitLine: string;
+    exercisesDone: number;
+  },
 ): string {
   // explainIn is resolved per-city by the caller
   const loc = getLocationOrDefault(cityId, locationId);
@@ -147,6 +157,7 @@ function buildContextBlock(
     locationLevel: locLevel,
     objectives,
     explainIn,
+    ...(tutorialCtx ?? {}),
   });
   return `[HANGOUT_CONTEXT]${ctx}[/HANGOUT_CONTEXT] `;
 }
@@ -250,7 +261,16 @@ export default function GamePage() {
   const [currentExercise, setCurrentExercise] = useState<ExerciseData | null>(null);
   const [sceneSummary, setSceneSummary] = useState<SceneSummary | null>(null);
   const [dynamicBackdrop, setDynamicBackdrop] = useState<{ url: string; transition: 'fade' | 'cut'; ambientDescription?: string } | null>(null);
-  const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; autoAdvance: boolean } | null>(null);
+  const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; autoAdvance: boolean; muted?: boolean } | null>(null);
+
+  /* tutorial state */
+  const mockVideo = searchParams.get('mock_video') === '1';
+  const [playerNameInput, setPlayerNameInput] = useState('');
+  const exitLineRef = useRef('');
+  const exitVideoGen = useVideoGeneration({ mock: mockVideo });
+  const [isTutorialHangout, setIsTutorialHangout] = useState(false);
+  const [tutorialExerciseCount, setTutorialExerciseCount] = useState(0);
+  const MIN_TUTORIAL_EXERCISES = 3;
 
   const processingRef = useRef(false);
   const pausedRef = useRef(false);
@@ -267,6 +287,26 @@ export default function GamePage() {
       next[langIdx] = value;
       return next;
     });
+  }
+
+  /** Map video gen hook status to context status */
+  function getVideoContextStatus(): 'generating' | 'ready' | 'failed' {
+    if (exitVideoGen.status === 'succeeded') return 'ready';
+    if (exitVideoGen.status === 'failed' || exitVideoGen.status === 'error') return 'failed';
+    return 'generating';
+  }
+
+  /** Build tutorial context if in tutorial mode */
+  function getTutorialCtx() {
+    if (!isTutorialHangout) return undefined;
+    return {
+      isTutorial: true,
+      playerName: gameState.playerName || 'Player',
+      videoStatus: getVideoContextStatus(),
+      exitVideoUrl: exitVideoGen.videoUrl,
+      exitLine: exitLineRef.current,
+      exercisesDone: tutorialExerciseCount,
+    };
   }
 
   function handleConfirmProficiency() {
@@ -288,13 +328,52 @@ export default function GamePage() {
     setPlayerLevel(weakLevel);
     setScore({ xp: 0, sp: 0, rp: 0 });
 
+    // Store player name
+    const name = playerNameInput.trim() || 'Player';
+    dispatch({ type: 'SET_PLAYER_NAME', name });
+
     // Store self-assessed level
     dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
+
+    // Detect tutorial (first encounter with this NPC)
+    const rel = getRelationship(npcId);
+    const isTutorial = rel.interactionCount === 0;
+    setIsTutorialHangout(isTutorial);
+    setTutorialExerciseCount(0);
+
+    // Kick off exit video generation for tutorial
+    let tutCtx: ReturnType<typeof getTutorialCtx> = undefined;
+    if (isTutorial) {
+      const config = TUTORIAL_VIDEO_CONFIG[npcId];
+      if (config) {
+        const templates = config.exitLineTemplates;
+        const template = templates[Math.floor(Math.random() * templates.length)];
+        const exitLine = template.replace(/{playerName}/g, name);
+        exitLineRef.current = exitLine;
+
+        const prompt = config.exitVideoPromptTemplate.replace(/{exitLine}/g, exitLine);
+        exitVideoGen.startGeneration({
+          content: [{ type: 'text', text: prompt }],
+          ratio: '9:16',
+          duration: 10,
+          generateAudio: true,
+        });
+      }
+
+      tutCtx = {
+        isTutorial: true,
+        playerName: name,
+        videoStatus: 'generating' as const,
+        exitVideoUrl: null,
+        exitLine: exitLineRef.current,
+        exercisesDone: 0,
+      };
+    }
 
     setPhase('hangout');
     setLoading(false);
 
-    const startMsg = `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street', npcChar, gameState.explainIn[primaryCity as CityId] ?? 'en')}Start the scene.`;
+    const startMsg = `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street', npcChar, gameState.explainIn[primaryCity as CityId] ?? 'en', tutCtx)}Start the scene.`;
     sessionLogger.start({ mode: 'hangout', cityId: primaryCity, locationId: 'food_street', npcId, playerLevel: weakLevel });
     sessionLogger.logAIRequest(startMsg);
     void append({ role: 'user', content: startMsg });
@@ -341,7 +420,7 @@ export default function GamePage() {
   useEffect(() => {
     if (skipToHangout && !sceneStartedRef.current) {
       sceneStartedRef.current = true;
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en');
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getTutorialCtx());
       void append({ role: 'user', content: `${ctx}Start the scene.` });
     }
   }, [skipToHangout, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
@@ -490,12 +569,15 @@ export default function GamePage() {
           caption?: string | null;
           autoAdvance: boolean;
         };
+        // Exit video (Seedance-generated with audio) should be unmuted
+        const isExitVideo = isTutorialHangout && exitVideoGen.videoUrl && args.videoUrl === exitVideoGen.videoUrl;
         setCinematic({
           videoUrl: args.videoUrl,
           caption: args.caption ?? undefined,
           autoAdvance: args.autoAdvance,
+          muted: !isExitVideo,
         });
-        console.log('[VN] play_cinematic BLOCK:', args.videoUrl);
+        console.log('[VN] play_cinematic BLOCK:', args.videoUrl, isExitVideo ? '(exit video, unmuted)' : '');
         return; // BLOCK — wait for video end or tap
       }
       default:
@@ -532,13 +614,13 @@ export default function GamePage() {
     }
 
     if (!currentExercise && !choices && toolQueue.length === 0) {
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en');
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getTutorialCtx());
       const msg = `${ctx}Continue.`;
       sessionLogger.logUserTap('continue');
       sessionLogger.logAIRequest(msg);
       void append({ role: 'user', content: msg });
     }
-  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
+  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, exitVideoGen.status, exitVideoGen.videoUrl, tutorialExerciseCount]);
 
   const handleExerciseResult = useCallback((exerciseId: string, correct: boolean) => {
     sessionLogger.logExerciseResult(exerciseId, correct);
@@ -552,18 +634,21 @@ export default function GamePage() {
       }
     }
 
+    // Increment tutorial exercise counter
+    if (isTutorialHangout) setTutorialExerciseCount(prev => prev + 1);
+
     // Delay clearing the exercise so user can see feedback (Correct!/Wrong) for 1.5s
     setTimeout(() => {
       setCurrentExercise(null);
       setToolQueue((prev) => prev.slice(1));
       processingRef.current = false;
 
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en');
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getTutorialCtx());
       const msg = `${ctx}${summarizeExercise(exerciseId, correct)}`;
       sessionLogger.logAIRequest(msg);
       void append({ role: 'user', content: msg });
     }, 1500);
-  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn]);
+  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, exitVideoGen.status, exitVideoGen.videoUrl, tutorialExerciseCount]);
 
   const handleChoice = useCallback((choiceId: string) => {
     setChoices(null);
@@ -571,11 +656,11 @@ export default function GamePage() {
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
     sessionLogger.logChoiceSelected(choiceId);
-    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en');
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getTutorialCtx());
     const msg = `${ctx}Choice: ${choiceId}`;
     sessionLogger.logAIRequest(msg);
     void append({ role: 'user', content: msg });
-  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn]);
+  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, exitVideoGen.status, exitVideoGen.videoUrl, tutorialExerciseCount]);
 
   const handleCinematicEnd = useCallback(() => {
     setCinematic(null);
@@ -591,10 +676,10 @@ export default function GamePage() {
       processingRef.current = false;
     } else if (!currentExercise && !choices && toolQueue.length === 0) {
       // tong_whisper was auto-advanced, nothing queued — request next turn
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en');
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getTutorialCtx());
       void append({ role: 'user', content: `${ctx}Continue.` });
     }
-  }, [currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
+  }, [currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, exitVideoGen.status, exitVideoGen.videoUrl, tutorialExerciseCount]);
 
   /* ── renders ──────────────────────────────────────────── */
 
@@ -751,6 +836,17 @@ export default function GamePage() {
                   </div>
                 ))}
               </div>
+              <label className="tg-name-input-section">
+                <span className="tg-name-label">What should we call you?</span>
+                <input
+                  type="text"
+                  className="tg-name-input"
+                  placeholder="Your name"
+                  value={playerNameInput}
+                  onChange={(e) => setPlayerNameInput(e.target.value)}
+                  maxLength={20}
+                />
+              </label>
               <button className="tg-menu-btn-primary" onClick={handleConfirmProficiency} style={{ width: '100%', marginTop: 16 }}>
                 Let&apos;s go!
               </button>
@@ -794,6 +890,9 @@ export default function GamePage() {
     setSceneSummary(null);
     setDynamicBackdrop(null);
     setCinematic(null);
+    setIsTutorialHangout(false);
+    setTutorialExerciseCount(0);
+    exitLineRef.current = '';
     processingRef.current = false;
     pausedRef.current = false;
     processedToolCallsRef.current.clear();
@@ -857,7 +956,7 @@ export default function GamePage() {
 
   if (phase === 'dev') {
     const DEV_EX_TYPES = [
-      'stroke_tracing', 'matching', 'multiple_choice', 'drag_drop',
+      'stroke_tracing', 'block_crush', 'matching', 'multiple_choice', 'drag_drop',
       'sentence_builder', 'fill_blank', 'pronunciation_select',
       'pattern_recognition', 'error_correction', 'free_input',
     ] as const;
@@ -1038,6 +1137,14 @@ export default function GamePage() {
   }
   const continueLabel = CONTINUE_LABELS[explainLang] ?? CONTINUE_LABELS.en;
 
+  // Heart meter progress: 50% from exercises, 50% from video gen
+  const heartProgress = isTutorialHangout
+    ? Math.round(
+        Math.min(50, (tutorialExerciseCount / MIN_TUTORIAL_EXERCISES) * 50)
+        + exitVideoGen.progress * 0.5
+      )
+    : 0;
+
   return (
     <UILangProvider value={explainLang}>
     <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1060,14 +1167,23 @@ export default function GamePage() {
           targetLang={targetLang}
           continueLabel={continueLabel}
           hudContent={
-            <GameHUD
-              xp={gameState.xp}
-              sp={gameState.sp}
-              rp={Math.round(affinity)}
-              locationLabel={<>{cityInfo.en} <span className="korean">{cityInfo.local}</span><span className="scene-hud-dot">&middot;</span>{t(`loc_${location}`, explainLang)}</>}
-              cityId={city}
-              explainLang={explainLang as AppLang}
-            />
+            <>
+              <GameHUD
+                xp={gameState.xp}
+                sp={gameState.sp}
+                rp={Math.round(affinity)}
+                locationLabel={<>{cityInfo.en} <span className="korean">{cityInfo.local}</span><span className="scene-hud-dot">&middot;</span>{t(`loc_${location}`, explainLang)}</>}
+                cityId={city}
+                explainLang={explainLang as AppLang}
+              />
+              {isTutorialHangout && (
+                <HeartMeter
+                  progress={heartProgress}
+                  videoReady={exitVideoGen.status === 'succeeded'}
+                  characterName={npc.name}
+                />
+              )}
+            </>
           }
           onChoice={handleChoice}
           onContinue={handleContinue}

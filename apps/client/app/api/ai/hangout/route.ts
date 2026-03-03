@@ -5,7 +5,11 @@ import {
   buildHangoutOrchestratorPrompt,
   type HangoutOrchestratorVars,
 } from '@/lib/ai/prompts/hangout-orchestrator';
-import { CHARACTER_MAP, HAUEN } from '@/lib/content/characters';
+import {
+  buildTutorialHangoutPrompt,
+  type TutorialHangoutVars,
+} from '@/lib/ai/prompts/tutorial-hangout';
+import { CHARACTER_MAP, HAUEN, TUTORIAL_VIDEO_CONFIG } from '@/lib/content/characters';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import type { Character, RelationshipStage, Relationship } from '@/lib/types/relationship';
 import type { MasterySnapshot } from '@/lib/types/mastery';
@@ -217,33 +221,66 @@ export async function POST(req: Request) {
 
   // Build system prompt
   const char: Character = CHARACTER_MAP[characterId] ?? HAUEN;
-  const defaultVars: HangoutOrchestratorVars = hangoutVars ?? {
-    location: POJANGMACHA,
-    playerLevel: 0,
-    selfAssessedLevel: 0,
-    calibratedLevel: null,
-    character: char,
-    relationship: {
-      characterId,
-      affinity: 10,
-      stage: 'strangers',
-      interactionCount: 0,
-      lastInteraction: 0,
-      storyFlags: {},
-      significantMoments: [],
-    },
-    stage: 'strangers',
-    mastery: {
-      script: { learned: [], total: 24 },
-      pronunciation: { accuracy: 0, weakSounds: [] },
-      vocabulary: { strong: [], weak: [], total: 45, mastered: 0 },
-      grammar: { mastered: [], learning: [], notStarted: ['N+주세요', '을/를', 'N+개'] },
-    },
-    objectives: POJANGMACHA.levels[0]?.objectives ?? [],
-    isFirstEncounter: true,
-  };
 
-  const systemPrompt = buildHangoutOrchestratorPrompt(defaultVars);
+  // Check for tutorial mode
+  let isTutorial = false;
+  let tutorialCtx: Record<string, unknown> = {};
+  try {
+    const hangoutMatch2 = contextStr.match(/\[HANGOUT_CONTEXT\]([\s\S]*?)\[\/HANGOUT_CONTEXT\]/);
+    const legacyMatch2 = contextStr.match(/\[CONTEXT\]([\s\S]*?)\[\/CONTEXT\]/);
+    const ctxMatch2 = hangoutMatch2 ?? legacyMatch2;
+    if (ctxMatch2) {
+      const parsedCtx = JSON.parse(ctxMatch2[1]);
+      isTutorial = parsedCtx.isTutorial === true;
+      tutorialCtx = parsedCtx;
+    }
+  } catch { /* ignore */ }
+
+  let systemPrompt: string;
+
+  if (isTutorial) {
+    const videoConfig = TUTORIAL_VIDEO_CONFIG[characterId];
+    const tutorialVars: TutorialHangoutVars = {
+      playerName: (tutorialCtx.playerName as string) ?? 'Player',
+      character: char,
+      explainIn: (tutorialCtx.explainIn as string) ?? 'en',
+      introVideoUrl: videoConfig?.introVideoUrl ?? null,
+      exitLine: (tutorialCtx.exitLine as string) ?? '',
+      videoStatus: (tutorialCtx.videoStatus as 'generating' | 'ready' | 'failed') ?? 'generating',
+      exitVideoUrl: (tutorialCtx.exitVideoUrl as string) ?? null,
+      exercisesDone: (tutorialCtx.exercisesDone as number) ?? 0,
+      minExercises: 3,
+    };
+    systemPrompt = buildTutorialHangoutPrompt(tutorialVars);
+    console.log('[hangout] Tutorial mode for', characterId, '| videoStatus:', tutorialVars.videoStatus);
+  } else {
+    const defaultVars: HangoutOrchestratorVars = hangoutVars ?? {
+      location: POJANGMACHA,
+      playerLevel: 0,
+      selfAssessedLevel: 0,
+      calibratedLevel: null,
+      character: char,
+      relationship: {
+        characterId,
+        affinity: 10,
+        stage: 'strangers',
+        interactionCount: 0,
+        lastInteraction: 0,
+        storyFlags: {},
+        significantMoments: [],
+      },
+      stage: 'strangers',
+      mastery: {
+        script: { learned: [], total: 24 },
+        pronunciation: { accuracy: 0, weakSounds: [] },
+        vocabulary: { strong: [], weak: [], total: 45, mastered: 0 },
+        grammar: { mastered: [], learning: [], notStarted: ['N+주세요', '을/를', 'N+개'] },
+      },
+      objectives: POJANGMACHA.levels[0]?.objectives ?? [],
+      isFirstEncounter: true,
+    };
+    systemPrompt = buildHangoutOrchestratorPrompt(defaultVars);
+  }
   const modelId = process.env.OPENAI_MODEL ?? 'gpt-5.2';
 
   console.log('[hangout] AI mode — model:', modelId, 'messages:', messages.length);
