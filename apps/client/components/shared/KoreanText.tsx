@@ -411,12 +411,14 @@ function getTooltipInfo(word: string, targetLang: TargetLang, explainLang: strin
 interface KoreanTextProps {
   text: string;
   targetLang?: TargetLang;
+  /** Called when a word is tapped (in addition to showing tooltip). */
+  onWordTap?: () => void;
 }
 
-export function KoreanText({ text, targetLang = 'ko' }: KoreanTextProps) {
+export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextProps) {
   const explainLang = useUILang();
   const [activeWord, setActiveWord] = useState<string | null>(null);
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number; bottom: number } | null>(null);
   const [tooltipInfo, setTooltipInfo] = useState<{ romanization: string; translation?: string } | null>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [mounted, setMounted] = useState(false);
@@ -445,7 +447,7 @@ export function KoreanText({ text, targetLang = 'ko' }: KoreanTextProps) {
     const rect = target.getBoundingClientRect();
     setActiveWord(word);
     setTooltipInfo(info);
-    setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
+    setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top, bottom: rect.bottom });
   }, [targetLang, explainLang]);
 
   const hideTooltip = useCallback(() => {
@@ -459,11 +461,11 @@ export function KoreanText({ text, targetLang = 'ko' }: KoreanTextProps) {
   }, [showTooltip]);
 
   const handleTap = useCallback((word: string, e: React.MouseEvent | React.TouchEvent) => {
-    e.stopPropagation();
     e.preventDefault();
     if (activeWord === word) { setActiveWord(null); return; }
     showTooltip(word, e.currentTarget as HTMLElement);
-  }, [activeWord, showTooltip]);
+    onWordTap?.();
+  }, [activeWord, showTooltip, onWordTap]);
 
   const tooltipVisible = activeWord && tooltipInfo && tooltipPos;
 
@@ -489,34 +491,51 @@ export function KoreanText({ text, targetLang = 'ko' }: KoreanTextProps) {
         })}
       </span>
 
-      {mounted && tooltipVisible && createPortal(
-        <div
-          className="korean-tooltip fade-in pointer-events-auto"
-          onMouseEnter={() => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); }}
-          onMouseLeave={hideTooltip}
-          style={{
-            position: 'fixed',
-            left: `${tooltipPos.x}px`,
-            top: `${tooltipPos.y - 8}px`,
-            transform: 'translate(-50%, -100%)',
-            zIndex: 99999,
-          }}
-        >
-          <div className="rounded-lg bg-[#16213e] border border-[var(--color-accent-gold)]/40 px-3 py-2 shadow-lg text-left min-w-[140px]">
-            <p className="text-sm font-medium text-[var(--color-accent-gold)] m-0">{activeWord}</p>
-            {tooltipInfo.romanization && (
-              <p className="text-xs text-[var(--color-text-muted)] m-0">{tooltipInfo.romanization}</p>
+      {mounted && tooltipVisible && (() => {
+        // Find the game-frame to check if tooltip would overflow its top edge
+        const frame = document.querySelector('.game-frame');
+        const frameTop = frame ? frame.getBoundingClientRect().top : 0;
+        const spaceAbove = tooltipPos.y - frameTop;
+        const flipBelow = spaceAbove < 90; // tooltip is ~80px tall
+
+        return createPortal(
+          <div
+            className="korean-tooltip fade-in pointer-events-auto"
+            onMouseEnter={() => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); }}
+            onMouseLeave={hideTooltip}
+            style={{
+              position: 'fixed',
+              left: `${tooltipPos.x}px`,
+              top: flipBelow ? `${tooltipPos.bottom + 8}px` : `${tooltipPos.y - 8}px`,
+              transform: flipBelow ? 'translate(-50%, 0%)' : 'translate(-50%, -100%)',
+              zIndex: 99999,
+            }}
+          >
+            {/* Arrow on top when flipped below */}
+            {flipBelow && (
+              <div className="flex justify-center">
+                <div className="w-2 h-2 rotate-45 bg-[#16213e] border-l border-t border-[var(--color-accent-gold)]/40 -mb-1" style={{ zIndex: 1 }} />
+              </div>
             )}
-            {tooltipInfo.translation && (
-              <p className="text-xs text-[var(--color-text)] mt-0.5 m-0">{tooltipInfo.translation}</p>
+            <div className="rounded-lg bg-[#16213e] border border-[var(--color-accent-gold)]/40 px-3 py-2 shadow-lg text-left min-w-[140px]">
+              <p className="text-sm font-medium text-[var(--color-accent-gold)] m-0">{activeWord}</p>
+              {tooltipInfo.romanization && (
+                <p className="text-xs text-[var(--color-text-muted)] m-0">{tooltipInfo.romanization}</p>
+              )}
+              {tooltipInfo.translation && (
+                <p className="text-xs text-[var(--color-text)] mt-0.5 m-0">{tooltipInfo.translation}</p>
+              )}
+            </div>
+            {/* Arrow on bottom when above (default) */}
+            {!flipBelow && (
+              <div className="flex justify-center">
+                <div className="w-2 h-2 rotate-45 bg-[#16213e] border-r border-b border-[var(--color-accent-gold)]/40 -mt-1" />
+              </div>
             )}
-          </div>
-          <div className="flex justify-center">
-            <div className="w-2 h-2 rotate-45 bg-[#16213e] border-r border-b border-[var(--color-accent-gold)]/40 -mt-1" />
-          </div>
-        </div>,
-        document.body,
-      )}
+          </div>,
+          document.body,
+        );
+      })()}
     </>
   );
 }
