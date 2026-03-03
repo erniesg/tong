@@ -26,6 +26,7 @@ import { UILangProvider } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
 import type { UILang } from '@/lib/i18n/ui-strings';
 import { GameHUD } from '@/components/hud/GameHUD';
+import { ExerciseModal } from '@/components/learn/ExerciseModal';
 
 /* ── scene constants ────────────────────────────────────── */
 
@@ -111,7 +112,7 @@ const PAUSE_BETWEEN_LINES_MS = 600;
 
 /* ── types ──────────────────────────────────────────────── */
 
-type Phase = 'intro' | 'proficiency' | 'hangout' | 'city_map' | 'learn';
+type Phase = 'intro' | 'proficiency' | 'hangout' | 'city_map' | 'learn' | 'dev';
 
 /* ── helpers ────────────────────────────────────────────── */
 
@@ -167,12 +168,13 @@ export default function GamePage() {
   const searchParams = useSearchParams();
   const gameState = useGameState();
 
-  /* phase state — ?phase=hangout|city_map skips straight there */
+  /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester */
   const phaseParam = searchParams.get('phase');
+  const devParam = searchParams.get('dev');
   const skipToHangout = phaseParam === 'hangout';
   const skipToCityMap = phaseParam === 'city_map';
   const [phase, setPhase] = useState<Phase>(
-    skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : 'intro'
+    devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : 'intro'
   );
   const [lineIndex, setLineIndex] = useState(0);
   const [displayedChars, setDisplayedChars] = useState(0);
@@ -198,6 +200,11 @@ export default function GamePage() {
   const [selectedLocation, setSelectedLocation] = useState<LocationId | null>(null);
   const [reviewSession, setReviewSession] = useState<CompletedSession | null>(null);
 
+  /* dev exercise tester state */
+  const [devExType, setDevExType] = useState(searchParams.get('type') ?? 'stroke_tracing');
+  const [devObjective, setDevObjective] = useState('ko-script-consonants');
+  const [devExercise, setDevExercise] = useState<ExerciseData | null>(null);
+  const [devLastResult, setDevLastResult] = useState<{ correct: boolean; id: string } | null>(null);
 
   /* NPC character ref — set during proficiency confirmation */
   const npcRef = useRef<Character>(HAUEN);
@@ -830,6 +837,96 @@ export default function GamePage() {
         </div>
       </div>
       </UILangProvider>
+    );
+  }
+
+  /* ── Dev exercise tester phase ──────────────────────────────── */
+
+  if (phase === 'dev') {
+    const DEV_EX_TYPES = [
+      'stroke_tracing', 'matching', 'multiple_choice', 'drag_drop',
+      'sentence_builder', 'fill_blank', 'pronunciation_select',
+      'pattern_recognition', 'error_correction', 'free_input',
+    ] as const;
+    const DEV_OBJECTIVES = [
+      { id: 'ko-script-consonants', label: 'Consonants' },
+      { id: 'ko-script-vowels', label: 'Vowels' },
+      { id: 'ko-vocab-food-items', label: 'Food vocab' },
+      { id: 'ko-vocab-courtesy', label: 'Courtesy phrases' },
+      { id: 'ko-gram-juseyo', label: 'Grammar (주세요)' },
+    ];
+
+    return (
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="game-frame" style={{ display: 'flex', flexDirection: 'column', background: 'var(--color-bg-dark, #1a1a2e)' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: 'var(--color-accent-gold, #d4a843)', fontWeight: 700, fontSize: 14, letterSpacing: 1 }}>DEV</span>
+            <span style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>Exercise Tester</span>
+          </div>
+
+          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <label style={{ color: '#ccc', fontSize: 13 }}>
+              Exercise type
+              <select
+                value={devExType}
+                onChange={(e) => { setDevExType(e.target.value); setDevExercise(null); setDevLastResult(null); }}
+                style={{ display: 'block', width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 14 }}
+              >
+                {DEV_EX_TYPES.map((t) => (
+                  <option key={t} value={t}>{t.replace('_', ' ')}</option>
+                ))}
+              </select>
+            </label>
+
+            <label style={{ color: '#ccc', fontSize: 13 }}>
+              Objective
+              <select
+                value={devObjective}
+                onChange={(e) => { setDevObjective(e.target.value); setDevExercise(null); setDevLastResult(null); }}
+                style={{ display: 'block', width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 14 }}
+              >
+                {DEV_OBJECTIVES.map((o) => (
+                  <option key={o.id} value={o.id}>{o.label} ({o.id})</option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              type="button"
+              onClick={() => {
+                const ex = generateExercise(devExType, { objectiveId: devObjective });
+                setDevExercise(ex);
+                setDevLastResult(null);
+              }}
+              style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: 'var(--color-accent-gold, #d4a843)', color: '#1a1a2e', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+            >
+              Generate {devExType.replace('_', ' ')}
+            </button>
+
+            {devLastResult && (
+              <div style={{ padding: '8px 12px', borderRadius: 6, background: devLastResult.correct ? 'rgba(76,175,80,0.2)' : 'rgba(244,67,54,0.2)', color: devLastResult.correct ? '#4caf50' : '#f44336', fontSize: 13, fontWeight: 600 }}>
+                {devLastResult.correct ? 'Correct' : 'Incorrect'} — {devLastResult.id}
+              </div>
+            )}
+
+            {devExercise && (
+              <div style={{ fontSize: 11, color: '#888', wordBreak: 'break-all', maxHeight: 120, overflow: 'auto', padding: '6px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.03)' }}>
+                <strong>Data:</strong> {JSON.stringify(devExercise, null, 0).slice(0, 500)}
+              </div>
+            )}
+          </div>
+
+          {devExercise && (
+            <ExerciseModal
+              exercise={devExercise}
+              onResult={(id, correct) => {
+                setDevLastResult({ correct, id });
+                setDevExercise(null);
+              }}
+            />
+          )}
+        </div>
+      </div>
     );
   }
 

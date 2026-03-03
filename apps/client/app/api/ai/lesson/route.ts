@@ -132,7 +132,10 @@ function srsAwarePick(
 }
 
 /** Exercise types available for fallback sessions. */
-const EXERCISE_TYPES = ['matching', 'drag_drop', 'multiple_choice'] as const;
+const EXERCISE_TYPES = [
+  'matching', 'drag_drop', 'multiple_choice',
+  'stroke_tracing', 'pronunciation_select', 'free_input',
+] as const;
 
 /**
  * Streaming lesson API — drives the learn chat via tool calls.
