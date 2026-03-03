@@ -1047,23 +1047,26 @@ async function handleRequest(request: Request): Promise<Response> {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: 'Tong <hello@berlayar.ai>',
+            from: 'Tong <tong@berlayar.ai>',
             to: [email],
-            subject: 'You\'re on the list \uD83C\uDF89',
-            html: `<div style="font-family:'Space Grotesk',sans-serif;max-width:480px;margin:0 auto;padding:32px 20px">
-              <h1 style="font-size:28px;margin:0 0 16px">Live the drama. Learn the language.</h1>
-              <p style="color:#64748b;font-size:16px;line-height:1.6;margin:0 0 24px">
-                You're on the Tong waitlist. We'll let you know the moment it's ready to play.
+            subject: "You're on the list \uD83C\uDF89",
+            html: `<div style="font-family:'Space Grotesk',system-ui,sans-serif;max-width:520px;margin:0 auto;padding:32px 20px">
+              <div style="text-align:center;margin-bottom:24px">
+                <img src="https://tong.berlayar.ai/assets/app/logo_trimmed.png" alt="Tong" width="60" height="60" style="border-radius:12px"/>
+              </div>
+              <h1 style="font-size:26px;margin:0 0 8px;text-align:center">You're in.</h1>
+              <p style="text-align:center;color:#64748b;font-size:15px;margin:0 0 28px">
+                Tong is an open-source dating sim where you play as a trainee in Seoul, Shanghai and Tokyo. Learn the language to build relationships &mdash; or burn them.
               </p>
               <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0 0 8px">
-                In the meantime, the code is open source:
+                We'll email you when Tong is ready to play. In the meantime, the entire game is open source:
               </p>
               <a href="https://github.com/erniesg/tong" style="color:#ff6b2c;font-weight:600;font-size:14px">
                 github.com/erniesg/tong
               </a>
-              <hr style="border:none;border-top:1px solid #e5d6c2;margin:32px 0 16px"/>
-              <p style="color:#94a3b8;font-size:12px;margin:0">
-                Tong \u2014 Built by <a href="https://berlayar.ai" style="color:#94a3b8">Berlayar</a>
+              <hr style="border:none;border-top:1px solid #e5d6c2;margin:28px 0 16px"/>
+              <p style="color:#94a3b8;font-size:12px;margin:0;text-align:center">
+                Tong &mdash; Built by <a href="https://berlayar.ai" style="color:#94a3b8">Berlayar</a>
               </p>
             </div>`,
           }),
