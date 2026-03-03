@@ -1046,32 +1046,29 @@ button.nav-link:hover {
 }
 
 .tg-menu-logo {
-  width: 200px;
-  height: 200px;
-  background: #fff;
-  border-radius: 50%;
+  width: 180px;
+  height: 180px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px 20px 20px;
-  margin-bottom: 16px;
-  overflow: hidden;
+  justify-content: center;
+  margin-bottom: 12px;
 }
 
 .tg-menu-logo-img {
   width: 100%;
-  flex: 0 0 auto;
-  max-height: 130px;
+  height: auto;
   object-fit: contain;
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.8))
+         drop-shadow(0 0 50px rgba(255, 255, 255, 0.4))
+         drop-shadow(0 0 100px rgba(240, 192, 64, 0.3));
 }
 
 .tg-brand-cycle {
   position: relative;
-  flex: 1;
+  height: 28px;
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  margin-top: 8px;
 }
 
 .tg-brand-cycle > span {
