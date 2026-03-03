@@ -1046,31 +1046,32 @@ button.nav-link:hover {
 }
 
 .tg-menu-logo {
-  width: 140px;
-  height: 140px;
+  width: 200px;
+  height: 200px;
   background: #fff;
   border-radius: 50%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 12px;
+  padding: 16px 20px 20px;
   margin-bottom: 16px;
-  position: relative;
   overflow: hidden;
 }
 
 .tg-menu-logo-img {
-  width: 70%;
-  height: auto;
+  width: 100%;
+  flex: 0 0 auto;
+  max-height: 130px;
   object-fit: contain;
 }
 
 .tg-brand-cycle {
   position: relative;
-  height: 1.2em;
+  flex: 1;
   width: 100%;
-  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tg-brand-cycle > span {

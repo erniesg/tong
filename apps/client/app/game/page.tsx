@@ -613,11 +613,11 @@ export default function GamePage() {
           <div className="tg-menu">
             <div className="tg-menu-logo">
               <img className="tg-menu-logo-img" src="/assets/app/logo_transparent.png" alt="Tong" />
-              <span className="tg-brand-cycle">
+              <div className="tg-brand-cycle">
                 <span>tōng</span>
                 <span>통</span>
                 <span>つう</span>
-              </span>
+              </div>
             </div>
             <p className="tg-menu-tagline">
               Live the drama. <span className="tg-menu-tagline-accent">Learn the language.</span>
