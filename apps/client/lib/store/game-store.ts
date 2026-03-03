@@ -16,6 +16,7 @@ export interface GameState {
   sp: number;
   selfAssessedLevel: number | null;
   calibratedLevel: number | null;
+  playerName: string;
   locationLevels: Record<string, { level: number }>;
   locationHangoutCounts: Record<string, number>;   // key: "seoul:food_street"
   unlockedLocations: Record<string, boolean>;       // key: "seoul:cafe"
@@ -35,7 +36,8 @@ export type GameAction =
   | { type: 'INCREMENT_INTERACTION'; characterId: string }
   | { type: 'INCREMENT_LOCATION_HANGOUT'; cityId: string; locationId: string }
   | { type: 'UNLOCK_LOCATION'; cityId: string; locationId: string }
-  | { type: 'SET_EXPLAIN_LANGUAGE'; cityId: CityId; lang: AppLang };
+  | { type: 'SET_EXPLAIN_LANGUAGE'; cityId: CityId; lang: AppLang }
+  | { type: 'SET_PLAYER_NAME'; name: string };
 
 /* ── Persistence ────────────────────────────────────────── */
 
@@ -52,6 +54,7 @@ function loadState(): GameState {
       const state: GameState = {
         ...defaults,
         ...parsed,
+        playerName: parsed.playerName ?? '',
         locationHangoutCounts: parsed.locationHangoutCounts ?? defaults.locationHangoutCounts,
         unlockedLocations: parsed.unlockedLocations ?? defaults.unlockedLocations,
         explainIn: (parsed.explainIn && typeof parsed.explainIn === 'object')
@@ -89,6 +92,7 @@ function createInitialState(): GameState {
     sp: 0,
     selfAssessedLevel: null,
     calibratedLevel: null,
+    playerName: '',
     locationLevels: {},
     locationHangoutCounts: {},
     unlockedLocations: { 'seoul:food_street': true, 'shanghai:dumpling_shop': true, 'tokyo:ramen_shop': true },
@@ -191,6 +195,8 @@ function reduce(state: GameState, action: GameAction): GameState {
     }
     case 'SET_EXPLAIN_LANGUAGE':
       return { ...state, explainIn: { ...state.explainIn, [action.cityId]: action.lang } };
+    case 'SET_PLAYER_NAME':
+      return { ...state, playerName: action.name };
     default:
       return state;
   }

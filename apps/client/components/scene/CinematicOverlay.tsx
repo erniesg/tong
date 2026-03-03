@@ -6,10 +6,11 @@ interface CinematicOverlayProps {
   videoUrl: string;
   caption?: string;
   autoAdvance: boolean;
+  muted?: boolean;
   onEnd: () => void;
 }
 
-export function CinematicOverlay({ videoUrl, caption, autoAdvance, onEnd }: CinematicOverlayProps) {
+export function CinematicOverlay({ videoUrl, caption, autoAdvance, muted = true, onEnd }: CinematicOverlayProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleEnded = useCallback(() => {
@@ -36,7 +37,7 @@ export function CinematicOverlay({ videoUrl, caption, autoAdvance, onEnd }: Cine
         src={videoUrl}
         autoPlay
         playsInline
-        muted
+        muted={muted}
         onEnded={handleEnded}
         className="cinematic-video"
       />
