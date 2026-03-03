@@ -2703,12 +2703,6 @@ button.nav-link:hover {
   border: none !important;
 }
 
-/* Flip tooltips downward inside city-map title to prevent top-edge clipping */
-.city-map__title .ko-token:hover::after {
-  bottom: auto;
-  top: calc(100% + 8px);
-}
-
 @keyframes pinPulse {
   0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); }
   50% { transform: scale(1.25); box-shadow: 0 2px 16px rgba(240, 192, 64, 0.6); }

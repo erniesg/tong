@@ -28,7 +28,7 @@ export function LocationPin({ locationId, label, labelKo, top, left, unlocked, a
     >
       <div className="location-pin__dot" onClick={handleClick} />
       <span className="location-pin__label" onClick={handleClick}>
-        <KoreanText text={labelKo} targetLang={targetLang} />
+        <KoreanText text={labelKo} targetLang={targetLang} onWordTap={unlocked ? handleClick : undefined} />
       </span>
     </div>
   );
