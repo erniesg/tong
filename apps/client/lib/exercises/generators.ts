@@ -7,10 +7,12 @@ import type {
   PronunciationSelectExercise,
   PatternRecognitionExercise,
   StrokeTracingExercise,
+  BlockCrushExercise,
   ErrorCorrectionExercise,
   FreeInputExercise,
   ExerciseData,
 } from '@/lib/types/hangout';
+import { getRandomTarget } from '@/lib/content/block-crush-data';
 import { VOCABULARY_TARGETS } from '@/lib/content/pojangmacha';
 import type { ItemMastery } from '@/lib/types/mastery';
 import { getDueItems, getNewItems } from '@/lib/curriculum/srs';
@@ -748,6 +750,29 @@ function generateStrokeTracing(
   };
 }
 
+function generateBlockCrush(
+  objectiveId: string,
+  language?: 'ko' | 'zh' | 'ja',
+): BlockCrushExercise {
+  const lang = language ?? 'ko';
+  const difficulty = objectiveId.includes('radical') ? 2 : 1;
+  const target = getRandomTarget(lang, difficulty);
+
+  return {
+    type: 'block_crush',
+    id: stableId('bc', objectiveId, [target.char]),
+    objectiveId,
+    difficulty: target.difficulty,
+    prompt: `Build the character: ${target.char}`,
+    language: lang,
+    targetChar: target.char,
+    components: target.components,
+    romanization: target.romanization,
+    meaning: target.meaning,
+    explanation: `${target.char} is made from ${target.components.map((c) => c.piece).join(' + ')}`,
+  };
+}
+
 function generateErrorCorrection(
   _pool: VocabItem[],
   objectiveId: string,
@@ -847,6 +872,8 @@ export function generateExercise(exerciseType: string, hints?: ExerciseHints): E
       return generatePatternRecognition(objectiveId, language);
     case 'stroke_tracing':
       return generateStrokeTracing(pool, objectiveId, hintItems, language);
+    case 'block_crush':
+      return generateBlockCrush(objectiveId, language);
     case 'error_correction':
       return generateErrorCorrection(pool, objectiveId);
     case 'free_input':

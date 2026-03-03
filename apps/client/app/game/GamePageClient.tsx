@@ -73,6 +73,7 @@ interface SceneLine {
   speaker: 'character' | 'you' | 'tong' | 'narrator';
   text: string;
   speakerName?: string;
+  expression?: string;
 }
 import { SceneView } from '@/components/scene/SceneView';
 
@@ -311,6 +312,48 @@ function mergeCharacterPayload(base: SceneCharacter, payload?: SceneCharacter): 
   };
 }
 
+/** Default sprite per character — uses descriptive filename so we know exactly what's showing */
+const CHARACTER_DEFAULT_SPRITE: Record<string, string> = {
+  haeun: 'eye_front_casual.png',
+  jin: 'eye_front_casual.png',
+};
+
+/**
+ * Expression → sprite mapping. Populate as we generate more poses.
+ * Unmapped expressions fall back to the default sprite above.
+ */
+const EXPRESSION_SPRITES: Record<string, Partial<Record<string, string>>> = {
+  haeun: {
+    // TODO: generate dedicated expression poses using reference images
+    // angry: 'eye_front_casual_grimace.png',
+    // surprised: 'eye_right_bare_teeth.png',
+  },
+  jin: {
+    // TODO: generate dedicated expression poses using reference images
+    // angry: 'eye_front_bare_grimace.png',
+    // surprised: 'eye_right_bare_teeth.png',
+  },
+};
+
+function getCharacterSpriteUrl(value?: SceneCharacter, expression?: string): string | null {
+  if (!value) return null;
+  const safeName = (value.name || '').toLowerCase().trim();
+  const safeId = (value.id || '').toLowerCase().trim();
+
+  let charKey: string | null = null;
+  if (safeId === 'npc_haeun' || safeName === 'haeun') charKey = 'haeun';
+  if (safeId === 'npc_jin' || safeId === 'npc_ding_man' || safeName === 'jin' || safeName === 'ding') charKey = 'jin';
+
+  if (charKey) {
+    const exprFile = expression && EXPRESSION_SPRITES[charKey]?.[expression];
+    const file = exprFile || CHARACTER_DEFAULT_SPRITE[charKey] || `${charKey}.png`;
+    return `/assets/characters/${charKey}/${file}`;
+  }
+
+  if (value.assetKey) return `/assets/characters/${value.assetKey}`;
+  return null;
+}
+
 function getCharacterAvatarPaths(value?: SceneCharacter): string[] {
   if (!value) return [];
   const options: string[] = [];
@@ -319,13 +362,14 @@ function getCharacterAvatarPaths(value?: SceneCharacter): string[] {
   const safeId = (value.id || '').toLowerCase().trim();
 
   if (safeId === 'npc_haeun' || safeName === 'haeun') {
+    options.push('/assets/characters/haeun/eye_front_casual.png');
     options.push('/assets/characters/haeun/haeun.png');
     options.push('/assets/characters/hauen/haeun.png');
   }
 
   if (safeId === 'npc_jin' || safeId === 'npc_ding_man' || safeName === 'jin' || safeName === 'ding') {
+    options.push('/assets/characters/jin/eye_front_casual.png');
     options.push('/assets/characters/jin/jin.png');
-    options.push('/assets/characters/ding_man/avatar.png');
     options.push('/assets/characters/ding_man/ding_man.png');
   }
 
@@ -420,6 +464,8 @@ export default function GamePageClient({
   const characterAvatarSrc = characterAvatarOptions[avatarPathIndex] || null;
 
   const activeSceneLine = pendingUserLine ? null : sceneLines[sceneLineIndex] || null;
+  const currentExpression = activeSceneLine?.expression;
+  const expressionSpriteUrl = getCharacterSpriteUrl(character, currentExpression);
   const isUserTurn = awaitingUserTurn && Boolean(sceneSessionId) && !sendingTurn;
 
   const activeSpeakerLabel = pendingUserLine
@@ -623,6 +669,7 @@ export default function GamePageClient({
         speaker: 'character' as const,
         text: op.text!.trim(),
         speakerName: op.speakerName,
+        expression: typeof op.expression === 'string' ? op.expression : undefined,
       }));
   }
 
@@ -1137,6 +1184,9 @@ export default function GamePageClient({
                     tongHint={tongHint}
                     onDismissTong={() => setTongHint(null)}
                     speakerName={activeSpeakerLabel}
+                    npcSpriteUrl={shouldShowAvatar && !avatarLoadFailed ? (expressionSpriteUrl || characterAvatarSrc || '') : ''}
+                    npcName={character.name || ''}
+                    npcColor={character.name?.toLowerCase() === 'jin' ? '#4a90d9' : '#e8485c'}
                     avatarUrl={shouldShowAvatar && !avatarLoadFailed ? characterAvatarSrc : null}
                     onAvatarError={() => {
                       const nextIndex = avatarPathIndex + 1;
