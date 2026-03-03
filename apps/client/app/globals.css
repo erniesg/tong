@@ -2614,7 +2614,7 @@ button.nav-link:hover {
   top: 0;
   left: 0;
   right: 0;
-  padding: 20px 20px 0;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 20px 0;
   z-index: 4;
   pointer-events: none;
 }
@@ -2701,6 +2701,12 @@ button.nav-link:hover {
 /* Remove dotted underline from Korean text inside pins — tooltip still works on tap */
 .location-pin__label .text-ko {
   border: none !important;
+}
+
+/* Flip tooltips downward inside city-map title to prevent top-edge clipping */
+.city-map__title .ko-token:hover::after {
+  bottom: auto;
+  top: calc(100% + 8px);
 }
 
 @keyframes pinPulse {

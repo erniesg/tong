@@ -16,7 +16,7 @@ import type { ItemMastery } from '@/lib/types/mastery';
 import { getDueItems, getNewItems } from '@/lib/curriculum/srs';
 import { HANGUL_DESIGN_PRINCIPLES } from '@/lib/content/scripts/hangul';
 import { PINYIN_DESIGN_PRINCIPLES } from '@/lib/content/scripts/pinyin';
-import { KANA_DESIGN_PRINCIPLES } from '@/lib/content/scripts/kana';
+import { KANA_DESIGN_PRINCIPLES, HIRAGANA, KATAKANA } from '@/lib/content/scripts/kana';
 import { getLocationVocab, getRegisteredLocationKeys } from '@/lib/content/locations';
 import type { DesignPrinciple } from '@/lib/content/scripts/hangul';
 
@@ -95,6 +95,54 @@ const VOWELS: VocabItem[] = [
 ];
 
 const ALL_JAMO: VocabItem[] = [...CONSONANTS, ...VOWELS];
+
+/* ── Japanese kana as VocabItem pools ─────────────────────── */
+
+const HIRAGANA_POOL: VocabItem[] = HIRAGANA.map((k) => ({
+  word: k.kana, translation: k.romaji, romanization: k.romaji,
+}));
+
+const KATAKANA_POOL: VocabItem[] = KATAKANA.map((k) => ({
+  word: k.kana, translation: k.romaji, romanization: k.romaji,
+}));
+
+const ALL_KANA: VocabItem[] = [...HIRAGANA_POOL, ...KATAKANA_POOL];
+
+/* ── Chinese basic radicals & characters for stroke tracing ── */
+
+const CHINESE_RADICALS: VocabItem[] = [
+  // Standalone radicals that are also common characters
+  { word: '一', translation: 'one', romanization: 'yī' },
+  { word: '二', translation: 'two', romanization: 'èr' },
+  { word: '三', translation: 'three', romanization: 'sān' },
+  { word: '十', translation: 'ten', romanization: 'shí' },
+  { word: '大', translation: 'big', romanization: 'dà' },
+  { word: '小', translation: 'small', romanization: 'xiǎo' },
+  { word: '人', translation: 'person', romanization: 'rén' },
+  { word: '口', translation: 'mouth', romanization: 'kǒu' },
+  { word: '日', translation: 'sun/day', romanization: 'rì' },
+  { word: '月', translation: 'moon/month', romanization: 'yuè' },
+  { word: '木', translation: 'tree/wood', romanization: 'mù' },
+  { word: '水', translation: 'water', romanization: 'shuǐ' },
+  { word: '火', translation: 'fire', romanization: 'huǒ' },
+  { word: '土', translation: 'earth/soil', romanization: 'tǔ' },
+  { word: '山', translation: 'mountain', romanization: 'shān' },
+  { word: '石', translation: 'stone', romanization: 'shí' },
+  { word: '田', translation: 'field', romanization: 'tián' },
+  { word: '目', translation: 'eye', romanization: 'mù' },
+  { word: '手', translation: 'hand', romanization: 'shǒu' },
+  { word: '心', translation: 'heart', romanization: 'xīn' },
+  { word: '女', translation: 'woman', romanization: 'nǚ' },
+  { word: '子', translation: 'child', romanization: 'zǐ' },
+  { word: '力', translation: 'power', romanization: 'lì' },
+  { word: '刀', translation: 'knife', romanization: 'dāo' },
+  { word: '中', translation: 'middle', romanization: 'zhōng' },
+  { word: '天', translation: 'sky/heaven', romanization: 'tiān' },
+  { word: '王', translation: 'king', romanization: 'wáng' },
+  { word: '白', translation: 'white', romanization: 'bái' },
+  { word: '金', translation: 'gold/metal', romanization: 'jīn' },
+  { word: '雨', translation: 'rain', romanization: 'yǔ' },
+];
 
 /* ── Vocab pools derived from location content ────────────── */
 
@@ -627,29 +675,53 @@ function generatePatternRecognition(
   };
 }
 
+/** Get the script-building-block pool for a language (jamo / kana / radicals). */
+function getScriptPool(language: 'ko' | 'zh' | 'ja', objectiveId?: string): VocabItem[] {
+  switch (language) {
+    case 'ko':
+      if (objectiveId?.includes('script-consonants')) return CONSONANTS;
+      if (objectiveId?.includes('script-vowels')) return VOWELS;
+      return ALL_JAMO;
+    case 'ja':
+      if (objectiveId?.includes('katakana')) return KATAKANA_POOL;
+      if (objectiveId?.includes('hiragana')) return HIRAGANA_POOL;
+      return ALL_KANA;
+    case 'zh':
+      return CHINESE_RADICALS;
+  }
+}
+
 function generateStrokeTracing(
   pool: VocabItem[],
   objectiveId: string,
   hintItems?: string[],
   language?: 'ko' | 'zh' | 'ja',
 ): StrokeTracingExercise {
+  const lang = language ?? 'ko';
+
+  // For stroke tracing, prefer script building blocks (jamo/kana/radicals)
+  // over general vocab, unless AI gave specific hintItems.
+  const scriptPool = getScriptPool(lang, objectiveId);
+
   // Pick a target character
   let target: string;
   let targetItem: VocabItem | undefined;
 
   if (hintItems && hintItems.length > 0) {
     target = hintItems[Math.floor(Math.random() * hintItems.length)];
-    // Try to find the matching pool item for romanization
-    targetItem = pool.find((v) => v.word === target);
+    // Try to find romanization from script pool first, then general pool
+    targetItem = scriptPool.find((v) => v.word === target)
+      ?? pool.find((v) => v.word === target);
   } else {
-    const item = pool[Math.floor(Math.random() * pool.length)];
-    target = item.word.charAt(0); // first character
-    // For single-char items (jamo), the item itself has the romanization
+    // Pick from script building blocks when available
+    const sourcePool = scriptPool.length > 0 ? scriptPool : pool;
+    const item = sourcePool[Math.floor(Math.random() * sourcePool.length)];
+    target = item.word.length === 1 ? item.word : item.word.charAt(0);
     if (item.word.length === 1) targetItem = item;
   }
 
-  // Find example words that contain this character (from ALL_VOCAB + pool)
-  const allItems = [...ALL_VOCAB, ...pool];
+  // Find example words that contain this character
+  const allItems = [...ALL_VOCAB, ...pool, ...scriptPool];
   const seen = new Set<string>();
   const exampleWords: { word: string; romanization: string; meaning: string }[] = [];
   for (const v of allItems) {
@@ -671,7 +743,7 @@ function generateStrokeTracing(
     explanation: `Practice writing ${target} to build muscle memory.`,
     romanization: targetItem?.romanization,
     sound: targetItem?.word ?? target,
-    language: language ?? 'ko',
+    language: lang,
     exampleWords: exampleWords.length > 0 ? exampleWords : undefined,
   };
 }

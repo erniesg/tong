@@ -133,6 +133,7 @@ const CITY_DEFINITIONS: CityDefinition[] = [
     mapPosition: 'left',
     vibe: 'Shibuya after-hours energy',
     backdropImage: '/assets/locations/tokyo-static.png',
+    backdropVideo: '/assets/locations/tokyo.mp4',
   },
   {
     id: 'seoul',
@@ -179,6 +180,11 @@ const LOCATION_LABELS: Record<LocationId, string> = {
   bbq_stall: 'BBQ Stall',
   milk_tea_shop: 'Milk Tea Shop',
   dumpling_shop: 'Dumpling Shop',
+  train_station: 'Train Station',
+  izakaya: 'Izakaya',
+  konbini: 'Convenience Store',
+  tea_house: 'Tea House',
+  ramen_shop: 'Ramen Shop',
 };
 
 const LOCATIONS: LocationId[] = [
@@ -200,6 +206,11 @@ const LOCATION_CHARACTERS_BY_CITY: Record<CityId, Record<LocationId, SceneCharac
     bbq_stall: { name: 'Ara', role: 'Grill vendor', avatarEmoji: 'BB', mood: 'lively' },
     milk_tea_shop: { name: 'Jin', role: 'Tea connoisseur', avatarEmoji: 'MT', mood: 'chill' },
     dumpling_shop: { name: 'Min', role: 'Dumpling chef', avatarEmoji: 'DM', mood: 'proud' },
+    train_station: { name: 'Haneul', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
+    izakaya: { name: 'Haeun', role: 'Evening companion', avatarEmoji: 'HR', mood: 'warm' },
+    konbini: { name: 'Min', role: 'Store clerk', avatarEmoji: 'CV', mood: 'helpful' },
+    tea_house: { name: 'Jin', role: 'Tea connoisseur', avatarEmoji: 'JN', mood: 'charming' },
+    ramen_shop: { name: 'Ara', role: 'Ramen enthusiast', avatarEmoji: 'PS', mood: 'energetic' },
   },
   tokyo: {
     food_street: { name: 'Haeun', role: 'Primary romance route lead', avatarEmoji: 'HR', mood: 'warm' },
@@ -211,6 +222,11 @@ const LOCATION_CHARACTERS_BY_CITY: Record<CityId, Record<LocationId, SceneCharac
     bbq_stall: { name: 'Kenji', role: 'Grill master', avatarEmoji: 'BB', mood: 'lively' },
     milk_tea_shop: { name: 'Yui', role: 'Tea server', avatarEmoji: 'MT', mood: 'sweet' },
     dumpling_shop: { name: 'Takeshi', role: 'Gyoza vendor', avatarEmoji: 'DM', mood: 'cheerful' },
+    train_station: { name: 'Daichi', role: 'Station guide', avatarEmoji: 'SB', mood: 'focused' },
+    izakaya: { name: 'Kenji', role: 'Izakaya regular', avatarEmoji: 'IZ', mood: 'lively' },
+    konbini: { name: 'Sora', role: 'Konbini clerk', avatarEmoji: 'CV', mood: 'helpful' },
+    tea_house: { name: 'Yui', role: 'Tea ceremony host', avatarEmoji: 'TH', mood: 'serene' },
+    ramen_shop: { name: 'Takeshi', role: 'Ramen chef', avatarEmoji: 'RM', mood: 'passionate' },
   },
   shanghai: {
     food_street: { name: 'Mei', role: 'Street food guide', avatarEmoji: 'FS', mood: 'warm' },
@@ -222,6 +238,11 @@ const LOCATION_CHARACTERS_BY_CITY: Record<CityId, Record<LocationId, SceneCharac
     bbq_stall: { name: 'Da Peng', role: 'BBQ vendor', avatarEmoji: 'BB', mood: 'boisterous' },
     milk_tea_shop: { name: 'Lian', role: 'Tea enthusiast', avatarEmoji: 'NC', mood: 'bubbly' },
     dumpling_shop: { name: 'Mei', role: 'Dumpling auntie', avatarEmoji: 'XL', mood: 'warm' },
+    train_station: { name: 'Wei', role: 'Commuter guide', avatarEmoji: 'SB', mood: 'focused' },
+    izakaya: { name: 'Da Peng', role: 'Evening host', avatarEmoji: 'BB', mood: 'boisterous' },
+    konbini: { name: 'Bo', role: 'Store clerk', avatarEmoji: 'CV', mood: 'helpful' },
+    tea_house: { name: 'Lian', role: 'Tea house regular', avatarEmoji: 'CF', mood: 'charming' },
+    ramen_shop: { name: 'Mei', role: 'Noodle vendor', avatarEmoji: 'FS', mood: 'warm' },
   },
 };
 

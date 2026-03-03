@@ -104,6 +104,12 @@ const LOCATION_NAMES: Record<LocationId, string> = {
   bbq_stall: 'BBQ Stall',
   milk_tea_shop: 'Milk Tea Shop',
   dumpling_shop: 'Dumpling Shop',
+  // Tokyo
+  train_station: 'Train Station',
+  izakaya: 'Izakaya',
+  konbini: 'Convenience Store',
+  tea_house: 'Tea House',
+  ramen_shop: 'Ramen Shop',
 };
 
 const CHARS_PER_TICK = 2;
@@ -849,11 +855,16 @@ export default function GamePage() {
       'pattern_recognition', 'error_correction', 'free_input',
     ] as const;
     const DEV_OBJECTIVES = [
-      { id: 'ko-script-consonants', label: 'Consonants' },
-      { id: 'ko-script-vowels', label: 'Vowels' },
-      { id: 'ko-vocab-food-items', label: 'Food vocab' },
-      { id: 'ko-vocab-courtesy', label: 'Courtesy phrases' },
-      { id: 'ko-gram-juseyo', label: 'Grammar (주세요)' },
+      { id: 'ko-script-consonants', label: '🇰🇷 Consonants (ㄱㄴㄷ)', lang: 'ko' as const },
+      { id: 'ko-script-vowels', label: '🇰🇷 Vowels (ㅏㅓㅗ)', lang: 'ko' as const },
+      { id: 'ko-vocab-food-items', label: '🇰🇷 Food vocab', lang: 'ko' as const },
+      { id: 'ko-vocab-courtesy', label: '🇰🇷 Courtesy phrases', lang: 'ko' as const },
+      { id: 'ko-gram-juseyo', label: '🇰🇷 Grammar (주세요)', lang: 'ko' as const },
+      { id: 'ja-script-hiragana', label: '🇯🇵 Hiragana (あいう)', lang: 'ja' as const },
+      { id: 'ja-script-katakana', label: '🇯🇵 Katakana (アイウ)', lang: 'ja' as const },
+      { id: 'ja-vocab-general', label: '🇯🇵 Vocab (Tokyo)', lang: 'ja' as const },
+      { id: 'zh-script-radicals', label: '🇨🇳 Radicals (人口日)', lang: 'zh' as const },
+      { id: 'zh-vocab-general', label: '🇨🇳 Vocab (Shanghai)', lang: 'zh' as const },
     ];
 
     return (
@@ -894,7 +905,8 @@ export default function GamePage() {
             <button
               type="button"
               onClick={() => {
-                const ex = generateExercise(devExType, { objectiveId: devObjective });
+                const obj = DEV_OBJECTIVES.find((o) => o.id === devObjective);
+                const ex = generateExercise(devExType, { objectiveId: devObjective, language: obj?.lang ?? 'ko' });
                 setDevExercise(ex);
                 setDevLastResult(null);
               }}

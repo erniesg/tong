@@ -14,7 +14,7 @@ import { getLanguageForCity } from '@/lib/content/locations';
 const CITY_ORDER: CityId[] = ['tokyo', 'seoul', 'shanghai'];
 
 const CITY_META: Record<CityId, { en: string; local: string; hasVideo: boolean }> = {
-  tokyo:    { en: 'Tokyo',    local: '東京', hasVideo: false },
+  tokyo:    { en: 'Tokyo',    local: '東京', hasVideo: true },
   seoul:    { en: 'Seoul',    local: '서울', hasVideo: true },
   shanghai: { en: 'Shanghai', local: '上海', hasVideo: true },
 };
@@ -46,7 +46,13 @@ const CITY_LOCATIONS: Record<CityId, LocationConfig[]> = {
     { id: 'milk_tea_shop',     en: 'Milk Tea Shop',       local: '奶茶店',     top: '75%', left: '22%' },
     { id: 'dumpling_shop',     en: 'Dumpling Shop',       local: '小笼包店',   top: '88%', left: '75%' },
   ],
-  tokyo: [],
+  tokyo: [
+    { id: 'train_station', en: 'Train Station',      local: '駅',         top: '22%', left: '18%' },
+    { id: 'izakaya',       en: 'Izakaya',             local: '居酒屋',     top: '18%', left: '72%' },
+    { id: 'konbini',       en: 'Convenience Store',   local: 'コンビニ',   top: '40%', left: '75%' },
+    { id: 'tea_house',     en: 'Tea House',            local: '茶屋',       top: '55%', left: '18%' },
+    { id: 'ramen_shop',    en: 'Ramen Shop',           local: 'ラーメン屋', top: '82%', left: '72%' },
+  ],
 };
 
 const SWIPE_THRESHOLD = 50;
