@@ -492,11 +492,15 @@ export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextPro
       </span>
 
       {mounted && tooltipVisible && (() => {
-        // Find the game-frame to check if tooltip would overflow its top edge
+        // Find the game-frame to clamp tooltip within its bounds
         const frame = document.querySelector('.game-frame');
-        const frameTop = frame ? frame.getBoundingClientRect().top : 0;
-        const spaceAbove = tooltipPos.y - frameTop;
+        const frameRect = frame ? frame.getBoundingClientRect() : { top: 0, left: 0, right: window.innerWidth };
+        const spaceAbove = tooltipPos.y - frameRect.top;
         const flipBelow = spaceAbove < 90; // tooltip is ~80px tall
+
+        // Clamp horizontal position so tooltip stays within game frame
+        const tooltipHalfW = 80; // ~half of min-w-[140px] + padding
+        const clampedX = Math.max(frameRect.left + tooltipHalfW + 8, Math.min(tooltipPos.x, frameRect.right - tooltipHalfW - 8));
 
         return createPortal(
           <div
@@ -505,10 +509,11 @@ export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextPro
             onMouseLeave={hideTooltip}
             style={{
               position: 'fixed',
-              left: `${tooltipPos.x}px`,
+              left: `${clampedX}px`,
               top: flipBelow ? `${tooltipPos.bottom + 8}px` : `${tooltipPos.y - 8}px`,
               transform: flipBelow ? 'translate(-50%, 0%)' : 'translate(-50%, -100%)',
               zIndex: 99999,
+              maxWidth: `${frameRect.right - frameRect.left - 16}px`,
             }}
           >
             {/* Arrow on top when flipped below */}
