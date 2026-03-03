@@ -50,6 +50,8 @@ export interface EnrichedCaptions {
   segments: CaptionSegment[];
 }
 
+export type IngestionSnapshotResult = Record<string, any>;
+
 export interface DictionaryEntry {
   term: string;
   lang: 'ko' | 'ja' | 'zh';

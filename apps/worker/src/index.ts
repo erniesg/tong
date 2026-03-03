@@ -856,7 +856,8 @@ async function handleRequest(request: Request): Promise<Response> {
     const pathname = url.pathname;
 
     if (pathname === '/health') {
-      return jsonResponse(200, { ok: true, service: 'tong-api' });
+      const env = (globalThis as any).__env;
+      return jsonResponse(200, { ok: true, service: 'tong-api', hasResend: !!env?.RESEND_API_KEY, hasDB: !!env?.DB });
     }
 
     if (pathname === '/api/v1/captions/enriched' && request.method === 'GET') {
@@ -1018,6 +1019,59 @@ async function handleRequest(request: Request): Promise<Response> {
       });
     }
 
+    if (pathname === '/api/v1/signup' && request.method === 'POST') {
+      const body = await readJsonBody(request);
+      const email = String(body.email || '').trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return jsonResponse(400, { error: 'invalid_email' });
+      }
+      const env = (globalThis as any).__env;
+      if (!env?.DB) {
+        return jsonResponse(500, { error: 'db_not_configured' });
+      }
+      let isNew = true;
+      try {
+        await env.DB.prepare('INSERT INTO signups (email) VALUES (?)').bind(email).run();
+      } catch (err: any) {
+        if (err?.message?.includes('UNIQUE')) {
+          isNew = false;
+        } else {
+          throw err;
+        }
+      }
+      if (isNew && env.RESEND_API_KEY) {
+        fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'Tong <hello@berlayar.ai>',
+            to: [email],
+            subject: 'You\'re on the list \uD83C\uDF89',
+            html: `<div style="font-family:'Space Grotesk',sans-serif;max-width:480px;margin:0 auto;padding:32px 20px">
+              <h1 style="font-size:28px;margin:0 0 16px">Live the drama. Learn the language.</h1>
+              <p style="color:#64748b;font-size:16px;line-height:1.6;margin:0 0 24px">
+                You're on the Tong waitlist. We'll let you know the moment it's ready to play.
+              </p>
+              <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0 0 8px">
+                In the meantime, the code is open source:
+              </p>
+              <a href="https://github.com/erniesg/tong" style="color:#ff6b2c;font-weight:600;font-size:14px">
+                github.com/erniesg/tong
+              </a>
+              <hr style="border:none;border-top:1px solid #e5d6c2;margin:32px 0 16px"/>
+              <p style="color:#94a3b8;font-size:12px;margin:0">
+                Tong \u2014 Built by <a href="https://berlayar.ai" style="color:#94a3b8">Berlayar</a>
+              </p>
+            </div>`,
+          }),
+        }).catch(() => {});
+      }
+      return jsonResponse(200, { ok: true });
+    }
+
     return jsonResponse(404, { error: 'not_found', pathname });
   } catch (error) {
     return jsonResponse(500, {
@@ -1028,7 +1082,8 @@ async function handleRequest(request: Request): Promise<Response> {
 }
 
 export default {
-  fetch(request: Request): Promise<Response> {
+  fetch(request: Request, env: Record<string, any>): Promise<Response> {
+    (globalThis as any).__env = env;
     return handleRequest(request);
   },
 };

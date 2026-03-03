@@ -1,20 +1,16 @@
 import type { Metadata } from 'next';
-import DemoPasswordBar from '@/components/demo-password-bar';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Tong Hackathon Demo',
+  title: 'Tong — Learn CJK by living in them',
   description:
-    'Review harness for YouTube caption overlays, mobile game UI, and YouTube/Spotify ingestion insights.',
+    'An open-source game that drops you into the streets of Seoul, Shanghai and Tokyo — where every conversation teaches you something new.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <DemoPasswordBar />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
