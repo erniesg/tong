@@ -1,4 +1,4 @@
-/* Tong content script styles */
+/* Pinpoint content script styles */
 
 /* Word group hover: subtle dotted underline for immediate feedback */
 [data-word-group]:hover {
@@ -8,7 +8,7 @@
 }
 
 /* Tooltip container — has transparent padding zone so mouse can reach it from the word */
-.tong-tooltip {
+.pinpoint-tooltip {
   position: absolute;
   z-index: 10001;
   pointer-events: auto;
@@ -34,12 +34,12 @@
   overflow-y: auto;
 }
 
-.tong-tooltip.visible {
+.pinpoint-tooltip.visible {
   opacity: 1;
 }
 
 /* Tooltip header: word + romanization + POS badge */
-.tong-tooltip-header {
+.pinpoint-tooltip-header {
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -47,26 +47,26 @@
   flex-wrap: wrap;
 }
 
-.tong-tooltip-word {
+.pinpoint-tooltip-word {
   font-size: 20px;
   font-weight: 700;
   color: #fbbf24;
 }
 
-.tong-tooltip-romanization {
+.pinpoint-tooltip-romanization {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.55);
 }
 
 /* Learning variant (e.g., simplified form when learning zh) */
-.tong-tooltip-variant {
+.pinpoint-tooltip-variant {
   font-size: 18px;
   font-weight: 600;
   color: rgba(251, 191, 36, 0.6);
 }
 
 /* POS badge */
-.tong-tooltip-pos-badge {
+.pinpoint-tooltip-pos-badge {
   font-size: 10px;
   color: rgba(251, 191, 36, 0.85);
   background: rgba(251, 191, 36, 0.15);
@@ -80,39 +80,39 @@
 }
 
 /* Translation line */
-.tong-tooltip-translation {
+.pinpoint-tooltip-translation {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.85);
   margin-bottom: 6px;
 }
 
 /* Dictionary entries (bilingual synonyms) */
-.tong-tooltip-dict {
+.pinpoint-tooltip-dict {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.6);
   margin-bottom: 3px;
 }
 
-.tong-tooltip-dict-pos {
+.pinpoint-tooltip-dict-pos {
   color: rgba(251, 191, 36, 0.7);
   font-style: italic;
   margin-right: 2px;
 }
 
 /* Definitions section (from dt=md) */
-.tong-tooltip-defs {
+.pinpoint-tooltip-defs {
   margin-top: 6px;
   padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.tong-tooltip-def {
+.pinpoint-tooltip-def {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.7);
   margin-bottom: 4px;
 }
 
-.tong-tooltip-def-example {
+.pinpoint-tooltip-def-example {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
   font-style: italic;
@@ -121,13 +121,13 @@
 }
 
 /* Usage examples section (from dt=ex) */
-.tong-tooltip-examples {
+.pinpoint-tooltip-examples {
   margin-top: 6px;
   padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.tong-tooltip-examples-label {
+.pinpoint-tooltip-examples-label {
   font-size: 10px;
   color: rgba(251, 191, 36, 0.6);
   text-transform: uppercase;
@@ -136,7 +136,7 @@
   font-weight: 600;
 }
 
-.tong-tooltip-example {
+.pinpoint-tooltip-example {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.65);
   margin-bottom: 6px;
@@ -144,7 +144,7 @@
   border-left: 2px solid rgba(251, 191, 36, 0.2);
 }
 
-.tong-tooltip-example-trans {
+.pinpoint-tooltip-example-trans {
   font-size: 10px;
   color: rgba(255, 255, 255, 0.4);
   font-style: italic;
@@ -152,7 +152,7 @@
 }
 
 /* Context sentence */
-.tong-tooltip-context {
+.pinpoint-tooltip-context {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.45);
   margin-top: 6px;
@@ -160,7 +160,7 @@
   padding-top: 6px;
 }
 
-.tong-tooltip-context mark {
+.pinpoint-tooltip-context mark {
   background: rgba(251, 191, 36, 0.25);
   color: #fbbf24;
   border-radius: 2px;
@@ -168,7 +168,7 @@
 }
 
 /* Hanja word display (Korean → Hanja mapping) */
-.tong-tooltip-hanja-word {
+.pinpoint-tooltip-hanja-word {
   font-size: 15px;
   color: rgba(255, 255, 255, 0.7);
   margin-bottom: 4px;
@@ -176,20 +176,20 @@
 }
 
 /* Character breakdown section */
-.tong-tooltip-chars {
+.pinpoint-tooltip-chars {
   margin-top: 6px;
   padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.tong-tooltip-char-entry {
+.pinpoint-tooltip-char-entry {
   display: flex;
   gap: 8px;
   margin-bottom: 6px;
   align-items: flex-start;
 }
 
-.tong-tooltip-char-glyph {
+.pinpoint-tooltip-char-glyph {
   font-size: 22px;
   font-weight: 700;
   color: #fbbf24;
@@ -199,25 +199,25 @@
   text-align: center;
 }
 
-.tong-tooltip-char-details {
+.pinpoint-tooltip-char-details {
   flex: 1;
   min-width: 0;
 }
 
-.tong-tooltip-char-readings {
+.pinpoint-tooltip-char-readings {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.6);
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
   letter-spacing: 0.3px;
 }
 
-.tong-tooltip-char-def {
+.pinpoint-tooltip-char-def {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.7);
   margin-top: 1px;
 }
 
-.tong-tooltip-char-etym {
+.pinpoint-tooltip-char-etym {
   font-size: 10px;
   color: rgba(255, 255, 255, 0.5);
   font-style: normal;
@@ -225,7 +225,7 @@
 }
 
 /* Loading state */
-.tong-tooltip-loading {
+.pinpoint-tooltip-loading {
   color: rgba(255, 255, 255, 0.4);
   font-size: 12px;
   font-style: italic;

@@ -128,6 +128,10 @@ export interface StrokeTracingExercise {
   targetChar: string;
   ghostOverlay: boolean;
   explanation?: string;
+  romanization?: string;
+  sound?: string;
+  language?: 'ko' | 'ja' | 'zh';
+  exampleWords?: { word: string; romanization: string; meaning: string }[];
 }
 
 export interface ErrorCorrectionExercise {

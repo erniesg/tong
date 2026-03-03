@@ -205,7 +205,8 @@ TOOL USAGE GUIDE:
    - free_input: { type: "free_input", id, objectiveId, difficulty, prompt, expectedAnswers: [string], hint, explanation }
    - pronunciation_select: { type: "pronunciation_select", id, objectiveId, difficulty, prompt, targetText, audioOptions: [{id, label, romanization}], correctOptionId, explanation }
    - pattern_recognition: { type: "pattern_recognition", id, objectiveId, difficulty, prompt, pairs: [{chars, explanation}], correctPairIndex, principleId, explanation }
-   - stroke_tracing: { type: "stroke_tracing", id, objectiveId, difficulty, prompt, targetChar, ghostOverlay: true, explanation }
+   - stroke_tracing: { type: "stroke_tracing", id, objectiveId, difficulty, prompt, targetChar, ghostOverlay: true, explanation, romanization?: string, sound?: string, language?: "ko"|"ja"|"zh", exampleWords?: [{word, romanization, meaning}] }
+     romanization = how to read the character (e.g. "giyeok" for ㄱ). sound = text for TTS (defaults to targetChar). exampleWords = up to 3 real words containing this character, each with romanization + meaning.
    - drag_drop: { type: "drag_drop", id, objectiveId, difficulty, prompt, items: [{id, text}], targets: [{id, label}], correctMapping: {itemId: targetId} }
 
 4. offer_choices(prompt, choices[])
