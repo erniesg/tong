@@ -39,11 +39,6 @@ const NPC_POOL = ['haeun', 'jin'] as const;
 
 /* ── constants ──────────────────────────────────────────── */
 
-const TONG_LINES = [
-  "Hey! I'm Tong, your language buddy.",
-  "I hang out in Seoul, Tokyo and Shanghai.",
-  "Tell me how much you know and I'll set things up.",
-];
 
 const GAME_LEVELS = [
   { level: 0, name: 'SCRIPT',        desc: 'Learning to read the symbols',        tongLangPct: 5 },
@@ -112,13 +107,10 @@ const LOCATION_NAMES: Record<LocationId, string> = {
   ramen_shop: 'Ramen Shop',
 };
 
-const CHARS_PER_TICK = 2;
-const TICK_MS = 30;
-const PAUSE_BETWEEN_LINES_MS = 600;
 
 /* ── types ──────────────────────────────────────────────── */
 
-type Phase = 'intro' | 'proficiency' | 'hangout' | 'city_map' | 'learn' | 'dev';
+type Phase = 'opening' | 'menu' | 'tong-intro' | 'proficiency' | 'hangout' | 'city_map' | 'learn' | 'dev';
 
 /* ── helpers ────────────────────────────────────────────── */
 
@@ -180,14 +172,29 @@ export default function GamePage() {
   const skipToHangout = phaseParam === 'hangout';
   const skipToCityMap = phaseParam === 'city_map';
   const [phase, setPhase] = useState<Phase>(
-    devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : 'intro'
+    devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : 'opening'
   );
-  const [lineIndex, setLineIndex] = useState(0);
-  const [displayedChars, setDisplayedChars] = useState(0);
-  const [typewriterDone, setTypewriterDone] = useState(false);
-  const [allLinesDone, setAllLinesDone] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
-  const advanceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const openingVideoRef = useRef<HTMLVideoElement>(null);
+
+  /* tong-intro typewriter */
+  const TONG_INTRO_LINES = [
+    "Hi! I\u2019m Tong.",
+    "I\u2019ll be your guide across Seoul, Tokyo, and Shanghai.",
+    "We\u2019ll meet locals, learn their languages, and live the drama together.",
+  ];
+  const CHARS_PER_TICK = 2;
+  const TICK_MS = 30;
+  const [introLineIdx, setIntroLineIdx] = useState(0);
+  const [introCharIdx, setIntroCharIdx] = useState(0);
+  const introTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (phase !== 'tong-intro') return;
+    const line = TONG_INTRO_LINES[introLineIdx];
+    if (!line || introCharIdx >= line.length) return; // wait for tap
+    introTimerRef.current = setTimeout(() => setIntroCharIdx((c) => Math.min(c + CHARS_PER_TICK, line.length)), TICK_MS);
+    return () => { if (introTimerRef.current) clearTimeout(introTimerRef.current); };
+  }, [phase, introLineIdx, introCharIdx]);
 
   /* proficiency sliders (0-6 each, maps directly to GAME_LEVELS) */
   const [sliders, setSliders] = useState<[number, number, number]>([0, 0, 0]);
@@ -233,68 +240,7 @@ export default function GamePage() {
   const sceneStartedRef = useRef(false);
   const lastExerciseRef = useRef<ExerciseData | null>(null);
 
-  const currentLine = TONG_LINES[lineIndex] ?? '';
-
-  /* ── typewriter effect ────────────────────────────────── */
-
-  useEffect(() => {
-    if (allLinesDone || phase !== 'intro') return;
-
-    setDisplayedChars(0);
-    setTypewriterDone(false);
-    if (timerRef.current) clearInterval(timerRef.current);
-
-    timerRef.current = setInterval(() => {
-      setDisplayedChars((prev) => {
-        const next = prev + CHARS_PER_TICK;
-        if (next >= currentLine.length) return currentLine.length;
-        return next;
-      });
-    }, TICK_MS);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [lineIndex, allLinesDone, currentLine, phase]);
-
-  /* detect when a line finishes typing */
-  useEffect(() => {
-    if (phase !== 'intro' || allLinesDone) return;
-    if (displayedChars >= currentLine.length && currentLine.length > 0) {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = undefined;
-      }
-      setTypewriterDone(true);
-    }
-  }, [displayedChars, currentLine, phase, allLinesDone]);
-
-  /* auto-advance after line finishes */
-  useEffect(() => {
-    if (!typewriterDone || allLinesDone || phase !== 'intro') return;
-
-    advanceRef.current = setTimeout(() => {
-      if (lineIndex < TONG_LINES.length - 1) {
-        setLineIndex((i) => i + 1);
-      } else {
-        setAllLinesDone(true);
-        setPhase('proficiency');
-      }
-    }, PAUSE_BETWEEN_LINES_MS);
-
-    return () => {
-      if (advanceRef.current) clearTimeout(advanceRef.current);
-    };
-  }, [typewriterDone, lineIndex, allLinesDone, phase]);
-
   /* ── handlers ─────────────────────────────────────────── */
-
-  function handleSkip() {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (advanceRef.current) clearTimeout(advanceRef.current);
-    setAllLinesDone(true);
-    setPhase('proficiency');
-  }
 
   function handleSlider(langIdx: number, value: number) {
     setSliders((prev) => {
@@ -633,37 +579,106 @@ export default function GamePage() {
 
   /* ── renders ──────────────────────────────────────────── */
 
-  /* Intro phase */
-  if (phase === 'intro') {
+  /* Opening phase — logo animation */
+  if (phase === 'opening') {
     return (
       <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="game-frame">
-          <div className="game-shell">
-            <div className="tong-avatar">T</div>
-            <div className="dialogue-area">
-              {TONG_LINES.map((line, i) => {
-                if (i < lineIndex) {
-                  return (
-                    <div key={i} className="dialogue-line muted">
-                      {line}
-                    </div>
-                  );
-                }
-                if (i === lineIndex && !allLinesDone) {
-                  return (
-                    <div key={i} className="dialogue-line">
-                      {currentLine.slice(0, displayedChars)}
-                      {displayedChars < currentLine.length && <span className="typewriter-cursor" />}
-                    </div>
-                  );
-                }
-                return null;
-              })}
+          <div className="tg-opening-wrap">
+            <video
+              ref={openingVideoRef}
+              className="tg-opening-vid"
+              src="/assets/app/tong_opening.mp4"
+              autoPlay
+              muted
+              playsInline
+              preload="auto"
+              onEnded={() => setPhase('menu')}
+              onError={() => setPhase('menu')}
+            />
+            <button className="btn-skip tg-skip-bottom" type="button" onClick={() => setPhase('menu')}>
+              Skip
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* Menu phase — logo + tagline + start/continue */
+  if (phase === 'menu') {
+    return (
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="game-frame">
+          <div className="tg-menu">
+            <div className="tg-menu-logo">
+              <img className="tg-menu-logo-img" src="/assets/app/logo_transparent.png" alt="Tong" />
+              <span className="tg-brand-cycle">
+                <span>tōng</span>
+                <span>통</span>
+                <span>つう</span>
+              </span>
             </div>
-            <div style={{ marginTop: 'auto', alignSelf: 'flex-end' }}>
-              <button className="btn-skip" onClick={handleSkip}>
-                skip
+            <p className="tg-menu-tagline">
+              Live the drama. <span className="tg-menu-tagline-accent">Learn the language.</span>
+            </p>
+            <div className="tg-menu-actions">
+              <button type="button" className="tg-menu-btn-primary" onClick={() => setPhase('tong-intro')}>
+                Start New Game
               </button>
+              <button type="button" className="tg-menu-btn-continue" onClick={() => setPhase('city_map')}>
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* Tong intro phase — mascot video + immersive subtitle dialogue */
+  if (phase === 'tong-intro') {
+    const currentLine = TONG_INTRO_LINES[introLineIdx] ?? '';
+    const lineFinished = introCharIdx >= currentLine.length;
+
+    const handleIntroTap = () => {
+      if (introTimerRef.current) clearTimeout(introTimerRef.current);
+      if (!lineFinished) {
+        // Instant-complete the current line
+        setIntroCharIdx(currentLine.length);
+      } else if (introLineIdx < TONG_INTRO_LINES.length - 1) {
+        // Advance to next line
+        setIntroLineIdx((i) => i + 1);
+        setIntroCharIdx(0);
+      } else {
+        // All lines done — proceed
+        setPhase('proficiency');
+      }
+    };
+
+    return (
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="game-frame">
+          <div className="tg-tong-intro" onClick={handleIntroTap}>
+            <video
+              className="tg-tong-intro-video"
+              src="/assets/tong_intro.webm"
+              autoPlay
+              muted
+              playsInline
+              preload="auto"
+              loop
+            />
+            {/* Immersive subtitle overlay — pinned to bottom like hangout dialogue */}
+            <div className="tg-tong-intro-subtitle">
+              <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
+              <p className="dialogue-text">
+                {currentLine.slice(0, introCharIdx)}
+                {!lineFinished && <span className="tg-typewriter-cursor" />}
+              </p>
+              {lineFinished && (
+                <p className="dialogue-continue">Tap to continue</p>
+              )}
             </div>
           </div>
         </div>
@@ -676,16 +691,8 @@ export default function GamePage() {
     return (
       <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="game-frame">
-          <div className="game-shell">
-            <div className="tong-avatar">T</div>
-            <div className="dialogue-area">
-              {TONG_LINES.map((line, i) => (
-                <div key={i} className={i === TONG_LINES.length - 1 ? 'dialogue-line' : 'dialogue-line muted'}>
-                  {line}
-                </div>
-              ))}
-            </div>
-
+          <div className="tg-proficiency">
+            <p className="tg-proficiency-heading">Choose your language settings to get started</p>
             <div className="proficiency-panel">
               {LANG_LABELS.map((lang, idx) => {
                 const val = sliders[idx];
@@ -744,8 +751,8 @@ export default function GamePage() {
                   </div>
                 ))}
               </div>
-              <button className="btn-go" onClick={handleConfirmProficiency} style={{ width: '100%', marginTop: 8 }}>
-                That&apos;s me
+              <button className="tg-menu-btn-primary" onClick={handleConfirmProficiency} style={{ width: '100%', marginTop: 16 }}>
+                Let&apos;s go!
               </button>
             </div>
           </div>
