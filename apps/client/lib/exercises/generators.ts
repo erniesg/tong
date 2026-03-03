@@ -631,14 +631,33 @@ function generateStrokeTracing(
   pool: VocabItem[],
   objectiveId: string,
   hintItems?: string[],
+  language?: 'ko' | 'zh' | 'ja',
 ): StrokeTracingExercise {
   // Pick a target character
   let target: string;
+  let targetItem: VocabItem | undefined;
+
   if (hintItems && hintItems.length > 0) {
     target = hintItems[Math.floor(Math.random() * hintItems.length)];
+    // Try to find the matching pool item for romanization
+    targetItem = pool.find((v) => v.word === target);
   } else {
     const item = pool[Math.floor(Math.random() * pool.length)];
     target = item.word.charAt(0); // first character
+    // For single-char items (jamo), the item itself has the romanization
+    if (item.word.length === 1) targetItem = item;
+  }
+
+  // Find example words that contain this character (from ALL_VOCAB + pool)
+  const allItems = [...ALL_VOCAB, ...pool];
+  const seen = new Set<string>();
+  const exampleWords: { word: string; romanization: string; meaning: string }[] = [];
+  for (const v of allItems) {
+    if (v.word.length > 1 && v.word.includes(target) && !seen.has(v.word)) {
+      seen.add(v.word);
+      exampleWords.push({ word: v.word, romanization: v.romanization, meaning: v.translation });
+      if (exampleWords.length >= 3) break;
+    }
   }
 
   return {
@@ -650,6 +669,10 @@ function generateStrokeTracing(
     targetChar: target,
     ghostOverlay: true,
     explanation: `Practice writing ${target} to build muscle memory.`,
+    romanization: targetItem?.romanization,
+    sound: targetItem?.word ?? target,
+    language: language ?? 'ko',
+    exampleWords: exampleWords.length > 0 ? exampleWords : undefined,
   };
 }
 
@@ -751,7 +774,7 @@ export function generateExercise(exerciseType: string, hints?: ExerciseHints): E
     case 'pattern_recognition':
       return generatePatternRecognition(objectiveId, language);
     case 'stroke_tracing':
-      return generateStrokeTracing(pool, objectiveId, hintItems);
+      return generateStrokeTracing(pool, objectiveId, hintItems, language);
     case 'error_correction':
       return generateErrorCorrection(pool, objectiveId);
     case 'free_input':
