@@ -630,8 +630,8 @@ function generatePronunciationSelect(
   // Player hears the sound → picks which character it is
   const distractors = shuffle(available.filter((j) => j.char !== target.char)).slice(0, 3);
   const allOptions = shuffle([
-    { id: 'correct', label: target.char, romanization: target.romanization },
-    ...distractors.map((d, i) => ({ id: `d${i}`, label: d.char, romanization: d.romanization })),
+    { id: 'correct', label: target.char, romanization: target.romanization, meaning: target.sound },
+    ...distractors.map((d, i) => ({ id: `d${i}`, label: d.char, romanization: d.romanization, meaning: d.sound })),
   ]);
 
   return {
@@ -752,6 +752,7 @@ function generateStrokeTracing(
     ghostOverlay: true,
     explanation: tFmt('stroke_explain', explainIn, target),
     romanization: targetItem?.romanization,
+    meaning: targetItem?.translation,
     sound: targetItem?.word ?? target,
     language: lang,
     exampleWords: exampleWords.length > 0 ? exampleWords : undefined,

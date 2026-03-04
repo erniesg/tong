@@ -323,9 +323,14 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     const score = computeScore();
     const correct = score >= PASS_THRESHOLD;
 
+    // Auto-play sound + meaning on completion
+    if (correct) {
+      playTTS(exercise.sound ?? exercise.targetChar, ttsLang);
+    }
+
     setResult({ correct, score });
     onResult(correct, `${Math.round(score * 100)}% coverage`);
-  }, [hasDrawn, submitted, computeScore, onResult]);
+  }, [hasDrawn, submitted, computeScore, onResult, exercise, ttsLang]);
 
   const handleClear = useCallback(() => {
     if (submitted) return;
@@ -384,6 +389,11 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             {exercise.romanization}
           </div>
         )}
+        {exercise.meaning && (
+          <div style={{ fontSize: 14, opacity: 0.4, marginTop: 2 }}>
+            {exercise.meaning}
+          </div>
+        )}
       </div>
 
       {/* Drawing canvas */}
@@ -396,8 +406,9 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             borderRadius: 12,
             background: 'rgba(255,255,255,0.05)',
             border: '2px solid rgba(255,255,255,0.1)',
-            touchAction: 'none',
+            touchAction: submitted ? 'auto' : 'none',
             cursor: submitted ? 'default' : 'crosshair',
+            pointerEvents: submitted ? 'none' : 'auto',
           }}
           onMouseDown={startDraw}
           onMouseMove={draw}
@@ -457,10 +468,6 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             </>
           )}
         </div>
-      )}
-
-      {submitted && exercise.explanation && (
-        <p className="mt-3 text-sm text-[var(--color-text-muted)] m-0 text-center">{exercise.explanation}</p>
       )}
 
       {/* Example words using this character */}

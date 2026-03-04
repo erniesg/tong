@@ -262,9 +262,11 @@ export async function POST(req: Request) {
       minExercises: 3,
       introAct: (introCtx.introAct as 1 | 2) ?? 1,
       backdropUrl: (introCtx.backdropUrl as string) ?? '/assets/backdrops/seoul/pojangmacha.png',
+      chargePercent: (introCtx.chargePercent as number) ?? 0,
+      chargeComplete: (introCtx.chargeComplete as boolean) ?? false,
     };
     systemPrompt = buildIntroductionHangoutPrompt(introVars);
-    console.log('[hangout] Introduction mode for', characterId, '| act:', introVars.introAct, '| videoStatus:', introVars.videoStatus);
+    console.log('[hangout] Introduction mode for', characterId, '| act:', introVars.introAct, '| videoStatus:', introVars.videoStatus, '| charge:', introVars.chargePercent + '%');
   } else {
     const defaultVars: HangoutOrchestratorVars = hangoutVars ?? {
       location: POJANGMACHA,
@@ -305,6 +307,9 @@ export async function POST(req: Request) {
   }
 
   try {
+    const abortController = new AbortController();
+    const timeout = setTimeout(() => abortController.abort(), 55000);
+
     const result = streamText({
       model: openai(modelId),
       system: systemPrompt,
@@ -312,8 +317,12 @@ export async function POST(req: Request) {
       tools: hangoutTools,
       maxSteps: 2,
       temperature: 0.8,
+      abortSignal: abortController.signal,
       onError: (error) => {
         console.error('[hangout] Stream error:', error);
+      },
+      onFinish: () => {
+        clearTimeout(timeout);
       },
       onStepFinish: ({ toolCalls, text }) => {
         if (text) console.log('[hangout] Step text:', text.slice(0, 200));
@@ -324,6 +333,7 @@ export async function POST(req: Request) {
         }
       },
     });
+
     return result.toDataStreamResponse();
   } catch (err) {
     console.error('[hangout] AI error, falling back:', err);

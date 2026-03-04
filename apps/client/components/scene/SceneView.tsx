@@ -73,6 +73,15 @@ export function SceneView({
   // Reset exerciseDone when exercise changes
   useEffect(() => { setExerciseDone(false); }, [currentExercise]);
 
+  // Auto-dismiss exercise after completion — no second "tap to continue" needed
+  useEffect(() => {
+    if (!exerciseDone) return;
+    const timer = setTimeout(() => {
+      onExerciseDismiss?.();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [exerciseDone, onExerciseDismiss]);
+
   const prevBackdropRef = useRef(backgroundUrl);
   const backdropTransition = backgroundTransition === 'fade' && prevBackdropRef.current !== backgroundUrl;
   if (prevBackdropRef.current !== backgroundUrl) {
@@ -135,13 +144,8 @@ export function SceneView({
         <div
           className="exercise-float-wrapper"
           onClick={(e) => {
-            if (exerciseDone) {
-              // After completion, tap ANYWHERE (card or outside) to continue
-              onExerciseDismiss?.();
-              return;
-            }
-            // Tap outside the card → hide temporarily
-            if (e.target === e.currentTarget && onExerciseDismiss) {
+            // Tap outside the card → hide temporarily (only when not done)
+            if (!exerciseDone && e.target === e.currentTarget && onExerciseDismiss) {
               onExerciseDismiss();
             }
           }}
@@ -155,11 +159,6 @@ export function SceneView({
               }}
             />
           </div>
-          {exerciseDone && (
-            <div className="exercise-float-continue animate-pulse">
-              {continueLabel}
-            </div>
-          )}
         </div>
       ) : choices ? (
         <ChoiceButtons choices={choices} prompt={choicePrompt} onSelect={onChoice} disabled={isStreaming} targetLang={targetLang} />
