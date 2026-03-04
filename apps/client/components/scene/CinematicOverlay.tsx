@@ -1,6 +1,8 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
+import { useUILang } from '@/lib/i18n/UILangContext';
+import { t } from '@/lib/i18n/ui-strings';
 
 interface CinematicOverlayProps {
   videoUrl: string;
@@ -10,24 +12,29 @@ interface CinematicOverlayProps {
   onEnd: () => void;
 }
 
-export function CinematicOverlay({ videoUrl, caption, autoAdvance, muted = true, onEnd }: CinematicOverlayProps) {
+export function CinematicOverlay({ videoUrl, autoAdvance, muted = false, onEnd }: CinematicOverlayProps) {
+  const lang = useUILang();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [fadingOut, setFadingOut] = useState(false);
+
+  const triggerEnd = useCallback(() => {
+    if (fadingOut) return;
+    setFadingOut(true);
+    // Wait for fade-out animation to finish before unmounting
+    setTimeout(() => onEnd(), 500);
+  }, [fadingOut, onEnd]);
 
   const handleEnded = useCallback(() => {
-    if (autoAdvance) {
-      onEnd();
-    }
-  }, [autoAdvance, onEnd]);
+    if (autoAdvance) triggerEnd();
+  }, [autoAdvance, triggerEnd]);
 
   const handleTap = useCallback(() => {
-    if (!autoAdvance) {
-      onEnd();
-    }
-  }, [autoAdvance, onEnd]);
+    if (!autoAdvance) triggerEnd();
+  }, [autoAdvance, triggerEnd]);
 
   return (
     <div
-      className="cinematic-overlay"
+      className={`cinematic-overlay ${fadingOut ? 'cinematic-fade-out' : ''}`}
       onClick={handleTap}
       role={autoAdvance ? undefined : 'button'}
       tabIndex={autoAdvance ? undefined : 0}
@@ -41,11 +48,8 @@ export function CinematicOverlay({ videoUrl, caption, autoAdvance, muted = true,
         onEnded={handleEnded}
         className="cinematic-video"
       />
-      {caption && (
-        <div className="cinematic-caption">{caption}</div>
-      )}
-      {!autoAdvance && (
-        <div className="cinematic-tap-hint">Tap to skip</div>
+      {!autoAdvance && !fadingOut && (
+        <div className="cinematic-tap-hint">{t('tap_to_skip', lang)}</div>
       )}
     </div>
   );

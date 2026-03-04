@@ -6,9 +6,9 @@ import {
   type HangoutOrchestratorVars,
 } from '@/lib/ai/prompts/hangout-orchestrator';
 import {
-  buildTutorialHangoutPrompt,
-  type TutorialHangoutVars,
-} from '@/lib/ai/prompts/tutorial-hangout';
+  buildIntroductionHangoutPrompt,
+  type IntroductionHangoutVars,
+} from '@/lib/ai/prompts/introduction-hangout';
 import { CHARACTER_MAP, HAEUN, TUTORIAL_VIDEO_CONFIG } from '@/lib/content/characters';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import type { Character, RelationshipStage, Relationship } from '@/lib/types/relationship';
@@ -223,38 +223,48 @@ export async function POST(req: Request) {
   // Build system prompt
   const char: Character = CHARACTER_MAP[characterId] ?? HAEUN;
 
-  // Check for tutorial mode
-  let isTutorial = false;
-  let tutorialCtx: Record<string, unknown> = {};
+  // Check for introduction mode (first encounter with a character)
+  let isIntroduction = false;
+  let introCtx: Record<string, unknown> = {};
   try {
     const hangoutMatch2 = contextStr.match(/\[HANGOUT_CONTEXT\]([\s\S]*?)\[\/HANGOUT_CONTEXT\]/);
     const legacyMatch2 = contextStr.match(/\[CONTEXT\]([\s\S]*?)\[\/CONTEXT\]/);
     const ctxMatch2 = hangoutMatch2 ?? legacyMatch2;
     if (ctxMatch2) {
       const parsedCtx = JSON.parse(ctxMatch2[1]);
-      isTutorial = parsedCtx.isTutorial === true;
-      tutorialCtx = parsedCtx;
+      // Support both old isTutorial and new isIntroduction flags
+      isIntroduction = parsedCtx.isIntroduction === true || parsedCtx.isTutorial === true;
+      introCtx = parsedCtx;
     }
   } catch { /* ignore */ }
 
   let systemPrompt: string;
 
-  if (isTutorial) {
+  if (isIntroduction) {
     const videoConfig = TUTORIAL_VIDEO_CONFIG[characterId];
-    const tutorialVars: TutorialHangoutVars = {
-      playerName: (tutorialCtx.playerName as string) ?? 'Player',
-      playerProfile: tutorialCtx.playerProfile as TutorialHangoutVars['playerProfile'],
+    const playerLevel = (introCtx.playerLevel as number) ?? 0;
+    // Korean % scales with level: 5, 10, 20, 35, 50, 70, 90
+    const TARGET_LANG_PCT = [5, 10, 20, 35, 50, 70, 90];
+    const targetLangPct = TARGET_LANG_PCT[Math.min(playerLevel, TARGET_LANG_PCT.length - 1)] ?? 5;
+
+    const introVars: IntroductionHangoutVars = {
+      playerName: (introCtx.playerName as string) ?? 'Player',
+      playerProfile: introCtx.playerProfile as IntroductionHangoutVars['playerProfile'],
       character: char,
-      explainIn: (tutorialCtx.explainIn as string) ?? 'en',
-      introVideoUrl: (tutorialCtx.introVideoUrl as string) ?? videoConfig?.introVideoUrls?.[0] ?? null,
-      exitLine: (tutorialCtx.exitLine as string) ?? '',
-      videoStatus: (tutorialCtx.videoStatus as 'generating' | 'ready' | 'failed') ?? 'generating',
-      exitVideoUrl: (tutorialCtx.exitVideoUrl as string) ?? null,
-      exercisesDone: (tutorialCtx.exercisesDone as number) ?? 0,
+      explainIn: (introCtx.explainIn as string) ?? 'en',
+      playerLevel,
+      targetLangPct,
+      introVideoUrl: (introCtx.introVideoUrl as string) ?? videoConfig?.introVideoUrls?.[0] ?? null,
+      exitLine: (introCtx.exitLine as string) ?? '',
+      videoStatus: (introCtx.videoStatus as 'generating' | 'ready' | 'failed') ?? 'generating',
+      exitVideoUrl: (introCtx.exitVideoUrl as string) ?? null,
+      exercisesDone: (introCtx.exercisesDone as number) ?? 0,
       minExercises: 3,
+      introAct: (introCtx.introAct as 1 | 2) ?? 1,
+      backdropUrl: (introCtx.backdropUrl as string) ?? '/assets/backdrops/seoul/pojangmacha.png',
     };
-    systemPrompt = buildTutorialHangoutPrompt(tutorialVars);
-    console.log('[hangout] Tutorial mode for', characterId, '| videoStatus:', tutorialVars.videoStatus);
+    systemPrompt = buildIntroductionHangoutPrompt(introVars);
+    console.log('[hangout] Introduction mode for', characterId, '| act:', introVars.introAct, '| videoStatus:', introVars.videoStatus);
   } else {
     const defaultVars: HangoutOrchestratorVars = hangoutVars ?? {
       location: POJANGMACHA,

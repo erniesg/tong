@@ -62,7 +62,7 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
         <span className="pron-select__target-label">{t('tap_to_play', lang)}</span>
       </div>
 
-      {/* Character options — show only the character, no romanization */}
+      {/* Character options — player picks which hangul matches the sound */}
       <div className="pron-select__options">
         {exercise.audioOptions.map((opt) => {
           const isThis = selected === opt.id;
@@ -80,8 +80,7 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
                 submitted && isThis && !isCorrect && 'pron-select__option--incorrect',
               )}
             >
-              <span className="text-ko text-2xl">{opt.label}</span>
-              {/* Show romanization only after submit for learning */}
+              <span className="text-ko text-3xl">{opt.label}</span>
               {submitted && (
                 <span className="text-sm text-[var(--color-text-muted)] ml-auto">({opt.romanization})</span>
               )}

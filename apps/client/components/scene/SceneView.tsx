@@ -32,6 +32,7 @@ interface SceneViewProps {
   onChoice?: (choiceId: string) => void;
   onContinue?: () => void;
   onExerciseResult?: (exerciseId: string, correct: boolean) => void;
+  onExerciseDismiss?: () => void;
   onDismissTong?: () => void;
   // Extended props used by GamePageClient VN mode
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -65,6 +66,7 @@ export function SceneView({
   onChoice = () => {},
   onContinue = () => {},
   onExerciseResult = () => {},
+  onExerciseDismiss,
   onDismissTong = () => {},
 }: SceneViewProps) {
   const prevBackdropRef = useRef(backgroundUrl);
@@ -100,9 +102,8 @@ export function SceneView({
       {cinematic && (
         <CinematicOverlay
           videoUrl={cinematic.videoUrl}
-          caption={cinematic.caption}
           autoAdvance={cinematic.autoAdvance}
-          muted={cinematic.muted ?? true}
+          muted={cinematic.muted ?? false}
           onEnd={handleCinematicEnd}
         />
       )}
@@ -128,6 +129,15 @@ export function SceneView({
       {/* Layer 4: Interactive area at bottom */}
       {currentExercise ? (
         <div className="absolute bottom-0 left-0 right-0 max-h-[70vh] overflow-y-auto slide-up">
+          {onExerciseDismiss && (
+            <button
+              className="exercise-dismiss-btn"
+              onClick={onExerciseDismiss}
+              aria-label="Skip exercise"
+            >
+              ✕
+            </button>
+          )}
           <ExerciseRenderer
             exercise={currentExercise}
             onResult={(correct) => onExerciseResult(currentExercise.id, correct)}

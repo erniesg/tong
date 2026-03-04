@@ -22,6 +22,12 @@ interface GameHUDProps {
   cityId: CityId;
   /** Current explainIn language for this city */
   explainLang: AppLang;
+  /** Optional charge bar progress 0-100 (hidden when undefined) */
+  chargeProgress?: number;
+  /** Label shown on the charge bar */
+  chargeLabel?: string;
+  /** Whether the charge is complete (triggers shimmer) */
+  chargeComplete?: boolean;
 }
 
 /**
@@ -30,7 +36,7 @@ interface GameHUDProps {
  * The parent must forward touch events via the returned swipe handlers,
  * OR just wrap with `<GameHUD.SwipeZone>`.
  */
-export function GameHUD({ xp, sp, rp, locationLabel, cityId, explainLang }: GameHUDProps) {
+export function GameHUD({ xp, sp, rp, locationLabel, cityId, explainLang, chargeProgress, chargeLabel, chargeComplete }: GameHUDProps) {
   const [open, setOpen] = useState(false);
   const touchStartRef = useRef<number>(0);
 
@@ -59,6 +65,20 @@ export function GameHUD({ xp, sp, rp, locationLabel, cityId, explainLang }: Game
       >
         <span className="scene-hud-pull-tab-chevron">{open ? '▲' : '▼'}</span>
       </div>
+      {/* Charge bar — below pull tab, always visible when active */}
+      {chargeProgress !== undefined && (
+        <div className={`charge-bar${chargeComplete ? ' charge-bar--complete' : ''}`}>
+          <div className="charge-bar__track">
+            <div
+              className="charge-bar__fill"
+              style={{ width: `${Math.max(0, Math.min(100, chargeProgress))}%` }}
+            />
+            {chargeComplete && <div className="charge-bar__shimmer" />}
+          </div>
+          {chargeLabel && <div className="charge-bar__label">{chargeLabel}</div>}
+        </div>
+      )}
+
       {/* HUD drawer */}
       <div className={`scene-hud ${open ? 'scene-hud--open' : ''}`}>
         {locationLabel && (

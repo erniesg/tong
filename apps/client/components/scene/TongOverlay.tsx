@@ -25,7 +25,7 @@ export function TongOverlay({ message, translation, visible, targetLang = 'ko', 
       <div className="flex items-start gap-2">
         <img src="/assets/characters/tong/tong_cheerful.png" alt="Tong" className="tong-whisper__avatar" />
         <div className="min-w-0">
-          <p className="text-xs font-bold tong-whisper__label m-0">Tong</p>
+          <p className="text-xs font-bold tong-whisper__label m-0">{targetLang === 'zh' ? '小通' : 'Tong'}</p>
           <p className="mt-0.5 text-sm text-ko leading-snug tong-whisper__body m-0"><KoreanText text={message} targetLang={targetLang} /></p>
           {translation && (
             <p className="mt-1 text-xs tong-whisper__translation italic m-0">{translation}</p>

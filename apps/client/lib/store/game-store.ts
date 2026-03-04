@@ -48,7 +48,8 @@ export type GameAction =
   | { type: 'UNLOCK_LOCATION'; cityId: string; locationId: string }
   | { type: 'SET_EXPLAIN_LANGUAGE'; cityId: CityId; lang: AppLang }
   | { type: 'SET_PLAYER_NAME'; name: string }
-  | { type: 'SET_PLAYER_PROFILE'; profile: PlayerProfile };
+  | { type: 'SET_PLAYER_PROFILE'; profile: PlayerProfile }
+  | { type: 'RESET' };
 
 /* ── Persistence ────────────────────────────────────────── */
 
@@ -217,6 +218,8 @@ function reduce(state: GameState, action: GameAction): GameState {
       return { ...state, playerName: action.name };
     case 'SET_PLAYER_PROFILE':
       return { ...state, playerProfile: action.profile, playerName: action.profile.englishName };
+    case 'RESET':
+      return createInitialState();
     default:
       return state;
   }

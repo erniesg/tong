@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils/cn';
 
 interface CharacterSpriteProps {
@@ -17,6 +18,11 @@ export function CharacterSprite({
   position = 'center',
   active = true,
 }: CharacterSpriteProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!mounted || !spriteUrl) return null;
+
   return (
     <div
       className={cn(
@@ -27,25 +33,12 @@ export function CharacterSprite({
         position === 'right' && 'slide-in-right',
       )}
     >
-      {spriteUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={spriteUrl}
-          alt={name}
-          className="h-full w-full object-cover object-top"
-        />
-      ) : (
-        <div className="flex h-full w-32 flex-col items-center justify-end">
-          <div className="relative h-full w-full rounded-t-full bg-gradient-to-t from-white/15 via-white/8 to-transparent">
-            <div
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold"
-              style={{ backgroundColor: nameColor, color: '#fff' }}
-            >
-              {name}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={spriteUrl}
+        alt={name}
+        className="h-full w-full object-cover object-top"
+      />
     </div>
   );
 }
