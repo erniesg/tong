@@ -134,6 +134,8 @@ export interface StrokeTracingExercise {
   exampleWords?: { word: string; romanization: string; meaning: string }[];
 }
 
+export type BlockCrushStage = 'intro' | 'recognition' | 'recall';
+
 export interface BlockCrushExercise {
   type: 'block_crush';
   id: string;
@@ -148,6 +150,8 @@ export interface BlockCrushExercise {
   romanization: string;
   meaning: string;
   explanation?: string;
+  /** Stage for progressive difficulty — defaults to 'recognition' */
+  stage?: BlockCrushStage;
 }
 
 export interface ErrorCorrectionExercise {

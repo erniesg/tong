@@ -12,7 +12,8 @@ import type {
   FreeInputExercise,
   ExerciseData,
 } from '@/lib/types/hangout';
-import { getRandomTarget } from '@/lib/content/block-crush-data';
+import { getRandomTarget, getTargets } from '@/lib/content/block-crush-data';
+import type { CompositionTarget } from '@/lib/content/block-crush-data';
 import { VOCABULARY_TARGETS } from '@/lib/content/pojangmacha';
 import type { ItemMastery } from '@/lib/types/mastery';
 import { getDueItems, getNewItems } from '@/lib/curriculum/srs';
@@ -750,13 +751,57 @@ function generateStrokeTracing(
   };
 }
 
+function stageFromMastery(
+  itemId: string,
+  mastery?: Record<string, ItemMastery>,
+): 'intro' | 'recognition' | 'recall' {
+  if (!mastery || !mastery[itemId]) return 'intro';
+  const m = mastery[itemId];
+  if (m.masteryLevel === 'new' || m.masteryLevel === 'seen') return 'intro';
+  if (m.masteryLevel === 'learning') return 'recognition';
+  return 'recall'; // familiar or mastered
+}
+
 function generateBlockCrush(
   objectiveId: string,
   language?: 'ko' | 'zh' | 'ja',
+  hintItems?: string[],
+  mastery?: Record<string, ItemMastery>,
 ): BlockCrushExercise {
   const lang = language ?? 'ko';
   const difficulty = objectiveId.includes('radical') ? 2 : 1;
-  const target = getRandomTarget(lang, difficulty);
+
+  let target: CompositionTarget;
+
+  // 1. If hintItems provided, find matching CompositionTarget
+  if (hintItems && hintItems.length > 0) {
+    const allTargets = getTargets(lang);
+    const matched = allTargets.find((t) => hintItems.includes(t.char));
+    if (matched) {
+      target = matched;
+    } else {
+      target = getRandomTarget(lang, difficulty);
+    }
+  } else if (mastery && Object.keys(mastery).length > 0) {
+    // 2. SRS-aware: pick due items first, then unseen
+    const allTargets = getTargets(lang, difficulty);
+    const targetChars = allTargets.map((t) => t.char);
+    const dueChars = getDueItems(mastery).filter((w) => targetChars.includes(w));
+    const newChars = getNewItems(mastery, targetChars);
+
+    if (dueChars.length > 0) {
+      target = allTargets.find((t) => t.char === dueChars[0])!;
+    } else if (newChars.length > 0) {
+      target = allTargets.find((t) => t.char === newChars[0])!;
+    } else {
+      target = getRandomTarget(lang, difficulty);
+    }
+  } else {
+    // 3. Fallback: random
+    target = getRandomTarget(lang, difficulty);
+  }
+
+  const stage = stageFromMastery(target.char, mastery);
 
   return {
     type: 'block_crush',
@@ -770,6 +815,7 @@ function generateBlockCrush(
     romanization: target.romanization,
     meaning: target.meaning,
     explanation: `${target.char} is made from ${target.components.map((c) => c.piece).join(' + ')}`,
+    stage,
   };
 }
 
@@ -873,7 +919,7 @@ export function generateExercise(exerciseType: string, hints?: ExerciseHints): E
     case 'stroke_tracing':
       return generateStrokeTracing(pool, objectiveId, hintItems, language);
     case 'block_crush':
-      return generateBlockCrush(objectiveId, language);
+      return generateBlockCrush(objectiveId, language, hintItems, mastery);
     case 'error_correction':
       return generateErrorCorrection(pool, objectiveId);
     case 'free_input':

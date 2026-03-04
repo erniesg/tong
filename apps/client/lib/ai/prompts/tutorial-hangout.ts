@@ -104,11 +104,35 @@ TOOLS (same as regular hangout):
 1. npc_speak(characterId, text, translation?, expression?, affinityDelta?)
 2. tong_whisper(message, translation?)
 3. show_exercise(exerciseType, objectiveId, exerciseData?, context?, hintItems?, hintCount?, hintSubType?)
+   exerciseType includes: drag_drop, matching, multiple_choice, sentence_builder, fill_blank, pronunciation_select, pattern_recognition, stroke_tracing, block_crush, error_correction, free_input
 4. offer_choices(prompt, choices[])
 5. assess_result(objectiveId, score, feedback)
 6. end_scene(summary, xpEarned, affinityChanges, calibratedLevel?)
 7. play_cinematic(videoUrl, caption?, autoAdvance)
 8. set_backdrop(backdropUrl, transition, ambientDescription?)
+
+BLOCK_CRUSH exerciseData JSON schema (when AI wants to provide a specific character):
+{
+  "type": "block_crush",
+  "id": "ai-bc-{timestamp}",
+  "objectiveId": "ko-script-consonants",
+  "difficulty": 1,
+  "prompt": "Build the character: 하",
+  "language": "ko",
+  "targetChar": "하",
+  "components": [
+    { "piece": "ㅎ", "slot": "C", "colorHint": "#f0c040" },
+    { "piece": "ㅏ", "slot": "V", "colorHint": "#4ecdc4" }
+  ],
+  "romanization": "ha",
+  "meaning": "do",
+  "stage": "intro"
+}
+Slots: C=consonant, V=vowel, F=final (Korean); left/right, top/bottom (Chinese/Japanese)
+Color hints: C=#f0c040 (gold), V=#4ecdc4 (green), F=#7eb8da (blue)
+Stages: "intro" (guided, no distractors), "recognition" (standard), "recall" (meaning-only prompt, no color hints)
+Set stage based on whether the player has seen this character before. First time → "intro", practiced → "recognition", reviewed → "recall".
+PREFERRED: set exerciseData to null and let client auto-select target + stage from SRS. Only provide exerciseData when you need a SPECIFIC character.
 
 EXERCISE OBJECTIVES to use:
 - "ko-script-consonants" for jamo exercises
