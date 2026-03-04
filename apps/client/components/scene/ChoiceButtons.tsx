@@ -1,6 +1,5 @@
 'use client';
 
-import { cn } from '@/lib/utils/cn';
 import { KoreanText, type TargetLang } from '@/components/shared/KoreanText';
 
 export interface DialogueChoice {
@@ -19,9 +18,9 @@ interface ChoiceButtonsProps {
 
 export function ChoiceButtons({ choices, prompt, onSelect, disabled, targetLang = 'ko' }: ChoiceButtonsProps) {
   return (
-    <div className="absolute bottom-0 left-0 right-0 p-4 pb-[calc(1rem+var(--safe-bottom))] flex flex-col gap-2 slide-up">
+    <div className="vn-choices slide-up">
       {prompt && (
-        <div className="text-sm text-[var(--color-text-secondary)] mb-1 px-1">
+        <div className="vn-choices__prompt">
           <KoreanText text={prompt} targetLang={targetLang} />
         </div>
       )}
@@ -30,20 +29,12 @@ export function ChoiceButtons({ choices, prompt, onSelect, disabled, targetLang 
           key={choice.id}
           onClick={() => onSelect(choice.id)}
           disabled={disabled}
-          className={cn(
-            'w-full rounded-xl px-5 py-3.5 text-left transition-all',
-            'border border-white/20 bg-[var(--color-bg-card)]/90 backdrop-blur-md',
-            'hover:border-[var(--color-primary)]/60 hover:bg-[var(--color-primary)]/10',
-            'active:scale-[0.98]',
-            disabled && 'opacity-50 pointer-events-none'
-          )}
+          className="vn-choices__btn"
           style={{ animationDelay: `${i * 80}ms` }}
         >
-          <span className="text-ko text-sm font-medium"><KoreanText text={choice.text} targetLang={targetLang} /></span>
+          <span className="vn-choices__text"><KoreanText text={choice.text} targetLang={targetLang} /></span>
           {choice.subtext && (
-            <span className="block mt-1 text-xs text-[var(--color-text-muted)]">
-              {choice.subtext}
-            </span>
+            <span className="vn-choices__subtext">{choice.subtext}</span>
           )}
         </button>
       ))}
