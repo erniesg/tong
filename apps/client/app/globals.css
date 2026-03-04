@@ -1848,9 +1848,8 @@ button.nav-link:hover {
 /* ── Exercise card ────────────────────────────────────────── */
 .exercise-card {
   background: rgba(22, 33, 62, 0.95);
-  border-top: 2px solid rgba(232, 72, 92, 0.35);
   backdrop-filter: blur(14px);
-  border-radius: 12px 12px 0 0;
+  border-radius: 16px;
   color: var(--color-text);
 }
 
