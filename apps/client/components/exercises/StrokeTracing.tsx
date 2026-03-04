@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils/cn';
 import type { StrokeTracingExercise } from '@/lib/types/hangout';
 import { useUILang } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
+import { getMeaning } from '@/lib/content/block-crush-data';
 
 interface Props {
   exercise: StrokeTracingExercise;
@@ -37,13 +38,23 @@ const LANG_TO_BCP47: Record<string, string> = {
   ko: 'ko-KR', ja: 'ja-JP', zh: 'zh-CN',
 };
 
-function playTTS(text: string, language?: string) {
+function playTTS(text: string, language?: string, thenMeaning?: string, meaningLang?: string) {
   const ttsText = JAMO_TO_SYLLABLE[text] ?? text;
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   const utter = new SpeechSynthesisUtterance(ttsText);
   utter.lang = LANG_TO_BCP47[language ?? 'ko'] ?? 'ko-KR';
   utter.rate = 0.8;
   window.speechSynthesis.cancel();
+  if (thenMeaning && meaningLang) {
+    utter.onend = () => {
+      setTimeout(() => {
+        const meaningUtter = new SpeechSynthesisUtterance(thenMeaning);
+        meaningUtter.lang = LANG_TO_BCP47[meaningLang] ?? 'en-US';
+        meaningUtter.rate = 0.85;
+        window.speechSynthesis.speak(meaningUtter);
+      }, 500);
+    };
+  }
   window.speechSynthesis.speak(utter);
 }
 
@@ -323,14 +334,17 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     const score = computeScore();
     const correct = score >= PASS_THRESHOLD;
 
-    // Auto-play sound + meaning on completion
-    if (correct) {
+    // Auto-play sound + meaning in preferred language on completion
+    if (correct && exercise.meaning) {
+      const localMeaning = getMeaning(exercise.meaning, lang);
+      playTTS(exercise.sound ?? exercise.targetChar, ttsLang, localMeaning, lang);
+    } else if (correct) {
       playTTS(exercise.sound ?? exercise.targetChar, ttsLang);
     }
 
     setResult({ correct, score });
     onResult(correct, `${Math.round(score * 100)}% coverage`);
-  }, [hasDrawn, submitted, computeScore, onResult, exercise, ttsLang]);
+  }, [hasDrawn, submitted, computeScore, onResult, exercise, ttsLang, lang]);
 
   const handleClear = useCallback(() => {
     if (submitted) return;
@@ -389,9 +403,9 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             {exercise.romanization}
           </div>
         )}
-        {exercise.meaning && (
+        {exercise.meaning && exercise.meaning !== exercise.romanization && (
           <div style={{ fontSize: 14, opacity: 0.4, marginTop: 2 }}>
-            {exercise.meaning}
+            {getMeaning(exercise.meaning, lang)}
           </div>
         )}
       </div>
@@ -455,6 +469,11 @@ export function StrokeTracing({ exercise, onResult }: Props) {
           {result.correct ? (
             <>
               {t('stroke_done', lang)}
+              {exercise.meaning && (
+                <div className="mt-1 text-sm font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
+                  {exercise.targetChar} = {getMeaning(exercise.meaning, lang)}
+                </div>
+              )}
               <div className="mt-1 text-xs opacity-70">
                 {t('stroke_score', lang)}: {Math.round(result.score * 100)}%
               </div>
@@ -497,7 +516,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
                 <span style={{ fontSize: 14, opacity: 0.4, flexShrink: 0 }}>🔊</span>
                 <span className="text-ko" style={{ fontSize: 18 }}>{ex.word}</span>
                 <span style={{ fontSize: 13, opacity: 0.5 }}>{ex.romanization}</span>
-                <span style={{ fontSize: 13, opacity: 0.4, marginLeft: 'auto' }}>{ex.meaning}</span>
+                <span style={{ fontSize: 13, opacity: 0.4, marginLeft: 'auto' }}>{getMeaning(ex.meaning, lang)}</span>
               </button>
             ))}
           </div>

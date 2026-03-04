@@ -37,6 +37,14 @@ const TONG_NAMES: Record<string, string> = {
   zh: '小通',
 };
 
+/** Localized term for "Hangul" (the Korean writing system) */
+const HANGUL_NAMES: Record<string, string> = {
+  en: 'Hangul',
+  ko: '한글',
+  ja: 'ハングル',
+  zh: '韩文',
+};
+
 export function buildIntroductionHangoutPrompt(vars: IntroductionHangoutVars): string {
   const explainLangName = EXPLAIN_LANG_NAMES[vars.explainIn] ?? 'English';
   const tongName = TONG_NAMES[vars.explainIn] ?? 'Tong';
@@ -54,8 +62,8 @@ CURRENT ACT: ${vars.introAct}
 - Act 2: NPC enters — personality, connection, exercise grind, emotional payoff
 
 PLAYER: "${vars.playerName}"
-EXPLAIN IN: ${explainLangName}
-GUIDE: "${tongName}"
+EXPLAIN IN: ${explainLangName}${vars.explainIn !== 'en' ? ` — ALL dialogue must be in ${explainLangName}. Zero English.` : ''}
+GUIDE: "${tongName}" (always refer to the guide as "${tongName}" in dialogue, never "Tong")
 LEVEL: 0 (complete beginner, knows zero Korean)
 
 ${tongBlock}
@@ -78,10 +86,10 @@ LANGUAGE:
 - ~${vars.targetLangPct}% Korean, ~${100 - vars.targetLangPct}% ${explainLangName}.${vars.targetLangPct <= 10 ? ` At level 0: speak ${explainLangName}. Only sprinkle Korean WORDS (food names, 안녕). NEVER full Korean sentences.` : ''}
 - NPC speaks the player's language (${explainLangName}) with Korean flavor.
 - No parenthetical translations — UI tooltips handle that. Set "translation" to null.
+- ZERO English.${vars.explainIn !== 'en' ? ` Every word must be in ${explainLangName} (or Korean for target-language sprinkles). No "Hey", "Nice", "OK", "Hangul", "Tong". Use "${HANGUL_NAMES[vars.explainIn] ?? 'Hangul'}" for the Korean script and "${tongName}" for the guide.` : ''}
 
 STYLE:
-- Dialogue only. 1-2 sentences per tong_whisper/npc_speak. No stage directions, no parenthetical actions like "（她甩头发）", no literary prose.
-- For zh: 口语, not 书面语. Like texting, not an essay.
+- Dialogue only. 1-2 sentences per tong_whisper/npc_speak. No stage directions, no parenthetical actions, no literary prose.${vars.explainIn === 'zh' ? '\n- 口语, not 书面语. Like texting, not an essay.' : vars.explainIn === 'ja' ? '\n- 話し言葉で。エッセイではなくチャットのように。' : ''}
 - Use npc_speak "expression" param for emotion instead of writing actions.
 
 PACING:

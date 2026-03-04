@@ -79,7 +79,7 @@ interface StageConfig {
 }
 
 const STAGE_CONFIG: Record<BlockCrushStage, StageConfig> = {
-  intro:       { speedMult: 0.5,  distractorRate: 0,    lives: 5, showColorHints: true,  colorHintOpacity: 1 },
+  intro:       { speedMult: 0.5,  distractorRate: 0.3,  lives: 5, showColorHints: true,  colorHintOpacity: 1 },
   recognition: { speedMult: 1,    distractorRate: 0.4,  lives: 3, showColorHints: true,  colorHintOpacity: 0.5 },
   recall:      { speedMult: 1.2,  distractorRate: 0.6,  lives: 2, showColorHints: false, colorHintOpacity: 0 },
 };
@@ -704,7 +704,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
             />
           )}
           <div className="bc-overlay__romanization">{exercise.romanization}</div>
-          <div className="bc-overlay__meaning">{localMeaning}</div>
+          {localMeaning && <div className="bc-overlay__meaning">{localMeaning}</div>}
           {stage === 'intro' && (
             <div className="bc-overlay__tap" style={{ opacity: animationDone ? 1 : 0 }}>{ui.tapToContinue}</div>
           )}

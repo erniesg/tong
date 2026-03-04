@@ -100,8 +100,11 @@ export function formatLanguageRatio(
 ): string {
   const pct = computeTargetLangPercent(playerLevel, stage);
   const explainLangName = EXPLAIN_LANG_NAMES[explainIn] ?? 'English';
+  const noEnglishHint = explainIn !== 'en'
+    ? `\n- ZERO English. Every non-Korean word must be in ${explainLangName}. No "Hey", "Nice", "OK", "Hangul".${explainIn === 'zh' ? ' Use 韩文, 小通.' : explainIn === 'ja' ? ' Use ハングル, トン.' : explainIn === 'ko' ? ' Use 한글, 통.' : ''}`
+    : '';
   return `LANGUAGE RATIO:
-- Use ~${pct}% Korean, rest ${explainLangName}
+- Use ~${pct}% Korean, rest ${explainLangName}${noEnglishHint}
 - Level ${playerLevel} guidelines:
   0-1: single words, basic greetings only
   2-3: simple sentences with known grammar

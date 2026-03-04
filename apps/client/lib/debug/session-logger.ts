@@ -106,7 +106,7 @@ export const sessionLogger = {
   },
 
   logAIRequest(content: string): void {
-    pushEntry({ kind: 'ai_request', data: { content: content.slice(0, 2000) } });
+    pushEntry({ kind: 'ai_request', data: { content } });
   },
 
   logAIResponse(role: string, toolCount: number): void {
