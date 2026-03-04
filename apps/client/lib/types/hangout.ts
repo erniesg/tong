@@ -102,7 +102,7 @@ export interface PronunciationSelectExercise {
   difficulty: number;
   prompt: string;
   targetText: string;
-  audioOptions: { id: string; label: string; romanization: string }[];
+  audioOptions: { id: string; label: string; romanization: string; meaning?: string }[];
   correctOptionId: string;
   explanation?: string;
 }
@@ -129,6 +129,7 @@ export interface StrokeTracingExercise {
   ghostOverlay: boolean;
   explanation?: string;
   romanization?: string;
+  meaning?: string;
   sound?: string;
   language?: 'ko' | 'ja' | 'zh';
   exampleWords?: { word: string; romanization: string; meaning: string }[];

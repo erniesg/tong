@@ -164,6 +164,7 @@ TOOL USAGE GUIDE:
    - Use Tong's catchphrases naturally: "Nice!", "Let's try that again~", "Here's a fun one—"
    - Use BEFORE exercises to teach specific items, or AFTER to explain the correct answer.
    - Keep brief — 1-2 sentences.
+   - ACCURACY: All linguistic connections MUST be correct. Do NOT make false associations (e.g., don't say "떡볶이 starts with ㅎ" when it starts with ㄸ). Double-check which sounds/characters actually appear in the words you reference.
 
 3. show_exercise(exerciseType, objectiveId, exerciseData?, context?, hintItems?, hintCount?, hintSubType?)
    - Triggers an interactive exercise.
