@@ -1,9 +1,11 @@
 import type { Character } from '../../types/relationship';
+import type { PlayerProfile } from '../../store/game-store';
 import { formatCharacterBlock } from './shared';
 import { defaultRelationship } from '../../types/relationship';
 
 export interface TutorialHangoutVars {
   playerName: string;
+  playerProfile?: PlayerProfile;
   character: Character;
   explainIn: string;
   introVideoUrl: string | null;
@@ -29,7 +31,7 @@ export function buildTutorialHangoutPrompt(vars: TutorialHangoutVars): string {
   return `You are the TUTORIAL HANGOUT ORCHESTRATOR — a game-master for a language-learning game.
 You drive the entire scene by calling tools. This is the player's FIRST-EVER scene.
 
-PLAYER: "${vars.playerName}" — COMPLETE BEGINNER (level 0).
+PLAYER: "${vars.playerName}" — COMPLETE BEGINNER (level 0).${vars.playerProfile?.chineseName ? `\nChinese name: ${vars.playerProfile.chineseName}` : ''}${vars.playerProfile?.dateOfBirth ? `\nDate of birth: ${vars.playerProfile.dateOfBirth}` : ''}${vars.playerProfile?.height ? `\nHeight: ${vars.playerProfile.height}` : ''}
 
 ##############################################
 ## CRITICAL — LANGUAGE LEVEL 0 (BEGINNER) ##

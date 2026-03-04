@@ -242,9 +242,10 @@ export async function POST(req: Request) {
     const videoConfig = TUTORIAL_VIDEO_CONFIG[characterId];
     const tutorialVars: TutorialHangoutVars = {
       playerName: (tutorialCtx.playerName as string) ?? 'Player',
+      playerProfile: tutorialCtx.playerProfile as TutorialHangoutVars['playerProfile'],
       character: char,
       explainIn: (tutorialCtx.explainIn as string) ?? 'en',
-      introVideoUrl: videoConfig?.introVideoUrl ?? null,
+      introVideoUrl: (tutorialCtx.introVideoUrl as string) ?? videoConfig?.introVideoUrls?.[0] ?? null,
       exitLine: (tutorialCtx.exitLine as string) ?? '',
       videoStatus: (tutorialCtx.videoStatus as 'generating' | 'ready' | 'failed') ?? 'generating',
       exitVideoUrl: (tutorialCtx.exitVideoUrl as string) ?? null,
