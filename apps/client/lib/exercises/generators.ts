@@ -22,6 +22,8 @@ import { PINYIN_DESIGN_PRINCIPLES } from '@/lib/content/scripts/pinyin';
 import { KANA_DESIGN_PRINCIPLES, HIRAGANA, KATAKANA } from '@/lib/content/scripts/kana';
 import { getLocationVocab, getRegisteredLocationKeys } from '@/lib/content/locations';
 import type { DesignPrinciple } from '@/lib/content/scripts/hangul';
+import { t, tFmt } from '@/lib/i18n/ui-strings';
+import type { UILang } from '@/lib/i18n/ui-strings';
 
 export interface ExerciseHints {
   hintItems?: string[];
@@ -32,6 +34,7 @@ export interface ExerciseHints {
   language?: 'ko' | 'zh' | 'ja';
   cityId?: string;
   locationId?: string;
+  explainIn?: UILang;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -304,6 +307,7 @@ function generateMatching(
   hintItems?: string[],
   hintSubType?: string,
   mastery?: Record<string, ItemMastery>,
+  explainIn: UILang = 'en',
 ): MatchingExercise {
   const selected = selectItems(count, pool, hintItems, mastery);
   const isScript = objectiveId.includes('script') || objectiveId.includes('pron');
@@ -315,10 +319,10 @@ function generateMatching(
     objectiveId,
     difficulty: isScript ? 1 : 2,
     prompt: isSound
-      ? 'Match each symbol to its sound'
+      ? t('match_symbol_sound', explainIn)
       : isScript
-        ? 'Match each character to its romanization'
-        : 'Match the Korean words to their English meanings',
+        ? t('match_char_roman', explainIn)
+        : t('match_words_meaning', explainIn),
     pairs: selected.map((v) => ({
       left: v.word,
       right: isSound ? v.romanization : v.translation,
@@ -332,6 +336,7 @@ function generateMultipleChoice(
   hintItems?: string[],
   hintSubType?: string,
   mastery?: Record<string, ItemMastery>,
+  explainIn: UILang = 'en',
 ): MultipleChoiceExercise {
   const selected = selectItems(4, pool, hintItems, mastery);
   const target = selected[0];
@@ -343,21 +348,19 @@ function generateMultipleChoice(
   let options: { id: string; text: string }[];
 
   if (isVisual) {
-    // "Which symbol makes the 'g' sound?" — options are Korean characters
-    prompt = `Which symbol makes the "${target.romanization}" sound?`;
+    prompt = tFmt('which_sound', explainIn, target.romanization);
     options = selected.map((v, i) => ({
       id: i === 0 ? 'correct' : `d${i}`,
       text: v.word,
     }));
   } else if (isSound) {
-    // "What sound does ㄱ make?" — options are romanizations
-    prompt = `What sound does "${target.word}" make?`;
+    prompt = tFmt('what_sound', explainIn, target.word);
     options = selected.map((v, i) => ({
       id: i === 0 ? 'correct' : `d${i}`,
       text: v.romanization,
     }));
   } else {
-    prompt = `What does "${target.word}" mean?`;
+    prompt = tFmt('what_means', explainIn, target.word);
     options = selected.map((v, i) => ({
       id: i === 0 ? 'correct' : `d${i}`,
       text: v.translation,
@@ -383,6 +386,7 @@ function generateDragDrop(
   hintItems?: string[],
   hintSubType?: string,
   mastery?: Record<string, ItemMastery>,
+  explainIn: UILang = 'en',
 ): DragDropExercise {
   const selected = selectItems(count, pool, hintItems, mastery);
   const isScript = objectiveId.includes('script') || objectiveId.includes('pron');
@@ -409,10 +413,10 @@ function generateDragDrop(
     objectiveId,
     difficulty: isScript ? 1 : 2,
     prompt: isSound
-      ? 'Match each symbol to its sound'
+      ? t('match_symbol_sound', explainIn)
       : isScript
-        ? 'Match each character to its romanization'
-        : 'Match the Korean words to their English meanings',
+        ? t('match_char_roman', explainIn)
+        : t('match_words_meaning', explainIn),
     items: shuffle(items),
     targets,
     correctMapping,
@@ -613,6 +617,7 @@ function generatePronunciationSelect(
   _pool: VocabItem[],
   objectiveId: string,
   hintItems?: string[],
+  explainIn: UILang = 'en',
 ): PronunciationSelectExercise {
   const available = [...JAMO_SOUNDS];
   let target = available[Math.floor(Math.random() * available.length)];
@@ -622,10 +627,11 @@ function generatePronunciationSelect(
     if (matched) target = matched;
   }
 
+  // Player hears the sound → picks which character it is
   const distractors = shuffle(available.filter((j) => j.char !== target.char)).slice(0, 3);
   const allOptions = shuffle([
-    { id: 'correct', label: target.sound, romanization: target.romanization },
-    ...distractors.map((d, i) => ({ id: `d${i}`, label: d.sound, romanization: d.romanization })),
+    { id: 'correct', label: target.char, romanization: target.romanization },
+    ...distractors.map((d, i) => ({ id: `d${i}`, label: d.char, romanization: d.romanization })),
   ]);
 
   return {
@@ -633,11 +639,11 @@ function generatePronunciationSelect(
     id: stableId('ps', objectiveId, [target.char]),
     objectiveId,
     difficulty: 1,
-    prompt: `What sound does this character make?`,
+    prompt: t('pron_prompt', explainIn),
     targetText: target.char,
     audioOptions: allOptions,
     correctOptionId: 'correct',
-    explanation: `${target.char} (${target.romanization}) makes the "${target.sound}" sound`,
+    explanation: `${target.char} (${target.romanization}) = "${target.sound}"`,
   };
 }
 
@@ -699,6 +705,7 @@ function generateStrokeTracing(
   objectiveId: string,
   hintItems?: string[],
   language?: 'ko' | 'zh' | 'ja',
+  explainIn: UILang = 'en',
 ): StrokeTracingExercise {
   const lang = language ?? 'ko';
 
@@ -740,10 +747,10 @@ function generateStrokeTracing(
     id: stableId('st', objectiveId, [target]),
     objectiveId,
     difficulty: 1,
-    prompt: `Trace the character: ${target}`,
+    prompt: tFmt('stroke_prompt', explainIn, target),
     targetChar: target,
     ghostOverlay: true,
-    explanation: `Practice writing ${target} to build muscle memory.`,
+    explanation: tFmt('stroke_explain', explainIn, target),
     romanization: targetItem?.romanization,
     sound: targetItem?.word ?? target,
     language: lang,
@@ -767,6 +774,7 @@ function generateBlockCrush(
   language?: 'ko' | 'zh' | 'ja',
   hintItems?: string[],
   mastery?: Record<string, ItemMastery>,
+  explainIn: UILang = 'en',
 ): BlockCrushExercise {
   const lang = language ?? 'ko';
   const difficulty = objectiveId.includes('radical') ? 2 : 1;
@@ -808,7 +816,7 @@ function generateBlockCrush(
     id: stableId('bc', objectiveId, [target.char]),
     objectiveId,
     difficulty: target.difficulty,
-    prompt: `Build the character: ${target.char}`,
+    prompt: tFmt('build_char', explainIn, target.char),
     language: lang,
     targetChar: target.char,
     components: target.components,
@@ -872,6 +880,7 @@ function generateFreeInput(
   pool: VocabItem[],
   objectiveId: string,
   hintItems?: string[],
+  explainIn: UILang = 'en',
 ): FreeInputExercise {
   const selected = hintItems && hintItems.length > 0
     ? pool.find((v) => hintItems.includes(v.word)) ?? pool[0]
@@ -882,9 +891,9 @@ function generateFreeInput(
     id: stableId('fi', objectiveId, [selected.word]),
     objectiveId,
     difficulty: 2,
-    prompt: `Type the Korean word for "${selected.translation}":`,
+    prompt: tFmt('type_word_for', explainIn, selected.translation),
     expectedAnswers: [selected.word],
-    hint: `Romanization: ${selected.romanization}`,
+    hint: tFmt('romanization_hint', explainIn, selected.romanization),
     explanation: `${selected.word} (${selected.romanization}) = ${selected.translation}`,
   };
 }
@@ -897,34 +906,35 @@ export function generateExercise(exerciseType: string, hints?: ExerciseHints): E
   const objectiveId = hints?.objectiveId ?? 'ko-vocab-food-items';
   const mastery = hints?.mastery;
   const language = hints?.language ?? 'ko';
+  const explainIn = hints?.explainIn ?? 'en';
 
   // Language-aware pool selection
   const pool = getPoolForLocation(language, hints?.cityId, hints?.locationId, objectiveId);
 
   switch (exerciseType) {
     case 'matching':
-      return generateMatching(pool, objectiveId, count ?? 5, hintItems, hintSubType, mastery);
+      return generateMatching(pool, objectiveId, count ?? 5, hintItems, hintSubType, mastery, explainIn);
     case 'multiple_choice':
-      return generateMultipleChoice(pool, objectiveId, hintItems, hintSubType, mastery);
+      return generateMultipleChoice(pool, objectiveId, hintItems, hintSubType, mastery, explainIn);
     case 'drag_drop':
-      return generateDragDrop(pool, objectiveId, count ?? 4, hintItems, hintSubType, mastery);
+      return generateDragDrop(pool, objectiveId, count ?? 4, hintItems, hintSubType, mastery, explainIn);
     case 'sentence_builder':
       return generateSentenceBuilder(pool, objectiveId, hintItems);
     case 'fill_blank':
       return generateFillBlank(pool, objectiveId, hintItems);
     case 'pronunciation_select':
-      return generatePronunciationSelect(pool, objectiveId, hintItems);
+      return generatePronunciationSelect(pool, objectiveId, hintItems, explainIn);
     case 'pattern_recognition':
       return generatePatternRecognition(objectiveId, language);
     case 'stroke_tracing':
-      return generateStrokeTracing(pool, objectiveId, hintItems, language);
+      return generateStrokeTracing(pool, objectiveId, hintItems, language, explainIn);
     case 'block_crush':
-      return generateBlockCrush(objectiveId, language, hintItems, mastery);
+      return generateBlockCrush(objectiveId, language, hintItems, mastery, explainIn);
     case 'error_correction':
       return generateErrorCorrection(pool, objectiveId);
     case 'free_input':
-      return generateFreeInput(pool, objectiveId, hintItems);
+      return generateFreeInput(pool, objectiveId, hintItems, explainIn);
     default:
-      return generateMatching(pool, objectiveId, count ?? 5, hintItems, hintSubType, mastery);
+      return generateMatching(pool, objectiveId, count ?? 5, hintItems, hintSubType, mastery, explainIn);
   }
 }

@@ -17,7 +17,6 @@ import { useGameState, dispatch, getRelationship, getMasterySnapshot, getGameSta
 import type { PlayerProfile } from '@/lib/store/game-store';
 import { CHARACTER_MAP, HAEUN, TUTORIAL_VIDEO_CONFIG, pickRandom } from '@/lib/content/characters';
 import { useVideoGeneration } from '@/lib/hooks/useVideoGeneration';
-import { HeartMeter } from '@/components/scene/HeartMeter';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import { getLocationOrDefault, getLanguageForCity } from '@/lib/content/locations';
 import { getRelationshipStage } from '@/lib/types/relationship';
@@ -39,6 +38,13 @@ const NPC_SPRITES: Record<string, { name: string; nameLocal: string; nameZh: str
 };
 
 const NPC_POOL = ['haeun', 'jin'] as const;
+
+/** Pick an NPC that belongs to the given city, falling back to any NPC. */
+function pickNpcForCity(cityId: CityId): string {
+  const cityNpcs = NPC_POOL.filter((id) => CHARACTER_MAP[id]?.cityId === cityId);
+  const pool = cityNpcs.length > 0 ? cityNpcs : NPC_POOL;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 /* ── constants ──────────────────────────────────────────── */
 
@@ -72,12 +78,6 @@ const EXPLAIN_LANG_OPTIONS: { value: AppLang; label: string; flag: string }[] = 
   { value: 'zh', label: '中文', flag: '🇨🇳' },
 ];
 
-const CONTINUE_LABELS: Record<string, string> = {
-  en: 'Tap to continue',
-  ko: '탭하여 계속',
-  ja: 'タップして続く',
-  zh: '点击继续',
-};
 
 const CITY_EXPLAIN_ROWS: { cityId: CityId; label: string; target: string }[] = [
   { cityId: 'shanghai', label: 'Shanghai', target: 'Chinese' },
@@ -140,13 +140,15 @@ function buildContextBlock(
   locationId: LocationId,
   npcChar: Character,
   explainIn: AppLang = 'en',
-  tutorialCtx?: {
-    isTutorial: boolean;
+  introCtx?: {
+    isIntroduction: boolean;
     playerName: string;
     videoStatus: 'generating' | 'ready' | 'failed';
     exitVideoUrl: string | null;
     exitLine: string;
     exercisesDone: number;
+    introAct?: 1 | 2;
+    backdropUrl?: string;
   },
 ): string {
   // explainIn is resolved per-city by the caller
@@ -174,7 +176,7 @@ function buildContextBlock(
     locationLevel: locLevel,
     objectives,
     explainIn,
-    ...(tutorialCtx ?? {}),
+    ...(introCtx ?? {}),
   });
   return `[HANGOUT_CONTEXT]${ctx}[/HANGOUT_CONTEXT] `;
 }
@@ -194,13 +196,14 @@ export default function GamePage() {
   const searchParams = useSearchParams();
   const gameState = useGameState();
 
-  /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester */
+  /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester, ?dev_intro=1 fresh intro hangout */
   const phaseParam = searchParams.get('phase');
   const devParam = searchParams.get('dev');
+  const devIntro = searchParams.get('dev_intro') === '1';
   const skipToHangout = phaseParam === 'hangout';
   const skipToCityMap = phaseParam === 'city_map';
   const [phase, setPhase] = useState<Phase>(
-    devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : 'opening'
+    devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : 'opening'
   );
   const openingVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -316,10 +319,12 @@ export default function GamePage() {
   const exitLineRef = useRef('');
   const introVideoUrlRef = useRef<string | null>(null);
   const exitVideoUrlRef = useRef<string | null>(null);
+  const cinematicCaptionRef = useRef<string | null>(null);
   const exitVideoGen = useVideoGeneration({ mock: mockVideo });
-  const [isTutorialHangout, setIsTutorialHangout] = useState(false);
-  const [tutorialExerciseCount, setTutorialExerciseCount] = useState(0);
-  const MIN_TUTORIAL_EXERCISES = 3;
+  const [isIntroHangout, setIsIntroHangout] = useState(false);
+  const [introExerciseCount, setIntroExerciseCount] = useState(0);
+  const [introAct, setIntroAct] = useState<1 | 2>(1);
+  const MIN_INTRO_EXERCISES = 3;
 
   // Sync generated video URL back to exitVideoUrlRef when generation succeeds
   useEffect(() => {
@@ -348,11 +353,11 @@ export default function GamePage() {
     });
   }
 
-  /** Build tutorial context if in tutorial mode */
-  function getTutorialCtx() {
-    if (!isTutorialHangout) return undefined;
+  /** Build introduction context if in introduction mode */
+  function getIntroCtx() {
+    if (!isIntroHangout) return undefined;
 
-    // Map exitVideoGen.status → tutorial 3-state model
+    // Map exitVideoGen.status → introduction 3-state model
     let videoStatus: 'generating' | 'ready' | 'failed';
     let exitVideoUrl = exitVideoUrlRef.current; // pre-gen fallback
 
@@ -371,14 +376,21 @@ export default function GamePage() {
       videoStatus = 'generating';
     }
 
+    // Use Chinese name when explain language is zh
+    const explainLangForCtx = gameState.explainIn[city] ?? 'en';
+    const ctxName = explainLangForCtx === 'zh' && gameState.playerProfile?.chineseName
+      ? gameState.playerProfile.chineseName : (gameState.playerName || 'Player');
+
     return {
-      isTutorial: true,
-      playerName: gameState.playerName || 'Player',
+      isIntroduction: true,
+      playerName: ctxName,
       videoStatus,
       exitVideoUrl,
       introVideoUrl: introVideoUrlRef.current,
       exitLine: exitLineRef.current,
-      exercisesDone: tutorialExerciseCount,
+      exercisesDone: introExerciseCount,
+      introAct,
+      backdropUrl: '/assets/backdrops/seoul/pojangmacha.png',
     };
   }
 
@@ -388,14 +400,15 @@ export default function GamePage() {
 
     const weakIdx = getWeakestLangIndex(sliders);
     const primaryLang = LANG_KEYS[weakIdx] as 'ko' | 'ja' | 'zh';
-    const primaryCity = LANG_TO_CITY[primaryLang] ?? 'seoul';
 
     const weakLevel = sliders[weakIdx];
-    const npcId = NPC_POOL[Math.floor(Math.random() * NPC_POOL.length)];
+    const preferredCity = (LANG_TO_CITY[primaryLang] ?? 'seoul') as CityId;
+    const npcId = pickNpcForCity(preferredCity);
     const npcChar = CHARACTER_MAP[npcId] ?? HAEUN;
-    npcRef.current = npcChar;
-
-    setCity(primaryCity as CityId);
+    // Use the NPC's actual city — if no NPC exists for the preferred city,
+    // the fallback NPC's city determines the target language.
+    const primaryCity = (npcChar.cityId ?? preferredCity) as CityId;
+    setCity(primaryCity);
     setLocation('food_street');
     setActiveNpc(npcId);
     setPlayerLevel(weakLevel);
@@ -405,25 +418,30 @@ export default function GamePage() {
     const name = profileInput.englishName.trim() || 'Player';
     const profile: PlayerProfile = { ...profileInput, englishName: name };
     dispatch({ type: 'SET_PLAYER_PROFILE', profile });
+    // Use Chinese name when explain language is zh and Chinese name is available
+    const cityExplainLang = gameState.explainIn[primaryCity as CityId] ?? 'en';
+    const displayName = cityExplainLang === 'zh' && profileInput.chineseName?.trim()
+      ? profileInput.chineseName.trim() : name;
 
     // Store self-assessed level
     dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
 
-    // Detect tutorial (first encounter with this NPC, or forced via ?force_tutorial=1)
+    // Detect introduction (first encounter with this NPC, or forced via ?force_tutorial=1)
     const rel = getRelationship(npcId);
     const forceTutorial = searchParams.get('force_tutorial') === '1';
-    const isTutorial = forceTutorial || rel.interactionCount === 0;
-    setIsTutorialHangout(isTutorial);
-    setTutorialExerciseCount(0);
+    const isIntro = forceTutorial || rel.interactionCount === 0;
+    setIsIntroHangout(isIntro);
+    setIntroExerciseCount(0);
+    setIntroAct(1);
 
-    // Select pre-generated intro/exit videos for tutorial
-    let tutCtx: ReturnType<typeof getTutorialCtx> = undefined;
-    if (isTutorial) {
+    // Select pre-generated intro/exit videos for introduction
+    let introCtx: ReturnType<typeof getIntroCtx> = undefined;
+    if (isIntro) {
       const config = TUTORIAL_VIDEO_CONFIG[npcId];
       if (config) {
         const templates = config.exitLineTemplates;
         const template = pickRandom(templates);
-        const exitLine = template.replace(/{playerName}/g, name);
+        const exitLine = template.replace(/{playerName}/g, displayName);
         exitLineRef.current = exitLine;
 
         introVideoUrlRef.current = pickRandom(config.introVideoUrls);
@@ -446,21 +464,23 @@ export default function GamePage() {
 
       // Initial video status: 'generating' if gen started, 'ready' with pre-gen otherwise
       const initialVideoStatus = (liveVideo || mockVideo) ? 'generating' as const : 'ready' as const;
-      tutCtx = {
-        isTutorial: true,
-        playerName: name,
+      introCtx = {
+        isIntroduction: true,
+        playerName: displayName,
         videoStatus: initialVideoStatus,
         exitVideoUrl: exitVideoUrlRef.current,
         introVideoUrl: introVideoUrlRef.current,
         exitLine: exitLineRef.current,
         exercisesDone: 0,
+        introAct: 1 as const,
+        backdropUrl: '/assets/backdrops/seoul/pojangmacha.png',
       };
     }
 
     setPhase('hangout');
     setLoading(false);
 
-    const startMsg = `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street', npcChar, gameState.explainIn[primaryCity as CityId] ?? 'en', tutCtx)}Start the scene.`;
+    const startMsg = `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street', npcChar, gameState.explainIn[primaryCity as CityId] ?? 'en', introCtx)}Start the scene.`;
     sessionLogger.start({ mode: 'hangout', cityId: primaryCity, locationId: 'food_street', npcId, playerLevel: weakLevel });
     sessionLogger.logAIRequest(startMsg);
     void append({ role: 'user', content: startMsg });
@@ -507,10 +527,69 @@ export default function GamePage() {
   useEffect(() => {
     if (skipToHangout && !sceneStartedRef.current) {
       sceneStartedRef.current = true;
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getTutorialCtx());
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
       void append({ role: 'user', content: `${ctx}Start the scene.` });
     }
   }, [skipToHangout, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
+
+  /* Dev intro bypass: ?dev_intro=1 — fresh introduction hangout, clears stale state */
+  useEffect(() => {
+    if (!devIntro || sceneStartedRef.current) return;
+    sceneStartedRef.current = true;
+
+    // Reset game state for a true fresh start
+    dispatch({ type: 'RESET' });
+
+    const npcId = searchParams.get('npc') ?? 'haeun';
+    const npcChar = CHARACTER_MAP[npcId] ?? HAEUN;
+    const devCity = (npcChar.cityId ?? 'seoul') as CityId;
+    const devLang = (searchParams.get('lang') ?? 'en') as AppLang;
+    const englishName = searchParams.get('name') ?? 'Player';
+    const chineseName = searchParams.get('cn_name') ?? '';
+    // Use Chinese name when lang=zh and it's available, otherwise English
+    const displayName = devLang === 'zh' && chineseName ? chineseName : englishName;
+
+    npcRef.current = npcChar;
+    setCity(devCity);
+    setLocation('food_street');
+    setActiveNpc(npcId);
+    setPlayerLevel(0);
+    setIsIntroHangout(true);
+    setIntroExerciseCount(0);
+    setIntroAct(1);
+
+    // Set player profile and language preference
+    dispatch({ type: 'SET_PLAYER_PROFILE', profile: { englishName, chineseName } });
+    dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: devCity, lang: devLang });
+
+    // Pick intro/exit videos
+    const config = TUTORIAL_VIDEO_CONFIG[npcId];
+    if (config) {
+      introVideoUrlRef.current = pickRandom(config.introVideoUrls);
+      exitVideoUrlRef.current = pickRandom(config.exitVideoUrls);
+      const template = pickRandom(config.exitLineTemplates);
+      exitLineRef.current = template.replace(/{playerName}/g, displayName);
+    }
+
+    const introCtx = {
+      isIntroduction: true,
+      playerName: displayName,
+      videoStatus: 'ready' as const,
+      exitVideoUrl: exitVideoUrlRef.current,
+      introVideoUrl: introVideoUrlRef.current,
+      exitLine: exitLineRef.current,
+      exercisesDone: 0,
+      introAct: 1 as const,
+      backdropUrl: '/assets/backdrops/seoul/pojangmacha.png',
+    };
+
+    const startMsg = `${buildContextBlock(0, npcId, devCity, 'food_street', npcChar, devLang, introCtx)}Start the scene.`;
+    sessionLogger.start({ mode: 'hangout', cityId: devCity, locationId: 'food_street', npcId, playerLevel: 0 });
+    sessionLogger.logAIRequest(startMsg);
+    console.log('[DevIntro] Starting fresh introduction hangout for', npcId, 'lang:', devLang);
+    void append({ role: 'user', content: startMsg });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devIntro]);
 
   /* ── Tool queue processor ───────────────────────────────── */
   useEffect(() => {
@@ -528,6 +607,11 @@ export default function GamePage() {
           expression?: string | null;
           affinityDelta?: number | null;
         };
+        // If AI calls npc_speak during Act 1, auto-promote to Act 2 (NPC arrived)
+        if (isIntroHangout && introAct === 1) {
+          setIntroAct(2);
+          console.log('[VN] Act 1 → Act 2 transition triggered by npc_speak');
+        }
         setCurrentMessage({
           id: item.toolCallId,
           role: 'npc',
@@ -565,11 +649,20 @@ export default function GamePage() {
         if (parsed) {
           exercise = parsed;
         } else {
+          const npcChar = CHARACTER_MAP[activeNpc];
+          const npcCity = (npcChar?.cityId ?? city) as CityId;
+          const lang = getLanguageForCity(npcCity);
+          const explainLang_ = getGameState().explainIn[npcCity] ?? 'en';
           exercise = generateExercise(args.exerciseType, {
             hintItems: args.hintItems ?? undefined,
             hintCount: args.hintCount ?? undefined,
             hintSubType: args.hintSubType ?? undefined,
             objectiveId: args.objectiveId,
+            language: lang as 'ko' | 'zh' | 'ja',
+            cityId: city,
+            locationId: location,
+            mastery: getGameState().itemMastery,
+            explainIn: explainLang_ as UILang,
           });
         }
         setCurrentMessage(null);
@@ -657,14 +750,21 @@ export default function GamePage() {
           autoAdvance: boolean;
         };
         // Exit video (pre-generated with audio) should be unmuted
-        const isExitVideo = isTutorialHangout && exitVideoUrlRef.current && args.videoUrl === exitVideoUrlRef.current;
+        const isExitVideo = isIntroHangout && exitVideoUrlRef.current && args.videoUrl === exitVideoUrlRef.current;
+        // Intro video triggers Act 1 → Act 2 transition
+        const isIntroVideo = isIntroHangout && introAct === 1 && introVideoUrlRef.current && args.videoUrl === introVideoUrlRef.current;
+        if (isIntroVideo) {
+          setIntroAct(2);
+          console.log('[VN] Act 1 → Act 2 transition triggered by intro cinematic');
+        }
+        // Store caption to show as narrator line after cinematic ends
+        cinematicCaptionRef.current = args.caption ?? null;
         setCinematic({
           videoUrl: args.videoUrl,
-          caption: args.caption ?? undefined,
           autoAdvance: args.autoAdvance,
-          muted: !isExitVideo,
+          muted: false,
         });
-        console.log('[VN] play_cinematic BLOCK:', args.videoUrl, isExitVideo ? '(exit video, unmuted)' : '');
+        console.log('[VN] play_cinematic BLOCK:', args.videoUrl, isExitVideo ? '(exit video, unmuted)' : '', isIntroVideo ? '(intro video, act transition)' : '');
         return; // BLOCK — wait for video end or tap
       }
       default:
@@ -674,7 +774,7 @@ export default function GamePage() {
     // Auto-advance: dequeue and release lock
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
-  }, [toolQueue, activeNpc]);
+  }, [toolQueue, activeNpc, isIntroHangout, introAct]);
 
   /* ── Hangout handlers ───────────────────────────────────── */
 
@@ -701,13 +801,13 @@ export default function GamePage() {
     }
 
     if (!currentExercise && !choices && toolQueue.length === 0) {
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getTutorialCtx());
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
       const msg = `${ctx}Continue.`;
       sessionLogger.logUserTap('continue');
       sessionLogger.logAIRequest(msg);
       void append({ role: 'user', content: msg });
     }
-  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, tutorialExerciseCount]);
+  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
 
   const handleExerciseResult = useCallback((exerciseId: string, correct: boolean) => {
     sessionLogger.logExerciseResult(exerciseId, correct);
@@ -721,21 +821,32 @@ export default function GamePage() {
       }
     }
 
-    // Increment tutorial exercise counter
-    if (isTutorialHangout) setTutorialExerciseCount(prev => prev + 1);
+    // Increment introduction exercise counter
+    if (isIntroHangout) setIntroExerciseCount(prev => prev + 1);
 
-    // Delay clearing the exercise so user can see feedback (Correct!/Wrong) for 1.5s
+    // Delay clearing the exercise so user can see feedback (Correct!/Wrong)
     setTimeout(() => {
       setCurrentExercise(null);
       setToolQueue((prev) => prev.slice(1));
       processingRef.current = false;
 
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getTutorialCtx());
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
       const msg = `${ctx}${summarizeExercise(exerciseId, correct)}`;
       sessionLogger.logAIRequest(msg);
       void append({ role: 'user', content: msg });
-    }, 1500);
-  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, tutorialExerciseCount]);
+    }, 800);
+  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
+
+  const handleExerciseDismiss = useCallback(() => {
+    setCurrentExercise(null);
+    setToolQueue((prev) => prev.slice(1));
+    processingRef.current = false;
+
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
+    const msg = `${ctx}Player skipped the exercise. Continue the conversation naturally.`;
+    sessionLogger.logAIRequest(msg);
+    void append({ role: 'user', content: msg });
+  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
 
   const handleChoice = useCallback((choiceId: string) => {
     setChoices(null);
@@ -743,14 +854,20 @@ export default function GamePage() {
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
     sessionLogger.logChoiceSelected(choiceId);
-    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getTutorialCtx());
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
     const msg = `${ctx}Choice: ${choiceId}`;
     sessionLogger.logAIRequest(msg);
     void append({ role: 'user', content: msg });
-  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, tutorialExerciseCount]);
+  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
 
   const handleCinematicEnd = useCallback(() => {
     setCinematic(null);
+    // Show caption as a narrator line after the video finishes
+    const caption = cinematicCaptionRef.current;
+    if (caption) {
+      setCurrentMessage({ id: `cinematic-caption-${Date.now()}`, role: 'narrator', content: caption });
+      cinematicCaptionRef.current = null;
+    }
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
   }, []);
@@ -763,10 +880,10 @@ export default function GamePage() {
       processingRef.current = false;
     } else if (!currentExercise && !choices && toolQueue.length === 0) {
       // tong_whisper was auto-advanced, nothing queued — request next turn
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getTutorialCtx());
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
       void append({ role: 'user', content: `${ctx}Continue.` });
     }
-  }, [currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, tutorialExerciseCount]);
+  }, [currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
 
   /* ── renders ──────────────────────────────────────────── */
 
@@ -1052,7 +1169,7 @@ export default function GamePage() {
   /* ── City map handlers ────────────────────────────────────── */
 
   function handleMapHangout(cityId: CityId, locationId: LocationId) {
-    const npcId = NPC_POOL[Math.floor(Math.random() * NPC_POOL.length)];
+    const npcId = pickNpcForCity(cityId);
     const npcChar = CHARACTER_MAP[npcId] ?? HAEUN;
     npcRef.current = npcChar;
     const level = gameState.calibratedLevel ?? gameState.selfAssessedLevel ?? 0;
@@ -1082,8 +1199,9 @@ export default function GamePage() {
     setSceneSummary(null);
     setDynamicBackdrop(null);
     setCinematic(null);
-    setIsTutorialHangout(false);
-    setTutorialExerciseCount(0);
+    setIsIntroHangout(false);
+    setIntroExerciseCount(0);
+    setIntroAct(1);
     exitLineRef.current = '';
     processingRef.current = false;
     pausedRef.current = false;
@@ -1282,8 +1400,13 @@ export default function GamePage() {
   const rel = gameState.relationships[activeNpc];
   const affinity = rel?.affinity ?? 10;
 
-  const targetLang = getLanguageForCity(city);
-  const explainLang = (gameState.explainIn[city] ?? 'en') as UILang;
+  // Derive targetLang from the NPC's home city, not the game's current city.
+  // This ensures that talking to a Seoul NPC (Jin) always gives Korean tooltips,
+  // even if the game routed to a different city during onboarding.
+  const npcChar = CHARACTER_MAP[activeNpc];
+  const npcCity = (npcChar?.cityId ?? city) as CityId;
+  const targetLang = getLanguageForCity(npcCity);
+  const explainLang = (gameState.explainIn[npcCity] ?? 'en') as UILang;
 
   if (sceneSummary) {
     const sceneImageUrl = TUTORIAL_VIDEO_CONFIG[activeNpc]?.sceneImageUrl;
@@ -1331,11 +1454,11 @@ export default function GamePage() {
       </UILangProvider>
     );
   }
-  const continueLabel = CONTINUE_LABELS[explainLang] ?? CONTINUE_LABELS.en;
+  const continueLabel = t('tap_to_continue', explainLang as UILang);
 
   // Heart meter progress: based on exercise completion
-  const heartProgress = isTutorialHangout
-    ? Math.round(Math.min(100, (tutorialExerciseCount / MIN_TUTORIAL_EXERCISES) * 100))
+  const heartProgress = isIntroHangout
+    ? Math.round(Math.min(100, (introExerciseCount / MIN_INTRO_EXERCISES) * 100))
     : 0;
 
   return (
@@ -1350,7 +1473,7 @@ export default function GamePage() {
           onCinematicEnd={handleCinematicEnd}
           npcName={npc.name}
           npcColor={npc.color}
-          npcSpriteUrl={npc.src}
+          npcSpriteUrl={isIntroHangout && introAct === 1 ? '' : npc.src}
           currentMessage={currentMessage}
           currentExercise={currentExercise}
           choices={choices}
@@ -1360,27 +1483,22 @@ export default function GamePage() {
           targetLang={targetLang}
           continueLabel={continueLabel}
           hudContent={
-            <>
-              <GameHUD
-                xp={gameState.xp}
-                sp={gameState.sp}
-                rp={Math.round(affinity)}
-                locationLabel={<>{cityInfo.en} <span className="korean">{cityInfo.local}</span><span className="scene-hud-dot">&middot;</span>{t(`loc_${location}`, explainLang)}</>}
-                cityId={city}
-                explainLang={explainLang as AppLang}
-              />
-              {isTutorialHangout && (
-                <HeartMeter
-                  progress={heartProgress}
-                  videoReady={!!exitVideoUrlRef.current}
-                  characterName={npc.name}
-                />
-              )}
-            </>
+            <GameHUD
+              xp={gameState.xp}
+              sp={gameState.sp}
+              rp={Math.round(affinity)}
+              locationLabel={<>{cityInfo.en} <span className="korean">{cityInfo.local}</span><span className="scene-hud-dot">&middot;</span>{t(`loc_${location}`, explainLang)}</>}
+              cityId={city}
+              explainLang={explainLang as AppLang}
+              chargeProgress={isIntroHangout && introAct === 2 ? heartProgress : undefined}
+              chargeLabel={isIntroHangout && introAct === 2 ? `${npc.name} · ${heartProgress}%` : undefined}
+              chargeComplete={isIntroHangout && introAct === 2 && !!exitVideoUrlRef.current && heartProgress >= 100}
+            />
           }
           onChoice={handleChoice}
           onContinue={handleContinue}
           onExerciseResult={handleExerciseResult}
+          onExerciseDismiss={handleExerciseDismiss}
           onDismissTong={handleDismissTong}
         />
       </div>

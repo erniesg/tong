@@ -778,6 +778,7 @@ button.nav-link:hover {
   transform: translateY(0);
   opacity: 1;
   pointer-events: auto;
+  z-index: 35;
 }
 
 .scene-hud-location {
@@ -1906,6 +1907,34 @@ button.nav-link:hover {
 /* ── Animations ───────────────────────────────────────────── */
 .slide-up {
   animation: slideUp 0.4s ease-out;
+  position: relative;
+}
+
+/* Exercise dismiss / skip button */
+.exercise-dismiss-btn {
+  position: sticky;
+  top: 0;
+  float: right;
+  z-index: 50;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  cursor: pointer;
+  margin: 8px 8px 0 0;
+  transition: background 0.15s, color 0.15s;
+}
+.exercise-dismiss-btn:hover {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
 }
 
 @keyframes slideUp {
@@ -1955,26 +1984,27 @@ button.nav-link:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: fadeIn 0.3s ease-out;
+  animation: cinematicFadeIn 0.5s ease-out;
+}
+
+.cinematic-overlay.cinematic-fade-out {
+  animation: cinematicFadeOut 0.5s ease-in forwards;
+}
+
+@keyframes cinematicFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes cinematicFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 
 .cinematic-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.cinematic-caption {
-  position: absolute;
-  bottom: 60px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
-  padding: 0 24px;
 }
 
 .cinematic-tap-hint {
@@ -4198,7 +4228,9 @@ button.nav-link:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #000;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 60;
   animation: bc-overlay-in 0.3s ease-out;
 }
@@ -4253,43 +4285,67 @@ button.nav-link:hover {
 
 /* ── Heart Meter ─────────────────────────────────────────── */
 
-.heart-meter {
+/* ── Charge bar (horizontal progress meter) ────────────── */
+.charge-bar {
   position: absolute;
-  top: 52px;
-  right: 12px;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  top: 50%;
+  left: 0;
+  right: 0;
+  z-index: 12;
+  padding: 0 16px;
   pointer-events: none;
+  animation: fadeIn 0.4s ease-out;
 }
 
-.heart-meter svg {
-  filter: drop-shadow(0 2px 6px rgba(232, 72, 92, 0.3));
-  transition: filter 0.3s ease;
+.charge-bar__track {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
 }
 
-.heart-meter__fill {
-  transition: y 0.8s ease-out;
+.charge-bar__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #e8485c, #f472b6);
+  transition: width 0.8s ease-out;
 }
 
-.heart-meter__label {
+.charge-bar__shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: charge-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes charge-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.charge-bar__label {
+  margin-top: 4px;
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.7);
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  letter-spacing: 0.3px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  text-align: center;
 }
 
-.heart-meter--complete svg {
-  animation: heart-pulse 1.2s ease-in-out infinite;
-  filter: drop-shadow(0 0 12px rgba(232, 72, 92, 0.6));
+.charge-bar--complete .charge-bar__fill {
+  background: linear-gradient(90deg, #f472b6, #a855f7);
 }
 
-@keyframes heart-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15); }
+.charge-bar--complete .charge-bar__label {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* ── Name Input (proficiency screen) ─────────────────────── */
