@@ -629,11 +629,8 @@ export default function GamePage() {
       case 'tong_whisper': {
         const args = item.args as { message: string; translation?: string | null };
         setTongTip({ message: args.message, translation: args.translation ?? undefined });
-        if (toolQueue.length > 1 && toolQueue[1].toolName === 'show_exercise') {
-          console.log('[VN] tong_whisper BLOCK (exercise next)');
-          return; // BLOCK
-        }
-        break; // auto-advance
+        console.log('[VN] tong_whisper BLOCK — wait for user dismiss');
+        return; // ALWAYS BLOCK — user must tap to dismiss before proceeding
       }
       case 'show_exercise': {
         const args = item.args as {
@@ -795,9 +792,19 @@ export default function GamePage() {
       }
       console.log('[VN] handleContinue: dequeue blocked tool');
       setCurrentMessage(null);
-      setTongTip(null); // Clear any lingering tong tip
+      setTongTip(null);
+      const remainingAfterDequeue = toolQueue.length - 1;
       setToolQueue((prev) => prev.slice(1));
       processingRef.current = false;
+
+      // If nothing left in queue after dequeuing, request next turn
+      if (remainingAfterDequeue === 0 && !chatLoading) {
+        const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
+        const msg = `${ctx}Continue.`;
+        sessionLogger.logUserTap('continue');
+        sessionLogger.logAIRequest(msg);
+        void append({ role: 'user', content: msg });
+      }
       return;
     }
 
@@ -836,30 +843,40 @@ export default function GamePage() {
     // Increment introduction exercise counter
     if (isIntroHangout) setIntroExerciseCount(prev => prev + 1);
 
-    // Store result — DON'T auto-clear. The exercise component shows its own
-    // feedback (e.g. "Great job!"). User must tap outside to continue.
+    // Store result and auto-advance after delay (user can also tap to advance immediately)
     exerciseResultRef.current = { exerciseId, correct };
+    setTimeout(() => {
+      // Only auto-advance if result hasn't been consumed by a tap already
+      if (exerciseResultRef.current?.exerciseId === exerciseId) {
+        advanceAfterExercise();
+      }
+    }, 2000);
   }, [isIntroHangout, introExerciseCount, introAct]);
 
-  const handleExerciseDismiss = useCallback(() => {
+  const advanceAfterExercise = useCallback(() => {
     const result = exerciseResultRef.current;
-    if (result) {
-      // Exercise was completed — advance to conversation
-      exerciseResultRef.current = null;
-      setCurrentExercise(null);
-      setToolQueue((prev) => prev.slice(1));
-      processingRef.current = false;
+    if (!result) return;
+    exerciseResultRef.current = null;
+    setCurrentExercise(null);
+    setToolQueue((prev) => prev.slice(1));
+    processingRef.current = false;
 
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
-      const msg = `${ctx}${summarizeExercise(result.exerciseId, result.correct)}`;
-      sessionLogger.logAIRequest(msg);
-      void append({ role: 'user', content: msg });
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
+    const msg = `${ctx}${summarizeExercise(result.exerciseId, result.correct)}`;
+    sessionLogger.logAIRequest(msg);
+    void append({ role: 'user', content: msg });
+  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
+
+  const handleExerciseDismiss = useCallback(() => {
+    if (exerciseResultRef.current) {
+      // Exercise completed — advance immediately
+      advanceAfterExercise();
     } else {
       // Exercise not completed — just hide temporarily.
       // processingRef stays true. handleContinue will re-show it.
       setCurrentExercise(null);
     }
-  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
+  }, [advanceAfterExercise]);
 
   const handleChoice = useCallback((choiceId: string) => {
     setChoices(null);
@@ -875,12 +892,7 @@ export default function GamePage() {
 
   const handleCinematicEnd = useCallback(() => {
     setCinematic(null);
-    // Show caption as a narrator line after the video finishes
-    const caption = cinematicCaptionRef.current;
-    if (caption) {
-      setCurrentMessage({ id: `cinematic-caption-${Date.now()}`, role: 'narrator', content: caption });
-      cinematicCaptionRef.current = null;
-    }
+    cinematicCaptionRef.current = null;
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
   }, []);
@@ -888,17 +900,12 @@ export default function GamePage() {
   const handleDismissTong = useCallback(() => {
     setTongTip(null);
     if (processingRef.current) {
-      // tong_whisper was blocking (exercise next).
-      // DON'T dequeue yet — leave the tong_whisper in queue so the user
-      // sees "tap to continue" and gets a moment before the exercise appears.
-      // The next handleContinue tap will dequeue it and let the processor
-      // pick up show_exercise.
-    } else if (!currentExercise && !choices && toolQueue.length === 0) {
-      // tong_whisper was auto-advanced, nothing queued — request next turn
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
-      void append({ role: 'user', content: `${ctx}Continue.` });
+      // tong_whisper was blocking. Don't dequeue yet — leave it in queue
+      // so the user sees "tap to continue" before the next tool fires.
+      // handleContinue will dequeue on the next tap.
     }
-  }, [currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
+    // If not processing (shouldn't happen since tong always blocks, but safety):
+  }, []);
 
   /* ── renders ──────────────────────────────────────────── */
 
