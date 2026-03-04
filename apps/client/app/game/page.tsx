@@ -13,8 +13,9 @@ import { generateExercise } from '@/lib/exercises/generators';
 import { parseExerciseData } from '@/lib/exercises/validate';
 import { extractTargetItems } from '@/lib/exercises/extract-targets';
 import { summarizeExercise } from '@/lib/utils/summarize-exercise';
-import { useGameState, dispatch, getRelationship, getMasterySnapshot } from '@/lib/store/game-store';
-import { CHARACTER_MAP, HAUEN, TUTORIAL_VIDEO_CONFIG } from '@/lib/content/characters';
+import { useGameState, dispatch, getRelationship, getMasterySnapshot, getGameState } from '@/lib/store/game-store';
+import type { PlayerProfile } from '@/lib/store/game-store';
+import { CHARACTER_MAP, HAUEN, TUTORIAL_VIDEO_CONFIG, pickRandom } from '@/lib/content/characters';
 import { useVideoGeneration } from '@/lib/hooks/useVideoGeneration';
 import { HeartMeter } from '@/components/scene/HeartMeter';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
@@ -145,6 +146,7 @@ function buildContextBlock(
 
   const ctx = JSON.stringify({
     playerLevel: level,
+    playerProfile: getGameState().playerProfile,
     characterId: npcId,
     city: cityId,
     location: locationId,
@@ -265,8 +267,10 @@ export default function GamePage() {
 
   /* tutorial state */
   const mockVideo = searchParams.get('mock_video') === '1';
-  const [playerNameInput, setPlayerNameInput] = useState('');
+  const [profileInput, setProfileInput] = useState<PlayerProfile>({ englishName: '', chineseName: '', dateOfBirth: '', height: '' });
   const exitLineRef = useRef('');
+  const introVideoUrlRef = useRef<string | null>(null);
+  const exitVideoUrlRef = useRef<string | null>(null);
   const exitVideoGen = useVideoGeneration({ mock: mockVideo });
   const [isTutorialHangout, setIsTutorialHangout] = useState(false);
   const [tutorialExerciseCount, setTutorialExerciseCount] = useState(0);
@@ -289,21 +293,15 @@ export default function GamePage() {
     });
   }
 
-  /** Map video gen hook status to context status */
-  function getVideoContextStatus(): 'generating' | 'ready' | 'failed' {
-    if (exitVideoGen.status === 'succeeded') return 'ready';
-    if (exitVideoGen.status === 'failed' || exitVideoGen.status === 'error') return 'failed';
-    return 'generating';
-  }
-
   /** Build tutorial context if in tutorial mode */
   function getTutorialCtx() {
     if (!isTutorialHangout) return undefined;
     return {
       isTutorial: true,
       playerName: gameState.playerName || 'Player',
-      videoStatus: getVideoContextStatus(),
-      exitVideoUrl: exitVideoGen.videoUrl,
+      videoStatus: 'ready' as const,
+      exitVideoUrl: exitVideoUrlRef.current,
+      introVideoUrl: introVideoUrlRef.current,
       exitLine: exitLineRef.current,
       exercisesDone: tutorialExerciseCount,
     };
@@ -328,9 +326,10 @@ export default function GamePage() {
     setPlayerLevel(weakLevel);
     setScore({ xp: 0, sp: 0, rp: 0 });
 
-    // Store player name
-    const name = playerNameInput.trim() || 'Player';
-    dispatch({ type: 'SET_PLAYER_NAME', name });
+    // Store player profile
+    const name = profileInput.englishName.trim() || 'Player';
+    const profile: PlayerProfile = { ...profileInput, englishName: name };
+    dispatch({ type: 'SET_PLAYER_PROFILE', profile });
 
     // Store self-assessed level
     dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
@@ -341,30 +340,26 @@ export default function GamePage() {
     setIsTutorialHangout(isTutorial);
     setTutorialExerciseCount(0);
 
-    // Kick off exit video generation for tutorial
+    // Select pre-generated intro/exit videos for tutorial
     let tutCtx: ReturnType<typeof getTutorialCtx> = undefined;
     if (isTutorial) {
       const config = TUTORIAL_VIDEO_CONFIG[npcId];
       if (config) {
         const templates = config.exitLineTemplates;
-        const template = templates[Math.floor(Math.random() * templates.length)];
+        const template = pickRandom(templates);
         const exitLine = template.replace(/{playerName}/g, name);
         exitLineRef.current = exitLine;
 
-        const prompt = config.exitVideoPromptTemplate.replace(/{exitLine}/g, exitLine);
-        exitVideoGen.startGeneration({
-          content: [{ type: 'text', text: prompt }],
-          ratio: '9:16',
-          duration: 10,
-          generateAudio: true,
-        });
+        introVideoUrlRef.current = pickRandom(config.introVideoUrls);
+        exitVideoUrlRef.current = pickRandom(config.exitVideoUrls);
       }
 
       tutCtx = {
         isTutorial: true,
         playerName: name,
-        videoStatus: 'generating' as const,
-        exitVideoUrl: null,
+        videoStatus: 'ready' as const,
+        exitVideoUrl: exitVideoUrlRef.current,
+        introVideoUrl: introVideoUrlRef.current,
         exitLine: exitLineRef.current,
         exercisesDone: 0,
       };
@@ -569,8 +564,8 @@ export default function GamePage() {
           caption?: string | null;
           autoAdvance: boolean;
         };
-        // Exit video (Seedance-generated with audio) should be unmuted
-        const isExitVideo = isTutorialHangout && exitVideoGen.videoUrl && args.videoUrl === exitVideoGen.videoUrl;
+        // Exit video (pre-generated with audio) should be unmuted
+        const isExitVideo = isTutorialHangout && exitVideoUrlRef.current && args.videoUrl === exitVideoUrlRef.current;
         setCinematic({
           videoUrl: args.videoUrl,
           caption: args.caption ?? undefined,
@@ -620,7 +615,7 @@ export default function GamePage() {
       sessionLogger.logAIRequest(msg);
       void append({ role: 'user', content: msg });
     }
-  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, exitVideoGen.status, exitVideoGen.videoUrl, tutorialExerciseCount]);
+  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, tutorialExerciseCount]);
 
   const handleExerciseResult = useCallback((exerciseId: string, correct: boolean) => {
     sessionLogger.logExerciseResult(exerciseId, correct);
@@ -648,7 +643,7 @@ export default function GamePage() {
       sessionLogger.logAIRequest(msg);
       void append({ role: 'user', content: msg });
     }, 1500);
-  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, exitVideoGen.status, exitVideoGen.videoUrl, tutorialExerciseCount]);
+  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, tutorialExerciseCount]);
 
   const handleChoice = useCallback((choiceId: string) => {
     setChoices(null);
@@ -660,7 +655,7 @@ export default function GamePage() {
     const msg = `${ctx}Choice: ${choiceId}`;
     sessionLogger.logAIRequest(msg);
     void append({ role: 'user', content: msg });
-  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, exitVideoGen.status, exitVideoGen.videoUrl, tutorialExerciseCount]);
+  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, tutorialExerciseCount]);
 
   const handleCinematicEnd = useCallback(() => {
     setCinematic(null);
@@ -679,7 +674,7 @@ export default function GamePage() {
       const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getTutorialCtx());
       void append({ role: 'user', content: `${ctx}Continue.` });
     }
-  }, [currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, exitVideoGen.status, exitVideoGen.videoUrl, tutorialExerciseCount]);
+  }, [currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isTutorialHangout, tutorialExerciseCount]);
 
   /* ── renders ──────────────────────────────────────────── */
 
@@ -836,17 +831,50 @@ export default function GamePage() {
                   </div>
                 ))}
               </div>
-              <label className="tg-name-input-section">
-                <span className="tg-name-label">What should we call you?</span>
-                <input
-                  type="text"
-                  className="tg-name-input"
-                  placeholder="Your name"
-                  value={playerNameInput}
-                  onChange={(e) => setPlayerNameInput(e.target.value)}
-                  maxLength={20}
-                />
-              </label>
+              <div className="tg-profile-section">
+                <div className="tg-profile-field">
+                  <label className="tg-profile-label">English Name</label>
+                  <input
+                    type="text"
+                    className="tg-profile-input"
+                    placeholder="Your name"
+                    value={profileInput.englishName}
+                    onChange={(e) => setProfileInput(p => ({ ...p, englishName: e.target.value }))}
+                    maxLength={20}
+                  />
+                </div>
+                <div className="tg-profile-field">
+                  <label className="tg-profile-label">Chinese Name <span className="tg-profile-optional">optional</span></label>
+                  <input
+                    type="text"
+                    className="tg-profile-input"
+                    placeholder="中文名"
+                    value={profileInput.chineseName}
+                    onChange={(e) => setProfileInput(p => ({ ...p, chineseName: e.target.value }))}
+                    maxLength={10}
+                  />
+                </div>
+                <div className="tg-profile-field">
+                  <label className="tg-profile-label">Date of Birth <span className="tg-profile-optional">optional</span></label>
+                  <input
+                    type="date"
+                    className="tg-profile-input"
+                    value={profileInput.dateOfBirth}
+                    onChange={(e) => setProfileInput(p => ({ ...p, dateOfBirth: e.target.value }))}
+                  />
+                </div>
+                <div className="tg-profile-field">
+                  <label className="tg-profile-label">Height <span className="tg-profile-optional">optional</span></label>
+                  <input
+                    type="text"
+                    className="tg-profile-input"
+                    placeholder="e.g. 170cm"
+                    value={profileInput.height}
+                    onChange={(e) => setProfileInput(p => ({ ...p, height: e.target.value }))}
+                    maxLength={10}
+                  />
+                </div>
+              </div>
               <button className="tg-menu-btn-primary" onClick={handleConfirmProficiency} style={{ width: '100%', marginTop: 16 }}>
                 Let&apos;s go!
               </button>
@@ -1094,25 +1122,29 @@ export default function GamePage() {
   const explainLang = (gameState.explainIn[city] ?? 'en') as UILang;
 
   if (sceneSummary) {
+    const sceneImageUrl = TUTORIAL_VIDEO_CONFIG[activeNpc]?.sceneImageUrl;
     return (
       <UILangProvider value={explainLang}>
         <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="game-frame" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-dark)', padding: '2rem' }}>
-            <div style={{ textAlign: 'center', color: 'var(--color-text)' }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-              <h2 style={{ margin: '0 0 8px', color: 'var(--color-accent-gold)', fontSize: 24 }}>{t('scene_complete', explainLang)}</h2>
-              <p style={{ margin: '0 0 20px', color: 'var(--color-text-muted)', fontSize: 14 }}><KoreanText text={sceneSummary.summary} targetLang={targetLang} /></p>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 24 }}>
-                <div>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-accent-gold)' }}>+{sceneSummary.xpEarned}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{t('xp_earned', explainLang)}</div>
+          <div className="game-frame summary-screen">
+            {sceneImageUrl && (
+              <img className="summary-scene-bg" src={sceneImageUrl} alt="" />
+            )}
+            <div className="summary-overlay" />
+            <div className="summary-content">
+              <h2 className="summary-title">{t('scene_complete', explainLang)}</h2>
+              <p className="summary-text"><KoreanText text={sceneSummary.summary} targetLang={targetLang} /></p>
+              <div className="summary-stats">
+                <div className="summary-stat">
+                  <div className="summary-stat-value summary-stat-xp">+{sceneSummary.xpEarned}</div>
+                  <div className="summary-stat-label">{t('xp_earned', explainLang)}</div>
                 </div>
                 {sceneSummary.affinityChanges.map((ac) => (
-                  <div key={ac.characterId}>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: ac.delta > 0 ? 'var(--color-accent-green)' : '#e8485c' }}>
+                  <div key={ac.characterId} className="summary-stat">
+                    <div className={`summary-stat-value ${ac.delta > 0 ? 'summary-stat-positive' : 'summary-stat-negative'}`}>
                       {ac.delta > 0 ? '+' : ''}{ac.delta}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                    <div className="summary-stat-label">
                       {(NPC_SPRITES[ac.characterId] || NPC_SPRITES.haeun).name}
                     </div>
                   </div>
@@ -1137,12 +1169,9 @@ export default function GamePage() {
   }
   const continueLabel = CONTINUE_LABELS[explainLang] ?? CONTINUE_LABELS.en;
 
-  // Heart meter progress: 50% from exercises, 50% from video gen
+  // Heart meter progress: based on exercise completion
   const heartProgress = isTutorialHangout
-    ? Math.round(
-        Math.min(50, (tutorialExerciseCount / MIN_TUTORIAL_EXERCISES) * 50)
-        + exitVideoGen.progress * 0.5
-      )
+    ? Math.round(Math.min(100, (tutorialExerciseCount / MIN_TUTORIAL_EXERCISES) * 100))
     : 0;
 
   return (
@@ -1179,7 +1208,7 @@ export default function GamePage() {
               {isTutorialHangout && (
                 <HeartMeter
                   progress={heartProgress}
-                  videoReady={exitVideoGen.status === 'succeeded'}
+                  videoReady={!!exitVideoUrlRef.current}
                   characterName={npc.name}
                 />
               )}

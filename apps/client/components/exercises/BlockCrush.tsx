@@ -56,12 +56,16 @@ export function BlockCrush({ exercise, onResult }: Props) {
   const [done, setDone] = useState(false);
   const [successFlash, setSuccessFlash] = useState(false);
 
-  // Drag — fully ref-based, document listeners, no overlay
+  // Drag state — move the actual piece element via transform
   const dragId = useRef<string | null>(null);
   const dragChr = useRef('');
-  const ghostRef = useRef<HTMLDivElement>(null);
+  const dragElRef = useRef<HTMLElement | null>(null);
+  const dragStartRect = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const moveRef = useRef<((e: PointerEvent) => void) | null>(null);
   const upRef = useRef<((e: PointerEvent) => void) | null>(null);
+
+  // Piece element refs keyed by piece id so we can style them during drag
+  const pieceElRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const slotRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const rafRef = useRef(0);
@@ -137,14 +141,24 @@ export function BlockCrush({ exercise, onResult }: Props) {
     return () => cancelAnimationFrame(rafRef.current);
   }, [gameLoop]);
 
-  /* ── Drag handlers (document-level, attached on pointerdown) ── */
+  /* ── Drag handlers ──────────────────────────────────── */
 
   const cleanupDragListeners = useCallback(() => {
-    if (moveRef.current) { document.removeEventListener('pointermove', moveRef.current); moveRef.current = null; }
-    if (upRef.current) { document.removeEventListener('pointerup', upRef.current); document.removeEventListener('pointercancel', upRef.current); upRef.current = null; }
+    const el = dragElRef.current;
+    if (moveRef.current) {
+      if (el) el.removeEventListener('pointermove', moveRef.current);
+      document.removeEventListener('pointermove', moveRef.current);
+      moveRef.current = null;
+    }
+    if (upRef.current) {
+      if (el) { el.removeEventListener('pointerup', upRef.current); el.removeEventListener('pointercancel', upRef.current); }
+      document.removeEventListener('pointerup', upRef.current);
+      document.removeEventListener('pointercancel', upRef.current);
+      upRef.current = null;
+    }
+    dragElRef.current = null;
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => cleanupDragListeners, [cleanupDragListeners]);
 
   const startDrag = useCallback((e: React.PointerEvent, p: FallingPiece) => {
@@ -155,29 +169,39 @@ export function BlockCrush({ exercise, onResult }: Props) {
     dragId.current = p.id;
     dragChr.current = p.piece;
 
-    const ghost = ghostRef.current;
-    if (ghost) {
-      ghost.style.left = `${e.clientX - 28}px`;
-      ghost.style.top = `${e.clientY - 28}px`;
-      ghost.textContent = p.piece;
-      ghost.style.display = 'flex';
-    }
+    const pieceEl = e.currentTarget as HTMLElement;
+    try { pieceEl.setPointerCapture(e.pointerId); } catch { /* ok */ }
+    dragElRef.current = pieceEl;
+
+    // Record pointer start position — we'll translate relative to this
+    dragStartRect.current = { x: e.clientX, y: e.clientY };
+
+    // Style the piece as "being dragged"
+    pieceEl.style.zIndex = '100';
+    pieceEl.style.boxShadow = '0 0 20px rgba(240,192,64,0.5), 0 8px 24px rgba(0,0,0,0.4)';
+    pieceEl.style.border = '2px solid #f0c040';
+    pieceEl.style.transition = 'none';
 
     setPieces((prev) => prev.map((pp) => pp.id === p.id ? { ...pp, speed: 0 } : pp));
 
-    // Attach document listeners immediately — no overlay mount delay
     const onMove = (ev: PointerEvent) => {
       ev.preventDefault();
-      const g = ghostRef.current;
-      if (g) {
-        g.style.left = `${ev.clientX - 28}px`;
-        g.style.top = `${ev.clientY - 28}px`;
-      }
+      // Move the actual piece element by translating relative to start
+      const dx = ev.clientX - dragStartRect.current.x;
+      const dy = ev.clientY - dragStartRect.current.y;
+      pieceEl.style.transform = `translate(calc(-50% + ${dx}px), ${dy}px)`;
     };
 
     const onUp = (ev: PointerEvent) => {
+      try { pieceEl.releasePointerCapture(ev.pointerId); } catch { /* ok */ }
       cleanupDragListeners();
-      if (ghostRef.current) ghostRef.current.style.display = 'none';
+
+      // Reset piece styling
+      pieceEl.style.zIndex = '';
+      pieceEl.style.boxShadow = '';
+      pieceEl.style.border = '';
+      pieceEl.style.transform = 'translateX(-50%)';
+      pieceEl.style.transition = '';
 
       const pid = dragId.current;
       const pchr = dragChr.current;
@@ -220,7 +244,11 @@ export function BlockCrush({ exercise, onResult }: Props) {
 
     moveRef.current = onMove;
     upRef.current = onUp;
-    document.addEventListener('pointermove', onMove);
+    // Captured element gets events on mobile; document fallback for desktop
+    pieceEl.addEventListener('pointermove', onMove);
+    pieceEl.addEventListener('pointerup', onUp);
+    pieceEl.addEventListener('pointercancel', onUp);
+    document.addEventListener('pointermove', onMove, { passive: false });
     document.addEventListener('pointerup', onUp);
     document.addEventListener('pointercancel', onUp);
   }, [done, exercise, onResult, cleanupDragListeners]);
@@ -259,11 +287,10 @@ export function BlockCrush({ exercise, onResult }: Props) {
 
   const S = 52;
   const G = 2;
-  const W = S * 2 + G; // total grid width for 2-column layouts
+  const W = S * 2 + G;
 
   function renderGrid() {
     switch (layout) {
-      // Korean: vertical vowel, no final — C | V side by side
       case 'ko-cv-lr':
         return (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: G, width: W }}>
@@ -271,8 +298,6 @@ export function BlockCrush({ exercise, onResult }: Props) {
             {renderSlot('V', S, S * 1.2)}
           </div>
         );
-
-      // Korean: horizontal vowel, no final — C on top, V below
       case 'ko-cv-tb':
         return (
           <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: G, width: W }}>
@@ -280,8 +305,6 @@ export function BlockCrush({ exercise, onResult }: Props) {
             {renderSlot('V', W, S * 0.5)}
           </div>
         );
-
-      // Korean: vertical vowel + final — C|V top, F spanning bottom
       case 'ko-cvf-lr':
         return (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr auto', gap: G, width: W }}>
@@ -292,8 +315,6 @@ export function BlockCrush({ exercise, onResult }: Props) {
             </div>
           </div>
         );
-
-      // Korean: horizontal vowel + final — C / V / F all stacked
       case 'ko-cvf-tb':
         return (
           <div style={{ display: 'grid', gridTemplateRows: 'auto auto auto', gap: G, width: W }}>
@@ -302,8 +323,6 @@ export function BlockCrush({ exercise, onResult }: Props) {
             {renderSlot('F', W, S * 0.55)}
           </div>
         );
-
-      // Chinese / Japanese kanji: left | right
       case 'left-right':
         return (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: G, width: W }}>
@@ -311,8 +330,6 @@ export function BlockCrush({ exercise, onResult }: Props) {
             {renderSlot('right', S, S * 1.2)}
           </div>
         );
-
-      // Chinese: top / bottom
       case 'top-bottom':
         return (
           <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: G, width: W * 0.75 }}>
@@ -320,8 +337,6 @@ export function BlockCrush({ exercise, onResult }: Props) {
             {renderSlot('bottom', W * 0.75, S)}
           </div>
         );
-
-      // Japanese: base + dakuten
       case 'dakuten': {
         const markSlot = exercise.components.find((c) => c.slot === 'dakuten' || c.slot === 'handakuten')!.slot;
         return (
@@ -331,8 +346,6 @@ export function BlockCrush({ exercise, onResult }: Props) {
           </div>
         );
       }
-
-      // Japanese: hiragana → katakana
       case 'convert':
         return (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: G, width: W }}>
@@ -351,7 +364,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
   }
 
   return (
-    <div className="exercise-card" style={{ padding: 0, position: 'relative', touchAction: 'none' }}>
+    <div className="exercise-card" style={{ padding: 0, position: 'relative', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}>
       {/* Header */}
       <div style={{ padding: '12px 16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 14, fontWeight: 600, opacity: 0.8 }}>{exercise.prompt}</span>
@@ -360,34 +373,33 @@ export function BlockCrush({ exercise, onResult }: Props) {
         </span>
       </div>
 
-      {/* Lanes */}
+      {/* Lanes — overflow visible so dragged piece can escape its lane */}
       <div style={{
         display: 'grid', gridTemplateColumns: `repeat(${LANES}, 1fr)`,
-        gap: 2, height: 280, padding: '0 8px', position: 'relative', overflow: 'hidden',
+        gap: 2, height: 280, padding: '0 8px', position: 'relative', overflow: 'visible',
       }}>
         {lanes.map((lane, i) => (
-          <div key={i} style={{ position: 'relative' }}>
-            {lane.map((p) => {
-              const isDrag = dragId.current === p.id;
-              return (
-                <div
-                  key={p.id}
-                  onPointerDown={(e) => startDrag(e, p)}
-                  style={{
-                    position: 'absolute', left: '50%', top: `${p.y * 100}%`,
-                    width: 52, height: 52,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 26, borderRadius: 10, cursor: 'grab',
-                    border: p.colorHint ? `2px solid ${p.colorHint}55` : '2px solid rgba(255,255,255,0.12)',
-                    background: p.isDistractor ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)',
-                    transform: 'translateX(-50%)', touchAction: 'none', zIndex: 2,
-                    opacity: isDrag ? 0.25 : 1,
-                  }}
-                >
-                  {p.piece}
-                </div>
-              );
-            })}
+          <div key={i} style={{ position: 'relative', overflow: 'visible' }}>
+            {lane.map((p) => (
+              <div
+                key={p.id}
+                ref={(el) => { pieceElRefs.current[p.id] = el; }}
+                onPointerDown={(e) => startDrag(e, p)}
+                style={{
+                  position: 'absolute', left: '50%', top: `${p.y * 100}%`,
+                  width: 52, height: 52,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 26, borderRadius: 10, cursor: 'grab',
+                  border: p.colorHint ? `2px solid ${p.colorHint}55` : '2px solid rgba(255,255,255,0.12)',
+                  background: p.isDistractor ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)',
+                  transform: 'translateX(-50%)', touchAction: 'none', zIndex: 2,
+                  userSelect: 'none', WebkitUserSelect: 'none',
+                  WebkitTouchCallout: 'none',
+                } as React.CSSProperties}
+              >
+                {p.piece}
+              </div>
+            ))}
           </div>
         ))}
       </div>
@@ -403,21 +415,6 @@ export function BlockCrush({ exercise, onResult }: Props) {
           {exercise.romanization} — {exercise.meaning}
         </div>
       </div>
-
-      {/* Drag ghost — always in DOM, shown/hidden via ref */}
-      <div
-        ref={ghostRef}
-        style={{
-          position: 'fixed', width: 56, height: 56,
-          display: 'none',
-          alignItems: 'center', justifyContent: 'center',
-          fontSize: 28, borderRadius: 12,
-          border: '2px solid #f0c040',
-          background: 'rgba(26,26,46,0.92)',
-          boxShadow: '0 0 20px rgba(240,192,64,0.5), 0 8px 24px rgba(0,0,0,0.4)',
-          zIndex: 99999, pointerEvents: 'none',
-        }}
-      />
 
       {/* Success flash */}
       {successFlash && (
