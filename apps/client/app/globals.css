@@ -1200,6 +1200,66 @@ button.nav-link:hover {
     rgba(0, 0, 0, 0.25) 70%,
     transparent 100%
   );
+  z-index: 2;
+}
+
+/* Trainee profile card — in-world styled, pinned above subtitle area */
+.tg-trainee-profile {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 16px 18px;
+  padding-bottom: calc(16px + 48px);
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.5) 80%,
+    transparent 100%
+  );
+}
+
+.tg-trainee-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--color-accent-gold, #f0c040);
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.tg-name-field {
+  margin-top: 10px;
+}
+
+.tg-name-field-label {
+  display: block;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 4px;
+}
+
+.tg-name-input {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.tg-name-input:focus {
+  border-color: var(--color-accent-gold, #f0c040);
+}
+
+.tg-name-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .tg-typewriter-cursor {
@@ -1741,6 +1801,12 @@ button.nav-link:hover {
   text-align: center;
   font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.5);
+  animation: continuePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes continuePulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
 /* ── Exercise card ────────────────────────────────────────── */

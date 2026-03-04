@@ -39,7 +39,6 @@ interface SceneViewProps {
 }
 
 const SPEAKER_COLORS: Record<string, string> = {
-  hauen: '#e8485c',
   haeun: '#e8485c',
   jin: '#4a90d9',
   tong: '#f0c040',

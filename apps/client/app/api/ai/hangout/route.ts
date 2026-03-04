@@ -9,7 +9,7 @@ import {
   buildTutorialHangoutPrompt,
   type TutorialHangoutVars,
 } from '@/lib/ai/prompts/tutorial-hangout';
-import { CHARACTER_MAP, HAUEN, TUTORIAL_VIDEO_CONFIG } from '@/lib/content/characters';
+import { CHARACTER_MAP, HAEUN, TUTORIAL_VIDEO_CONFIG } from '@/lib/content/characters';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import type { Character, RelationshipStage, Relationship } from '@/lib/types/relationship';
 import type { MasterySnapshot } from '@/lib/types/mastery';
@@ -33,7 +33,7 @@ const hangoutTools = {
   npc_speak: tool({
     description: 'The NPC says something to the player. Use for all NPC dialogue. The NPC is a CHARACTER — never a teacher.',
     parameters: z.object({
-      characterId: z.string().describe('The NPC character ID (e.g., hauen, jin)'),
+      characterId: z.string().describe('The NPC character ID (e.g., haeun, jin)'),
       text: z.string().describe('The dialogue text (mix of Korean + English based on language ratio)'),
       translation: z.string().nullable().describe('English translation of Korean parts, or null'),
       expression: z.enum([
@@ -57,7 +57,8 @@ const hangoutTools = {
       exerciseType: z.enum([
         'drag_drop', 'matching', 'multiple_choice',
         'sentence_builder', 'fill_blank', 'pronunciation_select',
-        'pattern_recognition', 'stroke_tracing', 'error_correction', 'free_input',
+        'pattern_recognition', 'stroke_tracing', 'block_crush',
+        'error_correction', 'free_input',
       ]).describe('Exercise UI type'),
       objectiveId: z.string().describe('Learning objective this tests'),
       exerciseData: z.string().nullable().describe('JSON-encoded complete exercise object. When provided, client parses and uses it directly. When null, client generates locally from hints. ID convention: "ai-{type}-{timestamp}".'),
@@ -165,7 +166,7 @@ export async function POST(req: Request) {
   const contextStr = (typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : '') as string;
 
   let hangoutVars: HangoutOrchestratorVars | null = null;
-  let characterId = 'hauen';
+  let characterId = 'haeun';
 
   try {
     // Try new HANGOUT_CONTEXT format first, fall back to old CONTEXT format
@@ -175,8 +176,8 @@ export async function POST(req: Request) {
 
     if (ctxMatch) {
       const ctx = JSON.parse(ctxMatch[1]);
-      characterId = ctx.characterId ?? 'hauen';
-      const char: Character = CHARACTER_MAP[characterId] ?? HAUEN;
+      characterId = ctx.characterId ?? 'haeun';
+      const char: Character = CHARACTER_MAP[characterId] ?? HAEUN;
       const stage: RelationshipStage = ctx.stage ?? 'strangers';
       const rel: Relationship = ctx.relationship ?? {
         characterId,
@@ -220,7 +221,7 @@ export async function POST(req: Request) {
   }
 
   // Build system prompt
-  const char: Character = CHARACTER_MAP[characterId] ?? HAUEN;
+  const char: Character = CHARACTER_MAP[characterId] ?? HAEUN;
 
   // Check for tutorial mode
   let isTutorial = false;
@@ -326,7 +327,7 @@ export async function POST(req: Request) {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildFallbackResponse(characterId: string, isFirstEncounter: boolean, messages: any[]) {
-  const isHauen = characterId === 'hauen';
+  const isHauen = characterId === 'haeun';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userMsgs = messages.filter((m: any) => m.role === 'user');
