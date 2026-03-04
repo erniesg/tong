@@ -38,6 +38,12 @@ export function CharacterSprite({
         src={spriteUrl}
         alt={name}
         className="h-full w-full object-cover object-top"
+        style={{
+          maskImage: 'linear-gradient(to bottom, transparent 0%, black 8px, black calc(100% - 10px), transparent 100%), linear-gradient(to right, transparent 0%, black 8px, black calc(100% - 8px), transparent 100%)',
+          maskComposite: 'intersect',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 8px, black calc(100% - 10px), transparent 100%), linear-gradient(to right, transparent 0%, black 8px, black calc(100% - 8px), transparent 100%)',
+          WebkitMaskComposite: 'source-in',
+        }}
       />
     </div>
   );
