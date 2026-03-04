@@ -9,8 +9,8 @@ function stageMap(
   return stages;
 }
 
-export const HAUEN: Character = {
-  id: 'hauen',
+export const HAEUN: Character = {
+  id: 'haeun',
   name: { en: 'Ha-eun', ko: '하은' },
   cityId: 'seoul',
   role: 'fellow trainee',
@@ -227,10 +227,13 @@ export const TONG: Character = {
 };
 
 export const CHARACTER_MAP: Record<string, Character> = {
-  hauen: HAUEN,
+  haeun: HAEUN,
   jin: JIN,
   tong: TONG,
 };
+
+/** @deprecated Use HAEUN instead */
+export const HAUEN = HAEUN;
 
 /* ── Tutorial video configuration ──────────────────────── */
 
