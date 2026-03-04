@@ -1186,6 +1186,39 @@ button.nav-link:hover {
   animation: tongFadeIn 1s ease 0.2s forwards;
 }
 
+/* Static Tong avatar for steps 1-3 — wrapper with circular bg */
+.tong-avatar-wrap {
+  position: absolute;
+  top: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  opacity: 0;
+  animation: tongFadeIn 0.5s ease forwards, tongBob 3s ease-in-out 0.5s infinite;
+  overflow: visible;
+}
+
+.tong-avatar-wrap::before {
+  display: none;
+}
+
+.tong-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+@keyframes tongBob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-6px); }
+}
+
 /* Immersive subtitle bar — matches hangout .dialogue-subtitle */
 .tg-tong-intro-subtitle {
   position: absolute;
@@ -1203,21 +1236,17 @@ button.nav-link:hover {
   z-index: 2;
 }
 
-/* Trainee profile card — in-world styled, pinned above subtitle area */
+/* Trainee profile card — positioned below avatar */
 .tg-trainee-profile {
   position: absolute;
+  top: 30%;
+  left: 5%;
+  right: 5%;
   bottom: 0;
-  left: 0;
-  right: 0;
   z-index: 2;
-  padding: 16px 18px;
-  padding-bottom: calc(16px + 48px);
-  background: linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0.7) 0%,
-    rgba(0, 0, 0, 0.5) 80%,
-    transparent 100%
-  );
+  padding: 8px 18px;
+  padding-bottom: 24px;
+  overflow-y: auto;
 }
 
 .tg-trainee-label {
