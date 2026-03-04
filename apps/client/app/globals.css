@@ -2044,6 +2044,12 @@ button.nav-link:hover {
   height: 100%;
   object-fit: cover;
 }
+.cinematic-video::-webkit-media-controls {
+  display: none !important;
+}
+.cinematic-video::-webkit-media-controls-enclosure {
+  display: none !important;
+}
 
 .cinematic-tap-hint {
   position: absolute;

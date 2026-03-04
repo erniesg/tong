@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BlockCrushExercise, BlockCrushStage } from '@/lib/types/hangout';
 import { getDistractors, getMeaning, getSlotLayout } from '@/lib/content/block-crush-data';
+import { onTranslationsReady } from '@/lib/i18n/translation-cache';
 import { getGameState } from '@/lib/store/game-store';
 import type { CityId } from '@/lib/api';
 import { StrokeOrderAnimation } from './StrokeOrderAnimation';
@@ -202,6 +203,10 @@ export function BlockCrush({ exercise, onResult }: Props) {
   const [successFlash, setSuccessFlash] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [animationDone, setAnimationDone] = useState(false);
+  const [, forceUpdate] = useState(0);
+
+  // Re-render when dynamic translations arrive (Google Translate fallback)
+  useEffect(() => onTranslationsReady(() => forceUpdate((n) => n + 1)), []);
 
   // Drag state — move the actual piece element via transform
   const dragId = useRef<string | null>(null);

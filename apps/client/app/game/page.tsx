@@ -1521,7 +1521,7 @@ export default function GamePage() {
           onCinematicEnd={handleCinematicEnd}
           npcName={`${npc.nameLocal} ${explainLang === 'zh' ? npc.nameZh : npc.name}`}
           npcColor={npc.color}
-          npcSpriteUrl={isIntroHangout && introAct === 1 ? '' : npc.src}
+          npcSpriteUrl={isIntroHangout && introAct === 1 ? '' : currentExercise ? '' : npc.src}
           currentMessage={currentMessage}
           currentExercise={currentExercise}
           choices={choices}

@@ -47,6 +47,9 @@ export function CinematicOverlay({ videoUrl, autoAdvance, muted = false, onEnd }
         muted={muted}
         onEnded={handleEnded}
         className="cinematic-video"
+        disablePictureInPicture
+        disableRemotePlayback
+        controlsList="nodownload noplaybackrate"
       />
       {!autoAdvance && !fadingOut && (
         <div className="cinematic-tap-hint">{t('tap_to_skip', lang)}</div>
