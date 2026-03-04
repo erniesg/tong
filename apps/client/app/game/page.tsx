@@ -261,8 +261,7 @@ export default function GamePage() {
   const dropTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dropLinesRef = useRef([
-    "Let's head to Seoul! I know someone you should meet...",
-    "", // placeholder — filled with player name on step 3 entry
+    "", // single line — filled with player name on step 3 entry
   ]);
 
   useEffect(() => {
@@ -851,7 +850,7 @@ export default function GamePage() {
 
     const handleLanguageNext = () => {
       changeTongExpression('excited');
-      dropLinesRef.current[1] = `Stick with me, ${profileInput.englishName.trim() || 'trainee'}.`;
+      dropLinesRef.current[0] = `Let's head to Seoul, ${profileInput.englishName.trim() || 'trainee'}! I know someone you should meet...`;
       setDropLineIdx(0);
       setDropCharIdx(0);
       setDropDone(false);
@@ -1019,7 +1018,7 @@ export default function GamePage() {
               };
 
               return dropDone ? (
-                <div className="tg-tong-intro-subtitle">
+                <div className="tg-trainee-profile tg-dialogue-panel">
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
                   <p className="dialogue-text">{dropLinesRef.current[dropLinesRef.current.length - 1]}</p>
                   <button
@@ -1032,7 +1031,7 @@ export default function GamePage() {
                 </div>
               ) : (
                 // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-                <div className="tg-tong-intro-subtitle" onClick={handleDropTap}>
+                <div className="tg-trainee-profile tg-dialogue-panel" onClick={handleDropTap}>
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
                   <p className="dialogue-text">
                     {dropLine.slice(0, dropCharIdx)}
