@@ -108,7 +108,7 @@ const JAPANESE_TARGETS: CompositionTarget[] = [
 /* ── Name-specific targets (tutorial) ──────────────────── */
 
 export const NAME_TARGETS: Record<string, CompositionTarget[]> = {
-  hauen: [
+  haeun: [
     { char: '하', components: [
       { piece: 'ㅎ', slot: 'C', colorHint: C },
       { piece: 'ㅏ', slot: 'V', colorHint: V },

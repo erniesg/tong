@@ -12,8 +12,8 @@ import type { AppLang, CityId } from '../api';
 export interface PlayerProfile {
   englishName: string;
   chineseName: string;
-  dateOfBirth: string;
-  height: string;
+  dateOfBirth?: string;
+  height?: string;
 }
 
 /* ── State shape ────────────────────────────────────────── */

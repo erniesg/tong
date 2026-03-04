@@ -15,7 +15,7 @@ import { extractTargetItems } from '@/lib/exercises/extract-targets';
 import { summarizeExercise } from '@/lib/utils/summarize-exercise';
 import { useGameState, dispatch, getRelationship, getMasterySnapshot, getGameState } from '@/lib/store/game-store';
 import type { PlayerProfile } from '@/lib/store/game-store';
-import { CHARACTER_MAP, HAUEN, TUTORIAL_VIDEO_CONFIG, pickRandom } from '@/lib/content/characters';
+import { CHARACTER_MAP, HAEUN, TUTORIAL_VIDEO_CONFIG, pickRandom } from '@/lib/content/characters';
 import { useVideoGeneration } from '@/lib/hooks/useVideoGeneration';
 import { HeartMeter } from '@/components/scene/HeartMeter';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
@@ -113,7 +113,22 @@ const LOCATION_NAMES: Record<LocationId, string> = {
 
 /* ── types ──────────────────────────────────────────────── */
 
-type Phase = 'opening' | 'menu' | 'tong-intro' | 'proficiency' | 'hangout' | 'city_map' | 'learn' | 'dev';
+type Phase = 'opening' | 'menu' | 'tong-intro' | 'hangout' | 'city_map' | 'learn' | 'dev';
+
+type TongExpression = 'neutral' | 'cheerful' | 'surprised' | 'proud' | 'love' | 'sad' | 'crying' | 'amazed' | 'excited' | 'thinking';
+
+const TONG_EXPRESSIONS: Record<TongExpression, string> = {
+  neutral: '/assets/characters/tong/tong_neutral.png',
+  cheerful: '/assets/characters/tong/tong_cheerful.png',
+  surprised: '/assets/characters/tong/tong_surprised.png',
+  proud: '/assets/characters/tong/tong_proud.png',
+  love: '/assets/characters/tong/tong_love.png',
+  sad: '/assets/characters/tong/tong_sad.png',
+  crying: '/assets/characters/tong/tong_crying.png',
+  amazed: '/assets/characters/tong/tong_amazed.png',
+  excited: '/assets/characters/tong/tong_excited.png',
+  thinking: '/assets/characters/tong/tong_thinking.png',
+};
 
 /* ── helpers ────────────────────────────────────────────── */
 
@@ -228,6 +243,36 @@ export default function GamePage() {
     return () => { if (introTimerRef.current) clearTimeout(introTimerRef.current); };
   }, [phase, introLineIdx, introCharIdx]);
 
+  /* tong-intro sub-steps: 0=meet, 1=name, 2=language, 3=world-drop */
+  const [introStep, setIntroStep] = useState(0);
+  const [tongExpression, setTongExpression] = useState<TongExpression>('cheerful');
+  const [tongPulse, setTongPulse] = useState(false);
+
+  function changeTongExpression(expr: TongExpression) {
+    setTongExpression(expr);
+    setTongPulse(true);
+    setTimeout(() => setTongPulse(false), 300);
+  }
+
+  /* world-drop typewriter (step 3) */
+  const [dropLineIdx, setDropLineIdx] = useState(0);
+  const [dropCharIdx, setDropCharIdx] = useState(0);
+  const [dropDone, setDropDone] = useState(false);
+  const dropTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dropLinesRef = useRef([
+    "Let's head to Seoul! I know someone you should meet...",
+    "", // placeholder — filled with player name on step 3 entry
+  ]);
+
+  useEffect(() => {
+    if (phase !== 'tong-intro' || introStep !== 3 || dropDone) return;
+    const line = dropLinesRef.current[dropLineIdx];
+    if (!line || dropCharIdx >= line.length) return;
+    dropTimerRef.current = setTimeout(() => setDropCharIdx((c) => Math.min(c + CHARS_PER_TICK, line.length)), TICK_MS);
+    return () => { if (dropTimerRef.current) clearTimeout(dropTimerRef.current); };
+  }, [phase, introStep, dropLineIdx, dropCharIdx, dropDone]);
+
   /* proficiency sliders (0-6 each, maps directly to GAME_LEVELS) */
   const [sliders, setSliders] = useState<[number, number, number]>([0, 0, 0]);
 
@@ -252,7 +297,7 @@ export default function GamePage() {
   const [devLastResult, setDevLastResult] = useState<{ correct: boolean; id: string } | null>(null);
 
   /* NPC character ref — set during proficiency confirmation */
-  const npcRef = useRef<Character>(HAUEN);
+  const npcRef = useRef<Character>(HAEUN);
 
   /* VN scene state */
   const [toolQueue, setToolQueue] = useState<ToolQueueItem[]>([]);
@@ -268,7 +313,7 @@ export default function GamePage() {
   /* tutorial state */
   const mockVideo = searchParams.get('mock_video') === '1';
   const liveVideo = searchParams.get('live_video') === '1';
-  const [profileInput, setProfileInput] = useState<PlayerProfile>({ englishName: '', chineseName: '', dateOfBirth: '', height: '' });
+  const [profileInput, setProfileInput] = useState<PlayerProfile>({ englishName: '', chineseName: '' });
   const exitLineRef = useRef('');
   const introVideoUrlRef = useRef<string | null>(null);
   const exitVideoUrlRef = useRef<string | null>(null);
@@ -348,7 +393,7 @@ export default function GamePage() {
 
     const weakLevel = sliders[weakIdx];
     const npcId = NPC_POOL[Math.floor(Math.random() * NPC_POOL.length)];
-    const npcChar = CHARACTER_MAP[npcId] ?? HAUEN;
+    const npcChar = CHARACTER_MAP[npcId] ?? HAEUN;
     npcRef.current = npcChar;
 
     setCity(primaryCity as CityId);
@@ -778,30 +823,48 @@ export default function GamePage() {
     );
   }
 
-  /* Tong intro phase — mascot video + immersive subtitle dialogue */
+  /* Tong intro phase — narrative onboarding with sub-steps */
   if (phase === 'tong-intro') {
     const currentLine = TONG_INTRO_LINES[introLineIdx] ?? '';
     const lineFinished = introCharIdx >= currentLine.length;
 
     const handleIntroTap = () => {
+      if (introStep !== 0) return; // only tap-advance on step 0
       if (introTimerRef.current) clearTimeout(introTimerRef.current);
       if (!lineFinished) {
-        // Instant-complete the current line
         setIntroCharIdx(currentLine.length);
       } else if (introLineIdx < TONG_INTRO_LINES.length - 1) {
-        // Advance to next line
         setIntroLineIdx((i) => i + 1);
         setIntroCharIdx(0);
       } else {
-        // All lines done — proceed
-        setPhase('proficiency');
+        // All intro lines done — advance to name step
+        changeTongExpression('thinking');
+        setIntroStep(1);
       }
     };
+
+    const handleNameNext = () => {
+      if (!profileInput.englishName.trim()) return;
+      changeTongExpression('neutral');
+      setIntroStep(2);
+    };
+
+    const handleLanguageNext = () => {
+      changeTongExpression('excited');
+      dropLinesRef.current[1] = `Stick with me, ${profileInput.englishName.trim() || 'trainee'}.`;
+      setDropLineIdx(0);
+      setDropCharIdx(0);
+      setDropDone(false);
+      setIntroStep(3);
+    };
+
+    const tongAvatarSrc = TONG_EXPRESSIONS[tongExpression];
 
     return (
       <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="game-frame">
-          <div className="tg-tong-intro" onClick={handleIntroTap}>
+          <div className="tg-tong-intro" onClick={introStep === 0 ? handleIntroTap : undefined}>
+            {/* Looping video background for entire onboarding */}
             <video
               className="tg-tong-intro-video"
               src="/assets/tong_intro.webm"
@@ -811,122 +874,152 @@ export default function GamePage() {
               preload="auto"
               loop
             />
-            {/* Immersive subtitle overlay — pinned to bottom like hangout dialogue */}
-            <div className="tg-tong-intro-subtitle">
-              <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
-              <p className="dialogue-text">
-                {currentLine.slice(0, introCharIdx)}
-                {!lineFinished && <span className="tg-typewriter-cursor" />}
-              </p>
-              {lineFinished && (
-                <p className="dialogue-continue">Tap to continue</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  /* Proficiency phase */
-  if (phase === 'proficiency') {
-    return (
-      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="game-frame">
-          <div className="tg-proficiency">
-            <p className="tg-proficiency-heading">Choose your language settings to get started</p>
-            <div className="proficiency-panel">
-              {LANG_LABELS.map((lang, idx) => {
-                const val = sliders[idx];
-                const gameLvl = GAME_LEVELS[val];
-                return (
-                  <div key={lang.key} className="proficiency-lang">
-                    <div className="proficiency-lang-header">
-                      <span className="proficiency-lang-name">
-                        {lang.flag} {lang.name}
-                      </span>
-                      <span className="proficiency-lang-level">
-                        {gameLvl.name}
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={6}
-                      step={1}
-                      value={val}
-                      onChange={(e) => handleSlider(idx, Number(e.target.value))}
-                      className="proficiency-slider"
-                    />
-                    <p className="proficiency-desc">Lv.{gameLvl.level} — {gameLvl.desc}</p>
-                  </div>
-                );
-              })}
-              <div className="explain-in-section">
-                <span className="explain-in-heading">Learn each language in:</span>
-                {CITY_EXPLAIN_ROWS.map((row) => (
-                  <div key={row.cityId} className="explain-in-row">
-                    <span className="explain-in-label">{row.target}</span>
-                    <select
-                      className="explain-in-select"
-                      value={gameState.explainIn[row.cityId] ?? 'en'}
-                      onChange={(e) => dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: row.cityId, lang: e.target.value as AppLang })}
-                    >
-                      {EXPLAIN_LANG_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
+            {/* Step 0: MEET TONG — typewriter dialogue */}
+            {introStep === 0 && (
+              <div className="tg-tong-intro-subtitle">
+                <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
+                <p className="dialogue-text">
+                  {currentLine.slice(0, introCharIdx)}
+                  {!lineFinished && <span className="tg-typewriter-cursor" />}
+                </p>
+                {lineFinished && (
+                  <p className="dialogue-continue">Tap to continue</p>
+                )}
               </div>
-              <div className="tg-profile-section">
-                <div className="tg-profile-field">
-                  <label className="tg-profile-label">English Name</label>
+            )}
+
+            {/* Step 1: TRAINEE PROFILE — name input */}
+            {introStep === 1 && (
+              <div className="tg-trainee-profile">
+                <p className="tg-trainee-label">TRAINEE PROFILE</p>
+                <div className="tg-tong-intro-subtitle" style={{ position: 'relative', bottom: 'auto', padding: 0, background: 'none' }}>
+                  <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
+                  <p className="dialogue-text">What should I call you?</p>
+                </div>
+                <div className="tg-name-field">
                   <input
                     type="text"
-                    className="tg-profile-input"
+                    className="tg-name-input"
                     placeholder="Your name"
                     value={profileInput.englishName}
                     onChange={(e) => setProfileInput(p => ({ ...p, englishName: e.target.value }))}
                     maxLength={20}
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && handleNameNext()}
                   />
                 </div>
-                <div className="tg-profile-field">
-                  <label className="tg-profile-label">Chinese Name <span className="tg-profile-optional">optional</span></label>
+                <div className="tg-name-field">
+                  <span className="tg-name-field-label">Chinese name <span className="tg-profile-optional">(optional)</span></span>
                   <input
                     type="text"
-                    className="tg-profile-input"
+                    className="tg-name-input"
                     placeholder="中文名"
                     value={profileInput.chineseName}
                     onChange={(e) => setProfileInput(p => ({ ...p, chineseName: e.target.value }))}
                     maxLength={10}
+                    onKeyDown={(e) => e.key === 'Enter' && handleNameNext()}
                   />
                 </div>
-                <div className="tg-profile-field">
-                  <label className="tg-profile-label">Date of Birth <span className="tg-profile-optional">optional</span></label>
-                  <input
-                    type="date"
-                    className="tg-profile-input"
-                    value={profileInput.dateOfBirth}
-                    onChange={(e) => setProfileInput(p => ({ ...p, dateOfBirth: e.target.value }))}
-                  />
-                </div>
-                <div className="tg-profile-field">
-                  <label className="tg-profile-label">Height <span className="tg-profile-optional">optional</span></label>
-                  <input
-                    type="text"
-                    className="tg-profile-input"
-                    placeholder="e.g. 170cm"
-                    value={profileInput.height}
-                    onChange={(e) => setProfileInput(p => ({ ...p, height: e.target.value }))}
-                    maxLength={10}
-                  />
-                </div>
+                <button
+                  className="tg-menu-btn-primary"
+                  onClick={handleNameNext}
+                  disabled={!profileInput.englishName.trim()}
+                  style={{ width: '100%', marginTop: 12 }}
+                >
+                  Next
+                </button>
               </div>
-              <button className="tg-menu-btn-primary" onClick={handleConfirmProficiency} style={{ width: '100%', marginTop: 16 }}>
-                Let&apos;s go!
-              </button>
-            </div>
+            )}
+
+            {/* Step 2: LANGUAGE CHECK — sliders */}
+            {introStep === 2 && (
+              <div className="tg-trainee-profile">
+                <div className="tg-tong-intro-subtitle" style={{ position: 'relative', bottom: 'auto', padding: 0, background: 'none' }}>
+                  <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
+                  <p className="dialogue-text">How familiar are you with these?</p>
+                </div>
+                <div className="proficiency-panel" style={{ marginTop: 12 }}>
+                  {LANG_LABELS.map((lang, idx) => {
+                    const val = sliders[idx];
+                    const gameLvl = GAME_LEVELS[val];
+                    return (
+                      <div key={lang.key} className="proficiency-lang">
+                        <div className="proficiency-lang-header">
+                          <span className="proficiency-lang-name">
+                            {lang.flag} {lang.name}
+                          </span>
+                          <span className="proficiency-lang-level">
+                            {gameLvl.name}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={6}
+                          step={1}
+                          value={val}
+                          onChange={(e) => handleSlider(idx, Number(e.target.value))}
+                          className="proficiency-slider"
+                        />
+                        <p className="proficiency-desc">Lv.{gameLvl.level} — {gameLvl.desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button
+                  className="tg-menu-btn-primary"
+                  onClick={handleLanguageNext}
+                  style={{ width: '100%', marginTop: 12 }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+
+            {/* Step 3: WORLD DROP — typewriter narration then Let's go */}
+            {introStep === 3 && (() => {
+              const dropLine = dropLinesRef.current[dropLineIdx] ?? '';
+              const dropLineFinished = dropCharIdx >= dropLine.length;
+
+              const handleDropTap = () => {
+                if (dropTimerRef.current) clearTimeout(dropTimerRef.current);
+                if (!dropLineFinished) {
+                  setDropCharIdx(dropLine.length);
+                } else if (dropLineIdx < dropLinesRef.current.length - 1) {
+                  setDropLineIdx((i) => i + 1);
+                  setDropCharIdx(0);
+                } else {
+                  setDropDone(true);
+                }
+              };
+
+              return dropDone ? (
+                <div className="tg-tong-intro-subtitle">
+                  <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
+                  <p className="dialogue-text">{dropLinesRef.current[dropLinesRef.current.length - 1]}</p>
+                  <button
+                    className="tg-menu-btn-primary"
+                    onClick={handleConfirmProficiency}
+                    style={{ width: '100%', marginTop: 12 }}
+                  >
+                    Let&apos;s go!
+                  </button>
+                </div>
+              ) : (
+                // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+                <div className="tg-tong-intro-subtitle" onClick={handleDropTap}>
+                  <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
+                  <p className="dialogue-text">
+                    {dropLine.slice(0, dropCharIdx)}
+                    {!dropLineFinished && <span className="tg-typewriter-cursor" />}
+                  </p>
+                  {dropLineFinished && (
+                    <p className="dialogue-continue">Tap to continue</p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -937,7 +1030,7 @@ export default function GamePage() {
 
   function handleMapHangout(cityId: CityId, locationId: LocationId) {
     const npcId = NPC_POOL[Math.floor(Math.random() * NPC_POOL.length)];
-    const npcChar = CHARACTER_MAP[npcId] ?? HAUEN;
+    const npcChar = CHARACTER_MAP[npcId] ?? HAEUN;
     npcRef.current = npcChar;
     const level = gameState.calibratedLevel ?? gameState.selfAssessedLevel ?? 0;
 

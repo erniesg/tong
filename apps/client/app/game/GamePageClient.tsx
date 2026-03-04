@@ -364,7 +364,6 @@ function getCharacterAvatarPaths(value?: SceneCharacter): string[] {
   if (safeId === 'npc_haeun' || safeName === 'haeun') {
     options.push('/assets/characters/haeun/eye_front_casual.png');
     options.push('/assets/characters/haeun/haeun.png');
-    options.push('/assets/characters/hauen/haeun.png');
   }
 
   if (safeId === 'npc_jin' || safeId === 'npc_ding_man' || safeName === 'jin' || safeName === 'ding') {
