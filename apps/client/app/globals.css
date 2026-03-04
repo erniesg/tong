@@ -731,7 +731,7 @@ button.nav-link:hover {
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 11;
+  z-index: 40;
   display: flex;
   align-items: center;
   padding: 6px 14px;
@@ -1818,8 +1818,9 @@ button.nav-link:hover {
   line-height: 1.6;
   color: #fff;
   text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.9),
-    0 0 8px rgba(0, 0, 0, 0.5);
+    0 1px 4px rgba(0, 0, 0, 1),
+    0 0 10px rgba(0, 0, 0, 0.7),
+    0 0 2px rgba(0, 0, 0, 1);
   min-height: 1.6em;
 }
 
@@ -1905,37 +1906,63 @@ button.nav-link:hover {
 }
 
 /* ── Animations ───────────────────────────────────────────── */
-.slide-up {
-  animation: slideUp 0.4s ease-out;
-  position: relative;
-}
-
-/* Exercise dismiss / skip button */
-.exercise-dismiss-btn {
-  position: sticky;
-  top: 0;
-  float: right;
-  z-index: 50;
-  width: 36px;
-  height: 36px;
+/* ── Exercise floating card ─────────────────────────────── */
+.exercise-float-wrapper {
+  position: absolute;
+  inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
-  cursor: pointer;
-  margin: 8px 8px 0 0;
-  transition: background 0.15s, color 0.15s;
+  gap: 12px;
+  padding: 24px 16px;
+  pointer-events: auto;
+  z-index: 8;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
-.exercise-dismiss-btn:hover {
-  background: rgba(0, 0, 0, 0.7);
-  color: #fff;
+
+.exercise-float-card {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  max-height: 70vh;
+  overflow-y: auto;
+  animation: exercisePopIn 0.3s ease-out;
 }
+
+.exercise-float-continue {
+  color: rgba(255,255,255,0.7);
+  font-size: 12px;
+  text-align: center;
+  padding: 8px 16px;
+  text-shadow:
+    0 1px 3px rgba(0,0,0,0.9),
+    0 0 8px rgba(0,0,0,0.5);
+}
+
+/* ── Subtitle-style continue label ─────────────────────── */
+.scene-continue-label {
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255,255,255,0.65);
+  padding: 8px 0;
+  text-shadow:
+    0 1px 4px rgba(0,0,0,0.95),
+    0 0 12px rgba(0,0,0,0.6),
+    0 0 2px rgba(0,0,0,1);
+}
+
+@keyframes exercisePopIn {
+  from { opacity: 0; transform: scale(0.95) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
 
 @keyframes slideUp {
   from { transform: translateY(24px); opacity: 0; }
@@ -4285,16 +4312,10 @@ button.nav-link:hover {
 
 /* ── Heart Meter ─────────────────────────────────────────── */
 
-/* ── Charge bar (horizontal progress meter) ────────────── */
-.charge-bar {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  z-index: 12;
-  padding: 0 16px;
-  pointer-events: none;
-  animation: fadeIn 0.4s ease-out;
+/* ── Charge bar (inside HUD drawer) ─────────────────────── */
+.charge-bar-inline {
+  width: 100%;
+  margin-top: 4px;
 }
 
 .charge-bar__track {
@@ -4340,11 +4361,11 @@ button.nav-link:hover {
   text-align: center;
 }
 
-.charge-bar--complete .charge-bar__fill {
+.charge-bar-inline--complete .charge-bar__fill {
   background: linear-gradient(90deg, #f472b6, #a855f7);
 }
 
-.charge-bar--complete .charge-bar__label {
+.charge-bar-inline--complete .charge-bar__label {
   color: rgba(255, 255, 255, 0.85);
 }
 

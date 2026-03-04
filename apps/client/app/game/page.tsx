@@ -666,6 +666,7 @@ export default function GamePage() {
           });
         }
         setCurrentMessage(null);
+        setTongTip(null);
         setCurrentExercise(exercise);
         lastExerciseRef.current = exercise;
         sessionLogger.logExerciseShown(args.exerciseType, exercise.id, { objectiveId: args.objectiveId, hintItems: args.hintItems });
@@ -784,6 +785,14 @@ export default function GamePage() {
     lastContinueRef.current = now;
 
     if (processingRef.current) {
+      // If the current blocking tool is show_exercise and exercise was dismissed,
+      // re-show it from cache instead of dequeuing
+      const currentTool = toolQueue[0]?.toolName;
+      if (currentTool === 'show_exercise' && !currentExercise && lastExerciseRef.current) {
+        console.log('[VN] handleContinue: re-show dismissed exercise');
+        setCurrentExercise(lastExerciseRef.current);
+        return;
+      }
       console.log('[VN] handleContinue: dequeue blocked tool');
       setCurrentMessage(null);
       setTongTip(null); // Clear any lingering tong tip
@@ -809,6 +818,9 @@ export default function GamePage() {
     }
   }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
 
+  // Store exercise result so handleContinue can advance after user taps
+  const exerciseResultRef = useRef<{ exerciseId: string; correct: boolean } | null>(null);
+
   const handleExerciseResult = useCallback((exerciseId: string, correct: boolean) => {
     sessionLogger.logExerciseResult(exerciseId, correct);
 
@@ -824,28 +836,29 @@ export default function GamePage() {
     // Increment introduction exercise counter
     if (isIntroHangout) setIntroExerciseCount(prev => prev + 1);
 
-    // Delay clearing the exercise so user can see feedback (Correct!/Wrong)
-    setTimeout(() => {
+    // Store result — DON'T auto-clear. The exercise component shows its own
+    // feedback (e.g. "Great job!"). User must tap outside to continue.
+    exerciseResultRef.current = { exerciseId, correct };
+  }, [isIntroHangout, introExerciseCount, introAct]);
+
+  const handleExerciseDismiss = useCallback(() => {
+    const result = exerciseResultRef.current;
+    if (result) {
+      // Exercise was completed — advance to conversation
+      exerciseResultRef.current = null;
       setCurrentExercise(null);
       setToolQueue((prev) => prev.slice(1));
       processingRef.current = false;
 
       const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
-      const msg = `${ctx}${summarizeExercise(exerciseId, correct)}`;
+      const msg = `${ctx}${summarizeExercise(result.exerciseId, result.correct)}`;
       sessionLogger.logAIRequest(msg);
       void append({ role: 'user', content: msg });
-    }, 800);
-  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
-
-  const handleExerciseDismiss = useCallback(() => {
-    setCurrentExercise(null);
-    setToolQueue((prev) => prev.slice(1));
-    processingRef.current = false;
-
-    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
-    const msg = `${ctx}Player skipped the exercise. Continue the conversation naturally.`;
-    sessionLogger.logAIRequest(msg);
-    void append({ role: 'user', content: msg });
+    } else {
+      // Exercise not completed — just hide temporarily.
+      // processingRef stays true. handleContinue will re-show it.
+      setCurrentExercise(null);
+    }
   }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
 
   const handleChoice = useCallback((choiceId: string) => {
@@ -875,9 +888,11 @@ export default function GamePage() {
   const handleDismissTong = useCallback(() => {
     setTongTip(null);
     if (processingRef.current) {
-      // tong_whisper was blocking (exercise next) — dequeue so processor advances
-      setToolQueue((prev) => prev.slice(1));
-      processingRef.current = false;
+      // tong_whisper was blocking (exercise next).
+      // DON'T dequeue yet — leave the tong_whisper in queue so the user
+      // sees "tap to continue" and gets a moment before the exercise appears.
+      // The next handleContinue tap will dequeue it and let the processor
+      // pick up show_exercise.
     } else if (!currentExercise && !choices && toolQueue.length === 0) {
       // tong_whisper was auto-advanced, nothing queued — request next turn
       const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
