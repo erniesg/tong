@@ -1459,14 +1459,12 @@ export default function GamePage() {
   const explainLang = (gameState.explainIn[npcCity] ?? 'en') as UILang;
 
   if (sceneSummary) {
-    const sceneImageUrl = TUTORIAL_VIDEO_CONFIG[activeNpc]?.sceneImageUrl;
+    const backdropUrl = dynamicBackdrop?.url ?? '/assets/backdrops/seoul/pojangmacha.png';
     return (
       <UILangProvider value={explainLang}>
         <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="game-frame summary-screen">
-            {sceneImageUrl && (
-              <img className="summary-scene-bg" src={sceneImageUrl} alt="" />
-            )}
+            <img className="summary-scene-bg" src={backdropUrl} alt="" />
             <div className="summary-overlay" />
             <div className="summary-content">
               <h2 className="summary-title">{t('scene_complete', explainLang)}</h2>
