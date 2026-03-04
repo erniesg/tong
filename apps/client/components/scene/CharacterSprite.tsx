@@ -20,8 +20,7 @@ export function CharacterSprite({
   return (
     <div
       className={cn(
-        'absolute bottom-[35%] left-1/2 -translate-x-1/2',
-        'h-[45%] w-auto',
+        'absolute inset-0',
         'transition-all duration-500 ease-out',
         active ? 'opacity-100 scale-100' : 'opacity-40 scale-90 brightness-50',
         position === 'left' && 'slide-in-left',
@@ -33,7 +32,7 @@ export function CharacterSprite({
         <img
           src={spriteUrl}
           alt={name}
-          className="h-full w-auto object-contain drop-shadow-[0_4px_24px_rgba(0,0,0,0.6)]"
+          className="h-full w-full object-cover object-top"
         />
       ) : (
         <div className="flex h-full w-32 flex-col items-center justify-end">
