@@ -65,20 +65,6 @@ export function GameHUD({ xp, sp, rp, locationLabel, cityId, explainLang, charge
       >
         <span className="scene-hud-pull-tab-chevron">{open ? '▲' : '▼'}</span>
       </div>
-      {/* Charge bar — below pull tab, always visible when active */}
-      {chargeProgress !== undefined && (
-        <div className={`charge-bar${chargeComplete ? ' charge-bar--complete' : ''}`}>
-          <div className="charge-bar__track">
-            <div
-              className="charge-bar__fill"
-              style={{ width: `${Math.max(0, Math.min(100, chargeProgress))}%` }}
-            />
-            {chargeComplete && <div className="charge-bar__shimmer" />}
-          </div>
-          {chargeLabel && <div className="charge-bar__label">{chargeLabel}</div>}
-        </div>
-      )}
-
       {/* HUD drawer */}
       <div className={`scene-hud ${open ? 'scene-hud--open' : ''}`}>
         {locationLabel && (
@@ -104,6 +90,18 @@ export function GameHUD({ xp, sp, rp, locationLabel, cityId, explainLang, charge
             </button>
           ))}
         </div>
+        {chargeProgress !== undefined && (
+          <div className={`charge-bar-inline${chargeComplete ? ' charge-bar-inline--complete' : ''}`}>
+            <div className="charge-bar__track">
+              <div
+                className="charge-bar__fill"
+                style={{ width: `${Math.max(0, Math.min(100, chargeProgress))}%` }}
+              />
+              {chargeComplete && <div className="charge-bar__shimmer" />}
+            </div>
+            {chargeLabel && <div className="charge-bar__label">{chargeLabel}</div>}
+          </div>
+        )}
       </div>
     </>
   );

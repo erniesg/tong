@@ -29,8 +29,8 @@ export function Background({ imageUrl, ambientDescription, fade = false }: Backg
           </p>
         </div>
       ) : null}
-      {/* Dark gradient overlay for text legibility */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
+      {/* Subtle bottom gradient — just enough for subtitle legibility */}
+      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
     </div>
   );
 }
