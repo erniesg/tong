@@ -7,6 +7,15 @@ import { sm2, qualityFromCorrect, defaultSRSFields } from '../curriculum/srs';
 import type { Location } from '../types/objectives';
 import type { AppLang, CityId } from '../api';
 
+/* ── Player profile ────────────────────────────────────── */
+
+export interface PlayerProfile {
+  englishName: string;
+  chineseName: string;
+  dateOfBirth: string;
+  height: string;
+}
+
 /* ── State shape ────────────────────────────────────────── */
 
 export interface GameState {
@@ -17,6 +26,7 @@ export interface GameState {
   selfAssessedLevel: number | null;
   calibratedLevel: number | null;
   playerName: string;
+  playerProfile: PlayerProfile;
   locationLevels: Record<string, { level: number }>;
   locationHangoutCounts: Record<string, number>;   // key: "seoul:food_street"
   unlockedLocations: Record<string, boolean>;       // key: "seoul:cafe"
@@ -37,7 +47,8 @@ export type GameAction =
   | { type: 'INCREMENT_LOCATION_HANGOUT'; cityId: string; locationId: string }
   | { type: 'UNLOCK_LOCATION'; cityId: string; locationId: string }
   | { type: 'SET_EXPLAIN_LANGUAGE'; cityId: CityId; lang: AppLang }
-  | { type: 'SET_PLAYER_NAME'; name: string };
+  | { type: 'SET_PLAYER_NAME'; name: string }
+  | { type: 'SET_PLAYER_PROFILE'; profile: PlayerProfile };
 
 /* ── Persistence ────────────────────────────────────────── */
 
@@ -55,6 +66,12 @@ function loadState(): GameState {
         ...defaults,
         ...parsed,
         playerName: parsed.playerName ?? '',
+        playerProfile: parsed.playerProfile ?? {
+          englishName: parsed.playerName ?? '',
+          chineseName: '',
+          dateOfBirth: '',
+          height: '',
+        },
         locationHangoutCounts: parsed.locationHangoutCounts ?? defaults.locationHangoutCounts,
         unlockedLocations: parsed.unlockedLocations ?? defaults.unlockedLocations,
         explainIn: (parsed.explainIn && typeof parsed.explainIn === 'object')
@@ -93,6 +110,7 @@ function createInitialState(): GameState {
     selfAssessedLevel: null,
     calibratedLevel: null,
     playerName: '',
+    playerProfile: { englishName: '', chineseName: '', dateOfBirth: '', height: '' },
     locationLevels: {},
     locationHangoutCounts: {},
     unlockedLocations: { 'seoul:food_street': true, 'shanghai:dumpling_shop': true, 'tokyo:ramen_shop': true },
@@ -197,6 +215,8 @@ function reduce(state: GameState, action: GameAction): GameState {
       return { ...state, explainIn: { ...state.explainIn, [action.cityId]: action.lang } };
     case 'SET_PLAYER_NAME':
       return { ...state, playerName: action.name };
+    case 'SET_PLAYER_PROFILE':
+      return { ...state, playerProfile: action.profile, playerName: action.profile.englishName };
     default:
       return state;
   }
