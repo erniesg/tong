@@ -110,8 +110,40 @@ const STRINGS: Record<string, Record<UILang, string>> = {
 
   // City map
   'explain_in': { en: 'Explain in:', ko: '설명 언어:', ja: '説明言語:', zh: '说明语言：' },
+
+  // Exercise prompts (generated exercises)
+  'match_char_roman': { en: 'Match each character to its romanization', ko: '각 글자를 로마자에 맞추세요', ja: '各文字をローマ字と合わせよう', zh: '将字符匹配到罗马音' },
+  'match_symbol_sound': { en: 'Match each symbol to its sound', ko: '각 기호를 소리에 맞추세요', ja: '各記号を音と合わせよう', zh: '将符号匹配到发音' },
+  'match_words_meaning': { en: 'Match the words to their meanings', ko: '단어를 뜻에 맞추세요', ja: '単語を意味と合わせよう', zh: '将词语匹配到含义' },
+  'which_sound': { en: 'Which symbol makes the "{0}" sound?', ko: '"{0}" 소리를 내는 기호는?', ja: '「{0}」の音を出す記号は？', zh: '哪个符号发"{0}"的音？' },
+  'what_sound': { en: 'What sound does "{0}" make?', ko: '"{0}"은(는) 무슨 소리?', ja: '「{0}」はどんな音？', zh: '"{0}"发什么音？' },
+  'what_means': { en: 'What does "{0}" mean?', ko: '"{0}"의 뜻은?', ja: '「{0}」の意味は？', zh: '"{0}"是什么意思？' },
+  'stroke_prompt': { en: 'Trace the character: {0}', ko: '글자를 따라 쓰세요: {0}', ja: '文字をなぞろう: {0}', zh: '描写这个字: {0}' },
+  'stroke_explain': { en: 'Practice writing {0} to build muscle memory.', ko: '{0} 쓰기를 연습하여 익히세요.', ja: '{0}を書いて体で覚えよう。', zh: '练习写{0}来培养肌肉记忆。' },
+  'type_word_for': { en: 'Type the word for "{0}":', ko: '"{0}"에 해당하는 단어를 입력하세요:', ja: '「{0}」の単語を入力しよう:', zh: '输入"{0}"对应的词：' },
+  'romanization_hint': { en: 'Romanization: {0}', ko: '로마자: {0}', ja: 'ローマ字: {0}', zh: '罗马音: {0}' },
+  'build_char': { en: 'Build the character: {0}', ko: '글자를 조합하세요: {0}', ja: '文字を組み立てよう: {0}', zh: '组合这个字: {0}' },
+
+  // Navigation
+  'tap_to_continue': { en: 'Tap to continue', ko: '탭하여 계속', ja: 'タップして続く', zh: '点击继续' },
+  'tap_to_skip': { en: 'Tap to skip', ko: '탭하여 건너뛰기', ja: 'タップでスキップ', zh: '点击跳过' },
+
+  // Charge bar
+  'charge_unlocked': { en: '✦ {0} unlocked', ko: '✦ {0} 해금', ja: '✦ {0} 解放', zh: '✦ {0} 已解锁' },
+
+  // Pronunciation exercise
+  'pron_prompt': { en: 'Listen and pick the matching character', ko: '듣고 맞는 글자를 고르세요', ja: '聞いて合う文字を選ぼう', zh: '听音选字' },
 };
 
 export function t(key: string, lang: UILang = 'en'): string {
   return STRINGS[key]?.[lang] ?? STRINGS[key]?.en ?? key;
+}
+
+/** t() with positional {0}, {1}, ... replacements. */
+export function tFmt(key: string, lang: UILang = 'en', ...args: string[]): string {
+  let s = t(key, lang);
+  for (let i = 0; i < args.length; i++) {
+    s = s.replace(`{${i}}`, args[i]);
+  }
+  return s;
 }
