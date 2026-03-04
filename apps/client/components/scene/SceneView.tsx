@@ -63,6 +63,7 @@ export function SceneView({
   hudContent,
   targetLang = 'ko',
   continueLabel = 'Tap to continue',
+  sceneReady = true,
   onChoice = () => {},
   onContinue = () => {},
   onExerciseResult = () => {},
@@ -73,15 +74,6 @@ export function SceneView({
   // Reset exerciseDone when exercise changes
   useEffect(() => { setExerciseDone(false); }, [currentExercise]);
 
-  // Auto-dismiss exercise after completion — no second "tap to continue" needed
-  useEffect(() => {
-    if (!exerciseDone) return;
-    const timer = setTimeout(() => {
-      onExerciseDismiss?.();
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [exerciseDone, onExerciseDismiss]);
-
   const prevBackdropRef = useRef(backgroundUrl);
   const backdropTransition = backgroundTransition === 'fade' && prevBackdropRef.current !== backgroundUrl;
   if (prevBackdropRef.current !== backgroundUrl) {
@@ -91,10 +83,12 @@ export function SceneView({
   const handleCinematicEnd = useCallback(() => {
     onCinematicEnd();
   }, [onCinematicEnd]);
+  const TONG_LABELS: Record<string, string> = { zh: '小通 Tong', ja: 'トン Tong', ko: '통 Tong' };
+  const YOU_LABELS: Record<string, string> = { zh: '你', ja: 'あなた', ko: '나' };
   const getSpeakerName = (msg: SessionMessage): string | undefined => {
     if (msg.role === 'narrator' || msg.role === 'system') return undefined;
-    if (msg.role === 'tong') return 'Tong';
-    if (msg.role === 'user') return 'You';
+    if (msg.role === 'tong') return TONG_LABELS[targetLang] ?? 'Tong';
+    if (msg.role === 'user') return YOU_LABELS[targetLang] ?? 'You';
     return npcName;
   };
 
@@ -146,8 +140,11 @@ export function SceneView({
         <div
           className="exercise-float-wrapper"
           onClick={(e) => {
-            // Tap outside the card → hide temporarily (only when not done)
-            if (!exerciseDone && e.target === e.currentTarget && onExerciseDismiss) {
+            if (exerciseDone) {
+              // Done — tap anywhere to advance
+              onExerciseDismiss?.();
+            } else if (e.target === e.currentTarget && onExerciseDismiss) {
+              // Not done — tap outside card to hide temporarily
               onExerciseDismiss();
             }
           }}
@@ -160,6 +157,11 @@ export function SceneView({
                 onExerciseResult(currentExercise.id, correct);
               }}
             />
+            {exerciseDone && (
+              <div className="dialogue-continue animate-pulse" style={{ textAlign: 'center', padding: '8px 0 4px' }}>
+                {continueLabel}
+              </div>
+            )}
           </div>
         </div>
       ) : choices ? (
@@ -175,14 +177,14 @@ export function SceneView({
           continueLabel={continueLabel}
           onContinue={onContinue}
         />
-      ) : isStreaming ? (
+      ) : isStreaming || !sceneReady ? (
         <div className="absolute bottom-4 left-0 right-0 text-center">
           <div className="scene-continue-label animate-pulse">...</div>
         </div>
       ) : (
         <div
           className="absolute bottom-0 left-0 right-0 p-5 cursor-pointer"
-          onClick={onContinue}
+          onClick={tongTip ? onDismissTong : onContinue}
         >
           <div className="scene-continue-label animate-pulse">
             {continueLabel}

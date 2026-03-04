@@ -46,6 +46,19 @@ function pickNpcForCity(cityId: CityId): string {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+/* ── Charge notification (auto-dismisses with fallback timer) ── */
+function ChargeNotif({ text, onDone }: { text: string; onDone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 3000); // fallback if animation event doesn't fire
+    return () => clearTimeout(t);
+  }, [onDone]);
+  return (
+    <div className="charge-notif" onAnimationEnd={onDone}>
+      {text}
+    </div>
+  );
+}
+
 /* ── constants ──────────────────────────────────────────── */
 
 
@@ -311,6 +324,7 @@ export default function GamePage() {
   const [choicePrompt, setChoicePrompt] = useState<string | null>(null);
   const [currentExercise, setCurrentExercise] = useState<ExerciseData | null>(null);
   const [sceneSummary, setSceneSummary] = useState<SceneSummary | null>(null);
+  const [sceneReady, setSceneReady] = useState(false);
   const [dynamicBackdrop, setDynamicBackdrop] = useState<{ url: string; transition: 'fade' | 'cut'; ambientDescription?: string } | null>(null);
   const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; autoAdvance: boolean; muted?: boolean } | null>(null);
 
@@ -326,6 +340,7 @@ export default function GamePage() {
   const [isIntroHangout, setIsIntroHangout] = useState(false);
   const [introExerciseCount, setIntroExerciseCount] = useState(0);
   const [introAct, setIntroAct] = useState<1 | 2>(1);
+  const [npcRevealed, setNpcRevealed] = useState(false);
   const MIN_INTRO_EXERCISES = 3;
   // Random charge time between 1.5–3 minutes (simulates video generation)
   const [chargeDurationMs] = useState(() => Math.round((1.5 + Math.random() * 1.5) * 60 * 1000));
@@ -529,6 +544,7 @@ export default function GamePage() {
         return args;
       }
       processedToolCallsRef.current.add(toolCallId);
+      if (!sceneReady) setSceneReady(true);
       sessionLogger.logToolCall(toolName, toolCallId, args as Record<string, unknown>);
 
       setToolQueue((prev) => [
@@ -639,6 +655,7 @@ export default function GamePage() {
           setIntroAct(2);
           console.log('[VN] Act 1 → Act 2 transition triggered by npc_speak');
         }
+        if (isIntroHangout && !npcRevealed) setNpcRevealed(true);
         setCurrentMessage({
           id: item.toolCallId,
           role: 'npc',
@@ -921,19 +938,30 @@ export default function GamePage() {
   const handleCinematicEnd = useCallback(() => {
     setCinematic(null);
     cinematicCaptionRef.current = null;
+    if (isIntroHangout && !npcRevealed) setNpcRevealed(true);
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
-  }, []);
+  }, [isIntroHangout, npcRevealed]);
 
   const handleDismissTong = useCallback(() => {
     setTongTip(null);
     if (processingRef.current) {
-      // tong_whisper was blocking. Don't dequeue yet — leave it in queue
-      // so the user sees "tap to continue" before the next tool fires.
-      // handleContinue will dequeue on the next tap.
+      // tong_whisper was blocking — dequeue immediately so next tool fires
+      setCurrentMessage(null);
+      const remainingAfterDequeue = toolQueue.length - 1;
+      setToolQueue((prev) => prev.slice(1));
+      processingRef.current = false;
+
+      // If nothing left in queue, request next turn
+      if (remainingAfterDequeue === 0 && !chatLoading) {
+        const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
+        const msg = `${ctx}Continue.`;
+        sessionLogger.logUserTap('continue');
+        sessionLogger.logAIRequest(msg);
+        void append({ role: 'user', content: msg });
+      }
     }
-    // If not processing (shouldn't happen since tong always blocks, but safety):
-  }, []);
+  }, [toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
 
   /* ── renders ──────────────────────────────────────────── */
 
@@ -1247,6 +1275,8 @@ export default function GamePage() {
     setChoicePrompt(null);
     setCurrentExercise(null);
     setSceneSummary(null);
+    setSceneReady(false);
+    setNpcRevealed(false);
     setDynamicBackdrop(null);
     setCinematic(null);
     setIsIntroHangout(false);
@@ -1519,13 +1549,14 @@ export default function GamePage() {
           onCinematicEnd={handleCinematicEnd}
           npcName={`${npc.nameLocal} ${explainLang === 'zh' ? npc.nameZh : npc.name}`}
           npcColor={npc.color}
-          npcSpriteUrl={isIntroHangout && introAct === 1 ? '' : currentExercise ? '' : npc.src}
+          npcSpriteUrl={isIntroHangout && !npcRevealed ? '' : currentExercise ? '' : npc.src}
           currentMessage={currentMessage}
           currentExercise={currentExercise}
           choices={choices}
           choicePrompt={choicePrompt}
           tongTip={tongTip}
           isStreaming={chatLoading}
+          sceneReady={sceneReady}
           targetLang={targetLang}
           continueLabel={continueLabel}
           hudContent={
@@ -1549,12 +1580,10 @@ export default function GamePage() {
         />
         {/* Charge complete notification (auto-dismisses) */}
         {chargeNotifShown && (
-          <div
-            className="charge-notif"
-            onAnimationEnd={() => setChargeNotifShown(false)}
-          >
-            {explainLang === 'zh' ? '⚡ 能量已满' : explainLang === 'ko' ? '⚡ 에너지 충전 완료' : explainLang === 'ja' ? '⚡ エネルギー満タン' : '⚡ Fully Charged'}
-          </div>
+          <ChargeNotif
+            text={explainLang === 'zh' ? '⚡ 能量已满' : explainLang === 'ko' ? '⚡ 에너지 충전 완료' : explainLang === 'ja' ? '⚡ エネルギー満タン' : '⚡ Fully Charged'}
+            onDone={() => setChargeNotifShown(false)}
+          />
         )}
       </div>
     </div>
