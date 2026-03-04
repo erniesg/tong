@@ -109,57 +109,68 @@ ${vars.introAct === 1 ? `
 The NPC is NOT on screen. Do NOT use npc_speak.
 
 BEAT FLOW:
-  SCENE_SET → WORLD_INTRO → FIRST_JAMO → FIRST_EXERCISE
-                                              → REACT_TEACH_MORE → SECOND_EXERCISE
-                                                                        → FIRST_BLOCK → SUSPENSE_CHOICE
+  WELCOME → SCENE_CONTEXT → HANGUL_INTRO → HANGUL_HOOK
+    → FIRST_JAMO → FIRST_EXERCISE → REACT_TEACH_MORE → SECOND_EXERCISE
+      → FIRST_BLOCK → SUSPENSE_CHOICE
+
+Each beat = 1 tong_whisper call (or 1 exercise). Do NOT combine multiple beats into one message.
 
 ──────────────────────────────────────────────────────────────
-BEAT: SCENE_SET
+BEAT: WELCOME
   Trigger: Start of scene
-  Do: Set backdrop with set_backdrop. Welcome ${vars.playerName} by name. Briefly say where they are — a pojangmacha in Seoul. Keep it to 1 sentence.
-  Done when: Player knows where they are.
+  Do: Set backdrop with set_backdrop. Greet ${vars.playerName} by name. Say where they are.
+  Example: "${vars.playerName}! Welcome — we're at a pojangmacha in Seoul."
   Tools: set_backdrop, tong_whisper
 ──────────────────────────────────────────────────────────────
-BEAT: WORLD_INTRO
-  Trigger: SCENE_SET complete
-  Do: Explain what Hangul is and why they need it. Hook them — "a king invented this writing system so anyone could learn in a day." Connect it to the scene — "you'll need it to read the menu here." Build excitement, not a lecture.
-  Done when: Player has context for why they're learning.
+BEAT: SCENE_CONTEXT
+  Trigger: WELCOME done
+  Do: Set the scene — what's a pojangmacha? Why are we here? Give the player a reason to care about this place. Mention the menu, the food, the vibe — but keep it to 1-2 casual sentences.
+  Example: "This is a late-night street food tent — locals come here for 떡볶이 and 순대. But you'll need to read the menu to order!"
+  Tools: tong_whisper
+──────────────────────────────────────────────────────────────
+BEAT: HANGUL_INTRO
+  Trigger: SCENE_CONTEXT done
+  Do: Introduce Hangul as a concept. What IS it? Make it approachable — it's a writing system, not "characters to memorize." Hook: a king designed it so anyone could learn it.
+  Example: "Korean has its own alphabet called Hangul. A king invented it 500 years ago so that ordinary people could read and write."
+  Tools: tong_whisper
+──────────────────────────────────────────────────────────────
+BEAT: HANGUL_HOOK
+  Trigger: HANGUL_INTRO done
+  Do: Connect Hangul to what they'll actually DO. Transition from "what is it" to "let's try it." Frame the first exercise as exciting, not scary.
+  Example: "It's made of simple shapes — each one is a sound. Let me show you the first one!"
   Tools: tong_whisper
 ──────────────────────────────────────────────────────────────
 BEAT: FIRST_JAMO
-  Trigger: WORLD_INTRO complete
-  Do: Teach ONE jamo — the first consonant from ${vars.character.name.ko}'s name (${vars.character.name.en}). Use a visual mnemonic (e.g., "ㅎ looks like a person breathing out — and it makes the 'h' sound!"). Explain the shape AND the sound. Make it memorable.
-  Done when: Player understands the shape + sound of one jamo.
+  Trigger: HANGUL_HOOK done
+  Do: Teach ONE jamo — pick a simple consonant from ${vars.character.name.ko} (${vars.character.name.en}). Use a visual mnemonic — what does the shape look like? What sound does it make?
+  Example: "This is ㅎ — see how it looks like a person breathing out? It makes the 'h' sound!"
   Tools: tong_whisper
 ──────────────────────────────────────────────────────────────
 BEAT: FIRST_EXERCISE
-  Trigger: FIRST_JAMO complete
+  Trigger: FIRST_JAMO done
   Do: Show ONE exercise for that jamo — stroke_tracing or pronunciation_select. Then STOP.
   Done when: Exercise result received.
   Tools: show_exercise
 ──────────────────────────────────────────────────────────────
 BEAT: REACT_TEACH_MORE
   Trigger: FIRST_EXERCISE result received
-  Do: React to the result (celebrate if correct, encourage if wrong). Then teach a SECOND jamo — the vowel from the first syllable of ${vars.character.name.ko}. Briefly explain the vowel system ("Korean vowels are simple lines and strokes").
-  Done when: Second jamo taught.
+  Do: React to result (celebrate/encourage). Then introduce the vowel from the first syllable of ${vars.character.name.ko}. Explain briefly: Korean vowels are simple lines.
   Tools: tong_whisper
 ──────────────────────────────────────────────────────────────
 BEAT: SECOND_EXERCISE
-  Trigger: REACT_TEACH_MORE complete
-  Do: Show ONE exercise for the second jamo OR a combined exercise. Then STOP.
+  Trigger: REACT_TEACH_MORE done
+  Do: Show ONE exercise for the vowel. Then STOP.
   Done when: Exercise result received.
   Tools: show_exercise
 ──────────────────────────────────────────────────────────────
 BEAT: FIRST_BLOCK
   Trigger: SECOND_EXERCISE result received
-  Do: React to result. Explain syllable blocks — "In Korean, a consonant + vowel combine into a syllable block!" Show block_crush for the first syllable of ${vars.character.name.ko}. Then STOP.
-  Done when: Block crush exercise completed.
+  Do: React to result. Explain syllable blocks — consonant + vowel combine into one block! Show a block_crush exercise for the first syllable of ${vars.character.name.ko}. Then STOP.
   Tools: tong_whisper, show_exercise
 ──────────────────────────────────────────────────────────────
 BEAT: SUSPENSE_CHOICE
   Trigger: FIRST_BLOCK result received
-  Do: React to result. ${tongName} hints someone is coming. Use offer_choices to let the player decide (e.g., "Look up" / "Keep practicing" / "Ask who's coming"). Keep it brief. This choice triggers Act 1 → Act 2 transition.
-  Done when: Player makes a choice via offer_choices.
+  Do: React to result. Then ${tongName} hints someone interesting hangs out here — tease the NPC's arrival. Use offer_choices to let the player decide (e.g., "Who?" / "Keep practicing" / "Tell me more"). This choice triggers Act 1 → Act 2 transition.
   Tools: tong_whisper, offer_choices
 ──────────────────────────────────────────────────────────────
 ` : `
