@@ -22,6 +22,8 @@
     "build:client:cf": "npm --prefix apps/client run cf:build",
     "deploy:client:cf": "./scripts/deploy-client-cloudflare.sh",
     "setup:worktrees": "./scripts/setup-hackathon-worktrees.sh",
+    "build:extension": "npm --prefix apps/extension run build",
+    "dev:extension": "npm --prefix apps/extension run dev",
     "zip": "./scripts/build-extension-bundle.sh",
     "launch:agents": "./scripts/launch-parallel-agents.sh"
   }
