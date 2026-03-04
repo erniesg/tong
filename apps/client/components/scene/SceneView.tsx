@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import type { SessionMessage, ExerciseData } from '@/lib/types/hangout';
 import type { TargetLang } from '@/components/shared/KoreanText';
 import { Background } from './Background';
@@ -69,6 +69,10 @@ export function SceneView({
   onExerciseDismiss,
   onDismissTong = () => {},
 }: SceneViewProps) {
+  const [exerciseDone, setExerciseDone] = useState(false);
+  // Reset exerciseDone when exercise changes
+  useEffect(() => { setExerciseDone(false); }, [currentExercise]);
+
   const prevBackdropRef = useRef(backgroundUrl);
   const backdropTransition = backgroundTransition === 'fade' && prevBackdropRef.current !== backgroundUrl;
   if (prevBackdropRef.current !== backgroundUrl) {
@@ -128,20 +132,34 @@ export function SceneView({
 
       {/* Layer 4: Interactive area at bottom */}
       {currentExercise ? (
-        <div className="absolute bottom-0 left-0 right-0 max-h-[70vh] overflow-y-auto slide-up">
-          {onExerciseDismiss && (
-            <button
-              className="exercise-dismiss-btn"
-              onClick={onExerciseDismiss}
-              aria-label="Skip exercise"
-            >
-              ✕
-            </button>
+        <div
+          className="exercise-float-wrapper"
+          onClick={(e) => {
+            if (exerciseDone) {
+              // After completion, tap ANYWHERE (card or outside) to continue
+              onExerciseDismiss?.();
+              return;
+            }
+            // Tap outside the card → hide temporarily
+            if (e.target === e.currentTarget && onExerciseDismiss) {
+              onExerciseDismiss();
+            }
+          }}
+        >
+          <div className="exercise-float-card">
+            <ExerciseRenderer
+              exercise={currentExercise}
+              onResult={(correct) => {
+                setExerciseDone(true);
+                onExerciseResult(currentExercise.id, correct);
+              }}
+            />
+          </div>
+          {exerciseDone && (
+            <div className="exercise-float-continue animate-pulse">
+              {continueLabel}
+            </div>
           )}
-          <ExerciseRenderer
-            exercise={currentExercise}
-            onResult={(correct) => onExerciseResult(currentExercise.id, correct)}
-          />
         </div>
       ) : choices ? (
         <ChoiceButtons choices={choices} prompt={choicePrompt} onSelect={onChoice} disabled={isStreaming} targetLang={targetLang} />
@@ -158,14 +176,14 @@ export function SceneView({
         />
       ) : isStreaming ? (
         <div className="absolute bottom-4 left-0 right-0 text-center">
-          <div className="text-xs text-[var(--color-text-muted)] animate-pulse">...</div>
+          <div className="scene-continue-label animate-pulse">...</div>
         </div>
       ) : (
         <div
           className="absolute bottom-0 left-0 right-0 p-5 cursor-pointer"
           onClick={onContinue}
         >
-          <div className="text-center text-xs text-[var(--color-text-muted)] animate-pulse py-4">
+          <div className="scene-continue-label animate-pulse">
             {continueLabel}
           </div>
         </div>
