@@ -121,14 +121,16 @@ export function SceneView({
         />
       )}
 
-      {/* Layer 2: Character sprite */}
-      <CharacterSprite
-        spriteUrl={npcSpriteUrl}
-        name={npcName}
-        nameColor={npcColor}
-        position="center"
-        active={true}
-      />
+      {/* Layer 2: Character sprite — hidden during cinematics */}
+      {!cinematic && (
+        <CharacterSprite
+          spriteUrl={npcSpriteUrl}
+          name={npcName}
+          nameColor={npcColor}
+          position="center"
+          active={true}
+        />
+      )}
 
       {/* Layer 3: Tong whisper */}
       <TongOverlay

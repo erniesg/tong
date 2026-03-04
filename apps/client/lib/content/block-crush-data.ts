@@ -1,4 +1,5 @@
 /* ── Block Crush — Character composition database ──────────── */
+import { getCachedTranslation, requestTranslations } from '../i18n/translation-cache';
 
 export interface CompositionTarget {
   char: string;
@@ -188,7 +189,15 @@ const MEANING_I18N: Record<string, Record<string, string>> = {
 
 export function getMeaning(englishMeaning: string, explainIn: string): string {
   if (explainIn === 'en') return englishMeaning;
-  return MEANING_I18N[englishMeaning]?.[explainIn] ?? englishMeaning;
+  // Try static table first
+  const staticResult = MEANING_I18N[englishMeaning]?.[explainIn];
+  if (staticResult) return staticResult;
+  // Try dynamic translation cache
+  const cached = getCachedTranslation(englishMeaning, 'en', explainIn);
+  if (cached) return cached;
+  // Request translation — will be available on next render
+  requestTranslations([englishMeaning], 'en', explainIn);
+  return englishMeaning;
 }
 
 /* ── Distractor pieces per language ──────────────────────── */
