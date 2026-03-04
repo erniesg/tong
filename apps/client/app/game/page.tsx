@@ -267,6 +267,7 @@ export default function GamePage() {
 
   /* tutorial state */
   const mockVideo = searchParams.get('mock_video') === '1';
+  const liveVideo = searchParams.get('live_video') === '1';
   const [profileInput, setProfileInput] = useState<PlayerProfile>({ englishName: '', chineseName: '', dateOfBirth: '', height: '' });
   const exitLineRef = useRef('');
   const introVideoUrlRef = useRef<string | null>(null);
@@ -275,6 +276,16 @@ export default function GamePage() {
   const [isTutorialHangout, setIsTutorialHangout] = useState(false);
   const [tutorialExerciseCount, setTutorialExerciseCount] = useState(0);
   const MIN_TUTORIAL_EXERCISES = 3;
+
+  // Sync generated video URL back to exitVideoUrlRef when generation succeeds
+  useEffect(() => {
+    if (exitVideoGen.status === 'succeeded' && exitVideoGen.videoUrl) {
+      console.log('[VideoGen] Succeeded — updating exitVideoUrl:', exitVideoGen.videoUrl);
+      exitVideoUrlRef.current = exitVideoGen.videoUrl;
+    } else if (exitVideoGen.status === 'failed' || exitVideoGen.status === 'error') {
+      console.log('[VideoGen] Failed — keeping pre-gen fallback:', exitVideoUrlRef.current);
+    }
+  }, [exitVideoGen.status, exitVideoGen.videoUrl]);
 
   const processingRef = useRef(false);
   const pausedRef = useRef(false);
@@ -296,11 +307,31 @@ export default function GamePage() {
   /** Build tutorial context if in tutorial mode */
   function getTutorialCtx() {
     if (!isTutorialHangout) return undefined;
+
+    // Map exitVideoGen.status → tutorial 3-state model
+    let videoStatus: 'generating' | 'ready' | 'failed';
+    let exitVideoUrl = exitVideoUrlRef.current; // pre-gen fallback
+
+    const genStatus = exitVideoGen.status;
+    if (genStatus === 'idle') {
+      // No generation started (default / live_video not enabled) — use pre-gen
+      videoStatus = 'ready';
+    } else if (genStatus === 'succeeded' && exitVideoGen.videoUrl) {
+      videoStatus = 'ready';
+      exitVideoUrl = exitVideoGen.videoUrl;
+    } else if (genStatus === 'failed' || genStatus === 'error') {
+      // Generation failed — fall back to pre-gen
+      videoStatus = 'ready';
+    } else {
+      // queued or running
+      videoStatus = 'generating';
+    }
+
     return {
       isTutorial: true,
       playerName: gameState.playerName || 'Player',
-      videoStatus: 'ready' as const,
-      exitVideoUrl: exitVideoUrlRef.current,
+      videoStatus,
+      exitVideoUrl,
       introVideoUrl: introVideoUrlRef.current,
       exitLine: exitLineRef.current,
       exercisesDone: tutorialExerciseCount,
@@ -334,9 +365,10 @@ export default function GamePage() {
     // Store self-assessed level
     dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
 
-    // Detect tutorial (first encounter with this NPC)
+    // Detect tutorial (first encounter with this NPC, or forced via ?force_tutorial=1)
     const rel = getRelationship(npcId);
-    const isTutorial = rel.interactionCount === 0;
+    const forceTutorial = searchParams.get('force_tutorial') === '1';
+    const isTutorial = forceTutorial || rel.interactionCount === 0;
     setIsTutorialHangout(isTutorial);
     setTutorialExerciseCount(0);
 
@@ -352,12 +384,28 @@ export default function GamePage() {
 
         introVideoUrlRef.current = pickRandom(config.introVideoUrls);
         exitVideoUrlRef.current = pickRandom(config.exitVideoUrls);
+
+        // Start dynamic video generation when enabled (?live_video=1 or ?mock_video=1)
+        if (liveVideo || mockVideo) {
+          const prompt = config.exitVideoPromptTemplate.replace(/{exitLine}/g, exitLine);
+          exitVideoGen.startGeneration({
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', imageUrl: config.sceneImageUrl },
+            ],
+            ratio: '9:16',
+            duration: 10,
+            generateAudio: true,
+          });
+        }
       }
 
+      // Initial video status: 'generating' if gen started, 'ready' with pre-gen otherwise
+      const initialVideoStatus = (liveVideo || mockVideo) ? 'generating' as const : 'ready' as const;
       tutCtx = {
         isTutorial: true,
         playerName: name,
-        videoStatus: 'ready' as const,
+        videoStatus: initialVideoStatus,
         exitVideoUrl: exitVideoUrlRef.current,
         introVideoUrl: introVideoUrlRef.current,
         exitLine: exitLineRef.current,
