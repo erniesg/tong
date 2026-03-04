@@ -132,6 +132,65 @@ export function getNameTargets(characterId: string): CompositionTarget[] {
   return NAME_TARGETS[characterId] ?? [];
 }
 
+/* ── Meaning translations ────────────────────────────────── */
+
+/** Translate English meaning key → explainIn language. Falls back to English. */
+const MEANING_I18N: Record<string, Record<string, string>> = {
+  // Korean char meanings
+  'go':            { zh: '去', ja: '行く' },
+  'I / me':        { zh: '我', ja: '私' },
+  'all':           { zh: '全部', ja: '全て' },
+  'horse':         { zh: '马', ja: '馬' },
+  'four':          { zh: '四', ja: '四' },
+  'ah':            { zh: '啊', ja: 'ああ' },
+  'ruler':         { zh: '尺子', ja: '定規' },
+  'do':            { zh: '做', ja: 'する' },
+  'high':          { zh: '高', ja: '高い' },
+  'old':           { zh: '老', ja: '古い' },
+  'two':           { zh: '二', ja: '二' },
+  'nothing':       { zh: '无', ja: '無' },
+  'Korea / one':   { zh: '韩/一', ja: '韓/一' },
+  'words':         { zh: '话', ja: '言葉' },
+  'rice':          { zh: '饭', ja: 'ご飯' },
+  'seaweed':       { zh: '海苔', ja: '海苔' },
+  'house':         { zh: '房子', ja: '家' },
+  'bread':         { zh: '面包', ja: 'パン' },
+  'rice cake':     { zh: '年糕', ja: '餅' },
+  'bear':          { zh: '熊', ja: '熊' },
+  'door':          { zh: '门', ja: '門' },
+  'writing':       { zh: '文字', ja: '文' },
+  'round':         { zh: '圆', ja: '丸い' },
+  'country':       { zh: '国家', ja: '国' },
+  'feeling':       { zh: '感觉', ja: '感じ' },
+  'love (사랑)':   { zh: '爱', ja: '愛' },
+  // Chinese char meanings
+  'good':          { ko: '좋다', ja: '良い' },
+  'bright':        { ko: '밝다', ja: '明るい' },
+  'forest':        { ko: '숲', ja: '林' },
+  'rest':          { ko: '쉬다', ja: '休み' },
+  'he':            { ko: '그', ja: '彼' },
+  'mom':           { ko: '엄마', ja: 'お母さん' },
+  'flower':        { ko: '꽃', ja: '花' },
+  'character':     { ko: '글자', ja: '字' },
+  'male':          { ko: '남자', ja: '男' },
+  'peace':         { ko: '평화', ja: '平和' },
+  'think':         { ko: '생각', ja: '思う' },
+  'clear':         { ko: '맑다', ja: '清い' },
+  'lake':          { ko: '호수', ja: '湖' },
+  'river':         { ko: '강', ja: '川' },
+  // Japanese char meanings
+  'grove':         { ko: '숲', zh: '林' },
+  // Name-specific
+  'Ha-':           { zh: '哈', ja: 'ハ' },
+  'silver/grace':  { zh: '银/恩', ja: '銀/恩' },
+  'truth/precious': { zh: '真/珍', ja: '真/珍' },
+};
+
+export function getMeaning(englishMeaning: string, explainIn: string): string {
+  if (explainIn === 'en') return englishMeaning;
+  return MEANING_I18N[englishMeaning]?.[explainIn] ?? englishMeaning;
+}
+
 /* ── Distractor pieces per language ──────────────────────── */
 
 export const DISTRACTORS: Record<'ko' | 'zh' | 'ja', string[]> = {

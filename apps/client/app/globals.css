@@ -4060,6 +4060,97 @@ button.nav-link:hover {
   to { opacity: 1; }
 }
 
+/* Block Crush — wrong block feedback toast */
+.bc-wrong-toast {
+  position: absolute;
+  bottom: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(220, 60, 60, 0.9);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  animation: bc-toast-in 0.2s ease-out, bc-toast-out 0.3s 1.2s ease-in forwards;
+  pointer-events: none;
+  z-index: 50;
+}
+
+@keyframes bc-toast-in { from { opacity: 0; transform: translateX(-50%) translateY(4px); } }
+@keyframes bc-toast-out { to { opacity: 0; } }
+
+.bc-slot--wrong-shake {
+  animation: bc-shake 0.3s ease-in-out;
+}
+
+@keyframes bc-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* Block Crush — completion overlay */
+.bc-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  z-index: 60;
+  animation: bc-overlay-in 0.3s ease-out;
+}
+
+@keyframes bc-overlay-in { from { opacity: 0; } }
+
+.bc-overlay__char {
+  font-size: 4rem;
+  font-weight: bold;
+  color: var(--color-text-primary, white);
+}
+
+.bc-overlay__romanization {
+  font-size: 1rem;
+  color: var(--color-text-muted, #aaa);
+  margin-top: 0.5rem;
+}
+
+.bc-overlay__meaning {
+  font-size: 1.25rem;
+  color: var(--color-accent, #f0c040);
+  margin-top: 0.25rem;
+}
+
+.bc-overlay__tap {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #999);
+  margin-top: 1.5rem;
+  animation: pulse 2s infinite;
+}
+
+/* Block Crush — component-reveal assembly animation */
+.bc-assembly { display: flex; flex-direction: column; align-items: center; }
+
+.bc-assembly__piece {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  font-size: 38px; font-weight: 600; line-height: 1;
+  opacity: 0; transform: scale(0.3);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out, text-shadow 0.4s ease-out;
+}
+
+.bc-assembly__piece--revealed { opacity: 1; transform: scale(1); }
+
+.bc-assembly__merged {
+  font-size: 4rem; font-weight: bold; color: white;
+  text-shadow: 0 0 24px rgba(240, 192, 64, 0.5);
+}
+
+.bc-assembly__piece-lg .bc-assembly__piece { width: 56px; height: 56px; font-size: 50px; }
+.bc-assembly__piece-sm .bc-assembly__piece { width: 20px; height: 20px; font-size: 18px; }
+
 /* ── Heart Meter ─────────────────────────────────────────── */
 
 .heart-meter {
