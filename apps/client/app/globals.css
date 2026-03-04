@@ -750,6 +750,18 @@ button.nav-link:hover {
   font-size: 10px;
   color: rgba(255,255,255,0.85);
   text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  transition: color 0.3s, text-shadow 0.3s;
+}
+
+.scene-hud-pull-tab-chevron.charge-done {
+  color: rgb(168, 85, 247);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.8);
+  animation: charge-done-pulse 2s ease-in-out infinite;
+}
+
+@keyframes charge-done-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 /* ── HUD drawer (hidden by default, slides down) ──────────── */
@@ -1914,7 +1926,7 @@ button.nav-link:hover {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 24px 16px;
+  padding: 24px 0;
   pointer-events: auto;
   z-index: 8;
   background: rgba(0, 0, 0, 0.35);
@@ -1925,7 +1937,7 @@ button.nav-link:hover {
 .exercise-float-card {
   position: relative;
   width: 100%;
-  max-width: 380px;
+  max-width: none;
   max-height: 70vh;
   overflow-y: auto;
   animation: exercisePopIn 0.3s ease-out;
@@ -2669,10 +2681,10 @@ button.nav-link:hover {
 
 .exercise-modal-content {
   background: transparent;
-  border-radius: 16px;
+  border-radius: 0;
   padding: 0;
-  width: 90%;
-  max-width: 400px;
+  width: 100%;
+  max-width: none;
   max-height: 85vh;
   overflow-y: auto;
   animation: slideUp 0.3s ease-out;
@@ -4276,9 +4288,11 @@ button.nav-link:hover {
 }
 
 .bc-overlay__meaning {
-  font-size: 1.25rem;
-  color: var(--color-accent, #f0c040);
-  margin-top: 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-accent-gold, #f0c040);
+  margin-top: 0.5rem;
+  text-shadow: 0 0 12px rgba(240, 192, 64, 0.4);
 }
 
 .bc-overlay__tap {
@@ -4330,7 +4344,32 @@ button.nav-link:hover {
   inset: 0;
   border-radius: 3px;
   background: linear-gradient(90deg, #e8485c, #f472b6);
-  transition: width 0.8s ease-out;
+  transition: width 0.3s linear;
+}
+
+/* Energy glow at 50%+ */
+.charge-bar-inline--mid .charge-bar__fill {
+  background: linear-gradient(90deg, #e8485c, #f472b6, #c084fc);
+  box-shadow: 0 0 6px rgba(244, 114, 182, 0.4);
+}
+
+/* Stronger glow at 75%+ */
+.charge-bar-inline--high .charge-bar__fill {
+  background: linear-gradient(90deg, #f472b6, #c084fc, #a855f7);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+}
+
+/* Shimmer appears at 75%+ */
+.charge-bar-inline--high .charge-bar__shimmer-active {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 100%
+  );
+  animation: charge-shimmer 2s ease-in-out infinite;
 }
 
 .charge-bar__shimmer {
@@ -4342,7 +4381,7 @@ button.nav-link:hover {
     rgba(255, 255, 255, 0.4) 50%,
     transparent 100%
   );
-  animation: charge-shimmer 1.5s ease-in-out infinite;
+  animation: charge-shimmer 1.2s ease-in-out infinite;
 }
 
 @keyframes charge-shimmer {
@@ -4360,12 +4399,51 @@ button.nav-link:hover {
   text-align: center;
 }
 
+/* Fully charged: pulsing glow */
 .charge-bar-inline--complete .charge-bar__fill {
-  background: linear-gradient(90deg, #f472b6, #a855f7);
+  background: linear-gradient(90deg, #c084fc, #a855f7, #7c3aed);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.7);
+  animation: charge-pulse 1.5s ease-in-out infinite;
 }
 
 .charge-bar-inline--complete .charge-bar__label {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(200, 180, 255, 0.95);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+}
+
+@keyframes charge-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+  50%      { box-shadow: 0 0 20px rgba(168, 85, 247, 0.8), 0 0 4px rgba(255, 255, 255, 0.3); }
+}
+
+/* ── Charge complete notification ──────────────────────────── */
+.charge-notif {
+  position: absolute;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 10, 30, 0.9);
+  border: 1px solid rgba(168, 85, 247, 0.6);
+  border-radius: 16px;
+  padding: 10px 20px;
+  color: rgba(220, 200, 255, 0.95);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 0 30px rgba(168, 85, 247, 0.3);
+  z-index: 100;
+  pointer-events: none;
+  animation: charge-notif-pop 3s ease-out forwards;
+}
+
+@keyframes charge-notif-pop {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.9); }
+  10%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.02); }
+  15%  { transform: translateX(-50%) translateY(0) scale(1); }
+  75%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
 }
 
 /* ── Name Input (proficiency screen) ─────────────────────── */

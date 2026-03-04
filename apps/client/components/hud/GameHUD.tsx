@@ -63,7 +63,7 @@ export function GameHUD({ xp, sp, rp, locationLabel, cityId, explainLang, charge
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        <span className="scene-hud-pull-tab-chevron">{open ? '▲' : '▼'}</span>
+        <span className={`scene-hud-pull-tab-chevron${chargeComplete ? ' charge-done' : ''}`}>{open ? '▲' : '▼'}</span>
       </div>
       {/* HUD drawer */}
       <div className={`scene-hud ${open ? 'scene-hud--open' : ''}`}>
@@ -91,12 +91,17 @@ export function GameHUD({ xp, sp, rp, locationLabel, cityId, explainLang, charge
           ))}
         </div>
         {chargeProgress !== undefined && (
-          <div className={`charge-bar-inline${chargeComplete ? ' charge-bar-inline--complete' : ''}`}>
+          <div className={`charge-bar-inline${
+            chargeComplete ? ' charge-bar-inline--complete' :
+            chargeProgress >= 75 ? ' charge-bar-inline--high' :
+            chargeProgress >= 50 ? ' charge-bar-inline--mid' : ''
+          }`}>
             <div className="charge-bar__track">
               <div
                 className="charge-bar__fill"
                 style={{ width: `${Math.max(0, Math.min(100, chargeProgress))}%` }}
               />
+              {chargeProgress >= 75 && !chargeComplete && <div className="charge-bar__shimmer-active" />}
               {chargeComplete && <div className="charge-bar__shimmer" />}
             </div>
             {chargeLabel && <div className="charge-bar__label">{chargeLabel}</div>}

@@ -149,6 +149,8 @@ function buildContextBlock(
     exercisesDone: number;
     introAct?: 1 | 2;
     backdropUrl?: string;
+    chargePercent?: number;
+    chargeComplete?: boolean;
   },
 ): string {
   // explainIn is resolved per-city by the caller
@@ -325,6 +327,27 @@ export default function GamePage() {
   const [introExerciseCount, setIntroExerciseCount] = useState(0);
   const [introAct, setIntroAct] = useState<1 | 2>(1);
   const MIN_INTRO_EXERCISES = 3;
+  // Random charge time between 1.5–3 minutes (simulates video generation)
+  const [chargeDurationMs] = useState(() => Math.round((1.5 + Math.random() * 1.5) * 60 * 1000));
+  const [chargeStart] = useState(() => Date.now());
+  const [chargePercent, setChargePercent] = useState(0);
+  const [chargeNotifShown, setChargeNotifShown] = useState(false);
+
+  // Time-based charge bar: 0→100% over random duration
+  useEffect(() => {
+    if (!isIntroHangout) return;
+    const tick = () => {
+      const elapsed = Date.now() - chargeStart;
+      const pct = Math.min(100, Math.round((elapsed / chargeDurationMs) * 100));
+      setChargePercent(pct);
+      if (pct >= 100 && !chargeNotifShown) {
+        setChargeNotifShown(true);
+      }
+      if (pct < 100) rafId = requestAnimationFrame(tick);
+    };
+    let rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [isIntroHangout, chargeStart, chargeDurationMs, chargeNotifShown]);
 
   // Sync generated video URL back to exitVideoUrlRef when generation succeeds
   useEffect(() => {
@@ -391,6 +414,8 @@ export default function GamePage() {
       exercisesDone: introExerciseCount,
       introAct,
       backdropUrl: '/assets/backdrops/seoul/pojangmacha.png',
+      chargePercent,
+      chargeComplete: chargePercent >= 100,
     };
   }
 
@@ -474,6 +499,8 @@ export default function GamePage() {
         exercisesDone: 0,
         introAct: 1 as const,
         backdropUrl: '/assets/backdrops/seoul/pojangmacha.png',
+        chargePercent: 0,
+        chargeComplete: false,
       };
     }
 
@@ -843,14 +870,8 @@ export default function GamePage() {
     // Increment introduction exercise counter
     if (isIntroHangout) setIntroExerciseCount(prev => prev + 1);
 
-    // Store result and auto-advance after delay (user can also tap to advance immediately)
+    // Store result — user must tap "点击继续" to advance
     exerciseResultRef.current = { exerciseId, correct };
-    setTimeout(() => {
-      // Only auto-advance if result hasn't been consumed by a tap already
-      if (exerciseResultRef.current?.exerciseId === exerciseId) {
-        advanceAfterExercise();
-      }
-    }, 2000);
   }, [isIntroHangout, introExerciseCount, introAct]);
 
   const advanceAfterExercise = useCallback(() => {
@@ -884,6 +905,13 @@ export default function GamePage() {
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
     sessionLogger.logChoiceSelected(choiceId);
+
+    // SUSPENSE_CHOICE beat: offer_choices response during Act 1 triggers Act 2
+    if (isIntroHangout && introAct === 1) {
+      setIntroAct(2);
+      console.log('[VN] Act 1 → Act 2 transition triggered by SUSPENSE_CHOICE (offer_choices response)');
+    }
+
     const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
     const msg = `${ctx}Choice: ${choiceId}`;
     sessionLogger.logAIRequest(msg);
@@ -1478,10 +1506,8 @@ export default function GamePage() {
   }
   const continueLabel = t('tap_to_continue', explainLang as UILang);
 
-  // Heart meter progress: based on exercise completion
-  const heartProgress = isIntroHangout
-    ? Math.round(Math.min(100, (introExerciseCount / MIN_INTRO_EXERCISES) * 100))
-    : 0;
+  // Heart meter progress: time-based charge over 2 minutes
+  const heartProgress = chargePercent;
 
   return (
     <UILangProvider value={explainLang}>
@@ -1493,7 +1519,7 @@ export default function GamePage() {
           ambientDescription={dynamicBackdrop?.ambientDescription ?? 'A warm pojangmacha (street food tent) on a Seoul side street'}
           cinematic={cinematic}
           onCinematicEnd={handleCinematicEnd}
-          npcName={npc.name}
+          npcName={`${npc.nameLocal} ${explainLang === 'zh' ? npc.nameZh : npc.name}`}
           npcColor={npc.color}
           npcSpriteUrl={isIntroHangout && introAct === 1 ? '' : npc.src}
           currentMessage={currentMessage}
@@ -1512,9 +1538,9 @@ export default function GamePage() {
               locationLabel={<>{cityInfo.en} <span className="korean">{cityInfo.local}</span><span className="scene-hud-dot">&middot;</span>{t(`loc_${location}`, explainLang)}</>}
               cityId={city}
               explainLang={explainLang as AppLang}
-              chargeProgress={isIntroHangout && introAct === 2 ? heartProgress : undefined}
-              chargeLabel={isIntroHangout && introAct === 2 ? `${npc.name} · ${heartProgress}%` : undefined}
-              chargeComplete={isIntroHangout && introAct === 2 && !!exitVideoUrlRef.current && heartProgress >= 100}
+              chargeProgress={isIntroHangout ? heartProgress : undefined}
+              chargeLabel={isIntroHangout ? (introAct === 1 ? `${heartProgress}%` : `${npc.nameLocal} ${explainLang === 'zh' ? npc.nameZh : npc.name} · ${heartProgress}%`) : undefined}
+              chargeComplete={isIntroHangout && heartProgress >= 100}
             />
           }
           onChoice={handleChoice}
@@ -1523,6 +1549,15 @@ export default function GamePage() {
           onExerciseDismiss={handleExerciseDismiss}
           onDismissTong={handleDismissTong}
         />
+        {/* Charge complete notification (auto-dismisses) */}
+        {chargeNotifShown && (
+          <div
+            className="charge-notif"
+            onAnimationEnd={() => setChargeNotifShown(false)}
+          >
+            {explainLang === 'zh' ? '⚡ 能量已满' : explainLang === 'ko' ? '⚡ 에너지 충전 완료' : explainLang === 'ja' ? '⚡ エネルギー満タン' : '⚡ Fully Charged'}
+          </div>
+        )}
       </div>
     </div>
     </UILangProvider>
