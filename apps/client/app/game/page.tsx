@@ -864,28 +864,35 @@ export default function GamePage() {
       <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="game-frame">
           <div className="tg-tong-intro" onClick={introStep === 0 ? handleIntroTap : undefined}>
-            {/* Looping video background for entire onboarding */}
-            <video
-              className="tg-tong-intro-video"
-              src="/assets/tong_intro.webm"
-              autoPlay
-              muted
-              playsInline
-              preload="auto"
-              loop
-            />
-
-            {/* Step 0: MEET TONG — typewriter dialogue */}
+            {/* Step 0: looping video */}
             {introStep === 0 && (
-              <div className="tg-tong-intro-subtitle">
-                <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
-                <p className="dialogue-text">
-                  {currentLine.slice(0, introCharIdx)}
-                  {!lineFinished && <span className="tg-typewriter-cursor" />}
-                </p>
-                {lineFinished && (
-                  <p className="dialogue-continue">Tap to continue</p>
-                )}
+              <>
+                <video
+                  className="tg-tong-intro-video"
+                  src="/assets/tong_intro.webm"
+                  autoPlay
+                  muted
+                  playsInline
+                  preload="auto"
+                  loop
+                />
+                <div className="tg-tong-intro-subtitle">
+                  <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
+                  <p className="dialogue-text">
+                    {currentLine.slice(0, introCharIdx)}
+                    {!lineFinished && <span className="tg-typewriter-cursor" />}
+                  </p>
+                  {lineFinished && (
+                    <p className="dialogue-continue">Tap to continue</p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Steps 1-3: static avatar at top with circular bg */}
+            {introStep > 0 && (
+              <div className="tong-avatar-wrap">
+                <img className="tong-avatar" src={tongAvatarSrc} alt="Tong" />
               </div>
             )}
 
@@ -966,6 +973,23 @@ export default function GamePage() {
                       </div>
                     );
                   })}
+                </div>
+                <div className="explain-in-section" style={{ marginTop: 16 }}>
+                  <span className="explain-in-heading">Learn each language in:</span>
+                  {CITY_EXPLAIN_ROWS.map((row) => (
+                    <div key={row.cityId} className="explain-in-row">
+                      <span className="explain-in-label">{row.target}</span>
+                      <select
+                        className="explain-in-select"
+                        value={gameState.explainIn[row.cityId] ?? 'en'}
+                        onChange={(e) => dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: row.cityId, lang: e.target.value as AppLang })}
+                      >
+                        {EXPLAIN_LANG_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
                 </div>
                 <button
                   className="tg-menu-btn-primary"
