@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils/cn';
 import type { PronunciationSelectExercise } from '@/lib/types/hangout';
 import { useUILang } from '@/lib/i18n/UILangContext';
@@ -37,9 +37,18 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
     }
   }, []);
 
+  // Auto-play sound on mount
+  useEffect(() => {
+    const timer = setTimeout(() => playSound(exercise.targetText), 400);
+    return () => clearTimeout(timer);
+  }, [exercise.targetText, playSound]);
+
   const handleSubmit = () => {
     if (!selected || submitted) return;
     setSubmitted(true);
+    // Auto-play correct answer sound on submit
+    const correctOpt = exercise.audioOptions.find((o) => o.id === exercise.correctOptionId);
+    if (correctOpt) playSound(correctOpt.label);
     onResult(isCorrect);
   };
 
@@ -82,7 +91,9 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
             >
               <span className="text-ko text-3xl">{opt.label}</span>
               {submitted && (
-                <span className="text-sm text-[var(--color-text-muted)] ml-auto">({opt.romanization})</span>
+                <span className="text-sm text-[var(--color-text-muted)] ml-auto">
+                  {opt.romanization}{opt.meaning ? ` — ${opt.meaning}` : ''}
+                </span>
               )}
             </button>
           );

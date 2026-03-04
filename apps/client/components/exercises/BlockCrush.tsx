@@ -297,6 +297,14 @@ export function BlockCrush({ exercise, onResult }: Props) {
 
   /* ── Success handler ──────────────────────────────── */
 
+  const resultFiredRef = useRef(false);
+
+  const fireResult = useCallback(() => {
+    if (resultFiredRef.current) return;
+    resultFiredRef.current = true;
+    onResult(true, `Built ${exercise.targetChar} (${exercise.romanization})`);
+  }, [exercise, onResult]);
+
   const handleSuccess = useCallback(() => {
     setDone(true);
     playTTS(exercise.targetChar, exercise.language, exercise.meaning);
@@ -311,19 +319,18 @@ export function BlockCrush({ exercise, onResult }: Props) {
       setShowOverlay(true);
       setTimeout(() => {
         setShowOverlay(false);
-        onResult(true, `Built ${exercise.targetChar} (${exercise.romanization})`);
+        fireResult();
       }, 2000);
     } else {
       // recall: quick flash only
       setSuccessFlash(true);
-      setTimeout(() => onResult(true, `Built ${exercise.targetChar} (${exercise.romanization})`), 500);
+      setTimeout(() => fireResult(), 500);
     }
-  }, [exercise, stage, onResult]);
+  }, [exercise, stage, fireResult]);
 
   const dismissOverlay = useCallback(() => {
-    setShowOverlay(false);
-    onResult(true, `Built ${exercise.targetChar} (${exercise.romanization})`);
-  }, [exercise, onResult]);
+    fireResult();
+  }, [fireResult]);
 
   /* ── Drag handlers ──────────────────────────────────── */
 
