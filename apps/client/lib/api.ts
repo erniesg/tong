@@ -600,9 +600,10 @@ export function replicateMusicGenerate(args: {
 export function replicateCharacterGenerate(args: {
   characterId: string;
   variant: 'a-pose' | 'grimace' | 'right-profile' | 'casual';
+  referenceImage?: string;
   customOverrides?: Record<string, string>;
 }) {
-  return invokeTool<ReplicateImageResult & { prompt: string; characterId: string; variant: string }>(
+  return invokeTool<ReplicateImageResult & { transparentB64: string | null; prompt: string; characterId: string; variant: string }>(
     'replicate.character.generate',
     args,
   );

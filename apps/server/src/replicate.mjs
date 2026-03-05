@@ -1,3 +1,5 @@
+import sharp from 'sharp';
+
 /**
  * Replicate API client — Image gen (Nano Banana 2) + Video gen (Veo 3.1 Fast) + Music gen (Lyria 2).
  *
@@ -453,7 +455,7 @@ const VARIANT_CONFIGS = {
 };
 
 const CHARACTER_REF_STYLE =
-  'Solid white background, flat even studio lighting, character reference sheet style, PNG transparent background';
+  'Solid bright chromakey green background (#00FF00), flat even studio lighting, character reference sheet style';
 
 /**
  * Build a complete prompt for a character reference image.
@@ -507,13 +509,66 @@ function buildCharacterPrompt({ characterId, variant, customOverrides }) {
 }
 
 /**
+ * Chroma-key green screen removal.
+ * Fetches an image URL, replaces green pixels with transparency, returns base64 PNG.
+ *
+ * @param {string} imageUrl - URL of the green-screen image
+ * @param {object} [opts]
+ * @param {number} [opts.threshold=90] - Max distance from pure green to consider "green" (0-255 scale)
+ * @returns {Promise<string>} Base64-encoded PNG with alpha
+ */
+async function chromaKeyRemoveGreen(imageUrl, opts = {}) {
+  const threshold = opts.threshold ?? 90;
+
+  const response = await fetch(imageUrl);
+  if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+
+  const { data, info } = await sharp(buffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const pixels = data;
+  const channels = info.channels; // 4 (RGBA)
+
+  for (let i = 0; i < pixels.length; i += channels) {
+    const r = pixels[i];
+    const g = pixels[i + 1];
+    const b = pixels[i + 2];
+
+    // Distance from pure green (#00FF00)
+    const dist = Math.sqrt(r * r + (255 - g) * (255 - g) + b * b);
+
+    if (dist < threshold) {
+      // Fully transparent
+      pixels[i + 3] = 0;
+    } else if (dist < threshold + 30) {
+      // Feathered edge — partial transparency for anti-aliasing
+      const alpha = Math.round(((dist - threshold) / 30) * 255);
+      pixels[i + 3] = Math.min(pixels[i + 3], alpha);
+    }
+  }
+
+  const result = await sharp(pixels, {
+    raw: { width: info.width, height: info.height, channels },
+  })
+    .png()
+    .toBuffer();
+
+  return result.toString('base64');
+}
+
+/**
  * Generate a character reference image.
+ * Uses green-screen prompting + chroma-key post-processing for true transparency.
  *
  * @param {object} args
  * @param {string}  args.characterId     - Character preset key
  * @param {string}  args.variant         - a-pose|grimace|right-profile|casual
  * @param {object}  [args.customOverrides] - Override any face/body field
- * @returns {Promise<{id: string, status: string, images: string[], prompt: string, characterId: string, variant: string, error: string|null}>}
+ * @param {string}  [args.referenceImage] - URL of a reference image for face consistency
+ * @returns {Promise<{id: string, status: string, images: string[], transparentB64: string|null, prompt: string, characterId: string, variant: string, error: string|null}>}
  */
 export async function replicateGenerateCharacterRef(args) {
   const prompt = buildCharacterPrompt({
@@ -522,14 +577,29 @@ export async function replicateGenerateCharacterRef(args) {
     customOverrides: args.customOverrides,
   });
 
-  const result = await replicateGenerateImage({
+  const genArgs = {
     prompt,
     aspect_ratio: '9:16',
     output_format: 'png',
-  });
+  };
+  if (args.referenceImage) genArgs.image = args.referenceImage;
+
+  const result = await replicateGenerateImage(genArgs);
+
+  // Post-process: chroma-key the green background
+  let transparentB64 = null;
+  if (result.images && result.images.length > 0) {
+    try {
+      transparentB64 = await chromaKeyRemoveGreen(result.images[0]);
+    } catch (err) {
+      // Non-fatal — still return the original image
+      console.error('Chroma key failed:', err.message);
+    }
+  }
 
   return {
     ...result,
+    transparentB64,
     prompt,
     characterId: args.characterId,
     variant: args.variant,

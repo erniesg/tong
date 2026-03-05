@@ -429,6 +429,7 @@ const AGENT_TOOL_DEFINITIONS = [
     args: {
       characterId: 'string (required) – character preset: dingman|qushoucheng|miku|kaito|obachan',
       variant: 'string (required) – a-pose|grimace|right-profile|casual',
+      referenceImage: 'string (optional) – URL of a reference image for face consistency (e.g. A-pose output)',
       customOverrides: 'object (optional) – override any face/body field (e.g. {hair: "short bob"}) ',
     },
   },
