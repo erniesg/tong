@@ -522,6 +522,103 @@ export function volcTTSSynthesize(args: {
   return invokeTool<VolcTTSResult>('volcengine.tts.synthesize', args);
 }
 
+// ── Replicate tools ──────────────────────────────────────────────────
+
+export type ReplicatePredictionStatus = 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled';
+
+export interface ReplicatePrediction {
+  id: string;
+  model: string;
+  version: string;
+  status: ReplicatePredictionStatus;
+  output: unknown;
+  error: string | null;
+  metrics: Record<string, unknown> | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface ReplicateImageResult {
+  id: string;
+  status: ReplicatePredictionStatus;
+  images: string[];
+  error: string | null;
+}
+
+export function replicateImageGenerate(args: {
+  prompt: string;
+  image?: string;
+  aspect_ratio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4' | '3:2' | '2:3';
+  output_format?: 'png' | 'jpg' | 'webp';
+  output_resolution?: 'auto' | '1024' | '2048';
+  number_of_images?: number;
+}) {
+  return invokeTool<ReplicateImageResult>('replicate.image.generate', args);
+}
+
+export function replicateVideoCreate(args: {
+  prompt: string;
+  image?: string;
+  duration?: 4 | 6 | 8;
+  resolution?: '720p' | '1080p';
+  aspect_ratio?: '16:9' | '9:16';
+}) {
+  return invokeTool<ReplicatePrediction>('replicate.video.create', args);
+}
+
+export function replicatePredictionGet(predictionId: string) {
+  return invokeTool<ReplicatePrediction>('replicate.prediction.get', { predictionId });
+}
+
+export function replicatePredictionCancel(predictionId: string) {
+  return invokeTool<ReplicatePrediction>('replicate.prediction.cancel', { predictionId });
+}
+
+export function replicatePredictionWait(predictionId: string, timeoutMs?: number) {
+  return invokeTool<ReplicatePrediction>('replicate.prediction.wait', {
+    predictionId,
+    ...(timeoutMs != null ? { timeoutMs } : {}),
+  });
+}
+
+export interface ReplicateMusicResult {
+  id: string;
+  status: ReplicatePredictionStatus;
+  audio: string | null;
+  error: string | null;
+}
+
+export function replicateMusicGenerate(args: {
+  prompt: string;
+  negative_prompt?: string;
+  seed?: number;
+}) {
+  return invokeTool<ReplicateMusicResult>('replicate.music.generate', args);
+}
+
+export function replicateCharacterGenerate(args: {
+  characterId: string;
+  variant: 'a-pose' | 'grimace' | 'right-profile' | 'casual';
+  customOverrides?: Record<string, string>;
+}) {
+  return invokeTool<ReplicateImageResult & { prompt: string; characterId: string; variant: string }>(
+    'replicate.character.generate',
+    args,
+  );
+}
+
+export function replicateCharacterPresets() {
+  return invokeTool<{
+    characters: Array<{ id: string; name: string }>;
+    variants: string[];
+  }>('replicate.character.presets');
+}
+
+export function replicateStatus() {
+  return invokeTool<{ apiTokenConfigured: boolean }>('replicate.status');
+}
+
 export function volcStatus() {
   return invokeTool<{
     arkApiKeyConfigured: boolean;
