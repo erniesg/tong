@@ -46,14 +46,10 @@ function pickNpcForCity(cityId: CityId): string {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-/* ── Charge notification (auto-dismisses with fallback timer) ── */
-function ChargeNotif({ text, onDone }: { text: string; onDone: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 3000); // fallback if animation event doesn't fire
-    return () => clearTimeout(t);
-  }, [onDone]);
+/* ── Charge notification (auto-dismisses via parent timer) ── */
+function ChargeNotif({ text }: { text: string }) {
   return (
-    <div className="charge-notif" onAnimationEnd={onDone}>
+    <div className="charge-notif">
       {text}
     </div>
   );
@@ -357,6 +353,7 @@ export default function GamePage() {
       setChargePercent(pct);
       if (pct >= 100 && !chargeNotifShown) {
         setChargeNotifShown(true);
+        setTimeout(() => setChargeNotifShown(false), 3500);
       }
       if (pct < 100) rafId = requestAnimationFrame(tick);
     };
@@ -887,7 +884,7 @@ export default function GamePage() {
     // Increment introduction exercise counter
     if (isIntroHangout) setIntroExerciseCount(prev => prev + 1);
 
-    // Store result — user must tap "点击继续" to advance
+    // Store result — overlay dismiss or auto-advance will pick it up
     exerciseResultRef.current = { exerciseId, correct };
   }, [isIntroHangout, introExerciseCount, introAct]);
 
@@ -1582,7 +1579,6 @@ export default function GamePage() {
         {chargeNotifShown && (
           <ChargeNotif
             text={explainLang === 'zh' ? '⚡ 能量已满' : explainLang === 'ko' ? '⚡ 에너지 충전 완료' : explainLang === 'ja' ? '⚡ エネルギー満タン' : '⚡ Fully Charged'}
-            onDone={() => setChargeNotifShown(false)}
           />
         )}
       </div>

@@ -239,7 +239,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
   });
 
   const explainLang = getExplainLang(exercise.language);
-  const localMeaning = getMeaning(exercise.meaning, explainLang);
+  const localMeaning = getMeaning(exercise.meaning, explainLang, exercise.targetChar);
 
   const ui = getUI(explainLang);
   const prompt = getPromptForStage(exercise, stage, localMeaning, explainLang);
@@ -334,6 +334,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
   }, [exercise, stage, fireResult]);
 
   const dismissOverlay = useCallback(() => {
+    setShowOverlay(false);
     fireResult();
   }, [fireResult]);
 
@@ -704,7 +705,13 @@ export function BlockCrush({ exercise, onResult }: Props) {
             />
           )}
           <div className="bc-overlay__romanization">{exercise.romanization}</div>
-          {localMeaning && <div className="bc-overlay__meaning">{localMeaning}</div>}
+          {localMeaning ? (
+            <div className="bc-overlay__meaning">{localMeaning}</div>
+          ) : (
+            <div className="bc-overlay__meaning" style={{ fontSize: '1rem', opacity: 0.6 }}>
+              {exercise.components.map((c) => c.piece).join(' + ')} → {exercise.targetChar}
+            </div>
+          )}
           {stage === 'intro' && (
             <div className="bc-overlay__tap" style={{ opacity: animationDone ? 1 : 0 }}>{ui.tapToContinue}</div>
           )}

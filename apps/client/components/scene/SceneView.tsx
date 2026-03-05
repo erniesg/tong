@@ -141,7 +141,7 @@ export function SceneView({
           className="exercise-float-wrapper"
           onClick={(e) => {
             if (exerciseDone) {
-              // Done — tap anywhere to advance
+              // Done — advance immediately
               onExerciseDismiss?.();
             } else if (e.target === e.currentTarget && onExerciseDismiss) {
               // Not done — tap outside card to hide temporarily
@@ -155,13 +155,11 @@ export function SceneView({
               onResult={(correct) => {
                 setExerciseDone(true);
                 onExerciseResult(currentExercise.id, correct);
+                // Auto-advance after exercise completes — no extra tap needed.
+                // Brief delay lets the exercise show its own completion state first.
+                setTimeout(() => onExerciseDismiss?.(), 800);
               }}
             />
-            {exerciseDone && (
-              <div className="dialogue-continue animate-pulse" style={{ textAlign: 'center', padding: '8px 0 4px' }}>
-                {continueLabel}
-              </div>
-            )}
           </div>
         </div>
       ) : choices ? (

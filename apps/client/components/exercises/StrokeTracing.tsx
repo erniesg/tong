@@ -336,7 +336,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
 
     // Auto-play sound + meaning in preferred language on completion
     if (correct && exercise.meaning) {
-      const localMeaning = getMeaning(exercise.meaning, lang);
+      const localMeaning = getMeaning(exercise.meaning, lang, exercise.targetChar);
       playTTS(exercise.sound ?? exercise.targetChar, ttsLang, localMeaning, lang);
     } else if (correct) {
       playTTS(exercise.sound ?? exercise.targetChar, ttsLang);
@@ -379,7 +379,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             {exercise.targetChar}
           </span>
           <button
-            onClick={() => playTTS(exercise.sound ?? exercise.targetChar, ttsLang)}
+            onClick={(e) => { e.stopPropagation(); playTTS(exercise.sound ?? exercise.targetChar, ttsLang); }}
             style={{
               background: 'rgba(255,255,255,0.1)',
               border: 'none',
@@ -405,7 +405,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
         )}
         {exercise.meaning && exercise.meaning !== exercise.romanization && (
           <div style={{ fontSize: 14, opacity: 0.4, marginTop: 2 }}>
-            {getMeaning(exercise.meaning, lang)}
+            {getMeaning(exercise.meaning, lang, exercise.targetChar)}
           </div>
         )}
       </div>
@@ -471,7 +471,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
               {t('stroke_done', lang)}
               {exercise.meaning && (
                 <div className="mt-1 text-sm font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
-                  {exercise.targetChar} = {getMeaning(exercise.meaning, lang)}
+                  {exercise.targetChar} = {getMeaning(exercise.meaning, lang, exercise.targetChar)}
                 </div>
               )}
               <div className="mt-1 text-xs opacity-70">
@@ -499,7 +499,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             {exercise.exampleWords.map((ex, i) => (
               <button
                 key={i}
-                onClick={() => playTTS(ex.word, ttsLang)}
+                onClick={(e) => { e.stopPropagation(); playTTS(ex.word, ttsLang); }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
