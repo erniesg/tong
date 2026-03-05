@@ -1,6 +1,13 @@
 /* ── Block Crush — Character composition database ──────────── */
 import { getCachedTranslation, requestTranslations } from '../i18n/translation-cache';
 
+export interface MeaningI18n {
+  en: string;
+  zh?: string;
+  ja?: string;
+  ko?: string;
+}
+
 export interface CompositionTarget {
   char: string;
   components: {
@@ -9,7 +16,10 @@ export interface CompositionTarget {
     colorHint: string;
   }[];
   romanization: string;
+  /** English meaning key (legacy) — prefer meaningI18n for direct translations */
   meaning: string;
+  /** Direct translations per language — no lookup table needed */
+  meaningI18n?: MeaningI18n;
   difficulty: number;
   language: 'ko' | 'zh' | 'ja';
 }
@@ -30,38 +40,38 @@ const F = '#7eb8da';
 
 const KOREAN_TARGETS: CompositionTarget[] = [
   // Level 1 — CV (vertical vowels: C|V side by side)
-  { char: '가', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'ga', meaning: 'go', difficulty: 1, language: 'ko' },
-  { char: '나', components: [{ piece: 'ㄴ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'na', meaning: 'I / me', difficulty: 1, language: 'ko' },
-  { char: '다', components: [{ piece: 'ㄷ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'da', meaning: 'all', difficulty: 1, language: 'ko' },
-  { char: '마', components: [{ piece: 'ㅁ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'ma', meaning: 'horse', difficulty: 1, language: 'ko' },
-  { char: '사', components: [{ piece: 'ㅅ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'sa', meaning: 'four', difficulty: 1, language: 'ko' },
-  { char: '아', components: [{ piece: 'ㅇ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'a', meaning: 'ah', difficulty: 1, language: 'ko' },
-  { char: '자', components: [{ piece: 'ㅈ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'ja', meaning: 'ruler', difficulty: 1, language: 'ko' },
-  { char: '하', components: [{ piece: 'ㅎ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'ha', meaning: 'do', difficulty: 1, language: 'ko' },
+  { char: '가', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'ga', meaning: 'go', meaningI18n: { en: 'go', zh: '去', ja: '行く' }, difficulty: 1, language: 'ko' },
+  { char: '나', components: [{ piece: 'ㄴ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'na', meaning: 'I / me', meaningI18n: { en: 'I / me', zh: '我', ja: '私' }, difficulty: 1, language: 'ko' },
+  { char: '다', components: [{ piece: 'ㄷ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'da', meaning: 'all', meaningI18n: { en: 'all', zh: '全部', ja: '全て' }, difficulty: 1, language: 'ko' },
+  { char: '마', components: [{ piece: 'ㅁ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'ma', meaning: 'horse', meaningI18n: { en: 'horse', zh: '马', ja: '馬' }, difficulty: 1, language: 'ko' },
+  { char: '사', components: [{ piece: 'ㅅ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'sa', meaning: 'four', meaningI18n: { en: 'four', zh: '四', ja: '四' }, difficulty: 1, language: 'ko' },
+  { char: '아', components: [{ piece: 'ㅇ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'a', meaning: 'ah', meaningI18n: { en: 'ah', zh: '啊', ja: 'ああ' }, difficulty: 1, language: 'ko' },
+  { char: '자', components: [{ piece: 'ㅈ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'ja', meaning: 'ruler', meaningI18n: { en: 'ruler', zh: '尺子', ja: '定規' }, difficulty: 1, language: 'ko' },
+  { char: '하', components: [{ piece: 'ㅎ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }], romanization: 'ha', meaning: 'do', meaningI18n: { en: 'do', zh: '做', ja: 'する' }, difficulty: 1, language: 'ko' },
   // CV (horizontal vowels: C on top, V below)
-  { char: '고', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅗ', slot: 'V', colorHint: V }], romanization: 'go', meaning: 'high', difficulty: 1, language: 'ko' },
-  { char: '노', components: [{ piece: 'ㄴ', slot: 'C', colorHint: C }, { piece: 'ㅗ', slot: 'V', colorHint: V }], romanization: 'no', meaning: 'old', difficulty: 1, language: 'ko' },
-  { char: '두', components: [{ piece: 'ㄷ', slot: 'C', colorHint: C }, { piece: 'ㅜ', slot: 'V', colorHint: V }], romanization: 'du', meaning: 'two', difficulty: 1, language: 'ko' },
-  { char: '무', components: [{ piece: 'ㅁ', slot: 'C', colorHint: C }, { piece: 'ㅜ', slot: 'V', colorHint: V }], romanization: 'mu', meaning: 'nothing', difficulty: 1, language: 'ko' },
+  { char: '고', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅗ', slot: 'V', colorHint: V }], romanization: 'go', meaning: 'high', meaningI18n: { en: 'high', zh: '高', ja: '高い' }, difficulty: 1, language: 'ko' },
+  { char: '노', components: [{ piece: 'ㄴ', slot: 'C', colorHint: C }, { piece: 'ㅗ', slot: 'V', colorHint: V }], romanization: 'no', meaning: 'old', meaningI18n: { en: 'old', zh: '老', ja: '古い' }, difficulty: 1, language: 'ko' },
+  { char: '두', components: [{ piece: 'ㄷ', slot: 'C', colorHint: C }, { piece: 'ㅜ', slot: 'V', colorHint: V }], romanization: 'du', meaning: 'two', meaningI18n: { en: 'two', zh: '二', ja: '二' }, difficulty: 1, language: 'ko' },
+  { char: '무', components: [{ piece: 'ㅁ', slot: 'C', colorHint: C }, { piece: 'ㅜ', slot: 'V', colorHint: V }], romanization: 'mu', meaning: 'nothing', meaningI18n: { en: 'nothing', zh: '无', ja: '無' }, difficulty: 1, language: 'ko' },
 
   // Level 2 — CVC (vertical vowel: C|V top, F bottom)
-  { char: '한', components: [{ piece: 'ㅎ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }, { piece: 'ㄴ', slot: 'F', colorHint: F }], romanization: 'han', meaning: 'Korea / one', difficulty: 2, language: 'ko' },
-  { char: '말', components: [{ piece: 'ㅁ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }, { piece: 'ㄹ', slot: 'F', colorHint: F }], romanization: 'mal', meaning: 'words', difficulty: 2, language: 'ko' },
-  { char: '밥', components: [{ piece: 'ㅂ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }, { piece: 'ㅂ', slot: 'F', colorHint: F }], romanization: 'bap', meaning: 'rice', difficulty: 2, language: 'ko' },
-  { char: '김', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅣ', slot: 'V', colorHint: V }, { piece: 'ㅁ', slot: 'F', colorHint: F }], romanization: 'gim', meaning: 'seaweed', difficulty: 2, language: 'ko' },
-  { char: '집', components: [{ piece: 'ㅈ', slot: 'C', colorHint: C }, { piece: 'ㅣ', slot: 'V', colorHint: V }, { piece: 'ㅂ', slot: 'F', colorHint: F }], romanization: 'jip', meaning: 'house', difficulty: 2, language: 'ko' },
-  { char: '빵', components: [{ piece: 'ㅃ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }, { piece: 'ㅇ', slot: 'F', colorHint: F }], romanization: 'ppang', meaning: 'bread', difficulty: 2, language: 'ko' },
-  { char: '떡', components: [{ piece: 'ㄸ', slot: 'C', colorHint: C }, { piece: 'ㅓ', slot: 'V', colorHint: V }, { piece: 'ㄱ', slot: 'F', colorHint: F }], romanization: 'tteok', meaning: 'rice cake', difficulty: 2, language: 'ko' },
+  { char: '한', components: [{ piece: 'ㅎ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }, { piece: 'ㄴ', slot: 'F', colorHint: F }], romanization: 'han', meaning: 'Korea / one', meaningI18n: { en: 'Korea / one', zh: '韩/一', ja: '韓/一' }, difficulty: 2, language: 'ko' },
+  { char: '말', components: [{ piece: 'ㅁ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }, { piece: 'ㄹ', slot: 'F', colorHint: F }], romanization: 'mal', meaning: 'words', meaningI18n: { en: 'words', zh: '话', ja: '言葉' }, difficulty: 2, language: 'ko' },
+  { char: '밥', components: [{ piece: 'ㅂ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }, { piece: 'ㅂ', slot: 'F', colorHint: F }], romanization: 'bap', meaning: 'rice', meaningI18n: { en: 'rice', zh: '饭', ja: 'ご飯' }, difficulty: 2, language: 'ko' },
+  { char: '김', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅣ', slot: 'V', colorHint: V }, { piece: 'ㅁ', slot: 'F', colorHint: F }], romanization: 'gim', meaning: 'seaweed', meaningI18n: { en: 'seaweed', zh: '海苔', ja: '海苔' }, difficulty: 2, language: 'ko' },
+  { char: '집', components: [{ piece: 'ㅈ', slot: 'C', colorHint: C }, { piece: 'ㅣ', slot: 'V', colorHint: V }, { piece: 'ㅂ', slot: 'F', colorHint: F }], romanization: 'jip', meaning: 'house', meaningI18n: { en: 'house', zh: '房子', ja: '家' }, difficulty: 2, language: 'ko' },
+  { char: '빵', components: [{ piece: 'ㅃ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }, { piece: 'ㅇ', slot: 'F', colorHint: F }], romanization: 'ppang', meaning: 'bread', meaningI18n: { en: 'bread', zh: '面包', ja: 'パン' }, difficulty: 2, language: 'ko' },
+  { char: '떡', components: [{ piece: 'ㄸ', slot: 'C', colorHint: C }, { piece: 'ㅓ', slot: 'V', colorHint: V }, { piece: 'ㄱ', slot: 'F', colorHint: F }], romanization: 'tteok', meaning: 'rice cake', meaningI18n: { en: 'rice cake', zh: '年糕', ja: '餅' }, difficulty: 2, language: 'ko' },
   // CVC (horizontal vowel: C top, V middle, F bottom — all stacked)
-  { char: '곰', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅗ', slot: 'V', colorHint: V }, { piece: 'ㅁ', slot: 'F', colorHint: F }], romanization: 'gom', meaning: 'bear', difficulty: 2, language: 'ko' },
-  { char: '문', components: [{ piece: 'ㅁ', slot: 'C', colorHint: C }, { piece: 'ㅜ', slot: 'V', colorHint: V }, { piece: 'ㄴ', slot: 'F', colorHint: F }], romanization: 'mun', meaning: 'door', difficulty: 2, language: 'ko' },
-  { char: '글', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅡ', slot: 'V', colorHint: V }, { piece: 'ㄹ', slot: 'F', colorHint: F }], romanization: 'geul', meaning: 'writing', difficulty: 2, language: 'ko' },
-  { char: '둥', components: [{ piece: 'ㄷ', slot: 'C', colorHint: C }, { piece: 'ㅜ', slot: 'V', colorHint: V }, { piece: 'ㅇ', slot: 'F', colorHint: F }], romanization: 'dung', meaning: 'round', difficulty: 2, language: 'ko' },
+  { char: '곰', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅗ', slot: 'V', colorHint: V }, { piece: 'ㅁ', slot: 'F', colorHint: F }], romanization: 'gom', meaning: 'bear', meaningI18n: { en: 'bear', zh: '熊', ja: '熊' }, difficulty: 2, language: 'ko' },
+  { char: '문', components: [{ piece: 'ㅁ', slot: 'C', colorHint: C }, { piece: 'ㅜ', slot: 'V', colorHint: V }, { piece: 'ㄴ', slot: 'F', colorHint: F }], romanization: 'mun', meaning: 'door', meaningI18n: { en: 'door', zh: '门', ja: '門' }, difficulty: 2, language: 'ko' },
+  { char: '글', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅡ', slot: 'V', colorHint: V }, { piece: 'ㄹ', slot: 'F', colorHint: F }], romanization: 'geul', meaning: 'writing', meaningI18n: { en: 'writing', zh: '文字', ja: '文' }, difficulty: 2, language: 'ko' },
+  { char: '둥', components: [{ piece: 'ㄷ', slot: 'C', colorHint: C }, { piece: 'ㅜ', slot: 'V', colorHint: V }, { piece: 'ㅇ', slot: 'F', colorHint: F }], romanization: 'dung', meaning: 'round', meaningI18n: { en: 'round', zh: '圆', ja: '丸い' }, difficulty: 2, language: 'ko' },
 
   // Level 3
-  { char: '국', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅜ', slot: 'V', colorHint: V }, { piece: 'ㄱ', slot: 'F', colorHint: F }], romanization: 'guk', meaning: 'country', difficulty: 3, language: 'ko' },
-  { char: '감', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }, { piece: 'ㅁ', slot: 'F', colorHint: F }], romanization: 'gam', meaning: 'feeling', difficulty: 3, language: 'ko' },
-  { char: '랑', components: [{ piece: 'ㄹ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }, { piece: 'ㅇ', slot: 'F', colorHint: F }], romanization: 'rang', meaning: 'love (사랑)', difficulty: 3, language: 'ko' },
+  { char: '국', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅜ', slot: 'V', colorHint: V }, { piece: 'ㄱ', slot: 'F', colorHint: F }], romanization: 'guk', meaning: 'country', meaningI18n: { en: 'country', zh: '国家', ja: '国' }, difficulty: 3, language: 'ko' },
+  { char: '감', components: [{ piece: 'ㄱ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }, { piece: 'ㅁ', slot: 'F', colorHint: F }], romanization: 'gam', meaning: 'feeling', meaningI18n: { en: 'feeling', zh: '感觉', ja: '感じ' }, difficulty: 3, language: 'ko' },
+  { char: '랑', components: [{ piece: 'ㄹ', slot: 'C', colorHint: C }, { piece: 'ㅏ', slot: 'V', colorHint: V }, { piece: 'ㅇ', slot: 'F', colorHint: F }], romanization: 'rang', meaning: 'love (사랑)', meaningI18n: { en: 'love (사랑)', zh: '爱', ja: '愛' }, difficulty: 3, language: 'ko' },
 ];
 
 /* ── Chinese: radical → character ────────────────────────── */
@@ -113,19 +123,19 @@ export const NAME_TARGETS: Record<string, CompositionTarget[]> = {
     { char: '하', components: [
       { piece: 'ㅎ', slot: 'C', colorHint: C },
       { piece: 'ㅏ', slot: 'V', colorHint: V },
-    ], romanization: 'ha', meaning: 'Ha-', difficulty: 1, language: 'ko' },
+    ], romanization: 'ha', meaning: 'Ha-', meaningI18n: { en: 'Ha- (do)', zh: '哈（做）', ja: 'ハ（する）' }, difficulty: 1, language: 'ko' },
     { char: '은', components: [
       { piece: 'ㅇ', slot: 'C', colorHint: C },
       { piece: 'ㅡ', slot: 'V', colorHint: V },
       { piece: 'ㄴ', slot: 'F', colorHint: F },
-    ], romanization: 'eun', meaning: 'silver/grace', difficulty: 2, language: 'ko' },
+    ], romanization: 'eun', meaning: 'silver/grace', meaningI18n: { en: 'silver / grace', zh: '银/恩', ja: '銀/恩' }, difficulty: 2, language: 'ko' },
   ],
   jin: [
     { char: '진', components: [
       { piece: 'ㅈ', slot: 'C', colorHint: C },
       { piece: 'ㅣ', slot: 'V', colorHint: V },
       { piece: 'ㄴ', slot: 'F', colorHint: F },
-    ], romanization: 'jin', meaning: 'truth/precious', difficulty: 2, language: 'ko' },
+    ], romanization: 'jin', meaning: 'truth/precious', meaningI18n: { en: 'truth / precious', zh: '真/珍', ja: '真/珍' }, difficulty: 2, language: 'ko' },
   ],
 };
 
@@ -187,14 +197,25 @@ const MEANING_I18N: Record<string, Record<string, string>> = {
   'truth/precious': { zh: '真/珍', ja: '真/珍' },
 };
 
-export function getMeaning(englishMeaning: string, explainIn: string): string {
+export function getMeaning(englishMeaning: string, explainIn: string, targetChar?: string): string {
   if (explainIn === 'en') return englishMeaning;
-  // Try static table first
+
+  // 1. Try canonical target lookup by char (most reliable — has direct i18n)
+  if (targetChar) {
+    const target = _getTargetByChar(targetChar);
+    if (target?.meaningI18n?.[explainIn as keyof MeaningI18n]) {
+      return target.meaningI18n[explainIn as keyof MeaningI18n]!;
+    }
+  }
+
+  // 2. Try static table
   const staticResult = MEANING_I18N[englishMeaning]?.[explainIn];
   if (staticResult) return staticResult;
-  // Try dynamic translation cache
+
+  // 3. Try dynamic translation cache
   const cached = getCachedTranslation(englishMeaning, 'en', explainIn);
   if (cached) return cached;
+
   // Request translation — will be available on next render
   requestTranslations([englishMeaning], 'en', explainIn);
   return englishMeaning;
@@ -215,6 +236,20 @@ const ALL_TARGETS: CompositionTarget[] = [
   ...CHINESE_TARGETS,
   ...JAPANESE_TARGETS,
 ];
+
+/** Lazy-init char → target lookup (includes name targets). */
+let _targetByChar: Map<string, CompositionTarget> | null = null;
+function _getTargetByChar(char: string): CompositionTarget | undefined {
+  if (!_targetByChar) {
+    _targetByChar = new Map();
+    for (const t of ALL_TARGETS) _targetByChar.set(t.char, t);
+    for (const targets of Object.values(NAME_TARGETS)) {
+      for (const t of targets) _targetByChar.set(t.char, t);
+    }
+  }
+  return _targetByChar.get(char);
+}
+export const getTargetByChar = _getTargetByChar;
 
 export function getTargets(language: 'ko' | 'zh' | 'ja', difficulty?: number): CompositionTarget[] {
   return ALL_TARGETS.filter(

@@ -86,7 +86,9 @@ LANGUAGE:
 - ~${vars.targetLangPct}% Korean, ~${100 - vars.targetLangPct}% ${explainLangName}.${vars.targetLangPct <= 10 ? ` At level 0: speak ${explainLangName}. Only sprinkle Korean WORDS (food names, 안녕). NEVER full Korean sentences.` : ''}
 - NPC speaks the player's language (${explainLangName}) with Korean flavor.
 - No parenthetical translations — UI tooltips handle that. Set "translation" to null.
-- ZERO English.${vars.explainIn !== 'en' ? ` Every word must be in ${explainLangName} (or Korean for target-language sprinkles). No "Hey", "Nice", "OK", "Hangul", "Tong". Use "${HANGUL_NAMES[vars.explainIn] ?? 'Hangul'}" for the Korean script and "${tongName}" for the guide.` : ''}
+- ZERO English.${vars.explainIn !== 'en' ? ` ABSOLUTE RULE: Every single word must be in ${explainLangName} or Korean. NEVER use ANY English — not even one word. Banned: "Nice", "Hey", "OK", "Good", "Let's go", "Hangul", "Tong", "Great", "Cool", "Yes". Use "${HANGUL_NAMES[vars.explainIn] ?? 'Hangul'}" for the Korean script and "${tongName}" for the guide.
+  BAD: "Nice！这一下就很像ㅎ了" ← "Nice" is ENGLISH. FORBIDDEN.
+  GOOD: "不错！这一下就很像ㅎ了" ← pure ${explainLangName}. CORRECT.` : ''}
 
 STYLE:
 - Dialogue only. 1-2 sentences per tong_whisper/npc_speak. No stage directions, no parenthetical actions, no literary prose.${vars.explainIn === 'zh' ? '\n- 口语, not 书面语. Like texting, not an essay.' : vars.explainIn === 'ja' ? '\n- 話し言葉で。エッセイではなくチャットのように。' : ''}

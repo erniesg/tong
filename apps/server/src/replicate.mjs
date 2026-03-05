@@ -431,10 +431,10 @@ const CHARACTER_PRESETS = {
 
 const VARIANT_CONFIGS = {
   'a-pose': {
-    framing: 'Full body front-facing A-pose, arms slightly away from body, full body visible head to feet',
-    expression: 'neutral calm expression',
-    clothing: 'Wearing plain fitted light grey t-shirt and grey leggings',
-    extras: 'No makeup, no jewelry, no accessories, no piercings',
+    framing: 'Full body head-to-toe front-facing A-pose standing upright, arms 30 degrees from sides palms facing forward, feet hip-width apart with small gap between legs, MUST show complete feet and full head, wide shot pulled far back with large margin above head and below feet, centered in frame',
+    expression: 'neutral calm bare face expression, no makeup, eyes looking straight at camera',
+    clothing: 'Wearing plain fitted light grey t-shirt and grey leggings, bare feet on flat ground',
+    extras: 'No makeup, no jewelry, no accessories, no piercings, no shoes, no background props',
   },
   grimace: {
     framing: 'Half body from waist up, front-facing',
@@ -449,13 +449,20 @@ const VARIANT_CONFIGS = {
     extras: 'No makeup, no jewelry, no accessories, no piercings',
   },
   casual: {
-    framing: 'Half body from waist up, front-facing',
+    framing: 'Full body head-to-toe front-facing standing upright, camera pulled back to show entire body with space above head and below feet',
     // expression + clothing come from CHARACTER_PRESETS[id].casualLook
+    extras: 'No makeup, bare face, no jewelry, no accessories, no earrings, no piercings',
   },
 };
 
-const CHARACTER_REF_STYLE =
-  'Solid bright chromakey green background (#00FF00), flat even studio lighting, character reference sheet style';
+const CHARACTER_REF_BASE_STYLE =
+  'Solid bright chromakey green background (#00FF00), flat even studio lighting';
+
+const CHARACTER_REF_STYLE_PHOTO =
+  `${CHARACTER_REF_BASE_STYLE}, photorealistic photograph of a real person, NOT illustration NOT anime NOT painting NOT cartoon NOT digital art, DSLR 85mm lens, natural skin texture, sharp focus, real human being`;
+
+const CHARACTER_REF_STYLE_SHEET =
+  `${CHARACTER_REF_BASE_STYLE}, character reference sheet style`;
 
 /**
  * Build a complete prompt for a character reference image.
@@ -502,8 +509,8 @@ function buildCharacterPrompt({ characterId, variant, customOverrides }) {
   // Extras (no makeup etc.)
   if (variantCfg.extras) parts.push(variantCfg.extras);
 
-  // Style suffix
-  parts.push(CHARACTER_REF_STYLE);
+  // Style suffix — photorealistic for all variants
+  parts.push(CHARACTER_REF_STYLE_PHOTO);
 
   return parts.join(', ');
 }
@@ -518,8 +525,6 @@ function buildCharacterPrompt({ characterId, variant, customOverrides }) {
  * @returns {Promise<string>} Base64-encoded PNG with alpha
  */
 async function chromaKeyRemoveGreen(imageUrl, opts = {}) {
-  const threshold = opts.threshold ?? 90;
-
   const response = await fetch(imageUrl);
   if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
   const buffer = Buffer.from(await response.arrayBuffer());
@@ -530,28 +535,70 @@ async function chromaKeyRemoveGreen(imageUrl, opts = {}) {
     .toBuffer({ resolveWithObject: true });
 
   const pixels = data;
-  const channels = info.channels; // 4 (RGBA)
+  const { width, height, channels } = info;
 
+  // Use green-dominance ratio: how much greener is this pixel than red/blue?
+  // This handles shadows, lighting variations, and non-uniform green screens.
+  // Require BOTH ratio AND absolute excess to avoid keying grey fabric with slight green spill.
   for (let i = 0; i < pixels.length; i += channels) {
     const r = pixels[i];
     const g = pixels[i + 1];
     const b = pixels[i + 2];
 
-    // Distance from pure green (#00FF00)
-    const dist = Math.sqrt(r * r + (255 - g) * (255 - g) + b * b);
+    const maxRB = Math.max(r, b);
+    const greenExcess = g - maxRB;
+    const greenness = g > 30 ? greenExcess / (g + 1) : 0;
 
-    if (dist < threshold) {
-      // Fully transparent
+    // Core key: high ratio AND significant absolute green excess
+    if (greenness > 0.3 && greenExcess > 40) {
+      pixels[i] = 0;
+      pixels[i + 1] = 0;
+      pixels[i + 2] = 0;
       pixels[i + 3] = 0;
-    } else if (dist < threshold + 30) {
-      // Feathered edge — partial transparency for anti-aliasing
-      const alpha = Math.round(((dist - threshold) / 30) * 255);
+    } else if (greenness > 0.15 && greenExcess > 50) {
+      // Feather zone — only for clearly green pixels
+      const t = (0.3 - greenness) / 0.15;
+      const alpha = Math.round(t * t * 255);
       pixels[i + 3] = Math.min(pixels[i + 3], alpha);
+      pixels[i + 1] = Math.min(g, maxRB);
+    } else if (greenExcess > 15) {
+      // Light de-spill: reduce green cast on subject pixels
+      pixels[i + 1] = Math.min(g, maxRB + 15);
+    }
+  }
+
+  // Erode alpha by 2px to kill any remaining green fringe
+  for (let pass = 0; pass < 2; pass++) {
+    const alphaCopy = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        alphaCopy[y * width + x] = pixels[(y * width + x) * channels + 3];
+      }
+    }
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
+        const minNeighbor = Math.min(
+          alphaCopy[idx - width], alphaCopy[idx + width],
+          alphaCopy[idx - 1], alphaCopy[idx + 1],
+        );
+        if (minNeighbor === 0) {
+          const pi = idx * channels;
+          // First pass: harsh cut. Second pass: soften.
+          pixels[pi + 3] = pass === 0
+            ? Math.min(pixels[pi + 3], Math.round(pixels[pi + 3] * 0.15))
+            : Math.min(pixels[pi + 3], Math.round(pixels[pi + 3] * 0.5));
+          // Also de-spill eroded edge pixels
+          if (pixels[pi + 1] > Math.max(pixels[pi], pixels[pi + 2])) {
+            pixels[pi + 1] = Math.max(pixels[pi], pixels[pi + 2]);
+          }
+        }
+      }
     }
   }
 
   const result = await sharp(pixels, {
-    raw: { width: info.width, height: info.height, channels },
+    raw: { width, height, channels },
   })
     .png()
     .toBuffer();
@@ -581,18 +628,18 @@ export async function replicateGenerateCharacterRef(args) {
     prompt,
     aspect_ratio: '9:16',
     output_format: 'png',
+    output_resolution: '2048',
   };
   if (args.referenceImage) genArgs.image = args.referenceImage;
 
   const result = await replicateGenerateImage(genArgs);
 
-  // Post-process: chroma-key the green background
+  // Post-process: chroma-key the green background, then upscale to 4K
   let transparentB64 = null;
   if (result.images && result.images.length > 0) {
     try {
       transparentB64 = await chromaKeyRemoveGreen(result.images[0]);
     } catch (err) {
-      // Non-fatal — still return the original image
       console.error('Chroma key failed:', err.message);
     }
   }
