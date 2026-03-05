@@ -7,13 +7,8 @@ import {
   createPipeline,
   setActivePipeline,
   deletePipeline,
-  addConceptProposal,
-  selectConcept,
-  addCharacterProposal,
-  selectCharacter,
-  advanceFromCharacters,
-  addCurriculumProposal,
-  selectCurriculum,
+  setPlan,
+  approvePlan,
   addBackdropProposal,
   selectBackdrop,
   markPublished,
@@ -23,11 +18,8 @@ import {
 import type {
   DirectorStage,
   LocationPipeline,
-  LocationConcept,
-  CharacterConcept,
-  CurriculumConcept,
+  LocationPlan,
   BackdropConcept,
-  Proposal,
 } from '@/lib/types/director';
 import { DIRECTOR_STAGES, STAGE_LABELS } from '@/lib/types/director';
 import { getRegisteredLocationKeys, getLocation } from '@/lib/content/locations';
@@ -40,7 +32,8 @@ const CITIES = [
   { id: 'tokyo', label: 'Tokyo', lang: 'ja' },
 ];
 
-/** Derive location list from the single source of truth (location registry). */
+const LANG_MAP: Record<string, string> = { seoul: 'ko', shanghai: 'zh', tokyo: 'ja' };
+
 function getLocationEntries() {
   return getRegisteredLocationKeys().map((key) => {
     const [cityId, locationId] = key.split(':');
@@ -48,22 +41,18 @@ function getLocationEntries() {
     if (!loc) return null;
     const hasContent = loc.vocabularyTargets.length > 0 && loc.levels.some((l) => l.objectives.length > 0);
     const localName = Object.entries(loc.name).find(([k]) => k !== 'en')?.[1] || '';
-    return {
-      cityId,
-      locationId: loc.id,
-      label: loc.name.en || loc.id,
-      local: localName,
-      domain: loc.domain,
-      hasContent,
-    };
+    return { cityId, locationId: loc.id, label: loc.name.en || loc.id, local: localName, domain: loc.domain, hasContent, stub: loc as unknown as Record<string, unknown> };
   }).filter(Boolean) as Array<{
-    cityId: string;
-    locationId: string;
-    label: string;
-    local: string;
-    domain: string;
-    hasContent: boolean;
+    cityId: string; locationId: string; label: string; local: string; domain: string; hasContent: boolean; stub: Record<string, unknown>;
   }>;
+}
+
+/** Convert { en, local } name from AI to { en, <langCode> }. */
+function expandName(raw: { en?: string; local?: string } | Record<string, string>, cityId: string): Record<string, string> {
+  if (!raw) return { en: '' };
+  if (!('local' in raw)) return raw as Record<string, string>;
+  const code = LANG_MAP[cityId] || 'ko';
+  return { en: (raw as { en: string }).en || '', [code]: (raw as { local: string }).local || '' };
 }
 
 /* ── Main Page ─────────────────────────────────────────────── */
@@ -79,22 +68,14 @@ export default function BackstagePage() {
     ? directorState.pipelines[directorState.activePipelineId]
     : null;
 
-  // Refs so callbacks always see the latest values
   const pipelineRef = useRef(activePipeline);
   pipelineRef.current = activePipeline;
-  const feedbackRef = useRef(feedbackText);
-  feedbackRef.current = feedbackText;
-
-  // Track which tool invocations we've already processed
   const processedToolCalls = useRef(new Set<string>());
 
   /* ── AI Chat hook ──────────────────────────────────────── */
   const { messages, setMessages, append, isLoading } = useChat({
     api: '/api/ai/director',
-    body: {
-      pipeline: activePipeline,
-      feedback: feedbackText || undefined,
-    },
+    body: { pipeline: activePipeline, feedback: feedbackText || undefined },
   });
 
   /* ── Extract tool results from streamed messages ──────── */
@@ -112,34 +93,19 @@ export default function BackstagePage() {
         processedToolCalls.current.add(callId);
 
         const data = (inv.result ?? inv.args) as Record<string, unknown>;
-        console.log('[director] tool result:', inv.toolName, data);
-
-        // The API returns name as { en, local }. Convert to { en, <langCode> } for the store.
-        const langMap: Record<string, string> = { seoul: 'ko', shanghai: 'zh', tokyo: 'ja' };
-
-        function expandName(raw: unknown, cityId: string): Record<string, string> {
-          const n = raw as { en?: string; local?: string } | Record<string, string> | undefined;
-          if (!n) return { en: '' };
-          // Already expanded (has a lang code key)?
-          if (!('local' in n)) return n as Record<string, string>;
-          const code = langMap[cityId] || 'ko';
-          return { en: n.en || '', [code]: n.local || '' };
-        }
 
         switch (inv.toolName) {
-          case 'propose_concept': {
-            const d = data as Record<string, unknown> & { name: unknown; cityId: string };
-            addConceptProposal(pid, { ...d, name: expandName(d.name, d.cityId) } as unknown as LocationConcept);
+          case 'propose_plan': {
+            const plan = data as unknown as { concept: Record<string, unknown>; characters: Record<string, unknown>[]; curriculum: Record<string, unknown> };
+            // Expand names from { en, local } → { en, ko/zh/ja }
+            const concept = { ...plan.concept, name: expandName(plan.concept.name as { en: string; local: string }, plan.concept.cityId as string) };
+            const characters = plan.characters.map((c) => ({
+              ...c,
+              name: expandName(c.name as { en: string; local: string }, c.cityId as string),
+            }));
+            setPlan(pid, { concept, characters, curriculum: plan.curriculum } as unknown as LocationPlan);
             break;
           }
-          case 'propose_character': {
-            const d = data as Record<string, unknown> & { name: unknown; cityId: string };
-            addCharacterProposal(pid, { ...d, name: expandName(d.name, d.cityId) } as unknown as CharacterConcept);
-            break;
-          }
-          case 'propose_curriculum':
-            addCurriculumProposal(pid, data as unknown as CurriculumConcept);
-            break;
           case 'propose_backdrop':
             addBackdropProposal(pid, data as unknown as BackdropConcept);
             break;
@@ -153,16 +119,15 @@ export default function BackstagePage() {
 
   /* ── Actions ───────────────────────────────────────────── */
 
-  const handleCreatePipeline = useCallback((cityId?: string, locId?: string) => {
+  const handleCreatePipeline = useCallback((cityId?: string, locId?: string, stub?: Record<string, unknown>) => {
     const city = cityId || selectedCity;
     const loc = locId || newLocationId.trim().toLowerCase().replace(/\s+/g, '_');
     if (!loc) return;
     const pipelineId = `${city}:${loc}`;
-    // Don't recreate if already exists — just select it
     if (directorState.pipelines[pipelineId]) {
       setActivePipeline(pipelineId);
     } else {
-      createPipeline(city, loc);
+      createPipeline(city, loc, stub);
     }
     setNewLocationId('');
   }, [selectedCity, newLocationId, directorState.pipelines]);
@@ -172,11 +137,12 @@ export default function BackstagePage() {
     setDirectorMessages([]);
     setMessages([]);
     processedToolCalls.current.clear();
+    const stage = activePipeline.currentStage;
     append({
       role: 'user',
       content: feedbackText
-        ? `Regenerate proposals for ${activePipeline.currentStage}. Feedback: ${feedbackText}`
-        : `Generate proposals for the ${activePipeline.currentStage} stage.`,
+        ? `Regenerate the ${stage}. Feedback: ${feedbackText}`
+        : `Generate the ${stage} for this location.`,
     });
     setFeedbackText('');
   }, [activePipeline, feedbackText, append, setMessages]);
@@ -185,22 +151,16 @@ export default function BackstagePage() {
     if (!activePipeline) return;
     const exported = exportPipeline(activePipeline.id);
     if (!exported) return;
-
-    // Save to server
     try {
       const serverUrl = process.env.NEXT_PUBLIC_TONG_SERVER_URL || 'http://localhost:8787';
       await fetch(`${serverUrl}/api/v1/director/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pipelineId: activePipeline.id,
-          ...exported,
-        }),
+        body: JSON.stringify({ pipelineId: activePipeline.id, ...exported }),
       });
       markPublished(activePipeline.id);
     } catch (err) {
       console.error('Publish failed:', err);
-      // Still mark locally
       markPublished(activePipeline.id);
     }
   }, [activePipeline]);
@@ -211,11 +171,11 @@ export default function BackstagePage() {
     <div className="backstage">
       <header className="backstage-header">
         <h1>Backstage</h1>
-        <span className="backstage-subtitle">AI Director Content Pipeline</span>
+        <span className="backstage-subtitle">AI Director</span>
       </header>
 
       <div className="backstage-layout">
-        {/* ── Sidebar: Locations ─────────────────────────── */}
+        {/* ── Sidebar ───────────────────────────────────── */}
         <aside className="backstage-sidebar">
           {CITIES.map((city) => {
             const stubs = getLocationEntries().filter((s) => s.cityId === city.id);
@@ -231,7 +191,7 @@ export default function BackstagePage() {
                       <li
                         key={pipelineId}
                         className={`backstage-pipeline-item ${isActive ? 'active' : ''} ${stub.hasContent ? 'has-content' : ''}`}
-                        onClick={() => handleCreatePipeline(stub.cityId, stub.locationId)}
+                        onClick={() => handleCreatePipeline(stub.cityId, stub.locationId, stub.stub as Record<string, unknown>)}
                       >
                         <div className="pipeline-info">
                           <span className="pipeline-label">{stub.local}</span>
@@ -252,14 +212,11 @@ export default function BackstagePage() {
             );
           })}
 
-          {/* Custom location */}
           <div className="backstage-city-group">
             <h2>Custom</h2>
             <div className="backstage-create">
               <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}>
-                {CITIES.map((c) => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
+                {CITIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
               <input
                 type="text"
@@ -268,38 +225,64 @@ export default function BackstagePage() {
                 onChange={(e) => setNewLocationId(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleCreatePipeline()}
               />
-              <button onClick={() => handleCreatePipeline()} disabled={!newLocationId.trim()}>
-                + New
-              </button>
+              <button onClick={() => handleCreatePipeline()} disabled={!newLocationId.trim()}>+ New</button>
             </div>
           </div>
         </aside>
 
-        {/* ── Main: Active Pipeline ─────────────────────── */}
+        {/* ── Main ──────────────────────────────────────── */}
         <main className="backstage-main">
           {!activePipeline ? (
-            <div className="backstage-empty">
-              Select or create a pipeline to get started.
-            </div>
+            <div className="backstage-empty">Select a location to get started.</div>
           ) : (
             <>
-              {/* Stage stepper */}
-              <div className="stage-stepper">
-                {DIRECTOR_STAGES.map((stage, i) => {
-                  const isCurrent = activePipeline.currentStage === stage;
-                  const isPast = DIRECTOR_STAGES.indexOf(activePipeline.currentStage) > i;
-                  return (
+              {/* Stage stepper + controls row */}
+              <div className="backstage-toolbar">
+                <div className="stage-stepper">
+                  {DIRECTOR_STAGES.map((stage, i) => {
+                    const isCurrent = activePipeline.currentStage === stage;
+                    const isPast = DIRECTOR_STAGES.indexOf(activePipeline.currentStage) > i;
+                    return (
+                      <button
+                        key={stage}
+                        className={`stage-step ${isCurrent ? 'current' : ''} ${isPast ? 'done' : ''}`}
+                        onClick={() => goToStage(activePipeline.id, stage)}
+                      >
+                        <span className="stage-dot">{isPast ? '\u2713' : i + 1}</span>
+                        <span className="stage-label">{STAGE_LABELS[stage]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="toolbar-actions">
+                  {activePipeline.currentStage !== 'published' && (
                     <button
-                      key={stage}
-                      className={`stage-step ${isCurrent ? 'current' : ''} ${isPast ? 'done' : ''}`}
-                      onClick={() => goToStage(activePipeline.id, stage)}
+                      className="btn-generate"
+                      onClick={handleGenerate}
+                      disabled={isLoading}
                     >
-                      <span className="stage-dot">{isPast ? '\u2713' : i + 1}</span>
-                      <span className="stage-label">{STAGE_LABELS[stage]}</span>
+                      {isLoading ? 'Generating...' : `Generate ${STAGE_LABELS[activePipeline.currentStage]}`}
                     </button>
-                  );
-                })}
+                  )}
+                  {activePipeline.currentStage === 'published' && !activePipeline.publishedAt && (
+                    <button className="btn-publish" onClick={handlePublish}>Publish to Server</button>
+                  )}
+                </div>
               </div>
+
+              {/* Feedback bar */}
+              {activePipeline.currentStage !== 'published' && (
+                <div className="feedback-bar">
+                  <input
+                    type="text"
+                    className="feedback-input-inline"
+                    placeholder="Feedback for AI Director (optional)..."
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+                  />
+                </div>
+              )}
 
               {/* Director messages */}
               {directorMessages.length > 0 && (
@@ -314,39 +297,6 @@ export default function BackstagePage() {
               <div className="stage-content">
                 <StagePanel pipeline={activePipeline} />
               </div>
-
-              {/* Controls */}
-              <div className="backstage-controls">
-                <textarea
-                  className="feedback-input"
-                  placeholder="Feedback for AI Director (optional)..."
-                  value={feedbackText}
-                  onChange={(e) => setFeedbackText(e.target.value)}
-                  rows={2}
-                />
-                <div className="control-buttons">
-                  <button
-                    className="btn-generate"
-                    onClick={handleGenerate}
-                    disabled={isLoading || activePipeline.currentStage === 'published'}
-                  >
-                    {isLoading ? 'Generating...' : `Generate ${STAGE_LABELS[activePipeline.currentStage]}`}
-                  </button>
-                  {activePipeline.currentStage === 'published' && !activePipeline.publishedAt && (
-                    <button className="btn-publish" onClick={handlePublish}>
-                      Publish to Server
-                    </button>
-                  )}
-                  <button
-                    className="btn-delete"
-                    onClick={() => {
-                      if (confirm('Delete this pipeline?')) deletePipeline(activePipeline.id);
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
             </>
           )}
         </main>
@@ -359,12 +309,8 @@ export default function BackstagePage() {
 
 function StagePanel({ pipeline }: { pipeline: LocationPipeline }) {
   switch (pipeline.currentStage) {
-    case 'concept':
-      return <ConceptStage pipeline={pipeline} />;
-    case 'characters':
-      return <CharactersStage pipeline={pipeline} />;
-    case 'curriculum':
-      return <CurriculumStage pipeline={pipeline} />;
+    case 'plan':
+      return <PlanStage pipeline={pipeline} />;
     case 'backdrops':
       return <BackdropsStage pipeline={pipeline} />;
     case 'published':
@@ -374,131 +320,80 @@ function StagePanel({ pipeline }: { pipeline: LocationPipeline }) {
   }
 }
 
-/* ── Concept Stage ─────────────────────────────────────────── */
+/* ── Plan Stage ────────────────────────────────────────────── */
 
-function ConceptStage({ pipeline }: { pipeline: LocationPipeline }) {
-  if (pipeline.concepts.length === 0) {
-    return <div className="stage-empty">Click "Generate" to create location concepts.</div>;
+function PlanStage({ pipeline }: { pipeline: LocationPipeline }) {
+  const plan = pipeline.plan;
+
+  if (!plan) {
+    return <div className="stage-empty">Click "Generate Plan" to create a complete location plan.</div>;
   }
 
+  const { concept, characters, curriculum } = plan.data;
+
   return (
-    <div className="proposal-grid">
-      {pipeline.concepts.map((p) => (
-        <div key={p.id} className={`proposal-card ${p.status}`}>
+    <div className="plan-review">
+      {/* Concept section */}
+      <section className="plan-section">
+        <h3 className="plan-section-title">Location Concept</h3>
+        <div className="plan-card">
           <div className="proposal-header">
-            <h3>{p.data.name.en}</h3>
-            <span className="proposal-native">{Object.values(p.data.name).find((_, i) => i === 1) || ''}</span>
+            <h4>{concept.name.en}</h4>
+            <span className="proposal-native">{Object.values(concept.name).find((_, i) => i === 1) || ''}</span>
           </div>
           <div className="proposal-meta">
-            <span className="tag">{p.data.domain}</span>
-            <span className="tag">{p.data.suggestedNpcCount} NPCs</span>
+            <span className="tag">{concept.domain}</span>
+            <span className="tag">{concept.suggestedNpcCount} NPCs</span>
           </div>
-          <p className="proposal-desc">{p.data.ambientDescription}</p>
-          <p className="proposal-hook"><strong>Cultural:</strong> {p.data.culturalHook}</p>
-          <p className="proposal-hook"><strong>Narrative:</strong> {p.data.narrativeHook}</p>
-          <div className="proposal-actions">
-            {p.status === 'proposed' && (
-              <button className="btn-approve" onClick={() => selectConcept(pipeline.id, p.id)}>
-                Select
-              </button>
-            )}
-            {p.status === 'approved' && <span className="status-badge approved">Selected</span>}
-          </div>
+          <p className="proposal-desc">{concept.ambientDescription}</p>
+          <p className="proposal-hook"><strong>Cultural:</strong> {concept.culturalHook}</p>
+          <p className="proposal-hook"><strong>Narrative:</strong> {concept.narrativeHook}</p>
         </div>
-      ))}
-    </div>
-  );
-}
+      </section>
 
-/* ── Characters Stage ──────────────────────────────────────── */
-
-function CharactersStage({ pipeline }: { pipeline: LocationPipeline }) {
-  if (pipeline.characters.length === 0) {
-    return <div className="stage-empty">Click "Generate" to create NPC characters.</div>;
-  }
-
-  const allDecided = pipeline.characters.every((c) => c.status !== 'proposed');
-
-  return (
-    <>
-      <div className="proposal-grid">
-        {pipeline.characters.map((p) => (
-          <div key={p.id} className={`proposal-card ${p.status}`}>
-            <div className="proposal-header">
-              <h3>{p.data.name.en}</h3>
-              <span className="proposal-native">{Object.values(p.data.name).find((_, i) => i === 1) || ''}</span>
+      {/* Characters section */}
+      <section className="plan-section">
+        <h3 className="plan-section-title">Characters ({characters.length})</h3>
+        <div className="proposal-grid">
+          {characters.map((char, i) => (
+            <div key={char.id || i} className="plan-card">
+              <div className="proposal-header">
+                <h4>{char.name.en}</h4>
+                <span className="proposal-native">{Object.values(char.name).find((_, i) => i === 1) || ''}</span>
+              </div>
+              <div className="proposal-meta">
+                <span className="tag">{char.archetype}</span>
+                <span className="tag">{char.role}</span>
+                {char.romanceable && <span className="tag romance">romanceable</span>}
+              </div>
+              <p className="proposal-desc">{char.context}</p>
+              <p className="proposal-hook"><strong>Personality:</strong> {char.personality.traits.join(', ')}</p>
+              <p className="proposal-hook"><strong>Backstory:</strong> {char.backstory}</p>
+              <details>
+                <summary>Speech Style</summary>
+                <pre className="speech-preview">{JSON.stringify(char.speechStyle, null, 2)}</pre>
+              </details>
             </div>
-            <div className="proposal-meta">
-              <span className="tag">{p.data.archetype}</span>
-              <span className="tag">{p.data.role}</span>
-              {p.data.romanceable && <span className="tag romance">romanceable</span>}
-            </div>
-            <p className="proposal-desc">{p.data.context}</p>
-            <p className="proposal-hook"><strong>Personality:</strong> {p.data.personality.traits.join(', ')}</p>
-            <p className="proposal-hook"><strong>Backstory:</strong> {p.data.backstory}</p>
-            <details>
-              <summary>Speech Style</summary>
-              <pre className="speech-preview">{JSON.stringify(p.data.speechStyle, null, 2)}</pre>
-            </details>
-            <div className="proposal-actions">
-              {p.status === 'proposed' && (
-                <>
-                  <button className="btn-approve" onClick={() => selectCharacter(pipeline.id, p.id, true)}>
-                    Approve
-                  </button>
-                  <button className="btn-reject" onClick={() => selectCharacter(pipeline.id, p.id, false)}>
-                    Reject
-                  </button>
-                </>
-              )}
-              {p.status === 'approved' && <span className="status-badge approved">Approved</span>}
-              {p.status === 'rejected' && <span className="status-badge rejected">Rejected</span>}
-            </div>
-          </div>
-        ))}
-      </div>
-      {allDecided && pipeline.selectedCharacters.length > 0 && (
-        <button className="btn-advance" onClick={() => advanceFromCharacters(pipeline.id)}>
-          Continue with {pipeline.selectedCharacters.length} character(s)
-        </button>
-      )}
-    </>
-  );
-}
+          ))}
+        </div>
+      </section>
 
-/* ── Curriculum Stage ──────────────────────────────────────── */
-
-function CurriculumStage({ pipeline }: { pipeline: LocationPipeline }) {
-  if (pipeline.curriculum.length === 0) {
-    return <div className="stage-empty">Click "Generate" to create the curriculum.</div>;
-  }
-
-  return (
-    <div className="proposal-grid">
-      {pipeline.curriculum.map((p) => (
-        <div key={p.id} className={`proposal-card wide ${p.status}`}>
-          <h3>Curriculum Proposal</h3>
+      {/* Curriculum section */}
+      <section className="plan-section">
+        <h3 className="plan-section-title">Curriculum</h3>
+        <div className="plan-card wide">
           <div className="curriculum-summary">
+            <div className="curriculum-stat"><strong>{curriculum.levels.length}</strong> levels</div>
+            <div className="curriculum-stat"><strong>{curriculum.vocabularyTargets.length}</strong> vocab items</div>
+            <div className="curriculum-stat"><strong>{curriculum.grammarTargets.length}</strong> grammar patterns</div>
             <div className="curriculum-stat">
-              <strong>{p.data.levels.length}</strong> levels
-            </div>
-            <div className="curriculum-stat">
-              <strong>{p.data.vocabularyTargets.length}</strong> vocab items
-            </div>
-            <div className="curriculum-stat">
-              <strong>{p.data.grammarTargets.length}</strong> grammar patterns
-            </div>
-            <div className="curriculum-stat">
-              <strong>{p.data.levels.reduce((sum, l) => sum + l.objectives.length, 0)}</strong> objectives
+              <strong>{curriculum.levels.reduce((sum: number, l: { objectives: unknown[] }) => sum + l.objectives.length, 0)}</strong> objectives
             </div>
           </div>
 
-          {/* Levels overview */}
-          {p.data.levels.map((level) => (
+          {curriculum.levels.map((level: { level: number; name: string; description: string; objectives: { id: string; title: string; description: string; targetCount: number; assessmentThreshold: number; prerequisites: string[] }[] }) => (
             <details key={level.level} className="level-detail">
-              <summary>
-                L{level.level}: {level.name} — {level.description} ({level.objectives.length} objectives)
-              </summary>
+              <summary>L{level.level}: {level.name} — {level.description} ({level.objectives.length} objectives)</summary>
               <ul className="objective-list">
                 {level.objectives.map((obj) => (
                   <li key={obj.id}>
@@ -514,33 +409,33 @@ function CurriculumStage({ pipeline }: { pipeline: LocationPipeline }) {
             </details>
           ))}
 
-          {/* Vocab sample */}
           <details className="vocab-detail">
-            <summary>Vocabulary ({p.data.vocabularyTargets.length} items)</summary>
+            <summary>Vocabulary ({curriculum.vocabularyTargets.length} items)</summary>
             <div className="vocab-grid">
-              {p.data.vocabularyTargets.slice(0, 20).map((v, i) => (
+              {curriculum.vocabularyTargets.slice(0, 20).map((v: { word: string; romanization: string; translation: string }, i: number) => (
                 <div key={i} className="vocab-item">
                   <span className="vocab-word">{v.word}</span>
                   <span className="vocab-rom">{v.romanization}</span>
                   <span className="vocab-trans">{v.translation}</span>
                 </div>
               ))}
-              {p.data.vocabularyTargets.length > 20 && (
-                <div className="vocab-more">+{p.data.vocabularyTargets.length - 20} more</div>
+              {curriculum.vocabularyTargets.length > 20 && (
+                <div className="vocab-more">+{curriculum.vocabularyTargets.length - 20} more</div>
               )}
             </div>
           </details>
-
-          <div className="proposal-actions">
-            {p.status === 'proposed' && (
-              <button className="btn-approve" onClick={() => selectCurriculum(pipeline.id, p.id)}>
-                Approve Curriculum
-              </button>
-            )}
-            {p.status === 'approved' && <span className="status-badge approved">Approved</span>}
-          </div>
         </div>
-      ))}
+      </section>
+
+      {/* Approve button */}
+      {plan.status === 'proposed' && (
+        <button className="btn-advance" onClick={() => approvePlan(pipeline.id)}>
+          Approve Plan &amp; Continue to Backdrops
+        </button>
+      )}
+      {plan.status === 'approved' && (
+        <div className="status-badge approved" style={{ textAlign: 'center', marginTop: 16 }}>Plan Approved</div>
+      )}
     </div>
   );
 }
@@ -549,7 +444,7 @@ function CurriculumStage({ pipeline }: { pipeline: LocationPipeline }) {
 
 function BackdropsStage({ pipeline }: { pipeline: LocationPipeline }) {
   if (pipeline.backdrops.length === 0) {
-    return <div className="stage-empty">Click "Generate" to create backdrop concepts.</div>;
+    return <div className="stage-empty">Click "Generate Backdrops" to create backdrop concepts.</div>;
   }
 
   return (
@@ -567,9 +462,7 @@ function BackdropsStage({ pipeline }: { pipeline: LocationPipeline }) {
           )}
           <div className="proposal-actions">
             {p.status === 'proposed' && (
-              <button className="btn-approve" onClick={() => selectBackdrop(pipeline.id, p.id)}>
-                Select
-              </button>
+              <button className="btn-approve" onClick={() => selectBackdrop(pipeline.id, p.id)}>Select</button>
             )}
             {p.status === 'approved' && <span className="status-badge approved">Selected</span>}
           </div>
@@ -590,32 +483,27 @@ function PublishedStage({ pipeline }: { pipeline: LocationPipeline }) {
       {pipeline.publishedAt && (
         <p className="publish-date">Published at: {new Date(pipeline.publishedAt).toLocaleString()}</p>
       )}
-
       <div className="published-summary">
         <div className="summary-section">
           <h4>Location</h4>
           <p>{exported?.concept?.name?.en || pipeline.id}</p>
           <p>{exported?.concept?.ambientDescription}</p>
         </div>
-
         <div className="summary-section">
           <h4>Characters ({exported?.characters?.length || 0})</h4>
-          {exported?.characters?.map((c) => (
+          {exported?.characters?.map((c: { id: string; name: Record<string, string>; role: string; archetype: string }) => (
             <p key={c.id}>{c.name.en} — {c.role} ({c.archetype})</p>
           ))}
         </div>
-
         <div className="summary-section">
           <h4>Curriculum</h4>
           <p>{exported?.curriculum?.levels?.length || 0} levels, {exported?.curriculum?.vocabularyTargets?.length || 0} vocab, {exported?.curriculum?.grammarTargets?.length || 0} grammar</p>
         </div>
-
         <div className="summary-section">
           <h4>Backdrop</h4>
           <p>{exported?.backdrop?.timeOfDay} / {exported?.backdrop?.mood}</p>
         </div>
       </div>
-
       <details>
         <summary>Raw JSON Export</summary>
         <pre className="json-export">{JSON.stringify(exported, null, 2)}</pre>

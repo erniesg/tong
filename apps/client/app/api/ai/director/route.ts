@@ -9,7 +9,6 @@ export const maxDuration = 120;
 
 /* ── Shared schemas ────────────────────────────────────────── */
 
-/** Explicit name object — no z.record() since OpenAI strict mode forbids additionalProperties. */
 const nameSchema = z.object({
   en: z.string().describe('English name'),
   local: z.string().describe('Native language name (Korean/Chinese/Japanese)'),
@@ -44,6 +43,21 @@ const speechStyleSchema = z.object({
     close: stageEntrySchema,
     romantic: stageEntrySchema,
   }),
+});
+
+const characterSchema = z.object({
+  id: z.string(),
+  name: nameSchema,
+  cityId: z.string(),
+  role: z.string(),
+  context: z.string(),
+  archetype: z.string(),
+  personality: personalitySchema,
+  speechStyle: speechStyleSchema,
+  backstory: z.string(),
+  defaultLocationId: z.string(),
+  romanceable: z.boolean(),
+  voiceDescription: z.string(),
 });
 
 const objectiveSchema = z.object({
@@ -94,47 +108,26 @@ const grammarSchema = z.object({
 /* ── Director tools ────────────────────────────────────────── */
 
 const directorTools = {
-  propose_concept: tool({
-    description: 'Propose a location concept. Call this 3 times for 3 distinct proposals.',
+  propose_plan: tool({
+    description: 'Propose a complete location plan: concept + characters + curriculum in one call.',
     parameters: z.object({
-      id: z.string().describe('lowercase_snake_case location identifier'),
-      name: nameSchema,
-      cityId: z.string(),
-      domain: z.string().describe('Thematic domain: street_food, cafe_culture, entertainment, shopping, etc.'),
-      order: z.number().describe('Display order on the city map'),
-      ambientDescription: z.string().describe('Vivid 2-3 sentence scene description'),
-      culturalHook: z.string().describe('Why this place matters culturally'),
-      narrativeHook: z.string().describe('How it ties into the trainee storyline'),
-      suggestedNpcCount: z.number().describe('Recommended number of NPCs (1-3)'),
-    }),
-    execute: async (args) => args,
-  }),
-
-  propose_character: tool({
-    description: 'Propose an NPC character for this location.',
-    parameters: z.object({
-      id: z.string(),
-      name: nameSchema,
-      cityId: z.string(),
-      role: z.string(),
-      context: z.string(),
-      archetype: z.string(),
-      personality: personalitySchema,
-      speechStyle: speechStyleSchema,
-      backstory: z.string(),
-      defaultLocationId: z.string(),
-      romanceable: z.boolean(),
-      voiceDescription: z.string(),
-    }),
-    execute: async (args) => args,
-  }),
-
-  propose_curriculum: tool({
-    description: 'Propose a complete curriculum for this location.',
-    parameters: z.object({
-      levels: z.array(levelSchema),
-      vocabularyTargets: z.array(vocabSchema),
-      grammarTargets: z.array(grammarSchema),
+      concept: z.object({
+        id: z.string().describe('lowercase_snake_case location identifier — must match the stub'),
+        name: nameSchema,
+        cityId: z.string(),
+        domain: z.string(),
+        order: z.number(),
+        ambientDescription: z.string().describe('Vivid 2-3 sentence scene description'),
+        culturalHook: z.string().describe('Why this place matters culturally'),
+        narrativeHook: z.string().describe('How it ties into the trainee storyline'),
+        suggestedNpcCount: z.number(),
+      }),
+      characters: z.array(characterSchema).describe('2-3 NPCs for this location'),
+      curriculum: z.object({
+        levels: z.array(levelSchema),
+        vocabularyTargets: z.array(vocabSchema),
+        grammarTargets: z.array(grammarSchema),
+      }),
     }),
     execute: async (args) => args,
   }),
@@ -150,7 +143,7 @@ const directorTools = {
   }),
 
   director_message: tool({
-    description: 'Send a message to the developer about the current stage, asking for feedback or explaining decisions.',
+    description: 'Send a message to the developer explaining design decisions or asking for feedback.',
     parameters: z.object({
       message: z.string(),
     }),
