@@ -17,6 +17,18 @@ import {
   elevenlabsTTS,
   getVolcengineStatus,
 } from './volcengine.mjs';
+import {
+  getReplicateStatus,
+  replicateGenerateImage,
+  replicateGenerateVideo,
+  replicateGetPrediction,
+  replicateCancelPrediction,
+  replicateGenerateMusic,
+  replicateGenerateCharacterRef,
+  getCharacterPresets,
+  handleReplicateWebhook,
+  replicateWaitForPrediction,
+} from './replicate.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -334,6 +346,98 @@ const AGENT_TOOL_DEFINITIONS = [
       speed: 'number (optional) – speech speed, 1.0 = normal',
       outputFormat: 'string (optional, default mp3_44100_128)',
     },
+  },
+  // ── Replicate tools ───────────────────────────────────────────
+  {
+    name: 'replicate.status',
+    description: 'Check if Replicate API token is configured.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {},
+  },
+  {
+    name: 'replicate.image.generate',
+    description: 'Generate images using Google Nano Banana 2 via Replicate. Sync mode (~20-30s). Returns image URLs directly.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      prompt: 'string (required) – description of the image to generate',
+      image: 'string (optional) – input image URL for img2img',
+      aspect_ratio: '1:1|16:9|9:16|4:3|3:4|3:2|2:3 (optional, default 1:1)',
+      output_format: 'png|jpg|webp (optional, default png)',
+      output_resolution: 'auto|1024|2048 (optional, default auto)',
+      number_of_images: 'number 1-4 (optional, default 1)',
+    },
+  },
+  {
+    name: 'replicate.video.create',
+    description: 'Create a video using Google Veo 3.1 Fast via Replicate. Async (~60-120s) – returns prediction ID for polling.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      prompt: 'string (required) – description of the video to generate',
+      image: 'string (optional) – input image URL for img2vid',
+      duration: '4|6|8 (optional, default 8) – video length in seconds',
+      resolution: '720p|1080p (optional, default 720p)',
+      aspect_ratio: '16:9|9:16 (optional, default 16:9)',
+    },
+  },
+  {
+    name: 'replicate.music.generate',
+    description: 'Generate 30s of instrumental music using Google Lyria 2 via Replicate. Sync mode (~20-30s). Produces 48kHz stereo audio. Use for BGM, scene music, character themes.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      prompt: 'string (required, max 600 chars) – music description or lyrics. Newlines = line breaks, double newlines = pauses, ## = accompaniment sections',
+      negative_prompt: 'string (optional) – what to exclude from the audio',
+      seed: 'number (optional, min 0) – for reproducibility',
+    },
+  },
+  {
+    name: 'replicate.prediction.get',
+    description: 'Get status of any Replicate prediction. Use to poll video generation. Status: starting → processing → succeeded|failed|canceled.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      predictionId: 'string (required) – prediction ID from replicate.video.create or replicate.image.generate',
+    },
+  },
+  {
+    name: 'replicate.prediction.cancel',
+    description: 'Cancel a running Replicate prediction.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      predictionId: 'string (required) – prediction ID to cancel',
+    },
+  },
+  {
+    name: 'replicate.prediction.wait',
+    description: 'Wait for a Replicate prediction to complete. Uses webhook if REPLICATE_WEBHOOK_BASE_URL is set (instant notification), otherwise falls back to polling every 5s. Blocks up to 5 minutes. Returns completed prediction with output.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      predictionId: 'string (required) – prediction ID from replicate.video.create',
+      timeoutMs: 'number (optional, default 300000) – max wait time in ms',
+    },
+  },
+  {
+    name: 'replicate.character.generate',
+    description: 'Generate a character reference image (bareface A-pose, grimace, profile, or casual outfit) using Nano Banana 2. Sync mode (~20-30s). Returns PNG at 9:16.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      characterId: 'string (required) – character preset: dingman|qushoucheng|miku|kaito|obachan',
+      variant: 'string (required) – a-pose|grimace|right-profile|casual',
+      customOverrides: 'object (optional) – override any face/body field (e.g. {hair: "short bob"}) ',
+    },
+  },
+  {
+    name: 'replicate.character.presets',
+    description: 'List available character presets and variant options for character reference image generation.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {},
   },
 ];
 
@@ -1046,6 +1150,124 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
         };
       }
     }
+    // ── Replicate tools ─────────────────────────────────────────
+    case 'replicate.status': {
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: getReplicateStatus(),
+        },
+      };
+    }
+    case 'replicate.image.generate': {
+      try {
+        const result = await replicateGenerateImage(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'replicate.video.create': {
+      try {
+        const result = await replicateGenerateVideo(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'replicate.music.generate': {
+      try {
+        const result = await replicateGenerateMusic(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'replicate.prediction.get': {
+      try {
+        const result = await replicateGetPrediction(args.predictionId);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'replicate.prediction.cancel': {
+      try {
+        const result = await replicateCancelPrediction(args.predictionId);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'replicate.prediction.wait': {
+      try {
+        const result = await replicateWaitForPrediction(
+          args.predictionId,
+          args.timeoutMs || 300000,
+        );
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'replicate.character.generate': {
+      try {
+        const result = await replicateGenerateCharacterRef(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'replicate.character.presets': {
+      return {
+        statusCode: 200,
+        payload: { ok: true, tool: toolName, result: getCharacterPresets() },
+      };
+    }
     default:
       return {
         statusCode: 404,
@@ -1075,6 +1297,18 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/health') {
       jsonResponse(res, 200, { ok: true, service: 'tong-server' });
+      return;
+    }
+
+    // Replicate webhook — must be before auth check (Replicate won't send demo password)
+    if (pathname === '/api/v1/replicate/webhook' && req.method === 'POST') {
+      try {
+        const body = await readJsonBody(req);
+        const result = handleReplicateWebhook(body);
+        jsonResponse(res, 200, result);
+      } catch (err) {
+        jsonResponse(res, 400, { ok: false, error: err.message });
+      }
       return;
     }
 
