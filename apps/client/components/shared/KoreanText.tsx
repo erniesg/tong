@@ -462,6 +462,7 @@ export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextPro
 
   const handleTap = useCallback((word: string, e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
+    e.stopPropagation(); // Don't bubble to parent (e.g. dismiss Tong whisper)
     if (activeWord === word) { setActiveWord(null); return; }
     showTooltip(word, e.currentTarget as HTMLElement);
     onWordTap?.();

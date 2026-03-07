@@ -17,21 +17,20 @@ interface Point {
   y: number;
 }
 
-const BRUSH_MIN = 4;   // CSS px — fast swipe (light stroke)
-const BRUSH_MAX = 12;  // CSS px — slow/stationary (press down)
-const VELOCITY_CAP = 8; // px/ms — speeds above this clamp to min brush
-const PASS_THRESHOLD = 0.55;
+const BRUSH_MIN = 2;
+const BRUSH_MAX = 5;
+const VELOCITY_CAP = 8;
+const PASS_THRESHOLD = 0.80;
 const ALPHA_THRESHOLD = 30;
-const GUIDE_COLOR = 'rgba(100, 120, 150, 0.35)';
 const GOLD_COLOR = '#f0c040';
 
 /** Map bare jamo to their full Korean names for TTS. */
 const JAMO_TO_SYLLABLE: Record<string, string> = {
-  'ㄱ': '기역', 'ㄴ': '니은', 'ㄷ': '디귿', 'ㄹ': '리을', 'ㅁ': '미음',
-  'ㅂ': '비읍', 'ㅅ': '시옷', 'ㅇ': '이응', 'ㅈ': '지읒', 'ㅊ': '치읓',
-  'ㅋ': '키읔', 'ㅌ': '티읕', 'ㅍ': '피읖', 'ㅎ': '히읗',
-  'ㅏ': '아', 'ㅑ': '야', 'ㅓ': '어', 'ㅕ': '여', 'ㅗ': '오',
-  'ㅛ': '요', 'ㅜ': '우', 'ㅠ': '유', 'ㅡ': '으', 'ㅣ': '이',
+  '\u3131': '\uAE30\uC5ED', '\u3134': '\uB2C8\uC740', '\u3137': '\uB514\uADCF', '\u3139': '\uB9AC\uC744', '\u3141': '\uBBF8\uC74C',
+  '\u3142': '\uBE44\uC74D', '\u3145': '\uC2DC\uC637', '\u3147': '\uC774\uC751', '\u3148': '\uC9C0\uC74F', '\u314A': '\uCE58\uC74F',
+  '\u314B': '\uD0A4\uC74D', '\u314C': '\uD2F0\uC74D', '\u314D': '\uD53C\uC74D', '\u314E': '\uD788\uC74F',
+  '\u314F': '\uC544', '\u3151': '\uC57C', '\u3153': '\uC5B4', '\u3155': '\uC5EC', '\u3157': '\uC624',
+  '\u3159': '\uC694', '\u315C': '\uC6B0', '\u315E': '\uC720', '\u3161': '\uC73C', '\u3163': '\uC774',
 };
 
 const LANG_TO_BCP47: Record<string, string> = {
@@ -58,41 +57,48 @@ function playTTS(text: string, language?: string, thenMeaning?: string, meaningL
   window.speechSynthesis.speak(utter);
 }
 
-export function StrokeTracing({ exercise, onResult }: Props) {
-  const lang = useUILang();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  // Offscreen: character in white for hit-testing & pixel counting
-  const refCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  // Offscreen: accumulates white circles where user drags
-  const revealCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  // Offscreen: scratch space for compositing gold × reveal
-  const tempCanvasRef = useRef<HTMLCanvasElement | null>(null);
+/* ── Single cell canvas logic ─────────────────────────────── */
 
+interface CellState {
+  done: boolean;
+  score: number;
+}
+
+interface CellCanvasProps {
+  targetChar: string;
+  ghostOpacity: number;
+  cellIndex: number;
+  active: boolean;
+  cellState: CellState;
+  onPass: (score: number) => void;
+  onFail: () => void;
+}
+
+function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, onPass, onFail }: CellCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const refCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const revealCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const tempCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [drawing, setDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [result, setResult] = useState<{ correct: boolean; score: number } | null>(null);
   const prevPointRef = useRef<Point | null>(null);
   const prevTimeRef = useRef(0);
-  const curBrushRef = useRef(BRUSH_MAX); // current smoothed brush radius
+  const curBrushRef = useRef(BRUSH_MAX);
   const dprRef = useRef(2);
   const cssSizeRef = useRef({ w: 0, h: 0 });
 
-  const ttsLang = exercise.language ?? 'ko';
+  const guideColor = `rgba(100, 120, 150, ${ghostOpacity})`;
 
-  /** Draw character text on a context at CSS-space coordinates (fill only, no stroke outline). */
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
     ctx.save();
     ctx.font = `${cssW * 0.7}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
-    const cssH = cssW; // square canvas
-    ctx.fillText(exercise.targetChar, cssW / 2, cssH / 2);
+    ctx.fillText(targetChar, cssW / 2, cssW / 2);
     ctx.restore();
-  }, [exercise.targetChar]);
+  }, [targetChar]);
 
-  /** Composite: gray guide + (gold char masked by reveal) → visible canvas. */
   const drawScene = useCallback(() => {
     const canvas = canvasRef.current;
     const revealCanvas = revealCanvasRef.current;
@@ -104,43 +110,37 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     if (!ctx || !tempCtx) return;
 
     const dpr = dprRef.current;
-    const { w: cssW, h: cssH } = cssSizeRef.current;
+    const { w: cssW } = cssSizeRef.current;
     const pxW = cssW * dpr;
-    const pxH = cssH * dpr;
 
-    // 1. Clear visible canvas and draw gray guide character
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, pxW, pxH);
+    ctx.clearRect(0, 0, pxW, pxW);
     ctx.restore();
 
-    // Draw guide in gray (scale is already set to dpr)
-    drawChar(ctx, GUIDE_COLOR, cssW);
+    if (ghostOpacity > 0.01) {
+      drawChar(ctx, guideColor, cssW);
+    }
 
-    // 2. On tempCanvas: draw gold character, then destination-in with revealCanvas
     tempCtx.save();
     tempCtx.setTransform(1, 0, 0, 1, 0, 0);
-    tempCtx.clearRect(0, 0, pxW, pxH);
+    tempCtx.clearRect(0, 0, pxW, pxW);
     tempCtx.restore();
 
-    // Draw gold character on temp (uses dpr scale)
     drawChar(tempCtx, GOLD_COLOR, cssW);
 
-    // Mask: only keep gold pixels where revealCanvas has content
     tempCtx.save();
     tempCtx.setTransform(1, 0, 0, 1, 0, 0);
     tempCtx.globalCompositeOperation = 'destination-in';
     tempCtx.drawImage(revealCanvas, 0, 0);
     tempCtx.restore();
 
-    // 3. Draw the masked gold result onto visible canvas
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(tempCanvas, 0, 0);
     ctx.restore();
-  }, [drawChar]);
+  }, [drawChar, ghostOpacity, guideColor]);
 
-  // Initialize canvases
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -148,58 +148,52 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 2;
     dprRef.current = dpr;
-    cssSizeRef.current = { w: rect.width, h: rect.height };
+    const size = rect.width;
+    cssSizeRef.current = { w: size, h: size };
 
-    const pxW = rect.width * dpr;
-    const pxH = rect.height * dpr;
+    const px = size * dpr;
 
-    // Set up visible canvas
-    canvas.width = pxW;
-    canvas.height = pxH;
+    canvas.width = px;
+    canvas.height = px;
     const ctx = canvas.getContext('2d');
     if (ctx) ctx.scale(dpr, dpr);
 
-    // Ref canvas: character in white for pixel counting
     const refCanvas = document.createElement('canvas');
-    refCanvas.width = pxW;
-    refCanvas.height = pxH;
+    refCanvas.width = px;
+    refCanvas.height = px;
     const refCtx = refCanvas.getContext('2d');
     if (refCtx) {
       refCtx.scale(dpr, dpr);
-      refCtx.font = `${rect.width * 0.7}px sans-serif`;
+      refCtx.font = `${size * 0.7}px sans-serif`;
       refCtx.textAlign = 'center';
       refCtx.textBaseline = 'middle';
       refCtx.fillStyle = 'white';
-      refCtx.fillText(exercise.targetChar, rect.width / 2, rect.height / 2);
-      refCtx.lineWidth = 4;
+      refCtx.fillText(targetChar, size / 2, size / 2);
+      refCtx.lineWidth = 3;
       refCtx.strokeStyle = 'white';
-      refCtx.strokeText(exercise.targetChar, rect.width / 2, rect.height / 2);
+      refCtx.strokeText(targetChar, size / 2, size / 2);
     }
     refCanvasRef.current = refCanvas;
 
-    // Reveal canvas: starts empty, accumulates brush strokes
     const revealCanvas = document.createElement('canvas');
-    revealCanvas.width = pxW;
-    revealCanvas.height = pxH;
+    revealCanvas.width = px;
+    revealCanvas.height = px;
     revealCanvasRef.current = revealCanvas;
 
-    // Temp canvas: scratch for compositing
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = pxW;
-    tempCanvas.height = pxH;
+    tempCanvas.width = px;
+    tempCanvas.height = px;
     const tempCtx = tempCanvas.getContext('2d');
     if (tempCtx) tempCtx.scale(dpr, dpr);
     tempCanvasRef.current = tempCanvas;
 
-    // Draw initial scene (gray guide)
     drawScene();
-  }, [exercise.targetChar, drawScene]);
+  }, [targetChar, drawScene]);
 
   const getPoint = useCallback((e: React.TouchEvent | React.MouseEvent): Point | null => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-
     if ('touches' in e) {
       const touch = e.touches[0];
       if (!touch) return null;
@@ -208,7 +202,6 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top };
   }, []);
 
-  /** Paint a circle on revealCanvas at CSS coords (no redraw — caller redraws). */
   const stampCircle = useCallback((revealCtx: CanvasRenderingContext2D, x: number, y: number, radius: number) => {
     const dpr = dprRef.current;
     revealCtx.beginPath();
@@ -216,29 +209,25 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     revealCtx.fill();
   }, []);
 
-  /** Reveal along a line with velocity-based brush width, then redraw once. */
   const revealStroke = useCallback((from: Point | null, to: Point, now: number) => {
     const revealCanvas = revealCanvasRef.current;
     if (!revealCanvas) return;
     const revealCtx = revealCanvas.getContext('2d');
     if (!revealCtx) return;
 
-    // Compute velocity → brush radius
     let radius = BRUSH_MAX;
     if (from) {
       const dx = to.x - from.x;
       const dy = to.y - from.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const dt = Math.max(now - prevTimeRef.current, 1); // ms
-      const velocity = dist / dt; // px/ms
-      const t = Math.min(velocity / VELOCITY_CAP, 1); // 0=slow, 1=fast
-      const target = BRUSH_MAX - t * (BRUSH_MAX - BRUSH_MIN);
-      // Smooth toward target (ease 40%) for natural feel
+      const dt = Math.max(now - prevTimeRef.current, 1);
+      const velocity = dist / dt;
+      const f = Math.min(velocity / VELOCITY_CAP, 1);
+      const target = BRUSH_MAX - f * (BRUSH_MAX - BRUSH_MIN);
       radius = curBrushRef.current + (target - curBrushRef.current) * 0.4;
     }
     curBrushRef.current = radius;
 
-    // Stamp circles along the path
     revealCtx.save();
     revealCtx.setTransform(1, 0, 0, 1, 0, 0);
     revealCtx.fillStyle = 'white';
@@ -249,7 +238,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
       const dx = to.x - from.x;
       const dy = to.y - from.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const step = Math.max(radius * 0.4, 1); // tighter spacing for smooth coverage
+      const step = Math.max(radius * 0.4, 1);
       const steps = Math.max(Math.ceil(dist / step), 1);
       for (let i = 0; i <= steps; i++) {
         const frac = i / steps;
@@ -261,38 +250,6 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     drawScene();
   }, [drawScene, stampCircle]);
 
-  const startDraw = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    if (submitted) return;
-    e.preventDefault();
-    setDrawing(true);
-    setHasDrawn(true);
-    const pt = getPoint(e);
-    if (pt) {
-      const now = performance.now();
-      prevPointRef.current = pt;
-      prevTimeRef.current = now;
-      curBrushRef.current = BRUSH_MAX; // start thick (pen down)
-      revealStroke(null, pt, now);
-    }
-  }, [getPoint, submitted, revealStroke]);
-
-  const draw = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    if (!drawing || submitted) return;
-    e.preventDefault();
-    const pt = getPoint(e);
-    if (!pt) return;
-
-    const now = performance.now();
-    revealStroke(prevPointRef.current, pt, now);
-    prevPointRef.current = pt;
-    prevTimeRef.current = now;
-  }, [drawing, getPoint, submitted, revealStroke]);
-
-  const endDraw = useCallback(() => {
-    setDrawing(false);
-    prevPointRef.current = null;
-  }, []);
-
   const computeScore = useCallback((): number => {
     const refCanvas = refCanvasRef.current;
     const revealCanvas = revealCanvasRef.current;
@@ -300,7 +257,6 @@ export function StrokeTracing({ exercise, onResult }: Props) {
 
     const w = refCanvas.width;
     const h = refCanvas.height;
-
     const refCtx = refCanvas.getContext('2d');
     const revealCtx = revealCanvas.getContext('2d');
     if (!refCtx || !revealCtx) return 0;
@@ -312,70 +268,412 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     let revealedPixels = 0;
 
     for (let i = 0; i < refData.length; i += 4) {
-      const refAlpha = refData[i + 3];
-      const revealAlpha = revealData[i + 3];
-      const isRef = refAlpha > ALPHA_THRESHOLD;
-      const isRevealed = revealAlpha > ALPHA_THRESHOLD;
-
-      if (isRef) {
+      if (refData[i + 3] > ALPHA_THRESHOLD) {
         refPixels++;
-        if (isRevealed) revealedPixels++;
+        if (revealData[i + 3] > ALPHA_THRESHOLD) revealedPixels++;
       }
     }
 
-    if (refPixels === 0) return 0;
-    return revealedPixels / refPixels;
+    return refPixels === 0 ? 0 : revealedPixels / refPixels;
   }, []);
 
-  const handleSubmit = useCallback(() => {
+  const startDraw = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    if (!active || cellState.done) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDrawing(true);
+    setHasDrawn(true);
+    const pt = getPoint(e);
+    if (pt) {
+      const now = performance.now();
+      prevPointRef.current = pt;
+      prevTimeRef.current = now;
+      curBrushRef.current = BRUSH_MAX;
+      revealStroke(null, pt, now);
+    }
+  }, [active, cellState.done, getPoint, revealStroke]);
+
+  const moveDraw = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    if (!drawing || !active || cellState.done) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pt = getPoint(e);
+    if (!pt) return;
+    const now = performance.now();
+    revealStroke(prevPointRef.current, pt, now);
+    prevPointRef.current = pt;
+    prevTimeRef.current = now;
+  }, [drawing, active, cellState.done, getPoint, revealStroke]);
+
+  const endDraw = useCallback(() => {
+    if (!drawing) return;
+    setDrawing(false);
+    prevPointRef.current = null;
+
+    // Auto-submit on pen-up if user has drawn
+    if (hasDrawn && active && !cellState.done) {
+      const score = computeScore();
+      if (score >= PASS_THRESHOLD) {
+        onPass(score);
+      } else if (score > 0.15) {
+        // Some effort but not enough — let them keep going
+      } else {
+        // Barely drew anything — ignore
+      }
+    }
+  }, [drawing, hasDrawn, active, cellState.done, computeScore, onPass]);
+
+  const borderColor = cellState.done
+    ? 'rgba(240, 192, 64, 0.4)'
+    : active
+      ? 'rgba(255,255,255,0.3)'
+      : 'rgba(255,255,255,0.08)';
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        aspectRatio: '1',
+        borderRadius: 8,
+        border: `1.5px solid ${borderColor}`,
+        background: active ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
+        overflow: 'hidden',
+        transition: 'border-color 0.3s, background 0.3s',
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          touchAction: active && !cellState.done ? 'none' : 'auto',
+          cursor: active && !cellState.done ? 'crosshair' : 'default',
+          pointerEvents: active && !cellState.done ? 'auto' : 'none',
+        }}
+        onMouseDown={startDraw}
+        onMouseMove={moveDraw}
+        onMouseUp={endDraw}
+        onMouseLeave={endDraw}
+        onTouchStart={startDraw}
+        onTouchMove={moveDraw}
+        onTouchEnd={endDraw}
+      />
+      {cellState.done && (
+        <div style={{
+          position: 'absolute',
+          bottom: 2,
+          right: 4,
+          fontSize: 10,
+          opacity: 0.4,
+          color: GOLD_COLOR,
+        }}>
+          {Math.round(cellState.score * 100)}%
+        </div>
+      )}
+      {/* Cell number */}
+      <div style={{
+        position: 'absolute',
+        top: 2,
+        left: 4,
+        fontSize: 9,
+        opacity: 0.2,
+      }}>
+        {cellIndex + 1}
+      </div>
+    </div>
+  );
+}
+
+/* ── Main component ───────────────────────────────────────── */
+
+export function StrokeTracing({ exercise, onResult }: Props) {
+  const lang = useUILang();
+  const totalReps = exercise.reps ?? 1;
+  const isDrill = totalReps > 1;
+  const ttsLang = exercise.language ?? 'ko';
+
+  // Single-trace mode refs (only used when totalReps === 1)
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const refCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const revealCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const tempCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const prevPointRef = useRef<Point | null>(null);
+  const prevTimeRef = useRef(0);
+  const curBrushRef = useRef(BRUSH_MAX);
+  const dprRef = useRef(2);
+  const cssSizeRef = useRef({ w: 0, h: 0 });
+
+  const [drawing, setDrawing] = useState(false);
+  const [hasDrawn, setHasDrawn] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [result, setResult] = useState<{ correct: boolean; score: number } | null>(null);
+
+  // Drill mode state
+  const [cellStates, setCellStates] = useState<CellState[]>(
+    () => Array.from({ length: totalReps }, () => ({ done: false, score: 0 })),
+  );
+  const [activeCell, setActiveCell] = useState(0);
+  const allDone = isDrill && cellStates.every((c) => c.done);
+
+  /** Ghost opacity per cell in drill mode. */
+  const cellGhostOpacity = useCallback((idx: number) => {
+    if (totalReps <= 1) return 0.35;
+    // First quarter: full ghost, then fade linearly, last quarter: no ghost
+    const progress = idx / (totalReps - 1);
+    return Math.max(0, 0.35 * (1 - progress * 1.2));
+  }, [totalReps]);
+
+  const handleCellPass = useCallback((cellIdx: number, score: number) => {
+    setCellStates((prev) => {
+      const next = [...prev];
+      next[cellIdx] = { done: true, score };
+      return next;
+    });
+    // Play a quick tick sound via TTS
+    playTTS(exercise.sound ?? exercise.targetChar, ttsLang);
+    // Advance to next cell
+    if (cellIdx < totalReps - 1) {
+      setActiveCell(cellIdx + 1);
+    }
+  }, [totalReps, exercise.sound, exercise.targetChar, ttsLang]);
+
+  // Detect all-done for drill
+  useEffect(() => {
+    if (isDrill && cellStates.every((c) => c.done)) {
+      const avgScore = cellStates.reduce((a, c) => a + c.score, 0) / cellStates.length;
+      if (exercise.meaning) {
+        const localMeaning = getMeaning(exercise.meaning, lang, exercise.targetChar);
+        playTTS(exercise.sound ?? exercise.targetChar, ttsLang, localMeaning, lang);
+      }
+      onResult(true, `${totalReps} reps, avg ${Math.round(avgScore * 100)}%`);
+    }
+  }, [cellStates, isDrill, totalReps, exercise, ttsLang, lang, onResult]);
+
+  /* ── Single-trace mode (original) ─────────────────────────── */
+
+  const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
+    ctx.save();
+    ctx.font = `${cssW * 0.7}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = color;
+    ctx.fillText(exercise.targetChar, cssW / 2, cssW / 2);
+    ctx.restore();
+  }, [exercise.targetChar]);
+
+  const drawScene = useCallback(() => {
+    const canvas = canvasRef.current;
+    const revealCanvas = revealCanvasRef.current;
+    const tempCanvas = tempCanvasRef.current;
+    if (!canvas || !revealCanvas || !tempCanvas) return;
+    const ctx = canvas.getContext('2d');
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!ctx || !tempCtx) return;
+    const dpr = dprRef.current;
+    const { w: cssW } = cssSizeRef.current;
+    const pxW = cssW * dpr;
+
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, pxW, pxW); ctx.restore();
+    drawChar(ctx, 'rgba(100, 120, 150, 0.35)', cssW);
+
+    tempCtx.save(); tempCtx.setTransform(1, 0, 0, 1, 0, 0); tempCtx.clearRect(0, 0, pxW, pxW); tempCtx.restore();
+    drawChar(tempCtx, GOLD_COLOR, cssW);
+    tempCtx.save(); tempCtx.setTransform(1, 0, 0, 1, 0, 0);
+    tempCtx.globalCompositeOperation = 'destination-in';
+    tempCtx.drawImage(revealCanvas, 0, 0);
+    tempCtx.restore();
+
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(tempCanvas, 0, 0); ctx.restore();
+  }, [drawChar]);
+
+  useEffect(() => {
+    if (isDrill) return; // Skip for drill mode
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 2;
+    dprRef.current = dpr;
+    cssSizeRef.current = { w: rect.width, h: rect.height };
+    const pxW = rect.width * dpr;
+    const pxH = rect.height * dpr;
+
+    canvas.width = pxW; canvas.height = pxH;
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.scale(dpr, dpr);
+
+    const refCanvas = document.createElement('canvas');
+    refCanvas.width = pxW; refCanvas.height = pxH;
+    const refCtx = refCanvas.getContext('2d');
+    if (refCtx) {
+      refCtx.scale(dpr, dpr);
+      refCtx.font = `${rect.width * 0.7}px sans-serif`;
+      refCtx.textAlign = 'center'; refCtx.textBaseline = 'middle';
+      refCtx.fillStyle = 'white';
+      refCtx.fillText(exercise.targetChar, rect.width / 2, rect.height / 2);
+      refCtx.lineWidth = 4; refCtx.strokeStyle = 'white';
+      refCtx.strokeText(exercise.targetChar, rect.width / 2, rect.height / 2);
+    }
+    refCanvasRef.current = refCanvas;
+
+    const revealCanvas = document.createElement('canvas');
+    revealCanvas.width = pxW; revealCanvas.height = pxH;
+    revealCanvasRef.current = revealCanvas;
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = pxW; tempCanvas.height = pxH;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (tempCtx) tempCtx.scale(dpr, dpr);
+    tempCanvasRef.current = tempCanvas;
+
+    drawScene();
+  }, [exercise.targetChar, drawScene, isDrill]);
+
+  const getPoint = useCallback((e: React.TouchEvent | React.MouseEvent): Point | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    if ('touches' in e) {
+      const touch = e.touches[0];
+      if (!touch) return null;
+      return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+    }
+    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top };
+  }, []);
+
+  const stampCircle = useCallback((revealCtx: CanvasRenderingContext2D, x: number, y: number, radius: number) => {
+    const dpr = dprRef.current;
+    revealCtx.beginPath();
+    revealCtx.arc(x * dpr, y * dpr, radius * dpr, 0, Math.PI * 2);
+    revealCtx.fill();
+  }, []);
+
+  const revealStroke = useCallback((from: Point | null, to: Point, now: number) => {
+    const revealCanvas = revealCanvasRef.current;
+    if (!revealCanvas) return;
+    const revealCtx = revealCanvas.getContext('2d');
+    if (!revealCtx) return;
+
+    let radius = BRUSH_MAX;
+    if (from) {
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const dt = Math.max(now - prevTimeRef.current, 1);
+      const velocity = dist / dt;
+      const f = Math.min(velocity / VELOCITY_CAP, 1);
+      const target = BRUSH_MAX - f * (BRUSH_MAX - BRUSH_MIN);
+      radius = curBrushRef.current + (target - curBrushRef.current) * 0.4;
+    }
+    curBrushRef.current = radius;
+
+    revealCtx.save(); revealCtx.setTransform(1, 0, 0, 1, 0, 0); revealCtx.fillStyle = 'white';
+    if (!from) {
+      stampCircle(revealCtx, to.x, to.y, radius);
+    } else {
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const step = Math.max(radius * 0.4, 1);
+      const steps = Math.max(Math.ceil(dist / step), 1);
+      for (let i = 0; i <= steps; i++) {
+        const frac = i / steps;
+        stampCircle(revealCtx, from.x + dx * frac, from.y + dy * frac, radius);
+      }
+    }
+    revealCtx.restore();
+    drawScene();
+  }, [drawScene, stampCircle]);
+
+  const startDraw_single = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    if (submitted) return;
+    e.preventDefault();
+    setDrawing(true); setHasDrawn(true);
+    const pt = getPoint(e);
+    if (pt) {
+      const now = performance.now();
+      prevPointRef.current = pt; prevTimeRef.current = now;
+      curBrushRef.current = BRUSH_MAX;
+      revealStroke(null, pt, now);
+    }
+  }, [getPoint, submitted, revealStroke]);
+
+  const draw_single = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    if (!drawing || submitted) return;
+    e.preventDefault();
+    const pt = getPoint(e);
+    if (!pt) return;
+    const now = performance.now();
+    revealStroke(prevPointRef.current, pt, now);
+    prevPointRef.current = pt; prevTimeRef.current = now;
+  }, [drawing, getPoint, submitted, revealStroke]);
+
+  const endDraw_single = useCallback(() => {
+    setDrawing(false); prevPointRef.current = null;
+  }, []);
+
+  const computeScore_single = useCallback((): number => {
+    const refCanvas = refCanvasRef.current;
+    const revealCanvas = revealCanvasRef.current;
+    if (!refCanvas || !revealCanvas) return 0;
+    const w = refCanvas.width; const h = refCanvas.height;
+    const refCtx = refCanvas.getContext('2d');
+    const revealCtx = revealCanvas.getContext('2d');
+    if (!refCtx || !revealCtx) return 0;
+    const refData = refCtx.getImageData(0, 0, w, h).data;
+    const revealData = revealCtx.getImageData(0, 0, w, h).data;
+    let refPixels = 0; let revealedPixels = 0;
+    for (let i = 0; i < refData.length; i += 4) {
+      if (refData[i + 3] > ALPHA_THRESHOLD) {
+        refPixels++;
+        if (revealData[i + 3] > ALPHA_THRESHOLD) revealedPixels++;
+      }
+    }
+    return refPixels === 0 ? 0 : revealedPixels / refPixels;
+  }, []);
+
+  const handleSubmit_single = useCallback(() => {
     if (!hasDrawn || submitted) return;
     setSubmitted(true);
-
-    const score = computeScore();
+    const score = computeScore_single();
     const correct = score >= PASS_THRESHOLD;
-
-    // Auto-play sound + meaning in preferred language on completion
     if (correct && exercise.meaning) {
       const localMeaning = getMeaning(exercise.meaning, lang, exercise.targetChar);
       playTTS(exercise.sound ?? exercise.targetChar, ttsLang, localMeaning, lang);
     } else if (correct) {
       playTTS(exercise.sound ?? exercise.targetChar, ttsLang);
     }
-
     setResult({ correct, score });
     onResult(correct, `${Math.round(score * 100)}% coverage`);
-  }, [hasDrawn, submitted, computeScore, onResult, exercise, ttsLang, lang]);
+  }, [hasDrawn, submitted, computeScore_single, onResult, exercise, ttsLang, lang]);
 
-  const handleClear = useCallback(() => {
+  const handleClear_single = useCallback(() => {
     if (submitted) return;
-
-    // Clear the reveal canvas
     const revealCanvas = revealCanvasRef.current;
     if (revealCanvas) {
       const revealCtx = revealCanvas.getContext('2d');
       if (revealCtx) {
-        revealCtx.save();
-        revealCtx.setTransform(1, 0, 0, 1, 0, 0);
+        revealCtx.save(); revealCtx.setTransform(1, 0, 0, 1, 0, 0);
         revealCtx.clearRect(0, 0, revealCanvas.width, revealCanvas.height);
         revealCtx.restore();
       }
     }
-
-    prevPointRef.current = null;
-    setHasDrawn(false);
-
-    // Redraw scene (gray guide, no gold)
+    prevPointRef.current = null; setHasDrawn(false);
     drawScene();
   }, [submitted, drawScene]);
 
+  /* ── Render ───────────────────────────────────────────────── */
+
+  // Determine grid columns based on total reps
+  const cols = totalReps <= 4 ? 2 : totalReps <= 9 ? 3 : 4;
+
   return (
     <div className="exercise-card p-5">
-      <p className="text-lg font-medium mb-4 text-ko m-0">{exercise.prompt}</p>
+      <p className="text-lg font-medium mb-3 text-ko m-0">{exercise.prompt}</p>
 
       {/* Target character + romanization + sound */}
-      <div style={{ textAlign: 'center', marginBottom: 12 }}>
+      <div style={{ textAlign: 'center', marginBottom: isDrill ? 8 : 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <span style={{ fontSize: 48, opacity: 0.6 }} className="text-ko">
+          <span style={{ fontSize: isDrill ? 36 : 48, opacity: 0.6 }} className="text-ko">
             {exercise.targetChar}
           </span>
           <button
@@ -384,109 +682,166 @@ export function StrokeTracing({ exercise, onResult }: Props) {
               background: 'rgba(255,255,255,0.1)',
               border: 'none',
               borderRadius: '50%',
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 18,
               flexShrink: 0,
             }}
             aria-label="Play sound"
           >
-            🔊
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.6 }}>
+              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+            </svg>
           </button>
         </div>
         {exercise.romanization && (
-          <div style={{ fontSize: 16, opacity: 0.5, marginTop: 2 }}>
+          <div style={{ fontSize: 14, opacity: 0.5, marginTop: 2 }}>
             {exercise.romanization}
           </div>
         )}
         {exercise.meaning && exercise.meaning !== exercise.romanization && (
-          <div style={{ fontSize: 14, opacity: 0.4, marginTop: 2 }}>
+          <div style={{ fontSize: 13, opacity: 0.4, marginTop: 1 }}>
             {getMeaning(exercise.meaning, lang, exercise.targetChar)}
           </div>
         )}
       </div>
 
-      {/* Drawing canvas */}
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '1', maxWidth: 280, margin: '0 auto' }}>
-        <canvas
-          ref={canvasRef}
-          style={{
-            width: '100%',
-            height: '100%',
-            borderRadius: 12,
-            background: 'rgba(255,255,255,0.05)',
-            border: '2px solid rgba(255,255,255,0.1)',
-            touchAction: submitted ? 'auto' : 'none',
-            cursor: submitted ? 'default' : 'crosshair',
-            pointerEvents: submitted ? 'none' : 'auto',
-          }}
-          onMouseDown={startDraw}
-          onMouseMove={draw}
-          onMouseUp={endDraw}
-          onMouseLeave={endDraw}
-          onTouchStart={startDraw}
-          onTouchMove={draw}
-          onTouchEnd={endDraw}
-        />
-      </div>
-
-      {!submitted && (
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-          <button
-            onClick={handleClear}
-            className="flex-1 rounded-lg py-3 font-semibold bg-white/10 text-[var(--color-text-muted)] transition hover:bg-white/20"
+      {isDrill ? (
+        /* ── Drill mode: grid of mini canvases ────────────────── */
+        <>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${cols}, 1fr)`,
+              gap: 6,
+              maxWidth: 360,
+              margin: '0 auto',
+            }}
           >
-            {t('clear', lang)}
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!hasDrawn}
-            className={cn(
-              'flex-1 rounded-lg py-3 font-semibold transition',
-              hasDrawn
-                ? 'bg-[var(--color-accent-gold)] text-[#1a1a2e] hover:brightness-110'
-                : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
-            )}
-          >
-            {t('done', lang)}
-          </button>
-        </div>
-      )}
+            {cellStates.map((cell, i) => (
+              <CellCanvas
+                key={i}
+                targetChar={exercise.targetChar}
+                ghostOpacity={cellGhostOpacity(i)}
+                cellIndex={i}
+                active={i === activeCell}
+                cellState={cell}
+                onPass={(score) => handleCellPass(i, score)}
+                onFail={() => {}}
+              />
+            ))}
+          </div>
 
-      {submitted && result && (
-        <div
-          className={cn(
-            'mt-4 rounded-lg px-4 py-3 text-center text-sm',
-            result.correct
-              ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]'
-              : 'bg-red-500/20 text-red-400',
+          {/* Freehand hint */}
+          {cellGhostOpacity(activeCell) <= 0.01 && !allDone && (
+            <div style={{ textAlign: 'center', fontSize: 13, opacity: 0.5, marginTop: 8 }}>
+              {t('stroke_freehand', lang)}
+            </div>
           )}
-        >
-          {result.correct ? (
-            <>
-              {t('stroke_done', lang)}
+
+          {/* Drill progress */}
+          <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.3, marginTop: 8 }}>
+            {cellStates.filter((c) => c.done).length}/{totalReps}
+          </div>
+
+          {allDone && (
+            <div className="mt-3 rounded-lg px-4 py-3 text-center text-sm bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]">
+              {t('stroke_drill_done', lang)}
               {exercise.meaning && (
                 <div className="mt-1 text-sm font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
                   {exercise.targetChar} = {getMeaning(exercise.meaning, lang, exercise.targetChar)}
                 </div>
               )}
               <div className="mt-1 text-xs opacity-70">
-                {t('stroke_score', lang)}: {Math.round(result.score * 100)}%
+                {totalReps} reps &middot; avg {Math.round(cellStates.reduce((a, c) => a + c.score, 0) / cellStates.length * 100)}%
               </div>
-            </>
-          ) : (
-            <>
-              {t('stroke_try_again', lang)}
-              <div className="mt-1 text-xs opacity-70">
-                {t('stroke_score', lang)}: {Math.round(result.score * 100)}%
-              </div>
-            </>
+            </div>
           )}
-        </div>
+        </>
+      ) : (
+        /* ── Single-trace mode (original) ─────────────────────── */
+        <>
+          <div style={{ position: 'relative', width: '100%', aspectRatio: '1', maxWidth: 280, margin: '0 auto' }}>
+            <canvas
+              ref={canvasRef}
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: 12,
+                background: 'rgba(255,255,255,0.05)',
+                border: '2px solid rgba(255,255,255,0.1)',
+                touchAction: submitted ? 'auto' : 'none',
+                cursor: submitted ? 'default' : 'crosshair',
+                pointerEvents: submitted ? 'none' : 'auto',
+              }}
+              onMouseDown={startDraw_single}
+              onMouseMove={draw_single}
+              onMouseUp={endDraw_single}
+              onMouseLeave={endDraw_single}
+              onTouchStart={startDraw_single}
+              onTouchMove={draw_single}
+              onTouchEnd={endDraw_single}
+            />
+          </div>
+
+          {!submitted && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button
+                onClick={handleClear_single}
+                className="flex-1 rounded-lg py-3 font-semibold bg-white/10 text-[var(--color-text-muted)] transition hover:bg-white/20"
+              >
+                {t('clear', lang)}
+              </button>
+              <button
+                onClick={handleSubmit_single}
+                disabled={!hasDrawn}
+                className={cn(
+                  'flex-1 rounded-lg py-3 font-semibold transition',
+                  hasDrawn
+                    ? 'bg-[var(--color-accent-gold)] text-[#1a1a2e] hover:brightness-110'
+                    : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
+                )}
+              >
+                {t('done', lang)}
+              </button>
+            </div>
+          )}
+
+          {submitted && result && (
+            <div
+              className={cn(
+                'mt-4 rounded-lg px-4 py-3 text-center text-sm',
+                result.correct
+                  ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]'
+                  : 'bg-red-500/20 text-red-400',
+              )}
+            >
+              {result.correct ? (
+                <>
+                  {t('stroke_done', lang)}
+                  {exercise.meaning && (
+                    <div className="mt-1 text-sm font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
+                      {exercise.targetChar} = {getMeaning(exercise.meaning, lang, exercise.targetChar)}
+                    </div>
+                  )}
+                  <div className="mt-1 text-xs opacity-70">
+                    {t('stroke_score', lang)}: {Math.round(result.score * 100)}%
+                  </div>
+                </>
+              ) : (
+                <>
+                  {t('stroke_try_again', lang)}
+                  <div className="mt-1 text-xs opacity-70">
+                    {t('stroke_score', lang)}: {Math.round(result.score * 100)}%
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/* Example words using this character */}
@@ -513,7 +868,9 @@ export function StrokeTracing({ exercise, onResult }: Props) {
                   width: '100%',
                 }}
               >
-                <span style={{ fontSize: 14, opacity: 0.4, flexShrink: 0 }}>🔊</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.4, flexShrink: 0 }}>
+                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                </svg>
                 <span className="text-ko" style={{ fontSize: 18 }}>{ex.word}</span>
                 <span style={{ fontSize: 13, opacity: 0.5 }}>{ex.romanization}</span>
                 <span style={{ fontSize: 13, opacity: 0.4, marginLeft: 'auto' }}>{getMeaning(ex.meaning, lang)}</span>

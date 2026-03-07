@@ -133,6 +133,8 @@ export interface StrokeTracingExercise {
   sound?: string;
   language?: 'ko' | 'ja' | 'zh';
   exampleWords?: { word: string; romanization: string; meaning: string }[];
+  /** Number of reps for drill mode (习字 style). Omit or 1 = single trace. */
+  reps?: number;
 }
 
 export type BlockCrushStage = 'intro' | 'recognition' | 'recall';

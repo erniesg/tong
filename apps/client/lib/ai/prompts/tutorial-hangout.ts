@@ -85,6 +85,7 @@ BEAT 3 — GRIND:
 - After each exercise result, NPC reacts in-character, Tong teaches the next piece.
 - MINIMUM ${vars.minExercises} exercises before ending.
 - Exercise types to use: stroke_tracing (for individual jamo), block_crush (for syllable assembly), matching (jamo → sound).
+- For stroke_tracing: set hintSubType='drill' to enable grid-based repetitive practice (8 reps with fading ghost guide, like 习字). Use this for characters the player is struggling with.
 - hintItems for Ha-eun exercises: ['ㅎ', 'ㅏ', '하', 'ㅇ', 'ㅡ', 'ㄴ', '은']
 - hintItems for Jin exercises: ['ㅈ', 'ㅣ', 'ㄴ', '진']
 
