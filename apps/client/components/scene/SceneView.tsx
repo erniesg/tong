@@ -20,6 +20,7 @@ interface SceneViewProps {
   npcName?: string;
   npcColor?: string;
   npcSpriteUrl?: string;
+  npcIdleVideoUrl?: string;
   currentMessage?: SessionMessage | null;
   currentExercise?: ExerciseData | null;
   choices?: DialogueChoice[] | null;
@@ -54,6 +55,7 @@ export function SceneView({
   npcName = '',
   npcColor = 'var(--color-primary)',
   npcSpriteUrl = '',
+  npcIdleVideoUrl,
   currentMessage = null,
   currentExercise = null,
   choices = null,
@@ -119,6 +121,7 @@ export function SceneView({
       {!cinematic && (
         <CharacterSprite
           spriteUrl={npcSpriteUrl}
+          idleVideoUrl={npcIdleVideoUrl}
           name={npcName}
           nameColor={npcColor}
           position="center"

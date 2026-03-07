@@ -440,6 +440,18 @@ const AGENT_TOOL_DEFINITIONS = [
     path: '/api/v1/tools/invoke',
     args: {},
   },
+  // ── Scene Builder tools ──────────────────────────────────────────
+  {
+    name: 'scene-builder.generate-images',
+    description: 'Generate scene sketch images for a Scene Builder exercise. Takes an array of scene descriptions and generates images in parallel via Replicate. Returns image URLs for each scene.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      scenes: 'array (required) – [{ prompt: "image generation prompt", sceneNumber: 1 }, ...]',
+      aspect_ratio: '16:9|1:1|9:16 (optional, default 16:9)',
+      style: 'string (optional) – style prefix, e.g. "pencil sketch storyboard style"',
+    },
+  },
 ];
 
 function jsonResponse(res, statusCode, payload) {
@@ -1269,6 +1281,58 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
         payload: { ok: true, tool: toolName, result: getCharacterPresets() },
       };
     }
+    case 'scene-builder.generate-images': {
+      try {
+        const scenes = args.scenes;
+        if (!Array.isArray(scenes) || scenes.length === 0) {
+          return {
+            statusCode: 400,
+            payload: { ok: false, tool: toolName, error: 'scenes array is required' },
+          };
+        }
+
+        const style = args.style || 'cinematic storyboard concept art, film scene sketch';
+        const aspectRatio = args.aspect_ratio || '16:9';
+
+        // Generate all scene images in parallel
+        const results = await Promise.allSettled(
+          scenes.map(async (scene) => {
+            const fullPrompt = `${style}, ${scene.prompt}`;
+            const result = await replicateGenerateImage({
+              prompt: fullPrompt,
+              aspect_ratio: aspectRatio,
+              output_format: 'jpg',
+              number_of_images: 1,
+            });
+            return {
+              sceneNumber: scene.sceneNumber,
+              imageUrl: result.images?.[0] ?? null,
+              predictionId: result.id,
+              error: result.error,
+            };
+          })
+        );
+
+        const sceneResults = results.map((r, i) => {
+          if (r.status === 'fulfilled') return r.value;
+          return {
+            sceneNumber: scenes[i].sceneNumber,
+            imageUrl: null,
+            error: r.reason?.message || 'Generation failed',
+          };
+        });
+
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result: { scenes: sceneResults } },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
     default:
       return {
         statusCode: 404,
@@ -1489,6 +1553,43 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/v1/learn/sessions' && req.method === 'POST') {
       const body = await readJsonBody(req);
       jsonResponse(res, 200, createLearnSession(body));
+      return;
+    }
+
+    /* ── Director: publish generated content ────────────────── */
+    if (pathname === '/api/v1/director/publish' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const contentDir = path.join(repoRoot, 'apps/server/data/content');
+      if (!fs.existsSync(contentDir)) fs.mkdirSync(contentDir, { recursive: true });
+
+      const { pipelineId, concept, characters, curriculum, backdrop } = body;
+      const outPath = path.join(contentDir, `${pipelineId.replace(':', '_')}.json`);
+      fs.writeFileSync(outPath, JSON.stringify({ pipelineId, concept, characters, curriculum, backdrop, publishedAt: new Date().toISOString() }, null, 2));
+      console.log(`[director] Published ${pipelineId} → ${outPath}`);
+      jsonResponse(res, 200, { ok: true, pipelineId, path: outPath });
+      return;
+    }
+
+    if (pathname === '/api/v1/director/content' && req.method === 'GET') {
+      const contentDir = path.join(repoRoot, 'apps/server/data/content');
+      if (!fs.existsSync(contentDir)) {
+        jsonResponse(res, 200, { items: [] });
+        return;
+      }
+      const files = fs.readdirSync(contentDir).filter(f => f.endsWith('.json'));
+      const items = files.map(f => JSON.parse(fs.readFileSync(path.join(contentDir, f), 'utf8')));
+      jsonResponse(res, 200, { items });
+      return;
+    }
+
+    if (pathname.startsWith('/api/v1/director/content/') && req.method === 'GET') {
+      const id = pathname.replace('/api/v1/director/content/', '').replace(':', '_');
+      const filePath = path.join(repoRoot, 'apps/server/data/content', `${id}.json`);
+      if (fs.existsSync(filePath)) {
+        jsonResponse(res, 200, JSON.parse(fs.readFileSync(filePath, 'utf8')));
+      } else {
+        jsonResponse(res, 404, { error: 'not_found', id });
+      }
       return;
     }
 

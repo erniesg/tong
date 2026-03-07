@@ -208,6 +208,117 @@ const LOCATION_REGISTRY: Record<string, Location> = {
     vocabularyTargets: [],
     grammarTargets: [],
   },
+
+  /* ── Tokyo stub locations ───────────────────────────────── */
+  'tokyo:train_station': {
+    id: 'train_station',
+    cityId: 'tokyo',
+    name: { en: 'Train Station', ja: '駅' },
+    domain: 'transportation',
+    order: 0,
+    backgroundImageUrl: '',
+    ambientDescription: 'A bustling Tokyo train station with electronic departure boards and the melody of arriving trains.',
+    levels: [
+      {
+        level: 0,
+        name: 'Reading Signs',
+        description: 'Navigate the train station',
+        objectives: [],
+        estimatedSessionMinutes: 10,
+        assessmentCriteria: { minAccuracy: 0.6, minItemsCompleted: 3, requiredObjectives: [] },
+      },
+    ],
+    vocabularyTargets: [],
+    grammarTargets: [],
+  },
+
+  'tokyo:izakaya': {
+    id: 'izakaya',
+    cityId: 'tokyo',
+    name: { en: 'Izakaya', ja: '居酒屋' },
+    domain: 'dining',
+    order: 1,
+    backgroundImageUrl: '',
+    ambientDescription: 'A warm izakaya with paper lanterns, wooden counters, and the sound of clinking glasses.',
+    levels: [
+      {
+        level: 0,
+        name: 'First Round',
+        description: 'Order food and drinks at an izakaya',
+        objectives: [],
+        estimatedSessionMinutes: 10,
+        assessmentCriteria: { minAccuracy: 0.6, minItemsCompleted: 3, requiredObjectives: [] },
+      },
+    ],
+    vocabularyTargets: [],
+    grammarTargets: [],
+  },
+
+  'tokyo:konbini': {
+    id: 'konbini',
+    cityId: 'tokyo',
+    name: { en: 'Convenience Store', ja: 'コンビニ' },
+    domain: 'shopping',
+    order: 2,
+    backgroundImageUrl: '',
+    ambientDescription: 'A brightly lit konbini with onigiri, bento, and the chime of the automatic door.',
+    levels: [
+      {
+        level: 0,
+        name: 'Quick Stop',
+        description: 'Buy snacks at the konbini',
+        objectives: [],
+        estimatedSessionMinutes: 10,
+        assessmentCriteria: { minAccuracy: 0.6, minItemsCompleted: 3, requiredObjectives: [] },
+      },
+    ],
+    vocabularyTargets: [],
+    grammarTargets: [],
+  },
+
+  'tokyo:tea_house': {
+    id: 'tea_house',
+    cityId: 'tokyo',
+    name: { en: 'Tea House', ja: '茶屋' },
+    domain: 'cafe_culture',
+    order: 3,
+    backgroundImageUrl: '',
+    ambientDescription: 'A quiet traditional tea house with tatami mats, matcha, and wagashi sweets.',
+    levels: [
+      {
+        level: 0,
+        name: 'Tea Ceremony',
+        description: 'Experience a Japanese tea house',
+        objectives: [],
+        estimatedSessionMinutes: 10,
+        assessmentCriteria: { minAccuracy: 0.6, minItemsCompleted: 3, requiredObjectives: [] },
+      },
+    ],
+    vocabularyTargets: [],
+    grammarTargets: [],
+  },
+
+  'tokyo:ramen_shop': {
+    id: 'ramen_shop',
+    cityId: 'tokyo',
+    name: { en: 'Ramen Shop', ja: 'ラーメン屋' },
+    domain: 'food',
+    order: 4,
+    backgroundImageUrl: '',
+    ambientDescription: 'A tiny ramen counter with steaming bowls, a ticket machine, and the slurping of noodles.',
+    levels: [
+      {
+        level: 0,
+        name: 'Ticket Machine',
+        description: 'Order ramen from the vending machine',
+        objectives: [],
+        estimatedSessionMinutes: 10,
+        assessmentCriteria: { minAccuracy: 0.6, minItemsCompleted: 3, requiredObjectives: [] },
+      },
+    ],
+    vocabularyTargets: [],
+    grammarTargets: [],
+  },
 };
 
 /** Get a location by city and location ID. Returns null if not found. */

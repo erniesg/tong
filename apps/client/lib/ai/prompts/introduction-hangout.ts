@@ -184,7 +184,14 @@ PHASE 3: EXERCISE GRIND  [tools: tong_whisper, show_exercise, npc_speak]
   - NPC reacts in-character between exercises. ${tongName} teaches.
   - Keep going until charge hits 100%.
 
-PHASE 4: PAYOFF  [tools: tong_whisper, npc_speak, play_cinematic, end_scene]
+PHASE 4: NAME TEST  [tools: npc_speak, show_exercise, tong_whisper]
+  Gate: Player has completed a pronunciation_select exercise for ${vars.character.name.ko}.
+  - NPC challenges the player: "Can you read my name?" — this is the climactic test.
+  - show_exercise(pronunciation_select) for ${vars.character.name.ko}. STOP. Wait for result.
+  - NPC reacts in-character to the result (impressed, teasing, etc.).
+  - This is MANDATORY before moving to the farewell. Do NOT skip it.
+
+PHASE 5: FAREWELL  [tools: tong_whisper, npc_speak, play_cinematic, end_scene]
   Gate: end_scene has been called.
   NEVER break immersion — don't announce "there'll be a cinematic" or "watch this clip." Just let it happen naturally, as if the player is living it.
   This happens over MULTIPLE turns — do NOT cram it:
