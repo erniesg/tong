@@ -141,14 +141,10 @@ export function SceneView({
         <div
           className="exercise-float-wrapper"
           onClick={() => {
-            if (exerciseDone) {
-              onExerciseDismiss?.();
-            } else if (onExerciseDismiss) {
-              onExerciseDismiss();
-            }
+            if (exerciseDone) onExerciseDismiss?.();
           }}
         >
-          <div className="exercise-float-card" onClick={exerciseDone ? () => onExerciseDismiss?.() : undefined}>
+          <div className="exercise-float-card" onClick={(e) => e.stopPropagation()}>
             <ExerciseRenderer
               exercise={currentExercise}
               onResult={(correct) => {

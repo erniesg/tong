@@ -692,7 +692,8 @@ export default function GamePage() {
           hintSubType?: string | null;
         };
         let exercise: ExerciseData;
-        const parsed = parseExerciseData(args.exerciseData);
+        // For pronunciation_select, always use the generator — AI-constructed data is unreliable
+        const parsed = args.exerciseType === 'pronunciation_select' ? null : parseExerciseData(args.exerciseData);
         if (parsed) {
           exercise = parsed;
         } else {

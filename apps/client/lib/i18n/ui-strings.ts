@@ -133,6 +133,7 @@ const STRINGS: Record<string, Record<UILang, string>> = {
 
   // Pronunciation exercise
   'pron_prompt': { en: 'Listen and pick the matching character', ko: '듣고 맞는 글자를 고르세요', ja: '聞いて合う文字を選ぼう', zh: '听音选字' },
+  'pron_word_prompt': { en: 'Which one is "{0}"?', ko: '"{0}"의 발음은?', ja: '「{0}」の発音は？', zh: '"{0}"怎么读？' },
 };
 
 export function t(key: string, lang: UILang = 'en'): string {
