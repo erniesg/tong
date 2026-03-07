@@ -144,6 +144,212 @@ export interface SecretStatusResponse {
   openAiApiKeyConfigured: boolean;
 }
 
+export interface GraphPersonaGoal {
+  lang: 'ko' | 'ja' | 'zh';
+  theme: string;
+  objective: string;
+}
+
+export interface GraphPersonaSummary {
+  learnerId?: string;
+  personaId: string;
+  userId: string;
+  displayName: string;
+  focusSummary: string;
+  proficiency: UserProficiency;
+  goals: GraphPersonaGoal[];
+}
+
+export interface GraphPersonaListResponse {
+  generatedAtIso: string;
+  items: GraphPersonaSummary[];
+}
+
+export interface GraphWorldRoadmapLevel {
+  level: number;
+  label: string;
+  status: 'locked' | 'available' | 'active' | 'validated' | 'preview';
+}
+
+export interface GraphWorldRoadmapLocation {
+  locationId: LocationId;
+  label: string;
+  status: 'active' | 'preview' | 'locked';
+  progress: string;
+}
+
+export interface GraphWorldRoadmapCity {
+  cityId: CityId;
+  label: string;
+  focus: string;
+  proficiency: ProficiencyLevel;
+  locations: GraphWorldRoadmapLocation[];
+  levels: GraphWorldRoadmapLevel[];
+}
+
+export interface GraphSkillObjective {
+  objectiveId: string;
+  title: string;
+  description: string;
+  status: 'locked' | 'available' | 'learning' | 'due' | 'validated' | 'mastered';
+  mastery_score: number;
+  validatedTargetCount: number;
+  targetCount: number;
+  blockers: string[];
+  category: string;
+}
+
+export interface GraphSkillLevel {
+  level: number;
+  name: string;
+  description: string;
+  estimatedSessionMinutes: number;
+  mission: {
+    missionId: string;
+    title: string;
+    requiredObjectiveIds: string[];
+    reward: ScoreState;
+    status: 'locked' | 'tracking' | 'ready';
+  };
+  objectives: GraphSkillObjective[];
+}
+
+export interface GraphOverlayFocusCard {
+  overlayId: string;
+  lang: 'ko' | 'ja' | 'zh';
+  theme: string;
+  title: string;
+  description: string;
+  nodes: Array<{
+    nodeId: string;
+    label: string;
+    translation: string;
+    status: 'locked' | 'available' | 'active';
+  }>;
+  reason: string;
+}
+
+export interface GraphAction {
+  actionId: string;
+  type: 'lesson' | 'hangout' | 'review' | 'mission' | 'overlay';
+  title: string;
+  objectiveId: string | null;
+  cityId: CityId;
+  locationId: LocationId;
+  reason: string;
+  recommendedNodeIds: string[];
+}
+
+export interface GraphBundleTarget {
+  nodeId: string;
+  label: string;
+  status: string;
+  mastery_score: number;
+}
+
+export interface GraphLessonBundle {
+  bundleId: string;
+  cityId: CityId;
+  locationId: LocationId;
+  objectiveId: string | null;
+  title: string;
+  mode: 'learn';
+  reason: string;
+  targets: GraphBundleTarget[];
+  explainIn: AppLang;
+}
+
+export interface GraphHangoutBundle {
+  bundleId: string;
+  cityId: CityId;
+  locationId: LocationId;
+  objectiveId: string | null;
+  title: string;
+  mode: 'hangout';
+  reason: string;
+  targets: GraphBundleTarget[];
+  suggestedPhrases: string[];
+}
+
+export interface GraphDashboardResponse {
+  generatedAtIso: string;
+  persona: GraphPersonaSummary & {
+    learnerId?: string;
+    topTerms: Array<{ lemma: string; lang: 'ko' | 'ja' | 'zh'; source: 'youtube' | 'spotify'; weight: number }>;
+    mediaPreferences: {
+      youtube: string[];
+      spotify: string[];
+    };
+  };
+  progression: ScoreState;
+  worldRoadmap: GraphWorldRoadmapCity[];
+  locationSkillTree: {
+    packId: string;
+    cityId: CityId;
+    locationId: LocationId;
+    title: string;
+    levels: GraphSkillLevel[];
+  };
+  personalizedOverlay: {
+    focusCards: GraphOverlayFocusCard[];
+    summary: string;
+  };
+  nextActions: GraphAction[];
+  lessonBundle: GraphLessonBundle;
+  hangoutBundle: GraphHangoutBundle;
+  metrics: {
+    validatedObjectives: number;
+    masteredObjectives: number;
+    dueNodeCount: number;
+    evidenceCount: number;
+  };
+}
+
+export interface GraphNextActionsResponse {
+  generatedAtIso: string;
+  learnerId?: string;
+  personaId: string;
+  actions: GraphAction[];
+}
+
+export interface GraphEvidenceRecordResponse {
+  learnerId?: string;
+  personaId?: string;
+  recorded: number;
+  events: Array<{
+    eventId: string;
+    personaId: string;
+    userId: string;
+    nodeId: string;
+    objectiveId: string | null;
+    mode: 'learn' | 'hangout' | 'review' | 'mission' | 'media';
+    quality: number;
+    occurredAtIso: string;
+    source: string;
+  }>;
+  progression: ScoreState;
+  metrics: {
+    validatedObjectives: number;
+    masteredObjectives: number;
+    dueNodeCount: number;
+    evidenceCount: number;
+  };
+}
+
+export interface GraphPackValidateResponse {
+  valid: boolean;
+  errorCount: number;
+  errors: Array<{ code: string; message: string }>;
+  summary: string;
+}
+
+export interface GraphOverlayProposalResponse {
+  generatedAtIso: string;
+  learnerId?: string;
+  personaId: string;
+  overlays: GraphOverlayFocusCard[];
+}
+
 export type CityId = 'seoul' | 'tokyo' | 'shanghai';
 export type LocationId =
   | 'food_street'
@@ -413,6 +619,49 @@ export function fetchSecretStatus() {
   return apiFetch<SecretStatusResponse>('/api/v1/demo/secret-status');
 }
 
+interface FetchGraphDashboardParams {
+  personaId?: string;
+  learnerId?: string;
+  userId?: string;
+  city?: CityId;
+  location?: LocationId;
+}
+
+export function fetchGraphPersonas() {
+  return apiFetch<GraphPersonaListResponse>('/api/v1/graph/personas');
+}
+
+export function fetchGraphDashboard(params: FetchGraphDashboardParams = {}) {
+  const search = new URLSearchParams();
+  if (params.personaId) search.set('personaId', params.personaId);
+  if (params.learnerId) search.set('learnerId', params.learnerId);
+  if (params.userId) search.set('userId', params.userId);
+  if (params.city) search.set('city', params.city);
+  if (params.location) search.set('location', params.location);
+  return apiFetch<GraphDashboardResponse>(`/api/v1/graph/dashboard${search.toString() ? `?${search.toString()}` : ''}`);
+}
+
+export function fetchGraphNextActions(params: { personaId?: string; learnerId?: string; userId?: string; limit?: number } = {}) {
+  const search = new URLSearchParams();
+  if (params.personaId) search.set('personaId', params.personaId);
+  if (params.learnerId) search.set('learnerId', params.learnerId);
+  if (params.userId) search.set('userId', params.userId);
+  if (params.limit) search.set('limit', String(params.limit));
+  return apiFetch<GraphNextActionsResponse>(`/api/v1/graph/next-actions${search.toString() ? `?${search.toString()}` : ''}`);
+}
+
+export function recordGraphEvidence(body: {
+  personaId?: string;
+  userId?: string;
+  event?: Record<string, unknown>;
+  events?: Record<string, unknown>[];
+}) {
+  return apiFetch<GraphEvidenceRecordResponse>('/api/v1/graph/evidence', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 export function getApiBase() {
   return API_BASE;
 }
@@ -438,6 +687,34 @@ export function fetchTools() {
     ok: true;
     tools: Array<{ name: string; description: string; args: Record<string, unknown> }>;
   }>('/api/v1/tools');
+}
+
+export function graphDashboardTool(args: Record<string, unknown> = {}) {
+  return invokeTool<GraphDashboardResponse>('graph.dashboard.get', args);
+}
+
+export function graphNextActionsTool(args: Record<string, unknown> = {}) {
+  return invokeTool<GraphNextActionsResponse>('graph.next_actions.get', args);
+}
+
+export function graphLessonBundleTool(args: Record<string, unknown> = {}) {
+  return invokeTool<GraphLessonBundle>('graph.lesson_bundle.get', args);
+}
+
+export function graphHangoutBundleTool(args: Record<string, unknown> = {}) {
+  return invokeTool<GraphHangoutBundle>('graph.hangout_bundle.get', args);
+}
+
+export function graphEvidenceRecordTool(args: Record<string, unknown> = {}) {
+  return invokeTool<GraphEvidenceRecordResponse>('graph.evidence.record', args);
+}
+
+export function graphPackValidateTool(args: Record<string, unknown> = {}) {
+  return invokeTool<GraphPackValidateResponse>('graph.pack.validate', args);
+}
+
+export function graphOverlayProposeTool(args: Record<string, unknown> = {}) {
+  return invokeTool<GraphOverlayProposalResponse>('graph.overlay.propose', args);
 }
 
 // ── Volcengine / ByteDance tools ─────────────────────────────────────

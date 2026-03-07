@@ -1,0 +1,51 @@
+{
+  "packId": "invalid_unmapped_target_pack",
+  "version": "1.0.0",
+  "cityId": "seoul",
+  "locationId": "food_street",
+  "lang": "ko",
+  "title": "Invalid Missing Target",
+  "summary": "Fixture with an objective target that is not backed by content metadata.",
+  "goldStandard": false,
+  "contentVersionPolicy": "append_only",
+  "nodes": [
+    {
+      "nodeId": "missing_target_objective",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 0,
+      "title": "Missing Target",
+      "description": "Objective references an unmapped target item.",
+      "tags": ["test"],
+      "targetItemIds": ["ghost_target"],
+      "targetCount": 1,
+      "assessmentThreshold": 0.8,
+      "objectiveCategory": "vocabulary"
+    }
+  ],
+  "edges": [],
+  "levels": [
+    {
+      "level": 0,
+      "label": "TEST",
+      "description": "Validator fixture",
+      "objectiveNodeIds": ["missing_target_objective"],
+      "assessmentCriteria": {
+        "minAccuracy": 0.8,
+        "minItemsCompleted": 1,
+        "requiredNodeIds": ["missing_target_objective"]
+      }
+    }
+  ],
+  "scenarios": [],
+  "missions": [],
+  "content": {
+    "scriptTargets": [],
+    "pronunciationTargets": [],
+    "vocabularyTargets": [],
+    "grammarTargets": [],
+    "sentenceFrameTargets": []
+  }
+}

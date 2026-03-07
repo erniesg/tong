@@ -267,6 +267,67 @@ Request:
 }
 ```
 
+## GET `/api/v1/graph/dashboard`
+Query:
+```json
+{
+  "learnerId": "persona_kpop_prompting",
+  "city": "seoul",
+  "location": "food_street"
+}
+```
+
+Response:
+Path: `packages/contracts/fixtures/graph.dashboard.sample.json`
+
+## GET `/api/v1/graph/personas`
+Response:
+Path: `packages/contracts/fixtures/graph.personas.sample.json`
+
+## GET `/api/v1/graph/next-actions`
+Query:
+```json
+{
+  "learnerId": "persona_kpop_prompting",
+  "limit": 4
+}
+```
+
+Response:
+Path: `packages/contracts/fixtures/graph.next-actions.sample.json`
+
+## POST `/api/v1/graph/evidence`
+Request:
+```json
+{
+  "learnerId": "persona_kpop_prompting",
+  "event": {
+    "nodeId": "ko-vocab-courtesy",
+    "mode": "learn",
+    "quality": 0.86,
+    "source": "dashboard.learn"
+  }
+}
+```
+
+Response:
+Path: `packages/contracts/fixtures/graph.evidence.record.sample.json`
+
+## Graph Tool Payloads
+These are invoked through `POST /api/v1/tools/invoke`:
+
+Public contract note:
+- Use `learnerId` for graph requests and tool invocations.
+- The mocked dashboard runtime also accepts `personaId` as an alias while the first milestone is fixture-driven.
+
+- `graph.dashboard.get` -> `packages/contracts/fixtures/graph.dashboard.sample.json`
+- `graph.next_actions.get` -> `packages/contracts/fixtures/graph.next-actions.sample.json`
+- `graph.lesson_bundle.get` -> `packages/contracts/fixtures/graph.lesson-bundle.sample.json`
+- `graph.hangout_bundle.get` -> `packages/contracts/fixtures/graph.hangout-bundle.sample.json`
+- `graph.evidence.record` -> `packages/contracts/fixtures/graph.evidence.record.sample.json`
+- `graph.pack.validate` -> `packages/contracts/fixtures/graph.pack.validate.sample.json`
+- `graph.overlay.propose` -> `packages/contracts/fixtures/graph.overlay.propose.sample.json`
+
 Response:
 ```json
 {

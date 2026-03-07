@@ -15,6 +15,8 @@
     "test:api-flow:local:spotify": "node scripts/mock_api_flow_check.mjs ${TONG_LOCAL_API_BASE_URL:-http://localhost:8787} --strict-state --sources=spotify",
     "test:api-flow:worker-local": "node scripts/mock_api_flow_check.mjs ${TONG_WORKER_LOCAL_API_BASE_URL:-http://localhost:8788} --strict-state",
     "test:api-flow:cloud": "node scripts/mock_api_flow_check.mjs ${TONG_REMOTE_API_BASE_URL:-https://tong-api.erniesg.workers.dev}",
+    "test:graph-contracts": "node scripts/graph_contract_check.mjs",
+    "test:dashboard-smoke": "node scripts/dashboard_smoke_check.mjs",
     "demo:smoke": "node scripts/demo_smoke_check.mjs",
     "demo:tools": "node scripts/mock_tool_flow_check.mjs",
     "demo:judge": "./scripts/run-judge-demo.sh",
