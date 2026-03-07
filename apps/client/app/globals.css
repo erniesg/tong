@@ -2219,6 +2219,27 @@ button.nav-link:hover {
   overflow: hidden;
 }
 
+.learn-chat-topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+.learn-chat-topbar__back {
+  all: unset;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary, #5b6abf);
+}
+.learn-chat-topbar__label {
+  font-size: 13px;
+  opacity: 0.6;
+}
+
 .learn-chat-scroll {
   flex: 1;
   overflow-y: auto;

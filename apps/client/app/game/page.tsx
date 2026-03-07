@@ -213,8 +213,9 @@ export default function GamePage() {
   const devIntro = searchParams.get('dev_intro') === '1';
   const skipToHangout = phaseParam === 'hangout';
   const skipToCityMap = phaseParam === 'city_map';
+  const skipToLearn = phaseParam === 'learn';
   const [phase, setPhase] = useState<Phase>(
-    devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : 'opening'
+    devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : skipToLearn ? 'learn' : 'opening'
   );
   const openingVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -1489,7 +1490,6 @@ export default function GamePage() {
               locationId={location}
               userId="local"
               lang="ko"
-              autoStart={!reviewSession}
               initialReviewSession={reviewSession ?? undefined}
             />
           </div>
