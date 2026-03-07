@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils/cn';
 
 interface CharacterSpriteProps {
   spriteUrl: string;
+  idleVideoUrl?: string;
   name: string;
   nameColor?: string;
   position?: 'left' | 'center' | 'right';
@@ -13,6 +14,7 @@ interface CharacterSpriteProps {
 
 export function CharacterSprite({
   spriteUrl,
+  idleVideoUrl,
   name,
   nameColor = '#e8485c',
   position = 'center',
@@ -21,7 +23,7 @@ export function CharacterSprite({
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  if (!mounted || !spriteUrl) return null;
+  if (!mounted || (!spriteUrl && !idleVideoUrl)) return null;
 
   return (
     <div
@@ -33,18 +35,27 @@ export function CharacterSprite({
         position === 'right' && 'slide-in-right',
       )}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={spriteUrl}
-        alt={name}
-        className="h-full w-full object-cover object-top"
-        style={{
-          maskImage: 'linear-gradient(to bottom, transparent 0%, black 8px, black calc(100% - 10px), transparent 100%), linear-gradient(to right, transparent 0%, black 8px, black calc(100% - 8px), transparent 100%)',
-          maskComposite: 'intersect',
-          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 8px, black calc(100% - 10px), transparent 100%), linear-gradient(to right, transparent 0%, black 8px, black calc(100% - 8px), transparent 100%)',
-          WebkitMaskComposite: 'source-in',
-        }}
-      />
+      {idleVideoUrl ? (
+        <video
+          src={idleVideoUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="h-full w-full object-cover object-top"
+        />
+      ) : (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={spriteUrl}
+          alt={name}
+          className="h-full w-full object-cover object-top"
+          style={{
+            maskImage: 'linear-gradient(to bottom, transparent 0%, black 8px, black calc(100% - 10px), transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 8px, black calc(100% - 10px), transparent 100%)',
+          }}
+        />
+      )}
     </div>
   );
 }
