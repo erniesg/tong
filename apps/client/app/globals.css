@@ -2325,9 +2325,21 @@ button.nav-link:hover {
 }
 
 .learn-exercise-review__pair--wrong {
-  background: rgba(229, 57, 53, 0.1);
+  background: rgba(229, 57, 53, 0.08);
   color: #c62828;
+}
+
+.learn-exercise-review__pair--wrong > span:nth-child(3) {
   text-decoration: line-through;
+}
+
+.learn-exercise-review__correction {
+  color: #2e7d32;
+  font-weight: 600;
+  font-size: 13px;
+  margin-left: auto;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .learn-exercise-review__options {
@@ -2397,13 +2409,8 @@ button.nav-link:hover {
   margin-left: 4px;
 }
 
-.learn-exercise-review--correct {
-  border-left: 3px solid #4caf50;
-}
-
-.learn-exercise-review--wrong {
-  border-left: 3px solid #e53935;
-}
+.learn-exercise-review--correct {}
+.learn-exercise-review--wrong {}
 
 .learn-exercise-review__arrow {
   font-size: 12px;
