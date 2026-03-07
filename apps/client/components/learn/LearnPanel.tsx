@@ -10,6 +10,12 @@ import { getCitySkin } from '@/lib/theme/city-skins';
 import { dispatch as gameDispatch, useGameState, getMasterySnapshot } from '@/lib/store/game-store';
 import { dispatchSession, useSessionState, type CompletedSession } from '@/lib/store/session-store';
 import { getLocationOrDefault } from '@/lib/content/locations';
+import {
+  getGraphRuntimeLearnerId,
+  looksLikeGraphNodeId,
+  normalizeGraphNodeId,
+  recordGraphEvidence,
+} from '@/lib/api';
 
 import { useUILang } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
@@ -66,6 +72,7 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
   const scrollRef = useRef<HTMLDivElement>(null);
   const processedToolCallsRef = useRef(new Set<string>());
   const pausedRef = useRef(false);
+  const sessionNodeIdsRef = useRef<string[]>([]);
 
   // Auto-scroll to bottom on new entries
   useEffect(() => {
@@ -108,6 +115,31 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
 
     return `[LEARN_CONTEXT]${JSON.stringify(ctx)}[/LEARN_CONTEXT]`;
   }, [cityId, locationId, gameState, sessionState.activeSession]);
+
+  const recordLearnGraphEvidence = useCallback(
+    (event: {
+      nodeId: string;
+      mode: 'learn' | 'hangout' | 'review' | 'mission';
+      source: 'learn' | 'exercise' | 'hangout' | 'mission' | 'review' | 'media';
+      correct: boolean;
+      qualityScore: number;
+      metadata?: Record<string, unknown>;
+    }) => {
+      const nodeId = normalizeGraphNodeId(event.nodeId);
+      if (!looksLikeGraphNodeId(nodeId)) return;
+
+      void recordGraphEvidence({
+        learnerId: getGraphRuntimeLearnerId(),
+        event: {
+          ...event,
+          nodeId,
+        },
+      }).catch((error) => {
+        console.warn('[LearnPanel] Failed to record curriculum-graph evidence:', error);
+      });
+    },
+    [],
+  );
 
   /* ── useChat integration ──────────────────────────────── */
   const { append, isLoading } = useChat({
@@ -176,6 +208,14 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
             exercise = generateExercise(args.exerciseType as string, hints);
           }
 
+          const exerciseNodeId = normalizeGraphNodeId(exercise.objectiveId);
+          if (looksLikeGraphNodeId(exerciseNodeId)) {
+            sessionNodeIdsRef.current = [
+              ...sessionNodeIdsRef.current.filter((nodeId) => nodeId !== exerciseNodeId),
+              exerciseNodeId,
+            ];
+          }
+
           setExerciseMap((prev) => ({ ...prev, [exercise.id]: exercise }));
           setChatEntries((prev) => [
             ...prev,
@@ -220,8 +260,14 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
           const learnedItems = (args.learnedItems as { char: string; romanization: string | null }[]) ?? [];
           const xpEarned = (args.xpEarned as number) ?? 30;
           const summary = (args.summary as string) ?? '';
-
           const active = sessionState.activeSession;
+          const exercisesCompleted = active?.exercisesCompleted ?? 0;
+          const exercisesCorrect = active?.exercisesCorrect ?? 0;
+          const accuracy = exercisesCompleted > 0 ? exercisesCorrect / exercisesCompleted : 0.7;
+          const sessionNodeId =
+            [...sessionNodeIdsRef.current].reverse().find((nodeId) => looksLikeGraphNodeId(nodeId)) ||
+            (looksLikeGraphNodeId(objectiveId) ? objectiveId : null);
+
           setChatEntries((prev) => [
             ...prev,
             {
@@ -230,12 +276,31 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
               data: {
                 summary,
                 xpEarned,
-                exercisesCompleted: active?.exercisesCompleted ?? 0,
-                exercisesCorrect: active?.exercisesCorrect ?? 0,
+                exercisesCompleted,
+                exercisesCorrect,
                 learnedItems,
               },
             },
           ]);
+
+          if (sessionNodeId) {
+            recordLearnGraphEvidence({
+              nodeId: sessionNodeId,
+              mode: 'learn',
+              source: 'learn',
+              correct: exercisesCompleted === 0 ? true : accuracy >= 0.6,
+              qualityScore: Number((2.2 + Math.max(0, Math.min(1, accuracy)) * 2.8).toFixed(2)),
+              metadata: {
+                cityId,
+                locationId,
+                learnSessionId: active?.id,
+                summary,
+                learnedItems,
+                exercisesCompleted,
+                exercisesCorrect,
+              },
+            });
+          }
 
           // Award XP and SP
           gameDispatch({ type: 'ADD_XP', amount: xpEarned });
@@ -244,7 +309,7 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
         }
       }
     },
-    [objectiveId, sessionState.activeSession],
+    [cityId, locationId, objectiveId, recordLearnGraphEvidence, sessionState.activeSession],
   );
 
   /* ── Start new session ───────────────────────────────── */
@@ -259,6 +324,7 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
     setExerciseMap({});
     setActiveExercise(null);
     setChoiceSelections({});
+    sessionNodeIdsRef.current = [];
     processedToolCallsRef.current.clear();
     pausedRef.current = false;
     setMode('active');
@@ -311,6 +377,22 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
             correct,
           });
         }
+
+        recordLearnGraphEvidence({
+          nodeId: exercise.objectiveId,
+          mode: 'learn',
+          source: 'exercise',
+          correct,
+          qualityScore: correct ? 4.4 : 1.6,
+          metadata: {
+            cityId,
+            locationId,
+            learnSessionId: sessionState.activeSession?.id,
+            exerciseId,
+            exerciseType: exercise.type,
+            summary,
+          },
+        });
       }
 
       // Add result card showing exercise type + score/selection
@@ -336,7 +418,15 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
         content: `${ctx}Exercise result: ${correct ? 'correct' : 'incorrect'} (exerciseId: ${exerciseId})`,
       });
     },
-    [exerciseMap, append, buildContextBlock],
+    [
+      append,
+      buildContextBlock,
+      cityId,
+      exerciseMap,
+      locationId,
+      recordLearnGraphEvidence,
+      sessionState.activeSession?.id,
+    ],
   );
 
   /* ── Handle choice selection ─────────────────────────── */

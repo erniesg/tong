@@ -3,7 +3,18 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
-import type { CityId, LocationId, ProficiencyLevel, ScoreState, UserProficiency, AppLang } from '@/lib/api';
+import {
+  getGraphRuntimeLearnerId,
+  looksLikeGraphNodeId,
+  normalizeGraphNodeId,
+  recordGraphEvidence,
+  type CityId,
+  type LocationId,
+  type ProficiencyLevel,
+  type ScoreState,
+  type UserProficiency,
+  type AppLang,
+} from '@/lib/api';
 import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData } from '@/lib/types/hangout';
 import type { CompletedSession } from '@/lib/store/session-store';
 import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
@@ -344,6 +355,31 @@ export default function GamePage() {
   const [chargePercent, setChargePercent] = useState(0);
   const [chargeNotifShown, setChargeNotifShown] = useState(false);
   const chargeNotifFiredRef = useRef(false);
+
+  const emitGraphEvidence = useCallback(
+    (event: {
+      nodeId: string;
+      mode: 'learn' | 'hangout' | 'review' | 'mission';
+      source: 'learn' | 'exercise' | 'hangout' | 'mission' | 'review' | 'media';
+      correct: boolean;
+      qualityScore: number;
+      metadata?: Record<string, unknown>;
+    }) => {
+      const nodeId = normalizeGraphNodeId(event.nodeId);
+      if (!looksLikeGraphNodeId(nodeId)) return;
+
+      void recordGraphEvidence({
+        learnerId: getGraphRuntimeLearnerId(),
+        event: {
+          ...event,
+          nodeId,
+        },
+      }).catch((error) => {
+        console.warn('[GamePage] Failed to record curriculum-graph evidence:', error);
+      });
+    },
+    [],
+  );
 
   // Time-based charge bar: 0→100% over random duration
   useEffect(() => {
@@ -748,6 +784,21 @@ export default function GamePage() {
             dispatch({ type: 'RECORD_ITEM_RESULT', itemId, category, correct });
           }
         }
+        emitGraphEvidence({
+          nodeId: args.objectiveId,
+          mode: 'hangout',
+          source: 'hangout',
+          correct: args.score >= 70,
+          qualityScore: Number(Math.max(0, Math.min(5, (args.score / 100) * 5)).toFixed(2)),
+          metadata: {
+            cityId: city,
+            locationId: location,
+            characterId: activeNpc,
+            introHangout: isIntroHangout,
+            score: args.score,
+            feedback: args.feedback,
+          },
+        });
         console.log('[VN] assess_result dispatched:', args.objectiveId, args.score);
         break; // auto-advance
       }
@@ -823,7 +874,7 @@ export default function GamePage() {
     // Auto-advance: dequeue and release lock
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
-  }, [toolQueue, activeNpc, isIntroHangout, introAct]);
+  }, [toolQueue, activeNpc, city, emitGraphEvidence, isIntroHangout, introAct, location]);
 
   /* ── Hangout handlers ───────────────────────────────────── */
 
@@ -889,6 +940,22 @@ export default function GamePage() {
       for (const target of targets) {
         dispatch({ type: 'RECORD_ITEM_RESULT', itemId: target.itemId, category: target.category, correct });
       }
+
+      emitGraphEvidence({
+        nodeId: exercise.objectiveId,
+        mode: 'learn',
+        source: 'exercise',
+        correct,
+        qualityScore: correct ? 4.2 : 1.6,
+        metadata: {
+          cityId: city,
+          locationId: location,
+          npcId: activeNpc,
+          introHangout: isIntroHangout,
+          exerciseId,
+          exerciseType: exercise.type,
+        },
+      });
     }
 
     // Increment introduction exercise counter
@@ -896,7 +963,7 @@ export default function GamePage() {
 
     // Store result — overlay dismiss or auto-advance will pick it up
     exerciseResultRef.current = { exerciseId, correct };
-  }, [isIntroHangout, introExerciseCount, introAct]);
+  }, [activeNpc, city, emitGraphEvidence, introAct, introExerciseCount, isIntroHangout, location]);
 
   const advanceAfterExercise = useCallback(() => {
     const result = exerciseResultRef.current;
