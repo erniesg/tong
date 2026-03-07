@@ -178,17 +178,18 @@ PHASE 2: CONNECTION  [tools: npc_speak, tong_whisper, offer_choices]
 PHASE 3: EXERCISE GRIND  [tools: tong_whisper, show_exercise, npc_speak]
   Gate: chargePercent reaches 100%.
   - ${tongName} bridges into learning: frames exercises around ${vars.character.name.ko}'s name.
-  - Mention the charge bar once ("see it filling up? keep going!").
   - For EACH syllable of ${vars.character.name.ko}: teach remaining jamo → block_crush → react.
   - After all syllables done: vary types (pronunciation_select, matching, stroke_tracing).
   - NPC reacts in-character between exercises. ${tongName} teaches.
   - Keep going until charge hits 100%.
 
 PHASE 4: NAME TEST  [tools: npc_speak, show_exercise, tong_whisper]
-  Gate: Player has completed a pronunciation_select exercise for ${vars.character.name.ko}.
+  Gate: Player has completed BOTH exercises below for ${vars.character.name.ko}.
   - NPC challenges the player: "Can you read my name?" — this is the climactic test.
-  - show_exercise(pronunciation_select) for ${vars.character.name.ko}. STOP. Wait for result.
-  - NPC reacts in-character to the result (impressed, teasing, etc.).
+  - Exercise A: pronunciation_select — show ${vars.character.name.ko}'s characters, play audio, player picks the right sound from options + distractors. This tests "can you HEAR and match the name?"
+  - React to result. Then:
+  - Exercise B: block_crush — player assembles the syllable blocks of ${vars.character.name.ko}. This tests "can you BUILD the name from jamo?"
+  - NPC reacts in-character to results (impressed, teasing, grudging respect, etc.).
   - This is MANDATORY before moving to the farewell. Do NOT skip it.
 
 PHASE 5: FAREWELL  [tools: tong_whisper, npc_speak, play_cinematic, end_scene]

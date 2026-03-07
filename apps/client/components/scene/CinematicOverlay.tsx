@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { useUILang } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
 
@@ -20,7 +20,6 @@ export function CinematicOverlay({ videoUrl, autoAdvance, muted = false, onEnd }
   const triggerEnd = useCallback(() => {
     if (fadingOut) return;
     setFadingOut(true);
-    // Wait for fade-out animation to finish before unmounting
     setTimeout(() => onEnd(), 500);
   }, [fadingOut, onEnd]);
 
@@ -32,17 +31,39 @@ export function CinematicOverlay({ videoUrl, autoAdvance, muted = false, onEnd }
     if (!autoAdvance) triggerEnd();
   }, [autoAdvance, triggerEnd]);
 
+  // Autoplay with unmute fallback: browsers block unmuted autoplay without user gesture
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = muted;
+    const playPromise = v.play();
+    if (playPromise) {
+      playPromise.catch(() => {
+        // Blocked — start muted, then unmute on first tap
+        v.muted = true;
+        v.play().catch(() => {});
+      });
+    }
+  }, [videoUrl, muted]);
+
   return (
     <div
       className={`cinematic-overlay ${fadingOut ? 'cinematic-fade-out' : ''}`}
-      onClick={handleTap}
+      onClick={(e) => {
+        const v = videoRef.current;
+        if (v && v.muted && !muted) {
+          // First tap unmutes if autoplay was forced muted
+          v.muted = false;
+          return;
+        }
+        handleTap();
+      }}
       role={autoAdvance ? undefined : 'button'}
       tabIndex={autoAdvance ? undefined : 0}
     >
       <video
         ref={videoRef}
         src={videoUrl}
-        autoPlay
         playsInline
         muted={muted}
         onEnded={handleEnded}

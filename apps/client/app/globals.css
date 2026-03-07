@@ -4503,14 +4503,14 @@ button.nav-link:hover {
   box-shadow: 0 0 30px rgba(168, 85, 247, 0.3);
   z-index: 100;
   pointer-events: none;
-  animation: charge-notif-pop 3s ease-out forwards;
+  animation: charge-notif-pop 5s ease-out forwards;
 }
 
 @keyframes charge-notif-pop {
   0%   { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.9); }
-  10%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.02); }
-  15%  { transform: translateX(-50%) translateY(0) scale(1); }
-  75%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  8%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.02); }
+  12%  { transform: translateX(-50%) translateY(0) scale(1); }
+  85%  { opacity: 1; transform: translateX(-50%) translateY(0); }
   100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
 }
 
