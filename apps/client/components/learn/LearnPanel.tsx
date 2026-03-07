@@ -543,8 +543,9 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
                           {ex.type === 'drag_drop' && (
                             <div className="learn-exercise-review__pairs">
                               {ex.targets.map((tgt) => {
-                                const itemId = ex.correctMapping[tgt.id];
-                                const item = ex.items.find((it) => it.id === itemId);
+                                // correctMapping is item-id → target-id, so reverse lookup
+                                const itemEntry = Object.entries(ex.correctMapping).find(([, targetId]) => targetId === tgt.id);
+                                const item = itemEntry ? ex.items.find((it) => it.id === itemEntry[0]) : null;
                                 return (
                                   <div key={tgt.id} className="learn-exercise-review__pair">
                                     <span>{tgt.label}</span> → <span className="text-ko">{item?.text ?? '?'}</span>
