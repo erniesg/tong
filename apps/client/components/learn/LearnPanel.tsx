@@ -447,6 +447,18 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
 
       {(mode === 'active' || mode === 'review') && (
         <>
+          {mode === 'review' && (
+            <div className="learn-chat-topbar">
+              <button
+                className="learn-chat-topbar__back"
+                onClick={() => { setMode('picker'); setChatEntries([]); setExerciseMap({}); setReviewSession(null); }}
+                type="button"
+              >
+                ← {t('back', uiLang)}
+              </button>
+              <span className="learn-chat-topbar__label">{t('reviewing_session', uiLang)}</span>
+            </div>
+          )}
 
           <div ref={scrollRef} className="learn-chat-scroll">
             {chatEntries.map((entry) => {
