@@ -24,6 +24,21 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
   const lang = useUILang();
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+
+  // Guard: if AI didn't provide audioOptions, auto-generate from targetText
+  if (!exercise.audioOptions || exercise.audioOptions.length === 0) {
+    const target = exercise.targetText || '하';
+    exercise = {
+      ...exercise,
+      audioOptions: [
+        { id: 'correct', text: target },
+        { id: 'wrong1', text: target === '하' ? '가' : '하' },
+        { id: 'wrong2', text: target === '은' ? '운' : '은' },
+      ].sort(() => Math.random() - 0.5),
+      correctOptionId: 'correct',
+    };
+  }
+
   const isCorrect = selected === exercise.correctOptionId;
 
   const playSound = useCallback((text: string) => {
