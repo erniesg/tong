@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils/cn';
 
 interface CharacterSpriteProps {
@@ -22,9 +22,30 @@ export function CharacterSprite({
 }: CharacterSpriteProps) {
   const [mounted, setMounted] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   useEffect(() => { setMounted(true); }, []);
 
   const handleCanPlay = useCallback(() => { setVideoReady(true); }, []);
+
+  // Keep idle video playing — mobile Safari can pause it on DOM changes or throttling
+  useEffect(() => {
+    if (!idleVideoUrl) return;
+    const ensurePlaying = () => {
+      const v = videoRef.current;
+      if (v && v.paused && v.readyState >= 2) {
+        v.play().catch(() => {});
+      }
+    };
+    // Check on visibility change (tab switch, overlay dismiss)
+    const onVisibility = () => { if (!document.hidden) ensurePlaying(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    // Periodic check as safety net
+    const interval = setInterval(ensurePlaying, 2000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      clearInterval(interval);
+    };
+  }, [idleVideoUrl]);
 
   if (!mounted || (!spriteUrl && !idleVideoUrl)) return null;
 
@@ -42,6 +63,7 @@ export function CharacterSprite({
     >
       {idleVideoUrl ? (
         <video
+          ref={videoRef}
           src={idleVideoUrl}
           preload="auto"
           autoPlay

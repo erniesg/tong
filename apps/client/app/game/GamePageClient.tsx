@@ -1031,14 +1031,22 @@ export default function GamePageClient({
             <div className="tg-tong-intro">
               <video
                 className="tg-tong-intro-video"
-                src={TONG_INTRO_PATH}
                 autoPlay
                 muted
                 playsInline
                 preload="auto"
                 onEnded={() => setEntryPhase('onboarding')}
                 onError={() => setEntryPhase('onboarding')}
-              />
+                ref={(el) => {
+                  if (!el) return;
+                  // Timeout fallback: if video doesn't start within 3s, skip
+                  const t = setTimeout(() => { if (el.readyState < 2) setEntryPhase('onboarding'); }, 3000);
+                  el.addEventListener('playing', () => clearTimeout(t), { once: true });
+                }}
+              >
+                <source src={TONG_INTRO_PATH} type="video/webm" />
+                <source src="/assets/tong_intro_fallback.mp4" type="video/mp4" />
+              </video>
               <p className="tg-tong-intro-name">Tong</p>
               <button className="btn-skip tg-skip-bottom" type="button" onClick={() => setEntryPhase('onboarding')}>
                 Skip

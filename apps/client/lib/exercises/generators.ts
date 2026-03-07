@@ -767,6 +767,7 @@ function generateStrokeTracing(
   hintItems?: string[],
   language?: 'ko' | 'zh' | 'ja',
   explainIn: UILang = 'en',
+  hintSubType?: string,
 ): StrokeTracingExercise {
   const lang = language ?? 'ko';
 
@@ -817,6 +818,7 @@ function generateStrokeTracing(
     sound: targetItem?.word ?? target,
     language: lang,
     exampleWords: exampleWords.length > 0 ? exampleWords : undefined,
+    reps: hintSubType === 'drill' ? 8 : undefined,
   };
 }
 
@@ -989,7 +991,7 @@ export function generateExercise(exerciseType: string, hints?: ExerciseHints): E
     case 'pattern_recognition':
       return generatePatternRecognition(objectiveId, language);
     case 'stroke_tracing':
-      return generateStrokeTracing(pool, objectiveId, hintItems, language, explainIn);
+      return generateStrokeTracing(pool, objectiveId, hintItems, language, explainIn, hintSubType);
     case 'block_crush':
       return generateBlockCrush(objectiveId, language, hintItems, mastery, explainIn);
     case 'error_correction':

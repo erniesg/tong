@@ -1085,13 +1085,15 @@ export default function GamePage() {
               <>
                 <video
                   className="tg-tong-intro-video"
-                  src="/assets/tong_intro.webm"
                   autoPlay
                   muted
                   playsInline
                   preload="auto"
                   loop
-                />
+                >
+                  <source src="/assets/tong_intro.webm" type="video/webm" />
+                  <source src="/assets/tong_intro_fallback.mp4" type="video/mp4" />
+                </video>
                 <div className="tg-tong-intro-subtitle">
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
                   <p className="dialogue-text">
@@ -1424,7 +1426,8 @@ export default function GamePage() {
               type="button"
               onClick={() => {
                 const obj = DEV_OBJECTIVES.find((o) => o.id === devObjective);
-                const ex = generateExercise(devExType, { objectiveId: devObjective, language: obj?.lang ?? 'ko' });
+                const subtype = searchParams.get('subtype') ?? undefined;
+                const ex = generateExercise(devExType, { objectiveId: devObjective, language: obj?.lang ?? 'ko', hintSubType: subtype });
                 setDevExercise(ex);
                 setDevLastResult(null);
               }}

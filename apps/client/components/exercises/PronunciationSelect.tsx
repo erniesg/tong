@@ -88,7 +88,7 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
 
       {/* Target character displayed prominently */}
       <div className="pron-select__target" style={{ cursor: 'default' }}>
-        <span className="text-ko" style={{ fontSize: '4rem', lineHeight: 1 }}>{exercise.targetText}</span>
+        <span className="text-ko" style={{ fontSize: '3.5rem', lineHeight: 1 }}>{exercise.targetText}</span>
       </div>
 
       {/* Audio options — each plays a different sound, user picks the match */}
@@ -105,7 +105,6 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
                 playSound(opt.label, opt.ttsText, opt.id);
                 if (!submitted) setSelected(opt.id);
               }}
-              disabled={submitted}
               className={cn(
                 'pron-select__option',
                 !submitted && isThis && 'pron-select__option--selected',
@@ -116,14 +115,21 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: isPlaying ? 1 : 0.5, flexShrink: 0 }}>
                 <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
               </svg>
+
+              {/* Before submit: "Tap to play" / After submit: show the actual label + details */}
               {submitted ? (
-                <span className="text-ko text-xl ml-2">{opt.label}</span>
+                <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, flex: 1 }}>
+                  <span className="text-ko" style={{ fontSize: '1.25rem' }}>{opt.label}</span>
+                  {opt.romanization && (
+                    <span style={{ fontSize: 13, opacity: 0.5 }}>{opt.romanization}</span>
+                  )}
+                  {opt.meaning && (
+                    <span style={{ fontSize: 13, opacity: 0.4, marginLeft: 'auto' }}>{opt.meaning}</span>
+                  )}
+                </span>
               ) : (
-                <span className="ml-2" style={{ opacity: 0.6 }}>{t('tap_to_play', lang)}</span>
-              )}
-              {submitted && opt.romanization && (
-                <span className="text-sm text-[var(--color-text-muted)] ml-auto">
-                  {opt.romanization}{opt.meaning ? ` — ${opt.meaning}` : ''}
+                <span className="text-ko ml-2" style={{ fontSize: '1rem', opacity: 0.6 }}>
+                  {t('tap_to_play', lang)}
                 </span>
               )}
             </button>
