@@ -135,6 +135,8 @@ function srsAwarePick(
 const EXERCISE_TYPES = [
   'matching', 'drag_drop', 'multiple_choice',
   'stroke_tracing', 'pronunciation_select', 'free_input',
+  'sentence_builder', 'fill_blank', 'pattern_recognition',
+  'error_correction', 'block_crush',
 ] as const;
 
 /**
@@ -164,7 +166,7 @@ const lessonTools = {
       exerciseType: z.enum([
         'matching', 'multiple_choice', 'drag_drop',
         'sentence_builder', 'fill_blank', 'pronunciation_select',
-        'pattern_recognition', 'stroke_tracing', 'error_correction', 'free_input',
+        'pattern_recognition', 'stroke_tracing', 'error_correction', 'free_input', 'block_crush',
       ]).describe('Exercise UI type'),
       objectiveId: z.string().describe('Learning objective this tests'),
       exerciseData: z.string().nullable().describe('JSON-encoded complete exercise object. When provided, client parses and uses it directly. When null, client generates locally from hints. ID convention: "ai-{type}-{timestamp}".'),
