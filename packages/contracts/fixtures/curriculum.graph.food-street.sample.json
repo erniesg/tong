@@ -1,0 +1,502 @@
+{
+  "packId": "seoul_food_street_v1",
+  "version": "1.0.0",
+  "cityId": "seoul",
+  "locationId": "food_street",
+  "lang": "ko",
+  "title": "Seoul Food Street",
+  "summary": "Gold-standard curriculum pack for the Seoul food street route, covering script, pronunciation, vocabulary, and grammar for first-order hangouts.",
+  "goldStandard": true,
+  "contentVersionPolicy": "append_only",
+  "nodes": [
+    {
+      "nodeId": "ko-script-consonants-basic",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 0,
+      "title": "Learn 14 basic consonants",
+      "description": "Recognize and name the 14 basic Korean consonants.",
+      "tags": ["hangul", "consonants", "jamo", "script"],
+      "targetItemIds": ["ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"],
+      "targetCount": 14,
+      "assessmentThreshold": 0.8,
+      "objectiveCategory": "script"
+    },
+    {
+      "nodeId": "ko-script-vowels-basic",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 0,
+      "title": "Learn 10 basic vowels",
+      "description": "Recognize and name the 10 basic Korean vowels.",
+      "tags": ["hangul", "vowels", "jamo", "script"],
+      "targetItemIds": ["ㅏ", "ㅑ", "ㅓ", "ㅕ", "ㅗ", "ㅛ", "ㅜ", "ㅠ", "ㅡ", "ㅣ"],
+      "targetCount": 10,
+      "assessmentThreshold": 0.8,
+      "objectiveCategory": "script"
+    },
+    {
+      "nodeId": "ko-script-blocks-2part",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 0,
+      "title": "Read 2-part syllable blocks",
+      "description": "Combine consonant + vowel to read basic blocks like 가, 나, 다.",
+      "tags": ["hangul", "syllable-blocks", "script"],
+      "targetItemIds": ["가", "나", "다", "라", "마", "바", "사", "아", "자", "카", "타", "파", "하"],
+      "targetCount": 13,
+      "assessmentThreshold": 0.7,
+      "objectiveCategory": "script"
+    },
+    {
+      "nodeId": "ko-script-menu-reading",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 0,
+      "title": "Read menu items",
+      "description": "Read food names from the stall menu.",
+      "tags": ["hangul", "reading", "food", "menu"],
+      "targetItemIds": ["오뎅", "떡볶이", "라면", "순대"],
+      "targetCount": 4,
+      "assessmentThreshold": 0.75,
+      "objectiveCategory": "script"
+    },
+    {
+      "nodeId": "ko-pron-jamo-all",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 1,
+      "title": "Pronounce all jamo correctly",
+      "description": "Accurate pronunciation of all consonants and vowels.",
+      "tags": ["pronunciation", "jamo", "audio"],
+      "targetItemIds": ["ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ", "ㅏ", "ㅑ", "ㅓ", "ㅕ", "ㅗ", "ㅛ", "ㅜ", "ㅠ", "ㅡ", "ㅣ"],
+      "targetCount": 24,
+      "assessmentThreshold": 0.8,
+      "objectiveCategory": "pronunciation"
+    },
+    {
+      "nodeId": "ko-pron-batchim",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 1,
+      "title": "Learn 받침 (batchim) rules",
+      "description": "Understand and apply final consonant pronunciation rules.",
+      "tags": ["pronunciation", "batchim", "final-consonant"],
+      "targetItemIds": ["ㄱ받침", "ㄴ받침", "ㄹ받침", "ㅁ받침", "ㅂ받침", "ㅇ받침", "ㄷ받침"],
+      "targetCount": 7,
+      "assessmentThreshold": 0.7,
+      "objectiveCategory": "pronunciation"
+    },
+    {
+      "nodeId": "ko-pron-food-words",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 1,
+      "title": "Pronounce 20 food words",
+      "description": "Correctly pronounce common Korean food words from the stall.",
+      "tags": ["pronunciation", "food", "words"],
+      "targetItemIds": ["떡볶이", "라면", "오뎅", "순대", "김밥", "어묵", "만두", "튀김", "꼬치", "호떡", "붕어빵", "떡꼬치", "소떡소떡", "핫도그", "군고구마", "비빔밥", "볶음밥", "잡채", "김치", "콜라"],
+      "targetCount": 20,
+      "assessmentThreshold": 0.75,
+      "objectiveCategory": "pronunciation"
+    },
+    {
+      "nodeId": "ko-vocab-food-items",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 2,
+      "title": "Learn 20 food items",
+      "description": "Know the meaning and reading of 20 street food items.",
+      "tags": ["vocabulary", "food", "nouns"],
+      "targetItemIds": ["떡볶이", "라면", "오뎅", "순대", "김밥", "어묵", "만두", "튀김", "꼬치", "호떡", "붕어빵", "비빔밥", "볶음밥", "김치", "콜라", "물", "주스", "소주", "맥주", "사이다"],
+      "targetCount": 20,
+      "assessmentThreshold": 0.8,
+      "objectiveCategory": "vocabulary"
+    },
+    {
+      "nodeId": "ko-vocab-taste-words",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 2,
+      "title": "Learn taste and texture words",
+      "description": "Describe flavors: spicy, sweet, salty, delicious, and more.",
+      "tags": ["vocabulary", "taste", "adjectives"],
+      "targetItemIds": ["맵다", "달다", "짜다", "맛있다", "맛없다", "시다", "쓰다", "뜨겁다", "차갑다", "맵지 않다"],
+      "targetCount": 10,
+      "assessmentThreshold": 0.8,
+      "objectiveCategory": "vocabulary"
+    },
+    {
+      "nodeId": "ko-vocab-numbers",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 2,
+      "title": "Learn numbers for ordering",
+      "description": "Count 1-5 with native Korean numbers for ordering.",
+      "tags": ["vocabulary", "numbers", "ordering"],
+      "targetItemIds": ["하나", "둘", "셋", "넷", "다섯"],
+      "targetCount": 5,
+      "assessmentThreshold": 0.9,
+      "objectiveCategory": "vocabulary"
+    },
+    {
+      "nodeId": "ko-vocab-basic-verbs",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 2,
+      "title": "Learn basic food verbs",
+      "description": "Key verbs for ordering and eating.",
+      "tags": ["vocabulary", "verbs", "action"],
+      "targetItemIds": ["먹다", "주다", "마시다", "사다", "시키다"],
+      "targetCount": 5,
+      "assessmentThreshold": 0.8,
+      "objectiveCategory": "vocabulary"
+    },
+    {
+      "nodeId": "ko-vocab-courtesy",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 2,
+      "title": "Learn courtesy phrases",
+      "description": "Essential polite phrases for ordering.",
+      "tags": ["vocabulary", "courtesy", "phrases", "polite"],
+      "targetItemIds": ["주세요", "감사합니다", "잠시만요", "여기요", "얼마예요"],
+      "targetCount": 5,
+      "assessmentThreshold": 0.9,
+      "objectiveCategory": "vocabulary"
+    },
+    {
+      "nodeId": "ko-gram-juseyo",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 3,
+      "title": "Master N + 주세요 pattern",
+      "description": "Use noun + 주세요 to order food politely.",
+      "tags": ["grammar", "ordering", "polite", "juseyo"],
+      "targetItemIds": ["N+주세요"],
+      "targetCount": 1,
+      "assessmentThreshold": 0.85,
+      "objectiveCategory": "grammar"
+    },
+    {
+      "nodeId": "ko-gram-object-particle",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 3,
+      "title": "Learn 을/를 object particle",
+      "description": "Use the object marker correctly with food nouns.",
+      "tags": ["grammar", "particles", "object-marker"],
+      "targetItemIds": ["을/를"],
+      "targetCount": 1,
+      "assessmentThreshold": 0.8,
+      "objectiveCategory": "grammar"
+    },
+    {
+      "nodeId": "ko-gram-counters",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 3,
+      "title": "Use number + counter patterns",
+      "description": "Order using 하나, 두 개, and similar counter patterns.",
+      "tags": ["grammar", "counters", "numbers", "ordering"],
+      "targetItemIds": ["N+개", "하나/둘/셋+개"],
+      "targetCount": 2,
+      "assessmentThreshold": 0.8,
+      "objectiveCategory": "grammar"
+    }
+  ],
+  "edges": [
+    { "edgeId": "e1", "type": "requires", "fromNodeId": "ko-script-consonants-basic", "toNodeId": "ko-script-blocks-2part", "rationale": "Need consonants before combining blocks." },
+    { "edgeId": "e2", "type": "requires", "fromNodeId": "ko-script-vowels-basic", "toNodeId": "ko-script-blocks-2part", "rationale": "Need vowels before combining blocks." },
+    { "edgeId": "e3", "type": "requires", "fromNodeId": "ko-script-blocks-2part", "toNodeId": "ko-script-menu-reading", "rationale": "Menu reading depends on basic block recognition." },
+    { "edgeId": "e4", "type": "requires", "fromNodeId": "ko-script-consonants-basic", "toNodeId": "ko-pron-jamo-all", "rationale": "Learner must know consonants before pronouncing them." },
+    { "edgeId": "e5", "type": "requires", "fromNodeId": "ko-script-vowels-basic", "toNodeId": "ko-pron-jamo-all", "rationale": "Learner must know vowels before pronouncing them." },
+    { "edgeId": "e6", "type": "requires", "fromNodeId": "ko-pron-jamo-all", "toNodeId": "ko-pron-batchim", "rationale": "Batchim builds on baseline pronunciation." },
+    { "edgeId": "e7", "type": "requires", "fromNodeId": "ko-script-menu-reading", "toNodeId": "ko-pron-food-words", "rationale": "Menu reading supports food-word pronunciation." },
+    { "edgeId": "e8", "type": "requires", "fromNodeId": "ko-pron-food-words", "toNodeId": "ko-vocab-food-items", "rationale": "Food vocabulary follows recognition and pronunciation." },
+    { "edgeId": "e9", "type": "requires", "fromNodeId": "ko-vocab-food-items", "toNodeId": "ko-vocab-taste-words", "rationale": "Taste words extend the basic food lexicon." },
+    { "edgeId": "e10", "type": "requires", "fromNodeId": "ko-vocab-food-items", "toNodeId": "ko-vocab-numbers", "rationale": "Number ordering builds on food nouns." },
+    { "edgeId": "e11", "type": "requires", "fromNodeId": "ko-vocab-food-items", "toNodeId": "ko-vocab-basic-verbs", "rationale": "Action vocabulary builds on food nouns." },
+    { "edgeId": "e12", "type": "requires", "fromNodeId": "ko-vocab-food-items", "toNodeId": "ko-vocab-courtesy", "rationale": "Courtesy phrases land after core nouns are familiar." },
+    { "edgeId": "e13", "type": "requires", "fromNodeId": "ko-vocab-courtesy", "toNodeId": "ko-gram-juseyo", "rationale": "주세요 pattern depends on polite phrase familiarity." },
+    { "edgeId": "e14", "type": "requires", "fromNodeId": "ko-vocab-food-items", "toNodeId": "ko-gram-juseyo", "rationale": "Need food nouns before using noun plus 주세요." },
+    { "edgeId": "e15", "type": "requires", "fromNodeId": "ko-gram-juseyo", "toNodeId": "ko-gram-object-particle", "rationale": "Object particle follows the simpler order phrase." },
+    { "edgeId": "e16", "type": "requires", "fromNodeId": "ko-vocab-numbers", "toNodeId": "ko-gram-counters", "rationale": "Counter patterns require numbers." },
+    { "edgeId": "e17", "type": "requires", "fromNodeId": "ko-gram-juseyo", "toNodeId": "ko-gram-counters", "rationale": "Counter ordering extends noun plus 주세요." }
+  ],
+  "levels": [
+    {
+      "level": 0,
+      "label": "SCRIPT",
+      "description": "Can I recognise the symbols?",
+      "objectiveNodeIds": ["ko-script-consonants-basic", "ko-script-vowels-basic", "ko-script-blocks-2part", "ko-script-menu-reading"],
+      "assessmentCriteria": {
+        "minAccuracy": 0.8,
+        "minItemsCompleted": 20,
+        "requiredNodeIds": ["ko-script-consonants-basic", "ko-script-vowels-basic"]
+      }
+    },
+    {
+      "level": 1,
+      "label": "PRONUNCIATION",
+      "description": "Can I say them correctly?",
+      "objectiveNodeIds": ["ko-pron-jamo-all", "ko-pron-batchim", "ko-pron-food-words"],
+      "assessmentCriteria": {
+        "minAccuracy": 0.75,
+        "minItemsCompleted": 15,
+        "requiredNodeIds": ["ko-pron-jamo-all"]
+      }
+    },
+    {
+      "level": 2,
+      "label": "VOCABULARY",
+      "description": "Do I know what they mean?",
+      "objectiveNodeIds": ["ko-vocab-food-items", "ko-vocab-taste-words", "ko-vocab-numbers", "ko-vocab-basic-verbs", "ko-vocab-courtesy"],
+      "assessmentCriteria": {
+        "minAccuracy": 0.8,
+        "minItemsCompleted": 30,
+        "requiredNodeIds": ["ko-vocab-food-items", "ko-vocab-courtesy"]
+      }
+    },
+    {
+      "level": 3,
+      "label": "GRAMMAR",
+      "description": "Can I build sentences?",
+      "objectiveNodeIds": ["ko-gram-juseyo", "ko-gram-object-particle", "ko-gram-counters"],
+      "assessmentCriteria": {
+        "minAccuracy": 0.8,
+        "minItemsCompleted": 10,
+        "requiredNodeIds": ["ko-gram-juseyo"]
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "scenarioId": "seoul_food_street_learn_menu_reading",
+      "mode": "learn",
+      "title": "Menu Board Warmup",
+      "description": "Tong walks the learner through the menu board before the first order.",
+      "targetNodeIds": ["ko-script-menu-reading", "ko-vocab-food-items"]
+    },
+    {
+      "scenarioId": "seoul_food_street_hangout_first_order",
+      "mode": "hangout",
+      "title": "First Order Hangout",
+      "description": "Order 떡볶이 and a drink at the stall using polite Korean.",
+      "targetNodeIds": ["ko-vocab-courtesy", "ko-vocab-food-items", "ko-gram-juseyo"]
+    }
+  ],
+  "missions": [
+    {
+      "missionId": "seoul_food_street_script_gate",
+      "title": "Read the Stall Menu",
+      "description": "Read the visible menu without Tong reading it out for you.",
+      "level": 0,
+      "requiredNodeIds": ["ko-script-consonants-basic", "ko-script-vowels-basic", "ko-script-blocks-2part", "ko-script-menu-reading"],
+      "rewards": { "xp": 40, "sp": 6, "rp": 2 }
+    },
+    {
+      "missionId": "seoul_food_street_pron_gate",
+      "title": "Say the Order Clearly",
+      "description": "Pronounce core menu items clearly enough for the stall owner to understand.",
+      "level": 1,
+      "requiredNodeIds": ["ko-pron-jamo-all", "ko-pron-food-words"],
+      "rewards": { "xp": 55, "sp": 8, "rp": 4 }
+    },
+    {
+      "missionId": "seoul_food_street_vocab_gate",
+      "title": "Understand the Counter Chat",
+      "description": "Recognize key menu, taste, number, and courtesy vocabulary during the interaction.",
+      "level": 2,
+      "requiredNodeIds": ["ko-vocab-food-items", "ko-vocab-courtesy", "ko-vocab-numbers"],
+      "rewards": { "xp": 70, "sp": 10, "rp": 6 }
+    },
+    {
+      "missionId": "seoul_food_street_order_gate",
+      "title": "Place the Full Order",
+      "description": "Place a complete polite order using counters and the 주세요 frame.",
+      "level": 3,
+      "requiredNodeIds": ["ko-gram-juseyo", "ko-gram-counters"],
+      "rewards": { "xp": 90, "sp": 14, "rp": 9 }
+    }
+  ],
+  "content": {
+    "scriptTargets": [
+      { "id": "ㄱ", "label": "ㄱ", "transliteration": "g/k", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㄴ", "label": "ㄴ", "transliteration": "n", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㄷ", "label": "ㄷ", "transliteration": "d/t", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㄹ", "label": "ㄹ", "transliteration": "r/l", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㅁ", "label": "ㅁ", "transliteration": "m", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㅂ", "label": "ㅂ", "transliteration": "b/p", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㅅ", "label": "ㅅ", "transliteration": "s", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㅇ", "label": "ㅇ", "transliteration": "ng/silent", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㅈ", "label": "ㅈ", "transliteration": "j", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㅊ", "label": "ㅊ", "transliteration": "ch", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㅋ", "label": "ㅋ", "transliteration": "k", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㅌ", "label": "ㅌ", "transliteration": "t", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㅍ", "label": "ㅍ", "transliteration": "p", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㅎ", "label": "ㅎ", "transliteration": "h", "notes": "Basic consonant", "level": 0 },
+      { "id": "ㅏ", "label": "ㅏ", "transliteration": "a", "notes": "Basic vowel", "level": 0 },
+      { "id": "ㅑ", "label": "ㅑ", "transliteration": "ya", "notes": "Basic vowel", "level": 0 },
+      { "id": "ㅓ", "label": "ㅓ", "transliteration": "eo", "notes": "Basic vowel", "level": 0 },
+      { "id": "ㅕ", "label": "ㅕ", "transliteration": "yeo", "notes": "Basic vowel", "level": 0 },
+      { "id": "ㅗ", "label": "ㅗ", "transliteration": "o", "notes": "Basic vowel", "level": 0 },
+      { "id": "ㅛ", "label": "ㅛ", "transliteration": "yo", "notes": "Basic vowel", "level": 0 },
+      { "id": "ㅜ", "label": "ㅜ", "transliteration": "u", "notes": "Basic vowel", "level": 0 },
+      { "id": "ㅠ", "label": "ㅠ", "transliteration": "yu", "notes": "Basic vowel", "level": 0 },
+      { "id": "ㅡ", "label": "ㅡ", "transliteration": "eu", "notes": "Basic vowel", "level": 0 },
+      { "id": "ㅣ", "label": "ㅣ", "transliteration": "i", "notes": "Basic vowel", "level": 0 },
+      { "id": "가", "label": "가", "transliteration": "ga", "notes": "Two-part syllable block", "level": 0 },
+      { "id": "나", "label": "나", "transliteration": "na", "notes": "Two-part syllable block", "level": 0 },
+      { "id": "다", "label": "다", "transliteration": "da", "notes": "Two-part syllable block", "level": 0 },
+      { "id": "라", "label": "라", "transliteration": "ra", "notes": "Two-part syllable block", "level": 0 },
+      { "id": "마", "label": "마", "transliteration": "ma", "notes": "Two-part syllable block", "level": 0 },
+      { "id": "바", "label": "바", "transliteration": "ba", "notes": "Two-part syllable block", "level": 0 },
+      { "id": "사", "label": "사", "transliteration": "sa", "notes": "Two-part syllable block", "level": 0 },
+      { "id": "아", "label": "아", "transliteration": "a", "notes": "Two-part syllable block", "level": 0 },
+      { "id": "자", "label": "자", "transliteration": "ja", "notes": "Two-part syllable block", "level": 0 },
+      { "id": "카", "label": "카", "transliteration": "ka", "notes": "Two-part syllable block", "level": 0 },
+      { "id": "타", "label": "타", "transliteration": "ta", "notes": "Two-part syllable block", "level": 0 },
+      { "id": "파", "label": "파", "transliteration": "pa", "notes": "Two-part syllable block", "level": 0 },
+      { "id": "하", "label": "하", "transliteration": "ha", "notes": "Two-part syllable block", "level": 0 }
+    ],
+    "pronunciationTargets": [
+      { "id": "ㄱ받침", "label": "ㄱ받침", "transliteration": "k", "notes": "Final consonant rule", "level": 1 },
+      { "id": "ㄴ받침", "label": "ㄴ받침", "transliteration": "n", "notes": "Final consonant rule", "level": 1 },
+      { "id": "ㄹ받침", "label": "ㄹ받침", "transliteration": "l", "notes": "Final consonant rule", "level": 1 },
+      { "id": "ㅁ받침", "label": "ㅁ받침", "transliteration": "m", "notes": "Final consonant rule", "level": 1 },
+      { "id": "ㅂ받침", "label": "ㅂ받침", "transliteration": "p", "notes": "Final consonant rule", "level": 1 },
+      { "id": "ㅇ받침", "label": "ㅇ받침", "transliteration": "ng", "notes": "Final consonant rule", "level": 1 },
+      { "id": "ㄷ받침", "label": "ㄷ받침", "transliteration": "t", "notes": "Final consonant rule", "level": 1 }
+    ],
+    "vocabularyTargets": [
+      { "id": "오뎅", "word": "오뎅", "romanization": "odeng", "translation": "fish cake", "category": "food_item", "level": 0, "sceneContext": "written on the menu board in big letters", "visualCue": "bubbling pot of fish cake skewers on the counter" },
+      { "id": "떡볶이", "word": "떡볶이", "romanization": "tteokbokki", "translation": "spicy rice cakes", "category": "food_item", "level": 0, "sceneContext": "top item on the handwritten menu", "visualCue": "bright red sauce with cylindrical rice cakes in a flat pan" },
+      { "id": "라면", "word": "라면", "romanization": "ramyeon", "translation": "instant noodles", "category": "food_item", "level": 0, "sceneContext": "written on the menu board", "visualCue": "stack of instant noodle packets behind the counter" },
+      { "id": "순대", "word": "순대", "romanization": "sundae", "translation": "blood sausage", "category": "food_item", "level": 0, "sceneContext": "on the menu board next to 떡볶이", "visualCue": "dark sausage slices on a plate with salt" },
+      { "id": "김밥", "word": "김밥", "romanization": "gimbap", "translation": "seaweed rice roll", "category": "food_item", "level": 2, "sceneContext": "sliced rolls displayed in the glass case at the front", "visualCue": "colorful cross-sections of seaweed-wrapped rice rolls" },
+      { "id": "어묵", "word": "어묵", "romanization": "eomuk", "translation": "fish cake (formal)", "category": "food_item", "level": 2, "sceneContext": "ajusshi uses this word instead of 오뎅 sometimes", "visualCue": "folded fish cake skewers steaming in broth" },
+      { "id": "만두", "word": "만두", "romanization": "mandu", "translation": "dumplings", "category": "food_item", "level": 2, "sceneContext": "steaming in a bamboo basket on the side", "visualCue": "plump dumplings with steam rising from bamboo steamer" },
+      { "id": "튀김", "word": "튀김", "romanization": "twigim", "translation": "deep-fried snacks", "category": "food_item", "level": 2, "sceneContext": "frying in oil", "visualCue": "golden fried vegetables and shrimp draining on paper" },
+      { "id": "꼬치", "word": "꼬치", "romanization": "kkochi", "translation": "skewers", "category": "food_item", "level": 2, "sceneContext": "a rack of skewers on the counter", "visualCue": "wooden skewers with meat and vegetables lined up in a row" },
+      { "id": "호떡", "word": "호떡", "romanization": "hotteok", "translation": "sweet pancake", "category": "food_item", "level": 2, "sceneContext": "pressed flat on the griddle", "visualCue": "golden-brown pancake being pressed flat, sweet filling oozing" },
+      { "id": "붕어빵", "word": "붕어빵", "romanization": "bungeoppang", "translation": "fish-shaped bread", "category": "food_item", "level": 2, "sceneContext": "a neighboring cart sells these", "visualCue": "fish-shaped waffle filled with red bean paste" },
+      { "id": "떡꼬치", "word": "떡꼬치", "romanization": "tteokkkochi", "translation": "rice cake skewer", "category": "food_item", "level": 2, "sceneContext": "stacked on a tray near the sauce pot", "visualCue": "skewered rice cakes glazed with red sauce" },
+      { "id": "소떡소떡", "word": "소떡소떡", "romanization": "sotteoksotteok", "translation": "sausage and rice cake skewer", "category": "food_item", "level": 2, "sceneContext": "next to the fried snacks", "visualCue": "alternating sausage and rice cake on skewers" },
+      { "id": "핫도그", "word": "핫도그", "romanization": "hatdogeu", "translation": "hot dog", "category": "food_item", "level": 2, "sceneContext": "displayed under a warming lamp", "visualCue": "crispy Korean corn dog dusted with sugar" },
+      { "id": "군고구마", "word": "군고구마", "romanization": "gungoguma", "translation": "roasted sweet potato", "category": "food_item", "level": 2, "sceneContext": "warming in foil at the edge of the stall", "visualCue": "charred sweet potatoes wrapped in newspaper" },
+      { "id": "비빔밥", "word": "비빔밥", "romanization": "bibimbap", "translation": "mixed rice", "category": "food_item", "level": 2, "sceneContext": "not on this menu - you hear others ordering it nearby", "visualCue": "rice bowl topped with vegetables and gochujang" },
+      { "id": "볶음밥", "word": "볶음밥", "romanization": "bokkeumbap", "translation": "fried rice", "category": "food_item", "level": 2, "sceneContext": "ajusshi makes this with leftover 떡볶이 sauce at the end", "visualCue": "fried rice sizzling on a flat grill" },
+      { "id": "잡채", "word": "잡채", "romanization": "japchae", "translation": "glass noodles", "category": "food_item", "level": 2, "sceneContext": "someone at the next stool mentions craving this", "visualCue": "soy-seasoned noodles with vegetables" },
+      { "id": "김치", "word": "김치", "romanization": "gimchi", "translation": "kimchi", "category": "food_item", "level": 2, "sceneContext": "free side dish placed on the counter", "visualCue": "bright red cabbage kimchi in a metal dish" },
+      { "id": "콜라", "word": "콜라", "romanization": "kolla", "translation": "cola", "category": "drink", "level": 2, "sceneContext": "in the mini fridge under the counter", "visualCue": "glass bottles of cola in a cold display" },
+      { "id": "물", "word": "물", "romanization": "mul", "translation": "water", "category": "drink", "level": 2, "sceneContext": "you ask for this when the 떡볶이 is too spicy", "visualCue": "paper cups next to a cold dispenser" },
+      { "id": "주스", "word": "주스", "romanization": "juseu", "translation": "juice", "category": "drink", "level": 2, "sceneContext": "next to the soda cans in the fridge", "visualCue": "small fruit juice cartons" },
+      { "id": "소주", "word": "소주", "romanization": "soju", "translation": "soju", "category": "drink", "level": 2, "sceneContext": "Jin offers you a glass after practice", "visualCue": "green glass bottle with shot cups" },
+      { "id": "맥주", "word": "맥주", "romanization": "maekju", "translation": "beer", "category": "drink", "level": 2, "sceneContext": "senior trainees order this, ajusshi teases you about age", "visualCue": "frosted beer mugs behind the stall" },
+      { "id": "사이다", "word": "사이다", "romanization": "saida", "translation": "cider or sprite", "category": "drink", "level": 2, "sceneContext": "a fizzy soft drink option next to cola", "visualCue": "clear lemon-lime soda can" },
+      { "id": "맵다", "word": "맵다", "romanization": "maepda", "translation": "spicy", "category": "taste", "level": 2, "sceneContext": "Tong warns you before the first bite", "visualCue": "steam and red sauce rising from the pan" },
+      { "id": "달다", "word": "달다", "romanization": "dalda", "translation": "sweet", "category": "taste", "level": 2, "sceneContext": "used when comparing hotteok and tteokbokki", "visualCue": "syrup stretching from a torn pancake" },
+      { "id": "짜다", "word": "짜다", "romanization": "jjada", "translation": "salty", "category": "taste", "level": 2, "sceneContext": "describing broth or fried snacks", "visualCue": "seasoned fries and skewers" },
+      { "id": "맛있다", "word": "맛있다", "romanization": "masitda", "translation": "delicious", "category": "taste", "level": 2, "sceneContext": "the stall owner smiles if you say this", "visualCue": "happy reaction after the first bite" },
+      { "id": "맛없다", "word": "맛없다", "romanization": "maseopda", "translation": "not tasty", "category": "taste", "level": 2, "sceneContext": "Tong notes this is socially risky to say directly", "visualCue": "awkward face after tasting" },
+      { "id": "시다", "word": "시다", "romanization": "sida", "translation": "sour", "category": "taste", "level": 2, "sceneContext": "describing pickles or side dishes", "visualCue": "pickled radish dish" },
+      { "id": "쓰다", "word": "쓰다", "romanization": "sseuda", "translation": "bitter", "category": "taste", "level": 2, "sceneContext": "used when discussing herbal drinks", "visualCue": "small tonic bottle near the register" },
+      { "id": "뜨겁다", "word": "뜨겁다", "romanization": "tteugeopda", "translation": "hot", "category": "taste", "level": 2, "sceneContext": "warning for freshly cooked soup or broth", "visualCue": "steam rising strongly from a bowl" },
+      { "id": "차갑다", "word": "차갑다", "romanization": "chagapda", "translation": "cold", "category": "taste", "level": 2, "sceneContext": "describing drinks from the fridge", "visualCue": "ice in a cup with condensation" },
+      { "id": "맵지 않다", "word": "맵지 않다", "romanization": "maepji anta", "translation": "not spicy", "category": "taste", "level": 2, "sceneContext": "used when asking for a mild option", "visualCue": "lighter-colored sauce in a side bowl" },
+      { "id": "하나", "word": "하나", "romanization": "hana", "translation": "one", "category": "number", "level": 2, "sceneContext": "counting one skewer or one drink", "visualCue": "single item held up with fingers" },
+      { "id": "둘", "word": "둘", "romanization": "dul", "translation": "two", "category": "number", "level": 2, "sceneContext": "ordering two items", "visualCue": "two skewers side by side" },
+      { "id": "셋", "word": "셋", "romanization": "set", "translation": "three", "category": "number", "level": 2, "sceneContext": "ordering for a small group", "visualCue": "three paper cups on the counter" },
+      { "id": "넷", "word": "넷", "romanization": "net", "translation": "four", "category": "number", "level": 2, "sceneContext": "counting portions for trainees", "visualCue": "four stools gathered around the stall" },
+      { "id": "다섯", "word": "다섯", "romanization": "daseot", "translation": "five", "category": "number", "level": 2, "sceneContext": "counting a longer skewer order", "visualCue": "five skewers in a rack" },
+      { "id": "먹다", "word": "먹다", "romanization": "meokda", "translation": "to eat", "category": "verb", "level": 2, "sceneContext": "used when planning what to eat", "visualCue": "someone lifting noodles with chopsticks" },
+      { "id": "주다", "word": "주다", "romanization": "juda", "translation": "to give", "category": "verb", "level": 2, "sceneContext": "base verb inside 주세요", "visualCue": "stall owner handing over a plate" },
+      { "id": "마시다", "word": "마시다", "romanization": "masida", "translation": "to drink", "category": "verb", "level": 2, "sceneContext": "used for ordering drinks", "visualCue": "taking a sip from a bottle" },
+      { "id": "사다", "word": "사다", "romanization": "sada", "translation": "to buy", "category": "verb", "level": 2, "sceneContext": "used while deciding whether to buy snacks", "visualCue": "cash and QR payment options" },
+      { "id": "시키다", "word": "시키다", "romanization": "sikida", "translation": "to order", "category": "verb", "level": 2, "sceneContext": "Tong introduces this as the direct ordering verb", "visualCue": "placing an order at the counter" },
+      { "id": "주세요", "word": "주세요", "romanization": "juseyo", "translation": "please give me", "category": "courtesy", "level": 2, "sceneContext": "core ordering phrase at the stall", "visualCue": "speech bubble ending with 주세요" },
+      { "id": "감사합니다", "word": "감사합니다", "romanization": "gamsahamnida", "translation": "thank you", "category": "courtesy", "level": 2, "sceneContext": "used after receiving your order", "visualCue": "small bow after getting food" },
+      { "id": "잠시만요", "word": "잠시만요", "romanization": "jamsimanyo", "translation": "just a moment", "category": "courtesy", "level": 2, "sceneContext": "the stall owner says this while preparing food", "visualCue": "raised hand while turning back to the stove" },
+      { "id": "여기요", "word": "여기요", "romanization": "yeogiyo", "translation": "excuse me", "category": "courtesy", "level": 2, "sceneContext": "used to call the stall owner's attention politely", "visualCue": "waving lightly from the stool" },
+      { "id": "얼마예요", "word": "얼마예요", "romanization": "eolmayeyo", "translation": "how much is it?", "category": "courtesy", "level": 2, "sceneContext": "used when checking the price", "visualCue": "pointing at the menu price" }
+    ],
+    "grammarTargets": [
+      {
+        "id": "을/를",
+        "pattern": "을/를",
+        "explanation": "Object particle: 을 after consonant-ending nouns, 를 after vowel-ending nouns.",
+        "examples": [
+          { "target": "떡볶이를 먹다", "translation": "to eat tteokbokki" },
+          { "target": "라면을 먹다", "translation": "to eat ramyeon" },
+          { "target": "물을 마시다", "translation": "to drink water" }
+        ],
+        "level": 3,
+        "locationId": "food_street"
+      }
+    ],
+    "sentenceFrameTargets": [
+      {
+        "id": "N+주세요",
+        "pattern": "N + 주세요",
+        "explanation": "Add 주세요 after a noun to politely ask for something.",
+        "examples": [
+          { "target": "떡볶이 주세요", "translation": "Tteokbokki, please." },
+          { "target": "물 주세요", "translation": "Water, please." },
+          { "target": "라면 주세요", "translation": "Ramyeon, please." }
+        ],
+        "level": 3
+      },
+      {
+        "id": "N+개",
+        "pattern": "N + 개",
+        "explanation": "Use native Korean numbers plus the counter 개 for general items.",
+        "examples": [
+          { "target": "만두 두 개 주세요", "translation": "Two dumplings, please." },
+          { "target": "꼬치 세 개 주세요", "translation": "Three skewers, please." }
+        ],
+        "level": 3
+      },
+      {
+        "id": "하나/둘/셋+개",
+        "pattern": "하나/둘/셋 + 개",
+        "explanation": "Counter phrases commonly used for ordering quantities.",
+        "examples": [
+          { "target": "하나 주세요", "translation": "One, please." },
+          { "target": "둘 개는 아니고 하나만 주세요", "translation": "Not two, just one please." }
+        ],
+        "level": 3
+      }
+    ]
+  }
+}

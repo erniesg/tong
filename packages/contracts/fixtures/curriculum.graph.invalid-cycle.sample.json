@@ -1,0 +1,72 @@
+{
+  "packId": "invalid_cycle_pack",
+  "version": "1.0.0",
+  "cityId": "seoul",
+  "locationId": "food_street",
+  "lang": "ko",
+  "title": "Invalid Cycle",
+  "summary": "Fixture with a cyclic dependency for validator testing.",
+  "goldStandard": false,
+  "contentVersionPolicy": "append_only",
+  "nodes": [
+    {
+      "nodeId": "a",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 0,
+      "title": "A",
+      "description": "Objective A",
+      "tags": ["test"],
+      "targetItemIds": ["alpha"],
+      "targetCount": 1,
+      "assessmentThreshold": 0.8,
+      "objectiveCategory": "vocabulary"
+    },
+    {
+      "nodeId": "b",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 0,
+      "title": "B",
+      "description": "Objective B",
+      "tags": ["test"],
+      "targetItemIds": ["beta"],
+      "targetCount": 1,
+      "assessmentThreshold": 0.8,
+      "objectiveCategory": "vocabulary"
+    }
+  ],
+  "edges": [
+    { "edgeId": "ea", "type": "requires", "fromNodeId": "a", "toNodeId": "b" },
+    { "edgeId": "eb", "type": "requires", "fromNodeId": "b", "toNodeId": "a" }
+  ],
+  "levels": [
+    {
+      "level": 0,
+      "label": "TEST",
+      "description": "Validator fixture",
+      "objectiveNodeIds": ["a", "b"],
+      "assessmentCriteria": {
+        "minAccuracy": 0.8,
+        "minItemsCompleted": 1,
+        "requiredNodeIds": ["a"]
+      }
+    }
+  ],
+  "scenarios": [],
+  "missions": [],
+  "content": {
+    "scriptTargets": [],
+    "pronunciationTargets": [],
+    "vocabularyTargets": [
+      { "id": "alpha", "word": "alpha", "romanization": "alpha", "translation": "alpha", "category": "test", "level": 0 },
+      { "id": "beta", "word": "beta", "romanization": "beta", "translation": "beta", "category": "test", "level": 0 }
+    ],
+    "grammarTargets": [],
+    "sentenceFrameTargets": []
+  }
+}

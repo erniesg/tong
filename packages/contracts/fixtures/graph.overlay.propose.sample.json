@@ -1,0 +1,23 @@
+{
+  "learnerId": "persona_kpop_prompting",
+  "overlays": [
+    {
+      "overlayId": "overlay_zh_video_prompting",
+      "title": "Chinese Video Prompting Vocabulary",
+      "lang": "zh",
+      "source": "youtube",
+      "connectedNodeIds": ["overlay_zh_video_prompting"],
+      "rationale": "Recent creator-focused YouTube activity suggests strong motivation for prompt-writing vocabulary in Mandarin.",
+      "suggestedTerms": ["镜头", "提示词", "风格", "画面", "生成"]
+    },
+    {
+      "overlayId": "overlay_ko_kpop_stage",
+      "title": "K-pop Stage Language",
+      "lang": "ko",
+      "source": "spotify",
+      "connectedNodeIds": ["ko-vocab-food-items", "ko-vocab-courtesy"],
+      "rationale": "Heavy aespa and IVE listening is a good motivational bridge into Korean performance and rehearsal vocabulary.",
+      "suggestedTerms": ["무대", "연습", "안무", "파트", "리허설"]
+    }
+  ]
+}

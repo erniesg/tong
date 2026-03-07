@@ -3,7 +3,7 @@
   "tools": [
     {
       "name": "ingestion.run_mock",
-      "description": "Run mock ingestion and refresh frequency/insight/media-profile signals for a user.",
+      "description": "Run mock ingestion and refresh frequency, insights, and media-profile signals for a user.",
       "method": "POST",
       "path": "/api/v1/tools/invoke",
       "args": {
@@ -20,6 +20,87 @@
       "args": {
         "userId": "string (optional)",
         "lang": "ko|ja|zh (optional)"
+      }
+    },
+    {
+      "name": "graph.dashboard.get",
+      "description": "Fetch the learner dashboard model with roadmap, skill tree, overlays, and graph-driven recommendations.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "learnerId": "string (optional, personaId alias accepted by mock runtime)",
+        "userId": "string (optional)",
+        "city": "seoul|tokyo|shanghai (optional)",
+        "location": "food_street|cafe|convenience_store|subway_hub|practice_studio (optional)"
+      }
+    },
+    {
+      "name": "graph.next_actions.get",
+      "description": "Fetch deterministic next-step lesson, hangout, review, mission, and overlay recommendations.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "learnerId": "string (optional, personaId alias accepted by mock runtime)",
+        "userId": "string (optional)",
+        "limit": "number (optional)"
+      }
+    },
+    {
+      "name": "graph.lesson_bundle.get",
+      "description": "Fetch the next lesson bundle from the learner graph.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "learnerId": "string (optional, personaId alias accepted by mock runtime)",
+        "userId": "string (optional)",
+        "city": "seoul|tokyo|shanghai (optional)",
+        "location": "food_street|cafe|convenience_store|subway_hub|practice_studio (optional)"
+      }
+    },
+    {
+      "name": "graph.hangout_bundle.get",
+      "description": "Fetch the next hangout validation bundle from the learner graph.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "learnerId": "string (optional, personaId alias accepted by mock runtime)",
+        "userId": "string (optional)",
+        "city": "seoul|tokyo|shanghai (optional)",
+        "location": "food_street|cafe|convenience_store|subway_hub|practice_studio (optional)"
+      }
+    },
+    {
+      "name": "graph.evidence.record",
+      "description": "Record learner evidence events and return updated progression metrics.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "learnerId": "string (optional, personaId alias accepted by mock runtime)",
+        "userId": "string (optional)",
+        "event": "object (optional)",
+        "events": "array (optional)"
+      }
+    },
+    {
+      "name": "graph.pack.validate",
+      "description": "Validate a curriculum pack for cycles, orphans, duplicate nodes, and metadata coverage.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "pack": "object (optional)"
+      }
+    },
+    {
+      "name": "graph.overlay.propose",
+      "description": "Propose personalized YouTube/Spotify overlay branches from learner goals and media preferences.",
+      "method": "POST",
+      "path": "/api/v1/tools/invoke",
+      "args": {
+        "learnerId": "string (optional, personaId alias accepted by mock runtime)",
+        "userId": "string (optional)",
+        "lang": "ko|ja|zh (optional)",
+        "theme": "string (optional)",
+        "count": "number (optional)"
       }
     }
   ]

@@ -1,0 +1,41 @@
+{
+  "learnerId": "persona_kpop_prompting",
+  "actions": [
+    {
+      "recommendationId": "rec_ko_courtesy_review",
+      "type": "review",
+      "title": "Review Korean courtesy phrases",
+      "reason": "These phrases are due for review and unlock more natural food-street hangouts.",
+      "nodeIds": ["ko-vocab-courtesy"],
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "foundation": true,
+      "priority": 1
+    },
+    {
+      "recommendationId": "rec_zh_video_prompt_overlay",
+      "type": "overlay",
+      "title": "Start Chinese video prompting overlay",
+      "reason": "Recent YouTube interests suggest high-value vocabulary for prompt-writing and creator workflows.",
+      "nodeIds": ["overlay_zh_video_prompting"],
+      "cityId": "shanghai",
+      "locationId": "practice_studio",
+      "lang": "zh",
+      "foundation": false,
+      "priority": 2
+    },
+    {
+      "recommendationId": "rec_ja_beginner_lesson",
+      "type": "lesson",
+      "title": "Open beginner Japanese session",
+      "reason": "Japanese remains at the earliest foundation stage and needs a starter lesson path.",
+      "nodeIds": ["ja-foundation-01"],
+      "cityId": "tokyo",
+      "locationId": "food_street",
+      "lang": "ja",
+      "foundation": true,
+      "priority": 3
+    }
+  ]
+}

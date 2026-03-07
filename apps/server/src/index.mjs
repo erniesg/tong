@@ -29,6 +29,17 @@ import {
   handleReplicateWebhook,
   replicateWaitForPrediction,
 } from './replicate.mjs';
+import {
+  GRAPH_TOOL_DEFINITIONS,
+  getGraphDashboard,
+  getGraphHangoutBundle,
+  getGraphLessonBundle,
+  getGraphNextActions,
+  listGraphPersonas,
+  proposeGraphOverlay,
+  recordGraphEvidence,
+  validatePack,
+} from './curriculum-graph.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -190,6 +201,7 @@ const AGENT_TOOL_DEFINITIONS = [
       lang: 'ko|ja|zh (optional)',
     },
   },
+  ...GRAPH_TOOL_DEFINITIONS,
   // ── Volcengine / ByteDance tools ──────────────────────────────
   {
     name: 'volcengine.status',
@@ -1001,6 +1013,76 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
         },
       };
     }
+    case 'graph.dashboard.get': {
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: getGraphDashboard(args),
+        },
+      };
+    }
+    case 'graph.next_actions.get': {
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: getGraphNextActions(args),
+        },
+      };
+    }
+    case 'graph.lesson_bundle.get': {
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: getGraphLessonBundle(args),
+        },
+      };
+    }
+    case 'graph.hangout_bundle.get': {
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: getGraphHangoutBundle(args),
+        },
+      };
+    }
+    case 'graph.evidence.record': {
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: recordGraphEvidence(args),
+        },
+      };
+    }
+    case 'graph.pack.validate': {
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: validatePack(args.pack),
+        },
+      };
+    }
+    case 'graph.overlay.propose': {
+      return {
+        statusCode: 200,
+        payload: {
+          ok: true,
+          tool: toolName,
+          result: proposeGraphOverlay(args),
+        },
+      };
+    }
     // ── Volcengine tools ─────────────────────────────────────────
     case 'volcengine.status': {
       return {
@@ -1461,6 +1543,37 @@ const server = http.createServer(async (req, res) => {
           ? loadOrFallback('media-profile', ingestion.mediaProfile || FIXTURES.mediaProfile)
           : ingestion.mediaProfile || { ...FIXTURES.mediaProfile, userId },
       );
+      return;
+    }
+
+    if (pathname === '/api/v1/graph/personas' && req.method === 'GET') {
+      jsonResponse(res, 200, {
+        generatedAtIso: new Date().toISOString(),
+        items: listGraphPersonas(),
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/graph/dashboard' && req.method === 'GET') {
+      const personaId = url.searchParams.get('personaId') || url.searchParams.get('learnerId') || undefined;
+      const city = url.searchParams.get('city') || undefined;
+      const location = url.searchParams.get('location') || undefined;
+      const userId = getUserIdFromQuery(url.searchParams);
+      jsonResponse(res, 200, getGraphDashboard({ personaId, userId, city, location }));
+      return;
+    }
+
+    if (pathname === '/api/v1/graph/next-actions' && req.method === 'GET') {
+      const personaId = url.searchParams.get('personaId') || url.searchParams.get('learnerId') || undefined;
+      const userId = getUserIdFromQuery(url.searchParams);
+      const limit = Number(url.searchParams.get('limit') || 4);
+      jsonResponse(res, 200, getGraphNextActions({ personaId, userId, limit }));
+      return;
+    }
+
+    if (pathname === '/api/v1/graph/evidence' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      jsonResponse(res, 200, recordGraphEvidence(body));
       return;
     }
 

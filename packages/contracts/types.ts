@@ -300,6 +300,321 @@ export interface DemoSecretStatusResponse {
   openAiApiKeyConfigured: boolean;
 }
 
+// ── Curriculum graph / learner dashboard ─────────────────────────────
+
+export type GraphCityId = 'seoul' | 'tokyo' | 'shanghai';
+
+export type GraphLocationId =
+  | 'food_street'
+  | 'cafe'
+  | 'convenience_store'
+  | 'subway_hub'
+  | 'practice_studio';
+
+export type ObjectiveCategory =
+  | 'script'
+  | 'pronunciation'
+  | 'vocabulary'
+  | 'grammar'
+  | 'sentences'
+  | 'conversation'
+  | 'mastery';
+
+export type CurriculumGraphNodeType = 'objective' | 'media_overlay';
+
+export type CurriculumGraphEdgeType = 'requires' | 'reinforces' | 'unlocks';
+
+export type LearnerNodeStatus =
+  | 'locked'
+  | 'available'
+  | 'learning'
+  | 'due'
+  | 'validated'
+  | 'mastered';
+
+export type EvidenceSource = 'learn' | 'hangout' | 'exercise' | 'mission' | 'review' | 'media';
+
+export interface ScriptTarget {
+  id: string;
+  label: string;
+  transliteration?: string;
+  notes?: string;
+  level: number;
+}
+
+export interface PronunciationTarget {
+  id: string;
+  label: string;
+  transliteration?: string;
+  notes?: string;
+  level: number;
+}
+
+export interface VocabularyTarget {
+  id: string;
+  word: string;
+  romanization: string;
+  translation: string;
+  category: string;
+  level: number;
+  sceneContext?: string;
+  visualCue?: string;
+}
+
+export interface GrammarTarget {
+  id: string;
+  pattern: string;
+  explanation: string;
+  examples: Array<{
+    target: string;
+    translation: string;
+  }>;
+  level: number;
+  locationId: string;
+}
+
+export interface SentenceFrameTarget {
+  id: string;
+  pattern: string;
+  explanation: string;
+  examples: Array<{
+    target: string;
+    translation: string;
+  }>;
+  level: number;
+}
+
+export interface CurriculumGraphNode {
+  nodeId: string;
+  type: CurriculumGraphNodeType;
+  cityId: GraphCityId;
+  locationId: GraphLocationId;
+  lang: TargetLanguage;
+  level: number;
+  title: string;
+  description: string;
+  tags: string[];
+  targetItemIds?: string[];
+  targetCount?: number;
+  assessmentThreshold?: number;
+  objectiveCategory?: ObjectiveCategory;
+  personalized?: {
+    source: 'youtube' | 'spotify';
+    rationale: string;
+  };
+}
+
+export interface CurriculumGraphEdge {
+  edgeId: string;
+  type: CurriculumGraphEdgeType;
+  fromNodeId: string;
+  toNodeId: string;
+  rationale?: string;
+}
+
+export interface LocationMission {
+  missionId: string;
+  title: string;
+  description: string;
+  level: number;
+  requiredNodeIds: string[];
+  rewards: {
+    xp: number;
+    sp: number;
+    rp: number;
+  };
+}
+
+export interface LocationScenario {
+  scenarioId: string;
+  mode: 'learn' | 'hangout';
+  title: string;
+  description: string;
+  targetNodeIds: string[];
+}
+
+export interface CurriculumPackLevel {
+  level: number;
+  label: string;
+  description: string;
+  objectiveNodeIds: string[];
+  assessmentCriteria: {
+    minAccuracy: number;
+    minItemsCompleted: number;
+    requiredNodeIds: string[];
+  };
+}
+
+export interface LocationCurriculumPack {
+  packId: string;
+  version: string;
+  cityId: GraphCityId;
+  locationId: GraphLocationId;
+  lang: TargetLanguage;
+  title: string;
+  summary: string;
+  goldStandard: boolean;
+  contentVersionPolicy: 'append_only';
+  nodes: CurriculumGraphNode[];
+  edges: CurriculumGraphEdge[];
+  levels: CurriculumPackLevel[];
+  scenarios: LocationScenario[];
+  missions: LocationMission[];
+  content: {
+    scriptTargets: ScriptTarget[];
+    pronunciationTargets: PronunciationTarget[];
+    vocabularyTargets: VocabularyTarget[];
+    grammarTargets: GrammarTarget[];
+    sentenceFrameTargets: SentenceFrameTarget[];
+  };
+}
+
+export interface LearnerNodeState {
+  learnerId: string;
+  nodeId: string;
+  status: LearnerNodeStatus;
+  masteryScore: number;
+  nextReviewAt?: string;
+  lastEvidenceAt?: string;
+  evidenceCount: number;
+  blockerNodeIds: string[];
+  recommendedReason?: string;
+}
+
+export interface EvidenceEvent {
+  eventId: string;
+  learnerId: string;
+  nodeId: string;
+  source: EvidenceSource;
+  mode: 'learn' | 'hangout' | 'review' | 'mission';
+  correct: boolean;
+  qualityScore: number;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface GraphRecommendation {
+  recommendationId: string;
+  type: 'lesson' | 'hangout' | 'review' | 'mission' | 'overlay';
+  title: string;
+  reason: string;
+  nodeIds: string[];
+  cityId: GraphCityId;
+  locationId: GraphLocationId;
+  lang: TargetLanguage;
+  foundation: boolean;
+  priority: number;
+}
+
+export interface LearnerPersonaProfile {
+  learnerId: string;
+  displayName: string;
+  targetLanguages: TargetLanguage[];
+  proficiency: Record<TargetLanguage, 'none' | 'beginner' | 'intermediate' | 'advanced'>;
+  goals: Array<{
+    lang: TargetLanguage;
+    topic: string;
+  }>;
+  mediaPreferences: {
+    youtube: string[];
+    spotify: string[];
+  };
+}
+
+export interface WorldRoadmapEntry {
+  cityId: GraphCityId;
+  locationId: GraphLocationId;
+  title: string;
+  lang: TargetLanguage;
+  status: 'ready' | 'in_progress' | 'stub';
+  summary: string;
+  activeNodeCount: number;
+  completedNodeCount: number;
+}
+
+export interface LocationSkillTreeNode {
+  node: CurriculumGraphNode;
+  state: LearnerNodeState;
+  blockers: string[];
+}
+
+export interface PersonalizedOverlayNode {
+  overlayId: string;
+  title: string;
+  lang: TargetLanguage;
+  source: 'youtube' | 'spotify';
+  connectedNodeIds: string[];
+  rationale: string;
+  suggestedTerms: string[];
+}
+
+export interface GraphDashboardResponse {
+  learner: LearnerPersonaProfile;
+  progression: {
+    xp: number;
+    sp: number;
+    rp: number;
+  };
+  roadmap: WorldRoadmapEntry[];
+  selectedPack: {
+    pack: LocationCurriculumPack;
+    nodes: LocationSkillTreeNode[];
+  };
+  overlays: PersonalizedOverlayNode[];
+  recommendations: GraphRecommendation[];
+  evidence: {
+    totalEvents: number;
+    lastUpdatedAt?: string;
+  };
+}
+
+export interface GraphLessonBundleResponse {
+  learnerId: string;
+  nodeIds: string[];
+  objectiveIds: string[];
+  title: string;
+  reason: string;
+}
+
+export interface GraphHangoutBundleResponse {
+  learnerId: string;
+  nodeIds: string[];
+  objectiveIds: string[];
+  scenarioId: string;
+  title: string;
+  reason: string;
+}
+
+export interface GraphPackValidationIssue {
+  code: string;
+  severity: 'error' | 'warning';
+  message: string;
+  nodeId?: string;
+}
+
+export interface GraphPackValidationResponse {
+  valid: boolean;
+  packId: string;
+  issues: GraphPackValidationIssue[];
+}
+
+export interface GraphEvidenceRecordResponse {
+  accepted: true;
+  learnerId: string;
+  event: EvidenceEvent;
+  state: LearnerNodeState;
+  progression: {
+    xp: number;
+    sp: number;
+    rp: number;
+  };
+}
+
+export interface GraphOverlayProposalResponse {
+  learnerId: string;
+  overlays: PersonalizedOverlayNode[];
+}
+
 // ── Volcengine / ByteDance API types ────────────────────────────────
 
 /** Image generation request (Seedream) */

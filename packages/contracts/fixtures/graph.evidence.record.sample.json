@@ -1,0 +1,34 @@
+{
+  "accepted": true,
+  "learnerId": "persona_kpop_prompting",
+  "event": {
+    "eventId": "evt_graph_001",
+    "learnerId": "persona_kpop_prompting",
+    "nodeId": "ko-vocab-courtesy",
+    "source": "exercise",
+    "mode": "learn",
+    "correct": true,
+    "qualityScore": 4,
+    "createdAt": "2026-03-08T10:00:00.000Z",
+    "metadata": {
+      "exerciseType": "multiple_choice",
+      "targetItem": "주세요"
+    }
+  },
+  "state": {
+    "learnerId": "persona_kpop_prompting",
+    "nodeId": "ko-vocab-courtesy",
+    "status": "due",
+    "masteryScore": 0.78,
+    "nextReviewAt": "2026-03-10T10:00:00.000Z",
+    "lastEvidenceAt": "2026-03-08T10:00:00.000Z",
+    "evidenceCount": 6,
+    "blockerNodeIds": [],
+    "recommendedReason": "Courtesy phrases are nearly validated and remain directly relevant to the next hangout."
+  },
+  "progression": {
+    "xp": 164,
+    "sp": 34,
+    "rp": 18
+  }
+}

@@ -194,6 +194,9 @@ export default function IntegrationsPage() {
           <Link href="/insights" className="nav-link">
             Insights
           </Link>
+          <Link href="/dashboard" className="nav-link">
+            Dashboard
+          </Link>
         </div>
       </header>
 
