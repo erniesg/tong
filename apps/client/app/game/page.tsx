@@ -33,7 +33,7 @@ import { ExerciseModal } from '@/components/learn/ExerciseModal';
 /* ── scene constants ────────────────────────────────────── */
 
 const NPC_SPRITES: Record<string, { name: string; nameLocal: string; nameZh: string; src: string; idleVideo?: string; color: string }> = {
-  haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: '/assets/characters/haeun/haeun.png', idleVideo: '/assets/characters/haeun/haeun_idle.mp4', color: '#e8485c' },
+  haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: '/assets/characters/haeun/haeun.png', idleVideo: '/assets/characters/haeun/haeun_idle_loop.mp4', color: '#e8485c' },
   jin: { name: 'Jin', nameLocal: '진', nameZh: '珍', src: '/assets/characters/jin/jin.png', color: '#4a90d9' },
 };
 
