@@ -50,6 +50,8 @@ const STRINGS: Record<string, Record<UILang, string>> = {
   'stroke_try_again': { en: 'Try tracing closer to the character shape.', ko: '글자 모양에 더 가깝게 따라 써 보세요.', ja: '文字の形にもっと近づけてなぞってみよう。', zh: '试着更贴近字形描写。' },
   'stroke_score': { en: 'Accuracy', ko: '정확도', ja: '精度', zh: '准确度' },
   'stroke_examples': { en: 'Words using this character:', ko: '이 글자가 쓰이는 단어:', ja: 'この文字を使う単語:', zh: '使用这个字的词：' },
+  'stroke_drill_done': { en: 'Drill complete! Your muscle memory is building.', ko: '연습 완료! 근육 기억이 쌓이고 있어요.', ja: 'ドリル完了！体が覚えてきています。', zh: '练习完成！肌肉记忆正在形成。' },
+  'stroke_freehand': { en: 'Now try from memory!', ko: '이제 기억으로 써 보세요!', ja: '今度は記憶で書いてみよう！', zh: '现在凭记忆写吧！' },
   'your_pick': { en: 'Your pick', ko: '선택', ja: '選択', zh: '你的选择' },
   'or': { en: 'or', ko: '또는', ja: 'または', zh: '或' },
 

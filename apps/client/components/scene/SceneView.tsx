@@ -174,7 +174,8 @@ export function SceneView({
         </div>
       ) : (
         <div
-          className="absolute bottom-0 left-0 right-0 p-5 cursor-pointer"
+          className="absolute bottom-0 left-0 right-0 cursor-pointer"
+          style={{ padding: '20px 20px calc(20px + var(--safe-bottom, 0px))' }}
           onClick={tongTip ? onDismissTong : onContinue}
         >
           <div className="scene-continue-label animate-pulse">
