@@ -24,6 +24,7 @@ import { getLocationVocab, getRegisteredLocationKeys } from '@/lib/content/locat
 import type { DesignPrinciple } from '@/lib/content/scripts/hangul';
 import { t, tFmt } from '@/lib/i18n/ui-strings';
 import type { UILang } from '@/lib/i18n/ui-strings';
+import { getVocabTranslation } from '@/lib/i18n/vocab-translations';
 
 export interface ExerciseHints {
   hintItems?: string[];
@@ -325,7 +326,7 @@ function generateMatching(
         : t('match_words_meaning', explainIn),
     pairs: selected.map((v) => ({
       left: v.word,
-      right: isSound ? v.romanization : v.translation,
+      right: isSound ? v.romanization : getVocabTranslation(v.word, explainIn),
     })),
   };
 }
@@ -363,7 +364,7 @@ function generateMultipleChoice(
     prompt = tFmt('what_means', explainIn, target.word);
     options = selected.map((v, i) => ({
       id: i === 0 ? 'correct' : `d${i}`,
-      text: v.translation,
+      text: getVocabTranslation(v.word, explainIn),
     }));
   }
 
@@ -375,7 +376,7 @@ function generateMultipleChoice(
     prompt,
     options: shuffle(options),
     correctOptionId: 'correct',
-    explanation: `${target.word} (${target.romanization}) = ${target.translation}`,
+    explanation: `${target.word} (${target.romanization}) = ${getVocabTranslation(target.word, explainIn)}`,
   };
 }
 
@@ -399,7 +400,7 @@ function generateDragDrop(
 
   const targets = shuffle(selected).map((v) => ({
     id: `target-${v.word}`,
-    label: isSound ? v.romanization : v.translation,
+    label: isSound ? v.romanization : getVocabTranslation(v.word, explainIn),
   }));
 
   const correctMapping: Record<string, string> = {};
@@ -429,8 +430,11 @@ interface SentencePattern {
   words: string[];
   correctOrder: string[];
   distractors: string[];
-  prompt: string;
-  explanation: string;
+  /** i18n key for meaning shown to user, e.g. "떡볶이 주세요" */
+  meaningKey: string;
+  /** Korean sentence for explanation */
+  korean: string;
+  grammarNote: string;
 }
 
 const SENTENCE_PATTERNS: SentencePattern[] = [
@@ -438,36 +442,41 @@ const SENTENCE_PATTERNS: SentencePattern[] = [
     words: ['주세요', '떡볶이'],
     correctOrder: ['떡볶이', '주세요'],
     distractors: ['감사합니다', '맵다'],
-    prompt: 'Build: "Tteokbokki please"',
-    explanation: '떡볶이 주세요 = Tteokbokki please (N + 주세요)',
+    meaningKey: '떡볶이 주세요',
+    korean: '떡볶이 주세요',
+    grammarNote: 'N + 주세요',
   },
   {
     words: ['주세요', '물'],
     correctOrder: ['물', '주세요'],
     distractors: ['먹다', '짜다'],
-    prompt: 'Build: "Water please"',
-    explanation: '물 주세요 = Water please (N + 주세요)',
+    meaningKey: '물 주세요',
+    korean: '물 주세요',
+    grammarNote: 'N + 주세요',
   },
   {
     words: ['을', '김밥', '주세요'],
     correctOrder: ['김밥', '을', '주세요'],
     distractors: ['달다'],
-    prompt: 'Build: "Gimbap please" (with particle)',
-    explanation: '김밥을 주세요 = Please give me gimbap (N+을/를 주세요)',
+    meaningKey: '김밥을 주세요',
+    korean: '김밥을 주세요',
+    grammarNote: 'N+을/를 주세요',
   },
   {
     words: ['를', '라면', '주세요'],
     correctOrder: ['라면', '을', '주세요'],
     distractors: ['맵다'],
-    prompt: 'Build: "Ramen please" (with particle)',
-    explanation: '라면을 주세요 = Please give me ramen (N+을/를 주세요)',
+    meaningKey: '라면을 주세요',
+    korean: '라면을 주세요',
+    grammarNote: 'N+을/를 주세요',
   },
   {
     words: ['개', '세', '주세요', '떡볶이'],
     correctOrder: ['떡볶이', '세', '개', '주세요'],
     distractors: [],
-    prompt: 'Build: "Three tteokbokki please"',
-    explanation: '떡볶이 세 개 주세요 = Three tteokbokki please (N + counter + 주세요)',
+    meaningKey: '떡볶이 세 개 주세요',
+    korean: '떡볶이 세 개 주세요',
+    grammarNote: 'N + counter + 주세요',
   },
 ];
 
@@ -479,7 +488,8 @@ interface FillBlankPattern {
   correct: string;
   distractors: string[];
   grammarNote: string;
-  prompt: string;
+  /** i18n key for the prompt */
+  promptKey: string;
 }
 
 const FILL_BLANK_PATTERNS: FillBlankPattern[] = [
@@ -488,40 +498,40 @@ const FILL_BLANK_PATTERNS: FillBlankPattern[] = [
     blankIndex: 1,
     correct: '을',
     distractors: ['를', '은', '이'],
-    grammarNote: '을 is used after consonant-ending nouns (떡볶이 ends with ㅣ vowel, but 을 is common in casual speech)',
-    prompt: 'Fill in the correct particle',
+    grammarNote: '을/를 → object particle',
+    promptKey: 'fill_correct_particle',
   },
   {
     sentence: '물 ___ 주세요',
     blankIndex: 1,
     correct: '을',
     distractors: ['를', '은', '이'],
-    grammarNote: '을 is the object particle after consonant-ending nouns (물 ends with ㄹ)',
-    prompt: 'Fill in the correct particle',
+    grammarNote: '을/를 → object particle',
+    promptKey: 'fill_correct_particle',
   },
   {
     sentence: '김밥 ___ 맛있다',
     blankIndex: 1,
     correct: '이',
     distractors: ['을', '는', '를'],
-    grammarNote: '이 is the subject particle after consonant-ending nouns',
-    prompt: 'Fill in the correct particle',
+    grammarNote: '이/가 → subject particle',
+    promptKey: 'fill_correct_particle',
   },
   {
     sentence: '라면 ___ 개 주세요',
     blankIndex: 1,
     correct: '세',
     distractors: ['하나', '다섯', '두'],
-    grammarNote: '세 = three (native Korean number before counter)',
-    prompt: 'Fill in the correct number',
+    grammarNote: 'native Korean number + counter',
+    promptKey: 'fill_correct_particle',
   },
   {
     sentence: '여기 ___ 얼마예요?',
     blankIndex: 1,
     correct: '이거',
     distractors: ['저거', '그거', '뭐'],
-    grammarNote: '이거 = this thing (pointing at something near you)',
-    prompt: 'Fill in: "How much is this here?"',
+    grammarNote: '이거/저거/그거 → this/that/that',
+    promptKey: 'fill_correct_particle',
   },
 ];
 
@@ -551,6 +561,7 @@ function generateSentenceBuilder(
   _pool: VocabItem[],
   objectiveId: string,
   hintItems?: string[],
+  explainIn: UILang = 'en',
 ): SentenceBuilderExercise {
   // Pick a pattern, preferring ones matching hintItems
   let pattern = SENTENCE_PATTERNS[Math.floor(Math.random() * SENTENCE_PATTERNS.length)];
@@ -564,17 +575,19 @@ function generateSentenceBuilder(
   }
 
   const allTiles = shuffle([...pattern.words, ...pattern.distractors]);
+  // Build localized meaning: translate each Korean word in the sentence
+  const meaning = pattern.correctOrder.map((w) => getVocabTranslation(w, explainIn)).join(' ');
 
   return {
     type: 'sentence_builder',
     id: stableId('sb', objectiveId, pattern.correctOrder),
     objectiveId,
     difficulty: pattern.correctOrder.length > 3 ? 3 : 2,
-    prompt: pattern.prompt,
+    prompt: tFmt('build_sentence', explainIn, meaning),
     wordTiles: allTiles,
     correctOrder: pattern.correctOrder,
     distractors: pattern.distractors,
-    explanation: pattern.explanation,
+    explanation: `${pattern.korean} (${pattern.grammarNote})`,
   };
 }
 
@@ -582,6 +595,7 @@ function generateFillBlank(
   _pool: VocabItem[],
   objectiveId: string,
   hintItems?: string[],
+  explainIn: UILang = 'en',
 ): FillBlankExercise {
   let pattern = FILL_BLANK_PATTERNS[Math.floor(Math.random() * FILL_BLANK_PATTERNS.length)];
   if (hintItems && hintItems.length > 0) {
@@ -603,7 +617,7 @@ function generateFillBlank(
     id: stableId('fb', objectiveId, [pattern.correct, pattern.sentence]),
     objectiveId,
     difficulty: 2,
-    prompt: pattern.prompt,
+    prompt: t(pattern.promptKey, explainIn),
     sentence: pattern.sentence,
     blankIndex: pattern.blankIndex,
     options,
@@ -713,6 +727,7 @@ function generatePronunciationSelect(
 function generatePatternRecognition(
   objectiveId: string,
   language: 'ko' | 'zh' | 'ja' = 'ko',
+  explainIn: UILang = 'en',
 ): PatternRecognitionExercise {
   // Pick a random design principle from the appropriate language
   const principles = getDesignPrinciplesForLanguage(language);
@@ -737,7 +752,7 @@ function generatePatternRecognition(
     id: stableId('pr', objectiveId, [principle.id, principle.examples[correctIdx].chars]),
     objectiveId,
     difficulty: 2,
-    prompt: `Which example shows "${principle.title}"?`,
+    prompt: tFmt('which_shows_principle', explainIn, principle.title),
     pairs: shuffledPairs,
     correctPairIndex: correctShuffledIdx,
     principleId: principle.id,
@@ -894,6 +909,7 @@ function generateBlockCrush(
 function generateErrorCorrection(
   _pool: VocabItem[],
   objectiveId: string,
+  explainIn: UILang = 'en',
 ): ErrorCorrectionExercise {
   // Predefined error correction patterns for Korean grammar
   const patterns = [
@@ -931,7 +947,7 @@ function generateErrorCorrection(
     id: stableId('ec', objectiveId, [pattern.sentence, pattern.correct]),
     objectiveId,
     difficulty: 3,
-    prompt: 'Find and fix the error in this sentence:',
+    prompt: t('find_fix_error', explainIn),
     sentence: pattern.sentence,
     errorWordIndex: pattern.errorWordIndex,
     options,
@@ -955,10 +971,10 @@ function generateFreeInput(
     id: stableId('fi', objectiveId, [selected.word]),
     objectiveId,
     difficulty: 2,
-    prompt: tFmt('type_word_for', explainIn, selected.translation),
+    prompt: tFmt('type_word_for', explainIn, getVocabTranslation(selected.word, explainIn)),
     expectedAnswers: [selected.word],
     hint: tFmt('romanization_hint', explainIn, selected.romanization),
-    explanation: `${selected.word} (${selected.romanization}) = ${selected.translation}`,
+    explanation: `${selected.word} (${selected.romanization}) = ${getVocabTranslation(selected.word, explainIn)}`,
   };
 }
 
@@ -983,19 +999,19 @@ export function generateExercise(exerciseType: string, hints?: ExerciseHints): E
     case 'drag_drop':
       return generateDragDrop(pool, objectiveId, count ?? 4, hintItems, hintSubType, mastery, explainIn);
     case 'sentence_builder':
-      return generateSentenceBuilder(pool, objectiveId, hintItems);
+      return generateSentenceBuilder(pool, objectiveId, hintItems, explainIn);
     case 'fill_blank':
-      return generateFillBlank(pool, objectiveId, hintItems);
+      return generateFillBlank(pool, objectiveId, hintItems, explainIn);
     case 'pronunciation_select':
       return generatePronunciationSelect(pool, objectiveId, hintItems, explainIn);
     case 'pattern_recognition':
-      return generatePatternRecognition(objectiveId, language);
+      return generatePatternRecognition(objectiveId, language, explainIn);
     case 'stroke_tracing':
       return generateStrokeTracing(pool, objectiveId, hintItems, language, explainIn, hintSubType);
     case 'block_crush':
       return generateBlockCrush(objectiveId, language, hintItems, mastery, explainIn);
     case 'error_correction':
-      return generateErrorCorrection(pool, objectiveId);
+      return generateErrorCorrection(pool, objectiveId, explainIn);
     case 'free_input':
       return generateFreeInput(pool, objectiveId, hintItems, explainIn);
     default:
