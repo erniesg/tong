@@ -25,7 +25,10 @@ export function ErrorCorrection({ exercise, onResult }: Props) {
   const handleSubmit = () => {
     if (selectedWord === null || !selectedCorrection || submitted) return;
     setSubmitted(true);
-    onResult(isCorrect);
+    const selectedText = exercise.options.find((o) => o.id === selectedCorrection)?.text ?? '';
+    const correctText = exercise.options.find((o) => o.id === exercise.correctOptionId)?.text ?? '';
+    const errorWord = words[exercise.errorWordIndex] ?? '';
+    onResult(isCorrect, JSON.stringify({ kind: 'pick', selected: `${errorWord} → ${selectedText}`, answer: `${errorWord} → ${correctText}` }));
   };
 
   return (

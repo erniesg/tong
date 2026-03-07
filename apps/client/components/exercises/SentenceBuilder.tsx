@@ -34,7 +34,7 @@ export function SentenceBuilder({ exercise, onResult }: Props) {
       placed.length === exercise.correctOrder.length &&
       placed.every((t, i) => t === exercise.correctOrder[i]);
     setSubmitted(true);
-    onResult(isCorrect);
+    onResult(isCorrect, JSON.stringify({ kind: 'pick', selected: placed.join(' '), answer: exercise.correctOrder.join(' ') }));
   };
 
   const isCorrect =

@@ -687,9 +687,12 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
                                 )}
                               </div>
                             )}
-                            {!detail && (
+                            {!detail && exSummary && (
+                              <span className="learn-result-card__status">{exSummary}</span>
+                            )}
+                            {!detail && !exSummary && (
                               <span className="learn-result-card__status">
-                                {isCorrect ? '正确' : '错误'}
+                                {isCorrect ? '✓' : '✗'}
                               </span>
                             )}
                           </div>
