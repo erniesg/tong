@@ -1,5 +1,12 @@
 const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
 const DEMO_PASSWORD_STORAGE_KEY = 'tong.demo.password';
+const GRAPH_RUNTIME_LEARNER_STORAGE_KEY = 'tong.graph.learner_id';
+const GRAPH_NODE_ID_ALIASES: Record<string, string> = {
+  'ko-script-consonants': 'ko-script-consonants-basic',
+  'ko-script-vowels': 'ko-script-vowels-basic',
+};
+const GRAPH_NODE_ID_PATTERN =
+  /^(?:[a-z]{2}-(?:script|pron|vocab|gram|sentences?|conversation|mastery)-[a-z0-9-]+|overlay_[a-z0-9_]+)$/;
 
 function stripDemoPasswordFromUrl() {
   if (typeof window === 'undefined') return;
@@ -146,208 +153,236 @@ export interface SecretStatusResponse {
 
 export interface GraphPersonaGoal {
   lang: 'ko' | 'ja' | 'zh';
-  theme: string;
-  objective: string;
+  topic: string;
 }
 
 export interface GraphPersonaSummary {
-  learnerId?: string;
-  personaId: string;
-  userId: string;
+  learnerId: string;
   displayName: string;
-  focusSummary: string;
+  targetLanguages: Array<'ko' | 'ja' | 'zh'>;
   proficiency: UserProficiency;
   goals: GraphPersonaGoal[];
+  mediaPreferences: {
+    youtube: string[];
+    spotify: string[];
+  };
 }
 
 export interface GraphPersonaListResponse {
-  generatedAtIso: string;
   items: GraphPersonaSummary[];
 }
 
-export interface GraphWorldRoadmapLevel {
-  level: number;
-  label: string;
-  status: 'locked' | 'available' | 'active' | 'validated' | 'preview';
-}
-
-export interface GraphWorldRoadmapLocation {
-  locationId: LocationId;
-  label: string;
-  status: 'active' | 'preview' | 'locked';
-  progress: string;
-}
-
-export interface GraphWorldRoadmapCity {
+export interface GraphRoadmapItem {
   cityId: CityId;
-  label: string;
-  focus: string;
-  proficiency: ProficiencyLevel;
-  locations: GraphWorldRoadmapLocation[];
-  levels: GraphWorldRoadmapLevel[];
-}
-
-export interface GraphSkillObjective {
-  objectiveId: string;
+  locationId: LocationId;
   title: string;
-  description: string;
-  status: 'locked' | 'available' | 'learning' | 'due' | 'validated' | 'mastered';
-  mastery_score: number;
-  validatedTargetCount: number;
-  targetCount: number;
-  blockers: string[];
-  category: string;
-}
-
-export interface GraphSkillLevel {
-  level: number;
-  name: string;
-  description: string;
-  estimatedSessionMinutes: number;
-  mission: {
-    missionId: string;
-    title: string;
-    requiredObjectiveIds: string[];
-    reward: ScoreState;
-    status: 'locked' | 'tracking' | 'ready';
-  };
-  objectives: GraphSkillObjective[];
-}
-
-export interface GraphOverlayFocusCard {
-  overlayId: string;
   lang: 'ko' | 'ja' | 'zh';
-  theme: string;
-  title: string;
-  description: string;
-  nodes: Array<{
-    nodeId: string;
-    label: string;
-    translation: string;
-    status: 'locked' | 'available' | 'active';
-  }>;
-  reason: string;
+  status: 'ready' | 'in_progress' | 'stub';
+  summary: string;
+  activeNodeCount: number;
+  completedNodeCount: number;
 }
 
-export interface GraphAction {
-  actionId: string;
+export interface GraphPackNode {
+  nodeId: string;
+  type: string;
+  cityId: CityId;
+  locationId: LocationId;
+  lang: 'ko' | 'ja' | 'zh';
+  level: number;
+  title: string;
+  description: string;
+  tags: string[];
+  targetItemIds: string[];
+  targetCount: number;
+  assessmentThreshold: number;
+  objectiveCategory: string;
+}
+
+export interface GraphPackMission {
+  missionId: string;
+  title: string;
+  description: string;
+  level: number;
+  requiredNodeIds: string[];
+  rewards: ScoreState;
+}
+
+export interface GraphPackLevel {
+  level: number;
+  label: string;
+  description: string;
+  objectiveNodeIds: string[];
+  assessmentCriteria?: {
+    minAccuracy?: number;
+    minItemsCompleted?: number;
+    requiredNodeIds?: string[];
+  };
+}
+
+export interface GraphPackScenario {
+  scenarioId: string;
+  mode: 'learn' | 'hangout';
+  title: string;
+  description: string;
+  targetNodeIds: string[];
+}
+
+export interface GraphCurriculumPack {
+  packId: string;
+  version: string;
+  cityId: CityId;
+  locationId: LocationId;
+  lang: 'ko' | 'ja' | 'zh';
+  title: string;
+  summary: string;
+  goldStandard: boolean;
+  contentVersionPolicy: string;
+  nodes: GraphPackNode[];
+  levels: GraphPackLevel[];
+  scenarios: GraphPackScenario[];
+  missions: GraphPackMission[];
+}
+
+export interface GraphNodeState {
+  learnerId: string;
+  nodeId: string;
+  status: 'locked' | 'available' | 'learning' | 'due' | 'validated' | 'mastered';
+  masteryScore: number;
+  evidenceCount: number;
+  blockerNodeIds: string[];
+  recommendedReason?: string;
+  nextReviewAt?: string;
+  lastEvidenceAt?: string;
+}
+
+export interface GraphSelectedPackNode {
+  node: GraphPackNode;
+  state: GraphNodeState;
+  blockers: string[];
+}
+
+export interface GraphOverlay {
+  overlayId: string;
+  title: string;
+  lang: 'ko' | 'ja' | 'zh';
+  source: 'youtube' | 'spotify';
+  connectedNodeIds: string[];
+  rationale: string;
+  suggestedTerms: string[];
+}
+
+export interface GraphRecommendation {
+  recommendationId: string;
   type: 'lesson' | 'hangout' | 'review' | 'mission' | 'overlay';
   title: string;
-  objectiveId: string | null;
+  nodeIds: string[];
   cityId: CityId;
   locationId: LocationId;
+  lang: 'ko' | 'ja' | 'zh';
   reason: string;
-  recommendedNodeIds: string[];
-}
-
-export interface GraphBundleTarget {
-  nodeId: string;
-  label: string;
-  status: string;
-  mastery_score: number;
+  foundation: boolean;
+  priority: number;
 }
 
 export interface GraphLessonBundle {
-  bundleId: string;
-  cityId: CityId;
-  locationId: LocationId;
-  objectiveId: string | null;
+  learnerId: string;
+  nodeIds: string[];
+  objectiveIds: string[];
   title: string;
-  mode: 'learn';
   reason: string;
-  targets: GraphBundleTarget[];
-  explainIn: AppLang;
 }
 
 export interface GraphHangoutBundle {
-  bundleId: string;
-  cityId: CityId;
-  locationId: LocationId;
-  objectiveId: string | null;
+  learnerId: string;
+  nodeIds: string[];
+  objectiveIds: string[];
+  scenarioId: string;
   title: string;
-  mode: 'hangout';
   reason: string;
-  targets: GraphBundleTarget[];
-  suggestedPhrases: string[];
 }
 
 export interface GraphDashboardResponse {
-  generatedAtIso: string;
-  persona: GraphPersonaSummary & {
-    learnerId?: string;
-    topTerms: Array<{ lemma: string; lang: 'ko' | 'ja' | 'zh'; source: 'youtube' | 'spotify'; weight: number }>;
-    mediaPreferences: {
-      youtube: string[];
-      spotify: string[];
-    };
-  };
+  learner: GraphPersonaSummary;
   progression: ScoreState;
-  worldRoadmap: GraphWorldRoadmapCity[];
-  locationSkillTree: {
-    packId: string;
-    cityId: CityId;
-    locationId: LocationId;
-    title: string;
-    levels: GraphSkillLevel[];
+  roadmap: GraphRoadmapItem[];
+  selectedPack: {
+    pack: GraphCurriculumPack;
+    nodes: GraphSelectedPackNode[];
   };
-  personalizedOverlay: {
-    focusCards: GraphOverlayFocusCard[];
-    summary: string;
-  };
-  nextActions: GraphAction[];
-  lessonBundle: GraphLessonBundle;
-  hangoutBundle: GraphHangoutBundle;
-  metrics: {
-    validatedObjectives: number;
-    masteredObjectives: number;
-    dueNodeCount: number;
-    evidenceCount: number;
+  overlays: GraphOverlay[];
+  recommendations: GraphRecommendation[];
+  evidence: {
+    totalEvents: number;
+    lastUpdatedAt?: string;
   };
 }
 
 export interface GraphNextActionsResponse {
-  generatedAtIso: string;
-  learnerId?: string;
-  personaId: string;
-  actions: GraphAction[];
+  learnerId: string;
+  actions: GraphRecommendation[];
 }
 
 export interface GraphEvidenceRecordResponse {
-  learnerId?: string;
-  personaId?: string;
-  recorded: number;
-  events: Array<{
+  accepted: true;
+  learnerId: string;
+  event: {
     eventId: string;
-    personaId: string;
-    userId: string;
+    learnerId: string;
     nodeId: string;
-    objectiveId: string | null;
-    mode: 'learn' | 'hangout' | 'review' | 'mission' | 'media';
-    quality: number;
-    occurredAtIso: string;
-    source: string;
-  }>;
-  progression: ScoreState;
-  metrics: {
-    validatedObjectives: number;
-    masteredObjectives: number;
-    dueNodeCount: number;
-    evidenceCount: number;
+    mode: 'learn' | 'hangout' | 'review' | 'mission';
+    source: 'learn' | 'exercise' | 'hangout' | 'mission' | 'review' | 'media';
+    correct: boolean;
+    qualityScore: number;
+    createdAt: string;
+    metadata?: Record<string, unknown>;
   };
+  state: GraphNodeState;
+  progression: ScoreState;
+}
+
+export interface GraphEvidenceRecordBody {
+  personaId?: string;
+  learnerId?: string;
+  userId?: string;
+  event?: {
+    nodeId: string;
+    mode: 'learn' | 'hangout' | 'review' | 'mission';
+    quality?: number;
+    qualityScore?: number;
+    source?: string;
+    correct?: boolean;
+    createdAt?: string;
+    metadata?: Record<string, unknown>;
+  };
+  events?: Array<{
+    nodeId: string;
+    mode: 'learn' | 'hangout' | 'review' | 'mission';
+    quality?: number;
+    qualityScore?: number;
+    source?: string;
+    correct?: boolean;
+    createdAt?: string;
+    metadata?: Record<string, unknown>;
+  }>;
+}
+
+export interface GraphPackValidationIssue {
+  code: string;
+  severity: 'warning' | 'error';
+  message: string;
+  nodeId?: string;
 }
 
 export interface GraphPackValidateResponse {
   valid: boolean;
-  errorCount: number;
-  errors: Array<{ code: string; message: string }>;
-  summary: string;
+  packId: string;
+  issues: GraphPackValidationIssue[];
 }
 
 export interface GraphOverlayProposalResponse {
-  generatedAtIso: string;
-  learnerId?: string;
-  personaId: string;
-  overlays: GraphOverlayFocusCard[];
+  learnerId: string;
+  overlays: GraphOverlay[];
 }
 
 export type CityId = 'seoul' | 'tokyo' | 'shanghai';
@@ -415,6 +450,31 @@ export function setStoredDemoPassword(password: string) {
 export function clearStoredDemoPassword() {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(DEMO_PASSWORD_STORAGE_KEY);
+}
+
+export function getGraphRuntimeLearnerId() {
+  if (typeof window === 'undefined') return 'learner_local';
+
+  const existing = window.localStorage.getItem(GRAPH_RUNTIME_LEARNER_STORAGE_KEY);
+  if (existing) return existing;
+
+  const generated =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? `learner_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`
+      : `learner_${Math.random().toString(36).slice(2, 18)}`;
+
+  window.localStorage.setItem(GRAPH_RUNTIME_LEARNER_STORAGE_KEY, generated);
+  return generated;
+}
+
+export function normalizeGraphNodeId(nodeId?: string | null) {
+  if (typeof nodeId !== 'string') return '';
+  const trimmed = nodeId.trim();
+  return GRAPH_NODE_ID_ALIASES[trimmed] || trimmed;
+}
+
+export function looksLikeGraphNodeId(nodeId?: string | null) {
+  return GRAPH_NODE_ID_PATTERN.test(normalizeGraphNodeId(nodeId));
 }
 
 export function fetchCaptions(videoId: string, lang: 'ko' | 'ja' | 'zh' = 'ko') {
@@ -650,12 +710,7 @@ export function fetchGraphNextActions(params: { personaId?: string; learnerId?: 
   return apiFetch<GraphNextActionsResponse>(`/api/v1/graph/next-actions${search.toString() ? `?${search.toString()}` : ''}`);
 }
 
-export function recordGraphEvidence(body: {
-  personaId?: string;
-  userId?: string;
-  event?: Record<string, unknown>;
-  events?: Record<string, unknown>[];
-}) {
+export function recordGraphEvidence(body: GraphEvidenceRecordBody) {
   return apiFetch<GraphEvidenceRecordResponse>('/api/v1/graph/evidence', {
     method: 'POST',
     body: JSON.stringify(body),
