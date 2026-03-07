@@ -483,22 +483,123 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
                 case 'exercise_prompt': {
                   const exId = entry.data.exerciseId as string;
                   const ex = exerciseMap[exId];
+                  const typeLabel = t(`ex_${ex?.type}`, uiLang) || ex?.type?.replace('_', ' ') || 'Exercise';
                   return (
                     <ChatRow key={entry.id} side="left" avatarEmoji="✏️">
-                      <button
-                        className="learn-exercise-prompt-btn"
-                        onClick={() => mode !== 'review' && ex && setActiveExercise(ex)}
-                        type="button"
-                      >
-                        <span className="learn-exercise-prompt-btn__label">
-                          ✏️ {t(`ex_${ex?.type}`, uiLang) || ex?.type?.replace('_', ' ') || 'Exercise'}
-                        </span>
-                        {mode !== 'review' && (
+                      {mode === 'review' && ex ? (
+                        <div className="learn-exercise-review">
+                          <div className="learn-exercise-review__header">✏️ {typeLabel}</div>
+                          <div className="learn-exercise-review__prompt">{ex.prompt}</div>
+                          {ex.type === 'matching' && (
+                            <div className="learn-exercise-review__pairs">
+                              {ex.pairs.map((p, i) => (
+                                <div key={i} className="learn-exercise-review__pair">
+                                  <span className="text-ko">{p.left}</span> → <span>{p.right}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {ex.type === 'multiple_choice' && (
+                            <div className="learn-exercise-review__options">
+                              {ex.options.map((o) => (
+                                <div key={o.id} className={`learn-exercise-review__option ${o.id === ex.correctOptionId ? 'learn-exercise-review__option--correct' : ''}`}>
+                                  {o.id === ex.correctOptionId && <span className="learn-exercise-review__check">✓</span>}
+                                  <span className="text-ko">{o.text}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {ex.type === 'fill_blank' && (
+                            <div className="learn-exercise-review__detail">
+                              <div className="learn-exercise-review__sentence">{ex.sentence}</div>
+                              <div className="learn-exercise-review__options">
+                                {ex.options.map((o) => (
+                                  <div key={o.id} className={`learn-exercise-review__option ${o.id === ex.correctOptionId ? 'learn-exercise-review__option--correct' : ''}`}>
+                                    {o.id === ex.correctOptionId && <span className="learn-exercise-review__check">✓</span>}
+                                    <span className="text-ko">{o.text}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {ex.type === 'sentence_builder' && (
+                            <div className="learn-exercise-review__detail">
+                              <span className="learn-exercise-review__answer">{ex.correctOrder.join(' ')}</span>
+                            </div>
+                          )}
+                          {ex.type === 'pronunciation_select' && (
+                            <div className="learn-exercise-review__detail">
+                              <div className="learn-exercise-review__target text-ko">{ex.targetText}</div>
+                              <div className="learn-exercise-review__options">
+                                {ex.audioOptions.map((o) => (
+                                  <div key={o.id} className={`learn-exercise-review__option ${o.id === ex.correctOptionId ? 'learn-exercise-review__option--correct' : ''}`}>
+                                    {o.id === ex.correctOptionId && <span className="learn-exercise-review__check">✓</span>}
+                                    {o.romanization}{o.meaning ? ` (${o.meaning})` : ''}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {ex.type === 'drag_drop' && (
+                            <div className="learn-exercise-review__pairs">
+                              {ex.targets.map((tgt) => {
+                                const itemId = ex.correctMapping[tgt.id];
+                                const item = ex.items.find((it) => it.id === itemId);
+                                return (
+                                  <div key={tgt.id} className="learn-exercise-review__pair">
+                                    <span>{tgt.label}</span> → <span className="text-ko">{item?.text ?? '?'}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {ex.type === 'stroke_tracing' && (
+                            <div className="learn-exercise-review__detail">
+                              <span className="learn-exercise-review__target-char text-ko">{ex.targetChar}</span>
+                              {ex.romanization && <span className="learn-exercise-review__rom">{ex.romanization}</span>}
+                              {ex.meaning && <span className="learn-exercise-review__meaning">{ex.meaning}</span>}
+                            </div>
+                          )}
+                          {ex.type === 'error_correction' && (
+                            <div className="learn-exercise-review__detail">
+                              <div className="learn-exercise-review__sentence">{ex.sentence}</div>
+                              <div className="learn-exercise-review__options">
+                                {ex.options.map((o) => (
+                                  <div key={o.id} className={`learn-exercise-review__option ${o.id === ex.correctOptionId ? 'learn-exercise-review__option--correct' : ''}`}>
+                                    {o.id === ex.correctOptionId && <span className="learn-exercise-review__check">✓</span>}
+                                    <span className="text-ko">{o.text}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {ex.type === 'pattern_recognition' && (
+                            <div className="learn-exercise-review__pairs">
+                              {ex.pairs.map((p, i) => (
+                                <div key={i} className={`learn-exercise-review__pair ${i === ex.correctPairIndex ? 'learn-exercise-review__pair--correct' : ''}`}>
+                                  <span className="text-ko">{p.chars}</span> — <span>{p.explanation}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {('explanation' in ex) && ex.explanation && (
+                            <div className="learn-exercise-review__explanation">{ex.explanation}</div>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          className="learn-exercise-prompt-btn"
+                          onClick={() => ex && setActiveExercise(ex)}
+                          type="button"
+                        >
+                          <span className="learn-exercise-prompt-btn__label">
+                            ✏️ {typeLabel}
+                          </span>
                           <span className="learn-exercise-prompt-btn__cta">
                             {t('tap_to_start_exercise', uiLang)} →
                           </span>
-                        )}
-                      </button>
+                        </button>
+                      )}
                     </ChatRow>
                   );
                 }
@@ -555,17 +656,8 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
                   const isResult = entry.data.isResult as boolean | undefined;
                   const isCorrect = entry.data.correct as boolean | undefined;
                   if (isResult) {
-                    const exType = (entry.data.exerciseType as string) ?? '';
                     const exSummary = (entry.data.exerciseSummary as string) ?? '';
-                    const typeIcons: Record<string, string> = {
-                      matching: '🔗', multiple_choice: '🔘', drag_drop: '🎯',
-                      sentence_builder: '🧩', fill_blank: '📝', pronunciation_select: '🔊',
-                      pattern_recognition: '🔍', stroke_tracing: '✍️', error_correction: '🔧', free_input: '💬',
-                    };
-                    const icon = typeIcons[exType] ?? '✏️';
-                    const typeLabel = t(`ex_${exType}`, uiLang) || exType.replace('_', ' ');
 
-                    // Parse structured summary
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     let detail: any = null;
                     try { detail = JSON.parse(exSummary); } catch { /* plain string or empty */ }
@@ -575,7 +667,6 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
                         <div className={`learn-result-card ${isCorrect ? 'learn-result-card--correct' : 'learn-result-card--wrong'}`}>
                           <span className="learn-result-card__icon">{isCorrect ? '✓' : '✗'}</span>
                           <div className="learn-result-card__body">
-                            <span className="learn-result-card__type">{icon} {typeLabel}</span>
                             {detail?.kind === 'pairs' && (
                               <div className="learn-result-card__pairs">
                                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -595,6 +686,11 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
                                   <span className="learn-result-card__correct-answer">→ {detail.answer}</span>
                                 )}
                               </div>
+                            )}
+                            {!detail && (
+                              <span className="learn-result-card__status">
+                                {isCorrect ? '正确' : '错误'}
+                              </span>
                             )}
                           </div>
                         </div>
