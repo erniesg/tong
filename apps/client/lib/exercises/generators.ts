@@ -613,12 +613,65 @@ function generateFillBlank(
   };
 }
 
+/** Similar-sounding Korean name/word distractors for pronunciation exercises. */
+const KOREAN_NAME_DISTRACTORS: Record<string, string[]> = {
+  '하은': ['하윤', '하영', '하연'],
+  '하윤': ['하은', '하영', '하연'],
+  '하영': ['하은', '하윤', '하연'],
+  '진': ['민', '빈', '신'],
+};
+
+/** Generate similar-sounding distractors for any Korean word by swapping vowels/consonants. */
+function generateWordDistractors(word: string, count: number): string[] {
+  if (KOREAN_NAME_DISTRACTORS[word]) {
+    return shuffle(KOREAN_NAME_DISTRACTORS[word]).slice(0, count);
+  }
+  // For unknown words, swap last syllable's vowel to create distractors
+  const vowelSwaps: Record<string, string[]> = {
+    '아': ['어', '오', '우'], '어': ['아', '오', '이'], '오': ['우', '아', '어'],
+    '우': ['오', '으', '아'], '은': ['인', '안', '운'], '이': ['으', '어', '아'],
+    '으': ['이', '우', '어'],
+  };
+  const lastChar = word[word.length - 1];
+  const swaps = vowelSwaps[lastChar];
+  if (swaps) {
+    return swaps.slice(0, count).map((s) => word.slice(0, -1) + s);
+  }
+  // Fallback: return common Korean syllables
+  return shuffle(['가', '나', '다', '마', '하', '사']).slice(0, count);
+}
+
 function generatePronunciationSelect(
   _pool: VocabItem[],
   objectiveId: string,
   hintItems?: string[],
   explainIn: UILang = 'en',
 ): PronunciationSelectExercise {
+  // Check if hintItems contain multi-character words (name/word mode)
+  const wordHint = hintItems?.find((h) => h.length > 1);
+
+  if (wordHint) {
+    // Word/name mode: show the word, play 3 different pronunciations
+    const distractorWords = generateWordDistractors(wordHint, 2);
+    const allOptions = shuffle([
+      { id: 'correct', label: wordHint, ttsText: wordHint, romanization: '', meaning: '' },
+      ...distractorWords.map((d, i) => ({ id: `d${i}`, label: d, ttsText: d, romanization: '', meaning: '' })),
+    ]);
+
+    return {
+      type: 'pronunciation_select',
+      id: stableId('ps', objectiveId, [wordHint]),
+      objectiveId,
+      difficulty: 2,
+      prompt: tFmt('pron_word_prompt', explainIn, wordHint),
+      targetText: wordHint,
+      audioOptions: allOptions,
+      correctOptionId: 'correct',
+      explanation: `${wordHint}`,
+    };
+  }
+
+  // Jamo mode: show jamo character, play 3 different letter sounds
   const available = [...JAMO_SOUNDS];
   let target = available[Math.floor(Math.random() * available.length)];
 
@@ -627,11 +680,19 @@ function generatePronunciationSelect(
     if (matched) target = matched;
   }
 
-  // Player hears the sound → picks which character it is
-  const distractors = shuffle(available.filter((j) => j.char !== target.char)).slice(0, 3);
+  const distractors = shuffle(available.filter((j) => j.char !== target.char)).slice(0, 2);
+  const jamoToTts = (char: string) => {
+    const map: Record<string, string> = {
+      'ㄱ': '기역', 'ㄴ': '니은', 'ㄷ': '디귿', 'ㄹ': '리을', 'ㅁ': '미음',
+      'ㅂ': '비읍', 'ㅅ': '시옷', 'ㅇ': '이응', 'ㅈ': '지읒', 'ㅎ': '히읗',
+      'ㅏ': '아', 'ㅑ': '야', 'ㅓ': '어', 'ㅕ': '여', 'ㅗ': '오',
+      'ㅛ': '요', 'ㅜ': '우', 'ㅠ': '유', 'ㅡ': '으', 'ㅣ': '이',
+    };
+    return map[char] ?? char;
+  };
   const allOptions = shuffle([
-    { id: 'correct', label: target.char, romanization: target.romanization, meaning: target.sound },
-    ...distractors.map((d, i) => ({ id: `d${i}`, label: d.char, romanization: d.romanization, meaning: d.sound })),
+    { id: 'correct', label: target.char, ttsText: jamoToTts(target.char), romanization: target.romanization, meaning: target.sound },
+    ...distractors.map((d, i) => ({ id: `d${i}`, label: d.char, ttsText: jamoToTts(d.char), romanization: d.romanization, meaning: d.sound })),
   ]);
 
   return {
