@@ -2310,15 +2310,24 @@ button.nav-link:hover {
 }
 
 .learn-exercise-review__pair {
-  font-size: 13px;
-  padding: 4px 8px;
-  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  padding: 5px 10px;
+  border-radius: 8px;
   background: rgba(0, 0, 0, 0.04);
 }
 
 .learn-exercise-review__pair--correct {
   background: rgba(76, 175, 80, 0.12);
-  font-weight: 600;
+  color: #2e7d32;
+}
+
+.learn-exercise-review__pair--wrong {
+  background: rgba(229, 57, 53, 0.1);
+  color: #c62828;
+  text-decoration: line-through;
 }
 
 .learn-exercise-review__options {
@@ -2386,6 +2395,51 @@ button.nav-link:hover {
   font-size: 13px;
   color: rgba(0, 0, 0, 0.5);
   margin-left: 4px;
+}
+
+.learn-exercise-review--correct {
+  border-left: 3px solid #4caf50;
+}
+
+.learn-exercise-review--wrong {
+  border-left: 3px solid #e53935;
+}
+
+.learn-exercise-review__arrow {
+  font-size: 12px;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.learn-exercise-review__pick-result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.learn-exercise-review__selected {
+  font-size: 15px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.learn-exercise-review__selected--ok {
+  background: rgba(76, 175, 80, 0.12);
+  color: #2e7d32;
+}
+
+.learn-exercise-review__selected--wrong {
+  background: rgba(229, 57, 53, 0.1);
+  color: #c62828;
+  text-decoration: line-through;
+}
+
+.learn-exercise-review__correct-line {
+  font-size: 14px;
+  color: #2e7d32;
+  font-weight: 600;
+  padding: 4px 10px;
 }
 
 .learn-exercise-review__explanation {

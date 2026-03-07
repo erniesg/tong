@@ -484,105 +484,80 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
                   const exId = entry.data.exerciseId as string;
                   const ex = exerciseMap[exId];
                   const typeLabel = t(`ex_${ex?.type}`, uiLang) || ex?.type?.replace('_', ' ') || 'Exercise';
+
+                  // In review: find the result entry for this exercise to get user's answers
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  let resultDetail: any = null;
+                  let wasCorrect: boolean | undefined;
+                  if (mode === 'review') {
+                    const idx = chatEntries.indexOf(entry);
+                    const resultEntry = chatEntries.slice(idx + 1).find(
+                      (e) => e.kind === 'user_text' && e.data.isResult,
+                    );
+                    if (resultEntry) {
+                      wasCorrect = resultEntry.data.correct as boolean;
+                      try { resultDetail = JSON.parse(resultEntry.data.exerciseSummary as string); } catch { /* */ }
+                    }
+                  }
+
                   return (
                     <ChatRow key={entry.id} side="left" avatarEmoji="✏️">
                       {mode === 'review' && ex ? (
-                        <div className="learn-exercise-review">
-                          <div className="learn-exercise-review__header">✏️ {typeLabel}</div>
+                        <div className={`learn-exercise-review ${wasCorrect === true ? 'learn-exercise-review--correct' : wasCorrect === false ? 'learn-exercise-review--wrong' : ''}`}>
                           <div className="learn-exercise-review__prompt">{ex.prompt}</div>
-                          {ex.type === 'matching' && (
+
+                          {/* Pairs-based exercises: matching, drag_drop — show user's actual pairs color-coded */}
+                          {resultDetail?.kind === 'pairs' && (
                             <div className="learn-exercise-review__pairs">
-                              {ex.pairs.map((p, i) => (
-                                <div key={i} className="learn-exercise-review__pair">
-                                  <span className="text-ko">{p.left}</span> → <span>{p.right}</span>
+                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                              {(resultDetail.items as any[]).map((p: { left: string; right: string; ok: boolean }, i: number) => (
+                                <div key={i} className={`learn-exercise-review__pair ${p.ok ? 'learn-exercise-review__pair--correct' : 'learn-exercise-review__pair--wrong'}`}>
+                                  <span className="text-ko">{p.left}</span>
+                                  <span className="learn-exercise-review__arrow">{p.ok ? '→' : '✗'}</span>
+                                  <span>{p.right}</span>
                                 </div>
                               ))}
                             </div>
                           )}
-                          {ex.type === 'multiple_choice' && (
-                            <div className="learn-exercise-review__options">
-                              {ex.options.map((o) => (
-                                <div key={o.id} className={`learn-exercise-review__option ${o.id === ex.correctOptionId ? 'learn-exercise-review__option--correct' : ''}`}>
-                                  {o.id === ex.correctOptionId && <span className="learn-exercise-review__check">✓</span>}
-                                  <span className="text-ko">{o.text}</span>
+
+                          {/* Pick-based exercises: show what was selected + correct answer if wrong */}
+                          {resultDetail?.kind === 'pick' && (
+                            <div className="learn-exercise-review__pick-result">
+                              <div className={`learn-exercise-review__selected ${wasCorrect ? 'learn-exercise-review__selected--ok' : 'learn-exercise-review__selected--wrong'}`}>
+                                <span className="text-ko">{resultDetail.selected}</span>
+                              </div>
+                              {!wasCorrect && (
+                                <div className="learn-exercise-review__correct-line">
+                                  → <span className="text-ko">{resultDetail.answer}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Fallback: no structured result — show correct answers from exercise definition */}
+                          {!resultDetail && (ex.type === 'matching' || ex.type === 'drag_drop') && (
+                            <div className="learn-exercise-review__pairs">
+                              {ex.type === 'matching' && ex.pairs.map((p, i) => (
+                                <div key={i} className="learn-exercise-review__pair learn-exercise-review__pair--correct">
+                                  <span className="text-ko">{p.left}</span>
+                                  <span className="learn-exercise-review__arrow">→</span>
+                                  <span>{p.right}</span>
                                 </div>
                               ))}
-                            </div>
-                          )}
-                          {ex.type === 'fill_blank' && (
-                            <div className="learn-exercise-review__detail">
-                              <div className="learn-exercise-review__sentence">{ex.sentence}</div>
-                              <div className="learn-exercise-review__options">
-                                {ex.options.map((o) => (
-                                  <div key={o.id} className={`learn-exercise-review__option ${o.id === ex.correctOptionId ? 'learn-exercise-review__option--correct' : ''}`}>
-                                    {o.id === ex.correctOptionId && <span className="learn-exercise-review__check">✓</span>}
-                                    <span className="text-ko">{o.text}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {ex.type === 'sentence_builder' && (
-                            <div className="learn-exercise-review__detail">
-                              <span className="learn-exercise-review__answer">{ex.correctOrder.join(' ')}</span>
-                            </div>
-                          )}
-                          {ex.type === 'pronunciation_select' && (
-                            <div className="learn-exercise-review__detail">
-                              <div className="learn-exercise-review__target text-ko">{ex.targetText}</div>
-                              <div className="learn-exercise-review__options">
-                                {ex.audioOptions.map((o) => (
-                                  <div key={o.id} className={`learn-exercise-review__option ${o.id === ex.correctOptionId ? 'learn-exercise-review__option--correct' : ''}`}>
-                                    {o.id === ex.correctOptionId && <span className="learn-exercise-review__check">✓</span>}
-                                    {o.romanization}{o.meaning ? ` (${o.meaning})` : ''}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {ex.type === 'drag_drop' && (
-                            <div className="learn-exercise-review__pairs">
-                              {ex.targets.map((tgt) => {
-                                // correctMapping is item-id → target-id, so reverse lookup
-                                const itemEntry = Object.entries(ex.correctMapping).find(([, targetId]) => targetId === tgt.id);
+                              {ex.type === 'drag_drop' && ex.targets.map((tgt) => {
+                                const itemEntry = Object.entries(ex.correctMapping).find(([, tid]) => tid === tgt.id);
                                 const item = itemEntry ? ex.items.find((it) => it.id === itemEntry[0]) : null;
                                 return (
-                                  <div key={tgt.id} className="learn-exercise-review__pair">
-                                    <span>{tgt.label}</span> → <span className="text-ko">{item?.text ?? '?'}</span>
+                                  <div key={tgt.id} className="learn-exercise-review__pair learn-exercise-review__pair--correct">
+                                    <span>{tgt.label}</span>
+                                    <span className="learn-exercise-review__arrow">→</span>
+                                    <span className="text-ko">{item?.text ?? '?'}</span>
                                   </div>
                                 );
                               })}
                             </div>
                           )}
-                          {ex.type === 'stroke_tracing' && (
-                            <div className="learn-exercise-review__detail">
-                              <span className="learn-exercise-review__target-char text-ko">{ex.targetChar}</span>
-                              {ex.romanization && <span className="learn-exercise-review__rom">{ex.romanization}</span>}
-                              {ex.meaning && <span className="learn-exercise-review__meaning">{ex.meaning}</span>}
-                            </div>
-                          )}
-                          {ex.type === 'error_correction' && (
-                            <div className="learn-exercise-review__detail">
-                              <div className="learn-exercise-review__sentence">{ex.sentence}</div>
-                              <div className="learn-exercise-review__options">
-                                {ex.options.map((o) => (
-                                  <div key={o.id} className={`learn-exercise-review__option ${o.id === ex.correctOptionId ? 'learn-exercise-review__option--correct' : ''}`}>
-                                    {o.id === ex.correctOptionId && <span className="learn-exercise-review__check">✓</span>}
-                                    <span className="text-ko">{o.text}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {ex.type === 'pattern_recognition' && (
-                            <div className="learn-exercise-review__pairs">
-                              {ex.pairs.map((p, i) => (
-                                <div key={i} className={`learn-exercise-review__pair ${i === ex.correctPairIndex ? 'learn-exercise-review__pair--correct' : ''}`}>
-                                  <span className="text-ko">{p.chars}</span> — <span>{p.explanation}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+
                           {('explanation' in ex) && ex.explanation && (
                             <div className="learn-exercise-review__explanation">{ex.explanation}</div>
                           )}
