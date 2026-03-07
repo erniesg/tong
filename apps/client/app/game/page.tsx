@@ -32,8 +32,8 @@ import { ExerciseModal } from '@/components/learn/ExerciseModal';
 
 /* ── scene constants ────────────────────────────────────── */
 
-const NPC_SPRITES: Record<string, { name: string; nameLocal: string; nameZh: string; src: string; color: string }> = {
-  haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: '/assets/characters/haeun/haeun.png', color: '#e8485c' },
+const NPC_SPRITES: Record<string, { name: string; nameLocal: string; nameZh: string; src: string; idleVideo?: string; color: string }> = {
+  haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: '/assets/characters/haeun/haeun.png', idleVideo: '/assets/characters/haeun/haeun_idle.mp4', color: '#e8485c' },
   jin: { name: 'Jin', nameLocal: '진', nameZh: '珍', src: '/assets/characters/jin/jin.png', color: '#4a90d9' },
 };
 
@@ -343,6 +343,7 @@ export default function GamePage() {
   const [chargeStart] = useState(() => Date.now());
   const [chargePercent, setChargePercent] = useState(0);
   const [chargeNotifShown, setChargeNotifShown] = useState(false);
+  const chargeNotifFiredRef = useRef(false);
 
   // Time-based charge bar: 0→100% over random duration
   useEffect(() => {
@@ -351,15 +352,16 @@ export default function GamePage() {
       const elapsed = Date.now() - chargeStart;
       const pct = Math.min(100, Math.round((elapsed / chargeDurationMs) * 100));
       setChargePercent(pct);
-      if (pct >= 100 && !chargeNotifShown) {
+      if (pct >= 100 && !chargeNotifFiredRef.current) {
+        chargeNotifFiredRef.current = true;
         setChargeNotifShown(true);
-        setTimeout(() => setChargeNotifShown(false), 3500);
+        setTimeout(() => setChargeNotifShown(false), 5000);
       }
       if (pct < 100) rafId = requestAnimationFrame(tick);
     };
     let rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [isIntroHangout, chargeStart, chargeDurationMs, chargeNotifShown]);
+  }, [isIntroHangout, chargeStart, chargeDurationMs]);
 
   // Sync generated video URL back to exitVideoUrlRef when generation succeeds
   useEffect(() => {
@@ -936,9 +938,19 @@ export default function GamePage() {
     setCinematic(null);
     cinematicCaptionRef.current = null;
     if (isIntroHangout && !npcRevealed) setNpcRevealed(true);
+    const remainingAfterDequeue = toolQueue.length - 1;
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
-  }, [isIntroHangout, npcRevealed]);
+
+    // If nothing left in queue after dequeuing, request next AI turn
+    if (remainingAfterDequeue === 0 && !chatLoading) {
+      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
+      const msg = `${ctx}Continue.`;
+      sessionLogger.logUserTap('cinematic_end');
+      sessionLogger.logAIRequest(msg);
+      void append({ role: 'user', content: msg });
+    }
+  }, [isIntroHangout, npcRevealed, toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
 
   const handleDismissTong = useCallback(() => {
     setTongTip(null);
@@ -1507,7 +1519,7 @@ export default function GamePage() {
                       {ac.delta > 0 ? '+' : ''}{ac.delta}
                     </div>
                     <div className="summary-stat-label">
-                      {(NPC_SPRITES[ac.characterId] || NPC_SPRITES.haeun).name}
+                      {(() => { const s = NPC_SPRITES[ac.characterId] || NPC_SPRITES.haeun; return `${s.nameLocal} ${explainLang === 'zh' ? s.nameZh : s.name}`; })()}
                     </div>
                   </div>
                 ))}
@@ -1546,7 +1558,8 @@ export default function GamePage() {
           onCinematicEnd={handleCinematicEnd}
           npcName={`${npc.nameLocal} ${explainLang === 'zh' ? npc.nameZh : npc.name}`}
           npcColor={npc.color}
-          npcSpriteUrl={isIntroHangout && !npcRevealed ? '' : currentExercise ? '' : (!currentMessage && !choices) ? '' : npc.src}
+          npcSpriteUrl={isIntroHangout && !npcRevealed ? '' : currentExercise ? '' : npc.src}
+          npcIdleVideoUrl={npcRevealed && !currentExercise && npc.idleVideo ? npc.idleVideo : undefined}
           currentMessage={currentMessage}
           currentExercise={currentExercise}
           choices={choices}
