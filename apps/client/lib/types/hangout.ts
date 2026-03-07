@@ -102,7 +102,7 @@ export interface PronunciationSelectExercise {
   difficulty: number;
   prompt: string;
   targetText: string;
-  audioOptions: { id: string; label: string; romanization: string; meaning?: string }[];
+  audioOptions: { id: string; label: string; ttsText?: string; romanization: string; meaning?: string }[];
   correctOptionId: string;
   explanation?: string;
 }
