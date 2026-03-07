@@ -25,7 +25,7 @@ export function FreeInput({ exercise, onResult }: Props) {
   const handleSubmit = () => {
     if (!input.trim() || submitted) return;
     setSubmitted(true);
-    onResult(isCorrect);
+    onResult(isCorrect, JSON.stringify({ kind: 'pick', selected: input.trim(), answer: exercise.expectedAnswers[0] ?? '' }));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
