@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils/cn';
 
 interface CharacterSpriteProps {
@@ -21,16 +21,21 @@ export function CharacterSprite({
   active = true,
 }: CharacterSpriteProps) {
   const [mounted, setMounted] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
+  const handleCanPlay = useCallback(() => { setVideoReady(true); }, []);
+
   if (!mounted || (!spriteUrl && !idleVideoUrl)) return null;
+
+  const showVideo = idleVideoUrl && videoReady;
 
   return (
     <div
       className={cn(
         'absolute inset-0',
         'transition-all duration-500 ease-out',
-        active ? 'opacity-100 scale-100' : 'opacity-40 scale-90 brightness-50',
+        active && showVideo ? 'opacity-100 scale-100' : active && !idleVideoUrl ? 'opacity-100 scale-100' : !active ? 'opacity-40 scale-90 brightness-50' : 'opacity-0',
         position === 'left' && 'slide-in-left',
         position === 'right' && 'slide-in-right',
       )}
@@ -38,10 +43,12 @@ export function CharacterSprite({
       {idleVideoUrl ? (
         <video
           src={idleVideoUrl}
+          preload="auto"
           autoPlay
           loop
           muted
           playsInline
+          onCanPlayThrough={handleCanPlay}
           className="h-full w-full object-cover object-top"
         />
       ) : (
