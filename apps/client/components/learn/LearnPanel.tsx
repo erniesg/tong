@@ -507,18 +507,34 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
                           <div className="learn-exercise-review__prompt">{ex.prompt}</div>
 
                           {/* Pairs-based exercises: matching, drag_drop — show user's actual pairs color-coded */}
-                          {resultDetail?.kind === 'pairs' && (
-                            <div className="learn-exercise-review__pairs">
-                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                              {(resultDetail.items as any[]).map((p: { left: string; right: string; ok: boolean }, i: number) => (
-                                <div key={i} className={`learn-exercise-review__pair ${p.ok ? 'learn-exercise-review__pair--correct' : 'learn-exercise-review__pair--wrong'}`}>
-                                  <span className="text-ko">{p.left}</span>
-                                  <span className="learn-exercise-review__arrow">{p.ok ? '→' : '✗'}</span>
-                                  <span>{p.right}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          {resultDetail?.kind === 'pairs' && (() => {
+                            // Build correct answer lookup from exercise definition
+                            const correctMap = new Map<string, string>();
+                            if (ex.type === 'matching') {
+                              for (const p of ex.pairs) correctMap.set(p.left, p.right);
+                            } else if (ex.type === 'drag_drop') {
+                              for (const item of ex.items) {
+                                const targetId = ex.correctMapping[item.id];
+                                const target = ex.targets.find((tg) => tg.id === targetId);
+                                if (target) correctMap.set(item.text, target.label);
+                              }
+                            }
+                            return (
+                              <div className="learn-exercise-review__pairs">
+                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                {(resultDetail.items as any[]).map((p: { left: string; right: string; ok: boolean }, i: number) => (
+                                  <div key={i} className={`learn-exercise-review__pair ${p.ok ? 'learn-exercise-review__pair--correct' : 'learn-exercise-review__pair--wrong'}`}>
+                                    <span className="text-ko">{p.left}</span>
+                                    <span className="learn-exercise-review__arrow">→</span>
+                                    <span>{p.right}</span>
+                                    {!p.ok && correctMap.get(p.left) && (
+                                      <span className="learn-exercise-review__correction">✓ {correctMap.get(p.left)}</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
 
                           {/* Pick-based exercises: show what was selected + correct answer if wrong */}
                           {resultDetail?.kind === 'pick' && (
