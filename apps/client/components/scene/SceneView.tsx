@@ -142,24 +142,20 @@ export function SceneView({
       {currentExercise ? (
         <div
           className="exercise-float-wrapper"
-          onClick={(e) => {
+          onClick={() => {
             if (exerciseDone) {
-              // Done — advance immediately
               onExerciseDismiss?.();
-            } else if (e.target === e.currentTarget && onExerciseDismiss) {
-              // Not done — tap outside card to hide temporarily
+            } else if (onExerciseDismiss) {
               onExerciseDismiss();
             }
           }}
         >
-          <div className="exercise-float-card">
+          <div className="exercise-float-card" onClick={exerciseDone ? () => onExerciseDismiss?.() : undefined}>
             <ExerciseRenderer
               exercise={currentExercise}
               onResult={(correct) => {
                 setExerciseDone(true);
                 onExerciseResult(currentExercise.id, correct);
-                // Auto-advance after exercise completes — no extra tap needed.
-                // Brief delay lets the exercise show its own completion state first.
                 setTimeout(() => onExerciseDismiss?.(), 800);
               }}
             />

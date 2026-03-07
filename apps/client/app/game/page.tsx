@@ -574,7 +574,9 @@ export default function GamePage() {
     }
   }, [skipToHangout, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
 
-  /* Dev intro bypass: ?dev_intro=1 — fresh introduction hangout, clears stale state */
+  /* Dev intro bypass: ?dev_intro=1 — fresh introduction hangout, clears stale state
+     Optional: ?dev_act=2 — skip Act 1, start at Act 2 (NPC entrance) with exercises pre-done */
+  const devAct = Number(searchParams.get('dev_act') || '1') as 1 | 2;
   useEffect(() => {
     if (!devIntro || sceneStartedRef.current) return;
     sceneStartedRef.current = true;
@@ -597,8 +599,13 @@ export default function GamePage() {
     setActiveNpc(npcId);
     setPlayerLevel(0);
     setIsIntroHangout(true);
-    setIntroExerciseCount(0);
-    setIntroAct(1);
+
+    // If skipping to Act 2, pretend Act 1 exercises are done
+    const startAct = devAct >= 2 ? 2 : 1;
+    const fakeExercises = startAct === 2 ? 4 : 0;
+    setIntroExerciseCount(fakeExercises);
+    setIntroAct(startAct as 1 | 2);
+    // Don't set npcRevealed here — let the intro cinematic handle the reveal
 
     // Set player profile and language preference
     dispatch({ type: 'SET_PLAYER_PROFILE', profile: { englishName, chineseName } });
@@ -620,15 +627,15 @@ export default function GamePage() {
       exitVideoUrl: exitVideoUrlRef.current,
       introVideoUrl: introVideoUrlRef.current,
       exitLine: exitLineRef.current,
-      exercisesDone: 0,
-      introAct: 1 as const,
+      exercisesDone: fakeExercises,
+      introAct: startAct as 1 | 2,
       backdropUrl: '/assets/backdrops/seoul/pojangmacha.png',
     };
 
-    const startMsg = `${buildContextBlock(0, npcId, devCity, 'food_street', npcChar, devLang, introCtx)}Start the scene.`;
+    const startMsg = `${buildContextBlock(0, npcId, devCity, 'food_street', npcChar, devLang, introCtx)}${startAct === 2 ? 'Act 1 complete. Player already learned basic jamo (ㅎ, ㅏ, ㅇ, ㅡ, ㄴ) and built syllable blocks. Start Act 2 — NPC entrance.' : 'Start the scene.'}`;
     sessionLogger.start({ mode: 'hangout', cityId: devCity, locationId: 'food_street', npcId, playerLevel: 0 });
     sessionLogger.logAIRequest(startMsg);
-    console.log('[DevIntro] Starting fresh introduction hangout for', npcId, 'lang:', devLang);
+    console.log('[DevIntro] Starting introduction hangout for', npcId, 'act:', startAct, 'lang:', devLang);
     void append({ role: 'user', content: startMsg });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [devIntro]);
@@ -892,7 +899,11 @@ export default function GamePage() {
 
   const advanceAfterExercise = useCallback(() => {
     const result = exerciseResultRef.current;
-    if (!result) return;
+    if (!result) {
+      console.log('[VN] advanceAfterExercise: no result ref — clearing exercise UI');
+      setCurrentExercise(null);
+      return;
+    }
     exerciseResultRef.current = null;
     setCurrentExercise(null);
     setToolQueue((prev) => prev.slice(1));
@@ -900,9 +911,10 @@ export default function GamePage() {
 
     const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
     const msg = `${ctx}${summarizeExercise(result.exerciseId, result.correct)}`;
+    console.log('[VN] advanceAfterExercise:', result.exerciseId, result.correct, 'chatLoading:', chatLoading);
     sessionLogger.logAIRequest(msg);
     void append({ role: 'user', content: msg });
-  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
+  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, chatLoading, isIntroHangout, introExerciseCount, introAct]);
 
   const handleExerciseDismiss = useCallback(() => {
     if (exerciseResultRef.current) {
