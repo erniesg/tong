@@ -41,6 +41,10 @@ main.app-shell {
   padding: 24px 18px 56px;
 }
 
+main.app-shell.app-shell--wide {
+  max-width: 1440px;
+}
+
 .demo-access-bar {
   position: sticky;
   top: 0;
@@ -275,6 +279,187 @@ button.nav-link {
 
 button.nav-link:hover {
   transform: none;
+}
+
+.graph-route-layout {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.85fr) minmax(320px, 0.95fr);
+  align-items: start;
+}
+
+.graph-control-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.graph-metric-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.graph-sidebar {
+  min-width: 0;
+}
+
+.graph-canvas-frame {
+  position: relative;
+  min-height: 720px;
+  overflow: hidden;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(86, 148, 255, 0.24), transparent 28%),
+    radial-gradient(circle at 80% 14%, rgba(255, 133, 92, 0.22), transparent 26%),
+    radial-gradient(circle at 52% 85%, rgba(103, 90, 245, 0.18), transparent 34%),
+    linear-gradient(180deg, #11192d 0%, #0f1627 48%, #0a1020 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.graph-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 720px;
+  cursor: grab;
+}
+
+.graph-canvas-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: rgba(11, 19, 36, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(248, 250, 252, 0.92);
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(12px);
+}
+
+.graph-empty-state {
+  position: absolute;
+  inset: 16px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  border-radius: 20px;
+  background: rgba(6, 10, 20, 0.5);
+  color: #f8fafc;
+  text-align: center;
+}
+
+.graph-empty-state span {
+  color: rgba(255, 255, 255, 0.64);
+}
+
+.graph-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.app-shell button.graph-chip,
+.app-shell button.graph-list-button {
+  transform: none;
+}
+
+.app-shell button.graph-chip:hover,
+.app-shell button.graph-list-button:hover {
+  transform: none;
+}
+
+.app-shell button.graph-chip {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  padding: 8px 12px;
+  border-radius: 999px;
+}
+
+.app-shell button.graph-chip:hover {
+  background: #fff1e5;
+}
+
+.app-shell button.graph-chip.graph-chip--active {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+
+.graph-detail-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.graph-detail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.graph-mini-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.app-shell button.graph-list-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+
+.app-shell button.graph-list-button:hover {
+  background: #fff3e8;
+}
+
+.app-shell button.graph-list-button span {
+  color: var(--muted);
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+.graph-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+}
+
+.graph-legend-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  flex: 0 0 auto;
+}
+
+.graph-legend-swatch--ring {
+  background: #fff;
+  border-width: 3px;
+}
+
+.graph-legend-line {
+  display: inline-flex;
+  align-items: center;
+  width: 54px;
 }
 
 .video-frame {
@@ -928,8 +1113,29 @@ button.nav-link:hover {
     grid-template-columns: 1fr;
   }
 
+  .graph-route-layout,
+  .graph-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .graph-control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   main.app-shell {
     padding: 18px 14px 44px;
+  }
+}
+
+@media (max-width: 640px) {
+  .graph-control-grid,
+  .graph-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .graph-canvas,
+  .graph-canvas-frame {
+    min-height: 560px;
   }
 }
 
@@ -5462,4 +5668,3 @@ button.nav-link:hover {
     grid-template-columns: 1fr;
   }
 }
-

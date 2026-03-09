@@ -208,6 +208,14 @@ export interface GraphPackMission {
   rewards: ScoreState;
 }
 
+export interface GraphPackEdge {
+  edgeId: string;
+  type: 'requires' | 'reinforces' | 'unlocks';
+  fromNodeId: string;
+  toNodeId: string;
+  rationale?: string;
+}
+
 export interface GraphPackLevel {
   level: number;
   label: string;
@@ -239,6 +247,7 @@ export interface GraphCurriculumPack {
   goldStandard: boolean;
   contentVersionPolicy: string;
   nodes: GraphPackNode[];
+  edges: GraphPackEdge[];
   levels: GraphPackLevel[];
   scenarios: GraphPackScenario[];
   missions: GraphPackMission[];

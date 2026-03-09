@@ -13,6 +13,8 @@
 3. Add "View previous sessions" and "Start new session" entry points.
 4. Wire `TONG_BACKEND_MODE` adapter selection.
 5. Add smoke UI for objective details (vocab/grammar/sentence structures).
+6. Surface learner-facing language tier, progress-to-next-tier, and next unlock summary.
+7. Keep graph detail discoverable without making it the only progression view.
 
 ### `codex/client-overlay`
 1. Build caption triple-lane overlay (script, romanization, English).
@@ -25,6 +27,8 @@
 2. Implement Hangout start/respond endpoints.
 3. Implement Learn session list/create endpoints.
 4. Ensure response payloads match fixtures exactly.
+5. Extend graph responses with language summary, next unlocks, mission gate, and target-item progress.
+6. Make lesson and hangout recommendation payloads explain why they are next.
 
 ### `codex/server-ingestion`
 1. Build 72h transcript/lyrics ingest job.
@@ -38,6 +42,8 @@
 2. Track objective completion and XP/SP/RP deltas.
 3. Implement mission gate checks and location unlock checks.
 4. Implement Shanghai advanced texting reward flow.
+5. Gate paid hangouts on graph readiness and active validation objectives.
+6. Design one explicit Seoul Food Street mission that consumes graph readiness and writes mission evidence.
 
 ### `codex/infra-deploy`
 1. Build environment matrix (`local-mock`, `local-server`, `remote-server`).
@@ -61,3 +67,5 @@
 4. Vocab insights panel shows cluster labels and rationale.
 5. Demo run-of-show completes in `local-mock` and `local-server`.
 6. Mock UI and real UI share the same data shape and navigation flow.
+7. Graph page can answer "what have I learned, what is left, what unlocks next, and why am I blocked?"
+8. Lessons, hangouts, and mission readiness all come from the same graph state for a runtime learner.

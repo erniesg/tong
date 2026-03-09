@@ -6,11 +6,19 @@ import {
   fetchGraphDashboard,
   fetchGraphPersonas,
   fetchTools,
+  graphHangoutBundleTool,
+  graphLessonBundleTool,
   graphPackValidateTool,
   recordGraphEvidence,
   type GraphDashboardResponse,
+  type GraphHangoutBundle,
+  type GraphLessonBundle,
+  type GraphPackMission,
   type GraphPackValidateResponse,
+  type GraphPersonaGoal,
   type GraphPersonaSummary,
+  type GraphSelectedPackNode,
+  type ToolInvokeResponse,
 } from '@/lib/api';
 
 const STATUS_COLORS: Record<string, { bg: string; fg: string; border: string }> = {
@@ -26,6 +34,13 @@ const STATUS_COLORS: Record<string, { bg: string; fg: string; border: string }> 
   preview: { bg: '#f5efe7', fg: '#8a6b53', border: '#e7d5c5' },
   in_progress: { bg: '#fff1e8', fg: '#9b401c', border: '#f0c8b2' },
   stub: { bg: '#f5efe7', fg: '#8a6b53', border: '#e7d5c5' },
+  lesson: { bg: '#fff1e8', fg: '#9b401c', border: '#f0c8b2' },
+  hangout: { bg: '#e6f7f2', fg: '#0f766e', border: '#b5e7dc' },
+  review: { bg: '#fff6db', fg: '#8c6b00', border: '#e8d38f' },
+  mission: { bg: '#dbf4ff', fg: '#14537a', border: '#b6ddf4' },
+  overlay: { bg: '#f5efe7', fg: '#8a6b53', border: '#e7d5c5' },
+  error: { bg: '#ffe5e5', fg: '#9f1239', border: '#f2b2b2' },
+  warning: { bg: '#fff6db', fg: '#8c6b00', border: '#e8d38f' },
 };
 
 function toneForStatus(status: string) {
@@ -35,6 +50,41 @@ function toneForStatus(status: string) {
 function percent(value: number) {
   const normalized = value > 1 ? value / 100 : value;
   return Math.max(0, Math.min(100, Math.round(normalized * 100)));
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return 'No evidence yet';
+
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function formatGoal(goal: GraphPersonaGoal) {
+  return `${goal.lang.toUpperCase()} ${goal.topic}`;
+}
+
+function describePersona(persona: GraphPersonaSummary) {
+  if (persona.goals.length > 0) {
+    return persona.goals.map((goal) => formatGoal(goal)).join(' • ');
+  }
+
+  if (persona.targetLanguages.length > 0) {
+    return `Target languages: ${persona.targetLanguages.map((lang) => lang.toUpperCase()).join(', ')}`;
+  }
+
+  return 'No goals configured yet.';
+}
+
+function isCompletedStatus(status?: string) {
+  return status === 'validated' || status === 'mastered';
 }
 
 function StatusPill({ status }: { status: string }) {
@@ -77,10 +127,33 @@ function ProgressBar({ value }: { value: number }) {
   );
 }
 
+function unwrapToolResult<T>(payload: ToolInvokeResponse<T>, fallbackMessage: string): T {
+  if (payload.ok && payload.result) {
+    return payload.result;
+  }
+
+  throw new Error(payload.error || fallbackMessage);
+}
+
+function nodeLabel(nodeId: string, nodeEntriesById: Map<string, GraphSelectedPackNode>) {
+  return nodeEntriesById.get(nodeId)?.node.title || nodeId;
+}
+
+type PackLevelSection = {
+  level: number;
+  label: string;
+  description: string;
+  mission?: GraphPackMission;
+  missionStatus: 'ready' | 'tracking' | 'stub';
+  nodes: GraphSelectedPackNode[];
+};
+
 export default function DashboardPage() {
   const [personas, setPersonas] = useState<GraphPersonaSummary[]>([]);
-  const [personaId, setPersonaId] = useState('');
+  const [learnerId, setLearnerId] = useState('');
   const [dashboard, setDashboard] = useState<GraphDashboardResponse | null>(null);
+  const [lessonBundle, setLessonBundle] = useState<GraphLessonBundle | null>(null);
+  const [hangoutBundle, setHangoutBundle] = useState<GraphHangoutBundle | null>(null);
   const [graphTools, setGraphTools] = useState<Array<{ name: string; description: string }>>([]);
   const [validation, setValidation] = useState<GraphPackValidateResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,9 +165,9 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (!personaId) return;
-    void refreshDashboard(personaId);
-  }, [personaId]);
+    if (!learnerId) return;
+    void refreshDashboard(learnerId);
+  }, [learnerId]);
 
   async function bootstrap() {
     try {
@@ -106,10 +179,21 @@ export default function DashboardPage() {
         graphPackValidateTool(),
       ]);
 
+      const requestedLearnerId =
+        typeof window === 'undefined'
+          ? ''
+          : new URLSearchParams(window.location.search).get('learnerId') ||
+            new URLSearchParams(window.location.search).get('personaId') ||
+            '';
+      const defaultLearnerId =
+        personaPayload.items.find((item) => item.learnerId === requestedLearnerId)?.learnerId ||
+        personaPayload.items[0]?.learnerId ||
+        '';
+
       setPersonas(personaPayload.items);
-      setPersonaId((current) => current || personaPayload.items[0]?.personaId || '');
+      setLearnerId((current) => current || defaultLearnerId);
       setGraphTools(toolPayload.tools.filter((tool) => tool.name.startsWith('graph.')));
-      setValidation(validationPayload.result || null);
+      setValidation(unwrapToolResult(validationPayload, 'Failed to validate canonical graph pack.'));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load dashboard setup.');
     } finally {
@@ -117,12 +201,21 @@ export default function DashboardPage() {
     }
   }
 
-  async function refreshDashboard(activePersonaId = personaId) {
+  async function refreshDashboard(activeLearnerId = learnerId) {
+    if (!activeLearnerId) return;
+
     try {
       setLoading(true);
       setError(null);
-      const next = await fetchGraphDashboard({ personaId: activePersonaId });
-      setDashboard(next);
+      const [nextDashboard, lessonPayload, hangoutPayload] = await Promise.all([
+        fetchGraphDashboard({ learnerId: activeLearnerId }),
+        graphLessonBundleTool({ learnerId: activeLearnerId }),
+        graphHangoutBundleTool({ learnerId: activeLearnerId }),
+      ]);
+
+      setDashboard(nextDashboard);
+      setLessonBundle(unwrapToolResult(lessonPayload, 'Failed to load lesson bundle.'));
+      setHangoutBundle(unwrapToolResult(hangoutPayload, 'Failed to load hangout bundle.'));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load learner dashboard.');
     } finally {
@@ -131,23 +224,23 @@ export default function DashboardPage() {
   }
 
   async function simulateEvidence(mode: 'learn' | 'hangout') {
-    const bundle = mode === 'learn' ? dashboard?.lessonBundle : dashboard?.hangoutBundle;
-    const target = bundle?.targets?.[0];
-    if (!personaId || !target) return;
+    const bundle = mode === 'learn' ? lessonBundle : hangoutBundle;
+    const targetNodeId = bundle?.nodeIds?.[0];
+    if (!learnerId || !targetNodeId) return;
 
     try {
       setRecording(mode);
       setError(null);
       await recordGraphEvidence({
-        personaId,
+        learnerId,
         event: {
-          nodeId: target.nodeId,
+          nodeId: targetNodeId,
           mode,
           quality: mode === 'learn' ? 0.86 : 0.92,
           source: `dashboard.${mode}`,
         },
       });
-      await refreshDashboard(personaId);
+      await refreshDashboard(learnerId);
     } catch (recordError) {
       setError(recordError instanceof Error ? recordError.message : 'Failed to record evidence.');
     } finally {
@@ -156,22 +249,111 @@ export default function DashboardPage() {
   }
 
   const selectedPersona = useMemo(
-    () => personas.find((item) => item.personaId === personaId) || null,
-    [personas, personaId],
+    () => personas.find((item) => item.learnerId === learnerId) || null,
+    [personas, learnerId],
   );
+
+  const selectedPackNodes = dashboard?.selectedPack.nodes || [];
+
+  const nodeEntriesById = useMemo(
+    () => new Map(selectedPackNodes.map((entry) => [entry.node.nodeId, entry] as const)),
+    [selectedPackNodes],
+  );
+
+  const packStats = useMemo(() => {
+    const stats = {
+      available: 0,
+      learning: 0,
+      due: 0,
+      validated: 0,
+      mastered: 0,
+      locked: 0,
+      averageMastery: 0,
+    };
+
+    if (selectedPackNodes.length === 0) return stats;
+
+    let masteryTotal = 0;
+    for (const entry of selectedPackNodes) {
+      masteryTotal += entry.state.masteryScore;
+      if (entry.state.status in stats) {
+        stats[entry.state.status as keyof typeof stats] += 1;
+      }
+    }
+
+    stats.averageMastery = masteryTotal / selectedPackNodes.length;
+    return stats;
+  }, [selectedPackNodes]);
+
+  const packSections = useMemo(() => {
+    if (!dashboard) {
+      return { levels: [] as PackLevelSection[], ungrouped: [] as GraphSelectedPackNode[] };
+    }
+
+    const assignedNodeIds = new Set<string>();
+    const levels = dashboard.selectedPack.pack.levels.map((level) => {
+      const nodes = (level.objectiveNodeIds || [])
+        .map((nodeId) => {
+          const entry = nodeEntriesById.get(nodeId);
+          if (entry) assignedNodeIds.add(nodeId);
+          return entry;
+        })
+        .filter((entry): entry is GraphSelectedPackNode => Boolean(entry));
+
+      const mission = dashboard.selectedPack.pack.missions.find((item) => item.level === level.level);
+      const missionStatus: PackLevelSection['missionStatus'] = mission
+        ? mission.requiredNodeIds.every((nodeId) => isCompletedStatus(nodeEntriesById.get(nodeId)?.state.status))
+          ? 'ready'
+          : 'tracking'
+        : 'stub';
+
+      return {
+        level: level.level,
+        label: level.label,
+        description: level.description,
+        mission,
+        missionStatus,
+        nodes,
+      };
+    });
+
+    const ungrouped = selectedPackNodes.filter((entry) => !assignedNodeIds.has(entry.node.nodeId));
+    return { levels, ungrouped };
+  }, [dashboard, nodeEntriesById, selectedPackNodes]);
+
+  const lessonEntries = useMemo(
+    () =>
+      (lessonBundle?.nodeIds || [])
+        .map((nodeId) => nodeEntriesById.get(nodeId))
+        .filter((entry): entry is GraphSelectedPackNode => Boolean(entry)),
+    [lessonBundle, nodeEntriesById],
+  );
+
+  const hangoutEntries = useMemo(
+    () =>
+      (hangoutBundle?.nodeIds || [])
+        .map((nodeId) => nodeEntriesById.get(nodeId))
+        .filter((entry): entry is GraphSelectedPackNode => Boolean(entry)),
+    [hangoutBundle, nodeEntriesById],
+  );
+
+  const activeLearner = dashboard?.learner || selectedPersona;
 
   return (
     <main className="app-shell">
       <header className="page-header">
         <p className="kicker">Learner Graph Dashboard</p>
-        <h1 className="page-title">Foundation map + user-specific media overlays</h1>
+        <h1 className="page-title">Canonical graph runtime dashboard</h1>
         <p className="page-copy">
-          This view shows the curriculum graph, learner progression, K-pop/creator overlays, and the reusable agent
-          tools that can drive recommendations for lessons and hangouts.
+          This view reads the current curriculum graph runtime directly: learner profile, roadmap, selected pack node
+          state, media overlays, bundles, recommendations, and pack validation.
         </p>
         <div className="nav-links">
           <Link href="/" className="nav-link">
             Home
+          </Link>
+          <Link href="/graph" className="nav-link">
+            Graph
           </Link>
           <Link href="/insights" className="nav-link">
             Insights
@@ -193,21 +375,21 @@ export default function DashboardPage() {
           <div className="stack">
             <div className="row" style={{ alignItems: 'flex-start' }}>
               <div>
-                <h3 style={{ marginBottom: 6 }}>Persona</h3>
-                <p>Switch between mocked learner profiles to preview foundation and personalized overlays.</p>
+                <h3 style={{ marginBottom: 6 }}>Learner</h3>
+                <p>Switch between runtime personas and re-read the canonical graph state for that learner.</p>
               </div>
-              {validation && <StatusPill status={validation.valid ? 'validated' : 'locked'} />}
+              {validation && <StatusPill status={validation.valid ? 'validated' : 'error'} />}
             </div>
-            <select value={personaId} onChange={(event) => setPersonaId(event.target.value)} disabled={loading}>
+            <select value={learnerId} onChange={(event) => setLearnerId(event.target.value)} disabled={loading}>
               {personas.map((persona) => (
-                <option key={persona.personaId} value={persona.personaId}>
+                <option key={persona.learnerId} value={persona.learnerId}>
                   {persona.displayName}
                 </option>
               ))}
             </select>
-            {selectedPersona && (
+            {activeLearner && (
               <p>
-                <strong>{selectedPersona.displayName}</strong>: {selectedPersona.focusSummary}
+                <strong>{activeLearner.displayName}</strong>: {describePersona(activeLearner)}
               </p>
             )}
           </div>
@@ -216,23 +398,23 @@ export default function DashboardPage() {
             <div className="row" style={{ alignItems: 'flex-start' }}>
               <div>
                 <h3 style={{ marginBottom: 6 }}>Runtime Controls</h3>
-                <p>Record mock evidence to prove the dashboard reacts to graph-driven progression.</p>
+                <p>Record a single lesson or hangout event and re-read the current graph-driven progression.</p>
               </div>
-              <button className="secondary" onClick={() => void refreshDashboard()} disabled={loading || !personaId}>
+              <button className="secondary" onClick={() => void refreshDashboard()} disabled={loading || !learnerId}>
                 Refresh
               </button>
             </div>
             <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-              <button onClick={() => void simulateEvidence('learn')} disabled={recording !== null || !dashboard?.lessonBundle.targets?.length}>
+              <button onClick={() => void simulateEvidence('learn')} disabled={recording !== null || !lessonBundle?.nodeIds.length}>
                 {recording === 'learn' ? 'Recording lesson...' : 'Record Lesson Evidence'}
               </button>
-              <button onClick={() => void simulateEvidence('hangout')} disabled={recording !== null || !dashboard?.hangoutBundle.targets?.length}>
+              <button onClick={() => void simulateEvidence('hangout')} disabled={recording !== null || !hangoutBundle?.nodeIds.length}>
                 {recording === 'hangout' ? 'Recording hangout...' : 'Record Hangout Evidence'}
               </button>
             </div>
             {validation && (
               <p>
-                Canonical pack validation: <strong>{validation.summary || (validation.valid ? 'valid' : 'invalid')}</strong>
+                Pack <strong>{validation.packId}</strong> {validation.valid ? 'is valid.' : `has ${validation.issues.length} issue(s).`}
               </p>
             )}
           </div>
@@ -245,9 +427,9 @@ export default function DashboardPage() {
         <>
           <section className="grid grid-3" style={{ marginBottom: 16 }}>
             {[
-              { label: 'XP', value: dashboard.progression.xp, detail: `${dashboard.metrics.validatedObjectives} validated objectives` },
-              { label: 'SP', value: dashboard.progression.sp, detail: `${dashboard.lessonBundle.targets.length} lesson targets queued` },
-              { label: 'RP', value: dashboard.progression.rp, detail: `${dashboard.hangoutBundle.targets.length} hangout targets queued` },
+              { label: 'XP', value: dashboard.progression.xp, detail: `${packStats.validated} validated · ${packStats.mastered} mastered` },
+              { label: 'SP', value: dashboard.progression.sp, detail: `${lessonBundle?.nodeIds.length || 0} lesson nodes queued` },
+              { label: 'RP', value: dashboard.progression.rp, detail: `${hangoutBundle?.nodeIds.length || 0} hangout nodes queued` },
             ].map((item) => (
               <article key={item.label} className="card stack">
                 <span className="kicker">{item.label}</span>
@@ -262,33 +444,44 @@ export default function DashboardPage() {
               <div className="row" style={{ alignItems: 'flex-start' }}>
                 <div>
                   <h3>Learner Profile</h3>
-                  <p>{dashboard.persona.focusSummary}</p>
+                  <p>{describePersona(dashboard.learner)}</p>
                 </div>
-                <span className="pill">{dashboard.persona.userId}</span>
+                <span className="pill">{dashboard.learner.learnerId}</span>
               </div>
               <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                {Object.entries(dashboard.persona.proficiency).map(([lang, level]) => (
+                {dashboard.learner.targetLanguages.map((lang) => (
+                  <span key={lang} className="pill">
+                    {lang.toUpperCase()}
+                  </span>
+                ))}
+                {Object.entries(dashboard.learner.proficiency).map(([lang, level]) => (
                   <span key={lang} className="pill">
                     {lang.toUpperCase()} {level}
                   </span>
                 ))}
+                <span className="pill">{dashboard.evidence.totalEvents} evidence events</span>
+                <span className="pill">Updated {formatDateTime(dashboard.evidence.lastUpdatedAt)}</span>
               </div>
               <div className="stack">
                 <span className="pill">Goals</span>
-                {dashboard.persona.goals.map((goal) => (
-                  <p key={`${goal.lang}-${goal.theme}`}>
-                    <strong>{goal.lang.toUpperCase()}</strong> {goal.objective}
+                {dashboard.learner.goals.map((goal) => (
+                  <p key={`${goal.lang}-${goal.topic}`}>
+                    <strong>{goal.lang.toUpperCase()}</strong> {goal.topic}
                   </p>
                 ))}
               </div>
               <div className="stack">
-                <span className="pill">Top terms from media</span>
+                <span className="pill">Media preferences</span>
                 <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                  {dashboard.persona.topTerms.map((term) => (
-                    <span key={`${term.lang}-${term.lemma}`} className="pill">
-                      {term.lemma} · {term.source}
-                    </span>
-                  ))}
+                  {[...dashboard.learner.mediaPreferences.youtube, ...dashboard.learner.mediaPreferences.spotify].length > 0 ? (
+                    [...dashboard.learner.mediaPreferences.youtube, ...dashboard.learner.mediaPreferences.spotify].map((item) => (
+                      <span key={item} className="pill">
+                        {item}
+                      </span>
+                    ))
+                  ) : (
+                    <p>No media preferences configured for this learner.</p>
+                  )}
                 </div>
               </div>
             </article>
@@ -314,41 +507,34 @@ export default function DashboardPage() {
             <div className="row" style={{ alignItems: 'flex-start' }}>
               <div>
                 <h3>World Roadmap</h3>
-                <p>Foundation-first progression across the three cities, with Seoul active and the other routes ready for future packs or overlays.</p>
+                <p>The runtime roadmap is now a flat set of city-location entries with active and completed node counts.</p>
               </div>
-              <span className="pill">{dashboard.worldRoadmap.length} cities</span>
+              <span className="pill">{dashboard.roadmap.length} routes</span>
             </div>
             <div className="grid grid-3">
-              {dashboard.worldRoadmap.map((city) => (
-                <article key={city.cityId} className="card stack" style={{ padding: 14 }}>
+              {dashboard.roadmap.map((entry) => (
+                <article key={`${entry.cityId}-${entry.locationId}`} className="card stack" style={{ padding: 14 }}>
                   <div className="row" style={{ alignItems: 'flex-start' }}>
                     <div>
-                      <strong>{city.label}</strong>
-                      <p>{city.focus}</p>
+                      <strong>{entry.title}</strong>
+                      <p>{entry.summary}</p>
                     </div>
-                    <StatusPill status={city.locations[0]?.status || 'preview'} />
+                    <StatusPill status={entry.status} />
                   </div>
                   <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                    <span className="pill">{city.cityId.toUpperCase()}</span>
-                    <span className="pill">Proficiency {city.proficiency}</span>
+                    <span className="pill">{entry.cityId.toUpperCase()}</span>
+                    <span className="pill">{entry.locationId.replace(/_/g, ' ')}</span>
+                    <span className="pill">{entry.lang.toUpperCase()}</span>
                   </div>
-                  <div className="stack">
-                    {city.locations.map((location) => (
-                      <div key={location.locationId} className="row">
-                        <div>
-                          <strong>{location.label}</strong>
-                          <p>{location.progress}</p>
-                        </div>
-                        <StatusPill status={location.status} />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                    {city.levels.map((level) => (
-                      <span key={`${city.cityId}-${level.level}`} className="pill">
-                        L{level.level} {level.label}
-                      </span>
-                    ))}
+                  <div className="row">
+                    <div>
+                      <strong>{entry.activeNodeCount}</strong>
+                      <p>Active nodes</p>
+                    </div>
+                    <div>
+                      <strong>{entry.completedNodeCount}</strong>
+                      <p>Completed nodes</p>
+                    </div>
                   </div>
                 </article>
               ))}
@@ -359,76 +545,121 @@ export default function DashboardPage() {
             <article className="card stack">
               <div className="row" style={{ alignItems: 'flex-start' }}>
                 <div>
-                  <h3>{dashboard.locationSkillTree.title}</h3>
-                  <p>Core path for the first reference location. Each objective state is derived from graph evidence, not hardcoded UI progress.</p>
+                  <h3>{dashboard.selectedPack.pack.title}</h3>
+                  <p>{dashboard.selectedPack.pack.summary}</p>
                 </div>
-                <span className="pill">{dashboard.locationSkillTree.packId}</span>
+                <span className="pill">{dashboard.selectedPack.pack.packId}</span>
               </div>
-              {dashboard.locationSkillTree.levels.map((level) => (
-                <div key={level.level} className="card stack" style={{ padding: 14 }}>
+              <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+                <span className="pill">{dashboard.selectedPack.pack.lang.toUpperCase()}</span>
+                <span className="pill">{dashboard.selectedPack.pack.cityId}</span>
+                <span className="pill">{dashboard.selectedPack.pack.locationId.replace(/_/g, ' ')}</span>
+                <span className="pill">v{dashboard.selectedPack.pack.version}</span>
+                <span className="pill">{selectedPackNodes.length} nodes</span>
+              </div>
+              <div className="grid grid-3">
+                {[
+                  { label: 'Available', value: packStats.available + packStats.learning + packStats.due },
+                  { label: 'Completed', value: packStats.validated + packStats.mastered },
+                  { label: 'Avg mastery', value: `${percent(packStats.averageMastery)}%` },
+                ].map((item) => (
+                  <div key={item.label} className="card stack" style={{ padding: 12 }}>
+                    <strong>{item.value}</strong>
+                    <p>{item.label}</p>
+                  </div>
+                ))}
+              </div>
+              {packSections.levels.map((section) => (
+                <div key={section.level} className="card stack" style={{ padding: 14 }}>
                   <div className="row" style={{ alignItems: 'flex-start' }}>
                     <div>
                       <strong>
-                        L{level.level} · {level.name}
+                        L{section.level} · {section.label}
                       </strong>
-                      <p>{level.description}</p>
+                      <p>{section.description}</p>
                     </div>
-                    <StatusPill status={level.mission.status} />
+                    <StatusPill status={section.missionStatus} />
                   </div>
-                  <p>Mission: {level.mission.title}</p>
-                  <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                    <span className="pill">~{level.estimatedSessionMinutes} min</span>
-                    <span className="pill">
-                      Reward {level.mission.reward.xp} XP / {level.mission.reward.sp} SP / {level.mission.reward.rp} RP
-                    </span>
-                  </div>
-                  {level.objectives.map((objective) => (
-                    <div key={objective.objectiveId} style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
+                  {section.mission ? (
+                    <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+                      <span className="pill">{section.mission.title}</span>
+                      <span className="pill">
+                        Reward {section.mission.rewards.xp} XP / {section.mission.rewards.sp} SP / {section.mission.rewards.rp} RP
+                      </span>
+                    </div>
+                  ) : (
+                    <p>No mission is authored for this level yet.</p>
+                  )}
+                  {section.nodes.map((entry) => (
+                    <div key={entry.node.nodeId} style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
                       <div className="row" style={{ alignItems: 'flex-start' }}>
                         <div>
-                          <strong>{objective.title}</strong>
-                          <p>{objective.description}</p>
+                          <strong>{entry.node.title}</strong>
+                          <p>{entry.node.description}</p>
                         </div>
-                        <StatusPill status={objective.status} />
+                        <StatusPill status={entry.state.status} />
                       </div>
                       <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start', marginBottom: 8 }}>
-                        <span className="pill">{objective.category}</span>
-                        <span className="pill">
-                          {objective.validatedTargetCount}/{objective.targetCount} targets
-                        </span>
-                        {objective.blockers.length > 0 && <span className="pill">Blocked by {objective.blockers.length}</span>}
+                        <span className="pill">{entry.node.objectiveCategory}</span>
+                        <span className="pill">{entry.node.targetCount} targets</span>
+                        <span className="pill">{entry.state.evidenceCount} evidence</span>
+                        {entry.blockers.length > 0 && <span className="pill">Blocked by {entry.blockers.length}</span>}
+                        {entry.state.nextReviewAt && <span className="pill">Review {formatDateTime(entry.state.nextReviewAt)}</span>}
                       </div>
-                      <ProgressBar value={objective.mastery_score} />
+                      <ProgressBar value={entry.state.masteryScore} />
+                      {entry.state.recommendedReason && <p style={{ marginTop: 8 }}>{entry.state.recommendedReason}</p>}
                     </div>
                   ))}
                 </div>
               ))}
+              {packSections.ungrouped.length > 0 && (
+                <div className="card stack" style={{ padding: 14 }}>
+                  <strong>Additional nodes</strong>
+                  {packSections.ungrouped.map((entry) => (
+                    <div key={entry.node.nodeId} className="row">
+                      <div>
+                        <strong>{entry.node.title}</strong>
+                        <p>{entry.node.description}</p>
+                      </div>
+                      <StatusPill status={entry.state.status} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {selectedPackNodes.length === 0 && <p>This pack has no authored node graph yet.</p>}
             </article>
 
             <article className="card stack">
               <div className="row" style={{ alignItems: 'flex-start' }}>
                 <div>
-                  <h3>Personalized Overlay</h3>
-                  <p>{dashboard.personalizedOverlay.summary}</p>
+                  <h3>Personalized Overlays</h3>
+                  <p>Current overlay candidates are returned as canonical runtime overlays, not focus-card wrappers.</p>
                 </div>
-                <span className="pill">{dashboard.personalizedOverlay.focusCards.length} focus cards</span>
+                <span className="pill">{dashboard.overlays.length} overlays</span>
               </div>
-              {dashboard.personalizedOverlay.focusCards.map((card) => (
-                <div key={card.overlayId} className="card stack" style={{ padding: 14 }}>
+              {dashboard.overlays.length === 0 && <p>No personalized overlays are available for this learner yet.</p>}
+              {dashboard.overlays.map((overlay) => (
+                <div key={overlay.overlayId} className="card stack" style={{ padding: 14 }}>
                   <div className="row" style={{ alignItems: 'flex-start' }}>
                     <div>
-                      <strong>{card.title}</strong>
-                      <p>{card.description}</p>
+                      <strong>{overlay.title}</strong>
+                      <p>{overlay.rationale}</p>
                     </div>
                     <span className="pill">
-                      {card.lang.toUpperCase()} · {card.theme}
+                      {overlay.lang.toUpperCase()} · {overlay.source}
                     </span>
                   </div>
-                  <p>{card.reason}</p>
                   <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                    {card.nodes.map((node) => (
-                      <span key={node.nodeId} className="pill">
-                        {node.label} · {node.translation}
+                    {overlay.suggestedTerms.map((term) => (
+                      <span key={term} className="pill">
+                        {term}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+                    {overlay.connectedNodeIds.map((nodeId) => (
+                      <span key={nodeId} className="pill">
+                        {nodeLabel(nodeId, nodeEntriesById)}
                       </span>
                     ))}
                   </div>
@@ -442,17 +673,27 @@ export default function DashboardPage() {
               <div className="row" style={{ alignItems: 'flex-start' }}>
                 <div>
                   <h3>Lesson Bundle</h3>
-                  <p>{dashboard.lessonBundle.reason}</p>
+                  <p>{lessonBundle?.reason || 'No lesson bundle is available.'}</p>
                 </div>
                 <span className="pill">learn</span>
               </div>
-              <strong>{dashboard.lessonBundle.title}</strong>
+              <strong>{lessonBundle?.title || 'No lesson bundle'}</strong>
               <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                {dashboard.lessonBundle.targets.map((target) => (
-                  <span key={target.nodeId} className="pill">
-                    {target.label} · {percent(target.mastery_score)}%
-                  </span>
-                ))}
+                {(lessonBundle?.nodeIds || []).length > 0 ? (
+                  (lessonEntries.length > 0 ? lessonEntries : lessonBundle?.nodeIds || []).map((item) =>
+                    typeof item === 'string' ? (
+                      <span key={item} className="pill">
+                        {nodeLabel(item, nodeEntriesById)}
+                      </span>
+                    ) : (
+                      <span key={item.node.nodeId} className="pill">
+                        {item.node.title} · {percent(item.state.masteryScore)}%
+                      </span>
+                    ),
+                  )
+                ) : (
+                  <p>No lesson nodes queued.</p>
+                )}
               </div>
             </article>
 
@@ -460,47 +701,104 @@ export default function DashboardPage() {
               <div className="row" style={{ alignItems: 'flex-start' }}>
                 <div>
                   <h3>Hangout Bundle</h3>
-                  <p>{dashboard.hangoutBundle.reason}</p>
+                  <p>{hangoutBundle?.reason || 'No hangout bundle is available.'}</p>
                 </div>
                 <span className="pill">hangout</span>
               </div>
-              <strong>{dashboard.hangoutBundle.title}</strong>
+              <strong>{hangoutBundle?.title || 'No hangout bundle'}</strong>
               <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                {dashboard.hangoutBundle.targets.map((target) => (
-                  <span key={target.nodeId} className="pill">
-                    {target.label} · {percent(target.mastery_score)}%
-                  </span>
-                ))}
+                {hangoutBundle?.scenarioId && <span className="pill">{hangoutBundle.scenarioId}</span>}
+                <span className="pill">{hangoutBundle?.objectiveIds.length || 0} objectives</span>
               </div>
               <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                {dashboard.hangoutBundle.suggestedPhrases.map((phrase) => (
-                  <span key={phrase} className="pill">
-                    {phrase}
-                  </span>
-                ))}
+                {(hangoutBundle?.nodeIds || []).length > 0 ? (
+                  (hangoutEntries.length > 0 ? hangoutEntries : hangoutBundle?.nodeIds || []).map((item) =>
+                    typeof item === 'string' ? (
+                      <span key={item} className="pill">
+                        {nodeLabel(item, nodeEntriesById)}
+                      </span>
+                    ) : (
+                      <span key={item.node.nodeId} className="pill">
+                        {item.node.title} · {percent(item.state.masteryScore)}%
+                      </span>
+                    ),
+                  )
+                ) : (
+                  <p>No hangout nodes queued.</p>
+                )}
               </div>
             </article>
           </section>
 
-          <section className="card stack">
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div>
-                <h3>Next Actions</h3>
-                <p>Deterministic graph recommendations surfaced for both product UI and agentic tooling.</p>
-              </div>
-              <span className="pill">{dashboard.nextActions.length} actions</span>
-            </div>
-            {dashboard.nextActions.map((action) => (
-              <div key={action.actionId} style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
-                <div className="row" style={{ alignItems: 'flex-start' }}>
-                  <div>
-                    <strong>{action.title}</strong>
-                    <p>{action.reason}</p>
-                  </div>
-                  <span className="pill">{action.type}</span>
+          <section className="grid grid-2">
+            <article className="card stack">
+              <div className="row" style={{ alignItems: 'flex-start' }}>
+                <div>
+                  <h3>Recommendations</h3>
+                  <p>Canonical next actions are surfaced as graph recommendations.</p>
                 </div>
+                <span className="pill">{dashboard.recommendations.length} items</span>
               </div>
-            ))}
+              {dashboard.recommendations.map((recommendation) => (
+                <div key={recommendation.recommendationId} style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
+                  <div className="row" style={{ alignItems: 'flex-start' }}>
+                    <div>
+                      <strong>{recommendation.title}</strong>
+                      <p>{recommendation.reason}</p>
+                    </div>
+                    <StatusPill status={recommendation.type} />
+                  </div>
+                  <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+                    <span className="pill">Priority {recommendation.priority}</span>
+                    <span className="pill">{recommendation.lang.toUpperCase()}</span>
+                    <span className="pill">{recommendation.cityId}</span>
+                    <span className="pill">{recommendation.locationId.replace(/_/g, ' ')}</span>
+                    <span className="pill">{recommendation.foundation ? 'foundation' : 'overlay'}</span>
+                    {recommendation.nodeIds.map((nodeId) => (
+                      <span key={nodeId} className="pill">
+                        {nodeLabel(nodeId, nodeEntriesById)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </article>
+
+            <article className="card stack">
+              <div className="row" style={{ alignItems: 'flex-start' }}>
+                <div>
+                  <h3>Validation Results</h3>
+                  <p>Canonical pack validation now returns issue objects with severity and optional node ids.</p>
+                </div>
+                {validation && <StatusPill status={validation.valid ? 'validated' : 'error'} />}
+              </div>
+              {validation ? (
+                <>
+                  <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+                    <span className="pill">{validation.packId}</span>
+                    <span className="pill">{validation.issues.length} issues</span>
+                  </div>
+                  {validation.issues.length === 0 ? (
+                    <p>No validation issues detected.</p>
+                  ) : (
+                    validation.issues.map((issue) => (
+                      <div key={`${issue.code}-${issue.nodeId || 'global'}`} style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
+                        <div className="row" style={{ alignItems: 'flex-start' }}>
+                          <div>
+                            <strong>{issue.code}</strong>
+                            <p>{issue.message}</p>
+                          </div>
+                          <StatusPill status={issue.severity} />
+                        </div>
+                        {issue.nodeId && <span className="pill">{issue.nodeId}</span>}
+                      </div>
+                    ))
+                  )}
+                </>
+              ) : (
+                <p>Validation has not loaded yet.</p>
+              )}
+            </article>
           </section>
         </>
       )}

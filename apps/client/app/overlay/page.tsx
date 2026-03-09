@@ -85,6 +85,9 @@ export default function OverlayPage() {
           <Link href="/" className="nav-link">
             Home
           </Link>
+          <Link href="/graph" className="nav-link">
+            Graph
+          </Link>
           <Link href="/game" className="nav-link">
             Game UI
           </Link>
