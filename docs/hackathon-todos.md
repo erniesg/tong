@@ -37,3 +37,18 @@
 - [x] Run mock ingestion and verify insights render in web UI
 - [x] Sanity-check client build and critical routes
 - [x] Write concise review/test runbook for all three demo areas
+
+## Graph Progression Kernel
+- [x] Add product spec for graph-driven progression, lessons, hangouts, and mission gates
+- [ ] Extend shared graph contracts with language summary, mission gate status, next unlocks, and item-level target progress
+- [ ] Derive item-level progress from evidence in `apps/server/src/curriculum-graph.mjs`
+- [ ] Compute learner-facing `languageTier` and progress-to-next-tier from graph evidence
+- [ ] Expose explicit `next unlocks` and `why blocked` data from graph APIs
+- [ ] Add one explicit Seoul Food Street mission gate with ready / not-ready state
+
+## Graph-Driven Product Integration
+- [ ] Make `/graph` show overall language tier, next unlock path, mission gate, and per-node remaining target items
+- [ ] Make Learn mode consume graph lesson bundles and missing target items for session setup
+- [ ] Make Hangout mode check graph readiness before spending SP and starting a paid validation run
+- [ ] Ensure lesson + hangout evidence updates graph state immediately in the UI
+- [ ] Add smoke checks that verify next lesson, hangout readiness, and mission readiness for a runtime learner

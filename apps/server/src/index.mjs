@@ -35,6 +35,7 @@ import {
   getGraphHangoutBundle,
   getGraphLessonBundle,
   getGraphNextActions,
+  isGraphRuntimeError,
   listGraphPersonas,
   proposeGraphOverlay,
   recordGraphEvidence,
@@ -522,6 +523,13 @@ function getUserIdFromQuery(query) {
   return String(query.get('userId') || DEFAULT_USER_ID).trim() || DEFAULT_USER_ID;
 }
 
+function getOptionalUserIdFromQuery(query) {
+  const value = query.get('userId');
+  if (value === null || value === undefined) return undefined;
+  const normalized = String(value).trim();
+  return normalized || undefined;
+}
+
 function normalizeProfileRecord(input) {
   if (!input || typeof input !== 'object') return null;
   if (input.profile && typeof input.profile === 'object') return input.profile;
@@ -611,6 +619,49 @@ function getCaptionsForVideo(videoId = 'karina-variety-demo') {
 function loadOrFallback(name, fallback) {
   const generated = loadGeneratedSnapshot(name);
   return generated || fallback;
+}
+
+function graphToolResponse(toolName, factory) {
+  try {
+    return {
+      statusCode: 200,
+      payload: {
+        ok: true,
+        tool: toolName,
+        result: factory(),
+      },
+    };
+  } catch (error) {
+    if (isGraphRuntimeError(error)) {
+      return {
+        statusCode: error.statusCode,
+        payload: {
+          ok: false,
+          tool: toolName,
+          error: error.message,
+          code: error.code,
+          details: error.details,
+        },
+      };
+    }
+    throw error;
+  }
+}
+
+function sendGraphResponse(res, factory) {
+  try {
+    jsonResponse(res, 200, factory());
+  } catch (error) {
+    if (isGraphRuntimeError(error)) {
+      jsonResponse(res, error.statusCode, {
+        error: error.code,
+        message: error.message,
+        details: error.details,
+      });
+      return;
+    }
+    throw error;
+  }
 }
 
 function normalizeIngestionSources(input) {
@@ -1014,74 +1065,25 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
       };
     }
     case 'graph.dashboard.get': {
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: getGraphDashboard(args),
-        },
-      };
+      return graphToolResponse(toolName, () => getGraphDashboard(args));
     }
     case 'graph.next_actions.get': {
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: getGraphNextActions(args),
-        },
-      };
+      return graphToolResponse(toolName, () => getGraphNextActions(args));
     }
     case 'graph.lesson_bundle.get': {
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: getGraphLessonBundle(args),
-        },
-      };
+      return graphToolResponse(toolName, () => getGraphLessonBundle(args));
     }
     case 'graph.hangout_bundle.get': {
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: getGraphHangoutBundle(args),
-        },
-      };
+      return graphToolResponse(toolName, () => getGraphHangoutBundle(args));
     }
     case 'graph.evidence.record': {
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: recordGraphEvidence(args),
-        },
-      };
+      return graphToolResponse(toolName, () => recordGraphEvidence(args));
     }
     case 'graph.pack.validate': {
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: validatePack(args.pack),
-        },
-      };
+      return graphToolResponse(toolName, () => validatePack(args.pack));
     }
     case 'graph.overlay.propose': {
-      return {
-        statusCode: 200,
-        payload: {
-          ok: true,
-          tool: toolName,
-          result: proposeGraphOverlay(args),
-        },
-      };
+      return graphToolResponse(toolName, () => proposeGraphOverlay(args));
     }
     // ── Volcengine tools ─────────────────────────────────────────
     case 'volcengine.status': {
@@ -1548,7 +1550,6 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/v1/graph/personas' && req.method === 'GET') {
       jsonResponse(res, 200, {
-        generatedAtIso: new Date().toISOString(),
         items: listGraphPersonas(),
       });
       return;
@@ -1558,22 +1559,22 @@ const server = http.createServer(async (req, res) => {
       const personaId = url.searchParams.get('personaId') || url.searchParams.get('learnerId') || undefined;
       const city = url.searchParams.get('city') || undefined;
       const location = url.searchParams.get('location') || undefined;
-      const userId = getUserIdFromQuery(url.searchParams);
-      jsonResponse(res, 200, getGraphDashboard({ personaId, userId, city, location }));
+      const userId = getOptionalUserIdFromQuery(url.searchParams);
+      sendGraphResponse(res, () => getGraphDashboard({ personaId, userId, city, location }));
       return;
     }
 
     if (pathname === '/api/v1/graph/next-actions' && req.method === 'GET') {
       const personaId = url.searchParams.get('personaId') || url.searchParams.get('learnerId') || undefined;
-      const userId = getUserIdFromQuery(url.searchParams);
+      const userId = getOptionalUserIdFromQuery(url.searchParams);
       const limit = Number(url.searchParams.get('limit') || 4);
-      jsonResponse(res, 200, getGraphNextActions({ personaId, userId, limit }));
+      sendGraphResponse(res, () => getGraphNextActions({ personaId, userId, limit }));
       return;
     }
 
     if (pathname === '/api/v1/graph/evidence' && req.method === 'POST') {
       const body = await readJsonBody(req);
-      jsonResponse(res, 200, recordGraphEvidence(body));
+      sendGraphResponse(res, () => recordGraphEvidence(body));
       return;
     }
 
