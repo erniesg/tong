@@ -285,9 +285,13 @@ export function BlockCrush({ exercise, onResult }: Props) {
       }
       if (lost) {
         setLives((l) => {
-          const nl = l - 1;
-          if (nl <= 0) { setDone(true); onResult(false, 'Ran out of lives'); }
-          return Math.max(0, nl);
+          const nl = Math.max(0, l - 1);
+          if (nl <= 0) {
+            setDone(true);
+            // Defer onResult to avoid setState-during-render warning
+            setTimeout(() => onResult(false, 'Ran out of lives'), 0);
+          }
+          return nl;
         });
       }
       return next;
