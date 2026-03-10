@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
 import type { CityId, LocationId, ProficiencyLevel, ScoreState, UserProficiency, AppLang } from '@/lib/api';
-import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData } from '@/lib/types/hangout';
+import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData, BlockCrushCharStep, BlockCrushExercise } from '@/lib/types/hangout';
 import type { CompletedSession } from '@/lib/store/session-store';
 import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
 import type { Character } from '@/lib/types/relationship';
@@ -746,26 +746,53 @@ export default function GamePage() {
           const explainLangRef = getGameState().explainIn[npcCityRef] ?? 'en';
 
           if (bc.targetChar && bc.targetChar.length > 1) {
-            // Multi-char: try each character in block-crush-data
-            let found = false;
-            for (const ch of [...bc.targetChar]) {
+            // Multi-char: build sequence from all characters
+            const chars = [...bc.targetChar];
+            const steps: BlockCrushCharStep[] = [];
+            for (const ch of chars) {
               const target = getTargetByChar(ch);
               if (target && target.components.length >= 2) {
-                exercise = generateExercise('block_crush', {
-                  hintItems: [ch],
-                  objectiveId: args.objectiveId,
-                  language: langRef,
-                  cityId: city,
-                  locationId: location,
-                  mastery: getGameState().itemMastery,
-                  explainIn: explainLangRef as UILang,
+                steps.push({
+                  targetChar: target.char,
+                  components: target.components,
+                  romanization: target.romanization,
+                  meaning: target.meaning,
                 });
-                console.log('[EX] block_crush multi-char → decomposed to:', ch);
-                found = true;
-                break;
               }
             }
-            if (!found) {
+            if (steps.length >= 2) {
+              // Multi-char block crush with all grids side by side
+              const firstStep = steps[0];
+              exercise = {
+                type: 'block_crush',
+                id: `ai-bc-multi-${Date.now()}`,
+                objectiveId: args.objectiveId,
+                difficulty: bc.difficulty ?? 2,
+                prompt: `Build: ${bc.targetChar}`,
+                language: langRef,
+                targetChar: firstStep.targetChar,
+                components: firstStep.components,
+                romanization: firstStep.romanization,
+                meaning: firstStep.meaning,
+                stage: bc.stage || 'intro',
+                sequence: steps,
+                fullWord: bc.targetChar,
+              } as BlockCrushExercise;
+              console.log('[EX] block_crush multi-char → all grids:', steps.map(s => s.targetChar).join(''));
+            } else if (steps.length === 1) {
+              // Only one char decomposable — single block crush
+              exercise = generateExercise('block_crush', {
+                hintItems: [steps[0].targetChar],
+                objectiveId: args.objectiveId,
+                language: langRef,
+                cityId: city,
+                locationId: location,
+                mastery: getGameState().itemMastery,
+                explainIn: explainLangRef as UILang,
+              });
+              console.log('[EX] block_crush multi-char → single decomposed to:', steps[0].targetChar);
+            } else {
+              // No chars found — fallback to stroke_tracing
               exercise = generateExercise('stroke_tracing', {
                 hintItems: [bc.targetChar[0]],
                 objectiveId: args.objectiveId,
