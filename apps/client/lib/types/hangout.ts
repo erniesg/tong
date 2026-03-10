@@ -66,7 +66,9 @@ export interface MatchingExercise {
   objectiveId: string;
   difficulty: number;
   prompt: string;
-  pairs: { left: string; right: string }[];
+  pairs: { left: string; right: string; rightAudio?: string }[];
+  /** 'audio' = right side shows speaker icons with TTS, 'text' (default) = show text */
+  mode?: 'text' | 'audio';
 }
 
 export interface SentenceBuilderExercise {

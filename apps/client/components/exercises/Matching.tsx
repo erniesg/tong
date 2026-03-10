@@ -1,10 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { cn } from '@/lib/utils/cn';
 import type { MatchingExercise } from '@/lib/types/hangout';
 import { useUILang } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
+
+/** Map bare jamo to their full names for TTS — more distinguishable. */
+const JAMO_TO_TTS: Record<string, string> = {
+  'ㄱ': '기역', 'ㄴ': '니은', 'ㄷ': '디귿', 'ㄹ': '리을', 'ㅁ': '미음',
+  'ㅂ': '비읍', 'ㅅ': '시옷', 'ㅇ': '이응', 'ㅈ': '지읒', 'ㅊ': '치읓',
+  'ㅋ': '키읔', 'ㅌ': '티읕', 'ㅍ': '피읖', 'ㅎ': '히읗',
+  'ㅏ': '아', 'ㅑ': '야', 'ㅓ': '어', 'ㅕ': '여', 'ㅗ': '오',
+  'ㅛ': '요', 'ㅜ': '우', 'ㅠ': '유', 'ㅡ': '으', 'ㅣ': '이',
+};
+
+function detectTtsLang(text: string): string {
+  if (/[\uAC00-\uD7AF\u3131-\u318E]/.test(text)) return 'ko-KR';
+  if (/[\u4E00-\u9FFF]/.test(text)) return 'zh-CN';
+  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) return 'ja-JP';
+  return 'ko-KR';
+}
 
 interface Props {
   exercise: MatchingExercise;
@@ -13,10 +29,12 @@ interface Props {
 
 export function Matching({ exercise, onResult }: Props) {
   const lang = useUILang();
+  const isAudioMode = exercise.mode === 'audio';
   const [matches, setMatches] = useState<Record<number, number>>({});
   const [selectedWord, setSelectedWord] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [playing, setPlaying] = useState<number | null>(null);
 
   // Shuffle both sides once
   const [shuffledRight] = useState(() => {
@@ -44,6 +62,18 @@ export function Matching({ exercise, onResult }: Props) {
 
   const placedRight = new Set(Object.values(matches));
 
+  const playTTS = useCallback((text: string, idx: number) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const ttsText = JAMO_TO_TTS[text] || text;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(ttsText);
+    utter.lang = detectTtsLang(ttsText);
+    utter.rate = 0.8;
+    setPlaying(idx);
+    utter.onend = () => setPlaying(null);
+    window.speechSynthesis.speak(utter);
+  }, []);
+
   const placeWord = (leftIdx: number, rightIdx: number) => {
     const updated = { ...matches };
     for (const [k, v] of Object.entries(updated)) {
@@ -57,6 +87,11 @@ export function Matching({ exercise, onResult }: Props) {
 
   const handleWordBankClick = (rightIdx: number) => {
     if (submitted) return;
+    // In audio mode, always play sound on tap
+    if (isAudioMode) {
+      const pair = exercise.pairs[rightIdx];
+      playTTS(pair.rightAudio || pair.left, rightIdx);
+    }
     const existingSlot = Object.entries(matches).find(([, r]) => r === rightIdx);
     if (existingSlot) {
       const { [Number(existingSlot[0])]: _, ...rest } = matches;
@@ -100,30 +135,47 @@ export function Matching({ exercise, onResult }: Props) {
     onResult(isAllCorrect, JSON.stringify({ kind: 'pairs', items: details }));
   };
 
+  /* Speaker icon SVG */
+  const SpeakerIcon = ({ size = 20, active = false }: { size?: number; active?: boolean }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" style={{ opacity: active ? 1 : 0.6 }}>
+      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+    </svg>
+  );
+
   return (
     <div className="exercise-card p-5">
       <p className="text-lg font-medium mb-3 m-0">{exercise.prompt}</p>
 
-      {/* Word bank */}
+      {/* Word bank — audio mode shows speaker icons, text mode shows text */}
       <div className="flex flex-wrap gap-2 mb-4">
         {shuffledRight.map((rightIdx) => {
           const pair = exercise.pairs[rightIdx];
           const isPlaced = placedRight.has(rightIdx);
           const isSelected = selectedWord === rightIdx;
+          const isThisPlaying = playing === rightIdx;
           return (
             <button
               key={`word-${rightIdx}`}
               onClick={() => handleWordBankClick(rightIdx)}
               disabled={submitted}
               className={cn(
-                'rounded-lg px-3 py-2 font-medium transition border text-white text-base',
+                'rounded-lg font-medium transition border text-white',
+                isAudioMode ? 'px-4 py-3 flex items-center gap-2' : 'px-3 py-2 text-base',
                 !isPlaced && !isSelected && 'border-white/40 bg-white/8 hover:border-white/60 hover:bg-white/12',
                 isSelected && 'border-[var(--color-primary)] bg-[var(--color-primary)]/20 scale-105',
                 isPlaced && 'opacity-30 border-white/10 bg-transparent cursor-default',
+                isThisPlaying && !isPlaced && 'border-[var(--color-accent-gold)] bg-[var(--color-accent-gold)]/15',
                 submitted && 'pointer-events-none'
               )}
             >
-              {pair.right}
+              {isAudioMode ? (
+                <>
+                  <SpeakerIcon active={isThisPlaying} />
+                  {submitted && <span className="text-sm">{pair.right}</span>}
+                </>
+              ) : (
+                pair.right
+              )}
             </button>
           );
         })}
@@ -135,10 +187,12 @@ export function Matching({ exercise, onResult }: Props) {
           const pair = exercise.pairs[leftIdx];
           const matchedRightIdx = matches[leftIdx];
           const hasMatch = matchedRightIdx !== undefined;
-          const matchedText = hasMatch ? exercise.pairs[matchedRightIdx].right : null;
           const isCorrect = submitted && hasMatch && matchedRightIdx === leftIdx;
           const isWrong = submitted && hasMatch && matchedRightIdx !== leftIdx;
           const isSlotSelected = selectedSlot === leftIdx;
+
+          // In audio mode, matched slot shows a speaker icon; in text mode, shows text
+          const matchedPair = hasMatch ? exercise.pairs[matchedRightIdx] : null;
 
           return (
             <div
@@ -166,11 +220,18 @@ export function Matching({ exercise, onResult }: Props) {
                 isCorrect && 'border-[var(--color-accent-green)] border-solid',
                 isWrong && 'border-red-500 border-solid'
               )}>
-                {matchedText ? (
-                  <span className={cn(
-                    'text-ko font-medium text-white text-base',
-                    isWrong && 'line-through text-red-400'
-                  )}>{matchedText}</span>
+                {hasMatch ? (
+                  isAudioMode ? (
+                    <span className={cn('flex items-center gap-2', isWrong && 'text-red-400')}>
+                      <SpeakerIcon size={18} active={playing === matchedRightIdx} />
+                      {submitted && <span className="text-sm">{matchedPair?.right}</span>}
+                    </span>
+                  ) : (
+                    <span className={cn(
+                      'text-ko font-medium text-white text-base',
+                      isWrong && 'line-through text-red-400'
+                    )}>{matchedPair?.right}</span>
+                  )
                 ) : (
                   <span className="text-xs text-[var(--color-text-muted)]">
                     {isSlotSelected ? t('pick_word', lang) : selectedWord !== null ? t('tap_to_place', lang) : ''}
@@ -179,7 +240,17 @@ export function Matching({ exercise, onResult }: Props) {
               </div>
               {isWrong && (
                 <span className="text-xs text-[var(--color-accent-green)] whitespace-nowrap flex items-center gap-1">
-                  → {exercise.pairs[leftIdx].right}
+                  {isAudioMode ? (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); playTTS(pair.rightAudio || pair.left, leftIdx + 1000); }}
+                      className="flex items-center gap-1"
+                    >
+                      → <SpeakerIcon size={16} /> {pair.right}
+                    </button>
+                  ) : (
+                    <>→ {exercise.pairs[leftIdx].right}</>
+                  )}
                 </span>
               )}
               {isCorrect && (
