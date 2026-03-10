@@ -707,6 +707,7 @@ button.nav-link:hover {
   color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
   padding: 6px 10px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 .btn-skip:hover {
@@ -1207,6 +1208,23 @@ button.nav-link:hover {
   animation: tongFadeIn 1s ease 0.2s forwards;
 }
 
+/* Mobile: mp4 fallback has baked bg — use cover so no CSS bg peeks through */
+@media (max-width: 768px) {
+  .tg-tong-intro-video {
+    object-fit: cover;
+  }
+}
+
+.tg-tong-intro-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  animation: tongFadeIn 1s ease 0.2s forwards;
+}
+
 /* Static Tong avatar for steps 1-3 — wrapper with circular bg */
 .tong-avatar-wrap {
   position: absolute;
@@ -1218,6 +1236,7 @@ button.nav-link:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+  filter: drop-shadow(0 0 24px rgba(240, 192, 64, 0.35));
   z-index: 1;
   opacity: 0;
   animation: tongFadeIn 0.5s ease forwards, tongBob 3s ease-in-out 0.5s infinite;
@@ -1228,11 +1247,15 @@ button.nav-link:hover {
   display: none;
 }
 
-.tong-avatar {
+.tong-avatar-wrap .tong-avatar {
   width: 100%;
   height: 100%;
   object-fit: contain;
   object-position: center;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: inherit;
 }
 
 @keyframes tongBob {
@@ -1847,7 +1870,6 @@ button.nav-link:hover {
 .dialogue-translation {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.6);
-  font-style: italic;
   margin: 0.25rem 0 0;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }

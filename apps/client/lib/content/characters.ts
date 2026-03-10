@@ -265,6 +265,7 @@ export const TUTORIAL_VIDEO_CONFIG: Record<string, TutorialVideoConfig> = {
     introVideoUrls: [
       '/assets/cinematics/haeun/intro_1.mp4',
       '/assets/cinematics/haeun/intro_2.mp4',
+      '/assets/cinematics/haeun/intro_3.mp4',
     ],
     exitClips: [
       {
@@ -281,6 +282,11 @@ export const TUTORIAL_VIDEO_CONFIG: Record<string, TutorialVideoConfig> = {
         video: '/assets/cinematics/haeun/exit_3.mp4',
         line: '{playerName}...아니, {chineseName}. 나쁘지 않았어.',
         translation: '{playerName}...no, {chineseName}. Not bad.',
+      },
+      {
+        video: '/assets/cinematics/haeun/exit_4.mp4',
+        line: '흥, {playerName}... 조금은 인정해줄게.',
+        translation: 'Hmph, {playerName}... I\'ll give you a little credit.',
       },
     ],
     exitVideoPromptTemplate: `韩国首尔深夜포장마차路边摊。一位年轻韩国女性，长直黑发齐刘海，穿黑色皮夹克、白色露脐上衣、蓝色牛仔裤，戴银色十字架耳环和细链项链，站在热气腾腾的摊位前。她转向镜头，微微挑眉，嘴角不自觉地勾了一下，带着自信的语气说："{exitLine}"。说完她微微侧头，眼神停留一瞬，然后转身走入霓虹灯照亮的夜色中。她的声音特征：女性，约18-22岁，音色明亮有锐度，语速中等偏快，情绪基线自信、带一丝不易察觉的认可。暖黄灯笼光映照侧脸，背景是冒着热气的大锅和绿色烧酒瓶。镜头从近景缓推至中景跟拍她离开的背影。写实风格，韩剧电影质感，浅景深。`,

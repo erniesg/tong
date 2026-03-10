@@ -56,6 +56,7 @@ function ChargeNotif({ text }: { text: string }) {
   );
 }
 
+
 /* ── constants ──────────────────────────────────────────── */
 
 
@@ -194,17 +195,32 @@ export default function GamePage() {
   const searchParams = useSearchParams();
   const gameState = useGameState();
 
-  /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester, ?dev_intro=1 fresh intro hangout */
+  /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester, ?dev_intro=1 fresh intro hangout, ?fresh=1 replay from opening */
   const phaseParam = searchParams.get('phase');
   const devParam = searchParams.get('dev');
   const devIntro = searchParams.get('dev_intro') === '1';
+  const freshStart = searchParams.get('fresh') === '1';
+  const freshNpc = searchParams.get('npc') ?? undefined; // pre-select NPC for fresh start
   const skipToHangout = phaseParam === 'hangout';
   const skipToCityMap = phaseParam === 'city_map';
   const skipToLearn = phaseParam === 'learn';
   const [phase, setPhase] = useState<Phase>(
-    devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : skipToLearn ? 'learn' : 'opening'
+    freshStart ? 'opening' : devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : skipToLearn ? 'learn' : 'opening'
   );
   const openingVideoRef = useRef<HTMLVideoElement>(null);
+
+  /* ?fresh=1 — full reset: clear game state + force back to opening.
+     Done synchronously during render so no stale-state effects can fire.
+     Only runs once per mount — after reset, the normal flow takes over. */
+  const freshResetDone = useRef(false);
+  if (freshStart && !freshResetDone.current) {
+    freshResetDone.current = true;
+    console.log('[FRESH] Resetting game state, forcing phase=opening');
+    dispatch({ type: 'RESET' });
+    if (phase !== 'opening') {
+      setPhase('opening');
+    }
+  }
 
   /* tong-intro typewriter — random set each playthrough */
   const TONG_INTRO_SETS = [
@@ -423,6 +439,7 @@ export default function GamePage() {
   }
 
   function handleConfirmProficiency() {
+    console.log('[FLOW] handleConfirmProficiency called, phase:', phase, 'freshStart:', freshStart);
     setError('');
     setLoading(true);
 
@@ -431,7 +448,7 @@ export default function GamePage() {
 
     const weakLevel = sliders[weakIdx];
     const preferredCity = (LANG_TO_CITY[primaryLang] ?? 'seoul') as CityId;
-    const npcId = pickNpcForCity(preferredCity);
+    const npcId = freshNpc && CHARACTER_MAP[freshNpc] ? freshNpc : pickNpcForCity(preferredCity);
     const npcChar = CHARACTER_MAP[npcId] ?? HAEUN;
     // Use the NPC's actual city — if no NPC exists for the preferred city,
     // the fallback NPC's city determines the target language.
@@ -558,6 +575,7 @@ export default function GamePage() {
   /* Auto-start scene when skipping to hangout */
   useEffect(() => {
     if (skipToHangout && !sceneStartedRef.current) {
+      console.log('[FLOW] skipToHangout auto-start triggered');
       sceneStartedRef.current = true;
       const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
       void append({ role: 'user', content: `${ctx}Start the scene.` });
@@ -1088,7 +1106,7 @@ export default function GamePage() {
                   preload="auto"
                   loop
                 >
-                  <source src="/assets/tong_intro.webm" type="video/webm" />
+                  <source src="/assets/tong_intro.webm" type='video/webm; codecs="vp09.02.10.08.01"' />
                   <source src="/assets/tong_intro_fallback.mp4" type="video/mp4" />
                 </video>
                 <div className="tg-tong-intro-subtitle">
@@ -1114,7 +1132,6 @@ export default function GamePage() {
             {/* Step 1: TRAINEE PROFILE — name input */}
             {introStep === 1 && (
               <div className="tg-trainee-profile">
-                <p className="tg-trainee-label">TRAINEE PROFILE</p>
                 <div className="tg-tong-intro-subtitle" style={{ position: 'relative', bottom: 'auto', padding: 0, background: 'none' }}>
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
                   <p className="dialogue-text">What should I call you?</p>
