@@ -34,7 +34,7 @@ import { ExerciseModal } from '@/components/learn/ExerciseModal';
 /* ── scene constants ────────────────────────────────────── */
 
 const NPC_SPRITES: Record<string, { name: string; nameLocal: string; nameZh: string; src: string; idleVideo?: string; color: string }> = {
-  haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: '/assets/characters/haeun/haeun.png', idleVideo: '/assets/characters/haeun/haeun_idle_loop.mp4', color: '#e8485c' },
+  haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: '/assets/characters/haeun/haeun.png', idleVideo: '/assets/characters/haeun/haeun_idle.mp4', color: '#e8485c' },
   jin: { name: 'Jin', nameLocal: '진', nameZh: '珍', src: '/assets/characters/jin/jin.png', color: '#4a90d9' },
 };
 
@@ -701,16 +701,27 @@ export default function GamePage() {
           hintCount?: number | null;
           hintSubType?: string | null;
         };
+        console.log('[EX] AI sent show_exercise:', {
+          type: args.exerciseType,
+          objectiveId: args.objectiveId,
+          hintItems: args.hintItems,
+          hintCount: args.hintCount,
+          hintSubType: args.hintSubType,
+          hasExerciseData: !!args.exerciseData,
+          exerciseData: args.exerciseData,
+        });
         let exercise: ExerciseData;
         // For pronunciation_select, always use the generator — AI-constructed data is unreliable
         const parsed = args.exerciseType === 'pronunciation_select' ? null : parseExerciseData(args.exerciseData);
         if (parsed) {
+          console.log('[EX] Using AI-provided exerciseData:', { type: parsed.type, id: parsed.id, targetChar: (parsed as any).targetChar, components: (parsed as any).components });
           exercise = parsed;
         } else {
           const npcChar = CHARACTER_MAP[activeNpc];
           const npcCity = (npcChar?.cityId ?? city) as CityId;
           const lang = getLanguageForCity(npcCity);
           const explainLang_ = getGameState().explainIn[npcCity] ?? 'en';
+          console.log('[EX] Generating locally:', { type: args.exerciseType, lang, hintItems: args.hintItems, objectiveId: args.objectiveId });
           exercise = generateExercise(args.exerciseType, {
             hintItems: args.hintItems ?? undefined,
             hintCount: args.hintCount ?? undefined,
@@ -722,6 +733,7 @@ export default function GamePage() {
             mastery: getGameState().itemMastery,
             explainIn: explainLang_ as UILang,
           });
+          console.log('[EX] Generated exercise:', { type: exercise.type, id: exercise.id, targetChar: (exercise as any).targetChar, components: (exercise as any).components?.map((c: any) => ({ slot: c.slot, piece: c.piece })), stage: (exercise as any).stage });
         }
         setCurrentMessage(null);
         setTongTip(null);
