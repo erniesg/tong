@@ -467,15 +467,14 @@ export default function GamePage() {
     if (isIntro) {
       const config = TUTORIAL_VIDEO_CONFIG[npcId];
       if (config) {
-        const templates = config.exitLineTemplates;
-        const templateIndex = Math.floor(Math.random() * templates.length);
-        const exitLine = templates[templateIndex].replace(/{playerName}/g, displayName);
+        const clip = pickRandom(config.exitClips);
+        const cnName = profileInput.chineseName?.trim() || displayName;
+        const exitLine = clip.line.replace(/{playerName}/g, displayName).replace(/{chineseName}/g, cnName);
         exitLineRef.current = exitLine;
-        const translationTemplate = config.exitLineTranslations?.[templateIndex] ?? '';
-        exitLineTranslationRef.current = translationTemplate.replace(/{playerName}/g, displayName);
+        exitLineTranslationRef.current = clip.translation.replace(/{playerName}/g, displayName).replace(/{chineseName}/g, cnName);
 
         introVideoUrlRef.current = pickRandom(config.introVideoUrls);
-        exitVideoUrlRef.current = pickRandom(config.exitVideoUrls);
+        exitVideoUrlRef.current = clip.video;
 
         // Start dynamic video generation when enabled (?live_video=1 or ?mock_video=1)
         if (liveVideo || mockVideo) {
@@ -606,11 +605,11 @@ export default function GamePage() {
     const config = TUTORIAL_VIDEO_CONFIG[npcId];
     if (config) {
       introVideoUrlRef.current = pickRandom(config.introVideoUrls);
-      exitVideoUrlRef.current = pickRandom(config.exitVideoUrls);
-      const tplIndex = Math.floor(Math.random() * config.exitLineTemplates.length);
-      exitLineRef.current = config.exitLineTemplates[tplIndex].replace(/{playerName}/g, displayName);
-      const translationTpl = config.exitLineTranslations?.[tplIndex] ?? '';
-      exitLineTranslationRef.current = translationTpl.replace(/{playerName}/g, displayName);
+      const clip = pickRandom(config.exitClips);
+      exitVideoUrlRef.current = clip.video;
+      const cnName = chineseName || displayName;
+      exitLineRef.current = clip.line.replace(/{playerName}/g, displayName).replace(/{chineseName}/g, cnName);
+      exitLineTranslationRef.current = clip.translation.replace(/{playerName}/g, displayName).replace(/{chineseName}/g, cnName);
     }
 
     const introCtx = {
