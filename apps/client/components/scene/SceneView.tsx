@@ -15,7 +15,7 @@ interface SceneViewProps {
   backgroundUrl: string;
   backgroundTransition?: 'fade' | 'cut';
   ambientDescription?: string;
-  cinematic?: { videoUrl: string; caption?: string; autoAdvance: boolean; muted?: boolean } | null;
+  cinematic?: { videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null;
   onCinematicEnd?: () => void;
   npcName?: string;
   npcColor?: string;
@@ -111,6 +111,8 @@ export function SceneView({
       {cinematic && (
         <CinematicOverlay
           videoUrl={cinematic.videoUrl}
+          caption={cinematic.caption}
+          captionTranslation={cinematic.captionTranslation}
           autoAdvance={cinematic.autoAdvance}
           muted={cinematic.muted ?? false}
           onEnd={handleCinematicEnd}

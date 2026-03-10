@@ -2137,6 +2137,43 @@ button.nav-link:hover {
   50% { opacity: 1; }
 }
 
+/* ── Cinematic subtitles ──────────────────────────────────── */
+.cinematic-subtitle-bar {
+  position: absolute;
+  bottom: 48px;
+  left: 0;
+  right: 0;
+  padding: 10px 20px;
+  text-align: center;
+  background: linear-gradient(transparent, rgba(0,0,0,0.72) 20%, rgba(0,0,0,0.72));
+  opacity: 0;
+  transition: opacity 0.4s ease-in;
+  pointer-events: none;
+}
+
+.cinematic-subtitle-bar.cinematic-subtitle-visible {
+  opacity: 1;
+}
+
+.cinematic-subtitle-text {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.4;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  letter-spacing: 0.01em;
+}
+
+.cinematic-subtitle-translation {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.35;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+}
+
 /* ── Korean tooltip (portal) ──────────────────────────────── */
 .korean-tooltip {
   pointer-events: auto;

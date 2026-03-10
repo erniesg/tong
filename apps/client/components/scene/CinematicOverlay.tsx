@@ -7,15 +7,17 @@ import { t } from '@/lib/i18n/ui-strings';
 interface CinematicOverlayProps {
   videoUrl: string;
   caption?: string;
+  captionTranslation?: string;
   autoAdvance: boolean;
   muted?: boolean;
   onEnd: () => void;
 }
 
-export function CinematicOverlay({ videoUrl, autoAdvance, muted = false, onEnd }: CinematicOverlayProps) {
+export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAdvance, muted = false, onEnd }: CinematicOverlayProps) {
   const lang = useUILang();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [fadingOut, setFadingOut] = useState(false);
+  const [captionVisible, setCaptionVisible] = useState(false);
 
   const triggerEnd = useCallback(() => {
     if (fadingOut) return;
@@ -46,6 +48,14 @@ export function CinematicOverlay({ videoUrl, autoAdvance, muted = false, onEnd }
     }
   }, [videoUrl, muted]);
 
+  // Fade in caption shortly after video starts playing
+  useEffect(() => {
+    if (!caption) return;
+    setCaptionVisible(false);
+    const timer = setTimeout(() => setCaptionVisible(true), 600);
+    return () => clearTimeout(timer);
+  }, [videoUrl, caption]);
+
   return (
     <div
       className={`cinematic-overlay ${fadingOut ? 'cinematic-fade-out' : ''}`}
@@ -72,6 +82,14 @@ export function CinematicOverlay({ videoUrl, autoAdvance, muted = false, onEnd }
         disableRemotePlayback
         controlsList="nodownload noplaybackrate"
       />
+      {caption && (
+        <div className={`cinematic-subtitle-bar ${captionVisible ? 'cinematic-subtitle-visible' : ''}`}>
+          <p className="cinematic-subtitle-text">{caption}</p>
+          {captionTranslation && (
+            <p className="cinematic-subtitle-translation">{captionTranslation}</p>
+          )}
+        </div>
+      )}
       {!autoAdvance && !fadingOut && (
         <div className="cinematic-tap-hint">{t('tap_to_skip', lang)}</div>
       )}
