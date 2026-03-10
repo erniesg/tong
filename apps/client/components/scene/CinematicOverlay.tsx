@@ -33,19 +33,44 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
     if (!autoAdvance) triggerEnd();
   }, [autoAdvance, triggerEnd]);
 
-  // Autoplay with unmute fallback: browsers block unmuted autoplay without user gesture
+  // Autoplay with unmute fallback + audio fade-in
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    // Start at zero volume for fade-in
+    v.volume = 0;
     v.muted = muted;
     const playPromise = v.play();
     if (playPromise) {
       playPromise.catch(() => {
-        // Blocked — start muted, then unmute on first tap
         v.muted = true;
         v.play().catch(() => {});
       });
     }
+    // Fade in audio over 800ms
+    if (!muted) {
+      let vol = 0;
+      const fadeIn = setInterval(() => {
+        vol = Math.min(1, vol + 0.05);
+        v.volume = vol;
+        if (vol >= 1) clearInterval(fadeIn);
+      }, 40);
+      return () => clearInterval(fadeIn);
+    }
+  }, [videoUrl, muted]);
+
+  // Fade out audio before video ends
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || muted) return;
+    const handleTimeUpdate = () => {
+      if (v.duration && v.currentTime > v.duration - 1.5) {
+        const remaining = v.duration - v.currentTime;
+        v.volume = Math.max(0, remaining / 1.5);
+      }
+    };
+    v.addEventListener('timeupdate', handleTimeUpdate);
+    return () => v.removeEventListener('timeupdate', handleTimeUpdate);
   }, [videoUrl, muted]);
 
   // Fade in caption shortly after video starts playing
