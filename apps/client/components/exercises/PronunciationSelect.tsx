@@ -64,11 +64,11 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
     }
   }, []);
 
-  // Auto-play correct sound on mount so user hears it once
+  // Auto-play correct sound on mount so user hears it once — without visual highlight
   useEffect(() => {
     const correctOpt = exercise.audioOptions.find((o) => o.id === exercise.correctOptionId);
     if (correctOpt) {
-      const timer = setTimeout(() => playSound(correctOpt.label, correctOpt.ttsText, correctOpt.id), 400);
+      const timer = setTimeout(() => playSound(correctOpt.label, correctOpt.ttsText), 400);
       return () => clearTimeout(timer);
     }
   }, [exercise.audioOptions, exercise.correctOptionId, playSound]);

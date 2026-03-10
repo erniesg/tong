@@ -1965,6 +1965,12 @@ button.nav-link:hover {
   overflow-y: auto;
 }
 
+.exercise-float-wrapper.exercise-float-dismissing {
+  opacity: 0;
+  transition: opacity 0.6s ease-out;
+  pointer-events: none;
+}
+
 .exercise-float-card {
   position: relative;
   width: 100%;
@@ -2167,7 +2173,7 @@ button.nav-link:hover {
   right: 0;
   padding: 10px 20px;
   text-align: center;
-  background: linear-gradient(transparent, rgba(0,0,0,0.72) 20%, rgba(0,0,0,0.72));
+  background: none;
   opacity: 0;
   transition: opacity 0.4s ease-in;
   pointer-events: none;

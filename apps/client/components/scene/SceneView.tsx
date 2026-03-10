@@ -141,7 +141,7 @@ export function SceneView({
       {/* Layer 4: Interactive area at bottom */}
       {currentExercise ? (
         <div
-          className="exercise-float-wrapper"
+          className={`exercise-float-wrapper${exerciseDone ? ' exercise-float-dismissing' : ''}`}
           onClick={() => {
             if (exerciseDone) onExerciseDismiss?.();
           }}

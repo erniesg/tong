@@ -735,6 +735,29 @@ export default function GamePage() {
           });
           console.log('[EX] Generated exercise:', { type: exercise.type, id: exercise.id, targetChar: (exercise as any).targetChar, components: (exercise as any).components?.map((c: any) => ({ slot: c.slot, piece: c.piece })), stage: (exercise as any).stage });
         }
+        // Guard: block_crush with multi-char target or ≤1 component → fall back to stroke_tracing
+        if (exercise.type === 'block_crush') {
+          const bc = exercise as any;
+          if ((bc.targetChar && bc.targetChar.length > 1) || (bc.components && bc.components.length <= 1)) {
+            const singleChar = bc.targetChar?.length === 1 ? bc.targetChar : bc.targetChar?.[0];
+            if (singleChar) {
+              const npcChar = CHARACTER_MAP[activeNpc];
+              const npcCity = (npcChar?.cityId ?? city) as CityId;
+              const lang = getLanguageForCity(npcCity);
+              const explainLang_ = getGameState().explainIn[npcCity] ?? 'en';
+              exercise = generateExercise('stroke_tracing', {
+                hintItems: [singleChar],
+                objectiveId: args.objectiveId,
+                language: lang as 'ko' | 'zh' | 'ja',
+                cityId: city,
+                locationId: location,
+                mastery: getGameState().itemMastery,
+                explainIn: explainLang_ as UILang,
+              });
+              console.log('[EX] block_crush fallback to stroke_tracing for:', singleChar);
+            }
+          }
+        }
         setCurrentMessage(null);
         setTongTip(null);
         setCurrentExercise(exercise);
@@ -1157,7 +1180,7 @@ export default function GamePage() {
                     onChange={(e) => setProfileInput(p => ({ ...p, englishName: e.target.value }))}
                     maxLength={20}
                     autoFocus
-                    onKeyDown={(e) => e.key === 'Enter' && handleNameNext()}
+                    onKeyDown={(e) => e.key === 'Enter' && profileInput.englishName.trim() && handleNameNext()}
                   />
                 </div>
                 <div className="tg-name-field">
@@ -1169,17 +1192,26 @@ export default function GamePage() {
                     value={profileInput.chineseName}
                     onChange={(e) => setProfileInput(p => ({ ...p, chineseName: e.target.value }))}
                     maxLength={10}
-                    onKeyDown={(e) => e.key === 'Enter' && handleNameNext()}
+                    onKeyDown={(e) => e.key === 'Enter' && profileInput.englishName.trim() && handleNameNext()}
                   />
                 </div>
-                <button
-                  className="tg-menu-btn-primary"
-                  onClick={handleNameNext}
-                  disabled={!profileInput.englishName.trim()}
-                  style={{ width: '100%', marginTop: 12 }}
-                >
-                  Next
-                </button>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button
+                    className="tg-menu-btn-primary"
+                    onClick={() => setIntroStep(0)}
+                    style={{ flex: '0 0 auto', padding: '10px 18px', background: 'rgba(255,255,255,0.1)' }}
+                  >
+                    Back
+                  </button>
+                  <button
+                    className="tg-menu-btn-primary"
+                    onClick={handleNameNext}
+                    disabled={!profileInput.englishName.trim()}
+                    style={{ flex: 1 }}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1235,13 +1267,22 @@ export default function GamePage() {
                     </div>
                   ))}
                 </div>
-                <button
-                  className="tg-menu-btn-primary"
-                  onClick={handleLanguageNext}
-                  style={{ width: '100%', marginTop: 12 }}
-                >
-                  Next
-                </button>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button
+                    className="tg-menu-btn-primary"
+                    onClick={() => { changeTongExpression('thinking'); setIntroStep(1); }}
+                    style={{ flex: '0 0 auto', padding: '10px 18px', background: 'rgba(255,255,255,0.1)' }}
+                  >
+                    Back
+                  </button>
+                  <button
+                    className="tg-menu-btn-primary"
+                    onClick={handleLanguageNext}
+                    style={{ flex: 1 }}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1601,7 +1642,7 @@ export default function GamePage() {
           npcName={`${npc.nameLocal} ${explainLang === 'zh' ? npc.nameZh : npc.name}`}
           npcColor={npc.color}
           npcSpriteUrl={isIntroHangout && !npcRevealed ? '' : currentExercise ? '' : npc.src}
-          npcIdleVideoUrl={npcRevealed && !currentExercise && npc.idleVideo ? npc.idleVideo : undefined}
+          npcIdleVideoUrl={npc.idleVideo || undefined}
           currentMessage={currentMessage}
           currentExercise={currentExercise}
           choices={choices}
