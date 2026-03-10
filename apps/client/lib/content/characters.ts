@@ -241,11 +241,21 @@ export function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+export interface ExitClip {
+  video: string;
+  line: string;
+  translation: string;
+}
+
 export interface TutorialVideoConfig {
   introVideoUrls: string[];
-  exitVideoUrls: string[];
-  exitLineTemplates: string[];
-  exitLineTranslations: string[];
+  /** @deprecated Use exitClips instead */
+  exitVideoUrls?: string[];
+  /** @deprecated Use exitClips instead */
+  exitLineTemplates?: string[];
+  /** @deprecated Use exitClips instead */
+  exitLineTranslations?: string[];
+  exitClips: ExitClip[];
   exitVideoPromptTemplate: string;
   sceneImageUrl: string;
 }
@@ -256,21 +266,22 @@ export const TUTORIAL_VIDEO_CONFIG: Record<string, TutorialVideoConfig> = {
       '/assets/cinematics/haeun/intro_1.mp4',
       '/assets/cinematics/haeun/intro_2.mp4',
     ],
-    exitVideoUrls: [
-      '/assets/cinematics/haeun/exit_1.mp4',
-      '/assets/cinematics/haeun/exit_2.mp4',
-    ],
-    exitLineTemplates: [
-      '{playerName}... 나쁘지 않았어. See you around.',
-      '야 {playerName}, 다음엔 지지 않을 거야.',
-      '{playerName}, 이름은 기억했어.',
-      '흥, {playerName}... 조금은 인정해줄게.',
-    ],
-    exitLineTranslations: [
-      '{playerName}... not bad. See you around.',
-      'Hey {playerName}, I won\'t lose next time.',
-      '{playerName}, I remembered your name.',
-      'Hmph, {playerName}... I\'ll give you a little credit.',
+    exitClips: [
+      {
+        video: '/assets/cinematics/haeun/exit_1.mp4',
+        line: '흥, {playerName}... 조금은 인정해줄게.',
+        translation: 'Hmph, {playerName}... I\'ll give you a little credit.',
+      },
+      {
+        video: '/assets/cinematics/haeun/exit_2.mp4',
+        line: '{playerName}...아니, {chineseName}. 나쁘지 않았어.',
+        translation: '{playerName}...no, {chineseName}. Not bad.',
+      },
+      {
+        video: '/assets/cinematics/haeun/exit_3.mp4',
+        line: '{playerName}...아니, {chineseName}. 나쁘지 않았어.',
+        translation: '{playerName}...no, {chineseName}. Not bad.',
+      },
     ],
     exitVideoPromptTemplate: `韩国首尔深夜포장마차路边摊。一位年轻韩国女性，长直黑发齐刘海，穿黑色皮夹克、白色露脐上衣、蓝色牛仔裤，戴银色十字架耳环和细链项链，站在热气腾腾的摊位前。她转向镜头，微微挑眉，嘴角不自觉地勾了一下，带着自信的语气说："{exitLine}"。说完她微微侧头，眼神停留一瞬，然后转身走入霓虹灯照亮的夜色中。她的声音特征：女性，约18-22岁，音色明亮有锐度，语速中等偏快，情绪基线自信、带一丝不易察觉的认可。暖黄灯笼光映照侧脸，背景是冒着热气的大锅和绿色烧酒瓶。镜头从近景缓推至中景跟拍她离开的背影。写实风格，韩剧电影质感，浅景深。`,
     sceneImageUrl: '/assets/characters/haeun/scene.png',
@@ -280,20 +291,12 @@ export const TUTORIAL_VIDEO_CONFIG: Record<string, TutorialVideoConfig> = {
       '/assets/cinematics/jin/intro_1.mp4',
       '/assets/cinematics/jin/intro_2.mp4',
     ],
-    exitVideoUrls: [
-      '/assets/cinematics/jin/exit_1.mp4',
-    ],
-    exitLineTemplates: [
-      '{playerName}, 잘했어! 다음에 또 보자.',
-      '밥 먹었어, {playerName}? 다음엔 같이 먹자.',
-      '{playerName}야, 오늘 재밌었어.',
-      '천천히 해도 돼, {playerName}. 기다릴게.',
-    ],
-    exitLineTranslations: [
-      '{playerName}, you did well! See you next time.',
-      'Did you eat, {playerName}? Let\'s eat together next time.',
-      '{playerName}, today was fun.',
-      'Take your time, {playerName}. I\'ll wait.',
+    exitClips: [
+      {
+        video: '/assets/cinematics/jin/exit_1.mp4',
+        line: '{playerName}, 잘했어! 다음에 또 보자.',
+        translation: '{playerName}, you did well! See you next time.',
+      },
     ],
     exitVideoPromptTemplate: `韩国首尔深夜포장마차路边摊。一位年轻韩国男性，中棕色微卷短发，穿奶白色针织毛衣，坐在摊位前。他抬头看向镜头，露出温暖的笑容，轻声说："{exitLine}"。说完他微微点头，站起身来拍了拍衣服，慢慢走进夜色中，回头挥了一下手。他的声音特征：男性，约22-26岁，中音域温暖沉稳，语速中等，情绪基线温柔、鼓励。暖黄灯笼光柔和照亮面部，镜头从近景平稳推至中景跟拍他离开。写实风格，韩剧暖心质感。`,
     sceneImageUrl: '/assets/characters/jin/scene.png',
