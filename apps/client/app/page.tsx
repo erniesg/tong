@@ -101,9 +101,10 @@ function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   /* ── Preferences panel state ──────────────── */
-  const [prefsDone, setPrefsDone] = useState(false);   // true after save OR skip
-  const [prefsWereSaved, setPrefsWereSaved] = useState(false); // true only if actually saved
+  const [prefsDone, setPrefsDone] = useState(false);
+  const [prefsWereSaved, setPrefsWereSaved] = useState(false);
   const [prefsSending, setPrefsSending] = useState(false);
+  const [fromEmail, setFromEmail] = useState(false);
 
   /* Auto-open prefs if arriving from email link (?prefs=email&ko=2&ja=5) */
   useEffect(() => {
@@ -111,6 +112,7 @@ function LandingPage() {
     if (prefsEmail) {
       setSignedUpEmail(prefsEmail);
       setStatus('success');
+      setFromEmail(true);
       // Pre-fill gauge from URL params if provided
       const ko = searchParams.get('ko');
       const ja = searchParams.get('ja');
@@ -246,10 +248,6 @@ function LandingPage() {
                   Tell us what you already know — we&apos;ll skip the basics when you start playing.
                 </p>
                 <div className="landing-gauge-card">
-                  <header>
-                    <p>Language Gauge</p>
-                    <span>7 levels</span>
-                  </header>
                   {CJK_LANGS.map((lang) => {
                     const prof = gaugeToProf(gauge[lang]);
                     return (
@@ -269,7 +267,7 @@ function LandingPage() {
                         <div className="landing-gauge-meta">
                           <small>{profSub(prof)}</small>
                           <span className="landing-explain-in">
-                            <span>learn in</span>
+                            <span>learn&nbsp;in</span>
                             <select
                               value={explainIn[lang]}
                               onChange={(e) => handleExplainIn(lang, e.target.value as ExplainLang)}
@@ -293,13 +291,22 @@ function LandingPage() {
                   >
                     {prefsSending ? 'Saving...' : 'Save Preferences'}
                   </button>
-                  <button
-                    type="button"
-                    className="landing-prefs-skip"
-                    onClick={() => setPrefsDone(true)}
-                  >
-                    Skip for now
-                  </button>
+                  {!fromEmail && (
+                    <button
+                      type="button"
+                      className="landing-prefs-skip"
+                      onClick={() => {
+                        setPrefsDone(true);
+                        fetch(`${API_BASE}/api/v1/signup/skip-preferences`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ email: signedUpEmail }),
+                        }).catch(() => {});
+                      }}
+                    >
+                      Skip for now
+                    </button>
+                  )}
                 </div>
               </>
             ) : (
