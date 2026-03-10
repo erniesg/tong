@@ -3899,6 +3899,164 @@ button.nav-link:hover {
   font-weight: 600;
 }
 
+/* ── Landing preferences card (post-signup) ──────────────── */
+.landing-prefs-card {
+  max-width: 460px;
+  margin: 0 auto;
+  text-align: center;
+  background: rgba(18, 22, 34, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 28px 24px;
+  animation: fadeSlideUp 0.35s ease-out;
+}
+
+.landing-prefs-confirmed {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #f0f4fc;
+}
+
+.landing-prefs-hint {
+  margin: 0 0 16px;
+  color: rgba(200, 210, 230, 0.75);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.landing-gauge-card {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+.landing-gauge-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.landing-gauge-card header p {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(180, 195, 220, 0.7);
+  font-weight: 500;
+}
+.landing-gauge-card header span {
+  font-size: 11px;
+  color: rgba(200, 210, 230, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.landing-gauge-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.landing-gauge-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.landing-gauge-head strong {
+  font-size: 15px;
+  color: #e8edf8;
+}
+.landing-gauge-head span {
+  font-size: 13px;
+  color: rgba(210, 220, 240, 0.7);
+}
+.landing-gauge-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.landing-gauge-row small {
+  color: rgba(180, 195, 220, 0.55);
+  font-size: 12px;
+}
+.landing-explain-in {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: rgba(180, 195, 220, 0.5);
+}
+.landing-explain-in select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #d0d8ea;
+  font-size: 12px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.landing-explain-in select:focus {
+  outline: 1px solid rgba(255, 107, 44, 0.5);
+}
+.landing-gauge-row input[type='range'] {
+  width: 100%;
+  accent-color: #ff6b2c;
+  height: 6px;
+}
+.landing-prefs-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 18px;
+}
+.landing-prefs-save {
+  background: #ff6b2c;
+  color: #fff;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.landing-prefs-save:hover {
+  background: #e85a1c;
+}
+.landing-prefs-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.landing-prefs-skip {
+  background: none;
+  border: none;
+  color: rgba(200, 210, 230, 0.45);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 8px 14px;
+  transition: color 0.2s;
+}
+.landing-prefs-skip:hover {
+  color: rgba(200, 210, 230, 0.8);
+}
+.landing-prefs-done {
+  margin: 8px 0 0;
+  color: rgba(200, 210, 230, 0.8);
+  font-size: 15px;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .landing-error {
   margin: 8px 0 0;
   color: #dc2626;
