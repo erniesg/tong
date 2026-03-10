@@ -310,13 +310,14 @@ export default function GamePage() {
   const [sceneSummary, setSceneSummary] = useState<SceneSummary | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
   const [dynamicBackdrop, setDynamicBackdrop] = useState<{ url: string; transition: 'fade' | 'cut'; ambientDescription?: string } | null>(null);
-  const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; autoAdvance: boolean; muted?: boolean } | null>(null);
+  const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null>(null);
 
   /* tutorial state */
   const mockVideo = searchParams.get('mock_video') === '1';
   const liveVideo = searchParams.get('live_video') === '1';
   const [profileInput, setProfileInput] = useState<PlayerProfile>({ englishName: '', chineseName: '' });
   const exitLineRef = useRef('');
+  const exitLineTranslationRef = useRef('');
   const introVideoUrlRef = useRef<string | null>(null);
   const exitVideoUrlRef = useRef<string | null>(null);
   const cinematicCaptionRef = useRef<string | null>(null);
@@ -467,9 +468,11 @@ export default function GamePage() {
       const config = TUTORIAL_VIDEO_CONFIG[npcId];
       if (config) {
         const templates = config.exitLineTemplates;
-        const template = pickRandom(templates);
-        const exitLine = template.replace(/{playerName}/g, displayName);
+        const templateIndex = Math.floor(Math.random() * templates.length);
+        const exitLine = templates[templateIndex].replace(/{playerName}/g, displayName);
         exitLineRef.current = exitLine;
+        const translationTemplate = config.exitLineTranslations?.[templateIndex] ?? '';
+        exitLineTranslationRef.current = translationTemplate.replace(/{playerName}/g, displayName);
 
         introVideoUrlRef.current = pickRandom(config.introVideoUrls);
         exitVideoUrlRef.current = pickRandom(config.exitVideoUrls);
@@ -604,8 +607,10 @@ export default function GamePage() {
     if (config) {
       introVideoUrlRef.current = pickRandom(config.introVideoUrls);
       exitVideoUrlRef.current = pickRandom(config.exitVideoUrls);
-      const template = pickRandom(config.exitLineTemplates);
-      exitLineRef.current = template.replace(/{playerName}/g, displayName);
+      const tplIndex = Math.floor(Math.random() * config.exitLineTemplates.length);
+      exitLineRef.current = config.exitLineTemplates[tplIndex].replace(/{playerName}/g, displayName);
+      const translationTpl = config.exitLineTranslations?.[tplIndex] ?? '';
+      exitLineTranslationRef.current = translationTpl.replace(/{playerName}/g, displayName);
     }
 
     const introCtx = {
@@ -796,10 +801,15 @@ export default function GamePage() {
         }
         // Store caption to show as narrator line after cinematic ends
         cinematicCaptionRef.current = args.caption ?? null;
+        // For exit videos, show the exit line as subtitle overlay
+        const exitCaption = isExitVideo && exitLineRef.current ? exitLineRef.current : (args.caption ?? undefined);
+        const exitCaptionTranslation = isExitVideo && exitLineTranslationRef.current ? exitLineTranslationRef.current : undefined;
         setCinematic({
           videoUrl: args.videoUrl,
           autoAdvance: args.autoAdvance,
           muted: false,
+          caption: exitCaption,
+          captionTranslation: exitCaptionTranslation,
         });
         console.log('[VN] play_cinematic BLOCK:', args.videoUrl, isExitVideo ? '(exit video, unmuted)' : '', isIntroVideo ? '(intro video, act transition)' : '');
         return; // BLOCK — wait for video end or tap
@@ -1295,6 +1305,7 @@ export default function GamePage() {
     setIntroExerciseCount(0);
     setIntroAct(1);
     exitLineRef.current = '';
+    exitLineTranslationRef.current = '';
     processingRef.current = false;
     pausedRef.current = false;
     processedToolCallsRef.current.clear();
