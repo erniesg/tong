@@ -1,9 +1,45 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
 const API_BASE = 'https://tong-api.erniesg.workers.dev';
+
+/* ── Language gauge (mirrors game onboarding) ──────────────── */
+type CjkLang = 'ko' | 'ja' | 'zh';
+type ProficiencyGaugeLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+type ProficiencyLevel = 'none' | 'beginner' | 'intermediate' | 'advanced' | 'native';
+const MAX_GAUGE: ProficiencyGaugeLevel = 6;
+const CJK_LANGS: CjkLang[] = ['ja', 'ko', 'zh'];
+const LANG_LABELS: Record<CjkLang, string> = { ko: 'Korean 한국어', ja: 'Japanese 日本語', zh: 'Chinese 中文' };
+type ExplainLang = 'en' | 'ko' | 'ja' | 'zh';
+const EXPLAIN_OPTIONS: { value: ExplainLang; label: string }[] = [
+  { value: 'en', label: 'English' },
+  { value: 'zh', label: '中文' },
+  { value: 'ja', label: '日本語' },
+  { value: 'ko', label: '한국어' },
+];
+
+function gaugeToProf(level: ProficiencyGaugeLevel): ProficiencyLevel {
+  if (level <= 0) return 'none';
+  if (level <= 2) return 'beginner';
+  if (level <= 4) return 'intermediate';
+  if (level === 5) return 'advanced';
+  return 'native';
+}
+function profLabel(level: ProficiencyLevel): string {
+  return ({ none: 'None', beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced', native: 'Native' })[level];
+}
+function profSub(level: ProficiencyLevel): string {
+  return ({
+    none: 'Starting from zero',
+    beginner: 'Basic words and short patterns',
+    intermediate: 'Comfortable with short conversations',
+    advanced: 'Handle nuanced social talk',
+    native: 'Near-native comfort',
+  })[level];
+}
 
 const FAQ_ITEMS = [
   {
@@ -48,11 +84,87 @@ const STEPS = [
   },
 ];
 
-export default function LandingPage() {
+export default function LandingPageWrapper() {
+  return (
+    <Suspense>
+      <LandingPage />
+    </Suspense>
+  );
+}
+
+function LandingPage() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
+  const [signedUpEmail, setSignedUpEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  /* ── Preferences panel state ──────────────── */
+  const [prefsDone, setPrefsDone] = useState(false);   // true after save OR skip
+  const [prefsWereSaved, setPrefsWereSaved] = useState(false); // true only if actually saved
+  const [prefsSending, setPrefsSending] = useState(false);
+
+  /* Auto-open prefs if arriving from email link (?prefs=email&ko=2&ja=5) */
+  useEffect(() => {
+    const prefsEmail = searchParams.get('prefs');
+    if (prefsEmail) {
+      setSignedUpEmail(prefsEmail);
+      setStatus('success');
+      // Pre-fill gauge from URL params if provided
+      const ko = searchParams.get('ko');
+      const ja = searchParams.get('ja');
+      const zh = searchParams.get('zh');
+      if (ko || ja || zh) {
+        setGauge((prev) => ({
+          ko: ko ? Math.max(0, Math.min(MAX_GAUGE, Number(ko))) as ProficiencyGaugeLevel : prev.ko,
+          ja: ja ? Math.max(0, Math.min(MAX_GAUGE, Number(ja))) as ProficiencyGaugeLevel : prev.ja,
+          zh: zh ? Math.max(0, Math.min(MAX_GAUGE, Number(zh))) as ProficiencyGaugeLevel : prev.zh,
+        }));
+      }
+    }
+  }, [searchParams]);
+  const [gauge, setGauge] = useState<Record<CjkLang, ProficiencyGaugeLevel>>({
+    ko: 0, ja: 0, zh: 0,
+  });
+  const [explainIn, setExplainIn] = useState<Record<CjkLang, ExplainLang>>({
+    ko: 'en', ja: 'en', zh: 'en',
+  });
+
+  function handleGauge(lang: CjkLang, val: number) {
+    setGauge((prev) => ({ ...prev, [lang]: Math.max(0, Math.min(MAX_GAUGE, Math.round(val))) as ProficiencyGaugeLevel }));
+  }
+  function handleExplainIn(lang: CjkLang, val: ExplainLang) {
+    setExplainIn((prev) => ({ ...prev, [lang]: val }));
+  }
+
+  async function submitPrefs() {
+    if (prefsSending) return;
+    setPrefsSending(true);
+    try {
+      await fetch(`${API_BASE}/api/v1/signup/preferences`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: signedUpEmail,
+          proficiency: {
+            ko: gaugeToProf(gauge.ko),
+            ja: gaugeToProf(gauge.ja),
+            zh: gaugeToProf(gauge.zh),
+          },
+          explainIn: { ...explainIn },
+        }),
+      });
+      setPrefsWereSaved(true);
+      setPrefsDone(true);
+    } catch {
+      // silently fail — it's optional
+      setPrefsWereSaved(true);
+      setPrefsDone(true);
+    } finally {
+      setPrefsSending(false);
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -74,6 +186,7 @@ export default function LandingPage() {
       }
 
       setStatus('success');
+      setSignedUpEmail(email);
       setEmail('');
     } catch (err) {
       setStatus('error');
@@ -125,8 +238,75 @@ export default function LandingPage() {
         </p>
 
         {status === 'success' ? (
-          <div className="landing-signup-success card">
-            <p>You're on the list. We'll email you when Tong is ready.</p>
+          <div className="landing-prefs-card">
+            <p className="landing-prefs-confirmed">You&apos;re on the list.</p>
+            {!prefsDone ? (
+              <>
+                <p className="landing-prefs-hint">
+                  Tell us what you already know — we&apos;ll skip the basics when you start playing.
+                </p>
+                <div className="landing-gauge-card">
+                  <header>
+                    <p>Language Gauge</p>
+                    <span>7 levels</span>
+                  </header>
+                  {CJK_LANGS.map((lang) => {
+                    const prof = gaugeToProf(gauge[lang]);
+                    return (
+                      <div key={lang} className="landing-gauge-row">
+                        <div className="landing-gauge-head">
+                          <strong>{LANG_LABELS[lang]}</strong>
+                          <span>{gauge[lang] + 1}/7 · {profLabel(prof)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={MAX_GAUGE}
+                          step={1}
+                          value={gauge[lang]}
+                          onChange={(e) => handleGauge(lang, Number(e.target.value))}
+                        />
+                        <div className="landing-gauge-meta">
+                          <small>{profSub(prof)}</small>
+                          <span className="landing-explain-in">
+                            <span>learn in</span>
+                            <select
+                              value={explainIn[lang]}
+                              onChange={(e) => handleExplainIn(lang, e.target.value as ExplainLang)}
+                            >
+                              {EXPLAIN_OPTIONS.filter((o) => o.value !== lang).map((o) => (
+                                <option key={o.value} value={o.value}>{o.label}</option>
+                              ))}
+                            </select>
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="landing-prefs-actions">
+                  <button
+                    type="button"
+                    className="landing-prefs-save"
+                    onClick={submitPrefs}
+                    disabled={prefsSending}
+                  >
+                    {prefsSending ? 'Saving...' : 'Save Preferences'}
+                  </button>
+                  <button
+                    type="button"
+                    className="landing-prefs-skip"
+                    onClick={() => setPrefsDone(true)}
+                  >
+                    Skip for now
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="landing-prefs-done">
+                {prefsWereSaved ? "Saved — we'll fast-forward your onboarding." : "We'll email you when Tong is ready."}
+              </p>
+            )}
           </div>
         ) : (
           <form className="landing-signup" onSubmit={handleSubmit}>

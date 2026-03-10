@@ -1040,6 +1040,7 @@ async function handleRequest(request: Request): Promise<Response> {
         }
       }
       if (isNew && env.RESEND_API_KEY) {
+        const prefsUrl = `https://tong.berlayar.ai/?prefs=${encodeURIComponent(email)}`;
         fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -1050,29 +1051,153 @@ async function handleRequest(request: Request): Promise<Response> {
             from: 'Tong <tong@berlayar.ai>',
             to: [email],
             subject: "You're on the list \uD83C\uDF89",
-            html: `<div style="font-family:'Space Grotesk',system-ui,sans-serif;max-width:520px;margin:0 auto;padding:32px 20px">
+            html: `<div style="font-family:'Space Grotesk',system-ui,sans-serif;max-width:520px;margin:0 auto;padding:32px 20px;background:#ffffff">
               <div style="text-align:center;margin-bottom:24px">
                 <img src="https://tong.berlayar.ai/assets/app/logo_trimmed.png" alt="Tong" width="60" height="60" style="border-radius:12px"/>
               </div>
-              <h1 style="font-size:26px;margin:0 0 8px;text-align:center">You're in.</h1>
-              <p style="text-align:center;color:#64748b;font-size:15px;margin:0 0 28px">
-                Tong is an open-source dating sim where you play as a trainee in Seoul, Shanghai and Tokyo. Learn the language to build relationships &mdash; or burn them.
+              <h1 style="font-size:28px;margin:0 0 8px;text-align:center;color:#1a1a2e">You're in.</h1>
+              <p style="text-align:center;color:#555;font-size:15px;margin:0 0 28px;line-height:1.5">
+                Tong is an open-source game where you play as a trainee in Seoul, Shanghai and Tokyo. Learn the language to build relationships &mdash; or burn them.
               </p>
-              <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0 0 8px">
+              <p style="color:#555;font-size:14px;line-height:1.6;margin:0 0 8px">
                 We'll email you when Tong is ready to play. In the meantime, the entire game is open source:
               </p>
-              <a href="https://github.com/erniesg/tong" style="color:#ff6b2c;font-weight:600;font-size:14px">
-                github.com/erniesg/tong
-              </a>
-              <hr style="border:none;border-top:1px solid #e5d6c2;margin:28px 0 16px"/>
-              <p style="color:#94a3b8;font-size:12px;margin:0;text-align:center">
-                Tong &mdash; Built by <a href="https://berlayar.ai" style="color:#94a3b8">Berlayar</a>
+              <p style="margin:0 0 24px">
+                <a href="https://github.com/erniesg/tong" style="color:#ff6b2c;font-weight:600;font-size:14px">github.com/erniesg/tong</a>
+              </p>
+              <div style="background:#f5f5f7;border:1px solid #e0e0e0;border-radius:12px;padding:20px;margin:0 0 24px">
+                <p style="color:#1a1a2e;font-size:15px;margin:0 0 4px;font-weight:600;text-align:center">
+                  Optional: what's your starting point?
+                </p>
+                <p style="color:#666;font-size:13px;margin:0 0 16px;text-align:center;line-height:1.4">
+                  Pick the closest match — we'll personalise your experience.
+                </p>
+                <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 8px">
+                  <tr>
+                    <td style="font-size:14px;font-weight:600;color:#1a1a2e;padding:0 0 0 4px" width="25%">한국어</td>
+                    <td width="25%" align="center"><a href="${prefsUrl}&ko=0" style="color:#ff6b2c;font-size:13px;text-decoration:none">Zero</a></td>
+                    <td width="25%" align="center"><a href="${prefsUrl}&ko=2" style="color:#ff6b2c;font-size:13px;text-decoration:none">Some</a></td>
+                    <td width="25%" align="center"><a href="${prefsUrl}&ko=5" style="color:#ff6b2c;font-size:13px;text-decoration:none">Fluent</a></td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:14px;font-weight:600;color:#1a1a2e;padding:0 0 0 4px">日本語</td>
+                    <td align="center"><a href="${prefsUrl}&ja=0" style="color:#ff6b2c;font-size:13px;text-decoration:none">Zero</a></td>
+                    <td align="center"><a href="${prefsUrl}&ja=2" style="color:#ff6b2c;font-size:13px;text-decoration:none">Some</a></td>
+                    <td align="center"><a href="${prefsUrl}&ja=5" style="color:#ff6b2c;font-size:13px;text-decoration:none">Fluent</a></td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:14px;font-weight:600;color:#1a1a2e;padding:0 0 0 4px">中文</td>
+                    <td align="center"><a href="${prefsUrl}&zh=0" style="color:#ff6b2c;font-size:13px;text-decoration:none">Zero</a></td>
+                    <td align="center"><a href="${prefsUrl}&zh=2" style="color:#ff6b2c;font-size:13px;text-decoration:none">Some</a></td>
+                    <td align="center"><a href="${prefsUrl}&zh=5" style="color:#ff6b2c;font-size:13px;text-decoration:none">Fluent</a></td>
+                  </tr>
+                </table>
+                <p style="text-align:center;margin:12px 0 0">
+                  <a href="${prefsUrl}" style="color:#999;font-size:12px;text-decoration:underline">or set exact levels &rarr;</a>
+                </p>
+              </div>
+              <hr style="border:none;border-top:1px solid #e5e5e5;margin:0 0 16px"/>
+              <p style="color:#999;font-size:12px;margin:0;text-align:center">
+                Tong &mdash; Built by <a href="https://berlayar.ai" style="color:#999">Berlayar</a>
               </p>
             </div>`,
           }),
         }).catch(() => {});
       }
       return jsonResponse(200, { ok: true });
+    }
+
+    /* ── Save onboarding preferences (linked by email) ──────── */
+    if (pathname === '/api/v1/signup/preferences' && request.method === 'POST') {
+      const body = await readJsonBody(request);
+      const email = String(body.email || '').trim().toLowerCase();
+      if (!email) return jsonResponse(400, { error: 'email_required' });
+      const prof = body.proficiency || {};
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const validLevels = ['none', 'beginner', 'intermediate', 'advanced', 'native'];
+      const ko = validLevels.includes(prof.ko) ? prof.ko : 'none';
+      const ja = validLevels.includes(prof.ja) ? prof.ja : 'none';
+      const zh = validLevels.includes(prof.zh) ? prof.zh : 'none';
+      const explain = body.explainIn || {};
+      const validLangs = ['en', 'ko', 'ja', 'zh'];
+      const exKo = validLangs.includes(explain.ko) ? explain.ko : 'en';
+      const exJa = validLangs.includes(explain.ja) ? explain.ja : 'en';
+      const exZh = validLangs.includes(explain.zh) ? explain.zh : 'en';
+      await env.DB.prepare(
+        `UPDATE signups SET proficiency_ko = ?, proficiency_ja = ?, proficiency_zh = ?, explain_ko = ?, explain_ja = ?, explain_zh = ?, has_preferences = 1, preferences_at = datetime('now') WHERE email = ?`
+      ).bind(ko, ja, zh, exKo, exJa, exZh, email).run();
+      return jsonResponse(200, { ok: true });
+    }
+
+    /* ── Send follow-up emails to signups missing preferences ── */
+    if (pathname === '/api/v1/signup/follow-up' && request.method === 'POST') {
+      const env = (globalThis as any).__env;
+      if (!env?.DB || !env?.RESEND_API_KEY) {
+        return jsonResponse(500, { error: 'not_configured' });
+      }
+      // Only email users who signed up > 1 day ago and never set preferences
+      const { results } = await env.DB.prepare(
+        `SELECT email FROM signups WHERE has_preferences = 0 AND created_at < datetime('now', '-1 day') AND source != 'followed_up'`
+      ).all();
+      let sent = 0;
+      for (const row of results || []) {
+        const prefsUrl = `https://tong.berlayar.ai/?prefs=${encodeURIComponent(row.email as string)}`;
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'Tong <tong@berlayar.ai>',
+            to: [row.email],
+            subject: 'Quick question before Tong launches',
+            html: `<div style="font-family:'Space Grotesk',system-ui,sans-serif;max-width:520px;margin:0 auto;padding:32px 20px;background:#ffffff">
+              <div style="text-align:center;margin-bottom:24px">
+                <img src="https://tong.berlayar.ai/assets/app/logo_trimmed.png" alt="Tong" width="60" height="60" style="border-radius:12px"/>
+              </div>
+              <h1 style="font-size:22px;margin:0 0 12px;text-align:center;color:#1a1a2e">Quick question (optional)</h1>
+              <p style="text-align:center;color:#555;font-size:15px;margin:0 0 20px;line-height:1.5">
+                This is totally optional &mdash; but if you share your levels, we'll personalise your experience and skip content you've already mastered.
+              </p>
+              <div style="background:#f5f5f7;border:1px solid #e0e0e0;border-radius:12px;padding:16px;margin:0 0 20px">
+                <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0 8px">
+                  <tr>
+                    <td style="font-size:14px;font-weight:600;color:#1a1a2e;padding:0 0 0 4px" width="25%">한국어</td>
+                    <td width="25%" align="center"><a href="${prefsUrl}&ko=0" style="color:#ff6b2c;font-size:13px;text-decoration:none">Zero</a></td>
+                    <td width="25%" align="center"><a href="${prefsUrl}&ko=2" style="color:#ff6b2c;font-size:13px;text-decoration:none">Some</a></td>
+                    <td width="25%" align="center"><a href="${prefsUrl}&ko=5" style="color:#ff6b2c;font-size:13px;text-decoration:none">Fluent</a></td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:14px;font-weight:600;color:#1a1a2e;padding:0 0 0 4px">日本語</td>
+                    <td align="center"><a href="${prefsUrl}&ja=0" style="color:#ff6b2c;font-size:13px;text-decoration:none">Zero</a></td>
+                    <td align="center"><a href="${prefsUrl}&ja=2" style="color:#ff6b2c;font-size:13px;text-decoration:none">Some</a></td>
+                    <td align="center"><a href="${prefsUrl}&ja=5" style="color:#ff6b2c;font-size:13px;text-decoration:none">Fluent</a></td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:14px;font-weight:600;color:#1a1a2e;padding:0 0 0 4px">中文</td>
+                    <td align="center"><a href="${prefsUrl}&zh=0" style="color:#ff6b2c;font-size:13px;text-decoration:none">Zero</a></td>
+                    <td align="center"><a href="${prefsUrl}&zh=2" style="color:#ff6b2c;font-size:13px;text-decoration:none">Some</a></td>
+                    <td align="center"><a href="${prefsUrl}&zh=5" style="color:#ff6b2c;font-size:13px;text-decoration:none">Fluent</a></td>
+                  </tr>
+                </table>
+                <p style="text-align:center;margin:8px 0 0">
+                  <a href="${prefsUrl}" style="color:#999;font-size:12px;text-decoration:underline">or set exact levels &rarr;</a>
+                </p>
+              </div>
+              <hr style="border:none;border-top:1px solid #e5e5e5;margin:0 0 16px"/>
+              <p style="color:#999;font-size:12px;margin:0;text-align:center">
+                Tong &mdash; Built by <a href="https://berlayar.ai" style="color:#999">Berlayar</a>
+              </p>
+            </div>`,
+          }),
+        }).catch(() => {});
+        // Mark as followed up so we don't email again
+        await env.DB.prepare(`UPDATE signups SET source = 'followed_up' WHERE email = ?`).bind(row.email).run();
+        sent++;
+      }
+      return jsonResponse(200, { ok: true, sent });
     }
 
     return jsonResponse(404, { error: 'not_found', pathname });
