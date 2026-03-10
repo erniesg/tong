@@ -141,6 +141,13 @@ export interface StrokeTracingExercise {
 
 export type BlockCrushStage = 'intro' | 'recognition' | 'recall';
 
+export interface BlockCrushCharStep {
+  targetChar: string;
+  components: { piece: string; slot: string; colorHint: string }[];
+  romanization: string;
+  meaning: string;
+}
+
 export interface BlockCrushExercise {
   type: 'block_crush';
   id: string;
@@ -148,7 +155,7 @@ export interface BlockCrushExercise {
   difficulty: number;
   prompt: string;
   language: 'ko' | 'zh' | 'ja';
-  /** Target character to assemble */
+  /** Target character to assemble (first/only char when no sequence) */
   targetChar: string;
   /** Component pieces and their slots */
   components: { piece: string; slot: string; colorHint: string }[];
@@ -157,6 +164,10 @@ export interface BlockCrushExercise {
   explanation?: string;
   /** Stage for progressive difficulty — defaults to 'recognition' */
   stage?: BlockCrushStage;
+  /** Multi-char sequence — build each character in order. When present, targetChar/components/etc are for the first step. */
+  sequence?: BlockCrushCharStep[];
+  /** Full word being built (shown as title, e.g. "하은") */
+  fullWord?: string;
 }
 
 export interface ErrorCorrectionExercise {
