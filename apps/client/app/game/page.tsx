@@ -804,19 +804,35 @@ export default function GamePage() {
               });
               console.log('[EX] block_crush multi-char fallback to stroke_tracing for:', bc.targetChar[0]);
             }
-          } else if (bc.components && bc.components.length <= 1) {
-            // Single component: nothing to build → stroke_tracing
+          } else if (!bc.components || bc.components.length <= 1) {
+            // AI sent empty/single component — try to decompose from our database first
             const singleChar = bc.targetChar || 'ㅎ';
-            exercise = generateExercise('stroke_tracing', {
-              hintItems: [singleChar],
-              objectiveId: args.objectiveId,
-              language: langRef,
-              cityId: city,
-              locationId: location,
-              mastery: getGameState().itemMastery,
-              explainIn: explainLangRef as UILang,
-            });
-            console.log('[EX] block_crush single-component fallback to stroke_tracing for:', singleChar);
+            const target = getTargetByChar(singleChar);
+            if (target && target.components.length >= 2) {
+              // Found decomposition — generate proper block_crush
+              exercise = generateExercise('block_crush', {
+                hintItems: [singleChar],
+                objectiveId: args.objectiveId,
+                language: langRef,
+                cityId: city,
+                locationId: location,
+                mastery: getGameState().itemMastery,
+                explainIn: explainLangRef as UILang,
+              });
+              console.log('[EX] block_crush empty-components → auto-decomposed:', singleChar);
+            } else {
+              // Truly no decomposition available → stroke_tracing
+              exercise = generateExercise('stroke_tracing', {
+                hintItems: [singleChar],
+                objectiveId: args.objectiveId,
+                language: langRef,
+                cityId: city,
+                locationId: location,
+                mastery: getGameState().itemMastery,
+                explainIn: explainLangRef as UILang,
+              });
+              console.log('[EX] block_crush single-component fallback to stroke_tracing for:', singleChar);
+            }
           }
         }
         setCurrentMessage(null);

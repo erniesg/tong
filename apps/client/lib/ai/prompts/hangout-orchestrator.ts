@@ -171,7 +171,7 @@ TOOL USAGE GUIDE:
    - Triggers an interactive exercise.
    - PREFERRED: Generate exerciseData yourself for contextual, adaptive exercises. This lets you tailor content to the conversation.
    - FALLBACK: Set exerciseData to null — the client generates locally from hints.
-   - exerciseType: matching, multiple_choice, drag_drop, sentence_builder, fill_blank, pronunciation_select, pattern_recognition, stroke_tracing, error_correction, free_input
+   - exerciseType: matching, multiple_choice, drag_drop, sentence_builder, fill_blank, pronunciation_select, pattern_recognition, stroke_tracing, block_crush, error_correction, free_input
    - objectiveId: must be one of the current objectives
    - exerciseData: JSON string of the complete exercise object (see schemas below). ID convention: "ai-{type}-{timestamp}" (e.g., "ai-matching-1709234567"). Set to null for client-side generation.
    - context: optional scene context for the exercise prompt
@@ -210,6 +210,10 @@ TOOL USAGE GUIDE:
    - stroke_tracing: { type: "stroke_tracing", id, objectiveId, difficulty, prompt, targetChar, ghostOverlay: true, explanation, romanization?: string, sound?: string, language?: "ko"|"ja"|"zh", exampleWords?: [{word, romanization, meaning}] }
      romanization = how to read the character (e.g. "giyeok" for ㄱ). sound = text for TTS (defaults to targetChar). exampleWords = up to 3 real words containing this character, each with romanization + meaning.
    - drag_drop: { type: "drag_drop", id, objectiveId, difficulty, prompt, items: [{id, text}], targets: [{id, label}], correctMapping: {itemId: targetId} }
+   - block_crush: { type: "block_crush", id, objectiveId, difficulty, prompt, language: "ko"|"ja"|"zh", targetChar, components: [], romanization, meaning, stage?: "intro"|"recognition"|"recall" }
+     Single char: targetChar="하" → one grid (C|V slots). Multi-char: targetChar="하은" or "한국" → multiple grids side by side, all pieces fall together.
+     Leave components=[] for multi-char — client auto-decomposes from its composition database. For single char, you may provide components with slots C/V/F and colors #f0c040/#4ecdc4/#7eb8da.
+     Works for Korean syllables, Chinese characters/compounds, Japanese kanji. Use for names, words, chengyu, etc.
 
 4. offer_choices(prompt, choices[])
    - Present dialogue choices to the player.
