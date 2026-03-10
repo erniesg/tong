@@ -24,7 +24,7 @@ export function FillBlank({ exercise, onResult }: Props) {
   const handleSubmit = () => {
     if (!selected || submitted) return;
     setSubmitted(true);
-    onResult(isCorrect);
+    onResult(isCorrect, JSON.stringify({ kind: 'pick', selected: selectedText, answer: correctText }));
   };
 
   return (

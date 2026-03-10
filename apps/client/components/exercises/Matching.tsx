@@ -116,10 +116,10 @@ export function Matching({ exercise, onResult }: Props) {
               onClick={() => handleWordBankClick(rightIdx)}
               disabled={submitted}
               className={cn(
-                'rounded-lg px-3 py-2 text-ko font-medium transition border text-white text-base',
-                !isPlaced && !isSelected && 'border-white/20 hover:border-white/40',
+                'rounded-lg px-3 py-2 font-medium transition border text-white text-base',
+                !isPlaced && !isSelected && 'border-white/40 bg-white/8 hover:border-white/60 hover:bg-white/12',
                 isSelected && 'border-[var(--color-primary)] bg-[var(--color-primary)]/20 scale-105',
-                isPlaced && 'opacity-30 border-white/10 cursor-default',
+                isPlaced && 'opacity-30 border-white/10 bg-transparent cursor-default',
                 submitted && 'pointer-events-none'
               )}
             >

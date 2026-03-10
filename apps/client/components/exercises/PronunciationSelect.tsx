@@ -79,7 +79,9 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
     // Play the correct answer sound on submit
     const correctOpt = exercise.audioOptions.find((o) => o.id === exercise.correctOptionId);
     if (correctOpt) playSound(correctOpt.label, correctOpt.ttsText);
-    onResult(isCorrect);
+    const selectedOpt = exercise.audioOptions.find((o) => o.id === selected);
+    const correctOpt2 = exercise.audioOptions.find((o) => o.id === exercise.correctOptionId);
+    onResult(isCorrect, JSON.stringify({ kind: 'pick', selected: selectedOpt?.label ?? '?', answer: correctOpt2?.label ?? '?' }));
   };
 
   return (

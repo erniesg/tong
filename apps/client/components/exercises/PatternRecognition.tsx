@@ -20,7 +20,9 @@ export function PatternRecognition({ exercise, onResult }: Props) {
   const handleSubmit = () => {
     if (selected === null || submitted) return;
     setSubmitted(true);
-    onResult(isCorrect);
+    const selectedPair = selected !== null ? exercise.pairs[selected] : null;
+    const correctPair = exercise.pairs[exercise.correctPairIndex];
+    onResult(isCorrect, JSON.stringify({ kind: 'pick', selected: selectedPair?.chars ?? '?', answer: correctPair?.chars ?? '?' }));
   };
 
   return (
