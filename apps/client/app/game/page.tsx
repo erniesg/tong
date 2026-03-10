@@ -16,6 +16,7 @@ import { summarizeExercise } from '@/lib/utils/summarize-exercise';
 import { useGameState, dispatch, getRelationship, getMasterySnapshot, getGameState } from '@/lib/store/game-store';
 import type { PlayerProfile } from '@/lib/store/game-store';
 import { CHARACTER_MAP, HAEUN, TUTORIAL_VIDEO_CONFIG, pickRandom } from '@/lib/content/characters';
+import { type TongExpression, TONG_EXPRESSIONS } from '@/lib/content/tong-expressions';
 import { useVideoGeneration } from '@/lib/hooks/useVideoGeneration';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import { getLocationOrDefault, getLanguageForCity } from '@/lib/content/locations';
@@ -124,20 +125,6 @@ const LOCATION_NAMES: Record<LocationId, string> = {
 
 type Phase = 'opening' | 'menu' | 'tong-intro' | 'hangout' | 'city_map' | 'learn' | 'dev';
 
-type TongExpression = 'neutral' | 'cheerful' | 'surprised' | 'proud' | 'love' | 'sad' | 'crying' | 'amazed' | 'excited' | 'thinking';
-
-const TONG_EXPRESSIONS: Record<TongExpression, string> = {
-  neutral: '/assets/characters/tong/tong_neutral.png',
-  cheerful: '/assets/characters/tong/tong_cheerful.png',
-  surprised: '/assets/characters/tong/tong_surprised.png',
-  proud: '/assets/characters/tong/tong_proud.png',
-  love: '/assets/characters/tong/tong_love.png',
-  sad: '/assets/characters/tong/tong_sad.png',
-  crying: '/assets/characters/tong/tong_crying.png',
-  amazed: '/assets/characters/tong/tong_amazed.png',
-  excited: '/assets/characters/tong/tong_excited.png',
-  thinking: '/assets/characters/tong/tong_thinking.png',
-};
 
 /* ── helpers ────────────────────────────────────────────── */
 
