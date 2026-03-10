@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { BlockCrushExercise, BlockCrushStage } from '@/lib/types/hangout';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import type { BlockCrushExercise, BlockCrushCharStep, BlockCrushStage } from '@/lib/types/hangout';
 import { getDistractors, getMeaning, getSlotLayout } from '@/lib/content/block-crush-data';
+import type { SlotLayout } from '@/lib/content/block-crush-data';
 import { onTranslationsReady } from '@/lib/i18n/translation-cache';
 import { getGameState } from '@/lib/store/game-store';
 import type { CityId } from '@/lib/api';
@@ -66,6 +67,14 @@ interface FallingPiece {
   speed: number;
   isDistractor: boolean;
   colorHint?: string;
+}
+
+/** Flattened component with namespaced slot key for multi-char */
+interface FlatComponent {
+  piece: string;
+  slot: string;        // namespaced: "0:C", "1:left", etc. (or plain "C" for single)
+  colorHint: string;
+  charIdx: number;
 }
 
 /* ── Stage config ────────────────────────────────────── */
@@ -158,11 +167,11 @@ function getUI(lang: string) {
   return UI_STRINGS[lang] ?? UI_STRINGS.en;
 }
 
-function getPromptForStage(exercise: BlockCrushExercise, stage: BlockCrushStage, meaning: string, explainLang: string): string {
+function getPromptForStage(displayChar: string, exercise: BlockCrushExercise, stage: BlockCrushStage, meaning: string, explainLang: string): string {
   const ui = getUI(explainLang);
   switch (stage) {
     case 'intro':
-      return ui.intro(exercise.targetChar);
+      return ui.intro(displayChar);
     case 'recall':
       return ui.recall(meaning);
     default:
@@ -193,6 +202,34 @@ function getWrongFeedback(
 export function BlockCrush({ exercise, onResult }: Props) {
   const stage: BlockCrushStage = exercise.stage && STAGE_CONFIG[exercise.stage as BlockCrushStage] ? exercise.stage as BlockCrushStage : 'recognition';
   const cfg = STAGE_CONFIG[stage];
+
+  /* ── Multi-char setup ──────────────────────────────── */
+
+  const isMulti = !!exercise.sequence && exercise.sequence.length > 1;
+
+  const charSteps: BlockCrushCharStep[] = useMemo(() => {
+    if (isMulti) return exercise.sequence!;
+    return [{
+      targetChar: exercise.targetChar,
+      components: exercise.components,
+      romanization: exercise.romanization,
+      meaning: exercise.meaning,
+    }];
+  }, [isMulti, exercise]);
+
+  // Flatten all components with namespaced slots
+  const allComponents: FlatComponent[] = useMemo(() =>
+    charSteps.flatMap((step, idx) =>
+      step.components.map(c => ({
+        ...c,
+        slot: isMulti ? `${idx}:${c.slot}` : c.slot,
+        charIdx: idx,
+      }))
+    ), [charSteps, isMulti]);
+
+  // Display character: full word for multi, single char otherwise
+  const displayChar = isMulti ? (exercise.fullWord ?? charSteps.map(s => s.targetChar).join('')) : exercise.targetChar;
+  const displayRomanization = isMulti ? charSteps.map(s => s.romanization).join(' ') : exercise.romanization;
 
   const [pieces, setPieces] = useState<FallingPiece[]>([]);
   const [filledSlots, setFilledSlots] = useState<Record<string, string | null>>({});
@@ -232,6 +269,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
   filledRef.current = filledSlots;
   doneRef.current = done;
 
+  // Single-char layout (used for single mode and overlay)
   const layout = getSlotLayout({
     char: exercise.targetChar, components: exercise.components,
     romanization: exercise.romanization, meaning: exercise.meaning,
@@ -241,14 +279,24 @@ export function BlockCrush({ exercise, onResult }: Props) {
   const explainLang = getExplainLang(exercise.language);
   const localMeaning = getMeaning(exercise.meaning, explainLang, exercise.targetChar);
 
+  // For multi-char, compute combined meaning
+  const displayMeaning = isMulti
+    ? charSteps.map(s => getMeaning(s.meaning, explainLang, s.targetChar)).join(', ')
+    : localMeaning;
+
   const ui = getUI(explainLang);
-  const prompt = getPromptForStage(exercise, stage, localMeaning, explainLang);
+  const prompt = getPromptForStage(displayChar, exercise, stage, displayMeaning, explainLang);
+
+  // Keep a stable ref to allComponents for useCallback deps
+  const allComponentsRef = useRef(allComponents);
+  allComponentsRef.current = allComponents;
 
   /* ── Spawn ─────────────────────────────────────────── */
 
   const spawnPiece = useCallback(() => {
     if (piecesRef.current.length >= MAX_PIECES) return;
-    const unfilled = exercise.components.filter((c) => !filledRef.current[c.slot]);
+    const ac = allComponentsRef.current;
+    const unfilled = ac.filter((c) => !filledRef.current[c.slot]);
     const correctRate = 1 - cfg.distractorRate;
     const spawnCorrect = unfilled.length > 0 && Math.random() < correctRate;
     let piece: string, isDistractor: boolean, colorHint: string | undefined;
@@ -256,7 +304,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
       const comp = unfilled[Math.floor(Math.random() * unfilled.length)];
       piece = comp.piece; isDistractor = false; colorHint = comp.colorHint;
     } else {
-      const correctPieces = exercise.components.map((c) => c.piece);
+      const correctPieces = ac.map((c) => c.piece);
       const distractors = getDistractors(exercise.language, 1, correctPieces);
       piece = distractors[0] ?? correctPieces[0];
       isDistractor = !correctPieces.includes(piece);
@@ -265,7 +313,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
     const column = Math.floor(Math.random() * LANES);
     const speed = BASE_SPEED * cfg.speedMult * (0.8 + Math.random() * 0.4);
     setPieces((prev) => [...prev, { id, piece, column, y: -0.08, speed, isDistractor, colorHint }]);
-  }, [exercise.components, exercise.language, cfg.distractorRate, cfg.speedMult]);
+  }, [exercise.language, cfg.distractorRate, cfg.speedMult]);
 
   /* ── Game loop ─────────────────────────────────────── */
 
@@ -311,12 +359,12 @@ export function BlockCrush({ exercise, onResult }: Props) {
   const fireResult = useCallback(() => {
     if (resultFiredRef.current) return;
     resultFiredRef.current = true;
-    onResult(true, `Built ${exercise.targetChar} (${exercise.romanization})`);
-  }, [exercise, onResult]);
+    onResult(true, `Built ${displayChar} (${displayRomanization})`);
+  }, [displayChar, displayRomanization, onResult]);
 
   const handleSuccess = useCallback(() => {
     setDone(true);
-    playTTS(exercise.targetChar, exercise.language, exercise.meaning);
+    playTTS(displayChar, exercise.language, exercise.meaning);
 
     if (stage === 'intro') {
       // Show detailed overlay, wait for tap
@@ -335,7 +383,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
       setSuccessFlash(true);
       setTimeout(() => fireResult(), 500);
     }
-  }, [exercise, stage, fireResult]);
+  }, [displayChar, exercise.language, exercise.meaning, stage, fireResult]);
 
   const dismissOverlay = useCallback(() => {
     setShowOverlay(false);
@@ -416,8 +464,9 @@ export function BlockCrush({ exercise, onResult }: Props) {
 
       if (!pid) return;
 
+      const ac = allComponentsRef.current;
       let placed = false;
-      for (const comp of exercise.components) {
+      for (const comp of ac) {
         const el = slotRefs.current[comp.slot];
         if (!el) continue;
         const r = el.getBoundingClientRect();
@@ -427,7 +476,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
             setFilledSlots(nf);
             setPieces((prev) => prev.filter((pp) => pp.id !== pid));
             placed = true;
-            if (exercise.components.every((c) => nf[c.slot])) {
+            if (ac.every((c) => nf[c.slot])) {
               handleSuccess();
             }
           } else if (!filledRef.current[comp.slot]) {
@@ -459,13 +508,13 @@ export function BlockCrush({ exercise, onResult }: Props) {
     document.addEventListener('pointermove', onMove, { passive: false });
     document.addEventListener('pointerup', onUp);
     document.addEventListener('pointercancel', onUp);
-  }, [done, exercise, handleSuccess, cleanupDragListeners, stage, cfg.speedMult]);
+  }, [done, exercise.language, handleSuccess, cleanupDragListeners, stage, cfg.speedMult, explainLang]);
 
   /* ── Slot renderer ─────────────────────────────────── */
 
   // Inner slot — no border/radius of its own; the wrapper provides the unified box
-  function renderSlot(slotName: string, w: number | string, h: number) {
-    const comp = exercise.components.find((c) => c.slot === slotName);
+  function renderSlot(slotKey: string, w: number | string, h: number, fontSize?: number) {
+    const comp = allComponents.find((c) => c.slot === slotKey);
     if (!comp) return null;
     const filled = filledSlots[comp.slot];
     const isWrong = wrongSlot === comp.slot;
@@ -485,7 +534,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
           width: w, height: h,
           position: 'relative',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 24, fontWeight: 600,
+          fontSize: fontSize ?? 24, fontWeight: 600,
           background: filled ? `${color}cc` : 'transparent',
           color: filled ? '#fff' : 'transparent',
           transition: 'background 0.15s',
@@ -519,89 +568,123 @@ export function BlockCrush({ exercise, onResult }: Props) {
   const S = 52;
   const W = S * 2 + 1; // +1 for the divider
 
-  function renderGrid() {
-    switch (layout) {
-      // C | V side by side
+  /** Render a single character's grid with optional scaling and slot prefix */
+  function renderCharGrid(charIdx: number, step: BlockCrushCharStep, charLayout: SlotLayout, cellSize: number) {
+    const prefix = isMulti ? `${charIdx}:` : '';
+    const cW = cellSize * 2 + 1;
+    const fs = cellSize <= 40 ? 18 : 24;
+
+    const slot = (name: string, w: number | string, h: number) =>
+      renderSlot(`${prefix}${name}`, w, h, fs);
+
+    switch (charLayout) {
       case 'ko-cv-lr':
         return (
-          <div style={{ ...blockStyle, display: 'flex', width: W }}>
-            {renderSlot('C', S, S * 1.2)}
+          <div style={{ ...blockStyle, display: 'flex', width: cW }}>
+            {slot('C', cellSize, cellSize * 1.2)}
             <div style={dividerV} />
-            {renderSlot('V', S, S * 1.2)}
+            {slot('V', cellSize, cellSize * 1.2)}
           </div>
         );
-      // C on top, V below
       case 'ko-cv-tb':
         return (
-          <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', width: W }}>
-            {renderSlot('C', W, S * 0.7)}
+          <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', width: cW }}>
+            {slot('C', cW, cellSize * 0.7)}
             <div style={dividerH} />
-            {renderSlot('V', W, S * 0.5)}
+            {slot('V', cW, cellSize * 0.5)}
           </div>
         );
-      // C|V top, F spanning bottom
       case 'ko-cvf-lr':
         return (
-          <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', width: W }}>
+          <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', width: cW }}>
             <div style={{ display: 'flex' }}>
-              {renderSlot('C', S, S)}
+              {slot('C', cellSize, cellSize)}
               <div style={dividerV} />
-              {renderSlot('V', S, S)}
+              {slot('V', cellSize, cellSize)}
             </div>
             <div style={dividerH} />
-            {renderSlot('F', W, S * 0.7)}
+            {slot('F', cW, cellSize * 0.7)}
           </div>
         );
-      // C / V / F all stacked
       case 'ko-cvf-tb':
         return (
-          <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', width: W }}>
-            {renderSlot('C', W, S * 0.65)}
+          <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', width: cW }}>
+            {slot('C', cW, cellSize * 0.65)}
             <div style={dividerH} />
-            {renderSlot('V', W, S * 0.5)}
+            {slot('V', cW, cellSize * 0.5)}
             <div style={dividerH} />
-            {renderSlot('F', W, S * 0.55)}
+            {slot('F', cW, cellSize * 0.55)}
           </div>
         );
-      // left | right
       case 'left-right':
         return (
-          <div style={{ ...blockStyle, display: 'flex', width: W }}>
-            {renderSlot('left', S, S * 1.2)}
+          <div style={{ ...blockStyle, display: 'flex', width: cW }}>
+            {slot('left', cellSize, cellSize * 1.2)}
             <div style={dividerV} />
-            {renderSlot('right', S, S * 1.2)}
+            {slot('right', cellSize, cellSize * 1.2)}
           </div>
         );
-      // top / bottom
       case 'top-bottom':
         return (
-          <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', width: W * 0.75 }}>
-            {renderSlot('top', W * 0.75, S)}
+          <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', width: Math.round(cW * 0.75) }}>
+            {slot('top', Math.round(cW * 0.75), cellSize)}
             <div style={dividerH} />
-            {renderSlot('bottom', W * 0.75, S)}
+            {slot('bottom', Math.round(cW * 0.75), cellSize)}
           </div>
         );
-      // base + dakuten mark
       case 'dakuten': {
-        const markSlot = exercise.components.find((c) => c.slot === 'dakuten' || c.slot === 'handakuten')!.slot;
+        const markSlotName = step.components.find((c) => c.slot === 'dakuten' || c.slot === 'handakuten')?.slot ?? 'dakuten';
         return (
           <div style={{ ...blockStyle, display: 'flex', alignItems: 'flex-start' }}>
-            {renderSlot('base', S * 1.3, S * 1.3)}
+            {slot('base', cellSize * 1.3, cellSize * 1.3)}
             <div style={dividerV} />
-            {renderSlot(markSlot, S * 0.5, S * 0.5)}
+            {slot(markSlotName, cellSize * 0.5, cellSize * 0.5)}
           </div>
         );
       }
-      // hiragana → katakana
       case 'convert':
         return (
-          <div style={{ ...blockStyle, display: 'flex', width: W }}>
-            {renderSlot('hiragana', S, S)}
+          <div style={{ ...blockStyle, display: 'flex', width: cW }}>
+            {slot('hiragana', cellSize, cellSize)}
             <div style={dividerV} />
-            {renderSlot('convert', S, S)}
+            {slot('convert', cellSize, cellSize)}
           </div>
         );
     }
+  }
+
+  /** Compute per-char layouts for multi-char mode */
+  const charLayouts: SlotLayout[] = useMemo(() =>
+    charSteps.map(step => getSlotLayout({
+      char: step.targetChar,
+      components: step.components,
+      romanization: step.romanization,
+      meaning: step.meaning,
+      difficulty: exercise.difficulty,
+      language: exercise.language,
+    })), [charSteps, exercise.difficulty, exercise.language]);
+
+  function renderGrid() {
+    if (!isMulti) {
+      // Single char — use original layout with S sizing
+      return renderCharGrid(0, charSteps[0], layout, S);
+    }
+
+    // Multi-char: side-by-side grids with scaling
+    const charCount = charSteps.length;
+    const scale = charCount <= 2 ? 1 : charCount <= 4 ? 0.8 : 0.65;
+    const cellSize = Math.round(S * scale);
+
+    return (
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {charSteps.map((step, idx) => (
+          <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            {renderCharGrid(idx, step, charLayouts[idx], cellSize)}
+            <div style={{ fontSize: 10, opacity: 0.3 }}>{step.targetChar}</div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   /* ── Lanes ─────────────────────────────────────────── */
@@ -669,7 +752,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
         {/* In recall mode, hide romanization/meaning below slots (it's the challenge) */}
         {stage !== 'recall' && (
           <div style={{ fontSize: 13, opacity: 0.4, marginTop: 2 }}>
-            {exercise.romanization} — {localMeaning}
+            {displayRomanization} — {displayMeaning}
           </div>
         )}
       </div>
@@ -679,11 +762,11 @@ export function BlockCrush({ exercise, onResult }: Props) {
         <div style={{
           position: 'absolute', inset: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 64, animation: 'bc-successFlash 0.8s ease forwards',
+          fontSize: isMulti ? 48 : 64, animation: 'bc-successFlash 0.8s ease forwards',
           pointerEvents: 'none', zIndex: 50,
           textShadow: '0 0 40px rgba(78,205,196,0.6)',
         }}>
-          {exercise.targetChar}
+          {displayChar}
         </div>
       )}
 
@@ -708,9 +791,9 @@ export function BlockCrush({ exercise, onResult }: Props) {
               onComplete={() => setTimeout(() => setAnimationDone(true), 600)}
             />
           )}
-          <div className="bc-overlay__romanization">{exercise.romanization}</div>
-          {localMeaning ? (
-            <div className="bc-overlay__meaning">{localMeaning}</div>
+          <div className="bc-overlay__romanization">{displayRomanization}</div>
+          {displayMeaning ? (
+            <div className="bc-overlay__meaning">{displayMeaning}</div>
           ) : (
             <div className="bc-overlay__meaning" style={{ fontSize: '1rem', opacity: 0.6 }}>
               {exercise.components.map((c) => c.piece).join(' + ')} → {exercise.targetChar}
