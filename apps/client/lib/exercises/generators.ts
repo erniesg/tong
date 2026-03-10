@@ -326,7 +326,7 @@ function generateMatching(
         : t('match_words_meaning', explainIn),
     pairs: selected.map((v) => ({
       left: v.word,
-      right: isSound ? v.romanization : getVocabTranslation(v.word, explainIn),
+      right: isSound || isScript ? v.romanization : getVocabTranslation(v.word, explainIn),
     })),
   };
 }
