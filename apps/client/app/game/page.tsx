@@ -16,6 +16,7 @@ import { summarizeExercise } from '@/lib/utils/summarize-exercise';
 import { useGameState, dispatch, getRelationship, getMasterySnapshot, getGameState } from '@/lib/store/game-store';
 import type { PlayerProfile } from '@/lib/store/game-store';
 import { CHARACTER_MAP, HAEUN, TUTORIAL_VIDEO_CONFIG, pickRandom } from '@/lib/content/characters';
+import { type TongExpression, TONG_EXPRESSIONS } from '@/lib/content/tong-expressions';
 import { useVideoGeneration } from '@/lib/hooks/useVideoGeneration';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import { getLocationOrDefault, getLanguageForCity } from '@/lib/content/locations';
@@ -33,7 +34,7 @@ import { ExerciseModal } from '@/components/learn/ExerciseModal';
 /* ── scene constants ────────────────────────────────────── */
 
 const NPC_SPRITES: Record<string, { name: string; nameLocal: string; nameZh: string; src: string; idleVideo?: string; color: string }> = {
-  haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: '/assets/characters/haeun/haeun.png', idleVideo: '/assets/characters/haeun/haeun_idle_loop.mp4', color: '#e8485c' },
+  haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: '/assets/characters/haeun/haeun.png', idleVideo: '/assets/characters/haeun/haeun_idle.mp4', color: '#e8485c' },
   jin: { name: 'Jin', nameLocal: '진', nameZh: '珍', src: '/assets/characters/jin/jin.png', color: '#4a90d9' },
 };
 
@@ -54,6 +55,7 @@ function ChargeNotif({ text }: { text: string }) {
     </div>
   );
 }
+
 
 /* ── constants ──────────────────────────────────────────── */
 
@@ -124,20 +126,6 @@ const LOCATION_NAMES: Record<LocationId, string> = {
 
 type Phase = 'opening' | 'menu' | 'tong-intro' | 'hangout' | 'city_map' | 'learn' | 'dev';
 
-type TongExpression = 'neutral' | 'cheerful' | 'surprised' | 'proud' | 'love' | 'sad' | 'crying' | 'amazed' | 'excited' | 'thinking';
-
-const TONG_EXPRESSIONS: Record<TongExpression, string> = {
-  neutral: '/assets/characters/tong/tong_neutral.png',
-  cheerful: '/assets/characters/tong/tong_cheerful.png',
-  surprised: '/assets/characters/tong/tong_surprised.png',
-  proud: '/assets/characters/tong/tong_proud.png',
-  love: '/assets/characters/tong/tong_love.png',
-  sad: '/assets/characters/tong/tong_sad.png',
-  crying: '/assets/characters/tong/tong_crying.png',
-  amazed: '/assets/characters/tong/tong_amazed.png',
-  excited: '/assets/characters/tong/tong_excited.png',
-  thinking: '/assets/characters/tong/tong_thinking.png',
-};
 
 /* ── helpers ────────────────────────────────────────────── */
 
@@ -207,16 +195,32 @@ export default function GamePage() {
   const searchParams = useSearchParams();
   const gameState = useGameState();
 
-  /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester, ?dev_intro=1 fresh intro hangout */
+  /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester, ?dev_intro=1 fresh intro hangout, ?fresh=1 replay from opening */
   const phaseParam = searchParams.get('phase');
   const devParam = searchParams.get('dev');
   const devIntro = searchParams.get('dev_intro') === '1';
+  const freshStart = searchParams.get('fresh') === '1';
+  const freshNpc = searchParams.get('npc') ?? undefined; // pre-select NPC for fresh start
   const skipToHangout = phaseParam === 'hangout';
   const skipToCityMap = phaseParam === 'city_map';
+  const skipToLearn = phaseParam === 'learn';
   const [phase, setPhase] = useState<Phase>(
-    devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : 'opening'
+    freshStart ? 'opening' : devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : skipToLearn ? 'learn' : 'opening'
   );
   const openingVideoRef = useRef<HTMLVideoElement>(null);
+
+  /* ?fresh=1 — full reset: clear game state + force back to opening.
+     Done synchronously during render so no stale-state effects can fire.
+     Only runs once per mount — after reset, the normal flow takes over. */
+  const freshResetDone = useRef(false);
+  if (freshStart && !freshResetDone.current) {
+    freshResetDone.current = true;
+    console.log('[FRESH] Resetting game state, forcing phase=opening');
+    dispatch({ type: 'RESET' });
+    if (phase !== 'opening') {
+      setPhase('opening');
+    }
+  }
 
   /* tong-intro typewriter — random set each playthrough */
   const TONG_INTRO_SETS = [
@@ -322,13 +326,14 @@ export default function GamePage() {
   const [sceneSummary, setSceneSummary] = useState<SceneSummary | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
   const [dynamicBackdrop, setDynamicBackdrop] = useState<{ url: string; transition: 'fade' | 'cut'; ambientDescription?: string } | null>(null);
-  const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; autoAdvance: boolean; muted?: boolean } | null>(null);
+  const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null>(null);
 
   /* tutorial state */
   const mockVideo = searchParams.get('mock_video') === '1';
   const liveVideo = searchParams.get('live_video') === '1';
   const [profileInput, setProfileInput] = useState<PlayerProfile>({ englishName: '', chineseName: '' });
   const exitLineRef = useRef('');
+  const exitLineTranslationRef = useRef('');
   const introVideoUrlRef = useRef<string | null>(null);
   const exitVideoUrlRef = useRef<string | null>(null);
   const cinematicCaptionRef = useRef<string | null>(null);
@@ -434,6 +439,7 @@ export default function GamePage() {
   }
 
   function handleConfirmProficiency() {
+    console.log('[FLOW] handleConfirmProficiency called, phase:', phase, 'freshStart:', freshStart);
     setError('');
     setLoading(true);
 
@@ -442,7 +448,7 @@ export default function GamePage() {
 
     const weakLevel = sliders[weakIdx];
     const preferredCity = (LANG_TO_CITY[primaryLang] ?? 'seoul') as CityId;
-    const npcId = pickNpcForCity(preferredCity);
+    const npcId = freshNpc && CHARACTER_MAP[freshNpc] ? freshNpc : pickNpcForCity(preferredCity);
     const npcChar = CHARACTER_MAP[npcId] ?? HAEUN;
     // Use the NPC's actual city — if no NPC exists for the preferred city,
     // the fallback NPC's city determines the target language.
@@ -478,13 +484,14 @@ export default function GamePage() {
     if (isIntro) {
       const config = TUTORIAL_VIDEO_CONFIG[npcId];
       if (config) {
-        const templates = config.exitLineTemplates;
-        const template = pickRandom(templates);
-        const exitLine = template.replace(/{playerName}/g, displayName);
+        const clip = pickRandom(config.exitClips);
+        const cnName = profileInput.chineseName?.trim() || displayName;
+        const exitLine = clip.line.replace(/{playerName}/g, displayName).replace(/{chineseName}/g, cnName);
         exitLineRef.current = exitLine;
+        exitLineTranslationRef.current = clip.translation.replace(/{playerName}/g, displayName).replace(/{chineseName}/g, cnName);
 
         introVideoUrlRef.current = pickRandom(config.introVideoUrls);
-        exitVideoUrlRef.current = pickRandom(config.exitVideoUrls);
+        exitVideoUrlRef.current = clip.video;
 
         // Start dynamic video generation when enabled (?live_video=1 or ?mock_video=1)
         if (liveVideo || mockVideo) {
@@ -568,6 +575,7 @@ export default function GamePage() {
   /* Auto-start scene when skipping to hangout */
   useEffect(() => {
     if (skipToHangout && !sceneStartedRef.current) {
+      console.log('[FLOW] skipToHangout auto-start triggered');
       sceneStartedRef.current = true;
       const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
       void append({ role: 'user', content: `${ctx}Start the scene.` });
@@ -615,9 +623,11 @@ export default function GamePage() {
     const config = TUTORIAL_VIDEO_CONFIG[npcId];
     if (config) {
       introVideoUrlRef.current = pickRandom(config.introVideoUrls);
-      exitVideoUrlRef.current = pickRandom(config.exitVideoUrls);
-      const template = pickRandom(config.exitLineTemplates);
-      exitLineRef.current = template.replace(/{playerName}/g, displayName);
+      const clip = pickRandom(config.exitClips);
+      exitVideoUrlRef.current = clip.video;
+      const cnName = chineseName || displayName;
+      exitLineRef.current = clip.line.replace(/{playerName}/g, displayName).replace(/{chineseName}/g, cnName);
+      exitLineTranslationRef.current = clip.translation.replace(/{playerName}/g, displayName).replace(/{chineseName}/g, cnName);
     }
 
     const introCtx = {
@@ -691,16 +701,27 @@ export default function GamePage() {
           hintCount?: number | null;
           hintSubType?: string | null;
         };
+        console.log('[EX] AI sent show_exercise:', {
+          type: args.exerciseType,
+          objectiveId: args.objectiveId,
+          hintItems: args.hintItems,
+          hintCount: args.hintCount,
+          hintSubType: args.hintSubType,
+          hasExerciseData: !!args.exerciseData,
+          exerciseData: args.exerciseData,
+        });
         let exercise: ExerciseData;
         // For pronunciation_select, always use the generator — AI-constructed data is unreliable
         const parsed = args.exerciseType === 'pronunciation_select' ? null : parseExerciseData(args.exerciseData);
         if (parsed) {
+          console.log('[EX] Using AI-provided exerciseData:', { type: parsed.type, id: parsed.id, targetChar: (parsed as any).targetChar, components: (parsed as any).components });
           exercise = parsed;
         } else {
           const npcChar = CHARACTER_MAP[activeNpc];
           const npcCity = (npcChar?.cityId ?? city) as CityId;
           const lang = getLanguageForCity(npcCity);
           const explainLang_ = getGameState().explainIn[npcCity] ?? 'en';
+          console.log('[EX] Generating locally:', { type: args.exerciseType, lang, hintItems: args.hintItems, objectiveId: args.objectiveId });
           exercise = generateExercise(args.exerciseType, {
             hintItems: args.hintItems ?? undefined,
             hintCount: args.hintCount ?? undefined,
@@ -712,6 +733,7 @@ export default function GamePage() {
             mastery: getGameState().itemMastery,
             explainIn: explainLang_ as UILang,
           });
+          console.log('[EX] Generated exercise:', { type: exercise.type, id: exercise.id, targetChar: (exercise as any).targetChar, components: (exercise as any).components?.map((c: any) => ({ slot: c.slot, piece: c.piece })), stage: (exercise as any).stage });
         }
         setCurrentMessage(null);
         setTongTip(null);
@@ -808,10 +830,15 @@ export default function GamePage() {
         }
         // Store caption to show as narrator line after cinematic ends
         cinematicCaptionRef.current = args.caption ?? null;
+        // For exit videos, show the exit line as subtitle overlay
+        const exitCaption = isExitVideo && exitLineRef.current ? exitLineRef.current : (args.caption ?? undefined);
+        const exitCaptionTranslation = isExitVideo && exitLineTranslationRef.current ? exitLineTranslationRef.current : undefined;
         setCinematic({
           videoUrl: args.videoUrl,
           autoAdvance: args.autoAdvance,
           muted: false,
+          caption: exitCaption,
+          captionTranslation: exitCaptionTranslation,
         });
         console.log('[VN] play_cinematic BLOCK:', args.videoUrl, isExitVideo ? '(exit video, unmuted)' : '', isIntroVideo ? '(intro video, act transition)' : '');
         return; // BLOCK — wait for video end or tap
@@ -1091,7 +1118,7 @@ export default function GamePage() {
                   preload="auto"
                   loop
                 >
-                  <source src="/assets/tong_intro.webm" type="video/webm" />
+                  <source src="/assets/tong_intro.webm" type='video/webm; codecs="vp09.02.10.08.01"' />
                   <source src="/assets/tong_intro_fallback.mp4" type="video/mp4" />
                 </video>
                 <div className="tg-tong-intro-subtitle">
@@ -1117,7 +1144,6 @@ export default function GamePage() {
             {/* Step 1: TRAINEE PROFILE — name input */}
             {introStep === 1 && (
               <div className="tg-trainee-profile">
-                <p className="tg-trainee-label">TRAINEE PROFILE</p>
                 <div className="tg-tong-intro-subtitle" style={{ position: 'relative', bottom: 'auto', padding: 0, background: 'none' }}>
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
                   <p className="dialogue-text">What should I call you?</p>
@@ -1307,6 +1333,7 @@ export default function GamePage() {
     setIntroExerciseCount(0);
     setIntroAct(1);
     exitLineRef.current = '';
+    exitLineTranslationRef.current = '';
     processingRef.current = false;
     pausedRef.current = false;
     processedToolCallsRef.current.clear();
@@ -1489,7 +1516,6 @@ export default function GamePage() {
               locationId={location}
               userId="local"
               lang="ko"
-              autoStart={!reviewSession}
               initialReviewSession={reviewSession ?? undefined}
             />
           </div>

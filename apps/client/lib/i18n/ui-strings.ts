@@ -126,6 +126,14 @@ const STRINGS: Record<string, Record<UILang, string>> = {
   'romanization_hint': { en: 'Romanization: {0}', ko: '로마자: {0}', ja: 'ローマ字: {0}', zh: '罗马音: {0}' },
   'build_char': { en: 'Build the character: {0}', ko: '글자를 조합하세요: {0}', ja: '文字を組み立てよう: {0}', zh: '组合这个字: {0}' },
 
+  // Sentence builder / fill blank / error correction prompts
+  'build_sentence': { en: 'Build: "{0}"', ko: '문장을 만드세요: "{0}"', ja: '文を作ろう: 「{0}」', zh: '造句: "{0}"' },
+  'fill_correct_particle': { en: 'Fill in the correct particle', ko: '올바른 조사를 넣으세요', ja: '正しい助詞を入れよう', zh: '填入正确的助词' },
+  'find_fix_error': { en: 'Find and fix the error in this sentence:', ko: '이 문장의 오류를 찾아 고치세요:', ja: 'この文の間違いを見つけて直そう:', zh: '找出并修改这个句子的错误：' },
+  'drag_char_to_sound': { en: 'Drag each character to its sound', ko: '각 글자를 소리에 드래그하세요', ja: '各文字を音にドラッグしよう', zh: '把每个字拖到对应的读音' },
+  'drag_word_to_meaning': { en: 'Drag each word to its meaning', ko: '각 단어를 뜻에 드래그하세요', ja: '各単語を意味にドラッグしよう', zh: '把每个词拖到对应的意思' },
+  'which_shows_principle': { en: 'Which example shows "{0}"?', ko: '"{0}"을(를) 보여주는 예는?', ja: '「{0}」を示す例は？', zh: '哪个例子展示了"{0}"？' },
+
   // Navigation
   'tap_to_continue': { en: 'Tap to continue', ko: '탭하여 계속', ja: 'タップして続く', zh: '点击继续' },
   'tap_to_skip': { en: 'Tap to skip', ko: '탭하여 건너뛰기', ja: 'タップでスキップ', zh: '点击跳过' },

@@ -191,7 +191,7 @@ function getWrongFeedback(
 }
 
 export function BlockCrush({ exercise, onResult }: Props) {
-  const stage: BlockCrushStage = exercise.stage ?? 'recognition';
+  const stage: BlockCrushStage = exercise.stage && STAGE_CONFIG[exercise.stage as BlockCrushStage] ? exercise.stage as BlockCrushStage : 'recognition';
   const cfg = STAGE_CONFIG[stage];
 
   const [pieces, setPieces] = useState<FallingPiece[]>([]);
@@ -285,9 +285,13 @@ export function BlockCrush({ exercise, onResult }: Props) {
       }
       if (lost) {
         setLives((l) => {
-          const nl = l - 1;
-          if (nl <= 0) { setDone(true); onResult(false, 'Ran out of lives'); }
-          return Math.max(0, nl);
+          const nl = Math.max(0, l - 1);
+          if (nl <= 0) {
+            setDone(true);
+            // Defer onResult to avoid setState-during-render warning
+            setTimeout(() => onResult(false, 'Ran out of lives'), 0);
+          }
+          return nl;
         });
       }
       return next;
