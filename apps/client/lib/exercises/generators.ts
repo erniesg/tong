@@ -12,7 +12,7 @@ import type {
   FreeInputExercise,
   ExerciseData,
 } from '@/lib/types/hangout';
-import { getRandomTarget, getTargets } from '@/lib/content/block-crush-data';
+import { getRandomTarget, getTargets, getTargetByChar } from '@/lib/content/block-crush-data';
 import type { CompositionTarget } from '@/lib/content/block-crush-data';
 import { VOCABULARY_TARGETS } from '@/lib/content/pojangmacha';
 import type { ItemMastery } from '@/lib/types/mastery';
@@ -873,14 +873,15 @@ function generateBlockCrush(
 
   let target: CompositionTarget;
 
-  // 1. If hintItems provided, find matching CompositionTarget
+  // 1. If hintItems provided, find matching CompositionTarget (includes NAME_TARGETS)
   if (hintItems && hintItems.length > 0) {
-    const allTargets = getTargets(lang);
-    const matched = allTargets.find((t) => hintItems.includes(t.char));
-    if (matched) {
+    const matched = getTargetByChar(hintItems[0]);
+    if (matched && matched.components.length >= 2) {
       target = matched;
     } else {
-      target = getRandomTarget(lang, difficulty);
+      const allTargets = getTargets(lang);
+      const fallback = allTargets.find((t) => hintItems.includes(t.char));
+      target = fallback ?? getRandomTarget(lang, difficulty);
     }
   } else if (mastery && Object.keys(mastery).length > 0) {
     // 2. SRS-aware: pick due items first, then unseen

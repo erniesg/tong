@@ -736,18 +736,17 @@ export default function GamePage() {
           });
           console.log('[EX] Generated exercise:', { type: exercise.type, id: exercise.id, targetChar: (exercise as any).targetChar, components: (exercise as any).components?.map((c: any) => ({ slot: c.slot, piece: c.piece })), stage: (exercise as any).stage });
         }
-        // Guard: block_crush with multi-char target → pick first char and look up in data
-        // Also guard single-component block_crush (nothing to build) → stroke_tracing
+        // block_crush: auto-decompose from our database — AI just says WHAT to build
         if (exercise.type === 'block_crush') {
           const bc = exercise as any;
           const npcCharRef = CHARACTER_MAP[activeNpc];
           const npcCityRef = (npcCharRef?.cityId ?? city) as CityId;
           const langRef = getLanguageForCity(npcCityRef) as 'ko' | 'zh' | 'ja';
-          const explainLangRef = getGameState().explainIn[npcCityRef] ?? 'en';
+          const targetStr: string = bc.targetChar || '';
+          const chars = [...targetStr];
 
-          if (bc.targetChar && bc.targetChar.length > 1) {
-            // Multi-char: build sequence from all characters
-            const chars = [...bc.targetChar];
+          if (chars.length >= 1) {
+            // Look up decomposition for every character
             const steps: BlockCrushCharStep[] = [];
             for (const ch of chars) {
               const target = getTargetByChar(ch);
@@ -758,80 +757,50 @@ export default function GamePage() {
                   romanization: target.romanization,
                   meaning: target.meaning,
                 });
+              } else {
+                console.warn('[EX] block_crush: no decomposition data for', ch);
               }
             }
+
             if (steps.length >= 2) {
-              // Multi-char block crush with all grids side by side
-              const firstStep = steps[0];
+              // Multi-char: side-by-side grids
+              const first = steps[0];
               exercise = {
                 type: 'block_crush',
                 id: `ai-bc-multi-${Date.now()}`,
                 objectiveId: args.objectiveId,
                 difficulty: bc.difficulty ?? 2,
-                prompt: `Build: ${bc.targetChar}`,
+                prompt: bc.prompt || `Build: ${targetStr}`,
                 language: langRef,
-                targetChar: firstStep.targetChar,
-                components: firstStep.components,
-                romanization: firstStep.romanization,
-                meaning: firstStep.meaning,
+                targetChar: first.targetChar,
+                components: first.components,
+                romanization: first.romanization,
+                meaning: first.meaning,
                 stage: bc.stage || 'intro',
                 sequence: steps,
-                fullWord: bc.targetChar,
+                fullWord: targetStr,
               } as BlockCrushExercise;
-              console.log('[EX] block_crush multi-char → all grids:', steps.map(s => s.targetChar).join(''));
+              console.log('[EX] block_crush multi-char:', steps.map(s => s.targetChar).join(''));
             } else if (steps.length === 1) {
-              // Only one char decomposable — single block crush
-              exercise = generateExercise('block_crush', {
-                hintItems: [steps[0].targetChar],
+              // Single char with full decomposition
+              const s = steps[0];
+              exercise = {
+                type: 'block_crush',
+                id: bc.id || `ai-bc-${Date.now()}`,
                 objectiveId: args.objectiveId,
+                difficulty: bc.difficulty ?? 1,
+                prompt: bc.prompt || `Build: ${s.targetChar}`,
                 language: langRef,
-                cityId: city,
-                locationId: location,
-                mastery: getGameState().itemMastery,
-                explainIn: explainLangRef as UILang,
-              });
-              console.log('[EX] block_crush multi-char → single decomposed to:', steps[0].targetChar);
+                targetChar: s.targetChar,
+                components: s.components,
+                romanization: s.romanization,
+                meaning: s.meaning,
+                stage: bc.stage || 'intro',
+              } as BlockCrushExercise;
+              console.log('[EX] block_crush single:', s.targetChar);
             } else {
-              // No chars found — fallback to stroke_tracing
-              exercise = generateExercise('stroke_tracing', {
-                hintItems: [bc.targetChar[0]],
-                objectiveId: args.objectiveId,
-                language: langRef,
-                cityId: city,
-                locationId: location,
-                mastery: getGameState().itemMastery,
-                explainIn: explainLangRef as UILang,
-              });
-              console.log('[EX] block_crush multi-char fallback to stroke_tracing for:', bc.targetChar[0]);
-            }
-          } else if (!bc.components || bc.components.length <= 1) {
-            // AI sent empty/single component — try to decompose from our database first
-            const singleChar = bc.targetChar || 'ㅎ';
-            const target = getTargetByChar(singleChar);
-            if (target && target.components.length >= 2) {
-              // Found decomposition — generate proper block_crush
-              exercise = generateExercise('block_crush', {
-                hintItems: [singleChar],
-                objectiveId: args.objectiveId,
-                language: langRef,
-                cityId: city,
-                locationId: location,
-                mastery: getGameState().itemMastery,
-                explainIn: explainLangRef as UILang,
-              });
-              console.log('[EX] block_crush empty-components → auto-decomposed:', singleChar);
-            } else {
-              // Truly no decomposition available → stroke_tracing
-              exercise = generateExercise('stroke_tracing', {
-                hintItems: [singleChar],
-                objectiveId: args.objectiveId,
-                language: langRef,
-                cityId: city,
-                locationId: location,
-                mastery: getGameState().itemMastery,
-                explainIn: explainLangRef as UILang,
-              });
-              console.log('[EX] block_crush single-component fallback to stroke_tracing for:', singleChar);
+              // No decomposition data at all — log error, keep exercise as-is
+              console.error('[EX] block_crush: no decomposition found for any char in', targetStr);
             }
           }
         }

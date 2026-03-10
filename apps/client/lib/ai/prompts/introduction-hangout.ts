@@ -216,13 +216,18 @@ TOOLS:
 EXERCISE NOTES:
 - Use objectiveIds from the HANGOUT_CONTEXT objectives.
 - exerciseData: null (client auto-generates) unless you need a SPECIFIC character.
-- block_crush supports SINGLE characters AND MULTI-CHARACTER words/names:
-  Single char: targetChar="하" → one grid with C|V slots
-  Multi-char:  targetChar="하은" → TWO grids side by side (하: ㅎ|ㅏ and 은: ㅇ|ㅡ|ㄴ), all pieces fall together
-  The client auto-decomposes multi-char targets from its composition database. Just set targetChar to the full word.
-  Examples: targetChar="하은" (name), targetChar="한국" (word), targetChar="眼花" (Chinese compound)
+
+STROKE TRACING vs BLOCK CRUSH — use the RIGHT exercise for the moment:
+- stroke_tracing: FIRST ENCOUNTER with a jamo/character. Player learns the shape by writing it.
+  Use when introducing ㅎ, ㅏ, etc. for the first time. Supports reps (e.g. reps=3 for drill).
+  Use for individual jamo, not for assembled syllables.
+- block_crush: ASSEMBLY. Player builds characters from jamo they already know.
+  Use AFTER the player has traced/learned the component jamo.
+  Single char: targetChar="하" → one grid (ㅎ + ㅏ)
+  Multi-char:  targetChar="하은" → side-by-side grids (하: ㅎ|ㅏ and 은: ㅇ|ㅡ|ㄴ)
+  The client auto-decomposes from its database. Just set targetChar — leave components=[].
+  Examples: targetChar="하" (syllable), targetChar="하은" (name), targetChar="한국" (word)
+- Do NOT mix them up. Tracing = learning shapes. Block crush = assembling known parts.
 - block_crush JSON: {"type":"block_crush","id":"ai-bc-{timestamp}","objectiveId":"<id>","difficulty":1,"prompt":"Build: 하은","language":"ko","targetChar":"하은","components":[],"romanization":"ha-eun","meaning":"Ha-eun","stage":"intro"}
-  For multi-char, leave components=[] — the client fills them from its database. For single char, you may provide components.
-  Single-char slots: C=consonant, V=vowel, F=final. Colors: C=#f0c040, V=#4ecdc4, F=#7eb8da
 - When building names (하은, 진, etc.), use targetChar with the FULL name. The client shows all syllable grids simultaneously.`;
 }
