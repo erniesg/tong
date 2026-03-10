@@ -12,3 +12,10 @@ node_modules/
 *.tsbuildinfo
 reference-notes/
 apps/server/data/generated/
+
+# Large binary assets — store externally, not in git
+*.mp4
+*.mov
+*.fbx
+*.glb
+*.stl
