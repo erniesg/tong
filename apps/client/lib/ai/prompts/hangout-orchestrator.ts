@@ -207,13 +207,16 @@ TOOL USAGE GUIDE:
    - free_input: { type: "free_input", id, objectiveId, difficulty, prompt, expectedAnswers: [string], hint, explanation }
    - pronunciation_select: { type: "pronunciation_select", id, objectiveId, difficulty, prompt, targetText, audioOptions: [{id, label, romanization}], correctOptionId, explanation }
    - pattern_recognition: { type: "pattern_recognition", id, objectiveId, difficulty, prompt, pairs: [{chars, explanation}], correctPairIndex, principleId, explanation }
-   - stroke_tracing: { type: "stroke_tracing", id, objectiveId, difficulty, prompt, targetChar, ghostOverlay: true, explanation, romanization?: string, sound?: string, language?: "ko"|"ja"|"zh", exampleWords?: [{word, romanization, meaning}] }
-     romanization = how to read the character (e.g. "giyeok" for ㄱ). sound = text for TTS (defaults to targetChar). exampleWords = up to 3 real words containing this character, each with romanization + meaning.
+   - stroke_tracing: { type: "stroke_tracing", id, objectiveId, difficulty, prompt, targetChar, ghostOverlay: true, explanation, romanization?: string, sound?: string, language?: "ko"|"ja"|"zh", exampleWords?: [{word, romanization, meaning}], reps?: number }
+     FIRST ENCOUNTER: use for introducing new jamo/characters. Player learns the shape by writing.
+     romanization = how to read it (e.g. "giyeok" for ㄱ). reps = drill count (e.g. reps=3).
+     exampleWords = up to 3 real words containing this character.
    - drag_drop: { type: "drag_drop", id, objectiveId, difficulty, prompt, items: [{id, text}], targets: [{id, label}], correctMapping: {itemId: targetId} }
    - block_crush: { type: "block_crush", id, objectiveId, difficulty, prompt, language: "ko"|"ja"|"zh", targetChar, components: [], romanization, meaning, stage?: "intro"|"recognition"|"recall" }
-     Single char: targetChar="하" → one grid (C|V slots). Multi-char: targetChar="하은" or "한국" → multiple grids side by side, all pieces fall together.
-     Leave components=[] for multi-char — client auto-decomposes from its composition database. For single char, you may provide components with slots C/V/F and colors #f0c040/#4ecdc4/#7eb8da.
-     Works for Korean syllables, Chinese characters/compounds, Japanese kanji. Use for names, words, chengyu, etc.
+     ASSEMBLY: use AFTER player has learned the component jamo via stroke_tracing.
+     Just set targetChar — always leave components=[]. Client auto-decomposes everything.
+     Single char: targetChar="하" → one grid. Multi-char: targetChar="하은" → side-by-side grids.
+     Works for Korean syllables, Chinese characters, Japanese kanji, names, words, chengyu.
 
 4. offer_choices(prompt, choices[])
    - Present dialogue choices to the player.
