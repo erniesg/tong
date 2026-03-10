@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FormEvent, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, FormEvent, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
@@ -103,8 +103,17 @@ function LandingPage() {
   /* ── Preferences panel state ──────────────── */
   const [prefsDone, setPrefsDone] = useState(false);
   const [prefsWereSaved, setPrefsWereSaved] = useState(false);
-  const [prefsSending, setPrefsSending] = useState(false);
   const [fromEmail, setFromEmail] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>();
+  const [gauge, setGauge] = useState<Record<CjkLang, ProficiencyGaugeLevel>>({
+    ko: 0, ja: 0, zh: 0,
+  });
+  const [explainIn, setExplainIn] = useState<Record<CjkLang, ExplainLang>>({
+    ko: 'en', ja: 'en', zh: 'en',
+  });
+  const dirty = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>();
 
   /* Auto-open prefs if arriving from email link (?prefs=email&ko=2&ja=5) */
   useEffect(() => {
@@ -113,7 +122,6 @@ function LandingPage() {
       setSignedUpEmail(prefsEmail);
       setStatus('success');
       setFromEmail(true);
-      // Pre-fill gauge from URL params if provided
       const ko = searchParams.get('ko');
       const ja = searchParams.get('ja');
       const zh = searchParams.get('zh');
@@ -126,46 +134,46 @@ function LandingPage() {
       }
     }
   }, [searchParams]);
-  const [gauge, setGauge] = useState<Record<CjkLang, ProficiencyGaugeLevel>>({
-    ko: 0, ja: 0, zh: 0,
-  });
-  const [explainIn, setExplainIn] = useState<Record<CjkLang, ExplainLang>>({
-    ko: 'en', ja: 'en', zh: 'en',
-  });
+
+  function showToast(msg: string) {
+    setToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  }
+
+  const autoSave = useCallback((g: Record<CjkLang, ProficiencyGaugeLevel>, ex: Record<CjkLang, ExplainLang>) => {
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await fetch(`${API_BASE}/api/v1/signup/preferences`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: signedUpEmail,
+            proficiency: { ko: gaugeToProf(g.ko), ja: gaugeToProf(g.ja), zh: gaugeToProf(g.zh) },
+            explainIn: { ...ex },
+          }),
+        });
+        setPrefsWereSaved(true);
+        showToast('Saved');
+      } catch {
+        showToast('Could not save — try again');
+      }
+      dirty.current = false;
+    }, 800);
+  }, [signedUpEmail]);
 
   function handleGauge(lang: CjkLang, val: number) {
-    setGauge((prev) => ({ ...prev, [lang]: Math.max(0, Math.min(MAX_GAUGE, Math.round(val))) as ProficiencyGaugeLevel }));
+    const next = { ...gauge, [lang]: Math.max(0, Math.min(MAX_GAUGE, Math.round(val))) as ProficiencyGaugeLevel };
+    setGauge(next);
+    dirty.current = true;
+    if (signedUpEmail) autoSave(next, explainIn);
   }
   function handleExplainIn(lang: CjkLang, val: ExplainLang) {
-    setExplainIn((prev) => ({ ...prev, [lang]: val }));
-  }
-
-  async function submitPrefs() {
-    if (prefsSending) return;
-    setPrefsSending(true);
-    try {
-      await fetch(`${API_BASE}/api/v1/signup/preferences`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: signedUpEmail,
-          proficiency: {
-            ko: gaugeToProf(gauge.ko),
-            ja: gaugeToProf(gauge.ja),
-            zh: gaugeToProf(gauge.zh),
-          },
-          explainIn: { ...explainIn },
-        }),
-      });
-      setPrefsWereSaved(true);
-      setPrefsDone(true);
-    } catch {
-      // silently fail — it's optional
-      setPrefsWereSaved(true);
-      setPrefsDone(true);
-    } finally {
-      setPrefsSending(false);
-    }
+    const next = { ...explainIn, [lang]: val };
+    setExplainIn(next);
+    dirty.current = true;
+    if (signedUpEmail) autoSave(gauge, next);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -282,29 +290,24 @@ function LandingPage() {
                     );
                   })}
                 </div>
+                {toast && <p className="landing-toast">{toast}</p>}
                 <div className="landing-prefs-actions">
-                  <button
-                    type="button"
-                    className="landing-prefs-save"
-                    onClick={submitPrefs}
-                    disabled={prefsSending}
-                  >
-                    {prefsSending ? 'Saving...' : 'Save Preferences'}
-                  </button>
                   {!fromEmail && (
                     <button
                       type="button"
                       className="landing-prefs-skip"
                       onClick={() => {
                         setPrefsDone(true);
-                        fetch(`${API_BASE}/api/v1/signup/skip-preferences`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ email: signedUpEmail }),
-                        }).catch(() => {});
+                        if (!prefsWereSaved) {
+                          fetch(`${API_BASE}/api/v1/signup/skip-preferences`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: signedUpEmail }),
+                          }).catch(() => {});
+                        }
                       }}
                     >
-                      Skip for now
+                      {prefsWereSaved ? "Done" : "Skip for now"}
                     </button>
                   )}
                 </div>

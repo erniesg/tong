@@ -4042,6 +4042,19 @@ button.nav-link:hover {
   opacity: 0.6;
   cursor: not-allowed;
 }
+.landing-toast {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #ff6b2c;
+  text-align: center;
+  animation: toastFade 2.5s ease-out forwards;
+}
+@keyframes toastFade {
+  0% { opacity: 0; transform: translateY(4px); }
+  15% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
 .landing-prefs-skip {
   background: none;
   border: none;
