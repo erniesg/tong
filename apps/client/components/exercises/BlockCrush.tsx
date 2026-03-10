@@ -191,7 +191,7 @@ function getWrongFeedback(
 }
 
 export function BlockCrush({ exercise, onResult }: Props) {
-  const stage: BlockCrushStage = exercise.stage ?? 'recognition';
+  const stage: BlockCrushStage = exercise.stage && STAGE_CONFIG[exercise.stage as BlockCrushStage] ? exercise.stage as BlockCrushStage : 'recognition';
   const cfg = STAGE_CONFIG[stage];
 
   const [pieces, setPieces] = useState<FallingPiece[]>([]);
