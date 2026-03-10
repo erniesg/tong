@@ -314,19 +314,32 @@ function generateMatching(
   const isScript = objectiveId.includes('script') || objectiveId.includes('pron');
   const isSound = hintSubType === 'sound_quiz';
 
+  // Script-level matching: use audio mode — user hears sounds and matches to characters
+  if (isScript || isSound) {
+    return {
+      type: 'matching',
+      id: stableId('matching', objectiveId, selected.map((v) => v.word)),
+      objectiveId,
+      difficulty: 1,
+      mode: 'audio',
+      prompt: t('match_symbol_sound', explainIn),
+      pairs: selected.map((v) => ({
+        left: v.word,
+        right: v.translation || v.romanization,
+        rightAudio: v.word, // TTS text to play
+      })),
+    };
+  }
+
   return {
     type: 'matching',
     id: stableId('matching', objectiveId, selected.map((v) => v.word)),
     objectiveId,
-    difficulty: isScript ? 1 : 2,
-    prompt: isSound
-      ? t('match_symbol_sound', explainIn)
-      : isScript
-        ? t('match_char_roman', explainIn)
-        : t('match_words_meaning', explainIn),
+    difficulty: 2,
+    prompt: t('match_words_meaning', explainIn),
     pairs: selected.map((v) => ({
       left: v.word,
-      right: isSound || isScript ? v.romanization : getVocabTranslation(v.word, explainIn),
+      right: getVocabTranslation(v.word, explainIn),
     })),
   };
 }

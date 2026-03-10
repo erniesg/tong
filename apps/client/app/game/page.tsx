@@ -10,6 +10,7 @@ import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
 import type { Character } from '@/lib/types/relationship';
 import { SceneView } from '@/components/scene/SceneView';
 import { generateExercise } from '@/lib/exercises/generators';
+import { getTargetByChar } from '@/lib/content/block-crush-data';
 import { parseExerciseData } from '@/lib/exercises/validate';
 import { extractTargetItems } from '@/lib/exercises/extract-targets';
 import { summarizeExercise } from '@/lib/utils/summarize-exercise';
@@ -689,7 +690,7 @@ export default function GamePage() {
       case 'tong_whisper': {
         const args = item.args as { message: string; translation?: string | null };
         setTongTip({ message: args.message, translation: args.translation ?? undefined });
-        console.log('[VN] tong_whisper BLOCK — wait for user dismiss');
+        console.log('[VN] tong_whisper BLOCK — message:', JSON.stringify(args.message), 'translation:', args.translation ?? '(none)');
         return; // ALWAYS BLOCK — user must tap to dismiss before proceeding
       }
       case 'show_exercise': {
@@ -735,27 +736,60 @@ export default function GamePage() {
           });
           console.log('[EX] Generated exercise:', { type: exercise.type, id: exercise.id, targetChar: (exercise as any).targetChar, components: (exercise as any).components?.map((c: any) => ({ slot: c.slot, piece: c.piece })), stage: (exercise as any).stage });
         }
-        // Guard: block_crush with multi-char target or ≤1 component → fall back to stroke_tracing
+        // Guard: block_crush with multi-char target → pick first char and look up in data
+        // Also guard single-component block_crush (nothing to build) → stroke_tracing
         if (exercise.type === 'block_crush') {
           const bc = exercise as any;
-          if ((bc.targetChar && bc.targetChar.length > 1) || (bc.components && bc.components.length <= 1)) {
-            const singleChar = bc.targetChar?.length === 1 ? bc.targetChar : bc.targetChar?.[0];
-            if (singleChar) {
-              const npcChar = CHARACTER_MAP[activeNpc];
-              const npcCity = (npcChar?.cityId ?? city) as CityId;
-              const lang = getLanguageForCity(npcCity);
-              const explainLang_ = getGameState().explainIn[npcCity] ?? 'en';
+          const npcCharRef = CHARACTER_MAP[activeNpc];
+          const npcCityRef = (npcCharRef?.cityId ?? city) as CityId;
+          const langRef = getLanguageForCity(npcCityRef) as 'ko' | 'zh' | 'ja';
+          const explainLangRef = getGameState().explainIn[npcCityRef] ?? 'en';
+
+          if (bc.targetChar && bc.targetChar.length > 1) {
+            // Multi-char: try each character in block-crush-data
+            let found = false;
+            for (const ch of [...bc.targetChar]) {
+              const target = getTargetByChar(ch);
+              if (target && target.components.length >= 2) {
+                exercise = generateExercise('block_crush', {
+                  hintItems: [ch],
+                  objectiveId: args.objectiveId,
+                  language: langRef,
+                  cityId: city,
+                  locationId: location,
+                  mastery: getGameState().itemMastery,
+                  explainIn: explainLangRef as UILang,
+                });
+                console.log('[EX] block_crush multi-char → decomposed to:', ch);
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
               exercise = generateExercise('stroke_tracing', {
-                hintItems: [singleChar],
+                hintItems: [bc.targetChar[0]],
                 objectiveId: args.objectiveId,
-                language: lang as 'ko' | 'zh' | 'ja',
+                language: langRef,
                 cityId: city,
                 locationId: location,
                 mastery: getGameState().itemMastery,
-                explainIn: explainLang_ as UILang,
+                explainIn: explainLangRef as UILang,
               });
-              console.log('[EX] block_crush fallback to stroke_tracing for:', singleChar);
+              console.log('[EX] block_crush multi-char fallback to stroke_tracing for:', bc.targetChar[0]);
             }
+          } else if (bc.components && bc.components.length <= 1) {
+            // Single component: nothing to build → stroke_tracing
+            const singleChar = bc.targetChar || 'ㅎ';
+            exercise = generateExercise('stroke_tracing', {
+              hintItems: [singleChar],
+              objectiveId: args.objectiveId,
+              language: langRef,
+              cityId: city,
+              locationId: location,
+              mastery: getGameState().itemMastery,
+              explainIn: explainLangRef as UILang,
+            });
+            console.log('[EX] block_crush single-component fallback to stroke_tracing for:', singleChar);
           }
         }
         setCurrentMessage(null);
