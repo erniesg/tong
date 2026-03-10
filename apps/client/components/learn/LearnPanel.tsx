@@ -14,6 +14,8 @@ import { getLocationOrDefault } from '@/lib/content/locations';
 import { useUILang } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
 
+import { tongExpressionUrl } from '@/lib/content/tong-expressions';
+
 import { ChatRow } from './ChatRow';
 import { TongBubble } from './TongBubble';
 import { TeachingCard } from './TeachingCard';
@@ -465,14 +467,14 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
               switch (entry.kind) {
                 case 'tong_text':
                   return (
-                    <ChatRow key={entry.id} side="left" name={tongName} avatarEmoji="🐾">
-                      <TongBubble text={entry.data.text as string} />
+                    <ChatRow key={entry.id} side="left" name={tongName} avatarUrl={tongExpressionUrl('cheerful')}>
+                      <TongBubble text={entry.data.text as string} expression="cheerful" />
                     </ChatRow>
                   );
 
                 case 'teaching':
                   return (
-                    <ChatRow key={entry.id} side="left" avatarEmoji="📚">
+                    <ChatRow key={entry.id} side="left" avatarUrl={tongExpressionUrl('thinking')}>
                       <TeachingCard
                         korean={entry.data.korean as string | undefined}
                         translation={entry.data.translation as string | undefined}
@@ -501,7 +503,7 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
                   }
 
                   return (
-                    <ChatRow key={entry.id} side="left" avatarEmoji="✏️">
+                    <ChatRow key={entry.id} side="left" avatarUrl={tongExpressionUrl('excited')}>
                       {mode === 'review' && ex ? (
                         <div className={`learn-exercise-review ${wasCorrect === true ? 'learn-exercise-review--correct' : wasCorrect === false ? 'learn-exercise-review--wrong' : ''}`}>
                           <div className="learn-exercise-review__prompt">{ex.prompt}</div>
@@ -598,7 +600,7 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
 
                 case 'feedback':
                   return (
-                    <ChatRow key={entry.id} side="left" avatarEmoji={entry.data.positive ? '✅' : '❌'}>
+                    <ChatRow key={entry.id} side="left" avatarUrl={tongExpressionUrl(entry.data.positive ? 'proud' : 'sad')}>
                       <FeedbackBubble
                         positive={entry.data.positive as boolean}
                         message={entry.data.message as string}
@@ -609,9 +611,9 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
 
                 case 'choices':
                   return (
-                    <ChatRow key={entry.id} side="left" avatarEmoji="🐾">
+                    <ChatRow key={entry.id} side="left" avatarUrl={tongExpressionUrl('neutral')}>
                       <div>
-                        <TongBubble text={entry.data.prompt as string} />
+                        <TongBubble text={entry.data.prompt as string} expression="neutral" />
                         <div className="mt-2">
                           <MenuChoices
                             choices={entry.data.choices as { id: string; text: string }[]}
@@ -630,7 +632,7 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
 
                 case 'summary': {
                   return (
-                    <ChatRow key={entry.id} side="left" avatarEmoji="🎉">
+                    <ChatRow key={entry.id} side="left" avatarUrl={tongExpressionUrl('love')}>
                       <SessionSummary
                         summary={entry.data.summary as string}
                         exercisesCompleted={entry.data.exercisesCompleted as number}
@@ -708,7 +710,7 @@ export function LearnPanel({ cityId, locationId, objectiveId, autoStart, initial
 
             {/* Loading indicator — hide if session already has summary */}
             {isLoading && !chatEntries.some((e) => e.kind === 'summary') && (
-              <ChatRow side="left" avatarEmoji="🐾" name={tongName}>
+              <ChatRow side="left" avatarUrl={tongExpressionUrl('thinking')} name={tongName}>
                 <div className="msg-bubble msg-bubble--npc">
                   <div className="typing-indicator">
                     <span className="typing-dot" />
