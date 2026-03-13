@@ -202,6 +202,7 @@ export default function GamePage() {
   const devIntro = searchParams.get('dev_intro') === '1';
   const freshStart = searchParams.get('fresh') === '1';
   const freshNpc = searchParams.get('npc') ?? undefined; // pre-select NPC for fresh start
+  const freshLang = searchParams.get('lang') as AppLang | null; // pre-set explain language
   const skipToHangout = phaseParam === 'hangout';
   const skipToCityMap = phaseParam === 'city_map';
   const skipToLearn = phaseParam === 'learn';
@@ -218,6 +219,12 @@ export default function GamePage() {
     freshResetDone.current = true;
     console.log('[FRESH] Resetting game state, forcing phase=opening');
     dispatch({ type: 'RESET' });
+    // Pre-set explainIn language from ?lang= param for all cities
+    if (freshLang && ['en', 'ko', 'ja', 'zh'].includes(freshLang)) {
+      dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: 'seoul', lang: freshLang });
+      dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: 'tokyo', lang: freshLang });
+      dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: 'shanghai', lang: freshLang });
+    }
     if (phase !== 'opening') {
       setPhase('opening');
     }
@@ -337,6 +344,7 @@ export default function GamePage() {
   const exitLineTranslationRef = useRef('');
   const introVideoUrlRef = useRef<string | null>(null);
   const exitVideoUrlRef = useRef<string | null>(null);
+  const exitVideoPlayedRef = useRef(false);
   const cinematicCaptionRef = useRef<string | null>(null);
   const exitVideoGen = useVideoGeneration({ mock: mockVideo });
   const [isIntroHangout, setIsIntroHangout] = useState(false);
@@ -547,7 +555,14 @@ export default function GamePage() {
       const { toolName, toolCallId, args } = toolCall;
       if (processedToolCallsRef.current.has(toolCallId)) return args;
       if (pausedRef.current) {
-        console.log(`[VN] onToolCall SKIPPED (paused): ${toolName}`);
+        // Queue the tool for after the exercise/choice — don't lose it
+        console.log(`[VN] onToolCall QUEUED (paused): ${toolName}`);
+        processedToolCallsRef.current.add(toolCallId);
+        sessionLogger.logToolCall(toolName, toolCallId, args as Record<string, unknown>);
+        setToolQueue((prev) => [
+          ...prev,
+          { toolCallId, toolName, args: args as Record<string, unknown> },
+        ]);
         return args;
       }
       processedToolCallsRef.current.add(toolCallId);
@@ -891,6 +906,11 @@ export default function GamePage() {
         };
         // Exit video (pre-generated with audio) should be unmuted
         const isExitVideo = isIntroHangout && exitVideoUrlRef.current && args.videoUrl === exitVideoUrlRef.current;
+        if (isExitVideo) {
+          exitVideoPlayedRef.current = true;
+          // Hide NPC now — cinematic covers the screen, so when it fades out only backdrop remains
+          setNpcRevealed(false);
+        }
         // Intro video triggers Act 1 → Act 2 transition
         const isIntroVideo = isIntroHangout && introAct === 1 && introVideoUrlRef.current && args.videoUrl === introVideoUrlRef.current;
         if (isIntroVideo) {
@@ -1047,6 +1067,8 @@ export default function GamePage() {
     setCinematic(null);
     cinematicCaptionRef.current = null;
     if (isIntroHangout && !npcRevealed) setNpcRevealed(true);
+    // Hide NPC after exit video ends — she walked away
+    if (exitVideoPlayedRef.current) setNpcRevealed(false);
     const remainingAfterDequeue = toolQueue.length - 1;
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
@@ -1454,6 +1476,8 @@ export default function GamePage() {
   if (phase === 'city_map') {
     const mapCity = CITY_ORDER[mapCityIndex];
     const mapUiLang = (gameState.explainIn[mapCity] ?? 'en') as UILang;
+    const mapCityInfo = CITY_NAMES[mapCity] ?? CITY_NAMES.seoul;
+    const mapLearnKey = mapCity === 'shanghai' ? 'learn_chinese' : mapCity === 'tokyo' ? 'learn_japanese' : 'learn_korean';
     return (
       <UILangProvider value={mapUiLang}>
       <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1473,6 +1497,7 @@ export default function GamePage() {
             sp={gameState.sp}
             cityId={mapCity}
             explainLang={(gameState.explainIn[mapCity] ?? 'en') as AppLang}
+            locationLabel={<>{mapCityInfo.en} <span className="korean">{mapCityInfo.local}</span><span className="scene-hud-dot">&middot;</span>{t(mapLearnKey, mapUiLang)}</>}
           />
         </div>
       </div>
@@ -1642,7 +1667,12 @@ export default function GamePage() {
                   <div className="summary-stat-value summary-stat-xp">+{sceneSummary.xpEarned}</div>
                   <div className="summary-stat-label">{t('xp_earned', explainLang)}</div>
                 </div>
-                {sceneSummary.affinityChanges.map((ac) => (
+                {/* Merge duplicate characterId entries */}
+                {Object.values(sceneSummary.affinityChanges.reduce<Record<string, { characterId: string; delta: number }>>((acc, ac) => {
+                  if (acc[ac.characterId]) acc[ac.characterId].delta += ac.delta;
+                  else acc[ac.characterId] = { ...ac };
+                  return acc;
+                }, {})).map((ac) => (
                   <div key={ac.characterId} className="summary-stat">
                     <div className={`summary-stat-value ${ac.delta > 0 ? 'summary-stat-positive' : 'summary-stat-negative'}`}>
                       {ac.delta > 0 ? '+' : ''}{ac.delta}
@@ -1659,6 +1689,9 @@ export default function GamePage() {
                   dispatch({ type: 'INCREMENT_LOCATION_HANGOUT', cityId: city, locationId: location });
                   setSceneSummary(null);
                   setSelectedLocation(null);
+                  // Jump map to the city where the hangout was
+                  const cityIdx = CITY_ORDER.indexOf(city as CityId);
+                  if (cityIdx >= 0) setMapCityIndex(cityIdx);
                   setPhase('city_map');
                 }}
               >
@@ -1688,7 +1721,7 @@ export default function GamePage() {
           npcName={`${npc.nameLocal} ${explainLang === 'zh' ? npc.nameZh : npc.name}`}
           npcColor={npc.color}
           npcSpriteUrl={isIntroHangout && !npcRevealed ? '' : currentExercise ? '' : npc.src}
-          npcIdleVideoUrl={npc.idleVideo || undefined}
+          npcIdleVideoUrl={isIntroHangout && !npcRevealed ? undefined : npc.idleVideo || undefined}
           currentMessage={currentMessage}
           currentExercise={currentExercise}
           choices={choices}

@@ -115,6 +115,7 @@ export function SceneView({
           captionTranslation={cinematic.captionTranslation}
           autoAdvance={cinematic.autoAdvance}
           muted={cinematic.muted ?? false}
+          targetLang={targetLang}
           onEnd={handleCinematicEnd}
         />
       )}
@@ -140,19 +141,15 @@ export function SceneView({
 
       {/* Layer 4: Interactive area at bottom */}
       {currentExercise ? (
-        <div
-          className={`exercise-float-wrapper${exerciseDone ? ' exercise-float-dismissing' : ''}`}
-          onClick={() => {
-            if (exerciseDone) onExerciseDismiss?.();
-          }}
-        >
+        <div className={`exercise-float-wrapper${exerciseDone ? ' exercise-float-dismissing' : ''}`}>
           <div className="exercise-float-card" onClick={(e) => e.stopPropagation()}>
             <ExerciseRenderer
               exercise={currentExercise}
               onResult={(correct) => {
                 setExerciseDone(true);
                 onExerciseResult(currentExercise.id, correct);
-                setTimeout(() => onExerciseDismiss?.(), 800);
+                // Dismiss after a brief moment so the user sees the result flash
+                setTimeout(() => onExerciseDismiss?.(), 300);
               }}
             />
           </div>

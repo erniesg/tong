@@ -23,35 +23,32 @@ const CITY_META: Record<CityId, { en: string; local: string; hasVideo: boolean }
 
 interface LocationConfig {
   id: LocationId;
-  en: string;
-  local: string;
+  labels: { en: string; ko: string; ja: string; zh: string };
   top: string;
   left: string;
 }
 
 const CITY_LOCATIONS: Record<CityId, LocationConfig[]> = {
   seoul: [
-    // Positions matched to Seoul video landmarks
-    { id: 'practice_studio',   en: 'Chimaek Place',      local: '치맥',       top: '22%', left: '25%' },
-    { id: 'convenience_store', en: 'Convenience Store',   local: '편의점',     top: '48%', left: '22%' },
-    { id: 'subway_hub',        en: 'Subway Hub',          local: '지하철',     top: '68%', left: '48%' },
-    { id: 'cafe',              en: 'Cafe',                local: '카페',       top: '52%', left: '82%' },
-    { id: 'food_street',       en: 'Food Street',         local: '먹자골목',   top: '88%', left: '25%' },
+    { id: 'practice_studio',   labels: { en: 'Chimaek Place',    ko: '치맥',     ja: 'チメク',         zh: '炸鸡啤酒' },   top: '22%', left: '25%' },
+    { id: 'convenience_store', labels: { en: 'Convenience Store', ko: '편의점',   ja: 'コンビニ',       zh: '便利店' },     top: '48%', left: '22%' },
+    { id: 'subway_hub',        labels: { en: 'Subway Hub',        ko: '지하철',   ja: '地下鉄',         zh: '地铁站' },     top: '68%', left: '48%' },
+    { id: 'cafe',              labels: { en: 'Cafe',              ko: '카페',     ja: 'カフェ',         zh: '咖啡馆' },     top: '52%', left: '82%' },
+    { id: 'food_street',       labels: { en: 'Food Street',       ko: '먹자골목', ja: '食べ歩き通り',   zh: '美食街' },     top: '88%', left: '25%' },
   ],
   shanghai: [
-    // Positions matched to Shanghai video landmarks (generic local names)
-    { id: 'metro_station',     en: 'Metro Station',       local: '地铁站',     top: '28%', left: '18%' },
-    { id: 'bbq_stall',         en: 'BBQ Stall',           local: '烧烤摊',     top: '22%', left: '82%' },
-    { id: 'convenience_store', en: 'Convenience Store',   local: '便利店',     top: '58%', left: '72%' },
-    { id: 'milk_tea_shop',     en: 'Milk Tea Shop',       local: '奶茶店',     top: '75%', left: '22%' },
-    { id: 'dumpling_shop',     en: 'Dumpling Shop',       local: '小笼包店',   top: '88%', left: '75%' },
+    { id: 'metro_station',     labels: { en: 'Metro Station',     ko: '지하철역',   ja: '地下鉄駅',       zh: '地铁站' },   top: '28%', left: '18%' },
+    { id: 'bbq_stall',         labels: { en: 'BBQ Stall',         ko: '바비큐 노점', ja: 'BBQ屋台',       zh: '烧烤摊' },   top: '22%', left: '82%' },
+    { id: 'convenience_store', labels: { en: 'Convenience Store', ko: '편의점',     ja: 'コンビニ',       zh: '便利店' },   top: '58%', left: '72%' },
+    { id: 'milk_tea_shop',     labels: { en: 'Milk Tea Shop',     ko: '밀크티 가게', ja: 'ミルクティー店', zh: '奶茶店' },   top: '75%', left: '22%' },
+    { id: 'dumpling_shop',     labels: { en: 'Dumpling Shop',     ko: '만두 가게',   ja: '小籠包店',       zh: '小笼包店' }, top: '88%', left: '75%' },
   ],
   tokyo: [
-    { id: 'train_station', en: 'Train Station',      local: '駅',         top: '22%', left: '18%' },
-    { id: 'izakaya',       en: 'Izakaya',             local: '居酒屋',     top: '18%', left: '72%' },
-    { id: 'konbini',       en: 'Convenience Store',   local: 'コンビニ',   top: '40%', left: '75%' },
-    { id: 'tea_house',     en: 'Tea House',            local: '茶屋',       top: '55%', left: '18%' },
-    { id: 'ramen_shop',    en: 'Ramen Shop',           local: 'ラーメン屋', top: '82%', left: '72%' },
+    { id: 'train_station', labels: { en: 'Train Station',      ko: '기차역',     ja: '駅',           zh: '车站' },     top: '22%', left: '18%' },
+    { id: 'izakaya',       labels: { en: 'Izakaya',             ko: '이자카야',   ja: '居酒屋',       zh: '居酒屋' },   top: '18%', left: '72%' },
+    { id: 'konbini',       labels: { en: 'Convenience Store',   ko: '편의점',     ja: 'コンビニ',     zh: '便利店' },   top: '40%', left: '75%' },
+    { id: 'tea_house',     labels: { en: 'Tea House',            ko: '찻집',       ja: '茶屋',         zh: '茶馆' },     top: '55%', left: '18%' },
+    { id: 'ramen_shop',    labels: { en: 'Ramen Shop',           ko: '라멘 가게',  ja: 'ラーメン屋',   zh: '拉面店' },   top: '82%', left: '72%' },
   ],
 };
 
@@ -95,6 +92,7 @@ export function CityMap({
   const comingSoon = !meta.hasVideo;
   const locations = CITY_LOCATIONS[city] ?? [];
   const targetLang = getLanguageForCity(city);
+  const explainLang = gameState.explainIn[city] ?? 'en';
 
   /* ── Two-video dissolve loop ─────────────────────────────── */
 
@@ -281,12 +279,12 @@ export function CityMap({
       {/* Location pins */}
       {locations.map((loc) => {
         const unlocked = isLocationUnlocked(city, loc.id);
+        const pinLabel = loc.labels[explainLang] ?? loc.labels.en;
         return (
           <LocationPin
             key={loc.id}
             locationId={loc.id}
-            label={loc.en}
-            labelKo={loc.local}
+            label={pinLabel}
             top={loc.top}
             left={loc.left}
             unlocked={unlocked}
@@ -301,11 +299,13 @@ export function CityMap({
       {selectedLocation && (() => {
         const loc = locations.find((l) => l.id === selectedLocation);
         if (!loc) return null;
+        const sheetLabel = loc.labels[explainLang] ?? loc.labels.en;
+        const sheetLocal = loc.labels[targetLang] ?? loc.labels.en;
         return (
           <LocationSheet
             locationId={selectedLocation}
-            locationName={loc.en}
-            locationNameKo={loc.local}
+            locationName={sheetLabel}
+            locationNameLocal={sheetLocal}
             targetLang={targetLang}
             cityId={city}
             hangoutCount={getLocationHangoutCount(city, selectedLocation)}

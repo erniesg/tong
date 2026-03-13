@@ -3,6 +3,10 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { useUILang } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
+import { KoreanText, type TargetLang } from '@/components/shared/KoreanText';
+
+const CAPTION_CHARS_PER_TICK = 2;
+const CAPTION_TICK_MS = 35;
 
 interface CinematicOverlayProps {
   videoUrl: string;
@@ -10,14 +14,20 @@ interface CinematicOverlayProps {
   captionTranslation?: string;
   autoAdvance: boolean;
   muted?: boolean;
+  targetLang?: TargetLang;
   onEnd: () => void;
 }
 
-export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAdvance, muted = false, onEnd }: CinematicOverlayProps) {
+export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAdvance, muted = false, targetLang = 'ko', onEnd }: CinematicOverlayProps) {
   const lang = useUILang();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [fadingOut, setFadingOut] = useState(false);
   const [captionVisible, setCaptionVisible] = useState(false);
+
+  // Typewriter state for caption
+  const [captionChars, setCaptionChars] = useState(0);
+  const [captionTypewriterDone, setCaptionTypewriterDone] = useState(false);
+  const captionTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const triggerEnd = useCallback(() => {
     if (fadingOut) return;
@@ -73,12 +83,35 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
     return () => v.removeEventListener('timeupdate', handleTimeUpdate);
   }, [videoUrl, muted]);
 
-  // Fade in caption shortly after video starts playing
+  // Fade in caption shortly after video starts playing, then start typewriter
   useEffect(() => {
     if (!caption) return;
     setCaptionVisible(false);
-    const timer = setTimeout(() => setCaptionVisible(true), 600);
-    return () => clearTimeout(timer);
+    setCaptionChars(0);
+    setCaptionTypewriterDone(false);
+    if (captionTimerRef.current) clearInterval(captionTimerRef.current);
+
+    const fadeTimer = setTimeout(() => {
+      setCaptionVisible(true);
+      // Start typewriter after caption bar fades in
+      const twTimer = setInterval(() => {
+        setCaptionChars((prev) => {
+          const next = prev + CAPTION_CHARS_PER_TICK;
+          if (next >= caption.length) {
+            clearInterval(twTimer);
+            setCaptionTypewriterDone(true);
+            return caption.length;
+          }
+          return next;
+        });
+      }, CAPTION_TICK_MS);
+      captionTimerRef.current = twTimer;
+    }, 600);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      if (captionTimerRef.current) clearInterval(captionTimerRef.current);
+    };
   }, [videoUrl, caption]);
 
   return (
@@ -108,9 +141,21 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
         controlsList="nodownload noplaybackrate"
       />
       {caption && (
-        <div className={`cinematic-subtitle-bar ${captionVisible ? 'cinematic-subtitle-visible' : ''}`}>
-          <p className="cinematic-subtitle-text">{caption}</p>
-          {captionTranslation && (
+        <div
+          className={`cinematic-subtitle-bar ${captionVisible ? 'cinematic-subtitle-visible' : ''}`}
+          style={captionTypewriterDone ? { pointerEvents: 'auto' } : undefined}
+        >
+          <p className="cinematic-subtitle-text">
+            {captionTypewriterDone ? (
+              <KoreanText text={caption} targetLang={targetLang} />
+            ) : (
+              <>
+                {caption.slice(0, captionChars)}
+                <span className="typewriter-cursor" />
+              </>
+            )}
+          </p>
+          {captionTypewriterDone && captionTranslation && (
             <p className="cinematic-subtitle-translation">{captionTranslation}</p>
           )}
         </div>

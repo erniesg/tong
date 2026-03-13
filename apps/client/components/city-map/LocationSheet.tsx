@@ -17,7 +17,7 @@ function getSpCost(hangoutCount: number): number {
 interface LocationSheetProps {
   locationId: LocationId;
   locationName: string;
-  locationNameKo: string;
+  locationNameLocal: string;
   targetLang?: 'ko' | 'ja' | 'zh';
   cityId: string;
   hangoutCount: number;
@@ -32,7 +32,7 @@ interface LocationSheetProps {
 
 export function LocationSheet({
   locationName,
-  locationNameKo,
+  locationNameLocal,
   targetLang = 'ko',
   cityId,
   hangoutCount,
@@ -76,11 +76,13 @@ export function LocationSheet({
         {/* Handle bar */}
         <div className="location-drawer__handle-bar" />
 
-        {/* Header: local name + English + badge */}
+        {/* Header: primary name + local name + badge */}
         <div className="location-drawer__header">
           <div className="location-drawer__names">
-            <span className="location-drawer__name-local"><KoreanText text={locationNameKo} targetLang={targetLang} /></span>
-            <span className="location-drawer__name-en">{locationName}</span>
+            <span className="location-drawer__name-local">{locationName}</span>
+            {locationNameLocal !== locationName && (
+              <span className="location-drawer__name-en"><KoreanText text={locationNameLocal} targetLang={targetLang} /></span>
+            )}
           </div>
           {hangoutCount > 0 && (
             <span className="location-drawer__badge">{hangoutCount}x</span>

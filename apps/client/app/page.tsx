@@ -164,12 +164,15 @@ function LandingPage() {
   }, [signedUpEmail]);
 
   function handleGauge(lang: CjkLang, val: number) {
-    const next = { ...gauge, [lang]: Math.max(0, Math.min(MAX_GAUGE, Math.round(val))) as ProficiencyGaugeLevel };
+    const clamped = Math.max(0, Math.min(MAX_GAUGE, Math.round(val))) as ProficiencyGaugeLevel;
+    if (clamped === gauge[lang]) return;
+    const next = { ...gauge, [lang]: clamped };
     setGauge(next);
     dirty.current = true;
     if (signedUpEmail) autoSave(next, explainIn);
   }
   function handleExplainIn(lang: CjkLang, val: ExplainLang) {
+    if (val === explainIn[lang]) return;
     const next = { ...explainIn, [lang]: val };
     setExplainIn(next);
     dirty.current = true;

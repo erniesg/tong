@@ -23,6 +23,7 @@ const VELOCITY_CAP = 8;
 const PASS_THRESHOLD = 0.80;
 const ALPHA_THRESHOLD = 30;
 const GOLD_COLOR = '#f0c040';
+const CANVAS_FONT_FAMILY = "'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', sans-serif";
 
 /** Map bare jamo to their full Korean names for TTS. */
 const JAMO_TO_SYLLABLE: Record<string, string> = {
@@ -91,7 +92,7 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
     ctx.save();
-    ctx.font = `${cssW * 0.7}px sans-serif`;
+    ctx.font = `${cssW * 0.7}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
@@ -164,14 +165,11 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
     const refCtx = refCanvas.getContext('2d');
     if (refCtx) {
       refCtx.scale(dpr, dpr);
-      refCtx.font = `${size * 0.7}px sans-serif`;
+      refCtx.font = `${size * 0.7}px ${CANVAS_FONT_FAMILY}`;
       refCtx.textAlign = 'center';
       refCtx.textBaseline = 'middle';
       refCtx.fillStyle = 'white';
       refCtx.fillText(targetChar, size / 2, size / 2);
-      refCtx.lineWidth = 3;
-      refCtx.strokeStyle = 'white';
-      refCtx.strokeText(targetChar, size / 2, size / 2);
     }
     refCanvasRef.current = refCanvas;
 
@@ -414,13 +412,13 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   );
   const [activeCell, setActiveCell] = useState(0);
   const allDone = isDrill && cellStates.every((c) => c.done);
+  const drillCompletedRef = useRef(false);
 
-  /** Ghost opacity per cell in drill mode. */
+  /** Ghost opacity per cell in drill mode — always keeps a faint guide visible. */
   const cellGhostOpacity = useCallback((idx: number) => {
     if (totalReps <= 1) return 0.35;
-    // First quarter: full ghost, then fade linearly, last quarter: no ghost
     const progress = idx / (totalReps - 1);
-    return Math.max(0, 0.35 * (1 - progress * 1.2));
+    return Math.max(0.10, 0.35 * (1 - progress));
   }, [totalReps]);
 
   const handleCellPass = useCallback((cellIdx: number, score: number) => {
@@ -429,31 +427,35 @@ export function StrokeTracing({ exercise, onResult }: Props) {
       next[cellIdx] = { done: true, score };
       return next;
     });
-    // Play a quick tick sound via TTS
-    playTTS(exercise.sound ?? exercise.targetChar, ttsLang);
+    // Play TTS — prefer jamo mapping over AI-provided sound
+    const ttsChar = JAMO_TO_SYLLABLE[exercise.targetChar] ? exercise.targetChar : (exercise.sound ?? exercise.targetChar);
+    playTTS(ttsChar, ttsLang);
     // Advance to next cell
     if (cellIdx < totalReps - 1) {
       setActiveCell(cellIdx + 1);
     }
   }, [totalReps, exercise.sound, exercise.targetChar, ttsLang]);
 
-  // Detect all-done for drill
+  // Detect all-done for drill — play TTS but do NOT call onResult yet (wait for user tap)
   useEffect(() => {
+    if (drillCompletedRef.current) return;
     if (isDrill && cellStates.every((c) => c.done)) {
-      const avgScore = cellStates.reduce((a, c) => a + c.score, 0) / cellStates.length;
+      drillCompletedRef.current = true;
+      const ttsChar = JAMO_TO_SYLLABLE[exercise.targetChar] ? exercise.targetChar : (exercise.sound ?? exercise.targetChar);
       if (exercise.meaning) {
         const localMeaning = getMeaning(exercise.meaning, lang, exercise.targetChar);
-        playTTS(exercise.sound ?? exercise.targetChar, ttsLang, localMeaning, lang);
+        playTTS(ttsChar, ttsLang, localMeaning, lang);
+      } else {
+        playTTS(ttsChar, ttsLang);
       }
-      onResult(true, `${totalReps} reps, avg ${Math.round(avgScore * 100)}%`);
     }
-  }, [cellStates, isDrill, totalReps, exercise, ttsLang, lang, onResult]);
+  }, [cellStates, isDrill, exercise, ttsLang, lang]);
 
   /* ── Single-trace mode (original) ─────────────────────────── */
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
     ctx.save();
-    ctx.font = `${cssW * 0.7}px sans-serif`;
+    ctx.font = `${cssW * 0.7}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
@@ -506,12 +508,10 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     const refCtx = refCanvas.getContext('2d');
     if (refCtx) {
       refCtx.scale(dpr, dpr);
-      refCtx.font = `${rect.width * 0.7}px sans-serif`;
+      refCtx.font = `${rect.width * 0.7}px ${CANVAS_FONT_FAMILY}`;
       refCtx.textAlign = 'center'; refCtx.textBaseline = 'middle';
       refCtx.fillStyle = 'white';
       refCtx.fillText(exercise.targetChar, rect.width / 2, rect.height / 2);
-      refCtx.lineWidth = 4; refCtx.strokeStyle = 'white';
-      refCtx.strokeText(exercise.targetChar, rect.width / 2, rect.height / 2);
     }
     refCanvasRef.current = refCanvas;
 
@@ -636,11 +636,12 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     setSubmitted(true);
     const score = computeScore_single();
     const correct = score >= PASS_THRESHOLD;
+    const ttsChar = JAMO_TO_SYLLABLE[exercise.targetChar] ? exercise.targetChar : (exercise.sound ?? exercise.targetChar);
     if (correct && exercise.meaning) {
       const localMeaning = getMeaning(exercise.meaning, lang, exercise.targetChar);
-      playTTS(exercise.sound ?? exercise.targetChar, ttsLang, localMeaning, lang);
+      playTTS(ttsChar, ttsLang, localMeaning, lang);
     } else if (correct) {
-      playTTS(exercise.sound ?? exercise.targetChar, ttsLang);
+      playTTS(ttsChar, ttsLang);
     }
     setResult({ correct, score });
     onResult(correct, `${Math.round(score * 100)}% coverage`);
@@ -677,7 +678,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             {exercise.targetChar}
           </span>
           <button
-            onClick={(e) => { e.stopPropagation(); playTTS(exercise.sound ?? exercise.targetChar, ttsLang); }}
+            onClick={(e) => { e.stopPropagation(); const c = JAMO_TO_SYLLABLE[exercise.targetChar] ? exercise.targetChar : (exercise.sound ?? exercise.targetChar); playTTS(c, ttsLang); }}
             style={{
               background: 'rgba(255,255,255,0.1)',
               border: 'none',
@@ -714,24 +715,26 @@ export function StrokeTracing({ exercise, onResult }: Props) {
         <>
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${cols}, 1fr)`,
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
               gap: 6,
               maxWidth: 360,
               margin: '0 auto',
             }}
           >
             {cellStates.map((cell, i) => (
-              <CellCanvas
-                key={i}
-                targetChar={exercise.targetChar}
-                ghostOpacity={cellGhostOpacity(i)}
-                cellIndex={i}
-                active={i === activeCell}
-                cellState={cell}
-                onPass={(score) => handleCellPass(i, score)}
-                onFail={() => {}}
-              />
+              <div key={i} style={{ width: `calc(${100 / cols}% - ${6 * (cols - 1) / cols}px)` }}>
+                <CellCanvas
+                  targetChar={exercise.targetChar}
+                  ghostOpacity={cellGhostOpacity(i)}
+                  cellIndex={i}
+                  active={i === activeCell}
+                  cellState={cell}
+                  onPass={(score) => handleCellPass(i, score)}
+                  onFail={() => {}}
+                />
+              </div>
             ))}
           </div>
 
@@ -748,7 +751,14 @@ export function StrokeTracing({ exercise, onResult }: Props) {
           </div>
 
           {allDone && (
-            <div className="mt-3 rounded-lg px-4 py-3 text-center text-sm bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]">
+            <div
+              className="mt-3 rounded-lg px-4 py-3 text-center text-sm bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]"
+              onClick={() => {
+                const avgScore = cellStates.reduce((a, c) => a + c.score, 0) / cellStates.length;
+                onResult(true, `${totalReps} reps, avg ${Math.round(avgScore * 100)}%`);
+              }}
+              style={{ cursor: 'pointer' }}
+            >
               {t('stroke_drill_done', lang)}
               {exercise.meaning && (
                 <div className="mt-1 text-sm font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
@@ -757,6 +767,9 @@ export function StrokeTracing({ exercise, onResult }: Props) {
               )}
               <div className="mt-1 text-xs opacity-70">
                 {totalReps} reps &middot; avg {Math.round(cellStates.reduce((a, c) => a + c.score, 0) / cellStates.length * 100)}%
+              </div>
+              <div className="scene-continue-label animate-pulse" style={{ marginTop: 8 }}>
+                {t('tap_to_continue', lang)}
               </div>
             </div>
           )}
