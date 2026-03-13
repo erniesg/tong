@@ -67,6 +67,7 @@ python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py
    ```
 
    Use the generated branch names, PR body files, and `@codex` task comments as the execution handoff.
+   In an existing PR context, the current PR branch is the only delivery branch: push fixes back to it, do not create a follow-up PR, and do not rely on gitignored artifacts as committed evidence.
 
 ## Output requirements
 

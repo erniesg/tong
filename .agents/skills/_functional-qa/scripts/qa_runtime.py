@@ -86,6 +86,17 @@ def parse_issue_ref(raw: str) -> dict[str, Any]:
             "issue_ref": f"{repo_name_with_owner()}#{issue_number}",
         }
 
+    repo_ref_match = re.fullmatch(r"([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#(\d+)", cleaned)
+    if repo_ref_match:
+        repo = repo_ref_match.group(1)
+        issue_number = int(repo_ref_match.group(2))
+        return {
+            "kind": "github",
+            "repo": repo,
+            "number": issue_number,
+            "issue_ref": f"{repo}#{issue_number}",
+        }
+
     url_match = re.fullmatch(r"https://github\.com/([^/]+/[^/]+)/issues/(\d+)", cleaned)
     if url_match:
         repo = url_match.group(1)
@@ -115,8 +126,23 @@ def fetch_issue(target: str) -> dict[str, Any] | None:
             "gh",
             "api",
             f"repos/{parsed['repo']}/issues/{parsed['number']}",
-        ]
+        ],
+        allow_failure=True,
     )
+    if result.returncode != 0:
+        return {
+            "repo": parsed["repo"],
+            "number": parsed["number"],
+            "issue_ref": parsed["issue_ref"],
+            "title": target if target != parsed["issue_ref"] else parsed["issue_ref"],
+            "body": "",
+            "html_url": f"https://github.com/{parsed['repo']}/issues/{parsed['number']}",
+            "labels": [],
+            "created_at": None,
+            "updated_at": None,
+            "metadata_resolution": "fallback-no-gh",
+        }
+
     payload = json.loads(result.stdout)
     return {
         "repo": parsed["repo"],
@@ -400,11 +426,27 @@ def summary_is_placeholder(summary_text: str) -> bool:
     return "Replace this scaffold with the actual validation findings." in summary_text
 
 
+def validate_outcome_combination(verdict: str, repro_status: str, fix_status: str) -> None:
+    if verdict == "fixed" and fix_status != "fixed":
+        raise ValueError("`verdict=fixed` requires `fix_status=fixed`.")
+    if fix_status == "fixed" and repro_status != "not-reproduced":
+        raise ValueError("`fix_status=fixed` requires `repro_status=not-reproduced`.")
+    if fix_status == "still-reproduces" and repro_status != "reproduced":
+        raise ValueError("`fix_status=still-reproduces` requires `repro_status=reproduced`.")
+    if verdict == "not-reproduced" and repro_status == "reproduced":
+        raise ValueError("`verdict=not-reproduced` cannot be paired with `repro_status=reproduced`.")
+    if verdict in {"reproduced", "partially-reproduced", "ambiguous", "blocked"} and fix_status == "fixed":
+        raise ValueError(f"`verdict={verdict}` cannot be paired with `fix_status=fixed`.")
+
+
 def init_run(args: argparse.Namespace) -> int:
     issue_payload = fetch_issue(args.target)
     raw_text = args.target
     if issue_payload:
-        raw_text = f"{issue_payload['title']}\n\n{issue_payload['body']}"
+        if issue_payload.get("title") or issue_payload.get("body"):
+            raw_text = f"{issue_payload['title']}\n\n{issue_payload['body']}".strip()
+        else:
+            raw_text = args.target
     classification = classify_issue_text(raw_text)
     override = classification_override(issue_payload["issue_ref"] if issue_payload else None)
     if override:
@@ -488,6 +530,7 @@ def finalize_run(args: argparse.Namespace) -> int:
         raise ValueError(f"Unsupported fix status: {args.fix_status}")
     if args.issue_accuracy not in ISSUE_ACCURACY:
         raise ValueError(f"Unsupported issue accuracy: {args.issue_accuracy}")
+    validate_outcome_combination(verdict, args.repro_status, args.fix_status)
 
     run["functional"]["verdict"] = verdict
     run["functional"]["repro_status"] = args.repro_status
