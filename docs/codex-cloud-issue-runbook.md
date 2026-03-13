@@ -95,6 +95,7 @@ This remains local-only until shared asset hosting exists for the looping backdr
    - create a dedicated branch
    - open a draft PR
    - post the generated `@codex` comment
+   - treat that PR branch as the only delivery branch
 4. Let Codex:
    - validate the issue
    - fix the code
@@ -103,6 +104,13 @@ This remains local-only until shared asset hosting exists for the looping backdr
 5. Ask for `@codex review` on the PR if wanted.
 6. Have a human review and merge.
 7. Move to the next batch after the earlier batch stabilizes.
+
+Important delivery rule:
+
+1. The existing draft PR is the delivery vehicle.
+2. Codex must push commits back to that PR branch.
+3. Codex must not create a follow-up PR or alternate delivery branch.
+4. Artifact directories under `artifacts/qa-runs/` are gitignored, so evidence must be summarized in the PR/issue update instead of being cited as committed GitHub blob links unless those files were intentionally checked in.
 
 ## Acceptance policy
 
