@@ -95,7 +95,7 @@ const STAGE_CONFIG: Record<BlockCrushStage, StageConfig> = {
 
 const LANES = 4;
 const BASE_SPEED = 0.00015;
-const SPAWN_INTERVAL = 2400;
+const SPAWN_INTERVAL = 1400;
 const MAX_PIECES = 6;
 
 /** Play a single piece's sound (short, no meaning follow-up). */
@@ -310,7 +310,13 @@ export function BlockCrush({ exercise, onResult }: Props) {
       isDistractor = !correctPieces.includes(piece);
     }
     const id = `p${pidRef.current++}`;
-    const column = Math.floor(Math.random() * LANES);
+    // Pick the lane with fewest pieces to avoid stacking
+    const laneCounts = Array.from({ length: LANES }, (_, i) =>
+      piecesRef.current.filter(p => p.column === i).length
+    );
+    const minCount = Math.min(...laneCounts);
+    const emptiest = laneCounts.reduce<number[]>((acc, c, i) => c === minCount ? [...acc, i] : acc, []);
+    const column = emptiest[Math.floor(Math.random() * emptiest.length)];
     const speed = BASE_SPEED * cfg.speedMult * (0.8 + Math.random() * 0.4);
     setPieces((prev) => [...prev, { id, piece, column, y: -0.08, speed, isDistractor, colorHint }]);
   }, [exercise.language, cfg.distractorRate, cfg.speedMult]);
@@ -347,6 +353,16 @@ export function BlockCrush({ exercise, onResult }: Props) {
     rafRef.current = requestAnimationFrame(gameLoop);
   }, [spawnPiece, onResult]);
 
+  // Initial burst: spawn 2-3 pieces immediately so lanes aren't empty
+  const initialBurstDone = useRef(false);
+  useEffect(() => {
+    if (initialBurstDone.current) return;
+    initialBurstDone.current = true;
+    spawnPiece();
+    setTimeout(() => spawnPiece(), 300);
+    setTimeout(() => spawnPiece(), 600);
+  }, [spawnPiece]);
+
   useEffect(() => {
     rafRef.current = requestAnimationFrame(gameLoop);
     return () => cancelAnimationFrame(rafRef.current);
@@ -364,7 +380,8 @@ export function BlockCrush({ exercise, onResult }: Props) {
 
   const handleSuccess = useCallback(() => {
     setDone(true);
-    playTTS(displayChar, exercise.language, exercise.meaning);
+    // For multi-char, just speak the full word (skip meaning TTS — "Ha-" sounds like a random syllable)
+    playTTS(displayChar, exercise.language, isMulti ? undefined : exercise.meaning);
 
     if (stage === 'intro') {
       // Show detailed overlay, wait for tap
@@ -383,7 +400,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
       setSuccessFlash(true);
       setTimeout(() => fireResult(), 500);
     }
-  }, [displayChar, exercise.language, exercise.meaning, stage, fireResult]);
+  }, [displayChar, exercise.language, exercise.meaning, isMulti, stage, fireResult]);
 
   const dismissOverlay = useCallback(() => {
     setShowOverlay(false);
@@ -568,8 +585,22 @@ export function BlockCrush({ exercise, onResult }: Props) {
   const S = 52;
   const W = S * 2 + 1; // +1 for the divider
 
-  /** Render a single character's grid with optional scaling and slot prefix */
-  function renderCharGrid(charIdx: number, step: BlockCrushCharStep, charLayout: SlotLayout, cellSize: number) {
+  /** Compute inner content height for a layout (excluding border). */
+  function getGridHeight(charLayout: SlotLayout, cellSize: number): number {
+    switch (charLayout) {
+      case 'ko-cv-lr':  return cellSize * 1.2;
+      case 'ko-cv-tb':  return cellSize * 0.7 + 1 + cellSize * 0.5;
+      case 'ko-cvf-lr': return cellSize + 1 + cellSize * 0.7;
+      case 'ko-cvf-tb': return cellSize * 0.65 + 1 + cellSize * 0.5 + 1 + cellSize * 0.55;
+      case 'left-right': return cellSize * 1.2;
+      case 'top-bottom': return cellSize * 2 + 1;
+      case 'dakuten':   return cellSize * 1.3;
+      case 'convert':   return cellSize;
+    }
+  }
+
+  /** Render a single character's grid with optional uniform height — slots stretch to fill */
+  function renderCharGrid(charIdx: number, step: BlockCrushCharStep, charLayout: SlotLayout, cellSize: number, uniformHeight?: number) {
     const prefix = isMulti ? `${charIdx}:` : '';
     const cW = cellSize * 2 + 1;
     const fs = cellSize <= 40 ? 18 : 24;
@@ -577,77 +608,83 @@ export function BlockCrush({ exercise, onResult }: Props) {
     const slot = (name: string, w: number | string, h: number) =>
       renderSlot(`${prefix}${name}`, w, h, fs);
 
+    // Scale factor: stretch slot heights proportionally so all grids match
+    const scale = uniformHeight
+      ? uniformHeight / getGridHeight(charLayout, cellSize)
+      : 1;
+    const sh = (h: number) => Math.round(h * scale);
+
     switch (charLayout) {
       case 'ko-cv-lr':
         return (
           <div style={{ ...blockStyle, display: 'flex', width: cW }}>
-            {slot('C', cellSize, cellSize * 1.2)}
+            {slot('C', cellSize, sh(cellSize * 1.2))}
             <div style={dividerV} />
-            {slot('V', cellSize, cellSize * 1.2)}
+            {slot('V', cellSize, sh(cellSize * 1.2))}
           </div>
         );
       case 'ko-cv-tb':
         return (
           <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', width: cW }}>
-            {slot('C', cW, cellSize * 0.7)}
+            {slot('C', cW, sh(cellSize * 0.7))}
             <div style={dividerH} />
-            {slot('V', cW, cellSize * 0.5)}
+            {slot('V', cW, sh(cellSize * 0.5))}
           </div>
         );
       case 'ko-cvf-lr':
         return (
           <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', width: cW }}>
             <div style={{ display: 'flex' }}>
-              {slot('C', cellSize, cellSize)}
+              {slot('C', cellSize, sh(cellSize))}
               <div style={dividerV} />
-              {slot('V', cellSize, cellSize)}
+              {slot('V', cellSize, sh(cellSize))}
             </div>
             <div style={dividerH} />
-            {slot('F', cW, cellSize * 0.7)}
+            {slot('F', cW, sh(cellSize * 0.7))}
           </div>
         );
       case 'ko-cvf-tb':
         return (
           <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', width: cW }}>
-            {slot('C', cW, cellSize * 0.65)}
+            {slot('C', cW, sh(cellSize * 0.65))}
             <div style={dividerH} />
-            {slot('V', cW, cellSize * 0.5)}
+            {slot('V', cW, sh(cellSize * 0.5))}
             <div style={dividerH} />
-            {slot('F', cW, cellSize * 0.55)}
+            {slot('F', cW, sh(cellSize * 0.55))}
           </div>
         );
       case 'left-right':
         return (
           <div style={{ ...blockStyle, display: 'flex', width: cW }}>
-            {slot('left', cellSize, cellSize * 1.2)}
+            {slot('left', cellSize, sh(cellSize * 1.2))}
             <div style={dividerV} />
-            {slot('right', cellSize, cellSize * 1.2)}
+            {slot('right', cellSize, sh(cellSize * 1.2))}
           </div>
         );
       case 'top-bottom':
         return (
           <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', width: Math.round(cW * 0.75) }}>
-            {slot('top', Math.round(cW * 0.75), cellSize)}
+            {slot('top', Math.round(cW * 0.75), sh(cellSize))}
             <div style={dividerH} />
-            {slot('bottom', Math.round(cW * 0.75), cellSize)}
+            {slot('bottom', Math.round(cW * 0.75), sh(cellSize))}
           </div>
         );
       case 'dakuten': {
         const markSlotName = step.components.find((c) => c.slot === 'dakuten' || c.slot === 'handakuten')?.slot ?? 'dakuten';
         return (
           <div style={{ ...blockStyle, display: 'flex', alignItems: 'flex-start' }}>
-            {slot('base', cellSize * 1.3, cellSize * 1.3)}
+            {slot('base', cellSize * 1.3, sh(cellSize * 1.3))}
             <div style={dividerV} />
-            {slot(markSlotName, cellSize * 0.5, cellSize * 0.5)}
+            {slot(markSlotName, cellSize * 0.5, sh(cellSize * 0.5))}
           </div>
         );
       }
       case 'convert':
         return (
           <div style={{ ...blockStyle, display: 'flex', width: cW }}>
-            {slot('hiragana', cellSize, cellSize)}
+            {slot('hiragana', cellSize, sh(cellSize))}
             <div style={dividerV} />
-            {slot('convert', cellSize, cellSize)}
+            {slot('convert', cellSize, sh(cellSize))}
           </div>
         );
     }
@@ -675,11 +712,14 @@ export function BlockCrush({ exercise, onResult }: Props) {
     const scale = charCount <= 2 ? 1 : charCount <= 4 ? 0.8 : 0.65;
     const cellSize = Math.round(S * scale);
 
+    // Compute max grid height so all grids match
+    const maxGridH = Math.max(...charLayouts.map(l => getGridHeight(l, cellSize)));
+
     return (
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', justifyContent: 'center' }}>
         {charSteps.map((step, idx) => (
           <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            {renderCharGrid(idx, step, charLayouts[idx], cellSize)}
+            {renderCharGrid(idx, step, charLayouts[idx], cellSize, maxGridH)}
             <div style={{ fontSize: 10, opacity: 0.3 }}>{step.targetChar}</div>
           </div>
         ))}

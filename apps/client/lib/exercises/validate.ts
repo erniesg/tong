@@ -22,5 +22,16 @@ export function parseExerciseData(raw: unknown): ExerciseData | null {
     return null;
   }
 
+  // AI sometimes sends "target" instead of "targetChar" for stroke_tracing
+  if (d.type === 'stroke_tracing' && !d.targetChar && d.target) {
+    d.targetChar = d.target;
+    delete d.target;
+  }
+
+  // Reject stroke_tracing without targetChar — fall back to local generation
+  if (d.type === 'stroke_tracing' && typeof d.targetChar !== 'string') {
+    return null;
+  }
+
   return data as ExerciseData;
 }

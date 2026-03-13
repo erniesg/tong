@@ -253,8 +253,9 @@ function getSnapshot(): GameState {
   return state;
 }
 
+const SERVER_SNAPSHOT = createInitialState();
 function getServerSnapshot(): GameState {
-  return createInitialState();
+  return SERVER_SNAPSHOT;
 }
 
 /** React hook — re-renders when state changes. */

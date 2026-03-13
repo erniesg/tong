@@ -73,15 +73,21 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
     }
   }, [exercise.audioOptions, exercise.correctOptionId, playSound]);
 
+  const [readyToDismiss, setReadyToDismiss] = useState(false);
+
   const handleSubmit = () => {
     if (!selected || submitted) return;
     setSubmitted(true);
+    setReadyToDismiss(true);
     // Play the correct answer sound on submit
     const correctOpt = exercise.audioOptions.find((o) => o.id === exercise.correctOptionId);
     if (correctOpt) playSound(correctOpt.label, correctOpt.ttsText);
+  };
+
+  const handleDismiss = () => {
     const selectedOpt = exercise.audioOptions.find((o) => o.id === selected);
-    const correctOpt2 = exercise.audioOptions.find((o) => o.id === exercise.correctOptionId);
-    onResult(isCorrect, JSON.stringify({ kind: 'pick', selected: selectedOpt?.label ?? '?', answer: correctOpt2?.label ?? '?' }));
+    const correctOpt = exercise.audioOptions.find((o) => o.id === exercise.correctOptionId);
+    onResult(isCorrect, JSON.stringify({ kind: 'pick', selected: selectedOpt?.label ?? '?', answer: correctOpt?.label ?? '?' }));
   };
 
   return (
@@ -166,8 +172,15 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
               ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]'
               : 'bg-red-500/20 text-red-400',
           )}
+          onClick={readyToDismiss ? handleDismiss : undefined}
+          style={readyToDismiss ? { cursor: 'pointer' } : undefined}
         >
           {isCorrect ? t('correct', lang) : `${t('correct_pronunciation', lang)} "${exercise.audioOptions.find((o) => o.id === exercise.correctOptionId)?.label}"`}
+          {readyToDismiss && (
+            <div className="scene-continue-label animate-pulse" style={{ marginTop: 8 }}>
+              {t('tap_to_continue', lang)}
+            </div>
+          )}
         </div>
       )}
     </div>

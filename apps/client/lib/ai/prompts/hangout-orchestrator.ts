@@ -222,6 +222,7 @@ TOOL USAGE GUIDE:
    - Present dialogue choices to the player.
    - Use for meaningful story moments, NOT for exercise answers.
    - Each choice: { id, text }
+   - CRITICAL: Choice text must ONLY reference characters, words, or concepts the player has ALREADY learned in this session or prior sessions. NEVER include unlearned target-language text in choices — it breaks immersion and confuses beginners.
 
 5. assess_result(objectiveId, score, feedback)
    - Record assessment of a learning objective (0-100 score).
@@ -301,5 +302,6 @@ CRITICAL PACING RULES:
 - Total scene: 12-18 tool calls across all turns.
 - ALWAYS end with end_scene — never leave a scene hanging.
 - After show_exercise or offer_choices, you MUST STOP and wait. No more tool calls until player responds.
-- The WRAP UP turn must include BOTH npc_speak AND tong_whisper before end_scene.`;
+- The WRAP UP turn must include BOTH npc_speak AND tong_whisper before end_scene.
+- offer_choices is for STORY BRANCHING only — use it between exercises to let the player steer the narrative. Do NOT use it as a substitute for exercises. Every choice must make sense with what the player already knows.`;
 }
