@@ -69,3 +69,14 @@ Build a mobile-first language learning demo with:
 - Add fixtures/mocks for any new endpoint before wiring UI.
 - Prefer additive migrations; no destructive data changes during hackathon.
 - Include a short "How to test" section in each PR description.
+
+## Functional QA routing
+- When the user asks to step through GitHub issues, fix the issue queue, or decide what can run in parallel, start with `.agents/skills/work-github-issues/SKILL.md`.
+- That front-door skill must generate the queue plan first, then route each issue to `validate-issue`, `trace-ui-state`, `validate-issue --verify-fix`, and `publish-issue-update` as needed.
+- Use the existing worktree model in `docs/worktree-ownership-map.md` and `docs/hackathon-workstreams.md`; parallelize by worktree lane, not by raw issue count.
+- When the user explicitly wants Codex cloud or GitHub PR execution, also use `docs/codex-cloud-issue-runbook.md` and `python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py plan` to generate the current batch order, branch names, and PR/task prompts.
+- When the user asks to reproduce bugs, verify fixes, validate current behavior, or gather screenshots and traces for a specific issue, start with the functional QA workflow in `.agents/skills/validate-issue/SKILL.md`.
+- If validation is ambiguous, timing-sensitive, or points to a state race, continue with `.agents/skills/trace-ui-state/SKILL.md`.
+- Publish structured GitHub updates with `.agents/skills/publish-issue-update/SKILL.md` after the run is finalized or when the runtime policy allows auto-commenting.
+- For `/game` issues, use the generated `browser-playbook.md` in the run directory and open `/game` with `qa_run_id` and `qa_trace=1` so browser-capable agents can use `window.__TONG_QA__` for state and log exports.
+- Treat the functional QA artifact bundle under `artifacts/qa-runs/` as the source of truth for reruns and fix verification.
