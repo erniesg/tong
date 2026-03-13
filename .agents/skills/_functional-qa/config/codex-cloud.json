@@ -1,0 +1,142 @@
+{
+  "schema_version": "1",
+  "docs": {
+    "cloud_environments": "https://developers.openai.com/codex/cloud/environments",
+    "github_integration": "https://developers.openai.com/codex/integrations/github",
+    "worktrees": "https://developers.openai.com/codex/app/worktrees"
+  },
+  "label_suggestions": [
+    {
+      "name": "cloud-ok",
+      "description": "Issue can be validated, fixed, and re-verified in Codex cloud from repo state plus setup."
+    },
+    {
+      "name": "local-only",
+      "description": "Issue depends on local-only assets, device-specific state, or context not reproducible in Codex cloud."
+    },
+    {
+      "name": "needs-acceptance-proof",
+      "description": "Issue can be fixed in cloud but still needs a final local/browser-backed acceptance recording."
+    }
+  ],
+  "setup_commands": [
+    "npm --prefix apps/server install",
+    "npm --prefix apps/client install",
+    "npm run demo:smoke",
+    "npm run ingest:mock"
+  ],
+  "branch_pattern": "codex/issue-{number}-{slug}",
+  "pr_title_pattern": "fix: issue #{number} - {short_title}",
+  "local_only_keywords": [
+    "looping video",
+    "video backdrop",
+    "tong avatar",
+    "local asset",
+    "private asset",
+    "/users/",
+    "real device only"
+  ],
+  "cloud_issue_classes_needing_local_acceptance": [
+    "interaction-input",
+    "animation-transition",
+    "async-streaming-state",
+    "compatibility-environment",
+    "localization-content"
+  ],
+  "current_batches": [
+    {
+      "id": "batch-1",
+      "description": "First cloud wave: independent issues with low overlap and no hard local-asset blocker.",
+      "issues": ["#11", "#13", "#14", "#16"]
+    },
+    {
+      "id": "batch-2",
+      "description": "Second cloud wave: follow-up interaction and block-crush fixes after the first merge wave settles.",
+      "issues": ["#18", "#17", "#19"]
+    },
+    {
+      "id": "batch-3",
+      "description": "Cross-cutting cleanup after the focused fixes land.",
+      "issues": ["#15"]
+    },
+    {
+      "id": "batch-local",
+      "description": "Asset-hosting or local-acceptance dependent work.",
+      "issues": ["#12"]
+    }
+  ],
+  "issue_overrides": [
+    {
+      "match": "#11",
+      "cloud_mode": "cloud-ready",
+      "batch": "batch-1",
+      "depends_on": [],
+      "needs_final_local_acceptance": false,
+      "reason": "Onboarding clarity changes are code-only and reproducible from repo state."
+    },
+    {
+      "match": "#12",
+      "cloud_mode": "local-only",
+      "batch": "batch-local",
+      "depends_on": [],
+      "needs_final_local_acceptance": true,
+      "reason": "The requested looping backdrop and avatar work are asset-dependent until shared asset hosting exists."
+    },
+    {
+      "match": "#13",
+      "cloud_mode": "cloud-ready",
+      "batch": "batch-1",
+      "depends_on": [],
+      "needs_final_local_acceptance": false,
+      "reason": "The Block Crush HUD/time-pressure issue is self-contained in tracked UI code and fixtures."
+    },
+    {
+      "match": "#14",
+      "cloud_mode": "cloud-ready",
+      "batch": "batch-1",
+      "depends_on": [],
+      "needs_final_local_acceptance": false,
+      "reason": "HUD discoverability is a repo-contained UI/task copy problem."
+    },
+    {
+      "match": "#15",
+      "cloud_mode": "cloud-ready",
+      "batch": "batch-3",
+      "depends_on": ["#11", "#13", "#14", "#16", "#18", "#17", "#19"],
+      "needs_final_local_acceptance": false,
+      "reason": "Type-scale cleanup should run after the focused UI fixes to avoid churn and merge noise."
+    },
+    {
+      "match": "#16",
+      "cloud_mode": "cloud-ready-with-local-proof",
+      "batch": "batch-1",
+      "depends_on": [],
+      "needs_final_local_acceptance": true,
+      "reason": "The prompt/rendering changes are cloud-fixable, but tap-to-hear and text handling still need browser-backed acceptance."
+    },
+    {
+      "match": "#17",
+      "cloud_mode": "cloud-ready-with-local-proof",
+      "batch": "batch-2",
+      "depends_on": ["#11"],
+      "needs_final_local_acceptance": true,
+      "reason": "The wasted-tap fix can be developed in cloud, but final confidence depends on timed browser tracing."
+    },
+    {
+      "match": "#18",
+      "cloud_mode": "cloud-ready",
+      "batch": "batch-2",
+      "depends_on": ["#13"],
+      "needs_final_local_acceptance": false,
+      "reason": "This transition bug is code-local but should follow the earlier Block Crush HUD changes to reduce conflicts."
+    },
+    {
+      "match": "#19",
+      "cloud_mode": "cloud-ready-with-local-proof",
+      "batch": "batch-2",
+      "depends_on": ["#17"],
+      "needs_final_local_acceptance": true,
+      "reason": "Streaming can be reworked in cloud, but the final player-visible behavior still needs browser-backed verification."
+    }
+  ]
+}

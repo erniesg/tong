@@ -203,6 +203,8 @@ export default function GamePage() {
   const freshStart = searchParams.get('fresh') === '1';
   const freshNpc = searchParams.get('npc') ?? undefined; // pre-select NPC for fresh start
   const freshLang = searchParams.get('lang') as AppLang | null; // pre-set explain language
+  const qaRunId = searchParams.get('qa_run_id') ?? undefined;
+  const qaTrace = searchParams.get('qa_trace') === '1';
   const skipToHangout = phaseParam === 'hangout';
   const skipToCityMap = phaseParam === 'city_map';
   const skipToLearn = phaseParam === 'learn';
@@ -335,6 +337,11 @@ export default function GamePage() {
   const [sceneReady, setSceneReady] = useState(false);
   const [dynamicBackdrop, setDynamicBackdrop] = useState<{ url: string; transition: 'fade' | 'cut'; ambientDescription?: string } | null>(null);
   const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null>(null);
+
+  const traceQA = useCallback((event: string, data: Record<string, unknown> = {}) => {
+    if (!qaTrace) return;
+    sessionLogger.logTrace(event, { qaRunId, ...data });
+  }, [qaRunId, qaTrace]);
 
   /* tutorial state */
   const mockVideo = searchParams.get('mock_video') === '1';
@@ -538,7 +545,7 @@ export default function GamePage() {
     setLoading(false);
 
     const startMsg = `${buildContextBlock(weakLevel, npcId, primaryCity as CityId, 'food_street', npcChar, gameState.explainIn[primaryCity as CityId] ?? 'en', introCtx)}Start the scene.`;
-    sessionLogger.start({ mode: 'hangout', cityId: primaryCity, locationId: 'food_street', npcId, playerLevel: weakLevel });
+    sessionLogger.start({ mode: 'hangout', cityId: primaryCity, locationId: 'food_street', surface: 'game', qaRunId, npcId, playerLevel: weakLevel });
     sessionLogger.logAIRequest(startMsg);
     void append({ role: 'user', content: startMsg });
   }
@@ -550,6 +557,7 @@ export default function GamePage() {
     maxSteps: 1,
     onResponse: () => {
       pausedRef.current = false;
+      traceQA('chat_response_started', { paused: pausedRef.current });
     },
     onToolCall: ({ toolCall }) => {
       const { toolName, toolCallId, args } = toolCall;
@@ -559,6 +567,7 @@ export default function GamePage() {
         console.log(`[VN] onToolCall QUEUED (paused): ${toolName}`);
         processedToolCallsRef.current.add(toolCallId);
         sessionLogger.logToolCall(toolName, toolCallId, args as Record<string, unknown>);
+        traceQA('tool_call_queued_while_paused', { toolName, toolCallId, queueLength: toolQueue.length + 1 });
         setToolQueue((prev) => [
           ...prev,
           { toolCallId, toolName, args: args as Record<string, unknown> },
@@ -568,6 +577,7 @@ export default function GamePage() {
       processedToolCallsRef.current.add(toolCallId);
       if (!sceneReady) setSceneReady(true);
       sessionLogger.logToolCall(toolName, toolCallId, args as Record<string, unknown>);
+      traceQA('tool_call_received', { toolName, toolCallId });
 
       setToolQueue((prev) => [
         ...prev,
@@ -582,9 +592,11 @@ export default function GamePage() {
     },
     onError: (err) => {
       sessionLogger.logError('useChat error', err?.message ?? err);
+      traceQA('chat_error', { message: err?.message ?? String(err) });
     },
     onFinish: (msg) => {
       sessionLogger.logAIResponse(msg.role, msg.toolInvocations?.length ?? 0);
+      traceQA('chat_finish', { role: msg.role, toolCount: msg.toolInvocations?.length ?? 0 });
     },
   });
 
@@ -659,12 +671,12 @@ export default function GamePage() {
     };
 
     const startMsg = `${buildContextBlock(0, npcId, devCity, 'food_street', npcChar, devLang, introCtx)}${startAct === 2 ? 'Act 1 complete. Player already learned basic jamo (ㅎ, ㅏ, ㅇ, ㅡ, ㄴ) and built syllable blocks. Start Act 2 — NPC entrance.' : 'Start the scene.'}`;
-    sessionLogger.start({ mode: 'hangout', cityId: devCity, locationId: 'food_street', npcId, playerLevel: 0 });
+    sessionLogger.start({ mode: 'hangout', cityId: devCity, locationId: 'food_street', surface: 'game', qaRunId, npcId, playerLevel: 0 });
     sessionLogger.logAIRequest(startMsg);
     console.log('[DevIntro] Starting introduction hangout for', npcId, 'act:', startAct, 'lang:', devLang);
     void append({ role: 'user', content: startMsg });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [devIntro]);
+  }, [devIntro, qaRunId]);
 
   /* ── Tool queue processor ───────────────────────────────── */
   useEffect(() => {
@@ -672,6 +684,7 @@ export default function GamePage() {
     processingRef.current = true;
 
     const item = toolQueue[0];
+    traceQA('tool_queue_process_start', { toolName: item.toolName, toolCallId: item.toolCallId, queueLength: toolQueue.length });
 
     switch (item.toolName) {
       case 'npc_speak': {
@@ -688,6 +701,7 @@ export default function GamePage() {
           console.log('[VN] Act 1 → Act 2 transition triggered by npc_speak');
         }
         if (isIntroHangout && !npcRevealed) setNpcRevealed(true);
+        traceQA('tool_queue_blocking_message', { toolName: item.toolName, toolCallId: item.toolCallId });
         setCurrentMessage({
           id: item.toolCallId,
           role: 'npc',
@@ -705,6 +719,7 @@ export default function GamePage() {
       case 'tong_whisper': {
         const args = item.args as { message: string; translation?: string | null };
         setTongTip({ message: args.message, translation: args.translation ?? undefined });
+        traceQA('tool_queue_tong_whisper', { toolCallId: item.toolCallId });
         console.log('[VN] tong_whisper BLOCK — message:', JSON.stringify(args.message), 'translation:', args.translation ?? '(none)');
         return; // ALWAYS BLOCK — user must tap to dismiss before proceeding
       }
@@ -822,6 +837,7 @@ export default function GamePage() {
         setCurrentMessage(null);
         setTongTip(null);
         setCurrentExercise(exercise);
+        traceQA('tool_queue_show_exercise', { toolCallId: item.toolCallId, exerciseId: exercise.id, exerciseType: exercise.type });
         lastExerciseRef.current = exercise;
         sessionLogger.logExerciseShown(args.exerciseType, exercise.id, { objectiveId: args.objectiveId, hintItems: args.hintItems });
         return; // BLOCK — wait for exercise completion
@@ -830,6 +846,7 @@ export default function GamePage() {
         const args = item.args as { prompt: string; choices: { id: string; text: string }[] };
         setChoicePrompt(args.prompt);
         setChoices(args.choices);
+        traceQA('tool_queue_offer_choices', { toolCallId: item.toolCallId, choiceCount: args.choices.length });
         setCurrentMessage(null);
         sessionLogger.logChoiceShown(args.prompt, args.choices);
         return; // BLOCK — wait for choice
@@ -939,13 +956,17 @@ export default function GamePage() {
     // Auto-advance: dequeue and release lock
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
+    traceQA('tool_queue_auto_advance', { toolName: item.toolName, remainingQueueLength: Math.max(toolQueue.length - 1, 0) });
   }, [toolQueue, activeNpc, isIntroHangout, introAct]);
 
   /* ── Hangout handlers ───────────────────────────────────── */
 
   const handleContinue = useCallback(() => {
     const now = Date.now();
-    if (now - lastContinueRef.current < 400) return;
+    if (now - lastContinueRef.current < 400) {
+      traceQA('handle_continue_debounced', { elapsedMs: now - lastContinueRef.current });
+      return;
+    }
     lastContinueRef.current = now;
 
     if (processingRef.current) {
@@ -954,10 +975,12 @@ export default function GamePage() {
       const currentTool = toolQueue[0]?.toolName;
       if (currentTool === 'show_exercise' && !currentExercise && lastExerciseRef.current) {
         console.log('[VN] handleContinue: re-show dismissed exercise');
+        traceQA('handle_continue_reshow_exercise', { currentTool, exerciseId: lastExerciseRef.current.id });
         setCurrentExercise(lastExerciseRef.current);
         return;
       }
       console.log('[VN] handleContinue: dequeue blocked tool');
+      traceQA('handle_continue_dequeue_blocked_tool', { currentTool, queueLength: toolQueue.length });
       setCurrentMessage(null);
       setTongTip(null);
       const remainingAfterDequeue = toolQueue.length - 1;
@@ -970,15 +993,23 @@ export default function GamePage() {
         const msg = `${ctx}Continue.`;
         sessionLogger.logUserTap('continue');
         sessionLogger.logAIRequest(msg);
+        traceQA('handle_continue_request_next_turn_after_dequeue', { queueLength: remainingAfterDequeue });
         void append({ role: 'user', content: msg });
       }
       return;
     }
 
-    if (sceneSummary) return;
-    if (chatLoading) return;
+    if (sceneSummary) {
+      traceQA('handle_continue_noop_scene_summary');
+      return;
+    }
+    if (chatLoading) {
+      traceQA('handle_continue_noop_chat_loading', { queueLength: toolQueue.length });
+      return;
+    }
 
     if (tongTip) {
+      traceQA('handle_continue_clear_tong_tip_nonblocking');
       setTongTip(null);
       // tongTip was auto-advanced (not blocking) — fall through to request next turn
     }
@@ -988,9 +1019,16 @@ export default function GamePage() {
       const msg = `${ctx}Continue.`;
       sessionLogger.logUserTap('continue');
       sessionLogger.logAIRequest(msg);
+      traceQA('handle_continue_request_next_turn', { queueLength: toolQueue.length });
       void append({ role: 'user', content: msg });
+    } else {
+      traceQA('handle_continue_noop_waiting_state', {
+        queueLength: toolQueue.length,
+        hasExercise: !!currentExercise,
+        hasChoices: !!choices,
+      });
     }
-  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue.length, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
+  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct, traceQA]);
 
   // Store exercise result so handleContinue can advance after user taps
   const exerciseResultRef = useRef<{ exerciseId: string; correct: boolean } | null>(null);
@@ -1018,6 +1056,7 @@ export default function GamePage() {
     const result = exerciseResultRef.current;
     if (!result) {
       console.log('[VN] advanceAfterExercise: no result ref — clearing exercise UI');
+      traceQA('advance_after_exercise_missing_result');
       setCurrentExercise(null);
       return;
     }
@@ -1030,8 +1069,9 @@ export default function GamePage() {
     const msg = `${ctx}${summarizeExercise(result.exerciseId, result.correct)}`;
     console.log('[VN] advanceAfterExercise:', result.exerciseId, result.correct, 'chatLoading:', chatLoading);
     sessionLogger.logAIRequest(msg);
+    traceQA('advance_after_exercise', { exerciseId: result.exerciseId, correct: result.correct, chatLoading });
     void append({ role: 'user', content: msg });
-  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, chatLoading, isIntroHangout, introExerciseCount, introAct]);
+  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, chatLoading, isIntroHangout, introExerciseCount, introAct, traceQA]);
 
   const handleExerciseDismiss = useCallback(() => {
     if (exerciseResultRef.current) {
@@ -1084,6 +1124,7 @@ export default function GamePage() {
   }, [isIntroHangout, npcRevealed, toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
 
   const handleDismissTong = useCallback(() => {
+    traceQA('handle_dismiss_tong', { processing: processingRef.current, queueLength: toolQueue.length });
     setTongTip(null);
     if (processingRef.current) {
       // tong_whisper was blocking — dequeue immediately so next tool fires
@@ -1098,10 +1139,84 @@ export default function GamePage() {
         const msg = `${ctx}Continue.`;
         sessionLogger.logUserTap('continue');
         sessionLogger.logAIRequest(msg);
+        traceQA('handle_dismiss_tong_request_next_turn');
         void append({ role: 'user', content: msg });
       }
     }
-  }, [toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
+  }, [toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct, traceQA]);
+
+  const getQaState = useCallback(() => ({
+    qaRunId,
+    qaTrace,
+    route: typeof window !== 'undefined' ? window.location.href : null,
+    phase,
+    sceneReady,
+    chatLoading,
+    processing: processingRef.current,
+    toolQueue: toolQueue.map((item) => ({ toolCallId: item.toolCallId, toolName: item.toolName })),
+    currentMessage: currentMessage ? { id: currentMessage.id, role: currentMessage.role, characterId: currentMessage.characterId, contentPreview: currentMessage.content.slice(0, 120) } : null,
+    tongTip: tongTip ? { messagePreview: tongTip.message.slice(0, 120), hasTranslation: !!tongTip.translation } : null,
+    currentExercise: currentExercise ? { id: currentExercise.id, type: currentExercise.type } : null,
+    choices: choices ? choices.map((choice) => ({ id: choice.id, text: choice.text })) : null,
+    choicePrompt,
+    sceneSummary: sceneSummary ? { xpEarned: sceneSummary.xpEarned, calibratedLevel: sceneSummary.calibratedLevel ?? null } : null,
+    isIntroHangout,
+    introExerciseCount,
+    introAct,
+    npcRevealed,
+  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, toolQueue, currentMessage, tongTip, currentExercise, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
+
+  useEffect(() => {
+    if (!qaTrace) return;
+    traceQA('state_snapshot', {
+      phase,
+      chatLoading,
+      processing: processingRef.current,
+      queueLength: toolQueue.length,
+      currentMessageId: currentMessage?.id ?? null,
+      currentExerciseId: currentExercise?.id ?? null,
+      choiceCount: choices?.length ?? 0,
+      hasTongTip: !!tongTip,
+      hasSceneSummary: !!sceneSummary,
+    });
+  }, [qaTrace, traceQA, phase, chatLoading, toolQueue.length, currentMessage?.id, currentExercise?.id, choices?.length, tongTip, sceneSummary]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !qaRunId) return;
+
+    const downloadJson = (filename: string, data: unknown) => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__TONG_QA__ = {
+      getState: () => getQaState(),
+      getLogs: () => {
+        const current = sessionLogger.getCurrent();
+        const saved = sessionLogger.getAll();
+        return current ? [current, ...saved] : saved;
+      },
+      downloadState: () => downloadJson(`tong-qa-state-${qaRunId}.json`, getQaState()),
+      downloadLogs: () => {
+        const current = sessionLogger.getCurrent();
+        const saved = sessionLogger.getAll();
+        const logs = current ? [current, ...saved] : saved;
+        downloadJson(`tong-qa-logs-${qaRunId}.json`, logs);
+      },
+      clearLogs: () => sessionLogger.clear(),
+    };
+
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((window as any).__TONG_QA__) delete (window as any).__TONG_QA__;
+    };
+  }, [qaRunId, getQaState]);
 
   /* ── renders ──────────────────────────────────────────── */
 
@@ -1450,7 +1565,7 @@ export default function GamePage() {
     setPhase('hangout');
 
     const startMsg = `${buildContextBlock(level, npcId, cityId, locationId, npcChar, gameState.explainIn[cityId] ?? 'en')}Start the scene.`;
-    sessionLogger.start({ mode: 'hangout', cityId, locationId, npcId, playerLevel: level });
+    sessionLogger.start({ mode: 'hangout', cityId, locationId, surface: 'game', qaRunId, npcId, playerLevel: level });
     sessionLogger.logAIRequest(startMsg);
     void append({ role: 'user', content: startMsg });
   }

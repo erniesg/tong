@@ -1,0 +1,314 @@
+{
+  "schema_version": "1",
+  "default_open_issue_limit": 20,
+  "setup_worktrees_command": "npm run setup:worktrees",
+  "launch_parallel_command": "./scripts/launch-parallel-agents.sh",
+  "trace_issue_classes": [
+    "interaction-input",
+    "animation-transition",
+    "async-streaming-state",
+    "flaky-nondeterministic",
+    "compatibility-environment"
+  ],
+  "trace_keywords": [
+    "ambiguous",
+    "debug",
+    "double tap",
+    "flicker",
+    "flash",
+    "intermittent",
+    "investigate",
+    "occasionally",
+    "race",
+    "sometimes",
+    "timing",
+    "trace"
+  ],
+  "issue_class_fallbacks": {
+    "functional-logic": "client-shell",
+    "interaction-input": "client-shell",
+    "visual-layout": "client-shell",
+    "animation-transition": "client-shell",
+    "async-streaming-state": "client-shell",
+    "data-contract-api": "server-api",
+    "persistence-state-sync": "client-shell",
+    "performance-resource": "server-ingestion",
+    "compatibility-environment": "client-shell",
+    "auth-permissions": "server-api",
+    "integration-third-party": "server-api",
+    "accessibility": "client-shell",
+    "localization-content": "client-overlay",
+    "flaky-nondeterministic": "client-shell"
+  },
+  "worktrees": [
+    {
+      "id": "client-shell",
+      "branch": "codex/client-shell",
+      "path": ".worktrees/client-shell",
+      "path_hints": [
+        "apps/client/app/",
+        "apps/client/components/shell/",
+        "apps/client/components/learn/",
+        "apps/client/lib/session/",
+        "apps/client/lib/backend/",
+        "apps/client/lib/theme/"
+      ],
+      "keyword_hints": [
+        "chat",
+        "continue",
+        "dialogue",
+        "exercise",
+        "game",
+        "hangout",
+        "hud",
+        "learn",
+        "map",
+        "mobile",
+        "onboarding",
+        "profile",
+        "session",
+        "tap",
+        "touch",
+        "whisper"
+      ],
+      "issue_classes": [
+        "functional-logic",
+        "interaction-input",
+        "visual-layout",
+        "animation-transition",
+        "async-streaming-state",
+        "persistence-state-sync",
+        "compatibility-environment",
+        "accessibility",
+        "flaky-nondeterministic"
+      ]
+    },
+    {
+      "id": "client-overlay",
+      "branch": "codex/client-overlay",
+      "path": ".worktrees/client-overlay",
+      "path_hints": [
+        "apps/client/components/overlay/",
+        "apps/client/components/dictionary/",
+        "apps/client/lib/captions/",
+        "apps/client/lib/dictionary/",
+        "apps/client/lib/romanization/"
+      ],
+      "keyword_hints": [
+        "caption",
+        "cjk",
+        "dictionary",
+        "hanja",
+        "hangul",
+        "hover",
+        "kanji",
+        "overlay",
+        "popover",
+        "romanization",
+        "subtitle",
+        "token",
+        "translation",
+        "youtube"
+      ],
+      "issue_classes": [
+        "interaction-input",
+        "visual-layout",
+        "accessibility",
+        "localization-content"
+      ]
+    },
+    {
+      "id": "server-api",
+      "branch": "codex/server-api",
+      "path": ".worktrees/server-api",
+      "path_hints": [
+        "apps/server/api/",
+        "apps/server/routes/",
+        "apps/server/controllers/",
+        "apps/server/services/profile/",
+        "apps/server/services/sessions/",
+        "apps/server/services/bootstrap/"
+      ],
+      "keyword_hints": [
+        "api",
+        "auth",
+        "bootstrap",
+        "contract",
+        "endpoint",
+        "fixture",
+        "json",
+        "login",
+        "oauth",
+        "payload",
+        "profile",
+        "request",
+        "response",
+        "session"
+      ],
+      "issue_classes": [
+        "functional-logic",
+        "data-contract-api",
+        "persistence-state-sync",
+        "auth-permissions",
+        "integration-third-party"
+      ]
+    },
+    {
+      "id": "server-ingestion",
+      "branch": "codex/server-ingestion",
+      "path": ".worktrees/server-ingestion",
+      "path_hints": [
+        "apps/server/ingestion/",
+        "apps/server/jobs/",
+        "apps/server/services/vocab/",
+        "apps/server/services/media-profile/",
+        "apps/server/services/insights/",
+        "scripts/ingestion/"
+      ],
+      "keyword_hints": [
+        "cluster",
+        "frequency",
+        "ingest",
+        "ingestion",
+        "insights",
+        "lyrics",
+        "media profile",
+        "ranking",
+        "spotify",
+        "transcript",
+        "vocab",
+        "youtube"
+      ],
+      "issue_classes": [
+        "data-contract-api",
+        "performance-resource",
+        "integration-third-party"
+      ]
+    },
+    {
+      "id": "game-engine",
+      "branch": "codex/game-engine",
+      "path": ".worktrees/game-engine",
+      "path_hints": [
+        "apps/server/game-engine/",
+        "apps/server/services/game-loop/",
+        "apps/server/services/scenes/",
+        "apps/server/services/rewards/"
+      ],
+      "keyword_hints": [
+        "assessment",
+        "branching",
+        "mastery",
+        "mission",
+        "reward",
+        "rp",
+        "scene",
+        "sp",
+        "unlock",
+        "xp"
+      ],
+      "issue_classes": [
+        "functional-logic",
+        "async-streaming-state",
+        "localization-content",
+        "integration-third-party"
+      ]
+    },
+    {
+      "id": "infra-deploy",
+      "branch": "codex/infra-deploy",
+      "path": ".worktrees/infra-deploy",
+      "path_hints": [
+        "infra/",
+        "scripts/deploy",
+        "scripts/release",
+        "scripts/healthcheck",
+        ".github/workflows/",
+        "docs/deployment-track.md"
+      ],
+      "keyword_hints": [
+        "ci",
+        "cloudflare",
+        "deploy",
+        "deployment",
+        "env",
+        "healthcheck",
+        "production",
+        "release",
+        "vercel"
+      ],
+      "issue_classes": [
+        "compatibility-environment",
+        "auth-permissions",
+        "integration-third-party"
+      ]
+    },
+    {
+      "id": "mock-ui",
+      "branch": "codex/mock-ui",
+      "path": ".worktrees/mock-ui",
+      "path_hints": [
+        "apps/client/app/mock/",
+        "apps/client/components/mock/",
+        "apps/client/lib/mock/",
+        "apps/client/public/mock/",
+        "docs/demo-run-of-show.md"
+      ],
+      "keyword_hints": [
+        "clickable",
+        "demo",
+        "happy path",
+        "mock",
+        "rehearsal",
+        "run of show",
+        "storyboard"
+      ],
+      "issue_classes": [
+        "visual-layout",
+        "animation-transition",
+        "accessibility"
+      ]
+    },
+    {
+      "id": "creative-assets",
+      "branch": "codex/creative-assets",
+      "path": ".worktrees/creative-assets",
+      "path_hints": [
+        "assets/presets/",
+        "assets/content-packs/",
+        "assets/rewards/",
+        "assets/manifest/",
+        "docs/mock-ui-and-assets-track.md"
+      ],
+      "keyword_hints": [
+        "asset",
+        "background",
+        "content pack",
+        "image",
+        "memory card",
+        "polaroid",
+        "preset",
+        "reward art",
+        "video"
+      ],
+      "issue_classes": [
+        "visual-layout",
+        "localization-content"
+      ]
+    }
+  ],
+  "shared_zones": [
+    "packages/contracts/**",
+    "packages/contracts/fixtures/**",
+    "package.json",
+    "package-lock.json",
+    "scripts/demo_smoke_check.mjs",
+    "README.md",
+    "docs/install-and-test.md",
+    "docs/hackathon-workstreams.md",
+    "docs/agent-execution-board.md",
+    "apps/client/app/layout.tsx",
+    "apps/client/app/page.tsx",
+    "apps/client/app/globals.css"
+  ]
+}

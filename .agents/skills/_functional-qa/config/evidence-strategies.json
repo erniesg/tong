@@ -1,0 +1,80 @@
+{
+  "schema_version": "1",
+  "defaults": {
+    "required": ["contract-assertions"],
+    "optional": [],
+    "requires_ui_capture": false
+  },
+  "strategies": {
+    "functional-logic": {
+      "required": ["contract-assertions", "console-state-trace"],
+      "optional": ["network-trace"],
+      "requires_ui_capture": false
+    },
+    "interaction-input": {
+      "required": ["temporal-capture", "console-state-trace", "screenshots"],
+      "optional": ["network-trace"],
+      "requires_ui_capture": true
+    },
+    "visual-layout": {
+      "required": ["screenshots"],
+      "optional": ["cross-env-matrix"],
+      "requires_ui_capture": true
+    },
+    "animation-transition": {
+      "required": ["temporal-capture", "screenshots"],
+      "optional": ["console-state-trace"],
+      "requires_ui_capture": true
+    },
+    "async-streaming-state": {
+      "required": ["temporal-capture", "network-trace", "console-state-trace"],
+      "optional": ["screenshots"],
+      "requires_ui_capture": true
+    },
+    "data-contract-api": {
+      "required": ["contract-assertions", "network-trace"],
+      "optional": [],
+      "requires_ui_capture": false
+    },
+    "persistence-state-sync": {
+      "required": ["console-state-trace", "contract-assertions"],
+      "optional": ["screenshots"],
+      "requires_ui_capture": false
+    },
+    "performance-resource": {
+      "required": ["perf-profile"],
+      "optional": ["screenshots", "console-state-trace"],
+      "requires_ui_capture": false
+    },
+    "compatibility-environment": {
+      "required": ["cross-env-matrix"],
+      "optional": ["screenshots", "contract-assertions"],
+      "requires_ui_capture": false
+    },
+    "auth-permissions": {
+      "required": ["contract-assertions", "network-trace"],
+      "optional": ["screenshots"],
+      "requires_ui_capture": false
+    },
+    "integration-third-party": {
+      "required": ["network-trace", "contract-assertions"],
+      "optional": ["screenshots"],
+      "requires_ui_capture": false
+    },
+    "accessibility": {
+      "required": ["screenshots", "cross-env-matrix"],
+      "optional": ["console-state-trace"],
+      "requires_ui_capture": true
+    },
+    "localization-content": {
+      "required": ["screenshots", "contract-assertions"],
+      "optional": ["console-state-trace"],
+      "requires_ui_capture": true
+    },
+    "flaky-nondeterministic": {
+      "required": ["temporal-capture", "console-state-trace"],
+      "optional": ["screenshots", "cross-env-matrix"],
+      "requires_ui_capture": true
+    }
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Functional QA Repo Adapter",
+  "type": "object",
+  "required": ["schema_version", "repository", "artifact_root", "smoke_commands"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "repository": {
+      "type": "object",
+      "required": ["name_with_owner", "url", "default_branch"],
+      "properties": {
+        "name_with_owner": { "type": "string" },
+        "url": { "type": "string" },
+        "default_branch": { "type": "string" }
+      }
+    },
+    "artifact_root": { "type": "string" },
+    "browser_defaults": {
+      "type": "object",
+      "properties": {
+        "base_url": { "type": "string" },
+        "demo_password": { "type": "string" },
+        "query_params": { "type": "object" },
+        "qa_query_params": { "type": "object" },
+        "session_log_helper": { "type": "string" },
+        "session_export_methods": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "startup_commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "command"],
+        "properties": {
+          "label": { "type": "string" },
+          "command": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "smoke_commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "command"],
+        "properties": {
+          "label": { "type": "string" },
+          "command": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string" },
+          "routes": { "type": "array", "items": { "type": "string" } },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "debug_hooks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "path"],
+        "properties": {
+          "name": { "type": "string" },
+          "path": { "type": "string" },
+          "usage": { "type": "string" }
+        }
+      }
+    },
+    "issue_notes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["match", "notes"],
+        "properties": {
+          "match": { "type": "string" },
+          "issue_class_override": { "type": "string" },
+          "notes": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "issue_playbooks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["match", "surface", "route_template", "steps"],
+        "properties": {
+          "match": { "type": "string" },
+          "surface": { "type": "string" },
+          "route_template": { "type": "string" },
+          "steps": { "type": "array", "items": { "type": "string" } },
+          "screenshot_targets": { "type": "array", "items": { "type": "string" } },
+          "state_targets": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}
