@@ -19,3 +19,6 @@ apps/server/data/generated/
 *.fbx
 *.glb
 *.stl
+
+# Presets — dev/backup originals, not deployed
+assets/presets/
