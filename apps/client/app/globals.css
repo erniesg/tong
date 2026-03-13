@@ -11,6 +11,13 @@
   --accent-dark: #c94c18;
   --mint: #0f766e;
   --mint-soft: #d1fae5;
+
+  /* Game type scale — single place to tune all in-game font sizes */
+  --game-text-xs: 12px;   /* meta labels, secondary info */
+  --game-text-sm: 13px;   /* HUD scores, subtle labels */
+  --game-text-base: 15px; /* body text, descriptions, prompts */
+  --game-text-lg: 17px;   /* dialogue, whisper body, instructions */
+  --game-text-xl: 20px;   /* headings, speaker names */
 }
 
 * {
@@ -748,7 +755,7 @@ button.nav-link:hover {
 }
 
 .scene-hud-pull-tab-chevron {
-  font-size: 10px;
+  font-size: var(--game-text-xs);
   color: rgba(255,255,255,0.85);
   text-shadow: 0 1px 4px rgba(0,0,0,0.6);
   transition: color 0.3s, text-shadow 0.3s;
@@ -795,7 +802,7 @@ button.nav-link:hover {
 }
 
 .scene-hud-location {
-  font-size: 14px;
+  font-size: var(--game-text-base);
   font-weight: 600;
   color: rgba(255,255,255,0.85);
 }
@@ -811,7 +818,7 @@ button.nav-link:hover {
 }
 
 .scene-hud-score {
-  font-size: 12px;
+  font-size: var(--game-text-sm);
   color: rgba(255,255,255,0.55);
   letter-spacing: 0.04em;
 }
@@ -1848,7 +1855,7 @@ button.nav-link:hover {
 }
 
 .dialogue-speaker {
-  font-size: 0.8rem;
+  font-size: var(--game-text-base);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1857,7 +1864,7 @@ button.nav-link:hover {
 }
 
 .dialogue-text {
-  font-size: 1rem;
+  font-size: var(--game-text-lg);
   line-height: 1.6;
   color: #fff;
   text-shadow:
@@ -1877,7 +1884,7 @@ button.nav-link:hover {
 .dialogue-continue {
   margin-top: 0.5rem;
   text-align: center;
-  font-size: 0.7rem;
+  font-size: var(--game-text-sm);
   color: rgba(255, 255, 255, 0.5);
   animation: continuePulse 1.5s ease-in-out infinite;
 }
@@ -1992,7 +1999,7 @@ button.nav-link:hover {
 /* ── Subtitle-style continue label ─────────────────────── */
 .scene-continue-label {
   text-align: center;
-  font-size: 12px;
+  font-size: var(--game-text-sm);
   color: rgba(255,255,255,0.65);
   padding: 8px 0;
   text-shadow:
@@ -2650,7 +2657,7 @@ button.nav-link:hover {
 }
 
 .chat-row__name {
-  font-size: 11px;
+  font-size: var(--game-text-xs);
   color: rgba(0, 0, 0, 0.5);
   padding-left: 4px;
 }
@@ -4378,7 +4385,7 @@ button.nav-link:hover {
 
 .block-crush__hud-label {
   opacity: 0.5;
-  font-size: 11px;
+  font-size: var(--game-text-xs);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -4813,7 +4820,7 @@ button.nav-link:hover {
 }
 
 .bc-overlay__tap {
-  font-size: 0.75rem;
+  font-size: var(--game-text-sm);
   color: var(--color-text-muted, #999);
   margin-top: 1.5rem;
   animation: pulse 2s infinite;
@@ -4908,7 +4915,7 @@ button.nav-link:hover {
 
 .charge-bar__label {
   margin-top: 4px;
-  font-size: 10px;
+  font-size: var(--game-text-xs);
   color: rgba(255, 255, 255, 0.6);
   font-weight: 500;
   letter-spacing: 0.3px;
