@@ -5,6 +5,8 @@
     "github_integration": "https://developers.openai.com/codex/integrations/github",
     "worktrees": "https://developers.openai.com/codex/app/worktrees"
   },
+  "environment_name": "tong",
+  "delivery_mode": "direct-task-pr",
   "label_suggestions": [
     {
       "name": "cloud-ok",

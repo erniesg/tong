@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Codex cloud issue batching and PR/task prompts."""
+"""Generate Codex cloud issue batching and direct Codex task prompts."""
 
 from __future__ import annotations
 
@@ -104,10 +104,12 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
 
     issue_dir = queue_dir / "issues"
     issue_dir.mkdir(exist_ok=True)
-    comment_path = issue_dir / f"{file_stub}-codex-comment.md"
-    pr_body_path = issue_dir / f"{file_stub}-pr-body.md"
+    task_prompt_path = issue_dir / f"{file_stub}-task-prompt.md"
+    pr_notes_path = issue_dir / f"{file_stub}-pr-notes.md"
 
     replacements = {
+        "{{repository}}": repo_name_with_owner(),
+        "{{environment_name}}": CLOUD_CONFIG["environment_name"],
         "{{issue_ref}}": issue_ref or issue_entry["title"],
         "{{issue_url}}": raw_issue.get("url", ""),
         "{{batch_id}}": batch_id,
@@ -118,7 +120,8 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
         "{{initial_skill}}": issue_entry["initial_skill"],
         "{{follow_up_skills}}": "; ".join(issue_entry["follow_up_skills"]),
         "{{readiness_reason}}": readiness_reason,
-        "{{comment_path}}": str(comment_path.relative_to(queue_dir)),
+        "{{suggested_pr_title}}": pr_title,
+        "{{suggested_branch_name}}": branch_name,
         "{{final_acceptance_note}}": (
             "Do not send this issue to Codex cloud yet; keep it local until the blocking asset or environment dependency is removed."
             if cloud_mode == "local-only"
@@ -129,12 +132,12 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
         ),
     }
 
-    pr_body_path.write_text(
-        render_template(TEMPLATE_ROOT / "codex-cloud-pr-body.md.tmpl", replacements) + "\n",
+    task_prompt_path.write_text(
+        render_template(TEMPLATE_ROOT / "codex-cloud-task.md.tmpl", replacements) + "\n",
         encoding="utf-8",
     )
-    comment_path.write_text(
-        render_template(TEMPLATE_ROOT / "codex-cloud-comment.md.tmpl", replacements) + "\n",
+    pr_notes_path.write_text(
+        render_template(TEMPLATE_ROOT / "codex-cloud-pr-notes.md.tmpl", replacements) + "\n",
         encoding="utf-8",
     )
 
@@ -148,8 +151,8 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
         "branch_name": branch_name,
         "draft_pr_title": pr_title,
         "generated_files": {
-            "comment": str(comment_path.relative_to(queue_dir)),
-            "pr_body": str(pr_body_path.relative_to(queue_dir)),
+            "task_prompt": str(task_prompt_path.relative_to(queue_dir)),
+            "pr_notes": str(pr_notes_path.relative_to(queue_dir)),
         },
     }
 
@@ -177,8 +180,10 @@ def render_markdown(plan: dict[str, Any]) -> str:
         "# Codex Cloud Issue Plan",
         "",
         f"- Repository: `{plan['repository']}`",
+        f"- Environment: `{plan['environment_name']}`",
         f"- Generated at: `{plan['generated_at']}`",
         f"- Source: `{plan['source']}`",
+        f"- Delivery mode: `{plan['delivery_mode']}`",
         f"- Suggested labels: `{', '.join(label['name'] for label in plan['label_suggestions'])}`",
         "",
         "## Recommended setup",
@@ -209,41 +214,43 @@ def render_markdown(plan: dict[str, Any]) -> str:
                 f"- Follow-ups: `{'; '.join(issue['follow_up_skills'])}`",
                 f"- Depends on: `{', '.join(issue['depends_on']) or 'none'}`",
                 f"- Readiness: {issue['readiness_reason']}",
-                f"- Queue action: `{'skip cloud for now' if issue['cloud_mode'] == 'local-only' else 'open draft PR and hand to Codex'}`",
-                f"- Generated PR body: `{issue['generated_files']['pr_body']}`",
-                f"- Generated Codex comment: `{issue['generated_files']['comment']}`",
+                f"- Queue action: `{'skip cloud for now' if issue['cloud_mode'] == 'local-only' else 'launch a direct Codex task and create a PR from the task result'}`",
+                f"- Task prompt: `{issue['generated_files']['task_prompt']}`",
+                f"- PR notes: `{issue['generated_files']['pr_notes']}`",
             ]
         )
         lines.append("")
     return "\n".join(lines).strip() + "\n"
 
 
-def build_commands(plan: dict[str, Any]) -> str:
-    lines = ["# Review the generated PR body and Codex comment files before running these commands.", ""]
+def build_launch_instructions(plan: dict[str, Any]) -> str:
+    lines = [
+        "# Codex Launch Instructions",
+        "",
+        f"Use the Codex environment `{plan['environment_name']}` for implementation tasks.",
+        "Start with the earliest batch only.",
+        "",
+    ]
     for issue in plan["issues"]:
         if issue["cloud_mode"] == "local-only":
             lines.extend(
                 [
                     f"# {issue['issue_ref'] or issue['title']}",
-                    "# Skip this issue in Codex cloud for now.",
-                    f"# Reason: {issue['readiness_reason']}",
+                    "1. Skip this issue in Codex cloud for now.",
+                    f"2. Reason: {issue['readiness_reason']}",
                     "",
                 ]
             )
             continue
-        branch = issue["branch_name"]
-        pr_body = issue["generated_files"]["pr_body"]
-        comment = issue["generated_files"]["comment"]
-        pr_title = issue["draft_pr_title"].replace('"', '\\"')
         lines.extend(
             [
                 f"# {issue['issue_ref'] or issue['title']}",
-                "git switch main",
-                "git pull --ff-only",
-                f"git switch -c {branch}",
-                f"git push -u origin {branch}",
-                f'gh pr create --draft --title "{pr_title}" --body-file "{pr_body}" --base main --head "{branch}"',
-                f"# After PR creation, post: gh pr comment <PR_NUMBER> --body-file \"{comment}\"",
+                "1. Open `chatgpt.com/codex` and choose the configured environment.",
+                f"2. Start a new task and paste `{issue['generated_files']['task_prompt']}`.",
+                "3. Wait for the task to finish validation, code changes, and `--verify-fix`.",
+                f"4. Use Codex's built-in PR creation flow from the task result with title `{issue['draft_pr_title']}`.",
+                f"5. Copy any useful merge notes from `{issue['generated_files']['pr_notes']}` into the PR if Codex does not already summarize them well.",
+                "6. Review the resulting GitHub diff before moving on to the next issue in the batch.",
                 "",
             ]
         )
@@ -262,6 +269,8 @@ def build_plan(args: argparse.Namespace) -> int:
         "schema_version": "1",
         "generated_at": queue_timestamp,
         "repository": repo_name_with_owner(),
+        "environment_name": CLOUD_CONFIG["environment_name"],
+        "delivery_mode": CLOUD_CONFIG["delivery_mode"],
         "source": source,
         "setup_commands": CLOUD_CONFIG["setup_commands"],
         "label_suggestions": CLOUD_CONFIG["label_suggestions"],
@@ -271,7 +280,11 @@ def build_plan(args: argparse.Namespace) -> int:
 
     (queue_dir / "cloud-plan.json").write_text(json.dumps(plan, indent=2) + "\n", encoding="utf-8")
     (queue_dir / "cloud-plan.md").write_text(render_markdown(plan), encoding="utf-8")
-    (queue_dir / "commands.sh").write_text(build_commands(plan), encoding="utf-8")
+    (queue_dir / "launch.md").write_text(build_launch_instructions(plan), encoding="utf-8")
+    (queue_dir / "commands.sh").write_text(
+        "# Deprecated: use launch.md and the generated task prompt files for direct Codex environment tasks.\n",
+        encoding="utf-8",
+    )
 
     if args.json:
         print(json.dumps(plan, indent=2))

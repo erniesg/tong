@@ -74,7 +74,10 @@ Build a mobile-first language learning demo with:
 - When the user asks to step through GitHub issues, fix the issue queue, or decide what can run in parallel, start with `.agents/skills/work-github-issues/SKILL.md`.
 - That front-door skill must generate the queue plan first, then route each issue to `validate-issue`, `trace-ui-state`, `validate-issue --verify-fix`, and `publish-issue-update` as needed.
 - Use the existing worktree model in `docs/worktree-ownership-map.md` and `docs/hackathon-workstreams.md`; parallelize by worktree lane, not by raw issue count.
-- When the user explicitly wants Codex cloud or GitHub PR execution, also use `docs/codex-cloud-issue-runbook.md` and `python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py plan` to generate the current batch order, branch names, and PR/task prompts.
+- When the user explicitly wants Codex cloud or GitHub PR execution, also use `docs/codex-cloud-issue-runbook.md` and `python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py plan` to generate the current batch order, direct task prompts, and PR notes.
+- Prefer the direct Codex environment task flow for implementation work: launch a task on the `tong` environment, get a diff, then create a PR from the task result.
+- Do not assume shell-level `git push` or `gh` is available inside Codex cloud tasks.
+- Use GitHub comment triggers primarily for `@codex review` or explicitly manual experiments, not as the default implementation path.
 - When the user asks to reproduce bugs, verify fixes, validate current behavior, or gather screenshots and traces for a specific issue, start with the functional QA workflow in `.agents/skills/validate-issue/SKILL.md`.
 - If validation is ambiguous, timing-sensitive, or points to a state race, continue with `.agents/skills/trace-ui-state/SKILL.md`.
 - Publish structured GitHub updates with `.agents/skills/publish-issue-update/SKILL.md` after the run is finalized or when the runtime policy allows auto-commenting.

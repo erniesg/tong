@@ -1,22 +1,24 @@
-@codex Work {{issue_ref}} end-to-end on this branch.
+Work {{issue_ref}} in {{repository}} end-to-end.
+
+Environment:
+- Codex environment: `{{environment_name}}`
+- Suggested PR title: `{{suggested_pr_title}}`
+- Suggested branch name if the UI asks: `{{suggested_branch_name}}`
 
 Requirements:
 - Start with the repo skill `.agents/skills/work-github-issues/SKILL.md`.
 - Use the functional QA workflow to validate the issue before changing code.
 - Start with `{{initial_skill}}`.
 - Follow with `{{follow_up_skills}}`.
-- Treat this existing PR branch as the only delivery branch.
-- Commit and push all code changes back to this PR branch.
-- Do not create a follow-up PR, alternate branch, or call `make_pr`.
 - Keep the scope to {{issue_ref}} only.
-- Save or update artifacts under `artifacts/qa-runs/functional-qa/...`.
-- When you invoke the QA runtime, keep the target as the exact GitHub issue ref `{{issue_ref}}` so `issue_ref` stays populated even if GitHub CLI access is limited.
+- When you invoke the QA runtime, keep the target as the exact GitHub issue ref `{{issue_ref}}`.
 - If the issue is ambiguous, use `trace-ui-state` before making a speculative fix.
 - After the code change, re-run validation and verify the fix before claiming success.
-- Update the GitHub issue and this PR with repro, root cause, fix summary, and verification outcome.
-- Do not cite gitignored artifacts as GitHub blob links unless those files were actually committed to this branch.
+- Summarize evidence inline in the final task output and in the PR body.
+- Do not rely on `gh` CLI or shell-level `git push`.
+- Do not cite gitignored artifacts as committed GitHub blobs unless those files were actually checked in.
+- When the task is done, return a real diff and use Codex's built-in PR creation flow from the task result.
 - If blocked by missing assets, missing setup, or local-only context, stop and report the exact blocker.
-- The final deliverable must be a non-empty diff on this PR branch.
 
 Repo guidance:
 - Recommended worktree lane: `{{worktree_id}}` (`{{worktree_branch}}`)

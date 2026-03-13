@@ -1,6 +1,6 @@
 # Codex Cloud Issue Runbook
 
-Use this runbook when you want Codex cloud tasks to work Tong issues through GitHub PRs instead of local worktrees.
+Use this runbook when you want Codex cloud tasks to work Tong issues through the Codex environment UI and create PRs from task results instead of local worktrees.
 
 ## What Codex cloud can and cannot see
 
@@ -38,8 +38,8 @@ The generator writes:
 
 1. `cloud-plan.json`
 2. `cloud-plan.md`
-3. `commands.sh`
-4. per-issue PR body and Codex task comment files
+3. `launch.md`
+4. per-issue task prompt and PR notes files
 
 under `artifacts/qa-runs/functional-qa/codex-cloud-queue/<timestamp>/`.
 
@@ -82,7 +82,7 @@ This should happen after the focused fixes, because it is cross-cutting and othe
 
 This remains local-only until shared asset hosting exists for the looping backdrop and related scene assets.
 
-## Recommended PR workflow
+## Recommended cloud workflow
 
 1. Generate the cloud plan:
 
@@ -92,25 +92,27 @@ This remains local-only until shared asset hosting exists for the looping backdr
 
 2. Start with the earliest batch only.
 3. For each issue in the batch:
-   - create a dedicated branch
-   - open a draft PR
-   - post the generated `@codex` comment
-   - treat that PR branch as the only delivery branch
+   - open `chatgpt.com/codex`
+   - choose the `tong` environment
+   - start a new task using the generated task prompt file
+   - let Codex return a diff
+   - create the PR from the task result
 4. Let Codex:
    - validate the issue
    - fix the code
    - re-validate with `--verify-fix`
-   - update the issue and PR
-5. Ask for `@codex review` on the PR if wanted.
+   - summarize evidence in the task result or PR body
+5. Ask for `@codex review` on the PR if wanted after the PR exists.
 6. Have a human review and merge.
 7. Move to the next batch after the earlier batch stabilizes.
 
-Important delivery rule:
+Important delivery rules:
 
-1. The existing draft PR is the delivery vehicle.
-2. Codex must push commits back to that PR branch.
-3. Codex must not create a follow-up PR or alternate delivery branch.
-4. Artifact directories under `artifacts/qa-runs/` are gitignored, so evidence must be summarized in the PR/issue update instead of being cited as committed GitHub blob links unless those files were intentionally checked in.
+1. The primary implementation path is a direct Codex environment task, not a GitHub comment trigger.
+2. Do not rely on shell-level `git push` or `gh` CLI from inside the cloud task.
+3. Use Codex's built-in diff and PR creation flow from the task result.
+4. Artifact directories under `artifacts/qa-runs/` are gitignored, so evidence must be summarized in the task result or PR body instead of being cited as committed GitHub blob links unless those files were intentionally checked in.
+5. Reserve `@codex` GitHub comments for review or explicitly manual experiments, not the default implementation path.
 
 ## Acceptance policy
 

@@ -66,8 +66,10 @@ python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py
    python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py plan $ARGUMENTS
    ```
 
-   Use the generated branch names, PR body files, and `@codex` task comments as the execution handoff.
-   In an existing PR context, the current PR branch is the only delivery branch: push fixes back to it, do not create a follow-up PR, and do not rely on gitignored artifacts as committed evidence.
+   Use the generated task prompt files and PR notes as the execution handoff for direct Codex environment tasks.
+   Prefer the direct Codex environment flow: launch a task, let Codex return a diff, then create a PR from the task result.
+   Do not assume shell-level `git push` or `gh` is available inside the cloud task.
+   Use GitHub comments for `@codex review` or explicitly manual experiments, not as the default implementation path.
 
 ## Output requirements
 
