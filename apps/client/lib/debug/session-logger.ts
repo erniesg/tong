@@ -12,6 +12,7 @@ export interface LogEntry {
   ts: number;
   kind:
     | 'session_start'
+    | 'qa_trace'
     | 'ai_request'
     | 'ai_response'
     | 'tool_call'
@@ -32,6 +33,8 @@ export interface SessionLog {
   mode: 'hangout' | 'learn';
   cityId: string;
   locationId: string;
+  surface?: string;
+  qaRunId?: string;
   npcId?: string;
   playerLevel?: number;
   startedAt: number;
@@ -76,6 +79,8 @@ export const sessionLogger = {
     mode: 'hangout' | 'learn';
     cityId: string;
     locationId: string;
+    surface?: string;
+    qaRunId?: string;
     npcId?: string;
     playerLevel?: number;
   }): void {
@@ -88,6 +93,8 @@ export const sessionLogger = {
       mode: opts.mode,
       cityId: opts.cityId,
       locationId: opts.locationId,
+      surface: opts.surface,
+      qaRunId: opts.qaRunId,
       npcId: opts.npcId,
       playerLevel: opts.playerLevel,
       startedAt: Date.now(),
@@ -107,6 +114,10 @@ export const sessionLogger = {
 
   logAIRequest(content: string): void {
     pushEntry({ kind: 'ai_request', data: { content } });
+  },
+
+  logTrace(event: string, data: Record<string, unknown> = {}): void {
+    pushEntry({ kind: 'qa_trace', data: { event, ...data } });
   },
 
   logAIResponse(role: string, toolCount: number): void {

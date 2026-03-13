@@ -1,0 +1,119 @@
+# Codex Cloud Issue Runbook
+
+Use this runbook when you want Codex cloud tasks to work Tong issues through GitHub PRs instead of local worktrees.
+
+## What Codex cloud can and cannot see
+
+Codex cloud tasks work from the repository checkout plus the cloud environment setup. They do not inherit arbitrary local files from a laptop. Relevant docs:
+
+- [Cloud environments](https://developers.openai.com/codex/cloud/environments)
+- [Use Codex in GitHub](https://developers.openai.com/codex/integrations/github)
+- [Worktrees](https://developers.openai.com/codex/app/worktrees)
+
+Practical rule:
+
+1. If an issue can be reproduced from tracked code, fixtures, and setup commands, it can be a cloud issue.
+2. If it depends on local-only assets, unpublished media, or unreproducible device/local state, keep it local until that dependency is moved to a shared location.
+
+## Prerequisites outside the repo
+
+1. The Codex GitHub integration must be installed for this repository.
+2. The Codex cloud environment should run the Tong setup commands:
+   - `npm --prefix apps/server install`
+   - `npm --prefix apps/client install`
+   - `npm run demo:smoke`
+   - `npm run ingest:mock`
+3. If cloud tasks need large or private assets later, move them to shared storage first. Until then, leave asset-dependent issues as local-only.
+
+## Repo entry points
+
+1. Functional QA front door:
+   - `.agents/skills/work-github-issues/SKILL.md`
+2. Cloud queue generator:
+   - `python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py plan`
+3. Shortcut:
+   - `npm run codex:cloud-plan`
+
+The generator writes:
+
+1. `cloud-plan.json`
+2. `cloud-plan.md`
+3. `commands.sh`
+4. per-issue PR body and Codex task comment files
+
+under `artifacts/qa-runs/functional-qa/codex-cloud-queue/<timestamp>/`.
+
+## Suggested GitHub labels
+
+1. `cloud-ok`
+2. `local-only`
+3. `needs-acceptance-proof`
+
+The generator emits these as suggestions; it does not modify GitHub labels directly.
+
+## Current Tong batching order
+
+### Batch 1
+
+- `#11` Onboarding clarity
+- `#13` Block Crush lives/time UX
+- `#14` HUD discoverability
+- `#16` CJK treatment
+
+These are the first cloud wave because they are either code-only or only need normal browser acceptance after the fix.
+
+### Batch 2
+
+- `#18` Block Crush review flash
+- `#17` tap-flow wasted tap
+- `#19` fake streaming after loading
+
+These should follow Batch 1 because they are more timing-sensitive or overlap with the same gameplay shell files.
+
+### Batch 3
+
+- `#15` type-scale cleanup
+
+This should happen after the focused fixes, because it is cross-cutting and otherwise creates merge churn.
+
+### Local-only for now
+
+- `#12` hangout backdrop/avatar/immersion issue
+
+This remains local-only until shared asset hosting exists for the looping backdrop and related scene assets.
+
+## Recommended PR workflow
+
+1. Generate the cloud plan:
+
+   ```bash
+   npm run codex:cloud-plan
+   ```
+
+2. Start with the earliest batch only.
+3. For each issue in the batch:
+   - create a dedicated branch
+   - open a draft PR
+   - post the generated `@codex` comment
+4. Let Codex:
+   - validate the issue
+   - fix the code
+   - re-validate with `--verify-fix`
+   - update the issue and PR
+5. Ask for `@codex review` on the PR if wanted.
+6. Have a human review and merge.
+7. Move to the next batch after the earlier batch stabilizes.
+
+## Acceptance policy
+
+Issue workers are not the final product signoff.
+
+After the merged cloud batches, run one local/browser-backed acceptance proof that records:
+
+1. fresh game
+2. fresh player name
+3. Haeun hangout
+4. Block Crush completion
+5. return to map
+
+This final proof is the gameplay correctness artifact for the merged set, especially for `#16`, `#17`, and `#19`.

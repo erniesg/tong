@@ -1,0 +1,6 @@
+interface:
+  display_name: "Publish Issue Update"
+  short_description: "Publish structured QA findings back to GitHub"
+  default_prompt: "Use $publish-issue-update to publish a structured GitHub update from an existing functional QA run."
+policy:
+  allow_implicit_invocation: false

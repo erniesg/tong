@@ -1,0 +1,19 @@
+@codex Work {{issue_ref}} end-to-end on this branch.
+
+Requirements:
+- Start with the repo skill `.agents/skills/work-github-issues/SKILL.md`.
+- Use the functional QA workflow to validate the issue before changing code.
+- Start with `{{initial_skill}}`.
+- Follow with `{{follow_up_skills}}`.
+- Keep the scope to {{issue_ref}} only.
+- Save or update artifacts under `artifacts/qa-runs/functional-qa/...`.
+- If the issue is ambiguous, use `trace-ui-state` before making a speculative fix.
+- After the code change, re-run validation and verify the fix before claiming success.
+- Update the GitHub issue and this PR with repro, root cause, fix summary, and verification outcome.
+- If blocked by missing assets, missing setup, or local-only context, stop and report the exact blocker.
+
+Repo guidance:
+- Recommended worktree lane: `{{worktree_id}}` (`{{worktree_branch}}`)
+- Cloud mode: `{{cloud_mode}}`
+- Readiness note: {{readiness_reason}}
+- Final local acceptance proof required: `{{needs_local_acceptance}}`

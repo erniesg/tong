@@ -9,9 +9,13 @@ tong.zip
 node_modules/
 .next/
 .open-next/
+__pycache__/
+*.pyc
 *.tsbuildinfo
 reference-notes/
 apps/server/data/generated/
+artifacts/qa-runs/*
+!artifacts/qa-runs/.gitkeep
 
 # Large binary assets — store externally, not in git
 *.mp4
