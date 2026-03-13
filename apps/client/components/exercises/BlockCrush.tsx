@@ -720,7 +720,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
         {charSteps.map((step, idx) => (
           <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
             {renderCharGrid(idx, step, charLayouts[idx], cellSize, maxGridH)}
-            <div style={{ fontSize: 10, opacity: 0.3 }}>{step.targetChar}</div>
+            <div style={{ fontSize: 'var(--game-text-xs)', opacity: 0.3 }}>{step.targetChar}</div>
           </div>
         ))}
       </div>
@@ -738,8 +738,8 @@ export function BlockCrush({ exercise, onResult }: Props) {
     <div className="exercise-card" style={{ padding: 0, position: 'relative', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}>
       {/* Header */}
       <div style={{ padding: '12px 16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 14, fontWeight: 600, opacity: 0.8 }}>{prompt}</span>
-        <span style={{ fontSize: 13, opacity: 0.5 }}>
+        <span style={{ fontSize: 'var(--game-text-base)', fontWeight: 600, opacity: 0.8 }}>{prompt}</span>
+        <span style={{ fontSize: 'var(--game-text-sm)', opacity: 0.5 }}>
           {'●'.repeat(lives)}{'○'.repeat(Math.max(0, cfg.lives - lives))}
         </span>
       </div>
@@ -791,7 +791,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
         {renderGrid()}
         {/* In recall mode, hide romanization/meaning below slots (it's the challenge) */}
         {stage !== 'recall' && (
-          <div style={{ fontSize: 13, opacity: 0.4, marginTop: 2 }}>
+          <div style={{ fontSize: 'var(--game-text-sm)', opacity: 0.4, marginTop: 2 }}>
             {displayRomanization} — {displayMeaning}
           </div>
         )}
