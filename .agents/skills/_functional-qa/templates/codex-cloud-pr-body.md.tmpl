@@ -10,12 +10,15 @@
 ## Scope
 
 Work only on {{issue_ref}} in this PR.
+This PR branch is the delivery branch. Do not create a follow-up PR or alternate delivery branch.
 
 ## Repo workflow
 
 - Start with `{{initial_skill}}`
 - Follow with `{{follow_up_skills}}`
 - Keep artifacts in `artifacts/qa-runs/functional-qa/...`
+- Keep the QA runtime target as the exact GitHub issue ref `{{issue_ref}}`
+- Push commits back to this PR branch only
 
 ## Readiness note
 
@@ -33,6 +36,7 @@ Post the generated task comment from:
 2. Fix only the confirmed issue scope.
 3. Re-run validation, including `--verify-fix` when applicable.
 4. Update the GitHub issue and this PR with evidence and verification outcome.
+5. Ensure the PR has a real code diff before declaring success.
 
 ## Final acceptance
 
