@@ -68,6 +68,14 @@ This reads `upload-manifest.json` from the run directory and writes `uploaded-co
 - dialogue and tooltip screenshot links
 - selected trace and summary links
 
+The functional QA publisher now auto-attempts this upload-and-render path during:
+
+```bash
+python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR>
+```
+
+If the run includes screenshots or temporal capture evidence and the uploader succeeds, GitHub gets `uploaded-comment.md` automatically. Use `--no-auto-evidence-upload` only when you intentionally want the plain `publish.md` fallback.
+
 ## Dry-run locally
 
 Use `--dry-run` to generate previews and a manifest without uploading:
@@ -85,4 +93,5 @@ npm run qa:upload-evidence -- \
 - Use uploaded URLs in PR comments instead of repo blob links.
 - If auto-generation cannot find the previous run, cannot match same-state screenshots, or `magick` is unavailable, the rendered comment now calls that out explicitly instead of silently degrading.
 - Manual fallback: add pre-rendered files under `comparison_panels` and `comparison_focus_crops` in `evidence.json`, then rerun the uploader.
+- If the uploader is unavailable in the current environment, use a dedicated reviewer-proof branch or PR with tracked GIF, stills, summary, and machine-readable trace files. Post those GitHub links instead of local artifact paths.
 - For browser or untrusted uploaders later, switch to presigned URLs behind a small Worker instead of direct Wrangler auth.
