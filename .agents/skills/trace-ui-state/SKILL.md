@@ -45,6 +45,8 @@ Use the invocation arguments as the issue, URL, or surface name to trace.
 - console output
 - relevant internal state or branch logs
 
+   When tracing a tap, reveal, or timing-sensitive transition, emit explicit cue timestamps for important state changes if the runtime can provide them, for example `token_tapped_at_ms`, `tooltip_opened_at_ms`, `card_rendered_at_ms`, or `audio_started_at_ms`.
+
 4. Prefer existing logging and debug hooks from the repo adapter before adding new instrumentation.
 
 5. If you add temporary instrumentation, keep it targeted and remove it before finishing.
@@ -62,3 +64,4 @@ Use the invocation arguments as the issue, URL, or surface name to trace.
 - Do not guess at root cause.
 - If the issue remains unresolved, say exactly which state transition or evidence gap is still missing.
 - Point back to the validation run when the trace is a follow-up.
+- Prefer deterministic state cues over post-hoc video interpretation. Use video-understanding or OCR only when the runtime cannot expose the needed state transition directly.

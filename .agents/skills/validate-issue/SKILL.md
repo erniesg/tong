@@ -55,6 +55,8 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
 
 6. For UI issues, do not claim success without visual evidence. Use screenshots, ordered frames, or other temporal capture that matches the selected evidence strategy.
 
+   If the runtime can expose the proof moment directly, record cue timestamps in logs or structured state, for example `token_tapped_at_ms`, `tooltip_opened_at_ms`, `dictionary_card_visible_at_ms`, or `mission_complete_at_ms`. Use those cues when cutting reviewer-facing GIF previews or poster frames.
+
 7. If the issue is ambiguous, timing-sensitive, or likely state-race-driven, invoke the `trace-ui-state` workflow before finalizing.
 
 8. Record findings in:
@@ -90,3 +92,4 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
 - Make the repro checklist rerunnable.
 - If `--verify-fix` was used, explicitly compare against the previous run before claiming a fix.
 - If a required evidence type is unavailable, lower confidence and say why.
+- Prefer runtime-emitted cue timestamps over visual guesswork when selecting reviewer-facing frames. Treat video-understanding or OCR as a fallback layer, not the primary source of truth, when deterministic state cues are available.
