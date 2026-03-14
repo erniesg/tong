@@ -43,6 +43,11 @@ Set these on Cloudflare Workers (and local `.dev.vars` equivalents when needed):
 2. `TONG_ASSETS_R2_BUCKET`
 3. `TONG_RUNTIME_ASSET_MANIFEST_KEY`
 
+Checked-in examples for this contract live in:
+
+1. `.env.example`
+2. `apps/client/.env.example`
+
 ### Boundary rule
 
 1. Runtime app requests for character, scene, and world content must resolve from `tong-assets`.
