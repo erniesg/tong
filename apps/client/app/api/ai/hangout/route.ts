@@ -34,8 +34,8 @@ const hangoutTools = {
     description: 'The NPC says something to the player. Use for all NPC dialogue. The NPC is a CHARACTER — never a teacher.',
     parameters: z.object({
       characterId: z.string().describe('The NPC character ID (e.g., haeun, jin)'),
-      text: z.string().describe('The dialogue text (mix of Korean + English based on language ratio)'),
-      translation: z.string().nullable().describe('English translation of Korean parts, or null'),
+      text: z.string().describe('The dialogue text (mix of Korean + English based on language ratio). Any Korean/CJK term must stay in native script, never bare romanization.'),
+      translation: z.string().nullable().describe('Separate translation UI text for Korean parts, or null. Do not repeat romanization inline in text.'),
       expression: z.enum([
         'neutral', 'happy', 'surprised', 'thinking', 'embarrassed', 'sad', 'angry', 'flirty',
       ]).nullable().describe('NPC facial expression'),
@@ -46,8 +46,8 @@ const hangoutTools = {
   tong_whisper: tool({
     description: 'Tong gives the player a tip, teaching, or encouragement. Tong is the SOLE teacher — all language explanations go through here. Brief, 1-2 sentences.',
     parameters: z.object({
-      message: z.string().describe('The tip/teaching message'),
-      translation: z.string().nullable().describe('Translation if message contains Korean, or null'),
+      message: z.string().describe('The tip/teaching message. Keep Korean/CJK terms in native script, never bare romanization.'),
+      translation: z.string().nullable().describe('Separate translation UI text if message contains Korean, or null'),
     }),
     execute: async (args) => args,
   }),
@@ -380,7 +380,7 @@ function buildFallbackResponse(characterId: string, isFirstEncounter: boolean, m
         text: isHauen
           ? "Oh... you're the new trainee? Do you even speak any Korean?"
           : "Hey! You're the new trainee, right? Welcome to the 포장마차!",
-        translation: isHauen ? null : '포장마차 = pojangmacha (street food stall)',
+        translation: isHauen ? null : '포장마차 = street food stall',
         expression: isHauen ? 'neutral' : 'happy',
         affinityDelta: 1,
       },
@@ -412,7 +412,7 @@ function buildFallbackResponse(characterId: string, isFirstEncounter: boolean, m
     toolCalls.push({
       toolName: 'tong_whisper',
       args: {
-        message: "Let's learn some food words! 떡볶이 (tteokbokki) = spicy rice cakes, 김밥 (gimbap) = seaweed rice roll, 라면 (ramyeon) = ramen noodles, 순대 (sundae) = blood sausage.",
+        message: "Let's learn some food words! 떡볶이 = spicy rice cakes, 김밥 = seaweed rice roll, 라면 = ramen noodles, 순대 = blood sausage.",
         translation: null,
       },
     });
@@ -456,7 +456,7 @@ function buildFallbackResponse(characterId: string, isFirstEncounter: boolean, m
       toolName: 'tong_whisper',
       args: {
         message: lastWasCorrect
-          ? "Now let's try 오뎅 (odeng) = fish cake, 튀김 (twigim) = fried snacks, 만두 (mandu) = dumplings, 물 (mul) = water!"
+          ? "Now let's try 오뎅 = fish cake, 튀김 = fried snacks, 만두 = dumplings, 물 = water!"
           : "Let's review! 떡볶이 = spicy rice cakes, 김밥 = seaweed rice roll. You've got this!",
         translation: null,
       },

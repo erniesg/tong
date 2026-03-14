@@ -1,0 +1,34 @@
+{
+  "qaRunId": "functional-qa-validate-issue-20260314T044052Z-erniesg-tong-16",
+  "qaTrace": true,
+  "route": "http://localhost:3101/game?phase=hangout&demo=TONG-JUDGE-DEMO&qa_run_id=functional-qa-validate-issue-20260314T044052Z-erniesg-tong-16&qa_trace=1",
+  "phase": "hangout",
+  "sceneReady": true,
+  "chatLoading": false,
+  "processing": true,
+  "toolQueue": [
+    {
+      "toolCallId": "call_2iBIKyS3y6ne5m0VRRQFqNll",
+      "toolName": "npc_speak"
+    },
+    {
+      "toolCallId": "call_qOsbU3mjtpgTKushK0efeIKh",
+      "toolName": "tong_whisper"
+    }
+  ],
+  "currentMessage": {
+    "id": "call_2iBIKyS3y6ne5m0VRRQFqNll",
+    "role": "npc",
+    "characterId": "haeun",
+    "contentPreview": "Hey. You’re the new trainee, right? I’m 하은. This is a 포장마차—if you can’t read the menu, good luck keeping up."
+  },
+  "tongTip": null,
+  "currentExercise": null,
+  "choices": null,
+  "choicePrompt": null,
+  "sceneSummary": null,
+  "isIntroHangout": false,
+  "introExerciseCount": 0,
+  "introAct": 1,
+  "npcRevealed": false
+}

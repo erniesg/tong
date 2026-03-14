@@ -1,0 +1,11 @@
+f:{"messageId":"msg-rzYpv5O0SP5ATR29vFs9jKWo"}
+9:{"toolCallId":"call_aaLQy35xzeB1HuWrbbg1O52L","toolName":"set_backdrop","args":{"backdropUrl":"/assets/backdrops/seoul/pojangmacha.png","transition":"fade","ambientDescription":"A lively 포장마차 tent near Hongdae with steaming pots, a handwritten menu board, and orange plastic stools."}}
+a:{"toolCallId":"call_aaLQy35xzeB1HuWrbbg1O52L","result":{"backdropUrl":"/assets/backdrops/seoul/pojangmacha.png","transition":"fade","ambientDescription":"A lively 포장마차 tent near Hongdae with steaming pots, a handwritten menu board, and orange plastic stools."}}
+9:{"toolCallId":"call_YipGFJLDLizUkVyCEXNiMCQA","toolName":"npc_speak","args":{"characterId":"jin","text":"안녕하세요! I’m Jin, your 선배. First time at a 포장마차? 밥 먹었어? If you’re hungry, I’ll help you order something tasty.","translation":null,"expression":"happy","affinityDelta":3}}
+a:{"toolCallId":"call_YipGFJLDLizUkVyCEXNiMCQA","result":{"characterId":"jin","text":"안녕하세요! I’m Jin, your 선배. First time at a 포장마차? 밥 먹었어? If you’re hungry, I’ll help you order something tasty.","translation":null,"expression":"happy","affinityDelta":3}}
+9:{"toolCallId":"call_muep0maqnKma7lajeLrbM0km","toolName":"tong_whisper","args":{"message":"Welcome! Since you want to order food, we’ll start super simple: recognizing a couple menu words and saying them out loud. Today, just focus on spotting Korean words like 떡볶이 and 어묵 on the menu—no full sentences yet.","translation":null}}
+a:{"toolCallId":"call_muep0maqnKma7lajeLrbM0km","result":{"message":"Welcome! Since you want to order food, we’ll start super simple: recognizing a couple menu words and saying them out loud. Today, just focus on spotting Korean words like 떡볶이 and 어묵 on the menu—no full sentences yet.","translation":null}}
+e:{"finishReason":"tool-calls","usage":{"promptTokens":6276,"completionTokens":222},"isContinued":false}
+f:{"messageId":"msg-RFH9ukzjG8OVumTaG21TIrft"}
+e:{"finishReason":"stop","usage":{"promptTokens":6697,"completionTokens":3},"isContinued":false}
+d:{"finishReason":"stop","usage":{"promptTokens":12973,"completionTokens":225}}

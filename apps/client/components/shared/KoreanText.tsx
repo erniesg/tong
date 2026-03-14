@@ -9,6 +9,16 @@ import { HIRAGANA, KATAKANA } from '@/lib/content/scripts/kana';
 /* ── Target language type ──────────────────────────────────── */
 export type TargetLang = 'ko' | 'zh' | 'ja';
 
+type DictionaryEntry = {
+  romanization: string;
+  translation: string;
+};
+
+type KoreanHanjaReading = {
+  hangul: string;
+  romanization: string;
+};
+
 /* ── Pinyin map for common Chinese characters ──────────────── */
 const PINYIN_MAP: Record<string, string> = {
   '我': 'wǒ', '你': 'nǐ', '他': 'tā', '她': 'tā', '它': 'tā',
@@ -86,7 +96,7 @@ const PINYIN_MAP: Record<string, string> = {
 /**
  * Dictionary lookup for known words.
  */
-const DICTIONARY: Record<string, { romanization: string; translation: string }> = {
+const DICTIONARY: Record<string, DictionaryEntry> = {
   // Greetings & basics
   '포장마차': { romanization: 'po-jang-ma-cha', translation: 'street food tent' },
   '안녕하세요': { romanization: 'an-nyeong-ha-se-yo', translation: 'hello (formal)' },
@@ -159,6 +169,10 @@ const DICTIONARY: Record<string, { romanization: string; translation: string }> 
   '홍대': { romanization: 'hong-dae', translation: 'Hongdae (neighborhood)' },
   '한국어': { romanization: 'han-gug-eo', translation: 'Korean language' },
   '한국': { romanization: 'han-guk', translation: 'Korea' },
+  '韓國': { romanization: 'han-guk', translation: 'Korea' },
+  '韓國語': { romanization: 'han-gug-eo', translation: 'Korean language' },
+  '韓文': { romanization: 'han-mun', translation: 'Korean script / Korean writing' },
+  '漢字': { romanization: 'han-ja', translation: 'hanja / Chinese characters' },
   '연습': { romanization: 'yeon-seup', translation: 'practice' },
   '시작': { romanization: 'si-jak', translation: 'start / beginning' },
   '잘 먹겠습니다': { romanization: 'jal meok-gess-eum-ni-da', translation: "I'll eat well (before eating)" },
@@ -243,6 +257,35 @@ const JAMO_DICT: Record<string, { romanization: string; name: string }> = {
   'ㅔ': { romanization: 'e', name: 'e' },
 };
 
+const KOREAN_HANJA_MAP: Record<string, KoreanHanjaReading> = {
+  '一': { hangul: '일', romanization: 'il' },
+  '二': { hangul: '이', romanization: 'i' },
+  '三': { hangul: '삼', romanization: 'sam' },
+  '中': { hangul: '중', romanization: 'jung' },
+  '先': { hangul: '선', romanization: 'seon' },
+  '前': { hangul: '전', romanization: 'jeon' },
+  '國': { hangul: '국', romanization: 'guk' },
+  '地': { hangul: '지', romanization: 'ji' },
+  '堂': { hangul: '당', romanization: 'dang' },
+  '字': { hangul: '자', romanization: 'ja' },
+  '學': { hangul: '학', romanization: 'hak' },
+  '店': { hangul: '점', romanization: 'jeom' },
+  '後': { hangul: '후', romanization: 'hu' },
+  '文': { hangul: '문', romanization: 'mun' },
+  '日': { hangul: '일', romanization: 'il' },
+  '時': { hangul: '시', romanization: 'si' },
+  '月': { hangul: '월', romanization: 'wol' },
+  '東': { hangul: '동', romanization: 'dong' },
+  '漢': { hangul: '한', romanization: 'han' },
+  '火': { hangul: '화', romanization: 'hwa' },
+  '生': { hangul: '생', romanization: 'saeng' },
+  '西': { hangul: '서', romanization: 'seo' },
+  '語': { hangul: '어', romanization: 'eo' },
+  '道': { hangul: '도', romanization: 'do' },
+  '食': { hangul: '식', romanization: 'sik' },
+  '韓': { hangul: '한', romanization: 'han' },
+};
+
 /* ── Kana → romaji map ────────────────────────────────────── */
 
 const KANA_ROMAJI: Record<string, string> = {};
@@ -277,8 +320,8 @@ function isTargetChar(char: string, targetLang: TargetLang): boolean {
   const code = char.charCodeAt(0);
   switch (targetLang) {
     case 'ko':
-      // Korean: Hangul syllables + Jamo only. NOT CJK ideographs.
-      return isHangulSyllable(code) || isHangulJamo(code);
+      // Korean: Hangul syllables + Jamo + Hanja/CJK ideographs.
+      return isHangulSyllable(code) || isHangulJamo(code) || isCJKIdeograph(code);
     case 'zh':
       // Chinese: CJK ideographs only.
       return isCJKIdeograph(code);
@@ -317,6 +360,48 @@ function segmentText(text: string, targetLang: TargetLang): { text: string; isTa
   return segments;
 }
 
+function normalizeKoreanSpeechText(text: string): string {
+  return [...text].map((char) => KOREAN_HANJA_MAP[char]?.hangul ?? char).join('');
+}
+
+function pickStableVoice(targetLang: TargetLang): SpeechSynthesisVoice | null {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return null;
+
+  const prefixes = {
+    ko: ['ko-KR', 'ko'],
+    ja: ['ja-JP', 'ja'],
+    zh: ['zh-CN', 'zh-TW', 'zh'],
+  }[targetLang];
+
+  const sorted = [...voices].sort((a, b) => `${a.lang}-${a.name}`.localeCompare(`${b.lang}-${b.name}`));
+  for (const prefix of prefixes) {
+    const match = sorted.find((voice) => voice.lang.toLowerCase().startsWith(prefix.toLowerCase()));
+    if (match) return match;
+  }
+  return sorted[0] ?? null;
+}
+
+function playTargetAudio(text: string, targetLang: TargetLang): void {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  const speechText = targetLang === 'ko' ? normalizeKoreanSpeechText(text) : text;
+  const utter = new SpeechSynthesisUtterance(speechText);
+  const fallbackLang = {
+    ko: 'ko-KR',
+    ja: 'ja-JP',
+    zh: 'zh-CN',
+  }[targetLang];
+  utter.lang = fallbackLang;
+  const voice = pickStableVoice(targetLang);
+  if (voice) {
+    utter.voice = voice;
+    utter.lang = voice.lang;
+  }
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utter);
+}
+
 /* ── Romanization ──────────────────────────────────────────── */
 
 function romanizeSyllable(char: string): string | null {
@@ -332,7 +417,34 @@ function romanizeSyllable(char: string): string | null {
   return `${INITIALS[initial]}${MEDIALS[medial]}${FINALS[final]}`;
 }
 
-function lookupWord(word: string): { romanization: string; translation: string } | null {
+function romanizeKoreanToken(word: string): string | null {
+  const parts: string[] = [];
+
+  for (const char of [...word]) {
+    if (JAMO_DICT[char]) {
+      parts.push(JAMO_DICT[char].romanization);
+      continue;
+    }
+
+    const syllableRomanization = romanizeSyllable(char);
+    if (syllableRomanization) {
+      parts.push(syllableRomanization);
+      continue;
+    }
+
+    const hanjaReading = KOREAN_HANJA_MAP[char];
+    if (hanjaReading) {
+      parts.push(hanjaReading.romanization);
+      continue;
+    }
+
+    return null;
+  }
+
+  return parts.length > 0 ? parts.join('-') : null;
+}
+
+function lookupWord(word: string): DictionaryEntry | null {
   if (DICTIONARY[word]) return DICTIONARY[word];
   const particles = ['을', '를', '이', '가', '는', '은', '에', '서', '도', '의', '와', '과', '로'];
   for (const p of particles) {
@@ -396,10 +508,7 @@ function getTooltipInfo(word: string, targetLang: TargetLang, explainLang: strin
   }
 
   // Korean: use syllable decomposition
-  const romanized = chars.map((ch) => {
-    if (JAMO_DICT[ch]) return JAMO_DICT[ch].romanization;
-    return romanizeSyllable(ch) ?? ch;
-  }).join('-');
+  const romanized = romanizeKoreanToken(word);
   if (romanized && romanized !== word) {
     return { romanization: romanized, translation: resolveTranslation(word) };
   }
@@ -465,8 +574,9 @@ export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextPro
     e.stopPropagation(); // Don't bubble to parent (e.g. dismiss Tong whisper)
     if (activeWord === word) { setActiveWord(null); return; }
     showTooltip(word, e.currentTarget as HTMLElement);
+    playTargetAudio(word, targetLang);
     onWordTap?.();
-  }, [activeWord, showTooltip, onWordTap]);
+  }, [activeWord, showTooltip, onWordTap, targetLang]);
 
   const tooltipVisible = activeWord && tooltipInfo && tooltipPos;
 

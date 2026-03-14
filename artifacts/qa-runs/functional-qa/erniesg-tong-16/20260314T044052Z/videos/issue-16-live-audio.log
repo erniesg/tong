@@ -1,0 +1,28 @@
+ffmpeg version 8.0 Copyright (c) 2000-2025 the FFmpeg developers
+  built with Apple clang version 17.0.0 (clang-1700.0.13.3)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/8.0_1 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags='-Wl,-ld_classic' --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libharfbuzz --enable-libjxl --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      60.  8.100 / 60.  8.100
+  libavcodec     62. 11.100 / 62. 11.100
+  libavformat    62.  3.100 / 62.  3.100
+  libavdevice    62.  1.100 / 62.  1.100
+  libavfilter    11.  4.100 / 11.  4.100
+  libswscale      9.  1.100 /  9.  1.100
+  libswresample   6.  1.100 /  6.  1.100
+2026-03-14 13:04:06.066 ffmpeg[12810:3842872] WARNING: Add NSCameraUseContinuityCameraDeviceType to your Info.plist to use AVCaptureDeviceTypeContinuityCamera.
+2026-03-14 13:04:06.195 ffmpeg[12810:3842872] WARNING: AVCaptureDeviceTypeExternal is deprecated for Continuity Cameras. Please use AVCaptureDeviceTypeContinuityCamera and add NSCameraUseContinuityCameraDeviceType to your Info.plist.
+Input #0, avfoundation, from ':1':
+  Duration: N/A, start: 93831.350354, bitrate: 3072 kb/s
+  Stream #0:0: Audio: pcm_f32le, 48000 Hz, stereo, flt, 3072 kb/s, start 93831.350354
+Stream mapping:
+  Stream #0:0 -> #0:0 (pcm_f32le (native) -> aac (native))
+Press [q] to stop, [?] for help
+Output #0, ipod, to '/Users/erniesg/code/erniesg/tong/artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/videos/issue-16-live-audio.m4a':
+  Metadata:
+    encoder         : Lavf62.3.100
+  Stream #0:0: Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 128 kb/s
+    Metadata:
+      encoder         : Lavc62.11.100 aac
+size=       0KiB time=00:00:00.43 bitrate=   0.8kbits/s speed=0.866x elapsed=0:00:00.50    size=       0KiB time=00:00:00.96 bitrate=   0.4kbits/s speed=0.95x elapsed=0:00:01.01    size=       0KiB time=00:00:01.45 bitrate=   0.2kbits/s speed=0.959x elapsed=0:00:01.51    size=       0KiB time=00:00:01.97 bitrate=   0.2kbits/s speed=0.978x elapsed=0:00:02.01    size=       0KiB time=00:00:02.45 bitrate=   0.1kbits/s speed=0.973x elapsed=0:00:02.52    size=       0KiB time=00:00:02.96 bitrate=   0.1kbits/s speed=0.98x elapsed=0:00:03.02    size=       0KiB time=00:00:03.46 bitrate=   0.1kbits/s speed=0.982x elapsed=0:00:03.53    size=       0KiB time=00:00:03.97 bitrate=   0.1kbits/s speed=0.986x elapsed=0:00:04.03    size=       0KiB time=00:00:04.49 bitrate=   0.1kbits/s speed=0.989x elapsed=0:00:04.53    size=       0KiB time=00:00:04.99 bitrate=   0.1kbits/s speed=0.99x elapsed=0:00:05.04    size=       0KiB time=00:00:05.50 bitrate=   0.1kbits/s speed=0.992x elapsed=0:00:05.54    size=       0KiB time=00:00:05.98 bitrate=   0.1kbits/s speed=0.989x elapsed=0:00:06.05    size=       0KiB time=00:00:06.51 bitrate=   0.1kbits/s speed=0.994x elapsed=0:00:06.55    size=       0KiB time=00:00:07.00 bitrate=   0.1kbits/s speed=0.993x elapsed=0:00:07.06    size=       0KiB time=00:00:07.50 bitrate=   0.0kbits/s speed=0.993x elapsed=0:00:07.56    size=       0KiB time=00:00:08.00 bitrate=   0.0kbits/s speed=0.992x elapsed=0:00:08.06    size=       0KiB time=00:00:08.51 bitrate=   0.0kbits/s speed=0.994x elapsed=0:00:08.56    size=       0KiB time=00:00:09.02 bitrate=   0.0kbits/s speed=0.995x elapsed=0:00:09.07    size=       0KiB time=00:00:09.50 bitrate=   0.0kbits/s speed=0.993x elapsed=0:00:09.57    size=       0KiB time=00:00:10.01 bitrate=   0.0kbits/s speed=0.994x elapsed=0:00:10.07    size=       0KiB time=00:00:10.51 bitrate=   0.0kbits/s speed=0.994x elapsed=0:00:10.58    size=       0KiB time=00:00:11.02 bitrate=   0.0kbits/s speed=0.995x elapsed=0:00:11.08    size=       0KiB time=00:00:11.53 bitrate=   0.0kbits/s speed=0.995x elapsed=0:00:11.58    size=       0KiB time=00:00:12.04 bitrate=   0.0kbits/s speed=0.996x elapsed=0:00:12.09    size=       0KiB time=00:00:12.55 bitrate=   0.0kbits/s speed=0.997x elapsed=0:00:12.59    size=       0KiB time=00:00:13.03 bitrate=   0.0kbits/s speed=0.995x elapsed=0:00:13.10    [out#0/ipod @ 0x1219183c0] video:0KiB audio:17KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 29.560242%
+size=      23KiB time=00:00:13.38 bitrate=  13.8kbits/s speed=0.999x elapsed=0:00:13.40    
+[aac @ 0x121934a80] Qavg: 60923.320
+Exiting normally, received signal 2.

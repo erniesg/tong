@@ -734,14 +734,74 @@ export function BlockCrush({ exercise, onResult }: Props) {
     if (p.column >= 0 && p.column < LANES) lanes[p.column].push(p);
   }
 
+  const pressureRatio = Math.min(1, pieces.length / MAX_PIECES);
+
   return (
     <div className="exercise-card" style={{ padding: 0, position: 'relative', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}>
       {/* Header */}
-      <div style={{ padding: '12px 16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 'var(--game-text-base)', fontWeight: 600, opacity: 0.8 }}>{prompt}</span>
-        <span style={{ fontSize: 'var(--game-text-sm)', opacity: 0.5 }}>
-          {'●'.repeat(lives)}{'○'.repeat(Math.max(0, cfg.lives - lives))}
+      <div style={{
+        padding: '10px 12px',
+        display: 'grid',
+        gap: 8,
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        background: 'rgba(4, 10, 28, 0.36)',
+      }}>
+        <span
+          style={{
+            fontSize: 'var(--game-text-base)',
+            fontWeight: 600,
+            opacity: 0.86,
+            lineHeight: 1.3,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+          title={prompt}
+        >
+          {prompt}
         </span>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr minmax(90px, 120px)',
+          gap: 10,
+          alignItems: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            <span style={{ fontSize: 'var(--game-text-xs)', opacity: 0.72, flexShrink: 0 }}>HP</span>
+            <span style={{ fontSize: 'var(--game-text-sm)', letterSpacing: 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip' }}>
+              {'♥'.repeat(lives)}{'♡'.repeat(Math.max(0, cfg.lives - lives))}
+            </span>
+            <span style={{ fontSize: 'var(--game-text-xs)', opacity: 0.62, flexShrink: 0 }}>{lives}/{cfg.lives}</span>
+          </div>
+
+          <div style={{ display: 'grid', gap: 3, minWidth: 0 }}>
+            <span style={{ fontSize: 'var(--game-text-xs)', opacity: 0.65, textAlign: 'right', whiteSpace: 'nowrap' }}>Pressure</span>
+            <div
+              aria-label={`Pressure ${Math.round(pressureRatio * 100)} percent`}
+              style={{
+                width: '100%',
+                height: 5,
+                borderRadius: 999,
+                background: 'rgba(255,255,255,0.16)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.round(pressureRatio * 100)}%`,
+                  height: '100%',
+                  background: pressureRatio >= 0.75
+                    ? 'linear-gradient(90deg, #f08c8c, #ff5a5a)'
+                    : pressureRatio >= 0.4
+                      ? 'linear-gradient(90deg, #f0c040, #ff9f1a)'
+                      : 'linear-gradient(90deg, #5ad0ff, #4ecdc4)',
+                  transition: 'width 180ms ease',
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Lanes — overflow visible so dragged piece can escape its lane */}
