@@ -1,4 +1,4 @@
-# API Contract v0 (Hackathon)
+# API Contract v0
 
 ## GET `/api/v1/captions/enriched`
 Query:

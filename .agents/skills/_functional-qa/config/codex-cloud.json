@@ -57,6 +57,11 @@
       "issues": ["#35", "#36", "#34"]
     },
     {
+      "id": "batch-parallel",
+      "description": "Independent remote-first tooling and asset-foundation work that can run in parallel with the client-shell priority wave.",
+      "issues": ["#35", "#36", "#34"]
+    },
+    {
       "id": "batch-2",
       "description": "Second cloud wave: follow-up onboarding, HUD, Block Crush guidance, and tap-flow fixes after the priority wave settles.",
       "issues": ["#14", "#11", "#31", "#17"]
@@ -120,6 +125,30 @@
       "depends_on": [],
       "needs_final_local_acceptance": false,
       "reason": "The shared readability pass from #15 already landed in PR #33, so this transition bug is now the next client-shell fix in the priority wave."
+    },
+    {
+      "match": "#34",
+      "cloud_mode": "cloud-ready",
+      "batch": "batch-parallel",
+      "depends_on": [],
+      "needs_final_local_acceptance": false,
+      "reason": "QA evidence comparison tooling is repo-contained and independent of the current client-shell gameplay fixes."
+    },
+    {
+      "match": "#35",
+      "cloud_mode": "cloud-ready",
+      "batch": "batch-parallel",
+      "depends_on": [],
+      "needs_final_local_acceptance": false,
+      "reason": "The runtime asset bucket and env contract lives in infra/docs space and can move in parallel with gameplay UI work."
+    },
+    {
+      "match": "#36",
+      "cloud_mode": "cloud-ready",
+      "batch": "batch-parallel",
+      "depends_on": [],
+      "needs_final_local_acceptance": false,
+      "reason": "Canonical asset manifest work stays in the creative-assets lane and does not block the current client-shell wave."
     },
     {
       "match": "#34",
