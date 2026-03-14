@@ -2031,7 +2031,7 @@ button.nav-link:hover {
 }
 
 .vn-choices__prompt {
-  font-size: var(--game-text-base);
+  font-size: 1rem;
   color: rgba(255, 255, 255, 0.7);
   margin-bottom: 0.75rem;
   line-height: 1.4;
@@ -2067,7 +2067,7 @@ button.nav-link:hover {
 }
 
 .vn-choices__text {
-  font-size: var(--game-text-base);
+  font-size: 1rem;
   font-weight: 500;
   line-height: 1.5;
 }
@@ -2075,7 +2075,7 @@ button.nav-link:hover {
 .vn-choices__subtext {
   display: block;
   margin-top: 0.15rem;
-  font-size: var(--game-text-sm);
+  font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.45);
 }
 
