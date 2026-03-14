@@ -58,8 +58,8 @@
     },
     {
       "id": "batch-3",
-      "description": "Cross-cutting cleanup after the focused fixes land.",
-      "issues": ["#15"]
+      "description": "Reserved for future cleanup after the focused fixes land.",
+      "issues": []
     },
     {
       "id": "batch-local",
@@ -112,17 +112,17 @@
       "match": "#18",
       "cloud_mode": "cloud-ready",
       "batch": "batch-1",
-      "depends_on": [],
+      "depends_on": ["#15"],
       "needs_final_local_acceptance": false,
-      "reason": "This Block Crush transition bug is part of the priority wave and can run immediately."
+      "reason": "This Block Crush transition bug stays in the priority wave, but it should follow the shared-style pass on #15 to reduce client-shell churn."
     },
     {
       "match": "#19",
       "cloud_mode": "cloud-ready-with-local-proof",
       "batch": "batch-1",
-      "depends_on": [],
+      "depends_on": ["#18"],
       "needs_final_local_acceptance": true,
-      "reason": "Streaming behavior is now explicitly prioritized, though the final player-visible result still needs browser-backed verification."
+      "reason": "Streaming behavior remains in the priority wave, but it should follow #18 so the client-shell queue stays serialized while the final player-visible result still gets browser-backed verification."
     },
     {
       "match": "#31",

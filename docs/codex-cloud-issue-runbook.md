@@ -60,6 +60,7 @@ The generator emits these as suggestions; it does not modify GitHub labels direc
 - `#19` fake streaming after loading
 
 These are the first cloud wave because they are the explicitly prioritized fixes for readability, Block Crush transition polish, and streaming behavior.
+Run them serially in the listed order. They all sit in the `client-shell` lane, and `#15` touches shared `apps/client/app/globals.css`.
 
 ### Batch 2
 
@@ -86,7 +87,7 @@ This remains local-only until shared asset hosting exists for the looping backdr
 
 - `#29` remote-first and agent-native epic
 
-Keep this one split into narrower slices instead of sending the whole epic as one cloud task.
+Keep this one split into narrower slices instead of sending the whole epic as one cloud task. Treat unassigned issues as hold items, not launch-ready work.
 
 ## Recommended cloud workflow
 
