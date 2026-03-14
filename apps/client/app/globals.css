@@ -13,11 +13,11 @@
   --mint-soft: #d1fae5;
 
   /* Game type scale — single place to tune all in-game font sizes */
-  --game-text-xs: 0.8125rem;   /* meta labels, secondary info */
-  --game-text-sm: 0.875rem;   /* HUD scores, subtle labels */
-  --game-text-base: 1rem; /* body text, descriptions, prompts */
-  --game-text-lg: 1.1875rem;   /* dialogue, whisper body, instructions */
-  --game-text-xl: 1.375rem;   /* headings, speaker names */
+  --game-text-xs: 12px;   /* meta labels, secondary info */
+  --game-text-sm: 13px;   /* HUD scores, subtle labels */
+  --game-text-base: 15px; /* body text, descriptions, prompts */
+  --game-text-lg: 17px;   /* dialogue, whisper body, instructions */
+  --game-text-xl: 20px;   /* headings, speaker names */
 }
 
 * {
@@ -1875,7 +1875,7 @@ button.nav-link:hover {
 }
 
 .dialogue-translation {
-  font-size: var(--game-text-sm);
+  font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.6);
   margin: 0.25rem 0 0;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
@@ -1900,8 +1900,6 @@ button.nav-link:hover {
   backdrop-filter: blur(14px);
   border-radius: 16px;
   color: var(--color-text);
-  font-size: var(--game-text-base);
-  line-height: 1.5;
 }
 
 /* Full radius when inside modal */
@@ -1990,7 +1988,7 @@ button.nav-link:hover {
 
 .exercise-float-continue {
   color: rgba(255,255,255,0.7);
-  font-size: var(--game-text-sm);
+  font-size: 12px;
   text-align: center;
   padding: 8px 16px;
   text-shadow:
@@ -2033,7 +2031,7 @@ button.nav-link:hover {
 }
 
 .vn-choices__prompt {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.7);
   margin-bottom: 0.75rem;
   line-height: 1.4;
@@ -2069,7 +2067,7 @@ button.nav-link:hover {
 }
 
 .vn-choices__text {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 500;
   line-height: 1.5;
 }
@@ -2077,7 +2075,7 @@ button.nav-link:hover {
 .vn-choices__subtext {
   display: block;
   margin-top: 0.15rem;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.45);
 }
 
@@ -2690,7 +2688,6 @@ button.nav-link:hover {
 /* Translation sub-text inside a bubble — uses a muted but readable dark tone */
 .msg-bubble__translation {
   color: rgba(0, 0, 0, 0.55);
-  font-size: var(--game-text-sm);
 }
 
 /* ── Bubble tails ───────────────────────────────────────────── */
@@ -2728,7 +2725,7 @@ button.nav-link:hover {
 }
 
 .teaching-card__title {
-  font-size: var(--game-text-sm);
+  font-size: 13px;
   font-weight: 600;
   color: var(--msg-npc-text, #1a1a1a);
   margin-bottom: 8px;
@@ -2745,7 +2742,6 @@ button.nav-link:hover {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-height: 44px;
   padding: 6px 4px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.6);
@@ -2764,7 +2760,7 @@ button.nav-link:hover {
 }
 
 .teaching-card__roman {
-  font-size: var(--game-text-sm);
+  font-size: 11px;
   color: rgba(0, 0, 0, 0.55);
 }
 
@@ -2772,7 +2768,7 @@ button.nav-link:hover {
 .feedback-bubble {
   padding: 8px 12px;
   border-radius: var(--msg-bubble-radius, 18px);
-  font-size: var(--game-text-base);
+  font-size: 14px;
   line-height: 1.5;
   max-width: 280px;
 }
@@ -3213,18 +3209,14 @@ button.nav-link:hover {
 
 .sentence-builder__tile {
   padding: 6px 12px;
-  min-height: 44px;
   border-radius: 8px;
   background: var(--msg-accent, #f0c040);
   color: var(--msg-accent-text, #1a1a1a);
-  font-size: var(--game-text-base);
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
   user-select: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .sentence-builder__tile--placed {
@@ -3239,7 +3231,7 @@ button.nav-link:hover {
 
 /* ── Fill-blank exercise ────────────────────────────────────── */
 .fill-blank__sentence {
-  font-size: var(--game-text-lg);
+  font-size: 18px;
   line-height: 1.6;
   text-align: center;
   margin-bottom: 12px;
@@ -3266,7 +3258,7 @@ button.nav-link:hover {
   padding: 8px;
   border-radius: 8px;
   background: var(--msg-teaching-bg, #fff9e6);
-  font-size: var(--game-text-sm);
+  font-size: 12px;
   color: rgba(0, 0, 0, 0.7);
 }
 
@@ -3288,14 +3280,13 @@ button.nav-link:hover {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 48px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   border-radius: 12px;
   border: 1.5px solid rgba(0, 0, 0, 0.12);
   background: transparent;
   cursor: pointer;
   transition: all 0.15s;
-  font-size: var(--game-text-base);
+  font-size: 14px;
 }
 
 .pron-select__option:hover:not(:disabled) {
@@ -3525,20 +3516,20 @@ button.nav-link:hover {
 }
 
 .location-drawer__name-local {
-  font-size: var(--game-text-xl);
+  font-size: 20px;
   font-weight: 700;
   color: #fff;
   letter-spacing: 0.02em;
 }
 
 .location-drawer__name-en {
-  font-size: var(--game-text-sm);
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.45);
   font-weight: 500;
 }
 
 .location-drawer__badge {
-  font-size: var(--game-text-sm);
+  font-size: 12px;
   color: var(--color-accent-gold, #f0c040);
   background: rgba(240, 192, 64, 0.12);
   border: 1px solid rgba(240, 192, 64, 0.2);
@@ -3556,12 +3547,11 @@ button.nav-link:hover {
 /* Base button */
 .location-drawer__btn {
   width: 100%;
-  min-height: 48px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   border-radius: 12px;
   border: none;
   outline: none;
-  font-size: var(--game-text-base);
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
@@ -3600,19 +3590,19 @@ button.nav-link:hover {
 }
 
 .location-drawer__btn-label {
-  font-size: var(--game-text-base);
+  font-size: 14px;
   font-weight: 700;
 }
 
 .location-drawer__btn-desc {
-  font-size: var(--game-text-sm);
+  font-size: 10px;
   font-weight: 400;
   opacity: 0.6;
 }
 
 .location-drawer__sp-cost {
   margin-left: 8px;
-  font-size: var(--game-text-sm);
+  font-size: 11px;
   opacity: 0.7;
   font-weight: 500;
 }
@@ -3646,7 +3636,7 @@ button.nav-link:hover {
 }
 
 .location-drawer__hint {
-  font-size: var(--game-text-sm);
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.45);
   text-align: center;
   margin-top: 4px;
@@ -3662,9 +3652,8 @@ button.nav-link:hover {
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 44px;
   padding: 8px 14px;
-  font-size: var(--game-text-sm);
+  font-size: 12px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
@@ -3682,7 +3671,6 @@ button.nav-link:hover {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-height: 44px;
   padding: 8px 12px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
@@ -3695,7 +3683,7 @@ button.nav-link:hover {
 }
 
 .location-drawer__session-summary {
-  font-size: var(--game-text-sm);
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.8);
   white-space: nowrap;
   overflow: hidden;
@@ -3703,7 +3691,7 @@ button.nav-link:hover {
 }
 
 .location-drawer__session-meta {
-  font-size: var(--game-text-xs);
+  font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
 }
 
@@ -4504,14 +4492,10 @@ button.nav-link:hover {
 }
 
 .roadmap-overview {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 18px;
   margin-bottom: 24px;
 }
 
-.roadmap-overview-lead,
-.roadmap-overview-card {
+.roadmap-overview-lead {
   border-radius: 28px;
   border: 1px solid rgba(225, 214, 198, 0.92);
   box-shadow: 0 18px 40px rgba(180, 131, 87, 0.1);
@@ -4522,20 +4506,82 @@ button.nav-link:hover {
   background:
     radial-gradient(circle at top right, rgba(255, 107, 44, 0.14), transparent 32%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 246, 236, 0.98));
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .roadmap-overview-lead h2 {
-  margin: 10px 0 12px;
-  font-size: clamp(28px, 4vw, 42px);
-  line-height: 1.02;
+  margin: 6px 0 0;
+  font-size: clamp(34px, 4.6vw, 56px);
+  line-height: 0.95;
   letter-spacing: -0.03em;
+  max-width: 8ch;
 }
 
-.roadmap-overview-lead p {
+.roadmap-overview-tagline {
   margin: 0;
-  max-width: 62ch;
   color: #566476;
-  line-height: 1.72;
+  line-height: 1.5;
+  max-width: 34ch;
+  font-size: 18px;
+}
+
+.roadmap-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.roadmap-flow-step {
+  position: relative;
+  border-radius: 20px;
+  padding: 16px 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(224, 214, 199, 0.86);
+  min-height: 108px;
+}
+
+.roadmap-flow-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -6px;
+  width: 12px;
+  height: 12px;
+  border-top: 2px solid rgba(201, 76, 24, 0.35);
+  border-right: 2px solid rgba(201, 76, 24, 0.35);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.roadmap-flow-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 107, 44, 0.12);
+  color: #c94c18;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+.roadmap-flow-step strong {
+  display: block;
+  color: #293242;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.roadmap-flow-step span {
+  display: block;
+  margin-top: 6px;
+  color: #627083;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .roadmap-value-grid {
@@ -4565,46 +4611,30 @@ button.nav-link:hover {
 .roadmap-value-card strong {
   display: block;
   color: #293242;
-  line-height: 1.35;
-  font-size: 16px;
+  line-height: 0.95;
+  font-size: clamp(34px, 4vw, 48px);
+  letter-spacing: -0.04em;
 }
 
-.roadmap-overview-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
+.roadmap-value-card em {
+  display: block;
+  margin-top: 10px;
+  color: #5f6c7d;
+  font-style: normal;
+  line-height: 1.45;
+  font-size: 13px;
 }
 
-.roadmap-overview-card {
-  padding: 22px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(249, 252, 255, 0.98));
-}
-
-.roadmap-overview-card h3 {
-  margin: 0 0 10px;
-  font-size: 24px;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-}
-
-.roadmap-overview-card p {
-  margin: 0 0 14px;
-  color: #566476;
-  line-height: 1.66;
-}
-
-.roadmap-overview-points {
-  margin: 0;
-  padding-left: 18px;
-  color: #3f4d60;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.roadmap-overview-points li {
-  line-height: 1.5;
+.roadmap-mini-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(17, 24, 39, 0.05);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .roadmap-focus-grid {
@@ -4619,6 +4649,9 @@ button.nav-link:hover {
   padding: 24px;
   border: 1px solid rgba(224, 214, 199, 0.9);
   box-shadow: 0 18px 40px rgba(180, 131, 87, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .roadmap-focus-card--now {
@@ -4641,7 +4674,7 @@ button.nav-link:hover {
 
 .roadmap-focus-eyebrow {
   display: inline-block;
-  margin-bottom: 10px;
+  margin-left: 8px;
   color: #8f5d34;
   font-size: 11px;
   font-weight: 800;
@@ -4649,17 +4682,43 @@ button.nav-link:hover {
   text-transform: uppercase;
 }
 
+.roadmap-focus-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.roadmap-focus-stage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.08);
+  color: #293242;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
 .roadmap-focus-card h2 {
-  margin: 0 0 10px;
+  margin: 0;
   font-size: clamp(24px, 3vw, 34px);
   line-height: 1;
   letter-spacing: -0.03em;
 }
 
 .roadmap-focus-card p {
-  margin: 0 0 18px;
+  margin: 0;
   color: #556273;
-  line-height: 1.65;
+  line-height: 1.55;
+}
+
+.roadmap-focus-impact {
+  max-width: 34ch;
+  color: #2f3e51;
+  font-weight: 600;
 }
 
 .roadmap-chip-row {
@@ -5265,11 +5324,18 @@ button.nav-link:hover {
     grid-template-columns: 1fr;
   }
 
-  .roadmap-overview,
   .roadmap-focus-grid,
   .roadmap-legend,
   .roadmap-issue-grid {
     grid-template-columns: 1fr;
+  }
+
+  .roadmap-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .roadmap-flow-step:nth-child(2)::after {
+    display: none;
   }
 
   .roadmap-section-head,
@@ -5335,12 +5401,19 @@ button.nav-link:hover {
   }
 
   .roadmap-hero-stat-grid,
-  .roadmap-overview,
   .roadmap-value-grid,
   .roadmap-focus-grid,
   .roadmap-legend,
   .roadmap-issue-grid {
     grid-template-columns: 1fr;
+  }
+
+  .roadmap-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .roadmap-flow-step::after {
+    display: none;
   }
 
   .roadmap-phase-stats {
@@ -5785,7 +5858,7 @@ button.nav-link:hover {
   color: white;
   padding: 4px 12px;
   border-radius: 8px;
-  font-size: var(--game-text-sm);
+  font-size: 0.75rem;
   white-space: nowrap;
   animation: bc-toast-in 0.2s ease-out, bc-toast-out 0.3s 1.2s ease-in forwards;
   pointer-events: none;
@@ -5805,15 +5878,6 @@ button.nav-link:hover {
   75% { transform: translateX(3px); }
 }
 
-.bc-board {
-  transition: opacity 0.16s ease;
-}
-
-.bc-board--hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
 /* Block Crush — completion overlay */
 .bc-overlay {
   position: absolute;
@@ -5830,20 +5894,6 @@ button.nav-link:hover {
 }
 
 @keyframes bc-overlay-in { from { opacity: 0; } }
-@keyframes bc-overlay-out { to { opacity: 0; } }
-
-.bc-overlay--dismissing {
-  animation: bc-overlay-out 0.22s ease-in forwards;
-}
-
-.bc-overlay__panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: min(92%, 360px);
-  padding: 14px 0 0;
-  text-align: center;
-}
 
 .bc-overlay__char {
   font-size: 4rem;
@@ -5852,13 +5902,13 @@ button.nav-link:hover {
 }
 
 .bc-overlay__romanization {
-  font-size: var(--game-text-base);
+  font-size: 1rem;
   color: var(--color-text-muted, #aaa);
   margin-top: 0.5rem;
 }
 
 .bc-overlay__meaning {
-  font-size: var(--game-text-xl);
+  font-size: 1.5rem;
   font-weight: 600;
   color: var(--color-accent-gold, #f0c040);
   margin-top: 0.5rem;

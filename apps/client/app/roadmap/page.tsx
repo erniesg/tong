@@ -85,69 +85,57 @@ const executionCounts = ROADMAP_PHASES.flatMap((phase) => phase.issues).reduce(
   } as Record<RoadmapExecution, number>,
 );
 
+const totalIssues = ROADMAP_PHASES.reduce((count, phase) => count + phase.issues.length, 0);
+
 const FOCUS_WINDOWS = [
   {
     key: 'now',
+    stage: '01',
     eyebrow: 'Unlock first',
     title: 'Make Tong remotely operable',
-    summary:
-      'Before the queue scales, remote agents need portable issues, published assets, and reviewer-visible proof.',
+    summary: 'Portable issues, published assets, and reviewer-visible proof.',
+    impact: 'This is the reliability layer. Without it, remote QA and unattended implementation stay brittle.',
+    benefits: ['Portable context', 'Published runtime assets', 'Reviewable proof'],
     issueNumbers: [66, 65, 29, 35, 36, 46],
   },
   {
     key: 'next',
+    stage: '02',
     eyebrow: 'Unlock second',
     title: 'Add resume and deterministic checkpoints',
-    summary:
-      'Once the runtime is portable, progression and seeded checkpoints cut replay time for both players and QA.',
+    summary: 'Resume flows for players and seeded checkpoints for QA.',
+    impact: 'This is the speed layer. It cuts replay loops for both users and bug reproduction.',
+    benefits: ['Return to map', 'Resume active hangout', 'Checkpoint seeds'],
     issueNumbers: [37, 38, 47, 48, 49, 51],
   },
   {
     key: 'later',
+    stage: '03',
     eyebrow: 'Then accelerate',
     title: 'Polish, KG, and world content',
-    summary:
-      'Only after the foundations land should the backlog widen into playtest polish, KG-backed generation, and starter packs.',
+    summary: 'Polish the experience, expand generation, and ship starter packs.',
+    impact: 'This is the scale layer. It broadens the demo only after the foundations stop wasting cycles.',
+    benefits: ['Playtest polish', 'KG rollout', 'Starter packs'],
     issueNumbers: [31, 17, 19, 53, 60, 69],
   },
 ] as const;
 
-const OVERVIEW_CARDS = [
+const OVERVIEW_FLOW = [
   {
-    eyebrow: 'For players',
-    title: 'Tong becomes a world you can leave and return to',
-    copy:
-      'Resume-ready sessions and clearer progression turn the prototype into a living language game instead of a fragile one-shot flow.',
-    points: ['Return to the world map anytime', 'Resume the active hangout without replaying everything'],
+    title: 'Remote-first',
+    detail: 'assets + proof',
   },
   {
-    eyebrow: 'For testers',
-    title: 'QA shifts from replay loops to short, reliable proofs',
-    copy:
-      'Deterministic checkpoints, portable issues, and reviewer-proof capture make timing-sensitive bugs faster to prove and faster to close.',
-    points: ['Short proof clips instead of full playthroughs', 'Portable issue bundles agents can rerun remotely'],
+    title: 'Checkpointed',
+    detail: 'resume + seeds',
   },
   {
-    eyebrow: 'For agents',
-    title: 'Remote work stops depending on one laptop',
-    copy:
-      'Published assets, clearer dependencies, and proof rules make unattended implementation much more trustworthy.',
-    points: ['Agent-ready issues route cleanly by lane', 'PRs can carry media humans can actually review'],
-  },
-] as const;
-
-const VALUE_PROMISES = [
-  {
-    label: 'Product outcome',
-    title: 'A resumable, mobile-first language world',
+    title: 'Polished',
+    detail: 'faster fixes',
   },
   {
-    label: 'Ops outcome',
-    title: 'A queue agents can work 24/7 without hidden local context',
-  },
-  {
-    label: 'Team outcome',
-    title: 'A roadmap where dependencies and blockers are visible before work starts',
+    title: 'Expanded',
+    detail: 'KG + content',
   },
 ] as const;
 
@@ -348,44 +336,58 @@ export default function RoadmapPage() {
       <section className="roadmap-overview">
         <article className="roadmap-overview-lead">
           <span className="kicker">Overview</span>
-          <h2>Why this roadmap matters beyond “fix the backlog”</h2>
-          <p>
-            This is the path from a promising demo to a remotely operable product system: one where players can
-            actually resume progress, testers can report issues with enough context, and agents can take work
-            unattended without hallucinating the environment around them.
-          </p>
-          <div className="roadmap-value-grid">
-            {VALUE_PROMISES.map((value) => (
-              <div key={value.title} className="roadmap-value-card">
-                <span>{value.label}</span>
-                <strong>{value.title}</strong>
+          <h2>Tong, unlocked.</h2>
+          <p className="roadmap-overview-tagline">One execution path from fragile demo to remotely operable game.</p>
+
+          <div className="roadmap-flow">
+            {OVERVIEW_FLOW.map((item, index) => (
+              <div key={item.title} className="roadmap-flow-step">
+                <div className="roadmap-flow-badge">{String(index + 1).padStart(2, '0')}</div>
+                <strong>{item.title}</strong>
+                <span>{item.detail}</span>
               </div>
             ))}
           </div>
-        </article>
 
-        <div className="roadmap-overview-grid">
-          {OVERVIEW_CARDS.map((card) => (
-            <article key={card.title} className="roadmap-overview-card">
-              <span className="roadmap-focus-eyebrow">{card.eyebrow}</span>
-              <h3>{card.title}</h3>
-              <p>{card.copy}</p>
-              <ul className="roadmap-overview-points">
-                {card.points.map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-              </ul>
-            </article>
-          ))}
-        </div>
+          <div className="roadmap-value-grid">
+            <div className="roadmap-value-card">
+              <span>Critical path</span>
+              <strong>{CRITICAL_PATH.length}</strong>
+              <em>ordered unblockers</em>
+            </div>
+            <div className="roadmap-value-card">
+              <span>Agent-ready</span>
+              <strong>{executionCounts['agent-ready']}</strong>
+              <em>safe unattended issues</em>
+            </div>
+            <div className="roadmap-value-card">
+              <span>Total scope</span>
+              <strong>{totalIssues}</strong>
+              <em>tracked roadmap items</em>
+            </div>
+          </div>
+        </article>
       </section>
 
       <section className="roadmap-focus-grid">
         {FOCUS_WINDOWS.map((window) => (
           <article key={window.key} className={`roadmap-focus-card roadmap-focus-card--${window.key}`}>
-            <span className="roadmap-focus-eyebrow">{window.eyebrow}</span>
+            <div className="roadmap-focus-card-head">
+              <div>
+                <span className="roadmap-focus-stage">{window.stage}</span>
+                <span className="roadmap-focus-eyebrow">{window.eyebrow}</span>
+              </div>
+            </div>
             <h2>{window.title}</h2>
             <p>{window.summary}</p>
+            <p className="roadmap-focus-impact">{window.impact}</p>
+            <div className="roadmap-chip-row">
+              {window.benefits.map((benefit) => (
+                <span key={benefit} className="roadmap-mini-chip">
+                  {benefit}
+                </span>
+              ))}
+            </div>
             <div className="roadmap-chip-row">
               {window.issueNumbers
                 .map((issueNumber) => issueLookup.get(issueNumber))
