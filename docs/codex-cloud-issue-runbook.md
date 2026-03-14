@@ -56,19 +56,18 @@ The generator emits these as suggestions; it does not modify GitHub labels direc
 ### Batch 1
 
 - `#11` Onboarding clarity
-- `#13` Block Crush lives/time UX
 - `#14` HUD discoverability
-- `#16` CJK treatment
 
-These are the first cloud wave because they are either code-only or only need normal browser acceptance after the fix.
+These are the first cloud wave because they are small, repo-contained UI fixes with low overlap.
 
 ### Batch 2
 
+- `#31` Block Crush first-time hint and early cognitive-load follow-up
 - `#18` Block Crush review flash
 - `#17` tap-flow wasted tap
 - `#19` fake streaming after loading
 
-These should follow Batch 1 because they are more timing-sensitive or overlap with the same gameplay shell files.
+These should follow Batch 1 because they are either Block Crush follow-ups or more timing-sensitive interaction work in the same gameplay shell lane.
 
 ### Batch 3
 
@@ -81,6 +80,12 @@ This should happen after the focused fixes, because it is cross-cutting and othe
 - `#12` hangout backdrop/avatar/immersion issue
 
 This remains local-only until shared asset hosting exists for the looping backdrop and related scene assets.
+
+### Unassigned for now
+
+- `#29` remote-first and agent-native epic
+
+Keep this one split into narrower slices instead of sending the whole epic as one cloud task.
 
 ## Recommended cloud workflow
 
