@@ -252,15 +252,14 @@ function LandingPage() {
 
         <div className="landing-hero-stage">
           <div className="landing-hero-copy">
-            <span className="kicker landing-hero-kicker">Playable AI language drama</span>
+            <span className="kicker landing-hero-kicker">Korean. Japanese. Chinese.</span>
             <h1 className="landing-headline landing-headline--cinematic">
               <span className="landing-headline-line">Live the drama.</span>
               <span className="landing-headline-line">Learn the language.</span>
             </h1>
             <p className="landing-subhead landing-subhead--cinematic">
-              Play as a trainee navigating life in Seoul, Shanghai and Tokyo. Learn the language to{' '}
-              <span className="landing-build">build</span> relationships or <span className="landing-burn">burn</span>{' '}
-              them. What happens next is up to you.
+              Play as a trainee across Seoul, Shanghai, and Tokyo. <span className="landing-build">Build</span>{' '}
+              relationships or <span className="landing-burn">burn</span> them.
             </p>
           </div>
 

@@ -3887,6 +3887,11 @@ button.nav-link:hover {
 }
 
 .landing-hero-video {
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+
+.landing-hero-video--ready {
   opacity: 0.98;
 }
 

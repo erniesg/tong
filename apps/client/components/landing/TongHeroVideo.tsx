@@ -36,6 +36,7 @@ function detectSource(probe: HTMLVideoElement): HeroVideoSource {
 
 export default function TongHeroVideo() {
   const [source, setSource] = useState<HeroVideoSource>('static');
+  const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -47,10 +48,13 @@ export default function TongHeroVideo() {
     const video = videoRef.current;
     if (!video || source === 'static') return;
 
+    setVideoReady(false);
+
     const tryPlay = async () => {
       try {
         await video.play();
       } catch {
+        setVideoReady(false);
         setSource('static');
       }
     };
@@ -62,28 +66,34 @@ export default function TongHeroVideo() {
 
   return (
     <div className="landing-hero-video-shell" aria-hidden="true">
-      <Image
-        src={STATIC_FALLBACK}
-        alt=""
-        width={960}
-        height={960}
-        priority
-        className="landing-hero-poster"
-      />
+      {source === 'static' ? (
+        <Image
+          src={STATIC_FALLBACK}
+          alt=""
+          width={960}
+          height={960}
+          priority
+          className="landing-hero-poster"
+        />
+      ) : null}
       {src ? (
         <video
           key={src}
           ref={videoRef}
-          className="landing-hero-video"
+          className={`landing-hero-video${videoReady ? ' landing-hero-video--ready' : ''}`}
           autoPlay
           muted
           loop
           playsInline
           preload="metadata"
           disablePictureInPicture
-          poster={STATIC_FALLBACK}
           src={src}
-          onError={() => setSource('static')}
+          onLoadedData={() => setVideoReady(true)}
+          onPlaying={() => setVideoReady(true)}
+          onError={() => {
+            setVideoReady(false);
+            setSource('static');
+          }}
         />
       ) : null}
     </div>
