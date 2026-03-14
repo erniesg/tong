@@ -111,7 +111,7 @@ Important delivery rules:
 1. The primary implementation path is a direct Codex environment task, not a GitHub comment trigger.
 2. Do not rely on shell-level `git push` or `gh` CLI from inside the cloud task.
 3. Use Codex's built-in diff and PR creation flow from the task result.
-4. Artifact directories under `artifacts/qa-runs/` are gitignored, so evidence must be summarized in the task result or PR body instead of being cited as committed GitHub blob links unless those files were intentionally checked in.
+4. Artifact directories under `artifacts/qa-runs/` are gitignored, so evidence must be summarized in the task result or uploaded to `tong-runs` and linked from the PR body or comment. Do not depend on committed GitHub blob links unless those files were intentionally checked in.
 5. Reserve `@codex` GitHub comments for review or explicitly manual experiments, not the default implementation path.
 
 ## Acceptance policy

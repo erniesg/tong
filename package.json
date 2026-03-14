@@ -20,6 +20,8 @@
     "demo:smoke": "node scripts/demo_smoke_check.mjs",
     "demo:tools": "node scripts/mock_tool_flow_check.mjs",
     "demo:judge": "./scripts/run-judge-demo.sh",
+    "qa:upload-evidence": "node scripts/upload-qa-evidence.mjs",
+    "qa:render-comment": "node scripts/render-qa-comment.mjs",
     "secrets:sync:cf": "./scripts/sync-cf-secrets-from-env.sh",
     "build:client:cf": "npm --prefix apps/client run cf:build",
     "deploy:client:cf": "./scripts/deploy-client-cloudflare.sh",
