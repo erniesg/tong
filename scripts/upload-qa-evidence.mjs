@@ -272,13 +272,16 @@ function buildPreviewArtifacts(bundle, baseArtifacts, options) {
     return previewArtifacts;
   }
 
+  const videoArtifacts = baseArtifacts.filter((artifact) => artifact.media_kind === "video");
+  if (videoArtifacts.length === 0) {
+    return previewArtifacts;
+  }
+
   ensureTool("ffmpeg");
   ensureTool("ffprobe");
   ensureDir(previewsDir);
 
-  for (const artifact of baseArtifacts) {
-    if (artifact.media_kind !== "video") continue;
-
+  for (const artifact of videoArtifacts) {
     const absoluteVideoPath = path.join(bundle.repoRoot, artifact.local_path);
     const duration = getVideoDurationSeconds(absoluteVideoPath);
     const previewStart = resolvePreviewStartSeconds(duration, options);
