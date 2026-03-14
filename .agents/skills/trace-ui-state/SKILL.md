@@ -15,6 +15,7 @@ Read:
 - `.agents/skills/_functional-qa/references/evidence-strategies.md`
 - `.agents/skills/_functional-qa/references/game-browser-playbook.md` when tracing `/game`
 - `.agents/skills/_functional-qa/config/repo-adapter.json`
+- `docs/agent-native-project-setup.md`
 
 The shared runtime is:
 
@@ -44,6 +45,7 @@ Use the invocation arguments as the issue, URL, or surface name to trace.
 - visible UI before and after
 - console output
 - relevant internal state or branch logs
+- checkpoint or scenario-seed id when deterministic setup is used
 
    When tracing a tap, reveal, or timing-sensitive transition, emit explicit cue timestamps for important state changes if the runtime can provide them, for example `token_tapped_at_ms`, `tooltip_opened_at_ms`, `card_rendered_at_ms`, or `audio_started_at_ms`.
 
@@ -59,6 +61,11 @@ Use the invocation arguments as the issue, URL, or surface name to trace.
 - `steps.md` with the exact reproduction sequence
 - `evidence.json` with temporal capture, logs, and open questions
 
+   Distinguish between:
+
+- real-player route behavior
+- deterministic setup shortcuts used only to get near the proof moment
+
 7. Finalize the run with a verdict of `ambiguous`, `reproduced`, `partially-reproduced`, or `blocked` unless the trace fully resolves the issue.
 
 ## Output requirements
@@ -68,3 +75,4 @@ Use the invocation arguments as the issue, URL, or surface name to trace.
 - Point back to the validation run when the trace is a follow-up.
 - Prefer deterministic state cues over post-hoc video interpretation. Use video-understanding or OCR only when the runtime cannot expose the needed state transition directly.
 - If a deterministic jump or injected state makes the visible UI semantically confusing, say so explicitly and rerun before using the clip as reviewer-facing evidence.
+- If the trace depends on a non-portable local-only setup, say so explicitly.

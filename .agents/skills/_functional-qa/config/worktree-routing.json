@@ -1,8 +1,19 @@
 {
   "schema_version": "1",
-  "default_open_issue_limit": 20,
+  "default_open_issue_limit": 50,
   "setup_worktrees_command": "npm run setup:worktrees",
   "launch_parallel_command": "./scripts/launch-parallel-agents.sh",
+  "project_control_plane": {
+    "owner": "erniesg",
+    "owner_type": "user",
+    "number": 3,
+    "lane_field": "Lane",
+    "execution_mode_field": "Execution Mode",
+    "portable_context_field": "Portable Context",
+    "agent_ready_field": "Agent Ready",
+    "blocked_by_field": "Blocked By",
+    "workflow_status_field": "Workflow Status"
+  },
   "trace_issue_classes": [
     "interaction-input",
     "animation-transition",
@@ -25,61 +36,87 @@
     "trace"
   ],
   "issue_class_fallbacks": {
-    "functional-logic": "client-shell",
-    "interaction-input": "client-shell",
-    "visual-layout": "client-shell",
-    "animation-transition": "client-shell",
-    "async-streaming-state": "client-shell",
+    "functional-logic": "client-runtime",
+    "interaction-input": "client-runtime",
+    "visual-layout": "client-ui",
+    "animation-transition": "client-runtime",
+    "async-streaming-state": "client-runtime",
     "data-contract-api": "server-api",
-    "persistence-state-sync": "client-shell",
+    "persistence-state-sync": "server-api",
     "performance-resource": "server-ingestion",
-    "compatibility-environment": "client-shell",
+    "compatibility-environment": "runtime-assets",
     "auth-permissions": "server-api",
     "integration-third-party": "server-api",
-    "accessibility": "client-shell",
+    "accessibility": "client-ui",
     "localization-content": "client-overlay",
-    "flaky-nondeterministic": "client-shell"
+    "flaky-nondeterministic": "client-runtime"
   },
   "worktrees": [
     {
-      "id": "client-shell",
-      "branch": "codex/client-shell",
-      "path": ".worktrees/client-shell",
+      "id": "client-ui",
+      "branch": "codex/client-ui",
+      "path": ".worktrees/client-ui",
       "path_hints": [
-        "apps/client/app/",
         "apps/client/components/shell/",
+        "apps/client/components/city-map/",
+        "apps/client/components/hud/",
         "apps/client/components/learn/",
         "apps/client/lib/session/",
         "apps/client/lib/backend/",
         "apps/client/lib/theme/"
       ],
       "keyword_hints": [
-        "chat",
-        "continue",
-        "dialogue",
-        "exercise",
-        "game",
-        "hangout",
+        "discoverability",
         "hud",
-        "learn",
+        "language settings",
+        "layout",
         "map",
         "mobile",
         "onboarding",
-        "profile",
-        "session",
+        "typography",
+        "world map"
+      ],
+      "issue_classes": [
+        "visual-layout",
+        "accessibility"
+      ]
+    },
+    {
+      "id": "client-runtime",
+      "branch": "codex/client-runtime",
+      "path": ".worktrees/client-runtime",
+      "path_hints": [
+        "apps/client/app/api/",
+        "apps/client/app/game/GamePageClient.tsx",
+        "apps/client/components/exercises/",
+        "apps/client/components/scene/",
+        "apps/client/lib/ai/",
+        "apps/client/lib/debug/",
+        "apps/client/lib/store/"
+      ],
+      "keyword_hints": [
+        "block crush",
+        "checkpoint",
+        "continue",
+        "dialogue",
+        "dismiss",
+        "double tap",
+        "exercise",
+        "hangout",
+        "resume",
+        "review",
+        "scene",
+        "stream",
         "tap",
-        "touch",
-        "whisper"
+        "typewriter"
       ],
       "issue_classes": [
         "functional-logic",
         "interaction-input",
-        "visual-layout",
         "animation-transition",
         "async-streaming-state",
         "persistence-state-sync",
         "compatibility-environment",
-        "accessibility",
         "flaky-nondeterministic"
       ]
     },
@@ -115,6 +152,64 @@
         "visual-layout",
         "accessibility",
         "localization-content"
+      ]
+    },
+    {
+      "id": "qa-platform",
+      "branch": "codex/qa-platform",
+      "path": ".worktrees/qa-platform",
+      "path_hints": [
+        ".agents/skills/",
+        ".github/ISSUE_TEMPLATE/",
+        "docs/codex-cloud-issue-runbook.md",
+        "docs/qa/",
+        "docs/agent-native-project-setup.md"
+      ],
+      "keyword_hints": [
+        "artifact",
+        "codex cloud",
+        "evidence",
+        "issue template",
+        "portable context",
+        "proof",
+        "qa",
+        "reviewer",
+        "runbook"
+      ],
+      "issue_classes": [
+        "animation-transition",
+        "async-streaming-state",
+        "compatibility-environment"
+      ]
+    },
+    {
+      "id": "runtime-assets",
+      "branch": "codex/runtime-assets",
+      "path": ".worktrees/runtime-assets",
+      "path_hints": [
+        "assets/characters/",
+        "assets/game/",
+        "assets/generated/",
+        "assets/manifest/",
+        "docs/qa-evidence-uploads.md",
+        "apps/client/lib/content/characters.ts",
+        "apps/client/lib/content/tong-expressions.ts",
+        "apps/client/components/scene/CharacterSprite.tsx"
+      ],
+      "keyword_hints": [
+        "404",
+        "asset",
+        "bucket",
+        "fallback",
+        "haeun idle",
+        "manifest",
+        "runtime asset",
+        "video"
+      ],
+      "issue_classes": [
+        "visual-layout",
+        "compatibility-environment",
+        "flaky-nondeterministic"
       ]
     },
     {
@@ -171,6 +266,7 @@
         "ingest",
         "ingestion",
         "insights",
+        "knowledge graph",
         "lyrics",
         "media profile",
         "ranking",
@@ -200,6 +296,7 @@
         "branching",
         "mastery",
         "mission",
+        "progression",
         "reward",
         "rp",
         "scene",
@@ -277,7 +374,6 @@
         "assets/presets/",
         "assets/content-packs/",
         "assets/rewards/",
-        "assets/manifest/",
         "docs/mock-ui-and-assets-track.md"
       ],
       "keyword_hints": [
