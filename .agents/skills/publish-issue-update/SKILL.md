@@ -55,8 +55,14 @@ Use the invocation arguments as either:
 
    Use the generated `uploaded-comment.md` when you need clean public links, an inline GIF preview, or an MP4 proof link without committing binaries into git.
 
+7. For reviewer-visible UI fixes such as layout, typography, subtitle, translation, tooltip, or focus-style changes, make the published update easy to review:
+   - include a full before/after comparison panel
+   - include a focused comparison crop when the changed region is small or text-heavy
+   - if automation cannot generate those assets yet, say that explicitly and return paste-ready markdown that points to the raw before/after screenshots instead of pretending the evidence is complete
+
 ## Output requirements
 
 - Never publish a run with a placeholder summary.
 - Keep GitHub as the default coordination surface.
+- Do not describe visual evidence as reviewer-ready when the comment only contains raw run IDs or uncropped artifact links for a subtle UI change.
 - If GitHub auth is unavailable, stop and report that explicitly.

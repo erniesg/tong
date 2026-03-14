@@ -85,9 +85,22 @@ function renderBullet(label, artifact, cacheBustToken) {
   return `- ${label}: [${text}](${withCacheBust(artifact.url, cacheBustToken)})`;
 }
 
+function sameArtifact(left, right) {
+  if (!left || !right) return false;
+  if (left.id && right.id) return left.id === right.id;
+  return left.url && right.url ? left.url === right.url : false;
+}
+
 function renderInlinePreview(manifest, cacheBustToken) {
-  const previewArtifact = manifest.primary?.gif_preview || manifest.primary?.poster || manifest.primary?.dialogue_screenshot;
+  const previewArtifact =
+    manifest.primary?.comparison_panel ||
+    manifest.primary?.comparison_focus_crop ||
+    manifest.primary?.gif_preview ||
+    manifest.primary?.poster ||
+    manifest.primary?.dialogue_screenshot;
+
   if (!previewArtifact?.url) return null;
+
   const alt = manifest.issue?.issue_ref
     ? `${manifest.issue.issue_ref} uploaded evidence preview`
     : `${manifest.run.issue_ref} uploaded evidence preview`;
@@ -114,16 +127,33 @@ function renderValidationSentence(manifest) {
   return `${modeText}${liveModel}`.trim() || null;
 }
 
+function renderComparisonContext(manifest) {
+  const previousRun = manifest.comparison?.previous_run;
+  if (!previousRun?.run_id) return null;
+  return `Before/after comparison uses baseline run \`${previousRun.run_id}\`.`;
+}
+
+function renderComparisonGap(manifest) {
+  if (!manifest.comparison?.expected || manifest.comparison?.generated) {
+    return null;
+  }
+
+  const reason = manifest.comparison?.missing_reason
+    || "Add manual `comparison_panels` and `comparison_focus_crops` entries to evidence.json before publishing reviewer-facing evidence.";
+  return `Comparison assets are still missing for this reviewer-visible QA run. ${reason}`;
+}
+
 function renderComment(manifest) {
   const cacheBustToken = buildCacheBustToken(manifest);
   const issueRef = manifest.issue?.issue_ref || manifest.run.issue_ref;
-  const proofVideo = manifest.primary?.proof_video;
-  const dialogue = manifest.primary?.dialogue_screenshot;
-  const tooltip = manifest.primary?.tooltip_screenshot;
-  const trace = manifest.primary?.romanization_trace;
-  const summaryArtifact = manifest.primary?.summary;
+  const tooltipArtifact = manifest.primary?.tooltip_screenshot;
+  const dialogueArtifact = sameArtifact(manifest.primary?.dialogue_screenshot, tooltipArtifact)
+    ? null
+    : manifest.primary?.dialogue_screenshot;
   const preview = renderInlinePreview(manifest, cacheBustToken);
   const summarySentence = renderSummarySentence(manifest);
+  const comparisonContext = renderComparisonContext(manifest);
+  const comparisonGap = renderComparisonGap(manifest);
   const validationSentence = renderValidationSentence(manifest);
 
   const lines = [];
@@ -134,19 +164,31 @@ function renderComment(manifest) {
     lines.push(summarySentence);
   }
 
+  if (comparisonContext) {
+    lines.push("");
+    lines.push(comparisonContext);
+  }
+
   if (preview) {
     lines.push("");
     lines.push(preview);
   }
 
+  if (comparisonGap) {
+    lines.push("");
+    lines.push(comparisonGap);
+  }
+
   lines.push("");
   const bullets = [
+    renderBullet("Before/after comparison panel", manifest.primary?.comparison_panel, cacheBustToken),
+    renderBullet("Focused comparison crop", manifest.primary?.comparison_focus_crop, cacheBustToken),
     renderBullet("GIF preview", manifest.primary?.gif_preview, cacheBustToken),
-    renderBullet("Screen recording with audio", proofVideo, cacheBustToken),
-    renderBullet("Tooltip screenshot", tooltip, cacheBustToken),
-    renderBullet("Dialogue screenshot", dialogue, cacheBustToken),
-    renderBullet("Romanization-bait trace", trace, cacheBustToken),
-    renderBullet("QA summary", summaryArtifact, cacheBustToken),
+    renderBullet("Screen recording with audio", manifest.primary?.proof_video, cacheBustToken),
+    renderBullet("Tooltip screenshot", tooltipArtifact, cacheBustToken),
+    renderBullet("Dialogue screenshot", dialogueArtifact, cacheBustToken),
+    renderBullet("Romanization-bait trace", manifest.primary?.romanization_trace, cacheBustToken),
+    renderBullet("QA summary", manifest.primary?.summary, cacheBustToken),
     manifest.manifest_url ? `- Uploaded manifest: [manifest.json](${withCacheBust(manifest.manifest_url, cacheBustToken)})` : null,
   ].filter(Boolean);
   lines.push(...bullets);

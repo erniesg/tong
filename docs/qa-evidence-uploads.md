@@ -34,15 +34,24 @@ npm run qa:upload-evidence -- \
 What this does:
 
 1. Collects screenshots, proof video, summary, and optional supporting traces from the run bundle.
-2. Generates a GIF preview and poster frame for uploaded videos.
+2. For reviewer-visible UI fixes on `--verify-fix` runs, auto-generates:
+   - a full before/after comparison panel
+   - a focused comparison crop around the detected changed region
+3. Generates a GIF preview and poster frame for uploaded videos.
    By default the preview is taken from the end of the recording, so reviewer-facing evidence shows the actual interaction moment instead of the setup frames.
-3. Uploads everything to `tong-runs` under:
+4. Uploads everything to `tong-runs` under:
 
 ```text
 qa-runs/<suite>/<target-slug>/<run-id>/...
 ```
 
-4. Writes a local upload manifest in the run directory and uploads `manifest.json` beside the evidence files.
+5. Writes a local upload manifest in the run directory and uploads `manifest.json` beside the evidence files.
+
+Comparison generation uses the previous validation run linked in `run.json.previous_run_id`. That means the normal path is:
+
+1. run `validate-issue` before the fix
+2. run `validate-issue --verify-fix` after the fix
+3. upload the verify-fix run bundle
 
 ## Render a PR-ready comment
 
@@ -53,6 +62,7 @@ npm run qa:render-comment -- \
 
 This reads `upload-manifest.json` from the run directory and writes `uploaded-comment.md` with:
 
+- direct links to the before/after comparison panel and focused crop when available
 - inline GIF preview
 - direct link to the MP4 proof recording with audio
 - dialogue and tooltip screenshot links
@@ -73,4 +83,6 @@ npm run qa:upload-evidence -- \
 
 - Do not commit generated QA binaries into git once this flow is in place.
 - Use uploaded URLs in PR comments instead of repo blob links.
+- If auto-generation cannot find the previous run, cannot match same-state screenshots, or `magick` is unavailable, the rendered comment now calls that out explicitly instead of silently degrading.
+- Manual fallback: add pre-rendered files under `comparison_panels` and `comparison_focus_crops` in `evidence.json`, then rerun the uploader.
 - For browser or untrusted uploaders later, switch to presigned URLs behind a small Worker instead of direct Wrangler auth.

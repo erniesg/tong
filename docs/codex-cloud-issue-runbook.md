@@ -62,6 +62,14 @@ The generator emits these as suggestions; it does not modify GitHub labels direc
 These are the first cloud wave because they are the explicitly prioritized fixes for readability, Block Crush transition polish, and streaming behavior.
 Run them serially in the listed order. They all sit in the `client-shell` lane, and `#15` touches shared `apps/client/app/globals.css`.
 
+### Batch parallel
+
+- `#35` runtime asset bucket/env contract
+- `#36` canonical runtime asset manifest
+- `#34` QA evidence comparison panels
+
+These can run in parallel with Batch 1 because they sit in `infra-deploy`, `creative-assets`, and non-game QA tooling lanes rather than the active `client-shell` wave.
+
 ### Batch 2
 
 - `#14` HUD discoverability
