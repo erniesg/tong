@@ -1,0 +1,8 @@
+{
+  "bundleId": "shanghai-advanced-reward-placeholder",
+  "manifestKeys": [
+    "reward.shanghai.video-call.placeholder.v1",
+    "reward.shanghai.polaroid.placeholder.v1"
+  ],
+  "status": "planned"
+}

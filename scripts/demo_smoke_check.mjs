@@ -20,7 +20,11 @@ const requiredFiles = [
   "packages/contracts/fixtures/media.events.sample.json",
   "packages/contracts/fixtures/tools.list.sample.json",
   "packages/contracts/fixtures/tools.invoke.sample.json",
-  "packages/contracts/fixtures/demo.secret-status.sample.json"
+  "packages/contracts/fixtures/demo.secret-status.sample.json",
+  "assets/manifest/runtime-asset-manifest.json",
+  "assets/manifest/canonical-asset-manifest.json",
+  "assets/content-packs/seoul-food-street.starter.json",
+  "assets/rewards/shanghai-reward-bundle.placeholder.json"
 ];
 
 const missing = requiredFiles.filter((rel) => !fs.existsSync(path.join(root, rel)));
@@ -66,6 +70,31 @@ const demoSecretStatus = JSON.parse(
 const mediaEvents = JSON.parse(
   fs.readFileSync(
     path.join(root, "packages/contracts/fixtures/media.events.sample.json"),
+    "utf8"
+  )
+);
+
+const runtimeAssetManifest = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "assets/manifest/runtime-asset-manifest.json"),
+    "utf8"
+  )
+);
+const canonicalAssetManifest = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "assets/manifest/canonical-asset-manifest.json"),
+    "utf8"
+  )
+);
+const seoulStarterPack = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "assets/content-packs/seoul-food-street.starter.json"),
+    "utf8"
+  )
+);
+const shanghaiRewardBundle = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "assets/rewards/shanghai-reward-bundle.placeholder.json"),
     "utf8"
   )
 );
@@ -177,6 +206,75 @@ if (!Array.isArray(mediaEvents.events) || mediaEvents.events.length === 0) {
   process.exit(1);
 }
 
+
+if (!Array.isArray(runtimeAssetManifest.assets) || runtimeAssetManifest.assets.length === 0) {
+  console.error("Expected non-empty assets array in runtime asset manifest");
+  process.exit(1);
+}
+
+if (runtimeAssetManifest.keyFormat !== "domain.scope.name.variant") {
+  console.error("Unexpected keyFormat in runtime asset manifest");
+  process.exit(1);
+}
+
+const runtimeKeys = runtimeAssetManifest.assets.map((asset) => asset.key);
+const canonicalKeys = (canonicalAssetManifest.assets ?? []).map((asset) => asset.key);
+
+if (canonicalAssetManifest.keyFormat !== "domain.scope.name.variant") {
+  console.error("Unexpected keyFormat in canonical asset manifest");
+  process.exit(1);
+}
+
+if (runtimeAssetManifest.sourceManifest !== "assets/manifest/canonical-asset-manifest.json") {
+  console.error("runtime asset manifest must declare sourceManifest=assets/manifest/canonical-asset-manifest.json");
+  process.exit(1);
+}
+
+if (runtimeKeys.length !== canonicalKeys.length) {
+  console.error("Runtime manifest and canonical manifest key counts do not match");
+  process.exit(1);
+}
+
+for (const key of canonicalKeys) {
+  if (!runtimeKeys.includes(key)) {
+    console.error(`Runtime manifest missing canonical key: ${key}`);
+    process.exit(1);
+  }
+}
+
+const keyRegex = /^[a-z0-9]+(\.[a-z0-9-]+){3,}$/;
+const seenKeys = new Set();
+for (const asset of runtimeAssetManifest.assets) {
+  if (typeof asset.key !== "string" || !keyRegex.test(asset.key)) {
+    console.error(`Invalid runtime asset key format: ${asset?.key ?? "<missing>"}`);
+    process.exit(1);
+  }
+  if (seenKeys.has(asset.key)) {
+    console.error(`Duplicate runtime asset key: ${asset.key}`);
+    process.exit(1);
+  }
+  seenKeys.add(asset.key);
+
+  if (typeof asset.uri !== "string" || asset.uri.length === 0) {
+    console.error(`Runtime asset key ${asset.key} missing uri`);
+    process.exit(1);
+  }
+}
+
+for (const ref of seoulStarterPack.manifestKeys ?? []) {
+  if (!seenKeys.has(ref)) {
+    console.error(`Starter pack manifest key not found: ${ref}`);
+    process.exit(1);
+  }
+}
+
+for (const ref of shanghaiRewardBundle.manifestKeys ?? []) {
+  if (!seenKeys.has(ref)) {
+    console.error(`Reward bundle manifest key not found: ${ref}`);
+    process.exit(1);
+  }
+}
+
 for (const field of [
   "demoPasswordEnabled",
   "youtubeApiKeyConfigured",
@@ -198,3 +296,5 @@ console.log("- Objective model targets validated");
 console.log("- Vocab insight model validated");
 console.log("- Player media profile includes youtube + spotify signals");
 console.log("- Demo secret status fixture validated");
+console.log("- Runtime asset manifest keys validated");
+console.log("- Canonical/runtime manifest parity validated");

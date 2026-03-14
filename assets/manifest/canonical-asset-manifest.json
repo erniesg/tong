@@ -1,0 +1,88 @@
+{
+  "manifestVersion": "2026-03-14",
+  "manifestId": "tong-runtime-assets-canonical",
+  "owner": "codex/runtime-assets",
+  "keyFormat": "domain.scope.name.variant",
+  "fields": [
+    "key",
+    "type",
+    "usage",
+    "source",
+    "rights",
+    "promptTemplate",
+    "status",
+    "uri"
+  ],
+  "assets": [
+    {
+      "key": "app.logo.trimmed.default",
+      "type": "image",
+      "usage": "global-shell",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "ready",
+      "uri": "/assets/app/logo_trimmed.png"
+    },
+    {
+      "key": "city.seoul.location.food-street.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "ready",
+      "uri": "/assets/backdrops/seoul/pojangmacha.png"
+    },
+    {
+      "key": "city.seoul.location.food-street.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "draft",
+      "uri": "assets/content-packs/seoul-food-street.starter.json"
+    },
+    {
+      "key": "character.haeun.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "ready",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.jin.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "ready",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "reward.shanghai.video-call.placeholder.v1",
+      "type": "video",
+      "usage": "mission-reward",
+      "source": "placeholder",
+      "rights": "placeholder",
+      "promptTemplate": "reward-video-placeholder-v1",
+      "status": "planned",
+      "uri": "assets/rewards/shanghai-video-call.placeholder.mp4"
+    },
+    {
+      "key": "reward.shanghai.polaroid.placeholder.v1",
+      "type": "image",
+      "usage": "collectible-card",
+      "source": "placeholder",
+      "rights": "placeholder",
+      "promptTemplate": "reward-polaroid-placeholder-v1",
+      "status": "planned",
+      "uri": "assets/rewards/shanghai-polaroid.placeholder.png"
+    }
+  ]
+}
