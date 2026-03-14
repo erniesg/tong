@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tong Design System</title>
-<!-- Generated: 2026-03-14T10:45:37.639Z | 75 variables, 580 classes, 45 keyframes -->
+<!-- Generated: 2026-03-14T15:17:03.854Z | 97 variables, 676 classes, 45 keyframes -->
 <style>
 /* ══════════════════════════════════════════════════════════════
    BLOCK 1: globals.css — verbatim embed (single source of truth)
@@ -22,6 +22,7 @@
   --accent-dark: #c94c18;
   --mint: #0f766e;
   --mint-soft: #d1fae5;
+  --site-shell-max: 1240px;
 
   /* Game type scale — single place to tune all in-game font sizes */
   --game-text-xs: 12px;   /* meta labels, secondary info */
@@ -3788,7 +3789,7 @@ button.nav-link:hover {
    ============================== */
 
 .landing {
-  max-width: 720px;
+  max-width: var(--site-shell-max);
   margin: 0 auto;
   padding: 0 20px 64px;
 }
@@ -3864,8 +3865,76 @@ button.nav-link:hover {
 
 /* Hero */
 .landing-hero {
-  padding: 48px 0 40px;
-  text-align: center;
+  position: relative;
+  margin: 0 calc(50% - 50vw) 56px;
+  min-height: min(88svh, 860px);
+  overflow: hidden;
+  border-bottom: 1px solid rgba(229, 214, 194, 0.42);
+  background:
+    radial-gradient(circle at top, rgba(255, 145, 77, 0.16), transparent 28%),
+    linear-gradient(180deg, #0b0f18 0%, #141b2a 52%, #181118 100%);
+  isolation: isolate;
+}
+
+.landing-hero-video-shell {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.landing-hero-poster,
+.landing-hero-video {
+  position: absolute;
+  right: max(3vw, 20px);
+  bottom: -48px;
+  width: min(58vw, 860px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 28px 80px rgba(0, 0, 0, 0.34));
+}
+
+.landing-hero-poster {
+  opacity: 0.94;
+}
+
+.landing-hero-video {
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+
+.landing-hero-video--ready {
+  opacity: 0.98;
+}
+
+.landing-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 28%, rgba(255, 107, 44, 0.22), transparent 24%),
+    radial-gradient(circle at 80% 16%, rgba(15, 118, 110, 0.18), transparent 26%),
+    linear-gradient(90deg, rgba(7, 9, 14, 0.88) 0%, rgba(10, 14, 22, 0.68) 42%, rgba(10, 14, 22, 0.26) 72%, rgba(10, 14, 22, 0.42) 100%),
+    linear-gradient(180deg, rgba(7, 9, 14, 0.2) 0%, rgba(7, 9, 14, 0.06) 32%, rgba(7, 9, 14, 0.46) 100%);
+}
+
+.landing-hero-stage {
+  position: relative;
+  z-index: 2;
+  width: min(100%, var(--site-shell-max));
+  min-height: inherit;
+  margin: 0 auto;
+  padding: clamp(48px, 8vw, 92px) 20px 48px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 430px);
+  align-items: end;
+  gap: 28px;
+}
+
+.landing-hero-copy {
+  max-width: 700px;
+}
+
+.landing-hero-kicker {
+  color: rgba(229, 237, 248, 0.72);
 }
 
 .landing-headline {
@@ -3876,6 +3945,32 @@ button.nav-link:hover {
   font-weight: 700;
 }
 
+.landing-headline--cinematic {
+  display: flex;
+  flex-direction: column;
+  gap: 0.04em;
+  margin: 0 0 20px;
+  font-size: clamp(50px, 9vw, 110px);
+  line-height: 0.88;
+  letter-spacing: -0.05em;
+  color: #fff7ef;
+  text-wrap: balance;
+}
+
+.landing-headline-line {
+  display: block;
+  opacity: 1;
+  transform: translateY(18px);
+  animation: landingHeroReveal 780ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes landingHeroReveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .landing-subhead {
   margin: 0 auto 32px;
   max-width: 520px;
@@ -3884,12 +3979,38 @@ button.nav-link:hover {
   line-height: 1.55;
 }
 
+.landing-subhead--cinematic {
+  margin: 0;
+  max-width: 34ch;
+  color: rgba(238, 244, 252, 0.84);
+  font-size: clamp(18px, 2.3vw, 22px);
+  line-height: 1.58;
+}
+
+.landing-hero-panel {
+  width: 100%;
+  border-radius: 30px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(180deg, rgba(11, 16, 27, 0.78), rgba(11, 16, 27, 0.58)),
+    rgba(11, 16, 27, 0.52);
+  box-shadow: 0 28px 70px rgba(5, 8, 18, 0.34);
+  backdrop-filter: blur(18px);
+}
+
 /* Signup form */
 .landing-signup {
   display: flex;
   gap: 8px;
   max-width: 420px;
   margin: 0 auto;
+}
+
+.landing-signup--hero {
+  max-width: none;
+  margin: 0;
+  gap: 10px;
 }
 
 .landing-email-input {
@@ -3933,6 +4054,15 @@ button.nav-link:hover {
   border-radius: 20px;
   padding: 28px 24px;
   animation: fadeSlideUp 0.35s ease-out;
+}
+
+.landing-prefs-card--hero {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  animation: none;
 }
 
 .landing-prefs-confirmed {
@@ -4103,6 +4233,11 @@ button.nav-link:hover {
   text-align: center;
 }
 
+.landing-error--hero {
+  text-align: left;
+  color: #fda4af;
+}
+
 .landing-build {
   position: relative;
   cursor: default;
@@ -4141,6 +4276,12 @@ button.nav-link:hover {
   color: var(--muted);
   font-size: 13px;
   text-align: center;
+}
+
+.landing-micro--hero {
+  text-align: left;
+  margin-top: 14px;
+  color: rgba(214, 224, 240, 0.7);
 }
 
 /* City cards */
@@ -4334,14 +4475,1038 @@ button.nav-link:hover {
   color: var(--line);
 }
 
+/* Roadmap */
+.roadmap-shell {
+  max-width: var(--site-shell-max);
+  margin: 0 auto;
+  padding: 0 20px 88px;
+  position: relative;
+}
+
+.roadmap-shell::before,
+.roadmap-shell::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+  z-index: -1;
+  filter: blur(18px);
+  opacity: 0.75;
+}
+
+.roadmap-shell::before {
+  top: 110px;
+  right: 4vw;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 107, 44, 0.18), transparent 70%);
+}
+
+.roadmap-shell::after {
+  top: 420px;
+  left: -60px;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(15, 118, 110, 0.18), transparent 72%);
+}
+
+.roadmap-nav {
+  margin-bottom: 22px;
+}
+
+.roadmap-hero {
+  margin-bottom: 24px;
+}
+
+.roadmap-hero-copy {
+  border: 1px solid var(--line);
+  border-radius: 32px;
+  overflow: hidden;
+  padding: 42px 36px;
+  background:
+    radial-gradient(circle at 84% 14%, rgba(255, 107, 44, 0.18), transparent 30%),
+    radial-gradient(circle at 8% 100%, rgba(15, 118, 110, 0.12), transparent 38%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(255, 247, 238, 0.98));
+  box-shadow: 0 28px 64px rgba(180, 131, 87, 0.16);
+}
+
+.roadmap-hero-copy--single {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.roadmap-title {
+  margin: 8px 0 14px;
+  max-width: 9ch;
+  font-size: clamp(44px, 7vw, 78px);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+}
+
+.roadmap-subhead {
+  margin: 0;
+  max-width: 40ch;
+  color: #556273;
+  font-size: clamp(16px, 2vw, 20px);
+  line-height: 1.58;
+}
+
+.roadmap-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.roadmap-signal-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.roadmap-signal-pill {
+  border-radius: 20px;
+  padding: 16px 16px 18px;
+  border: 1px solid rgba(219, 208, 193, 0.92);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.roadmap-signal-pill--muted {
+  background: rgba(24, 32, 45, 0.92);
+  border-color: rgba(33, 46, 66, 0.96);
+}
+
+.roadmap-signal-pill span {
+  display: block;
+  margin-bottom: 8px;
+  color: #6f7d90;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.roadmap-signal-pill strong {
+  display: block;
+  color: #1f2937;
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.roadmap-signal-pill--muted span {
+  color: rgba(206, 216, 232, 0.76);
+}
+
+.roadmap-signal-pill--muted strong {
+  color: #ffffff;
+}
+
+.roadmap-waves {
+  margin-bottom: 24px;
+}
+
+.roadmap-mini-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(17, 24, 39, 0.05);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.roadmap-focus-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.roadmap-focus-grid::before {
+  content: "";
+  position: absolute;
+  inset: 56px 8% auto;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 107, 44, 0.18), rgba(37, 99, 235, 0.22), rgba(15, 118, 110, 0.18));
+  pointer-events: none;
+}
+
+.roadmap-focus-card {
+  position: relative;
+  border-radius: 28px;
+  padding: 24px;
+  border: 1px solid rgba(224, 214, 199, 0.9);
+  box-shadow: 0 18px 40px rgba(180, 131, 87, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.roadmap-focus-card::after {
+  content: "->";
+  position: absolute;
+  top: 44px;
+  right: -18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(224, 214, 199, 0.9);
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 10px 18px rgba(180, 131, 87, 0.12);
+  z-index: 1;
+}
+
+.roadmap-focus-card:last-child::after {
+  display: none;
+}
+
+.roadmap-focus-card--now {
+  background:
+    radial-gradient(circle at top right, rgba(255, 107, 44, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(255, 249, 243, 0.98), rgba(255, 243, 231, 0.98));
+}
+
+.roadmap-focus-card--next {
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 32%),
+    linear-gradient(180deg, rgba(245, 250, 255, 0.98), rgba(237, 246, 255, 0.98));
+}
+
+.roadmap-focus-card--later {
+  background:
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.15), transparent 34%),
+    linear-gradient(180deg, rgba(245, 255, 252, 0.98), rgba(238, 250, 246, 0.98));
+}
+
+.roadmap-focus-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  color: #8f5d34;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.roadmap-focus-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.roadmap-focus-stage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.08);
+  color: #293242;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.roadmap-focus-card h2 {
+  margin: 0;
+  font-size: clamp(28px, 3.2vw, 38px);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  max-width: 10ch;
+}
+
+.roadmap-focus-card p {
+  margin: 0;
+  color: #556273;
+  line-height: 1.52;
+  max-width: 28ch;
+}
+
+.roadmap-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.roadmap-focus-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.roadmap-issue-chip {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(74, 87, 105, 0.12);
+  background: rgba(255, 255, 255, 0.76);
+  color: #293242;
+  text-decoration: none;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.roadmap-issue-chip strong {
+  color: var(--accent-dark);
+  white-space: nowrap;
+}
+
+.roadmap-issue-chip span {
+  color: #465367;
+  line-height: 1.4;
+}
+
+.roadmap-issue-chip:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 107, 44, 0.25);
+  box-shadow: 0 12px 24px rgba(180, 131, 87, 0.12);
+}
+
+.roadmap-issue-chip--compact {
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.roadmap-card-link,
+.roadmap-open-link,
+.roadmap-critical-note a {
+  color: var(--accent-dark);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.roadmap-card-link:hover,
+.roadmap-open-link:hover,
+.roadmap-critical-note a:hover {
+  text-decoration: underline;
+}
+
+.roadmap-critical-section {
+  margin-bottom: 24px;
+  padding: 24px;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 255, 0.98));
+}
+
+.roadmap-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.roadmap-section-head--tight {
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.roadmap-section-head h2 {
+  margin: 8px 0 0;
+  font-size: clamp(28px, 3.6vw, 40px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.roadmap-section-head p {
+  max-width: 420px;
+  margin: 0;
+  color: #566476;
+  line-height: 1.62;
+}
+
+.roadmap-critical-strip {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 6px 2px 10px;
+  margin-bottom: 18px;
+  scroll-snap-type: x proximity;
+}
+
+.roadmap-critical-card {
+  position: relative;
+  flex: 0 0 248px;
+  min-height: 192px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(227, 214, 195, 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 238, 0.96));
+  box-shadow: 0 16px 36px rgba(180, 131, 87, 0.1);
+  scroll-snap-align: start;
+}
+
+.roadmap-critical-card:not(:last-child)::after {
+  content: "then";
+  position: absolute;
+  top: 18px;
+  right: -12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  padding: 0 8px;
+  background: #111827;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.roadmap-critical-step {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(255, 107, 44, 0.12);
+  color: #c94c18;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.roadmap-critical-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 10px;
+}
+
+.roadmap-critical-note {
+  margin: 0;
+  color: #5b6776;
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+.roadmap-legend {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.roadmap-legend-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 100%;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(220, 225, 232, 0.92);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.roadmap-legend-row p {
+  margin: 0;
+  color: #576476;
+  line-height: 1.58;
+  font-size: 14px;
+}
+
+.roadmap-queue-details {
+  margin: 0;
+}
+
+.roadmap-queue-details > summary {
+  list-style: none;
+}
+
+.roadmap-queue-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.roadmap-queue-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  border-radius: 24px;
+  padding: 18px 22px;
+  border: 1px solid rgba(224, 214, 199, 0.9);
+  background:
+    radial-gradient(circle at top right, rgba(255, 107, 44, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 250, 243, 0.98));
+  box-shadow: 0 16px 34px rgba(180, 131, 87, 0.08);
+}
+
+.roadmap-queue-toggle span:first-child {
+  color: #293242;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.roadmap-queue-toggle span:last-child {
+  color: #667487;
+  font-size: 14px;
+}
+
+.roadmap-queue-toggle::after {
+  content: "+";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.08);
+  color: #293242;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
+.roadmap-queue-details[open] .roadmap-queue-toggle::after {
+  content: "-";
+}
+
+.roadmap-queue-body {
+  padding-top: 18px;
+}
+
+.roadmap-phase-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.roadmap-section-head--phases {
+  margin-bottom: 0;
+}
+
+.roadmap-phase {
+  --roadmap-accent: #ff6b2c;
+  --roadmap-accent-soft: rgba(255, 107, 44, 0.12);
+  --roadmap-glow: rgba(255, 107, 44, 0.22);
+  display: grid;
+  grid-template-columns: minmax(250px, 290px) minmax(0, 1fr);
+  border: 1px solid rgba(226, 215, 199, 0.9);
+  border-radius: 34px;
+  overflow: hidden;
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: 0 26px 54px rgba(180, 131, 87, 0.12);
+}
+
+.roadmap-phase--ember {
+  --roadmap-accent: #ff6b2c;
+  --roadmap-accent-soft: rgba(255, 107, 44, 0.12);
+  --roadmap-glow: rgba(255, 107, 44, 0.2);
+}
+
+.roadmap-phase--lagoon {
+  --roadmap-accent: #0f766e;
+  --roadmap-accent-soft: rgba(15, 118, 110, 0.12);
+  --roadmap-glow: rgba(15, 118, 110, 0.2);
+}
+
+.roadmap-phase--cobalt {
+  --roadmap-accent: #2563eb;
+  --roadmap-accent-soft: rgba(37, 99, 235, 0.12);
+  --roadmap-glow: rgba(37, 99, 235, 0.2);
+}
+
+.roadmap-phase--rose {
+  --roadmap-accent: #d94673;
+  --roadmap-accent-soft: rgba(217, 70, 115, 0.12);
+  --roadmap-glow: rgba(217, 70, 115, 0.18);
+}
+
+.roadmap-phase--jade {
+  --roadmap-accent: #15803d;
+  --roadmap-accent-soft: rgba(21, 128, 61, 0.12);
+  --roadmap-glow: rgba(21, 128, 61, 0.18);
+}
+
+.roadmap-phase--gold {
+  --roadmap-accent: #b7791f;
+  --roadmap-accent-soft: rgba(183, 121, 31, 0.14);
+  --roadmap-glow: rgba(183, 121, 31, 0.18);
+}
+
+.roadmap-phase-rail {
+  padding: 24px 22px;
+  background:
+    radial-gradient(circle at top left, var(--roadmap-glow), transparent 44%),
+    linear-gradient(180deg, rgba(20, 26, 37, 0.98), rgba(18, 22, 31, 0.94));
+  color: rgba(245, 248, 255, 0.94);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.roadmap-phase-index {
+  font-size: clamp(38px, 5vw, 58px);
+  line-height: 0.9;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  color: #ffffff;
+}
+
+.roadmap-phase-tag,
+.roadmap-window-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.roadmap-phase-tag {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.roadmap-window-tag {
+  background: var(--roadmap-accent-soft);
+  color: #ffffff;
+}
+
+.roadmap-window-tag--next {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.roadmap-window-tag--later {
+  background: rgba(15, 118, 110, 0.18);
+}
+
+.roadmap-phase-outcome {
+  margin: 0;
+  color: rgba(226, 234, 245, 0.82);
+  line-height: 1.65;
+}
+
+.roadmap-phase-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.roadmap-phase-stats div {
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.roadmap-phase-stats span {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(208, 219, 233, 0.74);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.roadmap-phase-stats strong {
+  color: #ffffff;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.roadmap-phase-body {
+  padding: 24px;
+  background:
+    radial-gradient(circle at top right, var(--roadmap-glow), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 251, 246, 0.98));
+}
+
+.roadmap-phase-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.roadmap-phase-head h2 {
+  margin: 0 0 10px;
+  font-size: clamp(24px, 3vw, 36px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.roadmap-phase-summary {
+  margin: 0;
+  color: #576476;
+  line-height: 1.66;
+  max-width: 720px;
+}
+
+.roadmap-phase-next {
+  flex: 0 0 220px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(209, 220, 233, 0.92);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.roadmap-phase-next strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.roadmap-phase-details,
+.roadmap-issue-details {
+  margin: 0;
+}
+
+.roadmap-phase-details > summary,
+.roadmap-issue-details > summary {
+  list-style: none;
+}
+
+.roadmap-phase-details > summary::-webkit-details-marker,
+.roadmap-issue-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.roadmap-phase-details-toggle,
+.roadmap-issue-details-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+}
+
+.roadmap-phase-details-toggle {
+  border-radius: 20px;
+  padding: 14px 16px;
+  border: 1px solid rgba(209, 220, 233, 0.92);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.roadmap-phase-details-toggle span:first-child,
+.roadmap-issue-details-toggle span:first-child {
+  font-weight: 700;
+  color: #293242;
+}
+
+.roadmap-phase-details-toggle span:last-child,
+.roadmap-issue-details-toggle span:last-child {
+  color: #667487;
+  font-size: 14px;
+}
+
+.roadmap-phase-details-toggle::after,
+.roadmap-issue-details-toggle::after {
+  content: "+";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.08);
+  color: #293242;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
+.roadmap-phase-details[open] .roadmap-phase-details-toggle::after,
+.roadmap-issue-details[open] .roadmap-issue-details-toggle::after {
+  content: "-";
+}
+
+.roadmap-phase-details-body {
+  padding-top: 14px;
+}
+
+.roadmap-issue-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.roadmap-issue-card {
+  border: 1px solid rgba(225, 214, 198, 0.92);
+  border-radius: 24px;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 250, 243, 0.98));
+  box-shadow: 0 16px 34px rgba(180, 131, 87, 0.08);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.roadmap-issue-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 107, 44, 0.22);
+  box-shadow: 0 24px 42px rgba(180, 131, 87, 0.14);
+}
+
+.roadmap-issue-card--critical {
+  border-color: rgba(255, 107, 44, 0.28);
+  box-shadow: 0 18px 36px rgba(255, 107, 44, 0.12);
+}
+
+.roadmap-issue-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.roadmap-issue-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.roadmap-issue-number {
+  color: var(--accent-dark);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.roadmap-issue-flag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(255, 107, 44, 0.12);
+  color: #c94c18;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.roadmap-issue-card h3 {
+  margin: 12px 0 10px;
+  font-size: 18px;
+  line-height: 1.33;
+}
+
+.roadmap-issue-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.roadmap-issue-copy {
+  margin: 0;
+  color: #5b6776;
+  line-height: 1.6;
+}
+
+.roadmap-issue-details {
+  margin-top: 14px;
+}
+
+.roadmap-issue-details-toggle {
+  border-top: 1px solid rgba(220, 225, 232, 0.92);
+  padding-top: 14px;
+}
+
+.roadmap-issue-details-body {
+  padding-top: 12px;
+}
+
+.roadmap-issue-detail-copy {
+  margin: 0;
+  color: #5b6776;
+  line-height: 1.58;
+}
+
+.roadmap-link-cluster {
+  margin-top: 14px;
+}
+
+.roadmap-link-label {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #728194;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.roadmap-issue-footer {
+  margin-top: 16px;
+}
+
+.roadmap-open-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.roadmap-open-link::after {
+  content: "->";
+}
+
+.roadmap-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.roadmap-badge--agent {
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.16);
+  color: #0f766e;
+}
+
+.roadmap-badge--human {
+  background: rgba(255, 107, 44, 0.12);
+  border-color: rgba(255, 107, 44, 0.16);
+  color: #c94c18;
+}
+
+.roadmap-badge--trace {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.16);
+  color: #2563eb;
+}
+
+@media (max-width: 980px) {
+  .landing-hero-stage {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .landing-hero-copy {
+    max-width: 620px;
+  }
+
+  .landing-hero-panel {
+    max-width: 460px;
+  }
+
+  .landing-hero-poster,
+  .landing-hero-video {
+    width: min(72vw, 700px);
+    right: 50%;
+    bottom: -12px;
+    transform: translateX(50%);
+  }
+
+  .roadmap-signal-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .roadmap-focus-grid,
+  .roadmap-legend,
+  .roadmap-issue-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .roadmap-focus-grid::before,
+  .roadmap-focus-card::after {
+    display: none;
+  }
+
+  .roadmap-section-head,
+  .roadmap-phase-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .roadmap-phase {
+    grid-template-columns: 1fr;
+  }
+
+  .roadmap-phase-next {
+    flex: none;
+    width: 100%;
+  }
+}
+
 /* Mobile */
 @media (max-width: 600px) {
   .landing-hero {
-    padding: 32px 0 28px;
+    min-height: 760px;
+    margin-bottom: 40px;
   }
 
   .landing-signup {
     flex-direction: column;
+  }
+
+  .landing-hero-stage {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 18px;
+    padding-top: 28px;
+    padding-bottom: 32px;
+  }
+
+  .landing-hero-copy,
+  .landing-hero-panel {
+    max-width: none;
+  }
+
+  .landing-hero-copy {
+    text-align: center;
+  }
+
+  .landing-hero-poster,
+  .landing-hero-video {
+    right: 50%;
+    bottom: 120px;
+    width: min(132vw, 760px);
+    transform: translateX(50%);
+  }
+
+  .landing-subhead--cinematic,
+  .landing-micro--hero,
+  .landing-error--hero {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .landing-signup--hero {
+    gap: 8px;
   }
 
   .landing-cities,
@@ -4352,6 +5517,61 @@ button.nav-link:hover {
   .landing-footer {
     flex-direction: column;
     text-align: center;
+  }
+
+  .roadmap-shell {
+    padding: 0 16px 56px;
+  }
+
+  .roadmap-shell::before,
+  .roadmap-shell::after {
+    display: none;
+  }
+
+  .roadmap-title {
+    max-width: none;
+  }
+
+  .roadmap-hero-copy,
+  .roadmap-focus-card,
+  .roadmap-critical-section,
+  .roadmap-phase-rail,
+  .roadmap-phase-body,
+  .roadmap-queue-toggle {
+    padding: 20px;
+  }
+
+  .roadmap-signal-row,
+  .roadmap-focus-grid,
+  .roadmap-legend,
+  .roadmap-issue-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .roadmap-phase-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .roadmap-critical-card {
+    flex-basis: 86vw;
+  }
+
+  .roadmap-critical-card:not(:last-child)::after {
+    right: 12px;
+    top: auto;
+    bottom: -12px;
+  }
+
+  .roadmap-issue-chip {
+    width: 100%;
+  }
+
+  .roadmap-focus-footer,
+  .roadmap-queue-toggle,
+  .roadmap-phase-details-toggle,
+  .roadmap-issue-details-toggle {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
@@ -4793,15 +6013,6 @@ button.nav-link:hover {
   75% { transform: translateX(3px); }
 }
 
-.bc-board {
-  transition: opacity 0.16s ease;
-}
-
-.bc-board--hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
 /* Block Crush — completion overlay */
 .bc-overlay {
   position: absolute;
@@ -4818,23 +6029,6 @@ button.nav-link:hover {
 }
 
 @keyframes bc-overlay-in { from { opacity: 0; } }
-@keyframes bc-overlay-out { to { opacity: 0; } }
-
-.bc-overlay--dismissing {
-  animation: bc-overlay-out 0.22s ease-in forwards;
-}
-
-.bc-overlay__panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: min(92%, 360px);
-  padding: 14px 16px 18px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(10, 12, 18, 0.9);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
-}
 
 .bc-overlay__char {
   font-size: 4rem;
@@ -6221,6 +7415,14 @@ button.nav-link:hover {
     </div>
   </div>
   <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: 1240px;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Site Shell Max</div>
+      <div class="ds-color-value">1240px</div>
+      <div class="ds-color-token">--site-shell-max</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
     <div class="ds-color-swatch" style="background: 12px;"></div>
     <div class="ds-color-info">
       <div class="ds-color-name">Game Text Xs</div>
@@ -6678,6 +7880,202 @@ button.nav-link:hover {
       <div class="ds-color-name">Msg Teaching Border</div>
       <div class="ds-color-value">#07c160</div>
       <div class="ds-color-token">--msg-teaching-border</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.roadmap-phase)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #ff6b2c;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent</div>
+      <div class="ds-color-value">#ff6b2c</div>
+      <div class="ds-color-token">--roadmap-accent</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(255, 107, 44, 0.12);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent Soft</div>
+      <div class="ds-color-value">rgba(255, 107, 44, 0.12)</div>
+      <div class="ds-color-token">--roadmap-accent-soft</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(255, 107, 44, 0.22);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Glow</div>
+      <div class="ds-color-value">rgba(255, 107, 44, 0.22)</div>
+      <div class="ds-color-token">--roadmap-glow</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.roadmap-phase--ember)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #ff6b2c;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent</div>
+      <div class="ds-color-value">#ff6b2c</div>
+      <div class="ds-color-token">--roadmap-accent</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(255, 107, 44, 0.12);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent Soft</div>
+      <div class="ds-color-value">rgba(255, 107, 44, 0.12)</div>
+      <div class="ds-color-token">--roadmap-accent-soft</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(255, 107, 44, 0.2);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Glow</div>
+      <div class="ds-color-value">rgba(255, 107, 44, 0.2)</div>
+      <div class="ds-color-token">--roadmap-glow</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.roadmap-phase--lagoon)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #0f766e;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent</div>
+      <div class="ds-color-value">#0f766e</div>
+      <div class="ds-color-token">--roadmap-accent</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(15, 118, 110, 0.12);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent Soft</div>
+      <div class="ds-color-value">rgba(15, 118, 110, 0.12)</div>
+      <div class="ds-color-token">--roadmap-accent-soft</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(15, 118, 110, 0.2);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Glow</div>
+      <div class="ds-color-value">rgba(15, 118, 110, 0.2)</div>
+      <div class="ds-color-token">--roadmap-glow</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.roadmap-phase--cobalt)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #2563eb;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent</div>
+      <div class="ds-color-value">#2563eb</div>
+      <div class="ds-color-token">--roadmap-accent</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(37, 99, 235, 0.12);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent Soft</div>
+      <div class="ds-color-value">rgba(37, 99, 235, 0.12)</div>
+      <div class="ds-color-token">--roadmap-accent-soft</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(37, 99, 235, 0.2);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Glow</div>
+      <div class="ds-color-value">rgba(37, 99, 235, 0.2)</div>
+      <div class="ds-color-token">--roadmap-glow</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.roadmap-phase--rose)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #d94673;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent</div>
+      <div class="ds-color-value">#d94673</div>
+      <div class="ds-color-token">--roadmap-accent</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(217, 70, 115, 0.12);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent Soft</div>
+      <div class="ds-color-value">rgba(217, 70, 115, 0.12)</div>
+      <div class="ds-color-token">--roadmap-accent-soft</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(217, 70, 115, 0.18);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Glow</div>
+      <div class="ds-color-value">rgba(217, 70, 115, 0.18)</div>
+      <div class="ds-color-token">--roadmap-glow</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.roadmap-phase--jade)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #15803d;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent</div>
+      <div class="ds-color-value">#15803d</div>
+      <div class="ds-color-token">--roadmap-accent</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(21, 128, 61, 0.12);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent Soft</div>
+      <div class="ds-color-value">rgba(21, 128, 61, 0.12)</div>
+      <div class="ds-color-token">--roadmap-accent-soft</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(21, 128, 61, 0.18);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Glow</div>
+      <div class="ds-color-value">rgba(21, 128, 61, 0.18)</div>
+      <div class="ds-color-token">--roadmap-glow</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.roadmap-phase--gold)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #b7791f;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent</div>
+      <div class="ds-color-value">#b7791f</div>
+      <div class="ds-color-token">--roadmap-accent</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(183, 121, 31, 0.14);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Accent Soft</div>
+      <div class="ds-color-value">rgba(183, 121, 31, 0.14)</div>
+      <div class="ds-color-token">--roadmap-accent-soft</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(183, 121, 31, 0.18);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Roadmap Glow</div>
+      <div class="ds-color-value">rgba(183, 121, 31, 0.18)</div>
+      <div class="ds-color-token">--roadmap-glow</div>
     </div>
   </div>
 </div>
@@ -7385,105 +8783,105 @@ button.nav-link:hover {
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">landingHeroReveal</div>
+    <div class="ds-anim-box" style="background: #0f766e; animation: landingHeroReveal 2s ease infinite;">
+      landingHeroReveal
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">toastFade</div>
-    <div class="ds-anim-box" style="background: #0f766e; animation: toastFade 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #4a90d9; animation: toastFade 2s ease infinite;">
       toastFade
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">fadeSlideUp</div>
-    <div class="ds-anim-box" style="background: #4a90d9; animation: fadeSlideUp 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #e8485c; animation: fadeSlideUp 2s ease infinite;">
       fadeSlideUp
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">buildBounce</div>
-    <div class="ds-anim-box" style="background: #e8485c; animation: buildBounce 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #f0c040; animation: buildBounce 2s ease infinite;">
       buildBounce
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">burnGlow</div>
-    <div class="ds-anim-box" style="background: #f0c040; animation: burnGlow 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: burnGlow 2s ease infinite;">
       burnGlow
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">emojiPulse</div>
-    <div class="ds-anim-box" style="background: #8b5cf6; animation: emojiPulse 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #06b6d4; animation: emojiPulse 2s ease infinite;">
       emojiPulse
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">stepSlideUp</div>
-    <div class="ds-anim-box" style="background: #06b6d4; animation: stepSlideUp 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ec4899; animation: stepSlideUp 2s ease infinite;">
       stepSlideUp
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-pieceSelect</div>
-    <div class="ds-anim-box" style="background: #ec4899; animation: bc-pieceSelect 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: bc-pieceSelect 2s ease infinite;">
       bc-pieceSelect
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-piecePlaced</div>
-    <div class="ds-anim-box" style="background: #ff6b2c; animation: bc-piecePlaced 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #0f766e; animation: bc-piecePlaced 2s ease infinite;">
       bc-piecePlaced
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-slotGlow</div>
-    <div class="ds-anim-box" style="background: #0f766e; animation: bc-slotGlow 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #4a90d9; animation: bc-slotGlow 2s ease infinite;">
       bc-slotGlow
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-slotWrong</div>
-    <div class="ds-anim-box" style="background: #4a90d9; animation: bc-slotWrong 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #e8485c; animation: bc-slotWrong 2s ease infinite;">
       bc-slotWrong
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-successFlash</div>
-    <div class="ds-anim-box" style="background: #e8485c; animation: bc-successFlash 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #f0c040; animation: bc-successFlash 2s ease infinite;">
       bc-successFlash
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-overlayIn</div>
-    <div class="ds-anim-box" style="background: #f0c040; animation: bc-overlayIn 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: bc-overlayIn 2s ease infinite;">
       bc-overlayIn
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-toast-in</div>
-    <div class="ds-anim-box" style="background: #8b5cf6; animation: bc-toast-in 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #06b6d4; animation: bc-toast-in 2s ease infinite;">
       bc-toast-in
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-toast-out</div>
-    <div class="ds-anim-box" style="background: #06b6d4; animation: bc-toast-out 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ec4899; animation: bc-toast-out 2s ease infinite;">
       bc-toast-out
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-shake</div>
-    <div class="ds-anim-box" style="background: #ec4899; animation: bc-shake 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: bc-shake 2s ease infinite;">
       bc-shake
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-overlay-in</div>
-    <div class="ds-anim-box" style="background: #ff6b2c; animation: bc-overlay-in 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #0f766e; animation: bc-overlay-in 2s ease infinite;">
       bc-overlay-in
-    </div>
-  </div>
-  <div class="ds-component-card" style="padding: 16px;">
-    <div class="ds-component-label">bc-overlay-out</div>
-    <div class="ds-anim-box" style="background: #0f766e; animation: bc-overlay-out 2s ease infinite;">
-      bc-overlay-out
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
