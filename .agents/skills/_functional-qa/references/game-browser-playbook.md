@@ -34,6 +34,9 @@ The state helper should be treated as the current surface snapshot. The log help
 3. Export state and session logs immediately after reproducing the issue.
 4. Save visual artifacts into the run's `screenshots/` directory and JSON exports into `logs/`.
 5. For cloud runs or PR validation, also attach or link the reviewer-visible media in the task result, PR body, or issue comment. Local artifact paths alone do not count as shipped evidence.
+6. For reviewer-facing interaction proof, visibly wait on the ready state before input, show the actual tap or click, and hold on the first clean post-action frame instead of racing through the transition.
+7. If you use a deterministic jump or state injection to skip ahead, start recording only once the surface is semantically consistent to a human reviewer, or clearly label the clip as engineering-only trace evidence instead of acceptance proof.
+8. If the viewport contains unrelated chrome that makes the proof easy to misread, either include enough lead-in to explain the state or crop the proof to the relevant surface.
 
 ## Current issue focus
 

@@ -63,6 +63,10 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
 
    For timing-sensitive or transition bugs, reviewer-visible media is required for a "fixed" claim. A gitignored local artifact path is not enough by itself: attach or link the recording or ordered frames in the PR body, task result, or issue comment. If the runtime cannot make that media visible to reviewers, mark the fix verification incomplete and call out the blocker.
 
+   For reviewer-facing interaction or transition clips, do not race the input. Wait on the readable pre-action state, show the actual tap or click, and hold on the first stable post-action frame. If the clip skips or truncates any of those phases, do not treat it as final acceptance proof.
+
+   If you use deterministic fast-forward, state injection, or a dev jump to reach the proof moment, call that out in `summary.md` and keep the recorded UI semantically coherent to a reviewer. If the visible prompt or HUD contradicts the captured state, downgrade the evidence to engineering-only trace material and rerun a cleaner acceptance clip.
+
    For CJK or pronunciation-placement issues, capture the actual dialogue text, the tapped tooltip or dictionary state, and where pronunciation appears.
 
    For AI-output issues, record whether the run exercised live-model output, fallback content, or only a static or dev route. If live-model output was required and unavailable, do not claim a full fix.
@@ -112,4 +116,5 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
 - For reviewer-visible UI fixes, do not stop at generic screenshots when a comparison view would make the delta materially easier to review.
 - Prefer runtime-emitted cue timestamps over visual guesswork when selecting reviewer-facing frames. Treat video-understanding or OCR as a fallback layer, not the primary source of truth, when deterministic state cues are available.
 - Do not treat a local screenshot or `.webm` path under `artifacts/qa-runs/` as reviewer-visible proof unless the media is also attached or linked where reviewers can open it.
+- Do not call a clip reviewer-ready if it omits the visible input, races through the proof moment, or starts from a semantically confusing state created by a deterministic jump.
 - If the issue execution mode is `validate-and-propose-only` or `needs-human-design-review`, stop after validation evidence and proposal instead of making unattended UX or product changes.
