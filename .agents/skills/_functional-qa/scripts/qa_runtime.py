@@ -36,6 +36,8 @@ CLASSIFICATION_RULES = load_json(CONFIG_ROOT / "classification-rules.json")
 EVIDENCE_STRATEGIES = load_json(CONFIG_ROOT / "evidence-strategies.json")
 PUBLISH_POLICY = load_json(CONFIG_ROOT / "publish-policy.json")
 REPO_ADAPTER = load_json(CONFIG_ROOT / "repo-adapter.json")
+ROUTING_CONFIG = load_json(CONFIG_ROOT / "worktree-routing.json")
+PROJECT_OVERRIDE_CACHE: dict[str, dict[str, str]] | None = None
 
 
 def run_command(command: list[str], *, cwd: Path | None = None, allow_failure: bool = False) -> subprocess.CompletedProcess[str]:
@@ -78,6 +80,10 @@ def relative_to_repo(path: Path) -> str:
 
 def repo_name_with_owner() -> str:
     return REPO_ADAPTER["repository"]["name_with_owner"]
+
+
+def project_control_plane() -> dict[str, Any] | None:
+    return ROUTING_CONFIG.get("project_control_plane")
 
 
 def parse_issue_ref(raw: str) -> dict[str, Any]:
@@ -163,6 +169,135 @@ def fetch_issue(target: str) -> dict[str, Any] | None:
     }
 
 
+def fetch_project_overrides() -> dict[str, dict[str, str]]:
+    global PROJECT_OVERRIDE_CACHE
+    if PROJECT_OVERRIDE_CACHE is not None:
+        return PROJECT_OVERRIDE_CACHE
+
+    cfg = project_control_plane()
+    if not cfg:
+        PROJECT_OVERRIDE_CACHE = {}
+        return PROJECT_OVERRIDE_CACHE
+
+    owner_fragment = "user" if cfg.get("owner_type", "user") == "user" else "organization"
+    query = f"""
+    query($owner: String!, $number: Int!, $first: Int!, $after: String) {{
+      {owner_fragment}(login: $owner) {{
+        projectV2(number: $number) {{
+          items(first: $first, after: $after) {{
+            pageInfo {{
+              hasNextPage
+              endCursor
+            }}
+            nodes {{
+              content {{
+                ... on Issue {{
+                  number
+                  repository {{
+                    nameWithOwner
+                  }}
+                }}
+              }}
+              fieldValues(first: 50) {{
+                nodes {{
+                  ... on ProjectV2ItemFieldSingleSelectValue {{
+                    field {{
+                      ... on ProjectV2FieldCommon {{
+                        name
+                      }}
+                    }}
+                    name
+                  }}
+                  ... on ProjectV2ItemFieldTextValue {{
+                    field {{
+                      ... on ProjectV2FieldCommon {{
+                        name
+                      }}
+                    }}
+                    text
+                  }}
+                }}
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
+    """
+
+    overrides: dict[str, dict[str, str]] = {}
+    cursor: str | None = None
+    while True:
+        command = [
+            "gh",
+            "api",
+            "graphql",
+            "-f",
+            f"query={query}",
+            "-F",
+            f"owner={cfg['owner']}",
+            "-F",
+            f"number={cfg['number']}",
+            "-F",
+            "first=100",
+        ]
+        if cursor:
+            command.extend(["-F", f"after={cursor}"])
+        try:
+            result = run_command(command, allow_failure=True)
+        except FileNotFoundError:
+            PROJECT_OVERRIDE_CACHE = {}
+            return PROJECT_OVERRIDE_CACHE
+        if result.returncode != 0:
+            PROJECT_OVERRIDE_CACHE = {}
+            return PROJECT_OVERRIDE_CACHE
+
+        payload = json.loads(result.stdout)
+        owner_payload = payload["data"].get(owner_fragment)
+        if not owner_payload or not owner_payload.get("projectV2"):
+            break
+
+        items_payload = owner_payload["projectV2"]["items"]
+        for node in items_payload["nodes"]:
+            content = node.get("content")
+            if not content or "number" not in content:
+                continue
+            issue_ref = f"{content['repository']['nameWithOwner']}#{content['number']}"
+            field_map: dict[str, str] = {}
+            for field_node in node.get("fieldValues", {}).get("nodes", []):
+                field_name = field_node.get("field", {}).get("name")
+                if not field_name:
+                    continue
+                value = field_node.get("name") or field_node.get("text")
+                if value:
+                    field_map[field_name] = value
+            overrides[issue_ref] = field_map
+
+        if not items_payload["pageInfo"]["hasNextPage"]:
+            break
+        cursor = items_payload["pageInfo"]["endCursor"]
+
+    PROJECT_OVERRIDE_CACHE = overrides
+    return overrides
+
+
+def project_fields_for_issue(issue_ref: str | None) -> dict[str, str]:
+    if not issue_ref:
+        return {}
+    return fetch_project_overrides().get(issue_ref, {})
+
+
+def project_execution_mode(project_fields: dict[str, str]) -> str | None:
+    cfg = project_control_plane()
+    if not cfg:
+        return None
+    field_name = cfg.get("execution_mode_field")
+    if not field_name:
+        return None
+    value = project_fields.get(field_name)
+    return value or None
+
+
 def collect_issue_notes(issue_ref: str | None) -> list[str]:
     if not issue_ref:
         return []
@@ -195,10 +330,16 @@ def unique_lines(items: list[str]) -> list[str]:
     return list(dict.fromkeys(item for item in items if item))
 
 
-def build_validation_policy(playbook: dict[str, Any] | None, issue_class: str, evidence_plan: dict[str, Any]) -> dict[str, Any]:
+def build_validation_policy(
+    playbook: dict[str, Any] | None,
+    issue_class: str,
+    evidence_plan: dict[str, Any],
+    *,
+    execution_mode_override: str | None = None,
+) -> dict[str, Any]:
     defaults = REPO_ADAPTER.get("validation_defaults", {})
     requirements = (playbook or {}).get("validation_requirements", {})
-    execution_mode = (playbook or {}).get("execution_mode") or defaults.get("execution_mode", "safe-unattended")
+    execution_mode = execution_mode_override or (playbook or {}).get("execution_mode") or defaults.get("execution_mode", "safe-unattended")
 
     requires_direct_issue_evidence = requirements.get("requires_direct_issue_evidence", evidence_plan["requires_ui_capture"])
     ui_acceptance_required = requirements.get("ui_acceptance_required", evidence_plan["requires_ui_capture"])
@@ -211,6 +352,9 @@ def build_validation_policy(playbook: dict[str, Any] | None, issue_class: str, e
         (defaults.get("ui_acceptance_checks", []) if ui_acceptance_required else [])
         + requirements.get("ui_acceptance_checks", [])
     )
+    human_review_required = requirements.get("human_review_required")
+    if human_review_required is None:
+        human_review_required = execution_mode == "needs-human-design-review"
 
     return {
         "issue_class": issue_class,
@@ -222,7 +366,7 @@ def build_validation_policy(playbook: dict[str, Any] | None, issue_class: str, e
         "ui_acceptance_checks": ui_acceptance_checks,
         "required_runtime_modes_for_fixed": requirements.get("required_runtime_modes_for_fixed", []),
         "requires_live_model_for_fixed": requirements.get("requires_live_model_for_fixed", False),
-        "human_review_required": requirements.get("human_review_required", execution_mode == "needs-human-design-review"),
+        "human_review_required": human_review_required,
         "stop_conditions": requirements.get("stop_conditions", []),
     }
 
@@ -664,7 +808,13 @@ def init_run(args: argparse.Namespace) -> int:
         }
     evidence_plan = evidence_plan_for(classification["issue_class"])
     playbook = issue_playbook(issue_payload["issue_ref"] if issue_payload else None)
-    validation_policy = build_validation_policy(playbook, classification["issue_class"], evidence_plan)
+    project_fields = project_fields_for_issue(issue_payload["issue_ref"] if issue_payload else None)
+    validation_policy = build_validation_policy(
+        playbook,
+        classification["issue_class"],
+        evidence_plan,
+        execution_mode_override=project_execution_mode(project_fields),
+    )
 
     target_slug = slugify(issue_payload["issue_ref"] if issue_payload else args.target)
     run_timestamp = timestamp_slug()
@@ -693,6 +843,7 @@ def init_run(args: argparse.Namespace) -> int:
             "slug": target_slug,
         },
         "issue_ref": issue_payload["issue_ref"] if issue_payload else None,
+        "project_fields": project_fields,
         "classification": classification,
         "evidence_plan": evidence_plan,
         "validation_policy": validation_policy,
@@ -727,6 +878,7 @@ def init_run(args: argparse.Namespace) -> int:
     (run_dir / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
     (run_dir / "publish.md").write_text("Publish draft will be rendered after finalize-run.\n", encoding="utf-8")
     if issue_payload:
+        issue_payload["project_fields"] = project_fields
         (run_dir / "issue.json").write_text(json.dumps(issue_payload, indent=2) + "\n", encoding="utf-8")
 
     print(str(run_dir))
