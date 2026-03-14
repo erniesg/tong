@@ -302,7 +302,8 @@ Request:
 {
   "learnerId": "persona_kpop_prompting",
   "event": {
-    "nodeId": "ko-vocab-courtesy",
+    "nodeId": "objective:ko-vocab-courtesy",
+    "objectiveId": "ko-vocab-courtesy",
     "mode": "learn",
     "quality": 0.86,
     "source": "dashboard.learn"
@@ -312,6 +313,12 @@ Request:
 
 Response:
 Path: `packages/contracts/fixtures/graph.evidence.record.sample.json`
+
+Contract note:
+- `recorded` is the count of accepted events in this call.
+- `events[]` echoes normalized event payloads that were persisted.
+- `metrics` exposes objective/evidence counters so follow-on endpoints can assert progression deltas.
+- `events[].mode` is normalized to one of: `learn`, `hangout`, `mission`, `review`, `exercise`, `media`.
 
 ## Graph Tool Payloads
 These are invoked through `POST /api/v1/tools/invoke`:
@@ -407,21 +414,44 @@ Response:
   "objectiveId": "ko_food_l2_001",
   "level": 2,
   "mode": "hangout",
+  "lang": "ko",
+  "objectiveGraph": {
+    "objectiveNodeId": "objective:ko_food_l2_001",
+    "cityId": "seoul",
+    "locationId": "food_street",
+    "objectiveCategory": "vocabulary",
+    "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
+    "prerequisiteObjectiveIds": ["ko_food_l1_001"],
+    "source": "knowledge_graph"
+  },
   "coreTargets": {
     "vocabulary": ["메뉴", "주문", "맵다"],
     "grammar": ["-고 싶어요", "-주세요"],
     "sentenceStructures": ["N + 주세요", "N이/가 + adjective"]
   },
   "personalizedTargets": [
-    { "lemma": "무대", "source": "youtube" },
-    { "lemma": "연습", "source": "spotify" }
+    {
+      "lemma": "무대",
+      "source": "youtube",
+      "linkedNodeIds": ["overlay:youtube:performance-energy", "target:무대"]
+    },
+    {
+      "lemma": "연습",
+      "source": "spotify",
+      "linkedNodeIds": ["overlay:spotify:practice-studio", "target:연습"]
+    }
   ],
   "completionCriteria": {
     "requiredTurns": 4,
-    "requiredAccuracy": 0.75
+    "requiredAccuracy": 0.75,
+    "minEvidenceEvents": 3,
+    "acceptedEvidenceModes": ["learn", "hangout", "mission"]
   }
 }
 ```
+
+Contract note:
+- KG-backed objective responses require `lang`, `objectiveGraph`, and per-item `linkedNodeIds` in `personalizedTargets`.
 
 ## POST `/api/v1/scenes/hangout/start`
 Request:

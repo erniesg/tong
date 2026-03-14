@@ -707,7 +707,13 @@ function objectiveMatchesLanguage(objectiveId, lang) {
   return typeof objectiveId === 'string' && objectiveId.startsWith(`${lang}_`);
 }
 
-function buildPersonalizedObjective({ userId = DEFAULT_USER_ID, mode = 'hangout', lang = 'ko' }) {
+function buildPersonalizedObjective({
+  userId = DEFAULT_USER_ID,
+  mode = 'hangout',
+  lang = 'ko',
+  city = 'seoul',
+  location = 'food_street',
+}) {
   const ingestion = ensureIngestionForUser(userId);
   const baseObjective = cloneJson(FIXTURES.objectivesNext);
   const dominantClusterId = getDominantClusterId(ingestion);
@@ -751,12 +757,27 @@ function buildPersonalizedObjective({ userId = DEFAULT_USER_ID, mode = 'hangout'
   const personalizedTargets = personalizedBase.slice(0, 3).map((item) => ({
     lemma: item.lemma,
     source: item.dominantSource,
+    linkedNodeIds: [`overlay:${item.dominantSource}:${dominantClusterId}`, `target:${item.lemma}`],
   }));
+
+  const objectiveNodeId = `objective:${objectiveId}`;
+  const graphCategory = lang === 'zh' ? 'sentences' : lang === 'ja' ? 'script' : 'vocabulary';
+  const graphTargetNodeIds = vocabulary.map((term) => `target:${term}`);
 
   return {
     ...baseObjective,
     objectiveId,
     mode,
+    lang,
+    objectiveGraph: {
+      objectiveNodeId,
+      cityId: city,
+      locationId: location,
+      objectiveCategory: graphCategory,
+      targetNodeIds: graphTargetNodeIds,
+      prerequisiteObjectiveIds: [`${lang}_food_l1_001`],
+      source: 'knowledge_graph',
+    },
     coreTargets: {
       vocabulary:
         vocabulary.length > 0 ? vocabulary : [...(baseObjective.coreTargets?.vocabulary || [])],
@@ -769,6 +790,15 @@ function buildPersonalizedObjective({ userId = DEFAULT_USER_ID, mode = 'hangout'
       personalizedTargets.length > 0
         ? personalizedTargets
         : cloneJson(baseObjective.personalizedTargets || []),
+    completionCriteria: {
+      ...(baseObjective.completionCriteria || {}),
+      minEvidenceEvents: baseObjective.completionCriteria?.minEvidenceEvents || 3,
+      acceptedEvidenceModes: baseObjective.completionCriteria?.acceptedEvidenceModes || [
+        'learn',
+        'hangout',
+        'mission',
+      ],
+    },
   };
 }
 
@@ -1640,6 +1670,8 @@ const server = http.createServer(async (req, res) => {
         userId,
         mode,
         lang: selectedLang,
+        city: url.searchParams.get('city') || 'seoul',
+        location: url.searchParams.get('location') || 'food_street',
       });
       jsonResponse(res, 200, objective);
       return;
