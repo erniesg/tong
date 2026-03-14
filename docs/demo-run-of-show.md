@@ -1,4 +1,4 @@
-# Demo Run Of Show (Hackathon)
+# Demo Run Of Show
 
 ## Target length
 8 to 12 minutes total.

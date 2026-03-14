@@ -25,7 +25,7 @@ These files are cross-stream contract points and should be edited by one stream 
 4. `scripts/demo_smoke_check.mjs`
 5. `README.md`
 6. `docs/install-and-test.md`
-7. `docs/hackathon-workstreams.md`
+7. `docs/workstreams.md`
 8. `docs/agent-execution-board.md`
 9. `apps/client/app/layout.tsx`
 10. `apps/client/app/page.tsx`

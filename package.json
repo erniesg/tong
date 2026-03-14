@@ -25,7 +25,7 @@
     "secrets:sync:cf": "./scripts/sync-cf-secrets-from-env.sh",
     "build:client:cf": "npm --prefix apps/client run cf:build",
     "deploy:client:cf": "./scripts/deploy-client-cloudflare.sh",
-    "setup:worktrees": "./scripts/setup-hackathon-worktrees.sh",
+    "setup:worktrees": "./scripts/setup-worktrees.sh",
     "codex:cloud-plan": "python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py plan",
     "build:extension": "npm --prefix apps/extension run build",
     "dev:extension": "npm --prefix apps/extension run dev",

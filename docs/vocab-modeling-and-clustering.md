@@ -7,7 +7,7 @@ Use a hybrid pipeline:
 3. Rule-based orthography decomposition (radical/jamo/morpheme families).
 4. Objective-gap scoring to prioritize what to teach next.
 
-This gives technical depth while staying hackathon-feasible.
+This gives technical depth while staying within the current delivery scope.
 
 ## Data pipeline
 1. Collect transcript/lyrics lines from the last 72 hours per user.
