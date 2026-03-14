@@ -30,16 +30,42 @@ export function DialogueBox({
   const [displayedChars, setDisplayedChars] = useState(0);
   const [typewriterDone, setTypewriterDone] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const previousStreamingRef = useRef(false);
 
   useEffect(() => {
+    const wasStreaming = previousStreamingRef.current;
+    previousStreamingRef.current = Boolean(isStreaming);
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = undefined;
+    }
+
+    if (isStreaming) {
+      setDisplayedChars(content.length);
+      setTypewriterDone(false);
+      return;
+    }
+
+    if (wasStreaming) {
+      setDisplayedChars(content.length);
+      setTypewriterDone(true);
+      return;
+    }
+
     setDisplayedChars(0);
-    setTypewriterDone(false);
+    setTypewriterDone(content.length === 0);
+
+    if (!content) {
+      return;
+    }
 
     const timer = setInterval(() => {
       setDisplayedChars((prev) => {
         const next = prev + CHARS_PER_TICK;
         if (next >= content.length) {
           clearInterval(timer);
+          timerRef.current = undefined;
           setTypewriterDone(true);
           return content.length;
         }
@@ -49,11 +75,12 @@ export function DialogueBox({
 
     timerRef.current = timer;
     return () => clearInterval(timer);
-  }, [content]);
+  }, [content, isStreaming]);
 
   const handleClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('.text-ko[data-korean]')) return;
+    if (isStreaming) return;
 
     if (!typewriterDone) {
       if (timerRef.current) clearInterval(timerRef.current);

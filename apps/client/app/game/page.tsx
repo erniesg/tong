@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
+import type { ToolInvocation, UIMessage } from 'ai';
 import type { CityId, LocationId, ProficiencyLevel, ScoreState, UserProficiency, AppLang } from '@/lib/api';
 import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData, BlockCrushCharStep, BlockCrushExercise } from '@/lib/types/hangout';
 import type { CompletedSession } from '@/lib/store/session-store';
@@ -127,8 +128,58 @@ const LOCATION_NAMES: Record<LocationId, string> = {
 
 type Phase = 'opening' | 'menu' | 'tong-intro' | 'hangout' | 'city_map' | 'learn' | 'dev';
 
+type NpcSpeakToolArgs = {
+  characterId?: string;
+  text?: string;
+  translation?: string | null;
+};
+
 
 /* ── helpers ────────────────────────────────────────────── */
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function getNpcSpeakArgs(invocation: ToolInvocation): NpcSpeakToolArgs | null {
+  if (invocation.toolName !== 'npc_speak' || !('args' in invocation) || !isRecord(invocation.args)) {
+    return null;
+  }
+
+  return invocation.args as NpcSpeakToolArgs;
+}
+
+function getLatestNpcSpeakInvocation(messages: UIMessage[]): ToolInvocation | null {
+  for (let messageIndex = messages.length - 1; messageIndex >= 0; messageIndex -= 1) {
+    const toolInvocations = messages[messageIndex]?.toolInvocations;
+    if (!toolInvocations?.length) continue;
+
+    for (let invocationIndex = toolInvocations.length - 1; invocationIndex >= 0; invocationIndex -= 1) {
+      const invocation = toolInvocations[invocationIndex];
+      if (invocation.toolName === 'npc_speak') {
+        return invocation;
+      }
+    }
+  }
+
+  return null;
+}
+
+function buildStreamedNpcMessage(
+  invocation: ToolInvocation,
+  fallbackCharacterId: string,
+): SessionMessage | null {
+  const args = getNpcSpeakArgs(invocation);
+  if (!args) return null;
+
+  return {
+    id: invocation.toolCallId,
+    role: 'npc',
+    characterId: typeof args.characterId === 'string' ? args.characterId : fallbackCharacterId,
+    content: typeof args.text === 'string' ? args.text : '',
+    translation: typeof args.translation === 'string' ? args.translation : undefined,
+  };
+}
 
 /** Build rich context block for API messages using game store data. */
 function buildContextBlock(
@@ -552,7 +603,7 @@ export default function GamePage() {
 
   /* ── useChat integration ──────────────────────────────────── */
 
-  const { append, isLoading: chatLoading } = useChat({
+  const { append, messages, isLoading: chatLoading } = useChat({
     api: '/api/ai/hangout',
     maxSteps: 1,
     onResponse: () => {
@@ -599,6 +650,24 @@ export default function GamePage() {
       traceQA('chat_finish', { role: msg.role, toolCount: msg.toolInvocations?.length ?? 0 });
     },
   });
+
+  const latestNpcSpeakInvocation = getLatestNpcSpeakInvocation(messages);
+  const queuedNpcSpeakId = toolQueue[0]?.toolName === 'npc_speak' ? toolQueue[0].toolCallId : null;
+  const shouldRenderStreamedNpcMessage = latestNpcSpeakInvocation != null && (
+    ((latestNpcSpeakInvocation.state === 'partial-call' || latestNpcSpeakInvocation.state === 'call') && chatLoading)
+    || latestNpcSpeakInvocation.toolCallId === queuedNpcSpeakId
+    || latestNpcSpeakInvocation.toolCallId === currentMessage?.id
+  );
+  const streamedNpcMessage = shouldRenderStreamedNpcMessage && latestNpcSpeakInvocation
+    ? buildStreamedNpcMessage(latestNpcSpeakInvocation, activeNpc)
+    : null;
+  const displayMessage = streamedNpcMessage ?? currentMessage;
+  const dialogueIsStreaming = Boolean(
+    streamedNpcMessage
+    && latestNpcSpeakInvocation
+    && chatLoading
+    && (latestNpcSpeakInvocation.state === 'partial-call' || latestNpcSpeakInvocation.state === 'call')
+  );
 
   /* Auto-start scene when skipping to hangout */
   useEffect(() => {
@@ -1155,6 +1224,8 @@ export default function GamePage() {
     processing: processingRef.current,
     toolQueue: toolQueue.map((item) => ({ toolCallId: item.toolCallId, toolName: item.toolName })),
     currentMessage: currentMessage ? { id: currentMessage.id, role: currentMessage.role, characterId: currentMessage.characterId, contentPreview: currentMessage.content.slice(0, 120) } : null,
+    streamedMessage: streamedNpcMessage ? { id: streamedNpcMessage.id, role: streamedNpcMessage.role, characterId: streamedNpcMessage.characterId, contentPreview: streamedNpcMessage.content.slice(0, 120), isStreaming: dialogueIsStreaming } : null,
+    displayMessage: displayMessage ? { id: displayMessage.id, role: displayMessage.role, characterId: displayMessage.characterId, contentPreview: displayMessage.content.slice(0, 120) } : null,
     tongTip: tongTip ? { messagePreview: tongTip.message.slice(0, 120), hasTranslation: !!tongTip.translation } : null,
     currentExercise: currentExercise ? { id: currentExercise.id, type: currentExercise.type } : null,
     choices: choices ? choices.map((choice) => ({ id: choice.id, text: choice.text })) : null,
@@ -1164,22 +1235,24 @@ export default function GamePage() {
     introExerciseCount,
     introAct,
     npcRevealed,
-  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, toolQueue, currentMessage, tongTip, currentExercise, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
+  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
 
   useEffect(() => {
     if (!qaTrace) return;
     traceQA('state_snapshot', {
       phase,
       chatLoading,
+      dialogueStreaming: dialogueIsStreaming,
       processing: processingRef.current,
       queueLength: toolQueue.length,
       currentMessageId: currentMessage?.id ?? null,
+      displayMessageId: displayMessage?.id ?? null,
       currentExerciseId: currentExercise?.id ?? null,
       choiceCount: choices?.length ?? 0,
       hasTongTip: !!tongTip,
       hasSceneSummary: !!sceneSummary,
     });
-  }, [qaTrace, traceQA, phase, chatLoading, toolQueue.length, currentMessage?.id, currentExercise?.id, choices?.length, tongTip, sceneSummary]);
+  }, [qaTrace, traceQA, phase, chatLoading, dialogueIsStreaming, toolQueue.length, currentMessage?.id, displayMessage?.id, currentExercise?.id, choices?.length, tongTip, sceneSummary]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !qaRunId) return;
@@ -1837,12 +1910,13 @@ export default function GamePage() {
           npcColor={npc.color}
           npcSpriteUrl={isIntroHangout && !npcRevealed ? '' : currentExercise ? '' : npc.src}
           npcIdleVideoUrl={isIntroHangout && !npcRevealed ? undefined : npc.idleVideo || undefined}
-          currentMessage={currentMessage}
+          currentMessage={displayMessage}
           currentExercise={currentExercise}
           choices={choices}
           choicePrompt={choicePrompt}
           tongTip={tongTip}
           isStreaming={chatLoading}
+          dialogueIsStreaming={dialogueIsStreaming}
           sceneReady={sceneReady}
           targetLang={targetLang}
           continueLabel={continueLabel}
