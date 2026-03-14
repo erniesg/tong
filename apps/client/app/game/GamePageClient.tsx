@@ -115,8 +115,8 @@ const DEFAULT_LOCATION: LocationId = 'food_street';
 const ACTIVE_USER_ID_STORAGE_KEY = 'tong_active_user_id';
 
 const GAME_LOGO_PATH = '/assets/app/logo_transparent.png';
-const OPENING_ANIMATION_PATH = '/assets/app/tong_opening.mp4';
 const TONG_INTRO_PATH = '/assets/tong_intro.webm';
+const OPENING_ANIMATION_PATH = TONG_INTRO_PATH;
 const SEOUL_FIRST_SCENE_BACKDROP = '/assets/backdrops/seoul/pojangmacha.png';
 
 const MAX_PROFICIENCY_GAUGE_LEVEL: ProficiencyGaugeLevel = 6;
@@ -1045,7 +1045,6 @@ export default function GamePageClient({
                 }}
               >
                 <source src={TONG_INTRO_PATH} type="video/webm" />
-                <source src="/assets/tong_intro_fallback.mp4" type="video/mp4" />
               </video>
               <p className="tg-tong-intro-name">Tong</p>
               <button className="btn-skip tg-skip-bottom" type="button" onClick={() => setEntryPhase('onboarding')}>

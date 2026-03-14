@@ -2,6 +2,49 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
+const clientRoot = path.join(root, "apps/client");
+const clientPublicRoot = path.join(clientRoot, "public");
+const clientAssetRefPattern = /\/assets\/[A-Za-z0-9_./-]+\.(?:png|jpg|jpeg|webp|svg|mp4|webm)/g;
+const sourceFileExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".html"]);
+
+function walkFiles(dir, files = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name === ".next" || entry.name === ".turbo") {
+        continue;
+      }
+      if (fullPath === path.join(clientPublicRoot, "assets")) {
+        continue;
+      }
+      walkFiles(fullPath, files);
+      continue;
+    }
+
+    if (sourceFileExtensions.has(path.extname(entry.name))) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+function collectClientAssetRefs() {
+  const refs = new Set();
+  for (const file of walkFiles(clientRoot)) {
+    const contents = fs.readFileSync(file, "utf8");
+    const matches = contents.match(clientAssetRefPattern) ?? [];
+    for (const match of matches) refs.add(match);
+  }
+  return [...refs].sort();
+}
+
+function resolveManifestUri(uri) {
+  if (uri.startsWith("/assets/")) {
+    return path.join(clientPublicRoot, uri.slice(1));
+  }
+  return path.join(root, uri);
+}
 
 const requiredFiles = [
   "packages/contracts/api-contract.md",
@@ -98,6 +141,7 @@ const shanghaiRewardBundle = JSON.parse(
     "utf8"
   )
 );
+const clientAssetRefs = collectClientAssetRefs();
 
 if (!Array.isArray(loop.cities) || loop.cities.length !== 3) {
   console.error("Expected exactly 3 cities in game-loop.json");
@@ -212,6 +256,11 @@ if (!Array.isArray(runtimeAssetManifest.assets) || runtimeAssetManifest.assets.l
   process.exit(1);
 }
 
+if (!Array.isArray(canonicalAssetManifest.assets) || canonicalAssetManifest.assets.length === 0) {
+  console.error("Expected non-empty assets array in canonical asset manifest");
+  process.exit(1);
+}
+
 if (runtimeAssetManifest.keyFormat !== "domain.scope.name.variant") {
   console.error("Unexpected keyFormat in runtime asset manifest");
   process.exit(1);
@@ -219,6 +268,8 @@ if (runtimeAssetManifest.keyFormat !== "domain.scope.name.variant") {
 
 const runtimeKeys = runtimeAssetManifest.assets.map((asset) => asset.key);
 const canonicalKeys = (canonicalAssetManifest.assets ?? []).map((asset) => asset.key);
+const runtimeAssetsByKey = new Map(runtimeAssetManifest.assets.map((asset) => [asset.key, asset]));
+const runtimeUris = new Set(runtimeAssetManifest.assets.map((asset) => asset.uri));
 
 if (canonicalAssetManifest.keyFormat !== "domain.scope.name.variant") {
   console.error("Unexpected keyFormat in canonical asset manifest");
@@ -240,6 +291,20 @@ for (const key of canonicalKeys) {
     console.error(`Runtime manifest missing canonical key: ${key}`);
     process.exit(1);
   }
+
+  const canonicalAsset = canonicalAssetManifest.assets.find((asset) => asset.key === key);
+  const runtimeAsset = runtimeAssetsByKey.get(key);
+  if (!canonicalAsset || !runtimeAsset) {
+    console.error(`Asset key ${key} missing in canonical/runtime manifest lookup`);
+    process.exit(1);
+  }
+
+  for (const field of ["type", "usage", "source", "status", "uri"]) {
+    if (canonicalAsset[field] !== runtimeAsset[field]) {
+      console.error(`Canonical/runtime manifest mismatch for ${key} field ${field}`);
+      process.exit(1);
+    }
+  }
 }
 
 const keyRegex = /^[a-z0-9]+(\.[a-z0-9-]+){3,}$/;
@@ -257,6 +322,33 @@ for (const asset of runtimeAssetManifest.assets) {
 
   if (typeof asset.uri !== "string" || asset.uri.length === 0) {
     console.error(`Runtime asset key ${asset.key} missing uri`);
+    process.exit(1);
+  }
+
+  const resolvedPath = resolveManifestUri(asset.uri);
+  if (!fs.existsSync(resolvedPath)) {
+    console.error(`Runtime asset key ${asset.key} points to missing file: ${asset.uri}`);
+    process.exit(1);
+  }
+}
+
+for (const asset of canonicalAssetManifest.assets) {
+  const resolvedPath = resolveManifestUri(asset.uri);
+  if (!fs.existsSync(resolvedPath)) {
+    console.error(`Canonical asset key ${asset.key} points to missing file: ${asset.uri}`);
+    process.exit(1);
+  }
+}
+
+for (const ref of clientAssetRefs) {
+  if (!runtimeUris.has(ref)) {
+    console.error(`Client asset reference missing from runtime manifest: ${ref}`);
+    process.exit(1);
+  }
+
+  const resolvedPath = resolveManifestUri(ref);
+  if (!fs.existsSync(resolvedPath)) {
+    console.error(`Client asset reference missing on disk: ${ref}`);
     process.exit(1);
   }
 }
@@ -298,3 +390,4 @@ console.log("- Player media profile includes youtube + spotify signals");
 console.log("- Demo secret status fixture validated");
 console.log("- Runtime asset manifest keys validated");
 console.log("- Canonical/runtime manifest parity validated");
+console.log(`- Client asset references resolved (${clientAssetRefs.length})`);
