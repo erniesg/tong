@@ -91,6 +91,12 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
    python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR>
    ```
 
+11. Decide issue closure status deliberately:
+
+- if the verification run shows the issue is fully fixed and no follow-up scope remains, mark the PR or merge plan to close the issue
+- if the work is only partial, keep the issue open and rewrite the issue or publish update so the remaining scope is unambiguous
+- for epic or umbrella issues, prefer landing and closing child issues instead of closing the umbrella from a narrow PR
+
 ## Output requirements
 
 - Use the artifact bundle under `artifacts/qa-runs/functional-qa/...`.

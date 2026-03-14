@@ -71,6 +71,12 @@ python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py
    Do not assume shell-level `git push` or `gh` is available inside the cloud task.
    Use GitHub comments for `@codex review` or explicitly manual experiments, not as the default implementation path.
 
+8. Be explicit about issue closure:
+
+- if the PR fully resolves the issue, plan to close it via a GitHub closing keyword in the PR body such as `Fixes #123` or by closing it immediately after merge
+- if the PR is only a partial fix, an audit pass, or work under an umbrella or epic issue, do not close the issue; update the issue title/body or comment so the remaining scope is explicit
+- do not treat merged PRs as sufficient evidence that an issue should close unless the merged scope actually matches the current issue text
+
 ## Output requirements
 
 - Keep the queue plan under `artifacts/qa-runs/functional-qa/issue-queue/...`.

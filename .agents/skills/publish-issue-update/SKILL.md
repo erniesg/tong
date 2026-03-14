@@ -60,6 +60,12 @@ Use the invocation arguments as either:
    - include a focused comparison crop when the changed region is small or text-heavy
    - if automation cannot generate those assets yet, say that explicitly and return paste-ready markdown that points to the raw before/after screenshots instead of pretending the evidence is complete
 
+8. Handle issue closure explicitly after publication:
+
+- if the issue is fully fixed and this PR is the complete resolution, use a PR body closing keyword such as `Fixes #123` or close the issue immediately after merge
+- if the issue is only partially fixed, keep it open and state the remaining scope directly in the issue update
+- do not close umbrella or epic issues from a narrow child PR unless the umbrella itself is truly complete
+
 ## Output requirements
 
 - Never publish a run with a placeholder summary.

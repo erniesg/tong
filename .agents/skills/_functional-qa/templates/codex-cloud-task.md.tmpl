@@ -16,6 +16,7 @@ Requirements:
 - If the issue is ambiguous, use `trace-ui-state` before making a speculative fix.
 - After the code change, re-run validation and verify the fix before claiming success.
 - Summarize evidence inline in the final task output and in the PR body.
+- If the issue is fully resolved by the PR, include a GitHub closing keyword for {{issue_ref}} in the PR body. If the work is partial, explicitly say so and do not close the issue.
 - Reviewer-facing evidence requirement: {{reviewer_evidence_expectation}}
 - If the runtime cannot publish that evidence directly into GitHub after PR creation, return paste-ready markdown with the exact comparison images or links a human should add to the PR.
 - Do not rely on `gh` CLI or shell-level `git push`.
