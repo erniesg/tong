@@ -140,6 +140,16 @@ export interface ObjectiveNextResponse {
   objectiveId: string;
   level: number;
   mode: 'hangout' | 'learn';
+  lang: TargetLanguage;
+  objectiveGraph: {
+    objectiveNodeId: string;
+    cityId: GraphCityId;
+    locationId: GraphLocationId;
+    objectiveCategory: ObjectiveCategory;
+    targetNodeIds: string[];
+    prerequisiteObjectiveIds: string[];
+    source: 'knowledge_graph';
+  };
   coreTargets: {
     vocabulary: string[];
     grammar: string[];
@@ -148,10 +158,13 @@ export interface ObjectiveNextResponse {
   personalizedTargets: Array<{
     lemma: string;
     source: 'youtube' | 'spotify';
+    linkedNodeIds: string[];
   }>;
   completionCriteria: {
     requiredTurns: number;
     requiredAccuracy: number;
+    minEvidenceEvents: number;
+    acceptedEvidenceModes: Array<'learn' | 'hangout' | 'mission' | 'review' | 'exercise' | 'media'>;
   };
 }
 
@@ -599,14 +612,30 @@ export interface GraphPackValidationResponse {
 }
 
 export interface GraphEvidenceRecordResponse {
-  accepted: true;
   learnerId: string;
-  event: EvidenceEvent;
-  state: LearnerNodeState;
+  personaId?: string;
+  recorded: number;
+  events: Array<{
+    eventId: string;
+    personaId: string;
+    userId: string;
+    nodeId: string;
+    objectiveId: string | null;
+    mode: 'learn' | 'hangout' | 'mission' | 'review' | 'exercise' | 'media';
+    quality: number;
+    occurredAtIso: string;
+    source: string;
+  }>;
   progression: {
     xp: number;
     sp: number;
     rp: number;
+  };
+  metrics: {
+    validatedObjectives: number;
+    masteredObjectives: number;
+    dueNodeCount: number;
+    evidenceCount: number;
   };
 }
 
