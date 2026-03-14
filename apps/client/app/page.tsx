@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback, FormEvent, Suspense } from 'r
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
+import TongHeroVideo from '@/components/landing/TongHeroVideo';
+
 const API_BASE = 'https://tong-api.erniesg.workers.dev';
 
 /* ── Language gauge (mirrors game onboarding) ──────────────── */
@@ -244,115 +246,124 @@ function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="landing-hero">
-        <h1 className="landing-headline">
-          Live the drama.<br />Learn the language.
-        </h1>
-        <p className="landing-subhead">
-          Play as a trainee navigating life in Seoul, Shanghai and Tokyo.
-          Learn the language to <span className="landing-build">build</span> relationships — or <span className="landing-burn">burn</span> them. What happens next is up to you.
-        </p>
+      <section className="landing-hero landing-hero--cinematic">
+        <TongHeroVideo />
+        <div className="landing-hero-scrim" aria-hidden="true" />
 
-        {status === 'success' ? (
-          <div className="landing-prefs-card">
-            <p className="landing-prefs-confirmed">You&apos;re on the list.</p>
-            {!prefsDone ? (
-              <>
-                <p className="landing-prefs-hint">
-                  Tell us what you already know — we&apos;ll skip the basics when you start playing.
-                </p>
-                <div className="landing-gauge-card">
-                  {CJK_LANGS.map((lang) => {
-                    const prof = gaugeToProf(gauge[lang]);
-                    return (
-                      <div key={lang} className="landing-gauge-row">
-                        <div className="landing-gauge-head">
-                          <strong>{LANG_LABELS[lang]}</strong>
-                          <span>{gauge[lang] + 1}/7 · {profLabel(prof)}</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={0}
-                          max={MAX_GAUGE}
-                          step={1}
-                          value={gauge[lang]}
-                          onChange={(e) => handleGauge(lang, Number(e.target.value))}
-                        />
-                        <div className="landing-gauge-meta">
-                          <small>{profSub(prof)}</small>
-                          <span className="landing-explain-in">
-                            <span>learn&nbsp;in</span>
-                            <select
-                              value={explainIn[lang]}
-                              onChange={(e) => handleExplainIn(lang, e.target.value as ExplainLang)}
-                            >
-                              {EXPLAIN_OPTIONS.filter((o) => o.value !== lang).map((o) => (
-                                <option key={o.value} value={o.value}>{o.label}</option>
-                              ))}
-                            </select>
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {toast && <p className="landing-toast">{toast}</p>}
-                <div className="landing-prefs-actions">
-                  {!fromEmail && (
-                    <button
-                      type="button"
-                      className="landing-prefs-skip"
-                      onClick={() => {
-                        setPrefsDone(true);
-                        if (!prefsWereSaved) {
-                          fetch(`${API_BASE}/api/v1/signup/skip-preferences`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: signedUpEmail }),
-                          }).catch(() => {});
-                        }
-                      }}
-                    >
-                      {prefsWereSaved ? "Done" : "Skip for now"}
-                    </button>
-                  )}
-                </div>
-              </>
+        <div className="landing-hero-stage">
+          <div className="landing-hero-copy">
+            <span className="kicker landing-hero-kicker">Playable AI language drama</span>
+            <h1 className="landing-headline landing-headline--cinematic">
+              <span className="landing-headline-line">Live the drama.</span>
+              <span className="landing-headline-line">Learn the language.</span>
+            </h1>
+            <p className="landing-subhead landing-subhead--cinematic">
+              Play as a trainee navigating life in Seoul, Shanghai and Tokyo. Learn the language to{' '}
+              <span className="landing-build">build</span> relationships or <span className="landing-burn">burn</span>{' '}
+              them. What happens next is up to you.
+            </p>
+          </div>
+
+          <div className="landing-hero-panel">
+            {status === 'success' ? (
+              <div className="landing-prefs-card landing-prefs-card--hero">
+                <p className="landing-prefs-confirmed">You&apos;re on the list.</p>
+                {!prefsDone ? (
+                  <>
+                    <p className="landing-prefs-hint">
+                      Tell us what you already know — we&apos;ll skip the basics when you start playing.
+                    </p>
+                    <div className="landing-gauge-card">
+                      {CJK_LANGS.map((lang) => {
+                        const prof = gaugeToProf(gauge[lang]);
+                        return (
+                          <div key={lang} className="landing-gauge-row">
+                            <div className="landing-gauge-head">
+                              <strong>{LANG_LABELS[lang]}</strong>
+                              <span>{gauge[lang] + 1}/7 · {profLabel(prof)}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={MAX_GAUGE}
+                              step={1}
+                              value={gauge[lang]}
+                              onChange={(e) => handleGauge(lang, Number(e.target.value))}
+                            />
+                            <div className="landing-gauge-meta">
+                              <small>{profSub(prof)}</small>
+                              <span className="landing-explain-in">
+                                <span>learn&nbsp;in</span>
+                                <select
+                                  value={explainIn[lang]}
+                                  onChange={(e) => handleExplainIn(lang, e.target.value as ExplainLang)}
+                                >
+                                  {EXPLAIN_OPTIONS.filter((o) => o.value !== lang).map((o) => (
+                                    <option key={o.value} value={o.value}>
+                                      {o.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {toast && <p className="landing-toast">{toast}</p>}
+                    <div className="landing-prefs-actions">
+                      {!fromEmail && (
+                        <button
+                          type="button"
+                          className="landing-prefs-skip"
+                          onClick={() => {
+                            setPrefsDone(true);
+                            if (!prefsWereSaved) {
+                              fetch(`${API_BASE}/api/v1/signup/skip-preferences`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email: signedUpEmail }),
+                              }).catch(() => {});
+                            }
+                          }}
+                        >
+                          {prefsWereSaved ? 'Done' : 'Skip for now'}
+                        </button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className="landing-prefs-done">
+                    {prefsWereSaved ? "Saved — we'll fast-forward your onboarding." : "We'll email you when Tong is ready."}
+                  </p>
+                )}
+              </div>
             ) : (
-              <p className="landing-prefs-done">
-                {prefsWereSaved ? "Saved — we'll fast-forward your onboarding." : "We'll email you when Tong is ready."}
-              </p>
+              <>
+                <form className="landing-signup landing-signup--hero" onSubmit={handleSubmit}>
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="landing-email-input"
+                  />
+                  <button
+                    type="submit"
+                    disabled={status === 'sending'}
+                    className="landing-signup-btn"
+                  >
+                    {status === 'sending' ? 'Sending...' : 'Notify Me'}
+                  </button>
+                </form>
+
+                {status === 'error' ? <p className="landing-error landing-error--hero">{errorMsg}</p> : null}
+                <p className="landing-micro landing-micro--hero">We&apos;ll email you when Tong is ready.</p>
+              </>
             )}
           </div>
-        ) : (
-          <form className="landing-signup" onSubmit={handleSubmit}>
-            <input
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="landing-email-input"
-            />
-            <button
-              type="submit"
-              disabled={status === 'sending'}
-              className="landing-signup-btn"
-            >
-              {status === 'sending' ? 'Sending...' : 'Notify Me'}
-            </button>
-          </form>
-        )}
-
-        {status === 'error' && (
-          <p className="landing-error">{errorMsg}</p>
-        )}
-
-        {status !== 'success' && (
-          <p className="landing-micro">
-            We'll email you when Tong is ready.
-          </p>
-        )}
+        </div>
       </section>
 
       {/* Cities */}

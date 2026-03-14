@@ -25,6 +25,7 @@ test-results/
 *.fbx
 *.glb
 *.stl
+!apps/client/public/assets/tong_intro_alpha.mov
 
 # Presets — dev/backup originals, not deployed
 assets/presets/
