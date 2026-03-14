@@ -45,6 +45,8 @@ The generator writes:
 3. `launch.md`
 4. per-issue task prompt and PR notes files
 
+Each generated issue entry now includes a portability preflight summary. Treat `non-portable` as a hard stop for unattended cloud execution and use the listed blockers to update the issue body or Project fields before retrying.
+
 under `artifacts/qa-runs/functional-qa/codex-cloud-queue/<timestamp>/`.
 
 This is local staging, not the reviewer-visible evidence host.

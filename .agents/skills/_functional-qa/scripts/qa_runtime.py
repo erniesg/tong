@@ -36,6 +36,61 @@ CLASSIFICATION_RULES = load_json(CONFIG_ROOT / "classification-rules.json")
 EVIDENCE_STRATEGIES = load_json(CONFIG_ROOT / "evidence-strategies.json")
 PUBLISH_POLICY = load_json(CONFIG_ROOT / "publish-policy.json")
 REPO_ADAPTER = load_json(CONFIG_ROOT / "repo-adapter.json")
+WORKTREE_ROUTING = load_json(CONFIG_ROOT / "worktree-routing.json")
+CLOUD_CONFIG = load_json(CONFIG_ROOT / "codex-cloud.json")
+
+PROJECT_OVERRIDE_CACHE: dict[str, dict[str, str]] | None = None
+
+LOCAL_PATH_PATTERN = re.compile(
+    r"(?P<path>(?:"
+    r"/Users/[^/\s`\"'<>]+(?:/[^\s`\"'<>]+)+"
+    r"|/home/[^/\s`\"'<>]+(?:/[^\s`\"'<>]+)+"
+    r"|/var/folders/[^/\s`\"'<>]+(?:/[^\s`\"'<>]+)+"
+    r"|/private/var/[^/\s`\"'<>]+(?:/[^\s`\"'<>]+)+"
+    r"|[A-Za-z]:(?:\\)+Users(?:\\)+[^\\\s`\"'<>]+(?:(?:\\)+[^\\\s`\"'<>]+)+"
+    r"))"
+)
+PRIVATE_REFERENCE_PATTERNS = (
+    re.compile(r"\bprivate(?:-| )?(?:repo|repository)(?:-only)?\b", re.IGNORECASE),
+    re.compile(r"\bprivate(?:-| )?(?:branch|submodule|gist)\b", re.IGNORECASE),
+    re.compile(r"\bprivate github repo\b", re.IGNORECASE),
+)
+GAME_ROUTE_PATTERN = re.compile(r"(?P<route>/game(?:[/?][^\s`\"'<>]+)?)")
+PROOF_CONTEXT_KEYWORDS = (
+    "before/after",
+    "screenshot",
+    "screenshot target",
+    "screen recording",
+    "gif",
+    "reviewer-visible",
+    "steps to reproduce",
+)
+GAME_SURFACE_KEYWORDS = (
+    "apps/client/app/game",
+    "apps/client/components/scene/",
+    "apps/client/components/exercises/",
+    "hangout",
+    "block crush",
+)
+REMOTE_DEPENDENCY_KEYWORDS = (
+    "asset",
+    "avatar",
+    "bucket",
+    "cloudflare",
+    "device",
+    "env",
+    "oauth",
+    "real device",
+    "runtime asset",
+    "secret",
+    "spotify",
+    "tong-runs",
+    "video",
+    "youtube",
+)
+CHECKPOINT_HINTS = ("scenario seed", "checkpoint", "deterministic", "seed=")
+CHECKPOINT_ROUTE_HINTS = ("dev=", "fresh=", "seed=", "checkpoint", "scenario", "dev_intro=")
+REMOTE_DEPENDENCIES_NONE_PATTERN = re.compile(r"\bremote dependenc(?:y|ies)\s*:\s*none\b", re.IGNORECASE)
 
 
 def run_command(command: list[str], *, cwd: Path | None = None, allow_failure: bool = False) -> subprocess.CompletedProcess[str]:
@@ -78,6 +133,151 @@ def relative_to_repo(path: Path) -> str:
 
 def repo_name_with_owner() -> str:
     return REPO_ADAPTER["repository"]["name_with_owner"]
+
+
+def project_control_plane() -> dict[str, Any] | None:
+    return WORKTREE_ROUTING.get("project_control_plane")
+
+
+def fetch_project_overrides() -> dict[str, dict[str, str]]:
+    global PROJECT_OVERRIDE_CACHE
+    if PROJECT_OVERRIDE_CACHE is not None:
+        return PROJECT_OVERRIDE_CACHE
+
+    cfg = project_control_plane()
+    if not cfg:
+        PROJECT_OVERRIDE_CACHE = {}
+        return PROJECT_OVERRIDE_CACHE
+
+    owner_fragment = "user" if cfg.get("owner_type", "user") == "user" else "organization"
+    query = f"""
+    query($owner: String!, $number: Int!, $first: Int!, $after: String) {{
+      {owner_fragment}(login: $owner) {{
+        projectV2(number: $number) {{
+          items(first: $first, after: $after) {{
+            pageInfo {{
+              hasNextPage
+              endCursor
+            }}
+            nodes {{
+              content {{
+                ... on Issue {{
+                  number
+                  repository {{
+                    nameWithOwner
+                  }}
+                }}
+              }}
+              fieldValues(first: 50) {{
+                nodes {{
+                  ... on ProjectV2ItemFieldSingleSelectValue {{
+                    field {{
+                      ... on ProjectV2FieldCommon {{
+                        name
+                      }}
+                    }}
+                    name
+                  }}
+                  ... on ProjectV2ItemFieldTextValue {{
+                    field {{
+                      ... on ProjectV2FieldCommon {{
+                        name
+                      }}
+                    }}
+                    text
+                  }}
+                }}
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
+    """
+
+    overrides: dict[str, dict[str, str]] = {}
+    cursor: str | None = None
+    while True:
+        command = [
+            "gh",
+            "api",
+            "graphql",
+            "-f",
+            f"query={query}",
+            "-F",
+            f"owner={cfg['owner']}",
+            "-F",
+            f"number={cfg['number']}",
+            "-F",
+            "first=100",
+        ]
+        if cursor:
+            command.extend(["-F", f"after={cursor}"])
+        try:
+            result = run_command(command, allow_failure=True)
+        except FileNotFoundError:
+            PROJECT_OVERRIDE_CACHE = {}
+            return PROJECT_OVERRIDE_CACHE
+        if result.returncode != 0:
+            PROJECT_OVERRIDE_CACHE = {}
+            return PROJECT_OVERRIDE_CACHE
+        payload = json.loads(result.stdout)
+        owner_payload = payload["data"].get(owner_fragment)
+        if not owner_payload or not owner_payload.get("projectV2"):
+            break
+
+        items_payload = owner_payload["projectV2"]["items"]
+        for node in items_payload["nodes"]:
+            content = node.get("content")
+            if not content or "number" not in content:
+                continue
+            issue_ref = f"{content['repository']['nameWithOwner']}#{content['number']}"
+            field_map: dict[str, str] = {}
+            for field_node in node.get("fieldValues", {}).get("nodes", []):
+                field_name = field_node.get("field", {}).get("name")
+                if not field_name:
+                    continue
+                value = field_node.get("name") or field_node.get("text")
+                if value:
+                    field_map[field_name] = value
+            overrides[issue_ref] = field_map
+
+        if not items_payload["pageInfo"]["hasNextPage"]:
+            break
+        cursor = items_payload["pageInfo"]["endCursor"]
+
+    PROJECT_OVERRIDE_CACHE = overrides
+    return overrides
+
+
+def project_fields_for(issue_ref: str | None) -> dict[str, str]:
+    if not issue_ref:
+        return {}
+    return fetch_project_overrides().get(issue_ref, {})
+
+
+def unique_strings(items: list[str]) -> list[str]:
+    return list(dict.fromkeys(item for item in items if item))
+
+
+def format_portability_summary(portability: dict[str, Any]) -> str:
+    if portability.get("blockers"):
+        return portability["blockers"][0]
+    if portability.get("warnings"):
+        return portability["warnings"][0]
+    return "Portable from repo state plus documented setup."
+
+
+def render_portability_lines(portability: dict[str, Any], *, bullet: str = "- ") -> list[str]:
+    lines = [
+        f"{bullet}Portability preflight: `{portability.get('status', 'unknown')}`",
+        f"{bullet}Portability summary: {portability.get('summary', 'No portability summary recorded.')}",
+    ]
+    if portability.get("blockers"):
+        lines.append(f"{bullet}Portability blockers: {'; '.join(portability['blockers'])}")
+    if portability.get("warnings"):
+        lines.append(f"{bullet}Portability warnings: {'; '.join(portability['warnings'])}")
+    return lines
 
 
 def parse_issue_ref(raw: str) -> dict[str, Any]:
@@ -227,11 +427,28 @@ def build_validation_policy(playbook: dict[str, Any] | None, issue_class: str, e
     }
 
 
+def apply_execution_mode_override(validation_policy: dict[str, Any], execution_mode: str) -> dict[str, Any]:
+    updated = dict(validation_policy)
+    updated["execution_mode"] = execution_mode
+    updated["fix_allowed"] = execution_mode in FIX_ALLOWED_EXECUTION_MODES
+    updated["human_review_required"] = updated.get("human_review_required", False) or execution_mode == "needs-human-design-review"
+    return updated
+
+
+def keyword_matches_text(text: str, keyword: str) -> bool:
+    escaped = re.escape(keyword.lower())
+    if re.fullmatch(r"[a-z]+", keyword.lower()):
+        pattern = rf"(?<![a-z0-9]){escaped}(?:s|es|ed|ing)?(?![a-z0-9])"
+    else:
+        pattern = rf"(?<![a-z0-9]){escaped}(?![a-z0-9])"
+    return re.search(pattern, text) is not None
+
+
 def classify_issue_text(text: str) -> dict[str, Any]:
     lowered = text.lower()
     candidates: list[tuple[int, int, str, list[str]]] = []
     for rule in CLASSIFICATION_RULES["rules"]:
-        matches = [keyword for keyword in rule["keywords"] if keyword in lowered]
+        matches = [keyword for keyword in rule["keywords"] if keyword_matches_text(lowered, keyword)]
         if matches:
             candidates.append((len(matches), rule["priority"], rule["issue_class"], matches))
 
@@ -259,6 +476,234 @@ def evidence_plan_for(issue_class: str) -> dict[str, Any]:
         "optional": strategy["optional"],
         "requires_ui_capture": strategy["requires_ui_capture"],
     }
+
+
+def detect_local_paths(text: str) -> list[str]:
+    return sorted(
+        {
+            match.group("path").rstrip("`\"'.,:);]")
+            for match in LOCAL_PATH_PATTERN.finditer(text)
+        }
+    )
+
+
+def detect_private_references(text: str) -> list[str]:
+    hits: list[str] = []
+    for pattern in PRIVATE_REFERENCE_PATTERNS:
+        hits.extend(match.group(0) for match in pattern.finditer(text))
+    return unique_strings(hits)
+
+
+def is_portability_meta_issue_text(text: str) -> bool:
+    lowered = text.lower()
+    return "portability preflight" in lowered and "remote agents" in lowered
+
+
+def is_game_issue(text: str, playbook: dict[str, Any] | None) -> bool:
+    lowered = text.lower()
+    if playbook and playbook.get("surface") == "game":
+        return True
+    if is_portability_meta_issue_text(text):
+        return False
+    if GAME_ROUTE_PATTERN.search(text):
+        return True
+    return any(keyword in lowered for keyword in GAME_SURFACE_KEYWORDS)
+
+
+def detect_route_context(text: str, playbook: dict[str, Any] | None) -> dict[str, Any]:
+    route_match = GAME_ROUTE_PATTERN.search(text)
+    if route_match:
+        return {"present": True, "source": "issue body", "value": route_match.group("route")}
+    if playbook and playbook.get("route_template"):
+        return {"present": True, "source": "repo adapter playbook", "value": playbook["route_template"]}
+    if playbook and playbook.get("surface"):
+        return {"present": True, "source": "repo adapter playbook", "value": playbook["surface"]}
+    return {"present": False, "source": None, "value": None}
+
+
+def detect_proof_context(
+    text: str,
+    playbook: dict[str, Any] | None,
+    evidence_plan: dict[str, Any],
+    project_fields: dict[str, str],
+) -> dict[str, Any]:
+    lowered = text.lower()
+    if playbook and (playbook.get("steps") or playbook.get("screenshot_targets") or playbook.get("state_targets")):
+        proof_bits = []
+        if playbook.get("steps"):
+            proof_bits.append(f"{len(playbook['steps'])} step(s)")
+        if playbook.get("screenshot_targets"):
+            proof_bits.append(f"{len(playbook['screenshot_targets'])} screenshot target(s)")
+        if playbook.get("state_targets"):
+            proof_bits.append(f"{len(playbook['state_targets'])} state target(s)")
+        return {
+            "present": True,
+            "source": "repo adapter playbook",
+            "value": ", ".join(proof_bits),
+        }
+
+    hits = [keyword for keyword in PROOF_CONTEXT_KEYWORDS if keyword in lowered]
+    if hits:
+        return {"present": True, "source": "issue body", "value": ", ".join(hits[:4])}
+
+    proof_required = project_fields.get("Proof Required")
+    if proof_required and proof_required != "None":
+        return {"present": False, "source": "project field", "value": proof_required}
+    if evidence_plan.get("requires_ui_capture"):
+        return {"present": False, "source": "evidence plan", "value": "ui capture required"}
+    return {"present": False, "source": None, "value": None}
+
+
+def detect_remote_dependencies_context(
+    text: str,
+    project_fields: dict[str, str],
+    local_only_keywords: list[str],
+) -> dict[str, Any]:
+    lowered = text.lower()
+    remote_dependencies = (project_fields.get("Remote Dependencies") or "").strip()
+    if remote_dependencies:
+        return {"present": True, "source": "project field", "value": remote_dependencies}
+
+    if REMOTE_DEPENDENCIES_NONE_PATTERN.search(text):
+        return {"present": True, "source": "issue body", "value": "remote dependencies: none"}
+
+    explicit_repo_only = (
+        "repo-only",
+        "no remote dependencies",
+        "no external dependencies",
+        "no outside repo checkout should be required",
+    )
+    repo_only_hit = next((keyword for keyword in explicit_repo_only if keyword in lowered), None)
+    if repo_only_hit:
+        return {"present": True, "source": "issue body", "value": repo_only_hit}
+
+    if local_only_keywords:
+        return {
+            "present": True,
+            "source": "issue body",
+            "value": ", ".join(local_only_keywords[:4]),
+        }
+
+    if any(keyword in lowered for keyword in REMOTE_DEPENDENCY_KEYWORDS):
+        return {"present": False, "source": None, "value": None}
+
+    return {"present": False, "source": None, "value": None}
+
+
+def detect_checkpoint_context(
+    text: str,
+    project_fields: dict[str, str],
+    playbook: dict[str, Any] | None,
+) -> dict[str, Any]:
+    scenario_seed = (project_fields.get("Scenario Seed") or "").strip()
+    if scenario_seed:
+        return {"present": True, "source": "project field", "value": scenario_seed}
+
+    route_template = (playbook or {}).get("route_template", "")
+    if route_template and any(hint in route_template for hint in CHECKPOINT_ROUTE_HINTS):
+        return {"present": True, "source": "repo adapter playbook", "value": route_template}
+
+    lowered = text.lower()
+    hint = next((keyword for keyword in CHECKPOINT_HINTS if keyword in lowered), None)
+    if hint:
+        return {"present": True, "source": "issue body", "value": hint}
+
+    checkpoint_needed = project_fields.get("Checkpoint Needed")
+    if checkpoint_needed == "No" or not checkpoint_needed:
+        return {
+            "present": True,
+            "source": "project field" if checkpoint_needed == "No" else "inferred",
+            "value": "not required",
+        }
+    return {"present": False, "source": "project field", "value": checkpoint_needed}
+
+
+def portability_preflight(
+    issue_payload: dict[str, Any],
+    *,
+    project_fields: dict[str, str] | None = None,
+    playbook: dict[str, Any] | None = None,
+    evidence_plan: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    project_fields = project_fields or {}
+    evidence_plan = evidence_plan or {"requires_ui_capture": False}
+
+    text = f"{issue_payload.get('title', '')}\n\n{issue_payload.get('body', '')}".strip()
+    lowered = text.lower()
+    portability_meta_issue = is_portability_meta_issue_text(text)
+    local_paths = [] if portability_meta_issue else detect_local_paths(text)
+    private_references = [] if portability_meta_issue else detect_private_references(text)
+    local_only_keywords = (
+        []
+        if portability_meta_issue
+        else unique_strings(
+            [
+                keyword
+                for keyword in CLOUD_CONFIG.get("local_only_keywords", [])
+                if keyword != "/users/" and keyword in lowered
+            ]
+        )
+    )
+
+    blockers: list[str] = []
+    warnings: list[str] = []
+
+    if local_paths:
+        blockers.append("Found local filesystem references: " + ", ".join(local_paths[:3]))
+    if private_references:
+        blockers.append("Found private-repo-only references: " + ", ".join(private_references[:3]))
+    if local_only_keywords:
+        blockers.append("Found local-only dependency signals: " + ", ".join(local_only_keywords[:4]))
+
+    game_issue = is_game_issue(text, playbook)
+    route_context = detect_route_context(text, playbook)
+    proof_context = detect_proof_context(text, playbook, evidence_plan, project_fields)
+    remote_dependencies_context = detect_remote_dependencies_context(text, project_fields, local_only_keywords)
+    checkpoint_context = detect_checkpoint_context(text, project_fields, playbook)
+
+    portable_context_field = project_control_plane().get("portable_context_field") if project_control_plane() else "Portable Context"
+    portable_context_value = project_fields.get(portable_context_field)
+    if portable_context_value == "No":
+        blockers.append("Project marks `Portable Context=No`.")
+
+    proof_required = (
+        (project_fields.get("Proof Required") and project_fields.get("Proof Required") != "None")
+        or evidence_plan.get("requires_ui_capture", False)
+        or (playbook and playbook.get("surface") == "game")
+    )
+    if game_issue and not route_context["present"]:
+        warnings.append("Missing repo-visible `/game` route or surface under test.")
+    if game_issue and proof_required and not proof_context["present"]:
+        warnings.append("Missing visible proof sequence or reviewer-facing proof targets for this `/game` issue.")
+    if game_issue and not remote_dependencies_context["present"]:
+        warnings.append(
+            "Missing remote dependency context; say `repo-only`, `remote dependencies: none`, or name the required asset/env dependency."
+        )
+    if project_fields.get("Checkpoint Needed") == "Yes" and not checkpoint_context["present"]:
+        warnings.append("Checkpoint Needed=Yes but no Scenario Seed or deterministic checkpoint is recorded.")
+    if portable_context_value == "Yes" and blockers:
+        warnings.append("Project marks `Portable Context=Yes`, but the issue text still contains non-portable references.")
+
+    status = "non-portable" if blockers else "portable-with-warnings" if warnings else "portable"
+    portability = {
+        "status": status,
+        "portable": not blockers,
+        "blocking": bool(blockers),
+        "summary": "",
+        "blockers": blockers,
+        "warnings": warnings,
+        "project_portable_context": portable_context_value,
+        "detected_local_paths": local_paths,
+        "detected_private_references": private_references,
+        "detected_local_only_keywords": local_only_keywords,
+        "game_issue": game_issue,
+        "route_context": route_context,
+        "proof_context": proof_context,
+        "remote_dependencies_context": remote_dependencies_context,
+        "checkpoint_context": checkpoint_context,
+    }
+    portability["summary"] = format_portability_summary(portability)
+    return portability
 
 
 def render_template(path: Path, replacements: dict[str, str]) -> str:
@@ -372,6 +817,7 @@ def bootstrap_text(
     verify_fix: bool,
     previous_run: dict[str, Any] | None,
     validation_policy: dict[str, Any],
+    portability: dict[str, Any],
 ) -> tuple[str, str, dict[str, Any]]:
     summary_lines = [
         "# Summary",
@@ -379,6 +825,7 @@ def bootstrap_text(
         f"- Mode: `{mode}`",
         f"- Target: `{issue_payload['issue_ref'] if issue_payload else 'ad-hoc target'}`",
         f"- Execution mode: `{validation_policy['execution_mode']}`",
+        f"- Portability preflight: `{portability['status']}`",
         "- Verdict: pending",
         "- Confidence: 0.0",
         "",
@@ -386,6 +833,10 @@ def bootstrap_text(
         "",
         "- Replace this scaffold with the actual validation findings.",
     ]
+    if portability["blockers"] or portability["warnings"]:
+        summary_lines.extend(["", "## Portability Notes", ""])
+        summary_lines.extend(render_portability_lines(portability))
+
     steps_lines = [
         "# Steps",
         "",
@@ -403,6 +854,8 @@ def bootstrap_text(
         f"- Live model required for a fixed verdict: `{'yes' if validation_policy['requires_live_model_for_fixed'] else 'no'}`",
         f"- Human review required before a fixed verdict: `{'yes' if validation_policy['human_review_required'] else 'no'}`",
     ]
+    steps_lines.extend(["", "### Portability Preflight", ""])
+    steps_lines.extend(render_portability_lines(portability))
     if validation_policy["direct_evidence"]:
         steps_lines.extend(["", "### Direct Evidence Targets", ""])
         steps_lines.extend(f"- {item}" for item in validation_policy["direct_evidence"])
@@ -440,6 +893,10 @@ def bootstrap_text(
         "cross_env_matrix": [],
         "open_questions": [],
         "notes": [],
+        "portability": {
+            **portability,
+            "notes": [],
+        },
         "validation": {
             "direct_issue_evidence_complete": not validation_policy["requires_direct_issue_evidence"],
             "ui_acceptance_complete": not validation_policy["ui_acceptance_required"],
@@ -506,6 +963,13 @@ def render_validation_gate_lines(run: dict[str, Any], evidence: dict[str, Any]) 
     return "\n".join(lines)
 
 
+def render_portability_section(run: dict[str, Any], evidence: dict[str, Any]) -> str:
+    portability = evidence.get("portability") or run.get("portability_preflight") or {}
+    if not portability:
+        return "- No portability preflight recorded."
+    return "\n".join(render_portability_lines(portability))
+
+
 def render_publish(run: dict[str, Any], run_dir: Path) -> str:
     template = (TEMPLATE_ROOT / "publish-comment.md.tmpl").read_text(encoding="utf-8")
     summary_path = run_dir / "summary.md"
@@ -553,6 +1017,7 @@ def render_publish(run: dict[str, Any], run_dir: Path) -> str:
         "{{issue_accuracy}}": run["functional"]["issue_accuracy"],
         "{{summary_body}}": summary_body,
         "{{evidence_bullets}}": "\n".join(bullets),
+        "{{portability_preflight}}": render_portability_section(run, evidence),
         "{{validation_gates}}": render_validation_gate_lines(run, evidence),
         "{{regression_checks}}": regression_checks,
         "{{open_questions}}": open_questions_md,
@@ -649,6 +1114,8 @@ def validate_outcome_combination(verdict: str, repro_status: str, fix_status: st
 def init_run(args: argparse.Namespace) -> int:
     issue_payload = fetch_issue(args.target)
     raw_text = args.target
+    issue_ref = issue_payload["issue_ref"] if issue_payload else None
+    project_fields = project_fields_for(issue_ref)
     if issue_payload:
         if issue_payload.get("title") or issue_payload.get("body"):
             raw_text = f"{issue_payload['title']}\n\n{issue_payload['body']}".strip()
@@ -663,10 +1130,19 @@ def init_run(args: argparse.Namespace) -> int:
             "reason": f"Repo adapter override selected `{override}` for {issue_payload['issue_ref']}.",
         }
     evidence_plan = evidence_plan_for(classification["issue_class"])
-    playbook = issue_playbook(issue_payload["issue_ref"] if issue_payload else None)
+    playbook = issue_playbook(issue_ref)
     validation_policy = build_validation_policy(playbook, classification["issue_class"], evidence_plan)
+    execution_mode_field = project_control_plane().get("execution_mode_field") if project_control_plane() else None
+    if execution_mode_field and project_fields.get(execution_mode_field):
+        validation_policy = apply_execution_mode_override(validation_policy, project_fields[execution_mode_field])
+    portability = portability_preflight(
+        issue_payload or {"title": args.target, "body": ""},
+        project_fields=project_fields,
+        playbook=playbook,
+        evidence_plan=evidence_plan,
+    )
 
-    target_slug = slugify(issue_payload["issue_ref"] if issue_payload else args.target)
+    target_slug = slugify(issue_ref if issue_payload else args.target)
     run_timestamp = timestamp_slug()
     run_id = f"functional-qa-{args.mode}-{run_timestamp}-{target_slug}"
     run_dir = artifact_root() / "functional-qa" / target_slug / run_timestamp
@@ -674,13 +1150,14 @@ def init_run(args: argparse.Namespace) -> int:
     (run_dir / "screenshots").mkdir(exist_ok=True)
     (run_dir / "logs").mkdir(exist_ok=True)
 
-    previous_run = find_previous_run(issue_payload["issue_ref"] if issue_payload else None, target_slug, exclude_dir=run_dir)
+    previous_run = find_previous_run(issue_ref, target_slug, exclude_dir=run_dir)
     summary_text, steps_text, evidence = bootstrap_text(
         args.mode,
         issue_payload,
         args.verify_fix,
         previous_run,
         validation_policy,
+        portability,
     )
 
     run_manifest = {
@@ -692,10 +1169,12 @@ def init_run(args: argparse.Namespace) -> int:
             "raw": args.target,
             "slug": target_slug,
         },
-        "issue_ref": issue_payload["issue_ref"] if issue_payload else None,
+        "issue_ref": issue_ref,
+        "project_fields": project_fields,
         "classification": classification,
         "evidence_plan": evidence_plan,
         "validation_policy": validation_policy,
+        "portability_preflight": portability,
         "functional": {
             "verdict": "pending",
             "repro_status": "not-run",
@@ -715,7 +1194,7 @@ def init_run(args: argparse.Namespace) -> int:
         },
         "published_comment_url": None,
         "previous_run_id": previous_run["run_id"] if previous_run and args.verify_fix else None,
-        "repo_notes": collect_issue_notes(issue_payload["issue_ref"] if issue_payload else None),
+        "repo_notes": collect_issue_notes(issue_ref),
     }
 
     if playbook:

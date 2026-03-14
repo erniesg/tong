@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from qa_runtime import (
+    apply_execution_mode_override,
     CONFIG_ROOT,
     REPO_ROOT,
     artifact_root,
@@ -19,11 +20,16 @@ from qa_runtime import (
     classify_issue_text,
     evidence_plan_for,
     fetch_issue,
+    format_portability_summary,
+    fetch_project_overrides,
     find_previous_run,
     issue_playbook,
     load_json,
     parse_issue_ref,
+    portability_preflight,
+    project_control_plane,
     relative_to_repo,
+    render_portability_lines,
     repo_name_with_owner,
     run_command,
     slugify,
@@ -33,7 +39,6 @@ from qa_runtime import (
 
 ROUTING_CONFIG = load_json(CONFIG_ROOT / "worktree-routing.json")
 PATH_PATTERN = re.compile(r"(?P<path>(?:apps|packages|scripts|docs|infra|assets|\\.github)/[A-Za-z0-9._/-]+)")
-PROJECT_OVERRIDE_CACHE: dict[str, dict[str, str]] | None = None
 
 
 def normalize_issue(payload: dict[str, Any]) -> dict[str, Any]:
@@ -77,121 +82,6 @@ def fetch_open_issues(limit: int) -> list[dict[str, Any]]:
         normalized["issue_ref"] = f"{repo_name_with_owner()}#{normalized['number']}"
         issues.append(normalized)
     return issues
-
-
-def project_control_plane() -> dict[str, Any] | None:
-    return ROUTING_CONFIG.get("project_control_plane")
-
-
-def fetch_project_overrides() -> dict[str, dict[str, str]]:
-    global PROJECT_OVERRIDE_CACHE
-    if PROJECT_OVERRIDE_CACHE is not None:
-        return PROJECT_OVERRIDE_CACHE
-
-    cfg = project_control_plane()
-    if not cfg:
-        PROJECT_OVERRIDE_CACHE = {}
-        return PROJECT_OVERRIDE_CACHE
-
-    owner_fragment = "user" if cfg.get("owner_type", "user") == "user" else "organization"
-    query = f"""
-    query($owner: String!, $number: Int!, $first: Int!, $after: String) {{
-      {owner_fragment}(login: $owner) {{
-        projectV2(number: $number) {{
-          items(first: $first, after: $after) {{
-            pageInfo {{
-              hasNextPage
-              endCursor
-            }}
-            nodes {{
-              content {{
-                ... on Issue {{
-                  number
-                  repository {{
-                    nameWithOwner
-                  }}
-                }}
-              }}
-              fieldValues(first: 50) {{
-                nodes {{
-                  ... on ProjectV2ItemFieldSingleSelectValue {{
-                    field {{
-                      ... on ProjectV2FieldCommon {{
-                        name
-                      }}
-                    }}
-                    name
-                  }}
-                  ... on ProjectV2ItemFieldTextValue {{
-                    field {{
-                      ... on ProjectV2FieldCommon {{
-                        name
-                      }}
-                    }}
-                    text
-                  }}
-                }}
-              }}
-            }}
-          }}
-        }}
-      }}
-    }}
-    """
-
-    overrides: dict[str, dict[str, str]] = {}
-    cursor: str | None = None
-    while True:
-        command = [
-            "gh",
-            "api",
-            "graphql",
-            "-f",
-            f"query={query}",
-            "-F",
-            f"owner={cfg['owner']}",
-            "-F",
-            f"number={cfg['number']}",
-            "-F",
-            "first=100",
-        ]
-        if cursor:
-            command.extend(["-F", f"after={cursor}"])
-        try:
-            result = run_command(command, allow_failure=True)
-        except FileNotFoundError:
-            PROJECT_OVERRIDE_CACHE = {}
-            return PROJECT_OVERRIDE_CACHE
-        if result.returncode != 0:
-            PROJECT_OVERRIDE_CACHE = {}
-            return PROJECT_OVERRIDE_CACHE
-        payload = json.loads(result.stdout)
-        owner_payload = payload["data"].get(owner_fragment)
-        if not owner_payload or not owner_payload.get("projectV2"):
-            break
-
-        items_payload = owner_payload["projectV2"]["items"]
-        for node in items_payload["nodes"]:
-            content = node.get("content")
-            if not content or "number" not in content:
-                continue
-            issue_ref = f"{content['repository']['nameWithOwner']}#{content['number']}"
-            field_map: dict[str, str] = {}
-            for field_node in node.get("fieldValues", {}).get("nodes", []):
-                field_name = field_node.get("field", {}).get("name")
-                if not field_name:
-                    continue
-                value = field_node.get("name") or field_node.get("text")
-                if value:
-                    field_map[field_name] = value
-            overrides[issue_ref] = field_map
-
-        if not items_payload["pageInfo"]["hasNextPage"]:
-            break
-        cursor = items_payload["pageInfo"]["endCursor"]
-
-    PROJECT_OVERRIDE_CACHE = overrides
-    return overrides
 
 
 def resolve_targets(targets: list[str], limit: int) -> tuple[str, list[dict[str, Any]]]:
@@ -364,7 +254,13 @@ def build_issue_entry(issue: dict[str, Any]) -> dict[str, Any]:
     validation_policy = build_validation_policy(playbook, classification["issue_class"], evidence_plan)
     execution_mode_field = project_control_plane().get("execution_mode_field") if project_control_plane() else None
     if execution_mode_field and project_fields.get(execution_mode_field):
-        validation_policy["execution_mode"] = project_fields[execution_mode_field]
+        validation_policy = apply_execution_mode_override(validation_policy, project_fields[execution_mode_field])
+    portability = portability_preflight(
+        issue,
+        project_fields=project_fields,
+        playbook=playbook,
+        evidence_plan=evidence_plan,
+    )
     explicit_paths = extract_paths(issue["title"], issue["body"])
     issue["project_fields"] = project_fields
     worktree, routing_reasons, spans_multiple_worktrees, explicit_candidates = route_worktree(issue, classification["issue_class"], explicit_paths)
@@ -381,6 +277,7 @@ def build_issue_entry(issue: dict[str, Any]) -> dict[str, Any]:
         "project_fields": project_fields,
         "classification": classification,
         "evidence_plan": evidence_plan,
+        "portability_preflight": portability,
         "validation_policy": validation_policy,
         "initial_skill": initial_skill,
         "follow_up_skills": follow_up_skills,
@@ -473,6 +370,8 @@ def render_markdown(plan: dict[str, Any]) -> str:
                 f"- Project fields: `{', '.join(f'{key}={value}' for key, value in issue['project_fields'].items()) or 'none'}`",
                 f"- Execution mode: `{issue['validation_policy']['execution_mode']}`",
                 f"- Evidence plan: `{', '.join(issue['evidence_plan']['required'])}`",
+                f"- Portability: `{issue['portability_preflight']['status']}`",
+                f"- Portability summary: {format_portability_summary(issue['portability_preflight'])}",
                 f"- Start with: `{issue['initial_skill']}`",
                 f"- Follow-ups: `{'; '.join(issue['follow_up_skills'])}`",
                 f"- Worktree: `{issue['recommended_worktree']['id']}` -> `{issue['recommended_worktree']['branch']}` at `{issue['recommended_worktree']['path']}`",
@@ -484,6 +383,10 @@ def render_markdown(plan: dict[str, Any]) -> str:
                 f"- Shared-zone hits: `{', '.join(issue['shared_zone_hits']) or 'none'}`",
             ]
         )
+        for line in render_portability_lines(issue["portability_preflight"]):
+            if line.startswith("- Portability preflight:") or line.startswith("- Portability summary:"):
+                continue
+            lines.append(line)
         if issue["validation_policy"]["stop_conditions"]:
             lines.append(f"- Stop conditions: {'; '.join(issue['validation_policy']['stop_conditions'])}")
         if issue["explicit_paths"]:
