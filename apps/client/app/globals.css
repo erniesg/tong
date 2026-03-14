@@ -13,11 +13,11 @@
   --mint-soft: #d1fae5;
 
   /* Game type scale — single place to tune all in-game font sizes */
-  --game-text-xs: 12px;   /* meta labels, secondary info */
-  --game-text-sm: 13px;   /* HUD scores, subtle labels */
-  --game-text-base: 15px; /* body text, descriptions, prompts */
-  --game-text-lg: 17px;   /* dialogue, whisper body, instructions */
-  --game-text-xl: 20px;   /* headings, speaker names */
+  --game-text-xs: 0.8125rem;   /* meta labels, secondary info */
+  --game-text-sm: 0.875rem;   /* HUD scores, subtle labels */
+  --game-text-base: 1rem; /* body text, descriptions, prompts */
+  --game-text-lg: 1.1875rem;   /* dialogue, whisper body, instructions */
+  --game-text-xl: 1.375rem;   /* headings, speaker names */
 }
 
 * {
@@ -1875,7 +1875,7 @@ button.nav-link:hover {
 }
 
 .dialogue-translation {
-  font-size: 0.75rem;
+  font-size: var(--game-text-sm);
   color: rgba(255, 255, 255, 0.6);
   margin: 0.25rem 0 0;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
@@ -1988,7 +1988,7 @@ button.nav-link:hover {
 
 .exercise-float-continue {
   color: rgba(255,255,255,0.7);
-  font-size: 12px;
+  font-size: var(--game-text-sm);
   text-align: center;
   padding: 8px 16px;
   text-shadow:
@@ -2031,7 +2031,7 @@ button.nav-link:hover {
 }
 
 .vn-choices__prompt {
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: rgba(255, 255, 255, 0.7);
   margin-bottom: 0.75rem;
   line-height: 1.4;
@@ -2067,7 +2067,7 @@ button.nav-link:hover {
 }
 
 .vn-choices__text {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 500;
   line-height: 1.5;
 }
@@ -2075,7 +2075,7 @@ button.nav-link:hover {
 .vn-choices__subtext {
   display: block;
   margin-top: 0.15rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.45);
 }
 
@@ -5910,4 +5910,3 @@ button.nav-link:hover {
     grid-template-columns: 1fr;
   }
 }
-
