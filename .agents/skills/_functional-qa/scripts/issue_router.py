@@ -14,11 +14,13 @@ from qa_runtime import (
     CONFIG_ROOT,
     REPO_ROOT,
     artifact_root,
+    build_validation_policy,
     classification_override,
     classify_issue_text,
     evidence_plan_for,
     fetch_issue,
     find_previous_run,
+    issue_playbook,
     load_json,
     parse_issue_ref,
     relative_to_repo,
@@ -173,10 +175,28 @@ def route_worktree(issue: dict[str, Any], issue_class: str, explicit_paths: list
     return (worktree, reasons, spans_multiple, sorted(explicit_candidates))
 
 
-def choose_skills(issue: dict[str, Any], issue_class: str, previous_run: dict[str, Any] | None) -> tuple[str, list[str], str]:
+def choose_skills(
+    issue: dict[str, Any],
+    issue_class: str,
+    previous_run: dict[str, Any] | None,
+    validation_policy: dict[str, Any],
+) -> tuple[str, list[str], str]:
     lowered_text = f"{issue['title']}\n{issue['body']}".lower()
     trace_keywords = ROUTING_CONFIG.get("trace_keywords", [])
     trace_like = issue_class in ROUTING_CONFIG.get("trace_issue_classes", []) or any(keyword in lowered_text for keyword in trace_keywords)
+    execution_mode = validation_policy["execution_mode"]
+
+    if execution_mode in {"validate-and-propose-only", "needs-human-design-review"}:
+        initial_skill = "trace-ui-state" if previous_run and previous_run.get("functional", {}).get("verdict") == "ambiguous" else "validate-issue"
+        follow_ups = ["trace-ui-state if validation is ambiguous or timing-sensitive", "publish-issue-update"]
+        reason = f"execution mode `{execution_mode}` is validation-first; stop before unattended code changes"
+        return (initial_skill, follow_ups, reason)
+
+    if execution_mode == "requires-live-model":
+        initial_skill = "trace-ui-state" if previous_run and previous_run.get("functional", {}).get("verdict") == "ambiguous" else "validate-issue"
+        follow_ups = ["validate-issue --verify-fix with live-model output", "publish-issue-update"]
+        reason = "fixed claims require direct issue evidence plus confirmed live-model validation"
+        return (initial_skill, follow_ups, reason)
 
     if previous_run and previous_run.get("functional", {}).get("verdict") == "ambiguous":
         return (
@@ -211,11 +231,13 @@ def build_issue_entry(issue: dict[str, Any]) -> dict[str, Any]:
             "reason": f"Repo adapter override selected `{override}` for {issue_ref}.",
         }
     evidence_plan = evidence_plan_for(classification["issue_class"])
+    playbook = issue_playbook(issue_ref)
+    validation_policy = build_validation_policy(playbook, classification["issue_class"], evidence_plan)
     explicit_paths = extract_paths(issue["title"], issue["body"])
     worktree, routing_reasons, spans_multiple_worktrees, explicit_candidates = route_worktree(issue, classification["issue_class"], explicit_paths)
     shared_hits = shared_zone_hits(explicit_paths)
     previous_run = find_previous_run(issue_ref, slugify(issue_ref or issue["title"]))
-    initial_skill, follow_up_skills, flow_reason = choose_skills(issue, classification["issue_class"], previous_run)
+    initial_skill, follow_up_skills, flow_reason = choose_skills(issue, classification["issue_class"], previous_run, validation_policy)
 
     return {
         "number": issue.get("number"),
@@ -225,6 +247,7 @@ def build_issue_entry(issue: dict[str, Any]) -> dict[str, Any]:
         "labels": issue.get("labels", []),
         "classification": classification,
         "evidence_plan": evidence_plan,
+        "validation_policy": validation_policy,
         "initial_skill": initial_skill,
         "follow_up_skills": follow_up_skills,
         "flow_reason": flow_reason,
@@ -313,15 +336,21 @@ def render_markdown(plan: dict[str, Any]) -> str:
                 f"### {label}",
                 f"- Title: {issue['title']}",
                 f"- Issue class: `{issue['classification']['issue_class']}`",
+                f"- Execution mode: `{issue['validation_policy']['execution_mode']}`",
                 f"- Evidence plan: `{', '.join(issue['evidence_plan']['required'])}`",
                 f"- Start with: `{issue['initial_skill']}`",
                 f"- Follow-ups: `{'; '.join(issue['follow_up_skills'])}`",
                 f"- Worktree: `{issue['recommended_worktree']['id']}` -> `{issue['recommended_worktree']['branch']}` at `{issue['recommended_worktree']['path']}`",
                 f"- Routing reason: {'; '.join(issue['routing_reasons'])}",
                 f"- Flow reason: {issue['flow_reason']}",
+                f"- Direct issue evidence required: `{'yes' if issue['validation_policy']['requires_direct_issue_evidence'] else 'no'}`",
+                f"- Live model required for fixed: `{'yes' if issue['validation_policy']['requires_live_model_for_fixed'] else 'no'}`",
+                f"- Human review required: `{'yes' if issue['validation_policy']['human_review_required'] else 'no'}`",
                 f"- Shared-zone hits: `{', '.join(issue['shared_zone_hits']) or 'none'}`",
             ]
         )
+        if issue["validation_policy"]["stop_conditions"]:
+            lines.append(f"- Stop conditions: {'; '.join(issue['validation_policy']['stop_conditions'])}")
         if issue["explicit_paths"]:
             lines.append(f"- Explicit paths: `{', '.join(issue['explicit_paths'])}`")
         if issue["previous_run"]:

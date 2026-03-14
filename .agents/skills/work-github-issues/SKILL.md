@@ -39,6 +39,13 @@ python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py
 
 2. Use the generated `queue-plan.json` and `queue-plan.md` as the execution source of truth.
 
+   Treat each issue's `execution_mode` as binding:
+
+- `safe-unattended`: validate, fix, rerun `--verify-fix`, then publish.
+- `requires-live-model`: do not claim fixed unless the run captured direct issue evidence from live-model output.
+- `validate-and-propose-only`: validate, trace if needed, then stop with evidence and a scoped proposal instead of making unattended product or architecture changes.
+- `needs-human-design-review`: validate, capture visual evidence, and defer before subjective UX or hierarchy changes.
+
 3. Follow the planned skill sequence per issue:
 
 - start with `validate-issue` unless the queue plan points to `trace-ui-state` because an earlier validation run already ended ambiguous
@@ -49,7 +56,7 @@ python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py
 4. Respect the worktree routing:
 
 - issues in different worktrees and without shared-zone collisions may run in parallel
-- issues in the same worktree serialize within that lane
+- issues in the same worktree serialize within that lane, with one active worker per collision lane unless the work is intentionally combined in one PR
 - issues touching shared zones or spanning multiple worktrees must stay serialized
 
 5. If the plan identifies multiple independent worktrees and the worktrees are missing, ensure them first:
@@ -83,3 +90,4 @@ python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py
 - Keep each issue's validation and fix artifacts under `artifacts/qa-runs/functional-qa/...`.
 - Do not claim issues are safe to parallelize without checking shared-zone collisions.
 - Do not skip fix verification before publishing a "fixed" update.
+- Do not upgrade a validation-only or design-review issue into a fix run unless a human explicitly changes the direction.

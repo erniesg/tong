@@ -14,7 +14,8 @@ Requirements:
 - When you invoke the QA runtime, keep the target as the exact GitHub issue ref `{{issue_ref}}`.
 - Treat the issue as class `{{issue_class}}` with required evidence `{{evidence_required}}`.
 - If the issue is ambiguous, use `trace-ui-state` before making a speculative fix.
-- After the code change, re-run validation and verify the fix before claiming success.
+- Queue action: `{{queue_action}}`
+- {{verification_instruction}}
 - Summarize evidence inline in the final task output and in the PR body.
 - If the issue is fully resolved by the PR, include a GitHub closing keyword for {{issue_ref}} in the PR body. If the work is partial, explicitly say so and do not close the issue.
 - Reviewer-facing evidence requirement: {{reviewer_evidence_expectation}}
@@ -23,11 +24,19 @@ Requirements:
 - If you cannot make the media reviewer-visible from the cloud task, do not claim correctness; report that a final local/browser-backed recording is still required.
 - Do not rely on `gh` CLI or shell-level `git push`.
 - Do not cite gitignored artifacts as committed GitHub blobs unless those files were actually checked in.
-- When the task is done, return a real diff and use Codex's built-in PR creation flow from the task result.
+- {{completion_instruction}}
 - If blocked by missing assets, missing setup, or local-only context, stop and report the exact blocker.
 
 Repo guidance:
 - Recommended worktree lane: `{{worktree_id}}` (`{{worktree_branch}}`)
 - Cloud mode: `{{cloud_mode}}`
+- Execution mode: `{{execution_mode}}`
 - Readiness note: {{readiness_reason}}
 - Final local acceptance proof required: `{{needs_local_acceptance}}`
+- Lane rule: {{lane_guidance}}
+
+Validation gates:
+{{validation_gate_lines}}
+
+Stop conditions:
+{{stop_conditions}}

@@ -3,6 +3,7 @@
   "mode": "auto-comment",
   "confidence_threshold": 0.72,
   "publish_ambiguous": true,
+  "block_publish_for_unmet_validation_gates": true,
   "auto_close_fixed": false,
   "stop_without_publish_if_missing_auth": true
 }
