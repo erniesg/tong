@@ -82,6 +82,7 @@ These can run in parallel with Batch 1 because they sit in `infra-deploy`, `crea
 - `#14` HUD discoverability
 - `#11` Onboarding clarity
 - `#31` Block Crush first-time hint and early cognitive-load follow-up
+- `#18` Block Crush review flash *(capture using `docs/qa/issue-18-review-transition-evidence.md`)*
 - `#17` tap-flow wasted tap
 
 These should follow Batch 1 because they are the remaining onboarding and gameplay-shell follow-ups after the priority wave settles.
@@ -123,7 +124,7 @@ Keep this one split into narrower slices instead of sending the whole epic as on
    - validate the issue
    - fix the code
    - re-validate with `--verify-fix`
-   - summarize evidence in the task result or PR body
+   - put reviewer-visible evidence in the task result or PR body, not just a local artifact path
 5. Ask for `@codex review` on the PR if wanted after the PR exists.
 6. Have a human review and merge.
 7. Move to the next batch after the earlier batch stabilizes.
@@ -133,7 +134,7 @@ Important delivery rules:
 1. The primary implementation path is a direct Codex environment task, not a GitHub comment trigger.
 2. Do not rely on shell-level `git push` or `gh` CLI from inside the cloud task.
 3. Use Codex's built-in diff and PR creation flow from the task result.
-4. Artifact directories under `artifacts/qa-runs/` are gitignored, so evidence must be summarized in the task result or uploaded to `tong-runs` and linked from the PR body or comment. Do not depend on committed GitHub blob links unless those files were intentionally checked in.
+4. Artifact directories under `artifacts/qa-runs/` are gitignored. In the current flow, Codex cloud does not automatically publish those local files into the GitHub PR for reviewers. If a fix needs visual proof, attach or link reviewer-visible media in the task result, PR body, or issue comment. If that cannot be done, leave the verification incomplete and require a final local/browser-backed acceptance recording.
 5. Reserve `@codex` GitHub comments for review or explicitly manual experiments, not the default implementation path.
 
 ## Acceptance policy

@@ -33,6 +33,7 @@ The state helper should be treated as the current surface snapshot. The log help
 2. Capture pre-action and post-action states with the same viewport.
 3. Export state and session logs immediately after reproducing the issue.
 4. Save visual artifacts into the run's `screenshots/` directory and JSON exports into `logs/`.
+5. For cloud runs or PR validation, also attach or link the reviewer-visible media in the task result, PR body, or issue comment. Local artifact paths alone do not count as shipped evidence.
 
 ## Current issue focus
 

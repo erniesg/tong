@@ -4794,6 +4794,15 @@ button.nav-link:hover {
   75% { transform: translateX(3px); }
 }
 
+.bc-board {
+  transition: opacity 0.16s ease;
+}
+
+.bc-board--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Block Crush — completion overlay */
 .bc-overlay {
   position: absolute;
@@ -4810,6 +4819,23 @@ button.nav-link:hover {
 }
 
 @keyframes bc-overlay-in { from { opacity: 0; } }
+@keyframes bc-overlay-out { to { opacity: 0; } }
+
+.bc-overlay--dismissing {
+  animation: bc-overlay-out 0.22s ease-in forwards;
+}
+
+.bc-overlay__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(92%, 360px);
+  padding: 14px 16px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(10, 12, 18, 0.9);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+}
 
 .bc-overlay__char {
   font-size: 4rem;

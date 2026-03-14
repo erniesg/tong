@@ -239,6 +239,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
   const [done, setDone] = useState(false);
   const [successFlash, setSuccessFlash] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [overlayDismissing, setOverlayDismissing] = useState(false);
   const [animationDone, setAnimationDone] = useState(false);
   const [, forceUpdate] = useState(0);
 
@@ -386,13 +387,15 @@ export function BlockCrush({ exercise, onResult }: Props) {
     if (stage === 'intro') {
       // Show detailed overlay, wait for tap
       setAnimationDone(false);
+      setOverlayDismissing(false);
       setShowOverlay(true);
     } else if (stage === 'recognition') {
       // Brief overlay, auto-dismiss after 2s
       setAnimationDone(false);
+      setOverlayDismissing(false);
       setShowOverlay(true);
       setTimeout(() => {
-        setShowOverlay(false);
+        setOverlayDismissing(true);
         fireResult();
       }, 2000);
     } else {
@@ -403,9 +406,10 @@ export function BlockCrush({ exercise, onResult }: Props) {
   }, [displayChar, exercise.language, exercise.meaning, isMulti, stage, fireResult]);
 
   const dismissOverlay = useCallback(() => {
-    setShowOverlay(false);
+    if (overlayDismissing) return;
+    setOverlayDismissing(true);
     fireResult();
-  }, [fireResult]);
+  }, [overlayDismissing, fireResult]);
 
   /* ── Drag handlers ──────────────────────────────────── */
 
@@ -738,6 +742,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card" style={{ padding: 0, position: 'relative', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}>
+      <div className={showOverlay ? 'bc-board bc-board--hidden' : 'bc-board'}>
       {/* Header */}
       <div style={{
         padding: '10px 12px',
@@ -869,11 +874,12 @@ export function BlockCrush({ exercise, onResult }: Props) {
           {displayChar}
         </div>
       )}
+      </div>
 
       {/* Completion overlay (intro + recognition stages) */}
       {showOverlay && (
         <div
-          className="bc-overlay"
+          className={`bc-overlay${overlayDismissing ? ' bc-overlay--dismissing' : ''}`}
           onClick={stage === 'intro' && animationDone ? dismissOverlay : undefined}
         >
           {isStrokeOrderSupported(exercise.targetChar, exercise.language) ? (
@@ -891,17 +897,19 @@ export function BlockCrush({ exercise, onResult }: Props) {
               onComplete={() => setTimeout(() => setAnimationDone(true), 600)}
             />
           )}
-          <div className="bc-overlay__romanization">{displayRomanization}</div>
-          {displayMeaning ? (
-            <div className="bc-overlay__meaning">{displayMeaning}</div>
-          ) : (
-            <div className="bc-overlay__meaning" style={{ fontSize: 'var(--game-text-base)', opacity: 0.6 }}>
-              {exercise.components.map((c) => c.piece).join(' + ')} → {exercise.targetChar}
-            </div>
-          )}
-          {stage === 'intro' && (
-            <div className="bc-overlay__tap" style={{ opacity: animationDone ? 1 : 0 }}>{ui.tapToContinue}</div>
-          )}
+          <div className="bc-overlay__panel">
+            <div className="bc-overlay__romanization">{displayRomanization}</div>
+            {displayMeaning ? (
+              <div className="bc-overlay__meaning">{displayMeaning}</div>
+            ) : (
+              <div className="bc-overlay__meaning" style={{ fontSize: 'var(--game-text-base)', opacity: 0.6 }}>
+                {exercise.components.map((c) => c.piece).join(' + ')} → {exercise.targetChar}
+              </div>
+            )}
+            {stage === 'intro' && (
+              <div className="bc-overlay__tap" style={{ opacity: animationDone ? 1 : 0 }}>{ui.tapToContinue}</div>
+            )}
+          </div>
         </div>
       )}
     </div>

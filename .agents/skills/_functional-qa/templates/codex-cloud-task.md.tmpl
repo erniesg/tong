@@ -19,6 +19,8 @@ Requirements:
 - If the issue is fully resolved by the PR, include a GitHub closing keyword for {{issue_ref}} in the PR body. If the work is partial, explicitly say so and do not close the issue.
 - Reviewer-facing evidence requirement: {{reviewer_evidence_expectation}}
 - If the runtime cannot publish that evidence directly into GitHub after PR creation, return paste-ready markdown with the exact comparison images or links a human should add to the PR.
+- For UI or transition fixes, include reviewer-visible media links or attachments in the task output and PR body. A local artifact path under `artifacts/qa-runs/` is not sufficient by itself.
+- If you cannot make the media reviewer-visible from the cloud task, do not claim correctness; report that a final local/browser-backed recording is still required.
 - Do not rely on `gh` CLI or shell-level `git push`.
 - Do not cite gitignored artifacts as committed GitHub blobs unless those files were actually checked in.
 - When the task is done, return a real diff and use Codex's built-in PR creation flow from the task result.
