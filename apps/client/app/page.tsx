@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import TongHeroVideo from '@/components/landing/TongHeroVideo';
 import SiteFooter from '@/components/site/SiteFooter';
 import SiteHeader from '@/components/site/SiteHeader';
+import { LANDING_FOOTER_ITEMS, LANDING_HEADER_ITEMS } from '@/components/site/siteNav';
 
 const API_BASE = 'https://tong-api.erniesg.workers.dev';
 
@@ -206,7 +207,7 @@ function LandingPage() {
 
   return (
     <div className="landing">
-      <SiteHeader current="home" />
+      <SiteHeader items={LANDING_HEADER_ITEMS} />
 
       {/* Hero */}
       <section className="landing-hero landing-hero--cinematic">
@@ -374,7 +375,7 @@ function LandingPage() {
       </section>
 
       {/* Footer */}
-      <SiteFooter current="home" />
+      <SiteFooter items={LANDING_FOOTER_ITEMS} />
     </div>
   );
 }

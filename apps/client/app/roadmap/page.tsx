@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
 import RoadmapWaveVisual from '@/components/roadmap/RoadmapWaveVisual';
-import SiteFooter from '@/components/site/SiteFooter';
 import SiteHeader from '@/components/site/SiteHeader';
+import { ROADMAP_HEADER_ITEMS } from '@/components/site/siteNav';
 
 import {
   CRITICAL_PATH,
@@ -205,7 +205,7 @@ export default function RoadmapPage() {
   return (
     <div className="roadmap-shell">
       <div className="roadmap-nav">
-        <SiteHeader current="roadmap" />
+        <SiteHeader items={ROADMAP_HEADER_ITEMS} className="landing-nav roadmap-nav-bar" />
       </div>
 
       <section className="roadmap-hero">
@@ -386,8 +386,6 @@ export default function RoadmapPage() {
           </section>
         </div>
       </details>
-
-      <SiteFooter current="roadmap" />
     </div>
   );
 }

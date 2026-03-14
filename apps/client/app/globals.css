@@ -276,12 +276,6 @@ textarea:focus {
   background: #fff2e3;
 }
 
-.nav-link.is-active {
-  background: #fff2e3;
-  border-color: rgba(255, 107, 44, 0.3);
-  color: var(--accent-dark);
-}
-
 button.nav-link {
   padding: 9px 12px;
   transform: none;
@@ -3789,14 +3783,6 @@ button.nav-link:hover {
   padding: 0 20px 64px;
 }
 
-.site-header {
-  gap: 18px;
-}
-
-.site-brand {
-  gap: 10px;
-}
-
 /* Nav */
 .landing-nav {
   display: flex;
@@ -4426,10 +4412,6 @@ button.nav-link:hover {
   color: var(--muted);
 }
 
-.site-footer {
-  margin-top: 40px;
-}
-
 .landing-footer-brand {
   display: flex;
   align-items: center;
@@ -4493,6 +4475,11 @@ button.nav-link:hover {
 
 .roadmap-nav {
   margin-bottom: 22px;
+}
+
+.roadmap-nav-bar {
+  padding-top: 18px;
+  padding-bottom: 0;
 }
 
 .roadmap-hero {
@@ -5700,12 +5687,12 @@ button.nav-link:hover {
 }
 
 @media (max-width: 980px) {
-  .site-header {
+  .landing-nav {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .site-header .landing-nav-links {
+  .landing-nav .landing-nav-links {
     flex-wrap: wrap;
   }
 

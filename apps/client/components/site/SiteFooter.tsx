@@ -3,19 +3,16 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { SITE_NAV_ITEMS, type SitePage } from '@/components/site/siteNav';
+import { type SiteNavItem } from '@/components/site/siteNav';
 
 type SiteFooterProps = {
-  current: SitePage;
+  className?: string;
+  items: SiteNavItem[];
 };
 
-function getNavLinkClassName(isActive: boolean) {
-  return `nav-link${isActive ? ' is-active' : ''}`;
-}
-
-export default function SiteFooter({ current }: SiteFooterProps) {
+export default function SiteFooter({ className = 'landing-footer', items }: SiteFooterProps) {
   return (
-    <footer className="landing-footer site-footer">
+    <footer className={className}>
       <div className="landing-footer-brand">
         <Image
           src="/assets/app/logo_trimmed.png"
@@ -27,24 +24,30 @@ export default function SiteFooter({ current }: SiteFooterProps) {
         <span>Tong — Live the drama. Learn the language.</span>
       </div>
       <div className="landing-footer-links">
-        {SITE_NAV_ITEMS.map((item) => {
-          const isActive = item.page === current;
-
+        {items.map((item) => {
+          if (item.disabled) {
+            return (
+              <span key={item.key} className={item.className ?? 'nav-link'}>
+                {item.label}
+              </span>
+            );
+          }
           if (item.external) {
             return (
-              <a key={item.key} href={item.href} target="_blank" rel="noopener noreferrer" className="nav-link">
+              <a
+                key={item.key}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={item.className ?? 'nav-link'}
+              >
                 {item.label}
               </a>
             );
           }
 
           return (
-            <Link
-              key={item.key}
-              href={item.href}
-              className={getNavLinkClassName(isActive)}
-              aria-current={isActive ? 'page' : undefined}
-            >
+            <Link key={item.key} href={item.href ?? '/'} className={item.className ?? 'nav-link'}>
               {item.label}
             </Link>
           );
