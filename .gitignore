@@ -16,6 +16,7 @@ reference-notes/
 apps/server/data/generated/
 artifacts/qa-runs/*
 !artifacts/qa-runs/.gitkeep
+test-results/
 
 # Large binary assets — store externally, not in git
 *.mp4
