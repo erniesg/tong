@@ -315,6 +315,7 @@ export async function POST(req: Request) {
       system: systemPrompt,
       messages,
       tools: hangoutTools,
+      toolCallStreaming: true,
       maxSteps: 2,
       temperature: 0.8,
       abortSignal: abortController.signal,
