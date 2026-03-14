@@ -50,7 +50,7 @@ export function MultipleChoice({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card" style={{ padding: 20 }}>
-      <p style={{ fontSize: 18, fontWeight: 500, marginBottom: 16, margin: '0 0 16px' }}>{exercise.prompt}</p>
+      <p style={{ fontSize: 'var(--game-text-lg)', fontWeight: 500, marginBottom: 16, margin: '0 0 16px' }}>{exercise.prompt}</p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {exercise.options.map((opt) => {
@@ -66,8 +66,9 @@ export function MultipleChoice({ exercise, onResult }: Props) {
                 ...getOptionStyle(opt.id),
                 borderRadius: 12,
                 padding: '12px 16px',
+                minHeight: 44,
                 textAlign: 'left',
-                fontSize: 16,
+                fontSize: 'var(--game-text-base)',
                 color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
@@ -78,10 +79,10 @@ export function MultipleChoice({ exercise, onResult }: Props) {
             >
               <span>{opt.text}</span>
               {submitted && isCorrectOption && (
-                <span style={{ color: '#34d399', fontSize: 12, fontWeight: 600 }}>{t('correct', lang)}</span>
+                <span style={{ color: '#34d399', fontSize: 'var(--game-text-sm)', fontWeight: 600 }}>{t('correct', lang)}</span>
               )}
               {showWrong && (
-                <span style={{ color: '#f87171', fontSize: 12, fontWeight: 600 }}>{t('your_pick', lang)}</span>
+                <span style={{ color: '#f87171', fontSize: 'var(--game-text-sm)', fontWeight: 600 }}>{t('your_pick', lang)}</span>
               )}
             </button>
           );
@@ -89,7 +90,7 @@ export function MultipleChoice({ exercise, onResult }: Props) {
       </div>
 
       {submitted && exercise.explanation && (
-        <p style={{ marginTop: 12, fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>{exercise.explanation}</p>
+        <p style={{ marginTop: 12, fontSize: 'var(--game-text-base)', color: 'rgba(255,255,255,0.55)' }}>{exercise.explanation}</p>
       )}
 
       {!submitted && (
@@ -101,8 +102,9 @@ export function MultipleChoice({ exercise, onResult }: Props) {
             width: '100%',
             borderRadius: 12,
             padding: '13px 0',
+            minHeight: 44,
             fontWeight: 600,
-            fontSize: 15,
+            fontSize: 'var(--game-text-base)',
             border: 'none',
             cursor: selected ? 'pointer' : 'not-allowed',
             background: selected ? '#f0c040' : 'rgba(255,255,255,0.08)',
@@ -121,7 +123,7 @@ export function MultipleChoice({ exercise, onResult }: Props) {
             borderRadius: 12,
             padding: '12px 16px',
             textAlign: 'center',
-            fontSize: 14,
+            fontSize: 'var(--game-text-base)',
             fontWeight: 600,
             background: isCorrect ? 'rgba(52, 211, 153, 0.15)' : 'rgba(239, 68, 68, 0.15)',
             color: isCorrect ? '#34d399' : '#f87171',

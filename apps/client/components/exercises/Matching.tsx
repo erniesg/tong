@@ -144,7 +144,7 @@ export function Matching({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card p-5">
-      <p className="text-lg font-medium mb-3 m-0">{exercise.prompt}</p>
+      <p className="text-[length:var(--game-text-lg)] font-medium mb-3 m-0">{exercise.prompt}</p>
 
       {/* Word bank — audio mode shows speaker icons, text mode shows text */}
       <div className="flex flex-wrap gap-2 mb-4">
@@ -160,7 +160,7 @@ export function Matching({ exercise, onResult }: Props) {
               disabled={submitted}
               className={cn(
                 'rounded-lg font-medium transition border text-white',
-                isAudioMode ? 'px-4 py-3 flex items-center gap-2' : 'px-3 py-2 text-base',
+                isAudioMode ? 'min-h-[44px] px-4 py-3 flex items-center gap-2 text-[length:var(--game-text-base)]' : 'min-h-[44px] px-3 py-2 text-[length:var(--game-text-base)]',
                 !isPlaced && !isSelected && 'border-white/40 bg-white/8 hover:border-white/60 hover:bg-white/12',
                 isSelected && 'border-[var(--color-primary)] bg-[var(--color-primary)]/20 scale-105',
                 isPlaced && 'opacity-30 border-white/10 bg-transparent cursor-default',
@@ -171,7 +171,7 @@ export function Matching({ exercise, onResult }: Props) {
               {isAudioMode ? (
                 <>
                   <SpeakerIcon active={isThisPlaying} />
-                  {submitted && <span className="text-sm">{pair.right}</span>}
+                  {submitted && <span className="text-[length:var(--game-text-sm)]">{pair.right}</span>}
                 </>
               ) : (
                 pair.right
@@ -209,7 +209,7 @@ export function Matching({ exercise, onResult }: Props) {
                 submitted && 'cursor-default'
               )}
             >
-              <span className="text-ko text-base text-white font-medium min-w-[80px]">
+              <span className="text-ko text-[length:var(--game-text-base)] text-white font-medium min-w-[80px]">
                 {pair.left}
               </span>
               <div className={cn(
@@ -224,22 +224,22 @@ export function Matching({ exercise, onResult }: Props) {
                   isAudioMode ? (
                     <span className={cn('flex items-center gap-2', isWrong && 'text-red-400')}>
                       <SpeakerIcon size={18} active={playing === matchedRightIdx} />
-                      {submitted && <span className="text-sm">{matchedPair?.right}</span>}
+                      {submitted && <span className="text-[length:var(--game-text-sm)]">{matchedPair?.right}</span>}
                     </span>
                   ) : (
                     <span className={cn(
-                      'text-ko font-medium text-white text-base',
+                      'text-ko font-medium text-white text-[length:var(--game-text-base)]',
                       isWrong && 'line-through text-red-400'
                     )}>{matchedPair?.right}</span>
                   )
                 ) : (
-                  <span className="text-xs text-[var(--color-text-muted)]">
+                  <span className="text-[length:var(--game-text-sm)] text-[var(--color-text-muted)]">
                     {isSlotSelected ? t('pick_word', lang) : selectedWord !== null ? t('tap_to_place', lang) : ''}
                   </span>
                 )}
               </div>
               {isWrong && (
-                <span className="text-xs text-[var(--color-accent-green)] whitespace-nowrap flex items-center gap-1">
+                <span className="text-[length:var(--game-text-sm)] text-[var(--color-accent-green)] whitespace-nowrap flex items-center gap-1">
                   {isAudioMode ? (
                     <button
                       type="button"
@@ -254,7 +254,7 @@ export function Matching({ exercise, onResult }: Props) {
                 </span>
               )}
               {isCorrect && (
-                <span className="text-[var(--color-accent-green)] text-sm">✓</span>
+                <span className="text-[var(--color-accent-green)] text-[length:var(--game-text-base)]">✓</span>
               )}
             </div>
           );
@@ -263,7 +263,7 @@ export function Matching({ exercise, onResult }: Props) {
 
       {submitted && (
         <div className={cn(
-          'rounded-lg px-4 py-3 text-center font-semibold mb-3',
+          'rounded-lg px-4 py-3 text-center text-[length:var(--game-text-base)] font-semibold mb-3',
           isAllCorrect
             ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]'
             : 'bg-red-500/20 text-red-400'
@@ -280,7 +280,7 @@ export function Matching({ exercise, onResult }: Props) {
           onClick={handleSubmit}
           disabled={!allFilled}
           className={cn(
-            'w-full rounded-lg py-3 font-semibold transition',
+            'w-full min-h-[44px] rounded-lg py-3 text-[length:var(--game-text-base)] font-semibold transition',
             allFilled
               ? 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)]'
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed'

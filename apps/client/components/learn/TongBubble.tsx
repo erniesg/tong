@@ -14,7 +14,7 @@ export function TongBubble({ text, translation, expression = 'cheerful' }: TongB
     <div className="msg-bubble msg-bubble--npc bubble-tail-left">
       <p className="m-0 text-ko">{text}</p>
       {translation && (
-        <p className="m-0 mt-1 text-xs msg-bubble__translation">{translation}</p>
+        <p className="m-0 mt-1 text-[length:var(--game-text-sm)] msg-bubble__translation">{translation}</p>
       )}
     </div>
   );
