@@ -9,7 +9,16 @@ from pathlib import Path
 from typing import Any
 
 from issue_router import build_issue_entry, resolve_targets
-from qa_runtime import CONFIG_ROOT, artifact_root, load_json, repo_name_with_owner, slugify, timestamp_slug
+from qa_runtime import (
+    CONFIG_ROOT,
+    artifact_root,
+    format_portability_summary,
+    load_json,
+    render_portability_lines,
+    repo_name_with_owner,
+    slugify,
+    timestamp_slug,
+)
 
 
 CLOUD_CONFIG = load_json(CONFIG_ROOT / "codex-cloud.json")
@@ -35,7 +44,11 @@ def override_for(issue_ref: str | None) -> dict[str, Any] | None:
 def default_cloud_mode(raw_issue: dict[str, Any], issue_entry: dict[str, Any]) -> tuple[str, bool, str, list[str]]:
     lowered = f"{raw_issue['title']}\n{raw_issue['body']}".lower()
     project_fields = issue_entry.get("project_fields", {})
+    portability = issue_entry.get("portability_preflight", {})
     portable_context = project_fields.get("Portable Context")
+    if portability.get("blocking"):
+        reason = "Portability preflight failed: " + format_portability_summary(portability)
+        return ("local-only", True, reason, [])
     if portable_context == "No":
         reason = "Project marks `Portable Context=No`, so keep this out of unattended cloud execution for now."
         if project_fields.get("Blocked By"):
@@ -72,6 +85,18 @@ def default_cloud_mode(raw_issue: dict[str, Any], issue_entry: dict[str, Any]) -
         "No known cloud blocker was detected; the issue appears reproducible from repo state plus setup.",
         [],
     )
+
+
+def merge_readiness_reason(reason: str, portability: dict[str, Any]) -> str:
+    if not portability:
+        return reason
+    if portability.get("blocking"):
+        detail = "Portability preflight: " + format_portability_summary(portability)
+        return reason if detail in reason else f"{reason} {detail}"
+    if portability.get("warnings"):
+        detail = "Portability notes: " + "; ".join(portability["warnings"])
+        return reason if detail in reason else f"{reason} {detail}"
+    return reason
 
 
 def branch_name_for(issue_number: int | None, title: str) -> str:
@@ -139,6 +164,7 @@ def reviewer_evidence_expectation(issue_entry: dict[str, Any]) -> str:
 def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, Any]:
     issue_entry = build_issue_entry(raw_issue)
     issue_ref = issue_entry.get("issue_ref")
+    portability = issue_entry.get("portability_preflight", {})
     override = override_for(issue_ref)
     if override:
         cloud_mode = override["cloud_mode"]
@@ -149,6 +175,7 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
     else:
         cloud_mode, needs_local_acceptance, readiness_reason, depends_on = default_cloud_mode(raw_issue, issue_entry)
         batch_id = "unassigned"
+    readiness_reason = merge_readiness_reason(readiness_reason, portability)
 
     issue_number = issue_entry.get("number")
     file_stub = f"issue-{issue_number}" if issue_number is not None else slugify(issue_entry["title"])
@@ -270,12 +297,18 @@ def render_markdown(plan: dict[str, Any]) -> str:
                 f"- Start with: `{issue['initial_skill']}`",
                 f"- Follow-ups: `{'; '.join(issue['follow_up_skills'])}`",
                 f"- Depends on: `{', '.join(issue['depends_on']) or 'none'}`",
+                f"- Portability: `{issue['portability_preflight']['status']}`",
+                f"- Portability summary: {format_portability_summary(issue['portability_preflight'])}",
                 f"- Readiness: {issue['readiness_reason']}",
                 f"- Queue action: `{queue_action_for(issue)}`",
                 f"- Task prompt: `{issue['generated_files']['task_prompt']}`",
                 f"- PR notes: `{issue['generated_files']['pr_notes']}`",
             ]
         )
+        for line in render_portability_lines(issue["portability_preflight"]):
+            if line.startswith("- Portability preflight:") or line.startswith("- Portability summary:"):
+                continue
+            lines.append(line)
         lines.append("")
     return "\n".join(lines).strip() + "\n"
 
