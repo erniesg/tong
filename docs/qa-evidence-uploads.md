@@ -35,6 +35,7 @@ What this does:
 
 1. Collects screenshots, proof video, summary, and optional supporting traces from the run bundle.
 2. Generates a GIF preview and poster frame for uploaded videos.
+   By default the preview is taken from the end of the recording, so reviewer-facing evidence shows the actual interaction moment instead of the setup frames.
 3. Uploads everything to `tong-runs` under:
 
 ```text
