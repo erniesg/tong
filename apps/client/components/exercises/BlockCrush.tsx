@@ -97,6 +97,7 @@ const LANES = 4;
 const BASE_SPEED = 0.00015;
 const SPAWN_INTERVAL = 1400;
 const MAX_PIECES = 6;
+const PLAYFIELD_HEIGHT = 308;
 
 /** Play a single piece's sound (short, no meaning follow-up). */
 function playPieceTTS(piece: string, lang: string) {
@@ -239,6 +240,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
   const [done, setDone] = useState(false);
   const [successFlash, setSuccessFlash] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [overlayDismissing, setOverlayDismissing] = useState(false);
   const [animationDone, setAnimationDone] = useState(false);
   const [, forceUpdate] = useState(0);
 
@@ -318,7 +320,8 @@ export function BlockCrush({ exercise, onResult }: Props) {
     const emptiest = laneCounts.reduce<number[]>((acc, c, i) => c === minCount ? [...acc, i] : acc, []);
     const column = emptiest[Math.floor(Math.random() * emptiest.length)];
     const speed = BASE_SPEED * cfg.speedMult * (0.8 + Math.random() * 0.4);
-    setPieces((prev) => [...prev, { id, piece, column, y: -0.08, speed, isDistractor, colorHint }]);
+    // Spawn from the top edge of the playfield so the entry point reads clearly.
+    setPieces((prev) => [...prev, { id, piece, column, y: 0, speed, isDistractor, colorHint }]);
   }, [exercise.language, cfg.distractorRate, cfg.speedMult]);
 
   /* ── Game loop ─────────────────────────────────────── */
@@ -386,13 +389,15 @@ export function BlockCrush({ exercise, onResult }: Props) {
     if (stage === 'intro') {
       // Show detailed overlay, wait for tap
       setAnimationDone(false);
+      setOverlayDismissing(false);
       setShowOverlay(true);
     } else if (stage === 'recognition') {
       // Brief overlay, auto-dismiss after 2s
       setAnimationDone(false);
+      setOverlayDismissing(false);
       setShowOverlay(true);
       setTimeout(() => {
-        setShowOverlay(false);
+        setOverlayDismissing(true);
         fireResult();
       }, 2000);
     } else {
@@ -403,9 +408,10 @@ export function BlockCrush({ exercise, onResult }: Props) {
   }, [displayChar, exercise.language, exercise.meaning, isMulti, stage, fireResult]);
 
   const dismissOverlay = useCallback(() => {
-    setShowOverlay(false);
+    if (overlayDismissing) return;
+    setOverlayDismissing(true);
     fireResult();
-  }, [fireResult]);
+  }, [overlayDismissing, fireResult]);
 
   /* ── Drag handlers ──────────────────────────────────── */
 
@@ -738,6 +744,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card" style={{ padding: 0, position: 'relative', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}>
+      <div className={showOverlay ? 'bc-board bc-board--hidden' : 'bc-board'}>
       {/* Header */}
       <div style={{
         padding: '10px 12px',
@@ -804,42 +811,47 @@ export function BlockCrush({ exercise, onResult }: Props) {
         </div>
       </div>
 
-      {/* Lanes — overflow visible so dragged piece can escape its lane */}
+      {/* Lanes */}
       <div style={{
-        display: 'grid', gridTemplateColumns: `repeat(${LANES}, 1fr)`,
-        gap: 2, height: 280, padding: '0 8px', position: 'relative', overflow: 'visible',
+        padding: '0 8px 0',
+        position: 'relative',
       }}>
-        {lanes.map((lane, i) => (
-          <div key={i} style={{ position: 'relative', overflow: 'visible' }}>
-            {lane.map((p) => {
-              // Stage-aware color hint on pieces
-              const pieceBorder = cfg.showColorHints && p.colorHint
-                ? `2px solid ${p.colorHint}${Math.round(cfg.colorHintOpacity * 255 * 0.33).toString(16).padStart(2, '0')}`
-                : '2px solid rgba(255,255,255,0.12)';
+        <div style={{
+          display: 'grid', gridTemplateColumns: `repeat(${LANES}, 1fr)`,
+          gap: 2, height: PLAYFIELD_HEIGHT, position: 'relative', overflow: 'visible',
+        }}>
+          {lanes.map((lane, i) => (
+            <div key={i} style={{ position: 'relative', overflow: 'visible' }}>
+              {lane.map((p) => {
+                // Stage-aware color hint on pieces
+                const pieceBorder = cfg.showColorHints && p.colorHint
+                  ? `2px solid ${p.colorHint}${Math.round(cfg.colorHintOpacity * 255 * 0.33).toString(16).padStart(2, '0')}`
+                  : '2px solid rgba(255,255,255,0.12)';
 
-              return (
-                <div
-                  key={p.id}
-                  ref={(el) => { pieceElRefs.current[p.id] = el; }}
-                  onPointerDown={(e) => startDrag(e, p)}
-                  style={{
-                    position: 'absolute', left: '50%', top: `${p.y * 100}%`,
-                    width: 52, height: 52,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 26, borderRadius: 10, cursor: 'grab',
-                    border: pieceBorder,
-                    background: p.isDistractor ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)',
-                    transform: 'translateX(-50%)', touchAction: 'none', zIndex: 2,
-                    userSelect: 'none', WebkitUserSelect: 'none',
-                    WebkitTouchCallout: 'none',
-                  } as React.CSSProperties}
-                >
-                  {p.piece}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+                return (
+                  <div
+                    key={p.id}
+                    ref={(el) => { pieceElRefs.current[p.id] = el; }}
+                    onPointerDown={(e) => startDrag(e, p)}
+                    style={{
+                      position: 'absolute', left: '50%', top: `${p.y * 100}%`,
+                      width: 52, height: 52,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 26, borderRadius: 10, cursor: 'grab',
+                      border: pieceBorder,
+                      background: p.isDistractor ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)',
+                      transform: 'translateX(-50%)', touchAction: 'none', zIndex: 2,
+                      userSelect: 'none', WebkitUserSelect: 'none',
+                      WebkitTouchCallout: 'none',
+                    } as React.CSSProperties}
+                  >
+                    {p.piece}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Grid frame */}
@@ -869,11 +881,12 @@ export function BlockCrush({ exercise, onResult }: Props) {
           {displayChar}
         </div>
       )}
+      </div>
 
       {/* Completion overlay (intro + recognition stages) */}
       {showOverlay && (
         <div
-          className="bc-overlay"
+          className={`bc-overlay${overlayDismissing ? ' bc-overlay--dismissing' : ''}`}
           onClick={stage === 'intro' && animationDone ? dismissOverlay : undefined}
         >
           {isStrokeOrderSupported(exercise.targetChar, exercise.language) ? (
@@ -891,17 +904,19 @@ export function BlockCrush({ exercise, onResult }: Props) {
               onComplete={() => setTimeout(() => setAnimationDone(true), 600)}
             />
           )}
-          <div className="bc-overlay__romanization">{displayRomanization}</div>
-          {displayMeaning ? (
-            <div className="bc-overlay__meaning">{displayMeaning}</div>
-          ) : (
-            <div className="bc-overlay__meaning" style={{ fontSize: 'var(--game-text-base)', opacity: 0.6 }}>
-              {exercise.components.map((c) => c.piece).join(' + ')} → {exercise.targetChar}
-            </div>
-          )}
-          {stage === 'intro' && (
-            <div className="bc-overlay__tap" style={{ opacity: animationDone ? 1 : 0 }}>{ui.tapToContinue}</div>
-          )}
+          <div className="bc-overlay__panel">
+            <div className="bc-overlay__romanization">{displayRomanization}</div>
+            {displayMeaning ? (
+              <div className="bc-overlay__meaning">{displayMeaning}</div>
+            ) : (
+              <div className="bc-overlay__meaning" style={{ fontSize: 'var(--game-text-base)', opacity: 0.6 }}>
+                {exercise.components.map((c) => c.piece).join(' + ')} → {exercise.targetChar}
+              </div>
+            )}
+            {stage === 'intro' && (
+              <div className="bc-overlay__tap" style={{ opacity: animationDone ? 1 : 0 }}>{ui.tapToContinue}</div>
+            )}
+          </div>
         </div>
       )}
     </div>
