@@ -136,6 +136,16 @@ def batch_order_value(batch_id: str) -> int:
     return 999
 
 
+def configured_batch_for(issue_ref: str | None) -> str:
+    if not issue_ref:
+        return "unassigned"
+    for batch in CLOUD_CONFIG.get("current_batches", []):
+        for item in batch.get("issues", []):
+            if item in issue_ref:
+                return batch["id"]
+    return "unassigned"
+
+
 def issue_order_value(issue_ref: str | None, batch_id: str) -> int:
     for batch in CLOUD_CONFIG.get("current_batches", []):
         if batch["id"] != batch_id:
@@ -176,6 +186,83 @@ def reviewer_evidence_expectation(issue_entry: dict[str, Any]) -> str:
     return "Summarize the non-visual evidence inline and link any uploaded reviewer-facing artifacts."
 
 
+def verification_instruction_for(issue_entry: dict[str, Any]) -> str:
+    policy = issue_entry["validation_policy"]
+    if policy.get("fix_allowed"):
+        return "After code changes, rerun `validate-issue --verify-fix` before claiming the issue is fixed."
+    return (
+        f"Execution mode is `{policy.get('execution_mode', 'safe-unattended')}`. "
+        "Validate, trace if needed, and stop with evidence plus a scoped proposal instead of claiming a fix."
+    )
+
+
+def completion_instruction_for(issue_entry: dict[str, Any]) -> str:
+    if issue_entry["validation_policy"].get("fix_allowed"):
+        return (
+            "Return a concise final summary covering validation result, root cause, files changed, "
+            "verification outcome, and reviewer-visible evidence."
+        )
+    return (
+        "Return a concise validation summary with the reproduced behavior, root-cause hypothesis, "
+        "proposed fix scope, and any blockers. Do not make unattended product changes."
+    )
+
+
+def lane_guidance_for(issue_entry: dict[str, Any]) -> str:
+    worktree = issue_entry["recommended_worktree"]
+    shared_zone_hits = issue_entry.get("shared_zone_hits", [])
+    explicit_paths = issue_entry.get("explicit_paths", [])
+    if shared_zone_hits:
+        return (
+            f"Stay within the `{worktree['id']}` lane and keep changes serialized around shared zones: "
+            f"{', '.join(shared_zone_hits)}."
+        )
+    if explicit_paths:
+        return (
+            f"Prefer edits in the `{worktree['id']}` lane's owned paths. If validation forces a cross-lane change, "
+            f"name the boundary and keep it minimal. Explicit paths: {', '.join(explicit_paths)}."
+        )
+    return (
+        f"Stay within the `{worktree['id']}` lane's owned paths and avoid cross-lane edits unless validation proves "
+        "the issue spans another lane."
+    )
+
+
+def render_validation_gate_lines_for_issue(issue_entry: dict[str, Any]) -> str:
+    policy = issue_entry["validation_policy"]
+    runtime_modes = policy.get("required_runtime_modes_for_fixed", [])
+    lines = [
+        f"- Execution mode: `{policy.get('execution_mode', 'safe-unattended')}`",
+        f"- Direct issue evidence: `{'required' if policy.get('requires_direct_issue_evidence') else 'not-required'}`",
+        f"- UI acceptance gate: `{'required' if policy.get('ui_acceptance_required') else 'not-required'}`",
+        f"- Runtime modes to exercise for fixed claim: `{', '.join(runtime_modes) if runtime_modes else 'none specified'}`",
+        f"- Live model confirmation: `{'required' if policy.get('requires_live_model_for_fixed') else 'not-required'}`",
+        f"- Human review: `{'required' if policy.get('human_review_required') else 'not-required'}`",
+    ]
+    return "\n".join(lines)
+
+
+def render_stop_conditions_for_issue(issue: dict[str, Any]) -> str:
+    policy = issue["validation_policy"]
+    portability = issue.get("portability_preflight", {})
+    stop_conditions = list(policy.get("stop_conditions", []))
+    if not policy.get("fix_allowed"):
+        stop_conditions.append(
+            f"Execution mode `{policy.get('execution_mode', 'safe-unattended')}` is validation-only; stop after evidence and a scoped proposal."
+        )
+    if issue.get("cloud_mode") == "local-only":
+        stop_conditions.append("Portable context is not sufficient for unattended cloud execution; stop without code changes.")
+    if portability.get("blocking"):
+        stop_conditions.append(f"Portability blockers remain unresolved: {format_portability_summary(portability)}")
+    if issue.get("needs_final_local_acceptance"):
+        stop_conditions.append(
+            "If reviewer-visible media cannot be produced from the cloud task, leave final correctness pending local/browser-backed acceptance."
+        )
+    if not stop_conditions:
+        return "- None."
+    return "\n".join(f"- {item}" for item in stop_conditions)
+
+
 def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, Any]:
     issue_entry = build_issue_entry(raw_issue)
     issue_ref = issue_entry.get("issue_ref")
@@ -189,7 +276,7 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
         batch_id = override["batch"]
     else:
         cloud_mode, needs_local_acceptance, readiness_reason, depends_on = default_cloud_mode(raw_issue, issue_entry)
-        batch_id = "unassigned"
+        batch_id = configured_batch_for(issue_ref)
     cloud_mode, needs_local_acceptance, readiness_reason = enforce_portability_blockers(
         cloud_mode,
         needs_local_acceptance,
@@ -213,7 +300,7 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
         "{{repository}}": repo_name_with_owner(),
         "{{environment_name}}": CLOUD_CONFIG["environment_name"],
         "{{issue_ref}}": issue_ref or issue_entry["title"],
-        "{{issue_url}}": raw_issue.get("url", ""),
+        "{{issue_url}}": raw_issue.get("html_url") or raw_issue.get("url", ""),
         "{{batch_id}}": batch_id,
         "{{worktree_id}}": worktree["id"],
         "{{worktree_branch}}": worktree["branch"],
@@ -224,6 +311,28 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
         "{{reviewer_evidence_expectation}}": reviewer_evidence_expectation(issue_entry),
         "{{initial_skill}}": issue_entry["initial_skill"],
         "{{follow_up_skills}}": "; ".join(issue_entry["follow_up_skills"]),
+        "{{queue_action}}": queue_action_for(
+            {
+                **issue_entry,
+                "cloud_mode": cloud_mode,
+                "batch_id": batch_id,
+                "depends_on": depends_on,
+            }
+        ),
+        "{{verification_instruction}}": verification_instruction_for(issue_entry),
+        "{{completion_instruction}}": completion_instruction_for(issue_entry),
+        "{{execution_mode}}": issue_entry["validation_policy"].get("execution_mode", "safe-unattended"),
+        "{{lane_guidance}}": lane_guidance_for(issue_entry),
+        "{{validation_gate_lines}}": render_validation_gate_lines_for_issue(issue_entry),
+        "{{stop_conditions}}": render_stop_conditions_for_issue(
+            {
+                **issue_entry,
+                "cloud_mode": cloud_mode,
+                "batch_id": batch_id,
+                "depends_on": depends_on,
+                "needs_final_local_acceptance": needs_local_acceptance,
+            }
+        ),
         "{{readiness_reason}}": readiness_reason,
         "{{suggested_pr_title}}": pr_title,
         "{{suggested_branch_name}}": branch_name,
