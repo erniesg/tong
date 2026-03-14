@@ -1,10 +1,18 @@
 {
-  "manifestVersion": "2026-03-14",
+  "manifestVersion": "2026-03-15",
   "owner": "codex/runtime-assets",
   "keyFormat": "domain.scope.name.variant",
   "sourceManifest": "assets/manifest/canonical-asset-manifest.json",
-  "notes": "Runtime projection of canonical asset keys. Keep keys in sync with assets/presets/manifest.json.",
+  "notes": "Runtime projection of the current client asset surface plus starter/reward placeholders.",
   "assets": [
+    {
+      "key": "app.logo.transparent.default",
+      "type": "image",
+      "usage": "global-shell",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/app/logo_transparent.png"
+    },
     {
       "key": "app.logo.trimmed.default",
       "type": "image",
@@ -12,6 +20,14 @@
       "source": "repo",
       "status": "ready",
       "uri": "/assets/app/logo_trimmed.png"
+    },
+    {
+      "key": "app.intro.video.default",
+      "type": "video",
+      "usage": "intro-cinematic",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/tong_intro.webm"
     },
     {
       "key": "city.seoul.location.food-street.backdrop.default",
@@ -22,12 +38,68 @@
       "uri": "/assets/backdrops/seoul/pojangmacha.png"
     },
     {
+      "key": "city.seoul.map.static.default",
+      "type": "image",
+      "usage": "city-map-poster",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/locations/seoul-static.png"
+    },
+    {
+      "key": "city.seoul.map.video.default",
+      "type": "video",
+      "usage": "city-map-loop",
+      "source": "generated-placeholder",
+      "status": "placeholder",
+      "uri": "/assets/locations/seoul.mp4"
+    },
+    {
+      "key": "city.tokyo.map.static.default",
+      "type": "image",
+      "usage": "city-map-poster",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/locations/tokyo-static.png"
+    },
+    {
+      "key": "city.tokyo.map.video.default",
+      "type": "video",
+      "usage": "city-map-loop",
+      "source": "generated-placeholder",
+      "status": "placeholder",
+      "uri": "/assets/locations/tokyo.mp4"
+    },
+    {
+      "key": "city.shanghai.map.static.default",
+      "type": "image",
+      "usage": "city-map-poster",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/locations/shanghai-static.png"
+    },
+    {
+      "key": "city.shanghai.map.video.default",
+      "type": "video",
+      "usage": "city-map-loop",
+      "source": "generated-placeholder",
+      "status": "placeholder",
+      "uri": "/assets/locations/shanghai.mp4"
+    },
+    {
       "key": "city.seoul.location.food-street.pack.starter",
       "type": "content-pack",
       "usage": "scene-authoring",
       "source": "repo",
       "status": "draft",
       "uri": "assets/content-packs/seoul-food-street.starter.json"
+    },
+    {
+      "key": "character.ding-man.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/ding_man/ding_man.png"
     },
     {
       "key": "character.haeun.portrait.default",
@@ -38,6 +110,22 @@
       "uri": "/assets/characters/haeun/haeun.png"
     },
     {
+      "key": "character.haeun.portrait.eye-front-casual",
+      "type": "image",
+      "usage": "runtime-sprite",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/haeun/eye_front_casual.png"
+    },
+    {
+      "key": "character.haeun.scene.default",
+      "type": "image",
+      "usage": "scene-still",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/haeun/scene.png"
+    },
+    {
       "key": "character.jin.portrait.default",
       "type": "image",
       "usage": "dialogue-avatar",
@@ -46,20 +134,172 @@
       "uri": "/assets/characters/jin/jin.png"
     },
     {
+      "key": "character.jin.portrait.eye-front-casual",
+      "type": "image",
+      "usage": "runtime-sprite",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/jin/eye_front_casual.png"
+    },
+    {
+      "key": "character.jin.scene.default",
+      "type": "image",
+      "usage": "scene-still",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/jin/scene.png"
+    },
+    {
+      "key": "character.tong.expression.neutral",
+      "type": "image",
+      "usage": "npc-expression",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/tong/tong_neutral.png"
+    },
+    {
+      "key": "character.tong.expression.cheerful",
+      "type": "image",
+      "usage": "npc-expression",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/tong/tong_cheerful.png"
+    },
+    {
+      "key": "character.tong.expression.surprised",
+      "type": "image",
+      "usage": "npc-expression",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/tong/tong_surprised.png"
+    },
+    {
+      "key": "character.tong.expression.proud",
+      "type": "image",
+      "usage": "npc-expression",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/tong/tong_proud.png"
+    },
+    {
+      "key": "character.tong.expression.love",
+      "type": "image",
+      "usage": "npc-expression",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/tong/tong_love.png"
+    },
+    {
+      "key": "character.tong.expression.sad",
+      "type": "image",
+      "usage": "npc-expression",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/tong/tong_sad.png"
+    },
+    {
+      "key": "character.tong.expression.crying",
+      "type": "image",
+      "usage": "npc-expression",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/tong/tong_crying.png"
+    },
+    {
+      "key": "character.tong.expression.amazed",
+      "type": "image",
+      "usage": "npc-expression",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/tong/tong_amazed.png"
+    },
+    {
+      "key": "character.tong.expression.excited",
+      "type": "image",
+      "usage": "npc-expression",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/tong/tong_excited.png"
+    },
+    {
+      "key": "character.tong.expression.thinking",
+      "type": "image",
+      "usage": "npc-expression",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/tong/tong_thinking.png"
+    },
+    {
+      "key": "cinematic.haeun.intro.3",
+      "type": "video",
+      "usage": "intro-cinematic",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/cinematics/haeun/intro_3.mp4"
+    },
+    {
+      "key": "cinematic.haeun.exit.3",
+      "type": "video",
+      "usage": "exit-cinematic",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/cinematics/haeun/exit_3.mp4"
+    },
+    {
+      "key": "cinematic.haeun.exit.4",
+      "type": "video",
+      "usage": "exit-cinematic",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/cinematics/haeun/exit_4.mp4"
+    },
+    {
+      "key": "cinematic.jin.intro.1",
+      "type": "video",
+      "usage": "intro-cinematic",
+      "source": "generated-placeholder",
+      "status": "placeholder",
+      "uri": "/assets/cinematics/jin/intro_1.mp4"
+    },
+    {
+      "key": "cinematic.jin.intro.2",
+      "type": "video",
+      "usage": "intro-cinematic",
+      "source": "generated-placeholder",
+      "status": "placeholder",
+      "uri": "/assets/cinematics/jin/intro_2.mp4"
+    },
+    {
+      "key": "cinematic.jin.exit.1",
+      "type": "video",
+      "usage": "exit-cinematic",
+      "source": "generated-placeholder",
+      "status": "placeholder",
+      "uri": "/assets/cinematics/jin/exit_1.mp4"
+    },
+    {
       "key": "reward.shanghai.video-call.placeholder.v1",
       "type": "video",
       "usage": "mission-reward",
-      "source": "placeholder",
-      "status": "planned",
+      "source": "generated-placeholder",
+      "status": "placeholder",
       "uri": "assets/rewards/shanghai-video-call.placeholder.mp4"
     },
     {
       "key": "reward.shanghai.polaroid.placeholder.v1",
       "type": "image",
       "usage": "collectible-card",
-      "source": "placeholder",
-      "status": "planned",
+      "source": "generated-placeholder",
+      "status": "placeholder",
       "uri": "assets/rewards/shanghai-polaroid.placeholder.png"
+    },
+    {
+      "key": "reward.shanghai.bundle.placeholder",
+      "type": "reward-bundle",
+      "usage": "reward-authoring",
+      "source": "repo",
+      "status": "draft",
+      "uri": "assets/rewards/shanghai-reward-bundle.placeholder.json"
     }
   ]
 }

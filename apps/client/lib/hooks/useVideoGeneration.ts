@@ -16,7 +16,7 @@ const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 /** Mock: ramp progress over durationMs, then succeed with a placeholder URL */
 const MOCK_DURATION_MS = 30_000; // 30s simulated generation
-const MOCK_VIDEO_URL = '/assets/cinematics/mock_exit.mp4';
+const MOCK_VIDEO_URL = '/assets/cinematics/haeun/exit_3.mp4';
 
 interface UseVideoGenerationOptions {
   mock?: boolean;

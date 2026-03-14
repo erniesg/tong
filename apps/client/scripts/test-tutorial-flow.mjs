@@ -52,7 +52,7 @@ function buildCtx() {
   return JSON.stringify({
     ...BASE_CTX,
     videoStatus,
-    exitVideoUrl: videoStatus === 'ready' ? '/assets/cinematics/mock_exit.mp4' : null,
+    exitVideoUrl: videoStatus === 'ready' ? '/assets/cinematics/haeun/exit_3.mp4' : null,
     exercisesDone,
   });
 }
