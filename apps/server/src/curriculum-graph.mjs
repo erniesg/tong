@@ -729,13 +729,21 @@ function materializeEvidence(persona) {
 
 function normalizeEvidenceEvent(event, persona, indexBase = 0) {
   const nodeId = typeof event?.nodeId === 'string' ? event.nodeId : '';
+  const mode =
+    event?.mode === 'hangout' ||
+    event?.mode === 'mission' ||
+    event?.mode === 'media' ||
+    event?.mode === 'review' ||
+    event?.mode === 'exercise'
+      ? event.mode
+      : 'learn';
   return {
     eventId: typeof event?.eventId === 'string' ? event.eventId : `runtime:${persona.personaId}:${indexBase + 1}`,
     personaId: persona.personaId,
     userId: persona.userId,
     nodeId,
     objectiveId: typeof event?.objectiveId === 'string' ? event.objectiveId : null,
-    mode: event?.mode === 'hangout' || event?.mode === 'mission' || event?.mode === 'media' ? event.mode : 'learn',
+    mode,
     quality: clamp01(event?.quality),
     occurredAtIso:
       typeof event?.occurredAtIso === 'string'

@@ -514,6 +514,26 @@ function getLang(query) {
   return 'ko';
 }
 
+function getCityId(query, fallback = 'seoul') {
+  const city = query.get('city') || fallback;
+  if (city === 'seoul' || city === 'tokyo' || city === 'shanghai') return city;
+  return fallback;
+}
+
+function getLocationId(query, fallback = 'food_street') {
+  const location = query.get('location') || fallback;
+  if (
+    location === 'food_street' ||
+    location === 'cafe' ||
+    location === 'convenience_store' ||
+    location === 'subway_hub' ||
+    location === 'practice_studio'
+  ) {
+    return location;
+  }
+  return fallback;
+}
+
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -804,11 +824,17 @@ function buildPersonalizedObjective({
 
 function buildGameStartResponse(userId, incomingProfile) {
   const profile = incomingProfile || getProfile(userId) || FIXTURES.gameStart.profile;
-  const weakestLang = getWeakestTargetLanguage(profile);
-  const objective = buildPersonalizedObjective({ userId, mode: 'hangout', lang: weakestLang });
   const dominantClusterId = getDominantClusterId(ensureIngestionForUser(userId));
   const city = CLUSTER_CITY_MAP[dominantClusterId] || FIXTURES.gameStart.city || 'seoul';
   const location = CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
+  const weakestLang = getWeakestTargetLanguage(profile);
+  const objective = buildPersonalizedObjective({
+    userId,
+    mode: 'hangout',
+    lang: weakestLang,
+    city,
+    location,
+  });
 
   return {
     ...cloneJson(FIXTURES.gameStart),
@@ -1033,7 +1059,23 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
     case 'objectives.next.get': {
       const mode = args.mode === 'learn' ? 'learn' : 'hangout';
       const lang = args.lang === 'ja' || args.lang === 'zh' ? args.lang : 'ko';
-      const objective = buildPersonalizedObjective({ userId, mode, lang });
+      const city =
+        args.city === 'tokyo' || args.city === 'shanghai' || args.city === 'seoul' ? args.city : 'seoul';
+      const location =
+        args.location === 'cafe' ||
+        args.location === 'convenience_store' ||
+        args.location === 'subway_hub' ||
+        args.location === 'practice_studio' ||
+        args.location === 'food_street'
+          ? args.location
+          : 'food_street';
+      const objective = buildPersonalizedObjective({
+        userId,
+        mode,
+        lang,
+        city,
+        location,
+      });
       return {
         statusCode: 200,
         payload: {
@@ -1670,8 +1712,8 @@ const server = http.createServer(async (req, res) => {
         userId,
         mode,
         lang: selectedLang,
-        city: url.searchParams.get('city') || 'seoul',
-        location: url.searchParams.get('location') || 'food_street',
+        city: getCityId(url.searchParams),
+        location: getLocationId(url.searchParams),
       });
       jsonResponse(res, 200, objective);
       return;
