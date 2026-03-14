@@ -85,4 +85,5 @@ npm run qa:upload-evidence -- \
 - Use uploaded URLs in PR comments instead of repo blob links.
 - If auto-generation cannot find the previous run, cannot match same-state screenshots, or `magick` is unavailable, the rendered comment now calls that out explicitly instead of silently degrading.
 - Manual fallback: add pre-rendered files under `comparison_panels` and `comparison_focus_crops` in `evidence.json`, then rerun the uploader.
+- If the uploader is unavailable in the current environment, use a dedicated reviewer-proof branch or PR with tracked GIF, stills, summary, and machine-readable trace files. Post those GitHub links instead of local artifact paths.
 - For browser or untrusted uploaders later, switch to presigned URLs behind a small Worker instead of direct Wrangler auth.
