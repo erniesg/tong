@@ -90,51 +90,33 @@ const totalIssues = ROADMAP_PHASES.reduce((count, phase) => count + phase.issues
 const FOCUS_WINDOWS = [
   {
     key: 'now',
+    stage: '01',
     eyebrow: 'Unlock first',
     title: 'Make Tong remotely operable',
-    summary:
-      'Before the queue scales, remote agents need portable issues, published assets, and reviewer-visible proof.',
+    summary: 'Portable issues, published assets, and reviewer-visible proof.',
+    impact: 'This is the reliability layer. Without it, remote QA and unattended implementation stay brittle.',
+    benefits: ['Portable context', 'Published runtime assets', 'Reviewable proof'],
     issueNumbers: [66, 65, 29, 35, 36, 46],
   },
   {
     key: 'next',
+    stage: '02',
     eyebrow: 'Unlock second',
     title: 'Add resume and deterministic checkpoints',
-    summary:
-      'Once the runtime is portable, progression and seeded checkpoints cut replay time for both players and QA.',
+    summary: 'Resume flows for players and seeded checkpoints for QA.',
+    impact: 'This is the speed layer. It cuts replay loops for both users and bug reproduction.',
+    benefits: ['Return to map', 'Resume active hangout', 'Checkpoint seeds'],
     issueNumbers: [37, 38, 47, 48, 49, 51],
   },
   {
     key: 'later',
+    stage: '03',
     eyebrow: 'Then accelerate',
     title: 'Polish, KG, and world content',
-    summary:
-      'Only after the foundations land should the backlog widen into playtest polish, KG-backed generation, and starter packs.',
+    summary: 'Polish the experience, expand generation, and ship starter packs.',
+    impact: 'This is the scale layer. It broadens the demo only after the foundations stop wasting cycles.',
+    benefits: ['Playtest polish', 'KG rollout', 'Starter packs'],
     issueNumbers: [31, 17, 19, 53, 60, 69],
-  },
-] as const;
-
-const OVERVIEW_CARDS = [
-  {
-    eyebrow: 'For players',
-    glyph: 'P',
-    title: 'Resume the world',
-    copy: 'Leave anytime. Return to the right place.',
-    points: ['World map exit', 'Session resume'],
-  },
-  {
-    eyebrow: 'For testers',
-    glyph: 'Q',
-    title: 'Prove fixes fast',
-    copy: 'Short evidence clips instead of replay marathons.',
-    points: ['Checkpoint seeds', 'Reviewer-proof capture'],
-  },
-  {
-    eyebrow: 'For agents',
-    glyph: 'A',
-    title: 'Work remotely for real',
-    copy: 'Portable context, published assets, and clearer lanes.',
-    points: ['Agent-ready routing', 'Reviewable PR proof'],
   },
 ] as const;
 
@@ -385,34 +367,27 @@ export default function RoadmapPage() {
             </div>
           </div>
         </article>
-
-        <div className="roadmap-overview-grid">
-          {OVERVIEW_CARDS.map((card) => (
-            <article key={card.title} className="roadmap-overview-card">
-              <div className="roadmap-overview-card-head">
-                <span className="roadmap-overview-glyph">{card.glyph}</span>
-                <span className="roadmap-focus-eyebrow">{card.eyebrow}</span>
-              </div>
-              <h3>{card.title}</h3>
-              <p>{card.copy}</p>
-              <div className="roadmap-chip-row">
-                {card.points.map((point) => (
-                  <span key={point} className="roadmap-mini-chip">
-                    {point}
-                  </span>
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
       </section>
 
       <section className="roadmap-focus-grid">
         {FOCUS_WINDOWS.map((window) => (
           <article key={window.key} className={`roadmap-focus-card roadmap-focus-card--${window.key}`}>
-            <span className="roadmap-focus-eyebrow">{window.eyebrow}</span>
+            <div className="roadmap-focus-card-head">
+              <div>
+                <span className="roadmap-focus-stage">{window.stage}</span>
+                <span className="roadmap-focus-eyebrow">{window.eyebrow}</span>
+              </div>
+            </div>
             <h2>{window.title}</h2>
             <p>{window.summary}</p>
+            <p className="roadmap-focus-impact">{window.impact}</p>
+            <div className="roadmap-chip-row">
+              {window.benefits.map((benefit) => (
+                <span key={benefit} className="roadmap-mini-chip">
+                  {benefit}
+                </span>
+              ))}
+            </div>
             <div className="roadmap-chip-row">
               {window.issueNumbers
                 .map((issueNumber) => issueLookup.get(issueNumber))
