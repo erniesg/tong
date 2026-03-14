@@ -313,7 +313,7 @@ export interface GraphNextActionsResponse {
 }
 
 export interface GraphEvidenceRecordResponse {
-  learnerId?: string;
+  learnerId: string;
   personaId?: string;
   recorded: number;
   events: Array<{
@@ -322,7 +322,7 @@ export interface GraphEvidenceRecordResponse {
     userId: string;
     nodeId: string;
     objectiveId: string | null;
-    mode: 'learn' | 'hangout' | 'review' | 'mission' | 'media';
+    mode: 'learn' | 'hangout' | 'review' | 'mission' | 'exercise' | 'media';
     quality: number;
     occurredAtIso: string;
     source: string;
@@ -368,6 +368,38 @@ export type LocationId =
   | 'konbini'
   | 'tea_house'
   | 'ramen_shop';
+
+export interface ObjectiveNextResponse {
+  objectiveId: string;
+  level: number;
+  mode: 'hangout' | 'learn';
+  lang: 'ko' | 'ja' | 'zh';
+  objectiveGraph: {
+    objectiveNodeId: string;
+    cityId: CityId;
+    locationId: LocationId;
+    objectiveCategory: 'script' | 'pronunciation' | 'vocabulary' | 'grammar' | 'sentences' | 'conversation' | 'mastery';
+    targetNodeIds: string[];
+    prerequisiteObjectiveIds: string[];
+    source: 'knowledge_graph';
+  };
+  coreTargets: {
+    vocabulary: string[];
+    grammar: string[];
+    sentenceStructures: string[];
+  };
+  personalizedTargets: Array<{
+    lemma: string;
+    source: 'youtube' | 'spotify';
+    linkedNodeIds: string[];
+  }>;
+  completionCriteria: {
+    requiredTurns: number;
+    requiredAccuracy: number;
+    minEvidenceEvents: number;
+    acceptedEvidenceModes: Array<'learn' | 'hangout' | 'mission' | 'review' | 'exercise' | 'media'>;
+  };
+}
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const demoPassword = getDemoPassword();
@@ -479,20 +511,7 @@ export function fetchObjectiveNext(params: ObjectiveNextParams = {}) {
     lang: params.lang || 'ko',
   });
 
-  return apiFetch<{
-    objectiveId: string;
-    level: number;
-    mode: 'hangout' | 'learn';
-    coreTargets: {
-      vocabulary: string[];
-      grammar: string[];
-      sentenceStructures: string[];
-    };
-    completionCriteria: {
-      requiredTurns: number;
-      requiredAccuracy: number;
-    };
-  }>(`/api/v1/objectives/next?${search.toString()}`);
+  return apiFetch<ObjectiveNextResponse>(`/api/v1/objectives/next?${search.toString()}`);
 }
 
 interface StartHangoutParams {

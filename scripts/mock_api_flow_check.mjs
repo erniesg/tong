@@ -157,9 +157,21 @@ async function run() {
     `/api/v1/objectives/next?userId=${encodeURIComponent(userId)}&mode=hangout&lang=ko&city=seoul&location=food_street`,
   );
   assert(objectiveKo.ok, `/objectives/next ko failed (${objectiveKo.status})`);
+  assert(objectiveKo.data?.lang === 'ko', 'objectiveKo.lang should be ko');
+  assert(objectiveKo.data?.objectiveGraph?.source === 'knowledge_graph', 'objectiveKo.objectiveGraph.source missing');
+  assert(objectiveKo.data?.objectiveGraph?.cityId === 'seoul', 'objectiveKo.objectiveGraph.cityId mismatch');
+  assert(objectiveKo.data?.objectiveGraph?.locationId === 'food_street', 'objectiveKo.objectiveGraph.locationId mismatch');
+  assertArray(objectiveKo.data?.objectiveGraph?.targetNodeIds, 'objectiveKo.objectiveGraph.targetNodeIds');
   assertArray(objectiveKo.data?.coreTargets?.vocabulary, 'objectiveKo.coreTargets.vocabulary');
   assertArray(objectiveKo.data?.coreTargets?.grammar, 'objectiveKo.coreTargets.grammar');
   assertArray(objectiveKo.data?.coreTargets?.sentenceStructures, 'objectiveKo.coreTargets.sentenceStructures');
+  assertArray(objectiveKo.data?.personalizedTargets, 'objectiveKo.personalizedTargets');
+  assert(
+    objectiveKo.data.personalizedTargets.every((item) => Array.isArray(item.linkedNodeIds) && item.linkedNodeIds.length > 0),
+    'objectiveKo.personalizedTargets[].linkedNodeIds missing',
+  );
+  assert(Number.isFinite(objectiveKo.data?.completionCriteria?.minEvidenceEvents), 'objectiveKo.minEvidenceEvents missing');
+  assertArray(objectiveKo.data?.completionCriteria?.acceptedEvidenceModes, 'objectiveKo.acceptedEvidenceModes');
   assert(
     typeof objectiveKo.data?.objectiveId === 'string' && objectiveKo.data.objectiveId.startsWith('ko_'),
     `objectiveKo.objectiveId should start with ko_: ${objectiveKo.data?.objectiveId}`,
@@ -170,12 +182,39 @@ async function run() {
     `/api/v1/objectives/next?userId=${encodeURIComponent(userId)}&mode=hangout&lang=zh&city=shanghai&location=practice_studio`,
   );
   assert(objectiveZh.ok, `/objectives/next zh failed (${objectiveZh.status})`);
+  assert(objectiveZh.data?.lang === 'zh', 'objectiveZh.lang should be zh');
+  assert(objectiveZh.data?.objectiveGraph?.cityId === 'shanghai', 'objectiveZh.objectiveGraph.cityId mismatch');
+  assert(objectiveZh.data?.objectiveGraph?.locationId === 'practice_studio', 'objectiveZh.objectiveGraph.locationId mismatch');
   assertArray(objectiveZh.data?.coreTargets?.vocabulary, 'objectiveZh.coreTargets.vocabulary');
   assert(
     typeof objectiveZh.data?.objectiveId === 'string' && objectiveZh.data.objectiveId.startsWith('zh_'),
     `objectiveZh.objectiveId should start with zh_: ${objectiveZh.data?.objectiveId}`,
   );
   logPass('/api/v1/objectives/next?lang=zh');
+
+  const graphEvidence = await requestJson('/api/v1/graph/evidence', {
+    method: 'POST',
+    body: JSON.stringify({
+      personaId: 'kpop-video-prompter',
+      event: {
+        nodeId: 'objective:ko-vocab-courtesy',
+        objectiveId: 'ko-vocab-courtesy',
+        mode: 'exercise',
+        quality: 0.86,
+        source: 'mock_api_flow_check',
+      },
+    }),
+  });
+  if (graphEvidence.status === 404) {
+    logWarn('/api/v1/graph/evidence unavailable on this runtime; skipped graph evidence contract checks');
+  } else {
+    assert(graphEvidence.ok, `/graph/evidence failed (${graphEvidence.status})`);
+    assert(Number.isFinite(graphEvidence.data?.recorded), 'graphEvidence.recorded missing');
+    assertArray(graphEvidence.data?.events, 'graphEvidence.events');
+    assert(graphEvidence.data.events[0]?.mode === 'exercise', 'graphEvidence event mode should preserve exercise');
+    assert(Number.isFinite(graphEvidence.data?.metrics?.evidenceCount), 'graphEvidence.metrics.evidenceCount missing');
+    logPass('/api/v1/graph/evidence');
+  }
 
   const gameStart = await requestJson('/api/v1/game/start-or-resume', {
     method: 'POST',
