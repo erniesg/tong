@@ -18,6 +18,7 @@ Read these files before doing substantive work:
 - `.agents/skills/_functional-qa/references/game-browser-playbook.md` when the issue is on `/game`
 - `.agents/skills/_functional-qa/config/repo-adapter.json`
 - `.agents/skills/_functional-qa/config/publish-policy.json`
+- `docs/agent-native-project-setup.md`
 
 ## Target input
 
@@ -49,6 +50,14 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
 
 3. Read the issue, issue notes, and classification.
 
+   Before claiming the issue is runnable unattended, check whether the issue body is portable:
+
+- no required `/Users/...` path
+- no private-repo-only context without copied summary
+- route or surface under test is named
+- visible proof sequence is named for UI/timing issues
+- a scenario seed or checkpoint is supplied when the issue depends on a deterministic near-proof state
+
 4. Run the repo adapter smoke commands before issue-specific validation unless the target is clearly isolated and the adapter says otherwise.
 
 5. Reproduce or disprove the issue using the evidence plan from `run.json`.
@@ -60,6 +69,14 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
    For CJK or pronunciation-placement issues, capture the actual dialogue text, the tapped tooltip or dictionary state, and where pronunciation appears.
 
    For AI-output issues, record whether the run exercised live-model output, fallback content, or only a static or dev route. If live-model output was required and unavailable, do not claim a full fix.
+
+   For timing-sensitive `/game` issues, capture:
+
+- readable pre-action state
+- actual tap/click if it is part of the bug or proof
+- stable post-action result
+
+   If a deterministic checkpoint or scenario seed was used, record it explicitly and say whether it was only a setup shortcut or part of the acceptance proof.
 
 7. If the issue is ambiguous, timing-sensitive, or likely state-race-driven, invoke the `trace-ui-state` workflow before finalizing.
 
@@ -97,3 +114,4 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
 - If `--verify-fix` was used, explicitly compare against the previous run before claiming a fix.
 - If a required evidence type is unavailable, lower confidence, record the missing validation gate in `evidence.json`, and say why.
 - If the issue execution mode is `validate-and-propose-only` or `needs-human-design-review`, stop after validation evidence and proposal instead of making unattended UX or product changes.
+- If the issue body is not portable enough for remote execution, record that gap in `summary.md` and `evidence.json` before proceeding.

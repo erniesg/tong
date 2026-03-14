@@ -6,8 +6,11 @@ Use this map to keep parallel streams moving without stepping on the same files.
 
 | Worktree | Branch | Primary write globs |
 | --- | --- | --- |
-| Client shell | `codex/client-shell` | `apps/client/app/**` (except `apps/client/app/mock/**`), `apps/client/components/shell/**`, `apps/client/components/learn/**`, `apps/client/lib/session/**`, `apps/client/lib/backend/**`, `apps/client/lib/theme/**` |
+| Client UI | `codex/client-ui` | `apps/client/app/**` (except `apps/client/app/api/**`, `apps/client/app/game/GamePageClient.tsx`, `apps/client/app/mock/**`), `apps/client/components/shell/**`, `apps/client/components/city-map/**`, `apps/client/components/hud/**`, `apps/client/components/learn/**`, `apps/client/lib/session/**`, `apps/client/lib/backend/**`, `apps/client/lib/theme/**` |
+| Client runtime | `codex/client-runtime` | `apps/client/app/api/**`, `apps/client/app/game/GamePageClient.tsx`, `apps/client/components/exercises/**`, `apps/client/components/scene/**`, `apps/client/lib/ai/**`, `apps/client/lib/debug/**`, `apps/client/lib/store/**`, `apps/client/lib/types/hangout.ts` |
 | Client overlay | `codex/client-overlay` | `apps/client/components/overlay/**`, `apps/client/components/dictionary/**`, `apps/client/lib/captions/**`, `apps/client/lib/dictionary/**`, `apps/client/lib/romanization/**` |
+| QA platform | `codex/qa-platform` | `.agents/skills/**`, `.agents/skills/_functional-qa/**`, `.github/ISSUE_TEMPLATE/**`, `docs/codex-cloud-issue-runbook.md`, `docs/qa/**`, `docs/agent-native-project-setup.md` |
+| Runtime assets | `codex/runtime-assets` | `assets/characters/**`, `assets/game/**`, `assets/generated/**`, `assets/manifest/**`, `docs/qa-evidence-uploads.md`, `apps/client/lib/content/characters.ts`, `apps/client/lib/content/tong-expressions.ts`, `apps/client/components/scene/CharacterSprite.tsx` |
 | Server API | `codex/server-api` | `apps/server/api/**`, `apps/server/routes/**`, `apps/server/controllers/**`, `apps/server/services/profile/**`, `apps/server/services/sessions/**`, `apps/server/services/bootstrap/**` |
 | Server ingestion | `codex/server-ingestion` | `apps/server/ingestion/**`, `apps/server/jobs/**`, `apps/server/services/vocab/**`, `apps/server/services/media-profile/**`, `apps/server/services/insights/**`, `scripts/ingestion/**` |
 | Game engine | `codex/game-engine` | `apps/server/game-engine/**`, `apps/server/services/game-loop/**`, `apps/server/services/scenes/**`, `apps/server/services/rewards/**` |
@@ -30,6 +33,7 @@ These files are cross-stream contract points and should be edited by one stream 
 9. `apps/client/app/layout.tsx`
 10. `apps/client/app/page.tsx`
 11. `apps/client/app/globals.css`
+12. `AGENTS.md`
 
 ## Crossing boundaries protocol
 
@@ -41,13 +45,12 @@ These files are cross-stream contract points and should be edited by one stream 
 
 ## Current collision hot spots (from active diverged branches)
 
-`codex/mock-ui` and `codex/server-ingestion` currently overlap on:
+`codex/runtime-assets`, `codex/client-runtime`, and `codex/creative-assets` will overlap most often on:
 
-1. `README.md`
-2. `docs/install-and-test.md`
-3. `package.json`
-4. `packages/contracts/api-contract.md`
-5. `packages/contracts/fixtures/player.media-profile.sample.json`
-6. `scripts/demo_smoke_check.mjs`
+1. `apps/client/components/scene/CharacterSprite.tsx`
+2. `assets/manifest/**`
+3. `docs/mock-ui-and-assets-track.md`
+4. `docs/codex-cloud-issue-runbook.md`
+5. `packages/contracts/**`
 
 Treat this set as locked to one active editor at a time until both branches are rebased.

@@ -2,6 +2,8 @@
 
 Use this runbook when you want Codex cloud tasks to work Tong issues through the Codex environment UI and create PRs from task results instead of local worktrees.
 
+Use `docs/agent-native-project-setup.md` as the source of truth for Project fields, lane ownership, and issue portability rules.
+
 ## What Codex cloud can and cannot see
 
 Codex cloud tasks work from the repository checkout plus the cloud environment setup. They do not inherit arbitrary local files from a laptop. Relevant docs:
@@ -14,6 +16,7 @@ Practical rule:
 
 1. If an issue can be reproduced from tracked code, fixtures, and setup commands, it can be a cloud issue.
 2. If it depends on local-only assets, unpublished media, or unreproducible device/local state, keep it local until that dependency is moved to a shared location.
+3. If `Portable Context` is not `Yes`, do not send it to Codex cloud as an unattended fix task.
 
 ## Prerequisites outside the repo
 
@@ -49,38 +52,53 @@ under `artifacts/qa-runs/functional-qa/codex-cloud-queue/<timestamp>/`.
 2. `local-only`
 3. `needs-acceptance-proof`
 
+These are supplemental hints. The authoritative execution gates should live on the `Tong Hackathon` Project fields:
+
+- `Workflow Status`
+- `Execution Mode`
+- `Portable Context`
+- `Proof Required`
+- `Scenario Seed`
+- `Checkpoint Needed`
+- `Agent Ready`
+
 The generator emits these as suggestions; it does not modify GitHub labels directly.
 
 ## Current Tong batching order
 
-### Batch 1
+### Batch 1: remote-first platform
 
-- `#11` Onboarding clarity
-- `#13` Block Crush lives/time UX
-- `#14` HUD discoverability
-- `#16` CJK treatment
+- `#29` remote-first umbrella
+- `#35` runtime asset bucket/env contract
+- `#36` canonical runtime asset manifest
+- `#37` runtime asset resolution with fallbacks
+- `#38` fail smoke on unresolved runtime asset references
+- `#46` reviewer-proof capture workflow
 
-These are the first cloud wave because they are either code-only or only need normal browser acceptance after the fix.
+These unblock unattended cloud execution and reviewer-visible proof.
 
-### Batch 2
+### Batch 2: progression and deterministic checkpoints
 
-- `#18` Block Crush review flash
-- `#17` tap-flow wasted tap
-- `#19` fake streaming after loading
+- progression epic and child issues for resumable sessions, world-map return, and deterministic `/game` checkpoints
 
-These should follow Batch 1 because they are more timing-sensitive or overlap with the same gameplay shell files.
+These make unattended validation and short proof captures practical without replaying the entire hangout loop.
 
-### Batch 3
+### Batch 3: playtest polish that is safe-unattended
 
-- `#15` type-scale cleanup
+- `#12`
+- `#31`
+- `#42`
 
-This should happen after the focused fixes, because it is cross-cutting and otherwise creates merge churn.
+These are the next visual/gameplay fixes once runtime assets and proof tooling are stable.
 
-### Local-only for now
+### Validation-first only
 
-- `#12` hangout backdrop/avatar/immersion issue
+- `#11`
+- `#14`
+- `#17`
+- `#19`
 
-This remains local-only until shared asset hosting exists for the looping backdrop and related scene assets.
+These should stay `validate-and-propose-only` or `needs-human-design-review` until a human narrows the product decision or technical direction.
 
 ## Recommended cloud workflow
 
@@ -113,6 +131,8 @@ Important delivery rules:
 3. Use Codex's built-in diff and PR creation flow from the task result.
 4. Artifact directories under `artifacts/qa-runs/` are gitignored, so evidence must be summarized in the task result or PR body instead of being cited as committed GitHub blob links unless those files were intentionally checked in.
 5. Reserve `@codex` GitHub comments for review or explicitly manual experiments, not the default implementation path.
+6. For timing-sensitive `/game` issues, prefer seeded checkpoint setup plus a short route-faithful proof clip over a full playthrough.
+7. Do not treat local-only artifact paths as reviewer-visible proof.
 
 ## Acceptance policy
 

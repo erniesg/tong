@@ -15,6 +15,7 @@ Read:
 - `.agents/skills/_functional-qa/references/evidence-strategies.md`
 - `.agents/skills/_functional-qa/references/game-browser-playbook.md` when tracing `/game`
 - `.agents/skills/_functional-qa/config/repo-adapter.json`
+- `docs/agent-native-project-setup.md`
 
 The shared runtime is:
 
@@ -44,6 +45,7 @@ Use the invocation arguments as the issue, URL, or surface name to trace.
 - visible UI before and after
 - console output
 - relevant internal state or branch logs
+- checkpoint or scenario-seed id when deterministic setup is used
 
 4. Prefer existing logging and debug hooks from the repo adapter before adding new instrumentation.
 
@@ -55,6 +57,11 @@ Use the invocation arguments as the issue, URL, or surface name to trace.
 - `steps.md` with the exact reproduction sequence
 - `evidence.json` with temporal capture, logs, and open questions
 
+   Distinguish between:
+
+- real-player route behavior
+- deterministic setup shortcuts used only to get near the proof moment
+
 7. Finalize the run with a verdict of `ambiguous`, `reproduced`, `partially-reproduced`, or `blocked` unless the trace fully resolves the issue.
 
 ## Output requirements
@@ -62,3 +69,4 @@ Use the invocation arguments as the issue, URL, or surface name to trace.
 - Do not guess at root cause.
 - If the issue remains unresolved, say exactly which state transition or evidence gap is still missing.
 - Point back to the validation run when the trace is a follow-up.
+- If the trace depends on a non-portable local-only setup, say so explicitly.
