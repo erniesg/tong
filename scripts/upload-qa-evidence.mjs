@@ -21,7 +21,7 @@ const DEFAULT_MANIFEST_NAME = "upload-manifest.json";
 const DEFAULT_GIF_SECONDS = 4;
 const DEFAULT_GIF_FPS = 6;
 const DEFAULT_GIF_WIDTH = 360;
-const DEFAULT_POSTER_AT = 1;
+const DEFAULT_PREVIEW_TRAILING_PADDING = 0.5;
 const DEFAULT_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 function parseArgs(argv) {
@@ -36,7 +36,9 @@ function parseArgs(argv) {
     gifWidth: DEFAULT_GIF_WIDTH,
     includeSupporting: false,
     manifestName: DEFAULT_MANIFEST_NAME,
-    posterAtSeconds: DEFAULT_POSTER_AT,
+    posterAtSeconds: null,
+    previewStartSeconds: null,
+    previewTrailingPaddingSeconds: DEFAULT_PREVIEW_TRAILING_PADDING,
     wranglerConfig: "apps/client/wrangler.toml",
   };
 
@@ -58,8 +60,12 @@ function parseArgs(argv) {
       args.gifFps = Number(argv[++i]);
     } else if (arg === "--gif-width") {
       args.gifWidth = Number(argv[++i]);
+    } else if (arg === "--preview-start-seconds") {
+      args.previewStartSeconds = Number(argv[++i]);
     } else if (arg === "--poster-at-seconds") {
       args.posterAtSeconds = Number(argv[++i]);
+    } else if (arg === "--preview-trailing-padding-seconds") {
+      args.previewTrailingPaddingSeconds = Number(argv[++i]);
     } else if (arg === "--dry-run") {
       args.dryRun = true;
     } else if (arg === "--include-supporting") {
@@ -101,7 +107,10 @@ Options:
   --gif-seconds <n>             GIF duration in seconds (default: ${DEFAULT_GIF_SECONDS})
   --gif-fps <n>                 GIF frames per second (default: ${DEFAULT_GIF_FPS})
   --gif-width <n>               GIF width in pixels (default: ${DEFAULT_GIF_WIDTH})
-  --poster-at-seconds <n>       Poster frame timestamp (default: ${DEFAULT_POSTER_AT})
+  --preview-start-seconds <n>   GIF preview start timestamp (default: auto, near clip end)
+  --poster-at-seconds <n>       Poster frame timestamp (default: midpoint of preview window)
+  --preview-trailing-padding-seconds <n>
+                                Leave this much time at clip end when auto-picking preview start
   --manifest-name <name>        Local manifest filename (default: ${DEFAULT_MANIFEST_NAME})
   --wrangler-config <path>      Wrangler config path (default: apps/client/wrangler.toml)
   --dry-run                     Generate previews and manifest without uploading to R2
@@ -140,6 +149,41 @@ function getVideoDurationSeconds(filePath) {
   ]);
   const duration = Number(output);
   return Number.isFinite(duration) && duration > 0 ? duration : null;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function resolvePreviewStartSeconds(durationSeconds, options) {
+  if (!durationSeconds) {
+    return Number.isFinite(options.previewStartSeconds) ? Math.max(options.previewStartSeconds, 0) : 0;
+  }
+
+  const maxStart = Math.max(durationSeconds - Math.min(options.gifSeconds, durationSeconds), 0);
+  if (Number.isFinite(options.previewStartSeconds)) {
+    return clamp(options.previewStartSeconds, 0, maxStart);
+  }
+
+  const inferredStart = durationSeconds - Math.min(options.gifSeconds, durationSeconds) - options.previewTrailingPaddingSeconds;
+  return clamp(inferredStart, 0, maxStart);
+}
+
+function resolvePosterAtSeconds(durationSeconds, previewStartSeconds, gifLengthSeconds, options) {
+  if (!durationSeconds) {
+    if (Number.isFinite(options.posterAtSeconds)) {
+      return Math.max(options.posterAtSeconds, 0);
+    }
+    return Math.max(previewStartSeconds, 0);
+  }
+
+  const maxPosterAt = Math.max(durationSeconds - 0.1, 0);
+  if (Number.isFinite(options.posterAtSeconds)) {
+    return clamp(options.posterAtSeconds, 0, maxPosterAt);
+  }
+
+  const previewMidpoint = previewStartSeconds + Math.max(gifLengthSeconds / 2, 0);
+  return clamp(previewMidpoint, previewStartSeconds, maxPosterAt);
 }
 
 function generatePoster(filePath, posterPath, posterAtSeconds) {
@@ -237,8 +281,9 @@ function buildPreviewArtifacts(bundle, baseArtifacts, options) {
 
     const absoluteVideoPath = path.join(bundle.repoRoot, artifact.local_path);
     const duration = getVideoDurationSeconds(absoluteVideoPath);
-    const posterAt = duration ? Math.min(options.posterAtSeconds, Math.max(duration / 4, 0)) : options.posterAtSeconds;
-    const gifLength = duration ? Math.min(options.gifSeconds, Math.max(duration - posterAt, 1)) : options.gifSeconds;
+    const previewStart = resolvePreviewStartSeconds(duration, options);
+    const gifLength = duration ? Math.min(options.gifSeconds, Math.max(duration - previewStart, 1)) : options.gifSeconds;
+    const posterAt = resolvePosterAtSeconds(duration, previewStart, gifLength, options);
     const safeStem = path.basename(absoluteVideoPath, path.extname(absoluteVideoPath));
 
     if (options.generatePoster) {
@@ -265,7 +310,7 @@ function buildPreviewArtifacts(bundle, baseArtifacts, options) {
         gifSeconds: gifLength,
         gifFps: options.gifFps,
         gifWidth: options.gifWidth,
-        startSeconds: posterAt,
+        startSeconds: previewStart,
       });
       previewArtifacts.push({
         id: `${artifact.id}-gif`,

@@ -124,9 +124,10 @@ function renderComment(manifest) {
 
   lines.push("");
   const bullets = [
+    renderBullet("GIF preview", manifest.primary?.gif_preview),
     renderBullet("Screen recording with audio", proofVideo),
-    renderBullet("Dialogue screenshot", dialogue),
     renderBullet("Tooltip screenshot", tooltip),
+    renderBullet("Dialogue screenshot", dialogue),
     renderBullet("Romanization-bait trace", trace),
     renderBullet("QA summary", summaryArtifact),
     manifest.manifest_url ? `- Uploaded manifest: [manifest.json](${manifest.manifest_url})` : null,
