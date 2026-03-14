@@ -55,12 +55,11 @@ The generator emits these as suggestions; it does not modify GitHub labels direc
 
 ### Batch 1
 
-- `#15` type-scale cleanup
 - `#18` Block Crush review flash
 - `#19` fake streaming after loading
 
-These are the first cloud wave because they are the explicitly prioritized fixes for readability, Block Crush transition polish, and streaming behavior.
-Run them serially in the listed order. They all sit in the `client-shell` lane, and `#15` touches shared `apps/client/app/globals.css`.
+These are the first cloud wave because they are the next unresolved `client-shell` bugs after the initial readability pass for `#15` landed in PR `#33` on March 14, 2026.
+Run them serially in the listed order. They both sit in the `client-shell` lane, and `#19` should follow `#18` so the queue stays serialized through the transition and streaming work.
 
 ### Batch parallel
 
@@ -81,9 +80,9 @@ These should follow Batch 1 because they are the remaining onboarding and gamepl
 
 ### Batch 3
 
-- no current issue is assigned here
+- `#15` residual readability audit and mobile-device follow-up
 
-Keep this batch available for future cleanup work if more cross-cutting polish issues are opened later.
+Keep this batch for lower-priority cleanup work after the focused bug-fix waves land. `#15` stays open because PR `#33` only completed the first readability pass; the remaining audit scope should not block `#18` or `#19`.
 
 ### Local-only for now
 
