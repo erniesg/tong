@@ -226,6 +226,9 @@ function LandingPage() {
           </div>
         </a>
         <div className="landing-nav-links">
+          <a href="/roadmap" className="nav-link">
+            Roadmap
+          </a>
           <a
             href="https://github.com/erniesg/tong"
             target="_blank"
@@ -419,10 +422,22 @@ function LandingPage() {
           <span>Tong — Live the drama. Learn the language.</span>
         </div>
         <div className="landing-footer-links">
+          <a href="/roadmap" className="nav-link">
+            Roadmap
+          </a>
+          <a
+            href="https://github.com/users/erniesg/projects/3"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nav-link"
+          >
+            Project
+          </a>
           <a
             href="https://github.com/erniesg/tong"
             target="_blank"
             rel="noopener noreferrer"
+            className="nav-link"
           >
             GitHub
           </a>
