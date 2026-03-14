@@ -895,7 +895,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
           {displayMeaning ? (
             <div className="bc-overlay__meaning">{displayMeaning}</div>
           ) : (
-            <div className="bc-overlay__meaning" style={{ fontSize: '1rem', opacity: 0.6 }}>
+            <div className="bc-overlay__meaning" style={{ fontSize: 'var(--game-text-base)', opacity: 0.6 }}>
               {exercise.components.map((c) => c.piece).join(' + ')} → {exercise.targetChar}
             </div>
           )}

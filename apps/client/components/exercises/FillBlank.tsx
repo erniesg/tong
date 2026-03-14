@@ -29,7 +29,7 @@ export function FillBlank({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card p-5">
-      <p className="text-lg font-medium mb-4 text-ko m-0">{exercise.prompt}</p>
+      <p className="text-[length:var(--game-text-lg)] font-medium mb-4 text-ko m-0">{exercise.prompt}</p>
 
       {/* Sentence with blank */}
       <div className="fill-blank__sentence text-ko">
@@ -53,7 +53,7 @@ export function FillBlank({ exercise, onResult }: Props) {
               key={opt.id}
               onClick={() => !submitted && setSelected(opt.id)}
               className={cn(
-                'rounded-lg px-4 py-3 text-center transition-all border text-ko',
+                'rounded-lg min-h-[44px] px-4 py-3 text-center text-[length:var(--game-text-base)] transition-all border text-ko',
                 !submitted && !isThis && 'border-white/10 hover:border-white/30',
                 !submitted && isThis && 'border-[var(--color-accent-gold)] bg-[var(--color-accent-gold)]/10',
                 showCorrect && 'border-[var(--color-accent-green)] bg-[var(--color-accent-green)]/10',
@@ -76,7 +76,7 @@ export function FillBlank({ exercise, onResult }: Props) {
           onClick={handleSubmit}
           disabled={!selected}
           className={cn(
-            'mt-4 w-full rounded-lg py-3 font-semibold transition',
+            'mt-4 w-full min-h-[44px] rounded-lg py-3 text-[length:var(--game-text-base)] font-semibold transition',
             selected
               ? 'bg-[var(--color-accent-gold)] text-[#1a1a2e] hover:brightness-110'
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
@@ -89,7 +89,7 @@ export function FillBlank({ exercise, onResult }: Props) {
       {submitted && (
         <div
           className={cn(
-            'mt-4 rounded-lg px-4 py-3 text-center text-sm',
+            'mt-4 rounded-lg px-4 py-3 text-center text-[length:var(--game-text-base)]',
             isCorrect
               ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]'
               : 'bg-red-500/20 text-red-400',

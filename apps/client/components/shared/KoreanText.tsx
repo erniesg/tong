@@ -634,12 +634,12 @@ export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextPro
               </div>
             )}
             <div className="rounded-lg bg-[#16213e] border border-[var(--color-accent-gold)]/40 px-3 py-2 shadow-lg text-left min-w-[140px]">
-              <p className="text-sm font-medium text-[var(--color-accent-gold)] m-0">{activeWord}</p>
+              <p className="font-medium text-[length:var(--game-text-base)] text-[var(--color-accent-gold)] m-0">{activeWord}</p>
               {tooltipInfo.romanization && (
-                <p className="text-xs text-[var(--color-text-muted)] m-0">{tooltipInfo.romanization}</p>
+                <p className="text-[length:var(--game-text-sm)] text-[var(--color-text-muted)] m-0">{tooltipInfo.romanization}</p>
               )}
               {tooltipInfo.translation && (
-                <p className="text-xs text-[var(--color-text)] mt-0.5 m-0">{tooltipInfo.translation}</p>
+                <p className="text-[length:var(--game-text-sm)] text-[var(--color-text)] mt-0.5 m-0">{tooltipInfo.translation}</p>
               )}
             </div>
             {/* Arrow on bottom when above (default) */}

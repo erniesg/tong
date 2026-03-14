@@ -79,7 +79,7 @@ export function TeachingCard({ title, content, korean, translation, items }: Tea
     <div className="teaching-card">
       {title && <div className="teaching-card__title">{title}</div>}
       {content && !displayItems.length && (
-        <p className="m-0 text-sm text-ko">{content}</p>
+        <p className="m-0 text-[length:var(--game-text-base)] text-ko">{content}</p>
       )}
       {displayItems.length > 0 && (
         <div className="teaching-card__grid">

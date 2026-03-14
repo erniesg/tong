@@ -1900,6 +1900,8 @@ button.nav-link:hover {
   backdrop-filter: blur(14px);
   border-radius: 16px;
   color: var(--color-text);
+  font-size: var(--game-text-base);
+  line-height: 1.5;
 }
 
 /* Full radius when inside modal */
@@ -2688,6 +2690,7 @@ button.nav-link:hover {
 /* Translation sub-text inside a bubble — uses a muted but readable dark tone */
 .msg-bubble__translation {
   color: rgba(0, 0, 0, 0.55);
+  font-size: var(--game-text-sm);
 }
 
 /* ── Bubble tails ───────────────────────────────────────────── */
@@ -2725,7 +2728,7 @@ button.nav-link:hover {
 }
 
 .teaching-card__title {
-  font-size: 13px;
+  font-size: var(--game-text-sm);
   font-weight: 600;
   color: var(--msg-npc-text, #1a1a1a);
   margin-bottom: 8px;
@@ -2742,6 +2745,7 @@ button.nav-link:hover {
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  min-height: 44px;
   padding: 6px 4px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.6);
@@ -2760,7 +2764,7 @@ button.nav-link:hover {
 }
 
 .teaching-card__roman {
-  font-size: 11px;
+  font-size: var(--game-text-sm);
   color: rgba(0, 0, 0, 0.55);
 }
 
@@ -2768,7 +2772,7 @@ button.nav-link:hover {
 .feedback-bubble {
   padding: 8px 12px;
   border-radius: var(--msg-bubble-radius, 18px);
-  font-size: 14px;
+  font-size: var(--game-text-base);
   line-height: 1.5;
   max-width: 280px;
 }
@@ -3209,14 +3213,18 @@ button.nav-link:hover {
 
 .sentence-builder__tile {
   padding: 6px 12px;
+  min-height: 44px;
   border-radius: 8px;
   background: var(--msg-accent, #f0c040);
   color: var(--msg-accent-text, #1a1a1a);
-  font-size: 14px;
+  font-size: var(--game-text-base);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
   user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sentence-builder__tile--placed {
@@ -3231,7 +3239,7 @@ button.nav-link:hover {
 
 /* ── Fill-blank exercise ────────────────────────────────────── */
 .fill-blank__sentence {
-  font-size: 18px;
+  font-size: var(--game-text-lg);
   line-height: 1.6;
   text-align: center;
   margin-bottom: 12px;
@@ -3258,7 +3266,7 @@ button.nav-link:hover {
   padding: 8px;
   border-radius: 8px;
   background: var(--msg-teaching-bg, #fff9e6);
-  font-size: 12px;
+  font-size: var(--game-text-sm);
   color: rgba(0, 0, 0, 0.7);
 }
 
@@ -3280,13 +3288,14 @@ button.nav-link:hover {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
+  min-height: 48px;
+  padding: 12px 14px;
   border-radius: 12px;
   border: 1.5px solid rgba(0, 0, 0, 0.12);
   background: transparent;
   cursor: pointer;
   transition: all 0.15s;
-  font-size: 14px;
+  font-size: var(--game-text-base);
 }
 
 .pron-select__option:hover:not(:disabled) {
@@ -3516,20 +3525,20 @@ button.nav-link:hover {
 }
 
 .location-drawer__name-local {
-  font-size: 20px;
+  font-size: var(--game-text-xl);
   font-weight: 700;
   color: #fff;
   letter-spacing: 0.02em;
 }
 
 .location-drawer__name-en {
-  font-size: 12px;
+  font-size: var(--game-text-sm);
   color: rgba(255, 255, 255, 0.45);
   font-weight: 500;
 }
 
 .location-drawer__badge {
-  font-size: 12px;
+  font-size: var(--game-text-sm);
   color: var(--color-accent-gold, #f0c040);
   background: rgba(240, 192, 64, 0.12);
   border: 1px solid rgba(240, 192, 64, 0.2);
@@ -3547,11 +3556,12 @@ button.nav-link:hover {
 /* Base button */
 .location-drawer__btn {
   width: 100%;
-  padding: 10px 14px;
+  min-height: 48px;
+  padding: 12px 14px;
   border-radius: 12px;
   border: none;
   outline: none;
-  font-size: 14px;
+  font-size: var(--game-text-base);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
@@ -3590,19 +3600,19 @@ button.nav-link:hover {
 }
 
 .location-drawer__btn-label {
-  font-size: 14px;
+  font-size: var(--game-text-base);
   font-weight: 700;
 }
 
 .location-drawer__btn-desc {
-  font-size: 10px;
+  font-size: var(--game-text-sm);
   font-weight: 400;
   opacity: 0.6;
 }
 
 .location-drawer__sp-cost {
   margin-left: 8px;
-  font-size: 11px;
+  font-size: var(--game-text-sm);
   opacity: 0.7;
   font-weight: 500;
 }
@@ -3636,7 +3646,7 @@ button.nav-link:hover {
 }
 
 .location-drawer__hint {
-  font-size: 12px;
+  font-size: var(--game-text-sm);
   color: rgba(255, 255, 255, 0.45);
   text-align: center;
   margin-top: 4px;
@@ -3652,8 +3662,9 @@ button.nav-link:hover {
   display: flex;
   align-items: center;
   width: 100%;
+  min-height: 44px;
   padding: 8px 14px;
-  font-size: 12px;
+  font-size: var(--game-text-sm);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
@@ -3671,6 +3682,7 @@ button.nav-link:hover {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-height: 44px;
   padding: 8px 12px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
@@ -3683,7 +3695,7 @@ button.nav-link:hover {
 }
 
 .location-drawer__session-summary {
-  font-size: 13px;
+  font-size: var(--game-text-sm);
   color: rgba(255, 255, 255, 0.8);
   white-space: nowrap;
   overflow: hidden;
@@ -3691,7 +3703,7 @@ button.nav-link:hover {
 }
 
 .location-drawer__session-meta {
-  font-size: 11px;
+  font-size: var(--game-text-xs);
   color: rgba(255, 255, 255, 0.4);
 }
 
@@ -4762,7 +4774,7 @@ button.nav-link:hover {
   color: white;
   padding: 4px 12px;
   border-radius: 8px;
-  font-size: 0.75rem;
+  font-size: var(--game-text-sm);
   white-space: nowrap;
   animation: bc-toast-in 0.2s ease-out, bc-toast-out 0.3s 1.2s ease-in forwards;
   pointer-events: none;
@@ -4806,13 +4818,13 @@ button.nav-link:hover {
 }
 
 .bc-overlay__romanization {
-  font-size: 1rem;
+  font-size: var(--game-text-base);
   color: var(--color-text-muted, #aaa);
   margin-top: 0.5rem;
 }
 
 .bc-overlay__meaning {
-  font-size: 1.5rem;
+  font-size: var(--game-text-xl);
   font-weight: 600;
   color: var(--color-accent-gold, #f0c040);
   margin-top: 0.5rem;
