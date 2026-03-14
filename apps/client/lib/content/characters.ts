@@ -263,21 +263,9 @@ export interface TutorialVideoConfig {
 export const TUTORIAL_VIDEO_CONFIG: Record<string, TutorialVideoConfig> = {
   haeun: {
     introVideoUrls: [
-      '/assets/cinematics/haeun/intro_1.mp4',
-      '/assets/cinematics/haeun/intro_2.mp4',
       '/assets/cinematics/haeun/intro_3.mp4',
     ],
     exitClips: [
-      {
-        video: '/assets/cinematics/haeun/exit_1.mp4',
-        line: '흥, {playerName}... 조금은 인정해줄게.',
-        translation: 'Hmph, {playerName}... I\'ll give you a little credit.',
-      },
-      {
-        video: '/assets/cinematics/haeun/exit_2.mp4',
-        line: '{playerName}...아니, {chineseName}. 나쁘지 않았어.',
-        translation: '{playerName}...no, {chineseName}. Not bad.',
-      },
       {
         video: '/assets/cinematics/haeun/exit_3.mp4',
         line: '{playerName}...아니, {chineseName}. 나쁘지 않았어.',

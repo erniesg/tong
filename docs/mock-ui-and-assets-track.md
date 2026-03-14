@@ -23,9 +23,15 @@ Unblock demo validation early while API/plumbing is still in progress.
 - polaroid collectible card templates.
 3. Asset manifest:
 - id, usage context, source, rights, prompt/template, status.
+- Canonical key contract published at `assets/manifest/canonical-asset-manifest.json` with runtime projection at `assets/manifest/runtime-asset-manifest.json`.
 4. Compression and naming conventions for mobile-first loading.
 
 ## Integration contract
 1. Mock UI must consume fixtures under `packages/contracts/fixtures`.
 2. Asset references should use stable IDs, not hardcoded file names.
-3. Final plumbing should swap data sources without redesigning screens.
+3. Stable IDs follow `domain.scope.name.variant` and must resolve through the runtime manifest.
+4. Starter references for content packs and rewards live in:
+   - `assets/content-packs/seoul-food-street.starter.json`
+   - `assets/rewards/shanghai-reward-bundle.placeholder.json`
+5. `npm run demo:smoke` now cross-checks concrete client `/assets/...` refs against the runtime manifest and on-disk files.
+6. Final plumbing should swap data sources without redesigning screens.

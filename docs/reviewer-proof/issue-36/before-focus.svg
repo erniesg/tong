@@ -1,0 +1,6 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='900' height='280'>
+<rect width='100%' height='100%' fill='#111827'/>
+<text x='40' y='50' font-size='30' fill='#f9fafb' font-family='Arial'>Focused region: key contract</text>
+<text x='40' y='85' font-size='24' fill='#f87171' font-family='Arial'>State: Missing</text>
+<text x='40' y='110' font-size='22' fill='#e5e7eb'>HEAD lacked assets/manifest/runtime-asset-manifest.json</text>
+</svg>

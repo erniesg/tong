@@ -1,0 +1,11 @@
+{
+  "packId": "seoul-food-street-starter",
+  "city": "seoul",
+  "location": "food-street",
+  "manifestKeys": [
+    "city.seoul.location.food-street.backdrop.default",
+    "character.haeun.portrait.default",
+    "character.jin.portrait.default"
+  ],
+  "status": "draft"
+}
