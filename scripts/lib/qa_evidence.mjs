@@ -85,11 +85,38 @@ function inferContentType(filePath) {
 }
 
 function normalizeDescription(entry) {
-  return entry.description || entry.assertion || "";
+  return entry.description || entry.assertion || entry.label || "";
+}
+
+function normalizeEvidenceEntry(entry) {
+  if (typeof entry === "string") {
+    return { path: entry };
+  }
+  if (entry && typeof entry === "object") {
+    return entry;
+  }
+  return null;
+}
+
+function safeRelativeRunPath(runDir, repoRoot, absolutePath) {
+  const candidate = relativeToRun(runDir, absolutePath);
+  if (!candidate.startsWith("../") && candidate !== "..") {
+    return candidate;
+  }
+
+  return path.posix.join("_repo", relativeToRepo(repoRoot, absolutePath));
 }
 
 function resolveRepoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+}
+
+function inferRepoRootFromRun(runJson, fallbackRepoRoot) {
+  const manifestRepoRoot = runJson?.environment?.repo_root;
+  if (typeof manifestRepoRoot === "string" && manifestRepoRoot.trim()) {
+    return path.resolve(manifestRepoRoot);
+  }
+  return path.resolve(fallbackRepoRoot || resolveRepoRoot());
 }
 
 function relativeToRepo(repoRoot, absolutePath) {
@@ -125,7 +152,7 @@ function makeArtifactRecord({
   }
 
   const stats = fs.statSync(absolutePath);
-  const relativeRunPath = relativeToRun(runDir, absolutePath);
+  const relativeRunPath = safeRelativeRunPath(runDir, repoRoot, absolutePath);
   return {
     id: `${category}-${relativeRunPath.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
     category,
@@ -150,17 +177,50 @@ function collectEvidenceSectionArtifacts({
 }) {
   const artifacts = [];
   for (const entry of entries || []) {
-    if (!entry.path) continue;
+    const normalizedEntry = normalizeEvidenceEntry(entry);
+    if (!normalizedEntry?.path) continue;
     const artifact = makeArtifactRecord({
       category,
-      description: normalizeDescription(entry),
-      filePath: entry.path,
+      description: normalizeDescription(normalizedEntry),
+      filePath: normalizedEntry.path,
+      label: normalizedEntry.label,
       repoRoot,
       runDir,
       source,
     });
     if (artifact) artifacts.push(artifact);
   }
+  return artifacts;
+}
+
+function collectRunDirArtifacts({
+  category,
+  dirName,
+  repoRoot,
+  runDir,
+  role,
+  source,
+}) {
+  const artifactDir = path.join(runDir, dirName);
+  if (!fs.existsSync(artifactDir)) {
+    return [];
+  }
+
+  const artifacts = [];
+  for (const entry of fs.readdirSync(artifactDir, { withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    const absolutePath = path.join(artifactDir, entry.name);
+    const artifact = makeArtifactRecord({
+      category,
+      filePath: absolutePath,
+      repoRoot,
+      role,
+      runDir,
+      source,
+    });
+    if (artifact) artifacts.push(artifact);
+  }
+
   return artifacts;
 }
 
@@ -257,6 +317,17 @@ function collectQaArtifacts(bundle, options = {}) {
     }
   }
 
+  artifacts.push(
+    ...collectRunDirArtifacts({
+      category: "temporal-capture",
+      dirName: "video",
+      repoRoot,
+      role: "proof",
+      runDir,
+      source: "run-dir:auto",
+    }),
+  );
+
   return dedupeArtifacts(artifacts);
 }
 
@@ -270,7 +341,6 @@ function groupArtifactsByCategory(artifacts) {
 }
 
 function loadQaRunBundle(runDirInput, repoRootInput) {
-  const repoRoot = path.resolve(repoRootInput || resolveRepoRoot());
   const runDir = path.resolve(runDirInput);
   const runJsonPath = path.join(runDir, "run.json");
   const evidenceJsonPath = path.join(runDir, "evidence.json");
@@ -283,13 +353,16 @@ function loadQaRunBundle(runDirInput, repoRootInput) {
     throw new Error(`Missing evidence.json in ${runDir}`);
   }
 
+  const runJson = readJson(runJsonPath);
+  const repoRoot = inferRepoRootFromRun(runJson, repoRootInput);
+
   return {
     repoRoot,
     runDir,
     runJsonPath,
     evidenceJsonPath,
     issueJsonPath,
-    runJson: readJson(runJsonPath),
+    runJson,
     evidenceJson: readJson(evidenceJsonPath),
     issueJson: fs.existsSync(issueJsonPath) ? readJson(issueJsonPath) : null,
   };

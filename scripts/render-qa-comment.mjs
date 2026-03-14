@@ -223,7 +223,7 @@ function main() {
   const comment = renderComment(manifest);
   const outputPath =
     (args.outputPath ? path.resolve(args.outputPath) : null) ||
-    path.join(path.resolve(repoRoot, manifest.run.run_dir), DEFAULT_OUTPUT_NAME);
+    path.join(path.dirname(manifestPath), DEFAULT_OUTPUT_NAME);
 
   fs.writeFileSync(outputPath, comment, "utf8");
 

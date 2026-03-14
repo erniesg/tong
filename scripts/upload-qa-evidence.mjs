@@ -923,18 +923,18 @@ function buildManifest(bundle, artifacts, options, comparisonReport) {
   };
 }
 
-function uploadArtifacts(configPath, bucket, artifacts, dryRun) {
+function uploadArtifacts(configPath, bucket, artifacts, dryRun, repoRoot) {
   for (const artifact of artifacts) {
-    const absolutePath = path.resolve(resolveRepoRoot(), artifact.local_path);
+    const absolutePath = path.resolve(repoRoot, artifact.local_path);
     uploadWithWrangler(configPath, bucket, artifact.bucket_key, absolutePath, artifact.content_type, dryRun);
   }
 }
 
 function main() {
   const options = parseArgs(process.argv.slice(2));
-  const repoRoot = resolveRepoRoot();
+  const bundle = loadQaRunBundle(path.resolve(options.runDir), resolveRepoRoot());
+  const repoRoot = bundle.repoRoot;
   const wranglerConfigPath = path.resolve(repoRoot, options.wranglerConfig);
-  const bundle = loadQaRunBundle(path.resolve(options.runDir), repoRoot);
   const runPrefix = buildRunPrefix(bundle.runJson);
 
   const baseArtifacts = collectQaArtifacts(bundle, {
@@ -952,7 +952,7 @@ function main() {
   const manifestPath = path.join(bundle.runDir, options.manifestName);
   writeJson(manifestPath, manifest);
 
-  uploadArtifacts(wranglerConfigPath, options.bucket, allArtifacts, options.dryRun);
+  uploadArtifacts(wranglerConfigPath, options.bucket, allArtifacts, options.dryRun, repoRoot);
   uploadWithWrangler(
     wranglerConfigPath,
     options.bucket,
