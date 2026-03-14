@@ -74,6 +74,14 @@
   ],
   "issue_notes": [
     {
+      "match": "#31",
+      "issue_class_override": "visual-layout",
+      "notes": [
+        "Focus on the first-time hint state and the early multi-character Block Crush step.",
+        "Prefer direct before/after screenshots over timing traces unless the exercise state itself becomes ambiguous."
+      ]
+    },
+    {
       "match": "#17",
       "issue_class_override": "interaction-input",
       "notes": [
@@ -99,6 +107,25 @@
     }
   ],
   "issue_playbooks": [
+    {
+      "match": "#31",
+      "surface": "game",
+      "route_template": "/game?dev=exercise&type=block_crush&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Open the Block Crush dev exercise in a mobile viewport.",
+        "Capture the first-entry state and verify whether the objective is understandable without extra explanation.",
+        "Capture an early multi-character gameplay state and check whether the density and distractors feel manageable."
+      ],
+      "screenshot_targets": [
+        "first-entry state before play begins",
+        "hint or tutorial state if present",
+        "early multi-character gameplay state"
+      ],
+      "state_targets": [
+        "phase",
+        "currentExercise"
+      ]
+    },
     {
       "match": "#11",
       "surface": "game",
