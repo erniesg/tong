@@ -24,6 +24,7 @@ VERDICTS = {"reproduced", "not-reproduced", "partially-reproduced", "ambiguous",
 REPRO_STATUSES = {"reproduced", "not-reproduced", "partially-reproduced", "ambiguous", "blocked", "not-run"}
 FIX_STATUSES = {"not-checked", "fixed", "still-reproduces", "inconclusive"}
 ISSUE_ACCURACY = {"accurate", "stale", "misdescribed", "n/a"}
+FIX_ALLOWED_EXECUTION_MODES = {"safe-unattended", "requires-live-model"}
 
 
 def load_json(path: Path) -> Any:
@@ -185,6 +186,42 @@ def classification_override(issue_ref: str | None) -> str | None:
     return None
 
 
+def unique_lines(items: list[str]) -> list[str]:
+    return list(dict.fromkeys(item for item in items if item))
+
+
+def build_validation_policy(playbook: dict[str, Any] | None, issue_class: str, evidence_plan: dict[str, Any]) -> dict[str, Any]:
+    defaults = REPO_ADAPTER.get("validation_defaults", {})
+    requirements = (playbook or {}).get("validation_requirements", {})
+    execution_mode = (playbook or {}).get("execution_mode") or defaults.get("execution_mode", "safe-unattended")
+
+    requires_direct_issue_evidence = requirements.get("requires_direct_issue_evidence", evidence_plan["requires_ui_capture"])
+    ui_acceptance_required = requirements.get("ui_acceptance_required", evidence_plan["requires_ui_capture"])
+
+    direct_evidence = unique_lines(
+        (defaults.get("direct_evidence_requirements", []) if requires_direct_issue_evidence else [])
+        + requirements.get("direct_evidence", [])
+    )
+    ui_acceptance_checks = unique_lines(
+        (defaults.get("ui_acceptance_checks", []) if ui_acceptance_required else [])
+        + requirements.get("ui_acceptance_checks", [])
+    )
+
+    return {
+        "issue_class": issue_class,
+        "execution_mode": execution_mode,
+        "fix_allowed": execution_mode in FIX_ALLOWED_EXECUTION_MODES,
+        "requires_direct_issue_evidence": requires_direct_issue_evidence,
+        "direct_evidence": direct_evidence,
+        "ui_acceptance_required": ui_acceptance_required,
+        "ui_acceptance_checks": ui_acceptance_checks,
+        "required_runtime_modes_for_fixed": requirements.get("required_runtime_modes_for_fixed", []),
+        "requires_live_model_for_fixed": requirements.get("requires_live_model_for_fixed", False),
+        "human_review_required": requirements.get("human_review_required", execution_mode == "needs-human-design-review"),
+        "stop_conditions": requirements.get("stop_conditions", []),
+    }
+
+
 def classify_issue_text(text: str) -> dict[str, Any]:
     lowered = text.lower()
     candidates: list[tuple[int, int, str, list[str]]] = []
@@ -324,12 +361,19 @@ def find_previous_run(issue_ref: str | None, target_slug: str, exclude_dir: Path
     return manifest
 
 
-def bootstrap_text(mode: str, issue_payload: dict[str, Any] | None, verify_fix: bool, previous_run: dict[str, Any] | None) -> tuple[str, str, dict[str, Any]]:
+def bootstrap_text(
+    mode: str,
+    issue_payload: dict[str, Any] | None,
+    verify_fix: bool,
+    previous_run: dict[str, Any] | None,
+    validation_policy: dict[str, Any],
+) -> tuple[str, str, dict[str, Any]]:
     summary_lines = [
         "# Summary",
         "",
         f"- Mode: `{mode}`",
         f"- Target: `{issue_payload['issue_ref'] if issue_payload else 'ad-hoc target'}`",
+        f"- Execution mode: `{validation_policy['execution_mode']}`",
         "- Verdict: pending",
         "- Confidence: 0.0",
         "",
@@ -345,7 +389,27 @@ def bootstrap_text(mode: str, issue_payload: dict[str, Any] | None, verify_fix: 
         "3. Capture evidence according to the evidence plan.",
         "4. If the run is ambiguous and stateful, invoke `trace-ui-state`.",
         "5. Finalize the run manifest and publish according to policy.",
+        "",
+        "## Validation Gates",
+        "",
+        f"- Execution mode: `{validation_policy['execution_mode']}`",
+        f"- Direct issue evidence required: `{'yes' if validation_policy['requires_direct_issue_evidence'] else 'no'}`",
+        f"- UI acceptance gate required: `{'yes' if validation_policy['ui_acceptance_required'] else 'no'}`",
+        f"- Live model required for a fixed verdict: `{'yes' if validation_policy['requires_live_model_for_fixed'] else 'no'}`",
+        f"- Human review required before a fixed verdict: `{'yes' if validation_policy['human_review_required'] else 'no'}`",
     ]
+    if validation_policy["direct_evidence"]:
+        steps_lines.extend(["", "### Direct Evidence Targets", ""])
+        steps_lines.extend(f"- {item}" for item in validation_policy["direct_evidence"])
+    if validation_policy["ui_acceptance_checks"]:
+        steps_lines.extend(["", "### UI Acceptance Checks", ""])
+        steps_lines.extend(f"- {item}" for item in validation_policy["ui_acceptance_checks"])
+    if validation_policy["required_runtime_modes_for_fixed"]:
+        steps_lines.extend(["", "### Required Runtime Modes For Fixed", ""])
+        steps_lines.extend(f"- `{item}`" for item in validation_policy["required_runtime_modes_for_fixed"])
+    if validation_policy["stop_conditions"]:
+        steps_lines.extend(["", "### Stop Conditions", ""])
+        steps_lines.extend(f"- {item}" for item in validation_policy["stop_conditions"])
     if verify_fix and previous_run:
         steps_lines.extend(
             [
@@ -370,9 +434,71 @@ def bootstrap_text(mode: str, issue_payload: dict[str, Any] | None, verify_fix: 
         "perf_profiles": [],
         "cross_env_matrix": [],
         "open_questions": [],
-        "notes": []
+        "notes": [],
+        "validation": {
+            "direct_issue_evidence_complete": not validation_policy["requires_direct_issue_evidence"],
+            "ui_acceptance_complete": not validation_policy["ui_acceptance_required"],
+            "runtime_modes_exercised": [],
+            "live_model_confirmed": not validation_policy["requires_live_model_for_fixed"],
+            "human_review_completed": not validation_policy["human_review_required"],
+            "missing_requirements": [],
+            "notes": []
+        }
     }
     return ("\n".join(summary_lines) + "\n", "\n".join(steps_lines) + "\n", evidence)
+
+
+def validation_gate_failures(run: dict[str, Any], evidence: dict[str, Any], *, for_fixed_claim: bool) -> list[str]:
+    policy = run.get("validation_policy", {})
+    validation = evidence.get("validation", {})
+    failures: list[str] = []
+
+    if for_fixed_claim and policy.get("execution_mode") not in FIX_ALLOWED_EXECUTION_MODES:
+        failures.append(f"execution mode `{policy.get('execution_mode', 'unknown')}` is validation-only")
+
+    if policy.get("requires_direct_issue_evidence") and not validation.get("direct_issue_evidence_complete", False):
+        failures.append("direct issue evidence is not marked complete")
+
+    if policy.get("ui_acceptance_required") and not validation.get("ui_acceptance_complete", False):
+        failures.append("UI acceptance gate is not marked complete")
+
+    required_modes = policy.get("required_runtime_modes_for_fixed", [])
+    if required_modes:
+        exercised = set(validation.get("runtime_modes_exercised", []))
+        missing_modes = [mode for mode in required_modes if mode not in exercised]
+        if missing_modes:
+            failures.append("missing required runtime modes: " + ", ".join(missing_modes))
+
+    if policy.get("requires_live_model_for_fixed") and not validation.get("live_model_confirmed", False):
+        failures.append("live-model validation is not confirmed")
+
+    if policy.get("human_review_required") and not validation.get("human_review_completed", False):
+        failures.append("human review is not marked complete")
+
+    for item in validation.get("missing_requirements", []):
+        failures.append(f"missing requirement noted by runner: {item}")
+
+    return failures
+
+
+def render_validation_gate_lines(run: dict[str, Any], evidence: dict[str, Any]) -> str:
+    policy = run.get("validation_policy", {})
+    validation = evidence.get("validation", {})
+    runtime_modes = validation.get("runtime_modes_exercised", [])
+    failures = validation_gate_failures(run, evidence, for_fixed_claim=run["functional"]["fix_status"] == "fixed" or run["functional"]["verdict"] == "fixed")
+
+    lines = [
+        f"- Execution mode: `{policy.get('execution_mode', 'safe-unattended')}`",
+        f"- Direct issue evidence: `{'complete' if validation.get('direct_issue_evidence_complete', False) else 'missing' if policy.get('requires_direct_issue_evidence') else 'not-required'}`",
+        f"- UI acceptance gate: `{'complete' if validation.get('ui_acceptance_complete', False) else 'missing' if policy.get('ui_acceptance_required') else 'not-required'}`",
+        f"- Runtime modes exercised: `{', '.join(runtime_modes) if runtime_modes else 'none recorded'}`",
+        f"- Live model confirmation: `{'confirmed' if validation.get('live_model_confirmed', False) else 'missing' if policy.get('requires_live_model_for_fixed') else 'not-required'}`",
+        f"- Human review: `{'complete' if validation.get('human_review_completed', False) else 'missing' if policy.get('human_review_required') else 'not-required'}`",
+    ]
+    if failures:
+        lines.append("- Remaining validation gaps:")
+        lines.extend(f"  - {item}" for item in failures)
+    return "\n".join(lines)
 
 
 def render_publish(run: dict[str, Any], run_dir: Path) -> str:
@@ -415,12 +541,14 @@ def render_publish(run: dict[str, Any], run_dir: Path) -> str:
         "{{mode}}": run["mode"],
         "{{issue_ref}}": run.get("issue_ref") or "n/a",
         "{{issue_class}}": run["classification"]["issue_class"],
+        "{{execution_mode}}": run.get("validation_policy", {}).get("execution_mode", "safe-unattended"),
         "{{evidence_plan}}": ", ".join(run["evidence_plan"]["required"]),
         "{{verdict}}": run["functional"]["verdict"],
         "{{confidence}}": f"{run['confidence']:.2f}",
         "{{issue_accuracy}}": run["functional"]["issue_accuracy"],
         "{{summary_body}}": summary_body,
         "{{evidence_bullets}}": "\n".join(bullets),
+        "{{validation_gates}}": render_validation_gate_lines(run, evidence),
         "{{regression_checks}}": regression_checks,
         "{{open_questions}}": open_questions_md,
         "{{summary_path}}": relative_to_repo(summary_path),
@@ -468,6 +596,8 @@ def init_run(args: argparse.Namespace) -> int:
             "reason": f"Repo adapter override selected `{override}` for {issue_payload['issue_ref']}.",
         }
     evidence_plan = evidence_plan_for(classification["issue_class"])
+    playbook = issue_playbook(issue_payload["issue_ref"] if issue_payload else None)
+    validation_policy = build_validation_policy(playbook, classification["issue_class"], evidence_plan)
 
     target_slug = slugify(issue_payload["issue_ref"] if issue_payload else args.target)
     run_timestamp = timestamp_slug()
@@ -478,7 +608,13 @@ def init_run(args: argparse.Namespace) -> int:
     (run_dir / "logs").mkdir(exist_ok=True)
 
     previous_run = find_previous_run(issue_payload["issue_ref"] if issue_payload else None, target_slug, exclude_dir=run_dir)
-    summary_text, steps_text, evidence = bootstrap_text(args.mode, issue_payload, args.verify_fix, previous_run)
+    summary_text, steps_text, evidence = bootstrap_text(
+        args.mode,
+        issue_payload,
+        args.verify_fix,
+        previous_run,
+        validation_policy,
+    )
 
     run_manifest = {
         "schema_version": "1",
@@ -492,6 +628,7 @@ def init_run(args: argparse.Namespace) -> int:
         "issue_ref": issue_payload["issue_ref"] if issue_payload else None,
         "classification": classification,
         "evidence_plan": evidence_plan,
+        "validation_policy": validation_policy,
         "functional": {
             "verdict": "pending",
             "repro_status": "not-run",
@@ -514,7 +651,6 @@ def init_run(args: argparse.Namespace) -> int:
         "repo_notes": collect_issue_notes(issue_payload["issue_ref"] if issue_payload else None),
     }
 
-    playbook = issue_playbook(issue_payload["issue_ref"] if issue_payload else None)
     if playbook:
         create_browser_artifacts(run_dir, run_manifest, playbook)
 
@@ -533,6 +669,7 @@ def init_run(args: argparse.Namespace) -> int:
 def finalize_run(args: argparse.Namespace) -> int:
     run_dir = Path(args.run_dir).resolve()
     run = load_run_manifest(run_dir)
+    evidence = load_json(run_dir / "evidence.json")
     verdict = args.verdict
     if verdict not in VERDICTS:
         raise ValueError(f"Unsupported verdict: {verdict}")
@@ -543,6 +680,11 @@ def finalize_run(args: argparse.Namespace) -> int:
     if args.issue_accuracy not in ISSUE_ACCURACY:
         raise ValueError(f"Unsupported issue accuracy: {args.issue_accuracy}")
     validate_outcome_combination(verdict, args.repro_status, args.fix_status)
+
+    if verdict == "fixed" or args.fix_status == "fixed":
+        failures = validation_gate_failures(run, evidence, for_fixed_claim=True)
+        if failures:
+            raise ValueError("Cannot finalize as fixed: " + "; ".join(failures))
 
     run["functional"]["verdict"] = verdict
     run["functional"]["repro_status"] = args.repro_status
@@ -562,6 +704,7 @@ def finalize_run(args: argparse.Namespace) -> int:
 def publish_github(args: argparse.Namespace) -> int:
     run_dir = Path(args.run_dir).resolve()
     run = load_run_manifest(run_dir)
+    evidence = load_json(run_dir / "evidence.json")
     issue_ref = run.get("issue_ref")
     if not issue_ref:
         print("Run has no GitHub issue reference; skipping publish.")
@@ -580,6 +723,12 @@ def publish_github(args: argparse.Namespace) -> int:
     if not should_publish:
         print(f"Publish skipped by policy: confidence {confidence:.2f} < {threshold:.2f} and verdict `{verdict}` is not force-published.")
         return 0
+
+    if PUBLISH_POLICY.get("block_publish_for_unmet_validation_gates"):
+        failures = validation_gate_failures(run, evidence, for_fixed_claim=run["functional"]["fix_status"] == "fixed" or verdict == "fixed")
+        if failures:
+            print("Publish blocked: unmet validation gates: " + "; ".join(failures))
+            return 4
 
     auth = run_command(["gh", "auth", "status"], allow_failure=True)
     if auth.returncode != 0:
