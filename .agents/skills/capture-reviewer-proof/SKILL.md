@@ -1,6 +1,6 @@
 ---
 name: capture-reviewer-proof
-description: Capture short reviewer-facing proof for timing-sensitive UI interactions, including the readable pre-action state, visible input, stable post-action result, and reviewer-visible upload links.
+description: Capture short reviewer-facing proof for timing-sensitive UI interactions, including the readable pre-action state, visible input, stable post-action result, and reviewer-visible links.
 ---
 
 # Capture Reviewer Proof
@@ -14,8 +14,8 @@ Read:
 - `.agents/skills/_functional-qa/references/evidence-strategies.md`
 - `.agents/skills/_functional-qa/references/game-browser-playbook.md` for `/game`
 - `.agents/skills/_functional-qa/config/repo-adapter.json`
-- `docs/agent-native-project-setup.md`
 - `docs/codex-cloud-issue-runbook.md`
+- `docs/qa-evidence-uploads.md`
 
 ## Workflow
 
@@ -28,10 +28,13 @@ Read:
    - short clip
    - GIF preview
    - ordered stills for pre-action, ready, post-input, and stable post-action
-7. Upload reviewer-visible media and update the PR body or comment with the public links.
+7. Prefer the configured uploader flow in `docs/qa-evidence-uploads.md`.
+   The standard `publish-github` runtime now auto-attempts this upload path for runs with visual evidence, so only do it manually when you need to inspect or edit `uploaded-comment.md` first.
+8. If hosted upload is unavailable, fall back to reviewer-openable git-tracked files on a dedicated branch or PR. Do not leave the reviewer with local-only artifact paths.
+9. Update the PR body or issue comment with public links.
 
 ## Output requirements
 
-- Do not call local artifact paths “proof” if the reviewer cannot open them from the PR.
+- Do not call local artifact paths “proof” if the reviewer cannot open them from the PR or issue comment.
 - Say whether the clip uses a deterministic setup shortcut or a purely live path.
 - Reject captures that are semantically confusing, truncated, or omit the input event.
