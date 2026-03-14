@@ -108,7 +108,8 @@ python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py
 ## Output requirements
 
 - Keep the queue plan under `artifacts/qa-runs/functional-qa/issue-queue/...`.
-- Keep each issue's validation and fix artifacts under `artifacts/qa-runs/functional-qa/...`.
+- Keep each issue's validation and fix artifacts under `artifacts/qa-runs/functional-qa/...` as the local staging source bundle for publication.
+- Treat uploaded `tong-runs` artifacts, not local run paths, as the reviewer-visible proof surface when evidence hosting is configured.
 - Do not claim issues are safe to parallelize without checking shared-zone collisions.
 - Do not skip fix verification before publishing a "fixed" update.
 - Do not upgrade a validation-only or design-review issue into a fix run unless a human explicitly changes the direction.

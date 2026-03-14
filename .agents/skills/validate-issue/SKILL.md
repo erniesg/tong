@@ -100,6 +100,8 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
 - `logs/`
 - `browser-playbook.md` and `browser/` when the repo adapter generated a browser-backed capture pack
 
+   Treat the run directory under `artifacts/qa-runs/...` as local staging for the current QA tooling, not as the final reviewer-visible proof surface.
+
 9. Finalize the run:
 
    ```bash
@@ -118,7 +120,7 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
    python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR>
    ```
 
-   If the run needs reviewer-facing media links rather than a text-only QA update, continue with `capture-reviewer-proof` before considering the publication complete.
+   If the run needs reviewer-facing media links rather than a text-only QA update, continue with `capture-reviewer-proof` before considering the publication complete. The published proof should land on `tong-runs` when the uploader is configured; the local run bundle remains the staging source.
 
 11. Decide issue closure status deliberately:
 
@@ -128,13 +130,14 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
 
 ## Output requirements
 
-- Use the artifact bundle under `artifacts/qa-runs/functional-qa/...`.
+- Use the artifact bundle under `artifacts/qa-runs/functional-qa/...` as the required local staging bundle.
 - Make the repro checklist rerunnable.
 - If `--verify-fix` was used, explicitly compare against the previous run before claiming a fix.
 - If a required evidence type is unavailable, lower confidence and say why.
 - For reviewer-visible UI fixes, do not stop at generic screenshots when a comparison view would make the delta materially easier to review.
 - Prefer runtime-emitted cue timestamps over visual guesswork when selecting reviewer-facing frames. Treat video-understanding or OCR as a fallback layer, not the primary source of truth, when deterministic state cues are available.
 - Do not treat a local screenshot or `.webm` path under `artifacts/qa-runs/` as reviewer-visible proof unless the media is also attached or linked where reviewers can open it.
+- For reviewer-facing publication, prefer uploaded `tong-runs` URLs over local artifact paths.
 - Do not call a clip reviewer-ready if it omits the visible input, races through the proof moment, or starts from a semantically confusing state created by a deterministic jump.
 - If the issue execution mode is `validate-and-propose-only` or `needs-human-design-review`, stop after validation evidence and proposal instead of making unattended UX or product changes.
 - If the issue body is not portable enough for remote execution, record that gap in `summary.md` and `evidence.json` before proceeding.
