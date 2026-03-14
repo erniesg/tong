@@ -10,6 +10,9 @@ import mockMediaWindow from '../../server/data/mock-media-window.json';
 
 type Lang = 'ko' | 'ja' | 'zh';
 type Mode = 'hangout' | 'learn';
+type CityId = 'seoul' | 'tokyo' | 'shanghai';
+type LocationId = 'food_street' | 'cafe' | 'convenience_store' | 'subway_hub' | 'practice_studio';
+type ObjectiveCategory = 'script' | 'pronunciation' | 'vocabulary' | 'grammar' | 'sentences';
 
 type Profile = {
   nativeLanguage: string;
@@ -265,6 +268,26 @@ function getLang(search: URLSearchParams): Lang {
   const lang = (search.get('lang') || 'ko') as Lang;
   if (lang === 'ko' || lang === 'ja' || lang === 'zh') return lang;
   return 'ko';
+}
+
+function getCityId(search: URLSearchParams): CityId {
+  const city = search.get('city');
+  if (city === 'seoul' || city === 'tokyo' || city === 'shanghai') return city;
+  return 'seoul';
+}
+
+function getLocationId(search: URLSearchParams): LocationId {
+  const location = search.get('location');
+  if (
+    location === 'food_street' ||
+    location === 'cafe' ||
+    location === 'convenience_store' ||
+    location === 'subway_hub' ||
+    location === 'practice_studio'
+  ) {
+    return location;
+  }
+  return 'food_street';
 }
 
 function getUserIdFromSearch(searchParams: URLSearchParams): string {
@@ -682,7 +705,13 @@ function objectiveMatchesLanguage(objectiveId: unknown, lang: Lang): boolean {
   return typeof objectiveId === 'string' && objectiveId.startsWith(`${lang}_`);
 }
 
-function buildPersonalizedObjective({ userId, mode = 'hangout', lang = 'ko' as Lang }) {
+function buildPersonalizedObjective({
+  userId,
+  mode = 'hangout',
+  lang = 'ko' as Lang,
+  city = 'seoul' as CityId,
+  location = 'food_street' as LocationId,
+}) {
   const ingestion = ensureIngestionForUser(userId);
   const baseObjective = cloneJson(FIXTURES.objectivesNext as Record<string, any>);
 
@@ -731,12 +760,27 @@ function buildPersonalizedObjective({ userId, mode = 'hangout', lang = 'ko' as L
   const personalizedTargets = personalizedBase.slice(0, 3).map((item) => ({
     lemma: item.lemma,
     source: item.dominantSource,
+    linkedNodeIds: [`overlay:${item.dominantSource}:${dominantClusterId}`, `target:${item.lemma}`],
   }));
+
+  const objectiveNodeId = `objective:${objectiveId}`;
+  const objectiveCategory: ObjectiveCategory =
+    lang === 'zh' ? 'sentences' : lang === 'ja' ? 'script' : 'vocabulary';
 
   return {
     ...baseObjective,
     objectiveId,
     mode,
+    lang,
+    objectiveGraph: {
+      objectiveNodeId,
+      cityId: city,
+      locationId: location,
+      objectiveCategory,
+      targetNodeIds: vocabulary.map((term) => `target:${term}`),
+      prerequisiteObjectiveIds: [`${lang}_food_l1_001`],
+      source: 'knowledge_graph',
+    },
     coreTargets: {
       vocabulary: vocabulary.length > 0 ? vocabulary : [...(baseObjective.coreTargets?.vocabulary || [])],
       grammar: [...(LANG_TARGETS[lang]?.grammar || LANG_TARGETS.ko.grammar)],
@@ -744,6 +788,15 @@ function buildPersonalizedObjective({ userId, mode = 'hangout', lang = 'ko' as L
     },
     personalizedTargets:
       personalizedTargets.length > 0 ? personalizedTargets : cloneJson(baseObjective.personalizedTargets || []),
+    completionCriteria: {
+      ...(baseObjective.completionCriteria || {}),
+      minEvidenceEvents: baseObjective.completionCriteria?.minEvidenceEvents || 3,
+      acceptedEvidenceModes: baseObjective.completionCriteria?.acceptedEvidenceModes || [
+        'learn',
+        'hangout',
+        'mission',
+      ],
+    },
   };
 }
 
@@ -771,6 +824,8 @@ function buildGameStartResponse(userId: string, incomingProfile: Profile | null)
     userId,
     mode: 'hangout',
     lang: weakestLang,
+    city,
+    location,
   });
 
   return {
@@ -951,6 +1006,8 @@ async function handleRequest(request: Request): Promise<Response> {
         userId,
         mode,
         lang: getLang(url.searchParams),
+        city: getCityId(url.searchParams),
+        location: getLocationId(url.searchParams),
       });
       return jsonResponse(200, objective);
     }

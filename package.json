@@ -30,6 +30,7 @@
     "build:extension": "npm --prefix apps/extension run build",
     "dev:extension": "npm --prefix apps/extension run dev",
     "zip": "./scripts/build-extension-bundle.sh",
-    "launch:agents": "./scripts/launch-parallel-agents.sh"
+    "launch:agents": "./scripts/launch-parallel-agents.sh",
+    "test:kg-contract-schema": "node scripts/kg_contract_schema_check.mjs"
   }
 }
