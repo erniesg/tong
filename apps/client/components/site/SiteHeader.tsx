@@ -19,15 +19,13 @@ export default function SiteHeader({ current, tone = 'light', variant = current 
   return (
     <nav className={`landing-nav site-header site-header--${tone} site-header--${variant}`}>
       <Link href="/" className="landing-nav-brand site-brand">
-        <span className="site-brand-mark">
-          <Image
-            src="/assets/app/logo_transparent.png"
-            alt="Tong"
-            width={30}
-            height={30}
-            className="landing-nav-logo"
-          />
-        </span>
+        <Image
+          src="/assets/app/logo_trimmed.png"
+          alt="Tong"
+          width={30}
+          height={30}
+          className="landing-nav-logo landing-nav-logo--brand"
+        />
         <div className="landing-brand-cycle">
           <span>tōng</span>
           <span>통</span>

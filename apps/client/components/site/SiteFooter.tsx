@@ -18,15 +18,13 @@ export default function SiteFooter({ current, variant = current }: SiteFooterPro
   return (
     <footer className={`landing-footer site-footer site-footer--${variant}`}>
       <div className="landing-footer-brand site-footer-brand">
-        <span className="site-brand-mark site-brand-mark--footer">
-          <Image
-            src="/assets/app/logo_transparent.png"
-            alt="Tong"
-            width={30}
-            height={30}
-            className="landing-nav-logo"
-          />
-        </span>
+        <Image
+          src="/assets/app/logo_trimmed.png"
+          alt="Tong"
+          width={30}
+          height={30}
+          className="landing-nav-logo landing-nav-logo--brand"
+        />
         <span>Tong — Live the drama. Learn the language.</span>
       </div>
       <div className="landing-footer-links site-footer-links">
