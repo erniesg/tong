@@ -32,12 +32,17 @@ function inferRole(filePath, category) {
 
   if (base.includes("dialogue")) return "dialogue";
   if (base.includes("tooltip")) return "tooltip";
+  if (base.includes("subtitle")) return "subtitle";
+  if (base.includes("translation")) return "translation";
+  if (base.includes("dictionary")) return "dictionary";
   if (base.includes("proof")) return "proof";
   if (base.includes("romanization-bait")) return "romanization-bait";
   if (category === "summary") return "summary";
   if (category === "manifest") return "manifest";
   if (category === "preview-gif") return "preview";
   if (category === "preview-poster") return "poster";
+  if (category === "comparison-panel") return "comparison-panel";
+  if (category === "comparison-focus-crop") return "comparison-focus-crop";
   return category;
 }
 
@@ -202,6 +207,26 @@ function collectQaArtifacts(bundle, options = {}) {
 
   artifacts.push(
     ...collectEvidenceSectionArtifacts({
+      category: "comparison-panel",
+      entries: evidenceJson.comparison_panels,
+      repoRoot,
+      runDir,
+      source: "evidence.json",
+    }),
+  );
+
+  artifacts.push(
+    ...collectEvidenceSectionArtifacts({
+      category: "comparison-focus-crop",
+      entries: evidenceJson.comparison_focus_crops,
+      repoRoot,
+      runDir,
+      source: "evidence.json",
+    }),
+  );
+
+  artifacts.push(
+    ...collectEvidenceSectionArtifacts({
       category: "temporal-capture",
       entries: evidenceJson.temporal_capture,
       repoRoot,
@@ -270,13 +295,66 @@ function loadQaRunBundle(runDirInput, repoRootInput) {
   };
 }
 
+function qaArtifactRoot(repoRootInput) {
+  const repoRoot = path.resolve(repoRootInput || resolveRepoRoot());
+  return path.join(repoRoot, "artifacts", "qa-runs", "functional-qa");
+}
+
+function findQaRunDirByRunId(runId, repoRootInput) {
+  if (!runId) return null;
+
+  const functionalQaRoot = qaArtifactRoot(repoRootInput);
+  if (!fs.existsSync(functionalQaRoot)) {
+    return null;
+  }
+
+  for (const targetEntry of fs.readdirSync(functionalQaRoot, { withFileTypes: true })) {
+    if (!targetEntry.isDirectory()) continue;
+    const targetDir = path.join(functionalQaRoot, targetEntry.name);
+
+    for (const runEntry of fs.readdirSync(targetDir, { withFileTypes: true })) {
+      if (!runEntry.isDirectory()) continue;
+      const runDir = path.join(targetDir, runEntry.name);
+      const manifestPath = path.join(runDir, "run.json");
+      if (!fs.existsSync(manifestPath)) continue;
+
+      try {
+        const manifest = readJson(manifestPath);
+        if (manifest.run_id === runId) {
+          return runDir;
+        }
+      } catch {
+        // Ignore malformed manifests while scanning prior runs.
+      }
+    }
+  }
+
+  return null;
+}
+
+function loadPreviousQaRunBundle(bundle, repoRootInput) {
+  const previousRunId = bundle?.runJson?.previous_run_id;
+  if (!previousRunId) {
+    return null;
+  }
+
+  const previousRunDir = findQaRunDirByRunId(previousRunId, repoRootInput || bundle.repoRoot);
+  if (!previousRunDir) {
+    return null;
+  }
+
+  return loadQaRunBundle(previousRunDir, repoRootInput || bundle.repoRoot);
+}
+
 export {
   collectQaArtifacts,
   ensureDir,
+  findQaRunDirByRunId,
   formatLabelFromFilename,
   groupArtifactsByCategory,
   inferContentType,
   loadQaRunBundle,
+  loadPreviousQaRunBundle,
   readJson,
   relativeToRepo,
   resolveRepoRoot,
