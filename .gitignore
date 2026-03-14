@@ -5,6 +5,7 @@
 tong.zip
 
 .worktrees/
+.wrangler/
 .claude/
 node_modules/
 .next/
