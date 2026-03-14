@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 
+import RoadmapWaveVisual from '@/components/roadmap/RoadmapWaveVisual';
+
 import {
   CRITICAL_PATH,
   ROADMAP_PHASES,
@@ -265,21 +267,28 @@ export default function RoadmapPage() {
       </nav>
 
       <section className="roadmap-hero">
-        <div className="roadmap-hero-copy roadmap-hero-copy--single">
-          <span className="kicker">Roadmap</span>
-          <h1 className="roadmap-title">Tong, in three waves.</h1>
-          <p className="roadmap-subhead">
-            Remote-first foundations first. Resume and deterministic checkpoints second. Polish, KG, and starter
-            content after that.
-          </p>
-          <div className="roadmap-actions">
-            <a href={ROADMAP_PROJECT_URL} target="_blank" rel="noopener noreferrer" className="button">
-              Open GitHub Project
-            </a>
-            <a href="#roadmap-critical-path" className="button secondary">
-              Jump To Critical Path
-            </a>
+        <div className="roadmap-hero-copy">
+          <div className="roadmap-hero-grid">
+            <div className="roadmap-hero-copy-column">
+              <span className="kicker">Roadmap</span>
+              <h1 className="roadmap-title">Tong, in three waves.</h1>
+              <p className="roadmap-subhead">
+                Remote-first foundations first. Resume and deterministic checkpoints second. Polish, KG, and starter
+                content after that.
+              </p>
+              <div className="roadmap-actions">
+                <a href={ROADMAP_PROJECT_URL} target="_blank" rel="noopener noreferrer" className="button">
+                  Open GitHub Project
+                </a>
+                <a href="#roadmap-critical-path" className="button secondary">
+                  Jump To Critical Path
+                </a>
+              </div>
+            </div>
+
+            <RoadmapWaveVisual />
           </div>
+
           <div className="roadmap-signal-row">
             <div className="roadmap-signal-pill">
               <span>Critical path</span>

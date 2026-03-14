@@ -4520,10 +4520,17 @@ button.nav-link:hover {
   box-shadow: 0 28px 64px rgba(180, 131, 87, 0.16);
 }
 
-.roadmap-hero-copy--single {
+.roadmap-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.86fr) minmax(320px, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.roadmap-hero-copy-column {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  justify-content: center;
 }
 
 .roadmap-title {
@@ -4547,6 +4554,284 @@ button.nav-link:hover {
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 24px;
+}
+
+.roadmap-wave-viz {
+  position: relative;
+  min-height: 388px;
+  overflow: hidden;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 16% 16%, rgba(255, 132, 69, 0.15), transparent 28%),
+    radial-gradient(circle at 78% 18%, rgba(59, 130, 246, 0.16), transparent 32%),
+    radial-gradient(circle at 58% 78%, rgba(15, 118, 110, 0.18), transparent 34%),
+    linear-gradient(180deg, #0b1220 0%, #121c31 52%, #0d172a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 24px 54px rgba(16, 24, 40, 0.18);
+}
+
+.roadmap-wave-viz::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 100% 52px, 52px 100%;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.66), transparent 92%);
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.roadmap-wave-viz::after {
+  content: "";
+  position: absolute;
+  inset: auto 8% 16px;
+  height: 90px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.12), transparent 66%);
+  filter: blur(18px);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.roadmap-wave-viz-aurora {
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  border-radius: 999px;
+  filter: blur(46px);
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.roadmap-wave-viz-aurora--ember {
+  top: -52px;
+  left: -38px;
+  background: rgba(255, 122, 56, 0.44);
+  animation: roadmapWaveFloat 16s ease-in-out infinite;
+}
+
+.roadmap-wave-viz-aurora--lagoon {
+  right: 108px;
+  bottom: 24px;
+  background: rgba(15, 118, 110, 0.4);
+  animation: roadmapWaveFloat 18s ease-in-out infinite reverse;
+}
+
+.roadmap-wave-viz-aurora--cobalt {
+  top: 42px;
+  right: -24px;
+  background: rgba(59, 130, 246, 0.36);
+  animation: roadmapWaveFloat 20s ease-in-out infinite;
+}
+
+.roadmap-wave-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.roadmap-wave-halo {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 20;
+  opacity: 0.18;
+  filter: blur(5px);
+}
+
+.roadmap-wave-halo--one,
+.roadmap-wave-line--one,
+.roadmap-wave-node--one,
+.roadmap-wave-node-ring--one,
+.roadmap-wave-blur--one {
+  stroke: url(#roadmapWaveGlow01);
+  fill: url(#roadmapWaveGlow01);
+}
+
+.roadmap-wave-halo--two,
+.roadmap-wave-line--two,
+.roadmap-wave-node--two,
+.roadmap-wave-node-ring--two,
+.roadmap-wave-blur--two {
+  stroke: url(#roadmapWaveGlow02);
+  fill: url(#roadmapWaveGlow02);
+}
+
+.roadmap-wave-halo--three,
+.roadmap-wave-line--three,
+.roadmap-wave-node--three,
+.roadmap-wave-node-ring--three,
+.roadmap-wave-blur--three {
+  stroke: url(#roadmapWaveGlow03);
+  fill: url(#roadmapWaveGlow03);
+}
+
+.roadmap-wave-line {
+  fill: none;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-dasharray: 10 8;
+  opacity: 0.96;
+  animation: roadmapWavePulseLine 16s linear infinite;
+}
+
+.roadmap-wave-line--two {
+  animation-duration: 18s;
+}
+
+.roadmap-wave-line--three {
+  animation-duration: 20s;
+}
+
+.roadmap-wave-node {
+  stroke-width: 0;
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.2));
+  animation: roadmapWaveNodePulse 4.8s ease-in-out infinite;
+}
+
+.roadmap-wave-node--two {
+  animation-delay: 0.8s;
+}
+
+.roadmap-wave-node--three {
+  animation-delay: 1.5s;
+}
+
+.roadmap-wave-node-ring {
+  fill: none;
+  stroke-width: 1.5;
+  opacity: 0.65;
+  animation: roadmapWaveRing 4.8s ease-out infinite;
+}
+
+.roadmap-wave-node-ring--two {
+  animation-delay: 0.8s;
+}
+
+.roadmap-wave-node-ring--three {
+  animation-delay: 1.5s;
+}
+
+.roadmap-wave-blur {
+  opacity: 0.26;
+}
+
+.roadmap-wave-label {
+  position: absolute;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 170px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(7, 13, 24, 0.56);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 40px rgba(4, 7, 18, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+.roadmap-wave-label--one {
+  left: 28px;
+  bottom: 32px;
+  animation: roadmapWaveFloat 17s ease-in-out infinite;
+}
+
+.roadmap-wave-label--two {
+  left: 216px;
+  top: 150px;
+  animation: roadmapWaveFloat 19s ease-in-out infinite reverse;
+}
+
+.roadmap-wave-label--three {
+  right: 26px;
+  top: 30px;
+  animation: roadmapWaveFloat 18s ease-in-out infinite;
+}
+
+.roadmap-wave-label-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(244, 247, 251, 0.86);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.roadmap-wave-label strong,
+.roadmap-wave-label small {
+  display: block;
+}
+
+.roadmap-wave-label strong {
+  margin-bottom: 4px;
+  color: #f8fbff;
+  font-size: 15px;
+  line-height: 1.1;
+}
+
+.roadmap-wave-label small {
+  color: rgba(191, 203, 220, 0.88);
+  font-size: 11px;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@keyframes roadmapWavePulseLine {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -72;
+  }
+}
+
+@keyframes roadmapWaveFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@keyframes roadmapWaveNodePulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.96;
+  }
+  50% {
+    transform: scale(1.22);
+    opacity: 1;
+  }
+}
+
+@keyframes roadmapWaveRing {
+  0% {
+    opacity: 0.72;
+    transform: scale(0.75);
+  }
+  75% {
+    opacity: 0;
+    transform: scale(1.38);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.38);
+  }
 }
 
 .roadmap-signal-row {
@@ -5419,6 +5704,29 @@ button.nav-link:hover {
     transform: translateX(50%);
   }
 
+  .roadmap-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .roadmap-wave-viz {
+    min-height: 320px;
+  }
+
+  .roadmap-wave-label--one {
+    left: 22px;
+    bottom: 24px;
+  }
+
+  .roadmap-wave-label--two {
+    left: 180px;
+    top: 126px;
+  }
+
+  .roadmap-wave-label--three {
+    right: 22px;
+    top: 22px;
+  }
+
   .roadmap-signal-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -5521,6 +5829,31 @@ button.nav-link:hover {
     max-width: none;
   }
 
+  .roadmap-wave-viz {
+    min-height: 280px;
+  }
+
+  .roadmap-wave-label {
+    min-width: 0;
+    max-width: 164px;
+    padding: 10px 12px;
+  }
+
+  .roadmap-wave-label--one {
+    left: 18px;
+    bottom: 20px;
+  }
+
+  .roadmap-wave-label--two {
+    left: 132px;
+    top: 118px;
+  }
+
+  .roadmap-wave-label--three {
+    right: 16px;
+    top: 16px;
+  }
+
   .roadmap-hero-copy,
   .roadmap-focus-card,
   .roadmap-critical-section,
@@ -5561,6 +5894,16 @@ button.nav-link:hover {
   .roadmap-issue-details-toggle {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-wave-viz-aurora,
+  .roadmap-wave-line,
+  .roadmap-wave-node,
+  .roadmap-wave-node-ring,
+  .roadmap-wave-label {
+    animation: none;
   }
 }
 
