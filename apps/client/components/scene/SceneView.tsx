@@ -27,6 +27,7 @@ interface SceneViewProps {
   choicePrompt?: string | null;
   tongTip?: { message: string; translation?: string } | null;
   isStreaming?: boolean;
+  dialogueIsStreaming?: boolean;
   hudContent?: React.ReactNode;
   targetLang?: TargetLang;
   continueLabel?: string;
@@ -62,6 +63,7 @@ export function SceneView({
   choicePrompt,
   tongTip = null,
   isStreaming = false,
+  dialogueIsStreaming = false,
   hudContent,
   targetLang = 'ko',
   continueLabel = 'Tap to continue',
@@ -162,7 +164,7 @@ export function SceneView({
           speakerColor={getSpeakerColor(currentMessage)}
           content={currentMessage.content}
           translation={currentMessage.translation}
-          isStreaming={isStreaming}
+          isStreaming={dialogueIsStreaming}
           targetLang={targetLang}
           continueLabel={continueLabel}
           onContinue={onContinue}
