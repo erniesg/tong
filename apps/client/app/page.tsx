@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef, useCallback, FormEvent, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { runtimeAssetUrl } from '@/lib/runtime-assets';
 
 const API_BASE = 'https://tong-api.erniesg.workers.dev';
+const LANDING_LOGO_URL = runtimeAssetUrl('app.logo.trimmed.default');
 
 /* ── Language gauge (mirrors game onboarding) ──────────────── */
 type CjkLang = 'ko' | 'ja' | 'zh';
@@ -213,7 +215,7 @@ function LandingPage() {
       <nav className="landing-nav">
         <a href="/" className="landing-nav-brand">
           <Image
-            src="/assets/app/logo_trimmed.png"
+            src={LANDING_LOGO_URL}
             alt="Tong"
             width={30}
             height={30}
@@ -414,7 +416,7 @@ function LandingPage() {
       <footer className="landing-footer">
         <div className="landing-footer-brand">
           <Image
-            src="/assets/app/logo_trimmed.png"
+            src={LANDING_LOGO_URL}
             alt="Tong"
             width={30}
             height={30}

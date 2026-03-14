@@ -65,3 +65,18 @@ Template:
 - Integration risks:
   - Placeholder videos unblock validation but should be replaced by final art/video as the city and cinematic packs land.
 - Next owner: `codex/client-runtime`
+
+## 2026-03-15 (Issue 37 runtime asset resolver)
+- Date: 2026-03-15
+- Branch/worktree: `codex/fix-issue-37-runtime-asset-resolution` (shared root workspace)
+- What changed:
+  - Added `apps/client/lib/runtime-assets.ts` so client/runtime surfaces resolve canonical runtime asset keys through the runtime manifest and `NEXT_PUBLIC_TONG_ASSETS_BASE_URL`.
+  - Rewired active game, city-map, Tong overlay, content config, and shell logo surfaces away from hardcoded runtime file paths.
+  - Tightened `demo:smoke` so runtime source under `apps/client/{app,components,lib}` must use manifest-key resolution and cannot reintroduce direct `/assets/...` literals.
+- Contract changes:
+  - Client runtime now consumes runtime asset manifest keys instead of relying on local public-path assumptions.
+  - Next.js config allows the remote runtime asset host for image optimization and external manifest import.
+- Integration risks:
+  - Any newly added runtime media must land in `assets/manifest/runtime-asset-manifest.json` before client code can reference it via `runtimeAssetUrl(...)`.
+  - Legacy preview HTML and non-runtime scripts still use literal `/assets/...` references and remain outside the runtime smoke gate.
+- Next owner: `codex/runtime-assets`
