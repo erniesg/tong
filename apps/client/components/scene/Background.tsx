@@ -24,7 +24,7 @@ export function Background({ imageUrl, ambientDescription, fade = false }: Backg
         />
       ) : ambientDescription ? (
         <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-dark)] p-8">
-          <p className="max-w-xs text-center text-base italic text-[var(--color-text-muted)]">
+          <p className="max-w-xs text-center italic text-[length:var(--game-text-base)] text-[var(--color-text-muted)]">
             {ambientDescription}
           </p>
         </div>

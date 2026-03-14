@@ -37,10 +37,10 @@ export function FreeInput({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card p-5">
-      <p className="text-lg font-medium mb-4 m-0">{exercise.prompt}</p>
+      <p className="text-[length:var(--game-text-lg)] font-medium mb-4 m-0">{exercise.prompt}</p>
 
       {exercise.hint && (
-        <p className="text-sm text-[var(--color-text-muted)] mb-3 m-0">{exercise.hint}</p>
+        <p className="text-[length:var(--game-text-base)] text-[var(--color-text-muted)] mb-3 m-0">{exercise.hint}</p>
       )}
 
       <input
@@ -50,7 +50,7 @@ export function FreeInput({ exercise, onResult }: Props) {
         onKeyDown={handleKeyDown}
         disabled={submitted}
         placeholder={t('type_answer', lang)}
-        className="w-full rounded-lg px-4 py-3 text-lg text-ko"
+        className="w-full min-h-[44px] rounded-lg px-4 py-3 text-[length:var(--game-text-lg)] text-ko"
         style={{
           background: 'rgba(255,255,255,0.08)',
           border: '2px solid rgba(255,255,255,0.15)',
@@ -62,7 +62,7 @@ export function FreeInput({ exercise, onResult }: Props) {
       />
 
       {submitted && exercise.explanation && (
-        <p className="mt-3 text-sm text-[var(--color-text-muted)] m-0">{exercise.explanation}</p>
+        <p className="mt-3 text-[length:var(--game-text-base)] text-[var(--color-text-muted)] m-0">{exercise.explanation}</p>
       )}
 
       {!submitted && (
@@ -70,7 +70,7 @@ export function FreeInput({ exercise, onResult }: Props) {
           onClick={handleSubmit}
           disabled={!input.trim()}
           className={cn(
-            'mt-4 w-full rounded-lg py-3 font-semibold transition',
+            'mt-4 w-full min-h-[44px] rounded-lg py-3 text-[length:var(--game-text-base)] font-semibold transition',
             input.trim()
               ? 'bg-[var(--color-accent-gold)] text-[#1a1a2e] hover:brightness-110'
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
@@ -83,7 +83,7 @@ export function FreeInput({ exercise, onResult }: Props) {
       {submitted && (
         <div
           className={cn(
-            'mt-4 rounded-lg px-4 py-3 text-center text-sm',
+            'mt-4 rounded-lg px-4 py-3 text-center text-[length:var(--game-text-base)]',
             isCorrect
               ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]'
               : 'bg-red-500/20 text-red-400',

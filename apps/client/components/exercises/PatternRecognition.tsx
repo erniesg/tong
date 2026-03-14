@@ -27,7 +27,7 @@ export function PatternRecognition({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card p-5">
-      <p className="text-lg font-medium mb-4 text-ko m-0">{exercise.prompt}</p>
+      <p className="text-[length:var(--game-text-lg)] font-medium mb-4 text-ko m-0">{exercise.prompt}</p>
 
       <div className="pron-select__options">
         {exercise.pairs.map((pair, idx) => {
@@ -47,14 +47,14 @@ export function PatternRecognition({ exercise, onResult }: Props) {
               )}
             >
               <span className="text-ko" style={{ fontSize: 24, marginRight: 12 }}>{pair.chars}</span>
-              <span className="text-sm text-[var(--color-text-muted)]">{pair.explanation}</span>
+              <span className="text-[length:var(--game-text-base)] text-[var(--color-text-muted)]">{pair.explanation}</span>
             </button>
           );
         })}
       </div>
 
       {submitted && exercise.explanation && (
-        <p className="mt-3 text-sm text-[var(--color-text-muted)] m-0">{exercise.explanation}</p>
+        <p className="mt-3 text-[length:var(--game-text-base)] text-[var(--color-text-muted)] m-0">{exercise.explanation}</p>
       )}
 
       {!submitted && (
@@ -62,7 +62,7 @@ export function PatternRecognition({ exercise, onResult }: Props) {
           onClick={handleSubmit}
           disabled={selected === null}
           className={cn(
-            'mt-4 w-full rounded-lg py-3 font-semibold transition',
+            'mt-4 w-full min-h-[44px] rounded-lg py-3 text-[length:var(--game-text-base)] font-semibold transition',
             selected !== null
               ? 'bg-[var(--color-accent-gold)] text-[#1a1a2e] hover:brightness-110'
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
@@ -75,7 +75,7 @@ export function PatternRecognition({ exercise, onResult }: Props) {
       {submitted && (
         <div
           className={cn(
-            'mt-4 rounded-lg px-4 py-3 text-center text-sm',
+            'mt-4 rounded-lg px-4 py-3 text-center text-[length:var(--game-text-base)]',
             isCorrect
               ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]'
               : 'bg-red-500/20 text-red-400',

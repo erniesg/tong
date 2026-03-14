@@ -43,7 +43,7 @@ export function SentenceBuilder({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card p-5">
-      <p className="text-lg font-medium mb-4 text-ko m-0">{exercise.prompt}</p>
+      <p className="text-[length:var(--game-text-lg)] font-medium mb-4 text-ko m-0">{exercise.prompt}</p>
 
       {/* Answer area */}
       <div className="sentence-builder__tiles">
@@ -57,7 +57,7 @@ export function SentenceBuilder({ exercise, onResult }: Props) {
           </button>
         ))}
         {placed.length === 0 && (
-          <span className="text-sm text-[var(--color-text-muted)] py-1">{t('tap_tiles', lang)}</span>
+          <span className="text-[length:var(--game-text-base)] text-[var(--color-text-muted)] py-1">{t('tap_tiles', lang)}</span>
         )}
       </div>
 
@@ -79,7 +79,7 @@ export function SentenceBuilder({ exercise, onResult }: Props) {
       </div>
 
       {submitted && exercise.explanation && (
-        <p className="mt-1 text-sm text-[var(--color-text-muted)] m-0">{exercise.explanation}</p>
+        <p className="mt-1 text-[length:var(--game-text-base)] text-[var(--color-text-muted)] m-0">{exercise.explanation}</p>
       )}
 
       {!submitted && (
@@ -87,7 +87,7 @@ export function SentenceBuilder({ exercise, onResult }: Props) {
           onClick={handleSubmit}
           disabled={placed.length === 0}
           className={cn(
-            'mt-2 w-full rounded-lg py-3 font-semibold transition',
+            'mt-2 w-full min-h-[44px] rounded-lg py-3 text-[length:var(--game-text-base)] font-semibold transition',
             placed.length > 0
               ? 'bg-[var(--color-accent-gold)] text-[#1a1a2e] hover:brightness-110'
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
@@ -100,7 +100,7 @@ export function SentenceBuilder({ exercise, onResult }: Props) {
       {submitted && (
         <div
           className={cn(
-            'mt-4 rounded-lg px-4 py-3 text-center text-sm',
+            'mt-4 rounded-lg px-4 py-3 text-center text-[length:var(--game-text-base)]',
             isCorrect
               ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]'
               : 'bg-red-500/20 text-red-400',

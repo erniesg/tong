@@ -115,7 +115,7 @@ export function LocationSheet({
                   type="button"
                 >
                   {t('past_sessions', lang)} ({locationSessions.length})
-                  <span style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.6 }}>{showPastSessions ? '▲' : '▼'}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 'var(--game-text-xs)', opacity: 0.6 }}>{showPastSessions ? '▲' : '▼'}</span>
                 </button>
                 {showPastSessions && (
                   <div className="location-drawer__session-list">

@@ -1645,17 +1645,17 @@ export default function GamePage() {
       <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="game-frame" style={{ display: 'flex', flexDirection: 'column', background: 'var(--color-bg-dark, #1a1a2e)' }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: 'var(--color-accent-gold, #d4a843)', fontWeight: 700, fontSize: 14, letterSpacing: 1 }}>DEV</span>
-            <span style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>Exercise Tester</span>
+            <span style={{ color: 'var(--color-accent-gold, #d4a843)', fontWeight: 700, fontSize: 'var(--game-text-sm)', letterSpacing: 1 }}>DEV</span>
+            <span style={{ color: '#fff', fontWeight: 600, fontSize: 'var(--game-text-base)' }}>Exercise Tester</span>
           </div>
 
           <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <label style={{ color: '#ccc', fontSize: 13 }}>
+            <label style={{ color: '#ccc', fontSize: 'var(--game-text-sm)' }}>
               Exercise type
               <select
                 value={devExType}
                 onChange={(e) => { setDevExType(e.target.value); setDevExercise(null); setDevLastResult(null); }}
-                style={{ display: 'block', width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 14 }}
+                style={{ display: 'block', width: '100%', minHeight: 44, marginTop: 4, padding: '8px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 'var(--game-text-base)' }}
               >
                 {DEV_EX_TYPES.map((t) => (
                   <option key={t} value={t}>{t.replace('_', ' ')}</option>
@@ -1663,12 +1663,12 @@ export default function GamePage() {
               </select>
             </label>
 
-            <label style={{ color: '#ccc', fontSize: 13 }}>
+            <label style={{ color: '#ccc', fontSize: 'var(--game-text-sm)' }}>
               Objective
               <select
                 value={devObjective}
                 onChange={(e) => { setDevObjective(e.target.value); setDevExercise(null); setDevLastResult(null); }}
-                style={{ display: 'block', width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 14 }}
+                style={{ display: 'block', width: '100%', minHeight: 44, marginTop: 4, padding: '8px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 'var(--game-text-base)' }}
               >
                 {DEV_OBJECTIVES.map((o) => (
                   <option key={o.id} value={o.id}>{o.label} ({o.id})</option>
@@ -1685,19 +1685,19 @@ export default function GamePage() {
                 setDevExercise(ex);
                 setDevLastResult(null);
               }}
-              style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: 'var(--color-accent-gold, #d4a843)', color: '#1a1a2e', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+              style={{ minHeight: 44, padding: '10px 16px', borderRadius: 8, border: 'none', background: 'var(--color-accent-gold, #d4a843)', color: '#1a1a2e', fontWeight: 700, fontSize: 'var(--game-text-base)', cursor: 'pointer' }}
             >
               Generate {devExType.replace('_', ' ')}
             </button>
 
             {devLastResult && (
-              <div style={{ padding: '8px 12px', borderRadius: 6, background: devLastResult.correct ? 'rgba(76,175,80,0.2)' : 'rgba(244,67,54,0.2)', color: devLastResult.correct ? '#4caf50' : '#f44336', fontSize: 13, fontWeight: 600 }}>
+              <div style={{ padding: '8px 12px', borderRadius: 6, background: devLastResult.correct ? 'rgba(76,175,80,0.2)' : 'rgba(244,67,54,0.2)', color: devLastResult.correct ? '#4caf50' : '#f44336', fontSize: 'var(--game-text-sm)', fontWeight: 600 }}>
                 {devLastResult.correct ? 'Correct' : 'Incorrect'} — {devLastResult.id}
               </div>
             )}
 
             {devExercise && (
-              <div style={{ fontSize: 11, color: '#888', wordBreak: 'break-all', maxHeight: 120, overflow: 'auto', padding: '6px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.03)' }}>
+              <div style={{ fontSize: 'var(--game-text-xs)', color: '#888', wordBreak: 'break-all', maxHeight: 120, overflow: 'auto', padding: '6px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.03)' }}>
                 <strong>Data:</strong> {JSON.stringify(devExercise, null, 0).slice(0, 500)}
               </div>
             )}
@@ -1728,12 +1728,12 @@ export default function GamePage() {
           <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
             <button
               onClick={() => setPhase('city_map')}
-              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', padding: '4px 8px' }}
+              style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', width: 44, height: 44, padding: 0 }}
               type="button"
             >
               &larr;
             </button>
-            <span style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>
+            <span style={{ color: '#fff', fontWeight: 600, fontSize: 'var(--game-text-base)' }}>
               {CITY_NAMES[city]?.local ?? ''} {CITY_NAMES[city]?.en ?? ''} &middot; {t(`loc_${location}`, learnUiLang)}
             </span>
           </div>

@@ -57,7 +57,7 @@ export function DragDrop({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card p-5">
-      <p className="text-lg font-medium mb-2 m-0">{exercise.prompt}</p>
+      <p className="text-[length:var(--game-text-lg)] font-medium mb-2 m-0">{exercise.prompt}</p>
 
       {/* Items (source) */}
       <div className="flex flex-wrap gap-2 mb-4">
@@ -72,7 +72,7 @@ export function DragDrop({ exercise, onResult }: Props) {
               key={item.id}
               onClick={() => handleItemClick(item.id)}
               className={cn(
-                'rounded-lg px-3 py-2 text-ko transition border',
+                'rounded-lg min-h-[44px] px-3 py-2 text-ko text-[length:var(--game-text-base)] transition border',
                 !isPlaced && !isSelected && 'border-white/20 hover:border-white/40',
                 isSelected && 'border-[var(--color-primary)] bg-[var(--color-primary)]/20 scale-105',
                 isPlaced && !submitted && 'border-white/30 opacity-50',
@@ -99,13 +99,13 @@ export function DragDrop({ exercise, onResult }: Props) {
               key={target.id}
               onClick={() => handleTargetClick(target.id)}
               className={cn(
-                'rounded-lg border border-dashed px-3 py-4 text-center transition min-h-[60px]',
+                'rounded-lg border border-dashed px-3 py-4 text-center text-[length:var(--game-text-base)] transition min-h-[60px]',
                 !placedItemData && selectedItem && 'border-[var(--color-primary)]/50 hover:bg-[var(--color-primary)]/5',
                 !placedItemData && !selectedItem && 'border-white/20',
                 placedItemData && 'border-white/30 bg-white/5'
               )}
             >
-              <span className="text-xs text-[var(--color-text-muted)] block">{target.label}</span>
+              <span className="text-[length:var(--game-text-sm)] text-[var(--color-text-muted)] block">{target.label}</span>
               {placedItemData && (
                 <span className="text-ko font-medium">{placedItemData.text}</span>
               )}
@@ -119,7 +119,7 @@ export function DragDrop({ exercise, onResult }: Props) {
           onClick={handleSubmit}
           disabled={Object.keys(mapping).length < exercise.items.length}
           className={cn(
-            'w-full rounded-lg py-3 font-semibold transition',
+            'w-full min-h-[44px] rounded-lg py-3 text-[length:var(--game-text-base)] font-semibold transition',
             Object.keys(mapping).length === exercise.items.length
               ? 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)]'
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed'
@@ -130,7 +130,7 @@ export function DragDrop({ exercise, onResult }: Props) {
       ) : (
         <div
           className={cn(
-            'rounded-lg px-4 py-3 text-center font-semibold',
+            'rounded-lg px-4 py-3 text-center text-[length:var(--game-text-base)] font-semibold',
             allCorrect ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]' : 'bg-red-500/20 text-red-400'
           )}
         >
