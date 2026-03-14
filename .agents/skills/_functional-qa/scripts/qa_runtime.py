@@ -51,7 +51,7 @@ LOCAL_PATH_PATTERN = re.compile(
     r"))"
 )
 PRIVATE_REFERENCE_PATTERNS = (
-    re.compile(r"\bprivate(?:-| )?(?:repo|repository)(?!-only)\b", re.IGNORECASE),
+    re.compile(r"\bprivate(?:-| )?(?:repo|repository)(?:-only)?\b", re.IGNORECASE),
     re.compile(r"\bprivate(?:-| )?(?:branch|submodule|gist)\b", re.IGNORECASE),
     re.compile(r"\bprivate github repo\b", re.IGNORECASE),
 )
@@ -490,11 +490,16 @@ def detect_private_references(text: str) -> list[str]:
     return unique_strings(hits)
 
 
+def is_portability_meta_issue_text(text: str) -> bool:
+    lowered = text.lower()
+    return "portability preflight" in lowered and "remote agents" in lowered
+
+
 def is_game_issue(text: str, playbook: dict[str, Any] | None) -> bool:
     lowered = text.lower()
     if playbook and playbook.get("surface") == "game":
         return True
-    if "portability" in lowered and "preflight" in lowered and "/game" in lowered:
+    if is_portability_meta_issue_text(text):
         return False
     if GAME_ROUTE_PATTERN.search(text):
         return True
@@ -575,7 +580,7 @@ def detect_remote_dependencies_context(
     if any(keyword in lowered for keyword in REMOTE_DEPENDENCY_KEYWORDS):
         return {"present": False, "source": None, "value": None}
 
-    return {"present": True, "source": "inferred", "value": "repo-only"}
+    return {"present": False, "source": None, "value": None}
 
 
 def detect_checkpoint_context(
@@ -618,14 +623,19 @@ def portability_preflight(
 
     text = f"{issue_payload.get('title', '')}\n\n{issue_payload.get('body', '')}".strip()
     lowered = text.lower()
-    local_paths = detect_local_paths(text)
-    private_references = detect_private_references(text)
-    local_only_keywords = unique_strings(
-        [
-            keyword
-            for keyword in CLOUD_CONFIG.get("local_only_keywords", [])
-            if keyword != "/users/" and keyword in lowered
-        ]
+    portability_meta_issue = is_portability_meta_issue_text(text)
+    local_paths = [] if portability_meta_issue else detect_local_paths(text)
+    private_references = [] if portability_meta_issue else detect_private_references(text)
+    local_only_keywords = (
+        []
+        if portability_meta_issue
+        else unique_strings(
+            [
+                keyword
+                for keyword in CLOUD_CONFIG.get("local_only_keywords", [])
+                if keyword != "/users/" and keyword in lowered
+            ]
+        )
     )
 
     blockers: list[str] = []
