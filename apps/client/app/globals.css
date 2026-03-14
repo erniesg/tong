@@ -11,6 +11,7 @@
   --accent-dark: #c94c18;
   --mint: #0f766e;
   --mint-soft: #d1fae5;
+  --site-shell-max: 1240px;
 
   /* Game type scale — single place to tune all in-game font sizes */
   --game-text-xs: 12px;   /* meta labels, secondary info */
@@ -3777,7 +3778,7 @@ button.nav-link:hover {
    ============================== */
 
 .landing {
-  max-width: 720px;
+  max-width: var(--site-shell-max);
   margin: 0 auto;
   padding: 0 20px 64px;
 }
@@ -4325,7 +4326,7 @@ button.nav-link:hover {
 
 /* Roadmap */
 .roadmap-shell {
-  max-width: 1240px;
+  max-width: var(--site-shell-max);
   margin: 0 auto;
   padding: 0 20px 88px;
   position: relative;
