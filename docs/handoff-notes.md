@@ -52,3 +52,16 @@ Template:
 - Integration risks:
   - Tool invocation coverage currently focuses on ingestion/objective retrieval tools; connector OAuth tool set remains in `codex/server-ingestion-sync`.
 - Next owner: `codex/server-ingestion-sync` (merge/parity for live connector tool coverage)
+
+## 2026-03-15 (PR 77 runtime asset sweep)
+- Date: 2026-03-15
+- Branch/worktree: `pr-77-review` (`codex/fix-issue-#36-creative-assets-manifest`)
+- What changed:
+  - Crossing into `apps/client/public/assets/**` and runtime smoke validation to align the creative-asset manifest with live client asset references.
+  - Adding placeholder media files for currently referenced but missing runtime assets so smoke can validate the actual shipped surface instead of a partial manifest.
+- Contract changes:
+  - Runtime asset manifests now cover active client asset refs, not just starter-pack placeholders.
+  - `demo:smoke` validates concrete client `/assets/...` refs against the runtime manifest and on-disk files.
+- Integration risks:
+  - Placeholder videos unblock validation but should be replaced by final art/video as the city and cinematic packs land.
+- Next owner: `codex/client-runtime`
