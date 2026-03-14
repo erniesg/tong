@@ -112,6 +112,45 @@ const FOCUS_WINDOWS = [
   },
 ] as const;
 
+const OVERVIEW_CARDS = [
+  {
+    eyebrow: 'For players',
+    title: 'Tong becomes a world you can leave and return to',
+    copy:
+      'Resume-ready sessions and clearer progression turn the prototype into a living language game instead of a fragile one-shot flow.',
+    points: ['Return to the world map anytime', 'Resume the active hangout without replaying everything'],
+  },
+  {
+    eyebrow: 'For testers',
+    title: 'QA shifts from replay loops to short, reliable proofs',
+    copy:
+      'Deterministic checkpoints, portable issues, and reviewer-proof capture make timing-sensitive bugs faster to prove and faster to close.',
+    points: ['Short proof clips instead of full playthroughs', 'Portable issue bundles agents can rerun remotely'],
+  },
+  {
+    eyebrow: 'For agents',
+    title: 'Remote work stops depending on one laptop',
+    copy:
+      'Published assets, clearer dependencies, and proof rules make unattended implementation much more trustworthy.',
+    points: ['Agent-ready issues route cleanly by lane', 'PRs can carry media humans can actually review'],
+  },
+] as const;
+
+const VALUE_PROMISES = [
+  {
+    label: 'Product outcome',
+    title: 'A resumable, mobile-first language world',
+  },
+  {
+    label: 'Ops outcome',
+    title: 'A queue agents can work 24/7 without hidden local context',
+  },
+  {
+    label: 'Team outcome',
+    title: 'A roadmap where dependencies and blockers are visible before work starts',
+  },
+] as const;
+
 function trimTitle(title: string, maxLength: number) {
   if (title.length <= maxLength) return title;
   return `${title.slice(0, maxLength - 1).trimEnd()}...`;
@@ -173,33 +212,54 @@ function RoadmapIssueCard({ issue }: { issue: RoadmapIssue }) {
 
       <p className="roadmap-issue-copy">{issue.note ?? EXECUTION_COPY[issue.execution]}</p>
 
-      {dependencies.length ? (
-        <div className="roadmap-link-cluster">
-          <span className="roadmap-link-label">Blocked by</span>
-          <div className="roadmap-chip-row">
-            {dependencies.map((dependency) => (
-              <IssueReferenceChip key={dependency.number} issue={dependency} compact />
-            ))}
+      <details className="roadmap-issue-details">
+        <summary className="roadmap-issue-details-toggle">
+          <span>More detail</span>
+          <span>
+            {dependencies.length
+              ? `${dependencies.length} blocker${dependencies.length > 1 ? 's' : ''}`
+              : dependents.length
+                ? `${dependents.length} unlock${dependents.length > 1 ? 's' : ''}`
+                : 'scope + links'}
+          </span>
+        </summary>
+
+        <div className="roadmap-issue-details-body">
+          <p className="roadmap-issue-detail-copy">
+            {isCritical
+              ? 'This issue sits directly on the current critical path.'
+              : 'This issue matters inside the wider wave rather than the shortest unblocker chain.'}
+          </p>
+
+          {dependencies.length ? (
+            <div className="roadmap-link-cluster">
+              <span className="roadmap-link-label">Blocked by</span>
+              <div className="roadmap-chip-row">
+                {dependencies.map((dependency) => (
+                  <IssueReferenceChip key={dependency.number} issue={dependency} compact />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {dependents.length ? (
+            <div className="roadmap-link-cluster">
+              <span className="roadmap-link-label">Unlocks</span>
+              <div className="roadmap-chip-row">
+                {dependents.map((dependent) => (
+                  <IssueReferenceChip key={dependent.number} issue={dependent} compact />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="roadmap-issue-footer">
+            <a href={issueUrl(issue.number)} target="_blank" rel="noopener noreferrer" className="roadmap-open-link">
+              Open issue
+            </a>
           </div>
         </div>
-      ) : null}
-
-      {dependents.length ? (
-        <div className="roadmap-link-cluster">
-          <span className="roadmap-link-label">Unlocks</span>
-          <div className="roadmap-chip-row">
-            {dependents.map((dependent) => (
-              <IssueReferenceChip key={dependent.number} issue={dependent} compact />
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="roadmap-issue-footer">
-        <a href={issueUrl(issue.number)} target="_blank" rel="noopener noreferrer" className="roadmap-open-link">
-          Open issue
-        </a>
-      </div>
+      </details>
     </article>
   );
 }
@@ -282,6 +342,41 @@ export default function RoadmapPage() {
               <strong>{executionCounts['human-blocked']}</strong>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="roadmap-overview">
+        <article className="roadmap-overview-lead">
+          <span className="kicker">Overview</span>
+          <h2>Why this roadmap matters beyond “fix the backlog”</h2>
+          <p>
+            This is the path from a promising demo to a remotely operable product system: one where players can
+            actually resume progress, testers can report issues with enough context, and agents can take work
+            unattended without hallucinating the environment around them.
+          </p>
+          <div className="roadmap-value-grid">
+            {VALUE_PROMISES.map((value) => (
+              <div key={value.title} className="roadmap-value-card">
+                <span>{value.label}</span>
+                <strong>{value.title}</strong>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <div className="roadmap-overview-grid">
+          {OVERVIEW_CARDS.map((card) => (
+            <article key={card.title} className="roadmap-overview-card">
+              <span className="roadmap-focus-eyebrow">{card.eyebrow}</span>
+              <h3>{card.title}</h3>
+              <p>{card.copy}</p>
+              <ul className="roadmap-overview-points">
+                {card.points.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -414,11 +509,22 @@ export default function RoadmapPage() {
                   ) : null}
                 </div>
 
-                <div className="roadmap-issue-grid">
-                  {phase.issues.map((issue) => (
-                    <RoadmapIssueCard key={issue.number} issue={issue} />
-                  ))}
-                </div>
+                <details className="roadmap-phase-details" open={index <= 1}>
+                  <summary className="roadmap-phase-details-toggle">
+                    <span>View execution details</span>
+                    <span>
+                      {phase.issues.length} issues · {agentReadyCount} agent-ready · {humanBlockedCount} human-gated
+                    </span>
+                  </summary>
+
+                  <div className="roadmap-phase-details-body">
+                    <div className="roadmap-issue-grid">
+                      {phase.issues.map((issue) => (
+                        <RoadmapIssueCard key={issue.number} issue={issue} />
+                      ))}
+                    </div>
+                  </div>
+                </details>
               </div>
             </article>
           );
