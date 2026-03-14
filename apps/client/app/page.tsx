@@ -252,14 +252,14 @@ function LandingPage() {
 
         <div className="landing-hero-stage">
           <div className="landing-hero-copy">
-            <span className="kicker landing-hero-kicker">Korean. Japanese. Chinese.</span>
+            <span className="kicker landing-hero-kicker">An AI dating sim where language is gameplay.</span>
             <h1 className="landing-headline landing-headline--cinematic">
               <span className="landing-headline-line">Live the drama.</span>
               <span className="landing-headline-line">Learn the language.</span>
             </h1>
             <p className="landing-subhead landing-subhead--cinematic">
               Play as a trainee across Seoul, Shanghai, and Tokyo. <span className="landing-build">Build</span>{' '}
-              relationships or <span className="landing-burn">burn</span> them.
+              relationships or <span className="landing-burn">burn</span> them. What happens next is up to you.
             </p>
           </div>
 
