@@ -9,8 +9,11 @@ LAUNCH_TMUX="${LAUNCH_TMUX:-1}"
 "$ROOT_DIR/scripts/setup-worktrees.sh" "$BASE_BRANCH"
 
 streams=(
-  "client-shell"
+  "client-ui"
+  "client-runtime"
   "client-overlay"
+  "qa-platform"
+  "runtime-assets"
   "server-api"
   "server-ingestion"
   "game-engine"

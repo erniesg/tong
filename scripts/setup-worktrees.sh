@@ -25,8 +25,11 @@ create_worktree() {
   echo "[ok] created $branch at $path"
 }
 
-create_worktree "client-shell"
+create_worktree "client-ui"
+create_worktree "client-runtime"
 create_worktree "client-overlay"
+create_worktree "qa-platform"
+create_worktree "runtime-assets"
 create_worktree "server-api"
 create_worktree "server-ingestion"
 create_worktree "game-engine"
