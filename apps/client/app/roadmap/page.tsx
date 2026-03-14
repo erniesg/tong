@@ -267,9 +267,11 @@ export default function RoadmapPage() {
           {criticalPathIssues.map((issue, index) => (
             <article key={issue.number} className="roadmap-critical-card">
               <div className="roadmap-critical-step">Step {index + 1}</div>
-              <a href={issueUrl(issue.number)} target="_blank" rel="noopener noreferrer" className="roadmap-card-link">
-                #{issue.number} {issue.title}
-              </a>
+              <h3 className="roadmap-critical-title">
+                <a href={issueUrl(issue.number)} target="_blank" rel="noopener noreferrer" className="roadmap-card-link">
+                  #{issue.number} {issue.title}
+                </a>
+              </h3>
               <div className="roadmap-critical-meta">
                 <span className="pill">{issue.priority}</span>
                 <span className="pill">{issue.lane}</span>

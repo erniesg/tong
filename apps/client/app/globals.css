@@ -5190,8 +5190,9 @@ button.nav-link:hover {
 }
 
 .roadmap-critical-step {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  width: fit-content;
   margin-bottom: 12px;
   border-radius: 999px;
   padding: 6px 10px;
@@ -5203,11 +5204,22 @@ button.nav-link:hover {
   text-transform: uppercase;
 }
 
+.roadmap-critical-title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+}
+
+.roadmap-critical-title .roadmap-card-link {
+  display: block;
+}
+
 .roadmap-critical-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 12px 0 10px;
+  margin: 14px 0 10px;
 }
 
 .roadmap-critical-note {
