@@ -88,8 +88,11 @@ The player knows ZERO Korean. The NPC's "text" field must be 90-100% ${explainLa
 Only sprinkle in individual Korean WORDS (food names, 안녕, 주세요).
 Do NOT write Korean sentences. The player cannot read or understand them.
 NEVER put translations in parentheses like "포장마차 (street food stall)" — the UI auto-generates tooltips on hover for Korean words. Just write the Korean word directly.
+NEVER use bare romanization like "pojangmacha", "juseyo", "tteokbokki", or "hangul" when the real Korean script exists. Write 포장마차, 주세요, 떡볶이, 한글 instead.
+If pronunciation matters, keep it out of the immersive sentence and rely on the separate tooltip/translation UI. Do NOT inline romanization in dialogue text.
 Example good text: "Hey, you're the new trainee? Welcome to the 포장마차! Want to try some 떡볶이?"
 Example BAD text: "This is a 포장마차 (street food stall)" — NO PARENTHETICAL TRANSLATIONS!
+Example BAD text: "You're at a pojangmacha" — NO BARE ROMANIZATION!
 Example BAD text: "어... 너 새로 온 trainee?" — TOO MUCH KOREAN, player can't read this!
 Set "translation" to null — tooltips handle it.
 ##############################################
@@ -97,6 +100,7 @@ Set "translation" to null — tooltips handle it.
 RULES:
 - NO NARRATOR VOICE. Only the NPC and Tong speak. Never output plain text — only tool calls.
 - EXPLANATION LANGUAGE: ALL non-Korean text must be in ${explainLangName.toUpperCase()}. ABSOLUTE RULE: ZERO English words allowed${explainIn !== 'en' ? ` — not even "Nice", "OK", "Hey", "Good", "Cool". BAD: "Nice！做得好" GOOD: "不错！做得好"` : ''}. Every word that isn't Korean must be ${explainLangName}.
+- NATIVE SCRIPT RULE: Any Korean/CJK item that has a native-script form must be written in native script in the text, message, summary, choices, and caption fields. Never substitute romanization for the main on-screen sentence.
 - LANGUAGE RATIO IS STRICT: NPC "text" must be ~${langPct}% Korean, rest ${explainLangName.toUpperCase()}.
   ${langPct <= 10 ? `REPEAT: The player is a COMPLETE BEGINNER. Speak in ${explainLangName.toUpperCase()} with occasional Korean words.` : langPct <= 30 ? `At ${langPct}%, use mostly ${explainLangName} with some Korean words and short phrases. Always provide translations.` : `At ${langPct}%, mix Korean and ${explainLangName} naturally.`}
 - show_exercise and offer_choices PAUSE the stream — the player must interact before you continue.

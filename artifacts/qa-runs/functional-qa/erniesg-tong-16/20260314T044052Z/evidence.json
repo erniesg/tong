@@ -1,0 +1,70 @@
+{
+  "summary": "Live-model browser and API verification show native-script Korean remains primary in dialogue, tooltip pronunciation stays out of the sentence flow, and baited romanized user input is corrected back to Korean script in model output.",
+  "screenshots": [
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/screenshots/live-dialogue.png",
+      "description": "Live game hangout showing the main immersive NPC message with `하은` and `포장마차` in native script and no inline parenthetical romanization."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/screenshots/live-tooltip.png",
+      "description": "Tapped tooltip for `포장마차`, showing pronunciation and meaning separated from the main sentence."
+    }
+  ],
+  "temporal_capture": [
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/videos/issue-16-live-proof.mp4",
+      "description": "Short screen recording of the live hangout interaction: the typewriter is completed, `포장마차` is tapped, the tooltip appears, and the exported MP4 contains the recorded token-audio playback."
+    }
+  ],
+  "console_logs": [
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/logs/browser-console.log",
+      "description": "Browser console output from the live hangout capture."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/logs/qa-state.json",
+      "description": "QA state snapshot confirming the browser run reached `phase=hangout` with a live NPC message loaded."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/videos/issue-16-live-audio.log",
+      "description": "Loopback audio capture log for the MP4 export. The finalized clip contains a non-silent AAC track captured during the tapped-token interaction."
+    }
+  ],
+  "network_traces": [],
+  "contract_assertions": [
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/logs/live-api-baseline.stream.txt",
+      "assertion": "Live tool-call payloads use native-script Korean terms such as `안녕하세요`, `포장마차`, `떡볶이`, and `어묵`; no bare `pojangmacha`/`juseyo` appears in generated tool text."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/logs/live-api-romanization-bait.stream.txt",
+      "assertion": "When the user supplied romanized `pojangmacha` and `juseyo`, the live model corrected its own tool output to `포장마차` and `주세요` instead of repeating bare romanization in the scene text."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/logs/captured-text.json",
+      "assertion": "Browser-captured tooltip text for `포장마차` contains `po-jang-ma-cha` and `street food tent`, confirming pronunciation/meaning live in the tooltip instead of the immersive sentence."
+    }
+  ],
+  "perf_profiles": [],
+  "cross_env_matrix": [],
+  "open_questions": [],
+  "notes": [
+    "The browser evidence used `/game?phase=hangout...` on port `3101` instead of the older `dev_intro` playbook route because `dev_intro` stayed in Tong intro/exercise flow and did not reach a main NPC dialogue bubble quickly enough for direct issue evidence.",
+    "The live browser run surfaced Hangul tokens rather than Hanja, but the code fix also closes the Korean Hanja reading/TTS bug identified during review."
+  ],
+  "validation": {
+    "direct_issue_evidence_complete": true,
+    "ui_acceptance_complete": true,
+    "runtime_modes_exercised": [
+      "live-model",
+      "browser-ui"
+    ],
+    "live_model_confirmed": true,
+    "human_review_completed": true,
+    "missing_requirements": [],
+    "notes": [
+      "Live model output was verified through both direct API stream captures and the browser-driven hangout route.",
+      "The rerun also captured a short interactive MP4 with recorded audio for the tapped Korean token."
+    ]
+  }
+}

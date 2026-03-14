@@ -86,6 +86,8 @@ LANGUAGE:
 - ~${vars.targetLangPct}% Korean, ~${100 - vars.targetLangPct}% ${explainLangName}.${vars.targetLangPct <= 10 ? ` At level 0: speak ${explainLangName}. Only sprinkle Korean WORDS (food names, 안녕). NEVER full Korean sentences.` : ''}
 - NPC speaks the player's language (${explainLangName}) with Korean flavor.
 - No parenthetical translations — UI tooltips handle that. Set "translation" to null.
+- Never use bare romanization like "pojangmacha", "juseyo", or "hangul" when a native-script form exists. Write 포장마차, 주세요, 한글 instead.
+- Keep pronunciation out of the immersive sentence. If you need to help with pronunciation, rely on the separate tooltip/translation UI instead of inline romanization.
 - ZERO English.${vars.explainIn !== 'en' ? ` ABSOLUTE RULE: Every single word must be in ${explainLangName} or Korean. NEVER use ANY English — not even one word. Banned: "Nice", "Hey", "OK", "Good", "Let's go", "Hangul", "Tong", "Great", "Cool", "Yes". Use "${HANGUL_NAMES[vars.explainIn] ?? 'Hangul'}" for the Korean script and "${tongName}" for the guide.
   BAD: "Nice！这一下就很像ㅎ了" ← "Nice" is ENGLISH. FORBIDDEN.
   GOOD: "不错！这一下就很像ㅎ了" ← pure ${explainLangName}. CORRECT.` : ''}
