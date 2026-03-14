@@ -99,6 +99,21 @@ def merge_readiness_reason(reason: str, portability: dict[str, Any]) -> str:
     return reason
 
 
+def enforce_portability_blockers(
+    cloud_mode: str,
+    needs_local_acceptance: bool,
+    readiness_reason: str,
+    portability: dict[str, Any],
+) -> tuple[str, bool, str]:
+    if not portability.get("blocking") or cloud_mode == "local-only":
+        return cloud_mode, needs_local_acceptance, readiness_reason
+
+    blocked_reason = "Portability preflight failed; keep this out of unattended cloud execution until blockers are removed."
+    if blocked_reason not in readiness_reason:
+        readiness_reason = f"{readiness_reason} {blocked_reason}".strip()
+    return ("local-only", True, readiness_reason)
+
+
 def branch_name_for(issue_number: int | None, title: str) -> str:
     if issue_number is None:
         slug = slugify(title)
@@ -175,6 +190,12 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
     else:
         cloud_mode, needs_local_acceptance, readiness_reason, depends_on = default_cloud_mode(raw_issue, issue_entry)
         batch_id = "unassigned"
+    cloud_mode, needs_local_acceptance, readiness_reason = enforce_portability_blockers(
+        cloud_mode,
+        needs_local_acceptance,
+        readiness_reason,
+        portability,
+    )
     readiness_reason = merge_readiness_reason(readiness_reason, portability)
 
     issue_number = issue_entry.get("number")
