@@ -120,59 +120,11 @@
     },
     {
       "match": "#18",
-      "cloud_mode": "cloud-ready",
-      "batch": "batch-1",
-      "depends_on": [],
-      "needs_final_local_acceptance": false,
-      "reason": "The shared readability pass from #15 already landed in PR #33, so this transition bug is now the next client-shell fix in the priority wave."
-    },
-    {
-      "match": "#34",
-      "cloud_mode": "cloud-ready",
-      "batch": "batch-parallel",
-      "depends_on": [],
-      "needs_final_local_acceptance": false,
-      "reason": "QA evidence comparison tooling is repo-contained and independent of the current client-shell gameplay fixes."
-    },
-    {
-      "match": "#35",
-      "cloud_mode": "cloud-ready",
-      "batch": "batch-parallel",
-      "depends_on": [],
-      "needs_final_local_acceptance": false,
-      "reason": "The runtime asset bucket and env contract lives in infra/docs space and can move in parallel with gameplay UI work."
-    },
-    {
-      "match": "#36",
-      "cloud_mode": "cloud-ready",
-      "batch": "batch-parallel",
-      "depends_on": [],
-      "needs_final_local_acceptance": false,
-      "reason": "Canonical asset manifest work stays in the creative-assets lane and does not block the current client-shell wave."
-    },
-    {
-      "match": "#34",
-      "cloud_mode": "cloud-ready",
-      "batch": "batch-parallel",
-      "depends_on": [],
-      "needs_final_local_acceptance": false,
-      "reason": "QA evidence comparison tooling is repo-contained and independent of the current client-shell gameplay fixes."
-    },
-    {
-      "match": "#35",
-      "cloud_mode": "cloud-ready",
-      "batch": "batch-parallel",
-      "depends_on": [],
-      "needs_final_local_acceptance": false,
-      "reason": "The runtime asset bucket and env contract lives in infra/docs space and can move in parallel with gameplay UI work."
-    },
-    {
-      "match": "#36",
-      "cloud_mode": "cloud-ready",
-      "batch": "batch-parallel",
-      "depends_on": [],
-      "needs_final_local_acceptance": false,
-      "reason": "Canonical asset manifest work stays in the creative-assets lane and does not block the current client-shell wave."
+      "cloud_mode": "cloud-ready-with-local-proof",
+      "batch": "batch-2",
+      "depends_on": ["#13"],
+      "needs_final_local_acceptance": true,
+      "reason": "The transition bug is reproducible in cloud, but a fixed claim still needs reviewer-visible temporal evidence from the real Act 2 flow rather than a hidden local artifact path."
     },
     {
       "match": "#19",
