@@ -1,6 +1,6 @@
 # apps/client
 
-Next.js review app for Tong hackathon demo surfaces.
+Next.js app for Tong's web and mobile-first demo surfaces.
 
 ## Run
 

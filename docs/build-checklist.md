@@ -1,4 +1,4 @@
-# Hackathon TODOs (Living Checklist)
+# Build Checklist (Living)
 
 ## Planning + Repo Hygiene
 - [x] Add tracked execution plan for fresh Tong build

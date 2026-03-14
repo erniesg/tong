@@ -24,7 +24,7 @@ Ship the complete demo first in `local-mock` mode, then swap backend mode withou
 - Remote server.
 3. Deploy whichever backend is ready without changing core demo UI.
 
-## Definition of done for hackathon demo
+## Definition of done for the current demo
 1. Full run-of-show executes with no external dependency.
 2. One command verifies demo contracts (`npm run demo:smoke`).
 3. iOS, Android, and web can all present same narrative flow.

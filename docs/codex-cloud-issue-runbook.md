@@ -69,6 +69,14 @@ Run them serially in the listed order. They both sit in the `client-shell` lane,
 
 These can run in parallel with Batch 1 because they sit in `infra-deploy`, `creative-assets`, and non-game QA tooling lanes rather than the active `client-shell` wave.
 
+### Batch parallel
+
+- `#35` runtime asset bucket/env contract
+- `#36` canonical runtime asset manifest
+- `#34` QA evidence comparison panels
+
+These can run in parallel with Batch 1 because they sit in `infra-deploy`, `creative-assets`, and non-game QA tooling lanes rather than the active `client-shell` wave.
+
 ### Batch 2
 
 - `#14` HUD discoverability

@@ -16,7 +16,7 @@ Read these before doing substantive work:
 - `.agents/skills/_functional-qa/config/worktree-routing.json`
 - `.agents/skills/_functional-qa/config/codex-cloud.json` when the user asks for Codex cloud or GitHub PR execution
 - `docs/worktree-ownership-map.md`
-- `docs/hackathon-workstreams.md`
+- `docs/workstreams.md`
 - `docs/codex-cloud-issue-runbook.md` when the user asks for Codex cloud or GitHub PR execution
 
 The shared scripts are:
