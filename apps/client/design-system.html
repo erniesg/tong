@@ -4048,6 +4048,10 @@ button.nav-link:hover {
 
 .landing-hero-panel {
   width: 100%;
+  max-width: 392px;
+  justify-self: end;
+  align-self: end;
+  margin-top: clamp(104px, 14vh, 184px);
   border-radius: 30px;
   padding: 22px;
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -5761,6 +5765,7 @@ button.nav-link:hover {
 
   .landing-hero-panel {
     max-width: 460px;
+    margin-top: clamp(72px, 10vh, 120px);
   }
 
   .landing-hero-poster,
@@ -5857,6 +5862,12 @@ button.nav-link:hover {
 
   .landing-hero-copy {
     text-align: center;
+  }
+
+  .landing-hero-panel {
+    justify-self: stretch;
+    align-self: end;
+    margin-top: 0;
   }
 
   .landing-hero-poster,
