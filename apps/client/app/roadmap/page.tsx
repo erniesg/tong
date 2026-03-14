@@ -206,7 +206,7 @@ export default function RoadmapPage() {
     <div className="roadmap-shell">
       <section className="roadmap-hero">
         <div className="roadmap-hero-shell">
-          <SiteHeader current="roadmap" tone="dark" />
+          <SiteHeader current="roadmap" tone="dark" variant="roadmap" />
 
           <div className="roadmap-hero-copy">
             <div className="roadmap-hero-grid">
@@ -385,7 +385,7 @@ export default function RoadmapPage() {
         </div>
       </details>
 
-      <SiteFooter />
+      <SiteFooter current="roadmap" variant="roadmap" />
     </div>
   );
 }

@@ -212,7 +212,7 @@ function LandingPage() {
         <div className="landing-hero-scrim" aria-hidden="true" />
 
         <div className="landing-hero-shell">
-          <SiteHeader current="home" tone="dark" />
+          <SiteHeader current="home" tone="dark" variant="home" />
 
           <div className="landing-hero-stage">
             <div className="landing-hero-copy">
@@ -374,7 +374,7 @@ function LandingPage() {
       </section>
 
       {/* Footer */}
-      <SiteFooter />
+      <SiteFooter current="home" variant="home" />
     </div>
   );
 }

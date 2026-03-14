@@ -5,9 +5,18 @@ import Link from 'next/link';
 
 import { ROADMAP_PROJECT_URL, ROADMAP_REPO_URL } from '@/lib/content/roadmap';
 
-export default function SiteFooter() {
+type SiteFooterProps = {
+  current: 'home' | 'roadmap';
+  variant?: 'home' | 'roadmap';
+};
+
+function getNavLinkClassName(isActive: boolean) {
+  return `nav-link${isActive ? ' is-active' : ''}`;
+}
+
+export default function SiteFooter({ current, variant = current }: SiteFooterProps) {
   return (
-    <footer className="landing-footer site-footer">
+    <footer className={`landing-footer site-footer site-footer--${variant}`}>
       <div className="landing-footer-brand site-footer-brand">
         <span className="site-brand-mark site-brand-mark--footer">
           <Image
@@ -21,10 +30,14 @@ export default function SiteFooter() {
         <span>Tong — Live the drama. Learn the language.</span>
       </div>
       <div className="landing-footer-links site-footer-links">
-        <Link href="/" className="nav-link">
+        <Link href="/" className={getNavLinkClassName(current === 'home')} aria-current={current === 'home' ? 'page' : undefined}>
           Home
         </Link>
-        <Link href="/roadmap" className="nav-link">
+        <Link
+          href="/roadmap"
+          className={getNavLinkClassName(current === 'roadmap')}
+          aria-current={current === 'roadmap' ? 'page' : undefined}
+        >
           Roadmap
         </Link>
         <a href={ROADMAP_PROJECT_URL} target="_blank" rel="noopener noreferrer" className="nav-link">

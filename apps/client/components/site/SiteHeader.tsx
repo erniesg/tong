@@ -8,15 +8,16 @@ import { ROADMAP_PROJECT_URL, ROADMAP_REPO_URL } from '@/lib/content/roadmap';
 type SiteHeaderProps = {
   current: 'home' | 'roadmap';
   tone?: 'light' | 'dark';
+  variant?: 'home' | 'roadmap';
 };
 
 function getNavLinkClassName(isActive: boolean) {
   return `nav-link${isActive ? ' is-active' : ''}`;
 }
 
-export default function SiteHeader({ current, tone = 'light' }: SiteHeaderProps) {
+export default function SiteHeader({ current, tone = 'light', variant = current }: SiteHeaderProps) {
   return (
-    <nav className={`landing-nav site-header site-header--${tone}`}>
+    <nav className={`landing-nav site-header site-header--${tone} site-header--${variant}`}>
       <Link href="/" className="landing-nav-brand site-brand">
         <span className="site-brand-mark">
           <Image
