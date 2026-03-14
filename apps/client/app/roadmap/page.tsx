@@ -270,12 +270,9 @@ export default function RoadmapPage() {
         <div className="roadmap-hero-copy">
           <div className="roadmap-hero-grid">
             <div className="roadmap-hero-copy-column">
-              <span className="kicker">Roadmap</span>
-              <h1 className="roadmap-title">Tong, in three waves.</h1>
-              <p className="roadmap-subhead">
-                Remote-first foundations first. Resume and deterministic checkpoints second. Polish, KG, and starter
-                content after that.
-              </p>
+          <span className="kicker">Roadmap</span>
+          <h1 className="roadmap-title">Tong, in three waves.</h1>
+          <p className="roadmap-subhead">Each wave unlocks the next.</p>
               <div className="roadmap-actions">
                 <a href={ROADMAP_PROJECT_URL} target="_blank" rel="noopener noreferrer" className="button">
                   Open GitHub Project
@@ -321,7 +318,11 @@ export default function RoadmapPage() {
 
         <div className="roadmap-focus-grid">
           {FOCUS_WINDOWS.map((window) => (
-            <article key={window.key} className={`roadmap-focus-card roadmap-focus-card--${window.key}`}>
+            <article
+              id={`wave-${window.key}`}
+              key={window.key}
+              className={`roadmap-focus-card roadmap-focus-card--${window.key}`}
+            >
               <div className="roadmap-focus-card-head">
                 <span className="roadmap-focus-stage">{window.stage}</span>
                 <span className="roadmap-focus-eyebrow">{window.eyebrow}</span>

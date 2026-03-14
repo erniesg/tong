@@ -75,29 +75,29 @@ export default function RoadmapWaveVisual() {
         </g>
       </svg>
 
-      <div className="roadmap-wave-label roadmap-wave-label--one">
+      <a href="#wave-now" className="roadmap-wave-label roadmap-wave-label--one">
         <span className="roadmap-wave-label-index">01</span>
         <div>
           <strong>Remote-first</strong>
           <small>proof + assets</small>
         </div>
-      </div>
+      </a>
 
-      <div className="roadmap-wave-label roadmap-wave-label--two">
+      <a href="#wave-next" className="roadmap-wave-label roadmap-wave-label--two">
         <span className="roadmap-wave-label-index">02</span>
         <div>
           <strong>Resume</strong>
           <small>checkpoints + seeds</small>
         </div>
-      </div>
+      </a>
 
-      <div className="roadmap-wave-label roadmap-wave-label--three">
+      <a href="#wave-later" className="roadmap-wave-label roadmap-wave-label--three">
         <span className="roadmap-wave-label-index">03</span>
         <div>
           <strong>Expand</strong>
           <small>polish + KG + content</small>
         </div>
-      </div>
+      </a>
     </div>
   );
 }
