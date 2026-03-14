@@ -380,10 +380,10 @@ const FALLBACK_MSGS: Record<string, Record<string, string>> = {
     ja: '母音は難しいこともあります。練習すれば上達しますよ！',
   },
   food_intro: {
-    en: "Now let's learn some food words you'll see at a 포장마차 (street food stall)!",
-    zh: '现在来学在포장마차（小吃摊）会看到的美食词汇吧！',
+    en: "Now let's learn some food words you'll see at a 포장마차!",
+    zh: '现在来学在포장마차会看到的美食词汇吧！',
     ko: '이제 포장마차에서 볼 수 있는 음식 단어를 배워보자!',
-    ja: 'ポジャンマチャ（屋台）で見かける食べ物の言葉を学びましょう！',
+    ja: 'ポジャンマチャで見かける食べ物の言葉を学びましょう！',
   },
   great_job: {
     en: "Awesome! You're doing great!",
