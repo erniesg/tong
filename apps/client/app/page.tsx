@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback, FormEvent, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 
 import TongHeroVideo from '@/components/landing/TongHeroVideo';
+import SiteFooter from '@/components/site/SiteFooter';
+import SiteHeader from '@/components/site/SiteHeader';
 
 const API_BASE = 'https://tong-api.erniesg.workers.dev';
 
@@ -60,12 +61,6 @@ const FAQ_ITEMS = [
     q: 'Is Tong free?',
     a: 'Tong is open source and free to play. Some AI-powered features may cost money down the road\u00a0\u2014\u00a0those generations aren\u2019t free to run\u00a0\u2014\u00a0but the core game will always be free.',
   },
-];
-
-const CITIES = [
-  { name: 'Shanghai', lang: 'Mandarin', char: '\u4E2D', flag: '\uD83C\uDDE8\uD83C\uDDF3' },
-  { name: 'Tokyo', lang: 'Japanese', char: '\u65E5', flag: '\uD83C\uDDEF\uD83C\uDDF5' },
-  { name: 'Seoul', lang: 'Korean', char: '\uD55C', flag: '\uD83C\uDDF0\uD83C\uDDF7' },
 ];
 
 const STEPS = [
@@ -211,170 +206,128 @@ function LandingPage() {
 
   return (
     <div className="landing">
-      {/* Nav */}
-      <nav className="landing-nav">
-        <a href="/" className="landing-nav-brand">
-          <Image
-            src="/assets/app/logo_trimmed.png"
-            alt="Tong"
-            width={30}
-            height={30}
-            className="landing-nav-logo"
-          />
-          <div className="landing-brand-cycle">
-            <span>tōng</span>
-            <span>통</span>
-            <span>つう</span>
-          </div>
-        </a>
-        <div className="landing-nav-links">
-          <a href="/roadmap" className="nav-link">
-            Roadmap
-          </a>
-          <a
-            href="https://github.com/erniesg/tong"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-link"
-          >
-            GitHub
-          </a>
-          <span className="button landing-play-btn disabled">
-            Coming Soon
-          </span>
-        </div>
-      </nav>
-
       {/* Hero */}
       <section className="landing-hero landing-hero--cinematic">
         <TongHeroVideo />
         <div className="landing-hero-scrim" aria-hidden="true" />
 
-        <div className="landing-hero-stage">
-          <div className="landing-hero-copy">
-            <span className="kicker landing-hero-kicker">An AI dating sim where language is gameplay.</span>
-            <h1 className="landing-headline landing-headline--cinematic">
-              <span className="landing-headline-line">Live the drama.</span>
-              <span className="landing-headline-line">Learn the language.</span>
-            </h1>
-            <p className="landing-subhead landing-subhead--cinematic">
-              Play as a trainee across Seoul, Shanghai, and Tokyo. <span className="landing-build">Build</span>{' '}
-              relationships or <span className="landing-burn">burn</span> them. What happens next is up to you.
-            </p>
-          </div>
+        <div className="landing-hero-shell">
+          <SiteHeader current="home" tone="dark" />
 
-          <div className="landing-hero-panel">
-            {status === 'success' ? (
-              <div className="landing-prefs-card landing-prefs-card--hero">
-                <p className="landing-prefs-confirmed">You&apos;re on the list.</p>
-                {!prefsDone ? (
-                  <>
-                    <p className="landing-prefs-hint">
-                      Tell us what you already know — we&apos;ll skip the basics when you start playing.
+          <div className="landing-hero-stage">
+            <div className="landing-hero-copy">
+              <span className="kicker landing-hero-kicker">An AI dating sim where language is gameplay.</span>
+              <h1 className="landing-headline landing-headline--cinematic">
+                <span className="landing-headline-line">Live the drama.</span>
+                <span className="landing-headline-line">Learn the language.</span>
+              </h1>
+              <p className="landing-subhead landing-subhead--cinematic">
+                Play as a trainee across Seoul, Shanghai, and Tokyo. <span className="landing-build">Build</span>{' '}
+                relationships or <span className="landing-burn">burn</span> them. What happens next is up to you.
+              </p>
+            </div>
+
+            <div className="landing-hero-panel">
+              {status === 'success' ? (
+                <div className="landing-prefs-card landing-prefs-card--hero">
+                  <p className="landing-prefs-confirmed">You&apos;re on the list.</p>
+                  {!prefsDone ? (
+                    <>
+                      <p className="landing-prefs-hint">
+                        Tell us what you already know — we&apos;ll skip the basics when you start playing.
+                      </p>
+                      <div className="landing-gauge-card">
+                        {CJK_LANGS.map((lang) => {
+                          const prof = gaugeToProf(gauge[lang]);
+                          return (
+                            <div key={lang} className="landing-gauge-row">
+                              <div className="landing-gauge-head">
+                                <strong>{LANG_LABELS[lang]}</strong>
+                                <span>{gauge[lang] + 1}/7 · {profLabel(prof)}</span>
+                              </div>
+                              <input
+                                type="range"
+                                min={0}
+                                max={MAX_GAUGE}
+                                step={1}
+                                value={gauge[lang]}
+                                onChange={(e) => handleGauge(lang, Number(e.target.value))}
+                              />
+                              <div className="landing-gauge-meta">
+                                <small>{profSub(prof)}</small>
+                                <span className="landing-explain-in">
+                                  <span>learn&nbsp;in</span>
+                                  <select
+                                    value={explainIn[lang]}
+                                    onChange={(e) => handleExplainIn(lang, e.target.value as ExplainLang)}
+                                  >
+                                    {EXPLAIN_OPTIONS.filter((o) => o.value !== lang).map((o) => (
+                                      <option key={o.value} value={o.value}>
+                                        {o.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {toast && <p className="landing-toast">{toast}</p>}
+                      <div className="landing-prefs-actions">
+                        {!fromEmail && (
+                          <button
+                            type="button"
+                            className="landing-prefs-skip"
+                            onClick={() => {
+                              setPrefsDone(true);
+                              if (!prefsWereSaved) {
+                                fetch(`${API_BASE}/api/v1/signup/skip-preferences`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ email: signedUpEmail }),
+                                }).catch(() => {});
+                              }
+                            }}
+                          >
+                            {prefsWereSaved ? 'Done' : 'Skip for now'}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="landing-prefs-done">
+                      {prefsWereSaved ? "Saved — we'll fast-forward your onboarding." : "We'll email you when Tong is ready."}
                     </p>
-                    <div className="landing-gauge-card">
-                      {CJK_LANGS.map((lang) => {
-                        const prof = gaugeToProf(gauge[lang]);
-                        return (
-                          <div key={lang} className="landing-gauge-row">
-                            <div className="landing-gauge-head">
-                              <strong>{LANG_LABELS[lang]}</strong>
-                              <span>{gauge[lang] + 1}/7 · {profLabel(prof)}</span>
-                            </div>
-                            <input
-                              type="range"
-                              min={0}
-                              max={MAX_GAUGE}
-                              step={1}
-                              value={gauge[lang]}
-                              onChange={(e) => handleGauge(lang, Number(e.target.value))}
-                            />
-                            <div className="landing-gauge-meta">
-                              <small>{profSub(prof)}</small>
-                              <span className="landing-explain-in">
-                                <span>learn&nbsp;in</span>
-                                <select
-                                  value={explainIn[lang]}
-                                  onChange={(e) => handleExplainIn(lang, e.target.value as ExplainLang)}
-                                >
-                                  {EXPLAIN_OPTIONS.filter((o) => o.value !== lang).map((o) => (
-                                    <option key={o.value} value={o.value}>
-                                      {o.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {toast && <p className="landing-toast">{toast}</p>}
-                    <div className="landing-prefs-actions">
-                      {!fromEmail && (
-                        <button
-                          type="button"
-                          className="landing-prefs-skip"
-                          onClick={() => {
-                            setPrefsDone(true);
-                            if (!prefsWereSaved) {
-                              fetch(`${API_BASE}/api/v1/signup/skip-preferences`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ email: signedUpEmail }),
-                              }).catch(() => {});
-                            }
-                          }}
-                        >
-                          {prefsWereSaved ? 'Done' : 'Skip for now'}
-                        </button>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <p className="landing-prefs-done">
-                    {prefsWereSaved ? "Saved — we'll fast-forward your onboarding." : "We'll email you when Tong is ready."}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <>
-                <form className="landing-signup landing-signup--hero" onSubmit={handleSubmit}>
-                  <input
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="landing-email-input"
-                  />
-                  <button
-                    type="submit"
-                    disabled={status === 'sending'}
-                    className="landing-signup-btn"
-                  >
-                    {status === 'sending' ? 'Sending...' : 'Notify Me'}
-                  </button>
-                </form>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <form className="landing-signup landing-signup--hero" onSubmit={handleSubmit}>
+                    <input
+                      type="email"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="landing-email-input"
+                    />
+                    <button
+                      type="submit"
+                      disabled={status === 'sending'}
+                      className="landing-signup-btn"
+                    >
+                      {status === 'sending' ? 'Sending...' : 'Notify Me'}
+                    </button>
+                  </form>
 
-                {status === 'error' ? <p className="landing-error landing-error--hero">{errorMsg}</p> : null}
-                <p className="landing-micro landing-micro--hero">We&apos;ll email you when Tong is ready.</p>
-              </>
-            )}
+                  {status === 'error' ? <p className="landing-error landing-error--hero">{errorMsg}</p> : null}
+                  <p className="landing-micro landing-micro--hero">We&apos;ll email you when Tong is ready.</p>
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </section>
-
-      {/* Cities */}
-      <section className="landing-cities">
-        {CITIES.map((city) => (
-          <div key={city.name} className="card landing-city-card">
-            <span className="landing-city-char">{city.char}</span>
-            <span className="landing-city-flag">{city.flag}</span>
-            <h3>{city.name}</h3>
-            <p>{city.lang}</p>
-          </div>
-        ))}
       </section>
 
       {/* How it works */}
@@ -421,40 +374,7 @@ function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="landing-footer">
-        <div className="landing-footer-brand">
-          <Image
-            src="/assets/app/logo_trimmed.png"
-            alt="Tong"
-            width={30}
-            height={30}
-          />
-          <span>Tong — Live the drama. Learn the language.</span>
-        </div>
-        <div className="landing-footer-links">
-          <a href="/roadmap" className="nav-link">
-            Roadmap
-          </a>
-          <a
-            href="https://github.com/users/erniesg/projects/3"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-link"
-          >
-            Project
-          </a>
-          <a
-            href="https://github.com/erniesg/tong"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-link"
-          >
-            GitHub
-          </a>
-          <span className="landing-footer-sep">&middot;</span>
-          <span>Built by <a href="https://berlayar.ai" target="_blank" rel="noopener noreferrer">Berlayar</a></span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -1,14 +1,13 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
-import Link from 'next/link';
 
 import RoadmapWaveVisual from '@/components/roadmap/RoadmapWaveVisual';
+import SiteFooter from '@/components/site/SiteFooter';
+import SiteHeader from '@/components/site/SiteHeader';
 
 import {
   CRITICAL_PATH,
   ROADMAP_PHASES,
   ROADMAP_PROJECT_URL,
-  ROADMAP_REPO_URL,
   issueUrl,
   type RoadmapExecution,
   type RoadmapIssue,
@@ -88,39 +87,6 @@ const executionCounts = ROADMAP_PHASES.flatMap((phase) => phase.issues).reduce(
 );
 
 const totalIssues = ROADMAP_PHASES.reduce((count, phase) => count + phase.issues.length, 0);
-
-const FOCUS_WINDOWS = [
-  {
-    key: 'now',
-    stage: '01',
-    detailTarget: 'phase-0',
-    eyebrow: 'Unlock first',
-    title: 'Remote-first foundations',
-    summary: 'Make QA, assets, and proof portable enough for unattended remote work.',
-    benefits: ['Portable QA', 'Published assets', 'Reviewable proof'],
-    issueNumbers: [66, 65, 29, 35, 36, 46],
-  },
-  {
-    key: 'next',
-    stage: '02',
-    detailTarget: 'phase-2',
-    eyebrow: 'Unlock second',
-    title: 'Resume + checkpoints',
-    summary: 'Let players return anytime and let QA jump straight to seeded states.',
-    benefits: ['Return to map', 'Resume state', 'Checkpoint seeds'],
-    issueNumbers: [37, 38, 47, 48, 49, 51],
-  },
-  {
-    key: 'later',
-    stage: '03',
-    detailTarget: 'phase-3',
-    eyebrow: 'Then accelerate',
-    title: 'Polish + expansion',
-    summary: 'Only after the foundation holds should Tong widen into UX polish, KG, and starter packs.',
-    benefits: ['Playtest polish', 'KG rollout', 'Starter packs'],
-    issueNumbers: [31, 17, 19, 53, 60, 69],
-  },
-] as const;
 
 function trimTitle(title: string, maxLength: number) {
   if (title.length <= maxLength) return title;
@@ -238,112 +204,50 @@ function RoadmapIssueCard({ issue }: { issue: RoadmapIssue }) {
 export default function RoadmapPage() {
   return (
     <div className="roadmap-shell">
-      <nav className="landing-nav roadmap-nav">
-        <Link href="/" className="landing-nav-brand">
-          <Image
-            src="/assets/app/logo_trimmed.png"
-            alt="Tong"
-            width={30}
-            height={30}
-            className="landing-nav-logo"
-          />
-          <div className="landing-brand-cycle">
-            <span>tōng</span>
-            <span>통</span>
-            <span>つう</span>
-          </div>
-        </Link>
-        <div className="landing-nav-links">
-          <Link href="/" className="nav-link">
-            Home
-          </Link>
-          <a href={ROADMAP_REPO_URL} target="_blank" rel="noopener noreferrer" className="nav-link">
-            GitHub Repo
-          </a>
-          <a href={ROADMAP_PROJECT_URL} target="_blank" rel="noopener noreferrer" className="nav-link">
-            GitHub Project
-          </a>
-        </div>
-      </nav>
-
       <section className="roadmap-hero">
-        <div className="roadmap-hero-copy">
-          <div className="roadmap-hero-grid">
-            <div className="roadmap-hero-copy-column">
-          <span className="kicker">Roadmap</span>
-          <h1 className="roadmap-title">Tong, in three waves.</h1>
-          <p className="roadmap-subhead">Each wave unlocks the next.</p>
-              <div className="roadmap-actions">
-                <a href={ROADMAP_PROJECT_URL} target="_blank" rel="noopener noreferrer" className="button">
-                  Open GitHub Project
-                </a>
-                <a href="#roadmap-critical-path" className="button secondary">
-                  Jump To Critical Path
-                </a>
+        <div className="roadmap-hero-shell">
+          <SiteHeader current="roadmap" tone="dark" />
+
+          <div className="roadmap-hero-copy">
+            <div className="roadmap-hero-grid">
+              <div className="roadmap-hero-copy-column">
+                <span className="kicker landing-hero-kicker">Roadmap</span>
+                <h1 className="roadmap-title">Tong, in three waves.</h1>
+                <p className="roadmap-subhead">
+                  Tap a wave to jump straight to its execution phase below. The visual is the roadmap.
+                </p>
+                <div className="roadmap-actions">
+                  <a href={ROADMAP_PROJECT_URL} target="_blank" rel="noopener noreferrer" className="button">
+                    Open GitHub Project
+                  </a>
+                  <a href="#roadmap-critical-path" className="button secondary">
+                    Jump To Critical Path
+                  </a>
+                </div>
               </div>
+
+              <RoadmapWaveVisual />
             </div>
 
-            <RoadmapWaveVisual />
+            <div className="roadmap-signal-row">
+              <div className="roadmap-signal-pill">
+                <span>Critical path</span>
+                <strong>{CRITICAL_PATH.length}</strong>
+              </div>
+              <div className="roadmap-signal-pill">
+                <span>Agent-ready</span>
+                <strong>{executionCounts['agent-ready']}</strong>
+              </div>
+              <div className="roadmap-signal-pill">
+                <span>Total scope</span>
+                <strong>{totalIssues}</strong>
+              </div>
+              <div className="roadmap-signal-pill roadmap-signal-pill--muted">
+                <span>Human-blocked</span>
+                <strong>{executionCounts['human-blocked']}</strong>
+              </div>
+            </div>
           </div>
-
-          <div className="roadmap-signal-row">
-            <div className="roadmap-signal-pill">
-              <span>Critical path</span>
-              <strong>{CRITICAL_PATH.length}</strong>
-            </div>
-            <div className="roadmap-signal-pill">
-              <span>Agent-ready</span>
-              <strong>{executionCounts['agent-ready']}</strong>
-            </div>
-            <div className="roadmap-signal-pill">
-              <span>Total scope</span>
-              <strong>{totalIssues}</strong>
-            </div>
-            <div className="roadmap-signal-pill roadmap-signal-pill--muted">
-              <span>Human-blocked</span>
-              <strong>{executionCounts['human-blocked']}</strong>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="roadmap-waves">
-        <div className="roadmap-section-head roadmap-section-head--tight">
-          <div>
-            <span className="kicker">Now / Next / Later</span>
-            <h2>One sequence, three waves</h2>
-          </div>
-          <p>Each wave only exists to unlock the next one.</p>
-        </div>
-
-        <div className="roadmap-focus-grid">
-          {FOCUS_WINDOWS.map((window) => (
-            <article
-              id={`wave-${window.key}`}
-              key={window.key}
-              className={`roadmap-focus-card roadmap-focus-card--${window.key}`}
-            >
-              <div className="roadmap-focus-card-head">
-                <span className="roadmap-focus-stage">{window.stage}</span>
-                <span className="roadmap-focus-eyebrow">{window.eyebrow}</span>
-              </div>
-              <h2>{window.title}</h2>
-              <p>{window.summary}</p>
-              <div className="roadmap-chip-row">
-                {window.benefits.map((benefit) => (
-                  <span key={benefit} className="roadmap-mini-chip">
-                    {benefit}
-                  </span>
-                ))}
-              </div>
-              <div className="roadmap-focus-footer">
-                <span className="pill">{window.issueNumbers.length} issues</span>
-                <a href={`#${window.detailTarget}`} className="roadmap-open-link">
-                  See details
-                </a>
-              </div>
-            </article>
-          ))}
         </div>
       </section>
 
@@ -478,6 +382,8 @@ export default function RoadmapPage() {
           </section>
         </div>
       </details>
+
+      <SiteFooter />
     </div>
   );
 }

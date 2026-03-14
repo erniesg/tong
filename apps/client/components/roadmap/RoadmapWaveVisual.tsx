@@ -1,15 +1,17 @@
 export default function RoadmapWaveVisual() {
   return (
-    <div className="roadmap-wave-viz" aria-hidden="true">
-      <div className="roadmap-wave-viz-aurora roadmap-wave-viz-aurora--ember" />
-      <div className="roadmap-wave-viz-aurora roadmap-wave-viz-aurora--lagoon" />
-      <div className="roadmap-wave-viz-aurora roadmap-wave-viz-aurora--cobalt" />
+    <nav className="roadmap-wave-viz" aria-label="Roadmap waves">
+      <div className="roadmap-wave-viz-aurora roadmap-wave-viz-aurora--ember" aria-hidden="true" />
+      <div className="roadmap-wave-viz-aurora roadmap-wave-viz-aurora--lagoon" aria-hidden="true" />
+      <div className="roadmap-wave-viz-aurora roadmap-wave-viz-aurora--cobalt" aria-hidden="true" />
 
       <svg
         className="roadmap-wave-svg"
         viewBox="0 0 640 420"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        focusable="false"
       >
         <defs>
           <linearGradient id="roadmapWaveGlow01" x1="0" y1="320" x2="640" y2="180" gradientUnits="userSpaceOnUse">
@@ -75,7 +77,7 @@ export default function RoadmapWaveVisual() {
         </g>
       </svg>
 
-      <a href="#wave-now" className="roadmap-wave-label roadmap-wave-label--one">
+      <a href="#phase-0" className="roadmap-wave-label roadmap-wave-label--one">
         <span className="roadmap-wave-label-index">01</span>
         <div>
           <strong>Remote-first</strong>
@@ -83,7 +85,7 @@ export default function RoadmapWaveVisual() {
         </div>
       </a>
 
-      <a href="#wave-next" className="roadmap-wave-label roadmap-wave-label--two">
+      <a href="#phase-2" className="roadmap-wave-label roadmap-wave-label--two">
         <span className="roadmap-wave-label-index">02</span>
         <div>
           <strong>Resume</strong>
@@ -91,13 +93,13 @@ export default function RoadmapWaveVisual() {
         </div>
       </a>
 
-      <a href="#wave-later" className="roadmap-wave-label roadmap-wave-label--three">
+      <a href="#phase-3" className="roadmap-wave-label roadmap-wave-label--three">
         <span className="roadmap-wave-label-index">03</span>
         <div>
           <strong>Expand</strong>
           <small>polish + KG + content</small>
         </div>
       </a>
-    </div>
+    </nav>
   );
 }
