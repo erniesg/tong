@@ -50,6 +50,11 @@ def run_command(command: list[str], *, cwd: Path | None = None, allow_failure: b
     return result
 
 
+def print_command_failure(label: str, result: subprocess.CompletedProcess[str]) -> None:
+    details = result.stderr.strip() or result.stdout.strip() or f"exit code {result.returncode}"
+    print(f"{label} failed: {details}")
+
+
 def slugify(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     return slug[:80] or "target"
@@ -434,6 +439,68 @@ def render_publish(run: dict[str, Any], run_dir: Path) -> str:
     return rendered
 
 
+def load_evidence(run_dir: Path) -> dict[str, Any]:
+    evidence_path = run_dir / "evidence.json"
+    if not evidence_path.exists():
+        return {}
+    return load_json(evidence_path)
+
+
+def should_attempt_uploaded_reviewer_comment(run: dict[str, Any], evidence: dict[str, Any]) -> bool:
+    if run.get("evidence_plan", {}).get("requires_ui_capture"):
+        return True
+
+    visual_sections = (
+        "screenshots",
+        "comparison_panels",
+        "comparison_focus_crops",
+        "temporal_capture",
+    )
+    return any(evidence.get(section) for section in visual_sections)
+
+
+def render_uploaded_comment(run_dir: Path, *, dry_run: bool) -> Path | None:
+    upload_script = REPO_ROOT / "scripts" / "upload-qa-evidence.mjs"
+    render_script = REPO_ROOT / "scripts" / "render-qa-comment.mjs"
+    if not upload_script.exists() or not render_script.exists():
+        return None
+
+    upload_command = [
+        "node",
+        str(upload_script),
+        "--run-dir",
+        str(run_dir),
+        "--include-supporting",
+    ]
+    if dry_run:
+        upload_command.append("--dry-run")
+
+    upload_result = run_command(upload_command, allow_failure=True)
+    if upload_result.returncode != 0:
+        print_command_failure("Evidence upload", upload_result)
+        return None
+
+    render_result = run_command(
+        [
+            "node",
+            str(render_script),
+            "--run-dir",
+            str(run_dir),
+        ],
+        allow_failure=True,
+    )
+    if render_result.returncode != 0:
+        print_command_failure("Uploaded comment render", render_result)
+        return None
+
+    uploaded_comment_path = run_dir / "uploaded-comment.md"
+    if not uploaded_comment_path.exists():
+        print(f"Uploaded comment render succeeded but {relative_to_repo(uploaded_comment_path)} was not created.")
+        return None
+
+    return uploaded_comment_path
+
+
 def summary_is_placeholder(summary_text: str) -> bool:
     return "Replace this scaffold with the actual validation findings." in summary_text
 
@@ -590,9 +657,17 @@ def publish_github(args: argparse.Namespace) -> int:
         print(message)
         return 0
 
-    body = (run_dir / "publish.md").read_text(encoding="utf-8")
+    body_path = run_dir / "publish.md"
+    if not args.no_auto_evidence_upload:
+        evidence = load_evidence(run_dir)
+        if should_attempt_uploaded_reviewer_comment(run, evidence):
+            uploaded_comment_path = render_uploaded_comment(run_dir, dry_run=args.dry_run)
+            if uploaded_comment_path:
+                body_path = uploaded_comment_path
+
+    body = body_path.read_text(encoding="utf-8")
     if args.dry_run:
-        print(f"Dry run: would publish comment for {issue_ref} from {relative_to_repo(run_dir / 'publish.md')}")
+        print(f"Dry run: would publish comment for {issue_ref} from {relative_to_repo(body_path)}")
         return 0
 
     repo, number = issue_ref.split("#", 1)
@@ -664,6 +739,11 @@ def build_parser() -> argparse.ArgumentParser:
     publish_parser.add_argument("--run-dir", required=True)
     publish_parser.add_argument("--dry-run", action="store_true")
     publish_parser.add_argument("--force", action="store_true")
+    publish_parser.add_argument(
+        "--no-auto-evidence-upload",
+        action="store_true",
+        help="Skip reviewer-proof upload/comment generation and publish publish.md directly.",
+    )
     publish_parser.set_defaults(func=publish_github)
 
     policy_parser = subparsers.add_parser("show-policy", help="Print the active publish policy.")
