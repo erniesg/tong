@@ -32,12 +32,17 @@ import { t } from '@/lib/i18n/ui-strings';
 import type { UILang } from '@/lib/i18n/ui-strings';
 import { GameHUD } from '@/components/hud/GameHUD';
 import { ExerciseModal } from '@/components/learn/ExerciseModal';
+import { resolveRuntimeAssetUrl, runtimeAssetUrl } from '@/lib/runtime-assets';
 
 /* ── scene constants ────────────────────────────────────── */
 
+const GAME_LOGO_URL = runtimeAssetUrl('app.logo.transparent.default');
+const GAME_INTRO_VIDEO_URL = runtimeAssetUrl('app.intro.video.default');
+const SEOUL_FOOD_STREET_BACKDROP_URL = runtimeAssetUrl('city.seoul.location.food-street.backdrop.default');
+
 const NPC_SPRITES: Record<string, { name: string; nameLocal: string; nameZh: string; src: string; idleVideo?: string; color: string }> = {
-  haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: '/assets/characters/haeun/haeun.png', color: '#e8485c' },
-  jin: { name: 'Jin', nameLocal: '진', nameZh: '珍', src: '/assets/characters/jin/jin.png', color: '#4a90d9' },
+  haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: runtimeAssetUrl('character.haeun.portrait.default'), color: '#e8485c' },
+  jin: { name: 'Jin', nameLocal: '진', nameZh: '珍', src: runtimeAssetUrl('character.jin.portrait.default'), color: '#4a90d9' },
 };
 
 const NPC_POOL = ['haeun', 'jin'] as const;
@@ -499,7 +504,7 @@ export default function GamePage() {
       exitLine: exitLineRef.current,
       exercisesDone: introExerciseCount,
       introAct,
-      backdropUrl: '/assets/backdrops/seoul/pojangmacha.png',
+      backdropUrl: SEOUL_FOOD_STREET_BACKDROP_URL,
       chargePercent,
       chargeComplete: chargePercent >= 100,
     };
@@ -586,7 +591,7 @@ export default function GamePage() {
         exitLine: exitLineRef.current,
         exercisesDone: 0,
         introAct: 1 as const,
-        backdropUrl: '/assets/backdrops/seoul/pojangmacha.png',
+        backdropUrl: SEOUL_FOOD_STREET_BACKDROP_URL,
         chargePercent: 0,
         chargeComplete: false,
       };
@@ -736,7 +741,7 @@ export default function GamePage() {
       exitLine: exitLineRef.current,
       exercisesDone: fakeExercises,
       introAct: startAct as 1 | 2,
-      backdropUrl: '/assets/backdrops/seoul/pojangmacha.png',
+      backdropUrl: SEOUL_FOOD_STREET_BACKDROP_URL,
     };
 
     const startMsg = `${buildContextBlock(0, npcId, devCity, 'food_street', npcChar, devLang, introCtx)}${startAct === 2 ? 'Act 1 complete. Player already learned basic jamo (ㅎ, ㅏ, ㅇ, ㅡ, ㄴ) and built syllable blocks. Start Act 2 — NPC entrance.' : 'Start the scene.'}`;
@@ -1302,7 +1307,7 @@ export default function GamePage() {
             <video
               ref={openingVideoRef}
               className="tg-opening-vid"
-              src="/assets/tong_intro.webm"
+              src={GAME_INTRO_VIDEO_URL}
               autoPlay
               muted
               playsInline
@@ -1326,7 +1331,7 @@ export default function GamePage() {
         <div className="game-frame">
           <div className="tg-menu">
             <div className="tg-menu-logo">
-              <img className="tg-menu-logo-img" src="/assets/app/logo_transparent.png" alt="Tong" />
+              <img className="tg-menu-logo-img" src={GAME_LOGO_URL} alt="Tong" />
             </div>
             <p className="tg-menu-tagline">
               Live the drama. <span className="tg-menu-tagline-accent">Learn the language.</span>
@@ -1391,14 +1396,14 @@ export default function GamePage() {
               <>
                 <video
                   className="tg-tong-intro-video"
-                  autoPlay
-                  muted
-                  playsInline
-                  preload="auto"
-                  loop
-                >
-                  <source src="/assets/tong_intro.webm" type='video/webm; codecs="vp09.02.10.08.01"' />
-                </video>
+                autoPlay
+                muted
+                playsInline
+                preload="auto"
+                loop
+              >
+                <source src={GAME_INTRO_VIDEO_URL} type='video/webm; codecs="vp09.02.10.08.01"' />
+              </video>
                 <div className="tg-tong-intro-subtitle">
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
                   <p className="dialogue-text">
@@ -1837,9 +1842,10 @@ export default function GamePage() {
   const npcCity = (npcChar?.cityId ?? city) as CityId;
   const targetLang = getLanguageForCity(npcCity);
   const explainLang = (gameState.explainIn[npcCity] ?? 'en') as UILang;
+  const resolvedDynamicBackdropUrl = resolveRuntimeAssetUrl(dynamicBackdrop?.url);
 
   if (sceneSummary) {
-    const backdropUrl = dynamicBackdrop?.url ?? '/assets/backdrops/seoul/pojangmacha.png';
+    const backdropUrl = resolvedDynamicBackdropUrl || SEOUL_FOOD_STREET_BACKDROP_URL;
     return (
       <UILangProvider value={explainLang}>
         <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1900,7 +1906,7 @@ export default function GamePage() {
     <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="game-frame">
         <SceneView
-          backgroundUrl={dynamicBackdrop?.url ?? '/assets/backdrops/seoul/pojangmacha.png'}
+          backgroundUrl={resolvedDynamicBackdropUrl || SEOUL_FOOD_STREET_BACKDROP_URL}
           backgroundTransition={dynamicBackdrop?.transition}
           ambientDescription={dynamicBackdrop?.ambientDescription ?? 'A warm pojangmacha (street food tent) on a Seoul side street'}
           cinematic={cinematic}

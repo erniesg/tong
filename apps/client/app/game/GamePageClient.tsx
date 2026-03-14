@@ -8,9 +8,17 @@ import {
   startOrResumeGame,
   type CityId,
   type LocationId,
+  type ObjectiveNextResponse,
   type ProficiencyLevel,
   type ScoreState,
 } from '@/lib/api';
+import {
+  hasRuntimeAssetKey,
+  resolveCharacterAssetUrl,
+  resolveRuntimeAssetUrl,
+  resolveRuntimeAssetUrls,
+  runtimeAssetUrl,
+} from '@/lib/runtime-assets';
 
 /* ── Inline types — not exported from api.ts ──────────────── */
 interface GameProfile {
@@ -24,12 +32,6 @@ interface HangoutRenderOp {
   text?: string;
   speakerName?: string;
   choices?: string[];
-  [key: string]: unknown;
-}
-
-interface ObjectiveNextResponse {
-  objectiveId: string;
-  title?: string;
   [key: string]: unknown;
 }
 
@@ -114,10 +116,10 @@ const DEFAULT_CITY: CityId = 'seoul';
 const DEFAULT_LOCATION: LocationId = 'food_street';
 const ACTIVE_USER_ID_STORAGE_KEY = 'tong_active_user_id';
 
-const GAME_LOGO_PATH = '/assets/app/logo_transparent.png';
-const TONG_INTRO_PATH = '/assets/tong_intro.webm';
+const GAME_LOGO_PATH = runtimeAssetUrl('app.logo.transparent.default');
+const TONG_INTRO_PATH = runtimeAssetUrl('app.intro.video.default');
 const OPENING_ANIMATION_PATH = TONG_INTRO_PATH;
-const SEOUL_FIRST_SCENE_BACKDROP = '/assets/backdrops/seoul/pojangmacha.png';
+const SEOUL_FIRST_SCENE_BACKDROP = runtimeAssetUrl('city.seoul.location.food-street.backdrop.default');
 
 const MAX_PROFICIENCY_GAUGE_LEVEL: ProficiencyGaugeLevel = 6;
 const REQUESTED_GAUGE_PRESET: Record<CjkLang, ProficiencyGaugeLevel> = {
@@ -134,8 +136,8 @@ const CITY_DEFINITIONS: CityDefinition[] = [
     languageLabel: 'Japanese',
     mapPosition: 'left',
     vibe: 'Shibuya after-hours energy',
-    backdropImage: '/assets/locations/tokyo-static.png',
-    backdropVideo: '/assets/locations/tokyo.mp4',
+    backdropImage: runtimeAssetUrl('city.tokyo.map.static.default'),
+    backdropVideo: runtimeAssetUrl('city.tokyo.map.video.default'),
   },
   {
     id: 'seoul',
@@ -144,8 +146,8 @@ const CITY_DEFINITIONS: CityDefinition[] = [
     languageLabel: 'Korean',
     mapPosition: 'center',
     vibe: 'Hongdae late-night food lane',
-    backdropImage: '/assets/locations/seoul-static.png',
-    backdropVideo: '/assets/locations/seoul.mp4',
+    backdropImage: runtimeAssetUrl('city.seoul.map.static.default'),
+    backdropVideo: runtimeAssetUrl('city.seoul.map.video.default'),
   },
   {
     id: 'shanghai',
@@ -154,8 +156,8 @@ const CITY_DEFINITIONS: CityDefinition[] = [
     languageLabel: 'Chinese',
     mapPosition: 'right',
     vibe: 'Bund neon and river glow',
-    backdropImage: '/assets/locations/shanghai-static.png',
-    backdropVideo: '/assets/locations/shanghai.mp4',
+    backdropImage: runtimeAssetUrl('city.shanghai.map.static.default'),
+    backdropVideo: runtimeAssetUrl('city.shanghai.map.video.default'),
   },
 ];
 
@@ -347,10 +349,13 @@ function getCharacterSpriteUrl(value?: SceneCharacter, expression?: string): str
   if (charKey) {
     const exprFile = expression && EXPRESSION_SPRITES[charKey]?.[expression];
     const file = exprFile || CHARACTER_DEFAULT_SPRITE[charKey] || `${charKey}.png`;
-    return `/assets/characters/${charKey}/${file}`;
+    return resolveCharacterAssetUrl(`${charKey}/${file}`);
   }
 
-  if (value.assetKey) return `/assets/characters/${value.assetKey}`;
+  if (value.assetKey) {
+    if (hasRuntimeAssetKey(value.assetKey)) return runtimeAssetUrl(value.assetKey);
+    return resolveCharacterAssetUrl(value.assetKey);
+  }
   return null;
 }
 
@@ -362,21 +367,25 @@ function getCharacterAvatarPaths(value?: SceneCharacter): string[] {
   const safeId = (value.id || '').toLowerCase().trim();
 
   if (safeId === 'npc_haeun' || safeName === 'haeun') {
-    options.push('/assets/characters/haeun/eye_front_casual.png');
-    options.push('/assets/characters/haeun/haeun.png');
+    options.push(runtimeAssetUrl('character.haeun.portrait.eye-front-casual'));
+    options.push(runtimeAssetUrl('character.haeun.portrait.default'));
   }
 
   if (safeId === 'npc_jin' || safeId === 'npc_ding_man' || safeName === 'jin' || safeName === 'ding') {
-    options.push('/assets/characters/jin/eye_front_casual.png');
-    options.push('/assets/characters/jin/jin.png');
-    options.push('/assets/characters/ding_man/ding_man.png');
+    options.push(runtimeAssetUrl('character.jin.portrait.eye-front-casual'));
+    options.push(runtimeAssetUrl('character.jin.portrait.default'));
+    options.push(runtimeAssetUrl('character.ding-man.portrait.default'));
   }
 
   if (value.assetKey) {
-    options.push(`/assets/characters/${value.assetKey}`);
+    if (hasRuntimeAssetKey(value.assetKey)) {
+      options.push(runtimeAssetUrl(value.assetKey));
+    } else {
+      options.push(resolveCharacterAssetUrl(value.assetKey));
+    }
   }
 
-  return [...new Set(options)];
+  return resolveRuntimeAssetUrls(options);
 }
 
 function getCharacterForCityLocation(city: CityId, location: LocationId): SceneCharacter {
