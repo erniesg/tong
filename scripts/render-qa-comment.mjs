@@ -63,19 +63,35 @@ function relPathFromUrl(url) {
   }
 }
 
-function renderBullet(label, artifact) {
-  if (!artifact?.url) return null;
-  const text = relPathFromUrl(artifact.url);
-  return `- ${label}: [${text}](${artifact.url})`;
+function buildCacheBustToken(manifest) {
+  const raw = manifest.generated_at || "";
+  return raw.replace(/[^0-9A-Za-z]+/g, "");
 }
 
-function renderInlinePreview(manifest) {
+function withCacheBust(url, token) {
+  if (!url || !token) return url;
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("v", token);
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+function renderBullet(label, artifact, cacheBustToken) {
+  if (!artifact?.url) return null;
+  const text = relPathFromUrl(artifact.url);
+  return `- ${label}: [${text}](${withCacheBust(artifact.url, cacheBustToken)})`;
+}
+
+function renderInlinePreview(manifest, cacheBustToken) {
   const previewArtifact = manifest.primary?.gif_preview || manifest.primary?.poster || manifest.primary?.dialogue_screenshot;
   if (!previewArtifact?.url) return null;
   const alt = manifest.issue?.issue_ref
     ? `${manifest.issue.issue_ref} uploaded evidence preview`
     : `${manifest.run.issue_ref} uploaded evidence preview`;
-  return `![${alt}](${previewArtifact.url})`;
+  return `![${alt}](${withCacheBust(previewArtifact.url, cacheBustToken)})`;
 }
 
 function renderSummarySentence(manifest) {
@@ -99,13 +115,14 @@ function renderValidationSentence(manifest) {
 }
 
 function renderComment(manifest) {
+  const cacheBustToken = buildCacheBustToken(manifest);
   const issueRef = manifest.issue?.issue_ref || manifest.run.issue_ref;
   const proofVideo = manifest.primary?.proof_video;
   const dialogue = manifest.primary?.dialogue_screenshot;
   const tooltip = manifest.primary?.tooltip_screenshot;
   const trace = manifest.primary?.romanization_trace;
   const summaryArtifact = manifest.primary?.summary;
-  const preview = renderInlinePreview(manifest);
+  const preview = renderInlinePreview(manifest, cacheBustToken);
   const summarySentence = renderSummarySentence(manifest);
   const validationSentence = renderValidationSentence(manifest);
 
@@ -124,13 +141,13 @@ function renderComment(manifest) {
 
   lines.push("");
   const bullets = [
-    renderBullet("GIF preview", manifest.primary?.gif_preview),
-    renderBullet("Screen recording with audio", proofVideo),
-    renderBullet("Tooltip screenshot", tooltip),
-    renderBullet("Dialogue screenshot", dialogue),
-    renderBullet("Romanization-bait trace", trace),
-    renderBullet("QA summary", summaryArtifact),
-    manifest.manifest_url ? `- Uploaded manifest: [manifest.json](${manifest.manifest_url})` : null,
+    renderBullet("GIF preview", manifest.primary?.gif_preview, cacheBustToken),
+    renderBullet("Screen recording with audio", proofVideo, cacheBustToken),
+    renderBullet("Tooltip screenshot", tooltip, cacheBustToken),
+    renderBullet("Dialogue screenshot", dialogue, cacheBustToken),
+    renderBullet("Romanization-bait trace", trace, cacheBustToken),
+    renderBullet("QA summary", summaryArtifact, cacheBustToken),
+    manifest.manifest_url ? `- Uploaded manifest: [manifest.json](${withCacheBust(manifest.manifest_url, cacheBustToken)})` : null,
   ].filter(Boolean);
   lines.push(...bullets);
 
