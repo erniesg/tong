@@ -97,7 +97,6 @@ const LANES = 4;
 const BASE_SPEED = 0.00015;
 const SPAWN_INTERVAL = 1400;
 const MAX_PIECES = 6;
-const PLAYFIELD_SPAWN_GUTTER = 28;
 const PLAYFIELD_HEIGHT = 308;
 
 /** Play a single piece's sound (short, no meaning follow-up). */
@@ -321,7 +320,8 @@ export function BlockCrush({ exercise, onResult }: Props) {
     const emptiest = laneCounts.reduce<number[]>((acc, c, i) => c === minCount ? [...acc, i] : acc, []);
     const column = emptiest[Math.floor(Math.random() * emptiest.length)];
     const speed = BASE_SPEED * cfg.speedMult * (0.8 + Math.random() * 0.4);
-    setPieces((prev) => [...prev, { id, piece, column, y: -0.08, speed, isDistractor, colorHint }]);
+    // Spawn from the top edge of the playfield so the entry point reads clearly.
+    setPieces((prev) => [...prev, { id, piece, column, y: 0, speed, isDistractor, colorHint }]);
   }, [exercise.language, cfg.distractorRate, cfg.speedMult]);
 
   /* ── Game loop ─────────────────────────────────────── */
@@ -811,9 +811,9 @@ export function BlockCrush({ exercise, onResult }: Props) {
         </div>
       </div>
 
-      {/* Lanes — add a spawn gutter so pieces never eat into the HUD while keeping drag space visible */}
+      {/* Lanes */}
       <div style={{
-        padding: `${PLAYFIELD_SPAWN_GUTTER}px 8px 0`,
+        padding: '0 8px 0',
         position: 'relative',
       }}>
         <div style={{
