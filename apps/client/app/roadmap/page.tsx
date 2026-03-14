@@ -11,6 +11,9 @@ import {
   type RoadmapExecution,
   type RoadmapIssue,
 } from '@/lib/content/roadmap';
+import { runtimeAssetUrl } from '@/lib/runtime-assets';
+
+const ROADMAP_LOGO_URL = runtimeAssetUrl('app.logo.trimmed.default');
 
 export const metadata: Metadata = {
   title: 'Tong Roadmap',
@@ -270,7 +273,7 @@ export default function RoadmapPage() {
       <nav className="landing-nav roadmap-nav">
         <Link href="/" className="landing-nav-brand">
           <Image
-            src="/assets/app/logo_trimmed.png"
+            src={ROADMAP_LOGO_URL}
             alt="Tong"
             width={30}
             height={30}

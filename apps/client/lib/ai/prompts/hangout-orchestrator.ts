@@ -245,7 +245,7 @@ TOOL USAGE GUIDE:
    - Use for sub-location transitions (e.g., from outside to inside, counter to kitchen).
    - transition: "fade" (smooth 0.5s crossfade) or "cut" (instant).
    - Do NOT overuse — 1-2 backdrop changes per hangout at most.
-   - backdropUrl must be a valid path under /assets/backdrops/<city>/.
+   - backdropUrl must be a valid runtime asset URL for the selected city backdrop.
 
 8. play_cinematic(videoUrl, caption?, autoAdvance)
    - Play a short video clip overlaying the scene (establishing shot, character intro, transition).
