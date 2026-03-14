@@ -361,6 +361,8 @@ def bootstrap_text(mode: str, issue_payload: dict[str, Any] | None, verify_fix: 
     evidence = {
         "summary": "",
         "screenshots": [],
+        "comparison_panels": [],
+        "comparison_focus_crops": [],
         "temporal_capture": [],
         "console_logs": [],
         "network_traces": [],
@@ -381,7 +383,17 @@ def render_publish(run: dict[str, Any], run_dir: Path) -> str:
     summary_body = summary_path.read_text(encoding="utf-8").strip()
     evidence = load_json(evidence_path)
     bullets = []
-    for key in ("screenshots", "temporal_capture", "console_logs", "network_traces", "contract_assertions", "perf_profiles", "cross_env_matrix"):
+    for key in (
+        "screenshots",
+        "comparison_panels",
+        "comparison_focus_crops",
+        "temporal_capture",
+        "console_logs",
+        "network_traces",
+        "contract_assertions",
+        "perf_profiles",
+        "cross_env_matrix",
+    ):
         entries = evidence.get(key, [])
         if entries:
             bullets.append(f"- `{key}`: {len(entries)} item(s)")

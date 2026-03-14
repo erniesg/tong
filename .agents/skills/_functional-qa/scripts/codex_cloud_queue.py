@@ -107,6 +107,21 @@ def queue_action_for(issue: dict[str, Any]) -> str:
     return "launch a direct Codex task and create a PR from the task result"
 
 
+def reviewer_evidence_expectation(issue_entry: dict[str, Any]) -> str:
+    issue_class = issue_entry["classification"]["issue_class"]
+    if issue_class in {"visual-layout", "localization-content", "accessibility"}:
+        return (
+            "Include one before/after full-frame comparison of the same UI state and one focused comparison crop of the changed region. "
+            "For subtitle, translation, tooltip, or typography fixes, the focused crop should isolate the exact text region reviewers need to inspect."
+        )
+    if issue_entry["evidence_plan"].get("requires_ui_capture"):
+        return (
+            "Include reviewer-facing UI evidence in the PR body or linked comment. "
+            "For timing-sensitive fixes, use ordered frames or short video/GIF evidence anchored to the proof moment."
+        )
+    return "Summarize the non-visual evidence inline and link any uploaded reviewer-facing artifacts."
+
+
 def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, Any]:
     issue_entry = build_issue_entry(raw_issue)
     issue_ref = issue_entry.get("issue_ref")
@@ -142,6 +157,9 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
         "{{worktree_branch}}": worktree["branch"],
         "{{cloud_mode}}": cloud_mode,
         "{{needs_local_acceptance}}": "yes" if needs_local_acceptance else "no",
+        "{{issue_class}}": issue_entry["classification"]["issue_class"],
+        "{{evidence_required}}": ", ".join(issue_entry["evidence_plan"]["required"]),
+        "{{reviewer_evidence_expectation}}": reviewer_evidence_expectation(issue_entry),
         "{{initial_skill}}": issue_entry["initial_skill"],
         "{{follow_up_skills}}": "; ".join(issue_entry["follow_up_skills"]),
         "{{readiness_reason}}": readiness_reason,
