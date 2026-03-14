@@ -44,16 +44,18 @@ npm run dev:client
 ```
 
 ## 4) Switch client between backends
-Use `apps/client/.env.local` and set one variable:
+Use `apps/client/.env.local` and set these public vars:
 
 ### Local Node API
 ```bash
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8787
+NEXT_PUBLIC_TONG_API_BASE=http://localhost:8787
+NEXT_PUBLIC_TONG_ASSETS_BASE_URL=https://assets.tong.berlayar.ai
 ```
 
 ### Cloud Worker API
 ```bash
-NEXT_PUBLIC_API_BASE_URL=https://tong-api.<subdomain>.workers.dev
+NEXT_PUBLIC_TONG_API_BASE=https://tong-api.<subdomain>.workers.dev
+NEXT_PUBLIC_TONG_ASSETS_BASE_URL=https://assets.tong.berlayar.ai
 ```
 
 Restart `npm run dev:client` after changing env.
