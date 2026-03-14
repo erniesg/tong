@@ -7,27 +7,26 @@ import { SITE_NAV_ITEMS, type SitePage } from '@/components/site/siteNav';
 
 type SiteFooterProps = {
   current: SitePage;
-  variant?: SitePage;
 };
 
 function getNavLinkClassName(isActive: boolean) {
   return `nav-link${isActive ? ' is-active' : ''}`;
 }
 
-export default function SiteFooter({ current, variant = current }: SiteFooterProps) {
+export default function SiteFooter({ current }: SiteFooterProps) {
   return (
-    <footer className={`landing-footer site-footer site-footer--${variant}`}>
-      <div className="landing-footer-brand site-footer-brand">
+    <footer className="landing-footer site-footer">
+      <div className="landing-footer-brand">
         <Image
           src="/assets/app/logo_trimmed.png"
           alt="Tong"
           width={30}
           height={30}
-          className="landing-nav-logo landing-nav-logo--brand"
+          className="landing-nav-logo"
         />
         <span>Tong — Live the drama. Learn the language.</span>
       </div>
-      <div className="landing-footer-links site-footer-links">
+      <div className="landing-footer-links">
         {SITE_NAV_ITEMS.map((item) => {
           const isActive = item.page === current;
 

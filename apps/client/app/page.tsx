@@ -206,11 +206,7 @@ function LandingPage() {
 
   return (
     <div className="landing">
-      <div className="landing-topbar">
-        <div className="landing-topbar-shell">
-          <SiteHeader current="home" tone="dark" variant="home" />
-        </div>
-      </div>
+      <SiteHeader current="home" />
 
       {/* Hero */}
       <section className="landing-hero landing-hero--cinematic">
@@ -378,7 +374,7 @@ function LandingPage() {
       </section>
 
       {/* Footer */}
-      <SiteFooter current="home" variant="home" />
+      <SiteFooter current="home" />
     </div>
   );
 }

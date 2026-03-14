@@ -204,10 +204,8 @@ function RoadmapIssueCard({ issue }: { issue: RoadmapIssue }) {
 export default function RoadmapPage() {
   return (
     <div className="roadmap-shell">
-      <div className="roadmap-topbar">
-        <div className="roadmap-topbar-shell">
-          <SiteHeader current="roadmap" tone="dark" variant="roadmap" />
-        </div>
+      <div className="roadmap-nav">
+        <SiteHeader current="roadmap" />
       </div>
 
       <section className="roadmap-hero">
@@ -389,7 +387,7 @@ export default function RoadmapPage() {
         </div>
       </details>
 
-      <SiteFooter current="roadmap" variant="roadmap" />
+      <SiteFooter current="roadmap" />
     </div>
   );
 }

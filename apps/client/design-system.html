@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tong Design System</title>
-<!-- Generated: design-system build | 97 variables, 721 classes, 49 keyframes -->
+<!-- Generated: design-system build | 97 variables, 711 classes, 49 keyframes -->
 <style>
 /* ══════════════════════════════════════════════════════════════
    BLOCK 1: globals.css — verbatim embed (single source of truth)
@@ -3808,56 +3808,6 @@ button.nav-link:hover {
   gap: 10px;
 }
 
-.site-header--dark .landing-brand-cycle > span {
-  color: rgba(255, 247, 239, 0.96);
-}
-
-.site-header--dark .nav-link {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(244, 247, 252, 0.92);
-  backdrop-filter: blur(16px);
-}
-
-.site-header--dark .nav-link:hover,
-.site-header--dark .nav-link.is-active {
-  background: rgba(255, 248, 239, 0.18);
-  border-color: rgba(255, 255, 255, 0.22);
-  color: #fff8ef;
-}
-
-.site-header--home .nav-link.is-active {
-  background: rgba(255, 248, 239, 0.22);
-  border-color: rgba(255, 255, 255, 0.24);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.site-header--roadmap .nav-link {
-  position: relative;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.site-header--roadmap .nav-link.is-active {
-  background: rgba(255, 255, 255, 0.96);
-  border-color: rgba(255, 255, 255, 0.34);
-  color: #111827;
-  box-shadow:
-    0 16px 32px rgba(5, 8, 18, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.56);
-}
-
-.site-header--roadmap .nav-link.is-active::after {
-  content: "";
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: -8px;
-  height: 3px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #ff6b2c, #ff9a60);
-}
-
 /* Nav */
 .landing-nav {
   display: flex;
@@ -3875,11 +3825,7 @@ button.nav-link:hover {
 }
 
 .landing-nav-logo {
-  display: block;
-}
-
-.landing-nav-logo--brand {
-  flex: 0 0 auto;
+  border-radius: 8px;
 }
 
 .landing-brand-cycle {
@@ -3929,35 +3875,6 @@ button.nav-link:hover {
 .landing-play-btn:hover {
   background: var(--accent-dark);
   transform: translateY(-1px);
-}
-
-.landing-topbar,
-.roadmap-topbar {
-  margin: 0 calc(50% - 50vw);
-  position: relative;
-  z-index: 3;
-}
-
-.landing-topbar {
-  background:
-    radial-gradient(circle at top left, rgba(255, 145, 77, 0.12), transparent 28%),
-    linear-gradient(180deg, #0b0f18 0%, #101726 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.roadmap-topbar {
-  background:
-    radial-gradient(circle at 18% 0%, rgba(255, 122, 56, 0.1), transparent 24%),
-    radial-gradient(circle at 82% 18%, rgba(59, 130, 246, 0.12), transparent 28%),
-    linear-gradient(180deg, #0b1120 0%, #101827 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.landing-topbar-shell,
-.roadmap-topbar-shell {
-  width: min(100%, var(--site-shell-max));
-  margin: 0 auto;
-  padding: 0 20px;
 }
 
 /* Hero */
@@ -4524,46 +4441,6 @@ button.nav-link:hover {
   margin-top: 40px;
 }
 
-.site-footer .nav-link {
-  font-size: 12px;
-}
-
-.site-footer--home {
-  border-top-color: rgba(229, 214, 194, 0.9);
-}
-
-.site-footer--home .nav-link.is-active {
-  background: #fff2e3;
-  border-color: rgba(255, 107, 44, 0.24);
-  color: var(--accent-dark);
-}
-
-.site-footer--roadmap {
-  margin-top: 52px;
-  padding-top: 28px;
-  border-top-color: rgba(214, 221, 232, 0.74);
-}
-
-.site-footer--roadmap .site-footer-brand {
-  color: #536072;
-}
-
-.site-footer--roadmap .nav-link {
-  background: rgba(255, 255, 255, 0.76);
-  border-color: rgba(214, 221, 232, 0.92);
-  color: #4a5568;
-}
-
-.site-footer--roadmap .nav-link:hover {
-  background: rgba(255, 247, 238, 0.92);
-}
-
-.site-footer--roadmap .nav-link.is-active {
-  background: #111827;
-  border-color: #111827;
-  color: #fff7ef;
-}
-
 .landing-footer-brand {
   display: flex;
   align-items: center;
@@ -4623,6 +4500,10 @@ button.nav-link:hover {
   height: 300px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(15, 118, 110, 0.18), transparent 72%);
+}
+
+.roadmap-nav {
+  margin-bottom: 22px;
 }
 
 .roadmap-hero {
@@ -5922,8 +5803,6 @@ button.nav-link:hover {
     margin-bottom: 40px;
   }
 
-  .landing-topbar-shell,
-  .roadmap-topbar-shell,
   .landing-hero-shell,
   .roadmap-hero-shell {
     padding-left: 16px;

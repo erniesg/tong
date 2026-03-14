@@ -7,24 +7,22 @@ import { SITE_NAV_ITEMS, type SitePage } from '@/components/site/siteNav';
 
 type SiteHeaderProps = {
   current: SitePage;
-  tone?: 'light' | 'dark';
-  variant?: SitePage;
 };
 
 function getNavLinkClassName(isActive: boolean) {
   return `nav-link${isActive ? ' is-active' : ''}`;
 }
 
-export default function SiteHeader({ current, tone = 'light', variant = current }: SiteHeaderProps) {
+export default function SiteHeader({ current }: SiteHeaderProps) {
   return (
-    <nav className={`landing-nav site-header site-header--${tone} site-header--${variant}`}>
+    <nav className="landing-nav site-header">
       <Link href="/" className="landing-nav-brand site-brand">
         <Image
           src="/assets/app/logo_trimmed.png"
           alt="Tong"
           width={30}
           height={30}
-          className="landing-nav-logo landing-nav-logo--brand"
+          className="landing-nav-logo"
         />
         <div className="landing-brand-cycle">
           <span>tōng</span>
