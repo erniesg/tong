@@ -3,6 +3,7 @@
 Use this runbook when you want Codex cloud tasks to work Tong issues through the Codex environment UI and create PRs from task results instead of local worktrees.
 
 Use `docs/agent-native-project-setup.md` as the source of truth for Project fields, lane ownership, and issue portability rules.
+Use `docs/qa-evidence-uploads.md` as the source of truth for the boundary between local QA bundles and published reviewer-visible proof.
 
 ## What Codex cloud can and cannot see
 
@@ -45,6 +46,8 @@ The generator writes:
 4. per-issue task prompt and PR notes files
 
 under `artifacts/qa-runs/functional-qa/codex-cloud-queue/<timestamp>/`.
+
+This is local staging, not the reviewer-visible evidence host.
 
 ## Suggested GitHub labels
 
@@ -129,7 +132,7 @@ Important delivery rules:
 1. The primary implementation path is a direct Codex environment task, not a GitHub comment trigger.
 2. Do not rely on shell-level `git push` or `gh` CLI from inside the cloud task.
 3. Use Codex's built-in diff and PR creation flow from the task result.
-4. Artifact directories under `artifacts/qa-runs/` are gitignored. In the current flow, Codex cloud does not automatically publish those local files into the GitHub PR for reviewers. If a fix needs visual proof, attach or link reviewer-visible media in the task result, PR body, or issue comment. If that cannot be done, leave the verification incomplete and require a final local/browser-backed acceptance recording.
+4. Artifact directories under `artifacts/qa-runs/` are gitignored local staging. Evidence must be summarized in the task result or PR body or uploaded to the external QA evidence host before it counts as reviewer-visible proof. If a fix needs visual proof and that cannot be done, leave the verification incomplete and require a final local/browser-backed acceptance recording.
 5. Reserve `@codex` GitHub comments for review or explicitly manual experiments, not the default implementation path.
 6. Do not treat a truncated or deterministic-jump clip as final acceptance proof unless the interaction sequence is still legible to a human reviewer: readable pre-action state, visible input, and stable post-action result.
 7. For timing-sensitive `/game` issues, prefer seeded checkpoint setup plus a short route-faithful proof clip over a full playthrough.
