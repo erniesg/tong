@@ -93,6 +93,20 @@ def issue_order_value(issue_ref: str | None, batch_id: str) -> int:
     return 999
 
 
+def is_dispatchable(issue: dict[str, Any]) -> bool:
+    return issue["cloud_mode"] != "local-only" and issue["batch_id"] != "unassigned"
+
+
+def queue_action_for(issue: dict[str, Any]) -> str:
+    if issue["cloud_mode"] == "local-only":
+        return "skip cloud for now"
+    if issue["batch_id"] == "unassigned":
+        return "hold for manual batching or split before dispatch"
+    if issue["depends_on"]:
+        return "launch after listed dependencies merge or are rebased into the task branch"
+    return "launch a direct Codex task and create a PR from the task result"
+
+
 def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, Any]:
     issue_entry = build_issue_entry(raw_issue)
     issue_ref = issue_entry.get("issue_ref")
@@ -225,7 +239,7 @@ def render_markdown(plan: dict[str, Any]) -> str:
                 f"- Follow-ups: `{'; '.join(issue['follow_up_skills'])}`",
                 f"- Depends on: `{', '.join(issue['depends_on']) or 'none'}`",
                 f"- Readiness: {issue['readiness_reason']}",
-                f"- Queue action: `{'skip cloud for now' if issue['cloud_mode'] == 'local-only' else 'launch a direct Codex task and create a PR from the task result'}`",
+                f"- Queue action: `{queue_action_for(issue)}`",
                 f"- Task prompt: `{issue['generated_files']['task_prompt']}`",
                 f"- PR notes: `{issue['generated_files']['pr_notes']}`",
             ]
@@ -243,25 +257,34 @@ def build_launch_instructions(plan: dict[str, Any]) -> str:
         "",
     ]
     for issue in plan["issues"]:
-        if issue["cloud_mode"] == "local-only":
+        if not is_dispatchable(issue):
+            reason = issue["readiness_reason"]
+            if issue["batch_id"] == "unassigned":
+                reason = f"{reason} Keep this item out of the launch queue until it is explicitly batched or split into narrower tasks."
             lines.extend(
                 [
                     f"# {issue['issue_ref'] or issue['title']}",
                     "1. Skip this issue in Codex cloud for now.",
-                    f"2. Reason: {issue['readiness_reason']}",
+                    f"2. Reason: {reason}",
                     "",
                 ]
             )
             continue
+        dependency_note = (
+            f"2. Only launch after `{', '.join(issue['depends_on'])}` is merged or rebased into the current branch."
+            if issue["depends_on"]
+            else None
+        )
         lines.extend(
             [
                 f"# {issue['issue_ref'] or issue['title']}",
                 "1. Open `chatgpt.com/codex` and choose the configured environment.",
-                f"2. Start a new task and paste `{issue['generated_files']['task_prompt']}`.",
-                "3. Wait for the task to finish validation, code changes, and `--verify-fix`.",
-                f"4. Use Codex's built-in PR creation flow from the task result with title `{issue['draft_pr_title']}`.",
-                f"5. Copy any useful merge notes from `{issue['generated_files']['pr_notes']}` into the PR if Codex does not already summarize them well.",
-                "6. Review the resulting GitHub diff before moving on to the next issue in the batch.",
+                *( [dependency_note] if dependency_note else [] ),
+                f"{3 if dependency_note else 2}. Start a new task and paste `{issue['generated_files']['task_prompt']}`.",
+                f"{4 if dependency_note else 3}. Wait for the task to finish validation, code changes, and `--verify-fix`.",
+                f"{5 if dependency_note else 4}. Use Codex's built-in PR creation flow from the task result with title `{issue['draft_pr_title']}`.",
+                f"{6 if dependency_note else 5}. Copy any useful merge notes from `{issue['generated_files']['pr_notes']}` into the PR if Codex does not already summarize them well.",
+                f"{7 if dependency_note else 6}. Review the resulting GitHub diff before moving on to the next issue in the batch.",
                 "",
             ]
         )
