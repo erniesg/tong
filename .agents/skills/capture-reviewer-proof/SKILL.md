@@ -14,7 +14,6 @@ Read:
 - `.agents/skills/_functional-qa/references/evidence-strategies.md`
 - `.agents/skills/_functional-qa/references/game-browser-playbook.md` for `/game`
 - `.agents/skills/_functional-qa/config/repo-adapter.json`
-- `docs/agent-native-project-setup.md`
 - `docs/codex-cloud-issue-runbook.md`
 - `docs/qa-evidence-uploads.md`
 
