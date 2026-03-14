@@ -30,6 +30,7 @@ Read:
    - GIF preview
    - ordered stills for pre-action, ready, post-input, and stable post-action
 7. Prefer the configured uploader flow in `docs/qa-evidence-uploads.md`.
+   The standard `publish-github` runtime now auto-attempts this upload path for runs with visual evidence, so only do it manually when you need to inspect or edit `uploaded-comment.md` first.
 8. If hosted upload is unavailable, fall back to reviewer-openable git-tracked files on a dedicated branch or PR. Do not leave the reviewer with local-only artifact paths.
 9. Update the PR body or issue comment with public links.
 

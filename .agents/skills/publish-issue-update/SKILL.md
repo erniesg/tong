@@ -34,6 +34,8 @@ Use the invocation arguments as either:
    python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR>
    ```
 
+   By default this now attempts reviewer-proof upload first when the run has screenshots or temporal capture evidence and the uploader scripts are available. If upload succeeds, it publishes `uploaded-comment.md`; otherwise it falls back to `publish.md`.
+
 4. Use `--dry-run` for a safe preview:
 
    ```bash
@@ -44,6 +46,12 @@ Use the invocation arguments as either:
 
    ```bash
    python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR> --force
+   ```
+
+   If you explicitly need to skip the uploader and publish the plain markdown draft, add:
+
+   ```bash
+   python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR> --no-auto-evidence-upload
    ```
 
 6. If `tong-runs` evidence hosting is configured, upload reviewer-facing artifacts before posting a manual PR comment:
