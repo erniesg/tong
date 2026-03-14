@@ -305,7 +305,7 @@
     "scripts/demo_smoke_check.mjs",
     "README.md",
     "docs/install-and-test.md",
-    "docs/hackathon-workstreams.md",
+    "docs/workstreams.md",
     "docs/agent-execution-board.md",
     "apps/client/app/layout.tsx",
     "apps/client/app/page.tsx",

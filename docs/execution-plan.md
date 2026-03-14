@@ -1,4 +1,4 @@
-# Hackathon Execution Plan (Tong Fresh Build)
+# Execution Plan (Tong Fresh Build)
 
 ## Intent
 Build a clean Tong demo implementation in this repository while using only internal legacy learnings as reference.

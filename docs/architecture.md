@@ -1,4 +1,4 @@
-# Hackathon Architecture (Next.js + Capacitor)
+# Architecture (Next.js + Capacitor)
 
 ## Objective
 Ship one coherent demo across:
@@ -52,7 +52,7 @@ docs/
 4. Server ingestion + ranked vocabulary.
 5. Replace mocks with live server endpoints.
 
-## Non-goals for hackathon
+## Non-goals for the current build
 - Full production auth stack.
 - Deep offline sync.
 - Perfect subtitle/NLP accuracy across all content types.

@@ -117,11 +117,13 @@ curl -s -H "x-demo-password: TONG-JUDGE-DEMO" http://localhost:8787/api/v1/demo/
 # -> returns configured/missing booleans for demo + YouTube + Spotify + OpenAI secrets
 ```
 
-## Hackathon docs
+## Core docs
 
 - `AGENTS.md`
-- `docs/hackathon-architecture.md`
-- `docs/hackathon-workstreams.md`
+- `docs/execution-plan.md`
+- `docs/build-checklist.md`
+- `docs/architecture.md`
+- `docs/workstreams.md`
 - `docs/demo-run-of-show.md`
 - `docs/mastery-and-progression.md`
 - `docs/interaction-modes.md`
@@ -138,8 +140,8 @@ curl -s -H "x-demo-password: TONG-JUDGE-DEMO" http://localhost:8787/api/v1/demo/
 Parallel worktrees (only needed for multi-agent parallel development):
 
 ```bash
-chmod +x scripts/setup-hackathon-worktrees.sh
-./scripts/setup-hackathon-worktrees.sh
+chmod +x scripts/setup-worktrees.sh
+./scripts/setup-worktrees.sh
 ```
 
 ## Legacy prototype (v0.1 extension)

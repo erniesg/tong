@@ -2,11 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(git rev-parse --show-toplevel)"
-SESSION_NAME="${SESSION_NAME:-tong-hackathon}"
+SESSION_NAME="${SESSION_NAME:-tong-agents}"
 BASE_BRANCH="${1:-$(git rev-parse --abbrev-ref HEAD)}"
 LAUNCH_TMUX="${LAUNCH_TMUX:-1}"
 
-"$ROOT_DIR/scripts/setup-hackathon-worktrees.sh" "$BASE_BRANCH"
+"$ROOT_DIR/scripts/setup-worktrees.sh" "$BASE_BRANCH"
 
 streams=(
   "client-shell"
