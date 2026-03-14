@@ -118,6 +118,8 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
    python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR>
    ```
 
+   If the run needs reviewer-facing media links rather than a text-only QA update, continue with `capture-reviewer-proof` before considering the publication complete.
+
 11. Decide issue closure status deliberately:
 
 - if the verification run shows the issue is fully fixed and no follow-up scope remains, mark the PR or merge plan to close the issue

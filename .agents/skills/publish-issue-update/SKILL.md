@@ -34,6 +34,8 @@ Use the invocation arguments as either:
    python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR>
    ```
 
+   By default this now attempts reviewer-proof upload first when the run has screenshots or temporal capture evidence and the uploader scripts are available. If upload succeeds, it publishes `uploaded-comment.md`; otherwise it falls back to `publish.md`.
+
 4. Use `--dry-run` for a safe preview:
 
    ```bash
@@ -46,6 +48,12 @@ Use the invocation arguments as either:
    python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR> --force
    ```
 
+   If you explicitly need to skip the uploader and publish the plain markdown draft, add:
+
+   ```bash
+   python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR> --no-auto-evidence-upload
+   ```
+
 6. If `tong-runs` evidence hosting is configured, upload reviewer-facing artifacts before posting a manual PR comment:
 
    ```bash
@@ -54,6 +62,8 @@ Use the invocation arguments as either:
    ```
 
    Use the generated `uploaded-comment.md` when you need clean public links, an inline GIF preview, or an MP4 proof link without committing binaries into git.
+
+   If the uploader is not configured for the current environment, fall back to reviewer-openable git-tracked files on a dedicated branch or PR and use those GitHub blob or raw links in the posted comment. Do not leave reviewer-facing updates pointing only at local artifact paths.
 
 7. For reviewer-visible UI fixes such as layout, typography, subtitle, translation, tooltip, or focus-style changes, make the published update easy to review:
    - include a full before/after comparison panel
