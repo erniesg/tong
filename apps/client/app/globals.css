@@ -13,11 +13,11 @@
   --mint-soft: #d1fae5;
 
   /* Game type scale — single place to tune all in-game font sizes */
-  --game-text-xs: 13px;   /* meta labels, secondary info */
-  --game-text-sm: 14px;   /* HUD scores, subtle labels */
-  --game-text-base: 16px; /* body text, descriptions, prompts */
-  --game-text-lg: 19px;   /* dialogue, whisper body, instructions */
-  --game-text-xl: 22px;   /* headings, speaker names */
+  --game-text-xs: 0.8125rem;   /* meta labels, secondary info */
+  --game-text-sm: 0.875rem;   /* HUD scores, subtle labels */
+  --game-text-base: 1rem; /* body text, descriptions, prompts */
+  --game-text-lg: 1.1875rem;   /* dialogue, whisper body, instructions */
+  --game-text-xl: 1.375rem;   /* headings, speaker names */
 }
 
 * {
