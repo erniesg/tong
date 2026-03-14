@@ -98,6 +98,7 @@ const BASE_SPEED = 0.00015;
 const SPAWN_INTERVAL = 1400;
 const MAX_PIECES = 6;
 const PLAYFIELD_HEIGHT = 308;
+const BLOCK_CRUSH_HINT_SEEN_KEY = 'tong:block-crush:first-hint-seen';
 
 /** Play a single piece's sound (short, no meaning follow-up). */
 function playPieceTTS(piece: string, lang: string) {
@@ -129,6 +130,8 @@ const UI_STRINGS: Record<string, {
   wrongTryColor: (piece: string, color: string) => string;
   wrongNotFit: (piece: string) => string;
   wrongPosition: (piece: string, slot: string) => string;
+  firstHintSingle: string;
+  firstHintMulti: string;
 }> = {
   en: {
     intro: (c) => `Let's build ${c}! Drag each piece into its slot`,
@@ -137,6 +140,8 @@ const UI_STRINGS: Record<string, {
     wrongTryColor: (p, color) => `That's ${p} — try the ${color} one!`,
     wrongNotFit: (p) => `Not quite — ${p} doesn't fit here`,
     wrongPosition: (p, slot) => `${p} doesn't go in the ${slot} position`,
+    firstHintSingle: 'Tip: drag matching pieces by border color to lock the character quickly.',
+    firstHintMulti: 'Tip: finish one square at a time. Match border colors first, then fill the next character.',
   },
   zh: {
     intro: (c) => `来组成「${c}」！把每个部分拖到对应位置`,
@@ -145,6 +150,8 @@ const UI_STRINGS: Record<string, {
     wrongTryColor: (p, color) => `这是 ${p} — 试试${color === 'gold' ? '金色' : color === 'green' ? '绿色' : '蓝色'}的！`,
     wrongNotFit: (p) => `不太对 — ${p} 放不了这里`,
     wrongPosition: (p, slot) => `${p} 不是放在这个位置`,
+    firstHintSingle: '提示：先看边框颜色，再把对应部件拖到格子里。',
+    firstHintMulti: '提示：一次先完成一个方格。先按边框颜色配对，再做下一个字。',
   },
   ja: {
     intro: (c) => `「${c}」を作ろう！パーツをスロットにドラッグ`,
@@ -153,6 +160,8 @@ const UI_STRINGS: Record<string, {
     wrongTryColor: (p, color) => `${p}じゃないよ — ${color === 'gold' ? '金色' : color === 'green' ? '緑' : '青'}のを試して！`,
     wrongNotFit: (p) => `ちょっと違う — ${p} はここに入らない`,
     wrongPosition: (p, slot) => `${p} はここには入らない`,
+    firstHintSingle: 'ヒント：枠の色を手がかりに、対応するパーツをすばやく入れよう。',
+    firstHintMulti: 'ヒント：1マスずつ完成させよう。まず枠色を合わせてから次の文字へ。',
   },
   ko: {
     intro: (c) => `${c}를 만들어보자! 조각을 슬롯에 드래그하세요`,
@@ -161,6 +170,8 @@ const UI_STRINGS: Record<string, {
     wrongTryColor: (p, color) => `${p}가 아니에요 — ${color === 'gold' ? '금색' : color === 'green' ? '초록색' : '파란색'}을 시도해보세요!`,
     wrongNotFit: (p) => `아니에요 — ${p}는 여기에 맞지 않아요`,
     wrongPosition: (p, slot) => `${p}는 여기에 들어가지 않아요`,
+    firstHintSingle: '힌트: 테두리 색을 보고 맞는 조각을 빠르게 끌어다 놓으세요.',
+    firstHintMulti: '힌트: 한 칸씩 완성하세요. 먼저 테두리 색을 맞춘 뒤 다음 글자로 넘어가세요.',
   },
 };
 
@@ -242,6 +253,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
   const [showOverlay, setShowOverlay] = useState(false);
   const [overlayDismissing, setOverlayDismissing] = useState(false);
   const [animationDone, setAnimationDone] = useState(false);
+  const [showFirstTimeHint, setShowFirstTimeHint] = useState(false);
   const [, forceUpdate] = useState(0);
 
   // Re-render when dynamic translations arrive (Google Translate fallback)
@@ -288,6 +300,26 @@ export function BlockCrush({ exercise, onResult }: Props) {
 
   const ui = getUI(explainLang);
   const prompt = getPromptForStage(displayChar, exercise, stage, displayMeaning, explainLang);
+  const isMultiEarlyStage = isMulti && stage !== 'recall';
+  const maxPiecesOnBoard = isMultiEarlyStage ? 4 : MAX_PIECES;
+  const spawnIntervalMs = isMultiEarlyStage ? 1800 : SPAWN_INTERVAL;
+  const speedMult = isMultiEarlyStage ? cfg.speedMult * 0.82 : cfg.speedMult;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (stage !== 'intro') return;
+    const seenHint = window.localStorage.getItem(BLOCK_CRUSH_HINT_SEEN_KEY) === '1';
+    if (!seenHint) {
+      setShowFirstTimeHint(true);
+      window.localStorage.setItem(BLOCK_CRUSH_HINT_SEEN_KEY, '1');
+    }
+  }, [stage]);
+
+  useEffect(() => {
+    if (!showFirstTimeHint) return;
+    const timer = window.setTimeout(() => setShowFirstTimeHint(false), 7000);
+    return () => window.clearTimeout(timer);
+  }, [showFirstTimeHint]);
 
   // Keep a stable ref to allComponents for useCallback deps
   const allComponentsRef = useRef(allComponents);
@@ -296,7 +328,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
   /* ── Spawn ─────────────────────────────────────────── */
 
   const spawnPiece = useCallback(() => {
-    if (piecesRef.current.length >= MAX_PIECES) return;
+    if (piecesRef.current.length >= maxPiecesOnBoard) return;
     const ac = allComponentsRef.current;
     const unfilled = ac.filter((c) => !filledRef.current[c.slot]);
     const correctRate = 1 - cfg.distractorRate;
@@ -319,10 +351,10 @@ export function BlockCrush({ exercise, onResult }: Props) {
     const minCount = Math.min(...laneCounts);
     const emptiest = laneCounts.reduce<number[]>((acc, c, i) => c === minCount ? [...acc, i] : acc, []);
     const column = emptiest[Math.floor(Math.random() * emptiest.length)];
-    const speed = BASE_SPEED * cfg.speedMult * (0.8 + Math.random() * 0.4);
+    const speed = BASE_SPEED * speedMult * (0.8 + Math.random() * 0.35);
     // Spawn from the top edge of the playfield so the entry point reads clearly.
     setPieces((prev) => [...prev, { id, piece, column, y: 0, speed, isDistractor, colorHint }]);
-  }, [exercise.language, cfg.distractorRate, cfg.speedMult]);
+  }, [exercise.language, cfg.distractorRate, maxPiecesOnBoard, speedMult]);
 
   /* ── Game loop ─────────────────────────────────────── */
 
@@ -331,7 +363,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
     if (lastTimeRef.current === 0) { lastTimeRef.current = ts; lastSpawnRef.current = ts; }
     const dt = ts - lastTimeRef.current;
     lastTimeRef.current = ts;
-    if (ts - lastSpawnRef.current > SPAWN_INTERVAL) { lastSpawnRef.current = ts; spawnPiece(); }
+    if (ts - lastSpawnRef.current > spawnIntervalMs) { lastSpawnRef.current = ts; spawnPiece(); }
     setPieces((prev) => {
       const next: FallingPiece[] = [];
       let lost = false;
@@ -354,7 +386,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
       return next;
     });
     rafRef.current = requestAnimationFrame(gameLoop);
-  }, [spawnPiece, onResult]);
+  }, [onResult, spawnIntervalMs, spawnPiece]);
 
   // Initial burst: spawn 2-3 pieces immediately so lanes aren't empty
   const initialBurstDone = useRef(false);
@@ -363,8 +395,10 @@ export function BlockCrush({ exercise, onResult }: Props) {
     initialBurstDone.current = true;
     spawnPiece();
     setTimeout(() => spawnPiece(), 300);
-    setTimeout(() => spawnPiece(), 600);
-  }, [spawnPiece]);
+    if (!isMulti) {
+      setTimeout(() => spawnPiece(), 600);
+    }
+  }, [isMulti, spawnPiece]);
 
   useEffect(() => {
     rafRef.current = requestAnimationFrame(gameLoop);
@@ -443,6 +477,10 @@ export function BlockCrush({ exercise, onResult }: Props) {
       playPieceTTS(p.piece, exercise.language);
     }
 
+    if (showFirstTimeHint) {
+      setShowFirstTimeHint(false);
+    }
+
     dragId.current = p.id;
     dragChr.current = p.piece;
 
@@ -517,7 +555,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
 
       if (!placed) {
         setPieces((prev) => prev.map((pp) =>
-          pp.id === pid ? { ...pp, speed: BASE_SPEED * cfg.speedMult * (0.8 + Math.random() * 0.4) } : pp
+          pp.id === pid ? { ...pp, speed: BASE_SPEED * speedMult * (0.8 + Math.random() * 0.35) } : pp
         ));
       }
     };
@@ -531,7 +569,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
     document.addEventListener('pointermove', onMove, { passive: false });
     document.addEventListener('pointerup', onUp);
     document.addEventListener('pointercancel', onUp);
-  }, [done, exercise.language, handleSuccess, cleanupDragListeners, stage, cfg.speedMult, explainLang]);
+  }, [done, exercise.language, handleSuccess, cleanupDragListeners, stage, explainLang, showFirstTimeHint, speedMult]);
 
   /* ── Slot renderer ─────────────────────────────────── */
 
@@ -740,7 +778,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
     if (p.column >= 0 && p.column < LANES) lanes[p.column].push(p);
   }
 
-  const pressureRatio = Math.min(1, pieces.length / MAX_PIECES);
+  const pressureRatio = Math.min(1, pieces.length / maxPiecesOnBoard);
 
   return (
     <div className="exercise-card" style={{ padding: 0, position: 'relative', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}>
@@ -767,6 +805,20 @@ export function BlockCrush({ exercise, onResult }: Props) {
         >
           {prompt}
         </span>
+
+        {showFirstTimeHint && (
+          <div style={{
+            border: '1px solid rgba(78,205,196,0.35)',
+            background: 'rgba(78,205,196,0.1)',
+            borderRadius: 10,
+            padding: '8px 10px',
+            fontSize: 'var(--game-text-sm)',
+            lineHeight: 1.35,
+            color: 'rgba(233,244,255,0.95)',
+          }}>
+            {isMulti ? ui.firstHintMulti : ui.firstHintSingle}
+          </div>
+        )}
 
         <div style={{
           display: 'grid',
