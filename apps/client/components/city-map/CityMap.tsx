@@ -8,6 +8,7 @@ import { LocationPin } from './LocationPin';
 import { LocationSheet } from './LocationSheet';
 import { KoreanText } from '@/components/shared/KoreanText';
 import { getLanguageForCity } from '@/lib/content/locations';
+import { runtimeAssetUrl } from '@/lib/runtime-assets';
 
 /* ── Constants ──────────────────────────────────────────────── */
 
@@ -17,6 +18,21 @@ const CITY_META: Record<CityId, { en: string; local: string; hasVideo: boolean }
   tokyo:    { en: 'Tokyo',    local: '東京', hasVideo: true },
   seoul:    { en: 'Seoul',    local: '서울', hasVideo: true },
   shanghai: { en: 'Shanghai', local: '上海', hasVideo: true },
+};
+
+const CITY_MEDIA: Record<CityId, { poster: string; video: string }> = {
+  tokyo: {
+    poster: runtimeAssetUrl('city.tokyo.map.static.default'),
+    video: runtimeAssetUrl('city.tokyo.map.video.default'),
+  },
+  seoul: {
+    poster: runtimeAssetUrl('city.seoul.map.static.default'),
+    video: runtimeAssetUrl('city.seoul.map.video.default'),
+  },
+  shanghai: {
+    poster: runtimeAssetUrl('city.shanghai.map.static.default'),
+    video: runtimeAssetUrl('city.shanghai.map.video.default'),
+  },
 };
 
 /* ── Per-city location configs ────────────────────────────────── */
@@ -218,7 +234,8 @@ export function CityMap({
   /* ── Background ─────────────────────────────────────────── */
 
   const bgStyle = { transform: `translateX(${dragOffset}px)` };
-  const videoSrc = `/assets/locations/${city}.mp4`;
+  const cityMedia = CITY_MEDIA[city];
+  const videoSrc = cityMedia.video;
 
   return (
     <div
@@ -238,7 +255,7 @@ export function CityMap({
             muted
             playsInline
             preload="auto"
-            poster={`/assets/locations/${city}-static.png`}
+            poster={cityMedia.poster}
           >
             <source src={videoSrc} type="video/mp4" />
           </video>
@@ -259,7 +276,7 @@ export function CityMap({
           key={city}
           className={`city-map__bg${comingSoon ? ' city-map__bg--greyscale' : ''}`}
           style={bgStyle}
-          src={`/assets/locations/${city}-static.png`}
+          src={cityMedia.poster}
           alt={meta.en}
         />
       )}

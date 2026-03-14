@@ -11,6 +11,7 @@ import {
 } from '@/lib/ai/prompts/introduction-hangout';
 import { CHARACTER_MAP, HAEUN, TUTORIAL_VIDEO_CONFIG } from '@/lib/content/characters';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
+import { runtimeAssetUrl } from '@/lib/runtime-assets';
 import type { Character, RelationshipStage, Relationship } from '@/lib/types/relationship';
 import type { MasterySnapshot } from '@/lib/types/mastery';
 
@@ -102,7 +103,7 @@ const hangoutTools = {
   set_backdrop: tool({
     description: 'Change the scene backdrop. Use to transition between areas within a location (e.g., from outside to inside the stall, from counter to kitchen).',
     parameters: z.object({
-      backdropUrl: z.string().describe('Path to the backdrop image, e.g. /assets/backdrops/seoul/pojangmacha.png'),
+      backdropUrl: z.string().describe('Resolved runtime asset URL for the backdrop image'),
       transition: z.enum(['fade', 'cut']).describe('Transition type: fade (smooth 0.5s) or cut (instant)'),
       ambientDescription: z.string().nullable().describe('Ambient text shown if image fails to load, or null'),
     }),
@@ -261,7 +262,7 @@ export async function POST(req: Request) {
       exercisesDone: (introCtx.exercisesDone as number) ?? 0,
       minExercises: 3,
       introAct: (introCtx.introAct as 1 | 2) ?? 1,
-      backdropUrl: (introCtx.backdropUrl as string) ?? '/assets/backdrops/seoul/pojangmacha.png',
+      backdropUrl: (introCtx.backdropUrl as string) ?? runtimeAssetUrl('city.seoul.location.food-street.backdrop.default'),
       chargePercent: (introCtx.chargePercent as number) ?? 0,
       chargeComplete: (introCtx.chargeComplete as boolean) ?? false,
     };

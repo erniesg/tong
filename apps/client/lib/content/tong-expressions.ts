@@ -1,3 +1,5 @@
+import { runtimeAssetUrl } from '@/lib/runtime-assets';
+
 export type TongExpression =
   | 'neutral'
   | 'cheerful'
@@ -11,16 +13,16 @@ export type TongExpression =
   | 'thinking';
 
 export const TONG_EXPRESSIONS: Record<TongExpression, string> = {
-  neutral:   '/assets/characters/tong/tong_neutral.png',
-  cheerful:  '/assets/characters/tong/tong_cheerful.png',
-  surprised: '/assets/characters/tong/tong_surprised.png',
-  proud:     '/assets/characters/tong/tong_proud.png',
-  love:      '/assets/characters/tong/tong_love.png',
-  sad:       '/assets/characters/tong/tong_sad.png',
-  crying:    '/assets/characters/tong/tong_crying.png',
-  amazed:    '/assets/characters/tong/tong_amazed.png',
-  excited:   '/assets/characters/tong/tong_excited.png',
-  thinking:  '/assets/characters/tong/tong_thinking.png',
+  neutral: runtimeAssetUrl('character.tong.expression.neutral'),
+  cheerful: runtimeAssetUrl('character.tong.expression.cheerful'),
+  surprised: runtimeAssetUrl('character.tong.expression.surprised'),
+  proud: runtimeAssetUrl('character.tong.expression.proud'),
+  love: runtimeAssetUrl('character.tong.expression.love'),
+  sad: runtimeAssetUrl('character.tong.expression.sad'),
+  crying: runtimeAssetUrl('character.tong.expression.crying'),
+  amazed: runtimeAssetUrl('character.tong.expression.amazed'),
+  excited: runtimeAssetUrl('character.tong.expression.excited'),
+  thinking: runtimeAssetUrl('character.tong.expression.thinking'),
 };
 
 export function tongExpressionUrl(expression: TongExpression = 'cheerful'): string {

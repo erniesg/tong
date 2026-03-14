@@ -1,4 +1,5 @@
 import type { Location, VocabularyTarget, GrammarTarget, LearningObjective } from '../types/objectives';
+import { runtimeAssetUrl } from '@/lib/runtime-assets';
 
 const LEVEL_0_OBJECTIVES: LearningObjective[] = [
   {
@@ -285,7 +286,7 @@ export const POJANGMACHA: Location = {
   name: { en: 'Street Food Stall', ko: '포장마차' },
   domain: 'food',
   order: 1,
-  backgroundImageUrl: '/assets/backdrops/seoul/pojangmacha.png',
+  backgroundImageUrl: runtimeAssetUrl('city.seoul.location.food-street.backdrop.default'),
   ambientDescription:
     'A lively 포장마차 tent near Hongdae. Steam rises from bubbling pots of 떡볶이 and 어묵. Orange plastic stools, a handwritten menu board, and the sound of sizzling oil. Ajusshi wipes the counter with a practiced hand. Other trainees drift in and out.',
   levels: [
