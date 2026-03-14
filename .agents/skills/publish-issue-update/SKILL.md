@@ -46,6 +46,15 @@ Use the invocation arguments as either:
    python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR> --force
    ```
 
+6. If `tong-runs` evidence hosting is configured, upload reviewer-facing artifacts before posting a manual PR comment:
+
+   ```bash
+   npm run qa:upload-evidence -- --run-dir <RUN_DIR> --include-supporting
+   npm run qa:render-comment -- --run-dir <RUN_DIR>
+   ```
+
+   Use the generated `uploaded-comment.md` when you need clean public links, an inline GIF preview, or an MP4 proof link without committing binaries into git.
+
 ## Output requirements
 
 - Never publish a run with a placeholder summary.
