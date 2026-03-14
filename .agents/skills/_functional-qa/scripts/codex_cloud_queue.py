@@ -82,6 +82,17 @@ def batch_order_value(batch_id: str) -> int:
     return 999
 
 
+def issue_order_value(issue_ref: str | None, batch_id: str) -> int:
+    for batch in CLOUD_CONFIG.get("current_batches", []):
+        if batch["id"] != batch_id:
+            continue
+        for index, item in enumerate(batch.get("issues", [])):
+            if issue_ref and item in issue_ref:
+                return index
+        return 999
+    return 999
+
+
 def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, Any]:
     issue_entry = build_issue_entry(raw_issue)
     issue_ref = issue_entry.get("issue_ref")
@@ -264,6 +275,14 @@ def build_plan(args: argparse.Namespace) -> int:
     queue_dir.mkdir(parents=True, exist_ok=True)
 
     issues = [build_cloud_issue(issue, queue_dir) for issue in targets]
+    issues.sort(
+        key=lambda item: (
+            batch_order_value(item["batch_id"]),
+            issue_order_value(item.get("issue_ref"), item["batch_id"]),
+            item.get("number") or 99999,
+            item["title"],
+        )
+    )
     batches = build_batches(issues)
     plan = {
         "schema_version": "1",

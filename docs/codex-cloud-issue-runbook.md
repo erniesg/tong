@@ -55,25 +55,26 @@ The generator emits these as suggestions; it does not modify GitHub labels direc
 
 ### Batch 1
 
-- `#11` Onboarding clarity
-- `#14` HUD discoverability
+- `#15` type-scale cleanup
+- `#18` Block Crush review flash
+- `#19` fake streaming after loading
 
-These are the first cloud wave because they are small, repo-contained UI fixes with low overlap.
+These are the first cloud wave because they are the explicitly prioritized fixes for readability, Block Crush transition polish, and streaming behavior.
 
 ### Batch 2
 
+- `#14` HUD discoverability
+- `#11` Onboarding clarity
 - `#31` Block Crush first-time hint and early cognitive-load follow-up
-- `#18` Block Crush review flash
 - `#17` tap-flow wasted tap
-- `#19` fake streaming after loading
 
-These should follow Batch 1 because they are either Block Crush follow-ups or more timing-sensitive interaction work in the same gameplay shell lane.
+These should follow Batch 1 because they are the remaining onboarding and gameplay-shell follow-ups after the priority wave settles.
 
 ### Batch 3
 
-- `#15` type-scale cleanup
+- no current issue is assigned here
 
-This should happen after the focused fixes, because it is cross-cutting and otherwise creates merge churn.
+Keep this batch available for future cleanup work if more cross-cutting polish issues are opened later.
 
 ### Local-only for now
 
