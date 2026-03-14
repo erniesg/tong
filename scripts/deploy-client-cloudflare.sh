@@ -24,15 +24,25 @@ read_env_value() {
   printf "%s" "${line#*=}"
 }
 
+is_bad_public_api_base() {
+  local value="$1"
+  [[ -z "$value" ]] && return 0
+  [[ "$value" == *"localhost"* ]] && return 0
+  [[ "$value" == *"127.0.0.1"* ]] && return 0
+  [[ "$value" == *"api.example.com"* ]] && return 0
+  return 1
+}
+
 PUBLIC_DOMAIN="${NEXT_PUBLIC_TONG_PUBLIC_DOMAIN:-}"
 if [[ -z "$PUBLIC_DOMAIN" ]]; then PUBLIC_DOMAIN="$(read_env_value NEXT_PUBLIC_TONG_PUBLIC_DOMAIN)"; fi
 if [[ -z "$PUBLIC_DOMAIN" ]]; then PUBLIC_DOMAIN="${TONG_PUBLIC_DOMAIN:-}"; fi
 if [[ -z "$PUBLIC_DOMAIN" ]]; then PUBLIC_DOMAIN="tong.berlayar.ai"; fi
 
 API_BASE="${NEXT_PUBLIC_TONG_API_BASE:-}"
-if [[ -z "$API_BASE" ]]; then API_BASE="$(read_env_value NEXT_PUBLIC_TONG_API_BASE)"; fi
+if [[ -z "$API_BASE" ]]; then API_BASE="${TONG_REMOTE_API_BASE_URL:-}"; fi
 if [[ -z "$API_BASE" ]]; then API_BASE="$(read_env_value TONG_REMOTE_API_BASE_URL)"; fi
 if [[ -z "$API_BASE" ]]; then API_BASE="https://tong-api.erniesg.workers.dev"; fi
+if is_bad_public_api_base "$API_BASE"; then API_BASE="https://tong-api.erniesg.workers.dev"; fi
 
 EXTENSION_ZIP_URL="${NEXT_PUBLIC_TONG_EXTENSION_ZIP_URL:-}"
 if [[ -z "$EXTENSION_ZIP_URL" ]]; then EXTENSION_ZIP_URL="$(read_env_value NEXT_PUBLIC_TONG_EXTENSION_ZIP_URL)"; fi

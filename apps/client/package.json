@@ -6,6 +6,8 @@
     "dev": "npm run ds:build && next dev -p 3000",
     "build": "npm run ds:build && next build",
     "start": "next start -p 3000",
+    "cf:build": "npm run ds:build && opennextjs-cloudflare build --config wrangler.toml",
+    "cf:deploy": "npm run cf:build && opennextjs-cloudflare deploy --config wrangler.toml",
     "ds:build": "node scripts/build-design-system.mjs",
     "ds:watch": "node scripts/build-design-system.mjs --watch",
     "ds:audit": "node scripts/build-design-system.mjs --audit",
