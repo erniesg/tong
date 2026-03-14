@@ -97,6 +97,8 @@ const LANES = 4;
 const BASE_SPEED = 0.00015;
 const SPAWN_INTERVAL = 1400;
 const MAX_PIECES = 6;
+const PLAYFIELD_SPAWN_GUTTER = 28;
+const PLAYFIELD_HEIGHT = 308;
 
 /** Play a single piece's sound (short, no meaning follow-up). */
 function playPieceTTS(piece: string, lang: string) {
@@ -809,42 +811,47 @@ export function BlockCrush({ exercise, onResult }: Props) {
         </div>
       </div>
 
-      {/* Lanes — overflow visible so dragged piece can escape its lane */}
+      {/* Lanes — add a spawn gutter so pieces never eat into the HUD while keeping drag space visible */}
       <div style={{
-        display: 'grid', gridTemplateColumns: `repeat(${LANES}, 1fr)`,
-        gap: 2, height: 280, padding: '0 8px', position: 'relative', overflow: 'visible',
+        padding: `${PLAYFIELD_SPAWN_GUTTER}px 8px 0`,
+        position: 'relative',
       }}>
-        {lanes.map((lane, i) => (
-          <div key={i} style={{ position: 'relative', overflow: 'visible' }}>
-            {lane.map((p) => {
-              // Stage-aware color hint on pieces
-              const pieceBorder = cfg.showColorHints && p.colorHint
-                ? `2px solid ${p.colorHint}${Math.round(cfg.colorHintOpacity * 255 * 0.33).toString(16).padStart(2, '0')}`
-                : '2px solid rgba(255,255,255,0.12)';
+        <div style={{
+          display: 'grid', gridTemplateColumns: `repeat(${LANES}, 1fr)`,
+          gap: 2, height: PLAYFIELD_HEIGHT, position: 'relative', overflow: 'visible',
+        }}>
+          {lanes.map((lane, i) => (
+            <div key={i} style={{ position: 'relative', overflow: 'visible' }}>
+              {lane.map((p) => {
+                // Stage-aware color hint on pieces
+                const pieceBorder = cfg.showColorHints && p.colorHint
+                  ? `2px solid ${p.colorHint}${Math.round(cfg.colorHintOpacity * 255 * 0.33).toString(16).padStart(2, '0')}`
+                  : '2px solid rgba(255,255,255,0.12)';
 
-              return (
-                <div
-                  key={p.id}
-                  ref={(el) => { pieceElRefs.current[p.id] = el; }}
-                  onPointerDown={(e) => startDrag(e, p)}
-                  style={{
-                    position: 'absolute', left: '50%', top: `${p.y * 100}%`,
-                    width: 52, height: 52,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 26, borderRadius: 10, cursor: 'grab',
-                    border: pieceBorder,
-                    background: p.isDistractor ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)',
-                    transform: 'translateX(-50%)', touchAction: 'none', zIndex: 2,
-                    userSelect: 'none', WebkitUserSelect: 'none',
-                    WebkitTouchCallout: 'none',
-                  } as React.CSSProperties}
-                >
-                  {p.piece}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+                return (
+                  <div
+                    key={p.id}
+                    ref={(el) => { pieceElRefs.current[p.id] = el; }}
+                    onPointerDown={(e) => startDrag(e, p)}
+                    style={{
+                      position: 'absolute', left: '50%', top: `${p.y * 100}%`,
+                      width: 52, height: 52,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 26, borderRadius: 10, cursor: 'grab',
+                      border: pieceBorder,
+                      background: p.isDistractor ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)',
+                      transform: 'translateX(-50%)', touchAction: 'none', zIndex: 2,
+                      userSelect: 'none', WebkitUserSelect: 'none',
+                      WebkitTouchCallout: 'none',
+                    } as React.CSSProperties}
+                  >
+                    {p.piece}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Grid frame */}
