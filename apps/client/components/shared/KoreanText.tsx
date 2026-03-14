@@ -277,8 +277,8 @@ function isTargetChar(char: string, targetLang: TargetLang): boolean {
   const code = char.charCodeAt(0);
   switch (targetLang) {
     case 'ko':
-      // Korean: Hangul syllables + Jamo only. NOT CJK ideographs.
-      return isHangulSyllable(code) || isHangulJamo(code);
+      // Korean: Hangul syllables + Jamo + Hanja/CJK ideographs.
+      return isHangulSyllable(code) || isHangulJamo(code) || isCJKIdeograph(code);
     case 'zh':
       // Chinese: CJK ideographs only.
       return isCJKIdeograph(code);
@@ -315,6 +315,43 @@ function segmentText(text: string, targetLang: TargetLang): { text: string; isTa
     segments.push({ text: current, isTarget: currentIsTarget });
   }
   return segments;
+}
+
+function pickStableVoice(targetLang: TargetLang): SpeechSynthesisVoice | null {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return null;
+
+  const prefixes = {
+    ko: ['ko-KR', 'ko'],
+    ja: ['ja-JP', 'ja'],
+    zh: ['zh-CN', 'zh-TW', 'zh'],
+  }[targetLang];
+
+  const sorted = [...voices].sort((a, b) => `${a.lang}-${a.name}`.localeCompare(`${b.lang}-${b.name}`));
+  for (const prefix of prefixes) {
+    const match = sorted.find((voice) => voice.lang.toLowerCase().startsWith(prefix.toLowerCase()));
+    if (match) return match;
+  }
+  return sorted[0] ?? null;
+}
+
+function playTargetAudio(text: string, targetLang: TargetLang): void {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  const fallbackLang = {
+    ko: 'ko-KR',
+    ja: 'ja-JP',
+    zh: 'zh-CN',
+  }[targetLang];
+  utter.lang = fallbackLang;
+  const voice = pickStableVoice(targetLang);
+  if (voice) {
+    utter.voice = voice;
+    utter.lang = voice.lang;
+  }
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utter);
 }
 
 /* ── Romanization ──────────────────────────────────────────── */
@@ -465,8 +502,9 @@ export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextPro
     e.stopPropagation(); // Don't bubble to parent (e.g. dismiss Tong whisper)
     if (activeWord === word) { setActiveWord(null); return; }
     showTooltip(word, e.currentTarget as HTMLElement);
+    playTargetAudio(word, targetLang);
     onWordTap?.();
-  }, [activeWord, showTooltip, onWordTap]);
+  }, [activeWord, showTooltip, onWordTap, targetLang]);
 
   const tooltipVisible = activeWord && tooltipInfo && tooltipPos;
 
