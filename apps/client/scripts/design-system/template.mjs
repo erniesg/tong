@@ -201,7 +201,6 @@ const DS_LAYOUT_CSS = `
  * @returns {string}
  */
 export function generateHTML(parsed, sections) {
-  const now = new Date().toISOString();
   const varCount = parsed.variables.length;
   const classCount = new Set(parsed.rules.flatMap((r) => r.classes)).size;
   const kfCount = parsed.keyframes.length;
@@ -253,7 +252,7 @@ export function generateHTML(parsed, sections) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tong Design System</title>
-<!-- Generated: ${now} | ${varCount} variables, ${classCount} classes, ${kfCount} keyframes -->
+<!-- Generated: design-system build | ${varCount} variables, ${classCount} classes, ${kfCount} keyframes -->
 <style>
 /* ══════════════════════════════════════════════════════════════
    BLOCK 1: globals.css — verbatim embed (single source of truth)
