@@ -34,8 +34,8 @@ const hangoutTools = {
     description: 'The NPC says something to the player. Use for all NPC dialogue. The NPC is a CHARACTER — never a teacher.',
     parameters: z.object({
       characterId: z.string().describe('The NPC character ID (e.g., haeun, jin)'),
-      text: z.string().describe('The dialogue text (mix of Korean + English based on language ratio)'),
-      translation: z.string().nullable().describe('English translation of Korean parts, or null'),
+      text: z.string().describe('The dialogue text (mix of Korean + English based on language ratio). Any Korean/CJK term must stay in native script, never bare romanization.'),
+      translation: z.string().nullable().describe('Separate translation UI text for Korean parts, or null. Do not repeat romanization inline in text.'),
       expression: z.enum([
         'neutral', 'happy', 'surprised', 'thinking', 'embarrassed', 'sad', 'angry', 'flirty',
       ]).nullable().describe('NPC facial expression'),
@@ -46,8 +46,8 @@ const hangoutTools = {
   tong_whisper: tool({
     description: 'Tong gives the player a tip, teaching, or encouragement. Tong is the SOLE teacher — all language explanations go through here. Brief, 1-2 sentences.',
     parameters: z.object({
-      message: z.string().describe('The tip/teaching message'),
-      translation: z.string().nullable().describe('Translation if message contains Korean, or null'),
+      message: z.string().describe('The tip/teaching message. Keep Korean/CJK terms in native script, never bare romanization.'),
+      translation: z.string().nullable().describe('Separate translation UI text if message contains Korean, or null'),
     }),
     execute: async (args) => args,
   }),
