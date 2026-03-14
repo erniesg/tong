@@ -47,6 +47,8 @@ Use the invocation arguments as the issue, URL, or surface name to trace.
 
    When tracing a tap, reveal, or timing-sensitive transition, emit explicit cue timestamps for important state changes if the runtime can provide them, for example `token_tapped_at_ms`, `tooltip_opened_at_ms`, `card_rendered_at_ms`, or `audio_started_at_ms`.
 
+   If the trace media is going to be shown to a human reviewer, keep the clip legible: wait on the ready state before the interaction, show the input itself, and hold briefly on the resulting state. A trace that only engineers can decode should be labeled as such and should not replace acceptance proof.
+
 4. Prefer existing logging and debug hooks from the repo adapter before adding new instrumentation.
 
 5. If you add temporary instrumentation, keep it targeted and remove it before finishing.
@@ -65,3 +67,4 @@ Use the invocation arguments as the issue, URL, or surface name to trace.
 - If the issue remains unresolved, say exactly which state transition or evidence gap is still missing.
 - Point back to the validation run when the trace is a follow-up.
 - Prefer deterministic state cues over post-hoc video interpretation. Use video-understanding or OCR only when the runtime cannot expose the needed state transition directly.
+- If a deterministic jump or injected state makes the visible UI semantically confusing, say so explicitly and rerun before using the clip as reviewer-facing evidence.

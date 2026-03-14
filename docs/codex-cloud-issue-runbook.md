@@ -136,6 +136,7 @@ Important delivery rules:
 3. Use Codex's built-in diff and PR creation flow from the task result.
 4. Artifact directories under `artifacts/qa-runs/` are gitignored. In the current flow, Codex cloud does not automatically publish those local files into the GitHub PR for reviewers. If a fix needs visual proof, attach or link reviewer-visible media in the task result, PR body, or issue comment. If that cannot be done, leave the verification incomplete and require a final local/browser-backed acceptance recording.
 5. Reserve `@codex` GitHub comments for review or explicitly manual experiments, not the default implementation path.
+6. Do not treat a truncated or deterministic-jump clip as final acceptance proof unless the interaction sequence is still legible to a human reviewer: readable pre-action state, visible input, and stable post-action result.
 
 ## Acceptance policy
 
