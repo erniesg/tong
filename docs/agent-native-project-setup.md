@@ -4,6 +4,8 @@ Use one GitHub Project, `Tong Hackathon`, as the control plane for humans and ag
 
 Keep GitHub's built-in `Status` field as the coarse board state (`Todo`, `In Progress`, `Done`) and use `Workflow Status` for the richer execution states below.
 
+See `docs/project-roadmap.md` for the actual unlock order and dependency-driven sequencing.
+
 ## Project fields
 
 - `Workflow Status`: `Backlog`, `Ready`, `In Progress`, `Validating`, `Blocked`, `Done`
