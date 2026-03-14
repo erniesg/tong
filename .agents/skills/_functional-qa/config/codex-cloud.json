@@ -48,8 +48,8 @@
   "current_batches": [
     {
       "id": "batch-1",
-      "description": "First cloud wave: prioritized fixes for readability, Block Crush transition polish, and streaming behavior.",
-      "issues": ["#15", "#18", "#19"]
+      "description": "First cloud wave: Block Crush transition polish and dialogue streaming after the initial readability pass landed.",
+      "issues": ["#18", "#19"]
     },
     {
       "id": "batch-parallel",
@@ -63,8 +63,8 @@
     },
     {
       "id": "batch-3",
-      "description": "Reserved for future cleanup after the focused fixes land.",
-      "issues": []
+      "description": "Later follow-up cleanup after the focused fixes land, including residual readability audit work.",
+      "issues": ["#15"]
     },
     {
       "id": "batch-local",
@@ -99,11 +99,11 @@
     },
     {
       "match": "#15",
-      "cloud_mode": "cloud-ready",
-      "batch": "batch-1",
+      "cloud_mode": "cloud-ready-with-local-proof",
+      "batch": "batch-3",
       "depends_on": [],
-      "needs_final_local_acceptance": false,
-      "reason": "Type-scale cleanup is now intentionally prioritized as the first readability pass."
+      "needs_final_local_acceptance": true,
+      "reason": "PR #33 landed the first readability pass on March 14, 2026, so the remaining scope is a lower-priority audit and mobile-device follow-up rather than the next blocking fix."
     },
     {
       "match": "#17",
@@ -117,9 +117,9 @@
       "match": "#18",
       "cloud_mode": "cloud-ready",
       "batch": "batch-1",
-      "depends_on": ["#15"],
+      "depends_on": [],
       "needs_final_local_acceptance": false,
-      "reason": "This Block Crush transition bug stays in the priority wave, but it should follow the shared-style pass on #15 to reduce client-shell churn."
+      "reason": "The shared readability pass from #15 already landed in PR #33, so this transition bug is now the next client-shell fix in the priority wave."
     },
     {
       "match": "#34",
