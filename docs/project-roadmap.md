@@ -89,15 +89,18 @@ Outcome:
 ## Phase 5: starter world content
 
 Do content after the runtime and progression rails are defined enough that packs can be authored against stable keys and hooks.
+Also make the human creative dependency explicit instead of hiding it inside the city-pack issues.
 
 1. `#60` World content umbrella
 2. `#61` starter content template
-3. `#62` Seoul starter pack
-4. `#63` Tokyo starter pack
-5. `#64` Shanghai starter pack
+3. `#69` starter cast roster and required per-character asset bundle
+4. `#62` Seoul starter pack
+5. `#63` Tokyo starter pack
+6. `#64` Shanghai starter pack
 
 Outcome:
 - content production can run in parallel without inventing structure on every pack
+- city packs no longer pretend the character/media bundle is already solved
 
 ## Priority summary
 
