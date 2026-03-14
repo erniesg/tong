@@ -87,4 +87,4 @@ Build a mobile-first language learning demo with:
 - For timing-sensitive UI issues that need reviewer-visible proof, use `.agents/skills/capture-reviewer-proof/SKILL.md` after validation or fix verification.
 - Publish structured GitHub updates with `.agents/skills/publish-issue-update/SKILL.md` after the run is finalized or when the runtime policy allows auto-commenting.
 - For `/game` issues, use the generated `browser-playbook.md` in the run directory and open `/game` with `qa_run_id` and `qa_trace=1` so browser-capable agents can use `window.__TONG_QA__` for state and log exports.
-- Treat the functional QA artifact bundle under `artifacts/qa-runs/` as the source of truth for reruns and fix verification.
+- Treat the functional QA artifact bundle under `artifacts/qa-runs/` as the local workspace bundle for reruns, manifests, and fix verification. Treat published QA evidence on the external `tong-runs` host as the reviewer-visible proof surface.

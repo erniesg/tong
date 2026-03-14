@@ -63,6 +63,17 @@ Required:
 4. Remote dependencies called out explicitly.
 5. Reviewer-visible evidence requirement if the issue is visual or timing-sensitive.
 
+## QA evidence storage model
+
+Use a two-layer evidence model:
+
+- `artifacts/qa-runs/`
+  - local staging for manifests, summaries, traces, and raw captures
+- `tong-runs`
+  - external reviewer-visible host for published proof clips, GIFs, stills, and manifests
+
+The local artifact tree is still required by the current QA scripts. It should not be treated as the final proof surface for humans reviewing a PR.
+
 Do not require:
 
 1. `/Users/...` paths.

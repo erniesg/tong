@@ -3,6 +3,7 @@
 Use this runbook when you want Codex cloud tasks to work Tong issues through the Codex environment UI and create PRs from task results instead of local worktrees.
 
 Use `docs/agent-native-project-setup.md` as the source of truth for Project fields, lane ownership, and issue portability rules.
+Use `docs/qa-evidence-uploads.md` as the source of truth for the boundary between local QA bundles and published reviewer-visible proof.
 
 ## What Codex cloud can and cannot see
 
@@ -45,6 +46,8 @@ The generator writes:
 4. per-issue task prompt and PR notes files
 
 under `artifacts/qa-runs/functional-qa/codex-cloud-queue/<timestamp>/`.
+
+This is local staging, not the reviewer-visible evidence host.
 
 ## Suggested GitHub labels
 
@@ -129,7 +132,7 @@ Important delivery rules:
 1. The primary implementation path is a direct Codex environment task, not a GitHub comment trigger.
 2. Do not rely on shell-level `git push` or `gh` CLI from inside the cloud task.
 3. Use Codex's built-in diff and PR creation flow from the task result.
-4. Artifact directories under `artifacts/qa-runs/` are gitignored, so evidence must be summarized in the task result or PR body instead of being cited as committed GitHub blob links unless those files were intentionally checked in.
+4. Artifact directories under `artifacts/qa-runs/` are gitignored local staging, so evidence must be summarized in the task result or PR body or uploaded to the external QA evidence host before it counts as reviewer-visible proof.
 5. Reserve `@codex` GitHub comments for review or explicitly manual experiments, not the default implementation path.
 6. For timing-sensitive `/game` issues, prefer seeded checkpoint setup plus a short route-faithful proof clip over a full playthrough.
 7. Do not treat local-only artifact paths as reviewer-visible proof.
