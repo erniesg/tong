@@ -157,7 +157,14 @@ def fetch_project_overrides() -> dict[str, dict[str, str]]:
         ]
         if cursor:
             command.extend(["-F", f"after={cursor}"])
-        result = run_command(command)
+        try:
+            result = run_command(command, allow_failure=True)
+        except FileNotFoundError:
+            PROJECT_OVERRIDE_CACHE = {}
+            return PROJECT_OVERRIDE_CACHE
+        if result.returncode != 0:
+            PROJECT_OVERRIDE_CACHE = {}
+            return PROJECT_OVERRIDE_CACHE
         payload = json.loads(result.stdout)
         owner_payload = payload["data"].get(owner_fragment)
         if not owner_payload or not owner_payload.get("projectV2"):
@@ -343,7 +350,7 @@ def choose_skills(
 def build_issue_entry(issue: dict[str, Any]) -> dict[str, Any]:
     issue_ref = issue.get("issue_ref")
     raw_text = f"{issue['title']}\n\n{issue['body']}".strip()
-    project_fields = fetch_project_overrides().get(issue_ref or "", {})
+    project_fields = fetch_project_overrides().get(issue_ref, {}) if issue_ref else {}
     classification = classify_issue_text(raw_text)
     override = classification_override(issue_ref)
     if override:
