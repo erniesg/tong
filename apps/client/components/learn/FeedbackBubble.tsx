@@ -16,7 +16,7 @@ export function FeedbackBubble({ positive, message, detail }: FeedbackBubbleProp
       <p className="m-0 font-medium">
         {positive ? '✓' : '✗'} {message}
       </p>
-      {detail && <p className="m-0 mt-1 text-xs" style={{ color: 'rgba(255,255,255,0.85)' }}>{detail}</p>}
+      {detail && <p className="m-0 mt-1 text-[length:var(--game-text-sm)]" style={{ color: 'rgba(255,255,255,0.85)' }}>{detail}</p>}
     </div>
   );
 }

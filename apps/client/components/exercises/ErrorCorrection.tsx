@@ -33,7 +33,7 @@ export function ErrorCorrection({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card p-5">
-      <p className="text-lg font-medium mb-4 m-0">{exercise.prompt}</p>
+      <p className="text-[length:var(--game-text-lg)] font-medium mb-4 m-0">{exercise.prompt}</p>
 
       {/* Sentence with tappable words */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 16 }}>
@@ -43,7 +43,7 @@ export function ErrorCorrection({ exercise, onResult }: Props) {
             onClick={() => !submitted && setSelectedWord(idx)}
             disabled={submitted}
             className={cn(
-              'px-3 py-2 rounded-lg text-lg font-medium transition text-ko',
+              'min-h-[44px] px-3 py-2 rounded-lg text-[length:var(--game-text-lg)] font-medium transition text-ko',
               !submitted && selectedWord === idx && 'bg-red-500/30 text-red-300 ring-2 ring-red-400',
               !submitted && selectedWord !== idx && 'bg-white/10 text-[var(--color-text)]',
               submitted && idx === exercise.errorWordIndex && 'bg-red-500/30 text-red-300 line-through',
@@ -58,7 +58,7 @@ export function ErrorCorrection({ exercise, onResult }: Props) {
       {/* Correction options */}
       {selectedWord !== null && (
         <>
-          <p className="text-sm text-[var(--color-text-muted)] mb-2 m-0">{t('replace_with', lang)}</p>
+          <p className="text-[length:var(--game-text-base)] text-[var(--color-text-muted)] mb-2 m-0">{t('replace_with', lang)}</p>
           <div className="pron-select__options">
             {exercise.options.map((opt) => {
               const isThis = selectedCorrection === opt.id;
@@ -85,7 +85,7 @@ export function ErrorCorrection({ exercise, onResult }: Props) {
       )}
 
       {submitted && exercise.explanation && (
-        <p className="mt-3 text-sm text-[var(--color-text-muted)] m-0">{exercise.explanation}</p>
+        <p className="mt-3 text-[length:var(--game-text-base)] text-[var(--color-text-muted)] m-0">{exercise.explanation}</p>
       )}
 
       {!submitted && (
@@ -93,7 +93,7 @@ export function ErrorCorrection({ exercise, onResult }: Props) {
           onClick={handleSubmit}
           disabled={selectedWord === null || !selectedCorrection}
           className={cn(
-            'mt-4 w-full rounded-lg py-3 font-semibold transition',
+            'mt-4 w-full min-h-[44px] rounded-lg py-3 text-[length:var(--game-text-base)] font-semibold transition',
             selectedWord !== null && selectedCorrection
               ? 'bg-[var(--color-accent-gold)] text-[#1a1a2e] hover:brightness-110'
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
@@ -106,7 +106,7 @@ export function ErrorCorrection({ exercise, onResult }: Props) {
       {submitted && (
         <div
           className={cn(
-            'mt-4 rounded-lg px-4 py-3 text-center text-sm',
+            'mt-4 rounded-lg px-4 py-3 text-center text-[length:var(--game-text-base)]',
             isCorrect
               ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]'
               : 'bg-red-500/20 text-red-400',

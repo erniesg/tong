@@ -669,7 +669,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card p-5">
-      <p className="text-lg font-medium mb-3 text-ko m-0">{exercise.prompt}</p>
+      <p className="text-[length:var(--game-text-lg)] font-medium mb-3 text-ko m-0">{exercise.prompt}</p>
 
       {/* Target character + romanization + sound */}
       <div style={{ textAlign: 'center', marginBottom: isDrill ? 8 : 12 }}>
@@ -683,8 +683,8 @@ export function StrokeTracing({ exercise, onResult }: Props) {
               background: 'rgba(255,255,255,0.1)',
               border: 'none',
               borderRadius: '50%',
-              width: 32,
-              height: 32,
+              width: 44,
+              height: 44,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -699,12 +699,12 @@ export function StrokeTracing({ exercise, onResult }: Props) {
           </button>
         </div>
         {exercise.romanization && (
-          <div style={{ fontSize: 14, opacity: 0.5, marginTop: 2 }}>
+          <div style={{ fontSize: 'var(--game-text-base)', opacity: 0.5, marginTop: 2 }}>
             {exercise.romanization}
           </div>
         )}
         {exercise.meaning && exercise.meaning !== exercise.romanization && (
-          <div style={{ fontSize: 13, opacity: 0.4, marginTop: 1 }}>
+          <div style={{ fontSize: 'var(--game-text-sm)', opacity: 0.4, marginTop: 1 }}>
             {getMeaning(exercise.meaning, lang, exercise.targetChar)}
           </div>
         )}
@@ -740,19 +740,19 @@ export function StrokeTracing({ exercise, onResult }: Props) {
 
           {/* Freehand hint */}
           {cellGhostOpacity(activeCell) <= 0.01 && !allDone && (
-            <div style={{ textAlign: 'center', fontSize: 13, opacity: 0.5, marginTop: 8 }}>
+            <div style={{ textAlign: 'center', fontSize: 'var(--game-text-sm)', opacity: 0.5, marginTop: 8 }}>
               {t('stroke_freehand', lang)}
             </div>
           )}
 
           {/* Drill progress */}
-          <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.3, marginTop: 8 }}>
+          <div style={{ textAlign: 'center', fontSize: 'var(--game-text-xs)', opacity: 0.3, marginTop: 8 }}>
             {cellStates.filter((c) => c.done).length}/{totalReps}
           </div>
 
           {allDone && (
             <div
-              className="mt-3 rounded-lg px-4 py-3 text-center text-sm bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]"
+              className="mt-3 rounded-lg px-4 py-3 text-center text-[length:var(--game-text-base)] bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]"
               onClick={() => {
                 const avgScore = cellStates.reduce((a, c) => a + c.score, 0) / cellStates.length;
                 onResult(true, `${totalReps} reps, avg ${Math.round(avgScore * 100)}%`);
@@ -761,11 +761,11 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             >
               {t('stroke_drill_done', lang)}
               {exercise.meaning && (
-                <div className="mt-1 text-sm font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
+                <div className="mt-1 text-[length:var(--game-text-base)] font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
                   {exercise.targetChar} = {getMeaning(exercise.meaning, lang, exercise.targetChar)}
                 </div>
               )}
-              <div className="mt-1 text-xs opacity-70">
+              <div className="mt-1 text-[length:var(--game-text-sm)] opacity-70">
                 {totalReps} reps &middot; avg {Math.round(cellStates.reduce((a, c) => a + c.score, 0) / cellStates.length * 100)}%
               </div>
               <div className="scene-continue-label animate-pulse" style={{ marginTop: 8 }}>
@@ -804,7 +804,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button
                 onClick={handleClear_single}
-                className="flex-1 rounded-lg py-3 font-semibold bg-white/10 text-[var(--color-text-muted)] transition hover:bg-white/20"
+                className="flex-1 min-h-[44px] rounded-lg py-3 text-[length:var(--game-text-base)] font-semibold bg-white/10 text-[var(--color-text-muted)] transition hover:bg-white/20"
               >
                 {t('clear', lang)}
               </button>
@@ -812,7 +812,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
                 onClick={handleSubmit_single}
                 disabled={!hasDrawn}
                 className={cn(
-                  'flex-1 rounded-lg py-3 font-semibold transition',
+                  'flex-1 min-h-[44px] rounded-lg py-3 text-[length:var(--game-text-base)] font-semibold transition',
                   hasDrawn
                     ? 'bg-[var(--color-accent-gold)] text-[#1a1a2e] hover:brightness-110'
                     : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
@@ -826,7 +826,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
           {submitted && result && (
             <div
               className={cn(
-                'mt-4 rounded-lg px-4 py-3 text-center text-sm',
+                'mt-4 rounded-lg px-4 py-3 text-center text-[length:var(--game-text-base)]',
                 result.correct
                   ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]'
                   : 'bg-red-500/20 text-red-400',
@@ -836,18 +836,18 @@ export function StrokeTracing({ exercise, onResult }: Props) {
                 <>
                   {t('stroke_done', lang)}
                   {exercise.meaning && (
-                    <div className="mt-1 text-sm font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
+                    <div className="mt-1 text-[length:var(--game-text-base)] font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
                       {exercise.targetChar} = {getMeaning(exercise.meaning, lang, exercise.targetChar)}
                     </div>
                   )}
-                  <div className="mt-1 text-xs opacity-70">
+                  <div className="mt-1 text-[length:var(--game-text-sm)] opacity-70">
                     {t('stroke_score', lang)}: {Math.round(result.score * 100)}%
                   </div>
                 </>
               ) : (
                 <>
                   {t('stroke_try_again', lang)}
-                  <div className="mt-1 text-xs opacity-70">
+                  <div className="mt-1 text-[length:var(--game-text-sm)] opacity-70">
                     {t('stroke_score', lang)}: {Math.round(result.score * 100)}%
                   </div>
                 </>
@@ -860,7 +860,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
       {/* Example words using this character */}
       {exercise.exampleWords && exercise.exampleWords.length > 0 && (
         <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 13, opacity: 0.5, marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--game-text-sm)', opacity: 0.5, marginBottom: 8 }}>
             {t('stroke_examples', lang)}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -875,6 +875,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: 8,
+                  minHeight: 44,
                   padding: '8px 12px',
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -884,9 +885,9 @@ export function StrokeTracing({ exercise, onResult }: Props) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.4, flexShrink: 0 }}>
                   <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
                 </svg>
-                <span className="text-ko" style={{ fontSize: 18 }}>{ex.word}</span>
-                <span style={{ fontSize: 13, opacity: 0.5 }}>{ex.romanization}</span>
-                <span style={{ fontSize: 13, opacity: 0.4, marginLeft: 'auto' }}>{getMeaning(ex.meaning, lang)}</span>
+                <span className="text-ko" style={{ fontSize: 'var(--game-text-lg)' }}>{ex.word}</span>
+                <span style={{ fontSize: 'var(--game-text-sm)', opacity: 0.5 }}>{ex.romanization}</span>
+                <span style={{ fontSize: 'var(--game-text-sm)', opacity: 0.4, marginLeft: 'auto' }}>{getMeaning(ex.meaning, lang)}</span>
               </button>
             ))}
           </div>

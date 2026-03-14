@@ -92,7 +92,7 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card p-5">
-      <p className="text-lg font-medium mb-3 m-0">{exercise.prompt}</p>
+      <p className="text-[length:var(--game-text-lg)] font-medium mb-3 m-0">{exercise.prompt}</p>
 
       {/* Target character displayed prominently */}
       <div className="pron-select__target" style={{ cursor: 'default' }}>
@@ -129,14 +129,14 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
                 <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, flex: 1 }}>
                   <span className="text-ko" style={{ fontSize: '1.25rem' }}>{opt.label}</span>
                   {opt.romanization && (
-                    <span style={{ fontSize: 13, opacity: 0.5 }}>{opt.romanization}</span>
+                    <span style={{ fontSize: 'var(--game-text-sm)', opacity: 0.5 }}>{opt.romanization}</span>
                   )}
                   {opt.meaning && (
-                    <span style={{ fontSize: 13, opacity: 0.4, marginLeft: 'auto' }}>{opt.meaning}</span>
+                    <span style={{ fontSize: 'var(--game-text-sm)', opacity: 0.4, marginLeft: 'auto' }}>{opt.meaning}</span>
                   )}
                 </span>
               ) : (
-                <span className="text-ko ml-2" style={{ fontSize: '1rem', opacity: 0.6 }}>
+                <span className="text-ko ml-2" style={{ fontSize: 'var(--game-text-base)', opacity: 0.6 }}>
                   {t('tap_to_play', lang)}
                 </span>
               )}
@@ -146,7 +146,7 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
       </div>
 
       {submitted && exercise.explanation && (
-        <p className="mt-3 text-sm text-[var(--color-text-muted)] m-0">{exercise.explanation}</p>
+        <p className="mt-3 text-[length:var(--game-text-base)] text-[var(--color-text-muted)] m-0">{exercise.explanation}</p>
       )}
 
       {!submitted && (
@@ -154,7 +154,7 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
           onClick={handleSubmit}
           disabled={!selected}
           className={cn(
-            'mt-4 w-full rounded-lg py-3 font-semibold transition',
+            'mt-4 w-full min-h-[44px] rounded-lg py-3 text-[length:var(--game-text-base)] font-semibold transition',
             selected
               ? 'bg-[var(--color-accent-gold)] text-[#1a1a2e] hover:brightness-110'
               : 'bg-white/10 text-[var(--color-text-muted)] cursor-not-allowed',
@@ -167,7 +167,7 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
       {submitted && (
         <div
           className={cn(
-            'mt-4 rounded-lg px-4 py-3 text-center text-sm',
+            'mt-4 rounded-lg px-4 py-3 text-center text-[length:var(--game-text-base)]',
             isCorrect
               ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]'
               : 'bg-red-500/20 text-red-400',
