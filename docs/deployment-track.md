@@ -22,6 +22,38 @@ Only these env keys can change:
 2. `TONG_LOCAL_API_BASE_URL`
 3. `TONG_REMOTE_API_BASE_URL`
 
+## Runtime asset contract (`#35`)
+
+Runtime product assets and QA evidence must stay on separate buckets with explicit bindings.
+
+### Buckets and bindings
+
+1. Runtime product assets bucket: `tong-assets`
+   - Worker binding: `TONG_ASSETS_BUCKET`
+   - Public base URL: `https://assets.tong.berlayar.ai`
+2. QA evidence bucket: `tong-runs`
+   - Managed by QA evidence tooling/uploader (not the runtime app worker binding).
+   - Public base URL: `https://runs.tong.berlayar.ai`
+
+### Required runtime environment keys
+
+Set these on Cloudflare Workers (and local `.dev.vars` equivalents when needed):
+
+1. `NEXT_PUBLIC_TONG_ASSETS_BASE_URL`
+2. `TONG_ASSETS_R2_BUCKET`
+3. `TONG_RUNTIME_ASSET_MANIFEST_KEY`
+
+Checked-in examples for this contract live in:
+
+1. `.env.example`
+2. `apps/client/.env.example`
+
+### Boundary rule
+
+1. Runtime app requests for character, scene, and world content must resolve from `tong-assets`.
+2. Functional QA screenshots/videos and reviewer-proof bundles must publish to `tong-runs`.
+3. Do not mix product runtime payloads and QA reviewer artifacts in a single bucket.
+
 ## Secrets contract
 Store all sensitive values in server runtime secrets (Cloudflare Workers secrets or equivalent):
 1. `TONG_DEMO_PASSWORD`

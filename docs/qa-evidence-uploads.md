@@ -24,12 +24,26 @@ Suggested public domains:
 
 ## Environment
 
-Set these in the shell that runs the uploader:
+Set uploader env vars in the shell that runs QA evidence publication:
 
 ```bash
 export TONG_RUNS_R2_BUCKET=tong-runs
 export TONG_RUNS_PUBLIC_BASE_URL=https://runs.tong.berlayar.ai
 ```
+
+Runtime asset contract reference (managed by runtime app/deploy config, not the uploader):
+
+```bash
+export TONG_ASSETS_R2_BUCKET=tong-assets
+export NEXT_PUBLIC_TONG_ASSETS_BASE_URL=https://assets.tong.berlayar.ai
+export TONG_RUNTIME_ASSET_MANIFEST_KEY=runtime-assets/manifest.json
+```
+
+Boundary reminder:
+
+1. `TONG_ASSETS_R2_BUCKET` + `NEXT_PUBLIC_TONG_ASSETS_BASE_URL` are for player-facing runtime assets only.
+2. `TONG_RUNS_R2_BUCKET` + `TONG_RUNS_PUBLIC_BASE_URL` are for reviewer-facing QA evidence only.
+3. `TONG_RUNTIME_ASSET_MANIFEST_KEY` points to the canonical runtime manifest path.
 
 The uploader uses the Wrangler auth already configured for `apps/client`.
 

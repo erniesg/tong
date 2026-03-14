@@ -12,13 +12,15 @@ npm --prefix apps/client run dev
 Set API base (recommended):
 
 ```bash
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8787
+NEXT_PUBLIC_TONG_API_BASE=http://localhost:8787
+NEXT_PUBLIC_TONG_ASSETS_BASE_URL=https://assets.tong.berlayar.ai
 ```
 
 Cloud worker:
 
 ```bash
-NEXT_PUBLIC_API_BASE_URL=https://tong-api.<subdomain>.workers.dev
+NEXT_PUBLIC_TONG_API_BASE=https://tong-api.<subdomain>.workers.dev
+NEXT_PUBLIC_TONG_ASSETS_BASE_URL=https://assets.tong.berlayar.ai
 ```
 
 ## Cloudflare Workers Deploy (OpenNext)
@@ -45,6 +47,8 @@ Recommended deploy-time public vars for judge onboarding:
 
 ```bash
 NEXT_PUBLIC_TONG_PUBLIC_DOMAIN=tong.berlayar.ai
+NEXT_PUBLIC_TONG_API_BASE=https://tong-api.<subdomain>.workers.dev
+NEXT_PUBLIC_TONG_ASSETS_BASE_URL=https://assets.tong.berlayar.ai
 NEXT_PUBLIC_TONG_EXTENSION_ZIP_URL=https://<release-or-cdn>/tong.zip
 NEXT_PUBLIC_TONG_YOUTUBE_DEMO_URL=https://www.youtube.com/watch?v=<demo-video-id>
 ```
