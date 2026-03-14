@@ -26,6 +26,9 @@ Choose evidence from the issue class, then refine for the actual surface.
 ## Rules
 
 1. Do not claim a UI bug is validated without visual evidence.
-2. For timing-sensitive bugs, a single screenshot is not enough.
-3. If a required evidence type is unavailable, lower confidence and explain the gap in `summary.md` and `publish.md`.
-4. When a bug is ambiguous, escalate to `trace-ui-state` instead of guessing.
+2. The screenshot or capture must directly show the claimed issue or fix; generic or background frames do not count.
+3. For timing-sensitive bugs, a single screenshot is not enough.
+4. For CJK or pronunciation-placement issues, capture the actual dialogue text, the tapped tooltip or card state, and the pronunciation placement.
+5. If an issue depends on AI output and live-model behavior was not exercised, mark the run partial or blocked instead of claiming a full fix.
+6. If a required evidence type is unavailable, lower confidence and explain the gap in `summary.md` and `publish.md`.
+7. When a bug is ambiguous, escalate to `trace-ui-state` instead of guessing.

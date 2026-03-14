@@ -13,6 +13,18 @@
       "description": "Issue can be validated, fixed, and re-verified in Codex cloud from repo state plus setup."
     },
     {
+      "name": "validate-only",
+      "description": "Issue should stop after validation evidence and a scoped proposal instead of an unattended fix."
+    },
+    {
+      "name": "needs-human-review",
+      "description": "Issue involves UX or product judgment and should not be closed by an unattended worker."
+    },
+    {
+      "name": "requires-live-model",
+      "description": "Issue depends on live AI output and cannot be claimed fixed from fallback-only validation."
+    },
+    {
       "name": "local-only",
       "description": "Issue depends on local-only assets, device-specific state, or context not reproducible in Codex cloud."
     },
@@ -45,15 +57,19 @@
     "compatibility-environment",
     "localization-content"
   ],
+  "fix_allowed_execution_modes": [
+    "safe-unattended",
+    "requires-live-model"
+  ],
   "current_batches": [
     {
       "id": "batch-1",
-      "description": "First cloud wave: independent issues with low overlap and no hard local-asset blocker.",
+      "description": "First cloud wave: validation-first tasks for onboarding, HUD clarity, and CJK handling before any subjective fixes are approved.",
       "issues": ["#11", "#13", "#14", "#16"]
     },
     {
       "id": "batch-2",
-      "description": "Second cloud wave: follow-up interaction and block-crush fixes after the first merge wave settles.",
+      "description": "Second cloud wave: trace-heavy interaction and transition issues after the first lane settles.",
       "issues": ["#18", "#17", "#19"]
     },
     {
@@ -74,7 +90,7 @@
       "batch": "batch-1",
       "depends_on": [],
       "needs_final_local_acceptance": false,
-      "reason": "Onboarding clarity changes are code-only and reproducible from repo state."
+      "reason": "Cloud can capture evidence and prepare a proposal, but onboarding flow and language-selection changes still require product judgment before an unattended fix."
     },
     {
       "match": "#12",
@@ -90,7 +106,7 @@
       "batch": "batch-1",
       "depends_on": [],
       "needs_final_local_acceptance": false,
-      "reason": "The Block Crush HUD/time-pressure issue is self-contained in tracked UI code and fixtures."
+      "reason": "Cloud can reproduce the Block Crush HUD issue, but visual hierarchy and mobile clutter need human design review before a fix is accepted."
     },
     {
       "match": "#14",
@@ -98,7 +114,7 @@
       "batch": "batch-1",
       "depends_on": [],
       "needs_final_local_acceptance": false,
-      "reason": "HUD discoverability is a repo-contained UI/task copy problem."
+      "reason": "HUD discoverability is reproducible in cloud, but unattended copy or hierarchy changes should stop for human design review."
     },
     {
       "match": "#15",
@@ -106,7 +122,7 @@
       "batch": "batch-3",
       "depends_on": ["#11", "#13", "#14", "#16", "#18", "#17", "#19"],
       "needs_final_local_acceptance": false,
-      "reason": "Type-scale cleanup should run after the focused UI fixes to avoid churn and merge noise."
+      "reason": "Broad readability cleanup should stay in validation-and-proposal mode until the narrower issues land and the final scope is agreed."
     },
     {
       "match": "#16",
@@ -114,7 +130,7 @@
       "batch": "batch-1",
       "depends_on": [],
       "needs_final_local_acceptance": true,
-      "reason": "The prompt/rendering changes are cloud-fixable, but tap-to-hear and text handling still need browser-backed acceptance."
+      "reason": "The issue is cloud-fixable, but a fixed claim requires direct evidence from live-model Korean output rather than fallback-only validation."
     },
     {
       "match": "#17",
@@ -122,7 +138,7 @@
       "batch": "batch-2",
       "depends_on": ["#11"],
       "needs_final_local_acceptance": true,
-      "reason": "The wasted-tap fix can be developed in cloud, but final confidence depends on timed browser tracing."
+      "reason": "Cloud should trace and narrow the wasted-tap bug first; do not treat it as a simple unattended fix without issue-specific timing evidence."
     },
     {
       "match": "#18",
@@ -130,7 +146,7 @@
       "batch": "batch-2",
       "depends_on": ["#13"],
       "needs_final_local_acceptance": false,
-      "reason": "This transition bug is code-local but should follow the earlier Block Crush HUD changes to reduce conflicts."
+      "reason": "The transition bug is reproducible in cloud, but it should remain a trace-and-propose issue until the stale-frame source is isolated."
     },
     {
       "match": "#19",
@@ -138,7 +154,7 @@
       "batch": "batch-2",
       "depends_on": ["#17"],
       "needs_final_local_acceptance": true,
-      "reason": "Streaming can be reworked in cloud, but the final player-visible behavior still needs browser-backed verification."
+      "reason": "Streaming behavior needs timing evidence first and should not be claimed fixed without player-visible progressive rendering proof."
     }
   ]
 }

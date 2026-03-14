@@ -38,6 +38,19 @@
       "notes": "Validates core fixture and contract integrity before UI-specific validation."
     }
   ],
+  "validation_defaults": {
+    "execution_mode": "safe-unattended",
+    "direct_evidence_requirements": [
+      "Capture the exact UI state that demonstrates the claimed issue or fix.",
+      "Generic, background, or unrelated screenshots do not count as direct evidence."
+    ],
+    "ui_acceptance_checks": [
+      "No overlap or collision in the mobile viewport.",
+      "No awkward wrapping in critical HUD or status UI.",
+      "Primary interaction keeps stronger hierarchy than any added status or helper UI.",
+      "The fix reduces cognitive load instead of adding clutter."
+    ]
+  },
   "surfaces": [
     {
       "id": "overlay",
@@ -74,6 +87,14 @@
   ],
   "issue_notes": [
     {
+      "match": "#16",
+      "issue_class_override": "localization-content",
+      "notes": [
+        "Differentiate live-model output from fallback or static/dev responses before claiming a fix.",
+        "Do not claim success unless the evidence shows actual Korean dialogue plus the tapped pronunciation surface."
+      ]
+    },
+    {
       "match": "#17",
       "issue_class_override": "interaction-input",
       "notes": [
@@ -102,6 +123,7 @@
     {
       "match": "#11",
       "surface": "game",
+      "execution_mode": "validate-and-propose-only",
       "route_template": "/game?fresh=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
       "steps": [
         "Open the fresh onboarding flow and progress through Tong intro until the profile/language settings step is visible.",
@@ -112,6 +134,20 @@
         "full onboarding language settings screen",
         "any confusing or unlabeled controls"
       ],
+      "validation_requirements": {
+        "direct_evidence": [
+          "Capture the complete onboarding language-selection step before changing any controls.",
+          "Capture the specific controls, labels, or forced-default behavior that make the flow ambiguous."
+        ],
+        "ui_acceptance_checks": [
+          "A new player can tell what each language control changes without prior explanation.",
+          "Any clarification reduces onboarding ambiguity without adding more visual clutter."
+        ],
+        "stop_conditions": [
+          "If the fix depends on deciding whether language selection belongs on one screen versus multiple future onboarding screens, stop after validation and proposal.",
+          "If the fix implies syncing onboarding choices with future web-form or account-setting flows, stop and defer to a human product decision."
+        ]
+      },
       "state_targets": [
         "phase",
         "qaRunId"
@@ -140,6 +176,7 @@
     {
       "match": "#13",
       "surface": "game",
+      "execution_mode": "needs-human-design-review",
       "route_template": "/game?dev=exercise&type=block_crush&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
       "steps": [
         "Open the Block Crush dev exercise.",
@@ -151,6 +188,21 @@
         "active falling-piece state",
         "lives indicator close-up"
       ],
+      "validation_requirements": {
+        "direct_evidence": [
+          "Capture the narrow mobile gameplay state that shows how the pressure or timing HUD reads during play.",
+          "Capture the exact HUD or status treatment that competes with the game board if present."
+        ],
+        "ui_acceptance_checks": [
+          "Critical gameplay HUD does not overlap or wrap awkwardly on narrow mobile.",
+          "Status UI clarifies pressure without competing with the board or making the screen busier."
+        ],
+        "human_review_required": true,
+        "stop_conditions": [
+          "If the fix relies on subjective visual hierarchy or adding persistent HUD or status copy, stop after validation and proposal.",
+          "Do not claim success for a change that makes the screen busier even if the raw data is more explicit."
+        ]
+      },
       "state_targets": [
         "phase",
         "currentExercise"
@@ -159,6 +211,7 @@
     {
       "match": "#14",
       "surface": "game",
+      "execution_mode": "needs-human-design-review",
       "route_template": "/game?dev_intro=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
       "steps": [
         "Open a hangout and leave the HUD closed initially.",
@@ -169,6 +222,21 @@
         "HUD closed state",
         "HUD open state"
       ],
+      "validation_requirements": {
+        "direct_evidence": [
+          "Capture the closed HUD state that shows whether the pull tab is discoverable without instruction.",
+          "Capture the open HUD state that shows the charge meter and XP, SP, and RP label hierarchy."
+        ],
+        "ui_acceptance_checks": [
+          "Any discoverability fix improves hierarchy without adding competing HUD text.",
+          "Charge, XP, SP, and RP remain readable on mobile without visual clutter or awkward wrapping."
+        ],
+        "human_review_required": true,
+        "stop_conditions": [
+          "If the change depends on subjective discoverability or hierarchy judgment, stop after validation and proposal.",
+          "Do not add persistent helper copy unless a human explicitly approves the tradeoff."
+        ]
+      },
       "state_targets": [
         "phase"
       ]
@@ -176,6 +244,7 @@
     {
       "match": "#15",
       "surface": "game",
+      "execution_mode": "validate-and-propose-only",
       "route_template": "/game?dev_intro=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
       "steps": [
         "Open the main game surfaces in a mobile viewport.",
@@ -187,6 +256,17 @@
         "whisper-heavy state",
         "HUD text in mobile viewport"
       ],
+      "validation_requirements": {
+        "direct_evidence": [
+          "Capture the specific crowded states that motivate the readability complaint, not only generic game frames."
+        ],
+        "ui_acceptance_checks": [
+          "Any proposed readability change should improve hierarchy across dialogue, whisper, and HUD instead of creating new inconsistency."
+        ],
+        "stop_conditions": [
+          "If the fix becomes broad cross-cutting typography cleanup, stop after validation and proposal so the scope can be sequenced deliberately."
+        ]
+      },
       "state_targets": [
         "phase"
       ]
@@ -194,16 +274,38 @@
     {
       "match": "#16",
       "surface": "game",
+      "execution_mode": "requires-live-model",
       "route_template": "/game?dev_intro=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
       "steps": [
-        "Open a hangout scene with Korean text visible.",
-        "Tap CJK words and verify whether the interaction is consistent.",
-        "Capture examples of bare romanization or non-tappable CJK if found."
+        "Open a hangout scene with Korean dialogue visible in the main immersive text.",
+        "Capture the main sentence and verify it uses native script with no inline parenthetical romanization.",
+        "Tap a Korean token and capture the tooltip or dictionary state that exposes pronunciation placement.",
+        "Record whether the run exercised live-model output, fallback content, or only a static or dev route."
       ],
       "screenshot_targets": [
-        "CJK dialogue state",
-        "tooltip or tap interaction state"
+        "actual Korean dialogue state in the main message bubble",
+        "tooltip or dictionary state for the tapped Korean token",
+        "pronunciation placement outside the main immersive sentence"
       ],
+      "validation_requirements": {
+        "direct_evidence": [
+          "Capture an actual Korean dialogue sentence in the main immersive bubble.",
+          "Capture the tapped tooltip or dictionary card for the same Korean token.",
+          "Capture where pronunciation or romanization appears instead of inline parentheses."
+        ],
+        "ui_acceptance_checks": [
+          "Native script remains primary in the main immersive sentence.",
+          "Inline parenthetical romanization does not appear in immersive dialogue.",
+          "Pronunciation is available in tooltip, dictionary, or audio UI without displacing the main sentence."
+        ],
+        "required_runtime_modes_for_fixed": [
+          "live-model"
+        ],
+        "requires_live_model_for_fixed": true,
+        "stop_conditions": [
+          "If only fallback or canned or dev content was exercised, mark the run partial or blocked and do not claim the issue fixed."
+        ]
+      },
       "state_targets": [
         "phase",
         "currentMessage",
@@ -213,6 +315,7 @@
     {
       "match": "#17",
       "surface": "game",
+      "execution_mode": "validate-and-propose-only",
       "route_template": "/game?dev_intro=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
       "steps": [
         "Open the first hangout scene in QA mode.",
@@ -225,6 +328,15 @@
         "post-tap no-op state if reproduced",
         "recovered next-state after another tap"
       ],
+      "validation_requirements": {
+        "direct_evidence": [
+          "Capture the visible continue-ready state immediately before the wasted tap.",
+          "Capture the post-tap no-op state plus the correlated QA logs or state export."
+        ],
+        "stop_conditions": [
+          "If tracing still leaves multiple plausible state-race explanations, stop after evidence and proposal instead of making a speculative fix."
+        ]
+      },
       "state_targets": [
         "phase",
         "chatLoading",
@@ -239,6 +351,7 @@
     {
       "match": "#18",
       "surface": "game",
+      "execution_mode": "validate-and-propose-only",
       "route_template": "/game?dev_intro=1&dev_act=2&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
       "steps": [
         "Open the Act 2 intro and progress until a Block Crush exercise completes.",
@@ -250,6 +363,14 @@
         "transition burst during dismissal",
         "first clean post-dismissal state"
       ],
+      "validation_requirements": {
+        "direct_evidence": [
+          "Capture the transition sequence itself, not only the states before and after dismissal."
+        ],
+        "stop_conditions": [
+          "If the stale-frame source is still ambiguous after transition tracing, stop after validation evidence and proposal."
+        ]
+      },
       "state_targets": [
         "phase",
         "currentExercise",
@@ -260,6 +381,7 @@
     {
       "match": "#19",
       "surface": "game",
+      "execution_mode": "validate-and-propose-only",
       "route_template": "/game?dev_intro=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
       "steps": [
         "Open the first hangout scene in QA mode.",
@@ -271,6 +393,14 @@
         "first visible dialogue frame",
         "fully visible dialogue frame"
       ],
+      "validation_requirements": {
+        "direct_evidence": [
+          "Capture timestamps or ordered evidence for request start, first visible text, incremental updates, and completion."
+        ],
+        "stop_conditions": [
+          "If the issue spans transport timing and client rendering without a clearly isolated regression, stop after validation evidence and proposal."
+        ]
+      },
       "state_targets": [
         "phase",
         "chatLoading",

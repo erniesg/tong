@@ -32,6 +32,12 @@ def override_for(issue_ref: str | None) -> dict[str, Any] | None:
     return None
 
 
+def bullet_block(items: list[str], fallback: str) -> str:
+    if not items:
+        return f"- {fallback}"
+    return "\n".join(f"- {item}" for item in items)
+
+
 def default_cloud_mode(raw_issue: dict[str, Any], issue_entry: dict[str, Any]) -> tuple[str, bool, str, list[str]]:
     lowered = f"{raw_issue['title']}\n{raw_issue['body']}".lower()
     blockers = [keyword for keyword in CLOUD_CONFIG.get("local_only_keywords", []) if keyword in lowered]
@@ -101,6 +107,22 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
     branch_name = branch_name_for(issue_number, issue_entry["title"])
     pr_title = pr_title_for(issue_number, issue_entry["title"])
     worktree = issue_entry["recommended_worktree"]
+    validation_policy = issue_entry["validation_policy"]
+    execution_mode = validation_policy["execution_mode"]
+    fix_allowed = execution_mode in CLOUD_CONFIG.get("fix_allowed_execution_modes", ["safe-unattended", "requires-live-model"])
+
+    if cloud_mode == "local-only":
+        queue_action = "skip cloud for now"
+        completion_instruction = "Stop and report the blocker. Do not create a PR or claim the issue is fixed."
+        verification_instruction = "Do not make code changes. Report the exact local-only blocker and any missing setup."
+    elif fix_allowed:
+        queue_action = "launch a direct Codex task and allow code changes after validation"
+        completion_instruction = "When the task is done, return a real diff and use Codex's built-in PR creation flow from the task result."
+        verification_instruction = "After a code change, re-run validation and verify the fix before claiming success."
+    else:
+        queue_action = "launch a validation-only Codex task and stop after evidence and proposal"
+        completion_instruction = "When the task is done, return the validation evidence, the unresolved questions, and a scoped proposal. Do not create a PR unless a human explicitly approves the direction."
+        verification_instruction = "Do not make broad UX or product changes unattended. Stop after validation, trace output, and proposal."
 
     issue_dir = queue_dir / "issues"
     issue_dir.mkdir(exist_ok=True)
@@ -116,12 +138,33 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
         "{{worktree_id}}": worktree["id"],
         "{{worktree_branch}}": worktree["branch"],
         "{{cloud_mode}}": cloud_mode,
+        "{{execution_mode}}": execution_mode,
         "{{needs_local_acceptance}}": "yes" if needs_local_acceptance else "no",
         "{{initial_skill}}": issue_entry["initial_skill"],
         "{{follow_up_skills}}": "; ".join(issue_entry["follow_up_skills"]),
         "{{readiness_reason}}": readiness_reason,
         "{{suggested_pr_title}}": pr_title,
         "{{suggested_branch_name}}": branch_name,
+        "{{queue_action}}": queue_action,
+        "{{verification_instruction}}": verification_instruction,
+        "{{completion_instruction}}": completion_instruction,
+        "{{lane_guidance}}": f"Only one active worker should own `{worktree['id']}` at a time. Same-lane issues should serialize unless intentionally combined in one PR.",
+        "{{validation_gate_lines}}": bullet_block(
+            [
+                f"Direct issue evidence required: {'yes' if validation_policy['requires_direct_issue_evidence'] else 'no'}",
+                f"UI acceptance gate required: {'yes' if validation_policy['ui_acceptance_required'] else 'no'}",
+                f"Live model required for fixed: {'yes' if validation_policy['requires_live_model_for_fixed'] else 'no'}",
+                f"Human review required before fixed: {'yes' if validation_policy['human_review_required'] else 'no'}",
+            ]
+            + ([f"Direct evidence targets: {'; '.join(validation_policy['direct_evidence'])}"] if validation_policy["direct_evidence"] else [])
+            + ([f"UI acceptance checks: {'; '.join(validation_policy['ui_acceptance_checks'])}"] if validation_policy["ui_acceptance_checks"] else [])
+            + ([f"Required runtime modes for fixed: {', '.join(validation_policy['required_runtime_modes_for_fixed'])}"] if validation_policy["required_runtime_modes_for_fixed"] else []),
+            "No extra validation gates beyond the standard issue workflow.",
+        ),
+        "{{stop_conditions}}": bullet_block(
+            validation_policy["stop_conditions"],
+            "If validation stays ambiguous or subjective, stop and report instead of guessing.",
+        ),
         "{{final_acceptance_note}}": (
             "Do not send this issue to Codex cloud yet; keep it local until the blocking asset or environment dependency is removed."
             if cloud_mode == "local-only"
@@ -144,6 +187,8 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
     return {
         **issue_entry,
         "cloud_mode": cloud_mode,
+        "execution_mode": execution_mode,
+        "queue_action": queue_action,
         "needs_final_local_acceptance": needs_local_acceptance,
         "readiness_reason": readiness_reason,
         "depends_on": depends_on,
@@ -206,6 +251,7 @@ def render_markdown(plan: dict[str, Any]) -> str:
             [
                 f"### {label}",
                 f"- Cloud mode: `{issue['cloud_mode']}`",
+                f"- Execution mode: `{issue['execution_mode']}`",
                 f"- Batch: `{issue['batch_id']}`",
                 f"- Branch: `{issue['branch_name']}`",
                 f"- Draft PR title: `{issue['draft_pr_title']}`",
@@ -214,7 +260,7 @@ def render_markdown(plan: dict[str, Any]) -> str:
                 f"- Follow-ups: `{'; '.join(issue['follow_up_skills'])}`",
                 f"- Depends on: `{', '.join(issue['depends_on']) or 'none'}`",
                 f"- Readiness: {issue['readiness_reason']}",
-                f"- Queue action: `{'skip cloud for now' if issue['cloud_mode'] == 'local-only' else 'launch a direct Codex task and create a PR from the task result'}`",
+                f"- Queue action: `{issue['queue_action']}`",
                 f"- Task prompt: `{issue['generated_files']['task_prompt']}`",
                 f"- PR notes: `{issue['generated_files']['pr_notes']}`",
             ]
@@ -242,6 +288,19 @@ def build_launch_instructions(plan: dict[str, Any]) -> str:
                 ]
             )
             continue
+        if issue["queue_action"].startswith("launch a validation-only"):
+            lines.extend(
+                [
+                    f"# {issue['issue_ref'] or issue['title']}",
+                    "1. Open `chatgpt.com/codex` and choose the configured environment.",
+                    f"2. Start a new task and paste `{issue['generated_files']['task_prompt']}`.",
+                    "3. Wait for the task to finish validation, trace work if needed, and a scoped proposal.",
+                    "4. Do not create a PR from this task unless a human explicitly approves the design or product direction.",
+                    f"5. Review the evidence and proposal in `{issue['generated_files']['pr_notes']}` before starting another worker in the same lane.",
+                    "",
+                ]
+            )
+            continue
         lines.extend(
             [
                 f"# {issue['issue_ref'] or issue['title']}",
@@ -250,7 +309,7 @@ def build_launch_instructions(plan: dict[str, Any]) -> str:
                 "3. Wait for the task to finish validation, code changes, and `--verify-fix`.",
                 f"4. Use Codex's built-in PR creation flow from the task result with title `{issue['draft_pr_title']}`.",
                 f"5. Copy any useful merge notes from `{issue['generated_files']['pr_notes']}` into the PR if Codex does not already summarize them well.",
-                "6. Review the resulting GitHub diff before moving on to the next issue in the batch.",
+                "6. Review the resulting GitHub diff before moving on to the next issue in the same lane.",
                 "",
             ]
         )

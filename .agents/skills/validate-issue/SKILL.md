@@ -55,6 +55,12 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
 
 6. For UI issues, do not claim success without visual evidence. Use screenshots, ordered frames, or other temporal capture that matches the selected evidence strategy.
 
+   Evidence must directly show the claimed fix or failure state. Generic background screenshots do not count.
+
+   For CJK or pronunciation-placement issues, capture the actual dialogue text, the tapped tooltip or dictionary state, and where pronunciation appears.
+
+   For AI-output issues, record whether the run exercised live-model output, fallback content, or only a static or dev route. If live-model output was required and unavailable, do not claim a full fix.
+
 7. If the issue is ambiguous, timing-sensitive, or likely state-race-driven, invoke the `trace-ui-state` workflow before finalizing.
 
 8. Record findings in:
@@ -89,4 +95,5 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
 - Use the artifact bundle under `artifacts/qa-runs/functional-qa/...`.
 - Make the repro checklist rerunnable.
 - If `--verify-fix` was used, explicitly compare against the previous run before claiming a fix.
-- If a required evidence type is unavailable, lower confidence and say why.
+- If a required evidence type is unavailable, lower confidence, record the missing validation gate in `evidence.json`, and say why.
+- If the issue execution mode is `validate-and-propose-only` or `needs-human-design-review`, stop after validation evidence and proposal instead of making unattended UX or product changes.
