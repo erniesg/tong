@@ -1,6 +1,16 @@
 # QA Evidence Uploads
 
-Use this flow when a functional QA run needs reviewable screenshots, GIF previews, or proof videos without checking binary artifacts into git.
+Use two layers for QA evidence:
+
+1. `artifacts/qa-runs/`
+   - Local workspace staging area for run manifests, summaries, browser playbooks, logs, screenshots, and intermediate media.
+   - Gitignored by design.
+   - Required today because the functional QA scripts still write their run bundles there via `.agents/skills/_functional-qa/config/repo-adapter.json`.
+2. `tong-runs`
+   - External QA evidence host for reviewer-visible clips, GIFs, stills, and published manifests.
+   - This is the surface PRs and issues should link to when a human needs to validate correctness remotely.
+
+`artifacts/qa-runs/` remains the local source of truth for reruns, diffing, and debug context. It is not the final reviewer-proof destination.
 
 ## Buckets
 
