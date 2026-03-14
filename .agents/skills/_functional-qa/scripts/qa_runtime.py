@@ -47,7 +47,7 @@ LOCAL_PATH_PATTERN = re.compile(
     r"|/home/[^/\s`\"'<>]+(?:/[^\s`\"'<>]+)+"
     r"|/var/folders/[^/\s`\"'<>]+(?:/[^\s`\"'<>]+)+"
     r"|/private/var/[^/\s`\"'<>]+(?:/[^\s`\"'<>]+)+"
-    r"|[A-Za-z]:\\\\Users\\\\[^\\\\\s`\"'<>]+(?:\\\\[^\s`\"'<>]+)+"
+    r"|[A-Za-z]:(?:\\)+Users(?:\\)+[^\\\s`\"'<>]+(?:(?:\\)+[^\\\s`\"'<>]+)+"
     r"))"
 )
 PRIVATE_REFERENCE_PATTERNS = (
@@ -56,19 +56,13 @@ PRIVATE_REFERENCE_PATTERNS = (
     re.compile(r"\bprivate github repo\b", re.IGNORECASE),
 )
 GAME_ROUTE_PATTERN = re.compile(r"(?P<route>/game(?:[/?][^\s`\"'<>]+)?)")
-PROOF_KEYWORDS = (
-    "current behaviour",
-    "current behavior",
-    "expected behaviour",
-    "expected behavior",
-    "observed behaviour",
-    "observed behavior",
+PROOF_CONTEXT_KEYWORDS = (
+    "before/after",
     "screenshot",
+    "screenshot target",
     "screen recording",
-    "recording",
-    "video",
     "gif",
-    "proof",
+    "reviewer-visible",
     "steps to reproduce",
 )
 GAME_SURFACE_KEYWORDS = (
@@ -96,6 +90,7 @@ REMOTE_DEPENDENCY_KEYWORDS = (
 )
 CHECKPOINT_HINTS = ("scenario seed", "checkpoint", "deterministic", "seed=")
 CHECKPOINT_ROUTE_HINTS = ("dev=", "fresh=", "seed=", "checkpoint", "scenario", "dev_intro=")
+REMOTE_DEPENDENCIES_NONE_PATTERN = re.compile(r"\bremote dependenc(?:y|ies)\s*:\s*none\b", re.IGNORECASE)
 
 
 def run_command(command: list[str], *, cwd: Path | None = None, allow_failure: bool = False) -> subprocess.CompletedProcess[str]:
@@ -440,11 +435,20 @@ def apply_execution_mode_override(validation_policy: dict[str, Any], execution_m
     return updated
 
 
+def keyword_matches_text(text: str, keyword: str) -> bool:
+    escaped = re.escape(keyword.lower())
+    if re.fullmatch(r"[a-z]+", keyword.lower()):
+        pattern = rf"(?<![a-z0-9]){escaped}(?:s|es|ed|ing)?(?![a-z0-9])"
+    else:
+        pattern = rf"(?<![a-z0-9]){escaped}(?![a-z0-9])"
+    return re.search(pattern, text) is not None
+
+
 def classify_issue_text(text: str) -> dict[str, Any]:
     lowered = text.lower()
     candidates: list[tuple[int, int, str, list[str]]] = []
     for rule in CLASSIFICATION_RULES["rules"]:
-        matches = [keyword for keyword in rule["keywords"] if keyword in lowered]
+        matches = [keyword for keyword in rule["keywords"] if keyword_matches_text(lowered, keyword)]
         if matches:
             candidates.append((len(matches), rule["priority"], rule["issue_class"], matches))
 
@@ -538,7 +542,7 @@ def detect_proof_context(
             "value": ", ".join(proof_bits),
         }
 
-    hits = [keyword for keyword in PROOF_KEYWORDS if keyword in lowered]
+    hits = [keyword for keyword in PROOF_CONTEXT_KEYWORDS if keyword in lowered]
     if hits:
         return {"present": True, "source": "issue body", "value": ", ".join(hits[:4])}
 
@@ -559,6 +563,9 @@ def detect_remote_dependencies_context(
     remote_dependencies = (project_fields.get("Remote Dependencies") or "").strip()
     if remote_dependencies:
         return {"present": True, "source": "project field", "value": remote_dependencies}
+
+    if REMOTE_DEPENDENCIES_NONE_PATTERN.search(text):
+        return {"present": True, "source": "issue body", "value": "remote dependencies: none"}
 
     explicit_repo_only = (
         "repo-only",
@@ -669,7 +676,9 @@ def portability_preflight(
     if game_issue and proof_required and not proof_context["present"]:
         warnings.append("Missing visible proof sequence or reviewer-facing proof targets for this `/game` issue.")
     if game_issue and not remote_dependencies_context["present"]:
-        warnings.append("Missing remote dependency context; say `repo-only`, `none`, or name the required asset/env dependency.")
+        warnings.append(
+            "Missing remote dependency context; say `repo-only`, `remote dependencies: none`, or name the required asset/env dependency."
+        )
     if project_fields.get("Checkpoint Needed") == "Yes" and not checkpoint_context["present"]:
         warnings.append("Checkpoint Needed=Yes but no Scenario Seed or deterministic checkpoint is recorded.")
     if portable_context_value == "Yes" and blockers:
