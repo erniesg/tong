@@ -3801,20 +3801,23 @@ button.nav-link:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  background: rgba(255, 249, 243, 0.92);
-  border: 1px solid rgba(234, 220, 201, 0.86);
-  box-shadow: 0 10px 26px rgba(18, 24, 38, 0.14);
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 12px 28px rgba(9, 14, 24, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
   flex: 0 0 auto;
+  overflow: hidden;
 }
 
 .site-brand-mark--footer {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  box-shadow: none;
+  width: 40px;
+  height: 40px;
+  box-shadow:
+    0 10px 22px rgba(9, 14, 24, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .site-header--dark .landing-brand-cycle > span {
@@ -3884,7 +3887,8 @@ button.nav-link:hover {
 }
 
 .landing-nav-logo {
-  border-radius: 8px;
+  display: block;
+  border-radius: 999px;
 }
 
 .landing-brand-cycle {
@@ -3936,16 +3940,45 @@ button.nav-link:hover {
   transform: translateY(-1px);
 }
 
+.landing-topbar,
+.roadmap-topbar {
+  margin: 0 calc(50% - 50vw);
+  position: relative;
+  z-index: 3;
+}
+
+.landing-topbar {
+  background:
+    radial-gradient(circle at top left, rgba(255, 145, 77, 0.12), transparent 28%),
+    linear-gradient(180deg, #0b0f18 0%, #101726 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.roadmap-topbar {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 122, 56, 0.1), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(59, 130, 246, 0.12), transparent 28%),
+    linear-gradient(180deg, #0b1120 0%, #101827 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.landing-topbar-shell,
+.roadmap-topbar-shell {
+  width: min(100%, var(--site-shell-max));
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
 /* Hero */
 .landing-hero {
   position: relative;
   margin: 0 calc(50% - 50vw) 56px;
-  min-height: min(88svh, 860px);
+  min-height: min(82svh, 812px);
   overflow: hidden;
-  border-bottom: 1px solid rgba(229, 214, 194, 0.42);
+  border-bottom: 1px solid rgba(229, 214, 194, 0.28);
   background:
-    radial-gradient(circle at top, rgba(255, 145, 77, 0.16), transparent 28%),
-    linear-gradient(180deg, #0b0f18 0%, #141b2a 52%, #181118 100%);
+    radial-gradient(circle at top, rgba(255, 145, 77, 0.12), transparent 24%),
+    linear-gradient(180deg, #101726 0%, #141b2a 48%, #181118 100%);
   isolation: isolate;
 }
 
@@ -4006,7 +4039,7 @@ button.nav-link:hover {
   align-items: center;
   gap: 28px;
   flex: 1;
-  padding-top: clamp(24px, 4vw, 54px);
+  padding-top: clamp(40px, 6vw, 84px);
 }
 
 .landing-hero-copy {
@@ -4606,9 +4639,9 @@ button.nav-link:hover {
   padding-bottom: 20px;
   border-bottom: 1px solid rgba(229, 214, 194, 0.24);
   background:
-    radial-gradient(circle at 20% 0%, rgba(255, 122, 56, 0.12), transparent 26%),
+    radial-gradient(circle at 20% 0%, rgba(255, 122, 56, 0.08), transparent 22%),
     radial-gradient(circle at 78% 12%, rgba(59, 130, 246, 0.14), transparent 28%),
-    linear-gradient(180deg, #0b1120 0%, #111827 48%, #16131f 100%);
+    linear-gradient(180deg, #101827 0%, #111827 48%, #16131f 100%);
 }
 
 .roadmap-hero-shell {
@@ -4618,7 +4651,7 @@ button.nav-link:hover {
 }
 
 .roadmap-hero-copy {
-  padding: clamp(20px, 4vw, 34px) 0 0;
+  padding: clamp(34px, 5vw, 54px) 0 0;
 }
 
 .roadmap-hero-grid {
@@ -5898,6 +5931,8 @@ button.nav-link:hover {
     margin-bottom: 40px;
   }
 
+  .landing-topbar-shell,
+  .roadmap-topbar-shell,
   .landing-hero-shell,
   .roadmap-hero-shell {
     padding-left: 16px;

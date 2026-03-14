@@ -3,12 +3,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { ROADMAP_PROJECT_URL, ROADMAP_REPO_URL } from '@/lib/content/roadmap';
+import { SITE_NAV_ITEMS, type SitePage } from '@/components/site/siteNav';
 
 type SiteHeaderProps = {
-  current: 'home' | 'roadmap';
+  current: SitePage;
   tone?: 'light' | 'dark';
-  variant?: 'home' | 'roadmap';
+  variant?: SitePage;
 };
 
 function getNavLinkClassName(isActive: boolean) {
@@ -36,22 +36,28 @@ export default function SiteHeader({ current, tone = 'light', variant = current 
       </Link>
 
       <div className="landing-nav-links">
-        <Link href="/" className={getNavLinkClassName(current === 'home')} aria-current={current === 'home' ? 'page' : undefined}>
-          Home
-        </Link>
-        <Link
-          href="/roadmap"
-          className={getNavLinkClassName(current === 'roadmap')}
-          aria-current={current === 'roadmap' ? 'page' : undefined}
-        >
-          Roadmap
-        </Link>
-        <a href={ROADMAP_REPO_URL} target="_blank" rel="noopener noreferrer" className="nav-link">
-          GitHub
-        </a>
-        <a href={ROADMAP_PROJECT_URL} target="_blank" rel="noopener noreferrer" className="nav-link">
-          Project
-        </a>
+        {SITE_NAV_ITEMS.map((item) => {
+          const isActive = item.page === current;
+
+          if (item.external) {
+            return (
+              <a key={item.key} href={item.href} target="_blank" rel="noopener noreferrer" className="nav-link">
+                {item.label}
+              </a>
+            );
+          }
+
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              className={getNavLinkClassName(isActive)}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );

@@ -206,14 +206,18 @@ function LandingPage() {
 
   return (
     <div className="landing">
+      <div className="landing-topbar">
+        <div className="landing-topbar-shell">
+          <SiteHeader current="home" tone="dark" variant="home" />
+        </div>
+      </div>
+
       {/* Hero */}
       <section className="landing-hero landing-hero--cinematic">
         <TongHeroVideo />
         <div className="landing-hero-scrim" aria-hidden="true" />
 
         <div className="landing-hero-shell">
-          <SiteHeader current="home" tone="dark" variant="home" />
-
           <div className="landing-hero-stage">
             <div className="landing-hero-copy">
               <span className="kicker landing-hero-kicker">An AI dating sim where language is gameplay.</span>

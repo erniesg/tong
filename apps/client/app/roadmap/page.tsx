@@ -204,10 +204,14 @@ function RoadmapIssueCard({ issue }: { issue: RoadmapIssue }) {
 export default function RoadmapPage() {
   return (
     <div className="roadmap-shell">
+      <div className="roadmap-topbar">
+        <div className="roadmap-topbar-shell">
+          <SiteHeader current="roadmap" tone="dark" variant="roadmap" />
+        </div>
+      </div>
+
       <section className="roadmap-hero">
         <div className="roadmap-hero-shell">
-          <SiteHeader current="roadmap" tone="dark" variant="roadmap" />
-
           <div className="roadmap-hero-copy">
             <div className="roadmap-hero-grid">
               <div className="roadmap-hero-copy-column">
