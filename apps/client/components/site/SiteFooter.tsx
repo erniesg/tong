@@ -13,7 +13,7 @@ type SiteFooterProps = {
 export default function SiteFooter({ className = 'landing-footer', items }: SiteFooterProps) {
   return (
     <footer className={className}>
-      <div className="landing-footer-brand">
+      <Link href="/" className="landing-footer-brand">
         <Image
           src="/assets/app/logo_trimmed.png"
           alt="Tong"
@@ -22,7 +22,7 @@ export default function SiteFooter({ className = 'landing-footer', items }: Site
           className="landing-nav-logo"
         />
         <span>Tong — Live the drama. Learn the language.</span>
-      </div>
+      </Link>
       <div className="landing-footer-links">
         {items.map((item) => {
           if (item.disabled) {
