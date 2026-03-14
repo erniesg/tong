@@ -14,11 +14,13 @@ from qa_runtime import (
     CONFIG_ROOT,
     REPO_ROOT,
     artifact_root,
+    build_validation_policy,
     classification_override,
     classify_issue_text,
     evidence_plan_for,
     fetch_issue,
     find_previous_run,
+    issue_playbook,
     load_json,
     parse_issue_ref,
     relative_to_repo,
@@ -31,6 +33,7 @@ from qa_runtime import (
 
 ROUTING_CONFIG = load_json(CONFIG_ROOT / "worktree-routing.json")
 PATH_PATTERN = re.compile(r"(?P<path>(?:apps|packages|scripts|docs|infra|assets|\\.github)/[A-Za-z0-9._/-]+)")
+PROJECT_OVERRIDE_CACHE: dict[str, dict[str, str]] | None = None
 
 
 def normalize_issue(payload: dict[str, Any]) -> dict[str, Any]:
@@ -74,6 +77,121 @@ def fetch_open_issues(limit: int) -> list[dict[str, Any]]:
         normalized["issue_ref"] = f"{repo_name_with_owner()}#{normalized['number']}"
         issues.append(normalized)
     return issues
+
+
+def project_control_plane() -> dict[str, Any] | None:
+    return ROUTING_CONFIG.get("project_control_plane")
+
+
+def fetch_project_overrides() -> dict[str, dict[str, str]]:
+    global PROJECT_OVERRIDE_CACHE
+    if PROJECT_OVERRIDE_CACHE is not None:
+        return PROJECT_OVERRIDE_CACHE
+
+    cfg = project_control_plane()
+    if not cfg:
+        PROJECT_OVERRIDE_CACHE = {}
+        return PROJECT_OVERRIDE_CACHE
+
+    owner_fragment = "user" if cfg.get("owner_type", "user") == "user" else "organization"
+    query = f"""
+    query($owner: String!, $number: Int!, $first: Int!, $after: String) {{
+      {owner_fragment}(login: $owner) {{
+        projectV2(number: $number) {{
+          items(first: $first, after: $after) {{
+            pageInfo {{
+              hasNextPage
+              endCursor
+            }}
+            nodes {{
+              content {{
+                ... on Issue {{
+                  number
+                  repository {{
+                    nameWithOwner
+                  }}
+                }}
+              }}
+              fieldValues(first: 50) {{
+                nodes {{
+                  ... on ProjectV2ItemFieldSingleSelectValue {{
+                    field {{
+                      ... on ProjectV2FieldCommon {{
+                        name
+                      }}
+                    }}
+                    name
+                  }}
+                  ... on ProjectV2ItemFieldTextValue {{
+                    field {{
+                      ... on ProjectV2FieldCommon {{
+                        name
+                      }}
+                    }}
+                    text
+                  }}
+                }}
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
+    """
+
+    overrides: dict[str, dict[str, str]] = {}
+    cursor: str | None = None
+    while True:
+        command = [
+            "gh",
+            "api",
+            "graphql",
+            "-f",
+            f"query={query}",
+            "-F",
+            f"owner={cfg['owner']}",
+            "-F",
+            f"number={cfg['number']}",
+            "-F",
+            "first=100",
+        ]
+        if cursor:
+            command.extend(["-F", f"after={cursor}"])
+        try:
+            result = run_command(command, allow_failure=True)
+        except FileNotFoundError:
+            PROJECT_OVERRIDE_CACHE = {}
+            return PROJECT_OVERRIDE_CACHE
+        if result.returncode != 0:
+            PROJECT_OVERRIDE_CACHE = {}
+            return PROJECT_OVERRIDE_CACHE
+        payload = json.loads(result.stdout)
+        owner_payload = payload["data"].get(owner_fragment)
+        if not owner_payload or not owner_payload.get("projectV2"):
+            break
+
+        items_payload = owner_payload["projectV2"]["items"]
+        for node in items_payload["nodes"]:
+            content = node.get("content")
+            if not content or "number" not in content:
+                continue
+            issue_ref = f"{content['repository']['nameWithOwner']}#{content['number']}"
+            field_map: dict[str, str] = {}
+            for field_node in node.get("fieldValues", {}).get("nodes", []):
+                field_name = field_node.get("field", {}).get("name")
+                if not field_name:
+                    continue
+                value = field_node.get("name") or field_node.get("text")
+                if value:
+                    field_map[field_name] = value
+            overrides[issue_ref] = field_map
+
+        if not items_payload["pageInfo"]["hasNextPage"]:
+            break
+        cursor = items_payload["pageInfo"]["endCursor"]
+
+    PROJECT_OVERRIDE_CACHE = overrides
+    return overrides
 
 
 def resolve_targets(targets: list[str], limit: int) -> tuple[str, list[dict[str, Any]]]:
@@ -151,6 +269,9 @@ def route_worktree(issue: dict[str, Any], issue_class: str, explicit_paths: list
     labels_text = " ".join(label.lower() for label in issue.get("labels", []))
     scored: list[tuple[int, list[str], int, dict[str, Any]]] = []
     explicit_candidates: set[str] = set()
+    project_fields = issue.get("project_fields", {})
+    lane_field = project_control_plane().get("lane_field") if project_control_plane() else None
+    preferred_lane = project_fields.get(lane_field) if lane_field else None
 
     for worktree in ROUTING_CONFIG["worktrees"]:
         score, reasons, explicit_matches = score_worktree(worktree, lowered_text, labels_text, explicit_paths, issue_class)
@@ -158,11 +279,20 @@ def route_worktree(issue: dict[str, Any], issue_class: str, explicit_paths: list
             explicit_candidates.add(worktree["id"])
         scored.append((score, reasons, explicit_matches, worktree))
 
+    if preferred_lane:
+        preferred = next((item for item in ROUTING_CONFIG["worktrees"] if item["id"] == preferred_lane), None)
+        if preferred:
+            spans_multiple = len(explicit_candidates) > 1
+            reasons = [f"project field `{lane_field}` pinned worktree to `{preferred_lane}`"]
+            if spans_multiple:
+                reasons.append("explicit file references span multiple worktrees; keep execution serialized")
+            return (preferred, reasons, spans_multiple, sorted(explicit_candidates))
+
     scored.sort(key=lambda item: (item[2], item[0], item[3]["id"]), reverse=True)
     top_score, reasons, explicit_matches, worktree = scored[0]
 
     if top_score == 0:
-        fallback_id = ROUTING_CONFIG["issue_class_fallbacks"].get(issue_class, "client-shell")
+        fallback_id = ROUTING_CONFIG["issue_class_fallbacks"].get(issue_class, "client-runtime")
         worktree = next(item for item in ROUTING_CONFIG["worktrees"] if item["id"] == fallback_id)
         reasons = [f"no path or keyword hit; fell back to `{fallback_id}` for `{issue_class}`"]
 
@@ -173,10 +303,28 @@ def route_worktree(issue: dict[str, Any], issue_class: str, explicit_paths: list
     return (worktree, reasons, spans_multiple, sorted(explicit_candidates))
 
 
-def choose_skills(issue: dict[str, Any], issue_class: str, previous_run: dict[str, Any] | None) -> tuple[str, list[str], str]:
+def choose_skills(
+    issue: dict[str, Any],
+    issue_class: str,
+    previous_run: dict[str, Any] | None,
+    validation_policy: dict[str, Any],
+) -> tuple[str, list[str], str]:
     lowered_text = f"{issue['title']}\n{issue['body']}".lower()
     trace_keywords = ROUTING_CONFIG.get("trace_keywords", [])
     trace_like = issue_class in ROUTING_CONFIG.get("trace_issue_classes", []) or any(keyword in lowered_text for keyword in trace_keywords)
+    execution_mode = validation_policy["execution_mode"]
+
+    if execution_mode in {"validate-and-propose-only", "needs-human-design-review"}:
+        initial_skill = "trace-ui-state" if previous_run and previous_run.get("functional", {}).get("verdict") == "ambiguous" else "validate-issue"
+        follow_ups = ["trace-ui-state if validation is ambiguous or timing-sensitive", "publish-issue-update"]
+        reason = f"execution mode `{execution_mode}` is validation-first; stop before unattended code changes"
+        return (initial_skill, follow_ups, reason)
+
+    if execution_mode == "requires-live-model":
+        initial_skill = "trace-ui-state" if previous_run and previous_run.get("functional", {}).get("verdict") == "ambiguous" else "validate-issue"
+        follow_ups = ["validate-issue --verify-fix with live-model output", "publish-issue-update"]
+        reason = "fixed claims require direct issue evidence plus confirmed live-model validation"
+        return (initial_skill, follow_ups, reason)
 
     if previous_run and previous_run.get("functional", {}).get("verdict") == "ambiguous":
         return (
@@ -202,6 +350,7 @@ def choose_skills(issue: dict[str, Any], issue_class: str, previous_run: dict[st
 def build_issue_entry(issue: dict[str, Any]) -> dict[str, Any]:
     issue_ref = issue.get("issue_ref")
     raw_text = f"{issue['title']}\n\n{issue['body']}".strip()
+    project_fields = fetch_project_overrides().get(issue_ref, {}) if issue_ref else {}
     classification = classify_issue_text(raw_text)
     override = classification_override(issue_ref)
     if override:
@@ -211,11 +360,17 @@ def build_issue_entry(issue: dict[str, Any]) -> dict[str, Any]:
             "reason": f"Repo adapter override selected `{override}` for {issue_ref}.",
         }
     evidence_plan = evidence_plan_for(classification["issue_class"])
+    playbook = issue_playbook(issue_ref)
+    validation_policy = build_validation_policy(playbook, classification["issue_class"], evidence_plan)
+    execution_mode_field = project_control_plane().get("execution_mode_field") if project_control_plane() else None
+    if execution_mode_field and project_fields.get(execution_mode_field):
+        validation_policy["execution_mode"] = project_fields[execution_mode_field]
     explicit_paths = extract_paths(issue["title"], issue["body"])
+    issue["project_fields"] = project_fields
     worktree, routing_reasons, spans_multiple_worktrees, explicit_candidates = route_worktree(issue, classification["issue_class"], explicit_paths)
     shared_hits = shared_zone_hits(explicit_paths)
     previous_run = find_previous_run(issue_ref, slugify(issue_ref or issue["title"]))
-    initial_skill, follow_up_skills, flow_reason = choose_skills(issue, classification["issue_class"], previous_run)
+    initial_skill, follow_up_skills, flow_reason = choose_skills(issue, classification["issue_class"], previous_run, validation_policy)
 
     return {
         "number": issue.get("number"),
@@ -223,8 +378,10 @@ def build_issue_entry(issue: dict[str, Any]) -> dict[str, Any]:
         "issue_ref": issue_ref,
         "url": issue.get("url", ""),
         "labels": issue.get("labels", []),
+        "project_fields": project_fields,
         "classification": classification,
         "evidence_plan": evidence_plan,
+        "validation_policy": validation_policy,
         "initial_skill": initial_skill,
         "follow_up_skills": follow_up_skills,
         "flow_reason": flow_reason,
@@ -313,15 +470,22 @@ def render_markdown(plan: dict[str, Any]) -> str:
                 f"### {label}",
                 f"- Title: {issue['title']}",
                 f"- Issue class: `{issue['classification']['issue_class']}`",
+                f"- Project fields: `{', '.join(f'{key}={value}' for key, value in issue['project_fields'].items()) or 'none'}`",
+                f"- Execution mode: `{issue['validation_policy']['execution_mode']}`",
                 f"- Evidence plan: `{', '.join(issue['evidence_plan']['required'])}`",
                 f"- Start with: `{issue['initial_skill']}`",
                 f"- Follow-ups: `{'; '.join(issue['follow_up_skills'])}`",
                 f"- Worktree: `{issue['recommended_worktree']['id']}` -> `{issue['recommended_worktree']['branch']}` at `{issue['recommended_worktree']['path']}`",
                 f"- Routing reason: {'; '.join(issue['routing_reasons'])}",
                 f"- Flow reason: {issue['flow_reason']}",
+                f"- Direct issue evidence required: `{'yes' if issue['validation_policy']['requires_direct_issue_evidence'] else 'no'}`",
+                f"- Live model required for fixed: `{'yes' if issue['validation_policy']['requires_live_model_for_fixed'] else 'no'}`",
+                f"- Human review required: `{'yes' if issue['validation_policy']['human_review_required'] else 'no'}`",
                 f"- Shared-zone hits: `{', '.join(issue['shared_zone_hits']) or 'none'}`",
             ]
         )
+        if issue["validation_policy"]["stop_conditions"]:
+            lines.append(f"- Stop conditions: {'; '.join(issue['validation_policy']['stop_conditions'])}")
         if issue["explicit_paths"]:
             lines.append(f"- Explicit paths: `{', '.join(issue['explicit_paths'])}`")
         if issue["previous_run"]:

@@ -1,0 +1,104 @@
+name: Game Surface Bug
+description: Report a /game or timing-sensitive UI issue in a format remote agents can reproduce and validate.
+title: "[Game] "
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: initiative
+    attributes:
+      label: Initiative
+      options:
+        - Playtest Polish
+        - Remote-First QA
+        - Progression
+        - Runtime Assets
+    validations:
+      required: true
+  - type: dropdown
+    id: lane
+    attributes:
+      label: Lane
+      options:
+        - client-ui
+        - client-runtime
+        - client-overlay
+        - qa-platform
+        - runtime-assets
+        - server-api
+        - server-ingestion
+        - game-engine
+        - infra-deploy
+        - mock-ui
+        - creative-assets
+    validations:
+      required: true
+  - type: input
+    id: route
+    attributes:
+      label: Real route or surface
+      description: Name the real route/surface under test, not only a local file.
+      placeholder: /game?dev_intro=1&dev_act=2
+    validations:
+      required: true
+  - type: textarea
+    id: sequence
+    attributes:
+      label: Visible proof sequence
+      description: List exactly what a reviewer should see before, during, and after the bug moment.
+      placeholder: |
+        1. Final piece lands
+        2. Review overlay settles
+        3. Tap to continue is readable
+        4. Player taps
+        5. Scene returns cleanly
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: seed
+    attributes:
+      label: Scenario seed or checkpoint
+      description: Optional deterministic setup id if this issue is hard to reach from the beginning.
+      placeholder: block_crush_review_ready
+  - type: textarea
+    id: remote_dependencies
+    attributes:
+      label: Remote dependencies
+      description: Buckets, env vars, assets, or live-model requirements.
+      placeholder: repo-only / tong-assets bucket / live-model output required
+    validations:
+      required: true
+  - type: dropdown
+    id: proof
+    attributes:
+      label: Reviewer proof required
+      options:
+        - None
+        - Screenshot
+        - Clip
+        - Clip+Trace
+    validations:
+      required: true
+  - type: checkboxes
+    id: portability
+    attributes:
+      label: Portability checklist
+      options:
+        - label: This issue does not require /Users/... paths or laptop-only files.
+          required: true
+        - label: If prior art lives in another repo, the relevant summary is copied into this issue body.
+          required: true
+        - label: The visible acceptance sequence is specific enough for a remote reviewer.
+          required: true

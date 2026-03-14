@@ -34,7 +34,21 @@ def override_for(issue_ref: str | None) -> dict[str, Any] | None:
 
 def default_cloud_mode(raw_issue: dict[str, Any], issue_entry: dict[str, Any]) -> tuple[str, bool, str, list[str]]:
     lowered = f"{raw_issue['title']}\n{raw_issue['body']}".lower()
-    blockers = [keyword for keyword in CLOUD_CONFIG.get("local_only_keywords", []) if keyword in lowered]
+    project_fields = issue_entry.get("project_fields", {})
+    portable_context = project_fields.get("Portable Context")
+    if portable_context == "No":
+        reason = "Project marks `Portable Context=No`, so keep this out of unattended cloud execution for now."
+        if project_fields.get("Blocked By"):
+            reason += f" Blocked by: {project_fields['Blocked By']}."
+        return ("local-only", True, reason, [])
+
+    if project_fields.get("Agent Ready") == "No":
+        reason = "Project marks `Agent Ready=No`, so this issue should not launch as an unattended cloud task yet."
+        if project_fields.get("Blocked By"):
+            reason += f" Blocked by: {project_fields['Blocked By']}."
+        return ("local-only", True, reason, [])
+
+    blockers = [] if portable_context == "Yes" else [keyword for keyword in CLOUD_CONFIG.get("local_only_keywords", []) if keyword in lowered]
     if blockers:
         return (
             "local-only",
@@ -359,7 +373,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     plan_parser = subparsers.add_parser("plan", help="Generate the Codex cloud issue queue plan.")
     plan_parser.add_argument("targets", nargs="*", help="Issue numbers or URLs. Defaults to the open GitHub issue queue.")
-    plan_parser.add_argument("--limit", type=int, default=20, help="Open issue limit when no explicit targets are given.")
+    plan_parser.add_argument("--limit", type=int, default=50, help="Open issue limit when no explicit targets are given.")
     plan_parser.add_argument("--json", action="store_true", help="Print the JSON plan to stdout.")
     plan_parser.set_defaults(func=build_plan)
     return parser
