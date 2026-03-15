@@ -31,6 +31,7 @@ Unblock demo validation early while API/plumbing is still in progress.
 2. Asset references should use stable IDs, not hardcoded file names.
 3. Stable IDs follow `domain.scope.name.variant` and must resolve through the runtime manifest.
 4. Starter references for content packs and rewards live in:
+   - `assets/content-packs/city-location-character.starter.template.json`
    - `assets/content-packs/seoul-food-street.starter.json`
    - `assets/rewards/shanghai-reward-bundle.placeholder.json`
 5. `npm run demo:smoke` now cross-checks concrete client `/assets/...` refs against the runtime manifest and on-disk files.

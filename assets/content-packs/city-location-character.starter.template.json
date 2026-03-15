@@ -1,10 +1,10 @@
 {
   "templateVersion": "1.0.0",
   "packType": "city-location-character-starter",
-  "packId": "seoul-food-street-starter",
-  "city": "seoul",
+  "packId": "<city>-<location>-starter",
+  "city": "<seoul|tokyo|shanghai>",
   "location": {
-    "id": "food-street",
+    "id": "<food-street|cafe|convenience-store|subway-hub|practice-studio>",
     "modes": [
       "learn",
       "hangout"
@@ -12,19 +12,12 @@
   },
   "characterRoster": [
     {
-      "id": "haeun",
+      "id": "<character-id>",
       "role": "lead",
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
-        "character.haeun.portrait.default"
-      ]
-    },
-    {
-      "id": "jin",
-      "role": "support",
-      "relationshipTrack": "rp",
-      "requiredManifestKeys": [
-        "character.jin.portrait.default"
+        "character.<character-id>.portrait.default",
+        "character.<character-id>.sprite.default"
       ]
     },
     {
@@ -37,7 +30,7 @@
     }
   ],
   "objectiveSeed": {
-    "objectiveId": "seoul-food-street-v1",
+    "objectiveId": "<objective-id>",
     "targetTypes": [
       "vocabulary",
       "grammar",
@@ -49,14 +42,12 @@
     }
   },
   "manifestKeys": [
-    "city.seoul.location.food-street.backdrop.default",
-    "character.haeun.portrait.default",
-    "character.jin.portrait.default",
-    "character.tong.expression.neutral"
+    "city.<city>.location.<location>.backdrop.default",
+    "city.<city>.location.<location>.ambience.default"
   ],
   "rewardHooks": {
-    "videoCallRewardKey": "reward.shanghai.video-call.default",
-    "polaroidRewardKey": "reward.shanghai.polaroid.default"
+    "videoCallRewardKey": "reward.<city>.video-call.default",
+    "polaroidRewardKey": "reward.<city>.polaroid.default"
   },
-  "status": "draft"
+  "status": "template"
 }
