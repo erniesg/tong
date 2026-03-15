@@ -87,6 +87,14 @@ qa-runs/<suite>/<target-slug>/<run-id>/...
 ```
 
 5. Writes a local upload manifest in the run directory and uploads `manifest.json` beside the evidence files.
+6. Verifies the reviewer-facing URLs with real `GET` requests before returning success.
+
+Public verification notes:
+
+- The uploader checks the uploaded `manifest.json` plus the available primary review assets.
+- This is a reviewer-surface check, not just a bucket-write check.
+- The probe uses `GET`, not `HEAD`, because some edges reject `HEAD` while serving normal reviewer traffic correctly.
+- Use `--skip-public-verification` only when intentionally publishing to a not-yet-public surface or when isolating uploader failures.
 
 Comparison generation uses the previous validation run linked in `run.json.previous_run_id`. That means the normal path is:
 

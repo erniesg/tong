@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import { fallbackRuntimeAssetCandidates } from '@/lib/runtime-assets';
+
 interface BackgroundProps {
   imageUrl: string;
   ambientDescription?: string;
@@ -7,12 +10,21 @@ interface BackgroundProps {
 }
 
 export function Background({ imageUrl, ambientDescription, fade = false }: BackgroundProps) {
+  const candidates = useMemo(() => fallbackRuntimeAssetCandidates(imageUrl), [imageUrl]);
+  const [candidateIndex, setCandidateIndex] = useState(0);
+
+  useEffect(() => {
+    setCandidateIndex(0);
+  }, [imageUrl]);
+
+  const activeImageUrl = candidates[candidateIndex] ?? '';
+
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {imageUrl ? (
+      {activeImageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={imageUrl}
+          src={activeImageUrl}
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
           style={{
@@ -20,7 +32,13 @@ export function Background({ imageUrl, ambientDescription, fade = false }: Backg
             transition: fade ? 'opacity 0.5s ease-in-out' : undefined,
             animation: fade ? 'backdrop-fade-in 0.5s ease-in-out' : undefined,
           }}
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          onError={(e) => {
+            if (candidateIndex + 1 < candidates.length) {
+              setCandidateIndex(candidateIndex + 1);
+              return;
+            }
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
         />
       ) : ambientDescription ? (
         <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-dark)] p-8">

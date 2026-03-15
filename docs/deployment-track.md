@@ -43,10 +43,26 @@ Set these on Cloudflare Workers (and local `.dev.vars` equivalents when needed):
 2. `TONG_ASSETS_R2_BUCKET`
 3. `TONG_RUNTIME_ASSET_MANIFEST_KEY`
 
+The app now hydrates the runtime asset manifest from the public URL formed by
+`NEXT_PUBLIC_TONG_ASSETS_BASE_URL` + `TONG_RUNTIME_ASSET_MANIFEST_KEY`, then falls
+back to the bundled manifest only if that fetch fails.
+
 Checked-in examples for this contract live in:
 
 1. `.env.example`
 2. `apps/client/.env.example`
+
+### Publish runtime assets
+
+After adding or changing runtime media under `apps/client/public/assets/**` or either asset manifest:
+
+```bash
+npm run runtime-assets:upload
+```
+
+This uploads the runtime asset files to `tong-assets`, publishes the runtime manifests, and verifies the public `assets.tong.berlayar.ai` URLs with real `GET` requests before returning success.
+
+`npm run deploy:client:cf` now runs this publish step before the Cloudflare worker deploy so the client build does not point at a stale asset host.
 
 ### Boundary rule
 

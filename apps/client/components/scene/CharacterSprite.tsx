@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { cn } from '@/lib/utils/cn';
+import { fallbackRuntimeAssetCandidates } from '@/lib/runtime-assets';
 
 interface CharacterSpriteProps {
   spriteUrl: string;
@@ -22,8 +23,20 @@ export function CharacterSprite({
 }: CharacterSpriteProps) {
   const [mounted, setMounted] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+  const [videoCandidateIndex, setVideoCandidateIndex] = useState(0);
+  const [spriteCandidateIndex, setSpriteCandidateIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const idleVideoCandidates = useMemo(() => fallbackRuntimeAssetCandidates(idleVideoUrl), [idleVideoUrl]);
+  const spriteCandidates = useMemo(() => fallbackRuntimeAssetCandidates(spriteUrl), [spriteUrl]);
+
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setVideoReady(false);
+    setVideoCandidateIndex(0);
+  }, [idleVideoUrl]);
+  useEffect(() => {
+    setSpriteCandidateIndex(0);
+  }, [spriteUrl]);
 
   const handleCanPlay = useCallback(() => { setVideoReady(true); }, []);
 
@@ -47,9 +60,14 @@ export function CharacterSprite({
     };
   }, [idleVideoUrl]);
 
-  if (!mounted || (!spriteUrl && !idleVideoUrl)) return null;
+  const activeIdleVideoUrl = idleVideoCandidates[videoCandidateIndex] ?? '';
+  const activeSpriteUrl = spriteCandidates[spriteCandidateIndex] ?? '';
+  const videoAvailable = Boolean(activeIdleVideoUrl);
+  const spriteAvailable = Boolean(activeSpriteUrl);
 
-  const showVideo = idleVideoUrl && videoReady;
+  if (!mounted || (!spriteAvailable && !videoAvailable)) return null;
+
+  const showVideo = videoAvailable && videoReady;
 
   return (
     <div
@@ -61,27 +79,40 @@ export function CharacterSprite({
         position === 'right' && 'slide-in-right',
       )}
     >
-      {idleVideoUrl ? (
+      {videoAvailable ? (
         <video
           ref={videoRef}
-          src={idleVideoUrl}
+          src={activeIdleVideoUrl}
           preload="auto"
           autoPlay
           loop
           muted
           playsInline
           onCanPlayThrough={handleCanPlay}
+          onError={() => {
+            setVideoReady(false);
+            if (videoCandidateIndex + 1 < idleVideoCandidates.length) {
+              setVideoCandidateIndex(videoCandidateIndex + 1);
+            } else {
+              setVideoCandidateIndex(idleVideoCandidates.length);
+            }
+          }}
           className="h-full w-full object-cover object-top"
         />
       ) : (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
-          src={spriteUrl}
+          src={activeSpriteUrl}
           alt={name}
           className="h-full w-full object-cover object-top"
           style={{
             maskImage: 'linear-gradient(to bottom, transparent 0%, black 8px, black calc(100% - 10px), transparent 100%)',
             WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 8px, black calc(100% - 10px), transparent 100%)',
+          }}
+          onError={() => {
+            if (spriteCandidateIndex + 1 < spriteCandidates.length) {
+              setSpriteCandidateIndex(spriteCandidateIndex + 1);
+            }
           }}
         />
       )}

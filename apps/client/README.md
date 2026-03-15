@@ -23,6 +23,16 @@ NEXT_PUBLIC_TONG_API_BASE=https://tong-api.<subdomain>.workers.dev
 NEXT_PUBLIC_TONG_ASSETS_BASE_URL=https://assets.tong.berlayar.ai
 ```
 
+If the remote app is missing map or character media, publish the runtime assets:
+
+```bash
+npm run runtime-assets:upload
+```
+
+At request time the app now hydrates its runtime asset manifest from
+`NEXT_PUBLIC_TONG_ASSETS_BASE_URL` plus `TONG_RUNTIME_ASSET_MANIFEST_KEY`, with the
+checked-in manifest only as a fallback.
+
 ## Cloudflare Workers Deploy (OpenNext)
 
 This app is configured for OpenNext on Cloudflare Workers:
@@ -34,6 +44,8 @@ From repo root:
 ```bash
 npm run deploy:client:cf
 ```
+
+That deploy path now publishes the current runtime asset set to `tong-assets` before shipping the worker build, so the app and the external asset host stay in sync.
 
 Or run direct commands:
 
