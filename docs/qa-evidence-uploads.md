@@ -47,6 +47,23 @@ Boundary reminder:
 
 The uploader uses the Wrangler auth already configured for `apps/client`.
 
+## Preflight the publishing shell
+
+Before asking a local or remote operator to publish reviewer-visible proof, run:
+
+```bash
+npm run qa:preflight-reviewer-proof
+```
+
+This checks:
+- `TONG_RUNS_R2_BUCKET`
+- `TONG_RUNS_PUBLIC_BASE_URL`
+- `node`, `npm`, `python3`, `ffmpeg`, and `ffprobe`
+- `wrangler` through `apps/client`
+- the repo entry points used by upload, proof-pack generation, and comment rendering
+
+`magick` is reported as a warning rather than a hard failure because upload still works without auto-generated comparison panels.
+
 ## Upload a run bundle
 
 ```bash
