@@ -41,22 +41,32 @@
   "surfaces": [
     {
       "id": "overlay",
-      "routes": ["/overlay"],
+      "routes": [
+        "/overlay"
+      ],
       "notes": "Caption lanes plus dictionary popover."
     },
     {
       "id": "game",
-      "routes": ["/game", "/game/hangout", "/game/map"],
+      "routes": [
+        "/game",
+        "/game/hangout",
+        "/game/map"
+      ],
       "notes": "Primary narrative and exercise surface."
     },
     {
       "id": "insights",
-      "routes": ["/insights"],
+      "routes": [
+        "/insights"
+      ],
       "notes": "Vocabulary feed and clustering review surface."
     },
     {
       "id": "extension",
-      "routes": ["chrome-extension://apps/extension"],
+      "routes": [
+        "chrome-extension://apps/extension"
+      ],
       "notes": "YouTube overlay and subtitle augmentation surface."
     }
   ],
@@ -103,6 +113,15 @@
       "notes": [
         "Distinguish transport-level streaming from user-visible progressive rendering.",
         "Capture timestamps for request start, first visible dialogue, incremental updates, and completion."
+      ]
+    },
+    {
+      "match": "#46",
+      "issue_class_override": "animation-transition",
+      "notes": [
+        "Treat this as a timing-sensitive reviewer-proof workflow issue.",
+        "Require temporal capture and screenshots in validation and fix verification outputs.",
+        "Prefer qa-platform docs and workflow assets; keep cross-lane changes minimal."
       ]
     }
   ],
@@ -305,6 +324,30 @@
         "toolQueue",
         "processing"
       ]
+    },
+    {
+      "match": "#46",
+      "surface": "qa-platform",
+      "steps": [
+        "Generate the codex cloud queue prompt for erniesg/tong#46.",
+        "Validate the task prompt includes timing-sensitive evidence requirements and reviewer-visible media guidance.",
+        "Verify lane routing points to qa-platform with explicit docs paths."
+      ],
+      "screenshot_targets": [
+        "task prompt excerpt showing evidence requirements",
+        "task prompt excerpt showing reviewer-visible media requirement"
+      ],
+      "state_targets": [
+        "classification.issue_class",
+        "evidence_plan.required",
+        "recommended_worktree.id",
+        "validation_policy.ui_acceptance_required"
+      ],
+      "path_targets": [
+        "docs/codex-cloud-issue-runbook.md",
+        "docs/qa/issue-18-review-transition-evidence.md"
+      ],
+      "route_template": "/roadmap?demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1"
     }
   ]
 }
