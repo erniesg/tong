@@ -28,10 +28,23 @@ Read:
    - short clip
    - GIF preview
    - ordered stills for pre-action, ready, post-input, and stable post-action
-7. Prefer the configured uploader flow in `docs/qa-evidence-uploads.md`.
+7. Record the proof metadata in `evidence.json` under `reviewer_proof`:
+   - `classification`: `reviewer-proof` or `trace-only`
+   - real route and optional scenario seed
+   - ordered still paths for `pre_action`, `ready_state`, `immediate_post_input`, `later_transition`, and `stable_post_action`
+   - cue timestamps for the proof moment
+   - checks for semantic coherence, visible input, readable hold, stable post-action, and reviewer-visible media
+8. Prefer the configured uploader flow in `docs/qa-evidence-uploads.md`.
    The standard `publish-github` runtime now auto-attempts this upload path for runs with visual evidence, so only do it manually when you need to inspect or edit `uploaded-comment.md` first.
-8. If hosted upload is unavailable, fall back to reviewer-openable git-tracked files on a dedicated branch or PR. Do not leave the reviewer with local-only artifact paths.
-9. Update the PR body or issue comment with public links.
+9. After upload, build the reviewer-proof pack:
+
+   ```bash
+   python .agents/skills/_functional-qa/scripts/capture_reviewer_proof.py --run-dir <RUN_DIR>
+   ```
+
+   This writes `reviewer-proof.json`, `reviewer-proof.md`, and augments `upload-manifest.json` so the rendered comment can include ordered-frame links and cue timestamps.
+10. If hosted upload is unavailable, fall back to reviewer-openable git-tracked files on a dedicated branch or PR. Do not leave the reviewer with local-only artifact paths.
+11. Update the PR body or issue comment with public links.
 
 ## Output requirements
 

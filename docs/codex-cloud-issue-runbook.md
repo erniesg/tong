@@ -138,7 +138,8 @@ Important delivery rules:
 5. Reserve `@codex` GitHub comments for review or explicitly manual experiments, not the default implementation path.
 6. Do not treat a truncated or deterministic-jump clip as final acceptance proof unless the interaction sequence is still legible to a human reviewer: readable pre-action state, visible input, and stable post-action result.
 7. For timing-sensitive `/game` issues, prefer seeded checkpoint setup plus a short route-faithful proof clip over a full playthrough.
-8. Do not treat local-only artifact paths as reviewer-visible proof.
+8. For timing-sensitive fix verification, add `reviewer_proof` metadata to `evidence.json`, run `capture_reviewer_proof.py`, and make sure the rendered comment includes ordered frame links and cue timestamps instead of a generic screenshot list.
+9. Do not treat local-only artifact paths as reviewer-visible proof.
 
 ## Acceptance policy
 
