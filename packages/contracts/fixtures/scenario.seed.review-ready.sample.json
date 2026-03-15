@@ -1,0 +1,58 @@
+{
+  "seedId": "review_ready",
+  "label": "Review-ready food street checkpoint",
+  "source": "qa",
+  "qaOnly": true,
+  "route": {
+    "pathname": "/game",
+    "query": {
+      "city": "seoul",
+      "location": "food_street",
+      "mode": "hangout",
+      "qa_trace": "1",
+      "scenarioSeed": "review_ready"
+    }
+  },
+  "cityId": "seoul",
+  "locationId": "food_street",
+  "mode": "hangout",
+  "objective": {
+    "objectiveId": "ko_food_l2_001",
+    "lang": "ko",
+    "mode": "hangout",
+    "cityId": "seoul",
+    "locationId": "food_street",
+    "objectiveCategory": "vocabulary",
+    "objectiveNodeId": "objective:ko_food_l2_001",
+    "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
+    "summary": "QA-only seed for deterministic review and proof capture."
+  },
+  "phase": "review",
+  "turn": 4,
+  "activeExercise": {
+    "exerciseId": "block_crush_food_003",
+    "exerciseType": "block_crush",
+    "stepIndex": 2,
+    "prompt": "Hold before the final review decision.",
+    "payloadVersion": 1,
+    "state": {
+      "targetChar": "뉴",
+      "remainingLives": 2,
+      "boardPieces": ["ㅁ", "ㅠ"],
+      "requiredMatches": 1
+    }
+  },
+  "progressionDelta": {
+    "xp": 8,
+    "sp": 2,
+    "rp": 1,
+    "objectiveProgressDelta": 0.25,
+    "validatedHangoutsDelta": 0
+  },
+  "rewards": [],
+  "rng": {
+    "seed": "review_ready_seed_v1",
+    "version": 1
+  },
+  "notes": "Use for QA/demo capture only; do not expose as player-facing resume."
+}

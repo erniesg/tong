@@ -119,27 +119,206 @@ export interface PlayerMediaProfileResponse {
   };
 }
 
+export interface PlayerLanguageProfile {
+  nativeLanguage: AppLanguage;
+  targetLanguages: TargetLanguage[];
+  proficiency: Record<TargetLanguage, 'none' | 'beginner' | 'intermediate' | 'advanced'>;
+}
+
+export interface HangoutScore {
+  xp: number;
+  sp: number;
+  rp: number;
+}
+
+export type SessionMode = 'hangout' | 'learn';
+export type ResumeSource = 'new_session' | 'checkpoint' | 'scenario_seed';
+export type GameSessionStatus = 'active' | 'paused' | 'completed';
+export type ScenePhase = 'intro' | 'dialogue' | 'exercise' | 'review' | 'mission' | 'reward';
+export type ScenarioSeedSource = 'qa' | 'demo' | 'dev';
+
+export interface ObjectiveDescriptor {
+  objectiveId: string;
+  lang: TargetLanguage;
+  mode: SessionMode;
+  cityId: GraphCityId;
+  locationId: GraphLocationId;
+  objectiveCategory?: ObjectiveCategory;
+  objectiveNodeId?: string;
+  targetNodeIds?: string[];
+  summary?: string;
+}
+
+export interface RouteStateDescriptor {
+  pathname: string;
+  query?: Record<string, string>;
+}
+
+export interface ExerciseCheckpointState {
+  exerciseId: string;
+  exerciseType: string;
+  stepIndex?: number;
+  prompt?: string;
+  payloadVersion: number;
+  state: Record<string, unknown>;
+}
+
+export interface RewardGrant {
+  rewardId: string;
+  rewardType:
+    | 'xp_bonus'
+    | 'sp_bonus'
+    | 'rp_bonus'
+    | 'mission_unlock'
+    | 'video_call'
+    | 'polaroid_memory'
+    | 'collectible'
+    | 'cosmetic';
+  grantedAtIso: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface MissionGateSnapshot {
+  readiness: number;
+  validatedHangouts: number;
+  missionAssessmentUnlocked: boolean;
+  masteryTier: number;
+}
+
+export interface UnlockSnapshot {
+  locationIds: GraphLocationId[];
+  missionIds: string[];
+  rewardIds: string[];
+}
+
+export interface RngStateSnapshot {
+  seed: string;
+  version: number;
+}
+
+export interface CheckpointProgressionDelta extends HangoutScore {
+  objectiveProgressDelta?: number;
+  validatedHangoutsDelta?: number;
+}
+
+export interface Checkpoint {
+  checkpointId: string;
+  gameSessionId: string;
+  sceneSessionId: string;
+  kind: 'player_resume';
+  route: RouteStateDescriptor;
+  cityId: GraphCityId;
+  locationId: GraphLocationId;
+  mode: SessionMode;
+  objective: ObjectiveDescriptor;
+  phase: ScenePhase | string;
+  turn: number;
+  activeExercise?: ExerciseCheckpointState;
+  progressionDelta: CheckpointProgressionDelta;
+  rewards: RewardGrant[];
+  missionGate: MissionGateSnapshot;
+  unlocks: UnlockSnapshot;
+  rng: RngStateSnapshot;
+  createdAtIso: string;
+}
+
+export interface ScenarioSeed {
+  seedId: string;
+  label: string;
+  source: ScenarioSeedSource;
+  qaOnly: true;
+  route: RouteStateDescriptor;
+  cityId: GraphCityId;
+  locationId: GraphLocationId;
+  mode: SessionMode;
+  objective: ObjectiveDescriptor;
+  phase: ScenePhase | string;
+  turn: number;
+  activeExercise?: ExerciseCheckpointState;
+  progressionDelta?: CheckpointProgressionDelta;
+  rewards?: RewardGrant[];
+  rng: RngStateSnapshot;
+  notes?: string;
+}
+
+export interface GameSessionProgression extends HangoutScore {
+  currentMasteryLevel: number;
+}
+
+export interface GameSession {
+  sessionId: string;
+  userId: string;
+  status: GameSessionStatus;
+  profile: PlayerLanguageProfile;
+  cityId: GraphCityId;
+  locationId: GraphLocationId;
+  currentMode: SessionMode;
+  activeSceneId: string;
+  activeSceneSessionId: string;
+  activeObjective: ObjectiveDescriptor;
+  progression: GameSessionProgression;
+  missionGate: MissionGateSnapshot;
+  unlocks: UnlockSnapshot;
+  rewards: RewardGrant[];
+  availableActions: string[];
+  resumeSource: ResumeSource;
+  activeCheckpointId?: string;
+  startedAtIso: string;
+  updatedAtIso: string;
+}
+
+export interface SceneSession {
+  sceneSessionId: string;
+  gameSessionId: string;
+  sceneId: string;
+  cityId: GraphCityId;
+  locationId: GraphLocationId;
+  mode: SessionMode;
+  objective: ObjectiveDescriptor;
+  phase: ScenePhase | string;
+  turn: number;
+  route: RouteStateDescriptor;
+  activeExercise?: ExerciseCheckpointState;
+  progressionDelta: CheckpointProgressionDelta;
+  checkpointable: boolean;
+  uiPolicy?: {
+    immersiveFirstPerson: boolean;
+    allowOnlyDialogueAndHints: boolean;
+  };
+  startedAtIso: string;
+  updatedAtIso: string;
+}
+
 export interface StartOrResumeGameRequest {
   userId: string;
-  profile: {
-    nativeLanguage: AppLanguage;
-    targetLanguages: TargetLanguage[];
-    proficiency: Record<TargetLanguage, 'none' | 'beginner' | 'intermediate' | 'advanced'>;
-  };
+  city?: GraphCityId;
+  profile: PlayerLanguageProfile;
+  resumeCheckpointId?: string;
+  scenarioSeedId?: string;
+  preferRomance?: boolean;
 }
 
 export interface StartOrResumeGameResponse {
   sessionId: string;
-  city: 'seoul' | 'tokyo' | 'shanghai';
+  city: GraphCityId;
+  location: GraphLocationId;
   sceneId: string;
+  mode: SessionMode;
   tongPrompt: string;
+  profile: PlayerLanguageProfile;
+  progression: GameSessionProgression;
   actions: string[];
+  resumeSource: ResumeSource;
+  gameSession: GameSession;
+  sceneSession: SceneSession;
+  activeCheckpoint: Checkpoint | null;
+  availableScenarioSeeds: ScenarioSeed[];
 }
 
 export interface ObjectiveNextResponse {
   objectiveId: string;
   level: number;
-  mode: 'hangout' | 'learn';
+  mode: SessionMode;
   lang: TargetLanguage;
   objectiveGraph: {
     objectiveNodeId: string;
@@ -168,15 +347,9 @@ export interface ObjectiveNextResponse {
   };
 }
 
-export interface HangoutScore {
-  xp: number;
-  sp: number;
-  rp: number;
-}
-
 export interface HangoutStartResponse {
   sceneSessionId: string;
-  mode: 'hangout';
+  mode: SessionMode;
   uiPolicy: {
     immersiveFirstPerson: boolean;
     allowOnlyDialogueAndHints: boolean;

@@ -1,0 +1,43 @@
+{
+  "sceneSessionId": "scene_sess_demo_001_001",
+  "gameSessionId": "sess_demo_001",
+  "sceneId": "food_street_hangout_intro",
+  "cityId": "seoul",
+  "locationId": "food_street",
+  "mode": "hangout",
+  "objective": {
+    "objectiveId": "ko_food_l2_001",
+    "lang": "ko",
+    "mode": "hangout",
+    "cityId": "seoul",
+    "locationId": "food_street",
+    "objectiveCategory": "vocabulary",
+    "objectiveNodeId": "objective:ko_food_l2_001",
+    "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
+    "summary": "Order street food politely in Korean."
+  },
+  "phase": "intro",
+  "turn": 1,
+  "route": {
+    "pathname": "/game",
+    "query": {
+      "city": "seoul",
+      "location": "food_street",
+      "mode": "hangout"
+    }
+  },
+  "progressionDelta": {
+    "xp": 0,
+    "sp": 0,
+    "rp": 0,
+    "objectiveProgressDelta": 0,
+    "validatedHangoutsDelta": 0
+  },
+  "checkpointable": true,
+  "uiPolicy": {
+    "immersiveFirstPerson": true,
+    "allowOnlyDialogueAndHints": true
+  },
+  "startedAtIso": "2026-03-15T04:55:00.000Z",
+  "updatedAtIso": "2026-03-15T04:55:00.000Z"
+}
