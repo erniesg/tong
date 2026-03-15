@@ -1081,6 +1081,71 @@ def validation_gate_failures(run: dict[str, Any], evidence: dict[str, Any], *, f
     return failures
 
 
+EVIDENCE_SECTION_BY_REQUIREMENT = {
+    "screenshots": "screenshots",
+    "comparison-panel": "comparison_panels",
+    "comparison-focus-crop": "comparison_focus_crops",
+    "temporal-capture": "temporal_capture",
+    "console-state-trace": "console_logs",
+    "network-trace": "network_traces",
+    "contract-assertions": "contract_assertions",
+    "perf-profile": "perf_profiles",
+    "cross-env-matrix": "cross_env_matrix",
+}
+
+VISUAL_EVIDENCE_SECTIONS = {
+    "screenshots",
+    "comparison_panels",
+    "comparison_focus_crops",
+    "temporal_capture",
+}
+
+
+def sync_validation_markers(run: dict[str, Any], evidence: dict[str, Any]) -> None:
+    """Populate validation gate markers from current evidence entries.
+
+    This keeps `publish-github` and `finalize-run` aligned with the evidence plan
+    without requiring runners to manually toggle validation booleans.
+    """
+
+    validation = evidence.setdefault("validation", {})
+    required = run.get("evidence_plan", {}).get("required", [])
+
+    missing_required: list[str] = []
+    for requirement in required:
+        section = EVIDENCE_SECTION_BY_REQUIREMENT.get(requirement)
+        if not section:
+            continue
+        entries = evidence.get(section, [])
+        if not entries:
+            missing_required.append(requirement)
+
+    existing_missing = [
+        item
+        for item in validation.get("missing_requirements", [])
+        if not str(item).startswith("required evidence missing:")
+    ]
+    for requirement in missing_required:
+        note = f"required evidence missing: {requirement}"
+        if note not in existing_missing:
+            existing_missing.append(note)
+    validation["missing_requirements"] = existing_missing
+
+    if run.get("validation_policy", {}).get("requires_direct_issue_evidence"):
+        if not validation.get("direct_issue_evidence_complete", False):
+            validation["direct_issue_evidence_complete"] = not missing_required
+
+    if run.get("validation_policy", {}).get("ui_acceptance_required"):
+        visual_present = any(evidence.get(section) for section in VISUAL_EVIDENCE_SECTIONS)
+        missing_visual = any(
+            requirement in missing_required
+            and EVIDENCE_SECTION_BY_REQUIREMENT.get(requirement) in VISUAL_EVIDENCE_SECTIONS
+            for requirement in required
+        )
+        if not validation.get("ui_acceptance_complete", False):
+            validation["ui_acceptance_complete"] = visual_present and not missing_visual
+
+
 def render_validation_gate_lines(run: dict[str, Any], evidence: dict[str, Any]) -> str:
     policy = run.get("validation_policy", {})
     validation = evidence.get("validation", {})
@@ -1355,6 +1420,7 @@ def finalize_run(args: argparse.Namespace) -> int:
     run_dir = Path(args.run_dir).resolve()
     run = load_run_manifest(run_dir)
     evidence = load_json(run_dir / "evidence.json")
+    sync_validation_markers(run, evidence)
     verdict = args.verdict
     if verdict not in VERDICTS:
         raise ValueError(f"Unsupported verdict: {verdict}")
@@ -1380,6 +1446,7 @@ def finalize_run(args: argparse.Namespace) -> int:
         run["previous_run_id"] = args.previous_run_id
 
     (run_dir / "run.json").write_text(json.dumps(run, indent=2) + "\n", encoding="utf-8")
+    (run_dir / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
     rendered = render_publish(run, run_dir)
     (run_dir / "publish.md").write_text(rendered + "\n", encoding="utf-8")
     print(str(run_dir / "publish.md"))
@@ -1390,6 +1457,8 @@ def publish_github(args: argparse.Namespace) -> int:
     run_dir = Path(args.run_dir).resolve()
     run = load_run_manifest(run_dir)
     evidence = load_json(run_dir / "evidence.json")
+    sync_validation_markers(run, evidence)
+    (run_dir / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
     issue_ref = run.get("issue_ref")
     if not issue_ref:
         print("Run has no GitHub issue reference; skipping publish.")

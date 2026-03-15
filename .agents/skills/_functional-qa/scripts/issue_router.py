@@ -261,7 +261,8 @@ def build_issue_entry(issue: dict[str, Any]) -> dict[str, Any]:
         playbook=playbook,
         evidence_plan=evidence_plan,
     )
-    explicit_paths = extract_paths(issue["title"], issue["body"])
+    playbook_paths = playbook.get("path_targets", []) if playbook else []
+    explicit_paths = sorted(set(extract_paths(issue["title"], issue["body"], "\n".join(playbook_paths))))
     issue["project_fields"] = project_fields
     worktree, routing_reasons, spans_multiple_worktrees, explicit_candidates = route_worktree(issue, classification["issue_class"], explicit_paths)
     shared_hits = shared_zone_hits(explicit_paths)
