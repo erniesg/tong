@@ -49,32 +49,52 @@
     {
       "id": "batch-1",
       "description": "First cloud wave: Block Crush transition polish and dialogue streaming after the initial readability pass landed.",
-      "issues": ["#18", "#19"]
+      "issues": [
+        "#18",
+        "#19"
+      ]
     },
     {
       "id": "batch-parallel",
       "description": "Independent remote-first tooling and asset-foundation work that can run in parallel with the client-shell priority wave.",
-      "issues": ["#35", "#36", "#34"]
+      "issues": [
+        "#35",
+        "#36",
+        "#34"
+      ]
     },
     {
       "id": "batch-parallel",
       "description": "Independent remote-first tooling and asset-foundation work that can run in parallel with the client-shell priority wave.",
-      "issues": ["#35", "#36", "#34"]
+      "issues": [
+        "#35",
+        "#36",
+        "#34"
+      ]
     },
     {
       "id": "batch-2",
       "description": "Second cloud wave: follow-up onboarding, HUD, Block Crush guidance, and tap-flow fixes after the priority wave settles.",
-      "issues": ["#14", "#11", "#31", "#17"]
+      "issues": [
+        "#14",
+        "#11",
+        "#31",
+        "#17"
+      ]
     },
     {
       "id": "batch-3",
       "description": "Later follow-up cleanup after the focused fixes land, including residual readability audit work.",
-      "issues": ["#15"]
+      "issues": [
+        "#15"
+      ]
     },
     {
       "id": "batch-local",
       "description": "Asset-hosting or local-acceptance dependent work.",
-      "issues": ["#12"]
+      "issues": [
+        "#12"
+      ]
     }
   ],
   "issue_overrides": [
@@ -114,7 +134,9 @@
       "match": "#17",
       "cloud_mode": "cloud-ready-with-local-proof",
       "batch": "batch-2",
-      "depends_on": ["#11"],
+      "depends_on": [
+        "#11"
+      ],
       "needs_final_local_acceptance": true,
       "reason": "The wasted-tap fix can be developed in cloud, but final confidence depends on timed browser tracing."
     },
@@ -122,7 +144,9 @@
       "match": "#18",
       "cloud_mode": "cloud-ready-with-local-proof",
       "batch": "batch-2",
-      "depends_on": ["#13"],
+      "depends_on": [
+        "#13"
+      ],
       "needs_final_local_acceptance": true,
       "reason": "The transition bug is reproducible in cloud, but a fixed claim still needs reviewer-visible temporal evidence from the real Act 2 flow rather than a hidden local artifact path."
     },
@@ -130,7 +154,9 @@
       "match": "#19",
       "cloud_mode": "cloud-ready-with-local-proof",
       "batch": "batch-1",
-      "depends_on": ["#18"],
+      "depends_on": [
+        "#18"
+      ],
       "needs_final_local_acceptance": true,
       "reason": "Streaming behavior remains in the priority wave, but it should follow #18 so the client-shell queue stays serialized while the final player-visible result still gets browser-backed verification."
     },
@@ -141,6 +167,15 @@
       "depends_on": [],
       "needs_final_local_acceptance": false,
       "reason": "The Block Crush first-time hint and early-stage difficulty tuning are lightweight UI/gameplay follow-ups that fit the second wave."
+    },
+    {
+      "match": "#46",
+      "cloud_mode": "cloud-ready-with-local-proof",
+      "batch": "unassigned",
+      "depends_on": [],
+      "needs_final_local_acceptance": true,
+      "reason": "`animation-transition` is cloud-fixable, but final confidence still needs browser-backed local acceptance.",
+      "fallback_title": "Build first-class reviewer-proof capture workflow for timing-sensitive UI interactions"
     }
   ]
 }

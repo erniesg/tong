@@ -286,9 +286,12 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
     readiness_reason = merge_readiness_reason(readiness_reason, portability)
 
     issue_number = issue_entry.get("number")
+    effective_title = issue_entry["title"]
+    if override and override.get("fallback_title") and issue_ref and issue_entry["title"].strip() == issue_ref:
+        effective_title = override["fallback_title"]
     file_stub = f"issue-{issue_number}" if issue_number is not None else slugify(issue_entry["title"])
-    branch_name = branch_name_for(issue_number, issue_entry["title"])
-    pr_title = pr_title_for(issue_number, issue_entry["title"])
+    branch_name = branch_name_for(issue_number, effective_title)
+    pr_title = pr_title_for(issue_number, effective_title)
     worktree = issue_entry["recommended_worktree"]
 
     issue_dir = queue_dir / "issues"
