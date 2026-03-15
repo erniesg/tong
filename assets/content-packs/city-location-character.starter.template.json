@@ -4,7 +4,8 @@
   "packId": "<city>-<location>-starter",
   "city": "<seoul|tokyo|shanghai>",
   "location": {
-    "id": "<food-street|cafe|convenience-store|subway-hub|practice-studio>",
+    "id": "<food_street|cafe|convenience_store|subway_hub|practice_studio>",
+    "assetSlug": "<food-street|cafe|convenience-store|subway-hub|practice-studio>",
     "modes": [
       "learn",
       "hangout"
@@ -42,12 +43,12 @@
     }
   },
   "manifestKeys": [
-    "city.<city>.location.<location>.backdrop.default",
-    "city.<city>.location.<location>.ambience.default"
+    "city.<city>.location.<asset-slug>.backdrop.default",
+    "city.<city>.location.<asset-slug>.ambience.default"
   ],
   "rewardHooks": {
-    "videoCallRewardKey": "reward.<city>.video-call.default",
-    "polaroidRewardKey": "reward.<city>.polaroid.default"
+    "videoCallRewardKey": "<optional: reward.shanghai.video-call.placeholder.v1>",
+    "polaroidRewardKey": "<optional: reward.shanghai.polaroid.placeholder.v1>"
   },
   "status": "template"
 }

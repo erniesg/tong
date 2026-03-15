@@ -4,7 +4,8 @@
   "packId": "seoul-food-street-starter",
   "city": "seoul",
   "location": {
-    "id": "food-street",
+    "id": "food_street",
+    "assetSlug": "food-street",
     "modes": [
       "learn",
       "hangout"
@@ -54,9 +55,5 @@
     "character.jin.portrait.default",
     "character.tong.expression.neutral"
   ],
-  "rewardHooks": {
-    "videoCallRewardKey": "reward.shanghai.video-call.default",
-    "polaroidRewardKey": "reward.shanghai.polaroid.default"
-  },
   "status": "draft"
 }
