@@ -133,9 +133,20 @@ const DICTIONARY_OVERRIDES = {
   },
 };
 
+const CHECKPOINT_BOUNDARIES = {
+  scene_start: 'scene_start',
+  turn_end: 'turn_end',
+  exercise_start: 'exercise_start',
+  exercise_complete: 'exercise_complete',
+  reward_grant: 'reward_grant',
+};
+
 const state = {
   profiles: new Map(),
   sessions: new Map(),
+  sceneSessions: new Map(),
+  checkpoints: new Map(),
+  activeSessionByUser: new Map(),
   learnSessions: [...(FIXTURES.learnSessions.items || [])],
   ingestionByUser: new Map(),
 };
@@ -822,112 +833,84 @@ function buildPersonalizedObjective({
   };
 }
 
-function buildGameStartResponse(userId, incomingProfile, sessionId) {
-  const profile = incomingProfile || getProfile(userId) || FIXTURES.gameStart.profile;
-  const dominantClusterId = getDominantClusterId(ensureIngestionForUser(userId));
-  const city = CLUSTER_CITY_MAP[dominantClusterId] || FIXTURES.gameStart.city || 'seoul';
-  const location = CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
-  const weakestLang = getWeakestTargetLanguage(profile);
-  const objective = buildPersonalizedObjective({
-    userId,
-    mode: 'hangout',
-    lang: weakestLang,
-    city,
-    location,
-  });
-  const nowIso = new Date().toISOString();
-  const sceneId = `${location}_hangout_intro`;
-  const sceneSessionId = `scene_${sessionId}_001`;
-  const actions = [
+function buildGameActions(lang, objectiveId) {
+  return [
     'Start hangout validation',
     'Review personalized learn targets',
-    `Practice ${weakestLang.toUpperCase()} objective ${objective.objectiveId}`,
+    `Practice ${lang.toUpperCase()} objective ${objectiveId}`,
   ];
-  const activeObjective = {
+}
+
+function buildActiveObjectiveDescriptor({ objective, lang, city, location }) {
+  return {
     objectiveId: objective.objectiveId,
-    lang: weakestLang,
+    lang,
     mode: 'hangout',
     cityId: city,
     locationId: location,
     objectiveCategory: objective.objectiveGraph?.objectiveCategory,
     objectiveNodeId: objective.objectiveGraph?.objectiveNodeId,
     targetNodeIds: cloneJson(objective.objectiveGraph?.targetNodeIds || []),
-    summary: `Resume ${weakestLang.toUpperCase()} practice at ${location.replace(/_/g, ' ')}.`,
+    summary: `Resume ${lang.toUpperCase()} practice at ${location.replace(/_/g, ' ')}.`,
   };
-  const progression = {
+}
+
+function buildInitialProgression() {
+  return {
     ...(cloneJson(FIXTURES.gameStart.progression || {})),
     xp: FIXTURES.gameStart.progression?.xp ?? 110,
     sp: FIXTURES.gameStart.progression?.sp ?? 45,
     rp: FIXTURES.gameStart.progression?.rp ?? 12,
     currentMasteryLevel: FIXTURES.gameStart.progression?.currentMasteryLevel ?? 1,
   };
-  const missionGate = {
+}
+
+function buildInitialMissionGate(progression) {
+  return {
     readiness: 0.34,
     validatedHangouts: 0,
     missionAssessmentUnlocked: false,
     masteryTier: progression.currentMasteryLevel,
   };
-  const unlocks = {
+}
+
+function buildInitialUnlocks(location) {
+  return {
     locationIds: [location],
     missionIds: [],
     rewardIds: [],
   };
-  const checkpoint = {
-    checkpointId: `ckpt_${sessionId}_intro`,
-    gameSessionId: sessionId,
-    sceneSessionId,
-    kind: 'player_resume',
-    route: {
-      pathname: '/game',
-      query: {
-        city,
-        location,
-        mode: 'hangout',
-        resume: '1',
-      },
+}
+
+function buildHangoutRoute(city, location, extras = {}) {
+  return {
+    pathname: '/game',
+    query: {
+      city,
+      location,
+      mode: 'hangout',
+      ...extras,
     },
-    cityId: city,
-    locationId: location,
-    mode: 'hangout',
-    objective: cloneJson(activeObjective),
-    phase: 'intro',
-    turn: 1,
-    progressionDelta: {
-      xp: 0,
-      sp: 0,
-      rp: 0,
-      objectiveProgressDelta: 0,
-      validatedHangoutsDelta: 0,
-    },
-    rewards: [],
-    missionGate: cloneJson(missionGate),
-    unlocks: cloneJson(unlocks),
-    rng: {
-      seed: `${sessionId}_intro`,
-      version: 1,
-    },
-    createdAtIso: nowIso,
   };
-  const availableScenarioSeeds = [
+}
+
+function buildScenarioSeeds(gameSession) {
+  const lang = gameSession.activeObjective?.lang || 'ko';
+
+  return [
     {
       seedId: 'review_ready',
       label: 'Review-ready food street checkpoint',
       source: 'qa',
       qaOnly: true,
-      route: {
-        pathname: '/game',
-        query: {
-          city,
-          location,
-          mode: 'hangout',
-          qa_trace: '1',
-          scenarioSeed: 'review_ready',
-        },
-      },
-      cityId: city,
-      locationId: location,
+      route: buildHangoutRoute(gameSession.cityId, gameSession.locationId, {
+        qa_trace: '1',
+        scenarioSeed: 'review_ready',
+      }),
+      cityId: gameSession.cityId,
+      locationId: gameSession.locationId,
       mode: 'hangout',
-      objective: cloneJson(activeObjective),
+      objective: cloneJson(gameSession.activeObjective),
       phase: 'review',
       turn: 4,
       activeExercise: {
@@ -937,9 +920,9 @@ function buildGameStartResponse(userId, incomingProfile, sessionId) {
         prompt: 'Hold before the final review decision.',
         payloadVersion: 1,
         state: {
-          targetChar: weakestLang === 'ko' ? '뉴' : weakestLang === 'ja' ? '食' : '单',
+          targetChar: lang === 'ko' ? '뉴' : lang === 'ja' ? '食' : '单',
           remainingLives: 2,
-          boardPieces: weakestLang === 'ko' ? ['ㅁ', 'ㅠ'] : weakestLang === 'ja' ? ['し', 'ょ'] : ['订', '单'],
+          boardPieces: lang === 'ko' ? ['ㅁ', 'ㅠ'] : lang === 'ja' ? ['し', 'ょ'] : ['订', '单'],
           requiredMatches: 1,
         },
       },
@@ -950,7 +933,7 @@ function buildGameStartResponse(userId, incomingProfile, sessionId) {
         objectiveProgressDelta: 0.25,
         validatedHangoutsDelta: 0,
       },
-      rewards: [],
+      rewards: cloneJson(gameSession.rewards || []),
       rng: {
         seed: 'review_ready_seed_v1',
         version: 1,
@@ -958,76 +941,279 @@ function buildGameStartResponse(userId, incomingProfile, sessionId) {
       notes: 'Use for QA/demo capture only; do not expose as player-facing resume.',
     },
   ];
+}
+
+function createCheckpointRecord(gameSession, sceneSession, boundary, nowIso) {
+  const previousCheckpoint = gameSession.activeCheckpointId
+    ? state.checkpoints.get(gameSession.activeCheckpointId)
+    : null;
+  // Use rng.version as the persisted checkpoint revision so resume loaders have
+  // an explicit save-version counter without needing a parallel field.
+  const checkpointVersion = Math.max(previousCheckpoint?.rng?.version ?? 0, 0) + 1;
+  const checkpoint = {
+    checkpointId: `ckpt_${gameSession.sessionId}_${String(checkpointVersion).padStart(3, '0')}`,
+    gameSessionId: gameSession.sessionId,
+    sceneSessionId: sceneSession.sceneSessionId,
+    kind: 'player_resume',
+    route: buildHangoutRoute(gameSession.cityId, gameSession.locationId, {
+      resume: '1',
+      checkpoint: String(checkpointVersion),
+    }),
+    cityId: gameSession.cityId,
+    locationId: gameSession.locationId,
+    mode: gameSession.currentMode,
+    objective: cloneJson(gameSession.activeObjective),
+    phase: sceneSession.phase,
+    turn: sceneSession.turn,
+    progressionDelta: cloneJson(sceneSession.progressionDelta),
+    rewards: cloneJson(gameSession.rewards || []),
+    missionGate: cloneJson(gameSession.missionGate),
+    unlocks: cloneJson(gameSession.unlocks),
+    rng: {
+      seed: `${gameSession.sessionId}_${boundary}`,
+      version: checkpointVersion,
+    },
+    createdAtIso: nowIso,
+  };
+
+  if (sceneSession.activeExercise) {
+    checkpoint.activeExercise = cloneJson(sceneSession.activeExercise);
+  }
+
+  return checkpoint;
+}
+
+function persistCheckpoint(gameSession, sceneSession, boundary, nowIso = new Date().toISOString()) {
+  const checkpoint = createCheckpointRecord(gameSession, sceneSession, boundary, nowIso);
+  gameSession.activeCheckpointId = checkpoint.checkpointId;
+  gameSession.updatedAtIso = nowIso;
+  sceneSession.updatedAtIso = nowIso;
+  state.sessions.set(gameSession.sessionId, gameSession);
+  state.sceneSessions.set(sceneSession.sceneSessionId, sceneSession);
+  state.checkpoints.set(checkpoint.checkpointId, checkpoint);
+  state.activeSessionByUser.set(gameSession.userId, gameSession.sessionId);
+  return checkpoint;
+}
+
+function hydrateSceneSessionFromCheckpoint(gameSession, checkpoint) {
+  const existing = state.sceneSessions.get(gameSession.activeSceneSessionId);
+  const sceneSession = existing || {
+    sceneSessionId: checkpoint.sceneSessionId,
+    gameSessionId: gameSession.sessionId,
+    sceneId: gameSession.activeSceneId,
+    cityId: gameSession.cityId,
+    locationId: gameSession.locationId,
+    mode: gameSession.currentMode,
+    objective: cloneJson(gameSession.activeObjective),
+    phase: checkpoint.phase,
+    turn: checkpoint.turn,
+    route: buildHangoutRoute(gameSession.cityId, gameSession.locationId),
+    progressionDelta: cloneJson(checkpoint.progressionDelta),
+    checkpointable: true,
+    uiPolicy: {
+      immersiveFirstPerson: true,
+      allowOnlyDialogueAndHints: true,
+    },
+    startedAtIso: gameSession.startedAtIso,
+    updatedAtIso: checkpoint.createdAtIso,
+    score: {
+      xp: gameSession.progression.xp,
+      sp: gameSession.progression.sp,
+      rp: gameSession.progression.rp,
+    },
+  };
+
+  sceneSession.sceneSessionId = checkpoint.sceneSessionId;
+  sceneSession.gameSessionId = gameSession.sessionId;
+  sceneSession.sceneId = gameSession.activeSceneId;
+  sceneSession.cityId = checkpoint.cityId;
+  sceneSession.locationId = checkpoint.locationId;
+  sceneSession.mode = checkpoint.mode;
+  sceneSession.objective = cloneJson(checkpoint.objective);
+  sceneSession.phase = checkpoint.phase;
+  sceneSession.turn = checkpoint.turn;
+  sceneSession.route = buildHangoutRoute(checkpoint.cityId, checkpoint.locationId);
+  sceneSession.progressionDelta = cloneJson(checkpoint.progressionDelta);
+  sceneSession.updatedAtIso = checkpoint.createdAtIso;
+  sceneSession.checkpointable = true;
+  sceneSession.uiPolicy = {
+    immersiveFirstPerson: true,
+    allowOnlyDialogueAndHints: true,
+  };
+  sceneSession.score = {
+    xp: gameSession.progression.xp,
+    sp: gameSession.progression.sp,
+    rp: gameSession.progression.rp,
+  };
+
+  if (checkpoint.activeExercise) {
+    sceneSession.activeExercise = cloneJson(checkpoint.activeExercise);
+  } else {
+    delete sceneSession.activeExercise;
+  }
+
+  state.sceneSessions.set(sceneSession.sceneSessionId, sceneSession);
+  return sceneSession;
+}
+
+function buildGameStartResponse(gameSession, sceneSession, activeCheckpoint, resumeSource) {
+  const effectiveCheckpoint =
+    activeCheckpoint ||
+    (gameSession.activeCheckpointId ? state.checkpoints.get(gameSession.activeCheckpointId) : null);
+  const effectiveSceneSession =
+    sceneSession ||
+    (gameSession.activeSceneSessionId ? state.sceneSessions.get(gameSession.activeSceneSessionId) : null);
+
+  if (!effectiveSceneSession) {
+    throw new Error(`Missing scene session for ${gameSession.sessionId}`);
+  }
+
+  const nextResumeSource = resumeSource || gameSession.resumeSource || 'new_session';
+  gameSession.resumeSource = nextResumeSource;
+  const responseSceneSession = cloneJson(effectiveSceneSession);
+  delete responseSceneSession.score;
 
   return {
     ...cloneJson(FIXTURES.gameStart),
-    sessionId,
+    sessionId: gameSession.sessionId,
+    city: gameSession.cityId,
+    location: gameSession.locationId,
+    mode: gameSession.currentMode,
+    sceneId: gameSession.activeSceneId,
+    tongPrompt: FIXTURES.gameStart.tongPrompt || 'tong.system.food_street_intro.v1',
+    profile: cloneJson(gameSession.profile),
+    progression: cloneJson(gameSession.progression),
+    actions: cloneJson(gameSession.availableActions),
+    resumeSource: nextResumeSource,
+    gameSession: cloneJson(gameSession),
+    sceneSession: responseSceneSession,
+    activeCheckpoint: effectiveCheckpoint ? cloneJson(effectiveCheckpoint) : null,
+    availableScenarioSeeds: buildScenarioSeeds(gameSession),
+  };
+}
+
+function findGameSessionForResume({ userId, sessionId, resumeCheckpointId }) {
+  if (resumeCheckpointId) {
+    const checkpoint = state.checkpoints.get(resumeCheckpointId);
+    if (checkpoint) {
+      return state.sessions.get(checkpoint.gameSessionId) || null;
+    }
+  }
+
+  if (sessionId && state.sessions.has(sessionId)) {
+    const gameSession = state.sessions.get(sessionId);
+    if (gameSession?.userId === userId) {
+      return gameSession;
+    }
+  }
+
+  const activeSessionId = state.activeSessionByUser.get(userId);
+  if (activeSessionId) {
+    return state.sessions.get(activeSessionId) || null;
+  }
+
+  return null;
+}
+
+function createNewGameSession(userId, incomingProfile, requestedCity) {
+  const profile = incomingProfile || getProfile(userId) || FIXTURES.gameStart.profile;
+  const dominantClusterId = getDominantClusterId(ensureIngestionForUser(userId));
+  const city =
+    requestedCity === 'tokyo' || requestedCity === 'shanghai' || requestedCity === 'seoul'
+      ? requestedCity
+      : CLUSTER_CITY_MAP[dominantClusterId] || FIXTURES.gameStart.city || 'seoul';
+  const location = CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
+  const weakestLang = getWeakestTargetLanguage(profile);
+  const objective = buildPersonalizedObjective({
+    userId,
+    mode: 'hangout',
+    lang: weakestLang,
     city,
     location,
-    mode: 'hangout',
-    sceneId,
-    tongPrompt: FIXTURES.gameStart.tongPrompt || 'tong.system.food_street_intro.v1',
+  });
+  const nowIso = new Date().toISOString();
+  const sessionId = `sess_${Math.random().toString(36).slice(2, 10)}`;
+  const sceneId = `${location}_hangout_intro`;
+  const sceneSessionId = `scene_${sessionId}_001`;
+  const progression = buildInitialProgression();
+  const missionGate = buildInitialMissionGate(progression);
+  const unlocks = buildInitialUnlocks(location);
+  const activeObjective = buildActiveObjectiveDescriptor({
+    objective,
+    lang: weakestLang,
+    city,
+    location,
+  });
+  const gameSession = {
+    sessionId,
+    userId,
+    status: 'active',
     profile: cloneJson(profile),
-    progression,
-    actions,
+    cityId: city,
+    locationId: location,
+    currentMode: 'hangout',
+    activeSceneId: sceneId,
+    activeSceneSessionId: sceneSessionId,
+    activeObjective,
+    progression: cloneJson(progression),
+    missionGate: cloneJson(missionGate),
+    unlocks: cloneJson(unlocks),
+    rewards: [],
+    availableActions: buildGameActions(weakestLang, objective.objectiveId),
     resumeSource: 'new_session',
-    gameSession: {
-      sessionId,
-      userId,
-      status: 'active',
-      profile: cloneJson(profile),
-      cityId: city,
-      locationId: location,
-      currentMode: 'hangout',
-      activeSceneId: sceneId,
-      activeSceneSessionId: sceneSessionId,
-      activeObjective,
-      progression: cloneJson(progression),
-      missionGate: cloneJson(missionGate),
-      unlocks: cloneJson(unlocks),
-      rewards: [],
-      availableActions: actions,
-      resumeSource: 'new_session',
-      activeCheckpointId: checkpoint.checkpointId,
-      startedAtIso: nowIso,
-      updatedAtIso: nowIso,
-    },
-    sceneSession: {
-      sceneSessionId,
-      gameSessionId: sessionId,
-      sceneId,
-      cityId: city,
-      locationId: location,
-      mode: 'hangout',
-      objective: cloneJson(activeObjective),
-      phase: 'intro',
-      turn: 1,
-      route: {
-        pathname: '/game',
-        query: {
-          city,
-          location,
-          mode: 'hangout',
-        },
-      },
-      progressionDelta: {
-        xp: 0,
-        sp: 0,
-        rp: 0,
-        objectiveProgressDelta: 0,
-        validatedHangoutsDelta: 0,
-      },
-      checkpointable: true,
-      uiPolicy: {
-        immersiveFirstPerson: true,
-        allowOnlyDialogueAndHints: true,
-      },
-      startedAtIso: nowIso,
-      updatedAtIso: nowIso,
-    },
-    activeCheckpoint: checkpoint,
-    availableScenarioSeeds,
+    startedAtIso: nowIso,
+    updatedAtIso: nowIso,
   };
+  const sceneSession = {
+    sceneSessionId,
+    gameSessionId: sessionId,
+    sceneId,
+    cityId: city,
+    locationId: location,
+    mode: 'hangout',
+    objective: cloneJson(activeObjective),
+    phase: 'intro',
+    turn: 1,
+    route: buildHangoutRoute(city, location),
+    progressionDelta: {
+      xp: 0,
+      sp: 0,
+      rp: 0,
+      objectiveProgressDelta: 0,
+      validatedHangoutsDelta: 0,
+    },
+    checkpointable: true,
+    uiPolicy: {
+      immersiveFirstPerson: true,
+      allowOnlyDialogueAndHints: true,
+    },
+    startedAtIso: nowIso,
+    updatedAtIso: nowIso,
+    score: {
+      xp: progression.xp,
+      sp: progression.sp,
+      rp: progression.rp,
+    },
+  };
+
+  state.sessions.set(sessionId, gameSession);
+  state.sceneSessions.set(sceneSessionId, sceneSession);
+  const checkpoint = persistCheckpoint(gameSession, sceneSession, CHECKPOINT_BOUNDARIES.scene_start, nowIso);
+  return buildGameStartResponse(gameSession, sceneSession, checkpoint, 'new_session');
+}
+
+function resumeGameSession(gameSession, resumeCheckpointId) {
+  const checkpoint =
+    (resumeCheckpointId && state.checkpoints.get(resumeCheckpointId)) ||
+    (gameSession.activeCheckpointId ? state.checkpoints.get(gameSession.activeCheckpointId) : null);
+  const sceneSession = checkpoint
+    ? hydrateSceneSessionFromCheckpoint(gameSession, checkpoint)
+    : state.sceneSessions.get(gameSession.activeSceneSessionId);
+  const effectiveCheckpoint =
+    checkpoint ||
+    (sceneSession ? persistCheckpoint(gameSession, sceneSession, CHECKPOINT_BOUNDARIES.scene_start) : null);
+
+  return buildGameStartResponse(gameSession, sceneSession, effectiveCheckpoint, 'checkpoint');
 }
 
 function getSecretStatus() {
@@ -1053,7 +1239,7 @@ function getSecretStatus() {
 function handleHangoutRespond(body) {
   const sceneSessionId = body.sceneSessionId;
   const userUtterance = String(body.userUtterance || '').trim();
-  const existing = state.sessions.get(sceneSessionId);
+  const existing = state.sceneSessions.get(sceneSessionId);
 
   if (!existing) {
     return {
@@ -1069,16 +1255,81 @@ function handleHangoutRespond(body) {
   const xpDelta = matched ? 8 : 4;
   const spDelta = matched ? 2 : 1;
   const rpDelta = matched ? 1 : 0;
+  const objectiveProgressDelta = matched ? 0.25 : 0.1;
 
   existing.turn += 1;
-  existing.score.xp += xpDelta;
-  existing.score.sp += spDelta;
-  existing.score.rp += rpDelta;
+  existing.phase = 'dialogue';
+
+  if (!existing.gameSessionId) {
+    existing.score.xp += xpDelta;
+    existing.score.sp += spDelta;
+    existing.score.rp += rpDelta;
+    state.sceneSessions.set(sceneSessionId, existing);
+
+    return {
+      statusCode: 200,
+      payload: {
+        accepted: true,
+        feedback: {
+          tongHint: matched
+            ? 'Great phrasing. You used practical ordering language.'
+            : 'Try adding a food word plus polite ending like 주세요.',
+          objectiveProgressDelta,
+        },
+        nextLine: {
+          speaker: 'character',
+          text:
+            existing.turn % 2 === 0
+              ? '좋아요, 맵기는 어느 정도로 할까요?'
+              : '좋아요! 다음 주문도 한국어로 말해 볼까요?',
+        },
+        state: {
+          turn: existing.turn,
+          score: { ...existing.score },
+        },
+      },
+    };
+  }
+
+  const gameSession = state.sessions.get(existing.gameSessionId);
+  if (!gameSession) {
+    return {
+      statusCode: 404,
+      payload: {
+        error: 'unknown_game_session',
+      },
+    };
+  }
+
+  gameSession.progression.xp += xpDelta;
+  gameSession.progression.sp += spDelta;
+  gameSession.progression.rp += rpDelta;
+  gameSession.missionGate.readiness = Math.min(
+    1,
+    Number((gameSession.missionGate.readiness + objectiveProgressDelta).toFixed(2)),
+  );
+  existing.progressionDelta.xp += xpDelta;
+  existing.progressionDelta.sp += spDelta;
+  existing.progressionDelta.rp += rpDelta;
+  existing.progressionDelta.objectiveProgressDelta = Number(
+    ((existing.progressionDelta.objectiveProgressDelta || 0) + objectiveProgressDelta).toFixed(2),
+  );
+  existing.score = {
+    xp: gameSession.progression.xp,
+    sp: gameSession.progression.sp,
+    rp: gameSession.progression.rp,
+  };
 
   const nextLine =
     existing.turn % 2 === 0
       ? '좋아요, 맵기는 어느 정도로 할까요?'
       : '좋아요! 다음 주문도 한국어로 말해 볼까요?';
+  const checkpoint = persistCheckpoint(
+    gameSession,
+    existing,
+    CHECKPOINT_BOUNDARIES.turn_end,
+    new Date().toISOString(),
+  );
 
   const response = {
     accepted: true,
@@ -1086,7 +1337,7 @@ function handleHangoutRespond(body) {
       tongHint: matched
         ? 'Great phrasing. You used practical ordering language.'
         : 'Try adding a food word plus polite ending like 주세요.',
-      objectiveProgressDelta: matched ? 0.25 : 0.1,
+      objectiveProgressDelta,
     },
     nextLine: {
       speaker: 'character',
@@ -1094,18 +1345,76 @@ function handleHangoutRespond(body) {
     },
     state: {
       turn: existing.turn,
-      score: { ...existing.score },
+      score: { ...gameSession.progression },
+      objectiveProgress: existing.progressionDelta.objectiveProgressDelta,
+    },
+    activeCheckpoint: checkpoint,
+    routeState: {
+      sessionId: gameSession.sessionId,
+      checkpointId: checkpoint.checkpointId,
     },
   };
 
-  state.sessions.set(sceneSessionId, existing);
   return { statusCode: 200, payload: response };
 }
 
-function startHangoutScene(userId = DEFAULT_USER_ID) {
+function startHangoutScene(body = {}) {
+  const userId = body.userId || DEFAULT_USER_ID;
+  const requestedSessionId =
+    typeof body.sessionId === 'string' && body.sessionId.trim() ? body.sessionId : null;
+  const gameSession =
+    findGameSessionForResume({
+      userId,
+      sessionId: requestedSessionId,
+      resumeCheckpointId: null,
+    }) || null;
+
+  if (gameSession) {
+    const checkpoint = gameSession.activeCheckpointId ? state.checkpoints.get(gameSession.activeCheckpointId) : null;
+    const sceneSession = checkpoint
+      ? hydrateSceneSessionFromCheckpoint(gameSession, checkpoint)
+      : state.sceneSessions.get(gameSession.activeSceneSessionId);
+
+    if (sceneSession) {
+      const score = {
+        xp: gameSession.progression.xp,
+        sp: gameSession.progression.sp,
+        rp: gameSession.progression.rp,
+      };
+      sceneSession.score = score;
+      state.sceneSessions.set(sceneSession.sceneSessionId, sceneSession);
+
+      return {
+        sceneSessionId: sceneSession.sceneSessionId,
+        mode: 'hangout',
+        uiPolicy: cloneJson(
+          sceneSession.uiPolicy || {
+            immersiveFirstPerson: true,
+            allowOnlyDialogueAndHints: true,
+          },
+        ),
+        resumeSource: checkpoint ? 'checkpoint' : 'new_session',
+        checkpointId: checkpoint?.checkpointId || null,
+        activeCheckpoint: checkpoint ? cloneJson(checkpoint) : null,
+        state: {
+          turn: sceneSession.turn,
+          score,
+          objectiveProgress: sceneSession.progressionDelta?.objectiveProgressDelta || 0,
+        },
+        initialLine: {
+          speaker: 'character',
+          text:
+            sceneSession.turn > 1
+              ? '좋아요, 이어서 주문해 볼까요? 방금 멈춘 지점부터예요.'
+              : '어서 와요! 오늘은 뭐 먹고 싶어요?',
+        },
+      };
+    }
+  }
+
   const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
   const score = { xp: 0, sp: 0, rp: 0 };
-  state.sessions.set(sceneSessionId, {
+  state.sceneSessions.set(sceneSessionId, {
     userId,
     turn: 1,
     score: { ...score },
@@ -1854,18 +2163,14 @@ const server = http.createServer(async (req, res) => {
       if (body.profile) {
         state.profiles.set(userId, { userId, profile: body.profile });
       }
-      const sessionId = `sess_${Math.random().toString(36).slice(2, 10)}`;
-      const response = buildGameStartResponse(userId, body.profile, sessionId);
-      state.sessions.set(sessionId, {
+      const existingSession = findGameSessionForResume({
         userId,
-        city: response.city,
-        location: response.location,
-        sceneId: response.sceneId,
-        objectiveId: response.gameSession.activeObjective.objectiveId,
-        checkpointId: response.activeCheckpoint?.checkpointId,
-        turn: response.sceneSession.turn,
-        score: { xp: response.progression.xp, sp: response.progression.sp, rp: response.progression.rp },
+        sessionId: body.sessionId,
+        resumeCheckpointId: body.resumeCheckpointId,
       });
+      const response = existingSession
+        ? resumeGameSession(existingSession, body.resumeCheckpointId)
+        : createNewGameSession(userId, body.profile, body.city);
       jsonResponse(res, 200, response);
       return;
     }
@@ -1908,7 +2213,7 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/v1/scenes/hangout/start' && req.method === 'POST') {
       const body = await readJsonBody(req);
-      jsonResponse(res, 200, startHangoutScene(body.userId || DEFAULT_USER_ID));
+      jsonResponse(res, 200, startHangoutScene(body));
       return;
     }
 
