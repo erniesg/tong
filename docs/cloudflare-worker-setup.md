@@ -60,6 +60,20 @@ NEXT_PUBLIC_TONG_ASSETS_BASE_URL=https://assets.tong.berlayar.ai
 
 Restart `npm run dev:client` after changing env.
 
+## 4b) Publish runtime assets to `tong-assets`
+
+If the remote shell shows missing city maps, character art, or cinematics, the asset host is usually missing the current files. Publish them from repo state:
+
+```bash
+npm run runtime-assets:upload
+```
+
+This uploads `apps/client/public/assets/**` plus the runtime manifests and verifies the public `assets.tong.berlayar.ai` URLs before returning success.
+
+The client also hydrates its runtime asset manifest from the public asset host at
+request time, so `NEXT_PUBLIC_TONG_ASSETS_BASE_URL` and `TONG_RUNTIME_ASSET_MANIFEST_KEY`
+must point at the published manifest path.
+
 ## 5) Quick endpoint checks
 ```bash
 curl "http://localhost:8787/health"

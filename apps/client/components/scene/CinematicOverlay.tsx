@@ -1,9 +1,10 @@
 'use client';
 
-import { useRef, useCallback, useState, useEffect } from 'react';
+import { useRef, useCallback, useState, useEffect, useMemo } from 'react';
 import { useUILang } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
 import { KoreanText, type TargetLang } from '@/components/shared/KoreanText';
+import { fallbackRuntimeAssetCandidates } from '@/lib/runtime-assets';
 
 const CAPTION_CHARS_PER_TICK = 2;
 const CAPTION_TICK_MS = 35;
@@ -23,6 +24,9 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
   const videoRef = useRef<HTMLVideoElement>(null);
   const [fadingOut, setFadingOut] = useState(false);
   const [captionVisible, setCaptionVisible] = useState(false);
+  const [candidateIndex, setCandidateIndex] = useState(0);
+  const videoCandidates = useMemo(() => fallbackRuntimeAssetCandidates(videoUrl), [videoUrl]);
+  const activeVideoUrl = videoCandidates[candidateIndex] ?? '';
 
   // Typewriter state for caption
   const [captionChars, setCaptionChars] = useState(0);
@@ -42,6 +46,10 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
   const handleTap = useCallback(() => {
     if (!autoAdvance) triggerEnd();
   }, [autoAdvance, triggerEnd]);
+
+  useEffect(() => {
+    setCandidateIndex(0);
+  }, [videoUrl]);
 
   // Autoplay with unmute fallback + audio fade-in
   useEffect(() => {
@@ -67,7 +75,7 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
       }, 40);
       return () => clearInterval(fadeIn);
     }
-  }, [videoUrl, muted]);
+  }, [activeVideoUrl, muted]);
 
   // Fade out audio before video ends
   useEffect(() => {
@@ -81,7 +89,7 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
     };
     v.addEventListener('timeupdate', handleTimeUpdate);
     return () => v.removeEventListener('timeupdate', handleTimeUpdate);
-  }, [videoUrl, muted]);
+  }, [activeVideoUrl, muted]);
 
   // Fade in caption shortly after video starts playing, then start typewriter
   useEffect(() => {
@@ -112,7 +120,7 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
       clearTimeout(fadeTimer);
       if (captionTimerRef.current) clearInterval(captionTimerRef.current);
     };
-  }, [videoUrl, caption]);
+  }, [activeVideoUrl, caption]);
 
   return (
     <div
@@ -131,10 +139,17 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
     >
       <video
         ref={videoRef}
-        src={videoUrl}
+        src={activeVideoUrl}
         playsInline
         muted={muted}
         onEnded={handleEnded}
+        onError={() => {
+          if (candidateIndex + 1 < videoCandidates.length) {
+            setCandidateIndex(candidateIndex + 1);
+          } else {
+            triggerEnd();
+          }
+        }}
         className="cinematic-video"
         disablePictureInPicture
         disableRemotePlayback
