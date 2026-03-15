@@ -1,5 +1,5 @@
 {
-  "route": "http://127.0.0.1:3001/game?dev_intro=1&dev_act=2&demo=TONG-JUDGE-DEMO&qa_run_id=functional-qa-validate-issue-20260314T122901Z-erniesg-tong-19-proof&qa_trace=1",
+  "route": "http://127.0.0.1:3001/game?dev_intro=1&dev_act=2&demo=TONG-DEMO-ACCESS&qa_run_id=functional-qa-validate-issue-20260314T122901Z-erniesg-tong-19-proof&qa_trace=1",
   "proof": {
     "started_ms": 0,
     "fetches": [

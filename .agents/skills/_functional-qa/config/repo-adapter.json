@@ -8,9 +8,9 @@
   "artifact_root": "artifacts/qa-runs",
   "browser_defaults": {
     "base_url": "http://localhost:3000",
-    "demo_password": "TONG-JUDGE-DEMO",
+    "demo_password": "TONG-DEMO-ACCESS",
     "query_params": {
-      "demo": "TONG-JUDGE-DEMO"
+      "demo": "TONG-DEMO-ACCESS"
     },
     "qa_query_params": {
       "qa_trace": "1",
@@ -26,8 +26,8 @@
   },
   "startup_commands": [
     {
-      "label": "judge-demo",
-      "command": "npm run demo:judge",
+      "label": "demo-start",
+      "command": "npm run demo:start",
       "notes": "Installs dependencies, runs smoke checks, starts the local API and client, and opens the main demo routes."
     }
   ],

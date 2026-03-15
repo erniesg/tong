@@ -43,7 +43,7 @@ npm --prefix apps/client run cf:deploy
 npx --prefix apps/client wrangler deploy --config apps/client/wrangler.toml --domain tong.berlayar.ai --keep-vars
 ```
 
-Recommended deploy-time public vars for judge onboarding:
+Recommended deploy-time public vars for demo onboarding:
 
 ```bash
 NEXT_PUBLIC_TONG_PUBLIC_DOMAIN=tong.berlayar.ai
@@ -58,8 +58,8 @@ or open routes with `?demo=<password>`.
 
 ## Routes
 
-- `/` judge onboarding + instructions hub
-- `/judges` judge onboarding alias
+- `/` landing page
+- `/demo` demo setup + instructions hub
 - `/overlay` web caption overlay + dictionary popover
 - `/game` mobile-first game UI (start/resume, hangout, learn)
 - `/insights` ingestion controls + frequency/topic visualization

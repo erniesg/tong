@@ -76,7 +76,7 @@ Build a mobile-first language learning demo with:
 ## Functional QA routing
 - When the user asks to step through GitHub issues, fix the issue queue, or decide what can run in parallel, start with `.agents/skills/work-github-issues/SKILL.md`.
 - That front-door skill must generate the queue plan first, then route each issue to `validate-issue`, `trace-ui-state`, `validate-issue --verify-fix`, and `publish-issue-update` as needed.
-- Use the existing worktree model in `docs/worktree-ownership-map.md` and `docs/hackathon-workstreams.md`; parallelize by worktree lane, not by raw issue count.
+- Use the existing worktree model in `docs/worktree-ownership-map.md` and `docs/workstreams.md`; parallelize by worktree lane, not by raw issue count.
 - Treat `docs/agent-native-project-setup.md` as the control-plane contract for the GitHub Project fields, issue portability, deterministic checkpoints, and unattended execution gates.
 - When the user explicitly wants Codex cloud or GitHub PR execution, also use `docs/codex-cloud-issue-runbook.md` and `python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py plan` to generate the current batch order, direct task prompts, and PR notes.
 - Prefer the direct Codex environment task flow for implementation work: launch a task on the `tong` environment, get a diff, then create a PR from the task result.
