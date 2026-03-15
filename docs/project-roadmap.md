@@ -1,6 +1,6 @@
 # Tong Project Roadmap
 
-Use the `Tong Hackathon` GitHub Project as the execution board, but use this unlock order to decide what should move first.
+Use the main Tong GitHub Project as the execution board, but use this unlock order to decide what should move first.
 
 ## Phase 0: operational unblockers
 

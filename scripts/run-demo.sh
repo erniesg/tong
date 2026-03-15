@@ -6,7 +6,7 @@ SERVER_PORT="${TONG_SERVER_PORT:-8787}"
 CLIENT_PORT="${TONG_CLIENT_PORT:-3000}"
 OPEN_BROWSER="${TONG_OPEN_BROWSER:-1}"
 DEMO_USER_ID="${TONG_DEMO_USER_ID:-demo-user-1}"
-DEMO_PASSWORD="${TONG_DEMO_PASSWORD:-${TONG_DEMO_CODE:-TONG-JUDGE-DEMO}}"
+DEMO_PASSWORD="${TONG_DEMO_PASSWORD:-${TONG_DEMO_CODE:-TONG-DEMO-ACCESS}}"
 
 SERVER_LOG="$(mktemp -t tong-server-log.XXXXXX)"
 CLIENT_LOG="$(mktemp -t tong-client-log.XXXXXX)"
@@ -86,7 +86,7 @@ wait_for_http "server" "http://localhost:${SERVER_PORT}/health"
 echo "[5/6] Starting Next.js client on :$CLIENT_PORT..."
 ENCODED_DEMO_PASSWORD="$(node -e "console.log(encodeURIComponent(process.argv[1] || ''))" "$DEMO_PASSWORD")"
 NEXT_PUBLIC_TONG_API_BASE="http://localhost:${SERVER_PORT}" \
-  NEXT_PUBLIC_TONG_DEMO_PASSWORD_HINT="Use the demo password provided by Tong judges host." \
+  NEXT_PUBLIC_TONG_DEMO_PASSWORD_HINT="Use the demo access password provided by the Tong team." \
   npm --prefix "$ROOT_DIR/apps/client" run dev -- -p "$CLIENT_PORT" >"$CLIENT_LOG" 2>&1 &
 CLIENT_PID=$!
 wait_for_http "client" "http://localhost:${CLIENT_PORT}"
@@ -105,7 +105,7 @@ echo "- ${BASE_URL}/overlay?demo=${ENCODED_DEMO_PASSWORD}"
 echo "- ${BASE_URL}/game?demo=${ENCODED_DEMO_PASSWORD}"
 echo "- ${BASE_URL}/insights?demo=${ENCODED_DEMO_PASSWORD}"
 echo
-echo "Demo access for judges:"
+echo "Demo access details:"
 echo "- Demo user id: ${DEMO_USER_ID}"
 echo "- Demo password: ${DEMO_PASSWORD}"
 echo "- Password is required by API (header or ?demo=...) and auto-applied in opened URLs."

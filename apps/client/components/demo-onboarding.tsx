@@ -6,15 +6,15 @@ const DEMO_PASSWORD_HINT =
   process.env.NEXT_PUBLIC_TONG_DEMO_PASSWORD_HINT || 'Ask the Tong team for the demo password.';
 const YOUTUBE_DEMO_URL = process.env.NEXT_PUBLIC_TONG_YOUTUBE_DEMO_URL || 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 
-export default function JudgeOnboardingPage() {
+export default function DemoOnboardingPage() {
   return (
     <main className="app-shell">
       <header className="page-header">
-        <p className="kicker">Tong Judge Onboarding</p>
+        <p className="kicker">Tong Demo Setup</p>
         <h1 className="page-title">Use Tong in under 5 minutes</h1>
         <p className="page-copy">
-          This page is the official start point for judges at <code>{PUBLIC_DOMAIN}</code>. Follow the steps below to
-          unlock demo access, test web flows, and install the Chrome extension overlay.
+          This page is the quick start point for demo access at <code>{PUBLIC_DOMAIN}</code>. Follow the steps below to
+          unlock access, test web flows, and install the Chrome extension overlay.
         </p>
       </header>
 
@@ -101,10 +101,10 @@ export default function JudgeOnboardingPage() {
         <h3>Quick Links</h3>
         <div className="nav-links">
           <Link href="/" className="nav-link">
-            / (this page)
+            /
           </Link>
-          <Link href="/judges" className="nav-link">
-            /judges
+          <Link href="/demo" className="nav-link">
+            /demo
           </Link>
           <Link href="/overlay" className="nav-link">
             /overlay

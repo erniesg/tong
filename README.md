@@ -2,12 +2,12 @@
 
 Tong is evolving from a Chrome extension prototype into a multi-platform, mobile-first app using Next.js + Capacitor.
 
-## Judge Fast Path (One Command)
+## Demo Fast Path (One Command)
 
 Run this from repo root:
 
 ```bash
-npm run demo:judge
+npm run demo:start
 ```
 
 What it does:
@@ -19,12 +19,12 @@ What it does:
 
 Demo defaults:
 - Demo user id: `demo-user-1`
-- Demo password: `TONG-JUDGE-DEMO`
+- Demo password: `TONG-DEMO-ACCESS`
 
 Optional overrides:
 
 ```bash
-TONG_DEMO_PASSWORD=YOUR_PASSWORD TONG_SERVER_PORT=8787 TONG_CLIENT_PORT=3000 npm run demo:judge
+TONG_DEMO_PASSWORD=YOUR_PASSWORD TONG_SERVER_PORT=8787 TONG_CLIENT_PORT=3000 npm run demo:start
 ```
 
 Stop both services with `Ctrl+C` in the launcher terminal.
@@ -36,13 +36,13 @@ npm --prefix apps/server install
 npm --prefix apps/client install
 npm run demo:smoke
 npm run ingest:mock
-TONG_DEMO_PASSWORD=TONG-JUDGE-DEMO npm run dev:server
+TONG_DEMO_PASSWORD=TONG-DEMO-ACCESS npm run dev:server
 NEXT_PUBLIC_TONG_API_BASE=http://localhost:8787 npm run dev:client
 ```
 
 Demo routes:
 - `http://localhost:3000/`
-- `http://localhost:3000/judges`
+- `http://localhost:3000/demo`
 - `http://localhost:3000/overlay`
 - `http://localhost:3000/game`
 - `http://localhost:3000/insights`
@@ -74,7 +74,7 @@ OpenNext compatibility pinned in `apps/client`:
 - `next@^14.2.35`
 - `@opennextjs/cloudflare@^1.15.1` (Next 14 compatible line)
 
-Recommended frontend vars for hosted judge experience:
+Recommended frontend vars for hosted demo experience:
 - `NEXT_PUBLIC_TONG_PUBLIC_DOMAIN=tong.berlayar.ai`
 - `NEXT_PUBLIC_TONG_EXTENSION_ZIP_URL=<public link to tong.zip>`
 - `NEXT_PUBLIC_TONG_YOUTUBE_DEMO_URL=<public YouTube demo URL>`
@@ -113,7 +113,7 @@ Verify secret unlock path:
 curl -s http://localhost:8787/api/v1/demo/secret-status
 # -> 401 when password gate is enabled
 
-curl -s -H "x-demo-password: TONG-JUDGE-DEMO" http://localhost:8787/api/v1/demo/secret-status
+curl -s -H "x-demo-password: TONG-DEMO-ACCESS" http://localhost:8787/api/v1/demo/secret-status
 # -> returns configured/missing booleans for demo + YouTube + Spotify + OpenAI secrets
 ```
 

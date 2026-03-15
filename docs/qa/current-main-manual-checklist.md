@@ -79,7 +79,7 @@ NEXT_PUBLIC_TONG_API_BASE=http://localhost:8787 npm run dev:client
 Open:
 
 ```text
-http://localhost:3000/game?demo=TONG-JUDGE-DEMO
+http://localhost:3000/game?demo=TONG-DEMO-ACCESS
 ```
 
 Confirm:
