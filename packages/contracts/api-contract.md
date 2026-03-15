@@ -390,11 +390,86 @@ Response:
 {
   "sessionId": "sess_123",
   "city": "seoul",
+  "location": "food_street",
   "sceneId": "intro_001",
+  "mode": "hangout",
   "tongPrompt": "in-character system prompt token or id",
-  "actions": ["Train vocals", "Attend language class", "Meet cast member"]
+  "profile": {
+    "nativeLanguage": "en",
+    "targetLanguages": ["ko", "ja", "zh"],
+    "proficiency": {
+      "ko": "beginner",
+      "ja": "none",
+      "zh": "advanced"
+    }
+  },
+  "progression": {
+    "xp": 110,
+    "sp": 45,
+    "rp": 12,
+    "currentMasteryLevel": 1
+  },
+  "actions": ["Start hangout validation", "Review personalized learn targets"],
+  "resumeSource": "new_session",
+  "gameSession": {
+    "sessionId": "sess_123",
+    "status": "active",
+    "cityId": "seoul",
+    "locationId": "food_street",
+    "currentMode": "hangout",
+    "activeSceneId": "food_street_hangout_intro",
+    "activeSceneSessionId": "scene_sess_123_001",
+    "activeCheckpointId": "ckpt_sess_123_intro"
+  },
+  "sceneSession": {
+    "sceneSessionId": "scene_sess_123_001",
+    "gameSessionId": "sess_123",
+    "sceneId": "food_street_hangout_intro",
+    "phase": "intro",
+    "turn": 1,
+    "checkpointable": true
+  },
+  "activeCheckpoint": {
+    "checkpointId": "ckpt_sess_123_intro",
+    "kind": "player_resume",
+    "phase": "intro",
+    "turn": 1,
+    "route": {
+      "pathname": "/game",
+      "query": {
+        "city": "seoul",
+        "location": "food_street",
+        "mode": "hangout",
+        "resume": "1"
+      }
+    },
+    "rng": {
+      "seed": "sess_123_intro",
+      "version": 1
+    }
+  },
+  "availableScenarioSeeds": [
+    {
+      "seedId": "review_ready",
+      "qaOnly": true,
+      "phase": "review",
+      "turn": 4
+    }
+  ]
 }
 ```
+
+Contract notes:
+- The legacy top-level `sessionId`, `city`, `sceneId`, `tongPrompt`, and `actions` fields remain for compatibility with current clients.
+- `gameSession` is the durable player session envelope for progression, unlocks, and the active objective.
+- `sceneSession` is the currently mounted scene/runtime slice that can advance independently of broader session metadata.
+- `activeCheckpoint` is the player-facing resume payload and must stay safe to restore on the real `/game` route.
+- `availableScenarioSeeds` are QA/demo-only deterministic setup entries and must stay separate from player resume checkpoints.
+- Dedicated samples live at:
+  - `packages/contracts/fixtures/game.session.sample.json`
+  - `packages/contracts/fixtures/scene.session.sample.json`
+  - `packages/contracts/fixtures/checkpoint.player-resume.sample.json`
+  - `packages/contracts/fixtures/scenario.seed.review-ready.sample.json`
 
 ## GET `/api/v1/objectives/next`
 Query:

@@ -80,3 +80,17 @@ Template:
   - Any newly added runtime media must land in `assets/manifest/runtime-asset-manifest.json` before client code can reference it via `runtimeAssetUrl(...)`.
   - Legacy preview HTML and non-runtime scripts still use literal `/assets/...` references and remain outside the runtime smoke gate.
 - Next owner: `codex/runtime-assets`
+
+## 2026-03-15 (Issue 48 session/checkpoint contracts)
+- Date: 2026-03-15
+- Branch/worktree: `codex/issue-48-session-contracts` (shared root workspace)
+- What changed:
+  - Crossing into `packages/contracts/**` and the mock server to add the additive `GameSession`, `SceneSession`, `Checkpoint`, and `ScenarioSeed` contract model behind `POST /api/v1/game/start-or-resume`.
+  - Extending fixture and smoke coverage so progression/resume follow-up work can build on a single durable payload shape instead of the older bootstrap-only response.
+- Contract changes:
+  - `start-or-resume` keeps the legacy top-level compatibility fields, but now also carries nested durable session/checkpoint/seed objects.
+  - Added dedicated resume fixture samples for `game.session`, `scene.session`, `checkpoint`, and `scenario seed`.
+- Integration risks:
+  - Follow-up server/client branches should consume the nested contract objects rather than re-inventing ad hoc resume payloads.
+  - This change touches the shared contracts zone; dependent progression branches should rebase before landing resume/checkpoint work.
+- Next owner: `codex/server-api`

@@ -1,7 +1,10 @@
 {
   "sessionId": "sess_demo_001",
   "city": "seoul",
+  "location": "food_street",
   "sceneId": "food_street_hangout_intro",
+  "mode": "hangout",
+  "tongPrompt": "tong.system.food_street_intro.v1",
   "profile": {
     "nativeLanguage": "en",
     "targetLanguages": ["ko", "ja", "zh"],
@@ -16,5 +19,226 @@
     "sp": 45,
     "rp": 12,
     "currentMasteryLevel": 1
-  }
+  },
+  "actions": [
+    "Start hangout validation",
+    "Review personalized learn targets",
+    "Practice KO objective ko_food_l2_001"
+  ],
+  "resumeSource": "new_session",
+  "gameSession": {
+    "sessionId": "sess_demo_001",
+    "userId": "demo-user-1",
+    "status": "active",
+    "profile": {
+      "nativeLanguage": "en",
+      "targetLanguages": ["ko", "ja", "zh"],
+      "proficiency": {
+        "ko": "beginner",
+        "ja": "none",
+        "zh": "advanced"
+      }
+    },
+    "cityId": "seoul",
+    "locationId": "food_street",
+    "currentMode": "hangout",
+    "activeSceneId": "food_street_hangout_intro",
+    "activeSceneSessionId": "scene_sess_demo_001_001",
+    "activeObjective": {
+      "objectiveId": "ko_food_l2_001",
+      "lang": "ko",
+      "mode": "hangout",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "objectiveCategory": "vocabulary",
+      "objectiveNodeId": "objective:ko_food_l2_001",
+      "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
+      "summary": "Order street food politely in Korean."
+    },
+    "progression": {
+      "xp": 110,
+      "sp": 45,
+      "rp": 12,
+      "currentMasteryLevel": 1
+    },
+    "missionGate": {
+      "readiness": 0.34,
+      "validatedHangouts": 0,
+      "missionAssessmentUnlocked": false,
+      "masteryTier": 1
+    },
+    "unlocks": {
+      "locationIds": ["food_street"],
+      "missionIds": [],
+      "rewardIds": []
+    },
+    "rewards": [],
+    "availableActions": [
+      "Start hangout validation",
+      "Review personalized learn targets",
+      "Practice KO objective ko_food_l2_001"
+    ],
+    "resumeSource": "new_session",
+    "activeCheckpointId": "ckpt_sess_demo_001_intro",
+    "startedAtIso": "2026-03-15T04:55:00.000Z",
+    "updatedAtIso": "2026-03-15T04:55:00.000Z"
+  },
+  "sceneSession": {
+    "sceneSessionId": "scene_sess_demo_001_001",
+    "gameSessionId": "sess_demo_001",
+    "sceneId": "food_street_hangout_intro",
+    "cityId": "seoul",
+    "locationId": "food_street",
+    "mode": "hangout",
+    "objective": {
+      "objectiveId": "ko_food_l2_001",
+      "lang": "ko",
+      "mode": "hangout",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "objectiveCategory": "vocabulary",
+      "objectiveNodeId": "objective:ko_food_l2_001",
+      "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
+      "summary": "Order street food politely in Korean."
+    },
+    "phase": "intro",
+    "turn": 1,
+    "route": {
+      "pathname": "/game",
+      "query": {
+        "city": "seoul",
+        "location": "food_street",
+        "mode": "hangout"
+      }
+    },
+    "progressionDelta": {
+      "xp": 0,
+      "sp": 0,
+      "rp": 0,
+      "objectiveProgressDelta": 0,
+      "validatedHangoutsDelta": 0
+    },
+    "checkpointable": true,
+    "uiPolicy": {
+      "immersiveFirstPerson": true,
+      "allowOnlyDialogueAndHints": true
+    },
+    "startedAtIso": "2026-03-15T04:55:00.000Z",
+    "updatedAtIso": "2026-03-15T04:55:00.000Z"
+  },
+  "activeCheckpoint": {
+    "checkpointId": "ckpt_sess_demo_001_intro",
+    "gameSessionId": "sess_demo_001",
+    "sceneSessionId": "scene_sess_demo_001_001",
+    "kind": "player_resume",
+    "route": {
+      "pathname": "/game",
+      "query": {
+        "city": "seoul",
+        "location": "food_street",
+        "mode": "hangout",
+        "resume": "1"
+      }
+    },
+    "cityId": "seoul",
+    "locationId": "food_street",
+    "mode": "hangout",
+    "objective": {
+      "objectiveId": "ko_food_l2_001",
+      "lang": "ko",
+      "mode": "hangout",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "objectiveCategory": "vocabulary",
+      "objectiveNodeId": "objective:ko_food_l2_001",
+      "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
+      "summary": "Resume from the current safe intro boundary."
+    },
+    "phase": "intro",
+    "turn": 1,
+    "progressionDelta": {
+      "xp": 0,
+      "sp": 0,
+      "rp": 0,
+      "objectiveProgressDelta": 0,
+      "validatedHangoutsDelta": 0
+    },
+    "rewards": [],
+    "missionGate": {
+      "readiness": 0.34,
+      "validatedHangouts": 0,
+      "missionAssessmentUnlocked": false,
+      "masteryTier": 1
+    },
+    "unlocks": {
+      "locationIds": ["food_street"],
+      "missionIds": [],
+      "rewardIds": []
+    },
+    "rng": {
+      "seed": "sess_demo_001_intro",
+      "version": 1
+    },
+    "createdAtIso": "2026-03-15T04:55:00.000Z"
+  },
+  "availableScenarioSeeds": [
+    {
+      "seedId": "review_ready",
+      "label": "Review-ready food street checkpoint",
+      "source": "qa",
+      "qaOnly": true,
+      "route": {
+        "pathname": "/game",
+        "query": {
+          "city": "seoul",
+          "location": "food_street",
+          "mode": "hangout",
+          "qa_trace": "1",
+          "scenarioSeed": "review_ready"
+        }
+      },
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "mode": "hangout",
+      "objective": {
+        "objectiveId": "ko_food_l2_001",
+        "lang": "ko",
+        "mode": "hangout",
+        "cityId": "seoul",
+        "locationId": "food_street",
+        "objectiveCategory": "vocabulary",
+        "objectiveNodeId": "objective:ko_food_l2_001",
+        "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
+        "summary": "QA-only seed for deterministic review and proof capture."
+      },
+      "phase": "review",
+      "turn": 4,
+      "activeExercise": {
+        "exerciseId": "block_crush_food_003",
+        "exerciseType": "block_crush",
+        "stepIndex": 2,
+        "prompt": "Hold before the final review decision.",
+        "payloadVersion": 1,
+        "state": {
+          "targetChar": "뉴",
+          "remainingLives": 2,
+          "boardPieces": ["ㅁ", "ㅠ"],
+          "requiredMatches": 1
+        }
+      },
+      "progressionDelta": {
+        "xp": 8,
+        "sp": 2,
+        "rp": 1,
+        "objectiveProgressDelta": 0.25,
+        "validatedHangoutsDelta": 0
+      },
+      "rewards": [],
+      "rng": {
+        "seed": "review_ready_seed_v1",
+        "version": 1
+      },
+      "notes": "Use for QA/demo capture only; do not expose as player-facing resume."
+    }
+  ]
 }

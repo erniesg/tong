@@ -1,0 +1,68 @@
+{
+  "checkpointId": "ckpt_food_street_turn_03",
+  "gameSessionId": "sess_demo_001",
+  "sceneSessionId": "scene_sess_demo_001_001",
+  "kind": "player_resume",
+  "route": {
+    "pathname": "/game",
+    "query": {
+      "city": "seoul",
+      "location": "food_street",
+      "mode": "hangout",
+      "resume": "1"
+    }
+  },
+  "cityId": "seoul",
+  "locationId": "food_street",
+  "mode": "hangout",
+  "objective": {
+    "objectiveId": "ko_food_l2_001",
+    "lang": "ko",
+    "mode": "hangout",
+    "cityId": "seoul",
+    "locationId": "food_street",
+    "objectiveCategory": "vocabulary",
+    "objectiveNodeId": "objective:ko_food_l2_001",
+    "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
+    "summary": "Resume mid-ordering exercise at the last safe player-visible state."
+  },
+  "phase": "exercise",
+  "turn": 3,
+  "activeExercise": {
+    "exerciseId": "block_crush_food_003",
+    "exerciseType": "block_crush",
+    "stepIndex": 2,
+    "prompt": "Assemble 메뉴 before the final piece drops.",
+    "payloadVersion": 1,
+    "state": {
+      "targetChar": "뉴",
+      "remainingLives": 2,
+      "boardPieces": ["ㅁ", "ㅠ"],
+      "requiredMatches": 1
+    }
+  },
+  "progressionDelta": {
+    "xp": 8,
+    "sp": 2,
+    "rp": 1,
+    "objectiveProgressDelta": 0.25,
+    "validatedHangoutsDelta": 0
+  },
+  "rewards": [],
+  "missionGate": {
+    "readiness": 0.67,
+    "validatedHangouts": 1,
+    "missionAssessmentUnlocked": false,
+    "masteryTier": 1
+  },
+  "unlocks": {
+    "locationIds": ["food_street"],
+    "missionIds": ["ko_food_street_gate_01"],
+    "rewardIds": []
+  },
+  "rng": {
+    "seed": "sess_demo_001_turn_03",
+    "version": 2
+  },
+  "createdAtIso": "2026-03-15T04:58:00.000Z"
+}
