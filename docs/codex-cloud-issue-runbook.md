@@ -59,7 +59,7 @@ This is local staging, not the reviewer-visible evidence host.
 2. `local-only`
 3. `needs-acceptance-proof`
 
-These are supplemental hints. The authoritative execution gates should live on the `Tong Hackathon` Project fields:
+These are supplemental hints. The authoritative execution gates should live on the GitHub Project fields:
 
 - `Workflow Status`
 - `Execution Mode`

@@ -6,7 +6,7 @@ Use this reference when the target issue is on the `/game` surface.
 
 Open `/game` with:
 
-- `demo=TONG-JUDGE-DEMO`
+- `demo=TONG-DEMO-ACCESS`
 - `qa_run_id=<run id>`
 - `qa_trace=1`
 

@@ -21,7 +21,7 @@ From the real Act 2 hangout flow:
 
 Use the real hangout route, not the isolated dev exercise tester:
 
-`/game?dev_intro=1&dev_act=2&demo=TONG-JUDGE-DEMO&qa_trace=1`
+`/game?dev_intro=1&dev_act=2&demo=TONG-DEMO-ACCESS&qa_trace=1`
 
 ## Notes
 
@@ -35,7 +35,7 @@ Use the real hangout route, not the isolated dev exercise tester:
 After the verify-fix run is uploaded, populate `evidence.json.reviewer_proof` with:
 
 1. `classification: reviewer-proof`
-2. `route: /game?dev_intro=1&dev_act=2&demo=TONG-JUDGE-DEMO&qa_trace=1`
+2. `route: /game?dev_intro=1&dev_act=2&demo=TONG-DEMO-ACCESS&qa_trace=1`
 3. ordered frames for `pre_action`, `ready_state`, `immediate_post_input`, `later_transition`, and `stable_post_action`
 4. cue timestamps for `ready_state`, `input`, `immediate_post_input`, `later_transition`, and `stable_post_action`
 5. reviewer-proof checks confirming real route, semantic coherence, visible input, readable pre-action hold, stable post-action, and reviewer-visible media

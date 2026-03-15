@@ -856,7 +856,7 @@ def build_browser_route(playbook: dict[str, Any], run_id: str) -> str:
     defaults = REPO_ADAPTER.get("browser_defaults", {})
     route = playbook["route_template"]
     route = route.replace("{{run_id}}", run_id)
-    route = route.replace("{{demo_password}}", defaults.get("demo_password", "TONG-JUDGE-DEMO"))
+    route = route.replace("{{demo_password}}", defaults.get("demo_password", "TONG-DEMO-ACCESS"))
     base_url = defaults.get("base_url", "")
     if route.startswith("http://") or route.startswith("https://"):
         return route

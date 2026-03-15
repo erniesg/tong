@@ -19,7 +19,7 @@
     "test:dashboard-smoke": "node scripts/dashboard_smoke_check.mjs",
     "demo:smoke": "node scripts/demo_smoke_check.mjs",
     "demo:tools": "node scripts/mock_tool_flow_check.mjs",
-    "demo:judge": "./scripts/run-judge-demo.sh",
+    "demo:start": "./scripts/run-demo.sh",
     "qa:preflight-reviewer-proof": "node scripts/qa_evidence_preflight.mjs",
     "qa:upload-evidence": "node scripts/upload-qa-evidence.mjs",
     "qa:render-comment": "node scripts/render-qa-comment.mjs",
