@@ -250,6 +250,7 @@ async function run() {
     method: 'POST',
     body: JSON.stringify({
       userId,
+      sessionId: gameStart.data.sessionId,
       city: 'seoul',
       location: 'food_street',
       lang: 'ko',
@@ -259,6 +260,14 @@ async function run() {
   assert(startHangout.ok, `/scenes/hangout/start failed (${startHangout.status})`);
   assert(typeof startHangout.data?.sceneSessionId === 'string', 'hangout start missing sceneSessionId');
   assert(startHangout.data?.uiPolicy?.allowOnlyDialogueAndHints === true, 'hangout uiPolicy missing/invalid');
+  assert(
+    startHangout.data?.sceneSessionId === gameStart.data?.sceneSession?.sceneSessionId,
+    'hangout start should reuse active scene session for a persisted game session',
+  );
+  assert(
+    startHangout.data?.state?.turn === gameStart.data?.activeCheckpoint?.turn,
+    'hangout start turn should match active checkpoint turn',
+  );
   logPass('/api/v1/scenes/hangout/start');
 
   const respondHangout = await requestJson('/api/v1/scenes/hangout/respond', {
@@ -282,8 +291,36 @@ async function run() {
   } else {
     assert(respondHangout.data?.accepted === true, 'hangout respond missing accepted=true');
     assert(typeof respondHangout.data?.state?.score?.xp === 'number', 'hangout respond missing score');
+    assert(
+      typeof respondHangout.data?.activeCheckpoint?.checkpointId === 'string',
+      'hangout respond should return an updated activeCheckpoint',
+    );
     logPass('/api/v1/scenes/hangout/respond');
   }
+
+  const resumedGame = await requestJson('/api/v1/game/start-or-resume', {
+    method: 'POST',
+    body: JSON.stringify({
+      userId,
+      profile,
+    }),
+  });
+  assert(resumedGame.ok, `/game/start-or-resume resume failed (${resumedGame.status})`);
+  assert(resumedGame.data?.sessionId === gameStart.data?.sessionId, 'resume should reuse the active game session');
+  assert(resumedGame.data?.resumeSource === 'checkpoint', 'resume should report checkpoint resumeSource');
+  assert(
+    resumedGame.data?.activeCheckpoint?.turn === respondHangout.data?.state?.turn,
+    'resumed checkpoint turn should match the last persisted hangout turn',
+  );
+  assert(
+    resumedGame.data?.activeCheckpoint?.checkpointId === resumedGame.data?.gameSession?.activeCheckpointId,
+    'resumed active checkpoint should match gameSession.activeCheckpointId',
+  );
+  assert(
+    resumedGame.data?.activeCheckpoint?.rng?.version > gameStart.data?.activeCheckpoint?.rng?.version,
+    'resume should advance the persisted checkpoint version after a turn response',
+  );
+  logPass('/api/v1/game/start-or-resume resume');
 
   const learnSessions = await requestJson(`/api/v1/learn/sessions?userId=${encodeURIComponent(userId)}&city=seoul&lang=ko`);
   assert(learnSessions.ok, `/learn/sessions GET failed (${learnSessions.status})`);
