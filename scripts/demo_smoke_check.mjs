@@ -76,6 +76,10 @@ const requiredFiles = [
   "packages/contracts/fixtures/vocab.insights.sample.json",
   "packages/contracts/fixtures/player.media-profile.sample.json",
   "packages/contracts/fixtures/game.start-or-resume.sample.json",
+  "packages/contracts/fixtures/game.session.sample.json",
+  "packages/contracts/fixtures/scene.session.sample.json",
+  "packages/contracts/fixtures/checkpoint.player-resume.sample.json",
+  "packages/contracts/fixtures/scenario.seed.review-ready.sample.json",
   "packages/contracts/fixtures/objectives.next.sample.json",
   "packages/contracts/fixtures/learn.sessions.sample.json",
   "packages/contracts/fixtures/scene.food-hangout.sample.json",
@@ -136,6 +140,36 @@ const mediaEvents = JSON.parse(
     "utf8"
   )
 );
+const gameStart = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "packages/contracts/fixtures/game.start-or-resume.sample.json"),
+    "utf8"
+  )
+);
+const gameSession = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "packages/contracts/fixtures/game.session.sample.json"),
+    "utf8"
+  )
+);
+const sceneSession = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "packages/contracts/fixtures/scene.session.sample.json"),
+    "utf8"
+  )
+);
+const playerCheckpoint = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "packages/contracts/fixtures/checkpoint.player-resume.sample.json"),
+    "utf8"
+  )
+);
+const scenarioSeed = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "packages/contracts/fixtures/scenario.seed.review-ready.sample.json"),
+    "utf8"
+  )
+);
 
 const runtimeAssetManifest = JSON.parse(
   fs.readFileSync(
@@ -162,6 +196,84 @@ const shanghaiRewardBundle = JSON.parse(
   )
 );
 const clientRuntimeAssetUsage = collectClientRuntimeAssetUsage();
+
+function assertRouteState(route, label) {
+  if (!route || typeof route.pathname !== "string" || route.pathname.length === 0) {
+    console.error(`${label} missing route.pathname`);
+    process.exit(1);
+  }
+  if (route.query !== undefined && (typeof route.query !== "object" || Array.isArray(route.query))) {
+    console.error(`${label} route.query must be an object when present`);
+    process.exit(1);
+  }
+}
+
+function assertObjectiveDescriptor(objective, label) {
+  if (!objective || typeof objective.objectiveId !== "string" || objective.objectiveId.length === 0) {
+    console.error(`${label} missing objectiveId`);
+    process.exit(1);
+  }
+  if (!["ko", "ja", "zh"].includes(objective.lang)) {
+    console.error(`${label} has invalid lang`);
+    process.exit(1);
+  }
+  if (!["hangout", "learn"].includes(objective.mode)) {
+    console.error(`${label} has invalid mode`);
+    process.exit(1);
+  }
+  if (!["seoul", "tokyo", "shanghai"].includes(objective.cityId)) {
+    console.error(`${label} has invalid cityId`);
+    process.exit(1);
+  }
+  if (objective.targetNodeIds !== undefined && !Array.isArray(objective.targetNodeIds)) {
+    console.error(`${label} targetNodeIds must be an array when present`);
+    process.exit(1);
+  }
+}
+
+function assertMissionGate(gate, label) {
+  if (!gate || typeof gate.readiness !== "number") {
+    console.error(`${label} missing readiness`);
+    process.exit(1);
+  }
+  if (typeof gate.validatedHangouts !== "number") {
+    console.error(`${label} missing validatedHangouts`);
+    process.exit(1);
+  }
+  if (typeof gate.missionAssessmentUnlocked !== "boolean") {
+    console.error(`${label} missing missionAssessmentUnlocked`);
+    process.exit(1);
+  }
+  if (typeof gate.masteryTier !== "number") {
+    console.error(`${label} missing masteryTier`);
+    process.exit(1);
+  }
+}
+
+function assertUnlockSnapshot(unlocks, label) {
+  if (!unlocks || !Array.isArray(unlocks.locationIds) || !Array.isArray(unlocks.missionIds) || !Array.isArray(unlocks.rewardIds)) {
+    console.error(`${label} unlock snapshot is incomplete`);
+    process.exit(1);
+  }
+}
+
+function assertRngState(rng, label) {
+  if (!rng || typeof rng.seed !== "string" || rng.seed.length === 0) {
+    console.error(`${label} missing rng.seed`);
+    process.exit(1);
+  }
+  if (!Number.isInteger(rng.version) || rng.version < 1) {
+    console.error(`${label} missing valid rng.version`);
+    process.exit(1);
+  }
+}
+
+function assertProgressionDelta(delta, label) {
+  if (!delta || typeof delta.xp !== "number" || typeof delta.sp !== "number" || typeof delta.rp !== "number") {
+    console.error(`${label} missing xp/sp/rp`);
+    process.exit(1);
+  }
+}
 
 if (!Array.isArray(loop.cities) || loop.cities.length !== 3) {
   console.error("Expected exactly 3 cities in game-loop.json");
@@ -267,6 +379,140 @@ if (!playerMediaProfile.learningSignals || !Array.isArray(playerMediaProfile.lea
 
 if (!Array.isArray(mediaEvents.events) || mediaEvents.events.length === 0) {
   console.error("Expected non-empty events array in media.events.sample.json");
+  process.exit(1);
+}
+
+if (typeof gameStart.sessionId !== "string" || gameStart.sessionId.length === 0) {
+  console.error("Expected sessionId in game.start-or-resume.sample.json");
+  process.exit(1);
+}
+
+if (!["seoul", "tokyo", "shanghai"].includes(gameStart.city)) {
+  console.error("Expected valid city in game.start-or-resume.sample.json");
+  process.exit(1);
+}
+
+if (!["food_street", "cafe", "convenience_store", "subway_hub", "practice_studio"].includes(gameStart.location)) {
+  console.error("Expected valid location in game.start-or-resume.sample.json");
+  process.exit(1);
+}
+
+if (!["hangout", "learn"].includes(gameStart.mode)) {
+  console.error("Expected valid mode in game.start-or-resume.sample.json");
+  process.exit(1);
+}
+
+if (!gameStart.profile || !gameStart.profile.proficiency) {
+  console.error("Expected profile in game.start-or-resume.sample.json");
+  process.exit(1);
+}
+
+if (!gameStart.progression || typeof gameStart.progression.currentMasteryLevel !== "number") {
+  console.error("Expected progression.currentMasteryLevel in game.start-or-resume.sample.json");
+  process.exit(1);
+}
+
+if (!Array.isArray(gameStart.actions) || gameStart.actions.length === 0) {
+  console.error("Expected non-empty actions in game.start-or-resume.sample.json");
+  process.exit(1);
+}
+
+if (!["new_session", "checkpoint", "scenario_seed"].includes(gameStart.resumeSource)) {
+  console.error("Expected valid resumeSource in game.start-or-resume.sample.json");
+  process.exit(1);
+}
+
+if (!gameStart.gameSession || gameStart.gameSession.sessionId !== gameStart.sessionId) {
+  console.error("game.start-or-resume sample must embed matching gameSession");
+  process.exit(1);
+}
+
+if (!gameStart.sceneSession || gameStart.sceneSession.gameSessionId !== gameStart.sessionId) {
+  console.error("game.start-or-resume sample must embed matching sceneSession");
+  process.exit(1);
+}
+
+if (!gameStart.activeCheckpoint || gameStart.activeCheckpoint.gameSessionId !== gameStart.sessionId) {
+  console.error("game.start-or-resume sample must embed matching activeCheckpoint");
+  process.exit(1);
+}
+
+if (!Array.isArray(gameStart.availableScenarioSeeds) || gameStart.availableScenarioSeeds.length === 0) {
+  console.error("Expected availableScenarioSeeds in game.start-or-resume.sample.json");
+  process.exit(1);
+}
+
+if (!gameStart.availableScenarioSeeds.every((seed) => seed.qaOnly === true)) {
+  console.error("Scenario seeds must be explicitly qaOnly=true");
+  process.exit(1);
+}
+
+if (gameSession.sessionId !== gameStart.gameSession.sessionId) {
+  console.error("game.session sample should align with embedded gameSession");
+  process.exit(1);
+}
+
+assertObjectiveDescriptor(gameSession.activeObjective, "game.session.activeObjective");
+assertMissionGate(gameSession.missionGate, "game.session.missionGate");
+assertUnlockSnapshot(gameSession.unlocks, "game.session.unlocks");
+
+if (!Array.isArray(gameSession.availableActions) || gameSession.availableActions.length === 0) {
+  console.error("game.session.availableActions should not be empty");
+  process.exit(1);
+}
+
+if (sceneSession.gameSessionId !== gameSession.sessionId) {
+  console.error("scene.session sample should point at the matching game session");
+  process.exit(1);
+}
+
+assertObjectiveDescriptor(sceneSession.objective, "scene.session.objective");
+assertRouteState(sceneSession.route, "scene.session");
+assertProgressionDelta(sceneSession.progressionDelta, "scene.session.progressionDelta");
+
+if (typeof sceneSession.checkpointable !== "boolean") {
+  console.error("scene.session.checkpointable must be boolean");
+  process.exit(1);
+}
+
+if (!sceneSession.uiPolicy || sceneSession.uiPolicy.allowOnlyDialogueAndHints !== true) {
+  console.error("scene.session uiPolicy should preserve immersive hangout constraints");
+  process.exit(1);
+}
+
+if (playerCheckpoint.kind !== "player_resume") {
+  console.error("checkpoint sample must use kind=player_resume");
+  process.exit(1);
+}
+
+assertRouteState(playerCheckpoint.route, "checkpoint.player-resume");
+assertObjectiveDescriptor(playerCheckpoint.objective, "checkpoint.player-resume.objective");
+assertProgressionDelta(playerCheckpoint.progressionDelta, "checkpoint.player-resume.progressionDelta");
+assertMissionGate(playerCheckpoint.missionGate, "checkpoint.player-resume.missionGate");
+assertUnlockSnapshot(playerCheckpoint.unlocks, "checkpoint.player-resume.unlocks");
+assertRngState(playerCheckpoint.rng, "checkpoint.player-resume");
+
+if (!playerCheckpoint.activeExercise || typeof playerCheckpoint.activeExercise.exerciseId !== "string") {
+  console.error("checkpoint.player-resume must include activeExercise state");
+  process.exit(1);
+}
+
+if (scenarioSeed.qaOnly !== true) {
+  console.error("scenario.seed sample must be qaOnly=true");
+  process.exit(1);
+}
+
+assertRouteState(scenarioSeed.route, "scenario.seed.review-ready");
+assertObjectiveDescriptor(scenarioSeed.objective, "scenario.seed.review-ready.objective");
+assertRngState(scenarioSeed.rng, "scenario.seed.review-ready");
+
+if (!["qa", "demo", "dev"].includes(scenarioSeed.source)) {
+  console.error("scenario.seed sample must declare source=qa|demo|dev");
+  process.exit(1);
+}
+
+if (!scenarioSeed.activeExercise || typeof scenarioSeed.activeExercise.exerciseType !== "string") {
+  console.error("scenario.seed sample must include deterministic activeExercise state");
   process.exit(1);
 }
 

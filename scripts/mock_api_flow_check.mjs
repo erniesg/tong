@@ -225,8 +225,25 @@ async function run() {
   });
   assert(gameStart.ok, `/game/start-or-resume failed (${gameStart.status})`);
   assert(typeof gameStart.data?.sessionId === 'string' && gameStart.data.sessionId.length > 0, 'gameStart.sessionId missing');
+  assert(typeof gameStart.data?.location === 'string' && gameStart.data.location.length > 0, 'gameStart.location missing');
+  assert(['hangout', 'learn'].includes(gameStart.data?.mode), 'gameStart.mode missing/invalid');
   assert(typeof gameStart.data?.progression?.xp === 'number', 'gameStart progression missing xp');
   assertArray(gameStart.data?.actions, 'gameStart.actions');
+  assert(gameStart.data?.gameSession?.sessionId === gameStart.data.sessionId, 'gameStart.gameSession.sessionId mismatch');
+  assert(gameStart.data?.sceneSession?.gameSessionId === gameStart.data.sessionId, 'gameStart.sceneSession.gameSessionId mismatch');
+  assert(gameStart.data?.activeCheckpoint?.gameSessionId === gameStart.data.sessionId, 'gameStart.activeCheckpoint.gameSessionId mismatch');
+  assert(gameStart.data?.sceneSession?.sceneSessionId === gameStart.data?.gameSession?.activeSceneSessionId, 'gameStart active scene session mismatch');
+  assert(gameStart.data?.gameSession?.activeCheckpointId === gameStart.data?.activeCheckpoint?.checkpointId, 'gameStart active checkpoint mismatch');
+  assert(['new_session', 'checkpoint', 'scenario_seed'].includes(gameStart.data?.resumeSource), 'gameStart.resumeSource missing/invalid');
+  assert(typeof gameStart.data?.gameSession?.missionGate?.readiness === 'number', 'gameStart missionGate.readiness missing');
+  assert(Array.isArray(gameStart.data?.gameSession?.unlocks?.locationIds), 'gameStart unlocks.locationIds missing');
+  assert(gameStart.data?.activeCheckpoint?.route?.pathname === '/game', 'gameStart activeCheckpoint.route.pathname missing');
+  assert(Number.isInteger(gameStart.data?.activeCheckpoint?.rng?.version), 'gameStart activeCheckpoint.rng.version missing');
+  assertArray(gameStart.data?.availableScenarioSeeds, 'gameStart.availableScenarioSeeds');
+  assert(
+    gameStart.data.availableScenarioSeeds.every((seed) => seed.qaOnly === true && typeof seed.seedId === 'string'),
+    'gameStart.availableScenarioSeeds must be QA-only entries',
+  );
   logPass('/api/v1/game/start-or-resume');
 
   const startHangout = await requestJson('/api/v1/scenes/hangout/start', {
