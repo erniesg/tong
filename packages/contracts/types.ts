@@ -128,12 +128,77 @@ export interface StartOrResumeGameRequest {
   };
 }
 
+export interface GameProgressionState {
+  xp: number;
+  sp: number;
+  rp: number;
+  currentMasteryLevel: number;
+}
+
+export interface GameScenarioSeed {
+  scenarioSeedId: string;
+  scenarioId: string;
+  city: GraphCityId;
+  locationId: GraphLocationId;
+  mode: 'hangout' | 'learn';
+  objectiveId: string;
+  lang: TargetLanguage;
+}
+
+export interface GameSceneSession {
+  sceneSessionId: string;
+  gameSessionId: string;
+  sceneId: string;
+  scenarioId: string;
+  city: GraphCityId;
+  locationId: GraphLocationId;
+  mode: 'hangout' | 'learn';
+  turn: number;
+  status: 'active' | 'completed' | 'abandoned';
+  objectiveId: string;
+  lang: TargetLanguage;
+  startedAtIso: string;
+  updatedAtIso: string;
+}
+
+export interface GameCheckpoint {
+  checkpointId: string;
+  gameSessionId: string;
+  sceneSessionId: string;
+  city: GraphCityId;
+  locationId: GraphLocationId;
+  mode: 'hangout' | 'learn';
+  objectiveId: string;
+  turn: number;
+  label: string;
+  reason: 'autosave' | 'manual' | 'mission_gate' | 'qa_seed';
+  savedAtIso: string;
+}
+
+export interface GameSession {
+  gameSessionId: string;
+  userId: string;
+  city: GraphCityId;
+  activeSceneId: string;
+  activeSceneSessionId: string;
+  progression: GameProgressionState;
+  status: 'active' | 'paused' | 'completed';
+  startedAtIso: string;
+  updatedAtIso: string;
+}
+
 export interface StartOrResumeGameResponse {
   sessionId: string;
-  city: 'seoul' | 'tokyo' | 'shanghai';
+  city: GraphCityId;
   sceneId: string;
   tongPrompt: string;
   actions: string[];
+  profile?: StartOrResumeGameRequest['profile'];
+  progression?: GameProgressionState;
+  gameSession: GameSession;
+  sceneSession: GameSceneSession;
+  checkpoint: GameCheckpoint;
+  scenarioSeed: GameScenarioSeed;
 }
 
 export interface ObjectiveNextResponse {

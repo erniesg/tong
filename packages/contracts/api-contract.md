@@ -392,9 +392,65 @@ Response:
   "city": "seoul",
   "sceneId": "intro_001",
   "tongPrompt": "in-character system prompt token or id",
-  "actions": ["Train vocals", "Attend language class", "Meet cast member"]
+  "actions": ["Train vocals", "Attend language class", "Meet cast member"],
+  "gameSession": {
+    "gameSessionId": "sess_123",
+    "userId": "demo-user-1",
+    "city": "seoul",
+    "activeSceneId": "intro_001",
+    "activeSceneSessionId": "scene_sess_001",
+    "progression": {
+      "xp": 110,
+      "sp": 45,
+      "rp": 12,
+      "currentMasteryLevel": 1
+    },
+    "status": "active",
+    "startedAtIso": "2026-03-14T21:00:00.000Z",
+    "updatedAtIso": "2026-03-14T21:22:00.000Z"
+  },
+  "sceneSession": {
+    "sceneSessionId": "scene_sess_001",
+    "gameSessionId": "sess_123",
+    "sceneId": "intro_001",
+    "scenarioId": "seoul_food_street_hangout_first_order",
+    "city": "seoul",
+    "locationId": "food_street",
+    "mode": "hangout",
+    "turn": 0,
+    "status": "active",
+    "objectiveId": "ko_food_l2_001",
+    "lang": "ko",
+    "startedAtIso": "2026-03-14T21:00:00.000Z",
+    "updatedAtIso": "2026-03-14T21:22:00.000Z"
+  },
+  "checkpoint": {
+    "checkpointId": "chk_001",
+    "gameSessionId": "sess_123",
+    "sceneSessionId": "scene_sess_001",
+    "city": "seoul",
+    "locationId": "food_street",
+    "mode": "hangout",
+    "objectiveId": "ko_food_l2_001",
+    "turn": 0,
+    "label": "intro-open",
+    "reason": "autosave",
+    "savedAtIso": "2026-03-14T21:22:00.000Z"
+  },
+  "scenarioSeed": {
+    "scenarioSeedId": "seed_food_street_hangout_intro_v1",
+    "scenarioId": "seoul_food_street_hangout_first_order",
+    "city": "seoul",
+    "locationId": "food_street",
+    "mode": "hangout",
+    "objectiveId": "ko_food_l2_001",
+    "lang": "ko"
+  }
 }
 ```
+
+Contract note:
+- `gameSession`, `sceneSession`, `checkpoint`, and `scenarioSeed` are required so resume and deterministic checkpoint flows can share one canonical shape.
 
 ## GET `/api/v1/objectives/next`
 Query:

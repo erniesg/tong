@@ -21,3 +21,7 @@ Curriculum graph fixtures:
 Naming note:
 - The shared contract uses `learnerId` as the stable user-specific identifier.
 - The mock dashboard runtime also accepts `personaId` as an alias because the first milestone is driven by persona fixtures.
+
+Session contracts:
+- `StartOrResumeGameResponse` now includes canonical `gameSession`, `sceneSession`, `checkpoint`, and `scenarioSeed` payloads for resume + deterministic checkpoint workflows.
+- `fixtures/game.start-or-resume.sample.json` is the reference payload for those shapes.
