@@ -60,6 +60,8 @@ python3 .agents/skills/_functional-qa/scripts/capture_reviewer_proof.py --run-di
 npm run qa:render-comment -- --run-dir <RUN_DIR>
 ```
 
+The upload step now performs reviewer-surface verification with real `GET` requests before it returns success. That means a passing upload has already confirmed the public `tong-runs` URLs are readable, not just that the bucket write completed.
+
 Expected outputs:
 - `upload-manifest.json`
 - `reviewer-proof.json`

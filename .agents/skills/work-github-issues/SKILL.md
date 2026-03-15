@@ -114,3 +114,4 @@ python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py
 - Do not skip fix verification before publishing a "fixed" update.
 - Do not upgrade a validation-only or design-review issue into a fix run unless a human explicitly changes the direction.
 - Flag issues that are not remote-portable before sending them to Codex cloud or unattended workers.
+- For remote `/game` or runtime-media issues, treat public runtime asset availability as part of portability. If `assets.tong.berlayar.ai` is missing the referenced files, either publish the current runtime assets first or mark the remote run blocked.

@@ -64,6 +64,7 @@ The local run directory is the staging source bundle. The reviewer-visible proof
    ```
 
    Use the generated `uploaded-comment.md` when you need clean public links, an inline GIF preview, or an MP4 proof link without committing binaries into git.
+   A task-local Codex recording preview does not replace this step and should not be treated as the published reviewer-proof surface.
 
    If the uploader is not configured for the current environment, fall back to reviewer-openable git-tracked files on a dedicated branch or PR and use those GitHub blob or raw links in the posted comment. Do not leave reviewer-facing updates pointing only at local artifact paths inside `artifacts/qa-runs`.
 
