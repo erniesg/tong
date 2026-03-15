@@ -27,7 +27,9 @@ Practical rule:
    - `npm --prefix apps/client install`
    - `npm run demo:smoke`
    - `npm run ingest:mock`
-3. If cloud tasks need large or private assets later, move them to shared storage first. Until then, leave asset-dependent issues as local-only.
+3. The shell that will publish reviewer-visible QA evidence should pass:
+   - `npm run qa:preflight-reviewer-proof`
+4. If cloud tasks need large or private assets later, move them to shared storage first. Until then, leave asset-dependent issues as local-only.
 
 ## Repo entry points
 
