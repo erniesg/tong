@@ -19,6 +19,7 @@ Read these files before doing substantive work:
 - `.agents/skills/_functional-qa/config/repo-adapter.json`
 - `.agents/skills/_functional-qa/config/publish-policy.json`
 - `docs/agent-native-project-setup.md`
+- `docs/deployment-track.md` when the issue depends on runtime assets or remote environment behavior
 
 ## Target input
 
@@ -64,13 +65,18 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
 
 6. For UI issues, do not claim success without visual evidence. Use screenshots, ordered frames, or other temporal capture that matches the selected evidence strategy.
 
+   For remote `/game` or runtime-media issues, confirm the shipped reviewer surface before treating the capture as valid:
+   - the shell is using `NEXT_PUBLIC_TONG_ASSETS_BASE_URL`
+   - referenced runtime assets return `200` from the public host
+   - if the asset host is missing the current repo files, run `npm run runtime-assets:upload` or report that the remote environment is not ready yet
+
    When the fix changes a reviewer-visible UI surface such as layout, typography, subtitles, translation copy, tooltip content, or focus styling, capture the same state before and after the fix and prepare:
    - one full-frame side-by-side comparison
    - one tighter comparison crop when the changed region is small or text-dense
 
    If the runtime can expose the proof moment directly, record cue timestamps in logs or structured state, for example `token_tapped_at_ms`, `tooltip_opened_at_ms`, `dictionary_card_visible_at_ms`, or `mission_complete_at_ms`. Use those cues when cutting reviewer-facing GIF previews or poster frames.
 
-   For timing-sensitive or transition bugs, reviewer-visible media is required for a "fixed" claim. A gitignored local artifact path is not enough by itself: attach or link the recording or ordered frames in the PR body, task result, or issue comment. If the runtime cannot make that media visible to reviewers, mark the fix verification incomplete and call out the blocker.
+   For timing-sensitive or transition bugs, reviewer-visible media is required for a "fixed" claim. A gitignored local artifact path is not enough by itself, and a Codex task-local "Recording preview" is not enough by itself either: attach or link the recording or ordered frames in the PR body, task result, or issue comment. If the runtime cannot make that media visible to reviewers, mark the fix verification incomplete and call out the blocker.
 
    For reviewer-facing interaction or transition clips, do not race the input. Wait on the readable pre-action state, show the actual tap or click, and hold on the first stable post-action frame. If the clip skips or truncates any of those phases, do not treat it as final acceptance proof.
 

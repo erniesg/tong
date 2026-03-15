@@ -8,7 +8,7 @@ import { LocationPin } from './LocationPin';
 import { LocationSheet } from './LocationSheet';
 import { KoreanText } from '@/components/shared/KoreanText';
 import { getLanguageForCity } from '@/lib/content/locations';
-import { runtimeAssetUrl } from '@/lib/runtime-assets';
+import { fallbackRuntimeAssetCandidates, runtimeAssetUrl } from '@/lib/runtime-assets';
 
 /* ── Constants ──────────────────────────────────────────────── */
 
@@ -98,6 +98,8 @@ export function CityMap({
 }: CityMapProps) {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
+  const [videoCandidateIndex, setVideoCandidateIndex] = useState(0);
+  const [posterCandidateIndex, setPosterCandidateIndex] = useState(0);
 
   /* Two video refs for dissolve looping */
   const videoARef = useRef<HTMLVideoElement>(null);
@@ -109,6 +111,11 @@ export function CityMap({
   const locations = CITY_LOCATIONS[city] ?? [];
   const targetLang = getLanguageForCity(city);
   const explainLang = gameState.explainIn[city] ?? 'en';
+  const cityMedia = CITY_MEDIA[city];
+  const videoCandidates = fallbackRuntimeAssetCandidates(cityMedia.video);
+  const posterCandidates = fallbackRuntimeAssetCandidates(cityMedia.poster);
+  const videoSrc = videoCandidates[videoCandidateIndex] ?? '';
+  const posterSrc = posterCandidates[posterCandidateIndex] ?? cityMedia.poster;
 
   /* ── Two-video dissolve loop ─────────────────────────────── */
 
@@ -170,7 +177,7 @@ export function CityMap({
       vA.pause();
       vB.pause();
     };
-  }, [city, meta.hasVideo]);
+  }, [city, meta.hasVideo, videoSrc, posterSrc]);
 
   /* ── Swipe handling ─────────────────────────────────────── */
 
@@ -234,8 +241,11 @@ export function CityMap({
   /* ── Background ─────────────────────────────────────────── */
 
   const bgStyle = { transform: `translateX(${dragOffset}px)` };
-  const cityMedia = CITY_MEDIA[city];
-  const videoSrc = cityMedia.video;
+
+  useEffect(() => {
+    setVideoCandidateIndex(0);
+    setPosterCandidateIndex(0);
+  }, [city]);
 
   return (
     <div
@@ -245,7 +255,7 @@ export function CityMap({
       onTouchEnd={handleTouchEnd}
     >
       {/* Video backgrounds (two for dissolve) / static image */}
-      {meta.hasVideo ? (
+      {meta.hasVideo && videoSrc ? (
         <>
           <video
             ref={videoARef}
@@ -255,7 +265,15 @@ export function CityMap({
             muted
             playsInline
             preload="auto"
-            poster={cityMedia.poster}
+            poster={posterSrc}
+            onError={() => {
+              if (posterCandidateIndex + 1 < posterCandidates.length) {
+                setPosterCandidateIndex(posterCandidateIndex + 1);
+              }
+              if (videoCandidateIndex + 1 < videoCandidates.length) {
+                setVideoCandidateIndex(videoCandidateIndex + 1);
+              }
+            }}
           >
             <source src={videoSrc} type="video/mp4" />
           </video>
@@ -267,6 +285,15 @@ export function CityMap({
             muted
             playsInline
             preload="auto"
+            poster={posterSrc}
+            onError={() => {
+              if (posterCandidateIndex + 1 < posterCandidates.length) {
+                setPosterCandidateIndex(posterCandidateIndex + 1);
+              }
+              if (videoCandidateIndex + 1 < videoCandidates.length) {
+                setVideoCandidateIndex(videoCandidateIndex + 1);
+              }
+            }}
           >
             <source src={videoSrc} type="video/mp4" />
           </video>
@@ -276,8 +303,13 @@ export function CityMap({
           key={city}
           className={`city-map__bg${comingSoon ? ' city-map__bg--greyscale' : ''}`}
           style={bgStyle}
-          src={cityMedia.poster}
+          src={posterSrc}
           alt={meta.en}
+          onError={() => {
+            if (posterCandidateIndex + 1 < posterCandidates.length) {
+              setPosterCandidateIndex(posterCandidateIndex + 1);
+            }
+          }}
         />
       )}
 

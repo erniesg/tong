@@ -21,7 +21,9 @@ Requirements:
 - Reviewer-facing evidence requirement: {{reviewer_evidence_expectation}}
 - If the runtime cannot publish that evidence directly into GitHub after PR creation, return paste-ready markdown with the exact comparison images or links a human should add to the PR.
 - For UI or transition fixes, include reviewer-visible media links or attachments in the task output and PR body. A local artifact path under `artifacts/qa-runs/` is not sufficient by itself.
+- A Codex task-local "Recording preview" is not a reviewer-visible upload by itself. Use the repo uploader flow when public `tong-runs` links are required.
 - If you cannot make the media reviewer-visible from the cloud task, do not claim correctness; report that a final local/browser-backed recording is still required.
+- If the surface depends on runtime media, verify the public asset host before capture. When the current repo assets are missing from `assets.tong.berlayar.ai`, run `npm run runtime-assets:upload` before treating the remote UI as representative.
 - Do not rely on `gh` CLI or shell-level `git push`.
 - Do not cite gitignored artifacts as committed GitHub blobs unless those files were actually checked in.
 - {{completion_instruction}}
