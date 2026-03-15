@@ -77,6 +77,21 @@ Comparison generation uses the previous validation run linked in `run.json.previ
 2. run `validate-issue --verify-fix` after the fix
 3. upload the verify-fix run bundle
 
+For timing-sensitive reviewer-proof runs, follow the upload with:
+
+```bash
+python .agents/skills/_functional-qa/scripts/capture_reviewer_proof.py \
+  --run-dir artifacts/qa-runs/functional-qa/erniesg-tong-18/20260314T115603Z
+```
+
+That script validates the `reviewer_proof` block in `evidence.json`, writes `reviewer-proof.json` and `reviewer-proof.md`, and augments `upload-manifest.json` with:
+
+1. reviewer-proof status (`reviewer-proof`, `trace-only`, or `incomplete`)
+2. ordered frame links for the proof sequence
+3. cue timestamps for the proof moment
+4. route and deterministic-setup notes
+5. any missing reviewer-ready requirements
+
 ## Render a PR-ready comment
 
 ```bash
@@ -89,6 +104,7 @@ This reads `upload-manifest.json` from the run directory and writes `uploaded-co
 - direct links to the before/after comparison panel and focused crop when available
 - inline GIF preview
 - direct link to the MP4 proof recording with audio
+- reviewer-proof stage links and cue timestamps when `capture_reviewer_proof.py` populated the manifest
 - dialogue and tooltip screenshot links
 - selected trace and summary links
 

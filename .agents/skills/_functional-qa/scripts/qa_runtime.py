@@ -25,6 +25,7 @@ REPRO_STATUSES = {"reproduced", "not-reproduced", "partially-reproduced", "ambig
 FIX_STATUSES = {"not-checked", "fixed", "still-reproduces", "inconclusive"}
 ISSUE_ACCURACY = {"accurate", "stale", "misdescribed", "n/a"}
 FIX_ALLOWED_EXECUTION_MODES = {"safe-unattended", "requires-live-model"}
+REVIEWER_PROOF_REQUIRED_CLASSES = {"interaction-input", "animation-transition", "async-streaming-state"}
 
 
 def load_json(path: Path) -> Any:
@@ -1031,6 +1032,41 @@ def bootstrap_text(
         "cross_env_matrix": [],
         "open_questions": [],
         "notes": [],
+        "reviewer_proof": {
+            "classification": "not-evaluated",
+            "status": "not-evaluated",
+            "surface": "",
+            "route": "",
+            "scenario_seed": "",
+            "proof_moment": "",
+            "deterministic_setup": {
+                "used": False,
+                "description": "",
+            },
+            "artifacts": {
+                "proof_video": "",
+                "gif_preview": "",
+            },
+            "ordered_frames": {
+                "pre_action": "",
+                "ready_state": "",
+                "immediate_post_input": "",
+                "later_transition": "",
+                "stable_post_action": "",
+            },
+            "cue_timestamps_ms": {},
+            "checks": {
+                "real_route": False,
+                "semantically_coherent": False,
+                "ready_state_legible": False,
+                "input_visible": False,
+                "pre_action_hold": False,
+                "stable_post_action": False,
+                "reviewer_visible_media": False,
+            },
+            "notes": [],
+            "missing_requirements": [],
+        },
         "portability": {
             **portability,
             "notes": [],
@@ -1046,6 +1082,15 @@ def bootstrap_text(
         }
     }
     return ("\n".join(summary_lines) + "\n", "\n".join(steps_lines) + "\n", evidence)
+
+
+def reviewer_proof_required(run: dict[str, Any], *, for_fixed_claim: bool) -> bool:
+    if not for_fixed_claim:
+        return False
+    if not run.get("validation_policy", {}).get("ui_acceptance_required"):
+        return False
+    issue_class = run.get("classification", {}).get("issue_class")
+    return issue_class in REVIEWER_PROOF_REQUIRED_CLASSES
 
 
 def validation_gate_failures(run: dict[str, Any], evidence: dict[str, Any], *, for_fixed_claim: bool) -> list[str]:
@@ -1078,6 +1123,14 @@ def validation_gate_failures(run: dict[str, Any], evidence: dict[str, Any], *, f
     for item in validation.get("missing_requirements", []):
         failures.append(f"missing requirement noted by runner: {item}")
 
+    if reviewer_proof_required(run, for_fixed_claim=for_fixed_claim):
+        reviewer_proof = evidence.get("reviewer_proof") or {}
+        status = reviewer_proof.get("status") or reviewer_proof.get("classification") or "missing"
+        if status != "reviewer-proof":
+            failures.append(f"reviewer-proof pack status is `{status}`")
+        for item in reviewer_proof.get("missing_requirements", []):
+            failures.append(f"reviewer-proof requirement missing: {item}")
+
     return failures
 
 
@@ -1086,11 +1139,15 @@ def render_validation_gate_lines(run: dict[str, Any], evidence: dict[str, Any]) 
     validation = evidence.get("validation", {})
     runtime_modes = validation.get("runtime_modes_exercised", [])
     failures = validation_gate_failures(run, evidence, for_fixed_claim=run["functional"]["fix_status"] == "fixed" or run["functional"]["verdict"] == "fixed")
+    reviewer_proof = evidence.get("reviewer_proof") or {}
+    reviewer_proof_required_for_run = reviewer_proof_required(run, for_fixed_claim=True)
+    reviewer_proof_status = reviewer_proof.get("status") or reviewer_proof.get("classification") or "missing"
 
     lines = [
         f"- Execution mode: `{policy.get('execution_mode', 'safe-unattended')}`",
         f"- Direct issue evidence: `{'complete' if validation.get('direct_issue_evidence_complete', False) else 'missing' if policy.get('requires_direct_issue_evidence') else 'not-required'}`",
         f"- UI acceptance gate: `{'complete' if validation.get('ui_acceptance_complete', False) else 'missing' if policy.get('ui_acceptance_required') else 'not-required'}`",
+        f"- Reviewer-proof pack: `{reviewer_proof_status if reviewer_proof_required_for_run else 'not-required'}`",
         f"- Runtime modes exercised: `{', '.join(runtime_modes) if runtime_modes else 'none recorded'}`",
         f"- Live model confirmation: `{'confirmed' if validation.get('live_model_confirmed', False) else 'missing' if policy.get('requires_live_model_for_fixed') else 'not-required'}`",
         f"- Human review: `{'complete' if validation.get('human_review_completed', False) else 'missing' if policy.get('human_review_required') else 'not-required'}`",
@@ -1177,6 +1234,32 @@ def load_evidence(run_dir: Path) -> dict[str, Any]:
     return load_json(evidence_path)
 
 
+def maybe_generate_reviewer_proof(run_dir: Path) -> bool:
+    reviewer_proof = (load_evidence(run_dir).get("reviewer_proof") or {})
+    classification = reviewer_proof.get("classification") or reviewer_proof.get("status") or "not-evaluated"
+    if classification in {"", "not-evaluated", "missing", None}:
+        return True
+
+    script_path = SCRIPT_PATH.parent / "capture_reviewer_proof.py"
+    if not script_path.exists():
+        print(f"Reviewer-proof script missing: {relative_to_repo(script_path)}")
+        return False
+
+    result = run_command(
+        [
+            sys.executable,
+            str(script_path),
+            "--run-dir",
+            str(run_dir),
+        ],
+        allow_failure=True,
+    )
+    if result.returncode != 0:
+        print_command_failure("Reviewer-proof pack generation", result)
+        return False
+    return True
+
+
 def should_attempt_uploaded_reviewer_comment(run: dict[str, Any], evidence: dict[str, Any]) -> bool:
     if run.get("evidence_plan", {}).get("requires_ui_capture"):
         return True
@@ -1209,6 +1292,9 @@ def render_uploaded_comment(run_dir: Path, *, dry_run: bool) -> Path | None:
     upload_result = run_command(upload_command, allow_failure=True)
     if upload_result.returncode != 0:
         print_command_failure("Evidence upload", upload_result)
+        return None
+
+    if not maybe_generate_reviewer_proof(run_dir):
         return None
 
     render_result = run_command(

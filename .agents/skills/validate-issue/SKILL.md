@@ -121,6 +121,12 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
    ```
 
    If the run needs reviewer-facing media links rather than a text-only QA update, continue with `capture-reviewer-proof` before considering the publication complete. The published proof should land on `tong-runs` when the uploader is configured; the local run bundle remains the staging source.
+   For timing-sensitive interaction fixes that need a reviewer-proof pack, upload the run bundle and then build the proof metadata before the final fixed claim:
+
+   ```bash
+   npm run qa:upload-evidence -- --run-dir <RUN_DIR> --include-supporting
+   python .agents/skills/_functional-qa/scripts/capture_reviewer_proof.py --run-dir <RUN_DIR>
+   ```
 
 11. Decide issue closure status deliberately:
 

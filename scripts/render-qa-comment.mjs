@@ -143,6 +143,60 @@ function renderComparisonGap(manifest) {
   return `Comparison assets are still missing for this reviewer-visible QA run. ${reason}`;
 }
 
+function renderReviewerProofStatus(manifest) {
+  const reviewerProof = manifest.reviewer_proof;
+  if (!reviewerProof) return [];
+
+  const lines = [];
+  const status = reviewerProof.status || reviewerProof.classification || "missing";
+  const route = reviewerProof.route ? ` Route: \`${reviewerProof.route}\`.` : "";
+  const scenarioSeed = reviewerProof.scenario_seed ? ` Scenario seed: \`${reviewerProof.scenario_seed}\`.` : "";
+  lines.push(`Reviewer-proof pack: \`${status}\`.${route}${scenarioSeed}`);
+
+  const deterministicSetup = reviewerProof.deterministic_setup;
+  if (deterministicSetup?.used) {
+    lines.push(`Deterministic setup note: ${deterministicSetup.description || "Used only to reach the near-proof state."}`);
+  }
+
+  const cues = reviewerProof.cue_timestamps_ms || {};
+  const cueFragments = [
+    ["Ready", cues.ready_state],
+    ["Input", cues.input],
+    ["Immediate post-input", cues.immediate_post_input],
+    ["Later transition", cues.later_transition],
+    ["Stable post-action", cues.stable_post_action],
+  ]
+    .filter(([, value]) => typeof value === "number")
+    .map(([label, value]) => `${label} +${Math.trunc(value)}ms`);
+
+  if (cueFragments.length > 0) {
+    lines.push(`Cue timestamps: ${cueFragments.join(", ")}.`);
+  }
+
+  if (Array.isArray(reviewerProof.missing_requirements) && reviewerProof.missing_requirements.length > 0) {
+    lines.push(`Reviewer-proof gaps: ${reviewerProof.missing_requirements.join("; ")}`);
+  }
+
+  return lines;
+}
+
+function renderReviewerProofBullets(manifest, cacheBustToken) {
+  const reviewerProof = manifest.reviewer_proof;
+  if (!reviewerProof?.ordered_frames) return [];
+
+  const orderedStages = [
+    ["Pre-action frame", reviewerProof.ordered_frames.pre_action],
+    ["Ready-state frame", reviewerProof.ordered_frames.ready_state],
+    ["Immediate post-input frame", reviewerProof.ordered_frames.immediate_post_input],
+    ["Later transition frame", reviewerProof.ordered_frames.later_transition],
+    ["Stable post-action frame", reviewerProof.ordered_frames.stable_post_action],
+  ];
+
+  return orderedStages
+    .map(([label, artifact]) => renderBullet(label, artifact, cacheBustToken))
+    .filter(Boolean);
+}
+
 function renderComment(manifest) {
   const cacheBustToken = buildCacheBustToken(manifest);
   const issueRef = manifest.issue?.issue_ref || manifest.run.issue_ref;
@@ -154,6 +208,8 @@ function renderComment(manifest) {
   const summarySentence = renderSummarySentence(manifest);
   const comparisonContext = renderComparisonContext(manifest);
   const comparisonGap = renderComparisonGap(manifest);
+  const reviewerProofStatusLines = renderReviewerProofStatus(manifest);
+  const reviewerProofBullets = renderReviewerProofBullets(manifest, cacheBustToken);
   const validationSentence = renderValidationSentence(manifest);
 
   const lines = [];
@@ -179,12 +235,18 @@ function renderComment(manifest) {
     lines.push(comparisonGap);
   }
 
+  if (reviewerProofStatusLines.length > 0) {
+    lines.push("");
+    lines.push(...reviewerProofStatusLines);
+  }
+
   lines.push("");
   const bullets = [
     renderBullet("Before/after comparison panel", manifest.primary?.comparison_panel, cacheBustToken),
     renderBullet("Focused comparison crop", manifest.primary?.comparison_focus_crop, cacheBustToken),
     renderBullet("GIF preview", manifest.primary?.gif_preview, cacheBustToken),
     renderBullet("Screen recording with audio", manifest.primary?.proof_video, cacheBustToken),
+    ...reviewerProofBullets,
     renderBullet("Tooltip screenshot", tooltipArtifact, cacheBustToken),
     renderBullet("Dialogue screenshot", dialogueArtifact, cacheBustToken),
     renderBullet("Romanization-bait trace", manifest.primary?.romanization_trace, cacheBustToken),
