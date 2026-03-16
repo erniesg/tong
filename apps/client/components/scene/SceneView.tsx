@@ -28,6 +28,7 @@ interface SceneViewProps {
   tongTip?: { message: string; translation?: string } | null;
   isStreaming?: boolean;
   dialogueIsStreaming?: boolean;
+  sceneBusy?: boolean;
   hudContent?: React.ReactNode;
   targetLang?: TargetLang;
   continueLabel?: string;
@@ -64,6 +65,7 @@ export function SceneView({
   tongTip = null,
   isStreaming = false,
   dialogueIsStreaming = false,
+  sceneBusy = false,
   hudContent,
   targetLang = 'ko',
   continueLabel = 'Tap to continue',
@@ -169,7 +171,7 @@ export function SceneView({
           continueLabel={continueLabel}
           onContinue={onContinue}
         />
-      ) : isStreaming || !sceneReady ? (
+      ) : isStreaming || sceneBusy || !sceneReady ? (
         <div className="absolute bottom-4 left-0 right-0 text-center">
           <div className="scene-continue-label animate-pulse">...</div>
         </div>
