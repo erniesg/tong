@@ -1,0 +1,181 @@
+{
+  "schema_version": "1",
+  "docs": {
+    "cloud_environments": "https://developers.openai.com/codex/cloud/environments",
+    "github_integration": "https://developers.openai.com/codex/integrations/github",
+    "worktrees": "https://developers.openai.com/codex/app/worktrees"
+  },
+  "environment_name": "tong",
+  "delivery_mode": "direct-task-pr",
+  "label_suggestions": [
+    {
+      "name": "cloud-ok",
+      "description": "Issue can be validated, fixed, and re-verified in Codex cloud from repo state plus setup."
+    },
+    {
+      "name": "local-only",
+      "description": "Issue depends on local-only assets, device-specific state, or context not reproducible in Codex cloud."
+    },
+    {
+      "name": "needs-acceptance-proof",
+      "description": "Issue can be fixed in cloud but still needs a final local/browser-backed acceptance recording."
+    }
+  ],
+  "setup_commands": [
+    "npm --prefix apps/server install",
+    "npm --prefix apps/client install",
+    "npm run demo:smoke",
+    "npm run ingest:mock"
+  ],
+  "branch_pattern": "codex/issue-{number}-{slug}",
+  "pr_title_pattern": "fix: issue #{number} - {short_title}",
+  "local_only_keywords": [
+    "looping video",
+    "video backdrop",
+    "tong avatar",
+    "local asset",
+    "private asset",
+    "/users/",
+    "real device only"
+  ],
+  "cloud_issue_classes_needing_local_acceptance": [
+    "interaction-input",
+    "animation-transition",
+    "async-streaming-state",
+    "compatibility-environment",
+    "localization-content"
+  ],
+  "current_batches": [
+    {
+      "id": "batch-1",
+      "description": "First cloud wave: Block Crush transition polish and dialogue streaming after the initial readability pass landed.",
+      "issues": [
+        "#18",
+        "#19"
+      ]
+    },
+    {
+      "id": "batch-parallel",
+      "description": "Independent remote-first tooling and asset-foundation work that can run in parallel with the client-shell priority wave.",
+      "issues": [
+        "#35",
+        "#36",
+        "#34"
+      ]
+    },
+    {
+      "id": "batch-parallel",
+      "description": "Independent remote-first tooling and asset-foundation work that can run in parallel with the client-shell priority wave.",
+      "issues": [
+        "#35",
+        "#36",
+        "#34"
+      ]
+    },
+    {
+      "id": "batch-2",
+      "description": "Second cloud wave: follow-up onboarding, HUD, Block Crush guidance, and tap-flow fixes after the priority wave settles.",
+      "issues": [
+        "#14",
+        "#11",
+        "#31",
+        "#17"
+      ]
+    },
+    {
+      "id": "batch-3",
+      "description": "Later follow-up cleanup after the focused fixes land, including residual readability audit work.",
+      "issues": [
+        "#15"
+      ]
+    },
+    {
+      "id": "batch-local",
+      "description": "Asset-hosting or local-acceptance dependent work.",
+      "issues": [
+        "#12"
+      ]
+    }
+  ],
+  "issue_overrides": [
+    {
+      "match": "#11",
+      "cloud_mode": "cloud-ready",
+      "batch": "batch-2",
+      "depends_on": [],
+      "needs_final_local_acceptance": false,
+      "reason": "Onboarding clarity changes are code-only and reproducible from repo state."
+    },
+    {
+      "match": "#12",
+      "cloud_mode": "local-only",
+      "batch": "batch-local",
+      "depends_on": [],
+      "needs_final_local_acceptance": true,
+      "reason": "The requested looping backdrop and avatar work are asset-dependent until shared asset hosting exists."
+    },
+    {
+      "match": "#14",
+      "cloud_mode": "cloud-ready",
+      "batch": "batch-2",
+      "depends_on": [],
+      "needs_final_local_acceptance": false,
+      "reason": "HUD discoverability is a repo-contained UI/task copy problem."
+    },
+    {
+      "match": "#15",
+      "cloud_mode": "cloud-ready-with-local-proof",
+      "batch": "batch-3",
+      "depends_on": [],
+      "needs_final_local_acceptance": true,
+      "reason": "PR #33 landed the first readability pass on March 14, 2026, so the remaining scope is a lower-priority audit and mobile-device follow-up rather than the next blocking fix."
+    },
+    {
+      "match": "#17",
+      "cloud_mode": "cloud-ready-with-local-proof",
+      "batch": "batch-2",
+      "depends_on": [
+        "#11"
+      ],
+      "needs_final_local_acceptance": true,
+      "reason": "The wasted-tap fix can be developed in cloud, but final confidence depends on timed browser tracing."
+    },
+    {
+      "match": "#18",
+      "cloud_mode": "cloud-ready-with-local-proof",
+      "batch": "batch-2",
+      "depends_on": [
+        "#13"
+      ],
+      "needs_final_local_acceptance": true,
+      "reason": "The transition bug is reproducible in cloud, but a fixed claim still needs reviewer-visible temporal evidence from the real Act 2 flow rather than a hidden local artifact path."
+    },
+    {
+      "match": "#19",
+      "cloud_mode": "cloud-ready-with-local-proof",
+      "batch": "batch-1",
+      "depends_on": [
+        "#18"
+      ],
+      "needs_final_local_acceptance": true,
+      "reason": "Streaming behavior remains in the priority wave, but it should follow #18 so the client-shell queue stays serialized while the final player-visible result still gets browser-backed verification."
+    },
+    {
+      "match": "#31",
+      "cloud_mode": "cloud-ready",
+      "batch": "batch-2",
+      "depends_on": [],
+      "needs_final_local_acceptance": false,
+      "reason": "The Block Crush first-time hint and early-stage difficulty tuning are lightweight UI/gameplay follow-ups that fit the second wave."
+    },
+    {
+      "match": "#46",
+      "cloud_mode": "cloud-ready-with-local-proof",
+      "batch": "unassigned",
+      "depends_on": [],
+      "needs_final_local_acceptance": true,
+      "reason": "`animation-transition` is cloud-fixable, but final confidence still needs browser-backed local acceptance.",
+      "fallback_title": "Build first-class reviewer-proof capture workflow for timing-sensitive UI interactions"
+    }
+  ]
+}

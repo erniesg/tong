@@ -1,0 +1,6 @@
+interface:
+  display_name: "Trace UI State"
+  short_description: "Correlate UI events, timing, and state for bugs"
+  default_prompt: "Use $trace-ui-state to trace a timing-sensitive UI bug and capture a correlated state timeline."
+policy:
+  allow_implicit_invocation: true

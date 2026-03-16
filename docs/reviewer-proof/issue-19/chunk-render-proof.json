@@ -1,0 +1,356 @@
+{
+  "route": "http://127.0.0.1:3001/game?dev_intro=1&dev_act=2&demo=TONG-DEMO-ACCESS&qa_run_id=functional-qa-validate-issue-20260314T122901Z-erniesg-tong-19-proof&qa_trace=1",
+  "proof": {
+    "started_ms": 0,
+    "fetches": [
+      {
+        "url": "/api/ai/hangout",
+        "request_start_ms": 69,
+        "response_ms": 1127,
+        "status": 200,
+        "chunks": [
+          {
+            "ms": 1127,
+            "byte_length": 47,
+            "preview": "f:{\"messageId\":\"msg-4vwc2EmUhoWavI8gDhdqYe6R\"}\n"
+          },
+          {
+            "ms": 1518,
+            "byte_length": 316,
+            "preview": "9:{\"toolCallId\":\"call_25q04PuoZJVjpsU72VcXAW4k\",\"toolName\":\"play_cinematic\",\"args\":{\"videoUrl\":\"/assets/cinematics/haeun"
+          },
+          {
+            "ms": 1525,
+            "byte_length": 104,
+            "preview": "e:{\"finishReason\":\"tool-calls\",\"usage\":{\"promptTokens\":4806,\"completionTokens\":41},\"isContinued\":false}\n"
+          },
+          {
+            "ms": 2264,
+            "byte_length": 47,
+            "preview": "f:{\"messageId\":\"msg-wFEscGbcfRYt65mM8dGJ7BPr\"}\n"
+          },
+          {
+            "ms": 3098,
+            "byte_length": 551,
+            "preview": "9:{\"toolCallId\":\"call_Gsp8HbcOOweTULyIjhMg8uGV\",\"toolName\":\"npc_speak\",\"args\":{\"characterId\":\"haeun\",\"text\":\"So you’re t"
+          },
+          {
+            "ms": 3135,
+            "byte_length": 189,
+            "preview": "e:{\"finishReason\":\"tool-calls\",\"usage\":{\"promptTokens\":4887,\"completionTokens\":64},\"isContinued\":false}\nd:{\"finishReason"
+          }
+        ],
+        "done_ms": 3135
+      }
+    ],
+    "dialogue_changes": [
+      {
+        "ms": 3114,
+        "visible": true,
+        "text": "",
+        "length": 0,
+        "has_cursor": true,
+        "chat_loading": true,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3164,
+        "visible": true,
+        "text": "So y",
+        "length": 4,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3221,
+        "visible": true,
+        "text": "So you",
+        "length": 6,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3264,
+        "visible": true,
+        "text": "So you’re",
+        "length": 9,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3314,
+        "visible": true,
+        "text": "So you’re the",
+        "length": 13,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3371,
+        "visible": true,
+        "text": "So you’re the ne",
+        "length": 16,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3414,
+        "visible": true,
+        "text": "So you’re the new tr",
+        "length": 20,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3464,
+        "visible": true,
+        "text": "So you’re the new traine",
+        "length": 24,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3521,
+        "visible": true,
+        "text": "So you’re the new trainee",
+        "length": 25,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3564,
+        "visible": true,
+        "text": "So you’re the new trainee ever",
+        "length": 30,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3614,
+        "visible": true,
+        "text": "So you’re the new trainee everyone",
+        "length": 34,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3671,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s",
+        "length": 36,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3714,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s sta",
+        "length": 40,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3764,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring",
+        "length": 44,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3821,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring a",
+        "length": 46,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3864,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한",
+        "length": 50,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3914,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어,",
+        "length": 53,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 3971,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, li",
+        "length": 56,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 4014,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, like,",
+        "length": 59,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 4064,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, like, even",
+        "length": 64,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 4121,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, like, even a",
+        "length": 66,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 4164,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, like, even a lit",
+        "length": 70,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 4214,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little?",
+        "length": 74,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 4271,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? D",
+        "length": 76,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 4314,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t",
+        "length": 80,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 4364,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t was",
+        "length": 84,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 4421,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste",
+        "length": 86,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 4464,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my",
+        "length": 89,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 4514,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time",
+        "length": 94,
+        "has_cursor": true,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      },
+      {
+        "ms": 4564,
+        "visible": true,
+        "text": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time.",
+        "length": 95,
+        "has_cursor": false,
+        "chat_loading": false,
+        "current_message_preview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+      }
+    ],
+    "cinematic_clicks": [
+      {
+        "ms": 2115,
+        "note": "clicked cinematic overlay to advance to npc dialogue"
+      }
+    ],
+    "notes": []
+  },
+  "final_qa_state": {
+    "qaRunId": "functional-qa-validate-issue-20260314T122901Z-erniesg-tong-19-proof",
+    "qaTrace": true,
+    "route": "http://127.0.0.1:3001/game?dev_intro=1&dev_act=2&qa_run_id=functional-qa-validate-issue-20260314T122901Z-erniesg-tong-19-proof&qa_trace=1",
+    "phase": "hangout",
+    "sceneReady": true,
+    "chatLoading": false,
+    "processing": true,
+    "toolQueue": [
+      {
+        "toolCallId": "call_Gsp8HbcOOweTULyIjhMg8uGV",
+        "toolName": "npc_speak"
+      }
+    ],
+    "currentMessage": {
+      "id": "call_Gsp8HbcOOweTULyIjhMg8uGV",
+      "role": "npc",
+      "characterId": "haeun",
+      "contentPreview": "So you’re the new trainee everyone’s staring at… 한국어, like, even a little? Don’t waste my time."
+    },
+    "tongTip": null,
+    "currentExercise": null,
+    "choices": null,
+    "choicePrompt": null,
+    "sceneSummary": null,
+    "isIntroHangout": true,
+    "introExerciseCount": 4,
+    "introAct": 2,
+    "npcRevealed": true
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "schema_version": "1",
+  "run_id": "functional-qa-validate-issue-20260314T044052Z-erniesg-tong-16",
+  "suite": "functional-qa",
+  "mode": "validate-issue",
+  "target": {
+    "raw": "16",
+    "slug": "erniesg-tong-16"
+  },
+  "issue_ref": "erniesg/tong#16",
+  "classification": {
+    "issue_class": "localization-content",
+    "signals": [
+      "translation",
+      "hangul",
+      "cjk",
+      "copy"
+    ],
+    "reason": "Repo adapter override selected `localization-content` for erniesg/tong#16."
+  },
+  "evidence_plan": {
+    "required": [
+      "screenshots",
+      "contract-assertions"
+    ],
+    "optional": [
+      "console-state-trace"
+    ],
+    "requires_ui_capture": true
+  },
+  "validation_policy": {
+    "issue_class": "localization-content",
+    "execution_mode": "requires-live-model",
+    "fix_allowed": true,
+    "requires_direct_issue_evidence": true,
+    "direct_evidence": [
+      "Capture the exact UI state that demonstrates the claimed issue or fix.",
+      "Generic, background, or unrelated screenshots do not count as direct evidence.",
+      "Capture an actual Korean dialogue sentence in the main immersive bubble.",
+      "Capture the tapped tooltip or dictionary card for the same Korean token.",
+      "Capture where pronunciation or romanization appears instead of inline parentheses."
+    ],
+    "ui_acceptance_required": true,
+    "ui_acceptance_checks": [
+      "No overlap or collision in the mobile viewport.",
+      "No awkward wrapping in critical HUD or status UI.",
+      "Primary interaction keeps stronger hierarchy than any added status or helper UI.",
+      "The fix reduces cognitive load instead of adding clutter.",
+      "Native script remains primary in the main immersive sentence.",
+      "Inline parenthetical romanization does not appear in immersive dialogue.",
+      "Pronunciation is available in tooltip, dictionary, or audio UI without displacing the main sentence."
+    ],
+    "required_runtime_modes_for_fixed": [
+      "live-model"
+    ],
+    "requires_live_model_for_fixed": true,
+    "human_review_required": false,
+    "stop_conditions": [
+      "If only fallback or canned or dev content was exercised, mark the run partial or blocked and do not claim the issue fixed."
+    ]
+  },
+  "functional": {
+    "verdict": "fixed",
+    "repro_status": "not-reproduced",
+    "fix_status": "fixed",
+    "issue_accuracy": "accurate"
+  },
+  "confidence": 0.86,
+  "environment": {
+    "generated_at": "2026-03-14T04:40:52.292100+00:00",
+    "repo_root": "/Users/erniesg/code/erniesg/tong",
+    "repo_name_with_owner": "erniesg/tong",
+    "branch": "main",
+    "commit": "83e3bfbf0955e65422bb8688cc6b74b82ce14159",
+    "default_branch": "main",
+    "smoke_commands": [
+      {
+        "label": "demo-smoke",
+        "command": "npm run demo:smoke",
+        "notes": "Validates core fixture and contract integrity before UI-specific validation."
+      }
+    ]
+  },
+  "artifacts": {
+    "run_json": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/run.json",
+    "summary_md": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/summary.md",
+    "steps_md": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/steps.md",
+    "evidence_json": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/evidence.json",
+    "publish_md": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/publish.md",
+    "screenshots_dir": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/screenshots",
+    "logs_dir": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/logs",
+    "browser_playbook_md": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/browser-playbook.md",
+    "browser_dir": "artifacts/qa-runs/functional-qa/erniesg-tong-16/20260314T044052Z/browser"
+  },
+  "published_comment_url": null,
+  "previous_run_id": "functional-qa-validate-issue-20260313T191234Z-erniesg-tong-16",
+  "repo_notes": [
+    "Differentiate live-model output from fallback or static/dev responses before claiming a fix.",
+    "Do not claim success unless the evidence shows actual Korean dialogue plus the tapped pronunciation surface."
+  ],
+  "browser_route": "http://localhost:3000/game?dev_intro=1&demo=TONG-JUDGE-DEMO&qa_run_id=functional-qa-validate-issue-20260314T044052Z-erniesg-tong-16&qa_trace=1"
+}

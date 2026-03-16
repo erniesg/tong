@@ -9,7 +9,6 @@
       "lang": "ko",
       "minutes": 22,
       "consumedAtIso": "2026-02-27T04:30:00.000Z",
-      "embedUrl": "https://www.youtube.com/embed/aqz-KE-bpKQ",
       "tokens": ["메뉴", "주문", "먹다", "맵다", "연습"]
     },
     {
@@ -21,7 +20,6 @@
       "lang": "ko",
       "minutes": 16,
       "consumedAtIso": "2026-02-28T01:15:00.000Z",
-      "embedUrl": "https://www.youtube.com/embed/aqz-KE-bpKQ",
       "tokens": ["메뉴", "포장", "주세요", "주문", "무대"]
     },
     {
@@ -33,8 +31,7 @@
       "lang": "ja",
       "minutes": 26,
       "consumedAtIso": "2026-02-26T18:20:00.000Z",
-      "embedUrl": "https://www.youtube.com/embed/M7lc1UVf-VE",
-      "tokens": ["subway", "station", "menu", "order"]
+      "tokens": ["駅", "ホーム", "メニュー", "注文"]
     },
     {
       "eventId": "evt_004",
@@ -45,7 +42,6 @@
       "lang": "ko",
       "minutes": 19,
       "consumedAtIso": "2026-02-27T08:00:00.000Z",
-      "embedUrl": "https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC?utm_source=generator",
       "tokens": ["연습", "무대", "불", "주문"]
     },
     {
@@ -57,32 +53,7 @@
       "lang": "zh",
       "minutes": 16,
       "consumedAtIso": "2026-02-28T02:40:00.000Z",
-      "embedUrl": "https://open.spotify.com/embed/track/6DCZcSspjsKoFjzjrWoCd?utm_source=generator",
       "tokens": ["火", "燃烧", "练习", "무대"]
-    },
-    {
-      "eventId": "evt_006",
-      "userId": "demo-user-1",
-      "source": "spotify",
-      "mediaId": "sp_track_017",
-      "title": "Subway Day",
-      "lang": "en",
-      "minutes": 12,
-      "consumedAtIso": "2026-02-26T09:00:00.000Z",
-      "embedUrl": "https://open.spotify.com/embed/track/7qiZfU4dY1lWllzX7mPBI3?utm_source=generator",
-      "tokens": ["subway", "station", "transfer", "연습"]
-    },
-    {
-      "eventId": "evt_007",
-      "userId": "demo-user-2",
-      "source": "youtube",
-      "mediaId": "yt_ignore",
-      "title": "Other user event",
-      "lang": "ko",
-      "minutes": 15,
-      "consumedAtIso": "2026-02-27T10:00:00.000Z",
-      "embedUrl": "https://www.youtube.com/embed/aqz-KE-bpKQ",
-      "tokens": ["무시"]
     }
   ]
 }

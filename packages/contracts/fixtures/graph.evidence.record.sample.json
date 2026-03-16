@@ -1,0 +1,29 @@
+{
+  "learnerId": "persona_kpop_prompting",
+  "personaId": "persona_kpop_prompting",
+  "recorded": 1,
+  "events": [
+    {
+      "eventId": "runtime:persona_kpop_prompting:14",
+      "personaId": "persona_kpop_prompting",
+      "userId": "demo-user-1",
+      "nodeId": "objective:ko-vocab-courtesy",
+      "objectiveId": "ko-vocab-courtesy",
+      "mode": "learn",
+      "quality": 0.86,
+      "occurredAtIso": "2026-03-08T10:00:00.000Z",
+      "source": "dashboard.learn"
+    }
+  ],
+  "progression": {
+    "xp": 164,
+    "sp": 34,
+    "rp": 18
+  },
+  "metrics": {
+    "validatedObjectives": 3,
+    "masteredObjectives": 1,
+    "dueNodeCount": 2,
+    "evidenceCount": 14
+  }
+}

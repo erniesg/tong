@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QA Run Manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "suite",
+    "mode",
+    "target",
+    "classification",
+    "evidence_plan",
+    "environment",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "run_id": { "type": "string" },
+    "suite": { "type": "string" },
+    "mode": { "type": "string" },
+    "target": {
+      "type": "object",
+      "required": ["raw", "slug"],
+      "properties": {
+        "raw": { "type": "string" },
+        "slug": { "type": "string" }
+      }
+    },
+    "issue_ref": { "type": ["string", "null"] },
+    "classification": {
+      "type": "object",
+      "required": ["issue_class", "signals", "reason"],
+      "properties": {
+        "issue_class": { "type": "string" },
+        "signals": { "type": "array", "items": { "type": "string" } },
+        "reason": { "type": "string" }
+      }
+    },
+    "evidence_plan": {
+      "type": "object",
+      "required": ["required", "optional", "requires_ui_capture"],
+      "properties": {
+        "required": { "type": "array", "items": { "type": "string" } },
+        "optional": { "type": "array", "items": { "type": "string" } },
+        "requires_ui_capture": { "type": "boolean" }
+      }
+    },
+    "functional": {
+      "type": "object",
+      "properties": {
+        "verdict": { "type": "string" },
+        "repro_status": { "type": "string" },
+        "fix_status": { "type": "string" },
+        "issue_accuracy": { "type": "string" }
+      }
+    },
+    "playtest": {
+      "type": "object",
+      "properties": {
+        "rubric_scores": { "type": "object" },
+        "coherence_findings": { "type": "array", "items": { "type": "string" } },
+        "character_findings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "product": {
+      "type": "object",
+      "properties": {
+        "metric_windows": { "type": "array", "items": { "type": "string" } },
+        "variant_ids": { "type": "array", "items": { "type": "string" } },
+        "experiment_findings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "environment": { "type": "object" },
+    "artifacts": { "type": "object" },
+    "published_comment_url": { "type": ["string", "null"] },
+    "previous_run_id": { "type": ["string", "null"] }
+  }
+}

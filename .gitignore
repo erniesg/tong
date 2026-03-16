@@ -1,2 +1,30 @@
 .DS_Store
+.env
+.env.*
+!.env.example
 tong.zip
+
+.worktrees/
+.wrangler/
+.claude/
+node_modules/
+.next/
+.open-next/
+__pycache__/
+*.pyc
+*.tsbuildinfo
+reference-notes/
+apps/server/data/generated/
+artifacts/qa-runs/*
+!artifacts/qa-runs/.gitkeep
+test-results/
+
+# Large binary assets — store externally, not in git
+*.mp4
+*.mov
+*.fbx
+*.glb
+*.stl
+
+# Presets — dev/backup originals, not deployed
+assets/presets/

@@ -1,0 +1,58 @@
+{
+  "items": [
+    {
+      "learnerId": "persona_kpop_prompting",
+      "displayName": "K-pop creator learner",
+      "targetLanguages": ["ko", "ja", "zh"],
+      "proficiency": {
+        "ko": "beginner",
+        "ja": "beginner",
+        "zh": "intermediate"
+      },
+      "goals": [
+        { "lang": "zh", "topic": "video prompting vocabulary" },
+        { "lang": "ko", "topic": "K-pop and performance language" },
+        { "lang": "ja", "topic": "beginner daily conversation" }
+      ],
+      "mediaPreferences": {
+        "youtube": ["Chinese prompt engineering explainers", "K-pop performance practice clips", "Japanese travel vlogs"],
+        "spotify": ["aespa", "IVE", "NewJeans"]
+      }
+    },
+    {
+      "learnerId": "persona_beginner_foundation",
+      "displayName": "No-media beginner",
+      "targetLanguages": ["ko", "ja", "zh"],
+      "proficiency": {
+        "ko": "beginner",
+        "ja": "none",
+        "zh": "none"
+      },
+      "goals": [
+        { "lang": "ko", "topic": "reading and food ordering basics" }
+      ],
+      "mediaPreferences": {
+        "youtube": [],
+        "spotify": []
+      }
+    },
+    {
+      "learnerId": "persona_mixed_progress",
+      "displayName": "Mixed progress learner",
+      "targetLanguages": ["ko", "ja", "zh"],
+      "proficiency": {
+        "ko": "intermediate",
+        "ja": "beginner",
+        "zh": "beginner"
+      },
+      "goals": [
+        { "lang": "ko", "topic": "casual hangout fluency" },
+        { "lang": "zh", "topic": "food and app navigation" }
+      ],
+      "mediaPreferences": {
+        "youtube": ["Korean street food channels", "Chinese app tutorials"],
+        "spotify": ["IU", "Radwimps"]
+      }
+    }
+  ]
+}

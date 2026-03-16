@@ -1,0 +1,6 @@
+interface:
+  display_name: "Validate Issue"
+  short_description: "Reproduce issues and save rerunnable QA evidence"
+  default_prompt: "Use $validate-issue to validate a GitHub issue and save a rerunnable evidence bundle."
+policy:
+  allow_implicit_invocation: true

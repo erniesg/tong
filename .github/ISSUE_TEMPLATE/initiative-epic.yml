@@ -1,0 +1,55 @@
+name: Initiative Epic
+description: Create an execution-ready epic with explicit lane and dependency guidance.
+title: "[Epic] "
+labels:
+  - epic
+body:
+  - type: dropdown
+    id: initiative
+    attributes:
+      label: Initiative
+      options:
+        - Remote-First QA
+        - Progression
+        - Knowledge Graph
+        - World Content
+        - Runtime Assets
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+    validations:
+      required: true
+  - type: textarea
+    id: execution
+    attributes:
+      label: Lane and execution plan
+      description: State which lanes own which child issues.
+      placeholder: |
+        - server-ingestion: retrieval and KG signals
+        - server-api: bootstrap wiring
+        - game-engine: objective generation
+    validations:
+      required: true
+  - type: textarea
+    id: children
+    attributes:
+      label: Planned child issues
+      description: List the first concrete child issues in dependency order.
+    validations:
+      required: true
+  - type: textarea
+    id: blockers
+    attributes:
+      label: Blockers and remote dependencies
+      description: Buckets, envs, contracts, proofs, or human decisions that gate unattended execution.
+    validations:
+      required: true
