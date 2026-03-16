@@ -1,0 +1,48 @@
+{
+  "qaRunId": "reviewer-proof-issue-17",
+  "qaTrace": true,
+  "route": "http://localhost:3202/game?dev_intro=1&qa_trace=1&qa_run_id=reviewer-proof-issue-17",
+  "phase": "hangout",
+  "sceneReady": true,
+  "chatLoading": false,
+  "continuePending": false,
+  "processing": true,
+  "toolQueue": [
+    {
+      "toolCallId": "fallback-1773684776355-0",
+      "toolName": "npc_speak"
+    },
+    {
+      "toolCallId": "fallback-1773684776355-1",
+      "toolName": "tong_whisper"
+    }
+  ],
+  "currentMessage": {
+    "id": "fallback-1773684776355-0",
+    "role": "npc",
+    "characterId": "haeun",
+    "contentPreview": "Oh... you're the new trainee? Do you even speak any Korean?"
+  },
+  "streamedMessage": {
+    "id": "fallback-1773684776355-0",
+    "role": "npc",
+    "characterId": "haeun",
+    "contentPreview": "Oh... you're the new trainee? Do you even speak any Korean?",
+    "isStreaming": false
+  },
+  "displayMessage": {
+    "id": "fallback-1773684776355-0",
+    "role": "npc",
+    "characterId": "haeun",
+    "contentPreview": "Oh... you're the new trainee? Do you even speak any Korean?"
+  },
+  "tongTip": null,
+  "currentExercise": null,
+  "choices": null,
+  "choicePrompt": null,
+  "sceneSummary": null,
+  "isIntroHangout": true,
+  "introExerciseCount": 0,
+  "introAct": 2,
+  "npcRevealed": true
+}
