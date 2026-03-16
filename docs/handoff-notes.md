@@ -94,3 +94,16 @@ Template:
   - Follow-up server/client branches should consume the nested contract objects rather than re-inventing ad hoc resume payloads.
   - This change touches the shared contracts zone; dependent progression branches should rebase before landing resume/checkpoint work.
 - Next owner: `codex/server-api`
+
+## 2026-03-16 (Issue 17 tap-flow handoff)
+- Date: 2026-03-16
+- Branch/worktree: `codex/issue-17-tap-flow-investigation` + `.worktrees/issue-17-client-runtime`
+- What changed:
+  - Added a local `continuePending` guard in the `/game` runtime so the UI no longer re-exposes the idle continue affordance while a continue request is already in flight.
+  - Threaded a `sceneBusy` prop into `SceneView` so queued-tool and post-append transition frames show the non-interactive busy state instead of a tappable "Tap to continue" label.
+  - Extended QA state snapshots with `continuePending` to make future timing traces easier to interpret.
+- Contract changes: none
+- Integration risks:
+  - The local fallback hangout path is fast enough that final reviewer-facing reproduction of the old wasted-tap symptom still needs a human browser pass against real gameplay timing.
+  - Keep acceptance focused on the continue/tong whisper/exercise transitions in `/game?dev_intro=1&qa_trace=1`; this branch does not change exercise or content logic.
+- Next owner: human QA / `codex/client-runtime`
