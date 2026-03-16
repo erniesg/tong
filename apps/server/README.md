@@ -1,50 +1,75 @@
 # apps/server
 
-Server-side features isolated from client iteration.
+Tong demo API + mock ingestion service.
 
-Current ingestion responsibilities:
-1. Enriched captions endpoint.
-2. Dictionary entry endpoint.
-3. 72-hour YouTube + Spotify transcript/lyrics ingestion and frequency ranking.
-4. Topic clustering for planner signals.
-5. Planner-context output for lesson/scene/exercise generation.
-6. Profile persistence and game session bootstrap.
+## Run
 
-Implementation rule:
-- Match payloads in `packages/contracts` exactly.
+```bash
+npm --prefix apps/server run dev
+```
 
-Planner context generation (from fixture events):
+Server defaults to `http://localhost:8787`.
+If `TONG_DEMO_PASSWORD` is set, API requests must include `x-demo-password` header
+or `?demo=...` query.
+Use `GET /api/v1/demo/secret-status` to verify whether demo/YouTube/Spotify/OpenAI
+secrets are configured (booleans only).
+
+## Core endpoints
+
+- `GET /health`
+- `GET /api/v1/captions/enriched?videoId=...&lang=ko`
+- `GET /api/v1/dictionary/entry?term=...&lang=ko`
+- `GET /api/v1/tools`
+- `POST /api/v1/tools/invoke`
+- `GET /api/v1/vocab/frequency?windowDays=3`
+- `GET /api/v1/vocab/insights?windowDays=3`
+- `GET /api/v1/player/media-profile?windowDays=3`
+- `POST /api/v1/game/start-or-resume`
+- `PUT /api/v1/profile/proficiency`
+- `GET /api/v1/objectives/next`
+- `POST /api/v1/scenes/hangout/start`
+- `POST /api/v1/scenes/hangout/respond`
+- `GET /api/v1/learn/sessions`
+- `POST /api/v1/learn/sessions`
+- `POST /api/v1/ingestion/run-mock`
+- `GET /api/v1/demo/secret-status`
+
+## Mock ingestion
+
+```bash
+npm --prefix apps/server run ingest:mock
+```
+
+Generated files are written to `apps/server/data/generated/` (gitignored).
+
+Tool retrieval smoke check:
+
+```bash
+npm run demo:tools
+```
+
+Additional modeling scripts for ingestion iteration:
+
 ```bash
 npm run ingestion:planner
-```
-
-Regenerate planner context fixture:
-```bash
 npm run ingestion:planner:fixture
-```
-
-Vocab frequency generation:
-```bash
 npm run ingestion:vocab:frequency
-```
-
-Regenerate vocab frequency fixture:
-```bash
 npm run ingestion:vocab:frequency:fixture
-```
-
-Vocab insights generation:
-```bash
 npm run ingestion:vocab:insights
-```
-
-Regenerate vocab insights fixture:
-```bash
 npm run ingestion:vocab:insights:fixture
 ```
 
-Core scripts:
+Core modeling scripts:
+
 - `apps/server/ingestion/pipeline.mjs`
 - `apps/server/ingestion/generate_planner_context.mjs`
 - `apps/server/ingestion/generate_vocab_frequency.mjs`
 - `apps/server/ingestion/generate_vocab_insights.mjs`
+
+## Isolation contract for modeling work
+
+Topic modeling and frequency logic can iterate without live connectors using:
+
+- `apps/server/data/mock-media-window.json` (snapshot input used by mock API)
+- `packages/contracts/fixtures/media.events.sample.json` (canonical event fixture for scoring experiments)
+- `packages/contracts/fixtures/planner.lesson-context.sample.json` (generated lesson/scene recommendation fixture for modeling experiments)

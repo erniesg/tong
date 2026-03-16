@@ -1,0 +1,12 @@
+{
+  "valid": true,
+  "packId": "seoul_food_street_gold",
+  "issues": [
+    {
+      "code": "script_targets_optional_v1",
+      "severity": "warning",
+      "message": "Script and pronunciation target catalogs are still sparse in v1; validator treats this as a warning.",
+      "nodeId": "ko-script-consonants-basic"
+    }
+  ]
+}

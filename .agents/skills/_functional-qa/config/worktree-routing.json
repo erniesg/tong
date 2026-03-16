@@ -1,0 +1,410 @@
+{
+  "schema_version": "1",
+  "default_open_issue_limit": 50,
+  "setup_worktrees_command": "npm run setup:worktrees",
+  "launch_parallel_command": "./scripts/launch-parallel-agents.sh",
+  "project_control_plane": {
+    "owner": "erniesg",
+    "owner_type": "user",
+    "number": 3,
+    "lane_field": "Lane",
+    "execution_mode_field": "Execution Mode",
+    "portable_context_field": "Portable Context",
+    "agent_ready_field": "Agent Ready",
+    "blocked_by_field": "Blocked By",
+    "workflow_status_field": "Workflow Status"
+  },
+  "trace_issue_classes": [
+    "interaction-input",
+    "animation-transition",
+    "async-streaming-state",
+    "flaky-nondeterministic",
+    "compatibility-environment"
+  ],
+  "trace_keywords": [
+    "ambiguous",
+    "debug",
+    "double tap",
+    "flicker",
+    "flash",
+    "intermittent",
+    "investigate",
+    "occasionally",
+    "race",
+    "sometimes",
+    "timing",
+    "trace"
+  ],
+  "issue_class_fallbacks": {
+    "functional-logic": "client-runtime",
+    "interaction-input": "client-runtime",
+    "visual-layout": "client-ui",
+    "animation-transition": "client-runtime",
+    "async-streaming-state": "client-runtime",
+    "data-contract-api": "server-api",
+    "persistence-state-sync": "server-api",
+    "performance-resource": "server-ingestion",
+    "compatibility-environment": "runtime-assets",
+    "auth-permissions": "server-api",
+    "integration-third-party": "server-api",
+    "accessibility": "client-ui",
+    "localization-content": "client-overlay",
+    "flaky-nondeterministic": "client-runtime"
+  },
+  "worktrees": [
+    {
+      "id": "client-ui",
+      "branch": "codex/client-ui",
+      "path": ".worktrees/client-ui",
+      "path_hints": [
+        "apps/client/components/shell/",
+        "apps/client/components/city-map/",
+        "apps/client/components/hud/",
+        "apps/client/components/learn/",
+        "apps/client/lib/session/",
+        "apps/client/lib/backend/",
+        "apps/client/lib/theme/"
+      ],
+      "keyword_hints": [
+        "discoverability",
+        "hud",
+        "language settings",
+        "layout",
+        "map",
+        "mobile",
+        "onboarding",
+        "typography",
+        "world map"
+      ],
+      "issue_classes": [
+        "visual-layout",
+        "accessibility"
+      ]
+    },
+    {
+      "id": "client-runtime",
+      "branch": "codex/client-runtime",
+      "path": ".worktrees/client-runtime",
+      "path_hints": [
+        "apps/client/app/api/",
+        "apps/client/app/game/GamePageClient.tsx",
+        "apps/client/components/exercises/",
+        "apps/client/components/scene/",
+        "apps/client/lib/ai/",
+        "apps/client/lib/debug/",
+        "apps/client/lib/store/"
+      ],
+      "keyword_hints": [
+        "block crush",
+        "checkpoint",
+        "continue",
+        "dialogue",
+        "dismiss",
+        "double tap",
+        "exercise",
+        "hangout",
+        "resume",
+        "review",
+        "scene",
+        "stream",
+        "tap",
+        "typewriter"
+      ],
+      "issue_classes": [
+        "functional-logic",
+        "interaction-input",
+        "animation-transition",
+        "async-streaming-state",
+        "persistence-state-sync",
+        "compatibility-environment",
+        "flaky-nondeterministic"
+      ]
+    },
+    {
+      "id": "client-overlay",
+      "branch": "codex/client-overlay",
+      "path": ".worktrees/client-overlay",
+      "path_hints": [
+        "apps/client/components/overlay/",
+        "apps/client/components/dictionary/",
+        "apps/client/lib/captions/",
+        "apps/client/lib/dictionary/",
+        "apps/client/lib/romanization/"
+      ],
+      "keyword_hints": [
+        "caption",
+        "cjk",
+        "dictionary",
+        "hanja",
+        "hangul",
+        "hover",
+        "kanji",
+        "overlay",
+        "popover",
+        "romanization",
+        "subtitle",
+        "token",
+        "translation",
+        "youtube"
+      ],
+      "issue_classes": [
+        "interaction-input",
+        "visual-layout",
+        "accessibility",
+        "localization-content"
+      ]
+    },
+    {
+      "id": "qa-platform",
+      "branch": "codex/qa-platform",
+      "path": ".worktrees/qa-platform",
+      "path_hints": [
+        ".agents/skills/",
+        ".github/ISSUE_TEMPLATE/",
+        "docs/codex-cloud-issue-runbook.md",
+        "docs/qa/",
+        "docs/agent-native-project-setup.md"
+      ],
+      "keyword_hints": [
+        "artifact",
+        "codex cloud",
+        "evidence",
+        "issue template",
+        "portable context",
+        "proof",
+        "qa",
+        "reviewer",
+        "runbook"
+      ],
+      "issue_classes": [
+        "animation-transition",
+        "async-streaming-state",
+        "compatibility-environment"
+      ]
+    },
+    {
+      "id": "runtime-assets",
+      "branch": "codex/runtime-assets",
+      "path": ".worktrees/runtime-assets",
+      "path_hints": [
+        "assets/characters/",
+        "assets/game/",
+        "assets/generated/",
+        "assets/manifest/",
+        "docs/qa-evidence-uploads.md",
+        "apps/client/lib/content/characters.ts",
+        "apps/client/lib/content/tong-expressions.ts",
+        "apps/client/components/scene/CharacterSprite.tsx"
+      ],
+      "keyword_hints": [
+        "404",
+        "asset",
+        "bucket",
+        "fallback",
+        "haeun idle",
+        "manifest",
+        "runtime asset",
+        "video"
+      ],
+      "issue_classes": [
+        "visual-layout",
+        "compatibility-environment",
+        "flaky-nondeterministic"
+      ]
+    },
+    {
+      "id": "server-api",
+      "branch": "codex/server-api",
+      "path": ".worktrees/server-api",
+      "path_hints": [
+        "apps/server/api/",
+        "apps/server/routes/",
+        "apps/server/controllers/",
+        "apps/server/services/profile/",
+        "apps/server/services/sessions/",
+        "apps/server/services/bootstrap/"
+      ],
+      "keyword_hints": [
+        "api",
+        "auth",
+        "bootstrap",
+        "contract",
+        "endpoint",
+        "fixture",
+        "json",
+        "login",
+        "oauth",
+        "payload",
+        "profile",
+        "request",
+        "response",
+        "session"
+      ],
+      "issue_classes": [
+        "functional-logic",
+        "data-contract-api",
+        "persistence-state-sync",
+        "auth-permissions",
+        "integration-third-party"
+      ]
+    },
+    {
+      "id": "server-ingestion",
+      "branch": "codex/server-ingestion",
+      "path": ".worktrees/server-ingestion",
+      "path_hints": [
+        "apps/server/ingestion/",
+        "apps/server/jobs/",
+        "apps/server/services/vocab/",
+        "apps/server/services/media-profile/",
+        "apps/server/services/insights/",
+        "scripts/ingestion/"
+      ],
+      "keyword_hints": [
+        "cluster",
+        "frequency",
+        "ingest",
+        "ingestion",
+        "insights",
+        "knowledge graph",
+        "lyrics",
+        "media profile",
+        "ranking",
+        "spotify",
+        "transcript",
+        "vocab",
+        "youtube"
+      ],
+      "issue_classes": [
+        "data-contract-api",
+        "performance-resource",
+        "integration-third-party"
+      ]
+    },
+    {
+      "id": "game-engine",
+      "branch": "codex/game-engine",
+      "path": ".worktrees/game-engine",
+      "path_hints": [
+        "apps/server/game-engine/",
+        "apps/server/services/game-loop/",
+        "apps/server/services/scenes/",
+        "apps/server/services/rewards/"
+      ],
+      "keyword_hints": [
+        "assessment",
+        "branching",
+        "mastery",
+        "mission",
+        "progression",
+        "reward",
+        "rp",
+        "scene",
+        "sp",
+        "unlock",
+        "xp"
+      ],
+      "issue_classes": [
+        "functional-logic",
+        "async-streaming-state",
+        "localization-content",
+        "integration-third-party"
+      ]
+    },
+    {
+      "id": "infra-deploy",
+      "branch": "codex/infra-deploy",
+      "path": ".worktrees/infra-deploy",
+      "path_hints": [
+        "infra/",
+        "scripts/deploy",
+        "scripts/release",
+        "scripts/healthcheck",
+        ".github/workflows/",
+        "docs/deployment-track.md"
+      ],
+      "keyword_hints": [
+        "ci",
+        "cloudflare",
+        "deploy",
+        "deployment",
+        "env",
+        "healthcheck",
+        "production",
+        "release",
+        "vercel"
+      ],
+      "issue_classes": [
+        "compatibility-environment",
+        "auth-permissions",
+        "integration-third-party"
+      ]
+    },
+    {
+      "id": "mock-ui",
+      "branch": "codex/mock-ui",
+      "path": ".worktrees/mock-ui",
+      "path_hints": [
+        "apps/client/app/mock/",
+        "apps/client/components/mock/",
+        "apps/client/lib/mock/",
+        "apps/client/public/mock/",
+        "docs/demo-run-of-show.md"
+      ],
+      "keyword_hints": [
+        "clickable",
+        "demo",
+        "happy path",
+        "mock",
+        "rehearsal",
+        "run of show",
+        "storyboard"
+      ],
+      "issue_classes": [
+        "visual-layout",
+        "animation-transition",
+        "accessibility"
+      ]
+    },
+    {
+      "id": "creative-assets",
+      "branch": "codex/creative-assets",
+      "path": ".worktrees/creative-assets",
+      "path_hints": [
+        "assets/presets/",
+        "assets/content-packs/",
+        "assets/rewards/",
+        "docs/mock-ui-and-assets-track.md"
+      ],
+      "keyword_hints": [
+        "asset",
+        "background",
+        "content pack",
+        "image",
+        "memory card",
+        "polaroid",
+        "preset",
+        "reward art",
+        "video"
+      ],
+      "issue_classes": [
+        "visual-layout",
+        "localization-content"
+      ]
+    }
+  ],
+  "shared_zones": [
+    "packages/contracts/**",
+    "packages/contracts/fixtures/**",
+    "package.json",
+    "package-lock.json",
+    "scripts/demo_smoke_check.mjs",
+    "README.md",
+    "docs/install-and-test.md",
+    "docs/workstreams.md",
+    "docs/agent-execution-board.md",
+    "apps/client/app/layout.tsx",
+    "apps/client/app/page.tsx",
+    "apps/client/app/globals.css"
+  ]
+}

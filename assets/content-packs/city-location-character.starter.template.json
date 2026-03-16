@@ -1,0 +1,54 @@
+{
+  "templateVersion": "1.0.0",
+  "packType": "city-location-character-starter",
+  "packId": "<city>-<location>-starter",
+  "city": "<seoul|tokyo|shanghai>",
+  "location": {
+    "id": "<food_street|cafe|convenience_store|subway_hub|practice_studio>",
+    "assetSlug": "<food-street|cafe|convenience-store|subway-hub|practice-studio>",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "<character-id>",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.<character-id>.portrait.default",
+        "character.<character-id>.sprite.default"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "<objective-id>",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.2"
+    }
+  },
+  "manifestKeys": [
+    "city.<city>.location.<asset-slug>.backdrop.default",
+    "city.<city>.location.<asset-slug>.ambience.default"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": "<optional: reward.shanghai.video-call.placeholder.v1>",
+    "polaroidRewardKey": "<optional: reward.shanghai.polaroid.placeholder.v1>"
+  },
+  "status": "template"
+}

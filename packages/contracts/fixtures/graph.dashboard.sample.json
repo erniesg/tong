@@ -1,0 +1,408 @@
+{
+  "learner": {
+    "learnerId": "persona_kpop_prompting",
+    "displayName": "K-pop creator learner",
+    "targetLanguages": ["ko", "ja", "zh"],
+    "proficiency": {
+      "ko": "beginner",
+      "ja": "beginner",
+      "zh": "intermediate"
+    },
+    "goals": [
+      { "lang": "zh", "topic": "video prompting vocabulary" },
+      { "lang": "ko", "topic": "K-pop and performance language" },
+      { "lang": "ja", "topic": "beginner daily conversation" }
+    ],
+    "mediaPreferences": {
+      "youtube": ["Chinese prompt engineering explainers", "K-pop performance practice clips"],
+      "spotify": ["aespa", "IVE"]
+    }
+  },
+  "progression": {
+    "xp": 164,
+    "sp": 34,
+    "rp": 18
+  },
+  "roadmap": [
+    {
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "title": "Seoul Food Street",
+      "lang": "ko",
+      "status": "in_progress",
+      "summary": "Core Korean foundation path with active work on ordering language.",
+      "activeNodeCount": 4,
+      "completedNodeCount": 6
+    },
+    {
+      "cityId": "tokyo",
+      "locationId": "food_street",
+      "title": "Tokyo Food Street",
+      "lang": "ja",
+      "status": "ready",
+      "summary": "Beginner Japanese path is available but not started.",
+      "activeNodeCount": 0,
+      "completedNodeCount": 0
+    },
+    {
+      "cityId": "shanghai",
+      "locationId": "practice_studio",
+      "title": "Shanghai Practice Studio",
+      "lang": "zh",
+      "status": "ready",
+      "summary": "Chinese domain overlay for creator and prompting vocabulary is recommended.",
+      "activeNodeCount": 1,
+      "completedNodeCount": 2
+    }
+  ],
+  "selectedPack": {
+    "pack": {
+      "packId": "seoul_food_street_gold",
+      "version": "1.0.0",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "title": "Seoul Food Street Gold Pack",
+      "summary": "Canonical Korean foundation path for Seoul food ordering.",
+      "goldStandard": true,
+      "contentVersionPolicy": "append_only",
+      "nodes": [
+        {
+          "nodeId": "ko-script-menu-reading",
+          "type": "objective",
+          "cityId": "seoul",
+          "locationId": "food_street",
+          "lang": "ko",
+          "level": 0,
+          "title": "Read menu items",
+          "description": "Read food names from the stall menu.",
+          "tags": ["hangul", "reading", "food", "menu"],
+          "targetItemIds": ["오뎅", "떡볶이", "라면", "순대"],
+          "targetCount": 4,
+          "assessmentThreshold": 0.75,
+          "objectiveCategory": "script"
+        },
+        {
+          "nodeId": "ko-pron-food-words",
+          "type": "objective",
+          "cityId": "seoul",
+          "locationId": "food_street",
+          "lang": "ko",
+          "level": 1,
+          "title": "Pronounce 20 food words",
+          "description": "Correctly pronounce common Korean food words from the stall.",
+          "tags": ["pronunciation", "food"],
+          "targetCount": 20,
+          "assessmentThreshold": 0.75,
+          "objectiveCategory": "pronunciation"
+        },
+        {
+          "nodeId": "ko-vocab-food-items",
+          "type": "objective",
+          "cityId": "seoul",
+          "locationId": "food_street",
+          "lang": "ko",
+          "level": 2,
+          "title": "Learn 20 food items",
+          "description": "Know the meaning and reading of 20 street food items.",
+          "tags": ["vocabulary", "food"],
+          "targetCount": 20,
+          "assessmentThreshold": 0.8,
+          "objectiveCategory": "vocabulary"
+        },
+        {
+          "nodeId": "ko-vocab-courtesy",
+          "type": "objective",
+          "cityId": "seoul",
+          "locationId": "food_street",
+          "lang": "ko",
+          "level": 2,
+          "title": "Learn courtesy phrases",
+          "description": "Essential polite phrases for ordering.",
+          "tags": ["vocabulary", "courtesy"],
+          "targetCount": 5,
+          "assessmentThreshold": 0.9,
+          "objectiveCategory": "vocabulary"
+        },
+        {
+          "nodeId": "ko-gram-juseyo",
+          "type": "objective",
+          "cityId": "seoul",
+          "locationId": "food_street",
+          "lang": "ko",
+          "level": 3,
+          "title": "Master N + 주세요 pattern",
+          "description": "Use noun plus 주세요 to order food politely.",
+          "tags": ["grammar", "ordering", "polite"],
+          "targetCount": 1,
+          "assessmentThreshold": 0.85,
+          "objectiveCategory": "grammar"
+        },
+        {
+          "nodeId": "ko-gram-counters",
+          "type": "objective",
+          "cityId": "seoul",
+          "locationId": "food_street",
+          "lang": "ko",
+          "level": 3,
+          "title": "Use number + counter patterns",
+          "description": "Order using 하나, 둘, 셋 and 개 counters.",
+          "tags": ["grammar", "numbers", "ordering"],
+          "targetCount": 2,
+          "assessmentThreshold": 0.8,
+          "objectiveCategory": "grammar"
+        }
+      ],
+      "edges": [
+        { "edgeId": "edge_menu_unlocks_pron", "type": "unlocks", "fromNodeId": "ko-script-menu-reading", "toNodeId": "ko-pron-food-words" },
+        { "edgeId": "edge_pron_requires_vocab", "type": "requires", "fromNodeId": "ko-pron-food-words", "toNodeId": "ko-vocab-food-items" },
+        { "edgeId": "edge_vocab_requires_courtesy", "type": "reinforces", "fromNodeId": "ko-vocab-food-items", "toNodeId": "ko-vocab-courtesy" },
+        { "edgeId": "edge_juseyo_requires_vocab", "type": "requires", "fromNodeId": "ko-vocab-courtesy", "toNodeId": "ko-gram-juseyo" },
+        { "edgeId": "edge_counters_requires_juseyo", "type": "requires", "fromNodeId": "ko-gram-juseyo", "toNodeId": "ko-gram-counters" }
+      ],
+      "levels": [
+        {
+          "level": 0,
+          "label": "SCRIPT",
+          "description": "Can I recognise the symbols?",
+          "objectiveNodeIds": ["ko-script-menu-reading"],
+          "assessmentCriteria": { "minAccuracy": 0.8, "minItemsCompleted": 20, "requiredNodeIds": ["ko-script-menu-reading"] }
+        },
+        {
+          "level": 1,
+          "label": "PRONUNCIATION",
+          "description": "Can I say them correctly?",
+          "objectiveNodeIds": ["ko-pron-food-words"],
+          "assessmentCriteria": { "minAccuracy": 0.75, "minItemsCompleted": 15, "requiredNodeIds": ["ko-pron-food-words"] }
+        },
+        {
+          "level": 2,
+          "label": "VOCABULARY",
+          "description": "Do I know what they mean?",
+          "objectiveNodeIds": ["ko-vocab-food-items", "ko-vocab-courtesy"],
+          "assessmentCriteria": { "minAccuracy": 0.8, "minItemsCompleted": 30, "requiredNodeIds": ["ko-vocab-food-items", "ko-vocab-courtesy"] }
+        },
+        {
+          "level": 3,
+          "label": "GRAMMAR",
+          "description": "Can I build sentences?",
+          "objectiveNodeIds": ["ko-gram-juseyo", "ko-gram-counters"],
+          "assessmentCriteria": { "minAccuracy": 0.8, "minItemsCompleted": 10, "requiredNodeIds": ["ko-gram-juseyo"] }
+        }
+      ],
+      "scenarios": [],
+      "missions": [],
+      "content": {
+        "scriptTargets": [],
+        "pronunciationTargets": [],
+        "vocabularyTargets": [],
+        "grammarTargets": [],
+        "sentenceFrameTargets": []
+      }
+    },
+    "nodes": [
+      {
+        "node": {
+          "nodeId": "ko-script-menu-reading",
+          "type": "objective",
+          "cityId": "seoul",
+          "locationId": "food_street",
+          "lang": "ko",
+          "level": 0,
+          "title": "Read menu items",
+          "description": "Read food names from the stall menu.",
+          "tags": ["hangul", "reading", "menu"]
+        },
+        "state": {
+          "learnerId": "persona_kpop_prompting",
+          "nodeId": "ko-script-menu-reading",
+          "status": "validated",
+          "masteryScore": 0.91,
+          "lastEvidenceAt": "2026-03-06T12:00:00.000Z",
+          "evidenceCount": 8,
+          "blockerNodeIds": []
+        },
+        "blockers": []
+      },
+      {
+        "node": {
+          "nodeId": "ko-pron-food-words",
+          "type": "objective",
+          "cityId": "seoul",
+          "locationId": "food_street",
+          "lang": "ko",
+          "level": 1,
+          "title": "Pronounce 20 food words",
+          "description": "Correctly pronounce common Korean food words from the stall.",
+          "tags": ["pronunciation", "food"]
+        },
+        "state": {
+          "learnerId": "persona_kpop_prompting",
+          "nodeId": "ko-pron-food-words",
+          "status": "validated",
+          "masteryScore": 0.82,
+          "lastEvidenceAt": "2026-03-06T14:00:00.000Z",
+          "evidenceCount": 7,
+          "blockerNodeIds": []
+        },
+        "blockers": []
+      },
+      {
+        "node": {
+          "nodeId": "ko-vocab-food-items",
+          "type": "objective",
+          "cityId": "seoul",
+          "locationId": "food_street",
+          "lang": "ko",
+          "level": 2,
+          "title": "Learn 20 food items",
+          "description": "Know the meaning and reading of 20 street food items.",
+          "tags": ["vocabulary", "food"]
+        },
+        "state": {
+          "learnerId": "persona_kpop_prompting",
+          "nodeId": "ko-vocab-food-items",
+          "status": "learning",
+          "masteryScore": 0.68,
+          "nextReviewAt": "2026-03-09T08:00:00.000Z",
+          "lastEvidenceAt": "2026-03-07T13:00:00.000Z",
+          "evidenceCount": 5,
+          "blockerNodeIds": []
+        },
+        "blockers": []
+      },
+      {
+        "node": {
+          "nodeId": "ko-vocab-courtesy",
+          "type": "objective",
+          "cityId": "seoul",
+          "locationId": "food_street",
+          "lang": "ko",
+          "level": 2,
+          "title": "Learn courtesy phrases",
+          "description": "Essential polite phrases for ordering.",
+          "tags": ["vocabulary", "courtesy"]
+        },
+        "state": {
+          "learnerId": "persona_kpop_prompting",
+          "nodeId": "ko-vocab-courtesy",
+          "status": "due",
+          "masteryScore": 0.78,
+          "nextReviewAt": "2026-03-08T18:00:00.000Z",
+          "lastEvidenceAt": "2026-03-07T16:00:00.000Z",
+          "evidenceCount": 6,
+          "blockerNodeIds": [],
+          "recommendedReason": "Courtesy phrases are directly needed for the next hangout."
+        },
+        "blockers": []
+      },
+      {
+        "node": {
+          "nodeId": "ko-gram-juseyo",
+          "type": "objective",
+          "cityId": "seoul",
+          "locationId": "food_street",
+          "lang": "ko",
+          "level": 3,
+          "title": "Master N + 주세요 pattern",
+          "description": "Use noun plus 주세요 to order food politely.",
+          "tags": ["grammar", "ordering", "polite"]
+        },
+        "state": {
+          "learnerId": "persona_kpop_prompting",
+          "nodeId": "ko-gram-juseyo",
+          "status": "available",
+          "masteryScore": 0.24,
+          "evidenceCount": 1,
+          "blockerNodeIds": [],
+          "recommendedReason": "Ready to convert food and courtesy vocabulary into real order phrases."
+        },
+        "blockers": []
+      },
+      {
+        "node": {
+          "nodeId": "ko-gram-counters",
+          "type": "objective",
+          "cityId": "seoul",
+          "locationId": "food_street",
+          "lang": "ko",
+          "level": 3,
+          "title": "Use number + counter patterns",
+          "description": "Order using 하나, 둘, 셋 and 개 counters.",
+          "tags": ["grammar", "numbers", "ordering"]
+        },
+        "state": {
+          "learnerId": "persona_kpop_prompting",
+          "nodeId": "ko-gram-counters",
+          "status": "locked",
+          "masteryScore": 0.05,
+          "evidenceCount": 0,
+          "blockerNodeIds": ["ko-gram-juseyo", "ko-vocab-numbers"]
+        },
+        "blockers": ["ko-gram-juseyo", "ko-vocab-numbers"]
+      }
+    ]
+  },
+  "overlays": [
+    {
+      "overlayId": "overlay_zh_video_prompting",
+      "title": "Chinese Video Prompting Vocabulary",
+      "lang": "zh",
+      "source": "youtube",
+      "connectedNodeIds": ["overlay_zh_video_prompting"],
+      "rationale": "Matches creator-focused learning goals from recent Chinese YouTube usage.",
+      "suggestedTerms": ["镜头", "提示词", "风格", "画面", "生成"]
+    },
+    {
+      "overlayId": "overlay_ko_kpop_stage",
+      "title": "K-pop Stage Language",
+      "lang": "ko",
+      "source": "spotify",
+      "connectedNodeIds": ["ko-vocab-food-items", "ko-vocab-courtesy"],
+      "rationale": "Uses aespa and IVE listening habits as motivation to reinforce Korean vocabulary retention.",
+      "suggestedTerms": ["무대", "연습", "안무", "리허설", "파트"]
+    }
+  ],
+  "recommendations": [
+    {
+      "recommendationId": "rec_dashboard_review_courtesy",
+      "type": "review",
+      "title": "Review Korean courtesy phrases",
+      "reason": "This is the highest-leverage due item before the next hangout.",
+      "nodeIds": ["ko-vocab-courtesy"],
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "foundation": true,
+      "priority": 1
+    },
+    {
+      "recommendationId": "rec_dashboard_start_juseyo",
+      "type": "lesson",
+      "title": "Open the N + 주세요 grammar session",
+      "reason": "Current Korean vocabulary coverage is strong enough to begin productive ordering sentences.",
+      "nodeIds": ["ko-gram-juseyo"],
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "foundation": true,
+      "priority": 2
+    },
+    {
+      "recommendationId": "rec_dashboard_overlay_prompting",
+      "type": "overlay",
+      "title": "Explore Chinese video prompting vocabulary",
+      "reason": "This personalized overlay aligns closely with the learner's creator goal.",
+      "nodeIds": ["overlay_zh_video_prompting"],
+      "cityId": "shanghai",
+      "locationId": "practice_studio",
+      "lang": "zh",
+      "foundation": false,
+      "priority": 3
+    }
+  ],
+  "evidence": {
+    "totalEvents": 28,
+    "lastUpdatedAt": "2026-03-08T10:00:00.000Z"
+  }
+}

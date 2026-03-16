@@ -1,0 +1,6 @@
+interface:
+  display_name: "Work GitHub Issues"
+  short_description: "Route issue work across QA skills and safe worktree lanes"
+  default_prompt: "Use $work-github-issues to plan and execute GitHub issue work with the repo's QA workflow and worktree routing."
+policy:
+  allow_implicit_invocation: true

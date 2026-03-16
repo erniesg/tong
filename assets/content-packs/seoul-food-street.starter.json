@@ -1,0 +1,59 @@
+{
+  "templateVersion": "1.0.0",
+  "packType": "city-location-character-starter",
+  "packId": "seoul-food-street-starter",
+  "city": "seoul",
+  "location": {
+    "id": "food_street",
+    "assetSlug": "food-street",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "haeun",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.haeun.portrait.default"
+      ]
+    },
+    {
+      "id": "jin",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.jin.portrait.default"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "seoul-food-street-v1",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.2"
+    }
+  },
+  "manifestKeys": [
+    "city.seoul.location.food-street.backdrop.default",
+    "character.haeun.portrait.default",
+    "character.jin.portrait.default",
+    "character.tong.expression.neutral"
+  ],
+  "status": "draft"
+}

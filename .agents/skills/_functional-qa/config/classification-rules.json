@@ -1,0 +1,71 @@
+{
+  "schema_version": "1",
+  "default_issue_class": "functional-logic",
+  "rules": [
+    {
+      "issue_class": "flaky-nondeterministic",
+      "priority": 120,
+      "keywords": ["flaky", "intermittent", "sometimes", "occasionally", "random", "nondeterministic", "race"]
+    },
+    {
+      "issue_class": "auth-permissions",
+      "priority": 115,
+      "keywords": ["401", "403", "forbidden", "unauthorized", "permission", "permissions", "login", "oauth", "auth"]
+    },
+    {
+      "issue_class": "data-contract-api",
+      "priority": 110,
+      "keywords": ["api", "schema", "contract", "payload", "response", "request", "fixture", "json", "endpoint"]
+    },
+    {
+      "issue_class": "async-streaming-state",
+      "priority": 108,
+      "keywords": ["stream", "streaming", "loading", "spinner", "pulse", "latency", "delayed", "arrives at once", "all at once", "typewriter"]
+    },
+    {
+      "issue_class": "animation-transition",
+      "priority": 106,
+      "keywords": ["flash", "flicker", "transition", "fade", "dismiss", "animation", "briefly visible", "blink"]
+    },
+    {
+      "issue_class": "interaction-input",
+      "priority": 104,
+      "keywords": ["tap", "double tap", "click", "press", "gesture", "swipe", "pointer", "touch", "continue", "button"]
+    },
+    {
+      "issue_class": "visual-layout",
+      "priority": 102,
+      "keywords": ["layout", "font", "overflow", "overlap", "spacing", "too small", "cut off", "cropped", "visual", "ui"]
+    },
+    {
+      "issue_class": "persistence-state-sync",
+      "priority": 100,
+      "keywords": ["resume", "restore", "persist", "state sync", "desync", "saved", "session", "localstorage", "cache"]
+    },
+    {
+      "issue_class": "performance-resource",
+      "priority": 98,
+      "keywords": ["slow", "performance", "memory", "cpu", "lag", "jank", "resource"]
+    },
+    {
+      "issue_class": "compatibility-environment",
+      "priority": 96,
+      "keywords": ["ios", "android", "safari", "firefox", "chrome", "mobile", "desktop", "production", "localhost", "cloudflare", "vercel"]
+    },
+    {
+      "issue_class": "integration-third-party",
+      "priority": 94,
+      "keywords": ["youtube", "spotify", "openai", "github", "supabase", "clerk", "third-party", "external"]
+    },
+    {
+      "issue_class": "accessibility",
+      "priority": 92,
+      "keywords": ["keyboard", "screen reader", "aria", "focus", "contrast", "accessible", "accessibility"]
+    },
+    {
+      "issue_class": "localization-content",
+      "priority": 90,
+      "keywords": ["translation", "romanization", "locale", "language", "hangul", "kanji", "hanja", "cjk", "copy"]
+    }
+  ]
+}

@@ -1,0 +1,353 @@
+{
+  "schema_version": "1",
+  "repository": {
+    "name_with_owner": "erniesg/tong",
+    "url": "https://github.com/erniesg/tong",
+    "default_branch": "main"
+  },
+  "artifact_root": "artifacts/qa-runs",
+  "browser_defaults": {
+    "base_url": "http://localhost:3000",
+    "demo_password": "TONG-DEMO-ACCESS",
+    "query_params": {
+      "demo": "TONG-DEMO-ACCESS"
+    },
+    "qa_query_params": {
+      "qa_trace": "1",
+      "qa_run_id": "{{run_id}}"
+    },
+    "session_log_helper": "window.__TONG_QA__",
+    "session_export_methods": [
+      "window.__TONG_QA__.getLogs()",
+      "window.__TONG_QA__.downloadLogs()",
+      "window.__TONG_QA__.getState()",
+      "window.__TONG_QA__.downloadState()"
+    ]
+  },
+  "startup_commands": [
+    {
+      "label": "demo-start",
+      "command": "npm run demo:start",
+      "notes": "Installs dependencies, runs smoke checks, starts the local API and client, and opens the main demo routes."
+    }
+  ],
+  "smoke_commands": [
+    {
+      "label": "demo-smoke",
+      "command": "npm run demo:smoke",
+      "notes": "Validates core fixture and contract integrity before UI-specific validation."
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "overlay",
+      "routes": [
+        "/overlay"
+      ],
+      "notes": "Caption lanes plus dictionary popover."
+    },
+    {
+      "id": "game",
+      "routes": [
+        "/game",
+        "/game/hangout",
+        "/game/map"
+      ],
+      "notes": "Primary narrative and exercise surface."
+    },
+    {
+      "id": "insights",
+      "routes": [
+        "/insights"
+      ],
+      "notes": "Vocabulary feed and clustering review surface."
+    },
+    {
+      "id": "extension",
+      "routes": [
+        "chrome-extension://apps/extension"
+      ],
+      "notes": "YouTube overlay and subtitle augmentation surface."
+    }
+  ],
+  "debug_hooks": [
+    {
+      "name": "sessionLogger",
+      "path": "apps/client/lib/debug/session-logger.ts",
+      "usage": "Use window.sessionLogger.getCurrent(), getAll(), export(), and clear() during browser-backed runs."
+    },
+    {
+      "name": "hangoutUseChat",
+      "path": "apps/client/app/game/page.tsx",
+      "usage": "Trace useChat, toolQueue, processingRef, and continue flow when investigating interaction/state bugs."
+    }
+  ],
+  "issue_notes": [
+    {
+      "match": "#31",
+      "issue_class_override": "visual-layout",
+      "notes": [
+        "Focus on the first-time hint state and the early multi-character Block Crush step.",
+        "Prefer direct before/after screenshots over timing traces unless the exercise state itself becomes ambiguous."
+      ]
+    },
+    {
+      "match": "#17",
+      "issue_class_override": "interaction-input",
+      "notes": [
+        "Expected behavior: a player may tap once to finish the typewriter effect and again to advance.",
+        "Bug behavior: the UI appears ready to advance, the tap lands, but no meaningful state transition happens."
+      ]
+    },
+    {
+      "match": "#18",
+      "issue_class_override": "animation-transition",
+      "notes": [
+        "Capture transition evidence, not a single still frame.",
+        "Regression target: the stale Block Crush board never becomes visible after completion."
+      ]
+    },
+    {
+      "match": "#19",
+      "issue_class_override": "async-streaming-state",
+      "notes": [
+        "Distinguish transport-level streaming from user-visible progressive rendering.",
+        "Capture timestamps for request start, first visible dialogue, incremental updates, and completion."
+      ]
+    },
+    {
+      "match": "#46",
+      "issue_class_override": "animation-transition",
+      "notes": [
+        "Treat this as a timing-sensitive reviewer-proof workflow issue.",
+        "Require temporal capture and screenshots in validation and fix verification outputs.",
+        "Prefer qa-platform docs and workflow assets; keep cross-lane changes minimal."
+      ]
+    }
+  ],
+  "issue_playbooks": [
+    {
+      "match": "#31",
+      "surface": "game",
+      "route_template": "/game?dev=exercise&type=block_crush&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Open the Block Crush dev exercise in a mobile viewport.",
+        "Capture the first-entry state and verify whether the objective is understandable without extra explanation.",
+        "Capture an early multi-character gameplay state and check whether the density and distractors feel manageable."
+      ],
+      "screenshot_targets": [
+        "first-entry state before play begins",
+        "hint or tutorial state if present",
+        "early multi-character gameplay state"
+      ],
+      "state_targets": [
+        "phase",
+        "currentExercise"
+      ]
+    },
+    {
+      "match": "#11",
+      "surface": "game",
+      "route_template": "/game?fresh=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Open the fresh onboarding flow and progress through Tong intro until the profile/language settings step is visible.",
+        "Capture the language selection UI before changing any controls.",
+        "Test whether a player can clearly tell what each control means and whether all three languages are forced."
+      ],
+      "screenshot_targets": [
+        "full onboarding language settings screen",
+        "any confusing or unlabeled controls"
+      ],
+      "state_targets": [
+        "phase",
+        "qaRunId"
+      ]
+    },
+    {
+      "match": "#12",
+      "surface": "game",
+      "route_template": "/game?dev_intro=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Open the first hangout scene.",
+        "Capture the initial whisper and empty-space composition.",
+        "Verify the discoverability of Tong whisper and the continue affordance."
+      ],
+      "screenshot_targets": [
+        "first hangout full frame",
+        "whisper overlay visible",
+        "continue affordance"
+      ],
+      "state_targets": [
+        "phase",
+        "tongTip",
+        "currentMessage"
+      ]
+    },
+    {
+      "match": "#13",
+      "surface": "game",
+      "route_template": "/game?dev=exercise&type=block_crush&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Open the Block Crush dev exercise.",
+        "Capture the lives indicator and active gameplay state.",
+        "Check whether the time or pressure state is visually understandable."
+      ],
+      "screenshot_targets": [
+        "exercise start state",
+        "active falling-piece state",
+        "lives indicator close-up"
+      ],
+      "state_targets": [
+        "phase",
+        "currentExercise"
+      ]
+    },
+    {
+      "match": "#14",
+      "surface": "game",
+      "route_template": "/game?dev_intro=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Open a hangout and leave the HUD closed initially.",
+        "Capture whether the pull tab is obvious without prior instruction.",
+        "Open the HUD and capture the charge meter and XP/SP/RP labels."
+      ],
+      "screenshot_targets": [
+        "HUD closed state",
+        "HUD open state"
+      ],
+      "state_targets": [
+        "phase"
+      ]
+    },
+    {
+      "match": "#15",
+      "surface": "game",
+      "route_template": "/game?dev_intro=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Open the main game surfaces in a mobile viewport.",
+        "Capture text-heavy states including dialogue, whisper, and HUD.",
+        "Verify whether text and touch targets remain comfortably readable."
+      ],
+      "screenshot_targets": [
+        "dialogue-heavy state",
+        "whisper-heavy state",
+        "HUD text in mobile viewport"
+      ],
+      "state_targets": [
+        "phase"
+      ]
+    },
+    {
+      "match": "#16",
+      "surface": "game",
+      "route_template": "/game?dev_intro=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Open a hangout scene with Korean text visible.",
+        "Tap CJK words and verify whether the interaction is consistent.",
+        "Capture examples of bare romanization or non-tappable CJK if found."
+      ],
+      "screenshot_targets": [
+        "CJK dialogue state",
+        "tooltip or tap interaction state"
+      ],
+      "state_targets": [
+        "phase",
+        "currentMessage",
+        "tongTip"
+      ]
+    },
+    {
+      "match": "#17",
+      "surface": "game",
+      "route_template": "/game?dev_intro=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Open the first hangout scene in QA mode.",
+        "Progress until a continue affordance is visible and reproduce the wasted tap if possible.",
+        "Export session logs and state snapshots immediately after any tap that appears to do nothing.",
+        "Distinguish expected typewriter skip from a genuine no-op continue tap."
+      ],
+      "screenshot_targets": [
+        "pre-tap continue-visible state",
+        "post-tap no-op state if reproduced",
+        "recovered next-state after another tap"
+      ],
+      "state_targets": [
+        "phase",
+        "chatLoading",
+        "toolQueue",
+        "processing",
+        "currentMessage",
+        "currentExercise",
+        "choices",
+        "tongTip"
+      ]
+    },
+    {
+      "match": "#18",
+      "surface": "game",
+      "route_template": "/game?dev_intro=1&dev_act=2&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Open the Act 2 intro and progress until a Block Crush exercise completes.",
+        "Use burst screenshots or screen recording during the review-overlay dismissal.",
+        "Confirm whether the stale game board appears between the review overlay and the parent fade."
+      ],
+      "screenshot_targets": [
+        "review overlay visible",
+        "transition burst during dismissal",
+        "first clean post-dismissal state"
+      ],
+      "state_targets": [
+        "phase",
+        "currentExercise",
+        "processing",
+        "toolQueue"
+      ]
+    },
+    {
+      "match": "#19",
+      "surface": "game",
+      "route_template": "/game?dev_intro=1&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Open the first hangout scene in QA mode.",
+        "Capture request start, loading pulse, first visible dialogue, and the completion of the visible text.",
+        "Confirm whether the on-screen dialogue is progressively rendered or arrives as a complete payload after a gap."
+      ],
+      "screenshot_targets": [
+        "loading pulse before text",
+        "first visible dialogue frame",
+        "fully visible dialogue frame"
+      ],
+      "state_targets": [
+        "phase",
+        "chatLoading",
+        "currentMessage",
+        "toolQueue",
+        "processing"
+      ]
+    },
+    {
+      "match": "#46",
+      "surface": "qa-platform",
+      "steps": [
+        "Generate the codex cloud queue prompt for erniesg/tong#46.",
+        "Validate the task prompt includes timing-sensitive evidence requirements and reviewer-visible media guidance.",
+        "Verify lane routing points to qa-platform with explicit docs paths."
+      ],
+      "screenshot_targets": [
+        "task prompt excerpt showing evidence requirements",
+        "task prompt excerpt showing reviewer-visible media requirement"
+      ],
+      "state_targets": [
+        "classification.issue_class",
+        "evidence_plan.required",
+        "recommended_worktree.id",
+        "validation_policy.ui_acceptance_required"
+      ],
+      "path_targets": [
+        "docs/codex-cloud-issue-runbook.md",
+        "docs/qa/issue-18-review-transition-evidence.md"
+      ],
+      "route_template": "/roadmap?demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1"
+    }
+  ]
+}

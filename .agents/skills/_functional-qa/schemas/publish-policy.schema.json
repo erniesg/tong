@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Functional QA Publish Policy",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "mode",
+    "confidence_threshold",
+    "publish_ambiguous",
+    "auto_close_fixed",
+    "stop_without_publish_if_missing_auth"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "mode": { "type": "string" },
+    "confidence_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+    "publish_ambiguous": { "type": "boolean" },
+    "auto_close_fixed": { "type": "boolean" },
+    "stop_without_publish_if_missing_auth": { "type": "boolean" }
+  }
+}

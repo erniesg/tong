@@ -1,0 +1,7 @@
+{
+  "learnerId": "persona_kpop_prompting",
+  "nodeIds": ["ko-vocab-food-items", "ko-vocab-courtesy", "ko-gram-juseyo"],
+  "objectiveIds": ["ko-vocab-food-items", "ko-vocab-courtesy", "ko-gram-juseyo"],
+  "title": "Food Street Polite Ordering Bundle",
+  "reason": "This lesson bundle reinforces the current Korean foundation path and directly prepares the next hangout validation."
+}

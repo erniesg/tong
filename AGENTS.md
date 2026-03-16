@@ -1,4 +1,4 @@
-# Tong Hackathon Agent Context
+# Tong Agent Context
 
 ## Mission
 Build a mobile-first language learning demo with:
@@ -48,8 +48,11 @@ Build a mobile-first language learning demo with:
 3. Each session is tied to explicit vocabulary/grammar/sentence objectives.
 
 ## Parallel workstream ownership
-- `codex/client-shell`: Next.js app shell, mobile-first layout, auth/session bootstrap.
+- `codex/client-ui`: Next.js shell, onboarding, world map, HUD, and player-facing layout hierarchy.
+- `codex/client-runtime`: `/game` runtime state, exercises, transitions, streaming dialogue, resume UX.
 - `codex/client-overlay`: subtitle augmentation UI and dictionary hover/tap interactions.
+- `codex/qa-platform`: QA routing, reviewer-proof capture, issue templates, cloud execution runbooks.
+- `codex/runtime-assets`: runtime asset manifests, fallbacks, and asset/evidence contract boundaries.
 - `codex/server-api`: API routes, profile/session persistence, game endpoints.
 - `codex/server-ingestion`: transcript/lyrics ingest + vocabulary frequency pipeline.
 - `codex/game-engine`: branching scene model + Tong in-character response orchestration.
@@ -67,5 +70,21 @@ Build a mobile-first language learning demo with:
 ## Rules for agent PRs
 - Keep all schema changes in `packages/contracts` first.
 - Add fixtures/mocks for any new endpoint before wiring UI.
-- Prefer additive migrations; no destructive data changes during hackathon.
+- Prefer additive migrations; no destructive data changes during active development.
 - Include a short "How to test" section in each PR description.
+
+## Functional QA routing
+- When the user asks to step through GitHub issues, fix the issue queue, or decide what can run in parallel, start with `.agents/skills/work-github-issues/SKILL.md`.
+- That front-door skill must generate the queue plan first, then route each issue to `validate-issue`, `trace-ui-state`, `validate-issue --verify-fix`, and `publish-issue-update` as needed.
+- Use the existing worktree model in `docs/worktree-ownership-map.md` and `docs/workstreams.md`; parallelize by worktree lane, not by raw issue count.
+- Treat `docs/agent-native-project-setup.md` as the control-plane contract for the GitHub Project fields, issue portability, deterministic checkpoints, and unattended execution gates.
+- When the user explicitly wants Codex cloud or GitHub PR execution, also use `docs/codex-cloud-issue-runbook.md` and `python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py plan` to generate the current batch order, direct task prompts, and PR notes.
+- Prefer the direct Codex environment task flow for implementation work: launch a task on the `tong` environment, get a diff, then create a PR from the task result.
+- Do not assume shell-level `git push` or `gh` is available inside Codex cloud tasks.
+- Use GitHub comment triggers primarily for `@codex review` or explicitly manual experiments, not as the default implementation path.
+- When the user asks to reproduce bugs, verify fixes, validate current behavior, or gather screenshots and traces for a specific issue, start with the functional QA workflow in `.agents/skills/validate-issue/SKILL.md`.
+- If validation is ambiguous, timing-sensitive, or points to a state race, continue with `.agents/skills/trace-ui-state/SKILL.md`.
+- For timing-sensitive UI issues that need reviewer-visible proof, use `.agents/skills/capture-reviewer-proof/SKILL.md` after validation or fix verification.
+- Publish structured GitHub updates with `.agents/skills/publish-issue-update/SKILL.md` after the run is finalized or when the runtime policy allows auto-commenting.
+- For `/game` issues, use the generated `browser-playbook.md` in the run directory and open `/game` with `qa_run_id` and `qa_trace=1` so browser-capable agents can use `window.__TONG_QA__` for state and log exports.
+- Treat the functional QA artifact bundle under `artifacts/qa-runs/` as the local workspace bundle for reruns, manifests, and fix verification. Treat published QA evidence on the external `tong-runs` host as the reviewer-visible proof surface.
