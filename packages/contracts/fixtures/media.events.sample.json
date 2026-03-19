@@ -25,6 +25,17 @@
     {
       "eventId": "evt_003",
       "userId": "demo-user-1",
+      "source": "youtube",
+      "mediaId": "yt_b54",
+      "title": "Tokyo street interview",
+      "lang": "ja",
+      "minutes": 26,
+      "consumedAtIso": "2026-02-26T18:20:00.000Z",
+      "tokens": ["駅", "ホーム", "メニュー", "注文"]
+    },
+    {
+      "eventId": "evt_004",
+      "userId": "demo-user-1",
       "source": "spotify",
       "mediaId": "sp_track_001",
       "title": "밤 산책",
@@ -34,7 +45,7 @@
       "tokens": ["연습", "무대", "불", "주문"]
     },
     {
-      "eventId": "evt_004",
+      "eventId": "evt_005",
       "userId": "demo-user-1",
       "source": "spotify",
       "mediaId": "sp_track_004",

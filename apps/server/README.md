@@ -48,9 +48,28 @@ Tool retrieval smoke check:
 npm run demo:tools
 ```
 
+Additional modeling scripts for ingestion iteration:
+
+```bash
+npm run ingestion:planner
+npm run ingestion:planner:fixture
+npm run ingestion:vocab:frequency
+npm run ingestion:vocab:frequency:fixture
+npm run ingestion:vocab:insights
+npm run ingestion:vocab:insights:fixture
+```
+
+Core modeling scripts:
+
+- `apps/server/ingestion/pipeline.mjs`
+- `apps/server/ingestion/generate_planner_context.mjs`
+- `apps/server/ingestion/generate_vocab_frequency.mjs`
+- `apps/server/ingestion/generate_vocab_insights.mjs`
+
 ## Isolation contract for modeling work
 
 Topic modeling and frequency logic can iterate without live connectors using:
 
 - `apps/server/data/mock-media-window.json` (snapshot input used by mock API)
 - `packages/contracts/fixtures/media.events.sample.json` (canonical event fixture for scoring experiments)
+- `packages/contracts/fixtures/planner.lesson-context.sample.json` (generated lesson/scene recommendation fixture for modeling experiments)

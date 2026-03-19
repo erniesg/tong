@@ -234,6 +234,9 @@ Shape:
 }
 ```
 
+Related modeling fixture:
+- `packages/contracts/fixtures/planner.lesson-context.sample.json` captures generated lesson/scene recommendation inputs derived from canonical media events for ingestion experiments.
+
 ## GET `/api/v1/tools`
 Response:
 ```json
