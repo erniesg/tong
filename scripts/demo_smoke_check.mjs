@@ -74,6 +74,7 @@ const requiredFiles = [
   "packages/contracts/fixtures/dictionary.entry.sample.json",
   "packages/contracts/fixtures/vocab.frequency.sample.json",
   "packages/contracts/fixtures/vocab.insights.sample.json",
+  "packages/contracts/fixtures/planner.lesson-context.sample.json",
   "packages/contracts/fixtures/player.media-profile.sample.json",
   "packages/contracts/fixtures/game.start-or-resume.sample.json",
   "packages/contracts/fixtures/game.session.sample.json",
@@ -121,6 +122,12 @@ const objectivesCatalog = JSON.parse(
 );
 const vocabInsights = JSON.parse(
   fs.readFileSync(path.join(root, "packages/contracts/fixtures/vocab.insights.sample.json"), "utf8")
+);
+const plannerContext = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "packages/contracts/fixtures/planner.lesson-context.sample.json"),
+    "utf8"
+  )
 );
 const playerMediaProfile = JSON.parse(
   fs.readFileSync(
@@ -347,6 +354,25 @@ for (const item of vocabInsights.items) {
     console.error(`Vocab insight item ${item.lemma ?? "<unknown>"} missing objectiveLinks`);
     process.exit(1);
   }
+}
+
+if (!plannerContext.sourceBreakdown || !plannerContext.topicModel) {
+  console.error("Expected sourceBreakdown + topicModel in planner.lesson-context sample");
+  process.exit(1);
+}
+
+if (!Array.isArray(plannerContext.topTerms) || plannerContext.topTerms.length === 0) {
+  console.error("Expected non-empty topTerms in planner.lesson-context sample");
+  process.exit(1);
+}
+
+if (
+  !plannerContext.plannerInput ||
+  !Array.isArray(plannerContext.plannerInput.objectiveCandidates) ||
+  plannerContext.plannerInput.objectiveCandidates.length === 0
+) {
+  console.error("Expected plannerInput.objectiveCandidates in planner.lesson-context sample");
+  process.exit(1);
 }
 
 if (!playerMediaProfile.sourceBreakdown) {
@@ -668,6 +694,7 @@ console.log("- JSON fixtures parse");
 console.log("- Core progression shape validated");
 console.log("- Objective model targets validated");
 console.log("- Vocab insight model validated");
+console.log("- Planner lesson-context fixture validated");
 console.log("- Player media profile includes youtube + spotify signals");
 console.log("- Demo secret status fixture validated");
 console.log("- Runtime asset manifest keys validated");

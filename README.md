@@ -144,6 +144,21 @@ chmod +x scripts/setup-worktrees.sh
 ./scripts/setup-worktrees.sh
 ```
 
+Generate planner context from last-3-days sample media events:
+```bash
+npm run ingestion:planner
+```
+
+Generate ranked vocab frequency feed from last-3-days sample media events:
+```bash
+npm run ingestion:vocab:frequency
+```
+
+Generate topic + orthography vocab insights from last-3-days sample media events:
+```bash
+npm run ingestion:vocab:insights
+```
+
 ## Legacy prototype (v0.1 extension)
 
 The original Chrome MV3 extension scaffold remains in:
