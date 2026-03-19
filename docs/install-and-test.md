@@ -41,6 +41,14 @@ npm run ingest:mock
 TONG_DEMO_PASSWORD=TONG-DEMO-ACCESS npm run dev:server
 ```
 
+Optional modeling fixture refresh in the same terminal:
+
+```bash
+npm run ingestion:planner:fixture
+npm run ingestion:vocab:frequency:fixture
+npm run ingestion:vocab:insights:fixture
+```
+
 Terminal 2:
 
 ```bash
@@ -98,6 +106,7 @@ curl -s -H "x-demo-password: TONG-DEMO-ACCESS" http://localhost:8787/api/v1/demo
 3. Core progression contract shape remains valid.
 4. Objective model includes vocabulary/grammar/sentence structures.
 5. Player media profile includes YouTube + Spotify signals.
+6. Planner lesson-context fixture remains present and structurally valid for ingestion modeling work.
 
 ## Acceptance checklist
 1. `/overlay` lane sync + dictionary popover works.

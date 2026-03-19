@@ -1,18 +1,108 @@
 {
-  "windowStartIso": "2026-02-25T00:00:00.000Z",
-  "windowEndIso": "2026-02-28T00:00:00.000Z",
+  "windowStartIso": "2026-02-25T12:00:00.000Z",
+  "windowEndIso": "2026-02-28T12:00:00.000Z",
   "items": [
     {
       "lemma": "연습",
       "lang": "ko",
-      "count": 21,
-      "sourceCount": 7
+      "count": 3,
+      "sourceCount": 2
     },
     {
       "lemma": "무대",
       "lang": "ko",
-      "count": 18,
-      "sourceCount": 5
+      "count": 3,
+      "sourceCount": 2
+    },
+    {
+      "lemma": "주문",
+      "lang": "ko",
+      "count": 3,
+      "sourceCount": 2
+    },
+    {
+      "lemma": "subway",
+      "lang": "en",
+      "count": 2,
+      "sourceCount": 2
+    },
+    {
+      "lemma": "station",
+      "lang": "en",
+      "count": 2,
+      "sourceCount": 2
+    },
+    {
+      "lemma": "메뉴",
+      "lang": "ko",
+      "count": 2,
+      "sourceCount": 1
+    },
+    {
+      "lemma": "불",
+      "lang": "ko",
+      "count": 1,
+      "sourceCount": 1
+    },
+    {
+      "lemma": "火",
+      "lang": "zh",
+      "count": 1,
+      "sourceCount": 1
+    },
+    {
+      "lemma": "燃烧",
+      "lang": "zh",
+      "count": 1,
+      "sourceCount": 1
+    },
+    {
+      "lemma": "练习",
+      "lang": "zh",
+      "count": 1,
+      "sourceCount": 1
+    },
+    {
+      "lemma": "transfer",
+      "lang": "en",
+      "count": 1,
+      "sourceCount": 1
+    },
+    {
+      "lemma": "먹다",
+      "lang": "ko",
+      "count": 1,
+      "sourceCount": 1
+    },
+    {
+      "lemma": "맵다",
+      "lang": "ko",
+      "count": 1,
+      "sourceCount": 1
+    },
+    {
+      "lemma": "포장",
+      "lang": "ko",
+      "count": 1,
+      "sourceCount": 1
+    },
+    {
+      "lemma": "주세요",
+      "lang": "ko",
+      "count": 1,
+      "sourceCount": 1
+    },
+    {
+      "lemma": "menu",
+      "lang": "en",
+      "count": 1,
+      "sourceCount": 1
+    },
+    {
+      "lemma": "order",
+      "lang": "en",
+      "count": 1,
+      "sourceCount": 1
     }
   ]
 }
