@@ -1,0 +1,31 @@
+{
+  "qaRunId": "reviewer-proof-issue-17",
+  "qaTrace": true,
+  "route": "http://localhost:3202/game?dev_intro=1&qa_trace=1&qa_run_id=reviewer-proof-issue-17",
+  "phase": "hangout",
+  "sceneReady": true,
+  "chatLoading": false,
+  "continuePending": false,
+  "processing": true,
+  "toolQueue": [
+    {
+      "toolCallId": "fallback-1773684776355-1",
+      "toolName": "tong_whisper"
+    }
+  ],
+  "currentMessage": null,
+  "streamedMessage": null,
+  "displayMessage": null,
+  "tongTip": {
+    "messagePreview": "That's Ha-eun — she's competitive but secretly nice. She's testing you!",
+    "hasTranslation": false
+  },
+  "currentExercise": null,
+  "choices": null,
+  "choicePrompt": null,
+  "sceneSummary": null,
+  "isIntroHangout": true,
+  "introExerciseCount": 0,
+  "introAct": 2,
+  "npcRevealed": true
+}

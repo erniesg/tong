@@ -107,3 +107,16 @@ Template:
   - Live connector auth/callback work spans `server-api` and `server-ingestion`; keep provider-specific payload handling out of `game-engine`.
   - Do not add a dedicated KG worktree unless the ownership map changes; use the existing `server-ingestion`, `server-api`, and `game-engine` lanes.
 - Next owner: `codex/server-ingestion` for retrieval input modeling, then `codex/server-api` for connect/sync surface wiring
+
+## 2026-03-16 (Issue 17 tap-flow handoff)
+- Date: 2026-03-16
+- Branch/worktree: `codex/issue-17-tap-flow-investigation` + `.worktrees/issue-17-client-runtime`
+- What changed:
+  - Added a local `continuePending` guard in the `/game` runtime so the UI no longer re-exposes the idle continue affordance while a continue request is already in flight.
+  - Threaded a `sceneBusy` prop into `SceneView` so queued-tool and post-append transition frames show the non-interactive busy state instead of a tappable "Tap to continue" label.
+  - Extended QA state snapshots with `continuePending` to make future timing traces easier to interpret.
+- Contract changes: none
+- Integration risks:
+  - The local fallback hangout path is fast enough that final reviewer-facing reproduction of the old wasted-tap symptom still needs a human browser pass against real gameplay timing.
+  - Keep acceptance focused on the continue/tong whisper/exercise transitions in `/game?dev_intro=1&qa_trace=1`; this branch does not change exercise or content logic.
+- Next owner: human QA / `codex/client-runtime`

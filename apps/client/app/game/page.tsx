@@ -391,6 +391,7 @@ export default function GamePage() {
   const [currentExercise, setCurrentExercise] = useState<ExerciseData | null>(null);
   const [sceneSummary, setSceneSummary] = useState<SceneSummary | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
+  const [continuePending, setContinuePending] = useState(false);
   const [dynamicBackdrop, setDynamicBackdrop] = useState<{ url: string; transition: 'fade' | 'cut'; ambientDescription?: string } | null>(null);
   const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null>(null);
 
@@ -655,6 +656,36 @@ export default function GamePage() {
       traceQA('chat_finish', { role: msg.role, toolCount: msg.toolInvocations?.length ?? 0 });
     },
   });
+
+  useEffect(() => {
+    if (!continuePending) return;
+
+    let nextBusySource: string | null = null;
+    if (chatLoading) nextBusySource = 'chat_loading';
+    else if (toolQueue.length > 0) nextBusySource = 'tool_queue';
+    else if (currentMessage) nextBusySource = 'current_message';
+    else if (currentExercise) nextBusySource = 'current_exercise';
+    else if (choices) nextBusySource = 'choices';
+    else if (tongTip) nextBusySource = 'tong_tip';
+    else if (sceneSummary) nextBusySource = 'scene_summary';
+    else if (cinematic) nextBusySource = 'cinematic';
+
+    if (!nextBusySource) return;
+
+    traceQA('continue_pending_cleared', { nextBusySource, queueLength: toolQueue.length });
+    setContinuePending(false);
+  }, [
+    continuePending,
+    chatLoading,
+    toolQueue.length,
+    currentMessage,
+    currentExercise,
+    choices,
+    tongTip,
+    sceneSummary,
+    cinematic,
+    traceQA,
+  ]);
 
   const latestNpcSpeakInvocation = getLatestNpcSpeakInvocation(messages);
   const queuedNpcSpeakId = toolQueue[0]?.toolName === 'npc_speak' ? toolQueue[0].toolCallId : null;
@@ -1067,6 +1098,7 @@ export default function GamePage() {
         const msg = `${ctx}Continue.`;
         sessionLogger.logUserTap('continue');
         sessionLogger.logAIRequest(msg);
+        setContinuePending(true);
         traceQA('handle_continue_request_next_turn_after_dequeue', { queueLength: remainingAfterDequeue });
         void append({ role: 'user', content: msg });
       }
@@ -1093,6 +1125,7 @@ export default function GamePage() {
       const msg = `${ctx}Continue.`;
       sessionLogger.logUserTap('continue');
       sessionLogger.logAIRequest(msg);
+      setContinuePending(true);
       traceQA('handle_continue_request_next_turn', { queueLength: toolQueue.length });
       void append({ role: 'user', content: msg });
     } else {
@@ -1143,6 +1176,7 @@ export default function GamePage() {
     const msg = `${ctx}${summarizeExercise(result.exerciseId, result.correct)}`;
     console.log('[VN] advanceAfterExercise:', result.exerciseId, result.correct, 'chatLoading:', chatLoading);
     sessionLogger.logAIRequest(msg);
+    setContinuePending(true);
     traceQA('advance_after_exercise', { exerciseId: result.exerciseId, correct: result.correct, chatLoading });
     void append({ role: 'user', content: msg });
   }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, chatLoading, isIntroHangout, introExerciseCount, introAct, traceQA]);
@@ -1174,6 +1208,7 @@ export default function GamePage() {
     const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
     const msg = `${ctx}Choice: ${choiceId}`;
     sessionLogger.logAIRequest(msg);
+    setContinuePending(true);
     void append({ role: 'user', content: msg });
   }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
 
@@ -1193,6 +1228,7 @@ export default function GamePage() {
       const msg = `${ctx}Continue.`;
       sessionLogger.logUserTap('cinematic_end');
       sessionLogger.logAIRequest(msg);
+      setContinuePending(true);
       void append({ role: 'user', content: msg });
     }
   }, [isIntroHangout, npcRevealed, toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
@@ -1213,6 +1249,7 @@ export default function GamePage() {
         const msg = `${ctx}Continue.`;
         sessionLogger.logUserTap('continue');
         sessionLogger.logAIRequest(msg);
+        setContinuePending(true);
         traceQA('handle_dismiss_tong_request_next_turn');
         void append({ role: 'user', content: msg });
       }
@@ -1226,6 +1263,7 @@ export default function GamePage() {
     phase,
     sceneReady,
     chatLoading,
+    continuePending,
     processing: processingRef.current,
     toolQueue: toolQueue.map((item) => ({ toolCallId: item.toolCallId, toolName: item.toolName })),
     currentMessage: currentMessage ? { id: currentMessage.id, role: currentMessage.role, characterId: currentMessage.characterId, contentPreview: currentMessage.content.slice(0, 120) } : null,
@@ -1240,13 +1278,14 @@ export default function GamePage() {
     introExerciseCount,
     introAct,
     npcRevealed,
-  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
+  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, continuePending, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
 
   useEffect(() => {
     if (!qaTrace) return;
     traceQA('state_snapshot', {
       phase,
       chatLoading,
+      continuePending,
       dialogueStreaming: dialogueIsStreaming,
       processing: processingRef.current,
       queueLength: toolQueue.length,
@@ -1257,7 +1296,7 @@ export default function GamePage() {
       hasTongTip: !!tongTip,
       hasSceneSummary: !!sceneSummary,
     });
-  }, [qaTrace, traceQA, phase, chatLoading, dialogueIsStreaming, toolQueue.length, currentMessage?.id, displayMessage?.id, currentExercise?.id, choices?.length, tongTip, sceneSummary]);
+  }, [qaTrace, traceQA, phase, chatLoading, continuePending, dialogueIsStreaming, toolQueue.length, currentMessage?.id, displayMessage?.id, currentExercise?.id, choices?.length, tongTip, sceneSummary]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !qaRunId) return;
@@ -1897,6 +1936,7 @@ export default function GamePage() {
     );
   }
   const continueLabel = t('tap_to_continue', explainLang as UILang);
+  const sceneBusy = chatLoading || continuePending || toolQueue.length > 0;
 
   // Heart meter progress: time-based charge over 2 minutes
   const heartProgress = chargePercent;
@@ -1922,6 +1962,7 @@ export default function GamePage() {
           tongTip={tongTip}
           isStreaming={chatLoading}
           dialogueIsStreaming={dialogueIsStreaming}
+          sceneBusy={sceneBusy}
           sceneReady={sceneReady}
           targetLang={targetLang}
           continueLabel={continueLabel}
