@@ -425,7 +425,7 @@ async function validateGraphEndpoints() {
 }
 
 function runPlaywright(command, argsPrefix, learnerId) {
-  const selector = 'text=Progression Overview';
+  const selector = 'text=Foundation map + user-specific media overlays';
   const args = [
     ...argsPrefix,
     'screenshot',

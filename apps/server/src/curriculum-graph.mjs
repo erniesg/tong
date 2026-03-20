@@ -2058,6 +2058,30 @@ function normalizeEvidenceSource(source, mode) {
   return 'exercise';
 }
 
+function resolveLegacyEvidenceNodeId(rawNodeId, rawObjectiveId) {
+  const candidateIds = [
+    typeof rawNodeId === 'string' ? rawNodeId.trim() : '',
+    typeof rawObjectiveId === 'string' ? rawObjectiveId.trim() : '',
+  ].filter(Boolean);
+
+  for (const candidateId of candidateIds) {
+    const canonicalId = LEGACY_NODE_ID_ALIASES.get(candidateId) || candidateId;
+    if (KNOWN_NODE_IDS.has(canonicalId)) {
+      return canonicalId;
+    }
+
+    if (candidateId.startsWith('objective:')) {
+      const objectiveId = candidateId.slice('objective:'.length).trim();
+      const canonicalObjectiveId = LEGACY_NODE_ID_ALIASES.get(objectiveId) || objectiveId;
+      if (KNOWN_NODE_IDS.has(canonicalObjectiveId)) {
+        return canonicalObjectiveId;
+      }
+    }
+  }
+
+  return '';
+}
+
 function normalizeQualityScore(rawEvent) {
   if (rawEvent.qualityScore !== undefined) {
     const score = Number(rawEvent.qualityScore);
@@ -2122,7 +2146,11 @@ function normalizeRuntimeEvent(rawEvent, learnerId, eventIndex) {
   }
 
   const rawNodeId = typeof rawEvent.nodeId === 'string' ? rawEvent.nodeId.trim() : '';
-  const nodeId = LEGACY_NODE_ID_ALIASES.get(rawNodeId) || rawNodeId;
+  const rawObjectiveId = typeof rawEvent.objectiveId === 'string' ? rawEvent.objectiveId.trim() : '';
+  const nodeId =
+    resolveLegacyEvidenceNodeId(rawNodeId, rawObjectiveId) ||
+    LEGACY_NODE_ID_ALIASES.get(rawNodeId) ||
+    rawNodeId;
   if (!nodeId) {
     throw createGraphError('invalid_evidence_node', 'Evidence event must include nodeId.', 400);
   }
@@ -2136,8 +2164,9 @@ function normalizeRuntimeEvent(rawEvent, learnerId, eventIndex) {
     );
   }
 
-  const rawMode = typeof rawEvent.mode === 'string' ? rawEvent.mode : 'learn';
-  if (!['learn', 'hangout', 'review', 'mission'].includes(rawMode)) {
+  const rawMode = typeof rawEvent.mode === 'string' ? rawEvent.mode.trim().toLowerCase() : 'learn';
+  const mode = rawMode === 'exercise' ? 'learn' : rawMode;
+  if (!['learn', 'hangout', 'review', 'mission'].includes(mode)) {
     throw createGraphError(
       'invalid_evidence_mode',
       `Unsupported evidence mode "${rawMode}".`,
@@ -2147,7 +2176,7 @@ function normalizeRuntimeEvent(rawEvent, learnerId, eventIndex) {
   }
 
   const qualityScore = normalizeQualityScore(rawEvent);
-  const source = normalizeEvidenceSource(rawEvent.source, rawMode);
+  const source = normalizeEvidenceSource(rawEvent.source, mode);
   const targetResults = normalizeTargetResults({
     ...rawEvent,
     correct: typeof rawEvent.correct === 'boolean' ? rawEvent.correct : qualityScore >= 3,
@@ -2167,8 +2196,15 @@ function normalizeRuntimeEvent(rawEvent, learnerId, eventIndex) {
         : `evt_graph_${String(eventIndex + 1).padStart(3, '0')}`,
     learnerId,
     nodeId,
+    legacyNodeId: rawNodeId || rawObjectiveId || nodeId,
+    legacyObjectiveId: rawObjectiveId || rawNodeId || nodeId,
+    legacyMode: rawMode === 'exercise' ? 'exercise' : mode,
+    legacyQuality:
+      rawEvent.quality !== undefined && Number.isFinite(Number(rawEvent.quality))
+        ? Number(Number(rawEvent.quality).toFixed(2))
+        : qualityScore / 5,
     source,
-    mode: rawMode,
+    mode,
     correct: typeof rawEvent.correct === 'boolean' ? rawEvent.correct : qualityScore >= 3,
     qualityScore,
     createdAt,
@@ -2541,10 +2577,10 @@ export function recordGraphEvidence(args = {}) {
     eventId: normalizedEvent.eventId,
     personaId: persona.aliases?.[0] || persona.learnerId,
     userId: persona.userId,
-    nodeId: normalizedEvent.nodeId,
-    objectiveId: normalizedEvent.nodeId,
-    mode: normalizedEvent.mode,
-    quality: normalizedEvent.qualityScore / 5,
+    nodeId: normalizedEvent.legacyNodeId || normalizedEvent.nodeId,
+    objectiveId: normalizedEvent.legacyObjectiveId || normalizedEvent.nodeId,
+    mode: normalizedEvent.legacyMode || normalizedEvent.mode,
+    quality: normalizedEvent.legacyQuality ?? normalizedEvent.qualityScore / 5,
     occurredAtIso: normalizedEvent.createdAt,
     source: normalizedEvent.source,
   };
