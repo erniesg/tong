@@ -81,6 +81,13 @@ Template:
   - Legacy preview HTML and non-runtime scripts still use literal `/assets/...` references and remain outside the runtime smoke gate.
 - Next owner: `codex/runtime-assets`
 
+## 2026-03-19 (Issue 49 checkpoint resume client-runtime intent)
+- Date: 2026-03-19
+- Branch/worktree: `codex/issue-49-checkpoint-resume` (shared root workspace)
+- Intent:
+  - Crossing into `apps/client/app/game/page.tsx` from the `client-runtime` lane because the active `/game` runtime still needs to consume the existing checkpoint resume substrate from `POST /api/v1/game/start-or-resume`.
+  - Keep scope limited to bootstrap/runtime hydration for persisted checkpoint resume data; do not absorb world-map resume UX or scenario-seed mounts.
+
 ## 2026-03-15 (Issue 48 session/checkpoint contracts)
 - Date: 2026-03-15
 - Branch/worktree: `codex/issue-48-session-contracts` (shared root workspace)
