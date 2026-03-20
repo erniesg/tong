@@ -1683,6 +1683,37 @@ button.nav-link:hover {
   z-index: 2;
 }
 
+.tg-resume-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 164, 94, 0.38);
+  background: linear-gradient(180deg, rgba(255, 153, 79, 0.18), rgba(255, 255, 255, 0.06));
+  color: #f5f8ff;
+}
+
+.tg-resume-card strong {
+  display: block;
+  font-size: 15px;
+}
+
+.tg-resume-card p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: rgba(235, 241, 252, 0.82);
+}
+
+.tg-resume-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ffd3b3;
+}
+
 .tg-world-row {
   display: flex;
   gap: 8px;
