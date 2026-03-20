@@ -49,6 +49,14 @@ If the invocation includes `--verify-fix`, replay the most recent matching valid
 
    If the run contains `browser-playbook.md`, use that file as the concrete browser capture plan. For `/game` issues it will also include the QA-mode route and browser helper scripts.
 
+   For GitHub-backed issues or PR-driven fixes, get an initial evidence-path hint before choosing or extending CI recipes:
+
+   ```bash
+   npm run qa:suggest-recipe -- --issue-ref "$ARGUMENTS"
+   ```
+
+   Treat this as a heuristic input to planning, not as a replacement for actual validation. If the live repro disagrees, follow the repro.
+
 3. Read the issue, issue notes, and classification.
 
    Before claiming the issue is runnable unattended, check whether the issue body is portable:

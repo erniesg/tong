@@ -24,6 +24,8 @@ const DEFAULT_GIF_FPS = 6;
 const DEFAULT_GIF_WIDTH = 360;
 const DEFAULT_PREVIEW_TRAILING_PADDING = 0.5;
 const DEFAULT_CACHE_CONTROL = "public, max-age=31536000, immutable";
+const DEFAULT_UPLOAD_ATTEMPTS = 3;
+const DEFAULT_UPLOAD_RETRY_DELAY_MS = 1500;
 const DEFAULT_PUBLIC_VERIFY_ATTEMPTS = 4;
 const DEFAULT_PUBLIC_VERIFY_DELAY_MS = 1500;
 const DEFAULT_PUBLIC_VERIFY_TIMEOUT_MS = 15000;
@@ -69,6 +71,8 @@ function parseArgs(argv) {
     previewStartSeconds: null,
     previewTrailingPaddingSeconds: DEFAULT_PREVIEW_TRAILING_PADDING,
     skipPublicVerification: false,
+    uploadAttempts: DEFAULT_UPLOAD_ATTEMPTS,
+    uploadRetryDelayMs: DEFAULT_UPLOAD_RETRY_DELAY_MS,
     wranglerConfig: "apps/client/wrangler.toml",
   };
 
@@ -102,6 +106,10 @@ function parseArgs(argv) {
       args.publicVerifyTimeoutMs = Number(argv[++i]);
     } else if (arg === "--preview-trailing-padding-seconds") {
       args.previewTrailingPaddingSeconds = Number(argv[++i]);
+    } else if (arg === "--upload-attempts") {
+      args.uploadAttempts = Number(argv[++i]);
+    } else if (arg === "--upload-retry-delay-ms") {
+      args.uploadRetryDelayMs = Number(argv[++i]);
     } else if (arg === "--dry-run") {
       args.dryRun = true;
     } else if (arg === "--include-supporting") {
@@ -140,6 +148,12 @@ function parseArgs(argv) {
   if (!Number.isFinite(args.publicVerifyTimeoutMs) || args.publicVerifyTimeoutMs < 1) {
     throw new Error("`--public-verify-timeout-ms` must be a positive number.");
   }
+  if (!Number.isFinite(args.uploadAttempts) || args.uploadAttempts < 1) {
+    throw new Error("`--upload-attempts` must be a positive number.");
+  }
+  if (!Number.isFinite(args.uploadRetryDelayMs) || args.uploadRetryDelayMs < 0) {
+    throw new Error("`--upload-retry-delay-ms` must be zero or greater.");
+  }
 
   return args;
 }
@@ -165,6 +179,8 @@ Options:
                                 Timeout per reviewer-visible URL check (default: ${DEFAULT_PUBLIC_VERIFY_TIMEOUT_MS})
   --preview-trailing-padding-seconds <n>
                                 Leave this much time at clip end when auto-picking preview start
+  --upload-attempts <n>         Retry count for each Wrangler upload (default: ${DEFAULT_UPLOAD_ATTEMPTS})
+  --upload-retry-delay-ms <n>   Delay between Wrangler upload retries (default: ${DEFAULT_UPLOAD_RETRY_DELAY_MS})
   --manifest-name <name>        Local manifest filename (default: ${DEFAULT_MANIFEST_NAME})
   --wrangler-config <path>      Wrangler config path (default: apps/client/wrangler.toml)
   --skip-public-verification    Skip GET-based checks for reviewer-facing URLs after upload
@@ -952,10 +968,39 @@ function buildManifest(bundle, artifacts, options, comparisonReport) {
   };
 }
 
-function uploadArtifacts(configPath, bucket, artifacts, dryRun, repoRoot) {
+async function runWithRetries({ label, attempts, delayMs }, fn) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fn(attempt);
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts) {
+        break;
+      }
+
+      const detail = error instanceof Error ? error.message : String(error);
+      console.warn(`${label} failed on attempt ${attempt}/${attempts}: ${detail}`);
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError || `${label} failed`));
+}
+
+async function uploadArtifacts(configPath, bucket, artifacts, dryRun, repoRoot, options) {
   for (const artifact of artifacts) {
     const absolutePath = path.resolve(repoRoot, artifact.local_path);
-    uploadWithWrangler(configPath, bucket, artifact.bucket_key, absolutePath, artifact.content_type, dryRun);
+    await runWithRetries(
+      {
+        label: `Upload ${artifact.relative_run_path}`,
+        attempts: options.uploadAttempts,
+        delayMs: options.uploadRetryDelayMs,
+      },
+      async () =>
+        uploadWithWrangler(configPath, bucket, artifact.bucket_key, absolutePath, artifact.content_type, dryRun),
+    );
   }
 }
 
@@ -973,6 +1018,7 @@ function buildPublicVerificationTargets(manifest) {
     { label: "focused comparison crop", url: manifest.primary?.comparison_focus_crop?.url },
     { label: "dialogue screenshot", url: manifest.primary?.dialogue_screenshot?.url },
     { label: "tooltip screenshot", url: manifest.primary?.tooltip_screenshot?.url },
+    { label: "romanization trace", url: manifest.primary?.romanization_trace?.url },
   ];
 
   const seen = new Set();
@@ -1070,14 +1116,22 @@ async function main() {
   const manifestPath = path.join(bundle.runDir, options.manifestName);
   writeJson(manifestPath, manifest);
 
-  uploadArtifacts(wranglerConfigPath, options.bucket, allArtifacts, options.dryRun, repoRoot);
-  uploadWithWrangler(
-    wranglerConfigPath,
-    options.bucket,
-    `${runPrefix}/manifest.json`,
-    manifestPath,
-    "application/json; charset=utf-8",
-    options.dryRun,
+  await uploadArtifacts(wranglerConfigPath, options.bucket, allArtifacts, options.dryRun, repoRoot, options);
+  await runWithRetries(
+    {
+      label: "Upload manifest",
+      attempts: options.uploadAttempts,
+      delayMs: options.uploadRetryDelayMs,
+    },
+    async () =>
+      uploadWithWrangler(
+        wranglerConfigPath,
+        options.bucket,
+        `${runPrefix}/manifest.json`,
+        manifestPath,
+        "application/json; charset=utf-8",
+        options.dryRun,
+      ),
   );
   await verifyPublicArtifacts(manifest, options);
 
