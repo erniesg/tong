@@ -86,6 +86,58 @@ const TOPIC_DEFINITIONS = [
   },
 ];
 
+const PLACEMENT_BY_CLUSTER = {
+  'food-ordering': [
+    {
+      city: 'seoul',
+      location: 'food_street',
+      mode: 'hangout',
+      placementType: 'hangout',
+      reason: 'Food-ordering terms reinforce the Seoul food street hangout.',
+    },
+    {
+      city: 'seoul',
+      location: 'food_street',
+      mode: 'learn',
+      placementType: 'learn',
+      reason: 'Food-ordering terms fit the Seoul food lesson.',
+    },
+  ],
+  'performance-energy': [
+    {
+      city: 'shanghai',
+      location: 'practice_studio',
+      mode: 'hangout',
+      placementType: 'mission',
+      reason: 'Performance language supports the Shanghai texting mission.',
+    },
+    {
+      city: 'shanghai',
+      location: 'practice_studio',
+      mode: 'learn',
+      placementType: 'learn',
+      reason: 'Performance language can be introduced in the Shanghai practice lesson.',
+    },
+  ],
+  'city-social': [
+    {
+      city: 'tokyo',
+      location: 'subway_hub',
+      mode: 'hangout',
+      placementType: 'hangout',
+      reason: 'Navigation language is best validated in the Tokyo subway hub.',
+    },
+    {
+      city: 'tokyo',
+      location: 'subway_hub',
+      mode: 'learn',
+      placementType: 'learn',
+      reason: 'Navigation language fits the Tokyo subway lesson.',
+    },
+  ],
+  general: [],
+};
+
 const TOKEN_REGEX = /[\p{Script=Hangul}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}A-Za-z]{2,}/gu;
 const KANA_REGEX = /[\u3040-\u30ff]/u;
 const HANGUL_REGEX = /[\uac00-\ud7af]/u;
@@ -291,6 +343,37 @@ function objectiveLinkForEntry(entry) {
   }, topic.objectiveId || langFallback.objectiveId);
 }
 
+function placementHintsForCluster(clusterId, objectiveId) {
+  const resolvedClusterId =
+    clusterId && PLACEMENT_BY_CLUSTER[clusterId]
+      ? clusterId
+      : objectiveId === 'ko-vocab-food-items'
+        ? 'food-ordering'
+        : objectiveId === 'zh-mission-stage-texting'
+          ? 'performance-energy'
+          : 'city-social';
+  return (PLACEMENT_BY_CLUSTER[resolvedClusterId] || []).map((placement) =>
+    withObjectiveIdentity(
+      {
+        ...placement,
+        clusterId: resolvedClusterId,
+      },
+      objectiveId,
+    ),
+  );
+}
+
+function summarizeProvenance(entry) {
+  const samples = [...(entry.provenance || [])]
+    .sort((a, b) => parseIso(b.consumedAtIso) - parseIso(a.consumedAtIso))
+    .slice(0, 3);
+  return {
+    sources: [...(entry.sourceSet || [])],
+    mediaIds: [...(entry.mediaIds || [])],
+    samples,
+  };
+}
+
 function aggregateTopMedia(sourceItems, source) {
   const grouped = new Map();
   for (const item of sourceItems) {
@@ -389,6 +472,8 @@ export function runMockIngestion(snapshot, options = {}) {
         weighted: 0,
         recencyWeighted: 0,
         sourceSet: new Set(),
+        mediaIds: new Set(),
+        provenance: [],
         sourceBreakdown: { youtube: 0, spotify: 0 },
         baselineCount: 0,
         recentCount: 0,
@@ -399,7 +484,16 @@ export function runMockIngestion(snapshot, options = {}) {
       existing.weighted += SOURCE_WEIGHT[source] || 1;
       existing.recencyWeighted += (SOURCE_WEIGHT[source] || 1) * recencyWeight;
       existing.sourceSet.add(source);
+      existing.mediaIds.add(event.mediaId);
       existing.sourceBreakdown[source] += 1;
+      if (existing.provenance.length < 4) {
+        existing.provenance.push({
+          source,
+          mediaId: event.mediaId,
+          title: event.title,
+          consumedAtIso: event.consumedAtIso,
+        });
+      }
       if (consumedAt < midpoint) existing.baselineCount += 1;
       else existing.recentCount += 1;
 
@@ -430,8 +524,10 @@ export function runMockIngestion(snapshot, options = {}) {
     lemma: entry.lemma,
     lang: entry.lang,
     count: entry.count,
+    clusterId: entry.clusterId,
     sourceCount: entry.sourceSet.size,
     sourceBreakdown: entry.sourceBreakdown,
+    provenance: summarizeProvenance(entry),
   }));
 
   const maxCount = termEntries.reduce((best, entry) => Math.max(best, entry.count), 0) || 1;
@@ -473,6 +569,8 @@ export function runMockIngestion(snapshot, options = {}) {
       burst: row.burst,
       clusterId: row.entry.clusterId,
       orthographyFeatures: orthographyFeaturesForLemma(row.entry.lemma),
+      provenance: summarizeProvenance(row.entry),
+      placementHints: placementHintsForCluster(row.entry.clusterId, row.objective.objectiveId),
       objectiveLinks: [
         withObjectiveIdentity({
           reason: row.objective.reason,
@@ -490,6 +588,7 @@ export function runMockIngestion(snapshot, options = {}) {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 4)
         .map(([term]) => term),
+      placementHints: placementHintsForCluster(cluster.clusterId, cluster.objectiveId),
     }));
 
   const topTerms = frequencyItems.slice(0, 8);
@@ -520,8 +619,19 @@ export function runMockIngestion(snapshot, options = {}) {
         Number(item.sourceBreakdown?.youtube || 0) >= Number(item.sourceBreakdown?.spotify || 0)
           ? 'youtube'
           : 'spotify',
+      provenance: item.provenance,
+      placementHints: placementHintsForCluster(
+        item.clusterId,
+        objectiveLinkForEntry(item).objectiveId,
+      ),
     })),
     clusterAffinities: topTopics,
+    placementCandidates: topTopics.flatMap((topic) =>
+      placementHintsForCluster(topic.clusterId, topicFromId(topic.clusterId).objectiveId).map((placement) => ({
+        ...placement,
+        confidence: topic.score,
+      })),
+    ),
   };
 
   const result = {

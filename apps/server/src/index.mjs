@@ -754,6 +754,24 @@ function buildPersonalizedObjective({
   const dominantCluster =
     ingestion?.insights?.clusters?.find((cluster) => cluster.clusterId === dominantClusterId) ||
     ingestion?.insights?.clusters?.[0];
+  const placementCandidates = Array.isArray(ingestion?.mediaProfile?.learningSignals?.placementCandidates)
+    ? ingestion.mediaProfile.learningSignals.placementCandidates
+    : [];
+  const selectedPlacement =
+    placementCandidates.find(
+      (candidate) =>
+        candidate.city === city &&
+        candidate.location === location &&
+        candidate.mode === mode &&
+        (candidate.objectiveId?.startsWith(`${lang}-`) || candidate.objectiveId === DEFAULT_OBJECTIVE_BY_LANG[lang]),
+    ) ||
+    placementCandidates.find(
+      (candidate) =>
+        candidate.city === city &&
+        candidate.location === location &&
+        candidate.mode === mode,
+    ) ||
+    null;
 
   const insightItems = Array.isArray(ingestion?.insights?.items) ? ingestion.insights.items : [];
   const langItems = insightItems.filter((item) => item.lang === lang);
@@ -763,6 +781,7 @@ function buildPersonalizedObjective({
     : scopedItems;
 
   let objectiveId =
+    selectedPlacement?.objectiveId ||
     scopedClusterItems[0]?.objectiveLinks?.[0]?.objectiveId ||
     scopedItems[0]?.objectiveLinks?.[0]?.objectiveId ||
     baseObjective.objectiveId ||

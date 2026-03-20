@@ -43,10 +43,12 @@ export interface VocabFrequencyItem {
   lang: TargetLanguage;
   count: number;
   sourceCount: number;
+  clusterId?: string;
   sourceBreakdown?: {
     youtube: number;
     spotify: number;
   };
+  provenance?: IngestionProvenance;
 }
 
 export interface VocabFrequencyResponse {
@@ -60,6 +62,34 @@ export interface VocabInsightCluster {
   label: string;
   keywords: string[];
   topTerms: string[];
+  placementHints?: PlacementHint[];
+}
+
+export interface IngestionProvenanceSample {
+  source: 'youtube' | 'spotify';
+  mediaId: string;
+  title?: string;
+  consumedAtIso: string;
+}
+
+export interface IngestionProvenance {
+  sources: Array<'youtube' | 'spotify'>;
+  mediaIds: string[];
+  samples: IngestionProvenanceSample[];
+}
+
+export interface PlacementHint {
+  city: string;
+  location: string;
+  mode: 'hangout' | 'learn';
+  placementType: string;
+  reason: string;
+  clusterId: string;
+  objectiveId: string;
+  canonicalObjectiveId?: string;
+  legacyObjectiveId?: string;
+  objectiveAliasIds?: string[];
+  confidence?: number;
 }
 
 export interface VocabInsightItem {
@@ -70,6 +100,8 @@ export interface VocabInsightItem {
   burst: number;
   clusterId: string;
   orthographyFeatures: Record<string, unknown>;
+  provenance?: IngestionProvenance;
+  placementHints?: PlacementHint[];
   objectiveLinks: Array<{
     objectiveId: string;
     canonicalObjectiveId?: string;
@@ -113,12 +145,15 @@ export interface PlayerMediaProfileResponse {
       lang: TargetLanguage;
       weightedScore: number;
       dominantSource: 'youtube' | 'spotify';
+      provenance?: IngestionProvenance;
+      placementHints?: PlacementHint[];
     }>;
     clusterAffinities: Array<{
       clusterId: string;
       label: string;
       score: number;
     }>;
+    placementCandidates?: PlacementHint[];
   };
 }
 

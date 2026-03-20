@@ -151,6 +151,8 @@ async function run() {
   }
   assertArray(mediaProfile.data?.learningSignals?.topTerms, 'learningSignals.topTerms');
   assertArray(mediaProfile.data?.learningSignals?.clusterAffinities, 'learningSignals.clusterAffinities');
+  assertArray(mediaProfile.data?.learningSignals?.placementCandidates, 'learningSignals.placementCandidates');
+  assertArray(mediaProfile.data?.learningSignals?.topTerms[0]?.provenance?.samples, 'learningSignals.topTerms[0].provenance.samples');
   logPass('/api/v1/player/media-profile');
 
   const frequency = await requestJson(`/api/v1/vocab/frequency?windowDays=3&userId=${encodeURIComponent(userId)}`);
@@ -163,6 +165,8 @@ async function run() {
   assertArray(insights.data?.clusters, 'insights.clusters');
   assertArray(insights.data?.items, 'insights.items');
   assertArray(insights.data.items[0]?.objectiveLinks, 'insights.items[0].objectiveLinks');
+  assertArray(insights.data.items[0]?.placementHints, 'insights.items[0].placementHints');
+  assertArray(insights.data.items[0]?.provenance?.samples, 'insights.items[0].provenance.samples');
   logPass('/api/v1/vocab/insights');
 
   const objectiveKo = await requestJson(
