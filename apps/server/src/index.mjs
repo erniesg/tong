@@ -1026,7 +1026,25 @@ function persistCheckpoint(gameSession, sceneSession, boundary, nowIso = new Dat
   return checkpoint;
 }
 
+function restoreGameSessionFromCheckpoint(gameSession, checkpoint) {
+  if (!gameSession || !checkpoint) {
+    return gameSession;
+  }
+
+  gameSession.activeCheckpointId = checkpoint.checkpointId;
+  gameSession.activeSceneSessionId = checkpoint.sceneSessionId;
+  gameSession.currentMode = checkpoint.mode;
+  gameSession.activeObjective = cloneJson(checkpoint.objective);
+  gameSession.missionGate = cloneJson(checkpoint.missionGate);
+  gameSession.unlocks = cloneJson(checkpoint.unlocks);
+  gameSession.rewards = cloneJson(checkpoint.rewards || []);
+  gameSession.updatedAtIso = checkpoint.createdAtIso || gameSession.updatedAtIso;
+  state.sessions.set(gameSession.sessionId, gameSession);
+  return gameSession;
+}
+
 function hydrateSceneSessionFromCheckpoint(gameSession, checkpoint) {
+  restoreGameSessionFromCheckpoint(gameSession, checkpoint);
   const existing = state.sceneSessions.get(gameSession.activeSceneSessionId);
   const sceneSession = existing || {
     sceneSessionId: checkpoint.sceneSessionId,
@@ -2400,6 +2418,28 @@ const server = http.createServer(async (req, res) => {
 
 ensureIngestionForUser(DEFAULT_USER_ID);
 
-server.listen(PORT, () => {
-  console.log(`Tong mock server listening on http://localhost:${PORT}`);
-});
+export const __testing = {
+  CHECKPOINT_BOUNDARIES,
+  state,
+  createNewGameSession,
+  createCheckpointRecord,
+  persistCheckpoint,
+  resumeGameSession,
+  restoreGameSessionFromCheckpoint,
+  resetState() {
+    state.profiles.clear();
+    state.sessions.clear();
+    state.sceneSessions.clear();
+    state.checkpoints.clear();
+    state.activeSessionByUser.clear();
+    state.learnSessions = [...(FIXTURES.learnSessions.items || [])];
+    state.ingestionByUser.clear();
+    ensureIngestionForUser(DEFAULT_USER_ID);
+  },
+};
+
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  server.listen(PORT, () => {
+    console.log(`Tong mock server listening on http://localhost:${PORT}`);
+  });
+}
