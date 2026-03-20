@@ -1,3 +1,10 @@
+## 2026-03-20 (issue #58 KO bootstrap pilot routing intent)
+- Date: 2026-03-20
+- Branch/worktree: `work` (server-ingestion lane crossing into `apps/server/src/index.mjs` in server-api)
+- Intent:
+  - Validate and fix the KO pilot bootstrap selection so KG-backed `/api/v1/game/start-or-resume` prefers the Seoul/KO objective path instead of falling through to the globally weakest profile target.
+  - Keep the change additive and scoped to issue `#58`, then revalidate the end-to-end mock ingestion/objective/hangout flow with contract assertions and a network trace.
+
 # Handoff Notes
 
 Use this file to record cross-stream integration details.

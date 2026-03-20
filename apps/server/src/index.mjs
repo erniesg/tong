@@ -598,6 +598,26 @@ function getWeakestTargetLanguage(profile) {
     })[0] || 'ko';
 }
 
+const CITY_PILOT_LANGUAGE = {
+  seoul: 'ko',
+  tokyo: 'ja',
+  shanghai: 'zh',
+};
+
+function getBootstrapPilotLanguage(profile, city) {
+  const weakestTargetLanguage = getWeakestTargetLanguage(profile);
+  const targetLanguages = Array.isArray(profile?.targetLanguages)
+    ? profile.targetLanguages.filter((lang) => lang === 'ko' || lang === 'ja' || lang === 'zh')
+    : [];
+  const cityPilotLanguage = CITY_PILOT_LANGUAGE[city] || null;
+
+  if (cityPilotLanguage && targetLanguages.includes(cityPilotLanguage)) {
+    return cityPilotLanguage;
+  }
+
+  return weakestTargetLanguage;
+}
+
 function getCaptionsForVideo(videoId = 'karina-variety-demo') {
   const baseSegments = [
     {
@@ -1524,11 +1544,11 @@ function createNewGameSession(userId, incomingProfile, requestedCity) {
       ? requestedCity
       : CLUSTER_CITY_MAP[dominantClusterId] || FIXTURES.gameStart.city || 'seoul';
   const location = CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
-  const weakestLang = getWeakestTargetLanguage(profile);
+  const bootstrapLang = getBootstrapPilotLanguage(profile, city);
   const objective = buildPersonalizedObjective({
     userId,
     mode: 'hangout',
-    lang: weakestLang,
+    lang: bootstrapLang,
     city,
     location,
   });
@@ -1541,7 +1561,7 @@ function createNewGameSession(userId, incomingProfile, requestedCity) {
   const unlocks = buildInitialUnlocks(location);
   const activeObjective = buildActiveObjectiveDescriptor({
     objective,
-    lang: weakestLang,
+    lang: bootstrapLang,
     city,
     location,
   });
@@ -1560,7 +1580,7 @@ function createNewGameSession(userId, incomingProfile, requestedCity) {
     missionGate: cloneJson(missionGate),
     unlocks: cloneJson(unlocks),
     rewards: [],
-    availableActions: buildGameActions(weakestLang, objective.objectiveId),
+    availableActions: buildGameActions(bootstrapLang, objective.objectiveId),
     resumeSource: 'new_session',
     startedAtIso: nowIso,
     updatedAtIso: nowIso,
