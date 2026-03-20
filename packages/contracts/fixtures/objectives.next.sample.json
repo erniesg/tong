@@ -51,6 +51,97 @@
       ]
     }
   ],
+  "recentMediaRationale": {
+    "generatedAtIso": "2026-02-28T02:40:00.000Z",
+    "sourceSummary": [
+      {
+        "source": "youtube",
+        "itemsConsumed": 3,
+        "minutes": 64,
+        "topMedia": [
+          {
+            "mediaId": "yt_a12",
+            "title": "K-variety snack challenge",
+            "lang": "ko",
+            "minutes": 38
+          }
+        ]
+      },
+      {
+        "source": "spotify",
+        "itemsConsumed": 3,
+        "minutes": 47,
+        "topMedia": [
+          {
+            "mediaId": "sp_track_001",
+            "title": "밤 산책",
+            "lang": "ko",
+            "minutes": 19
+          }
+        ]
+      }
+    ],
+    "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+    "rankedTerms": [
+      {
+        "lemma": "주문",
+        "lang": "ko",
+        "source": "youtube",
+        "weightedScore": 0.95
+      },
+      {
+        "lemma": "연습",
+        "lang": "ko",
+        "source": "spotify",
+        "weightedScore": 0.65
+      }
+    ],
+    "topicSummary": {
+      "clusterId": "food-ordering",
+      "label": "Food Ordering",
+      "keywords": [
+        "주문",
+        "메뉴",
+        "포장"
+      ],
+      "topTerms": [
+        "주문",
+        "메뉴"
+      ]
+    },
+    "placementHints": [
+      {
+        "city": "seoul",
+        "location": "food_street",
+        "mode": "hangout",
+        "placementType": "hangout",
+        "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+        "clusterId": "food-ordering",
+        "objectiveId": "ko-vocab-food-items",
+        "canonicalObjectiveId": "ko-vocab-food-items",
+        "legacyObjectiveId": "ko_food_l2_001",
+        "objectiveAliasIds": [
+          "ko_food_l2_001"
+        ]
+      }
+    ]
+  },
+  "placementHints": [
+    {
+      "city": "seoul",
+      "location": "food_street",
+      "mode": "hangout",
+      "placementType": "hangout",
+      "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+      "clusterId": "food-ordering",
+      "objectiveId": "ko-vocab-food-items",
+      "canonicalObjectiveId": "ko-vocab-food-items",
+      "legacyObjectiveId": "ko_food_l2_001",
+      "objectiveAliasIds": [
+        "ko_food_l2_001"
+      ]
+    }
+  ],
   "completionCriteria": {
     "requiredTurns": 4,
     "requiredAccuracy": 0.75,

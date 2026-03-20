@@ -1,0 +1,10 @@
+{
+  "userId": "demo-user-1",
+  "youtubeConfigured": true,
+  "connected": true,
+  "tokenExpiresAtIso": "2026-02-28T17:00:00.000Z",
+  "tokenScope": "https://www.googleapis.com/auth/youtube.readonly",
+  "lastSyncAtIso": "2026-02-28T16:05:00.000Z",
+  "lastSyncItemCount": 3,
+  "syncWindowHours": 72
+}

@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "userId": "demo-user-1",
+  "syncedAtIso": "2026-02-28T16:05:00.000Z",
+  "windowHours": 72,
+  "youtubeItemCount": 3,
+  "youtubeRawItemCount": 3,
+  "sourceCount": {
+    "youtube": 3,
+    "spotify": 84
+  },
+  "topTerms": [
+    {
+      "lemma": "주문",
+      "lang": "ko",
+      "count": 12,
+      "sourceCount": 1
+    }
+  ]
+}

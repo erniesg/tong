@@ -1,0 +1,8 @@
+{
+  "userId": "demo-user-1",
+  "connected": false,
+  "state": "yt_demo_123",
+  "scope": "https://www.googleapis.com/auth/youtube.readonly",
+  "redirectUri": "http://127.0.0.1:8787/api/v1/integrations/youtube/callback",
+  "authUrl": "https://accounts.google.com/o/oauth2/v2/auth?..."
+}
