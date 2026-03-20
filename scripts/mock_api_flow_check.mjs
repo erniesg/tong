@@ -155,8 +155,16 @@ async function run() {
   assertArray(mediaProfile.data?.learningSignals?.topTerms[0]?.provenance?.samples, 'learningSignals.topTerms[0].provenance.samples');
   logPass('/api/v1/player/media-profile');
 
+  const spotifyStatusBeforeSync = await requestJson(`/api/v1/integrations/spotify/status?userId=${encodeURIComponent(userId)}`);
+  assert(spotifyStatusBeforeSync.ok, `/integrations/spotify/status pre-sync failed (${spotifyStatusBeforeSync.status})`);
+  assert(spotifyStatusBeforeSync.data?.connected === false, 'spotify status should start disconnected');
+  assert((spotifyStatusBeforeSync.data?.lastSyncItemCount || 0) === 0, 'spotify status should not report sync items before sync');
+  assert(spotifyStatusBeforeSync.data?.lastSyncAtIso == null, 'spotify status should not report lastSyncAtIso before sync');
+  logPass('/api/v1/integrations/spotify/status pre-sync');
+
   const spotifyConnect = await requestJson(`/api/v1/integrations/spotify/connect?userId=${encodeURIComponent(userId)}`);
   assert(spotifyConnect.ok, `/integrations/spotify/connect failed (${spotifyConnect.status})`);
+  assert(spotifyConnect.data?.connected === false, 'spotify connect should start disconnected');
   assert(typeof spotifyConnect.data?.authUrl === 'string', 'spotify connect authUrl missing');
   logPass('/api/v1/integrations/spotify/connect');
 
@@ -175,8 +183,16 @@ async function run() {
   assert(spotifyStatus.data?.connected === true, 'spotify status should report connected after sync');
   logPass('/api/v1/integrations/spotify/status');
 
+  const youtubeStatusBeforeSync = await requestJson(`/api/v1/integrations/youtube/status?userId=${encodeURIComponent(userId)}`);
+  assert(youtubeStatusBeforeSync.ok, `/integrations/youtube/status pre-sync failed (${youtubeStatusBeforeSync.status})`);
+  assert(youtubeStatusBeforeSync.data?.connected === false, 'youtube status should start disconnected');
+  assert((youtubeStatusBeforeSync.data?.lastSyncItemCount || 0) === 0, 'youtube status should not report sync items before sync');
+  assert(youtubeStatusBeforeSync.data?.lastSyncAtIso == null, 'youtube status should not report lastSyncAtIso before sync');
+  logPass('/api/v1/integrations/youtube/status pre-sync');
+
   const youtubeConnect = await requestJson(`/api/v1/integrations/youtube/connect?userId=${encodeURIComponent(userId)}`);
   assert(youtubeConnect.ok, `/integrations/youtube/connect failed (${youtubeConnect.status})`);
+  assert(youtubeConnect.data?.connected === false, 'youtube connect should start disconnected');
   assert(typeof youtubeConnect.data?.authUrl === 'string', 'youtube connect authUrl missing');
   logPass('/api/v1/integrations/youtube/connect');
 
@@ -291,6 +307,11 @@ async function run() {
   assertArray(gameStart.data?.actions, 'gameStart.actions');
   assertArray(gameStart.data?.recentMediaRationale?.rankedTerms, 'gameStart.recentMediaRationale.rankedTerms');
   assertArray(gameStart.data?.gameSession?.personalization?.rankedTerms, 'gameStart.gameSession.personalization.rankedTerms');
+  const recentMediaSources = Object.fromEntries(
+    (gameStart.data?.recentMediaRationale?.sourceSummary || []).map((entry) => [entry.source, entry.itemsConsumed || 0]),
+  );
+  assert((recentMediaSources.spotify || 0) > 0, 'gameStart recentMediaRationale should preserve spotify counts after youtube sync');
+  assert((recentMediaSources.youtube || 0) > 0, 'gameStart recentMediaRationale should include youtube counts after youtube sync');
   assert(gameStart.data?.gameSession?.sessionId === gameStart.data.sessionId, 'gameStart.gameSession.sessionId mismatch');
   assert(gameStart.data?.sceneSession?.gameSessionId === gameStart.data.sessionId, 'gameStart.sceneSession.gameSessionId mismatch');
   assert(gameStart.data?.activeCheckpoint?.gameSessionId === gameStart.data.sessionId, 'gameStart.activeCheckpoint.gameSessionId mismatch');

@@ -845,28 +845,38 @@ function buildRecentMediaRationale({ ingestion, city, location, mode, lang, obje
 
 function getIntegrationState(userId = DEFAULT_USER_ID, provider) {
   const userState = state.integrationsByUser.get(userId) || {};
-  const fixtureStatus = provider === 'spotify' ? FIXTURES.spotifyStatus : FIXTURES.youtubeStatus;
   const fixtureConnect = provider === 'spotify' ? FIXTURES.spotifyConnect : FIXTURES.youtubeConnect;
   const fixtureSync = provider === 'spotify' ? FIXTURES.spotifySync : FIXTURES.youtubeSync;
   const providerState = userState[provider] || {};
   return {
     provider,
     userId,
-    connected: providerState.connected ?? fixtureStatus.connected ?? fixtureConnect.connected ?? false,
-    lastSyncAtIso: providerState.lastSyncAtIso ?? fixtureStatus.lastSyncAtIso ?? fixtureSync.syncedAtIso ?? null,
+    connected: providerState.connected === true,
+    lastSyncAtIso: providerState.lastSyncAtIso ?? null,
     lastSyncItemCount:
       providerState.lastSyncItemCount ??
-      fixtureStatus.lastSyncItemCount ??
-      fixtureSync[`${provider}ItemCount`] ??
       0,
-    syncWindowHours: providerState.syncWindowHours ?? fixtureStatus.syncWindowHours ?? fixtureSync.windowHours ?? 72,
-    tokenExpiresAtIso: providerState.tokenExpiresAtIso ?? fixtureStatus.tokenExpiresAtIso ?? null,
-    tokenScope: providerState.tokenScope ?? fixtureStatus.tokenScope ?? fixtureConnect.scope ?? '',
+    syncWindowHours: providerState.syncWindowHours ?? fixtureSync.windowHours ?? 72,
+    tokenExpiresAtIso: providerState.tokenExpiresAtIso ?? null,
+    tokenScope: providerState.tokenScope ?? fixtureConnect.scope ?? '',
     demoMode: true,
     configured: provider === 'spotify'
       ? getSecretStatus().spotifyClientIdConfigured
       : getSecretStatus().youtubeApiKeyConfigured,
   };
+}
+
+function getConnectedIntegrationSources(userId = DEFAULT_USER_ID, nextProvider = null) {
+  const userState = state.integrationsByUser.get(userId) || {};
+  const connectedSources = Object.entries(userState)
+    .filter(([, providerState]) => providerState?.connected === true)
+    .map(([provider]) => provider);
+
+  if (nextProvider) {
+    connectedSources.push(nextProvider);
+  }
+
+  return normalizeIngestionSources(connectedSources);
 }
 
 function setIntegrationState(userId = DEFAULT_USER_ID, provider, patch = {}) {
@@ -912,8 +922,15 @@ function buildIntegrationStatusPayload(userId = DEFAULT_USER_ID, provider) {
 }
 
 function buildIntegrationSyncPayload(userId = DEFAULT_USER_ID, provider, includeSources = []) {
-  const normalizedSources = includeSources.length > 0 ? includeSources : [provider];
-  const result = runIngestionForUser(userId, { includeSources: normalizedSources });
+  const normalizedSources = normalizeIngestionSources(includeSources);
+  const connectedSources = getConnectedIntegrationSources(userId, provider);
+  const effectiveSources =
+    connectedSources.length > 0
+      ? connectedSources
+      : normalizedSources.length > 0
+        ? normalizedSources
+        : [provider];
+  const result = runIngestionForUser(userId, { includeSources: effectiveSources });
   const mediaProfile = result.mediaProfile || FIXTURES.mediaProfile;
   const fixture = cloneJson(provider === 'spotify' ? FIXTURES.spotifySync : FIXTURES.youtubeSync);
   const providerSourceCount = mediaProfile?.sourceBreakdown?.[provider]?.itemsConsumed || 0;
