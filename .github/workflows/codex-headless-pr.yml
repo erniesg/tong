@@ -98,31 +98,25 @@ jobs:
           sandbox: workspace-write
 
       - name: Write PR body
-        run: |
-          cat > "$RUNNER_TEMP/pr-body.md" <<'EOF'
-          ${{ inputs.pr_body }}
-
-          ## QA Publish Request
-
-          ```json
-          {
-            "issue_ref": "${{ inputs.issue_ref }}",
-            "run_dir": "",
-            "route": "${{ inputs.route }}",
-            "scenario_seed": "${{ inputs.scenario_seed }}",
-            "checkpoint_id": "${{ inputs.checkpoint_id }}",
-            "qa_recipe": "${{ inputs.qa_recipe }}",
-            "no_auto_evidence_upload": ${{ inputs.no_auto_evidence_upload }}
-          }
-          ```
-          EOF
+        id: pr_body
+        env:
+          INPUT_PR_TITLE: ${{ inputs.pr_title }}
+          INPUT_BRANCH: ${{ inputs.branch }}
+          INPUT_PR_BODY: ${{ inputs.pr_body }}
+          INPUT_ISSUE_REF: ${{ inputs.issue_ref }}
+          INPUT_ROUTE: ${{ inputs.route }}
+          INPUT_SCENARIO_SEED: ${{ inputs.scenario_seed }}
+          INPUT_CHECKPOINT_ID: ${{ inputs.checkpoint_id }}
+          INPUT_QA_RECIPE: ${{ inputs.qa_recipe }}
+          INPUT_NO_AUTO_EVIDENCE_UPLOAD: ${{ inputs.no_auto_evidence_upload }}
+        run: node scripts/write_pr_body_with_qa_request.mjs --body-path "$RUNNER_TEMP/pr-body.md"
 
       - name: Create Pull Request
         id: cpr
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: ${{ inputs.pr_title }}
+          commit-message: ${{ inputs.commit-message }}
           title: ${{ inputs.pr_title }}
           body-path: ${{ runner.temp }}/pr-body.md
           branch: ${{ inputs.branch }}
@@ -143,7 +137,10 @@ jobs:
             echo "## Codex Headless PR"
             echo
             echo "- PR: ${{ steps.cpr.outputs.pull-request-url }}"
-            echo "- QA recipe: \`${{ inputs.qa_recipe }}\`"
+            echo "- Issue ref: \`${{ steps.pr_body.outputs.issue_ref }}\`"
+            echo "- Route: \`${{ steps.pr_body.outputs.route }}\`"
+            echo "- Scenario seed: \`${{ steps.pr_body.outputs.scenario_seed }}\`"
+            echo "- QA recipe: \`${{ steps.pr_body.outputs.qa_recipe }}\`"
             echo "- Auto QA publish: \`${{ inputs.auto_qa_publish }}\`"
             echo "- Codex final message present: \`${{ steps.codex.outputs.final_message != '' }}\`"
           } >> "$GITHUB_STEP_SUMMARY"

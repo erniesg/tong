@@ -2,6 +2,12 @@
 
 import fs from "node:fs";
 import process from "node:process";
+import { defaultPublishRequest } from "./lib/qa_publish_defaults.mjs";
+import {
+  mergeQaPublishRequest,
+  renderQaPublishRequestBlock,
+  stripQaPublishRequestBlock,
+} from "./lib/qa_publish_request.mjs";
 
 const MAINTAINER_ASSOCIATIONS = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
 const TRUE_VALUES = new Set(["1", "true", "yes", "on"]);
@@ -57,18 +63,6 @@ function ensureCodexBranch(name) {
   const trimmed = (name || "").trim();
   if (!trimmed) return "";
   return trimmed.startsWith("codex/") ? trimmed : `codex/${trimmed.replace(/^\/+/, "")}`;
-}
-
-function renderQaPublishBlock(request) {
-  if (!request || typeof request !== "object" || Object.keys(request).length === 0) return "";
-  return [
-    "## QA Publish Request",
-    "",
-    "```json",
-    JSON.stringify(request, null, 2),
-    "```",
-    "",
-  ].join("\n");
 }
 
 function main() {
@@ -150,9 +144,15 @@ function main() {
   if (!request.issue_ref && repo && sourceIssueNumber) {
     request.issue_ref = `${repo}#${sourceIssueNumber}`;
   }
-  if (!request.qa_publish_request.issue_ref && request.issue_ref) {
-    request.qa_publish_request.issue_ref = request.issue_ref;
-  }
+  const qaDefaults = defaultPublishRequest({
+    issueRef: request.qa_publish_request.issue_ref || request.issue_ref,
+    title: request.pr_title,
+    headRef: request.new_branch,
+  });
+  request.qa_publish_request = mergeQaPublishRequest(qaDefaults, {
+    ...request.qa_publish_request,
+    issue_ref: request.qa_publish_request.issue_ref || request.issue_ref,
+  });
 
   if (!request.new_branch) {
     shouldRun = false;
@@ -170,15 +170,16 @@ function main() {
   }
 
   const prBodySections = [];
-  if (request.pr_body.trim()) {
-    prBodySections.push(request.pr_body.trim(), "");
+  const trimmedPrBody = stripQaPublishRequestBlock(request.pr_body).trim();
+  if (trimmedPrBody) {
+    prBodySections.push(trimmedPrBody, "");
   }
   if (request.issue_ref) {
     prBodySections.push(`Fix context: \`${request.issue_ref}\``, "");
   } else if (sourceIssueNumber) {
     prBodySections.push(`Source issue thread: #${sourceIssueNumber}`, "");
   }
-  const qaBlock = renderQaPublishBlock(request.qa_publish_request);
+  const qaBlock = renderQaPublishRequestBlock(request.qa_publish_request);
   if (qaBlock) {
     prBodySections.push(qaBlock.trim(), "");
   }
