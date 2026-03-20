@@ -943,6 +943,37 @@ function buildScenarioSeeds(gameSession) {
   ];
 }
 
+function createCheckpointFromScenarioSeed(gameSession, scenarioSeed, nowIso) {
+  return {
+    checkpointId: `seed_${gameSession.sessionId}_${scenarioSeed.seedId}`,
+    gameSessionId: gameSession.sessionId,
+    sceneSessionId: gameSession.activeSceneSessionId,
+    kind: 'player_resume',
+    route: cloneJson(scenarioSeed.route),
+    cityId: scenarioSeed.cityId,
+    locationId: scenarioSeed.locationId,
+    mode: scenarioSeed.mode,
+    objective: cloneJson(scenarioSeed.objective),
+    phase: scenarioSeed.phase,
+    turn: scenarioSeed.turn,
+    activeExercise: cloneJson(scenarioSeed.activeExercise),
+    progressionDelta: cloneJson(
+      scenarioSeed.progressionDelta || {
+        xp: 0,
+        sp: 0,
+        rp: 0,
+        objectiveProgressDelta: 0,
+        validatedHangoutsDelta: 0,
+      },
+    ),
+    rewards: cloneJson(scenarioSeed.rewards || []),
+    missionGate: cloneJson(gameSession.missionGate),
+    unlocks: cloneJson(gameSession.unlocks),
+    rng: cloneJson(scenarioSeed.rng),
+    createdAtIso: nowIso,
+  };
+}
+
 function createCheckpointRecord(gameSession, sceneSession, boundary, nowIso) {
   const previousCheckpoint = gameSession.activeCheckpointId
     ? state.checkpoints.get(gameSession.activeCheckpointId)
@@ -1214,6 +1245,76 @@ function resumeGameSession(gameSession, resumeCheckpointId) {
     (sceneSession ? persistCheckpoint(gameSession, sceneSession, CHECKPOINT_BOUNDARIES.scene_start) : null);
 
   return buildGameStartResponse(gameSession, sceneSession, effectiveCheckpoint, 'checkpoint');
+}
+
+function resumeGameSessionFromScenarioSeed(gameSession, scenarioSeedId) {
+  const scenarioSeed = buildScenarioSeeds(gameSession).find((seed) => seed.seedId === scenarioSeedId);
+  if (!scenarioSeed) {
+    return null;
+  }
+
+  const nowIso = new Date().toISOString();
+  const previousCheckpointId = gameSession.activeCheckpointId || null;
+  gameSession.cityId = scenarioSeed.cityId;
+  gameSession.locationId = scenarioSeed.locationId;
+  gameSession.currentMode = scenarioSeed.mode;
+  gameSession.activeObjective = cloneJson(scenarioSeed.objective);
+  gameSession.activeSceneId = `${scenarioSeed.locationId}_${scenarioSeed.mode}_intro`;
+  gameSession.resumeSource = 'scenario_seed';
+  gameSession.updatedAtIso = nowIso;
+
+  const sceneSession = {
+    sceneSessionId: gameSession.activeSceneSessionId,
+    gameSessionId: gameSession.sessionId,
+    sceneId: gameSession.activeSceneId,
+    cityId: scenarioSeed.cityId,
+    locationId: scenarioSeed.locationId,
+    mode: scenarioSeed.mode,
+    objective: cloneJson(scenarioSeed.objective),
+    phase: scenarioSeed.phase,
+    turn: scenarioSeed.turn,
+    route: cloneJson(scenarioSeed.route),
+    progressionDelta: cloneJson(
+      scenarioSeed.progressionDelta || {
+        xp: 0,
+        sp: 0,
+        rp: 0,
+        objectiveProgressDelta: 0,
+        validatedHangoutsDelta: 0,
+      },
+    ),
+    checkpointable: true,
+    uiPolicy: {
+      immersiveFirstPerson: true,
+      allowOnlyDialogueAndHints: true,
+    },
+    startedAtIso: gameSession.startedAtIso,
+    updatedAtIso: nowIso,
+    score: {
+      xp: gameSession.progression.xp,
+      sp: gameSession.progression.sp,
+      rp: gameSession.progression.rp,
+    },
+  };
+
+  if (scenarioSeed.activeExercise) {
+    sceneSession.activeExercise = cloneJson(scenarioSeed.activeExercise);
+  }
+
+  const checkpoint = createCheckpointFromScenarioSeed(gameSession, scenarioSeed, nowIso);
+  delete gameSession.activeCheckpointId;
+
+  if (previousCheckpointId) {
+    state.checkpoints.delete(previousCheckpointId);
+  }
+
+  state.sceneSessions.set(sceneSession.sceneSessionId, sceneSession);
+  state.sessions.set(gameSession.sessionId, gameSession);
+  if (state.activeSessionByUser.get(gameSession.userId) === gameSession.sessionId) {
+    state.activeSessionByUser.delete(gameSession.userId);
+  }
+
+  return buildGameStartResponse(gameSession, sceneSession, checkpoint, 'scenario_seed');
 }
 
 function getSecretStatus() {
@@ -2168,9 +2269,25 @@ const server = http.createServer(async (req, res) => {
         sessionId: body.sessionId,
         resumeCheckpointId: body.resumeCheckpointId,
       });
-      const response = existingSession
-        ? resumeGameSession(existingSession, body.resumeCheckpointId)
-        : createNewGameSession(userId, body.profile, body.city);
+
+      let response;
+      if (body.scenarioSeedId) {
+        const targetSession = createNewGameSession(userId, body.profile, body.city).gameSession;
+        response = resumeGameSessionFromScenarioSeed(targetSession, body.scenarioSeedId);
+
+        if (!response) {
+          jsonResponse(res, 404, {
+            error: 'unknown_scenario_seed',
+            scenarioSeedId: body.scenarioSeedId,
+          });
+          return;
+        }
+      } else {
+        response = existingSession
+          ? resumeGameSession(existingSession, body.resumeCheckpointId)
+          : createNewGameSession(userId, body.profile, body.city);
+      }
+
       jsonResponse(res, 200, response);
       return;
     }
