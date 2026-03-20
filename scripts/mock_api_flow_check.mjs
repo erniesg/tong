@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 
+import fs from 'node:fs';
+
 const args = process.argv.slice(2);
 const baseArg = args.find((arg) => !arg.startsWith('-'));
 const strictState = args.includes('--strict-state');
 const checkScenarioSeed = args.includes('--check-scenario-seed');
 const checkProgressionPersistence = args.includes('--check-progression-persistence');
 const sourcesArg = args.find((arg) => arg.startsWith('--sources='));
+const traceFileArg = args.find((arg) => arg.startsWith('--trace-file='));
 const apiBase = (baseArg || process.env.TONG_API_BASE_URL || 'http://localhost:8787').replace(/\/$/, '');
 const demoPassword = process.env.TONG_DEMO_PASSWORD || process.env.TONG_DEMO_CODE || '';
+const traceFile = traceFileArg ? traceFileArg.slice('--trace-file='.length) : '';
 const includeSources = sourcesArg
   ? [...new Set(
     sourcesArg
@@ -19,6 +23,7 @@ const includeSources = sourcesArg
   : [];
 
 const userId = `mock_user_${Date.now().toString(36)}`;
+const networkTrace = [];
 const profile = {
   nativeLanguage: 'en',
   targetLanguages: ['ko', 'zh'],
@@ -43,6 +48,11 @@ function assert(condition, message) {
   }
 }
 
+function writeNetworkTrace() {
+  if (!traceFile) return;
+  fs.writeFileSync(traceFile, `${JSON.stringify(networkTrace, null, 2)}\n`, 'utf8');
+}
+
 function assertJsonEqual(actual, expected, label) {
   const actualJson = JSON.stringify(actual);
   const expectedJson = JSON.stringify(expected);
@@ -51,11 +61,13 @@ function assertJsonEqual(actual, expected, label) {
 
 async function requestJson(pathname, init = {}) {
   const url = `${apiBase}${pathname}`;
+  const method = init.method || 'GET';
   const headers = {
     'Content-Type': 'application/json',
     ...(demoPassword ? { 'x-demo-password': demoPassword } : {}),
     ...(init.headers || {}),
   };
+  const startedAt = Date.now();
 
   const response = await fetch(url, {
     ...init,
@@ -69,6 +81,29 @@ async function requestJson(pathname, init = {}) {
   } catch {
     data = text;
   }
+
+  networkTrace.push({
+    recordedAtIso: new Date().toISOString(),
+    durationMs: Date.now() - startedAt,
+    request: {
+      method,
+      url,
+      pathname,
+      headers: Object.fromEntries(
+        Object.entries(headers).filter(([key]) => key.toLowerCase() !== 'x-demo-password'),
+      ),
+      body: typeof init.body === 'string' && init.body.length > 0 ? init.body : null,
+    },
+    response: {
+      ok: response.ok,
+      status: response.status,
+      headers: {
+        contentType: response.headers.get('content-type') || '',
+      },
+      body: data,
+    },
+  });
+  writeNetworkTrace();
 
   return {
     ok: response.ok,
