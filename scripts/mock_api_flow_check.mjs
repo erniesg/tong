@@ -347,6 +347,12 @@ async function run() {
   );
   assert((recentMediaSources.spotify || 0) > 0, 'gameStart recentMediaRationale should preserve spotify counts after youtube sync');
   assert((recentMediaSources.youtube || 0) > 0, 'gameStart recentMediaRationale should include youtube counts after youtube sync');
+  assert(gameStart.data?.gameSession?.activeObjective?.lang === 'ko', 'gameStart activeObjective.lang should prefer the KO pilot path');
+  assert(
+    typeof gameStart.data?.gameSession?.activeObjective?.objectiveId === 'string' &&
+      gameStart.data.gameSession.activeObjective.objectiveId.startsWith('ko-'),
+    `gameStart activeObjective.objectiveId should start with ko-: ${gameStart.data?.gameSession?.activeObjective?.objectiveId}`,
+  );
   assert(gameStart.data?.gameSession?.sessionId === gameStart.data.sessionId, 'gameStart.gameSession.sessionId mismatch');
   assert(gameStart.data?.sceneSession?.gameSessionId === gameStart.data.sessionId, 'gameStart.sceneSession.gameSessionId mismatch');
   assert(gameStart.data?.activeCheckpoint?.gameSessionId === gameStart.data.sessionId, 'gameStart.activeCheckpoint.gameSessionId mismatch');
