@@ -102,19 +102,15 @@ jobs:
             echo "- qa_recipe: \`${{ steps.resolve.outputs.qa_recipe }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  blocked:
-    needs: resolve
-    if: needs.resolve.outputs.should_run != 'true' && github.event_name == 'issue_comment' && needs.resolve.outputs.pr_number != ''
-    runs-on: ubuntu-latest
-    steps:
       - name: Comment blocker
+        if: steps.resolve.outputs.should_run != 'true' && github.event_name == 'issue_comment' && steps.resolve.outputs.pr_number != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh pr comment "${{ needs.resolve.outputs.pr_number }}" --repo "${{ github.repository }}" --body "$(cat <<'EOF'
+          gh pr comment "${{ steps.resolve.outputs.pr_number }}" --repo "${{ github.repository }}" --body "$(cat <<'EOF'
           Trusted QA publish did not start.
 
-          Reason: ${{ needs.resolve.outputs.reason }}
+          Reason: ${{ steps.resolve.outputs.reason }}
 
           Supported triggers:
           - Comment `/qa-publish` on a same-repo PR as a maintainer
