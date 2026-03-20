@@ -65,11 +65,6 @@ on:
         required: false
         type: boolean
         default: false
-      auto_qa_publish:
-        description: "Dispatch trusted QA publish after PR creation"
-        required: false
-        type: boolean
-        default: true
       dry_run:
         description: "Validate patch application without pushing or creating a PR"
         required: false
@@ -201,13 +196,6 @@ jobs:
         run: |
           gh issue comment "${{ steps.resolve.outputs.source_issue_number }}" --repo "${{ github.repository }}" --body "Trusted Codex PR created: ${{ steps.create.outputs.pr_url }}"
 
-      - name: Dispatch trusted QA publish
-        if: steps.resolve.outputs.dry_run != 'true' && steps.resolve.outputs.auto_qa_publish == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh workflow run qa-publish.yml --repo "${{ github.repository }}" -f pr_number="${{ steps.create.outputs.pr_number }}"
-
       - name: Step summary
         if: always()
         run: |
@@ -220,5 +208,5 @@ jobs:
             echo "- New branch: \`${{ steps.resolve.outputs.new_branch }}\`"
             echo "- Patch source: \`${{ steps.resolve.outputs.patch_source }}\`"
             echo "- PR: ${{ steps.create.outputs.pr_url }}"
-            echo "- Auto QA publish: \`${{ steps.resolve.outputs.auto_qa_publish }}\`"
+            echo "- QA publish: handled by the PR-triggered \`Trusted QA Publish\` workflow"
           } >> "$GITHUB_STEP_SUMMARY"

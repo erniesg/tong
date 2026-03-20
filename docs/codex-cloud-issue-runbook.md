@@ -216,7 +216,7 @@ Current behavior:
 1. The workflow applies the patch onto the requested base branch.
 2. It commits and pushes a `codex/*` branch.
 3. It opens the PR with the supplied PR body plus the `QA Publish Request` block.
-4. If `auto_qa_publish` is enabled, it explicitly dispatches the `Trusted QA Publish` workflow for the newly created PR.
+4. The newly opened PR is then picked up by the PR-triggered `Trusted QA Publish` workflow, which reads the `QA Publish Request` block from the PR body.
 
 Important limitation:
 
@@ -232,12 +232,12 @@ Current behavior:
 1. GitHub Actions checks out the repo and runs Codex headlessly with a supplied prompt.
 2. `peter-evans/create-pull-request` commits the Codex changes and opens the PR.
 3. The PR body includes the `QA Publish Request` block automatically.
-4. The workflow explicitly dispatches `Trusted QA Publish`, which can regenerate reviewer-proof evidence in CI from a supported `qa_recipe`.
+4. The PR open event then triggers `Trusted QA Publish`, which can regenerate reviewer-proof evidence in CI from a supported `qa_recipe`.
 
 Use this path when you want:
 
 - automatic PR creation
-- automatic QA publish dispatch
+- automatic QA publish on PR open
 - no manual transfer of patches out of Codex cloud task storage
 
 Use the Codex cloud web task path only when you specifically want an interactive remote coding session and are willing to create the PR manually afterward.

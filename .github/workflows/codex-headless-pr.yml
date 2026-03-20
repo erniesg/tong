@@ -49,11 +49,6 @@ on:
         required: false
         type: boolean
         default: false
-      auto_qa_publish:
-        description: "Dispatch trusted QA publish after PR creation"
-        required: false
-        type: boolean
-        default: true
       codex_args:
         description: "Optional extra codex exec args"
         required: false
@@ -129,13 +124,6 @@ jobs:
           base: ${{ inputs.base_branch }}
           delete-branch: false
 
-      - name: Dispatch trusted QA publish
-        if: inputs.auto_qa_publish && steps.cpr.outputs.pull-request-number != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh workflow run qa-publish.yml --repo "${{ github.repository }}" -f pr_number="${{ steps.cpr.outputs.pull-request-number }}"
-
       - name: Step summary
         if: always()
         run: |
@@ -144,6 +132,6 @@ jobs:
             echo
             echo "- PR: ${{ steps.cpr.outputs.pull-request-url }}"
             echo "- QA recipe: \`${{ inputs.qa_recipe }}\`"
-            echo "- Auto QA publish: \`${{ inputs.auto_qa_publish }}\`"
+            echo "- QA publish: handled by the PR-triggered \`Trusted QA Publish\` workflow"
             echo "- Codex final message present: \`${{ steps.codex.outputs.final_message != '' }}\`"
           } >> "$GITHUB_STEP_SUMMARY"

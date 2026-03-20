@@ -126,10 +126,6 @@ function main() {
     patch_text: inputs.patch_text || patchText || "",
     patch_url: (inputs.patch_url || metadata.patch_url || "").trim(),
     patch_path: (inputs.patch_path || metadata.patch_path || "").trim(),
-    auto_qa_publish: parseBoolean(
-      inputs.auto_qa_publish,
-      metadata.auto_qa_publish === false ? false : true,
-    ),
     dry_run: parseBoolean(inputs.dry_run, false) || metadata.dry_run === true,
     qa_publish_request: {
       issue_ref: (inputs.issue_ref || metadata.issue_ref || qaPublishRequest.issue_ref || "").trim(),
@@ -194,7 +190,6 @@ function main() {
   output("patch_source", request.patch_text ? "inline" : request.patch_url ? "url" : request.patch_path ? "path" : "");
   output("patch_url", request.patch_url);
   output("patch_path", request.patch_path);
-  output("auto_qa_publish", request.auto_qa_publish ? "true" : "false");
   output("dry_run", request.dry_run ? "true" : "false");
   output("source_issue_number", sourceIssueNumber);
 }
