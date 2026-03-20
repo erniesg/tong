@@ -141,7 +141,7 @@ Template:
 - Date: 2026-03-20
 - Branch/worktree: `codex/remove-judge-hackathon-branding` (shared root workspace crossing into qa-platform-owned paths and `.github/workflows/**`)
 - What changed:
-  - Added a `Codex Headless PR` GitHub Actions workflow that runs Codex via the official action, creates a PR with `peter-evans/create-pull-request`, and then dispatches trusted QA publish automatically.
+  - Added a `Codex Headless PR` GitHub Actions workflow that runs Codex via the official action, creates a PR with `peter-evans/create-pull-request`, and can explicitly dispatch trusted QA publish for the new PR.
   - Documented this as the recommended path for future fully automatic PR creation, rather than relying on Codex cloud web task storage.
 - Contract changes: none
 - Integration risks:
