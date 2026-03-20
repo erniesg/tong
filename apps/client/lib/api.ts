@@ -471,26 +471,53 @@ export interface UserProficiency {
   zh: ProficiencyLevel;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function startOrResumeGame(params?: any) {
-  const prof = params?.proficiency ?? params ?? { ko: 'beginner', ja: 'none', zh: 'none' };
-  const userId = params?.userId ?? 'demo-user-1';
-  const city = params?.city ?? 'seoul';
-  const profile = params?.profile ?? {
+export interface StartOrResumeGameParams {
+  proficiency?: UserProficiency;
+  userId?: string;
+  city?: CityId;
+  profile?: {
+    nativeLanguage: string,
+    targetLanguages: string[],
+    proficiency: Record<string, ProficiencyLevel>,
+  };
+  preferRomance?: boolean;
+  resumeCheckpointId?: string;
+  scenarioSeedId?: string;
+}
+
+export interface StartOrResumeGameResponse {
+  sessionId: string;
+  city: 'seoul' | 'tokyo' | 'shanghai';
+  sceneId: string;
+  actions: string[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+
+export function startOrResumeGame(params?: StartOrResumeGameParams | UserProficiency) {
+  const prof = ('ko' in (params || {}) && !('profile' in (params || {})))
+    ? (params as UserProficiency)
+    : (params as StartOrResumeGameParams | undefined)?.proficiency ?? { ko: 'beginner', ja: 'none', zh: 'none' };
+  const typedParams = (params && 'profile' in params) || (params && 'userId' in params) || (params && 'scenarioSeedId' in params) || (params && 'resumeCheckpointId' in params) || (params && 'preferRomance' in params) || (params && 'city' in params) || (params && 'proficiency' in params)
+    ? (params as StartOrResumeGameParams)
+    : undefined;
+  const userId = typedParams?.userId ?? 'demo-user-1';
+  const city = typedParams?.city ?? 'seoul';
+  const profile = typedParams?.profile ?? {
     nativeLanguage: 'en',
     targetLanguages: ['ko', 'ja', 'zh'],
     proficiency: prof,
   };
-  return apiFetch<{
-    sessionId: string;
-    city: 'seoul' | 'tokyo' | 'shanghai';
-    sceneId: string;
-    actions: string[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [key: string]: any;
-  }>('/api/v1/game/start-or-resume', {
+  return apiFetch<StartOrResumeGameResponse>('/api/v1/game/start-or-resume', {
     method: 'POST',
-    body: JSON.stringify({ userId, city, profile, preferRomance: params?.preferRomance }),
+    body: JSON.stringify({
+      userId,
+      city,
+      profile,
+      preferRomance: typedParams?.preferRomance,
+      resumeCheckpointId: typedParams?.resumeCheckpointId,
+      scenarioSeedId: typedParams?.scenarioSeedId,
+    }),
   });
 }
 

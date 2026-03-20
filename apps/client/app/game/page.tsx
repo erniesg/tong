@@ -140,6 +140,12 @@ type NpcSpeakToolArgs = {
   translation?: string | null;
 };
 
+type BootstrapQueryIntent = {
+  scenarioSeedId: string | null;
+  resumeCheckpointId: string | null;
+  resumeRequested: boolean;
+};
+
 
 /* ── helpers ────────────────────────────────────────────── */
 
@@ -169,6 +175,23 @@ function getLatestNpcSpeakInvocation(messages: UIMessage[]): ToolInvocation | nu
   }
 
   return null;
+}
+
+function readBootstrapQueryIntent(searchParams: ReturnType<typeof useSearchParams>): BootstrapQueryIntent {
+  const scenarioSeedId = searchParams.get('scenarioSeed') || searchParams.get('scenario_seed');
+  const resumeRequested = searchParams.get('resume') === '1';
+  const resumeCheckpointId =
+    searchParams.get('resumeCheckpointId')
+    || searchParams.get('checkpoint_id')
+    || (resumeRequested
+      ? searchParams.get('checkpointId') || searchParams.get('checkpoint')
+      : null);
+
+  return {
+    scenarioSeedId: scenarioSeedId?.trim() || null,
+    resumeCheckpointId: resumeCheckpointId?.trim() || null,
+    resumeRequested,
+  };
 }
 
 function buildStreamedNpcMessage(
@@ -262,11 +285,15 @@ export default function GamePage() {
   const freshLang = searchParams.get('lang') as AppLang | null; // pre-set explain language
   const qaRunId = searchParams.get('qa_run_id') ?? undefined;
   const qaTrace = searchParams.get('qa_trace') === '1';
+  const bootstrapIntent = readBootstrapQueryIntent(searchParams);
+  const seededBootstrapRequested = Boolean(
+    bootstrapIntent.scenarioSeedId || bootstrapIntent.resumeRequested,
+  );
   const skipToHangout = phaseParam === 'hangout';
   const skipToCityMap = phaseParam === 'city_map';
   const skipToLearn = phaseParam === 'learn';
   const [phase, setPhase] = useState<Phase>(
-    freshStart ? 'opening' : devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : skipToLearn ? 'learn' : 'opening'
+    freshStart ? 'opening' : devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : seededBootstrapRequested || skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : skipToLearn ? 'learn' : 'opening'
   );
   const openingVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -395,6 +422,10 @@ export default function GamePage() {
   const [continuePending, setContinuePending] = useState(false);
   const [sceneTurn, setSceneTurn] = useState<number>(1);
   const [hangoutCheckpointPhase, setHangoutCheckpointPhase] = useState<string | null>(null);
+  const [hangoutResumeSource, setHangoutResumeSource] = useState<'checkpoint' | 'scenario_seed' | null>(null);
+  const [hangoutSceneSessionId, setHangoutSceneSessionId] = useState<string | null>(null);
+  const [hangoutCheckpointId, setHangoutCheckpointId] = useState<string | null>(null);
+  const [availableScenarioSeedIds, setAvailableScenarioSeedIds] = useState<string[]>([]);
   const [dynamicBackdrop, setDynamicBackdrop] = useState<{ url: string; transition: 'fade' | 'cut'; ambientDescription?: string } | null>(null);
   const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null>(null);
 
@@ -558,6 +589,10 @@ export default function GamePage() {
     setTongTip(null);
     setSceneSummary(null);
     setSceneReady(false);
+    setHangoutResumeSource(null);
+    setHangoutSceneSessionId(null);
+    setHangoutCheckpointId(null);
+    setAvailableScenarioSeedIds([]);
 
     // Store player profile
     const name = profileInput.englishName.trim() || 'Player';
@@ -655,15 +690,19 @@ export default function GamePage() {
         setSceneReady(true);
         setSceneTurn(resumed.turn);
         setHangoutCheckpointPhase(resumed.phase);
+        setHangoutResumeSource(resumed.resumeSource);
+        setHangoutSceneSessionId(resumed.sceneSessionId);
+        setHangoutCheckpointId(resumed.checkpointId);
+        setAvailableScenarioSeedIds(resumed.availableScenarioSeedIds);
         setCurrentMessage(
           resumed.exercise
             ? null
             : {
-                id: `resume-turn-${resumed.turn}`,
+                id: `${resumed.resumeSource}-turn-${resumed.turn}`,
                 role: 'narrator',
                 content: resumed.objectiveSummary
-                  ? `Resumed turn ${resumed.turn} at ${resumed.phase}. ${resumed.objectiveSummary}`
-                  : `Resumed turn ${resumed.turn} at ${resumed.phase}.`,
+                  ? `${resumed.resumeSource === 'scenario_seed' ? 'Mounted scenario seed' : 'Resumed checkpoint'} turn ${resumed.turn} at ${resumed.phase}. ${resumed.objectiveSummary}`
+                  : `${resumed.resumeSource === 'scenario_seed' ? 'Mounted scenario seed' : 'Resumed checkpoint'} turn ${resumed.turn} at ${resumed.phase}.`,
               },
         );
         setCurrentExercise(resumed.exercise);
@@ -676,6 +715,7 @@ export default function GamePage() {
         setTongTip(null);
         setSceneSummary(null);
         pendingResumePromptRef.current = buildResumePrompt({
+          resumeSource: resumed.resumeSource,
           phase: resumed.phase,
           turn: resumed.turn,
           objectiveSummary: resumed.objectiveSummary,
@@ -689,6 +729,10 @@ export default function GamePage() {
     }
 
     setHangoutCheckpointPhase(null);
+    setHangoutResumeSource(null);
+    setHangoutSceneSessionId(null);
+    setHangoutCheckpointId(null);
+    setAvailableScenarioSeedIds([]);
     setSceneTurn(1);
     setPhase('hangout');
     setLoading(false);
@@ -806,6 +850,109 @@ export default function GamePage() {
       void append({ role: 'user', content: `${ctx}Start the scene.` });
     }
   }, [skipToHangout, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
+
+  useEffect(() => {
+    if (!seededBootstrapRequested || freshStart || devIntro || sceneStartedRef.current) return;
+
+    sceneStartedRef.current = true;
+    setLoading(true);
+    setError('');
+    setPhase('hangout');
+    setSceneReady(false);
+    setCurrentMessage(null);
+    setCurrentExercise(null);
+    setToolQueue([]);
+    setChoices(null);
+    setChoicePrompt(null);
+    setTongTip(null);
+    setSceneSummary(null);
+
+    const bootstrapProfile = {
+      nativeLanguage: 'en' as const,
+      targetLanguages: ['ko', 'ja', 'zh'] as ['ko', 'ja', 'zh'],
+      proficiency: {
+        ko: SLIDER_TO_LEVEL[sliders[2]] ?? 'beginner',
+        ja: SLIDER_TO_LEVEL[sliders[1]] ?? 'none',
+        zh: SLIDER_TO_LEVEL[sliders[0]] ?? 'none',
+      },
+    };
+
+    void (async () => {
+      try {
+        const bootstrap = (await startOrResumeGame({
+          userId: 'local',
+          city: 'seoul',
+          profile: bootstrapProfile,
+          preferRomance: true,
+          scenarioSeedId: bootstrapIntent.scenarioSeedId ?? undefined,
+          resumeCheckpointId: bootstrapIntent.resumeCheckpointId ?? undefined,
+        })) as ResumeBootstrapPayload;
+
+        const resumed = hydrateResumeState(bootstrap);
+        if (!resumed) {
+          throw new Error(`Bootstrap returned non-resumable source: ${bootstrap.resumeSource ?? 'unknown'}`);
+        }
+
+        const seededNpcId = pickNpcForCity(resumed.cityId);
+        const seededNpc = CHARACTER_MAP[seededNpcId] ?? HAEUN;
+        npcRef.current = seededNpc;
+        setCity(resumed.cityId);
+        setLocation(resumed.locationId);
+        setActiveNpc(seededNpcId);
+        setPlayerLevel(0);
+        setScore({
+          xp: bootstrap.progression?.xp ?? 0,
+          sp: bootstrap.progression?.sp ?? 0,
+          rp: bootstrap.progression?.rp ?? 0,
+        });
+        setPhase('hangout');
+        setSceneReady(true);
+        setSceneTurn(resumed.turn);
+        setHangoutCheckpointPhase(resumed.phase);
+        setHangoutResumeSource(resumed.resumeSource);
+        setHangoutSceneSessionId(resumed.sceneSessionId);
+        setHangoutCheckpointId(resumed.checkpointId);
+        setAvailableScenarioSeedIds(resumed.availableScenarioSeedIds);
+        setCurrentMessage(
+          resumed.exercise
+            ? null
+            : {
+                id: `${resumed.resumeSource}-turn-${resumed.turn}`,
+                role: 'narrator',
+                content: resumed.objectiveSummary
+                  ? `${resumed.resumeSource === 'scenario_seed' ? 'Mounted scenario seed' : 'Resumed checkpoint'} turn ${resumed.turn} at ${resumed.phase}. ${resumed.objectiveSummary}`
+                  : `${resumed.resumeSource === 'scenario_seed' ? 'Mounted scenario seed' : 'Resumed checkpoint'} turn ${resumed.turn} at ${resumed.phase}.`,
+              },
+        );
+        setCurrentExercise(resumed.exercise);
+        if (resumed.exercise) {
+          lastExerciseRef.current = resumed.exercise;
+        }
+        pendingResumePromptRef.current = buildResumePrompt({
+          resumeSource: resumed.resumeSource,
+          phase: resumed.phase,
+          turn: resumed.turn,
+          objectiveSummary: resumed.objectiveSummary,
+          exercise: resumed.exercise,
+        });
+        traceQA('bootstrap_resume_mount', {
+          resumeSource: bootstrap.resumeSource ?? null,
+          phase: resumed.phase,
+          turn: resumed.turn,
+          sceneSessionId: resumed.sceneSessionId,
+          checkpointId: resumed.checkpointId,
+          availableScenarioSeedIds: resumed.availableScenarioSeedIds,
+        });
+      } catch (bootstrapError) {
+        console.warn('[RESUME] Failed seeded /game bootstrap mount.', bootstrapError);
+        setError(bootstrapError instanceof Error ? bootstrapError.message : 'Failed to mount seeded /game bootstrap.');
+        setPhase('menu');
+        sceneStartedRef.current = false;
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [bootstrapIntent.resumeCheckpointId, bootstrapIntent.resumeRequested, bootstrapIntent.scenarioSeedId, devIntro, freshStart, qaRunId, seededBootstrapRequested, sliders, traceQA]);
 
   /* Dev intro bypass: ?dev_intro=1 — fresh introduction hangout, clears stale state
      Optional: ?dev_act=2 — skip Act 1, start at Act 2 (NPC entrance) with exercises pre-done */
@@ -1359,6 +1506,12 @@ export default function GamePage() {
     displayMessage: displayMessage ? { id: displayMessage.id, role: displayMessage.role, characterId: displayMessage.characterId, contentPreview: displayMessage.content.slice(0, 120) } : null,
     tongTip: tongTip ? { messagePreview: tongTip.message.slice(0, 120), hasTranslation: !!tongTip.translation } : null,
     currentExercise: currentExercise ? { id: currentExercise.id, type: currentExercise.type } : null,
+    hangoutResumeSource,
+    hangoutCheckpointPhase,
+    sceneTurn,
+    hangoutSceneSessionId,
+    hangoutCheckpointId,
+    availableScenarioSeedIds,
     choices: choices ? choices.map((choice) => ({ id: choice.id, text: choice.text })) : null,
     choicePrompt,
     sceneSummary: sceneSummary ? { xpEarned: sceneSummary.xpEarned, calibratedLevel: sceneSummary.calibratedLevel ?? null } : null,
@@ -1366,7 +1519,7 @@ export default function GamePage() {
     introExerciseCount,
     introAct,
     npcRevealed,
-  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, continuePending, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
+  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, continuePending, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, hangoutResumeSource, hangoutCheckpointPhase, sceneTurn, hangoutSceneSessionId, hangoutCheckpointId, availableScenarioSeedIds, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
 
   useEffect(() => {
     if (!qaTrace) return;
@@ -2094,8 +2247,10 @@ export default function GamePage() {
               pointerEvents: 'none',
             }}
           >
-            Resumed checkpoint · phase {hangoutCheckpointPhase} · turn {sceneTurn}
+            {hangoutResumeSource === 'scenario_seed' ? 'Scenario seed mount' : 'Resumed checkpoint'} · phase {hangoutCheckpointPhase} · turn {sceneTurn}
             {currentExercise ? ` · ${currentExercise.type}` : ''}
+            {hangoutSceneSessionId ? ` · scene ${hangoutSceneSessionId}` : ''}
+            {hangoutCheckpointId ? ` · checkpoint ${hangoutCheckpointId}` : ''}
           </div>
         )}
       </div>

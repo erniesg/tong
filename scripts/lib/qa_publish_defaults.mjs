@@ -48,7 +48,19 @@ function defaultPublishRequest({ issueRef = "", title = "", headRef = "" }) {
       if (signature.includes("scenario-seed-api") || signature.includes("part 1")) {
         return {
           route: "/game",
+          scenario_seed: "review_ready",
           qa_recipe: "issue_51_scenario_seed_api",
+        };
+      }
+      if (
+        signature.includes("scenario-seed-mount")
+        || signature.includes("scenario seed mount")
+        || signature.includes("part 2")
+      ) {
+        return {
+          route: "/game",
+          scenario_seed: "review_ready",
+          qa_recipe: "issue_51_scenario_seed_mount",
         };
       }
       return {

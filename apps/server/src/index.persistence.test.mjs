@@ -74,3 +74,25 @@ assert.deepEqual(resumed.activeCheckpoint.unlocks, beforeCheckpoint.unlocks);
 assert.deepEqual(resumed.activeCheckpoint.rewards, beforeCheckpoint.rewards);
 
 console.log('Issue #52 persistence regression test passed.');
+
+__testing.resetState();
+
+const seededStart = __testing.createNewGameSession('issue-99-user');
+const seededCheckpoint = seededStart.activeCheckpoint;
+const foundSession = __testing.findGameSessionForResume({
+  userId: 'issue-99-user',
+  sessionId: null,
+  requestedCity: seededStart.city,
+  resumeCheckpointId: String(seededCheckpoint.rng.version),
+});
+
+assert.equal(foundSession?.sessionId, seededStart.sessionId);
+
+const resumedByVersion = __testing.resumeGameSession(
+  __testing.state.sessions.get(seededStart.sessionId),
+  String(seededCheckpoint.rng.version),
+);
+
+assert.equal(resumedByVersion.activeCheckpoint?.checkpointId, seededCheckpoint.checkpointId);
+
+console.log('Issue #99 checkpoint route regression test passed.');

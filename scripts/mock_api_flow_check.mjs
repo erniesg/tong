@@ -7,6 +7,7 @@ const checkScenarioSeed = args.includes('--check-scenario-seed');
 const checkProgressionPersistence = args.includes('--check-progression-persistence');
 const sourcesArg = args.find((arg) => arg.startsWith('--sources='));
 const apiBase = (baseArg || process.env.TONG_API_BASE_URL || 'http://localhost:8787').replace(/\/$/, '');
+const demoPassword = process.env.TONG_DEMO_PASSWORD || process.env.TONG_DEMO_CODE || '';
 const includeSources = sourcesArg
   ? [...new Set(
     sourcesArg
@@ -52,6 +53,7 @@ async function requestJson(pathname, init = {}) {
   const url = `${apiBase}${pathname}`;
   const headers = {
     'Content-Type': 'application/json',
+    ...(demoPassword ? { 'x-demo-password': demoPassword } : {}),
     ...(init.headers || {}),
   };
 
