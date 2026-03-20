@@ -1254,6 +1254,7 @@ function resumeGameSessionFromScenarioSeed(gameSession, scenarioSeedId) {
   }
 
   const nowIso = new Date().toISOString();
+  const previousCheckpointId = gameSession.activeCheckpointId || null;
   gameSession.cityId = scenarioSeed.cityId;
   gameSession.locationId = scenarioSeed.locationId;
   gameSession.currentMode = scenarioSeed.mode;
@@ -1301,12 +1302,17 @@ function resumeGameSessionFromScenarioSeed(gameSession, scenarioSeedId) {
   }
 
   const checkpoint = createCheckpointFromScenarioSeed(gameSession, scenarioSeed, nowIso);
-  gameSession.activeCheckpointId = checkpoint.checkpointId;
+  delete gameSession.activeCheckpointId;
+
+  if (previousCheckpointId) {
+    state.checkpoints.delete(previousCheckpointId);
+  }
 
   state.sceneSessions.set(sceneSession.sceneSessionId, sceneSession);
-  state.checkpoints.set(checkpoint.checkpointId, checkpoint);
   state.sessions.set(gameSession.sessionId, gameSession);
-  state.activeSessionByUser.set(gameSession.userId, gameSession.sessionId);
+  if (state.activeSessionByUser.get(gameSession.userId) === gameSession.sessionId) {
+    state.activeSessionByUser.delete(gameSession.userId);
+  }
 
   return buildGameStartResponse(gameSession, sceneSession, checkpoint, 'scenario_seed');
 }
@@ -2266,7 +2272,7 @@ const server = http.createServer(async (req, res) => {
 
       let response;
       if (body.scenarioSeedId) {
-        const targetSession = existingSession || createNewGameSession(userId, body.profile, body.city).gameSession;
+        const targetSession = createNewGameSession(userId, body.profile, body.city).gameSession;
         response = resumeGameSessionFromScenarioSeed(targetSession, body.scenarioSeedId);
 
         if (!response) {
