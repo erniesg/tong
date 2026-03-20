@@ -1,6 +1,6 @@
 {
   "packId": "seoul_food_street_gold",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "cityId": "seoul",
   "locationId": "food_street",
   "lang": "ko",
@@ -233,6 +233,96 @@
       "targetCount": 2,
       "assessmentThreshold": 0.8,
       "objectiveCategory": "grammar"
+    },
+    {
+      "nodeId": "ko-sent-order-complete",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 4,
+      "title": "Build complete order sentences",
+      "description": "Combine item, quantity, and courtesy into a full order sentence.",
+      "tags": ["sentences", "ordering", "assembly"],
+      "targetItemIds": ["ko-sent-order-basic", "ko-sent-order-count", "ko-sent-order-combo"],
+      "targetCount": 3,
+      "assessmentThreshold": 0.82,
+      "objectiveCategory": "sentences"
+    },
+    {
+      "nodeId": "ko-sent-order-adjustments",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 4,
+      "title": "Make follow-up requests",
+      "description": "Adjust the order by asking for spice changes, drinks, or takeaway.",
+      "tags": ["sentences", "requests", "follow-up"],
+      "targetItemIds": ["ko-sent-less-spicy", "ko-sent-add-drink", "ko-sent-takeaway"],
+      "targetCount": 3,
+      "assessmentThreshold": 0.82,
+      "objectiveCategory": "sentences"
+    },
+    {
+      "nodeId": "ko-conv-stall-exchange",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 5,
+      "title": "Handle the opening exchange",
+      "description": "Respond naturally when the ajusshi greets you, asks your order, and confirms payment.",
+      "tags": ["conversation", "opening", "stall"],
+      "targetItemIds": ["ko-conv-open-order", "ko-conv-respond-question", "ko-conv-payment-question"],
+      "targetCount": 3,
+      "assessmentThreshold": 0.84,
+      "objectiveCategory": "conversation"
+    },
+    {
+      "nodeId": "ko-conv-repair-and-close",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 5,
+      "title": "Repair mistakes and close politely",
+      "description": "Recover from a misunderstanding, repeat the order, and close the exchange cleanly.",
+      "tags": ["conversation", "repair", "closing"],
+      "targetItemIds": ["ko-conv-repeat-order", "ko-conv-fix-mistake", "ko-conv-thank-and-close"],
+      "targetCount": 3,
+      "assessmentThreshold": 0.84,
+      "objectiveCategory": "conversation"
+    },
+    {
+      "nodeId": "ko-mastery-group-order",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 6,
+      "title": "Run a group order under pressure",
+      "description": "Manage multiple items, preferences, and payment choices in one fluid exchange.",
+      "tags": ["mastery", "group-order", "pressure"],
+      "targetItemIds": ["ko-mastery-order-for-group", "ko-mastery-preference-swap", "ko-mastery-card-or-cash"],
+      "targetCount": 3,
+      "assessmentThreshold": 0.88,
+      "objectiveCategory": "mastery"
+    },
+    {
+      "nodeId": "ko-mastery-natural-hangout",
+      "type": "objective",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "lang": "ko",
+      "level": 6,
+      "title": "Stay natural in a live food-street hangout",
+      "description": "Keep the order flowing while responding to recommendations, small talk, and a busy stall rhythm.",
+      "tags": ["mastery", "hangout", "fluency"],
+      "targetItemIds": ["ko-mastery-natural-chat", "ko-mastery-recommendation-loop", "ko-mastery-busy-stall-order"],
+      "targetCount": 3,
+      "assessmentThreshold": 0.88,
+      "objectiveCategory": "mastery"
     }
   ],
   "edges": [
@@ -253,11 +343,28 @@
     { "edgeId": "edge_object_particle_requires_juseyo", "type": "requires", "fromNodeId": "ko-gram-juseyo", "toNodeId": "ko-gram-object-particle", "rationale": "Object marking builds on simple order statements." },
     { "edgeId": "edge_counters_requires_numbers", "type": "requires", "fromNodeId": "ko-vocab-numbers", "toNodeId": "ko-gram-counters", "rationale": "Counters require number fluency." },
     { "edgeId": "edge_counters_requires_juseyo", "type": "requires", "fromNodeId": "ko-gram-juseyo", "toNodeId": "ko-gram-counters", "rationale": "Counter phrases extend the base order pattern." },
+    { "edgeId": "edge_sent_complete_requires_juseyo", "type": "requires", "fromNodeId": "ko-gram-juseyo", "toNodeId": "ko-sent-order-complete", "rationale": "Full order sentences build on the base polite pattern." },
+    { "edgeId": "edge_sent_complete_requires_counters", "type": "requires", "fromNodeId": "ko-gram-counters", "toNodeId": "ko-sent-order-complete", "rationale": "Full order sentences need quantity handling." },
+    { "edgeId": "edge_sent_adjust_requires_complete", "type": "requires", "fromNodeId": "ko-sent-order-complete", "toNodeId": "ko-sent-order-adjustments", "rationale": "Follow-up requests extend a complete order sentence." },
+    { "edgeId": "edge_sent_adjust_requires_taste", "type": "requires", "fromNodeId": "ko-vocab-taste-words", "toNodeId": "ko-sent-order-adjustments", "rationale": "Spice and preference changes rely on taste vocabulary." },
+    { "edgeId": "edge_conv_exchange_requires_complete", "type": "requires", "fromNodeId": "ko-sent-order-complete", "toNodeId": "ko-conv-stall-exchange", "rationale": "The opening exchange assumes complete sentence production." },
+    { "edgeId": "edge_conv_exchange_requires_adjustments", "type": "requires", "fromNodeId": "ko-sent-order-adjustments", "toNodeId": "ko-conv-stall-exchange", "rationale": "A live exchange includes clarification and follow-up requests." },
+    { "edgeId": "edge_conv_repair_requires_exchange", "type": "requires", "fromNodeId": "ko-conv-stall-exchange", "toNodeId": "ko-conv-repair-and-close", "rationale": "Repairing a conversation assumes you can already open one." },
+    { "edgeId": "edge_conv_repair_requires_object_particle", "type": "requires", "fromNodeId": "ko-gram-object-particle", "toNodeId": "ko-conv-repair-and-close", "rationale": "Repeating and correcting orders benefits from cleaner grammar." },
+    { "edgeId": "edge_mastery_group_requires_exchange", "type": "requires", "fromNodeId": "ko-conv-stall-exchange", "toNodeId": "ko-mastery-group-order", "rationale": "Group ordering builds on the basic multi-turn stall exchange." },
+    { "edgeId": "edge_mastery_group_requires_repair", "type": "requires", "fromNodeId": "ko-conv-repair-and-close", "toNodeId": "ko-mastery-group-order", "rationale": "Group orders demand repair and recovery skills." },
+    { "edgeId": "edge_mastery_hangout_requires_exchange", "type": "requires", "fromNodeId": "ko-conv-stall-exchange", "toNodeId": "ko-mastery-natural-hangout", "rationale": "Natural hangouts assume stable opening exchanges." },
+    { "edgeId": "edge_mastery_hangout_requires_repair", "type": "requires", "fromNodeId": "ko-conv-repair-and-close", "toNodeId": "ko-mastery-natural-hangout", "rationale": "Natural hangouts require recovery and polite closing under pressure." },
     { "edgeId": "edge_level0_unlocks_level1", "type": "unlocks", "fromNodeId": "ko-script-menu-reading", "toNodeId": "ko-pron-food-words", "rationale": "Finishing script content unlocks food pronunciation." },
     { "edgeId": "edge_level1_unlocks_level2", "type": "unlocks", "fromNodeId": "ko-pron-food-words", "toNodeId": "ko-vocab-food-items", "rationale": "Pronunciation milestone unlocks vocabulary work." },
     { "edgeId": "edge_level2_unlocks_level3", "type": "unlocks", "fromNodeId": "ko-vocab-courtesy", "toNodeId": "ko-gram-juseyo", "rationale": "Polite vocabulary unlocks grammar patterns." },
+    { "edgeId": "edge_level3_unlocks_level4", "type": "unlocks", "fromNodeId": "ko-gram-counters", "toNodeId": "ko-sent-order-complete", "rationale": "Grammar fluency unlocks sentence-building work." },
+    { "edgeId": "edge_level4_unlocks_level5", "type": "unlocks", "fromNodeId": "ko-sent-order-adjustments", "toNodeId": "ko-conv-stall-exchange", "rationale": "Sentence-level control unlocks conversation practice." },
+    { "edgeId": "edge_level5_unlocks_level6", "type": "unlocks", "fromNodeId": "ko-conv-repair-and-close", "toNodeId": "ko-mastery-group-order", "rationale": "Stable conversation performance unlocks mastery-tier challenges." },
     { "edgeId": "edge_food_vocab_reinforces_taste", "type": "reinforces", "fromNodeId": "ko-vocab-food-items", "toNodeId": "ko-vocab-taste-words", "rationale": "Food vocabulary practice reinforces taste descriptors." },
-    { "edgeId": "edge_food_vocab_reinforces_verbs", "type": "reinforces", "fromNodeId": "ko-vocab-food-items", "toNodeId": "ko-vocab-basic-verbs", "rationale": "Known food nouns reinforce core action verbs." }
+    { "edgeId": "edge_food_vocab_reinforces_verbs", "type": "reinforces", "fromNodeId": "ko-vocab-food-items", "toNodeId": "ko-vocab-basic-verbs", "rationale": "Known food nouns reinforce core action verbs." },
+    { "edgeId": "edge_sentences_reinforce_conversation", "type": "reinforces", "fromNodeId": "ko-sent-order-complete", "toNodeId": "ko-conv-stall-exchange", "rationale": "Sentence assembly reinforces live exchange fluency." },
+    { "edgeId": "edge_conversation_reinforces_mastery", "type": "reinforces", "fromNodeId": "ko-conv-repair-and-close", "toNodeId": "ko-mastery-natural-hangout", "rationale": "Conversation repair reinforces mastery-level performance." }
   ],
   "levels": [
     {
@@ -303,6 +410,39 @@
         "minItemsCompleted": 10,
         "requiredNodeIds": ["ko-gram-juseyo"]
       }
+    },
+    {
+      "level": 4,
+      "label": "SENTENCES",
+      "description": "Can I produce complete food-street sentences?",
+      "objectiveNodeIds": ["ko-sent-order-complete", "ko-sent-order-adjustments"],
+      "assessmentCriteria": {
+        "minAccuracy": 0.82,
+        "minItemsCompleted": 6,
+        "requiredNodeIds": ["ko-sent-order-complete"]
+      }
+    },
+    {
+      "level": 5,
+      "label": "CONVERSATION",
+      "description": "Can I survive a short multi-turn stall exchange?",
+      "objectiveNodeIds": ["ko-conv-stall-exchange", "ko-conv-repair-and-close"],
+      "assessmentCriteria": {
+        "minAccuracy": 0.84,
+        "minItemsCompleted": 6,
+        "requiredNodeIds": ["ko-conv-stall-exchange"]
+      }
+    },
+    {
+      "level": 6,
+      "label": "MASTERY",
+      "description": "Can I stay natural under pressure and variation?",
+      "objectiveNodeIds": ["ko-mastery-group-order", "ko-mastery-natural-hangout"],
+      "assessmentCriteria": {
+        "minAccuracy": 0.88,
+        "minItemsCompleted": 6,
+        "requiredNodeIds": ["ko-mastery-group-order"]
+      }
     }
   ],
   "scenarios": [
@@ -324,14 +464,14 @@
   "missions": [
     {
       "missionId": "ko-food-street-ordering-mission",
-      "title": "Food Street Ordering Mission",
-      "description": "Pass a full ordering interaction using food vocabulary, courtesy, and at least one grammar pattern.",
-      "level": 3,
-      "requiredNodeIds": ["ko-vocab-food-items", "ko-vocab-courtesy", "ko-gram-juseyo"],
+      "title": "Food Street Capstone Mission",
+      "description": "Handle a full live stall interaction for a group, adapt to changes, and stay natural under food-street pressure.",
+      "level": 7,
+      "requiredNodeIds": ["ko-mastery-group-order", "ko-mastery-natural-hangout"],
       "rewards": {
-        "xp": 48,
-        "sp": 16,
-        "rp": 8
+        "xp": 72,
+        "sp": 24,
+        "rp": 14
       }
     }
   ],
@@ -430,7 +570,7 @@
         "examples": [
           { "target": "만두 주세요", "translation": "Dumplings, please" }
         ],
-        "level": 3
+        "level": 4
       },
       {
         "id": "ko-sent-order-count",
@@ -439,7 +579,151 @@
         "examples": [
           { "target": "만두 세 개 주세요", "translation": "Three dumplings, please" }
         ],
-        "level": 3
+        "level": 4
+      },
+      {
+        "id": "ko-sent-order-combo",
+        "pattern": "N + number + 개 + drink + 주세요",
+        "explanation": "Chain the main item and a drink into one smooth sentence.",
+        "examples": [
+          { "target": "만두 세 개하고 콜라 주세요", "translation": "Three dumplings and a cola, please" }
+        ],
+        "level": 4
+      },
+      {
+        "id": "ko-sent-less-spicy",
+        "pattern": "덜 맵게 해 주세요",
+        "explanation": "Ask for a milder version of the dish.",
+        "examples": [
+          { "target": "떡볶이 덜 맵게 해 주세요", "translation": "Please make the tteokbokki less spicy" }
+        ],
+        "level": 4
+      },
+      {
+        "id": "ko-sent-add-drink",
+        "pattern": "N도 주세요",
+        "explanation": "Add one more item to the order naturally.",
+        "examples": [
+          { "target": "콜라도 주세요", "translation": "And a cola too, please" }
+        ],
+        "level": 4
+      },
+      {
+        "id": "ko-sent-takeaway",
+        "pattern": "포장해 주세요",
+        "explanation": "Ask for takeaway packaging.",
+        "examples": [
+          { "target": "포장해 주세요", "translation": "Please pack it to go" }
+        ],
+        "level": 4
+      },
+      {
+        "id": "ko-conv-open-order",
+        "pattern": "안녕하세요, 주문할게요",
+        "explanation": "Open the exchange naturally and signal that you are ready to order.",
+        "examples": [
+          { "target": "안녕하세요, 주문할게요", "translation": "Hi, I'd like to order" }
+        ],
+        "level": 5
+      },
+      {
+        "id": "ko-conv-respond-question",
+        "pattern": "N 주세요 / N 두 개 주세요",
+        "explanation": "Answer the vendor's prompt with a clean order sentence.",
+        "examples": [
+          { "target": "떡볶이 두 개 주세요", "translation": "Two tteokbokki, please" }
+        ],
+        "level": 5
+      },
+      {
+        "id": "ko-conv-payment-question",
+        "pattern": "카드 돼요? / 현금 있어요",
+        "explanation": "Handle a quick payment-related follow-up.",
+        "examples": [
+          { "target": "카드 돼요?", "translation": "Can I pay by card?" }
+        ],
+        "level": 5
+      },
+      {
+        "id": "ko-conv-repeat-order",
+        "pattern": "아니요, N 하나요",
+        "explanation": "Repeat the order when the vendor mishears you.",
+        "examples": [
+          { "target": "아니요, 만두 하나요", "translation": "No, one dumpling" }
+        ],
+        "level": 5
+      },
+      {
+        "id": "ko-conv-fix-mistake",
+        "pattern": "N 말고 M 주세요",
+        "explanation": "Correct the item or preference mid-conversation.",
+        "examples": [
+          { "target": "콜라 말고 물 주세요", "translation": "Not cola, water please" }
+        ],
+        "level": 5
+      },
+      {
+        "id": "ko-conv-thank-and-close",
+        "pattern": "감사합니다, 잘 먹겠습니다",
+        "explanation": "Close the exchange politely and naturally.",
+        "examples": [
+          { "target": "감사합니다, 잘 먹겠습니다", "translation": "Thank you, I'll enjoy it" }
+        ],
+        "level": 5
+      },
+      {
+        "id": "ko-mastery-order-for-group",
+        "pattern": "N 두 개, M 하나, 음료 하나 주세요",
+        "explanation": "Order multiple items for more than one person without losing structure.",
+        "examples": [
+          { "target": "떡볶이 두 개, 만두 하나, 콜라 하나 주세요", "translation": "Two tteokbokki, one dumpling, and one cola, please" }
+        ],
+        "level": 6
+      },
+      {
+        "id": "ko-mastery-preference-swap",
+        "pattern": "이거는 덜 맵게, 저거는 그냥 주세요",
+        "explanation": "Handle different preferences across items in one order.",
+        "examples": [
+          { "target": "이거는 덜 맵게, 저거는 그냥 주세요", "translation": "Make this one less spicy, and the other one regular" }
+        ],
+        "level": 6
+      },
+      {
+        "id": "ko-mastery-card-or-cash",
+        "pattern": "카드로 할게요 / 현금으로 할게요",
+        "explanation": "Answer payment shifts smoothly without breaking the flow.",
+        "examples": [
+          { "target": "카드로 할게요", "translation": "I'll pay by card" }
+        ],
+        "level": 6
+      },
+      {
+        "id": "ko-mastery-natural-chat",
+        "pattern": "이거 자주 먹어요?",
+        "explanation": "Stay comfortable when the interaction becomes lightly social instead of transactional.",
+        "examples": [
+          { "target": "이거 자주 먹어요?", "translation": "Do you eat this often?" }
+        ],
+        "level": 6
+      },
+      {
+        "id": "ko-mastery-recommendation-loop",
+        "pattern": "추천해 주세요 / 그럼 그걸로 할게요",
+        "explanation": "Ask for a recommendation and accept it naturally.",
+        "examples": [
+          { "target": "추천해 주세요. 그럼 그걸로 할게요", "translation": "Please recommend something. Then I'll go with that" }
+        ],
+        "level": 6
+      },
+      {
+        "id": "ko-mastery-busy-stall-order",
+        "pattern": "잠시만요, 다시 말할게요",
+        "explanation": "Recover gracefully when the stall is loud, rushed, or the first attempt fails.",
+        "examples": [
+          { "target": "잠시만요, 다시 말할게요", "translation": "One moment, I'll say it again" }
+        ],
+        "level": 6
       }
     ]
   }

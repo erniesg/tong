@@ -717,6 +717,12 @@ export interface LearnerNodeState {
   recommendedReason?: string;
 }
 
+export interface EvidenceTargetResult {
+  targetId: string;
+  correct: boolean;
+  qualityScore?: number;
+}
+
 export interface EvidenceEvent {
   eventId: string;
   learnerId: string;
@@ -726,6 +732,7 @@ export interface EvidenceEvent {
   correct: boolean;
   qualityScore: number;
   createdAt: string;
+  targetResults?: EvidenceTargetResult[];
   metadata?: Record<string, unknown>;
 }
 
@@ -768,10 +775,85 @@ export interface WorldRoadmapEntry {
   completedNodeCount: number;
 }
 
+export interface LanguageTierInfo {
+  level: number;
+  label: string;
+  description: string;
+}
+
+export interface LanguageProgressCategoryStat {
+  category: ObjectiveCategory;
+  masteryScore: number;
+  nodeCount: number;
+}
+
+export interface LanguageProgressSummary {
+  learnerId: string;
+  lang: TargetLanguage;
+  languageTier: LanguageTierInfo;
+  progressToNextTier: number;
+  completedNodeCount: number;
+  activeNodeCount: number;
+  totalNodeCount: number;
+  nextUnlockNodeIds: string[];
+  strongestCategories: LanguageProgressCategoryStat[];
+  weakestCategories: LanguageProgressCategoryStat[];
+  recommendedAction: 'lesson' | 'hangout' | 'review' | 'mission';
+}
+
+export interface NodeTargetProgress {
+  nodeId: string;
+  totalTargetCount: number;
+  completedTargetCount: number;
+  completionRatio: number;
+  remainingTargetIds: string[];
+  weakTargetIds: string[];
+  lastPracticedTargetIds: string[];
+}
+
+export interface MissionGateStatus {
+  missionId: string;
+  title: string;
+  description: string;
+  level: number;
+  status: 'blocked' | 'ready' | 'completed';
+  ready: boolean;
+  completed: boolean;
+  completedAt?: string;
+  requiredNodeIds: string[];
+  completedRequiredNodeIds: string[];
+  remainingRequiredNodeIds: string[];
+  reason: string;
+  rewards: {
+    xp: number;
+    sp: number;
+    rp: number;
+  };
+}
+
+export interface GraphNextUnlock {
+  nodeId: string;
+  title: string;
+  level: number;
+  objectiveCategory?: ObjectiveCategory;
+  remainingBlockerNodeIds: string[];
+  pathNodeIds: string[];
+  reason: string;
+}
+
+export interface GraphReadinessState {
+  ready: boolean;
+  reason: string;
+  blockingNodeIds: string[];
+}
+
 export interface LocationSkillTreeNode {
   node: CurriculumGraphNode;
   state: LearnerNodeState;
   blockers: string[];
+  targetProgress?: NodeTargetProgress;
+  unlocksNodeIds?: string[];
+  missionCritical?: boolean;
 }
 
 export interface PersonalizedOverlayNode {
@@ -786,15 +868,20 @@ export interface PersonalizedOverlayNode {
 
 export interface GraphDashboardResponse {
   learner: LearnerPersonaProfile;
+  languageSummary?: LanguageProgressSummary;
   progression: {
     xp: number;
     sp: number;
     rp: number;
   };
   roadmap: WorldRoadmapEntry[];
+  nextUnlocks?: GraphNextUnlock[];
   selectedPack: {
     pack: LocationCurriculumPack;
     nodes: LocationSkillTreeNode[];
+    missionGate?: MissionGateStatus | null;
+    lessonBundle?: GraphLessonBundleResponse;
+    hangoutBundle?: GraphHangoutBundleResponse;
   };
   overlays: PersonalizedOverlayNode[];
   recommendations: GraphRecommendation[];
@@ -808,17 +895,33 @@ export interface GraphLessonBundleResponse {
   learnerId: string;
   nodeIds: string[];
   objectiveIds: string[];
+  lang?: TargetLanguage;
+  cityId?: GraphCityId;
+  locationId?: GraphLocationId;
   title: string;
   reason: string;
+  focusNodeId?: string;
+  focusTargetIds?: string[];
+  targetProgress?: NodeTargetProgress[];
+  nextUnlockNodeIds?: string[];
 }
 
 export interface GraphHangoutBundleResponse {
   learnerId: string;
   nodeIds: string[];
   objectiveIds: string[];
+  lang?: TargetLanguage;
+  cityId?: GraphCityId;
+  locationId?: GraphLocationId;
   scenarioId: string;
   title: string;
   reason: string;
+  ready?: boolean;
+  focusNodeId?: string;
+  focusTargetIds?: string[];
+  targetProgress?: NodeTargetProgress[];
+  readiness?: GraphReadinessState;
+  missionGate?: MissionGateStatus | null;
 }
 
 export interface GraphPackValidationIssue {
@@ -837,6 +940,7 @@ export interface GraphPackValidationResponse {
 export interface GraphEvidenceRecordResponse {
   learnerId: string;
   personaId?: string;
+  accepted?: boolean;
   recorded: number;
   events: Array<{
     eventId: string;
@@ -852,6 +956,8 @@ export interface GraphEvidenceRecordResponse {
     occurredAtIso: string;
     source: string;
   }>;
+  event?: EvidenceEvent;
+  state?: LearnerNodeState;
   progression: {
     xp: number;
     sp: number;
