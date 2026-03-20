@@ -30,6 +30,48 @@
     "Practice KO objective ko-vocab-food-items"
   ],
   "resumeSource": "new_session",
+  "recentMediaRationale": {
+    "generatedAtIso": "2026-02-28T02:40:00.000Z",
+    "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+    "rankedTerms": [
+      {
+        "lemma": "주문",
+        "lang": "ko",
+        "source": "youtube",
+        "weightedScore": 0.95
+      },
+      {
+        "lemma": "연습",
+        "lang": "ko",
+        "source": "spotify",
+        "weightedScore": 0.65
+      }
+    ],
+    "topicSummary": {
+      "clusterId": "food-ordering",
+      "label": "Food Ordering",
+      "topTerms": [
+        "주문",
+        "메뉴"
+      ]
+    },
+    "placementHints": [
+      {
+        "city": "seoul",
+        "location": "food_street",
+        "mode": "hangout",
+        "placementType": "hangout",
+        "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+        "clusterId": "food-ordering",
+        "objectiveId": "ko-vocab-food-items",
+        "canonicalObjectiveId": "ko-vocab-food-items",
+        "legacyObjectiveId": "ko_food_l2_001",
+        "objectiveAliasIds": [
+          "ko_food_l2_001"
+        ]
+      }
+    ]
+  },
   "gameSession": {
     "sessionId": "sess_demo_001",
     "userId": "demo-user-1",
@@ -97,6 +139,10 @@
       "Review personalized learn targets",
       "Practice KO objective ko-vocab-food-items"
     ],
+    "personalization": {
+      "generatedAtIso": "2026-02-28T02:40:00.000Z",
+      "reason": "Food-ordering terms reinforce the Seoul food street hangout."
+    },
     "resumeSource": "new_session",
     "activeCheckpointId": "ckpt_sess_demo_001_intro",
     "startedAtIso": "2026-03-15T04:55:00.000Z",

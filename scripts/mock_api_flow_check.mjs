@@ -155,6 +155,46 @@ async function run() {
   assertArray(mediaProfile.data?.learningSignals?.topTerms[0]?.provenance?.samples, 'learningSignals.topTerms[0].provenance.samples');
   logPass('/api/v1/player/media-profile');
 
+  const spotifyConnect = await requestJson(`/api/v1/integrations/spotify/connect?userId=${encodeURIComponent(userId)}`);
+  assert(spotifyConnect.ok, `/integrations/spotify/connect failed (${spotifyConnect.status})`);
+  assert(typeof spotifyConnect.data?.authUrl === 'string', 'spotify connect authUrl missing');
+  logPass('/api/v1/integrations/spotify/connect');
+
+  const spotifySync = await requestJson('/api/v1/integrations/spotify/sync', {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+  assert(spotifySync.ok, `/integrations/spotify/sync failed (${spotifySync.status})`);
+  assert(spotifySync.data?.ok === true, 'spotify sync missing ok=true');
+  assert(Number.isFinite(spotifySync.data?.spotifyItemCount), 'spotify sync item count missing');
+  assertArray(spotifySync.data?.recentMediaRationale?.rankedTerms, 'spotify sync recentMediaRationale.rankedTerms');
+  logPass('/api/v1/integrations/spotify/sync');
+
+  const spotifyStatus = await requestJson(`/api/v1/integrations/spotify/status?userId=${encodeURIComponent(userId)}`);
+  assert(spotifyStatus.ok, `/integrations/spotify/status failed (${spotifyStatus.status})`);
+  assert(spotifyStatus.data?.connected === true, 'spotify status should report connected after sync');
+  logPass('/api/v1/integrations/spotify/status');
+
+  const youtubeConnect = await requestJson(`/api/v1/integrations/youtube/connect?userId=${encodeURIComponent(userId)}`);
+  assert(youtubeConnect.ok, `/integrations/youtube/connect failed (${youtubeConnect.status})`);
+  assert(typeof youtubeConnect.data?.authUrl === 'string', 'youtube connect authUrl missing');
+  logPass('/api/v1/integrations/youtube/connect');
+
+  const youtubeSync = await requestJson('/api/v1/integrations/youtube/sync', {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+  assert(youtubeSync.ok, `/integrations/youtube/sync failed (${youtubeSync.status})`);
+  assert(youtubeSync.data?.ok === true, 'youtube sync missing ok=true');
+  assert(Number.isFinite(youtubeSync.data?.youtubeItemCount), 'youtube sync item count missing');
+  assertArray(youtubeSync.data?.recentMediaRationale?.rankedTerms, 'youtube sync recentMediaRationale.rankedTerms');
+  logPass('/api/v1/integrations/youtube/sync');
+
+  const youtubeStatus = await requestJson(`/api/v1/integrations/youtube/status?userId=${encodeURIComponent(userId)}`);
+  assert(youtubeStatus.ok, `/integrations/youtube/status failed (${youtubeStatus.status})`);
+  assert(youtubeStatus.data?.connected === true, 'youtube status should report connected after sync');
+  logPass('/api/v1/integrations/youtube/status');
+
   const frequency = await requestJson(`/api/v1/vocab/frequency?windowDays=3&userId=${encodeURIComponent(userId)}`);
   assert(frequency.ok, `/vocab/frequency failed (${frequency.status})`);
   assertArray(frequency.data?.items, 'frequency.items');
@@ -182,6 +222,8 @@ async function run() {
   assertArray(objectiveKo.data?.coreTargets?.grammar, 'objectiveKo.coreTargets.grammar');
   assertArray(objectiveKo.data?.coreTargets?.sentenceStructures, 'objectiveKo.coreTargets.sentenceStructures');
   assertArray(objectiveKo.data?.personalizedTargets, 'objectiveKo.personalizedTargets');
+  assertArray(objectiveKo.data?.recentMediaRationale?.rankedTerms, 'objectiveKo.recentMediaRationale.rankedTerms');
+  assertArray(objectiveKo.data?.placementHints, 'objectiveKo.placementHints');
   assert(
     objectiveKo.data.personalizedTargets.every((item) => Array.isArray(item.linkedNodeIds) && item.linkedNodeIds.length > 0),
     'objectiveKo.personalizedTargets[].linkedNodeIds missing',
@@ -247,6 +289,8 @@ async function run() {
   assert(['hangout', 'learn'].includes(gameStart.data?.mode), 'gameStart.mode missing/invalid');
   assert(typeof gameStart.data?.progression?.xp === 'number', 'gameStart progression missing xp');
   assertArray(gameStart.data?.actions, 'gameStart.actions');
+  assertArray(gameStart.data?.recentMediaRationale?.rankedTerms, 'gameStart.recentMediaRationale.rankedTerms');
+  assertArray(gameStart.data?.gameSession?.personalization?.rankedTerms, 'gameStart.gameSession.personalization.rankedTerms');
   assert(gameStart.data?.gameSession?.sessionId === gameStart.data.sessionId, 'gameStart.gameSession.sessionId mismatch');
   assert(gameStart.data?.sceneSession?.gameSessionId === gameStart.data.sessionId, 'gameStart.sceneSession.gameSessionId mismatch');
   assert(gameStart.data?.activeCheckpoint?.gameSessionId === gameStart.data.sessionId, 'gameStart.activeCheckpoint.gameSessionId mismatch');

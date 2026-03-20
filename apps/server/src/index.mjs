@@ -69,6 +69,12 @@ const FIXTURES = {
   sceneFoodHangout: loadJson('packages/contracts/fixtures/scene.food-hangout.sample.json'),
   learnSessions: loadJson('packages/contracts/fixtures/learn.sessions.sample.json'),
   mediaProfile: loadJson('packages/contracts/fixtures/player.media-profile.sample.json'),
+  spotifyConnect: loadJson('packages/contracts/fixtures/spotify.connect.sample.json'),
+  spotifySync: loadJson('packages/contracts/fixtures/spotify.sync.sample.json'),
+  spotifyStatus: loadJson('packages/contracts/fixtures/spotify.status.sample.json'),
+  youtubeConnect: loadJson('packages/contracts/fixtures/youtube.connect.sample.json'),
+  youtubeSync: loadJson('packages/contracts/fixtures/youtube.sync.sample.json'),
+  youtubeStatus: loadJson('packages/contracts/fixtures/youtube.status.sample.json'),
 };
 
 const mockMediaWindowPath = path.join(repoRoot, 'apps/server/data/mock-media-window.json');
@@ -156,6 +162,7 @@ const state = {
   activeSessionByUser: new Map(),
   learnSessions: [...(FIXTURES.learnSessions.items || [])],
   ingestionByUser: new Map(),
+  integrationsByUser: new Map(),
 };
 
 const AGENT_TOOL_DEFINITIONS = [
@@ -741,6 +748,206 @@ function getDominantClusterId(ingestion) {
   );
 }
 
+function getMatchingPlacementHints(candidates = [], { city, location, mode, lang, objectiveId }) {
+  const items = Array.isArray(candidates) ? candidates : [];
+  const strictMatches = items.filter((candidate) => {
+    if (!candidate || typeof candidate !== 'object') return false;
+    if (city && candidate.city !== city) return false;
+    if (location && candidate.location !== location) return false;
+    if (mode && candidate.mode !== mode) return false;
+    if (lang && typeof candidate.objectiveId === 'string' && !candidate.objectiveId.startsWith(`${lang}-`)) return false;
+    if (objectiveId && candidate.objectiveId && candidate.objectiveId !== objectiveId) return false;
+    return true;
+  });
+
+  if (strictMatches.length > 0) {
+    return strictMatches;
+  }
+
+  return items.filter((candidate) => {
+    if (!candidate || typeof candidate !== 'object') return false;
+    if (city && candidate.city !== city) return false;
+    if (location && candidate.location !== location) return false;
+    if (mode && candidate.mode !== mode) return false;
+    return true;
+  });
+}
+
+function buildRecentMediaRationale({ ingestion, city, location, mode, lang, objectiveId }) {
+  const mediaProfile = ingestion?.mediaProfile || FIXTURES.mediaProfile;
+  const insights = ingestion?.insights || FIXTURES.insights;
+  const topTerms = Array.isArray(mediaProfile?.learningSignals?.topTerms) ? mediaProfile.learningSignals.topTerms : [];
+  const insightClusters = Array.isArray(insights?.clusters) ? insights.clusters : [];
+  const matchingTerms = topTerms.filter((term) => {
+    if (!term || typeof term !== 'object') return false;
+    if (lang && term.lang !== lang) return false;
+    return true;
+  });
+  const scopedTerms = matchingTerms.length > 0 ? matchingTerms : topTerms;
+  const selectedTerms = scopedTerms.slice(0, 3);
+  const placementHints = selectedTerms.flatMap((term) =>
+    getMatchingPlacementHints(term.placementHints, { city, location, mode, lang, objectiveId }),
+  );
+  const dominantPlacement = placementHints[0] || null;
+  const selectedCluster =
+    (dominantPlacement?.clusterId && insightClusters.find((cluster) => cluster.clusterId === dominantPlacement.clusterId)) ||
+    insightClusters.find((cluster) =>
+      getMatchingPlacementHints(cluster?.placementHints, { city, location, mode, lang, objectiveId }).length > 0,
+    ) ||
+    insightClusters[0] ||
+    null;
+
+  const sourceSummary = Object.entries(mediaProfile?.sourceBreakdown || {}).map(([source, value]) => ({
+    source,
+    itemsConsumed: value?.itemsConsumed || 0,
+    minutes: value?.minutes || 0,
+    topMedia: cloneJson(Array.isArray(value?.topMedia) ? value.topMedia.slice(0, 2) : []),
+  }));
+  const clusterPlacementHints = getMatchingPlacementHints(selectedCluster?.placementHints, {
+    city,
+    location,
+    mode,
+    lang,
+    objectiveId,
+  });
+  const rationaleReason =
+    dominantPlacement?.reason ||
+    clusterPlacementHints[0]?.reason ||
+    (typeof selectedCluster?.label === 'string' && selectedCluster.label.trim().length > 0
+      ? `Recent media signals align with ${selectedCluster.label.toLowerCase()} reinforcement.`
+      : null) ||
+    'Recent media signals were used to personalize the next lesson and hangout objective.';
+
+  return {
+    generatedAtIso: mediaProfile.generatedAtIso || new Date().toISOString(),
+    sourceSummary,
+    reason: rationaleReason,
+    rankedTerms: selectedTerms.map((term) => ({
+      lemma: term.lemma,
+      lang: term.lang,
+      source: term.dominantSource,
+      weightedScore: term.weightedScore,
+      provenance: cloneJson(term.provenance || {}),
+      placementHints: cloneJson(getMatchingPlacementHints(term.placementHints, { city, location, mode, lang, objectiveId })),
+    })),
+    topicSummary: selectedCluster
+      ? {
+          clusterId: selectedCluster.clusterId,
+          label: selectedCluster.label,
+          keywords: cloneJson(selectedCluster.keywords || []),
+          topTerms: cloneJson(selectedCluster.topTerms || []),
+          placementHints: cloneJson(clusterPlacementHints),
+        }
+      : null,
+    placementHints: cloneJson(placementHints.length > 0 ? placementHints : clusterPlacementHints),
+  };
+}
+
+function getIntegrationState(userId = DEFAULT_USER_ID, provider) {
+  const userState = state.integrationsByUser.get(userId) || {};
+  const fixtureStatus = provider === 'spotify' ? FIXTURES.spotifyStatus : FIXTURES.youtubeStatus;
+  const fixtureConnect = provider === 'spotify' ? FIXTURES.spotifyConnect : FIXTURES.youtubeConnect;
+  const fixtureSync = provider === 'spotify' ? FIXTURES.spotifySync : FIXTURES.youtubeSync;
+  const providerState = userState[provider] || {};
+  return {
+    provider,
+    userId,
+    connected: providerState.connected ?? fixtureStatus.connected ?? fixtureConnect.connected ?? false,
+    lastSyncAtIso: providerState.lastSyncAtIso ?? fixtureStatus.lastSyncAtIso ?? fixtureSync.syncedAtIso ?? null,
+    lastSyncItemCount:
+      providerState.lastSyncItemCount ??
+      fixtureStatus.lastSyncItemCount ??
+      fixtureSync[`${provider}ItemCount`] ??
+      0,
+    syncWindowHours: providerState.syncWindowHours ?? fixtureStatus.syncWindowHours ?? fixtureSync.windowHours ?? 72,
+    tokenExpiresAtIso: providerState.tokenExpiresAtIso ?? fixtureStatus.tokenExpiresAtIso ?? null,
+    tokenScope: providerState.tokenScope ?? fixtureStatus.tokenScope ?? fixtureConnect.scope ?? '',
+    demoMode: true,
+    configured: provider === 'spotify'
+      ? getSecretStatus().spotifyClientIdConfigured
+      : getSecretStatus().youtubeApiKeyConfigured,
+  };
+}
+
+function setIntegrationState(userId = DEFAULT_USER_ID, provider, patch = {}) {
+  const userState = state.integrationsByUser.get(userId) || {};
+  userState[provider] = {
+    ...(userState[provider] || {}),
+    ...patch,
+  };
+  state.integrationsByUser.set(userId, userState);
+  return getIntegrationState(userId, provider);
+}
+
+function buildIntegrationConnectPayload(userId = DEFAULT_USER_ID, provider) {
+  const fixture = cloneJson(provider === 'spotify' ? FIXTURES.spotifyConnect : FIXTURES.youtubeConnect);
+  const integrationState = getIntegrationState(userId, provider);
+  return {
+    ...fixture,
+    userId,
+    connected: integrationState.connected,
+    demoMode: true,
+    configured: integrationState.configured,
+    provider,
+  };
+}
+
+function buildIntegrationStatusPayload(userId = DEFAULT_USER_ID, provider) {
+  const fixture = cloneJson(provider === 'spotify' ? FIXTURES.spotifyStatus : FIXTURES.youtubeStatus);
+  const integrationState = getIntegrationState(userId, provider);
+  return {
+    ...fixture,
+    userId,
+    connected: integrationState.connected,
+    demoMode: true,
+    ...(provider === 'spotify'
+      ? { spotifyConfigured: integrationState.configured }
+      : { youtubeConfigured: integrationState.configured }),
+    tokenExpiresAtIso: integrationState.tokenExpiresAtIso,
+    tokenScope: integrationState.tokenScope,
+    lastSyncAtIso: integrationState.lastSyncAtIso,
+    lastSyncItemCount: integrationState.lastSyncItemCount,
+    syncWindowHours: integrationState.syncWindowHours,
+  };
+}
+
+function buildIntegrationSyncPayload(userId = DEFAULT_USER_ID, provider, includeSources = []) {
+  const normalizedSources = includeSources.length > 0 ? includeSources : [provider];
+  const result = runIngestionForUser(userId, { includeSources: normalizedSources });
+  const mediaProfile = result.mediaProfile || FIXTURES.mediaProfile;
+  const fixture = cloneJson(provider === 'spotify' ? FIXTURES.spotifySync : FIXTURES.youtubeSync);
+  const providerSourceCount = mediaProfile?.sourceBreakdown?.[provider]?.itemsConsumed || 0;
+  const nextState = setIntegrationState(userId, provider, {
+    connected: true,
+    lastSyncAtIso: result.generatedAtIso,
+    lastSyncItemCount: providerSourceCount,
+    syncWindowHours: fixture.windowHours ?? 72,
+  });
+
+  return {
+    ...fixture,
+    ok: true,
+    userId,
+    syncedAtIso: result.generatedAtIso,
+    windowHours: nextState.syncWindowHours,
+    [`${provider}ItemCount`]: providerSourceCount,
+    [`${provider}RawItemCount`]: providerSourceCount,
+    sourceCount: {
+      youtube: mediaProfile?.sourceBreakdown?.youtube?.itemsConsumed || 0,
+      spotify: mediaProfile?.sourceBreakdown?.spotify?.itemsConsumed || 0,
+    },
+    topTerms: cloneJson((result.frequency?.items || []).slice(0, 3)),
+    recentMediaRationale: buildRecentMediaRationale({
+      ingestion: result,
+      city: null,
+      location: null,
+      mode: null,
+      lang: null,
+      objectiveId: null,
+    }),
+  };
+}
+
 function buildPersonalizedObjective({
   userId = DEFAULT_USER_ID,
   mode = 'hangout',
@@ -824,6 +1031,14 @@ function buildPersonalizedObjective({
     ja: [],
     zh: [],
   };
+  const recentMediaRationale = buildRecentMediaRationale({
+    ingestion,
+    city,
+    location,
+    mode,
+    lang,
+    objectiveId,
+  });
 
   return withObjectiveIdentity({
     ...baseObjective,
@@ -850,6 +1065,8 @@ function buildPersonalizedObjective({
       personalizedTargets.length > 0
         ? personalizedTargets
         : cloneJson(baseObjective.personalizedTargets || []),
+    recentMediaRationale,
+    placementHints: cloneJson(recentMediaRationale.placementHints || []),
     completionCriteria: {
       ...(baseObjective.completionCriteria || {}),
       minEvidenceEvents: baseObjective.completionCriteria?.minEvidenceEvents || 3,
@@ -880,6 +1097,8 @@ function buildActiveObjectiveDescriptor({ objective, lang, city, location }) {
     objectiveNodeId: objective.objectiveGraph?.objectiveNodeId,
     targetNodeIds: cloneJson(objective.objectiveGraph?.targetNodeIds || []),
     summary: `Resume ${lang.toUpperCase()} practice at ${location.replace(/_/g, ' ')}.`,
+    recentMediaRationale: cloneJson(objective.recentMediaRationale || null),
+    placementHints: cloneJson(objective.placementHints || []),
   }, objective.objectiveId);
 }
 
@@ -1147,6 +1366,15 @@ function buildGameStartResponse(gameSession, sceneSession, activeCheckpoint, res
 
   const nextResumeSource = resumeSource || gameSession.resumeSource || 'new_session';
   gameSession.resumeSource = nextResumeSource;
+  const personalization = buildRecentMediaRationale({
+    ingestion: ensureIngestionForUser(gameSession.userId),
+    city: gameSession.cityId,
+    location: gameSession.locationId,
+    mode: gameSession.currentMode,
+    lang: gameSession.activeObjective?.lang || getWeakestTargetLanguage(gameSession.profile),
+    objectiveId: gameSession.activeObjective?.objectiveId || null,
+  });
+  gameSession.personalization = cloneJson(personalization);
   const responseSceneSession = cloneJson(effectiveSceneSession);
   delete responseSceneSession.score;
 
@@ -1162,6 +1390,7 @@ function buildGameStartResponse(gameSession, sceneSession, activeCheckpoint, res
     progression: cloneJson(gameSession.progression),
     actions: cloneJson(gameSession.availableActions),
     resumeSource: nextResumeSource,
+    recentMediaRationale: cloneJson(personalization),
     gameSession: cloneJson(gameSession),
     sceneSession: responseSceneSession,
     activeCheckpoint: effectiveCheckpoint ? cloneJson(effectiveCheckpoint) : null,
@@ -2384,6 +2613,70 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/v1/demo/secret-status' && req.method === 'GET') {
       jsonResponse(res, 200, getSecretStatus());
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/spotify/connect' && req.method === 'GET') {
+      const userId = getUserIdFromQuery(url.searchParams);
+      jsonResponse(res, 200, buildIntegrationConnectPayload(userId, 'spotify'));
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/spotify/callback' && req.method === 'GET') {
+      const userId = getUserIdFromQuery(url.searchParams);
+      const status = setIntegrationState(userId, 'spotify', { connected: true });
+      jsonResponse(res, 200, {
+        ok: true,
+        provider: 'spotify',
+        userId,
+        connected: status.connected,
+        demoMode: true,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/spotify/status' && req.method === 'GET') {
+      const userId = getUserIdFromQuery(url.searchParams);
+      jsonResponse(res, 200, buildIntegrationStatusPayload(userId, 'spotify'));
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/spotify/sync' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const userId = body.userId || getUserIdFromQuery(url.searchParams);
+      jsonResponse(res, 200, buildIntegrationSyncPayload(userId, 'spotify', ['spotify']));
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/youtube/connect' && req.method === 'GET') {
+      const userId = getUserIdFromQuery(url.searchParams);
+      jsonResponse(res, 200, buildIntegrationConnectPayload(userId, 'youtube'));
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/youtube/callback' && req.method === 'GET') {
+      const userId = getUserIdFromQuery(url.searchParams);
+      const status = setIntegrationState(userId, 'youtube', { connected: true });
+      jsonResponse(res, 200, {
+        ok: true,
+        provider: 'youtube',
+        userId,
+        connected: status.connected,
+        demoMode: true,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/youtube/status' && req.method === 'GET') {
+      const userId = getUserIdFromQuery(url.searchParams);
+      jsonResponse(res, 200, buildIntegrationStatusPayload(userId, 'youtube'));
+      return;
+    }
+
+    if (pathname === '/api/v1/integrations/youtube/sync' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const userId = body.userId || getUserIdFromQuery(url.searchParams);
+      jsonResponse(res, 200, buildIntegrationSyncPayload(userId, 'youtube', ['youtube']));
       return;
     }
 
