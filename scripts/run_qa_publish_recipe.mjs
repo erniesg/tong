@@ -133,6 +133,14 @@ function resolveRecipe(args) {
         ],
         description: "Strict API replay for scenario seed start-or-resume behavior",
       };
+    case "issue_51_scenario_seed_mount":
+      return {
+        command: "python3",
+        args: [
+          "scripts/record_issue_51_scenario_seed_mount.py",
+        ],
+        description: "Browser + strict API replay for deterministic scenario seed /game mount",
+      };
     case "issue_52_progression_persistence":
       return {
         command: "node",

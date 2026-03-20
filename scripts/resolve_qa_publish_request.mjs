@@ -226,7 +226,7 @@ function main() {
     run_dir: workflowInputs.run_dir || commentFlags.run_dir || prMetadata.run_dir || "",
     route: workflowInputs.route || commentFlags.route || prMetadata.route || inferredDefaults.route || "",
     scenario_seed:
-      workflowInputs.scenario_seed || commentFlags.scenario_seed || prMetadata.scenario_seed || "",
+      workflowInputs.scenario_seed || commentFlags.scenario_seed || prMetadata.scenario_seed || inferredDefaults.scenario_seed || "",
     checkpoint_id:
       workflowInputs.checkpoint_id || commentFlags.checkpoint_id || prMetadata.checkpoint_id || "",
     qa_recipe: workflowInputs.qa_recipe || prMetadata.qa_recipe || inferredDefaults.qa_recipe || "",

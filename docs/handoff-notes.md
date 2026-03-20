@@ -148,3 +148,10 @@ Template:
   - Requires `OPENAI_API_KEY` in GitHub Actions secrets.
   - The workflow assumes the provided branch name already follows the `codex/*` convention.
 - Next owner: `codex/qa-platform`
+
+## 2026-03-20 (Issue 51 part 2 seeded runtime + QA publish intent)
+- Date: 2026-03-20
+- Branch/worktree: `work` (shared root workspace crossing from `client-runtime` into `qa-platform` helper scripts/docs)
+- Intent:
+  - Teach the active `/game` bootstrap path to consume deterministic `scenarioSeedId` mounts from the existing `start-or-resume` substrate without collapsing them into ordinary player checkpoints.
+  - Add a CI-regenerable QA publish recipe for the issue #51 seeded mount flow so same-repo PRs can auto-resolve trusted publish metadata on PR open.
