@@ -95,28 +95,49 @@ Template:
   - This change touches the shared contracts zone; dependent progression branches should rebase before landing resume/checkpoint work.
 - Next owner: `codex/server-api`
 
-## 2026-03-16 (Player media personalization proposal)
-- Date: 2026-03-16
-- Branch/worktree: `codex/server-ingestion` + `.worktrees/server-ingestion`
+## 2026-03-20 (QA platform auth preflight tightening)
+- Date: 2026-03-20
+- Branch/worktree: `codex/remove-judge-hackathon-branding` (shared root workspace crossing into qa-platform-owned paths)
 - What changed:
-  - Added a repo-local proposal describing how YouTube/Spotify connections should feed the existing KG retrieval path instead of becoming a separate initiative.
-  - Mapped current contracts and open issues so connector sync, vocab-bank derivation, and game personalization can be sequenced without colliding with issue #17 work in `client-runtime`.
-  - Refined the proposal to explicitly cover segmentation/tokenization, rolling frequency counts, topic analysis, optional embedding-backed clustering, and placement scoring into lessons/hangouts/locations.
+  - Tightening reviewer-proof preflight and GitHub publish diagnostics so cloud tasks check real `gh` auth and real Wrangler auth instead of only binary presence/version.
+  - Making cloud-shell failures report missing publish-phase auth more explicitly when setup-phase auth was present but did not persist.
 - Contract changes: none
 - Integration risks:
-  - Live connector auth/callback work spans `server-api` and `server-ingestion`; keep provider-specific payload handling out of `game-engine`.
-  - Do not add a dedicated KG worktree unless the ownership map changes; use the existing `server-ingestion`, `server-api`, and `game-engine` lanes.
-- Next owner: `codex/server-ingestion` for retrieval input modeling, then `codex/server-api` for connect/sync surface wiring
+  - Cloud tasks that previously assumed setup-time secrets proved publish readiness will now fail earlier and more accurately in `qa:preflight-reviewer-proof`.
+- Next owner: `codex/qa-platform`
 
-## 2026-03-16 (Issue 17 tap-flow handoff)
-- Date: 2026-03-16
-- Branch/worktree: `codex/issue-17-tap-flow-investigation` + `.worktrees/issue-17-client-runtime`
+## 2026-03-20 (Trusted QA publish workflow)
+- Date: 2026-03-20
+- Branch/worktree: `codex/remove-judge-hackathon-branding` (shared root workspace crossing into qa-platform-owned paths and `.github/workflows/**`)
 - What changed:
-  - Added a local `continuePending` guard in the `/game` runtime so the UI no longer re-exposes the idle continue affordance while a continue request is already in flight.
-  - Threaded a `sceneBusy` prop into `SceneView` so queued-tool and post-append transition frames show the non-interactive busy state instead of a tappable "Tap to continue" label.
-  - Extended QA state snapshots with `continuePending` to make future timing traces easier to interpret.
+  - Added a trusted GitHub Actions workflow that can be triggered by PR comment (`/qa-publish`) or manual dispatch, resolves machine-readable publish metadata from the PR body, installs reviewer-proof dependencies, runs publish-shell preflight, and uses trusted GitHub/Cloudflare auth for comment posting and evidence upload.
+  - Added a helper script to resolve publish requests from workflow inputs, PR body metadata, and maintainer comment overrides.
+  - Updated the Codex PR notes template and cloud runbook to include the `QA Publish Request` block and the current limitation that gitignored Codex-local run bundles are not automatically present in GitHub Actions checkouts.
 - Contract changes: none
 - Integration risks:
-  - The local fallback hangout path is fast enough that final reviewer-facing reproduction of the old wasted-tap symptom still needs a human browser pass against real gameplay timing.
-  - Keep acceptance focused on the continue/tong whisper/exercise transitions in `/game?dev_intro=1&qa_trace=1`; this branch does not change exercise or content logic.
-- Next owner: human QA / `codex/client-runtime`
+  - The new workflow intentionally blocks fork PRs and same-repo PRs without a repo-visible run bundle; until a rerun automation exists, maintainers still need either a reproducible CI run or a manual publish fallback.
+- Next owner: `codex/qa-platform`
+
+## 2026-03-20 (Trusted Codex PR creation + CI recipe regeneration)
+- Date: 2026-03-20
+- Branch/worktree: `codex/remove-judge-hackathon-branding` (shared root workspace crossing into qa-platform-owned paths and `.github/workflows/**`)
+- What changed:
+  - Added a trusted GitHub Actions workflow that can create a `codex/*` branch and PR from a GitHub-visible patch artifact (workflow input, repo-visible patch file, or issue comment diff block).
+  - Extended trusted QA publish so it can regenerate a fresh QA run bundle in CI from a supported `qa_recipe` instead of requiring a repo-visible local `artifacts/qa-runs/...` directory.
+- Contract changes: none
+- Integration risks:
+  - PR creation still requires the patch itself to be visible to GitHub; Codex-local task storage is still invisible to Actions.
+  - CI evidence regeneration is whitelist-based; unsupported flows must add new recipes to `scripts/run_qa_publish_recipe.mjs`.
+- Next owner: `codex/qa-platform`
+
+## 2026-03-20 (Headless Codex PR automation)
+- Date: 2026-03-20
+- Branch/worktree: `codex/remove-judge-hackathon-branding` (shared root workspace crossing into qa-platform-owned paths and `.github/workflows/**`)
+- What changed:
+  - Added a `Codex Headless PR` GitHub Actions workflow that runs Codex via the official action, creates a PR with `peter-evans/create-pull-request`, and then dispatches trusted QA publish automatically.
+  - Documented this as the recommended path for future fully automatic PR creation, rather than relying on Codex cloud web task storage.
+- Contract changes: none
+- Integration risks:
+  - Requires `OPENAI_API_KEY` in GitHub Actions secrets.
+  - The workflow assumes the provided branch name already follows the `codex/*` convention.
+- Next owner: `codex/qa-platform`

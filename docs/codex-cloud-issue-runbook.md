@@ -143,6 +143,105 @@ Important delivery rules:
 8. For timing-sensitive fix verification, add `reviewer_proof` metadata to `evidence.json`, run `capture_reviewer_proof.py`, and make sure the rendered comment includes ordered frame links and cue timestamps instead of a generic screenshot list.
 9. Do not treat local-only artifact paths as reviewer-visible proof.
 
+## Trusted publish via GitHub Actions
+
+When a Codex cloud task cannot post GitHub comments or upload reviewer-proof artifacts directly because task-shell secrets are unavailable, use the trusted GitHub Actions workflow instead.
+
+Trigger options:
+
+1. Add a `QA Publish Request` JSON block to the PR body.
+2. Comment `/qa-publish` on the PR as a maintainer.
+3. Or run the `Trusted QA Publish` workflow manually with `pr_number`.
+
+Current behavior:
+
+1. The workflow uses trusted GitHub Actions credentials (`GITHUB_TOKEN`) plus repo Cloudflare secrets for publish/upload.
+2. It installs the reviewer-proof tooling (`ffmpeg`, `ffprobe`, ImageMagick, Wrangler auth checks) and runs `npm run qa:preflight-reviewer-proof` in the publishing shell.
+3. If the requested `run_dir` exists in the checked-out branch, it runs the existing trusted publish path:
+
+   ```bash
+   python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR>
+   ```
+
+4. If the `run_dir` is not repo-visible but the metadata provides a supported `qa_recipe`, the workflow starts local demo services in CI, regenerates a fresh run bundle, and publishes from that CI-created bundle.
+5. If neither a repo-visible `run_dir` nor a supported `qa_recipe` is available, the workflow comments a precise blocker instead of pretending publication succeeded.
+
+Important limitation:
+
+- `artifacts/qa-runs/...` is gitignored local staging, so Codex cloud task bundles are not automatically present in the GitHub Actions checkout unless you commit or otherwise publish them into GitHub-visible state.
+- CI regeneration only works for explicitly supported `qa_recipe` values. Add new recipes to `scripts/run_qa_publish_recipe.mjs` as more deterministic capture flows become available.
+
+## Trusted PR creation from GitHub-visible patch artifacts
+
+When a Codex cloud task cannot create a PR directly, you can hand GitHub Actions a patch that is visible to GitHub and let the repo create the branch and PR for you.
+
+Trigger options:
+
+1. Run the `Trusted Codex Create PR` workflow with:
+   - `new_branch`
+   - `pr_title`
+   - one patch source: `patch_text`, `patch_url`, or `patch_path`
+2. Or comment `/codex-create-pr` on an issue with:
+   - a `## Codex PR Request` JSON block
+   - a fenced ```diff block containing the patch
+
+Example issue comment:
+
+~~~md
+/codex-create-pr
+
+## Codex PR Request
+```json
+{
+  "base_branch": "main",
+  "new_branch": "codex/issue-49-checkpoint-resume",
+  "pr_title": "fix: issue #49 - persist and resume hangout checkpoints",
+  "issue_ref": "erniesg/tong#49",
+  "qa_publish_request": {
+    "issue_ref": "erniesg/tong#49",
+    "route": "/game",
+    "qa_recipe": "haeun_fresh_demo"
+  }
+}
+```
+
+```diff
+diff --git a/file.ts b/file.ts
+...
+```
+~~~
+
+Current behavior:
+
+1. The workflow applies the patch onto the requested base branch.
+2. It commits and pushes a `codex/*` branch.
+3. It opens the PR with the supplied PR body plus the `QA Publish Request` block.
+4. If `auto_qa_publish` is enabled, it explicitly dispatches the `Trusted QA Publish` workflow for the newly created PR.
+
+Important limitation:
+
+- GitHub Actions cannot see a patch or run bundle that exists only inside Codex cloud task storage.
+- The patch must first be made visible to GitHub, for example as workflow input text, a repo-visible patch file, or an issue comment diff block.
+
+## Fully automatic future PRs
+
+If you want future PR creation to be automatic rather than manually clicking `Create PR` in Codex cloud, use the `Codex Headless PR` workflow instead of the Codex cloud web task as the PR engine.
+
+Current behavior:
+
+1. GitHub Actions checks out the repo and runs Codex headlessly with a supplied prompt.
+2. `peter-evans/create-pull-request` commits the Codex changes and opens the PR.
+3. The PR body includes the `QA Publish Request` block automatically.
+4. The workflow explicitly dispatches `Trusted QA Publish`, which can regenerate reviewer-proof evidence in CI from a supported `qa_recipe`.
+
+Use this path when you want:
+
+- automatic PR creation
+- automatic QA publish dispatch
+- no manual transfer of patches out of Codex cloud task storage
+
+Use the Codex cloud web task path only when you specifically want an interactive remote coding session and are willing to create the PR manually afterward.
+
 ## Acceptance policy
 
 Issue workers are not the final product signoff.
