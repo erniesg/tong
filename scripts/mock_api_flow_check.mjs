@@ -3,6 +3,8 @@
 const args = process.argv.slice(2);
 const baseArg = args.find((arg) => !arg.startsWith('-'));
 const strictState = args.includes('--strict-state');
+const checkScenarioSeed = args.includes('--check-scenario-seed');
+const checkProgressionPersistence = args.includes('--check-progression-persistence');
 const sourcesArg = args.find((arg) => arg.startsWith('--sources='));
 const apiBase = (baseArg || process.env.TONG_API_BASE_URL || 'http://localhost:8787').replace(/\/$/, '');
 const includeSources = sourcesArg
@@ -38,6 +40,12 @@ function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
   }
+}
+
+function assertJsonEqual(actual, expected, label) {
+  const actualJson = JSON.stringify(actual);
+  const expectedJson = JSON.stringify(expected);
+  assert(actualJson === expectedJson, `${label} mismatch`);
 }
 
 async function requestJson(pathname, init = {}) {
@@ -81,6 +89,8 @@ function expectsSource(source) {
 async function run() {
   console.log(`Running mock flow checks against ${apiBase}`);
   console.log(`Strict stateful checks: ${strictState ? 'enabled' : 'disabled'}`);
+  console.log(`Scenario seed checks: ${checkScenarioSeed ? 'enabled' : 'disabled'}`);
+  console.log(`Progression persistence checks: ${checkProgressionPersistence ? 'enabled' : 'disabled'}`);
   console.log(`Source scope: ${includeSources.length > 0 ? includeSources.join(', ') : 'all'}`);
 
   const health = await requestJson('/health');
@@ -246,6 +256,26 @@ async function run() {
   );
   logPass('/api/v1/game/start-or-resume');
 
+  if (checkScenarioSeed) {
+    const scenarioSeedId = gameStart.data?.availableScenarioSeeds?.[0]?.seedId || 'review_ready';
+    const seededGame = await requestJson('/api/v1/game/start-or-resume', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId,
+        profile,
+        scenarioSeedId,
+      }),
+    });
+    assert(seededGame.ok, `/game/start-or-resume scenario seed failed (${seededGame.status})`);
+    assert(seededGame.data?.resumeSource === 'scenario_seed', 'scenario seed start should report scenario_seed resumeSource');
+    assert(seededGame.data?.activeCheckpoint?.route?.query?.scenarioSeed === scenarioSeedId, 'scenario seed route query missing scenarioSeed');
+    assert(seededGame.data?.activeCheckpoint?.phase === 'review', 'scenario seed phase should land on review');
+    assert(seededGame.data?.activeCheckpoint?.turn === 4, 'scenario seed turn should land on the deterministic review turn');
+    assert(seededGame.data?.activeCheckpoint?.activeExercise?.exerciseType === 'block_crush', 'scenario seed activeExercise missing');
+    assert(seededGame.data?.activeCheckpoint?.rng?.seed === 'review_ready_seed_v1', 'scenario seed rng.seed mismatch');
+    logPass('/api/v1/game/start-or-resume scenario seed');
+  }
+
   const startHangout = await requestJson('/api/v1/scenes/hangout/start', {
     method: 'POST',
     body: JSON.stringify({
@@ -320,6 +350,39 @@ async function run() {
     resumedGame.data?.activeCheckpoint?.rng?.version > gameStart.data?.activeCheckpoint?.rng?.version,
     'resume should advance the persisted checkpoint version after a turn response',
   );
+  if (checkProgressionPersistence) {
+    assertJsonEqual(
+      resumedGame.data?.activeCheckpoint?.missionGate,
+      respondHangout.data?.activeCheckpoint?.missionGate,
+      'resumed activeCheckpoint.missionGate',
+    );
+    assertJsonEqual(
+      resumedGame.data?.activeCheckpoint?.unlocks,
+      respondHangout.data?.activeCheckpoint?.unlocks,
+      'resumed activeCheckpoint.unlocks',
+    );
+    assertJsonEqual(
+      resumedGame.data?.activeCheckpoint?.rewards,
+      respondHangout.data?.activeCheckpoint?.rewards,
+      'resumed activeCheckpoint.rewards',
+    );
+    assertJsonEqual(
+      resumedGame.data?.gameSession?.missionGate,
+      resumedGame.data?.activeCheckpoint?.missionGate,
+      'resumed gameSession.missionGate',
+    );
+    assertJsonEqual(
+      resumedGame.data?.gameSession?.unlocks,
+      resumedGame.data?.activeCheckpoint?.unlocks,
+      'resumed gameSession.unlocks',
+    );
+    assertJsonEqual(
+      resumedGame.data?.gameSession?.rewards,
+      resumedGame.data?.activeCheckpoint?.rewards,
+      'resumed gameSession.rewards',
+    );
+    logPass('/api/v1/game/start-or-resume progression persistence');
+  }
   logPass('/api/v1/game/start-or-resume resume');
 
   const learnSessions = await requestJson(`/api/v1/learn/sessions?userId=${encodeURIComponent(userId)}&city=seoul&lang=ko`);
