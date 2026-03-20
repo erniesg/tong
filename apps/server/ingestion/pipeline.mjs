@@ -28,6 +28,57 @@ const CLUSTERS = [
   }
 ];
 
+const PLACEMENT_BY_CLUSTER = {
+  "food-ordering": [
+    {
+      city: "seoul",
+      location: "food_street",
+      mode: "hangout",
+      placementType: "hangout",
+      reason: "Food-ordering terms reinforce the Seoul food street hangout."
+    },
+    {
+      city: "seoul",
+      location: "food_street",
+      mode: "learn",
+      placementType: "learn",
+      reason: "Food-ordering terms fit the Seoul food lesson."
+    }
+  ],
+  "performance-energy": [
+    {
+      city: "shanghai",
+      location: "practice_studio",
+      mode: "hangout",
+      placementType: "mission",
+      reason: "Performance language supports the Shanghai texting mission."
+    },
+    {
+      city: "shanghai",
+      location: "practice_studio",
+      mode: "learn",
+      placementType: "learn",
+      reason: "Performance language can be introduced in the Shanghai practice lesson."
+    }
+  ],
+  "transport-navigation": [
+    {
+      city: "tokyo",
+      location: "subway_hub",
+      mode: "hangout",
+      placementType: "hangout",
+      reason: "Transit language is validated best in the Tokyo subway hub."
+    },
+    {
+      city: "tokyo",
+      location: "subway_hub",
+      mode: "learn",
+      placementType: "learn",
+      reason: "Transit terms map naturally to the Tokyo subway lesson."
+    }
+  ]
+};
+
 const OBJECTIVE_BY_CLUSTER = {
   "food-ordering": {
     objectiveId: "ko-vocab-food-items",
@@ -186,25 +237,36 @@ function aggregateTerms(events, { windowEnd, windowDays }) {
       const prev = terms.get(token) ?? {
         lemma: tokenRaw,
         normalized: token,
-        lang: detectLang(tokenRaw),
+        lang: event.lang || detectLang(tokenRaw),
         count: 0,
         weighted: 0,
         recencyWeighted: 0,
         sourceSet: new Set(),
         sourceWeights: Object.fromEntries(SOURCE_KEYS.map((key) => [key, 0])),
-        clusterId: clusterForTerm(token)
+        clusterId: clusterForTerm(token),
+        mediaIds: new Set(),
+        provenance: []
       };
 
       prev.count += 1;
       prev.weighted += weight;
       prev.recencyWeighted += weight * recencyWeight;
       prev.sourceSet.add(source);
+      prev.mediaIds.add(event.mediaId);
       if (typeof prev.sourceWeights[source] !== "number") {
         prev.sourceWeights[source] = 0;
       }
       prev.sourceWeights[source] += weight;
       if (!prev.clusterId) {
         prev.clusterId = clusterForTerm(token);
+      }
+      if (prev.provenance.length < 4) {
+        prev.provenance.push({
+          source,
+          mediaId: event.mediaId,
+          title: event.title,
+          consumedAtIso: event.consumedAtIso
+        });
       }
 
       terms.set(token, prev);
@@ -229,6 +291,37 @@ function getObjectiveLink(term) {
   }
 
   return OBJECTIVE_BY_LANG[term.lang] ?? OBJECTIVE_BY_LANG.en;
+}
+
+function placementHintsForCluster(clusterId, objectiveId) {
+  const resolvedClusterId =
+    clusterId && PLACEMENT_BY_CLUSTER[clusterId]
+      ? clusterId
+      : objectiveId === "ko-vocab-food-items"
+        ? "food-ordering"
+        : objectiveId === "zh-mission-stage-texting"
+          ? "performance-energy"
+          : "transport-navigation";
+  return (PLACEMENT_BY_CLUSTER[resolvedClusterId] ?? []).map((placement) =>
+    withObjectiveIdentity(
+      {
+        ...placement,
+        clusterId: resolvedClusterId
+      },
+      objectiveId
+    )
+  );
+}
+
+function summarizeProvenance(term) {
+  const samples = [...(term.provenance ?? [])]
+    .sort((a, b) => parseIso(b.consumedAtIso) - parseIso(a.consumedAtIso))
+    .slice(0, 3);
+  return {
+    sources: [...term.sourceSet],
+    mediaIds: [...term.mediaIds],
+    samples
+  };
 }
 
 function detectScriptType(term) {
@@ -370,12 +463,18 @@ function plannerRecommendations(clusterScores, topTerms) {
     withObjectiveIdentity({
       sceneId: "food_street_hangout_intro",
       city: "seoul",
-      mode: "hangout"
+      location: "food_street",
+      mode: "hangout",
+      placementType: "hangout",
+      sourceClusterId: "food-ordering"
     }, "ko-vocab-food-items"),
     withObjectiveIdentity({
       sceneId: "shanghai_texting_mission_advanced",
       city: "shanghai",
-      mode: "hangout"
+      location: "practice_studio",
+      mode: "hangout",
+      placementType: "mission",
+      sourceClusterId: "performance-energy"
     }, "zh-mission-stage-texting")
   ].filter((scene) => objectiveCandidates.some((objective) => objective.objectiveId === scene.objectiveId));
 
@@ -383,17 +482,41 @@ function plannerRecommendations(clusterScores, topTerms) {
     type: "targeted-drill",
     lemma: term.lemma,
     lang: term.lang,
-    reason: `Frequent in ${term.dominantSource} over last 72h`
+    reason: `Frequent in ${term.dominantSource} over last 72h`,
+    clusterId: term.clusterId,
+    provenance: term.provenance,
+    placementHints: placementHintsForCluster(
+      term.clusterId,
+      term.clusterId === "food-ordering"
+        ? "ko-vocab-food-items"
+        : term.clusterId === "performance-energy"
+          ? "zh-mission-stage-texting"
+          : "ja-vocab-subway-transfers"
+    )
   }, term.clusterId === "food-ordering"
     ? "ko-vocab-food-items"
     : term.clusterId === "performance-energy"
       ? "zh-mission-stage-texting"
       : "ja-vocab-subway-transfers"));
 
+  const placementCandidates = objectiveCandidates.flatMap((objective) => {
+    const clusterId =
+      objective.objectiveId === "ko-vocab-food-items"
+        ? "food-ordering"
+        : objective.objectiveId === "zh-mission-stage-texting"
+          ? "performance-energy"
+          : "transport-navigation";
+    return placementHintsForCluster(clusterId, objective.objectiveId).map((placement) => ({
+      ...placement,
+      confidence: objective.confidence
+    }));
+  });
+
   return {
     objectiveCandidates,
     sceneCandidates,
-    exerciseCandidates
+    exerciseCandidates,
+    placementCandidates
   };
 }
 
@@ -453,6 +576,7 @@ function buildInsightsClusters(items) {
         label: meta.label,
         keywords,
         topTerms,
+        placementHints: placementHintsForCluster(meta.clusterId, (OBJECTIVE_BY_CLUSTER[meta.clusterId] ?? OBJECTIVE_BY_LANG.en).objectiveId),
         score: sorted.reduce((sum, item) => sum + item.score, 0)
       };
     })
@@ -509,7 +633,9 @@ export function buildPlannerContext({ userId, events, windowDays = 3, nowIso }) 
     count: term.count,
     weightedScore: Number((term.weighted / maxWeighted).toFixed(4)),
     dominantSource: term.sourceWeights.spotify > term.sourceWeights.youtube ? "spotify" : "youtube",
-    clusterId: term.clusterId ?? "unassigned"
+    clusterId: term.clusterId ?? "unassigned",
+    provenance: summarizeProvenance(term),
+    placementHints: placementHintsForCluster(term.clusterId, getObjectiveLink(term).objectiveId)
   }));
 
   const clusterScores = computeClusterScores(
@@ -553,7 +679,8 @@ export function buildFrequencyPayload({
       lemma: term.lemma,
       lang: term.lang,
       count: term.count,
-      sourceCount: term.sourceSet.size
+      sourceCount: term.sourceSet.size,
+      provenance: summarizeProvenance(term)
     }));
 
   return {
@@ -640,6 +767,8 @@ export function buildVocabInsights({
     burst: term.burst,
     clusterId: term.clusterId,
     orthographyFeatures: orthographyFeaturesForTerm(term.lemma),
+    provenance: summarizeProvenance(term),
+    placementHints: placementHintsForCluster(term.clusterId, term.objective.objectiveId),
     objectiveLinks: [
       withObjectiveIdentity({
         reason: term.objective.reason

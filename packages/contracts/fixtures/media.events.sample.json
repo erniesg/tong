@@ -54,6 +54,17 @@
       "minutes": 16,
       "consumedAtIso": "2026-02-28T02:40:00.000Z",
       "tokens": ["火", "燃烧", "练习", "무대"]
+    },
+    {
+      "eventId": "evt_006",
+      "userId": "demo-user-1",
+      "source": "spotify",
+      "mediaId": "sp_track_017",
+      "title": "Subway Day",
+      "lang": "en",
+      "minutes": 12,
+      "consumedAtIso": "2026-02-27T22:00:00.000Z",
+      "tokens": ["subway", "station", "transfer"]
     }
   ]
 }
