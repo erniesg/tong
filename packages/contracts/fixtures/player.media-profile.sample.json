@@ -1,11 +1,11 @@
 {
   "userId": "demo-user-1",
   "windowDays": 3,
-  "generatedAtIso": "2026-02-28T12:00:00.000Z",
+  "generatedAtIso": "2026-02-28T02:40:00.000Z",
   "sourceBreakdown": {
     "youtube": {
-      "itemsConsumed": 8,
-      "minutes": 143,
+      "itemsConsumed": 3,
+      "minutes": 64,
       "topMedia": [
         {
           "mediaId": "yt_a12",
@@ -22,8 +22,8 @@
       ]
     },
     "spotify": {
-      "itemsConsumed": 37,
-      "minutes": 121,
+      "itemsConsumed": 3,
+      "minutes": 47,
       "topMedia": [
         {
           "mediaId": "sp_track_001",
@@ -36,6 +36,12 @@
           "title": "燃烧练习",
           "lang": "zh",
           "minutes": 16
+        },
+        {
+          "mediaId": "sp_track_017",
+          "title": "Subway Day",
+          "lang": "en",
+          "minutes": 12
         }
       ]
     }
@@ -43,28 +49,1144 @@
   "learningSignals": {
     "topTerms": [
       {
+        "lemma": "무대",
+        "lang": "ko",
+        "weightedScore": 1,
+        "dominantSource": "spotify",
+        "provenance": {
+          "sources": [
+            "youtube",
+            "spotify"
+          ],
+          "mediaIds": [
+            "yt_a12",
+            "sp_track_001",
+            "sp_track_004"
+          ],
+          "samples": [
+            {
+              "source": "spotify",
+              "mediaId": "sp_track_004",
+              "title": "燃烧练习",
+              "consumedAtIso": "2026-02-28T02:40:00.000Z"
+            },
+            {
+              "source": "youtube",
+              "mediaId": "yt_a12",
+              "title": "K-variety snack challenge",
+              "consumedAtIso": "2026-02-28T01:15:00.000Z"
+            },
+            {
+              "source": "spotify",
+              "mediaId": "sp_track_001",
+              "title": "밤 산책",
+              "consumedAtIso": "2026-02-27T08:00:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "shanghai",
+            "location": "practice_studio",
+            "mode": "hangout",
+            "placementType": "mission",
+            "reason": "Performance language supports the Shanghai texting mission.",
+            "clusterId": "performance-energy",
+            "objectiveId": "zh-mission-stage-texting",
+            "canonicalObjectiveId": "zh-mission-stage-texting",
+            "legacyObjectiveId": "zh_stage_l3_002",
+            "objectiveAliasIds": [
+              "zh_stage_l3_002"
+            ]
+          },
+          {
+            "city": "shanghai",
+            "location": "practice_studio",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Performance language can be introduced in the Shanghai practice lesson.",
+            "clusterId": "performance-energy",
+            "objectiveId": "zh-mission-stage-texting",
+            "canonicalObjectiveId": "zh-mission-stage-texting",
+            "legacyObjectiveId": "zh_stage_l3_002",
+            "objectiveAliasIds": [
+              "zh_stage_l3_002"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "주문",
+        "lang": "ko",
+        "weightedScore": 0.95,
+        "dominantSource": "youtube",
+        "provenance": {
+          "sources": [
+            "youtube",
+            "spotify"
+          ],
+          "mediaIds": [
+            "yt_a12",
+            "sp_track_001"
+          ],
+          "samples": [
+            {
+              "source": "youtube",
+              "mediaId": "yt_a12",
+              "title": "K-variety snack challenge",
+              "consumedAtIso": "2026-02-28T01:15:00.000Z"
+            },
+            {
+              "source": "spotify",
+              "mediaId": "sp_track_001",
+              "title": "밤 산책",
+              "consumedAtIso": "2026-02-27T08:00:00.000Z"
+            },
+            {
+              "source": "youtube",
+              "mediaId": "yt_a12",
+              "title": "K-variety snack challenge",
+              "consumedAtIso": "2026-02-27T04:30:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          },
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Food-ordering terms fit the Seoul food lesson.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          }
+        ]
+      },
+      {
         "lemma": "연습",
         "lang": "ko",
-        "weightedScore": 0.82,
-        "dominantSource": "spotify"
+        "weightedScore": 0.65,
+        "dominantSource": "spotify",
+        "provenance": {
+          "sources": [
+            "youtube",
+            "spotify"
+          ],
+          "mediaIds": [
+            "yt_a12",
+            "sp_track_001"
+          ],
+          "samples": [
+            {
+              "source": "spotify",
+              "mediaId": "sp_track_001",
+              "title": "밤 산책",
+              "consumedAtIso": "2026-02-27T08:00:00.000Z"
+            },
+            {
+              "source": "youtube",
+              "mediaId": "yt_a12",
+              "title": "K-variety snack challenge",
+              "consumedAtIso": "2026-02-27T04:30:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "shanghai",
+            "location": "practice_studio",
+            "mode": "hangout",
+            "placementType": "mission",
+            "reason": "Performance language supports the Shanghai texting mission.",
+            "clusterId": "performance-energy",
+            "objectiveId": "zh-mission-stage-texting",
+            "canonicalObjectiveId": "zh-mission-stage-texting",
+            "legacyObjectiveId": "zh_stage_l3_002",
+            "objectiveAliasIds": [
+              "zh_stage_l3_002"
+            ]
+          },
+          {
+            "city": "shanghai",
+            "location": "practice_studio",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Performance language can be introduced in the Shanghai practice lesson.",
+            "clusterId": "performance-energy",
+            "objectiveId": "zh-mission-stage-texting",
+            "canonicalObjectiveId": "zh-mission-stage-texting",
+            "legacyObjectiveId": "zh_stage_l3_002",
+            "objectiveAliasIds": [
+              "zh_stage_l3_002"
+            ]
+          }
+        ]
       },
       {
         "lemma": "메뉴",
         "lang": "ko",
-        "weightedScore": 0.77,
-        "dominantSource": "youtube"
+        "weightedScore": 0.61,
+        "dominantSource": "youtube",
+        "provenance": {
+          "sources": [
+            "youtube"
+          ],
+          "mediaIds": [
+            "yt_a12"
+          ],
+          "samples": [
+            {
+              "source": "youtube",
+              "mediaId": "yt_a12",
+              "title": "K-variety snack challenge",
+              "consumedAtIso": "2026-02-28T01:15:00.000Z"
+            },
+            {
+              "source": "youtube",
+              "mediaId": "yt_a12",
+              "title": "K-variety snack challenge",
+              "consumedAtIso": "2026-02-27T04:30:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          },
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Food-ordering terms fit the Seoul food lesson.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "불",
+        "lang": "ko",
+        "weightedScore": 0.35,
+        "dominantSource": "spotify",
+        "provenance": {
+          "sources": [
+            "spotify"
+          ],
+          "mediaIds": [
+            "sp_track_001"
+          ],
+          "samples": [
+            {
+              "source": "spotify",
+              "mediaId": "sp_track_001",
+              "title": "밤 산책",
+              "consumedAtIso": "2026-02-27T08:00:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          },
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Food-ordering terms fit the Seoul food lesson.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "火",
+        "lang": "zh",
+        "weightedScore": 0.35,
+        "dominantSource": "spotify",
+        "provenance": {
+          "sources": [
+            "spotify"
+          ],
+          "mediaIds": [
+            "sp_track_004"
+          ],
+          "samples": [
+            {
+              "source": "spotify",
+              "mediaId": "sp_track_004",
+              "title": "燃烧练习",
+              "consumedAtIso": "2026-02-28T02:40:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "shanghai",
+            "location": "practice_studio",
+            "mode": "hangout",
+            "placementType": "mission",
+            "reason": "Performance language supports the Shanghai texting mission.",
+            "clusterId": "performance-energy",
+            "objectiveId": "zh-mission-stage-texting",
+            "canonicalObjectiveId": "zh-mission-stage-texting",
+            "legacyObjectiveId": "zh_stage_l3_002",
+            "objectiveAliasIds": [
+              "zh_stage_l3_002"
+            ]
+          },
+          {
+            "city": "shanghai",
+            "location": "practice_studio",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Performance language can be introduced in the Shanghai practice lesson.",
+            "clusterId": "performance-energy",
+            "objectiveId": "zh-mission-stage-texting",
+            "canonicalObjectiveId": "zh-mission-stage-texting",
+            "legacyObjectiveId": "zh_stage_l3_002",
+            "objectiveAliasIds": [
+              "zh_stage_l3_002"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "燃烧",
+        "lang": "zh",
+        "weightedScore": 0.35,
+        "dominantSource": "spotify",
+        "provenance": {
+          "sources": [
+            "spotify"
+          ],
+          "mediaIds": [
+            "sp_track_004"
+          ],
+          "samples": [
+            {
+              "source": "spotify",
+              "mediaId": "sp_track_004",
+              "title": "燃烧练习",
+              "consumedAtIso": "2026-02-28T02:40:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "shanghai",
+            "location": "practice_studio",
+            "mode": "hangout",
+            "placementType": "mission",
+            "reason": "Performance language supports the Shanghai texting mission.",
+            "clusterId": "performance-energy",
+            "objectiveId": "zh-mission-stage-texting",
+            "canonicalObjectiveId": "zh-mission-stage-texting",
+            "legacyObjectiveId": "zh_stage_l3_002",
+            "objectiveAliasIds": [
+              "zh_stage_l3_002"
+            ]
+          },
+          {
+            "city": "shanghai",
+            "location": "practice_studio",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Performance language can be introduced in the Shanghai practice lesson.",
+            "clusterId": "performance-energy",
+            "objectiveId": "zh-mission-stage-texting",
+            "canonicalObjectiveId": "zh-mission-stage-texting",
+            "legacyObjectiveId": "zh_stage_l3_002",
+            "objectiveAliasIds": [
+              "zh_stage_l3_002"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "练习",
+        "lang": "zh",
+        "weightedScore": 0.35,
+        "dominantSource": "spotify",
+        "provenance": {
+          "sources": [
+            "spotify"
+          ],
+          "mediaIds": [
+            "sp_track_004"
+          ],
+          "samples": [
+            {
+              "source": "spotify",
+              "mediaId": "sp_track_004",
+              "title": "燃烧练习",
+              "consumedAtIso": "2026-02-28T02:40:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "shanghai",
+            "location": "practice_studio",
+            "mode": "hangout",
+            "placementType": "mission",
+            "reason": "Performance language supports the Shanghai texting mission.",
+            "clusterId": "performance-energy",
+            "objectiveId": "zh-mission-stage-texting",
+            "canonicalObjectiveId": "zh-mission-stage-texting",
+            "legacyObjectiveId": "zh_stage_l3_002",
+            "objectiveAliasIds": [
+              "zh_stage_l3_002"
+            ]
+          },
+          {
+            "city": "shanghai",
+            "location": "practice_studio",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Performance language can be introduced in the Shanghai practice lesson.",
+            "clusterId": "performance-energy",
+            "objectiveId": "zh-mission-stage-texting",
+            "canonicalObjectiveId": "zh-mission-stage-texting",
+            "legacyObjectiveId": "zh_stage_l3_002",
+            "objectiveAliasIds": [
+              "zh_stage_l3_002"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "subway",
+        "lang": "en",
+        "weightedScore": 0.35,
+        "dominantSource": "spotify",
+        "provenance": {
+          "sources": [
+            "spotify"
+          ],
+          "mediaIds": [
+            "sp_track_017"
+          ],
+          "samples": [
+            {
+              "source": "spotify",
+              "mediaId": "sp_track_017",
+              "title": "Subway Day",
+              "consumedAtIso": "2026-02-27T22:00:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Transit language is validated best in the Tokyo subway hub.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          },
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Transit terms map naturally to the Tokyo subway lesson.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "station",
+        "lang": "en",
+        "weightedScore": 0.35,
+        "dominantSource": "spotify",
+        "provenance": {
+          "sources": [
+            "spotify"
+          ],
+          "mediaIds": [
+            "sp_track_017"
+          ],
+          "samples": [
+            {
+              "source": "spotify",
+              "mediaId": "sp_track_017",
+              "title": "Subway Day",
+              "consumedAtIso": "2026-02-27T22:00:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Transit language is validated best in the Tokyo subway hub.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          },
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Transit terms map naturally to the Tokyo subway lesson.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "transfer",
+        "lang": "en",
+        "weightedScore": 0.35,
+        "dominantSource": "spotify",
+        "provenance": {
+          "sources": [
+            "spotify"
+          ],
+          "mediaIds": [
+            "sp_track_017"
+          ],
+          "samples": [
+            {
+              "source": "spotify",
+              "mediaId": "sp_track_017",
+              "title": "Subway Day",
+              "consumedAtIso": "2026-02-27T22:00:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Transit language is validated best in the Tokyo subway hub.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          },
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Transit terms map naturally to the Tokyo subway lesson.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "먹다",
+        "lang": "ko",
+        "weightedScore": 0.3,
+        "dominantSource": "youtube",
+        "provenance": {
+          "sources": [
+            "youtube"
+          ],
+          "mediaIds": [
+            "yt_a12"
+          ],
+          "samples": [
+            {
+              "source": "youtube",
+              "mediaId": "yt_a12",
+              "title": "K-variety snack challenge",
+              "consumedAtIso": "2026-02-27T04:30:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          },
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Food-ordering terms fit the Seoul food lesson.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "맵다",
+        "lang": "ko",
+        "weightedScore": 0.3,
+        "dominantSource": "youtube",
+        "provenance": {
+          "sources": [
+            "youtube"
+          ],
+          "mediaIds": [
+            "yt_a12"
+          ],
+          "samples": [
+            {
+              "source": "youtube",
+              "mediaId": "yt_a12",
+              "title": "K-variety snack challenge",
+              "consumedAtIso": "2026-02-27T04:30:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          },
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Food-ordering terms fit the Seoul food lesson.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "포장",
+        "lang": "ko",
+        "weightedScore": 0.3,
+        "dominantSource": "youtube",
+        "provenance": {
+          "sources": [
+            "youtube"
+          ],
+          "mediaIds": [
+            "yt_a12"
+          ],
+          "samples": [
+            {
+              "source": "youtube",
+              "mediaId": "yt_a12",
+              "title": "K-variety snack challenge",
+              "consumedAtIso": "2026-02-28T01:15:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          },
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Food-ordering terms fit the Seoul food lesson.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "주세요",
+        "lang": "ko",
+        "weightedScore": 0.3,
+        "dominantSource": "youtube",
+        "provenance": {
+          "sources": [
+            "youtube"
+          ],
+          "mediaIds": [
+            "yt_a12"
+          ],
+          "samples": [
+            {
+              "source": "youtube",
+              "mediaId": "yt_a12",
+              "title": "K-variety snack challenge",
+              "consumedAtIso": "2026-02-28T01:15:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          },
+          {
+            "city": "seoul",
+            "location": "food_street",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Food-ordering terms fit the Seoul food lesson.",
+            "clusterId": "food-ordering",
+            "objectiveId": "ko-vocab-food-items",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "駅",
+        "lang": "ja",
+        "weightedScore": 0.3,
+        "dominantSource": "youtube",
+        "provenance": {
+          "sources": [
+            "youtube"
+          ],
+          "mediaIds": [
+            "yt_b54"
+          ],
+          "samples": [
+            {
+              "source": "youtube",
+              "mediaId": "yt_b54",
+              "title": "Tokyo street interview",
+              "consumedAtIso": "2026-02-26T18:20:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Transit language is validated best in the Tokyo subway hub.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          },
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Transit terms map naturally to the Tokyo subway lesson.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "ホーム",
+        "lang": "ja",
+        "weightedScore": 0.3,
+        "dominantSource": "youtube",
+        "provenance": {
+          "sources": [
+            "youtube"
+          ],
+          "mediaIds": [
+            "yt_b54"
+          ],
+          "samples": [
+            {
+              "source": "youtube",
+              "mediaId": "yt_b54",
+              "title": "Tokyo street interview",
+              "consumedAtIso": "2026-02-26T18:20:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Transit language is validated best in the Tokyo subway hub.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          },
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Transit terms map naturally to the Tokyo subway lesson.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "メニュー",
+        "lang": "ja",
+        "weightedScore": 0.3,
+        "dominantSource": "youtube",
+        "provenance": {
+          "sources": [
+            "youtube"
+          ],
+          "mediaIds": [
+            "yt_b54"
+          ],
+          "samples": [
+            {
+              "source": "youtube",
+              "mediaId": "yt_b54",
+              "title": "Tokyo street interview",
+              "consumedAtIso": "2026-02-26T18:20:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Transit language is validated best in the Tokyo subway hub.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          },
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Transit terms map naturally to the Tokyo subway lesson.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          }
+        ]
+      },
+      {
+        "lemma": "注文",
+        "lang": "ja",
+        "weightedScore": 0.3,
+        "dominantSource": "youtube",
+        "provenance": {
+          "sources": [
+            "youtube"
+          ],
+          "mediaIds": [
+            "yt_b54"
+          ],
+          "samples": [
+            {
+              "source": "youtube",
+              "mediaId": "yt_b54",
+              "title": "Tokyo street interview",
+              "consumedAtIso": "2026-02-26T18:20:00.000Z"
+            }
+          ]
+        },
+        "placementHints": [
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "hangout",
+            "placementType": "hangout",
+            "reason": "Transit language is validated best in the Tokyo subway hub.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          },
+          {
+            "city": "tokyo",
+            "location": "subway_hub",
+            "mode": "learn",
+            "placementType": "learn",
+            "reason": "Transit terms map naturally to the Tokyo subway lesson.",
+            "clusterId": "transport-navigation",
+            "objectiveId": "ja-vocab-subway-transfers",
+            "canonicalObjectiveId": "ja-vocab-subway-transfers",
+            "legacyObjectiveId": "ja_subway_l1_001",
+            "objectiveAliasIds": [
+              "ja_subway_l1_001"
+            ]
+          }
+        ]
       }
     ],
     "clusterAffinities": [
       {
         "clusterId": "food-ordering",
         "label": "Food Ordering",
-        "score": 0.69
+        "score": 1
       },
       {
         "clusterId": "performance-energy",
         "label": "Performance Energy",
-        "score": 0.74
+        "score": 0.95
+      },
+      {
+        "clusterId": "transport-navigation",
+        "label": "Transit Navigation",
+        "score": 0.42
+      }
+    ],
+    "placementCandidates": [
+      {
+        "city": "seoul",
+        "location": "food_street",
+        "mode": "hangout",
+        "placementType": "hangout",
+        "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+        "clusterId": "food-ordering",
+        "objectiveId": "ko-vocab-food-items",
+        "canonicalObjectiveId": "ko-vocab-food-items",
+        "legacyObjectiveId": "ko_food_l2_001",
+        "objectiveAliasIds": [
+          "ko_food_l2_001"
+        ],
+        "confidence": 1
+      },
+      {
+        "city": "seoul",
+        "location": "food_street",
+        "mode": "learn",
+        "placementType": "learn",
+        "reason": "Food-ordering terms fit the Seoul food lesson.",
+        "clusterId": "food-ordering",
+        "objectiveId": "ko-vocab-food-items",
+        "canonicalObjectiveId": "ko-vocab-food-items",
+        "legacyObjectiveId": "ko_food_l2_001",
+        "objectiveAliasIds": [
+          "ko_food_l2_001"
+        ],
+        "confidence": 1
+      },
+      {
+        "city": "shanghai",
+        "location": "practice_studio",
+        "mode": "hangout",
+        "placementType": "mission",
+        "reason": "Performance language supports the Shanghai texting mission.",
+        "clusterId": "performance-energy",
+        "objectiveId": "zh-mission-stage-texting",
+        "canonicalObjectiveId": "zh-mission-stage-texting",
+        "legacyObjectiveId": "zh_stage_l3_002",
+        "objectiveAliasIds": [
+          "zh_stage_l3_002"
+        ],
+        "confidence": 0.95
+      },
+      {
+        "city": "shanghai",
+        "location": "practice_studio",
+        "mode": "learn",
+        "placementType": "learn",
+        "reason": "Performance language can be introduced in the Shanghai practice lesson.",
+        "clusterId": "performance-energy",
+        "objectiveId": "zh-mission-stage-texting",
+        "canonicalObjectiveId": "zh-mission-stage-texting",
+        "legacyObjectiveId": "zh_stage_l3_002",
+        "objectiveAliasIds": [
+          "zh_stage_l3_002"
+        ],
+        "confidence": 0.95
+      },
+      {
+        "city": "tokyo",
+        "location": "subway_hub",
+        "mode": "hangout",
+        "placementType": "hangout",
+        "reason": "Transit language is validated best in the Tokyo subway hub.",
+        "clusterId": "transport-navigation",
+        "objectiveId": "ja-vocab-subway-transfers",
+        "canonicalObjectiveId": "ja-vocab-subway-transfers",
+        "legacyObjectiveId": "ja_subway_l1_001",
+        "objectiveAliasIds": [
+          "ja_subway_l1_001"
+        ],
+        "confidence": 0.42
+      },
+      {
+        "city": "tokyo",
+        "location": "subway_hub",
+        "mode": "learn",
+        "placementType": "learn",
+        "reason": "Transit terms map naturally to the Tokyo subway lesson.",
+        "clusterId": "transport-navigation",
+        "objectiveId": "ja-vocab-subway-transfers",
+        "canonicalObjectiveId": "ja-vocab-subway-transfers",
+        "legacyObjectiveId": "ja_subway_l1_001",
+        "objectiveAliasIds": [
+          "ja_subway_l1_001"
+        ],
+        "confidence": 0.42
       }
     ]
   }

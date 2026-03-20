@@ -162,3 +162,7 @@ Template:
 - Intent:
   - Validate and then unify legacy objective ids with canonical graph objective ids without breaking fixture-backed APIs abruptly.
   - Keep canonical curriculum graph node ids as the source of truth and add additive alias metadata/migration checks so existing consumers can bridge during rollout.
+## 2026-03-20 (issue #55 ingestion retrieval intent)
+
+- Branch/worktree: `work` (server-ingestion lane; touching shared contracts for additive retrieval metadata)
+- Intent: complete KG-backed retrieval outputs with repo-visible provenance + placement hints for objective selection, then revalidate mock ingestion/objective flows.

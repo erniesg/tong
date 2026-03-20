@@ -3,6 +3,7 @@
 const args = process.argv.slice(2);
 const baseArg = args.find((arg) => !arg.startsWith('-'));
 const apiBase = (baseArg || process.env.TONG_API_BASE_URL || 'http://localhost:8787').replace(/\/$/, '');
+const demoPassword = process.env.TONG_DEMO_PASSWORD || process.env.TONG_DEMO_CODE || '';
 const userId = `tool_user_${Date.now().toString(36)}`;
 
 function assert(condition, message) {
@@ -17,6 +18,7 @@ async function requestJson(pathname, init = {}) {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...(demoPassword ? { 'x-demo-password': demoPassword } : {}),
       ...(init.headers || {}),
     },
   });
@@ -99,6 +101,7 @@ async function run() {
   const insights = await invoke('vocab.insights.get', { userId, lang: 'ko' });
   assert(Array.isArray(insights?.clusters), 'vocab.insights.get missing clusters');
   assert(Array.isArray(insights?.items), 'vocab.insights.get missing items');
+  assert(Array.isArray(insights?.items?.[0]?.placementHints), 'vocab.insights.get missing placementHints');
   logPass('vocab.insights.get');
 
   const objective = await invoke('objectives.next.get', { userId, mode: 'hangout', lang: 'ko' });
@@ -110,6 +113,7 @@ async function run() {
   const mediaProfile = await invoke('player.media_profile.get', { userId });
   assert(mediaProfile?.userId === userId, 'player.media_profile.get user mismatch');
   assert(Array.isArray(mediaProfile?.learningSignals?.topTerms), 'media profile topTerms missing');
+  assert(Array.isArray(mediaProfile?.learningSignals?.placementCandidates), 'media profile placementCandidates missing');
   logPass('player.media_profile.get');
 
   console.log('');

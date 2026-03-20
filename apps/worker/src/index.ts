@@ -6,13 +6,22 @@ import gameStartFixture from '../../../packages/contracts/fixtures/game.start-or
 import objectivesNextFixture from '../../../packages/contracts/fixtures/objectives.next.sample.json';
 import learnSessionsFixture from '../../../packages/contracts/fixtures/learn.sessions.sample.json';
 import mediaProfileFixture from '../../../packages/contracts/fixtures/player.media-profile.sample.json';
+import objectiveIdentityMap from '../../../packages/contracts/objective-identity-map.sample.json';
 import mockMediaWindow from '../../server/data/mock-media-window.json';
 
 type Lang = 'ko' | 'ja' | 'zh';
 type Mode = 'hangout' | 'learn';
 type CityId = 'seoul' | 'tokyo' | 'shanghai';
 type LocationId = 'food_street' | 'cafe' | 'convenience_store' | 'subway_hub' | 'practice_studio';
-type ObjectiveCategory = 'script' | 'pronunciation' | 'vocabulary' | 'grammar' | 'sentences';
+type ObjectiveCategory =
+  | 'script'
+  | 'pronunciation'
+  | 'vocabulary'
+  | 'grammar'
+  | 'sentences'
+  | 'conversation';
+
+type SourceKind = 'youtube' | 'spotify';
 
 type Profile = {
   nativeLanguage: string;
@@ -24,15 +33,44 @@ type Profile = {
   };
 };
 
+type IngestionProvenanceSample = {
+  source: SourceKind;
+  mediaId: string;
+  title?: string;
+  consumedAtIso: string;
+};
+
+type IngestionProvenance = {
+  sources: SourceKind[];
+  mediaIds: string[];
+  samples: IngestionProvenanceSample[];
+};
+
+type PlacementHint = {
+  city: CityId;
+  location: LocationId;
+  mode: Mode;
+  placementType: string;
+  reason: string;
+  clusterId: string;
+  objectiveId: string;
+  canonicalObjectiveId?: string;
+  legacyObjectiveId?: string | null;
+  objectiveAliasIds?: string[];
+  confidence?: number;
+};
+
 type FrequencyItem = {
   lemma: string;
   lang: Lang;
   count: number;
   sourceCount: number;
+  clusterId?: string;
   sourceBreakdown?: {
     youtube: number;
     spotify: number;
   };
+  provenance?: IngestionProvenance;
 };
 
 type IngestionResult = {
@@ -50,6 +88,7 @@ type IngestionResult = {
       label: string;
       keywords: string[];
       topTerms: string[];
+      placementHints?: PlacementHint[];
     }>;
     items: Array<{
       lemma: string;
@@ -59,7 +98,15 @@ type IngestionResult = {
       burst: number;
       clusterId: string;
       orthographyFeatures: Record<string, unknown>;
-      objectiveLinks: Array<{ objectiveId: string; reason: string }>;
+      provenance?: IngestionProvenance;
+      placementHints?: PlacementHint[];
+      objectiveLinks: Array<{
+        objectiveId: string;
+        canonicalObjectiveId?: string;
+        legacyObjectiveId?: string | null;
+        objectiveAliasIds?: string[];
+        reason: string;
+      }>;
     }>;
   };
   mediaProfile: {
@@ -84,12 +131,15 @@ type IngestionResult = {
         lang: Lang;
         weightedScore: number;
         dominantSource: 'youtube' | 'spotify';
+        provenance?: IngestionProvenance;
+        placementHints?: PlacementHint[];
       }>;
       clusterAffinities: Array<{
         clusterId: string;
         label: string;
         score: number;
       }>;
+      placementCandidates?: PlacementHint[];
     };
   };
 };
@@ -97,7 +147,7 @@ type IngestionResult = {
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, x-demo-password',
 };
 
 const DEFAULT_USER_ID = 'demo-user-1';
@@ -148,9 +198,39 @@ const LANG_TARGETS: Record<
 };
 
 const DEFAULT_OBJECTIVE_BY_LANG: Record<Lang, string> = {
-  ko: 'ko_food_l2_001',
-  ja: 'ko_city_l2_003',
-  zh: 'zh_stage_l3_002',
+  ko: 'ko-vocab-food-items',
+  ja: 'ja-vocab-subway-transfers',
+  zh: 'zh-mission-stage-texting',
+};
+
+const OBJECTIVE_BY_LANG: Record<
+  Lang | 'en',
+  {
+    objectiveId: string;
+    reason: string;
+    gap: number;
+  }
+> = {
+  ko: {
+    objectiveId: 'ko-vocab-food-items',
+    reason: 'Reinforces Korean phrase utility for food-street scenes',
+    gap: 0.74,
+  },
+  ja: {
+    objectiveId: 'ja-vocab-subway-transfers',
+    reason: 'Builds Japanese transit and social phrase reliability',
+    gap: 0.7,
+  },
+  zh: {
+    objectiveId: 'zh-mission-stage-texting',
+    reason: 'Strengthens Mandarin mission vocabulary recall',
+    gap: 0.8,
+  },
+  en: {
+    objectiveId: 'ja-vocab-subway-transfers',
+    reason: 'Supports cross-city objective transfer terms',
+    gap: 0.62,
+  },
 };
 
 const TOPIC_DEFINITIONS = [
@@ -173,22 +253,145 @@ const TOPIC_DEFINITIONS = [
       '카페',
       '咖啡',
       '吃',
+      '点餐',
+      '料理',
     ],
-    objectiveId: 'ko_food_l2_001',
+    objectiveId: 'ko-vocab-food-items',
+    objectiveReason: 'High utility in next food-location hangout',
+    objectiveGap: 0.84,
   },
   {
     clusterId: 'performance-energy',
     label: 'Performance Energy',
-    keywords: ['stage', 'performance', 'practice', 'dance', 'song', '무대', '연습', '노래', '火', '燃', '练习'],
-    objectiveId: 'zh_stage_l3_002',
+    keywords: [
+      'stage',
+      'performance',
+      'practice',
+      'dance',
+      'song',
+      '무대',
+      '연습',
+      '노래',
+      '火',
+      '燃',
+      '练习',
+      '练',
+      '舞台',
+    ],
+    objectiveId: 'zh-mission-stage-texting',
+    objectiveReason: 'Supports Shanghai advanced texting mission vocabulary',
+    objectiveGap: 0.9,
   },
   {
     clusterId: 'city-social',
     label: 'City Social',
-    keywords: ['subway', 'station', 'street', 'friends', 'hangout', '지하철', '거리', '친구', '站', '街', '友達'],
-    objectiveId: 'ko_city_l2_003',
+    keywords: [
+      'subway',
+      'station',
+      'street',
+      'friends',
+      'hangout',
+      '지하철',
+      '거리',
+      '친구',
+      '站',
+      '街',
+      '友達',
+      'cafe',
+    ],
+    objectiveId: 'ko-vocab-city-social',
+    objectiveReason: 'Builds social and navigation language transfer',
+    objectiveGap: 0.72,
   },
 ];
+
+const PLACEMENT_BY_CLUSTER: Record<
+  string,
+  Array<{
+    city: CityId;
+    location: LocationId;
+    mode: Mode;
+    placementType: string;
+    reason: string;
+  }>
+> = {
+  'food-ordering': [
+    {
+      city: 'seoul',
+      location: 'food_street',
+      mode: 'hangout',
+      placementType: 'hangout',
+      reason: 'Food-ordering terms reinforce the Seoul food street hangout.',
+    },
+    {
+      city: 'seoul',
+      location: 'food_street',
+      mode: 'learn',
+      placementType: 'learn',
+      reason: 'Food-ordering terms fit the Seoul food lesson.',
+    },
+  ],
+  'performance-energy': [
+    {
+      city: 'shanghai',
+      location: 'practice_studio',
+      mode: 'hangout',
+      placementType: 'mission',
+      reason: 'Performance language supports the Shanghai texting mission.',
+    },
+    {
+      city: 'shanghai',
+      location: 'practice_studio',
+      mode: 'learn',
+      placementType: 'learn',
+      reason: 'Performance language can be introduced in the Shanghai practice lesson.',
+    },
+  ],
+  'city-social': [
+    {
+      city: 'tokyo',
+      location: 'subway_hub',
+      mode: 'hangout',
+      placementType: 'hangout',
+      reason: 'Navigation language is best validated in the Tokyo subway hub.',
+    },
+    {
+      city: 'tokyo',
+      location: 'subway_hub',
+      mode: 'learn',
+      placementType: 'learn',
+      reason: 'Navigation language fits the Tokyo subway lesson.',
+    },
+  ],
+  general: [],
+};
+
+const RADICAL_BY_CHAR: Record<string, string> = {
+  火: '火',
+  炎: '火',
+  灯: '火',
+  烧: '火',
+  燃: '火',
+  热: '火',
+  食: '食',
+  饭: '食',
+  飲: '食',
+  饮: '食',
+  餐: '食',
+  言: '言',
+  詞: '言',
+  词: '言',
+  話: '言',
+  话: '言',
+  語: '言',
+  语: '言',
+};
+
+const RELATED_FORMS_BY_RADICAL: Record<string, string[]> = {
+  火: ['炎', '灯', '烧'],
+  食: ['饭', '饮', '餐'],
+  言: ['语', '话', '词'],
+};
 
 const DICTIONARY_OVERRIDES: Record<string, Record<string, unknown>> = {
   오늘: {
@@ -230,15 +433,189 @@ const FIXTURES = {
   mediaProfile: mediaProfileFixture,
 };
 
+const objectiveIdentityByCanonical = new Map<string, (typeof objectiveIdentityMap.objectives)[number]>();
+const canonicalObjectiveByAnyId = new Map<string, string>();
+
+for (const identity of objectiveIdentityMap.objectives || []) {
+  objectiveIdentityByCanonical.set(identity.canonicalObjectiveId, identity);
+  canonicalObjectiveByAnyId.set(identity.canonicalObjectiveId, identity.canonicalObjectiveId);
+  for (const legacyId of identity.legacyObjectiveIds || []) {
+    canonicalObjectiveByAnyId.set(legacyId, identity.canonicalObjectiveId);
+  }
+}
+
+type WorkerGameRuntime = {
+  userId: string;
+  response: any;
+};
+
+type WorkerSceneRuntime = {
+  userId: string;
+  gameSessionId: string | null;
+  sceneSession: Record<string, any>;
+};
+
 const state = {
   profiles: new Map<string, Profile>(),
-  sessions: new Map<string, { userId: string; turn: number; score: { xp: number; sp: number; rp: number } }>(),
+  sessions: new Map<string, WorkerGameRuntime>(),
+  sceneSessions: new Map<string, WorkerSceneRuntime>(),
+  checkpoints: new Map<string, Record<string, any>>(),
+  activeSessionByUser: new Map<string, string>(),
   learnSessions: [...(((FIXTURES.learnSessions as any).items || []) as Array<Record<string, unknown>>)],
   ingestionByUser: new Map<string, IngestionResult>(),
 };
 
 function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function buildInitialProgressionDelta() {
+  return {
+    xp: 0,
+    sp: 0,
+    rp: 0,
+    objectiveProgressDelta: 0,
+    validatedHangoutsDelta: 0,
+  };
+}
+
+function toSceneSessionPayload(sceneSession: Record<string, any>) {
+  const payload = cloneJson(sceneSession);
+  delete payload.score;
+  return payload;
+}
+
+function ensureSceneRuntime(response: any, userId: string): WorkerSceneRuntime {
+  const sceneSession = cloneJson(response?.sceneSession || {});
+  const progression = cloneJson(response?.gameSession?.progression || response?.progression || { xp: 0, sp: 0, rp: 0 });
+  const activeCheckpoint = cloneJson(response?.activeCheckpoint || {});
+
+  sceneSession.turn = Number(activeCheckpoint?.turn || sceneSession.turn || 1);
+  sceneSession.phase = activeCheckpoint?.phase || sceneSession.phase || 'intro';
+  sceneSession.progressionDelta = cloneJson(activeCheckpoint?.progressionDelta || sceneSession.progressionDelta || buildInitialProgressionDelta());
+  sceneSession.score = {
+    xp: Number(progression?.xp || 0),
+    sp: Number(progression?.sp || 0),
+    rp: Number(progression?.rp || 0),
+  };
+  sceneSession.uiPolicy = cloneJson(
+    sceneSession.uiPolicy || {
+      immersiveFirstPerson: true,
+      allowOnlyDialogueAndHints: true,
+    },
+  );
+
+  return {
+    userId,
+    gameSessionId: response?.sessionId ? String(response.sessionId) : null,
+    sceneSession,
+  };
+}
+
+function storeGameRuntimeResponse(userId: string, response: any) {
+  const responseClone = cloneJson(response);
+  const sessionId = String(responseClone?.sessionId || '');
+  const sceneRuntime = ensureSceneRuntime(responseClone, userId);
+  const activeCheckpoint = cloneJson(responseClone?.activeCheckpoint || {});
+
+  state.sessions.set(sessionId, {
+    userId,
+    response: responseClone,
+  });
+  state.sceneSessions.set(String(sceneRuntime.sceneSession.sceneSessionId || sessionId), sceneRuntime);
+  if (activeCheckpoint?.checkpointId) {
+    state.checkpoints.set(String(activeCheckpoint.checkpointId), activeCheckpoint);
+  }
+  state.activeSessionByUser.set(userId, sessionId);
+}
+
+function findStoredGameRuntime(userId: string, requestedSessionId: string | null) {
+  if (requestedSessionId && state.sessions.has(requestedSessionId)) {
+    const direct = state.sessions.get(requestedSessionId) || null;
+    if (direct?.userId === userId) return direct;
+  }
+
+  const activeSessionId = state.activeSessionByUser.get(userId);
+  if (activeSessionId) {
+    const active = state.sessions.get(activeSessionId) || null;
+    if (active?.userId === userId) return active;
+  }
+
+  for (const runtime of state.sessions.values()) {
+    if (runtime.userId === userId) {
+      return runtime;
+    }
+  }
+
+  return null;
+}
+
+function buildStoredGameResponse(runtime: WorkerGameRuntime, resumeSource: 'new_session' | 'checkpoint' = 'checkpoint') {
+  const response = cloneJson(runtime.response);
+  const sessionId = String(response?.sessionId || response?.gameSession?.sessionId || '');
+  const sceneSessionId = String(response?.gameSession?.activeSceneSessionId || response?.sceneSession?.sceneSessionId || '');
+  const sceneRuntime = sceneSessionId ? state.sceneSessions.get(sceneSessionId) : null;
+  const activeCheckpointId = String(response?.gameSession?.activeCheckpointId || response?.activeCheckpoint?.checkpointId || '');
+  const activeCheckpoint =
+    (activeCheckpointId ? state.checkpoints.get(activeCheckpointId) : null) || response.activeCheckpoint || null;
+
+  response.resumeSource = resumeSource;
+  response.progression = cloneJson(response?.gameSession?.progression || response?.progression || {});
+  response.actions = cloneJson(response?.gameSession?.availableActions || response?.actions || []);
+  response.gameSession = cloneJson(response?.gameSession || {});
+  response.gameSession.sessionId = sessionId;
+  response.gameSession.resumeSource = resumeSource;
+  response.gameSession.activeCheckpointId = activeCheckpoint?.checkpointId || response.gameSession.activeCheckpointId;
+  response.sceneSession = sceneRuntime ? toSceneSessionPayload(sceneRuntime.sceneSession) : toSceneSessionPayload(response.sceneSession || {});
+  response.activeCheckpoint = activeCheckpoint ? cloneJson(activeCheckpoint) : null;
+
+  runtime.response = cloneJson(response);
+  state.sessions.set(sessionId, runtime);
+  return response;
+}
+
+function createNextCheckpoint(gameResponse: any, sceneRuntime: WorkerSceneRuntime, boundary: string) {
+  const gameSession = gameResponse?.gameSession || {};
+  const sceneSession = sceneRuntime.sceneSession || {};
+  const previousCheckpoint =
+    (gameSession?.activeCheckpointId ? state.checkpoints.get(String(gameSession.activeCheckpointId)) : null) ||
+    gameResponse?.activeCheckpoint ||
+    null;
+  const previousVersion = Number(previousCheckpoint?.rng?.version || 0);
+  const checkpointVersion = Math.max(previousVersion, 0) + 1;
+  const nowIso = new Date().toISOString();
+
+  return {
+    ...(cloneJson(previousCheckpoint || {}) as Record<string, any>),
+    checkpointId: `ckpt_${String(gameSession.sessionId || gameResponse?.sessionId || 'session')}_${String(checkpointVersion).padStart(3, '0')}`,
+    gameSessionId: String(gameSession.sessionId || gameResponse?.sessionId || ''),
+    sceneSessionId: String(sceneSession.sceneSessionId || ''),
+    route: {
+      pathname: '/game',
+      query: {
+        city: String(sceneSession.cityId || gameSession.cityId || 'seoul'),
+        location: String(sceneSession.locationId || gameSession.locationId || 'food_street'),
+        mode: String(sceneSession.mode || gameSession.currentMode || 'hangout'),
+        resume: '1',
+        checkpoint: String(checkpointVersion),
+      },
+    },
+    cityId: String(sceneSession.cityId || gameSession.cityId || 'seoul'),
+    locationId: String(sceneSession.locationId || gameSession.locationId || 'food_street'),
+    mode: String(sceneSession.mode || gameSession.currentMode || 'hangout'),
+    objective: cloneJson(sceneSession.objective || gameSession.activeObjective || previousCheckpoint?.objective || {}),
+    phase: sceneSession.phase || 'dialogue',
+    turn: Number(sceneSession.turn || 1),
+    progressionDelta: cloneJson(sceneSession.progressionDelta || buildInitialProgressionDelta()),
+    rewards: cloneJson(gameSession.rewards || []),
+    missionGate: cloneJson(gameSession.missionGate || {}),
+    unlocks: cloneJson(gameSession.unlocks || {}),
+    rng: {
+      seed: `${String(gameSession.sessionId || gameResponse?.sessionId || 'session')}_${boundary}`,
+      version: checkpointVersion,
+    },
+    createdAtIso: nowIso,
+  };
 }
 
 function jsonResponse(statusCode: number, payload: unknown): Response {
@@ -409,6 +786,28 @@ function extractTokens(text: string): string[] {
   return (text.match(TOKEN_REGEX) || []).map(normalizeToken).filter((token) => token.length >= 2);
 }
 
+function parseIso(input: string | undefined | null, fallbackIso?: string): Date {
+  const candidate = input || fallbackIso || new Date().toISOString();
+  const value = new Date(candidate);
+  if (Number.isNaN(value.getTime())) {
+    return new Date(fallbackIso || Date.now());
+  }
+  return value;
+}
+
+function detectLang(term: string): Lang {
+  if (/[\p{Script=Hangul}]/u.test(term)) return 'ko';
+  if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(term)) return 'ja';
+  if (/[\p{Script=Han}]/u.test(term)) return 'zh';
+  return 'ko';
+}
+
+function normalizeTermKey(token: string): string {
+  const cleaned = normalizeToken(token);
+  if (!cleaned) return '';
+  return cleaned.toLocaleLowerCase();
+}
+
 function getTopicMatches(text: string) {
   const haystack = text.toLowerCase();
   const matches = TOPIC_DEFINITIONS.filter((topic) =>
@@ -421,7 +820,9 @@ function getTopicMatches(text: string) {
         clusterId: 'general',
         label: 'General',
         keywords: ['general'],
-        objectiveId: 'ko_food_l2_001',
+        objectiveId: 'ko-vocab-food-items',
+        objectiveReason: 'General fallback objective linkage',
+        objectiveGap: 0.62,
       },
     ];
   }
@@ -429,239 +830,460 @@ function getTopicMatches(text: string) {
   return matches;
 }
 
-function sortFrequencyEntries(
-  map: Map<
-    string,
+function topicFromId(clusterId: string) {
+  return (
+    TOPIC_DEFINITIONS.find((topic) => topic.clusterId === clusterId) || {
+      clusterId,
+      label: clusterId,
+      keywords: ['general'],
+      objectiveId: 'ko-vocab-food-items',
+      objectiveReason: 'General fallback objective linkage',
+      objectiveGap: 0.62,
+    }
+  );
+}
+
+function pickDominantCluster(clusterVotes: Map<string, number>): string {
+  let winner: string | null = null;
+  let best = -1;
+  for (const [clusterId, score] of clusterVotes.entries()) {
+    if (score > best) {
+      best = score;
+      winner = clusterId;
+    }
+  }
+  return winner || 'general';
+}
+
+function safeNorm(value: number, max: number): number {
+  if (!max || max <= 0) return 0;
+  return value / max;
+}
+
+function burstScore(recentCount: number, baselineCount: number): number {
+  const ratio = (recentCount + 1) / (baselineCount + 1);
+  const burst = 1 + 0.2 * (ratio - 1);
+  return Number(Math.max(0.5, Math.min(3, burst)).toFixed(2));
+}
+
+function detectRadical(chars: string[]): string | null {
+  for (const char of chars) {
+    if (RADICAL_BY_CHAR[char]) return RADICAL_BY_CHAR[char];
+  }
+  for (const char of chars) {
+    if (RELATED_FORMS_BY_RADICAL[char]) return char;
+  }
+  return chars[0] || null;
+}
+
+function orthographyFeaturesForLemma(lemma: string): Record<string, unknown> {
+  const scriptType = detectScriptType(lemma);
+
+  if (scriptType === 'hangul') {
+    return {
+      scriptType,
+      syllables: [...lemma].filter((char) => /[\p{Script=Hangul}]/u.test(char)).slice(0, 6),
+    };
+  }
+
+  if (scriptType === 'han') {
+    const hanChars = [...lemma].filter((char) => /[\p{Script=Han}]/u.test(char));
+    const radical = detectRadical(hanChars);
+    const relatedForms = radical ? RELATED_FORMS_BY_RADICAL[radical] || [] : [];
+    return {
+      scriptType,
+      ...(radical ? { radical } : {}),
+      ...(relatedForms.length > 0 ? { relatedForms } : {}),
+    };
+  }
+
+  if (scriptType === 'kana') {
+    return {
+      scriptType,
+      morae: [...lemma].filter((char) => /[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(char)).slice(0, 6),
+    };
+  }
+
+  return { scriptType };
+}
+
+function resolveObjectiveIdentity(objectiveId: unknown) {
+  if (typeof objectiveId !== 'string' || objectiveId.length === 0) {
+    return {
+      objectiveId,
+      canonicalObjectiveId: objectiveId,
+      legacyObjectiveId: null,
+      objectiveAliasIds: [] as string[],
+      identity: null,
+    };
+  }
+
+  const canonicalObjectiveId = canonicalObjectiveByAnyId.get(objectiveId) || objectiveId;
+  const identity = objectiveIdentityByCanonical.get(canonicalObjectiveId) || null;
+  const legacyObjectiveId = identity?.legacyObjectiveIds?.[0] || null;
+  const objectiveAliasIds = identity?.legacyObjectiveIds ? [...identity.legacyObjectiveIds] : [];
+
+  return {
+    objectiveId: canonicalObjectiveId,
+    canonicalObjectiveId,
+    legacyObjectiveId,
+    objectiveAliasIds,
+    identity,
+  };
+}
+
+function withObjectiveIdentity<T extends Record<string, unknown>>(payload: T, objectiveId: unknown) {
+  const resolved = resolveObjectiveIdentity(objectiveId);
+  return {
+    ...payload,
+    objectiveId: resolved.objectiveId,
+    canonicalObjectiveId: resolved.canonicalObjectiveId,
+    legacyObjectiveId: resolved.legacyObjectiveId,
+    objectiveAliasIds: resolved.objectiveAliasIds,
+  };
+}
+
+function canonicalObjectiveNodeId(objectiveId: unknown): string {
+  return `objective:${resolveObjectiveIdentity(objectiveId).canonicalObjectiveId}`;
+}
+
+function defaultObjectiveIdForLang(lang: Lang, fallbackObjectiveId: string | null = null): string | null {
+  if (typeof fallbackObjectiveId === 'string' && fallbackObjectiveId.length > 0) {
+    const fallbackCanonicalId = resolveObjectiveIdentity(fallbackObjectiveId).canonicalObjectiveId;
+    if (typeof fallbackCanonicalId === 'string' && fallbackCanonicalId.startsWith(`${lang}-`)) {
+      return fallbackCanonicalId;
+    }
+  }
+
+  for (const identity of objectiveIdentityMap.objectives || []) {
+    if (identity.lang === lang) {
+      return identity.canonicalObjectiveId;
+    }
+  }
+
+  return fallbackObjectiveId;
+}
+
+function objectiveLinkForEntry(entry: any) {
+  const topic = topicFromId(entry.clusterId);
+  const langFallback = (OBJECTIVE_BY_LANG as Record<string, { objectiveId: string; reason: string; gap: number }>)[entry.lang] || OBJECTIVE_BY_LANG.ko;
+  const topicGap = Number(topic.objectiveGap || 0);
+  const gap = topicGap > 0 ? topicGap : langFallback.gap;
+  return withObjectiveIdentity(
     {
-      lemma: string;
-      lang: Lang;
-      count: number;
-      sourceSet: Set<'youtube' | 'spotify'>;
-      sourceBreakdown: { youtube: number; spotify: number };
-    }
-  >,
-) {
-  return [...map.entries()].sort((a, b) => {
-    if (b[1].sourceSet.size !== a[1].sourceSet.size) {
-      return b[1].sourceSet.size - a[1].sourceSet.size;
-    }
-    return b[1].count - a[1].count;
-  });
+      reason: topic.objectiveReason || langFallback.reason,
+      gap,
+    },
+    topic.objectiveId || langFallback.objectiveId,
+  );
 }
 
-function getLanguageLearningBoost(profile: Profile | null, lang: Lang): number {
-  if (!profile || !Array.isArray(profile.targetLanguages) || profile.targetLanguages.length === 0) {
-    return 1;
+function placementHintsForCluster(clusterId: string, objectiveId: string): PlacementHint[] {
+  const resolvedClusterId =
+    clusterId && PLACEMENT_BY_CLUSTER[clusterId]
+      ? clusterId
+      : objectiveId === 'ko-vocab-food-items'
+        ? 'food-ordering'
+        : objectiveId === 'zh-mission-stage-texting'
+          ? 'performance-energy'
+          : 'city-social';
+
+  return (PLACEMENT_BY_CLUSTER[resolvedClusterId] || []).map((placement) =>
+    withObjectiveIdentity(
+      {
+        ...placement,
+        clusterId: resolvedClusterId,
+      },
+      objectiveId,
+    ) as PlacementHint,
+  );
+}
+
+function summarizeProvenance(entry: any): IngestionProvenance {
+  const samples = [...(entry.provenance || [])]
+    .sort((a: IngestionProvenanceSample, b: IngestionProvenanceSample) => parseIso(b.consumedAtIso).getTime() - parseIso(a.consumedAtIso).getTime())
+    .slice(0, 3);
+
+  return {
+    sources: [...(entry.sourceSet || [])],
+    mediaIds: [...(entry.mediaIds || [])],
+    samples,
+  };
+}
+
+function aggregateTopMedia(sourceItems: any[], source: SourceKind) {
+  const grouped = new Map<string, { mediaId: string; title: string; lang: Lang; minutes: number }>();
+  for (const item of sourceItems) {
+    if ((item.source === 'spotify' ? 'spotify' : 'youtube') !== source) continue;
+    const mediaId = item.mediaId || item.id || `media_${source}`;
+    const key = `${source}:${mediaId}`;
+    const existing = grouped.get(key) || {
+      mediaId,
+      title: item.title || mediaId,
+      lang: (item.lang || 'ko') as Lang,
+      minutes: 0,
+    };
+    existing.minutes += Number(item.minutes || 0);
+    grouped.set(key, existing);
   }
-
-  const targets = new Set(profile.targetLanguages);
-  if (!targets.has(lang)) return 0.55;
-
-  const level = profile?.proficiency?.[lang] || 'none';
-  const rank = PROFICIENCY_RANK[level] ?? 0;
-  const masteryGap = Math.max(0, 4 - rank);
-  return Number((1 + masteryGap * 0.18).toFixed(2));
+  return [...grouped.values()].sort((a, b) => b.minutes - a.minutes).slice(0, 5);
 }
 
-function stableTermJitter(userId: string, lemma: string): number {
-  const seed = `${userId}:${lemma}`;
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) % 10000;
-  }
-  return (hash % 17) / 1000;
-}
-
-function runMockIngestion(snapshot: any, options: { userId?: string; profile?: Profile | null } = {}): IngestionResult {
+function runMockIngestion(
+  snapshot: any,
+  options: { userId?: string; profile?: Profile | null; includeSources?: SourceKind[] } = {},
+): IngestionResult {
   const userId = options.userId || DEFAULT_USER_ID;
-  const profile = options.profile || null;
+  const windowStart = parseIso(snapshot?.windowStartIso, new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString());
+  const windowEnd = parseIso(snapshot?.windowEndIso, new Date().toISOString());
+  const midpoint = new Date(windowStart.getTime() + (windowEnd.getTime() - windowStart.getTime()) / 2);
+  const includeSources = Array.isArray(options.includeSources) && options.includeSources.length > 0
+    ? new Set(options.includeSources)
+    : null;
 
-  const frequencyMap = new Map<
-    string,
-    {
-      lemma: string;
-      lang: Lang;
-      count: number;
-      sourceSet: Set<'youtube' | 'spotify'>;
-      sourceBreakdown: { youtube: number; spotify: number };
-    }
-  >();
+  const sourceItems = (Array.isArray(snapshot?.sourceItems) ? snapshot.sourceItems : []).filter((item) => {
+    const source = item.source === 'spotify' ? 'spotify' : 'youtube';
+    return !includeSources || includeSources.has(source);
+  });
 
-  const topicStats = new Map<
-    string,
-    {
-      clusterId: string;
-      label: string;
-      keywords: string[];
-      count: number;
-      terms: Map<string, number>;
-      objectiveId: string;
-    }
-  >();
-
+  const termMap = new Map<string, any>();
+  const clusterStats = new Map<string, any>();
   const sourceBreakdown = {
     youtube: { itemsConsumed: 0, minutes: 0, topMedia: [] as Array<{ mediaId: string; title: string; lang: Lang; minutes: number }> },
     spotify: { itemsConsumed: 0, minutes: 0, topMedia: [] as Array<{ mediaId: string; title: string; lang: Lang; minutes: number }> },
   };
 
-  const sourceItems = snapshot.sourceItems || [];
-
   for (const item of sourceItems) {
-    const source: 'youtube' | 'spotify' = item.source === 'spotify' ? 'spotify' : 'youtube';
+    const source: SourceKind = item.source === 'spotify' ? 'spotify' : 'youtube';
     sourceBreakdown[source].itemsConsumed += 1;
     sourceBreakdown[source].minutes += Number(item.minutes || 0);
-    sourceBreakdown[source].topMedia.push({
-      mediaId: item.id,
-      title: item.title,
-      lang: item.lang,
-      minutes: Number(item.minutes || 0),
-    });
+  }
 
-    const tokens = extractTokens(item.text);
-    const topics = getTopicMatches(`${item.title} ${item.text}`);
+  sourceBreakdown.youtube.topMedia = aggregateTopMedia(sourceItems, 'youtube');
+  sourceBreakdown.spotify.topMedia = aggregateTopMedia(sourceItems, 'spotify');
+
+  for (const item of sourceItems) {
+    const source: SourceKind = item.source === 'spotify' ? 'spotify' : 'youtube';
+    const consumedAt = parseIso(item.playedAtIso || snapshot?.windowEndIso, windowEnd.toISOString());
+    const ageHours = Math.max(0, (windowEnd.getTime() - consumedAt.getTime()) / (60 * 60 * 1000));
+    const recencyWeight = Math.exp(
+      -ageHours / Math.max(1, (windowEnd.getTime() - windowStart.getTime()) / (60 * 60 * 1000)),
+    );
+    const topics = getTopicMatches(`${item.title || ''} ${item.text || ''}`);
+    const tokens =
+      Array.isArray(item.tokens) && item.tokens.length > 0 ? item.tokens : extractTokens(item.text || '');
 
     for (const topic of topics) {
-      const existingTopic = topicStats.get(topic.clusterId) || {
+      const clusterEntry = clusterStats.get(topic.clusterId) || {
         clusterId: topic.clusterId,
         label: topic.label,
         keywords: topic.keywords.slice(0, 6),
-        count: 0,
-        terms: new Map<string, number>(),
         objectiveId: topic.objectiveId,
+        count: 0,
+        termCounts: new Map<string, number>(),
       };
-      existingTopic.count += 1;
-      topicStats.set(topic.clusterId, existingTopic);
+      clusterEntry.count += 1;
+      clusterStats.set(topic.clusterId, clusterEntry);
     }
 
-    for (const token of tokens) {
-      const existing = frequencyMap.get(token) || {
+    for (const tokenRaw of tokens) {
+      const token = normalizeToken(String(tokenRaw));
+      const key = normalizeTermKey(token);
+      if (!key) continue;
+
+      const existing = termMap.get(key) || {
         lemma: token,
-        lang: item.lang,
+        lang: (item.lang || detectLang(token)) as Lang,
         count: 0,
-        sourceSet: new Set<'youtube' | 'spotify'>(),
+        weighted: 0,
+        recencyWeighted: 0,
+        sourceSet: new Set<SourceKind>(),
+        mediaIds: new Set<string>(),
+        provenance: [] as IngestionProvenanceSample[],
         sourceBreakdown: { youtube: 0, spotify: 0 },
+        baselineCount: 0,
+        recentCount: 0,
+        clusterVotes: new Map<string, number>(),
       };
 
       existing.count += 1;
+      existing.weighted += source === 'spotify' ? 1.15 : 1;
+      existing.recencyWeighted += (source === 'spotify' ? 1.15 : 1) * recencyWeight;
       existing.sourceSet.add(source);
+      existing.mediaIds.add(item.mediaId || item.id || `${source}_${key}`);
       existing.sourceBreakdown[source] += 1;
-      frequencyMap.set(token, existing);
+
+      if (existing.provenance.length < 4) {
+        existing.provenance.push({
+          source,
+          mediaId: item.mediaId || item.id || `${source}_${key}`,
+          title: item.title,
+          consumedAtIso: item.playedAtIso || snapshot?.windowEndIso || windowEnd.toISOString(),
+        });
+      }
+
+      if (consumedAt < midpoint) existing.baselineCount += 1;
+      else existing.recentCount += 1;
 
       for (const topic of topics) {
-        const topicEntry = topicStats.get(topic.clusterId);
-        if (!topicEntry) continue;
-        if (!topicEntry.terms.has(token)) {
-          topicEntry.terms.set(token, 0);
+        existing.clusterVotes.set(topic.clusterId, (existing.clusterVotes.get(topic.clusterId) || 0) + 1);
+        const clusterEntry = clusterStats.get(topic.clusterId);
+        if (clusterEntry) {
+          clusterEntry.termCounts.set(token, (clusterEntry.termCounts.get(token) || 0) + 1);
         }
-        topicEntry.terms.set(token, (topicEntry.terms.get(token) || 0) + 1);
       }
+
+      termMap.set(key, existing);
     }
   }
 
-  const sortedFrequency = sortFrequencyEntries(frequencyMap);
-  const averageCount =
-    sortedFrequency.length > 0
-      ? sortedFrequency.reduce((sum, [, value]) => sum + value.count, 0) / sortedFrequency.length
-      : 1;
+  const termEntries = [...termMap.values()];
+  for (const entry of termEntries) {
+    entry.clusterId = pickDominantCluster(entry.clusterVotes);
+  }
 
-  const frequencyItems: FrequencyItem[] = sortedFrequency.map(([, value]) => ({
-    lemma: value.lemma,
-    lang: value.lang,
-    count: value.count,
-    sourceCount: value.sourceSet.size,
-    sourceBreakdown: value.sourceBreakdown,
+  termEntries.sort((a, b) => {
+    if (b.weighted !== a.weighted) return b.weighted - a.weighted;
+    if (b.count !== a.count) return b.count - a.count;
+    return b.sourceSet.size - a.sourceSet.size;
+  });
+
+  const frequencyItems: FrequencyItem[] = termEntries.map((entry) => ({
+    lemma: entry.lemma,
+    lang: entry.lang,
+    count: entry.count,
+    clusterId: entry.clusterId,
+    sourceCount: entry.sourceSet.size,
+    sourceBreakdown: entry.sourceBreakdown,
+    provenance: summarizeProvenance(entry),
   }));
 
-  const sortedTopics = [...topicStats.values()].sort((a, b) => b.count - a.count);
-  const clusters = sortedTopics.map((topic) => ({
-    clusterId: topic.clusterId,
-    label: topic.label,
-    keywords: topic.keywords,
-    topTerms: [...topic.terms.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 4)
-      .map(([term]) => term),
-  }));
+  const maxCount = termEntries.reduce((best, entry) => Math.max(best, entry.count), 0) || 1;
+  const maxRecency = termEntries.reduce((best, entry) => Math.max(best, entry.recencyWeighted), 0) || 1;
+  const bursts = termEntries.map((entry) => burstScore(entry.recentCount, entry.baselineCount));
+  const maxBurst = bursts.reduce((best, burst) => Math.max(best, burst), 1);
 
-  const insightsItems = sortedFrequency.slice(0, 30).map(([, value], index) => {
-    const cluster =
-      sortedTopics.find((topic) => topic.terms.has(value.lemma)) ||
-      sortedTopics[0] || {
-        clusterId: 'general',
-        objectiveId: 'ko_food_l2_001',
-      };
-
-    const burst = Number((value.count / Math.max(averageCount, 1)).toFixed(2));
-    const score = Number(
-      (value.sourceSet.size * 3 + value.count * 0.8 + burst * 1.5 + (30 - index) * 0.03).toFixed(2),
-    );
+  const scored = termEntries.map((entry, idx) => {
+    const burst = bursts[idx];
+    const objective = objectiveLinkForEntry(entry);
+    const frequencyNorm = safeNorm(entry.count, maxCount);
+    const burstNorm = maxBurst > 1 ? safeNorm(burst - 1, maxBurst - 1) : 0;
+    const relevance = safeNorm(entry.recencyWeighted, maxRecency);
+    const novelty = 1 / (1 + entry.baselineCount);
+    const rawScore =
+      0.3 * frequencyNorm +
+      0.25 * burstNorm +
+      0.2 * relevance +
+      0.15 * Number(objective.gap || 0) +
+      0.1 * novelty;
 
     return {
-      lemma: value.lemma,
-      lang: value.lang,
-      score,
-      frequency: value.count,
+      entry,
       burst,
-      clusterId: cluster.clusterId,
-      orthographyFeatures: {
-        scriptType: detectScriptType(value.lemma),
-      },
-      objectiveLinks: [
-        {
-          objectiveId: cluster.objectiveId,
-          reason: 'High recent recurrence across media sources',
-        },
-      ],
+      objective,
+      rawScore,
     };
   });
 
+  const maxRawScore = scored.reduce((best, row) => Math.max(best, row.rawScore), 0) || 1;
+  const insightsItems = scored
+    .sort((a, b) => b.rawScore - a.rawScore || b.entry.count - a.entry.count)
+    .slice(0, 30)
+    .map((row) => ({
+      lemma: row.entry.lemma,
+      lang: row.entry.lang,
+      score: Number((row.rawScore / maxRawScore).toFixed(2)),
+      frequency: row.entry.count,
+      burst: row.burst,
+      clusterId: row.entry.clusterId,
+      orthographyFeatures: orthographyFeaturesForLemma(row.entry.lemma),
+      provenance: summarizeProvenance(row.entry),
+      placementHints: placementHintsForCluster(row.entry.clusterId, row.objective.objectiveId),
+      objectiveLinks: [
+        withObjectiveIdentity(
+          {
+            reason: row.objective.reason,
+          },
+          row.objective.objectiveId,
+        ),
+      ],
+    }));
+
+  const clusters = [...clusterStats.values()]
+    .sort((a, b) => b.count - a.count)
+    .map((cluster) => ({
+      clusterId: cluster.clusterId,
+      label: cluster.label,
+      keywords: cluster.keywords,
+      topTerms: [...cluster.termCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4)
+        .map(([term]) => term),
+      placementHints: placementHintsForCluster(cluster.clusterId, cluster.objectiveId),
+    }));
+
   const topTerms = frequencyItems.slice(0, 8);
-  const topTopics = clusters.slice(0, 4).map((cluster, idx) => ({
-    clusterId: cluster.clusterId,
-    label: cluster.label,
-    score: Number(Math.max(0.2, 0.95 - idx * 0.15).toFixed(2)),
-  }));
+  const clusterAffinityMap = new Map<string, number>();
+  for (const row of scored) {
+    clusterAffinityMap.set(
+      row.entry.clusterId,
+      (clusterAffinityMap.get(row.entry.clusterId) || 0) + row.rawScore,
+    );
+  }
 
-  const rankedTopTerms = topTerms
-    .map((item) => {
-      const baseScore = item.count * item.sourceCount;
-      const languageBoost = getLanguageLearningBoost(profile, item.lang);
-      const weightedScore = Number((baseScore * languageBoost + stableTermJitter(userId, item.lemma)).toFixed(4));
-      return { item, weightedScore };
-    })
-    .sort((a, b) => b.weightedScore - a.weightedScore);
+  const maxClusterAffinity = [...clusterAffinityMap.values()].reduce((best, value) => Math.max(best, value), 0) || 1;
+  const topTopics = [...clusterAffinityMap.entries()]
+    .map(([clusterId, value]) => ({
+      clusterId,
+      label: topicFromId(clusterId).label,
+      score: Number((value / maxClusterAffinity).toFixed(2)),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4);
 
-  const totalScore = rankedTopTerms.reduce((sum, entry) => sum + entry.weightedScore, 0) || 1;
+  const totalTopWeight =
+    topTerms.reduce((sum, item) => sum + item.count * Math.max(item.sourceCount, 1), 0) || 1;
 
   const learningSignals = {
-    topTerms: rankedTopTerms.map(({ item, weightedScore }) => ({
+    topTerms: topTerms.map((item) => ({
       lemma: item.lemma,
       lang: item.lang,
-      weightedScore: Number((weightedScore / totalScore).toFixed(2)),
+      weightedScore: Number(((item.count * Math.max(item.sourceCount, 1)) / totalTopWeight).toFixed(2)),
       dominantSource:
-        (item.sourceBreakdown?.youtube || 0) >= (item.sourceBreakdown?.spotify || 0)
+        Number(item.sourceBreakdown?.youtube || 0) >= Number(item.sourceBreakdown?.spotify || 0)
           ? 'youtube'
           : 'spotify',
+      provenance: item.provenance,
+      placementHints: placementHintsForCluster(
+        item.clusterId || 'general',
+        String(objectiveLinkForEntry(item).objectiveId || DEFAULT_OBJECTIVE_BY_LANG[item.lang]),
+      ),
     })),
     clusterAffinities: topTopics,
+    placementCandidates: topTopics.flatMap((topic) =>
+      placementHintsForCluster(topic.clusterId, String(topicFromId(topic.clusterId).objectiveId)).map((placement) => ({
+        ...placement,
+        confidence: topic.score,
+      })),
+    ),
   };
 
   return {
     generatedAtIso: new Date().toISOString(),
     frequency: {
-      windowStartIso: snapshot.windowStartIso,
-      windowEndIso: snapshot.windowEndIso,
+      windowStartIso: windowStart.toISOString(),
+      windowEndIso: windowEnd.toISOString(),
       items: frequencyItems,
     },
     insights: {
-      windowStartIso: snapshot.windowStartIso,
-      windowEndIso: snapshot.windowEndIso,
+      windowStartIso: windowStart.toISOString(),
+      windowEndIso: windowEnd.toISOString(),
       clusters,
       items: insightsItems,
     },
     mediaProfile: {
       userId,
-      windowDays: 3,
+      windowDays: Math.max(1, Math.round((windowEnd.getTime() - windowStart.getTime()) / (24 * 60 * 60 * 1000))),
       generatedAtIso: new Date().toISOString(),
       sourceBreakdown: {
         youtube: {
@@ -702,7 +1324,8 @@ function getDominantClusterId(ingestion: IngestionResult): string {
 }
 
 function objectiveMatchesLanguage(objectiveId: unknown, lang: Lang): boolean {
-  return typeof objectiveId === 'string' && objectiveId.startsWith(`${lang}_`);
+  return typeof resolveObjectiveIdentity(objectiveId).canonicalObjectiveId === 'string' &&
+    String(resolveObjectiveIdentity(objectiveId).canonicalObjectiveId).startsWith(`${lang}-`);
 }
 
 function buildPersonalizedObjective({
@@ -719,6 +1342,24 @@ function buildPersonalizedObjective({
   const dominantCluster =
     ingestion?.insights?.clusters?.find((cluster) => cluster.clusterId === dominantClusterId) ||
     ingestion?.insights?.clusters?.[0];
+  const placementCandidates = Array.isArray(ingestion?.mediaProfile?.learningSignals?.placementCandidates)
+    ? ingestion.mediaProfile.learningSignals.placementCandidates
+    : [];
+  const selectedPlacement =
+    placementCandidates.find(
+      (candidate) =>
+        candidate.city === city &&
+        candidate.location === location &&
+        candidate.mode === mode &&
+        (candidate.objectiveId?.startsWith(`${lang}-`) || candidate.objectiveId === DEFAULT_OBJECTIVE_BY_LANG[lang]),
+    ) ||
+    placementCandidates.find(
+      (candidate) =>
+        candidate.city === city &&
+        candidate.location === location &&
+        candidate.mode === mode,
+    ) ||
+    null;
 
   const insightItems = Array.isArray(ingestion?.insights?.items) ? ingestion.insights.items : [];
   const langItems = insightItems.filter((item) => item.lang === lang);
@@ -728,18 +1369,17 @@ function buildPersonalizedObjective({
     : scopedItems;
 
   let objectiveId =
+    selectedPlacement?.objectiveId ||
     scopedClusterItems[0]?.objectiveLinks?.[0]?.objectiveId ||
     scopedItems[0]?.objectiveLinks?.[0]?.objectiveId ||
     baseObjective.objectiveId ||
-    DEFAULT_OBJECTIVE_BY_LANG[lang];
+    defaultObjectiveIdForLang(lang, DEFAULT_OBJECTIVE_BY_LANG[lang]);
 
   if (!objectiveMatchesLanguage(objectiveId, lang)) {
     const languageAlignedObjective =
       scopedItems.find((item) => objectiveMatchesLanguage(item?.objectiveLinks?.[0]?.objectiveId, lang))
         ?.objectiveLinks?.[0]?.objectiveId ||
-      insightItems.find((item) => objectiveMatchesLanguage(item?.objectiveLinks?.[0]?.objectiveId, lang))
-        ?.objectiveLinks?.[0]?.objectiveId ||
-      DEFAULT_OBJECTIVE_BY_LANG[lang];
+      defaultObjectiveIdForLang(lang, DEFAULT_OBJECTIVE_BY_LANG[lang]);
 
     if (languageAlignedObjective) {
       objectiveId = languageAlignedObjective;
@@ -763,13 +1403,19 @@ function buildPersonalizedObjective({
     linkedNodeIds: [`overlay:${item.dominantSource}:${dominantClusterId}`, `target:${item.lemma}`],
   }));
 
-  const objectiveNodeId = `objective:${objectiveId}`;
+  const resolvedObjective = resolveObjectiveIdentity(objectiveId);
+  const objectiveNodeId = canonicalObjectiveNodeId(objectiveId);
   const objectiveCategory: ObjectiveCategory =
-    lang === 'zh' ? 'sentences' : lang === 'ja' ? 'script' : 'vocabulary';
+    (resolvedObjective.identity?.objectiveCategory as ObjectiveCategory | undefined) ||
+    (lang === 'zh' ? 'conversation' : 'vocabulary');
+  const prerequisiteByLang: Record<Lang, string[]> = {
+    ko: ['ko-pron-food-words'],
+    ja: [],
+    zh: [],
+  };
 
-  return {
+  return withObjectiveIdentity({
     ...baseObjective,
-    objectiveId,
     mode,
     lang,
     objectiveGraph: {
@@ -778,7 +1424,7 @@ function buildPersonalizedObjective({
       locationId: location,
       objectiveCategory,
       targetNodeIds: vocabulary.map((term) => `target:${term}`),
-      prerequisiteObjectiveIds: [`${lang}_food_l1_001`],
+      prerequisiteObjectiveIds: prerequisiteByLang[lang] || [],
       source: 'knowledge_graph',
     },
     coreTargets: {
@@ -797,16 +1443,20 @@ function buildPersonalizedObjective({
         'mission',
       ],
     },
-  };
+  }, objectiveId);
 }
 
-function buildGameStartResponse(userId: string, incomingProfile: Profile | null) {
-  const profile = incomingProfile || getProfile(userId) || (FIXTURES.gameStart as any).profile;
+function buildGameStartResponse(userId: string, incomingProfile: Profile | null, sessionId: string) {
+  const base = cloneJson(FIXTURES.gameStart as any);
+  const profile = incomingProfile || getProfile(userId) || base.profile;
   const ingestion = ensureIngestionForUser(userId);
   const dominantClusterId = getDominantClusterId(ingestion);
 
-  const city = CLUSTER_CITY_MAP[dominantClusterId] || (FIXTURES.gameStart as any).city || 'seoul';
+  const city = CLUSTER_CITY_MAP[dominantClusterId] || base.city || 'seoul';
   const location = CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
+  const sceneId = `${location}_hangout_intro`;
+  const sceneSessionId = `scene_${sessionId}_001`;
+  const checkpointId = `ckpt_${sessionId}_intro`;
 
   const ytMinutes = ingestion?.mediaProfile?.sourceBreakdown?.youtube?.minutes || 0;
   const spMinutes = ingestion?.mediaProfile?.sourceBreakdown?.spotify?.minutes || 0;
@@ -827,13 +1477,32 @@ function buildGameStartResponse(userId: string, incomingProfile: Profile | null)
     city,
     location,
   });
+  const actions = [
+    'Start hangout validation',
+    'Review personalized learn targets',
+    `Practice ${weakestLang.toUpperCase()} objective ${objective.objectiveId}`,
+  ];
+  const activeObjective = withObjectiveIdentity(
+    {
+      lang: weakestLang,
+      mode: 'hangout',
+      cityId: city,
+      locationId: location,
+      objectiveCategory: objective.objectiveGraph?.objectiveCategory,
+      objectiveNodeId: objective.objectiveGraph?.objectiveNodeId,
+      targetNodeIds: cloneJson(objective.objectiveGraph?.targetNodeIds || []),
+      summary: base.gameSession?.activeObjective?.summary || `Practice ${weakestLang.toUpperCase()} in ${location}.`,
+    },
+    objective.objectiveId,
+  );
 
   return {
-    ...(cloneJson(FIXTURES.gameStart) as Record<string, unknown>),
+    ...base,
+    sessionId,
     city,
     location,
     mode: 'hangout',
-    sceneId: `${location}_hangout_intro`,
+    sceneId,
     profile: cloneJson(profile),
     progression: {
       xp,
@@ -841,18 +1510,82 @@ function buildGameStartResponse(userId: string, incomingProfile: Profile | null)
       rp,
       currentMasteryLevel,
     },
-    actions: [
-      'Start hangout validation',
-      'Review personalized learn targets',
-      `Practice ${weakestLang.toUpperCase()} objective ${objective.objectiveId}`,
-    ],
+    actions,
+    resumeSource: 'new_session',
+    gameSession: {
+      ...(base.gameSession || {}),
+      sessionId,
+      userId,
+      profile: cloneJson(profile),
+      cityId: city,
+      locationId: location,
+      currentMode: 'hangout',
+      activeSceneId: sceneId,
+      activeSceneSessionId: sceneSessionId,
+      activeObjective,
+      progression: {
+        xp,
+        sp,
+        rp,
+        currentMasteryLevel,
+      },
+      missionGate: cloneJson(base.gameSession?.missionGate || {}),
+      unlocks: {
+        ...(base.gameSession?.unlocks || {}),
+        locationIds: [location],
+      },
+      rewards: cloneJson(base.gameSession?.rewards || []),
+      availableActions: actions,
+      resumeSource: 'new_session',
+      activeCheckpointId: checkpointId,
+    },
+    sceneSession: {
+      ...(base.sceneSession || {}),
+      sceneSessionId,
+      gameSessionId: sessionId,
+      sceneId,
+      cityId: city,
+      locationId: location,
+      mode: 'hangout',
+      objective: activeObjective,
+      route: {
+        pathname: '/game',
+        query: {
+          city,
+          location,
+          mode: 'hangout',
+        },
+      },
+    },
+    activeCheckpoint: {
+      ...(base.activeCheckpoint || {}),
+      checkpointId,
+      gameSessionId: sessionId,
+      sceneSessionId,
+      cityId: city,
+      locationId: location,
+      mode: 'hangout',
+      objective: {
+        ...activeObjective,
+        summary: base.activeCheckpoint?.objective?.summary || 'Resume from the current safe intro boundary.',
+      },
+      route: {
+        pathname: '/game',
+        query: {
+          city,
+          location,
+          mode: 'hangout',
+          resume: '1',
+        },
+      },
+    },
   };
 }
 
 function handleHangoutRespond(body: Record<string, any>) {
   const sceneSessionId = body.sceneSessionId;
   const userUtterance = String(body.userUtterance || '').trim();
-  const existing = state.sessions.get(sceneSessionId);
+  const existing = state.sceneSessions.get(sceneSessionId);
 
   if (!existing) {
     return {
@@ -868,14 +1601,95 @@ function handleHangoutRespond(body: Record<string, any>) {
   const xpDelta = matched ? 8 : 4;
   const spDelta = matched ? 2 : 1;
   const rpDelta = matched ? 1 : 0;
-
-  existing.turn += 1;
-  existing.score.xp += xpDelta;
-  existing.score.sp += spDelta;
-  existing.score.rp += rpDelta;
-
+  const objectiveProgressDelta = matched ? 0.25 : 0.1;
+  const sceneSession = existing.sceneSession;
+  sceneSession.turn = Number(sceneSession.turn || 1) + 1;
+  sceneSession.phase = 'dialogue';
   const nextLine =
-    existing.turn % 2 === 0 ? '좋아요, 맵기는 어느 정도로 할까요?' : '좋아요! 다음 주문도 한국어로 말해 볼까요?';
+    sceneSession.turn % 2 === 0 ? '좋아요, 맵기는 어느 정도로 할까요?' : '좋아요! 다음 주문도 한국어로 말해 볼까요?';
+
+  if (!existing.gameSessionId) {
+    sceneSession.score = cloneJson(sceneSession.score || { xp: 0, sp: 0, rp: 0 });
+    sceneSession.score.xp += xpDelta;
+    sceneSession.score.sp += spDelta;
+    sceneSession.score.rp += rpDelta;
+    state.sceneSessions.set(sceneSessionId, existing);
+
+    return {
+      statusCode: 200,
+      payload: {
+        accepted: true,
+        feedback: {
+          tongHint: matched
+            ? 'Great phrasing. You used practical ordering language.'
+            : 'Try adding a food word plus polite ending like 주세요.',
+          objectiveProgressDelta,
+        },
+        nextLine: {
+          speaker: 'character',
+          text: nextLine,
+        },
+        state: {
+          turn: sceneSession.turn,
+          score: cloneJson(sceneSession.score),
+        },
+      },
+    };
+  }
+
+  const gameRuntime = state.sessions.get(existing.gameSessionId);
+  if (!gameRuntime) {
+    return {
+      statusCode: 404,
+      payload: {
+        error: 'unknown_game_session',
+      },
+    };
+  }
+
+  const storedResponse = cloneJson(gameRuntime.response);
+  const gameSession = cloneJson(storedResponse?.gameSession || {});
+  const currentProgression = cloneJson(gameSession.progression || storedResponse.progression || { xp: 0, sp: 0, rp: 0 });
+
+  currentProgression.xp = Number(currentProgression.xp || 0) + xpDelta;
+  currentProgression.sp = Number(currentProgression.sp || 0) + spDelta;
+  currentProgression.rp = Number(currentProgression.rp || 0) + rpDelta;
+  gameSession.progression = cloneJson(currentProgression);
+  gameSession.missionGate = cloneJson(gameSession.missionGate || {});
+  gameSession.missionGate.readiness = Math.min(
+    1,
+    Number(((Number(gameSession.missionGate.readiness || 0) + objectiveProgressDelta)).toFixed(2)),
+  );
+
+  sceneSession.progressionDelta = cloneJson(sceneSession.progressionDelta || buildInitialProgressionDelta());
+  sceneSession.progressionDelta.xp = Number(sceneSession.progressionDelta.xp || 0) + xpDelta;
+  sceneSession.progressionDelta.sp = Number(sceneSession.progressionDelta.sp || 0) + spDelta;
+  sceneSession.progressionDelta.rp = Number(sceneSession.progressionDelta.rp || 0) + rpDelta;
+  sceneSession.progressionDelta.objectiveProgressDelta = Number(
+    ((Number(sceneSession.progressionDelta.objectiveProgressDelta || 0) + objectiveProgressDelta)).toFixed(2),
+  );
+  sceneSession.score = {
+    xp: currentProgression.xp,
+    sp: currentProgression.sp,
+    rp: currentProgression.rp,
+  };
+
+  const nextCheckpoint = createNextCheckpoint(
+    {
+      ...storedResponse,
+      gameSession,
+    },
+    existing,
+    'turn_end',
+  );
+  gameSession.activeCheckpointId = nextCheckpoint.checkpointId;
+  storedResponse.progression = cloneJson(currentProgression);
+  storedResponse.gameSession = cloneJson(gameSession);
+  storedResponse.gameSession.resumeSource = 'checkpoint';
+  storedResponse.sceneSession = toSceneSessionPayload(sceneSession);
+  storedResponse.activeCheckpoint = cloneJson(nextCheckpoint);
+  storedResponse.resumeSource = 'checkpoint';
+  gameRuntime.response = cloneJson(storedResponse);
 
   const response = {
     accepted: true,
@@ -883,19 +1697,27 @@ function handleHangoutRespond(body: Record<string, any>) {
       tongHint: matched
         ? 'Great phrasing. You used practical ordering language.'
         : 'Try adding a food word plus polite ending like 주세요.',
-      objectiveProgressDelta: matched ? 0.25 : 0.1,
+      objectiveProgressDelta,
     },
     nextLine: {
       speaker: 'character',
       text: nextLine,
     },
     state: {
-      turn: existing.turn,
-      score: { ...existing.score },
+      turn: sceneSession.turn,
+      score: cloneJson(currentProgression),
+      objectiveProgress: sceneSession.progressionDelta.objectiveProgressDelta,
+    },
+    activeCheckpoint: cloneJson(nextCheckpoint),
+    routeState: {
+      sessionId: gameSession.sessionId,
+      checkpointId: nextCheckpoint.checkpointId,
     },
   };
 
-  state.sessions.set(sceneSessionId, existing);
+  state.sessions.set(String(gameSession.sessionId), gameRuntime);
+  state.sceneSessions.set(sceneSessionId, existing);
+  state.checkpoints.set(String(nextCheckpoint.checkpointId), cloneJson(nextCheckpoint));
   return { statusCode: 200, payload: response };
 }
 
@@ -952,9 +1774,13 @@ async function handleRequest(request: Request): Promise<Response> {
       const body = await readJsonBody(request);
       const userId = body.userId || getUserIdFromSearch(url.searchParams);
       if (body.profile) upsertProfile(userId, { profile: body.profile });
+      const includeSources = Array.isArray(body.includeSources)
+        ? body.includeSources.filter((source: string) => source === 'youtube' || source === 'spotify')
+        : [];
       const result = runMockIngestion(mockMediaWindow, {
         userId,
         profile: getProfile(userId),
+        ...(includeSources.length > 0 ? { includeSources } : {}),
       });
       state.ingestionByUser.set(userId, result);
 
@@ -973,17 +1799,17 @@ async function handleRequest(request: Request): Promise<Response> {
       const body = await readJsonBody(request);
       const userId = body.userId || DEFAULT_USER_ID;
       const incomingProfile = body.profile ? upsertProfile(userId, { profile: body.profile }) : null;
-      const sessionId = `sess_${Math.random().toString(36).slice(2, 10)}`;
-      const response = {
-        ...buildGameStartResponse(userId, incomingProfile),
-        sessionId,
-      };
+      const requestedSessionId =
+        typeof body.sessionId === 'string' && body.sessionId.trim().length > 0 ? body.sessionId.trim() : null;
+      const existingRuntime = findStoredGameRuntime(userId, requestedSessionId);
 
-      state.sessions.set(sessionId, {
-        userId,
-        turn: 1,
-        score: { xp: 0, sp: 0, rp: 0 },
-      });
+      if (existingRuntime) {
+        return jsonResponse(200, buildStoredGameResponse(existingRuntime, 'checkpoint'));
+      }
+
+      const sessionId = `sess_${Math.random().toString(36).slice(2, 10)}`;
+      const response = buildGameStartResponse(userId, incomingProfile, sessionId);
+      storeGameRuntimeResponse(userId, response);
 
       return jsonResponse(200, response);
     }
@@ -1014,25 +1840,74 @@ async function handleRequest(request: Request): Promise<Response> {
 
     if (pathname === '/api/v1/scenes/hangout/start' && request.method === 'POST') {
       const body = await readJsonBody(request);
-      const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
-      const score = { xp: 0, sp: 0, rp: 0 };
+      const userId = body.userId || DEFAULT_USER_ID;
+      const requestedSessionId =
+        typeof body.sessionId === 'string' && body.sessionId.trim().length > 0 ? body.sessionId.trim() : null;
+      const existingGameRuntime = findStoredGameRuntime(userId, requestedSessionId);
 
-      state.sessions.set(sceneSessionId, {
-        userId: body.userId || DEFAULT_USER_ID,
-        turn: 1,
-        score: { ...score },
-      });
+      if (existingGameRuntime) {
+        const response = buildStoredGameResponse(existingGameRuntime, 'checkpoint');
+        const sceneSessionId = String(response?.sceneSession?.sceneSessionId || '');
+        const sceneRuntime = sceneSessionId ? state.sceneSessions.get(sceneSessionId) : null;
+        const score = cloneJson(sceneRuntime?.sceneSession?.score || response?.gameSession?.progression || { xp: 0, sp: 0, rp: 0 });
+        const turn = Number(sceneRuntime?.sceneSession?.turn || response?.activeCheckpoint?.turn || 1);
+
+        return jsonResponse(200, {
+          sceneSessionId,
+          mode: 'hangout',
+          uiPolicy: cloneJson(
+            sceneRuntime?.sceneSession?.uiPolicy || {
+              immersiveFirstPerson: true,
+              allowOnlyDialogueAndHints: true,
+            },
+          ),
+          resumeSource: response.resumeSource,
+          checkpointId: response?.activeCheckpoint?.checkpointId || null,
+          activeCheckpoint: cloneJson(response?.activeCheckpoint || null),
+          state: {
+            turn,
+            score,
+            objectiveProgress: Number(sceneRuntime?.sceneSession?.progressionDelta?.objectiveProgressDelta || 0),
+          },
+          initialLine: {
+            speaker: 'character',
+            text: turn > 1 ? '좋아요, 이어서 주문해 볼까요? 방금 멈춘 지점부터예요.' : '어서 와요! 오늘은 뭐 먹고 싶어요?',
+          },
+        });
+      }
+
+      const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
+      const sceneRuntime: WorkerSceneRuntime = {
+        userId,
+        gameSessionId: null,
+        sceneSession: {
+          sceneSessionId,
+          gameSessionId: null,
+          mode: 'hangout',
+          phase: 'intro',
+          turn: 1,
+          progressionDelta: buildInitialProgressionDelta(),
+          uiPolicy: {
+            immersiveFirstPerson: true,
+            allowOnlyDialogueAndHints: true,
+          },
+          score: {
+            xp: 0,
+            sp: 0,
+            rp: 0,
+          },
+        },
+      };
+
+      state.sceneSessions.set(sceneSessionId, sceneRuntime);
 
       return jsonResponse(200, {
         sceneSessionId,
         mode: 'hangout',
-        uiPolicy: {
-          immersiveFirstPerson: true,
-          allowOnlyDialogueAndHints: true,
-        },
+        uiPolicy: cloneJson(sceneRuntime.sceneSession.uiPolicy),
         state: {
           turn: 1,
-          score,
+          score: cloneJson(sceneRuntime.sceneSession.score),
         },
         initialLine: {
           speaker: 'character',
@@ -1055,16 +1930,23 @@ async function handleRequest(request: Request): Promise<Response> {
     if (pathname === '/api/v1/learn/sessions' && request.method === 'POST') {
       const body = await readJsonBody(request);
       const learnSessionId = `learn_${Math.random().toString(36).slice(2, 8)}`;
-      const title = `Food Street ${body.objectiveId || 'Objective'} Drill`;
+      const requestedObjectiveId =
+        body.objectiveId ||
+        defaultObjectiveIdForLang('ko', DEFAULT_OBJECTIVE_BY_LANG.ko) ||
+        'ko-vocab-food-items';
+      const resolvedObjective = resolveObjectiveIdentity(requestedObjectiveId);
+      const title = `Food Street ${resolvedObjective.canonicalObjectiveId || 'Objective'} Drill`;
       const item = {
         learnSessionId,
         title,
-        objectiveId: body.objectiveId || 'ko_food_l2_001',
+        objectiveId: resolvedObjective.canonicalObjectiveId,
         lastMessageAt: new Date().toISOString(),
       };
       state.learnSessions.unshift(item);
 
-      return jsonResponse(200, {
+      return jsonResponse(
+        200,
+        withObjectiveIdentity({
         learnSessionId,
         mode: 'learn',
         uiTheme: 'kakao_like',
@@ -1073,7 +1955,8 @@ async function handleRequest(request: Request): Promise<Response> {
           speaker: 'tong',
           text: "New session started. We'll train 주문 phrases for your next hangout.",
         },
-      });
+        }, item.objectiveId),
+      );
     }
 
     /* ── Step 1: Signup — just save the email, no email yet ── */

@@ -93,7 +93,10 @@ Response:
       "clusterId": "food-ordering",
       "label": "Food Ordering",
       "keywords": ["주문", "메뉴", "맵다"],
-      "topTerms": ["주문", "메뉴"]
+      "topTerms": ["주문", "메뉴"],
+      "placementHints": [
+        { "city": "seoul", "location": "food_street", "mode": "hangout", "placementType": "hangout", "objectiveId": "ko-vocab-food-items", "reason": "Food-ordering terms reinforce the Seoul food street hangout." }
+      ]
     }
   ],
   "items": [
@@ -109,6 +112,14 @@ Response:
         "radical": "火",
         "relatedForms": ["炎", "灯", "烧"]
       },
+      "provenance": {
+        "sources": ["spotify"],
+        "mediaIds": ["sp_track_004"],
+        "samples": [{ "source": "spotify", "mediaId": "sp_track_004", "title": "燃烧练习", "consumedAtIso": "2026-02-28T02:40:00.000Z" }]
+      },
+      "placementHints": [
+        { "city": "shanghai", "location": "practice_studio", "mode": "hangout", "placementType": "mission", "objectiveId": "zh-mission-stage-texting", "reason": "Performance language supports the Shanghai texting mission." }
+      ],
       "objectiveLinks": [
         { "objectiveId": "zh-mission-stage-texting", "legacyObjectiveId": "zh_stage_l3_002", "objectiveAliasIds": ["zh_stage_l3_002"], "reason": "Grammar + vocab gap" }
       ]
@@ -116,6 +127,9 @@ Response:
   ]
 }
 ```
+
+Contract note:
+- Retrieval-backed insight payloads should carry both `provenance` and `placementHints` so downstream objective selection can explain why a term surfaced and where it should be infused.
 
 ## GET `/api/v1/player/media-profile`
 Query:
@@ -164,7 +178,12 @@ Response:
         "lemma": "연습",
         "lang": "ko",
         "weightedScore": 0.82,
-        "dominantSource": "spotify"
+        "dominantSource": "spotify",
+        "provenance": {
+          "sources": ["spotify"],
+          "mediaIds": ["sp_track_001"],
+          "samples": [{ "source": "spotify", "mediaId": "sp_track_001", "title": "밤 산책", "consumedAtIso": "2026-02-27T08:00:00.000Z" }]
+        }
       }
     ],
     "clusterAffinities": [
@@ -173,6 +192,9 @@ Response:
         "label": "Food Ordering",
         "score": 0.69
       }
+    ],
+    "placementCandidates": [
+      { "city": "seoul", "location": "food_street", "mode": "hangout", "placementType": "hangout", "objectiveId": "ko-vocab-food-items", "reason": "Food-ordering terms reinforce the Seoul food street hangout.", "confidence": 0.69 }
     ]
   }
 }

@@ -371,6 +371,16 @@ for (const item of vocabInsights.items) {
     console.error(`Vocab insight item ${item.lemma ?? "<unknown>"} missing objectiveLinks`);
     process.exit(1);
   }
+
+  if (!Array.isArray(item.placementHints) || item.placementHints.length === 0) {
+    console.error(`Vocab insight item ${item.lemma ?? "<unknown>"} missing placementHints`);
+    process.exit(1);
+  }
+
+  if (!Array.isArray(item.provenance?.samples) || item.provenance.samples.length === 0) {
+    console.error(`Vocab insight item ${item.lemma ?? "<unknown>"} missing provenance.samples`);
+    process.exit(1);
+  }
 }
 
 if (!plannerContext.sourceBreakdown || !plannerContext.topicModel) {
@@ -392,8 +402,29 @@ if (
   process.exit(1);
 }
 
+if (
+  !Array.isArray(plannerContext.plannerInput.placementCandidates) ||
+  plannerContext.plannerInput.placementCandidates.length === 0
+) {
+  console.error("Expected plannerInput.placementCandidates in planner.lesson-context sample");
+  process.exit(1);
+}
+
+if (!Array.isArray(plannerContext.topTerms[0]?.provenance?.samples) || plannerContext.topTerms[0].provenance.samples.length === 0) {
+  console.error("Expected topTerms[0].provenance.samples in planner.lesson-context sample");
+  process.exit(1);
+}
+
 if (!playerMediaProfile.sourceBreakdown) {
   console.error("Expected sourceBreakdown in player.media-profile.sample.json");
+  process.exit(1);
+}
+
+if (
+  !Array.isArray(playerMediaProfile.learningSignals?.placementCandidates) ||
+  playerMediaProfile.learningSignals.placementCandidates.length === 0
+) {
+  console.error("Expected learningSignals.placementCandidates in player.media-profile sample");
   process.exit(1);
 }
 
