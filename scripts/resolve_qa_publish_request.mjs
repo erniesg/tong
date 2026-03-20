@@ -4,6 +4,7 @@ import fs from "node:fs";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { defaultPublishRequest, inferIssueRef } from "./lib/qa_publish_defaults.mjs";
+import { parseQaPublishRequest } from "./lib/qa_publish_request.mjs";
 
 const MAINTAINER_ASSOCIATIONS = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
 const TRUE_VALUES = new Set(["1", "true", "yes", "on"]);
@@ -106,15 +107,7 @@ function parseCommandFlags(body) {
 }
 
 function parsePrMetadata(body) {
-  const match = (body || "").match(/##\s*QA Publish Request\s*```json\s*([\s\S]*?)```/i);
-  if (!match) return {};
-
-  try {
-    const parsed = JSON.parse(match[1]);
-    return typeof parsed === "object" && parsed ? parsed : {};
-  } catch {
-    return {};
-  }
+  return parseQaPublishRequest(body);
 }
 
 function output(name, value) {
@@ -250,6 +243,11 @@ function main() {
       commentFlags.dry_run ||
       parseBoolean(String(prMetadata.dry_run || "")),
   };
+
+  if (shouldRun && !merged.run_dir && !merged.qa_recipe) {
+    shouldRun = false;
+    reason = "No repo-visible run_dir or qa_recipe was resolved for this request.";
+  }
 
   const headRepo = pr?.head?.repo?.full_name || "";
   const baseRepo = pr?.base?.repo?.full_name || repo;

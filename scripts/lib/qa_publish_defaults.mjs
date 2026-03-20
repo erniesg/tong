@@ -78,6 +78,7 @@ function defaultPublishRequest({ issueRef = "", title = "", headRef = "" }) {
     case "50":
       return {
         route: "/game",
+        qa_recipe: "issue_49_checkpoint_resume",
       };
     default:
       if (dashboardValidatorSignature) {
