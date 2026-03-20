@@ -95,6 +95,16 @@ interface PresetResponse {
   note?: string;
 }
 
+interface ActiveResumeCard {
+  sessionId: string;
+  city: CityId;
+  location: LocationId;
+  objectiveId: string | null;
+  checkpointId: string | null;
+  bond: string;
+  npcName: string | null;
+}
+
 interface CityDefinition {
   id: CityId;
   label: string;
@@ -419,6 +429,8 @@ export default function GamePageClient({
 
   const [city, setCity] = useState<CityId>(DEFAULT_CITY);
   const [location, setLocation] = useState<LocationId>(DEFAULT_LOCATION);
+  const [worldCity, setWorldCity] = useState<CityId>(DEFAULT_CITY);
+  const [worldLocation, setWorldLocation] = useState<LocationId>(DEFAULT_LOCATION);
   const [proficiencyGauge, setProficiencyGauge] = useState<Record<CjkLang, ProficiencyGaugeLevel>>({
     ...REQUESTED_GAUGE_PRESET,
   });
@@ -433,6 +445,7 @@ export default function GamePageClient({
   const [routeState, setRouteState] = useState<RouteState | null>(null);
   const [progressionLoop, setProgressionLoop] = useState<ProgressLoopState | null>(null);
   const [engineMode, setEngineMode] = useState<'dynamic_ai' | 'scripted_fallback'>('scripted_fallback');
+  const [activeResumeCard, setActiveResumeCard] = useState<ActiveResumeCard | null>(null);
 
   const [character, setCharacter] = useState<SceneCharacter>(getCharacterForCityLocation(DEFAULT_CITY, DEFAULT_LOCATION));
 
@@ -466,6 +479,7 @@ export default function GamePageClient({
   const [avatarPathIndex, setAvatarPathIndex] = useState(0);
 
   const cityConfig = CITY_BY_ID[city];
+  const worldCityConfig = CITY_BY_ID[worldCity];
   const selectedLang = cityConfig.language;
 
   const characterAvatarOptions = getCharacterAvatarPaths(character);
@@ -507,6 +521,9 @@ export default function GamePageClient({
   }));
 
   const sceneBackdrop = city === 'seoul' ? SEOUL_FIRST_SCENE_BACKDROP : cityConfig.backdropImage;
+  const activeResumeMatchesSelection = Boolean(
+    activeResumeCard && activeResumeCard.city === worldCity && activeResumeCard.location === worldLocation,
+  );
 
   useEffect(() => {
     const savedUserId = window.localStorage.getItem(ACTIVE_USER_ID_STORAGE_KEY);
@@ -623,11 +640,14 @@ export default function GamePageClient({
     persistActiveUserId(nextUserId);
     setCity(DEFAULT_CITY);
     setLocation(DEFAULT_LOCATION);
+    setWorldCity(DEFAULT_CITY);
+    setWorldLocation(DEFAULT_LOCATION);
     setSessionId(null);
     setObjective(null);
     setRouteState(null);
     setRelationshipState(null);
     setProgressionLoop(null);
+    setActiveResumeCard(null);
     setScore({ xp: 0, sp: 0, rp: 0 });
     setEngineMode('scripted_fallback');
     setError(null);
@@ -642,6 +662,27 @@ export default function GamePageClient({
 
   function finishOpeningAnimation() {
     setEntryPhase((current) => (current === 'opening' ? 'entry' : current));
+  }
+
+  function openWorldMap() {
+    setMode('hangout');
+    setWorldCity(activeResumeCard?.city || city);
+    setWorldLocation(activeResumeCard?.location || location);
+    setShowWorldPanel(true);
+    setStatus(
+      activeResumeCard
+        ? 'World map open. Your active hangout is parked at the latest safe checkpoint.'
+        : 'World map open. Choose a city and location to start a hangout.',
+    );
+  }
+
+  function closeWorldMap() {
+    setShowWorldPanel(false);
+    if (activeResumeCard) {
+      setStatus(
+        `${CITY_BY_ID[activeResumeCard.city].label} · ${LOCATION_LABELS[activeResumeCard.location]} ready to resume.`,
+      );
+    }
   }
 
   function applyServerReplies(replies?: string[]) {
@@ -720,28 +761,52 @@ export default function GamePageClient({
     setAwaitingUserTurn(true);
   }
 
-  async function quickStartHangout(userIdOverride?: string) {
+  async function quickStartHangout(
+    userIdOverride?: string,
+    selectionOverride?: { city?: CityId; location?: LocationId },
+  ) {
     const sessionUserId = userIdOverride || activeUserId;
+    const requestedCity = selectionOverride?.city || worldCity || city;
+    const requestedLocation = selectionOverride?.location || worldLocation || location;
 
     try {
       setLoadingStart(true);
       setMode('hangout');
       setShowWorldPanel(false);
       setError(null);
-      setStatus(`Preparing ${cityConfig.label} · ${LOCATION_LABELS[location]}...`);
-      resetSceneState(location, city);
+      setStatus(`Preparing ${CITY_BY_ID[requestedCity].label} · ${LOCATION_LABELS[requestedLocation]}...`);
+      resetSceneState(requestedLocation, requestedCity);
 
       const game = await startOrResumeGame({
         userId: sessionUserId,
-        city,
+        city: requestedCity,
         profile: buildProfileFromGauge(proficiencyGauge),
         preferRomance: true,
       });
+      const resolvedCity = game.city || requestedCity;
+      const resolvedLocation = game.location || requestedLocation;
+      const resolvedLang =
+        game.gameSession?.activeObjective?.lang === 'ko' ||
+        game.gameSession?.activeObjective?.lang === 'ja' ||
+        game.gameSession?.activeObjective?.lang === 'zh'
+          ? game.gameSession.activeObjective.lang
+          : CITY_BY_ID[resolvedCity].language;
+
+      setCity(resolvedCity);
+      setLocation(resolvedLocation);
+      setWorldCity(resolvedCity);
+      setWorldLocation(resolvedLocation);
+      setCharacter(getCharacterForCityLocation(resolvedCity, resolvedLocation));
 
       setSessionId(game.sessionId);
       setEngineMode(game.engineMode || 'scripted_fallback');
       setRelationshipState(game.relationshipState || null);
-      setRouteState(game.routeState || null);
+      setRouteState(
+        game.routeState || {
+          sessionId: game.sessionId,
+          checkpointId: game.activeCheckpoint?.checkpointId || null,
+        },
+      );
       setProgressionLoop(game.progressionLoop || null);
       if (game.progression) {
         setScore({
@@ -753,10 +818,10 @@ export default function GamePageClient({
 
       const nextObjective = await fetchObjectiveNext({
         userId: sessionUserId,
-        city,
-        location,
+        city: resolvedCity,
+        location: resolvedLocation,
         mode: 'hangout',
-        lang: selectedLang,
+        lang: resolvedLang,
       });
       setObjective(nextObjective);
 
@@ -764,9 +829,9 @@ export default function GamePageClient({
         objectiveId: nextObjective.objectiveId,
         userId: sessionUserId,
         sessionId: game.sessionId,
-        city,
-        location,
-        lang: selectedLang,
+        city: resolvedCity,
+        location: resolvedLocation,
+        lang: resolvedLang,
         preferRomance: true,
       });
 
@@ -775,8 +840,32 @@ export default function GamePageClient({
       setCharacter((current) => mergeCharacterPayload(current, hangout.character || hangout.npc));
       setScore(hangout.state.score);
       setRelationshipState(hangout.relationshipState || hangout.state.relationshipState || null);
-      setRouteState(hangout.routeState || hangout.state.routeState || game.routeState || null);
+      const nextRouteState =
+        hangout.routeState ||
+        hangout.state.routeState ||
+        game.routeState || {
+          sessionId: game.sessionId,
+          checkpointId: hangout.activeCheckpoint?.checkpointId || game.activeCheckpoint?.checkpointId || null,
+        };
+      setRouteState(nextRouteState);
       setProgressionLoop(hangout.progressionLoop || hangout.state.progressionLoop || null);
+      setActiveResumeCard({
+        sessionId: game.sessionId,
+        city: resolvedCity,
+        location: resolvedLocation,
+        objectiveId: nextObjective.objectiveId,
+        checkpointId:
+          (typeof hangout.activeCheckpoint?.checkpointId === 'string' && hangout.activeCheckpoint.checkpointId) ||
+          (typeof game.activeCheckpoint?.checkpointId === 'string' && game.activeCheckpoint.checkpointId) ||
+          (typeof nextRouteState?.checkpointId === 'string' && nextRouteState.checkpointId) ||
+          null,
+        bond:
+          (typeof nextRouteState?.stage === 'string' && nextRouteState.stage) ||
+          (typeof hangout.relationshipState?.stage === 'string' && hangout.relationshipState.stage) ||
+          (typeof hangout.state?.relationshipState?.stage === 'string' && hangout.state.relationshipState.stage) ||
+          'stranger',
+        npcName: hangout.character?.name || hangout.npc?.name || null,
+      });
 
       const startProgress =
         getObjectiveRatio(hangout.state.objectiveProgress) ?? getObjectiveRatio(hangout.objectiveProgress);
@@ -803,10 +892,11 @@ export default function GamePageClient({
             : [hangout.initialLine];
 
       mergeIncomingLines(openingLines, true);
-      setStatus(`${cityConfig.label} hangout live.`);
+      setStatus(`${CITY_BY_ID[resolvedCity].label} hangout live.`);
       return true;
     } catch (startError) {
-      const message = startError instanceof Error ? startError.message : `Failed to start the ${cityConfig.label} hangout.`;
+      const message =
+        startError instanceof Error ? startError.message : `Failed to start the ${CITY_BY_ID[requestedCity].label} hangout.`;
       setError(message);
       setStatus('Start failed. Try again.');
       return false;
@@ -863,6 +953,22 @@ export default function GamePageClient({
           response.completionSummary?.routeState ||
           routeState ||
           null,
+      );
+      setActiveResumeCard((current) =>
+        current
+          ? {
+              ...current,
+              checkpointId:
+                (typeof response.activeCheckpoint?.checkpointId === 'string' && response.activeCheckpoint.checkpointId) ||
+                (typeof response.routeState?.checkpointId === 'string' && response.routeState.checkpointId) ||
+                current.checkpointId,
+              bond:
+                (typeof response.routeState?.stage === 'string' && response.routeState.stage) ||
+                (typeof response.relationshipState?.stage === 'string' && response.relationshipState.stage) ||
+                (typeof response.state?.relationshipState?.stage === 'string' && response.state.relationshipState.stage) ||
+                current.bond,
+            }
+          : current,
       );
 
       setProgressionLoop(
@@ -949,19 +1055,26 @@ export default function GamePageClient({
     setProficiencyGauge({ ko: 0, ja: 0, zh: 0 });
   }
 
-  function handleLocationChange(nextLocation: LocationId) {
-    if (nextLocation === location) return;
-    setLocation(nextLocation);
-    resetSceneState(nextLocation, city);
-    setStatus(`${cityConfig.label} · ${LOCATION_LABELS[nextLocation]} selected.`);
+  async function resumeActiveHangout() {
+    if (!hasSavedUserId) return;
+    setMode('hangout');
+    await quickStartHangout(activeUserId, {
+      city: activeResumeCard?.city || city,
+      location: activeResumeCard?.location || location,
+    });
   }
 
-  function handleCityChange(nextCity: CityId) {
-    if (nextCity === city) return;
-    setCity(nextCity);
-    setLocation(DEFAULT_LOCATION);
-    resetSceneState(DEFAULT_LOCATION, nextCity);
-    setStatus(`${CITY_BY_ID[nextCity].label} selected.`);
+  function handleWorldLocationChange(nextLocation: LocationId) {
+    if (nextLocation === worldLocation) return;
+    setWorldLocation(nextLocation);
+    setStatus(`${worldCityConfig.label} · ${LOCATION_LABELS[nextLocation]} selected on the world map.`);
+  }
+
+  function handleWorldCityChange(nextCity: CityId) {
+    if (nextCity === worldCity) return;
+    setWorldCity(nextCity);
+    setWorldLocation(DEFAULT_LOCATION);
+    setStatus(`${CITY_BY_ID[nextCity].label} selected on the world map.`);
   }
 
   function handleStartFromMenu() {
@@ -1149,22 +1262,44 @@ export default function GamePageClient({
                   <button
                     className={`tg-chip ${showWorldPanel ? 'active' : ''}`}
                     type="button"
-                    onClick={() => setShowWorldPanel((current) => !current)}
+                    onClick={() => (showWorldPanel ? closeWorldMap() : openWorldMap())}
                   >
-                    World
+                    {showWorldPanel ? 'Back to Hangout' : activeResumeCard ? 'Return to World Map' : 'World Map'}
                   </button>
                 </div>
               </header>
 
               {showWorldPanel && (
                 <section className="tg-world-sheet">
+                  {activeResumeCard && (
+                    <article className="tg-resume-card">
+                      <div>
+                        <p className="tg-resume-label">Active Hangout</p>
+                        <strong>
+                          {CITY_BY_ID[activeResumeCard.city].label} · {LOCATION_LABELS[activeResumeCard.location]}
+                        </strong>
+                        <p>
+                          {activeResumeCard.npcName || 'Partner'} · Bond {activeResumeCard.bond}
+                          {activeResumeCard.objectiveId ? ` · ${activeResumeCard.objectiveId}` : ''}
+                        </p>
+                        <p>
+                          Resume from the latest safe checkpoint
+                          {activeResumeCard.checkpointId ? ` (${activeResumeCard.checkpointId})` : ''}.
+                        </p>
+                      </div>
+                      <button type="button" onClick={() => void resumeActiveHangout()} disabled={loadingStart}>
+                        {loadingStart ? 'Resuming...' : 'Resume Active Hangout'}
+                      </button>
+                    </article>
+                  )}
+
                   <div className="tg-world-row">
                     {CITY_DEFINITIONS.map((cityOption) => (
                       <button
                         key={cityOption.id}
                         type="button"
-                        className={`tg-city-pill ${cityOption.id === city ? 'active' : ''}`}
-                        onClick={() => handleCityChange(cityOption.id)}
+                        className={`tg-city-pill ${cityOption.id === worldCity ? 'active' : ''}`}
+                        onClick={() => handleWorldCityChange(cityOption.id)}
                       >
                         {cityOption.label}
                       </button>
@@ -1176,17 +1311,29 @@ export default function GamePageClient({
                       <button
                         key={item}
                         type="button"
-                        className={`tg-location-pill ${item === location ? 'active' : ''}`}
-                        onClick={() => handleLocationChange(item)}
+                        className={`tg-location-pill ${item === worldLocation ? 'active' : ''}`}
+                        onClick={() => handleWorldLocationChange(item)}
                       >
                         {LOCATION_LABELS[item]}
                       </button>
                     ))}
                   </div>
 
-                  <button type="button" onClick={() => void quickStartHangout()} disabled={loadingStart}>
-                    {loadingStart ? 'Starting...' : sceneSessionId ? 'Restart Hangout' : 'Start Hangout'}
-                  </button>
+                  {!activeResumeCard && (
+                    <button
+                      type="button"
+                      onClick={() => void quickStartHangout(undefined, { city: worldCity, location: worldLocation })}
+                      disabled={loadingStart}
+                    >
+                      {loadingStart ? 'Starting...' : 'Start Hangout'}
+                    </button>
+                  )}
+                  {activeResumeCard && !activeResumeMatchesSelection && (
+                    <p className="tg-status">
+                      A hangout is already active in {CITY_BY_ID[activeResumeCard.city].label} ·{' '}
+                      {LOCATION_LABELS[activeResumeCard.location]}. Resume that scene before starting somewhere else.
+                    </p>
+                  )}
                   <p className="tg-status">{status}</p>
                   {error && <p className="tg-error">{error}</p>}
                 </section>
