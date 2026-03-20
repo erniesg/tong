@@ -47,6 +47,18 @@ Boundary reminder:
 
 The uploader uses the Wrangler auth already configured for `apps/client`.
 
+In GitHub Actions, set the publishing job environment with:
+
+```bash
+export GH_TOKEN="$GITHUB_TOKEN"
+export GITHUB_TOKEN="$GITHUB_TOKEN"
+export CLOUDFLARE_API_TOKEN=...
+```
+
+The trusted workflow should run `npm run qa:preflight-reviewer-proof` in the same job before attempting upload or GitHub publication.
+
+If the PR cannot carry a repo-visible `artifacts/qa-runs/...` bundle, the trusted workflow can still publish reviewer proof when the PR metadata names a supported CI `qa_recipe` that knows how to regenerate the run bundle from scratch.
+
 ## Preflight the publishing shell
 
 Before asking a local or remote operator to publish reviewer-visible proof, run:
@@ -59,8 +71,12 @@ This checks:
 - `TONG_RUNS_R2_BUCKET`
 - `TONG_RUNS_PUBLIC_BASE_URL`
 - `node`, `npm`, `python3`, `ffmpeg`, and `ffprobe`
+- `gh auth status --hostname github.com`
 - `wrangler` through `apps/client`
+- `wrangler whoami` through `apps/client`
 - the repo entry points used by upload, proof-pack generation, and comment rendering
+
+Run this preflight in the same shell that will publish. In some cloud environments, setup-phase secrets or logins may not persist into the later agent shell.
 
 `magick` is reported as a warning rather than a hard failure because upload still works without auto-generated comparison panels.
 
@@ -87,14 +103,6 @@ qa-runs/<suite>/<target-slug>/<run-id>/...
 ```
 
 5. Writes a local upload manifest in the run directory and uploads `manifest.json` beside the evidence files.
-6. Verifies the reviewer-facing URLs with real `GET` requests before returning success.
-
-Public verification notes:
-
-- The uploader checks the uploaded `manifest.json` plus the available primary review assets.
-- This is a reviewer-surface check, not just a bucket-write check.
-- The probe uses `GET`, not `HEAD`, because some edges reject `HEAD` while serving normal reviewer traffic correctly.
-- Use `--skip-public-verification` only when intentionally publishing to a not-yet-public surface or when isolating uploader failures.
 
 Comparison generation uses the previous validation run linked in `run.json.previous_run_id`. That means the normal path is:
 

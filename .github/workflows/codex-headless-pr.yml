@@ -1,0 +1,149 @@
+name: Codex Headless PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Codex prompt describing the requested implementation"
+        required: true
+        type: string
+      base_branch:
+        description: "Base branch for the generated PR"
+        required: false
+        type: string
+        default: "main"
+      branch:
+        description: "Head branch for the generated PR (must start with codex/)"
+        required: true
+        type: string
+      pr_title:
+        description: "Pull request title"
+        required: true
+        type: string
+      pr_body:
+        description: "Optional PR body preamble"
+        required: false
+        type: string
+      issue_ref:
+        description: "Optional issue ref, e.g. erniesg/tong#49"
+        required: false
+        type: string
+      route:
+        description: "Optional QA route metadata"
+        required: false
+        type: string
+      scenario_seed:
+        description: "Optional QA scenario seed metadata"
+        required: false
+        type: string
+      checkpoint_id:
+        description: "Optional QA checkpoint metadata"
+        required: false
+        type: string
+      qa_recipe:
+        description: "Optional CI QA recipe, e.g. haeun_fresh_demo"
+        required: false
+        type: string
+      no_auto_evidence_upload:
+        description: "Skip automatic evidence upload in trusted QA publish"
+        required: false
+        type: boolean
+        default: false
+      auto_qa_publish:
+        description: "Dispatch trusted QA publish after PR creation"
+        required: false
+        type: boolean
+        default: true
+      codex_args:
+        description: "Optional extra codex exec args"
+        required: false
+        type: string
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  codex:
+    runs-on: ubuntu-latest
+    outputs:
+      pull_request_number: ${{ steps.cpr.outputs.pull-request-number }}
+      pull_request_url: ${{ steps.cpr.outputs.pull-request-url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base_branch }}
+
+      - name: Prime repo context
+        run: |
+          npm --prefix apps/server ci
+          npm --prefix apps/client ci
+          npm run demo:smoke
+          npm run ingest:mock
+
+      - name: Run Codex
+        id: codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt: |
+            Repository: ${{ github.repository }}
+            Base branch: ${{ inputs.base_branch }}
+            Issue ref: ${{ inputs.issue_ref }}
+
+            Task:
+            ${{ inputs.prompt }}
+          codex-args: ${{ inputs.codex_args }}
+          sandbox: workspace-write
+
+      - name: Write PR body
+        run: |
+          cat > "$RUNNER_TEMP/pr-body.md" <<'EOF'
+          ${{ inputs.pr_body }}
+
+          ## QA Publish Request
+
+          ```json
+          {
+            "issue_ref": "${{ inputs.issue_ref }}",
+            "run_dir": "",
+            "route": "${{ inputs.route }}",
+            "scenario_seed": "${{ inputs.scenario_seed }}",
+            "checkpoint_id": "${{ inputs.checkpoint_id }}",
+            "qa_recipe": "${{ inputs.qa_recipe }}",
+            "no_auto_evidence_upload": ${{ inputs.no_auto_evidence_upload }}
+          }
+          ```
+          EOF
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: ${{ inputs.pr_title }}
+          title: ${{ inputs.pr_title }}
+          body-path: ${{ runner.temp }}/pr-body.md
+          branch: ${{ inputs.branch }}
+          base: ${{ inputs.base_branch }}
+          delete-branch: false
+
+      - name: Dispatch trusted QA publish
+        if: inputs.auto_qa_publish && steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run qa-publish.yml --repo "${{ github.repository }}" -f pr_number="${{ steps.cpr.outputs.pull-request-number }}"
+
+      - name: Step summary
+        if: always()
+        run: |
+          {
+            echo "## Codex Headless PR"
+            echo
+            echo "- PR: ${{ steps.cpr.outputs.pull-request-url }}"
+            echo "- QA recipe: \`${{ inputs.qa_recipe }}\`"
+            echo "- Auto QA publish: \`${{ inputs.auto_qa_publish }}\`"
+            echo "- Codex final message present: \`${{ steps.codex.outputs.final_message != '' }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

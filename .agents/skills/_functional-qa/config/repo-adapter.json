@@ -326,6 +326,75 @@
       ]
     },
     {
+      "match": "#49",
+      "surface": "game",
+      "route_template": "/game?demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Run the strict local API flow against the current branch.",
+        "Confirm the server persists a checkpoint after a hangout turn and that a later start-or-resume reuses it.",
+        "Record the command transcript and the resumed checkpoint state markers."
+      ],
+      "screenshot_targets": [
+        "optional /game bootstrap sanity frame if a browser pass is included"
+      ],
+      "state_targets": [
+        "resumeSource",
+        "activeCheckpoint.turn",
+        "activeCheckpoint.rng.version",
+        "sceneSession.activeExercise"
+      ],
+      "path_targets": [
+        "docs/qa/current-main-manual-checklist.md"
+      ]
+    },
+    {
+      "match": "#51",
+      "surface": "game",
+      "route_template": "/game?scenarioSeed=review_ready&demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Run the strict local API flow with scenarioSeedId assertions enabled.",
+        "Confirm start-or-resume returns resumeSource=scenario_seed and lands on the deterministic review checkpoint.",
+        "Record the command transcript and seed-specific checkpoint markers."
+      ],
+      "screenshot_targets": [
+        "optional seeded /game review-state frame if a browser pass is included"
+      ],
+      "state_targets": [
+        "resumeSource",
+        "activeCheckpoint.phase",
+        "activeCheckpoint.turn",
+        "activeCheckpoint.activeExercise",
+        "availableScenarioSeeds"
+      ],
+      "path_targets": [
+        "packages/contracts/fixtures/scenario.seed.review-ready.sample.json"
+      ]
+    },
+    {
+      "match": "#52",
+      "surface": "game",
+      "route_template": "/game?demo={{demo_password}}&qa_run_id={{run_id}}&qa_trace=1",
+      "steps": [
+        "Run the strict local API flow with progression persistence assertions enabled.",
+        "Confirm mission gate, unlock, and reward snapshots persist into the resumed checkpoint.",
+        "Record the command transcript and the persisted progression markers."
+      ],
+      "screenshot_targets": [
+        "optional /game bootstrap sanity frame if a browser pass is included"
+      ],
+      "state_targets": [
+        "gameSession.missionGate",
+        "gameSession.unlocks",
+        "gameSession.rewards",
+        "activeCheckpoint.missionGate",
+        "activeCheckpoint.unlocks",
+        "activeCheckpoint.rewards"
+      ],
+      "path_targets": [
+        "docs/qa/current-main-manual-checklist.md"
+      ]
+    },
+    {
       "match": "#46",
       "surface": "qa-platform",
       "steps": [

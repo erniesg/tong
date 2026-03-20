@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -1570,9 +1571,17 @@ def publish_github(args: argparse.Namespace) -> int:
             print("Publish blocked: unmet validation gates: " + "; ".join(failures))
             return 4
 
-    auth = run_command(["gh", "auth", "status"], allow_failure=True)
+    auth = run_command(["gh", "auth", "status", "--hostname", "github.com"], allow_failure=True)
     if auth.returncode != 0:
-        message = "GitHub auth unavailable; stopping without publish."
+        gh_token_present = bool(os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN"))
+        auth_detail = (auth.stderr or auth.stdout or "").strip().splitlines()
+        detail = auth_detail[0] if auth_detail else "gh auth status failed"
+        token_note = (
+            "GH_TOKEN/GITHUB_TOKEN missing in current shell."
+            if not gh_token_present
+            else "GH_TOKEN/GITHUB_TOKEN present, but gh is not authenticated in current shell."
+        )
+        message = f"GitHub publish blocked: {detail} {token_note}"
         if PUBLISH_POLICY["stop_without_publish_if_missing_auth"]:
             print(message)
             return 2
