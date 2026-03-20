@@ -129,3 +129,15 @@ Template:
   - PR creation still requires the patch itself to be visible to GitHub; Codex-local task storage is still invisible to Actions.
   - CI evidence regeneration is whitelist-based; unsupported flows must add new recipes to `scripts/run_qa_publish_recipe.mjs`.
 - Next owner: `codex/qa-platform`
+
+## 2026-03-20 (Headless Codex PR automation)
+- Date: 2026-03-20
+- Branch/worktree: `codex/remove-judge-hackathon-branding` (shared root workspace crossing into qa-platform-owned paths and `.github/workflows/**`)
+- What changed:
+  - Added a `Codex Headless PR` GitHub Actions workflow that runs Codex via the official action, creates a PR with `peter-evans/create-pull-request`, and then dispatches trusted QA publish automatically.
+  - Documented this as the recommended path for future fully automatic PR creation, rather than relying on Codex cloud web task storage.
+- Contract changes: none
+- Integration risks:
+  - Requires `OPENAI_API_KEY` in GitHub Actions secrets.
+  - The workflow assumes the provided branch name already follows the `codex/*` convention.
+- Next owner: `codex/qa-platform`

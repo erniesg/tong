@@ -223,6 +223,25 @@ Important limitation:
 - GitHub Actions cannot see a patch or run bundle that exists only inside Codex cloud task storage.
 - The patch must first be made visible to GitHub, for example as workflow input text, a repo-visible patch file, or an issue comment diff block.
 
+## Fully automatic future PRs
+
+If you want future PR creation to be automatic rather than manually clicking `Create PR` in Codex cloud, use the `Codex Headless PR` workflow instead of the Codex cloud web task as the PR engine.
+
+Current behavior:
+
+1. GitHub Actions checks out the repo and runs Codex headlessly with a supplied prompt.
+2. `peter-evans/create-pull-request` commits the Codex changes and opens the PR.
+3. The PR body includes the `QA Publish Request` block automatically.
+4. The workflow explicitly dispatches `Trusted QA Publish`, which can regenerate reviewer-proof evidence in CI from a supported `qa_recipe`.
+
+Use this path when you want:
+
+- automatic PR creation
+- automatic QA publish dispatch
+- no manual transfer of patches out of Codex cloud task storage
+
+Use the Codex cloud web task path only when you specifically want an interactive remote coding session and are willing to create the PR manually afterward.
+
 ## Acceptance policy
 
 Issue workers are not the final product signoff.
