@@ -353,6 +353,27 @@ async function run() {
       gameStart.data.gameSession.activeObjective.objectiveId.startsWith('ko-'),
     `gameStart activeObjective.objectiveId should start with ko-: ${gameStart.data?.gameSession?.activeObjective?.objectiveId}`,
   );
+  const tokyoBootstrap = await requestJson('/api/v1/game/start-or-resume', {
+    method: 'POST',
+    body: JSON.stringify({
+      userId: `${userId}_tokyo`,
+      city: 'tokyo',
+      profile: {
+        nativeLanguage: 'en',
+        targetLanguages: ['ko', 'ja', 'zh'],
+        proficiency: {
+          ko: 'none',
+          ja: 'none',
+          zh: 'advanced',
+        },
+      },
+    }),
+  });
+  assert(tokyoBootstrap.ok, `/game/start-or-resume tokyo fallback failed (${tokyoBootstrap.status})`);
+  assert(
+    tokyoBootstrap.data?.gameSession?.activeObjective?.lang === 'ko',
+    'gameStart tokyo bootstrap should not force the JA pilot path before the hangout runtime is localized',
+  );
   assert(gameStart.data?.gameSession?.sessionId === gameStart.data.sessionId, 'gameStart.gameSession.sessionId mismatch');
   assert(gameStart.data?.sceneSession?.gameSessionId === gameStart.data.sessionId, 'gameStart.sceneSession.gameSessionId mismatch');
   assert(gameStart.data?.activeCheckpoint?.gameSessionId === gameStart.data.sessionId, 'gameStart.activeCheckpoint.gameSessionId mismatch');

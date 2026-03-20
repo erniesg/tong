@@ -600,8 +600,6 @@ function getWeakestTargetLanguage(profile) {
 
 const CITY_PILOT_LANGUAGE = {
   seoul: 'ko',
-  tokyo: 'ja',
-  shanghai: 'zh',
 };
 
 function getBootstrapPilotLanguage(profile, city) {
