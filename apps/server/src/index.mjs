@@ -1141,9 +1141,87 @@ function buildGameStartResponse(gameSession, sceneSession, activeCheckpoint, res
   };
 }
 
-function findGameSessionForResume({ userId, sessionId, resumeCheckpointId }) {
+function getCheckpointRouteVersion(checkpoint) {
+  const routeVersion = checkpoint?.route?.query?.checkpoint;
+  if (typeof routeVersion === 'string' && routeVersion.trim().length > 0) {
+    return routeVersion.trim();
+  }
+
+  const rngVersion = checkpoint?.rng?.version;
+  if (
+    Number.isFinite(rngVersion) &&
+    typeof checkpoint?.checkpointId === 'string' &&
+    checkpoint.checkpointId.startsWith('ckpt_')
+  ) {
+    return String(rngVersion);
+  }
+
+  return null;
+}
+
+function resolveResumeCheckpoint({ userId, sessionId, requestedCity, resumeCheckpointId }) {
+  if (!resumeCheckpointId) {
+    return null;
+  }
+
+  const normalizedResumeCheckpointId = String(resumeCheckpointId).trim();
+  if (!normalizedResumeCheckpointId) {
+    return null;
+  }
+
+  const directCheckpoint = state.checkpoints.get(normalizedResumeCheckpointId);
+  if (directCheckpoint) {
+    return directCheckpoint;
+  }
+
+  const activeSessionId = state.activeSessionByUser.get(userId) || null;
+  let resolvedCheckpoint = null;
+
+  for (const checkpoint of state.checkpoints.values()) {
+    const gameSession = state.sessions.get(checkpoint.gameSessionId);
+    if (!gameSession || gameSession.userId !== userId) {
+      continue;
+    }
+    if (sessionId && checkpoint.gameSessionId !== sessionId) {
+      continue;
+    }
+    if (requestedCity && checkpoint.cityId !== requestedCity) {
+      continue;
+    }
+    if (getCheckpointRouteVersion(checkpoint) !== normalizedResumeCheckpointId) {
+      continue;
+    }
+
+    if (!resolvedCheckpoint) {
+      resolvedCheckpoint = checkpoint;
+      continue;
+    }
+
+    const resolvedIsActive = resolvedCheckpoint.gameSessionId === activeSessionId;
+    const candidateIsActive = checkpoint.gameSessionId === activeSessionId;
+    if (candidateIsActive && !resolvedIsActive) {
+      resolvedCheckpoint = checkpoint;
+      continue;
+    }
+    if (
+      candidateIsActive === resolvedIsActive &&
+      (checkpoint.createdAtIso || '') > (resolvedCheckpoint.createdAtIso || '')
+    ) {
+      resolvedCheckpoint = checkpoint;
+    }
+  }
+
+  return resolvedCheckpoint;
+}
+
+function findGameSessionForResume({ userId, sessionId, resumeCheckpointId, requestedCity = null }) {
   if (resumeCheckpointId) {
-    const checkpoint = state.checkpoints.get(resumeCheckpointId);
+    const checkpoint = resolveResumeCheckpoint({
+      userId,
+      sessionId,
+      requestedCity,
+      resumeCheckpointId,
+    });
     if (checkpoint) {
       return state.sessions.get(checkpoint.gameSessionId) || null;
     }
@@ -1253,7 +1331,12 @@ function createNewGameSession(userId, incomingProfile, requestedCity) {
 
 function resumeGameSession(gameSession, resumeCheckpointId) {
   const checkpoint =
-    (resumeCheckpointId && state.checkpoints.get(resumeCheckpointId)) ||
+    resolveResumeCheckpoint({
+      userId: gameSession.userId,
+      sessionId: gameSession.sessionId,
+      requestedCity: gameSession.cityId,
+      resumeCheckpointId,
+    }) ||
     (gameSession.activeCheckpointId ? state.checkpoints.get(gameSession.activeCheckpointId) : null);
   const sceneSession = checkpoint
     ? hydrateSceneSessionFromCheckpoint(gameSession, checkpoint)
@@ -2286,6 +2369,7 @@ const server = http.createServer(async (req, res) => {
         userId,
         sessionId: body.sessionId,
         resumeCheckpointId: body.resumeCheckpointId,
+        requestedCity: body.city,
       });
 
       let response;
@@ -2423,6 +2507,7 @@ export const __testing = {
   state,
   createNewGameSession,
   createCheckpointRecord,
+  findGameSessionForResume,
   persistCheckpoint,
   resumeGameSession,
   restoreGameSessionFromCheckpoint,
