@@ -100,6 +100,56 @@ function resolveRecipe(args) {
         ],
         description: "Fresh Haeun live cinematic reviewer-proof capture",
       };
+    case "issue_49_checkpoint_resume":
+      return {
+        command: "node",
+        args: [
+          "scripts/record_issue_api_flow_recipe.mjs",
+          "--issue-ref",
+          args.issueRef,
+          "--route",
+          args.route || "/game",
+          "--base-url",
+          args.baseUrl.replace(/:3000$/, ":8787"),
+          "--label",
+          "Checkpoint resume strict API flow",
+        ],
+        description: "Strict API replay for persisted checkpoint resume",
+      };
+    case "issue_51_scenario_seed_api":
+      return {
+        command: "node",
+        args: [
+          "scripts/record_issue_api_flow_recipe.mjs",
+          "--issue-ref",
+          args.issueRef,
+          "--route",
+          args.route || "/game",
+          "--base-url",
+          args.baseUrl.replace(/:3000$/, ":8787"),
+          "--label",
+          "Scenario seed strict API flow",
+          "--check-scenario-seed",
+        ],
+        description: "Strict API replay for scenario seed start-or-resume behavior",
+      };
+    case "issue_52_progression_persistence":
+      return {
+        command: "node",
+        args: [
+          "scripts/record_issue_api_flow_recipe.mjs",
+          "--issue-ref",
+          args.issueRef,
+          "--route",
+          args.route || "/game",
+          "--base-url",
+          args.baseUrl.replace(/:3000$/, ":8787"),
+          "--label",
+          "Progression persistence strict API flow",
+          "--check-progression-persistence",
+        ],
+        description: "Strict API replay for mission gate, unlock, and reward persistence",
+      };
     default:
       fail(
         `Unsupported qa_recipe: ${args.recipe}. Add it to scripts/run_qa_publish_recipe.mjs before using it in PR metadata.`,

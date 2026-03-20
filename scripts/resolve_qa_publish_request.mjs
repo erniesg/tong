@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
+import { defaultPublishRequest, inferIssueRef } from "./lib/qa_publish_defaults.mjs";
 
 const MAINTAINER_ASSOCIATIONS = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
 const TRUE_VALUES = new Set(["1", "true", "yes", "on"]);
@@ -172,13 +173,30 @@ function main() {
     pr = event.pull_request || null;
     prNumber = String(pr?.number || "");
     const prMetadata = parsePrMetadata(pr?.body || "");
-    const hasMetadata = Boolean(prMetadata.issue_ref || prMetadata.run_dir || prMetadata.qa_recipe);
+    const inferredIssueRef = inferIssueRef({
+      repo,
+      title: pr?.title || "",
+      body: pr?.body || "",
+      headRef: pr?.head?.ref || "",
+    });
+    const inferredDefaults = defaultPublishRequest({
+      issueRef: prMetadata.issue_ref || inferredIssueRef,
+      title: pr?.title || "",
+      headRef: pr?.head?.ref || "",
+    });
+    const hasMetadata = Boolean(
+      prMetadata.issue_ref ||
+      prMetadata.run_dir ||
+      prMetadata.qa_recipe ||
+      inferredIssueRef ||
+      inferredDefaults.qa_recipe,
+    );
     if (!prNumber) {
       shouldRun = false;
       reason = "pull_request event payload is missing pull_request.number.";
     } else if (!hasMetadata) {
       shouldRun = false;
-      reason = "Pull request body does not contain a QA Publish Request block.";
+      reason = "Pull request does not expose resolvable QA publish metadata.";
     }
   } else {
     shouldRun = false;
@@ -190,15 +208,28 @@ function main() {
   }
 
   const prMetadata = pr ? parsePrMetadata(pr.body || "") : {};
+  const inferredIssueRef = pr
+    ? inferIssueRef({
+      repo,
+      title: pr.title || "",
+      body: pr.body || "",
+      headRef: pr.head?.ref || "",
+    })
+    : "";
+  const inferredDefaults = defaultPublishRequest({
+    issueRef: prMetadata.issue_ref || inferredIssueRef,
+    title: pr?.title || "",
+    headRef: pr?.head?.ref || "",
+  });
   const merged = {
-    issue_ref: workflowInputs.issue_ref || commentFlags.issue_ref || prMetadata.issue_ref || "",
+    issue_ref: workflowInputs.issue_ref || commentFlags.issue_ref || prMetadata.issue_ref || inferredIssueRef || "",
     run_dir: workflowInputs.run_dir || commentFlags.run_dir || prMetadata.run_dir || "",
-    route: workflowInputs.route || commentFlags.route || prMetadata.route || "",
+    route: workflowInputs.route || commentFlags.route || prMetadata.route || inferredDefaults.route || "",
     scenario_seed:
       workflowInputs.scenario_seed || commentFlags.scenario_seed || prMetadata.scenario_seed || "",
     checkpoint_id:
       workflowInputs.checkpoint_id || commentFlags.checkpoint_id || prMetadata.checkpoint_id || "",
-    qa_recipe: workflowInputs.qa_recipe || prMetadata.qa_recipe || "",
+    qa_recipe: workflowInputs.qa_recipe || prMetadata.qa_recipe || inferredDefaults.qa_recipe || "",
     no_auto_evidence_upload:
       parseBoolean(workflowInputs.no_auto_evidence_upload) ||
       commentFlags.no_auto_evidence_upload ||
