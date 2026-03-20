@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
 import type { ToolInvocation, UIMessage } from 'ai';
-import type { CityId, LocationId, ProficiencyLevel, ScoreState, UserProficiency, AppLang } from '@/lib/api';
+import { startOrResumeGame, type CityId, type LocationId, type ProficiencyLevel, type ScoreState, type UserProficiency, type AppLang } from '@/lib/api';
 import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData, BlockCrushCharStep, BlockCrushExercise } from '@/lib/types/hangout';
 import type { CompletedSession } from '@/lib/store/session-store';
 import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
@@ -33,6 +33,7 @@ import type { UILang } from '@/lib/i18n/ui-strings';
 import { GameHUD } from '@/components/hud/GameHUD';
 import { ExerciseModal } from '@/components/learn/ExerciseModal';
 import { resolveRuntimeAssetUrl, runtimeAssetUrl } from '@/lib/runtime-assets';
+import { buildResumePrompt, hydrateResumeState, type ResumeBootstrapPayload } from '@/lib/store/checkpoint-resume';
 
 /* ── scene constants ────────────────────────────────────── */
 
@@ -392,6 +393,8 @@ export default function GamePage() {
   const [sceneSummary, setSceneSummary] = useState<SceneSummary | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
   const [continuePending, setContinuePending] = useState(false);
+  const [sceneTurn, setSceneTurn] = useState<number>(1);
+  const [hangoutCheckpointPhase, setHangoutCheckpointPhase] = useState<string | null>(null);
   const [dynamicBackdrop, setDynamicBackdrop] = useState<{ url: string; transition: 'fade' | 'cut'; ambientDescription?: string } | null>(null);
   const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null>(null);
 
@@ -410,6 +413,7 @@ export default function GamePage() {
   const exitVideoUrlRef = useRef<string | null>(null);
   const exitVideoPlayedRef = useRef(false);
   const cinematicCaptionRef = useRef<string | null>(null);
+  const pendingResumePromptRef = useRef<string | null>(null);
   const exitVideoGen = useVideoGeneration({ mock: mockVideo });
   const [isIntroHangout, setIsIntroHangout] = useState(false);
   const [introExerciseCount, setIntroExerciseCount] = useState(0);
@@ -511,7 +515,22 @@ export default function GamePage() {
     };
   }
 
-  function handleConfirmProficiency() {
+  function buildScenePrompt(action: string) {
+    const ctx = buildContextBlock(
+      playerLevel,
+      activeNpc,
+      city,
+      location,
+      npcRef.current,
+      gameState.explainIn[city] ?? 'en',
+      getIntroCtx(),
+    );
+    const resumePrompt = pendingResumePromptRef.current ? `${pendingResumePromptRef.current} ` : '';
+    pendingResumePromptRef.current = null;
+    return `${ctx}${resumePrompt}${action}`;
+  }
+
+  async function handleConfirmProficiency() {
     console.log('[FLOW] handleConfirmProficiency called, phase:', phase, 'freshStart:', freshStart);
     setError('');
     setLoading(true);
@@ -531,6 +550,14 @@ export default function GamePage() {
     setActiveNpc(npcId);
     setPlayerLevel(weakLevel);
     setScore({ xp: 0, sp: 0, rp: 0 });
+    setCurrentMessage(null);
+    setCurrentExercise(null);
+    setToolQueue([]);
+    setChoices(null);
+    setChoicePrompt(null);
+    setTongTip(null);
+    setSceneSummary(null);
+    setSceneReady(false);
 
     // Store player profile
     const name = profileInput.englishName.trim() || 'Player';
@@ -551,6 +578,7 @@ export default function GamePage() {
     setIsIntroHangout(isIntro);
     setIntroExerciseCount(0);
     setIntroAct(1);
+    sceneStartedRef.current = true;
 
     // Select pre-generated intro/exit videos for introduction
     let introCtx: ReturnType<typeof getIntroCtx> = undefined;
@@ -598,6 +626,70 @@ export default function GamePage() {
       };
     }
 
+    try {
+      const bootstrap = (await startOrResumeGame({
+        userId: 'local',
+        city: primaryCity,
+        profile: {
+          nativeLanguage: 'en',
+          targetLanguages: ['ko', 'ja', 'zh'],
+          proficiency: {
+            ko: SLIDER_TO_LEVEL[sliders[2]] ?? 'none',
+            ja: SLIDER_TO_LEVEL[sliders[1]] ?? 'none',
+            zh: SLIDER_TO_LEVEL[sliders[0]] ?? 'none',
+          },
+        },
+        preferRomance: true,
+      })) as ResumeBootstrapPayload;
+
+      const resumed = hydrateResumeState(bootstrap);
+      if (resumed) {
+        setCity(resumed.cityId);
+        setLocation(resumed.locationId);
+        setScore({
+          xp: bootstrap.progression?.xp ?? 0,
+          sp: bootstrap.progression?.sp ?? 0,
+          rp: bootstrap.progression?.rp ?? 0,
+        });
+        setPhase('hangout');
+        setSceneReady(true);
+        setSceneTurn(resumed.turn);
+        setHangoutCheckpointPhase(resumed.phase);
+        setCurrentMessage(
+          resumed.exercise
+            ? null
+            : {
+                id: `resume-turn-${resumed.turn}`,
+                role: 'narrator',
+                content: resumed.objectiveSummary
+                  ? `Resumed turn ${resumed.turn} at ${resumed.phase}. ${resumed.objectiveSummary}`
+                  : `Resumed turn ${resumed.turn} at ${resumed.phase}.`,
+              },
+        );
+        setCurrentExercise(resumed.exercise);
+        if (resumed.exercise) {
+          lastExerciseRef.current = resumed.exercise;
+        }
+        setToolQueue([]);
+        setChoices(null);
+        setChoicePrompt(null);
+        setTongTip(null);
+        setSceneSummary(null);
+        pendingResumePromptRef.current = buildResumePrompt({
+          phase: resumed.phase,
+          turn: resumed.turn,
+          objectiveSummary: resumed.objectiveSummary,
+          exercise: resumed.exercise,
+        });
+        setLoading(false);
+        return;
+      }
+    } catch (resumeError) {
+      console.warn('[RESUME] Failed to hydrate checkpoint resume, falling back to new hangout bootstrap.', resumeError);
+    }
+
+    setHangoutCheckpointPhase(null);
+    setSceneTurn(1);
     setPhase('hangout');
     setLoading(false);
 
@@ -1094,8 +1186,7 @@ export default function GamePage() {
 
       // If nothing left in queue after dequeuing, request next turn
       if (remainingAfterDequeue === 0 && !chatLoading) {
-        const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
-        const msg = `${ctx}Continue.`;
+        const msg = buildScenePrompt('Continue.');
         sessionLogger.logUserTap('continue');
         sessionLogger.logAIRequest(msg);
         setContinuePending(true);
@@ -1121,8 +1212,7 @@ export default function GamePage() {
     }
 
     if (!currentExercise && !choices && toolQueue.length === 0) {
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
-      const msg = `${ctx}Continue.`;
+      const msg = buildScenePrompt('Continue.');
       sessionLogger.logUserTap('continue');
       sessionLogger.logAIRequest(msg);
       setContinuePending(true);
@@ -1135,7 +1225,7 @@ export default function GamePage() {
         hasChoices: !!choices,
       });
     }
-  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct, traceQA]);
+  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue, append, buildScenePrompt, traceQA]);
 
   // Store exercise result so handleContinue can advance after user taps
   const exerciseResultRef = useRef<{ exerciseId: string; correct: boolean } | null>(null);
@@ -1172,14 +1262,13 @@ export default function GamePage() {
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
 
-    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
-    const msg = `${ctx}${summarizeExercise(result.exerciseId, result.correct)}`;
+    const msg = buildScenePrompt(summarizeExercise(result.exerciseId, result.correct));
     console.log('[VN] advanceAfterExercise:', result.exerciseId, result.correct, 'chatLoading:', chatLoading);
     sessionLogger.logAIRequest(msg);
     setContinuePending(true);
     traceQA('advance_after_exercise', { exerciseId: result.exerciseId, correct: result.correct, chatLoading });
     void append({ role: 'user', content: msg });
-  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, chatLoading, isIntroHangout, introExerciseCount, introAct, traceQA]);
+  }, [append, buildScenePrompt, chatLoading, traceQA]);
 
   const handleExerciseDismiss = useCallback(() => {
     if (exerciseResultRef.current) {
@@ -1205,12 +1294,11 @@ export default function GamePage() {
       console.log('[VN] Act 1 → Act 2 transition triggered by SUSPENSE_CHOICE (offer_choices response)');
     }
 
-    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
-    const msg = `${ctx}Choice: ${choiceId}`;
+    const msg = buildScenePrompt(`Choice: ${choiceId}`);
     sessionLogger.logAIRequest(msg);
     setContinuePending(true);
     void append({ role: 'user', content: msg });
-  }, [append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct]);
+  }, [append, buildScenePrompt, isIntroHangout, introAct]);
 
   const handleCinematicEnd = useCallback(() => {
     setCinematic(null);
@@ -1990,6 +2078,25 @@ export default function GamePage() {
           <ChargeNotif
             text={explainLang === 'zh' ? '⚡ 能量已满' : explainLang === 'ko' ? '⚡ 에너지 충전 완료' : explainLang === 'ja' ? '⚡ エネルギー満タン' : '⚡ Fully Charged'}
           />
+        )}
+        {hangoutCheckpointPhase && (
+          <div
+            style={{
+              position: 'absolute',
+              right: 12,
+              bottom: 12,
+              padding: '8px 10px',
+              borderRadius: 10,
+              background: 'rgba(6, 10, 20, 0.78)',
+              color: '#f4f7ff',
+              fontSize: 'var(--game-text-xs)',
+              lineHeight: 1.4,
+              pointerEvents: 'none',
+            }}
+          >
+            Resumed checkpoint · phase {hangoutCheckpointPhase} · turn {sceneTurn}
+            {currentExercise ? ` · ${currentExercise.type}` : ''}
+          </div>
         )}
       </div>
     </div>
