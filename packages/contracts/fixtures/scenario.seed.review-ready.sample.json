@@ -17,15 +17,24 @@
   "locationId": "food_street",
   "mode": "hangout",
   "objective": {
-    "objectiveId": "ko_food_l2_001",
+    "objectiveId": "ko-vocab-food-items",
     "lang": "ko",
     "mode": "hangout",
     "cityId": "seoul",
     "locationId": "food_street",
     "objectiveCategory": "vocabulary",
-    "objectiveNodeId": "objective:ko_food_l2_001",
-    "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
-    "summary": "QA-only seed for deterministic review and proof capture."
+    "objectiveNodeId": "objective:ko-vocab-food-items",
+    "targetNodeIds": [
+      "target:메뉴",
+      "target:주문",
+      "target:맵다"
+    ],
+    "summary": "QA-only seed for deterministic review and proof capture.",
+    "canonicalObjectiveId": "ko-vocab-food-items",
+    "legacyObjectiveId": "ko_food_l2_001",
+    "objectiveAliasIds": [
+      "ko_food_l2_001"
+    ]
   },
   "phase": "review",
   "turn": 4,
@@ -38,7 +47,10 @@
     "state": {
       "targetChar": "뉴",
       "remainingLives": 2,
-      "boardPieces": ["ㅁ", "ㅠ"],
+      "boardPieces": [
+        "ㅁ",
+        "ㅠ"
+      ],
       "requiredMatches": 1
     }
   },
