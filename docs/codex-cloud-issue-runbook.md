@@ -163,12 +163,65 @@ Current behavior:
    python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR>
    ```
 
-4. If the `run_dir` is not repo-visible, the workflow comments a precise blocker instead of pretending publication succeeded.
+4. If the `run_dir` is not repo-visible but the metadata provides a supported `qa_recipe`, the workflow starts local demo services in CI, regenerates a fresh run bundle, and publishes from that CI-created bundle.
+5. If neither a repo-visible `run_dir` nor a supported `qa_recipe` is available, the workflow comments a precise blocker instead of pretending publication succeeded.
 
 Important limitation:
 
-- `artifacts/qa-runs/...` is gitignored local staging, so Codex cloud task bundles are not automatically present in the GitHub Actions checkout.
-- This workflow is therefore the trusted publish/upload step, not yet a full trusted re-validation runner. A later automation can extend it to regenerate run bundles from PR metadata alone.
+- `artifacts/qa-runs/...` is gitignored local staging, so Codex cloud task bundles are not automatically present in the GitHub Actions checkout unless you commit or otherwise publish them into GitHub-visible state.
+- CI regeneration only works for explicitly supported `qa_recipe` values. Add new recipes to `scripts/run_qa_publish_recipe.mjs` as more deterministic capture flows become available.
+
+## Trusted PR creation from GitHub-visible patch artifacts
+
+When a Codex cloud task cannot create a PR directly, you can hand GitHub Actions a patch that is visible to GitHub and let the repo create the branch and PR for you.
+
+Trigger options:
+
+1. Run the `Trusted Codex Create PR` workflow with:
+   - `new_branch`
+   - `pr_title`
+   - one patch source: `patch_text`, `patch_url`, or `patch_path`
+2. Or comment `/codex-create-pr` on an issue with:
+   - a `## Codex PR Request` JSON block
+   - a fenced ```diff block containing the patch
+
+Example issue comment:
+
+~~~md
+/codex-create-pr
+
+## Codex PR Request
+```json
+{
+  "base_branch": "main",
+  "new_branch": "codex/issue-49-checkpoint-resume",
+  "pr_title": "fix: issue #49 - persist and resume hangout checkpoints",
+  "issue_ref": "erniesg/tong#49",
+  "qa_publish_request": {
+    "issue_ref": "erniesg/tong#49",
+    "route": "/game",
+    "qa_recipe": "haeun_fresh_demo"
+  }
+}
+```
+
+```diff
+diff --git a/file.ts b/file.ts
+...
+```
+~~~
+
+Current behavior:
+
+1. The workflow applies the patch onto the requested base branch.
+2. It commits and pushes a `codex/*` branch.
+3. It opens the PR with the supplied PR body plus the `QA Publish Request` block.
+4. If `auto_qa_publish` is enabled, it explicitly dispatches the `Trusted QA Publish` workflow for the newly created PR.
+
+Important limitation:
+
+- GitHub Actions cannot see a patch or run bundle that exists only inside Codex cloud task storage.
+- The patch must first be made visible to GitHub, for example as workflow input text, a repo-visible patch file, or an issue comment diff block.
 
 ## Acceptance policy
 

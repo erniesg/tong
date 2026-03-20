@@ -144,6 +144,8 @@ function main() {
     dry_run: false,
   };
 
+  let pr = null;
+
   if (eventName === "issue_comment") {
     const issue = event.issue || {};
     const comment = event.comment || {};
@@ -166,14 +168,25 @@ function main() {
       shouldRun = false;
       reason = "workflow_dispatch requires pr_number.";
     }
+  } else if (eventName === "pull_request") {
+    pr = event.pull_request || null;
+    prNumber = String(pr?.number || "");
+    const prMetadata = parsePrMetadata(pr?.body || "");
+    const hasMetadata = Boolean(prMetadata.issue_ref || prMetadata.run_dir || prMetadata.qa_recipe);
+    if (!prNumber) {
+      shouldRun = false;
+      reason = "pull_request event payload is missing pull_request.number.";
+    } else if (!hasMetadata) {
+      shouldRun = false;
+      reason = "Pull request body does not contain a QA Publish Request block.";
+    }
   } else {
     shouldRun = false;
     reason = `Unsupported event ${eventName || "unknown"}.`;
   }
 
-  let pr = null;
   if (shouldRun) {
-    pr = runGhApi(`repos/${repo}/pulls/${prNumber}`);
+    pr = pr || runGhApi(`repos/${repo}/pulls/${prNumber}`);
   }
 
   const prMetadata = pr ? parsePrMetadata(pr.body || "") : {};
@@ -185,6 +198,7 @@ function main() {
       workflowInputs.scenario_seed || commentFlags.scenario_seed || prMetadata.scenario_seed || "",
     checkpoint_id:
       workflowInputs.checkpoint_id || commentFlags.checkpoint_id || prMetadata.checkpoint_id || "",
+    qa_recipe: workflowInputs.qa_recipe || prMetadata.qa_recipe || "",
     no_auto_evidence_upload:
       parseBoolean(workflowInputs.no_auto_evidence_upload) ||
       commentFlags.no_auto_evidence_upload ||
@@ -217,6 +231,7 @@ function main() {
   output("route", merged.route);
   output("scenario_seed", merged.scenario_seed);
   output("checkpoint_id", merged.checkpoint_id);
+  output("qa_recipe", merged.qa_recipe);
   output("no_auto_evidence_upload", merged.no_auto_evidence_upload ? "true" : "false");
   output("force", merged.force ? "true" : "false");
   output("dry_run", merged.dry_run ? "true" : "false");

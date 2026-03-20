@@ -57,6 +57,8 @@ export CLOUDFLARE_API_TOKEN=...
 
 The trusted workflow should run `npm run qa:preflight-reviewer-proof` in the same job before attempting upload or GitHub publication.
 
+If the PR cannot carry a repo-visible `artifacts/qa-runs/...` bundle, the trusted workflow can still publish reviewer proof when the PR metadata names a supported CI `qa_recipe` that knows how to regenerate the run bundle from scratch.
+
 ## Preflight the publishing shell
 
 Before asking a local or remote operator to publish reviewer-visible proof, run:

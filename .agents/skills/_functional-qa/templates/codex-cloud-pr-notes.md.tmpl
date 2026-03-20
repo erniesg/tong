@@ -36,6 +36,7 @@ Include a machine-readable block in the PR body so the trusted GitHub Actions pu
   "route": "/game",
   "scenario_seed": "",
   "checkpoint_id": "",
+  "qa_recipe": "",
   "no_auto_evidence_upload": false
 }
 ```
@@ -43,6 +44,8 @@ Include a machine-readable block in the PR body so the trusted GitHub Actions pu
 Maintainers can then trigger the trusted publish step with either:
 - a PR comment: `/qa-publish`
 - the `Trusted QA Publish` workflow with `pr_number`
+
+If the run bundle will not be committed into the branch, set `qa_recipe` to a supported CI capture recipe so GitHub Actions can regenerate evidence from PR metadata instead of depending on a Codex-local `artifacts/qa-runs/...` bundle.
 
 ## Readiness Note
 

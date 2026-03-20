@@ -117,3 +117,15 @@ Template:
 - Integration risks:
   - The new workflow intentionally blocks fork PRs and same-repo PRs without a repo-visible run bundle; until a rerun automation exists, maintainers still need either a reproducible CI run or a manual publish fallback.
 - Next owner: `codex/qa-platform`
+
+## 2026-03-20 (Trusted Codex PR creation + CI recipe regeneration)
+- Date: 2026-03-20
+- Branch/worktree: `codex/remove-judge-hackathon-branding` (shared root workspace crossing into qa-platform-owned paths and `.github/workflows/**`)
+- What changed:
+  - Added a trusted GitHub Actions workflow that can create a `codex/*` branch and PR from a GitHub-visible patch artifact (workflow input, repo-visible patch file, or issue comment diff block).
+  - Extended trusted QA publish so it can regenerate a fresh QA run bundle in CI from a supported `qa_recipe` instead of requiring a repo-visible local `artifacts/qa-runs/...` directory.
+- Contract changes: none
+- Integration risks:
+  - PR creation still requires the patch itself to be visible to GitHub; Codex-local task storage is still invisible to Actions.
+  - CI evidence regeneration is whitelist-based; unsupported flows must add new recipes to `scripts/run_qa_publish_recipe.mjs`.
+- Next owner: `codex/qa-platform`
