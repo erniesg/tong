@@ -167,7 +167,10 @@ function main() {
     fail(`Recipe ${args.recipe} did not print a run directory.`);
   }
   if (args.issueRef) {
-    const manifestPath = path.join(process.cwd(), runDir, "run.json");
+    const manifestPath = path.join(
+      path.isAbsolute(runDir) ? runDir : path.join(process.cwd(), runDir),
+      "run.json",
+    );
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
     manifest.issue_ref = args.issueRef;
     fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
