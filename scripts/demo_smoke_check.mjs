@@ -70,6 +70,7 @@ const requiredFiles = [
   "packages/contracts/api-contract.md",
   "packages/contracts/game-loop.json",
   "packages/contracts/objective-catalog.sample.json",
+  "packages/contracts/objective-identity-map.sample.json",
   "packages/contracts/fixtures/captions.enriched.sample.json",
   "packages/contracts/fixtures/dictionary.entry.sample.json",
   "packages/contracts/fixtures/vocab.frequency.sample.json",
@@ -220,6 +221,18 @@ function assertObjectiveDescriptor(objective, label) {
     console.error(`${label} missing objectiveId`);
     process.exit(1);
   }
+  if (objective.canonicalObjectiveId !== undefined && objective.objectiveId !== objective.canonicalObjectiveId) {
+    console.error(`${label} objectiveId must equal canonicalObjectiveId when provided`);
+    process.exit(1);
+  }
+  if (objective.legacyObjectiveId !== undefined && typeof objective.legacyObjectiveId !== "string") {
+    console.error(`${label} legacyObjectiveId must be a string when present`);
+    process.exit(1);
+  }
+  if (objective.objectiveAliasIds !== undefined && !Array.isArray(objective.objectiveAliasIds)) {
+    console.error(`${label} objectiveAliasIds must be an array when present`);
+    process.exit(1);
+  }
   if (!["ko", "ja", "zh"].includes(objective.lang)) {
     console.error(`${label} has invalid lang`);
     process.exit(1);
@@ -234,6 +247,10 @@ function assertObjectiveDescriptor(objective, label) {
   }
   if (objective.targetNodeIds !== undefined && !Array.isArray(objective.targetNodeIds)) {
     console.error(`${label} targetNodeIds must be an array when present`);
+    process.exit(1);
+  }
+  if (objective.objectiveNodeId !== undefined && objective.objectiveNodeId !== `objective:${objective.objectiveId}`) {
+    console.error(`${label} objectiveNodeId must wrap the canonical objectiveId`);
     process.exit(1);
   }
 }

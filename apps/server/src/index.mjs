@@ -40,6 +40,13 @@ import {
   recordGraphEvidence,
   validatePack,
 } from './curriculum-graph.mjs';
+import {
+  canonicalObjectiveNodeId,
+  defaultObjectiveIdForLang,
+  objectiveMatchesLanguage,
+  resolveObjectiveIdentity,
+  withObjectiveIdentity,
+} from './objective-identity.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -100,9 +107,9 @@ const LANG_TARGETS = {
   },
 };
 const DEFAULT_OBJECTIVE_BY_LANG = {
-  ko: 'ko_food_l2_001',
-  ja: 'ko_city_l2_003',
-  zh: 'zh_stage_l3_002',
+  ko: defaultObjectiveIdForLang('ko', 'ko-vocab-food-items'),
+  ja: defaultObjectiveIdForLang('ja', 'ja-vocab-subway-transfers'),
+  zh: defaultObjectiveIdForLang('zh', 'zh-mission-stage-texting'),
 };
 const INGESTION_SOURCES = new Set(['youtube', 'spotify']);
 
@@ -734,10 +741,6 @@ function getDominantClusterId(ingestion) {
   );
 }
 
-function objectiveMatchesLanguage(objectiveId, lang) {
-  return typeof objectiveId === 'string' && objectiveId.startsWith(`${lang}_`);
-}
-
 function buildPersonalizedObjective({
   userId = DEFAULT_USER_ID,
   mode = 'hangout',
@@ -791,13 +794,20 @@ function buildPersonalizedObjective({
     linkedNodeIds: [`overlay:${item.dominantSource}:${dominantClusterId}`, `target:${item.lemma}`],
   }));
 
-  const objectiveNodeId = `objective:${objectiveId}`;
-  const graphCategory = lang === 'zh' ? 'sentences' : lang === 'ja' ? 'script' : 'vocabulary';
+  const resolvedObjective = resolveObjectiveIdentity(objectiveId);
+  const objectiveNodeId = canonicalObjectiveNodeId(objectiveId);
+  const graphCategory =
+    resolvedObjective.identity?.objectiveCategory ||
+    (lang === 'zh' ? 'conversation' : lang === 'ja' ? 'vocabulary' : 'vocabulary');
   const graphTargetNodeIds = vocabulary.map((term) => `target:${term}`);
+  const prerequisiteByLang = {
+    ko: ['ko-pron-food-words'],
+    ja: [],
+    zh: [],
+  };
 
-  return {
+  return withObjectiveIdentity({
     ...baseObjective,
-    objectiveId,
     mode,
     lang,
     objectiveGraph: {
@@ -806,7 +816,7 @@ function buildPersonalizedObjective({
       locationId: location,
       objectiveCategory: graphCategory,
       targetNodeIds: graphTargetNodeIds,
-      prerequisiteObjectiveIds: [`${lang}_food_l1_001`],
+      prerequisiteObjectiveIds: prerequisiteByLang[lang] || [],
       source: 'knowledge_graph',
     },
     coreTargets: {
@@ -830,7 +840,7 @@ function buildPersonalizedObjective({
         'mission',
       ],
     },
-  };
+  }, objectiveId);
 }
 
 function buildGameActions(lang, objectiveId) {
@@ -842,8 +852,7 @@ function buildGameActions(lang, objectiveId) {
 }
 
 function buildActiveObjectiveDescriptor({ objective, lang, city, location }) {
-  return {
-    objectiveId: objective.objectiveId,
+  return withObjectiveIdentity({
     lang,
     mode: 'hangout',
     cityId: city,
@@ -852,7 +861,7 @@ function buildActiveObjectiveDescriptor({ objective, lang, city, location }) {
     objectiveNodeId: objective.objectiveGraph?.objectiveNodeId,
     targetNodeIds: cloneJson(objective.objectiveGraph?.targetNodeIds || []),
     summary: `Resume ${lang.toUpperCase()} practice at ${location.replace(/_/g, ' ')}.`,
-  };
+  }, objective.objectiveId);
 }
 
 function buildInitialProgression() {
@@ -1645,25 +1654,25 @@ function listLearnSessions() {
 
 function createLearnSession(body = {}) {
   const learnSessionId = `learn_${Math.random().toString(36).slice(2, 8)}`;
-  const title = `Food Street ${body.objectiveId || 'Objective'} Drill`;
-  const item = {
+  const requestedObjectiveId = body.objectiveId || DEFAULT_OBJECTIVE_BY_LANG.ko;
+  const resolvedObjective = resolveObjectiveIdentity(requestedObjectiveId);
+  const title = `Food Street ${resolvedObjective.canonicalObjectiveId || 'Objective'} Drill`;
+  const item = withObjectiveIdentity({
     learnSessionId,
     title,
-    objectiveId: body.objectiveId || 'ko_food_l2_001',
     lastMessageAt: new Date().toISOString(),
-  };
+  }, requestedObjectiveId);
   state.learnSessions.unshift(item);
 
-  return {
+  return withObjectiveIdentity({
     learnSessionId,
     mode: 'learn',
     uiTheme: 'kakao_like',
-    objectiveId: item.objectiveId,
     firstMessage: {
       speaker: 'tong',
       text: "New session started. We'll train 주문 phrases for your next hangout.",
     },
-  };
+  }, item.objectiveId);
 }
 
 async function invokeAgentTool(toolName, rawArgs = {}) {

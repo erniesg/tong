@@ -110,7 +110,7 @@ Response:
         "relatedForms": ["炎", "灯", "烧"]
       },
       "objectiveLinks": [
-        { "objectiveId": "zh_stage_l3_002", "reason": "Grammar + vocab gap" }
+        { "objectiveId": "zh-mission-stage-texting", "legacyObjectiveId": "zh_stage_l3_002", "objectiveAliasIds": ["zh_stage_l3_002"], "reason": "Grammar + vocab gap" }
       ]
     }
   ]
@@ -363,7 +363,7 @@ Response:
         "burst": 1.34,
         "clusterId": "food-ordering",
         "objectiveLinks": [
-          { "objectiveId": "ko_food_l2_001", "reason": "High utility in next hangout" }
+          { "objectiveId": "ko-vocab-food-items", "legacyObjectiveId": "ko_food_l2_001", "objectiveAliasIds": ["ko_food_l2_001"], "reason": "High utility in next hangout" }
         ]
       }
     ]
@@ -475,6 +475,9 @@ Contract notes:
   - `packages/contracts/fixtures/scenario.seed.review-ready.sample.json`
 
 ## GET `/api/v1/objectives/next`
+
+Canonical identity note: `objectiveId` now carries the canonical graph objective id. `legacyObjectiveId` and `objectiveAliasIds` remain additive compatibility fields during migration.
+
 Query:
 ```json
 {
@@ -489,17 +492,17 @@ Query:
 Response:
 ```json
 {
-  "objectiveId": "ko_food_l2_001",
+  "objectiveId": "ko-vocab-food-items",
   "level": 2,
   "mode": "hangout",
   "lang": "ko",
   "objectiveGraph": {
-    "objectiveNodeId": "objective:ko_food_l2_001",
+    "objectiveNodeId": "objective:ko-vocab-food-items",
     "cityId": "seoul",
     "locationId": "food_street",
     "objectiveCategory": "vocabulary",
     "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
-    "prerequisiteObjectiveIds": ["ko_food_l1_001"],
+    "prerequisiteObjectiveIds": ["ko-pron-food-words"],
     "source": "knowledge_graph"
   },
   "coreTargets": {
@@ -539,7 +542,7 @@ Request:
   "city": "seoul",
   "location": "food_street",
   "lang": "ko",
-  "objectiveId": "ko_food_l2_001"
+  "objectiveId": "ko-vocab-food-items"
 }
 ```
 
@@ -613,7 +616,7 @@ Response:
     {
       "learnSessionId": "learn_101",
       "title": "Food Street L2 Drill",
-      "objectiveId": "ko_food_l2_001",
+      "objectiveId": "ko-vocab-food-items",
       "lastMessageAt": "2026-02-28T11:20:00.000Z"
     }
   ]
@@ -627,7 +630,7 @@ Request:
   "userId": "demo-user-1",
   "city": "seoul",
   "lang": "ko",
-  "objectiveId": "ko_food_l2_001"
+  "objectiveId": "ko-vocab-food-items"
 }
 ```
 
@@ -637,7 +640,7 @@ Response:
   "learnSessionId": "learn_202",
   "mode": "learn",
   "uiTheme": "kakao_like",
-  "objectiveId": "ko_food_l2_001",
+  "objectiveId": "ko-vocab-food-items",
   "firstMessage": {
     "speaker": "tong",
     "text": "New session started. We'll train 주문 phrases for your next hangout."

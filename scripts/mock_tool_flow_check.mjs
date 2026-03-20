@@ -102,7 +102,8 @@ async function run() {
   logPass('vocab.insights.get');
 
   const objective = await invoke('objectives.next.get', { userId, mode: 'hangout', lang: 'ko' });
-  assert(typeof objective?.objectiveId === 'string' && objective.objectiveId.startsWith('ko_'), 'objective language mismatch');
+  assert(typeof objective?.objectiveId === 'string' && objective.objectiveId.startsWith('ko-'), 'objective language mismatch');
+  assert(objective?.legacyObjectiveId === 'ko_food_l2_001', 'objective legacyObjectiveId mismatch');
   assert(Array.isArray(objective?.coreTargets?.vocabulary), 'objective coreTargets.vocabulary missing');
   logPass('objectives.next.get');
 

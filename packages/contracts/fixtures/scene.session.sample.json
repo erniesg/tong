@@ -6,15 +6,24 @@
   "locationId": "food_street",
   "mode": "hangout",
   "objective": {
-    "objectiveId": "ko_food_l2_001",
+    "objectiveId": "ko-vocab-food-items",
     "lang": "ko",
     "mode": "hangout",
     "cityId": "seoul",
     "locationId": "food_street",
     "objectiveCategory": "vocabulary",
-    "objectiveNodeId": "objective:ko_food_l2_001",
-    "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
-    "summary": "Order street food politely in Korean."
+    "objectiveNodeId": "objective:ko-vocab-food-items",
+    "targetNodeIds": [
+      "target:메뉴",
+      "target:주문",
+      "target:맵다"
+    ],
+    "summary": "Order street food politely in Korean.",
+    "canonicalObjectiveId": "ko-vocab-food-items",
+    "legacyObjectiveId": "ko_food_l2_001",
+    "objectiveAliasIds": [
+      "ko_food_l2_001"
+    ]
   },
   "phase": "intro",
   "turn": 1,

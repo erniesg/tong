@@ -16,15 +16,24 @@
   "locationId": "food_street",
   "mode": "hangout",
   "objective": {
-    "objectiveId": "ko_food_l2_001",
+    "objectiveId": "ko-vocab-food-items",
     "lang": "ko",
     "mode": "hangout",
     "cityId": "seoul",
     "locationId": "food_street",
     "objectiveCategory": "vocabulary",
-    "objectiveNodeId": "objective:ko_food_l2_001",
-    "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
-    "summary": "Resume mid-ordering exercise at the last safe player-visible state."
+    "objectiveNodeId": "objective:ko-vocab-food-items",
+    "targetNodeIds": [
+      "target:메뉴",
+      "target:주문",
+      "target:맵다"
+    ],
+    "summary": "Resume mid-ordering exercise at the last safe player-visible state.",
+    "canonicalObjectiveId": "ko-vocab-food-items",
+    "legacyObjectiveId": "ko_food_l2_001",
+    "objectiveAliasIds": [
+      "ko_food_l2_001"
+    ]
   },
   "phase": "exercise",
   "turn": 3,
@@ -37,7 +46,10 @@
     "state": {
       "targetChar": "뉴",
       "remainingLives": 2,
-      "boardPieces": ["ㅁ", "ㅠ"],
+      "boardPieces": [
+        "ㅁ",
+        "ㅠ"
+      ],
       "requiredMatches": 1
     }
   },
@@ -56,8 +68,12 @@
     "masteryTier": 1
   },
   "unlocks": {
-    "locationIds": ["food_street"],
-    "missionIds": ["ko_food_street_gate_01"],
+    "locationIds": [
+      "food_street"
+    ],
+    "missionIds": [
+      "ko_food_street_gate_01"
+    ],
     "rewardIds": []
   },
   "rng": {

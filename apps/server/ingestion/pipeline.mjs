@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { withObjectiveIdentity } from "../src/objective-identity.mjs";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SOURCE_KEYS = ["youtube", "spotify"];
@@ -29,17 +30,17 @@ const CLUSTERS = [
 
 const OBJECTIVE_BY_CLUSTER = {
   "food-ordering": {
-    objectiveId: "ko_food_l2_001",
+    objectiveId: "ko-vocab-food-items",
     reason: "High utility in next food-location hangout",
     gap: 0.84
   },
   "performance-energy": {
-    objectiveId: "zh_stage_l3_002",
+    objectiveId: "zh-mission-stage-texting",
     reason: "Supports Shanghai advanced texting mission vocabulary",
     gap: 0.9
   },
   "transport-navigation": {
-    objectiveId: "ja_subway_l1_001",
+    objectiveId: "ja-vocab-subway-transfers",
     reason: "Improves route and transfer conversation readiness",
     gap: 0.72
   }
@@ -47,22 +48,22 @@ const OBJECTIVE_BY_CLUSTER = {
 
 const OBJECTIVE_BY_LANG = {
   ko: {
-    objectiveId: "ko_food_l2_001",
+    objectiveId: "ko-vocab-food-items",
     reason: "Reinforces Korean phrase utility for food-street scenes",
     gap: 0.74
   },
   ja: {
-    objectiveId: "ja_subway_l1_001",
+    objectiveId: "ja-vocab-subway-transfers",
     reason: "Builds Japanese transit phrase reliability",
     gap: 0.7
   },
   zh: {
-    objectiveId: "zh_stage_l3_002",
+    objectiveId: "zh-mission-stage-texting",
     reason: "Strengthens Mandarin mission vocabulary recall",
     gap: 0.8
   },
   en: {
-    objectiveId: "ja_subway_l1_001",
+    objectiveId: "ja-vocab-subway-transfers",
     reason: "Useful bridge terms for subway objective setup",
     gap: 0.62
   }
@@ -351,50 +352,43 @@ function plannerRecommendations(clusterScores, topTerms) {
   const byCluster = Object.fromEntries(clusterScores.map((item) => [item.clusterId, item.score]));
 
   const objectiveCandidates = [
-    {
-      objectiveId: "ko_food_l2_001",
+    withObjectiveIdentity({
       reason: "High food-ordering coverage from recent consumption",
       confidence: Number((byCluster["food-ordering"] ?? 0).toFixed(2))
-    },
-    {
-      objectiveId: "zh_stage_l3_002",
+    }, "ko-vocab-food-items"),
+    withObjectiveIdentity({
       reason: "Performance-energy cluster is active in CN/KR media",
       confidence: Number((byCluster["performance-energy"] ?? 0).toFixed(2))
-    },
-    {
-      objectiveId: "ja_subway_l1_001",
+    }, "zh-mission-stage-texting"),
+    withObjectiveIdentity({
       reason: "Transit vocabulary appears in multi-source content",
       confidence: Number((byCluster["transport-navigation"] ?? 0).toFixed(2))
-    }
+    }, "ja-vocab-subway-transfers")
   ].filter((item) => item.confidence > 0);
 
   const sceneCandidates = [
-    {
+    withObjectiveIdentity({
       sceneId: "food_street_hangout_intro",
       city: "seoul",
-      mode: "hangout",
-      objectiveId: "ko_food_l2_001"
-    },
-    {
+      mode: "hangout"
+    }, "ko-vocab-food-items"),
+    withObjectiveIdentity({
       sceneId: "shanghai_texting_mission_advanced",
       city: "shanghai",
-      mode: "hangout",
-      objectiveId: "zh_stage_l3_002"
-    }
+      mode: "hangout"
+    }, "zh-mission-stage-texting")
   ].filter((scene) => objectiveCandidates.some((objective) => objective.objectiveId === scene.objectiveId));
 
-  const exerciseCandidates = topTerms.slice(0, 6).map((term) => ({
+  const exerciseCandidates = topTerms.slice(0, 6).map((term) => withObjectiveIdentity({
     type: "targeted-drill",
     lemma: term.lemma,
     lang: term.lang,
-    objectiveId:
-      term.clusterId === "food-ordering"
-        ? "ko_food_l2_001"
-        : term.clusterId === "performance-energy"
-          ? "zh_stage_l3_002"
-          : "ja_subway_l1_001",
     reason: `Frequent in ${term.dominantSource} over last 72h`
-  }));
+  }, term.clusterId === "food-ordering"
+    ? "ko-vocab-food-items"
+    : term.clusterId === "performance-energy"
+      ? "zh-mission-stage-texting"
+      : "ja-vocab-subway-transfers"));
 
   return {
     objectiveCandidates,
@@ -647,10 +641,9 @@ export function buildVocabInsights({
     clusterId: term.clusterId,
     orthographyFeatures: orthographyFeaturesForTerm(term.lemma),
     objectiveLinks: [
-      {
-        objectiveId: term.objective.objectiveId,
+      withObjectiveIdentity({
         reason: term.objective.reason
-      }
+      }, term.objective.objectiveId)
     ]
   }));
 
