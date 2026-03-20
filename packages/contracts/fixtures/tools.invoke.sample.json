@@ -8,8 +8,15 @@
       {
         "clusterId": "food-ordering",
         "label": "Food Ordering",
-        "keywords": ["주문", "메뉴", "맵다"],
-        "topTerms": ["주문", "메뉴"]
+        "keywords": [
+          "주문",
+          "메뉴",
+          "맵다"
+        ],
+        "topTerms": [
+          "주문",
+          "메뉴"
+        ]
       }
     ],
     "items": [
@@ -22,12 +29,20 @@
         "clusterId": "food-ordering",
         "orthographyFeatures": {
           "scriptType": "hangul",
-          "syllables": ["주", "문"]
+          "syllables": [
+            "주",
+            "문"
+          ]
         },
         "objectiveLinks": [
           {
-            "objectiveId": "ko_food_l2_001",
-            "reason": "High utility in next hangout"
+            "objectiveId": "ko-vocab-food-items",
+            "reason": "High utility in next hangout",
+            "canonicalObjectiveId": "ko-vocab-food-items",
+            "legacyObjectiveId": "ko_food_l2_001",
+            "objectiveAliasIds": [
+              "ko_food_l2_001"
+            ]
           }
         ]
       }

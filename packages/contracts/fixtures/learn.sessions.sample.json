@@ -3,20 +3,30 @@
     {
       "learnSessionId": "learn_101",
       "title": "Food Street L2 Drill",
-      "objectiveId": "ko_food_l2_001",
+      "objectiveId": "ko-vocab-food-items",
       "city": "seoul",
       "lang": "ko",
       "uiTheme": "kakao_like",
-      "lastMessageAt": "2026-02-28T11:20:00.000Z"
+      "lastMessageAt": "2026-02-28T11:20:00.000Z",
+      "canonicalObjectiveId": "ko-vocab-food-items",
+      "legacyObjectiveId": "ko_food_l2_001",
+      "objectiveAliasIds": [
+        "ko_food_l2_001"
+      ]
     },
     {
       "learnSessionId": "learn_087",
       "title": "Pronunciation Warmup",
-      "objectiveId": "ko_food_l1_004",
+      "objectiveId": "ko-pron-food-words",
       "city": "seoul",
       "lang": "ko",
       "uiTheme": "kakao_like",
-      "lastMessageAt": "2026-02-27T10:10:00.000Z"
+      "lastMessageAt": "2026-02-27T10:10:00.000Z",
+      "canonicalObjectiveId": "ko-pron-food-words",
+      "legacyObjectiveId": "ko_food_l1_004",
+      "objectiveAliasIds": [
+        "ko_food_l1_004"
+      ]
     }
   ]
 }

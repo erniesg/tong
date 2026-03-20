@@ -72,6 +72,9 @@ export interface VocabInsightItem {
   orthographyFeatures: Record<string, unknown>;
   objectiveLinks: Array<{
     objectiveId: string;
+    canonicalObjectiveId?: string;
+    legacyObjectiveId?: string;
+    objectiveAliasIds?: string[];
     reason: string;
   }>;
 }
@@ -139,6 +142,9 @@ export type ScenarioSeedSource = 'qa' | 'demo' | 'dev';
 
 export interface ObjectiveDescriptor {
   objectiveId: string;
+  canonicalObjectiveId?: string;
+  legacyObjectiveId?: string;
+  objectiveAliasIds?: string[];
   lang: TargetLanguage;
   mode: SessionMode;
   cityId: GraphCityId;
@@ -317,6 +323,9 @@ export interface StartOrResumeGameResponse {
 
 export interface ObjectiveNextResponse {
   objectiveId: string;
+  canonicalObjectiveId?: string;
+  legacyObjectiveId?: string;
+  objectiveAliasIds?: string[];
   level: number;
   mode: SessionMode;
   lang: TargetLanguage;
@@ -393,6 +402,9 @@ export interface LearnSessionListItem {
   learnSessionId: string;
   title: string;
   objectiveId: string;
+  canonicalObjectiveId?: string;
+  legacyObjectiveId?: string;
+  objectiveAliasIds?: string[];
   lastMessageAt: string;
 }
 
@@ -405,6 +417,9 @@ export interface LearnSessionCreateResponse {
   mode: 'learn';
   uiTheme: 'kakao_like' | 'line_like' | 'wechat_like';
   objectiveId: string;
+  canonicalObjectiveId?: string;
+  legacyObjectiveId?: string;
+  objectiveAliasIds?: string[];
   firstMessage: {
     speaker: 'tong';
     text: string;
@@ -794,6 +809,9 @@ export interface GraphEvidenceRecordResponse {
     userId: string;
     nodeId: string;
     objectiveId: string | null;
+    canonicalObjectiveId?: string | null;
+    legacyObjectiveId?: string | null;
+    objectiveAliasIds?: string[];
     mode: 'learn' | 'hangout' | 'mission' | 'review' | 'exercise' | 'media';
     quality: number;
     occurredAtIso: string;

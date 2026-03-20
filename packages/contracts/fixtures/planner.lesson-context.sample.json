@@ -213,19 +213,34 @@
   "plannerInput": {
     "objectiveCandidates": [
       {
-        "objectiveId": "ko_food_l2_001",
+        "objectiveId": "ko-vocab-food-items",
         "reason": "High food-ordering coverage from recent consumption",
-        "confidence": 0.92
+        "confidence": 0.92,
+        "canonicalObjectiveId": "ko-vocab-food-items",
+        "legacyObjectiveId": "ko_food_l2_001",
+        "objectiveAliasIds": [
+          "ko_food_l2_001"
+        ]
       },
       {
-        "objectiveId": "zh_stage_l3_002",
+        "objectiveId": "zh-mission-stage-texting",
         "reason": "Performance-energy cluster is active in CN/KR media",
-        "confidence": 1
+        "confidence": 1,
+        "canonicalObjectiveId": "zh-mission-stage-texting",
+        "legacyObjectiveId": "zh_stage_l3_002",
+        "objectiveAliasIds": [
+          "zh_stage_l3_002"
+        ]
       },
       {
-        "objectiveId": "ja_subway_l1_001",
+        "objectiveId": "ja-vocab-subway-transfers",
         "reason": "Transit vocabulary appears in multi-source content",
-        "confidence": 0.61
+        "confidence": 0.61,
+        "canonicalObjectiveId": "ja-vocab-subway-transfers",
+        "legacyObjectiveId": "ja_subway_l1_001",
+        "objectiveAliasIds": [
+          "ja_subway_l1_001"
+        ]
       }
     ],
     "sceneCandidates": [
@@ -233,13 +248,23 @@
         "sceneId": "food_street_hangout_intro",
         "city": "seoul",
         "mode": "hangout",
-        "objectiveId": "ko_food_l2_001"
+        "objectiveId": "ko-vocab-food-items",
+        "canonicalObjectiveId": "ko-vocab-food-items",
+        "legacyObjectiveId": "ko_food_l2_001",
+        "objectiveAliasIds": [
+          "ko_food_l2_001"
+        ]
       },
       {
         "sceneId": "shanghai_texting_mission_advanced",
         "city": "shanghai",
         "mode": "hangout",
-        "objectiveId": "zh_stage_l3_002"
+        "objectiveId": "zh-mission-stage-texting",
+        "canonicalObjectiveId": "zh-mission-stage-texting",
+        "legacyObjectiveId": "zh_stage_l3_002",
+        "objectiveAliasIds": [
+          "zh_stage_l3_002"
+        ]
       }
     ],
     "exerciseCandidates": [
@@ -247,43 +272,73 @@
         "type": "targeted-drill",
         "lemma": "연습",
         "lang": "ko",
-        "objectiveId": "zh_stage_l3_002",
-        "reason": "Frequent in spotify over last 72h"
+        "objectiveId": "zh-mission-stage-texting",
+        "reason": "Frequent in spotify over last 72h",
+        "canonicalObjectiveId": "zh-mission-stage-texting",
+        "legacyObjectiveId": "zh_stage_l3_002",
+        "objectiveAliasIds": [
+          "zh_stage_l3_002"
+        ]
       },
       {
         "type": "targeted-drill",
         "lemma": "무대",
         "lang": "ko",
-        "objectiveId": "zh_stage_l3_002",
-        "reason": "Frequent in spotify over last 72h"
+        "objectiveId": "zh-mission-stage-texting",
+        "reason": "Frequent in spotify over last 72h",
+        "canonicalObjectiveId": "zh-mission-stage-texting",
+        "legacyObjectiveId": "zh_stage_l3_002",
+        "objectiveAliasIds": [
+          "zh_stage_l3_002"
+        ]
       },
       {
         "type": "targeted-drill",
         "lemma": "주문",
         "lang": "ko",
-        "objectiveId": "ko_food_l2_001",
-        "reason": "Frequent in youtube over last 72h"
+        "objectiveId": "ko-vocab-food-items",
+        "reason": "Frequent in youtube over last 72h",
+        "canonicalObjectiveId": "ko-vocab-food-items",
+        "legacyObjectiveId": "ko_food_l2_001",
+        "objectiveAliasIds": [
+          "ko_food_l2_001"
+        ]
       },
       {
         "type": "targeted-drill",
         "lemma": "subway",
         "lang": "en",
-        "objectiveId": "ja_subway_l1_001",
-        "reason": "Frequent in spotify over last 72h"
+        "objectiveId": "ja-vocab-subway-transfers",
+        "reason": "Frequent in spotify over last 72h",
+        "canonicalObjectiveId": "ja-vocab-subway-transfers",
+        "legacyObjectiveId": "ja_subway_l1_001",
+        "objectiveAliasIds": [
+          "ja_subway_l1_001"
+        ]
       },
       {
         "type": "targeted-drill",
         "lemma": "station",
         "lang": "en",
-        "objectiveId": "ja_subway_l1_001",
-        "reason": "Frequent in spotify over last 72h"
+        "objectiveId": "ja-vocab-subway-transfers",
+        "reason": "Frequent in spotify over last 72h",
+        "canonicalObjectiveId": "ja-vocab-subway-transfers",
+        "legacyObjectiveId": "ja_subway_l1_001",
+        "objectiveAliasIds": [
+          "ja_subway_l1_001"
+        ]
       },
       {
         "type": "targeted-drill",
         "lemma": "메뉴",
         "lang": "ko",
-        "objectiveId": "ko_food_l2_001",
-        "reason": "Frequent in youtube over last 72h"
+        "objectiveId": "ko-vocab-food-items",
+        "reason": "Frequent in youtube over last 72h",
+        "canonicalObjectiveId": "ko-vocab-food-items",
+        "legacyObjectiveId": "ko_food_l2_001",
+        "objectiveAliasIds": [
+          "ko_food_l2_001"
+        ]
       }
     ]
   }

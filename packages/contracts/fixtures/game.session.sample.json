@@ -4,7 +4,11 @@
   "status": "active",
   "profile": {
     "nativeLanguage": "en",
-    "targetLanguages": ["ko", "ja", "zh"],
+    "targetLanguages": [
+      "ko",
+      "ja",
+      "zh"
+    ],
     "proficiency": {
       "ko": "beginner",
       "ja": "none",
@@ -17,15 +21,24 @@
   "activeSceneId": "food_street_hangout_intro",
   "activeSceneSessionId": "scene_sess_demo_001_001",
   "activeObjective": {
-    "objectiveId": "ko_food_l2_001",
+    "objectiveId": "ko-vocab-food-items",
     "lang": "ko",
     "mode": "hangout",
     "cityId": "seoul",
     "locationId": "food_street",
     "objectiveCategory": "vocabulary",
-    "objectiveNodeId": "objective:ko_food_l2_001",
-    "targetNodeIds": ["target:메뉴", "target:주문", "target:맵다"],
-    "summary": "Order street food politely in Korean."
+    "objectiveNodeId": "objective:ko-vocab-food-items",
+    "targetNodeIds": [
+      "target:메뉴",
+      "target:주문",
+      "target:맵다"
+    ],
+    "summary": "Order street food politely in Korean.",
+    "canonicalObjectiveId": "ko-vocab-food-items",
+    "legacyObjectiveId": "ko_food_l2_001",
+    "objectiveAliasIds": [
+      "ko_food_l2_001"
+    ]
   },
   "progression": {
     "xp": 110,
@@ -40,7 +53,9 @@
     "masteryTier": 1
   },
   "unlocks": {
-    "locationIds": ["food_street"],
+    "locationIds": [
+      "food_street"
+    ],
     "missionIds": [],
     "rewardIds": []
   },
@@ -48,7 +63,7 @@
   "availableActions": [
     "Start hangout validation",
     "Review personalized learn targets",
-    "Practice KO objective ko_food_l2_001"
+    "Practice KO objective ko-vocab-food-items"
   ],
   "resumeSource": "new_session",
   "activeCheckpointId": "ckpt_sess_demo_001_intro",

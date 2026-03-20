@@ -59,8 +59,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "zh_stage_l3_002",
-          "reason": "Supports Shanghai advanced texting mission vocabulary"
+          "objectiveId": "zh-mission-stage-texting",
+          "reason": "Supports Shanghai advanced texting mission vocabulary",
+          "canonicalObjectiveId": "zh-mission-stage-texting",
+          "legacyObjectiveId": "zh_stage_l3_002",
+          "objectiveAliasIds": [
+            "zh_stage_l3_002"
+          ]
         }
       ]
     },
@@ -80,8 +85,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "ko_food_l2_001",
-          "reason": "High utility in next food-location hangout"
+          "objectiveId": "ko-vocab-food-items",
+          "reason": "High utility in next food-location hangout",
+          "canonicalObjectiveId": "ko-vocab-food-items",
+          "legacyObjectiveId": "ko_food_l2_001",
+          "objectiveAliasIds": [
+            "ko_food_l2_001"
+          ]
         }
       ]
     },
@@ -101,8 +111,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "zh_stage_l3_002",
-          "reason": "Supports Shanghai advanced texting mission vocabulary"
+          "objectiveId": "zh-mission-stage-texting",
+          "reason": "Supports Shanghai advanced texting mission vocabulary",
+          "canonicalObjectiveId": "zh-mission-stage-texting",
+          "legacyObjectiveId": "zh_stage_l3_002",
+          "objectiveAliasIds": [
+            "zh_stage_l3_002"
+          ]
         }
       ]
     },
@@ -122,8 +137,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "ko_food_l2_001",
-          "reason": "High utility in next food-location hangout"
+          "objectiveId": "ko-vocab-food-items",
+          "reason": "High utility in next food-location hangout",
+          "canonicalObjectiveId": "ko-vocab-food-items",
+          "legacyObjectiveId": "ko_food_l2_001",
+          "objectiveAliasIds": [
+            "ko_food_l2_001"
+          ]
         }
       ]
     },
@@ -139,8 +159,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "ja_subway_l1_001",
-          "reason": "Improves route and transfer conversation readiness"
+          "objectiveId": "ja-vocab-subway-transfers",
+          "reason": "Improves route and transfer conversation readiness",
+          "canonicalObjectiveId": "ja-vocab-subway-transfers",
+          "legacyObjectiveId": "ja_subway_l1_001",
+          "objectiveAliasIds": [
+            "ja_subway_l1_001"
+          ]
         }
       ]
     },
@@ -156,8 +181,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "ja_subway_l1_001",
-          "reason": "Improves route and transfer conversation readiness"
+          "objectiveId": "ja-vocab-subway-transfers",
+          "reason": "Improves route and transfer conversation readiness",
+          "canonicalObjectiveId": "ja-vocab-subway-transfers",
+          "legacyObjectiveId": "ja_subway_l1_001",
+          "objectiveAliasIds": [
+            "ja_subway_l1_001"
+          ]
         }
       ]
     },
@@ -179,8 +209,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "zh_stage_l3_002",
-          "reason": "Supports Shanghai advanced texting mission vocabulary"
+          "objectiveId": "zh-mission-stage-texting",
+          "reason": "Supports Shanghai advanced texting mission vocabulary",
+          "canonicalObjectiveId": "zh-mission-stage-texting",
+          "legacyObjectiveId": "zh_stage_l3_002",
+          "objectiveAliasIds": [
+            "zh_stage_l3_002"
+          ]
         }
       ]
     },
@@ -202,8 +237,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "zh_stage_l3_002",
-          "reason": "Supports Shanghai advanced texting mission vocabulary"
+          "objectiveId": "zh-mission-stage-texting",
+          "reason": "Supports Shanghai advanced texting mission vocabulary",
+          "canonicalObjectiveId": "zh-mission-stage-texting",
+          "legacyObjectiveId": "zh_stage_l3_002",
+          "objectiveAliasIds": [
+            "zh_stage_l3_002"
+          ]
         }
       ]
     },
@@ -220,8 +260,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "zh_stage_l3_002",
-          "reason": "Strengthens Mandarin mission vocabulary recall"
+          "objectiveId": "zh-mission-stage-texting",
+          "reason": "Strengthens Mandarin mission vocabulary recall",
+          "canonicalObjectiveId": "zh-mission-stage-texting",
+          "legacyObjectiveId": "zh_stage_l3_002",
+          "objectiveAliasIds": [
+            "zh_stage_l3_002"
+          ]
         }
       ]
     },
@@ -241,8 +286,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "ko_food_l2_001",
-          "reason": "High utility in next food-location hangout"
+          "objectiveId": "ko-vocab-food-items",
+          "reason": "High utility in next food-location hangout",
+          "canonicalObjectiveId": "ko-vocab-food-items",
+          "legacyObjectiveId": "ko_food_l2_001",
+          "objectiveAliasIds": [
+            "ko_food_l2_001"
+          ]
         }
       ]
     },
@@ -262,8 +312,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "ko_food_l2_001",
-          "reason": "High utility in next food-location hangout"
+          "objectiveId": "ko-vocab-food-items",
+          "reason": "High utility in next food-location hangout",
+          "canonicalObjectiveId": "ko-vocab-food-items",
+          "legacyObjectiveId": "ko_food_l2_001",
+          "objectiveAliasIds": [
+            "ko_food_l2_001"
+          ]
         }
       ]
     },
@@ -283,8 +338,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "ko_food_l2_001",
-          "reason": "High utility in next food-location hangout"
+          "objectiveId": "ko-vocab-food-items",
+          "reason": "High utility in next food-location hangout",
+          "canonicalObjectiveId": "ko-vocab-food-items",
+          "legacyObjectiveId": "ko_food_l2_001",
+          "objectiveAliasIds": [
+            "ko_food_l2_001"
+          ]
         }
       ]
     },
@@ -305,8 +365,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "ko_food_l2_001",
-          "reason": "Reinforces Korean phrase utility for food-street scenes"
+          "objectiveId": "ko-vocab-food-items",
+          "reason": "Reinforces Korean phrase utility for food-street scenes",
+          "canonicalObjectiveId": "ko-vocab-food-items",
+          "legacyObjectiveId": "ko_food_l2_001",
+          "objectiveAliasIds": [
+            "ko_food_l2_001"
+          ]
         }
       ]
     },
@@ -325,8 +390,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "ko_food_l2_001",
-          "reason": "Reinforces Korean phrase utility for food-street scenes"
+          "objectiveId": "ko-vocab-food-items",
+          "reason": "Reinforces Korean phrase utility for food-street scenes",
+          "canonicalObjectiveId": "ko-vocab-food-items",
+          "legacyObjectiveId": "ko_food_l2_001",
+          "objectiveAliasIds": [
+            "ko_food_l2_001"
+          ]
         }
       ]
     },
@@ -342,8 +412,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "ja_subway_l1_001",
-          "reason": "Improves route and transfer conversation readiness"
+          "objectiveId": "ja-vocab-subway-transfers",
+          "reason": "Improves route and transfer conversation readiness",
+          "canonicalObjectiveId": "ja-vocab-subway-transfers",
+          "legacyObjectiveId": "ja_subway_l1_001",
+          "objectiveAliasIds": [
+            "ja_subway_l1_001"
+          ]
         }
       ]
     },
@@ -359,8 +434,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "ja_subway_l1_001",
-          "reason": "Useful bridge terms for subway objective setup"
+          "objectiveId": "ja-vocab-subway-transfers",
+          "reason": "Useful bridge terms for subway objective setup",
+          "canonicalObjectiveId": "ja-vocab-subway-transfers",
+          "legacyObjectiveId": "ja_subway_l1_001",
+          "objectiveAliasIds": [
+            "ja_subway_l1_001"
+          ]
         }
       ]
     },
@@ -376,8 +456,13 @@
       },
       "objectiveLinks": [
         {
-          "objectiveId": "ja_subway_l1_001",
-          "reason": "Useful bridge terms for subway objective setup"
+          "objectiveId": "ja-vocab-subway-transfers",
+          "reason": "Useful bridge terms for subway objective setup",
+          "canonicalObjectiveId": "ja-vocab-subway-transfers",
+          "legacyObjectiveId": "ja_subway_l1_001",
+          "objectiveAliasIds": [
+            "ja_subway_l1_001"
+          ]
         }
       ]
     }

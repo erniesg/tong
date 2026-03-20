@@ -155,3 +155,10 @@ Template:
 - Intent:
   - Teach the active `/game` bootstrap path to consume deterministic `scenarioSeedId` mounts from the existing `start-or-resume` substrate without collapsing them into ordinary player checkpoints.
   - Add a CI-regenerable QA publish recipe for the issue #51 seeded mount flow so same-repo PRs can auto-resolve trusted publish metadata on PR open.
+
+## 2026-03-20 (KG objective identity unification intent)
+- Date: 2026-03-20
+- Branch/worktree: `codex/kg-contracts-schema` (shared root workspace crossing into `packages/contracts/**` and server KG contract validation)
+- Intent:
+  - Validate and then unify legacy objective ids with canonical graph objective ids without breaking fixture-backed APIs abruptly.
+  - Keep canonical curriculum graph node ids as the source of truth and add additive alias metadata/migration checks so existing consumers can bridge during rollout.

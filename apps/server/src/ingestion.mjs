@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { withObjectiveIdentity } from './objective-identity.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,7 +37,7 @@ const TOPIC_DEFINITIONS = [
       '点餐',
       '料理',
     ],
-    objectiveId: 'ko_food_l2_001',
+    objectiveId: 'ko-vocab-food-items',
     objectiveReason: 'High utility in next food-location hangout',
     objectiveGap: 0.84,
   },
@@ -58,7 +59,7 @@ const TOPIC_DEFINITIONS = [
       '练',
       '舞台',
     ],
-    objectiveId: 'zh_stage_l3_002',
+    objectiveId: 'zh-mission-stage-texting',
     objectiveReason: 'Supports Shanghai advanced texting mission vocabulary',
     objectiveGap: 0.9,
   },
@@ -79,7 +80,7 @@ const TOPIC_DEFINITIONS = [
       '友達',
       'cafe',
     ],
-    objectiveId: 'ko_city_l2_003',
+    objectiveId: 'ko-vocab-city-social',
     objectiveReason: 'Builds social and navigation language transfer',
     objectiveGap: 0.72,
   },
@@ -92,22 +93,22 @@ const HAN_REGEX = /[\u4e00-\u9fff]/u;
 
 const OBJECTIVE_BY_LANG = {
   ko: {
-    objectiveId: 'ko_food_l2_001',
+    objectiveId: 'ko-vocab-food-items',
     reason: 'Reinforces Korean phrase utility for food-street scenes',
     gap: 0.74,
   },
   ja: {
-    objectiveId: 'ko_city_l2_003',
+    objectiveId: 'ja-vocab-subway-transfers',
     reason: 'Builds Japanese transit and social phrase reliability',
     gap: 0.7,
   },
   zh: {
-    objectiveId: 'zh_stage_l3_002',
+    objectiveId: 'zh-mission-stage-texting',
     reason: 'Strengthens Mandarin mission vocabulary recall',
     gap: 0.8,
   },
   en: {
-    objectiveId: 'ko_city_l2_003',
+    objectiveId: 'ja-vocab-subway-transfers',
     reason: 'Supports cross-city objective transfer terms',
     gap: 0.62,
   },
@@ -192,7 +193,7 @@ function getTopicMatches(text) {
         clusterId: 'general',
         label: 'General',
         keywords: ['general'],
-        objectiveId: 'ko_food_l2_001',
+        objectiveId: 'ko-vocab-food-items',
         objectiveReason: 'General fallback objective linkage',
         objectiveGap: 0.62,
       },
@@ -208,7 +209,7 @@ function topicFromId(clusterId) {
       clusterId,
       label: clusterId,
       keywords: ['general'],
-      objectiveId: 'ko_food_l2_001',
+        objectiveId: 'ko-vocab-food-items',
       objectiveReason: 'General fallback objective linkage',
       objectiveGap: 0.62,
     }
@@ -284,11 +285,10 @@ function objectiveLinkForEntry(entry) {
   const langFallback = OBJECTIVE_BY_LANG[entry.lang] || OBJECTIVE_BY_LANG.en;
   const topicGap = Number(topic.objectiveGap || 0);
   const gap = topicGap > 0 ? topicGap : langFallback.gap;
-  return {
-    objectiveId: topic.objectiveId || langFallback.objectiveId,
+  return withObjectiveIdentity({
     reason: topic.objectiveReason || langFallback.reason,
     gap,
-  };
+  }, topic.objectiveId || langFallback.objectiveId);
 }
 
 function aggregateTopMedia(sourceItems, source) {
@@ -474,10 +474,9 @@ export function runMockIngestion(snapshot, options = {}) {
       clusterId: row.entry.clusterId,
       orthographyFeatures: orthographyFeaturesForLemma(row.entry.lemma),
       objectiveLinks: [
-        {
-          objectiveId: row.objective.objectiveId,
+        withObjectiveIdentity({
           reason: row.objective.reason,
-        },
+        }, row.objective.objectiveId),
       ],
     }));
 

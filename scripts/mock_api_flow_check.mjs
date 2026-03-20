@@ -185,9 +185,10 @@ async function run() {
   assert(Number.isFinite(objectiveKo.data?.completionCriteria?.minEvidenceEvents), 'objectiveKo.minEvidenceEvents missing');
   assertArray(objectiveKo.data?.completionCriteria?.acceptedEvidenceModes, 'objectiveKo.acceptedEvidenceModes');
   assert(
-    typeof objectiveKo.data?.objectiveId === 'string' && objectiveKo.data.objectiveId.startsWith('ko_'),
-    `objectiveKo.objectiveId should start with ko_: ${objectiveKo.data?.objectiveId}`,
+    typeof objectiveKo.data?.objectiveId === 'string' && objectiveKo.data.objectiveId.startsWith('ko-'),
+    `objectiveKo.objectiveId should start with ko-: ${objectiveKo.data?.objectiveId}`,
   );
+  assert(objectiveKo.data?.legacyObjectiveId === 'ko_food_l2_001', 'objectiveKo.legacyObjectiveId mismatch');
   logPass('/api/v1/objectives/next?lang=ko');
 
   const objectiveZh = await requestJson(
@@ -199,9 +200,10 @@ async function run() {
   assert(objectiveZh.data?.objectiveGraph?.locationId === 'practice_studio', 'objectiveZh.objectiveGraph.locationId mismatch');
   assertArray(objectiveZh.data?.coreTargets?.vocabulary, 'objectiveZh.coreTargets.vocabulary');
   assert(
-    typeof objectiveZh.data?.objectiveId === 'string' && objectiveZh.data.objectiveId.startsWith('zh_'),
-    `objectiveZh.objectiveId should start with zh_: ${objectiveZh.data?.objectiveId}`,
+    typeof objectiveZh.data?.objectiveId === 'string' && objectiveZh.data.objectiveId.startsWith('zh-'),
+    `objectiveZh.objectiveId should start with zh-: ${objectiveZh.data?.objectiveId}`,
   );
+  assert(objectiveZh.data?.legacyObjectiveId === 'zh_stage_l3_002', 'objectiveZh.legacyObjectiveId mismatch');
   logPass('/api/v1/objectives/next?lang=zh');
 
   const graphEvidence = await requestJson('/api/v1/graph/evidence', {
@@ -404,7 +406,27 @@ async function run() {
   assert(createLearn.ok, `/learn/sessions POST failed (${createLearn.status})`);
   assert(typeof createLearn.data?.learnSessionId === 'string', 'learn session create missing learnSessionId');
   assert(typeof createLearn.data?.firstMessage?.text === 'string', 'learn session create missing firstMessage');
+  assert(createLearn.data?.objectiveId === objectiveKo.data.objectiveId, 'learn session create objectiveId mismatch');
   logPass('/api/v1/learn/sessions POST');
+
+  const createDefaultLearn = await requestJson('/api/v1/learn/sessions', {
+    method: 'POST',
+    body: JSON.stringify({
+      userId,
+      city: 'seoul',
+      lang: 'ko',
+    }),
+  });
+  assert(createDefaultLearn.ok, `/learn/sessions POST default failed (${createDefaultLearn.status})`);
+  assert(
+    createDefaultLearn.data?.objectiveId === 'ko-vocab-food-items',
+    `default learn session objectiveId mismatch: ${createDefaultLearn.data?.objectiveId}`,
+  );
+  assert(
+    createDefaultLearn.data?.legacyObjectiveId === 'ko_food_l2_001',
+    `default learn session legacyObjectiveId mismatch: ${createDefaultLearn.data?.legacyObjectiveId}`,
+  );
+  logPass('/api/v1/learn/sessions POST default objective');
 
   console.log('');
   console.log('Mock flow check complete.');
