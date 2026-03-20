@@ -123,6 +123,14 @@
         "Require temporal capture and screenshots in validation and fix verification outputs.",
         "Prefer qa-platform docs and workflow assets; keep cross-lane changes minimal."
       ]
+    },
+    {
+      "match": "#51",
+      "issue_class_override": "persistence-state-sync",
+      "notes": [
+        "Treat the API half of scenario-seed mounts as a server-state verification issue, not a reviewer-proof visual transition.",
+        "Prefer strict API replay with contract assertions and console-state traces over screenshot gates."
+      ]
     }
   ],
   "issue_playbooks": [
