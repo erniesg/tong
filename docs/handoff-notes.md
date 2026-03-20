@@ -10,6 +10,19 @@ Template:
 - Integration risks:
 - Next owner:
 
+## 2026-03-21 (Issue 57 session-planning recovery)
+- Date: 2026-03-21
+- Branch/worktree: `codex/fix-issue-57-session-planning` + `.worktrees/issue-57-session-planning`
+- What changed:
+  - Recovering the missing `#57` KG-backed session-planning work from a divergent local worktree onto a clean branch.
+  - Touching `packages/contracts/**`, `apps/server/src/curriculum-graph.mjs`, `apps/client/lib/api.ts`, and dashboard smoke coverage together so the contract and consumers stay aligned.
+- Contract changes:
+  - Expected graph bundle shape expands beyond simple target lists to include readiness/mission/target-progress metadata needed for concrete learn and hangout planning.
+- Integration risks:
+  - The source worktree diverged heavily from current `HEAD`, so only issue-relevant file deltas should be transplanted.
+  - Dashboard/runtime smoke must be rerun before review because graph payload consumers depend on the new shape.
+- Next owner: `codex/game-engine`
+
 ## 2026-02-28
 - Date: 2026-02-28
 - Branch/worktree: `master` + `.worktrees/extension-hotfix` (`codex/extension-hotfix`)
