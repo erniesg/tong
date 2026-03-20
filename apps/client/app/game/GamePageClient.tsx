@@ -665,7 +665,6 @@ export default function GamePageClient({
   }
 
   function openWorldMap() {
-    setMode('hangout');
     setWorldCity(activeResumeCard?.city || city);
     setWorldLocation(activeResumeCard?.location || location);
     setShowWorldPanel(true);
@@ -1002,6 +1001,7 @@ export default function GamePageClient({
       mergeIncomingLines(nextLines, true);
 
       if (response.completion?.isCompleted) {
+        setActiveResumeCard(null);
         setStatus(
           response.completion.completionSignal === 'objective_validated'
             ? 'Objective validated. Hangout complete.'
@@ -1264,7 +1264,11 @@ export default function GamePageClient({
                     type="button"
                     onClick={() => (showWorldPanel ? closeWorldMap() : openWorldMap())}
                   >
-                    {showWorldPanel ? 'Back to Hangout' : activeResumeCard ? 'Return to World Map' : 'World Map'}
+                    {showWorldPanel
+                      ? `Back to ${mode === 'hangout' ? 'Hangout' : 'Learn'}`
+                      : activeResumeCard
+                        ? 'Return to World Map'
+                        : 'World Map'}
                   </button>
                 </div>
               </header>
