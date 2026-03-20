@@ -100,6 +100,40 @@ function resolveRecipe(args) {
         ],
         description: "Fresh Haeun live cinematic reviewer-proof capture",
       };
+    case "dashboard_validator_smoke":
+      return {
+        command: "node",
+        args: [
+          "scripts/record_dashboard_smoke_recipe.mjs",
+          "--issue-ref",
+          args.issueRef,
+          "--route",
+          args.route || "/dashboard",
+          "--client-base-url",
+          args.baseUrl,
+          "--api-base-url",
+          args.baseUrl.replace(/:3000$/, ":8787"),
+          "--label",
+          "Dashboard validator smoke proof",
+        ],
+        description: "Dashboard smoke validation with reviewer-visible screenshot capture",
+      };
+    case "issue_55_ingestion_objective_contract":
+      return {
+        command: "node",
+        args: [
+          "scripts/record_issue_api_flow_recipe.mjs",
+          "--issue-ref",
+          args.issueRef,
+          "--route",
+          args.route || "/api/v1/objectives/next",
+          "--base-url",
+          args.baseUrl.replace(/:3000$/, ":8787"),
+          "--label",
+          "Ingestion/objective strict API flow",
+        ],
+        description: "Strict API replay for ingestion, objective selection, and checkpoint resume parity",
+      };
     case "issue_49_checkpoint_resume":
       return {
         command: "node",

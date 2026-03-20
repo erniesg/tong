@@ -32,8 +32,17 @@ function defaultPublishRequest({ issueRef = "", title = "", headRef = "" }) {
   const numberMatch = issueRef.match(/#(\d+)$/);
   const issueNumber = numberMatch ? numberMatch[1] : "";
   const signature = `${title} ${headRef}`.toLowerCase();
+  const dashboardValidatorSignature =
+    signature.includes("all-city kg validator dashboard") ||
+    signature.includes("dashboard-validation-for-kg-completeness") ||
+    signature.includes("kg validator dashboard");
 
   switch (issueNumber) {
+    case "55":
+      return {
+        route: "/api/v1/objectives/next",
+        qa_recipe: "issue_55_ingestion_objective_contract",
+      };
     case "49":
       return {
         route: "/game",
@@ -71,6 +80,12 @@ function defaultPublishRequest({ issueRef = "", title = "", headRef = "" }) {
         route: "/game",
       };
     default:
+      if (dashboardValidatorSignature) {
+        return {
+          route: "/dashboard",
+          qa_recipe: "dashboard_validator_smoke",
+        };
+      }
       return {};
   }
 }

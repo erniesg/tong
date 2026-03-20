@@ -162,7 +162,33 @@ Template:
 - Intent:
   - Validate and then unify legacy objective ids with canonical graph objective ids without breaking fixture-backed APIs abruptly.
   - Keep canonical curriculum graph node ids as the source of truth and add additive alias metadata/migration checks so existing consumers can bridge during rollout.
+
 ## 2026-03-20 (issue #55 ingestion retrieval intent)
 
 - Branch/worktree: `work` (server-ingestion lane; touching shared contracts for additive retrieval metadata)
 - Intent: complete KG-backed retrieval outputs with repo-visible provenance + placement hints for objective selection, then revalidate mock ingestion/objective flows.
+
+## 2026-03-21 (QA recipe scaffold + uploader hardening)
+- Date: 2026-03-21
+- Branch/worktree: `codex/qa-evidence-planning-helper` (`/Users/erniesg/code/erniesg/tong/.worktrees/qa-platform`)
+- What changed:
+  - Hardened the reviewer-proof uploader with Wrangler upload retries and public URL verification.
+  - Added deterministic CI recipe inference for dashboard and issue-55 publish flows.
+  - Added a shared `qa:new-recipe` scaffold command, which requires touching root `package.json`.
+- Contract changes: none
+- Integration risks:
+  - `package.json` is a shared zone; rebase before merge if another lane changes root scripts.
+  - Newly scaffolded recipes still need human review if they target non-portable or non-deterministic flows.
+- Next owner: `codex/qa-platform`
+
+## 2026-03-21 (QA evidence path suggestion helper)
+- Date: 2026-03-21
+- Branch/worktree: `codex/qa-evidence-planning-helper` (`/Users/erniesg/code/erniesg/tong/.worktrees/qa-platform`)
+- What changed:
+  - Added `qa:suggest-recipe`, a deterministic helper that classifies an issue or PR surface and recommends one of: reuse an existing CI recipe, scaffold a new deterministic recipe, continue with `trace-ui-state`, or finish with `capture-reviewer-proof`.
+  - Updated the `validate-issue` skill and QA docs to use this helper as a planning hint before creating new trusted publish recipes.
+  - Touched shared `package.json` again to expose the new script as an npm entrypoint.
+- Contract changes: none
+- Integration risks:
+  - The helper is intentionally heuristic. It should inform planning, but `validate-issue` still owns the final evidence strategy after live repro.
+- Next owner: `codex/qa-platform`
