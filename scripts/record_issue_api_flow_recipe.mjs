@@ -114,7 +114,10 @@ function updateSummaryStatus(filePath, { verdict, confidence }) {
   fs.writeFileSync(filePath, next, "utf8");
 }
 
-function writeEvidence(runDir, { label, route, commandText, logRelativePath, success, errorText, scenarioSeed, progressionPersistence }) {
+function writeEvidence(
+  runDir,
+  { label, route, commandText, logRelativePath, networkTraceRelativePath, success, errorText, scenarioSeed, progressionPersistence },
+) {
   const evidencePath = path.join(runDir, "evidence.json");
   const evidence = JSON.parse(fs.readFileSync(evidencePath, "utf8"));
   const notes = [
@@ -142,6 +145,14 @@ function writeEvidence(runDir, { label, route, commandText, logRelativePath, suc
       path: logRelativePath,
       label: "api-flow-log",
       description: `${label} command transcript`,
+    },
+  ];
+  evidence.network_traces = [
+    ...(evidence.network_traces || []),
+    {
+      path: networkTraceRelativePath,
+      label: "api-flow-network-trace",
+      description: `${label} structured request/response trace`,
     },
   ];
   evidence.contract_assertions = [
@@ -191,10 +202,12 @@ function main() {
   }
 
   const logPath = path.join(runDir, "logs", "api-flow-check.log");
+  const networkTracePath = path.join(runDir, "logs", "api-flow-network-trace.json");
   const commandArgs = [
     "scripts/mock_api_flow_check.mjs",
     args.baseUrl,
     "--strict-state",
+    `--trace-file=${networkTracePath}`,
     ...(args.checkScenarioSeed ? ["--check-scenario-seed"] : []),
     ...(args.checkProgressionPersistence ? ["--check-progression-persistence"] : []),
   ];
@@ -213,6 +226,7 @@ function main() {
   const summaryPath = path.join(runDir, "summary.md");
   const stepsPath = path.join(runDir, "steps.md");
   const logRelativePath = path.relative(process.cwd(), logPath);
+  const networkTraceRelativePath = path.relative(process.cwd(), networkTracePath);
   const routeNote = `Route under test: \`${args.route}\``;
 
   if (result.status === 0) {
@@ -220,22 +234,25 @@ function main() {
       `- ${args.label} passed in trusted CI.`,
       `- ${routeNote}`,
       `- Log: \`${logRelativePath}\``,
+      `- Network trace: \`${networkTraceRelativePath}\``,
     ]);
     appendSection(summaryPath, "CI Verification", [
       `- ${args.label} passed.`,
       `- ${routeNote}`,
       `- Log: \`${logRelativePath}\``,
+      `- Network trace: \`${networkTraceRelativePath}\``,
     ]);
     appendSection(stepsPath, "Trusted CI Replay", [
       "1. Initialized a `validate-issue --verify-fix` run scaffold.",
       `2. Ran \`${commandText}\`.`,
-      "3. Stored the command transcript in the run logs and finalized the verification run as fixed.",
+      "3. Stored the command transcript and structured network trace in the run logs, then finalized the verification run as fixed.",
     ]);
     writeEvidence(runDir, {
       label: args.label,
       route: args.route,
       commandText,
       logRelativePath,
+      networkTraceRelativePath,
       success: true,
       scenarioSeed: args.checkScenarioSeed,
       progressionPersistence: args.checkProgressionPersistence,
@@ -263,24 +280,27 @@ function main() {
       `- ${args.label} failed in trusted CI.`,
       `- ${routeNote}`,
       `- Log: \`${logRelativePath}\``,
+      `- Network trace: \`${networkTraceRelativePath}\``,
       `- Failure summary: ${errorText}`,
     ]);
     appendSection(summaryPath, "CI Verification", [
       `- ${args.label} failed.`,
       `- ${routeNote}`,
       `- Log: \`${logRelativePath}\``,
+      `- Network trace: \`${networkTraceRelativePath}\``,
       `- Failure summary: ${errorText}`,
     ]);
     appendSection(stepsPath, "Trusted CI Replay", [
       "1. Initialized a `validate-issue --verify-fix` run scaffold.",
       `2. Ran \`${commandText}\`.`,
-      "3. Stored the failing transcript in the run logs and finalized the verification run as still reproducing.",
+      "3. Stored the failing transcript and network trace in the run logs, then finalized the verification run as still reproducing.",
     ]);
     writeEvidence(runDir, {
       label: args.label,
       route: args.route,
       commandText,
       logRelativePath,
+      networkTraceRelativePath,
       success: false,
       errorText,
       scenarioSeed: args.checkScenarioSeed,

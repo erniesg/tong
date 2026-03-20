@@ -118,6 +118,13 @@ Template:
 - Branch/worktree: `codex/remove-judge-hackathon-branding` (shared root workspace crossing into qa-platform-owned paths and `.github/workflows/**`)
 - What changed:
   - Added a trusted GitHub Actions workflow that can be triggered by PR comment (`/qa-publish`) or manual dispatch, resolves machine-readable publish metadata from the PR body, installs reviewer-proof dependencies, runs publish-shell preflight, and uses trusted GitHub/Cloudflare auth for comment posting and evidence upload.
+
+## 2026-03-20 (Issue 56 server-api shared-contract intent)
+- Date: 2026-03-20
+- Branch/worktree: `work` (shared root workspace crossing into `packages/contracts/**` from `server-api`)
+- Intent:
+  - Add the minimal additive fixture/contract updates needed for issue `#56` so connect/sync/bootstrap payloads can expose KG-backed lesson and hangout personalization without client special-casing.
+  - Keep the implementation scoped to `server-api` lane behavior plus contract-aligned fixtures and verification.
   - Added a helper script to resolve publish requests from workflow inputs, PR body metadata, and maintainer comment overrides.
   - Updated the Codex PR notes template and cloud runbook to include the `QA Publish Request` block and the current limitation that gitignored Codex-local run bundles are not automatically present in GitHub Actions checkouts.
 - Contract changes: none

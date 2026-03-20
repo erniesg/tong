@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 
+import fs from 'node:fs';
+
 const args = process.argv.slice(2);
 const baseArg = args.find((arg) => !arg.startsWith('-'));
 const strictState = args.includes('--strict-state');
 const checkScenarioSeed = args.includes('--check-scenario-seed');
 const checkProgressionPersistence = args.includes('--check-progression-persistence');
 const sourcesArg = args.find((arg) => arg.startsWith('--sources='));
+const traceFileArg = args.find((arg) => arg.startsWith('--trace-file='));
 const apiBase = (baseArg || process.env.TONG_API_BASE_URL || 'http://localhost:8787').replace(/\/$/, '');
 const demoPassword = process.env.TONG_DEMO_PASSWORD || process.env.TONG_DEMO_CODE || '';
+const traceFile = traceFileArg ? traceFileArg.slice('--trace-file='.length) : '';
 const includeSources = sourcesArg
   ? [...new Set(
     sourcesArg
@@ -19,6 +23,7 @@ const includeSources = sourcesArg
   : [];
 
 const userId = `mock_user_${Date.now().toString(36)}`;
+const networkTrace = [];
 const profile = {
   nativeLanguage: 'en',
   targetLanguages: ['ko', 'zh'],
@@ -43,6 +48,11 @@ function assert(condition, message) {
   }
 }
 
+function writeNetworkTrace() {
+  if (!traceFile) return;
+  fs.writeFileSync(traceFile, `${JSON.stringify(networkTrace, null, 2)}\n`, 'utf8');
+}
+
 function assertJsonEqual(actual, expected, label) {
   const actualJson = JSON.stringify(actual);
   const expectedJson = JSON.stringify(expected);
@@ -51,11 +61,13 @@ function assertJsonEqual(actual, expected, label) {
 
 async function requestJson(pathname, init = {}) {
   const url = `${apiBase}${pathname}`;
+  const method = init.method || 'GET';
   const headers = {
     'Content-Type': 'application/json',
     ...(demoPassword ? { 'x-demo-password': demoPassword } : {}),
     ...(init.headers || {}),
   };
+  const startedAt = Date.now();
 
   const response = await fetch(url, {
     ...init,
@@ -69,6 +81,29 @@ async function requestJson(pathname, init = {}) {
   } catch {
     data = text;
   }
+
+  networkTrace.push({
+    recordedAtIso: new Date().toISOString(),
+    durationMs: Date.now() - startedAt,
+    request: {
+      method,
+      url,
+      pathname,
+      headers: Object.fromEntries(
+        Object.entries(headers).filter(([key]) => key.toLowerCase() !== 'x-demo-password'),
+      ),
+      body: typeof init.body === 'string' && init.body.length > 0 ? init.body : null,
+    },
+    response: {
+      ok: response.ok,
+      status: response.status,
+      headers: {
+        contentType: response.headers.get('content-type') || '',
+      },
+      body: data,
+    },
+  });
+  writeNetworkTrace();
 
   return {
     ok: response.ok,
@@ -155,6 +190,62 @@ async function run() {
   assertArray(mediaProfile.data?.learningSignals?.topTerms[0]?.provenance?.samples, 'learningSignals.topTerms[0].provenance.samples');
   logPass('/api/v1/player/media-profile');
 
+  const spotifyStatusBeforeSync = await requestJson(`/api/v1/integrations/spotify/status?userId=${encodeURIComponent(userId)}`);
+  assert(spotifyStatusBeforeSync.ok, `/integrations/spotify/status pre-sync failed (${spotifyStatusBeforeSync.status})`);
+  assert(spotifyStatusBeforeSync.data?.connected === false, 'spotify status should start disconnected');
+  assert((spotifyStatusBeforeSync.data?.lastSyncItemCount || 0) === 0, 'spotify status should not report sync items before sync');
+  assert(spotifyStatusBeforeSync.data?.lastSyncAtIso == null, 'spotify status should not report lastSyncAtIso before sync');
+  logPass('/api/v1/integrations/spotify/status pre-sync');
+
+  const spotifyConnect = await requestJson(`/api/v1/integrations/spotify/connect?userId=${encodeURIComponent(userId)}`);
+  assert(spotifyConnect.ok, `/integrations/spotify/connect failed (${spotifyConnect.status})`);
+  assert(spotifyConnect.data?.connected === false, 'spotify connect should start disconnected');
+  assert(typeof spotifyConnect.data?.authUrl === 'string', 'spotify connect authUrl missing');
+  logPass('/api/v1/integrations/spotify/connect');
+
+  const spotifySync = await requestJson('/api/v1/integrations/spotify/sync', {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+  assert(spotifySync.ok, `/integrations/spotify/sync failed (${spotifySync.status})`);
+  assert(spotifySync.data?.ok === true, 'spotify sync missing ok=true');
+  assert(Number.isFinite(spotifySync.data?.spotifyItemCount), 'spotify sync item count missing');
+  assertArray(spotifySync.data?.recentMediaRationale?.rankedTerms, 'spotify sync recentMediaRationale.rankedTerms');
+  logPass('/api/v1/integrations/spotify/sync');
+
+  const spotifyStatus = await requestJson(`/api/v1/integrations/spotify/status?userId=${encodeURIComponent(userId)}`);
+  assert(spotifyStatus.ok, `/integrations/spotify/status failed (${spotifyStatus.status})`);
+  assert(spotifyStatus.data?.connected === true, 'spotify status should report connected after sync');
+  logPass('/api/v1/integrations/spotify/status');
+
+  const youtubeStatusBeforeSync = await requestJson(`/api/v1/integrations/youtube/status?userId=${encodeURIComponent(userId)}`);
+  assert(youtubeStatusBeforeSync.ok, `/integrations/youtube/status pre-sync failed (${youtubeStatusBeforeSync.status})`);
+  assert(youtubeStatusBeforeSync.data?.connected === false, 'youtube status should start disconnected');
+  assert((youtubeStatusBeforeSync.data?.lastSyncItemCount || 0) === 0, 'youtube status should not report sync items before sync');
+  assert(youtubeStatusBeforeSync.data?.lastSyncAtIso == null, 'youtube status should not report lastSyncAtIso before sync');
+  logPass('/api/v1/integrations/youtube/status pre-sync');
+
+  const youtubeConnect = await requestJson(`/api/v1/integrations/youtube/connect?userId=${encodeURIComponent(userId)}`);
+  assert(youtubeConnect.ok, `/integrations/youtube/connect failed (${youtubeConnect.status})`);
+  assert(youtubeConnect.data?.connected === false, 'youtube connect should start disconnected');
+  assert(typeof youtubeConnect.data?.authUrl === 'string', 'youtube connect authUrl missing');
+  logPass('/api/v1/integrations/youtube/connect');
+
+  const youtubeSync = await requestJson('/api/v1/integrations/youtube/sync', {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+  assert(youtubeSync.ok, `/integrations/youtube/sync failed (${youtubeSync.status})`);
+  assert(youtubeSync.data?.ok === true, 'youtube sync missing ok=true');
+  assert(Number.isFinite(youtubeSync.data?.youtubeItemCount), 'youtube sync item count missing');
+  assertArray(youtubeSync.data?.recentMediaRationale?.rankedTerms, 'youtube sync recentMediaRationale.rankedTerms');
+  logPass('/api/v1/integrations/youtube/sync');
+
+  const youtubeStatus = await requestJson(`/api/v1/integrations/youtube/status?userId=${encodeURIComponent(userId)}`);
+  assert(youtubeStatus.ok, `/integrations/youtube/status failed (${youtubeStatus.status})`);
+  assert(youtubeStatus.data?.connected === true, 'youtube status should report connected after sync');
+  logPass('/api/v1/integrations/youtube/status');
+
   const frequency = await requestJson(`/api/v1/vocab/frequency?windowDays=3&userId=${encodeURIComponent(userId)}`);
   assert(frequency.ok, `/vocab/frequency failed (${frequency.status})`);
   assertArray(frequency.data?.items, 'frequency.items');
@@ -182,6 +273,8 @@ async function run() {
   assertArray(objectiveKo.data?.coreTargets?.grammar, 'objectiveKo.coreTargets.grammar');
   assertArray(objectiveKo.data?.coreTargets?.sentenceStructures, 'objectiveKo.coreTargets.sentenceStructures');
   assertArray(objectiveKo.data?.personalizedTargets, 'objectiveKo.personalizedTargets');
+  assertArray(objectiveKo.data?.recentMediaRationale?.rankedTerms, 'objectiveKo.recentMediaRationale.rankedTerms');
+  assertArray(objectiveKo.data?.placementHints, 'objectiveKo.placementHints');
   assert(
     objectiveKo.data.personalizedTargets.every((item) => Array.isArray(item.linkedNodeIds) && item.linkedNodeIds.length > 0),
     'objectiveKo.personalizedTargets[].linkedNodeIds missing',
@@ -247,6 +340,13 @@ async function run() {
   assert(['hangout', 'learn'].includes(gameStart.data?.mode), 'gameStart.mode missing/invalid');
   assert(typeof gameStart.data?.progression?.xp === 'number', 'gameStart progression missing xp');
   assertArray(gameStart.data?.actions, 'gameStart.actions');
+  assertArray(gameStart.data?.recentMediaRationale?.rankedTerms, 'gameStart.recentMediaRationale.rankedTerms');
+  assertArray(gameStart.data?.gameSession?.personalization?.rankedTerms, 'gameStart.gameSession.personalization.rankedTerms');
+  const recentMediaSources = Object.fromEntries(
+    (gameStart.data?.recentMediaRationale?.sourceSummary || []).map((entry) => [entry.source, entry.itemsConsumed || 0]),
+  );
+  assert((recentMediaSources.spotify || 0) > 0, 'gameStart recentMediaRationale should preserve spotify counts after youtube sync');
+  assert((recentMediaSources.youtube || 0) > 0, 'gameStart recentMediaRationale should include youtube counts after youtube sync');
   assert(gameStart.data?.gameSession?.sessionId === gameStart.data.sessionId, 'gameStart.gameSession.sessionId mismatch');
   assert(gameStart.data?.sceneSession?.gameSessionId === gameStart.data.sessionId, 'gameStart.sceneSession.gameSessionId mismatch');
   assert(gameStart.data?.activeCheckpoint?.gameSessionId === gameStart.data.sessionId, 'gameStart.activeCheckpoint.gameSessionId mismatch');
