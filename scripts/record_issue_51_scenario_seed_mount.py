@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -13,6 +14,7 @@ from playwright.async_api import async_playwright
 
 
 ROOT = Path(__file__).resolve().parents[1]
+DEMO_PASSWORD = os.environ.get("TONG_DEMO_PASSWORD") or os.environ.get("TONG_DEMO_CODE") or "TONG-DEMO-ACCESS"
 
 
 def run(command: list[str]) -> str:
@@ -161,7 +163,7 @@ async def main() -> None:
     steps_path = run_dir / "steps.md"
     api_log_path = run_dir / "logs" / "api-flow-check.log"
 
-    route = f"http://127.0.0.1:3000/game?scenarioSeed=review_ready&demo=TONG-DEMO-ACCESS&qa_run_id={quote(run_dir.name)}&qa_trace=1"
+    route = f"http://127.0.0.1:3000/game?scenarioSeed=review_ready&demo={quote(DEMO_PASSWORD)}&qa_run_id={quote(run_dir.name)}&qa_trace=1"
     state, logs = await capture_browser(run_dir, route)
 
     assert state["hangoutResumeSource"] == "scenario_seed"
@@ -177,7 +179,9 @@ async def main() -> None:
         "--strict-state",
         "--check-scenario-seed",
     ]
-    api_result = subprocess.run(api_command, cwd=ROOT, capture_output=True, text=True)
+    api_env = os.environ.copy()
+    api_env.setdefault("TONG_DEMO_PASSWORD", DEMO_PASSWORD)
+    api_result = subprocess.run(api_command, cwd=ROOT, capture_output=True, text=True, env=api_env)
     transcript = "\n".join(
         part for part in [f"$ {' '.join(api_command)}", api_result.stdout.strip(), api_result.stderr.strip()] if part
     )

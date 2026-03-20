@@ -122,13 +122,10 @@ export function buildResumeExercise(
   if (!targetChar) return null;
 
   const target = getTargetByChar(targetChar);
+  const language = getLanguageForCity(cityId);
   const components = target?.components?.length
     ? target.components
-    : (activeExercise.state?.boardPieces || []).map((piece, index) => ({
-        piece,
-        slot: `seed_${index + 1}`,
-        colorHint: index % 2 === 0 ? '#7dd3fc' : '#c4b5fd',
-      }));
+    : buildFallbackComponents(language, activeExercise.state?.boardPieces || []);
   if (components.length < 2) return null;
 
   const exercise: BlockCrushExercise = {
@@ -137,7 +134,7 @@ export function buildResumeExercise(
     objectiveId,
     difficulty: 2,
     prompt: activeExercise.prompt || `Resume building ${targetChar}.`,
-    language: getLanguageForCity(cityId),
+    language,
     targetChar: target?.char || targetChar,
     components,
     romanization: target?.romanization || '',
@@ -146,6 +143,31 @@ export function buildResumeExercise(
   };
 
   return exercise;
+}
+
+function buildFallbackComponents(
+  language: BlockCrushExercise['language'],
+  boardPieces: string[],
+): BlockCrushExercise['components'] {
+  const slotTemplates =
+    language === 'ko'
+      ? ['C', 'V', 'F']
+      : language === 'ja' && boardPieces[1] === '゛'
+        ? ['base', 'dakuten']
+        : language === 'ja' && boardPieces[1] === '゜'
+          ? ['base', 'handakuten']
+          : language === 'ja' && boardPieces[1]?.includes('→')
+            ? ['hiragana', 'convert']
+            : ['left', 'right', 'bottom'];
+  const colorHints = ['#f0c040', '#4ecdc4', '#7eb8da'];
+
+  return boardPieces
+    .slice(0, slotTemplates.length)
+    .map((piece, index) => ({
+      piece,
+      slot: slotTemplates[index] || `slot_${index + 1}`,
+      colorHint: colorHints[index] || colorHints[colorHints.length - 1],
+    }));
 }
 
 export function buildResumePrompt(context: {

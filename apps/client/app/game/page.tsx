@@ -143,6 +143,7 @@ type NpcSpeakToolArgs = {
 type BootstrapQueryIntent = {
   scenarioSeedId: string | null;
   resumeCheckpointId: string | null;
+  resumeRequested: boolean;
 };
 
 
@@ -178,14 +179,18 @@ function getLatestNpcSpeakInvocation(messages: UIMessage[]): ToolInvocation | nu
 
 function readBootstrapQueryIntent(searchParams: ReturnType<typeof useSearchParams>): BootstrapQueryIntent {
   const scenarioSeedId = searchParams.get('scenarioSeed') || searchParams.get('scenario_seed');
+  const resumeRequested = searchParams.get('resume') === '1';
   const resumeCheckpointId =
     searchParams.get('resumeCheckpointId')
     || searchParams.get('checkpoint_id')
-    || (searchParams.get('resume') === '1' ? searchParams.get('checkpointId') : null);
+    || (resumeRequested
+      ? searchParams.get('checkpointId') || searchParams.get('checkpoint')
+      : null);
 
   return {
     scenarioSeedId: scenarioSeedId?.trim() || null,
     resumeCheckpointId: resumeCheckpointId?.trim() || null,
+    resumeRequested,
   };
 }
 
@@ -281,7 +286,9 @@ export default function GamePage() {
   const qaRunId = searchParams.get('qa_run_id') ?? undefined;
   const qaTrace = searchParams.get('qa_trace') === '1';
   const bootstrapIntent = readBootstrapQueryIntent(searchParams);
-  const seededBootstrapRequested = Boolean(bootstrapIntent.scenarioSeedId || bootstrapIntent.resumeCheckpointId);
+  const seededBootstrapRequested = Boolean(
+    bootstrapIntent.scenarioSeedId || bootstrapIntent.resumeRequested,
+  );
   const skipToHangout = phaseParam === 'hangout';
   const skipToCityMap = phaseParam === 'city_map';
   const skipToLearn = phaseParam === 'learn';
@@ -945,7 +952,7 @@ export default function GamePage() {
         setLoading(false);
       }
     })();
-  }, [bootstrapIntent.resumeCheckpointId, bootstrapIntent.scenarioSeedId, devIntro, freshStart, qaRunId, seededBootstrapRequested, sliders, traceQA]);
+  }, [bootstrapIntent.resumeCheckpointId, bootstrapIntent.resumeRequested, bootstrapIntent.scenarioSeedId, devIntro, freshStart, qaRunId, seededBootstrapRequested, sliders, traceQA]);
 
   /* Dev intro bypass: ?dev_intro=1 — fresh introduction hangout, clears stale state
      Optional: ?dev_act=2 — skip Act 1, start at Act 2 (NPC entrance) with exercises pre-done */
