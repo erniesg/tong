@@ -140,11 +140,57 @@ type NpcSpeakToolArgs = {
   translation?: string | null;
 };
 
+const ACTIVE_HANGOUT_RESUME_STORAGE_KEY = 'tong_active_hangout_resume';
+
+interface ActiveHangoutResumeSnapshot {
+  sessionId: string | null;
+  checkpointId: string | null;
+  resumeSource: string | null;
+  cityId: CityId;
+  locationId: LocationId;
+  npcId: string;
+  playerLevel: number;
+  phase: string;
+  turn: number;
+  objectiveSummary: string | null;
+  currentMessage: SessionMessage | null;
+  currentExercise: ExerciseData | null;
+  choices: DialogueChoice[] | null;
+  choicePrompt: string | null;
+  tongTip: { message: string; translation?: string } | null;
+  score: ScoreState;
+  savedAtIso: string;
+}
+
 
 /* ── helpers ────────────────────────────────────────────── */
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function readStoredHangoutResume(): ActiveHangoutResumeSnapshot | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.localStorage.getItem(ACTIVE_HANGOUT_RESUME_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as ActiveHangoutResumeSnapshot;
+  } catch (error) {
+    console.warn('[RESUME] Failed to read stored active hangout snapshot.', error);
+    return null;
+  }
+}
+
+function writeStoredHangoutResume(snapshot: ActiveHangoutResumeSnapshot | null) {
+  if (typeof window === 'undefined') return;
+
+  if (!snapshot) {
+    window.localStorage.removeItem(ACTIVE_HANGOUT_RESUME_STORAGE_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(ACTIVE_HANGOUT_RESUME_STORAGE_KEY, JSON.stringify(snapshot));
 }
 
 function getNpcSpeakArgs(invocation: ToolInvocation): NpcSpeakToolArgs | null {
@@ -278,6 +324,7 @@ export default function GamePage() {
     freshResetDone.current = true;
     console.log('[FRESH] Resetting game state, forcing phase=opening');
     dispatch({ type: 'RESET' });
+    writeStoredHangoutResume(null);
     // Pre-set explainIn language from ?lang= param for all cities
     if (freshLang && ['en', 'ko', 'ja', 'zh'].includes(freshLang)) {
       dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: 'seoul', lang: freshLang });
@@ -395,6 +442,7 @@ export default function GamePage() {
   const [continuePending, setContinuePending] = useState(false);
   const [sceneTurn, setSceneTurn] = useState<number>(1);
   const [hangoutCheckpointPhase, setHangoutCheckpointPhase] = useState<string | null>(null);
+  const [activeHangoutResume, setActiveHangoutResume] = useState<ActiveHangoutResumeSnapshot | null>(null);
   const [dynamicBackdrop, setDynamicBackdrop] = useState<{ url: string; transition: 'fade' | 'cut'; ambientDescription?: string } | null>(null);
   const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null>(null);
 
@@ -426,6 +474,16 @@ export default function GamePage() {
   const [chargePercent, setChargePercent] = useState(0);
   const [chargeNotifShown, setChargeNotifShown] = useState(false);
   const chargeNotifFiredRef = useRef(false);
+  const activeHangoutSessionIdRef = useRef<string | null>(null);
+  const activeHangoutCheckpointIdRef = useRef<string | null>(null);
+  const activeHangoutResumeSourceRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const stored = readStoredHangoutResume();
+    if (stored) {
+      setActiveHangoutResume(stored);
+    }
+  }, []);
 
   // Time-based charge bar: 0→100% over random duration
   useEffect(() => {
@@ -630,20 +688,14 @@ export default function GamePage() {
       const bootstrap = (await startOrResumeGame({
         userId: 'local',
         city: primaryCity,
-        profile: {
-          nativeLanguage: 'en',
-          targetLanguages: ['ko', 'ja', 'zh'],
-          proficiency: {
-            ko: SLIDER_TO_LEVEL[sliders[2]] ?? 'none',
-            ja: SLIDER_TO_LEVEL[sliders[1]] ?? 'none',
-            zh: SLIDER_TO_LEVEL[sliders[0]] ?? 'none',
-          },
-        },
+        profile: buildBootstrapProfile(),
         preferRomance: true,
       })) as ResumeBootstrapPayload;
+      syncActiveResumeMeta(bootstrap);
 
       const resumed = hydrateResumeState(bootstrap);
       if (resumed) {
+        clearActiveHangoutResume();
         setCity(resumed.cityId);
         setLocation(resumed.locationId);
         setScore({
@@ -688,6 +740,7 @@ export default function GamePage() {
       console.warn('[RESUME] Failed to hydrate checkpoint resume, falling back to new hangout bootstrap.', resumeError);
     }
 
+    clearActiveHangoutResume();
     setHangoutCheckpointPhase(null);
     setSceneTurn(1);
     setPhase('hangout');
@@ -796,6 +849,16 @@ export default function GamePage() {
     && chatLoading
     && (latestNpcSpeakInvocation.state === 'partial-call' || latestNpcSpeakInvocation.state === 'call')
   );
+  const canReturnToMap =
+    !loading &&
+    !chatLoading &&
+    !continuePending &&
+    !dialogueIsStreaming &&
+    !choices &&
+    !tongTip &&
+    !currentExercise &&
+    !sceneSummary &&
+    sceneReady;
 
   /* Auto-start scene when skipping to hangout */
   useEffect(() => {
@@ -1344,6 +1407,82 @@ export default function GamePage() {
     }
   }, [toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct, traceQA]);
 
+  function clearActiveHangoutResume() {
+    activeHangoutSessionIdRef.current = null;
+    activeHangoutCheckpointIdRef.current = null;
+    activeHangoutResumeSourceRef.current = null;
+    setActiveHangoutResume(null);
+    writeStoredHangoutResume(null);
+  }
+
+  function buildBootstrapProfile() {
+    return {
+      nativeLanguage: 'en',
+      targetLanguages: ['ko', 'ja', 'zh'],
+      proficiency: {
+        ko: SLIDER_TO_LEVEL[sliders[2]] ?? 'none',
+        ja: SLIDER_TO_LEVEL[sliders[1]] ?? 'none',
+        zh: SLIDER_TO_LEVEL[sliders[0]] ?? 'none',
+      },
+    };
+  }
+
+  function syncActiveResumeMeta(bootstrap?: ResumeBootstrapPayload | null) {
+    activeHangoutSessionIdRef.current = bootstrap?.sessionId ?? null;
+    activeHangoutCheckpointIdRef.current = bootstrap?.activeCheckpoint?.checkpointId ?? null;
+    activeHangoutResumeSourceRef.current = bootstrap?.resumeSource ?? null;
+  }
+
+  function saveActiveHangoutResumeSnapshot() {
+    const snapshot: ActiveHangoutResumeSnapshot = {
+      sessionId: activeHangoutSessionIdRef.current,
+      checkpointId: activeHangoutCheckpointIdRef.current,
+      resumeSource: activeHangoutResumeSourceRef.current,
+      cityId: city,
+      locationId: location,
+      npcId: activeNpc,
+      playerLevel,
+      phase: hangoutCheckpointPhase ?? 'hangout',
+      turn: sceneTurn,
+      objectiveSummary: displayMessage?.content ?? currentMessage?.content ?? null,
+      currentMessage: displayMessage ? { ...displayMessage } : null,
+      currentExercise: currentExercise ? JSON.parse(JSON.stringify(currentExercise)) : null,
+      choices: choices ? JSON.parse(JSON.stringify(choices)) : null,
+      choicePrompt,
+      tongTip: tongTip ? { ...tongTip } : null,
+      score,
+      savedAtIso: new Date().toISOString(),
+    };
+
+    setActiveHangoutResume(snapshot);
+    writeStoredHangoutResume(snapshot);
+  }
+
+  function restoreHangoutFromSnapshot(snapshot: ActiveHangoutResumeSnapshot, nextScore?: ScoreState) {
+    setCity(snapshot.cityId);
+    setLocation(snapshot.locationId);
+    setActiveNpc(snapshot.npcId);
+    setPlayerLevel(snapshot.playerLevel);
+    setScore(nextScore ?? snapshot.score);
+    setPhase('hangout');
+    setSceneReady(true);
+    setSceneTurn(snapshot.turn);
+    setHangoutCheckpointPhase(snapshot.phase);
+    setCurrentMessage(snapshot.currentMessage ? { ...snapshot.currentMessage } : null);
+    setCurrentExercise(snapshot.currentExercise ? JSON.parse(JSON.stringify(snapshot.currentExercise)) : null);
+    setToolQueue([]);
+    setChoices(snapshot.choices ? JSON.parse(JSON.stringify(snapshot.choices)) : null);
+    setChoicePrompt(snapshot.choicePrompt);
+    setTongTip(snapshot.tongTip ? { ...snapshot.tongTip } : null);
+    setSceneSummary(null);
+    pendingResumePromptRef.current = buildResumePrompt({
+      phase: snapshot.phase,
+      turn: snapshot.turn,
+      objectiveSummary: snapshot.objectiveSummary,
+      exercise: snapshot.currentExercise,
+    });
+  }
+
   const getQaState = useCallback(() => ({
     qaRunId,
     qaTrace,
@@ -1359,6 +1498,17 @@ export default function GamePage() {
     displayMessage: displayMessage ? { id: displayMessage.id, role: displayMessage.role, characterId: displayMessage.characterId, contentPreview: displayMessage.content.slice(0, 120) } : null,
     tongTip: tongTip ? { messagePreview: tongTip.message.slice(0, 120), hasTranslation: !!tongTip.translation } : null,
     currentExercise: currentExercise ? { id: currentExercise.id, type: currentExercise.type } : null,
+    activeHangoutResume: activeHangoutResume
+      ? {
+          cityId: activeHangoutResume.cityId,
+          locationId: activeHangoutResume.locationId,
+          checkpointId: activeHangoutResume.checkpointId,
+          phase: activeHangoutResume.phase,
+          turn: activeHangoutResume.turn,
+          hasExercise: !!activeHangoutResume.currentExercise,
+        }
+      : null,
+    canReturnToMap,
     choices: choices ? choices.map((choice) => ({ id: choice.id, text: choice.text })) : null,
     choicePrompt,
     sceneSummary: sceneSummary ? { xpEarned: sceneSummary.xpEarned, calibratedLevel: sceneSummary.calibratedLevel ?? null } : null,
@@ -1366,7 +1516,7 @@ export default function GamePage() {
     introExerciseCount,
     introAct,
     npcRevealed,
-  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, continuePending, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
+  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, continuePending, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, activeHangoutResume, canReturnToMap, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
 
   useEffect(() => {
     if (!qaTrace) return;
@@ -1724,7 +1874,7 @@ export default function GamePage() {
 
   /* ── City map handlers ────────────────────────────────────── */
 
-  function handleMapHangout(cityId: CityId, locationId: LocationId) {
+  async function handleMapHangout(cityId: CityId, locationId: LocationId) {
     const npcId = pickNpcForCity(cityId);
     const npcChar = CHARACTER_MAP[npcId] ?? HAEUN;
     npcRef.current = npcChar;
@@ -1766,12 +1916,71 @@ export default function GamePage() {
     pausedRef.current = false;
     processedToolCallsRef.current.clear();
 
+    clearActiveHangoutResume();
+    setLoading(true);
     setPhase('hangout');
+
+    try {
+      const bootstrap = (await startOrResumeGame({
+        userId: 'local',
+        city: cityId,
+        profile: buildBootstrapProfile(),
+        preferRomance: true,
+      })) as ResumeBootstrapPayload;
+      syncActiveResumeMeta(bootstrap);
+      setScore({
+        xp: bootstrap.progression?.xp ?? 0,
+        sp: bootstrap.progression?.sp ?? 0,
+        rp: bootstrap.progression?.rp ?? 0,
+      });
+      setHangoutCheckpointPhase(bootstrap.activeCheckpoint?.phase ?? 'intro');
+      setSceneTurn(bootstrap.activeCheckpoint?.turn ?? 1);
+    } catch (bootstrapError) {
+      console.warn('[RESUME] Failed to bootstrap map hangout session.', bootstrapError);
+      syncActiveResumeMeta(null);
+      setHangoutCheckpointPhase('hangout');
+      setSceneTurn(1);
+    } finally {
+      setLoading(false);
+    }
 
     const startMsg = `${buildContextBlock(level, npcId, cityId, locationId, npcChar, gameState.explainIn[cityId] ?? 'en')}Start the scene.`;
     sessionLogger.start({ mode: 'hangout', cityId, locationId, surface: 'game', qaRunId, npcId, playerLevel: level });
     sessionLogger.logAIRequest(startMsg);
     void append({ role: 'user', content: startMsg });
+  }
+
+  async function handleResumeActiveHangout() {
+    if (!activeHangoutResume) return;
+
+    setLoading(true);
+    setSelectedLocation(null);
+    setReviewSession(null);
+
+    try {
+      const bootstrap = (await startOrResumeGame({
+        userId: 'local',
+        city: activeHangoutResume.cityId,
+        profile: buildBootstrapProfile(),
+        preferRomance: true,
+      })) as ResumeBootstrapPayload;
+      syncActiveResumeMeta(bootstrap);
+      restoreHangoutFromSnapshot(activeHangoutResume, {
+        xp: bootstrap.progression?.xp ?? activeHangoutResume.score.xp,
+        sp: bootstrap.progression?.sp ?? activeHangoutResume.score.sp,
+        rp: bootstrap.progression?.rp ?? activeHangoutResume.score.rp,
+      });
+      traceQA('hangout_resumed_from_map', {
+        checkpointId: activeHangoutResume.checkpointId,
+        turn: activeHangoutResume.turn,
+        phase: activeHangoutResume.phase,
+      });
+    } catch (resumeError) {
+      console.warn('[RESUME] Failed to resume active hangout from world map.', resumeError);
+      restoreHangoutFromSnapshot(activeHangoutResume);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleMapLearn(cityId: CityId, locationId: LocationId) {
@@ -1811,6 +2020,56 @@ export default function GamePage() {
             onReviewSession={handleMapReviewSession}
             gameState={gameState}
           />
+          {activeHangoutResume && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 12,
+                right: 12,
+                top: 64,
+                zIndex: 30,
+                padding: '14px 16px',
+                borderRadius: 18,
+                background: 'rgba(6, 10, 20, 0.82)',
+                border: '1px solid rgba(255,255,255,0.14)',
+                boxShadow: '0 18px 40px rgba(0,0,0,0.26)',
+                color: '#f4f7ff',
+              }}
+            >
+              <div style={{ fontSize: 'var(--game-text-xs)', letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.72 }}>
+                Active hangout
+              </div>
+              <div style={{ marginTop: 4, fontSize: 'var(--game-text-lg)', fontWeight: 700 }}>
+                {CITY_NAMES[activeHangoutResume.cityId]?.en ?? activeHangoutResume.cityId} · {t(`loc_${activeHangoutResume.locationId}`, mapUiLang)}
+              </div>
+              <div style={{ marginTop: 6, fontSize: 'var(--game-text-sm)', lineHeight: 1.5, opacity: 0.88 }}>
+                Resume turn {activeHangoutResume.turn} at {activeHangoutResume.phase}
+              </div>
+              {activeHangoutResume.objectiveSummary && (
+                <div style={{ marginTop: 8, fontSize: 'var(--game-text-sm)', lineHeight: 1.5, opacity: 0.88 }}>
+                  {activeHangoutResume.objectiveSummary}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => void handleResumeActiveHangout()}
+                style={{
+                  marginTop: 12,
+                  width: '100%',
+                  border: 'none',
+                  borderRadius: 14,
+                  background: 'linear-gradient(135deg, #ff7e6b, #ff4d8d)',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: 'var(--game-text-sm)',
+                  padding: '13px 16px',
+                  cursor: 'pointer',
+                }}
+              >
+                Resume active hangout
+              </button>
+            </div>
+          )}
           <GameHUD
             xp={gameState.xp}
             sp={gameState.sp}
@@ -2012,6 +2271,7 @@ export default function GamePage() {
                   // Jump map to the city where the hangout was
                   const cityIdx = CITY_ORDER.indexOf(city as CityId);
                   if (cityIdx >= 0) setMapCityIndex(cityIdx);
+                  clearActiveHangoutResume();
                   setPhase('city_map');
                 }}
               >
@@ -2078,6 +2338,41 @@ export default function GamePage() {
           <ChargeNotif
             text={explainLang === 'zh' ? '⚡ 能量已满' : explainLang === 'ko' ? '⚡ 에너지 충전 완료' : explainLang === 'ja' ? '⚡ エネルギー満タン' : '⚡ Fully Charged'}
           />
+        )}
+        {canReturnToMap && (
+          <button
+            type="button"
+            onClick={() => {
+              saveActiveHangoutResumeSnapshot();
+              const cityIdx = CITY_ORDER.indexOf(city as CityId);
+              if (cityIdx >= 0) setMapCityIndex(cityIdx);
+              setSelectedLocation(null);
+              setReviewSession(null);
+              traceQA('hangout_return_to_map', {
+                checkpointId: activeHangoutCheckpointIdRef.current,
+                turn: sceneTurn,
+                phase: hangoutCheckpointPhase ?? 'hangout',
+              });
+              setPhase('city_map');
+            }}
+            style={{
+              position: 'absolute',
+              left: 12,
+              top: 56,
+              zIndex: 30,
+              border: '1px solid rgba(255,255,255,0.16)',
+              borderRadius: 999,
+              background: 'rgba(6, 10, 20, 0.78)',
+              color: '#f4f7ff',
+              padding: '10px 14px',
+              fontSize: 'var(--game-text-xs)',
+              fontWeight: 700,
+              letterSpacing: '0.02em',
+              boxShadow: '0 14px 30px rgba(0,0,0,0.2)',
+            }}
+          >
+            ← Return to world map
+          </button>
         )}
         {hangoutCheckpointPhase && (
           <div

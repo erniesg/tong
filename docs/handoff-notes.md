@@ -148,3 +148,10 @@ Template:
   - Requires `OPENAI_API_KEY` in GitHub Actions secrets.
   - The workflow assumes the provided branch name already follows the `codex/*` convention.
 - Next owner: `codex/qa-platform`
+
+## 2026-03-20 (Issue 50 map-return resume intent)
+- Date: 2026-03-20
+- Branch/worktree: `work` (shared root workspace crossing from `client-runtime` into QA publish scripts)
+- Intent:
+  - Add the player-facing `/game` return-to-map and resume-active-hangout UX on top of the existing checkpoint/resume substrate.
+  - Wire a trusted QA publish recipe/defaults path for issue #50 so CI can regenerate reviewer-facing evidence from PR metadata.

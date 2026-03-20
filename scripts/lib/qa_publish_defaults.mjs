@@ -57,6 +57,7 @@ function defaultPublishRequest({ issueRef = "", title = "", headRef = "" }) {
     case "50":
       return {
         route: "/game",
+        qa_recipe: "issue_50_return_map_resume",
       };
     default:
       return {};

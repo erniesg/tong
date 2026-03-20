@@ -150,6 +150,20 @@ function resolveRecipe(args) {
         ],
         description: "Strict API replay for mission gate, unlock, and reward persistence",
       };
+    case "issue_50_return_map_resume":
+      return {
+        command: "python3",
+        args: [
+          "scripts/record_issue_50_return_map_resume.py",
+          "--issue-ref",
+          args.issueRef,
+          "--route",
+          args.route || "/game",
+          "--base-url",
+          args.baseUrl,
+        ],
+        description: "Reviewer-proof capture for return-to-map and resume-active-hangout UX",
+      };
     default:
       fail(
         `Unsupported qa_recipe: ${args.recipe}. Add it to scripts/run_qa_publish_recipe.mjs before using it in PR metadata.`,
