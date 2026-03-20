@@ -94,3 +94,26 @@ Template:
   - Follow-up server/client branches should consume the nested contract objects rather than re-inventing ad hoc resume payloads.
   - This change touches the shared contracts zone; dependent progression branches should rebase before landing resume/checkpoint work.
 - Next owner: `codex/server-api`
+
+## 2026-03-20 (QA platform auth preflight tightening)
+- Date: 2026-03-20
+- Branch/worktree: `codex/remove-judge-hackathon-branding` (shared root workspace crossing into qa-platform-owned paths)
+- What changed:
+  - Tightening reviewer-proof preflight and GitHub publish diagnostics so cloud tasks check real `gh` auth and real Wrangler auth instead of only binary presence/version.
+  - Making cloud-shell failures report missing publish-phase auth more explicitly when setup-phase auth was present but did not persist.
+- Contract changes: none
+- Integration risks:
+  - Cloud tasks that previously assumed setup-time secrets proved publish readiness will now fail earlier and more accurately in `qa:preflight-reviewer-proof`.
+- Next owner: `codex/qa-platform`
+
+## 2026-03-20 (Trusted QA publish workflow)
+- Date: 2026-03-20
+- Branch/worktree: `codex/remove-judge-hackathon-branding` (shared root workspace crossing into qa-platform-owned paths and `.github/workflows/**`)
+- What changed:
+  - Added a trusted GitHub Actions workflow that can be triggered by PR comment (`/qa-publish`) or manual dispatch, resolves machine-readable publish metadata from the PR body, installs reviewer-proof dependencies, runs publish-shell preflight, and uses trusted GitHub/Cloudflare auth for comment posting and evidence upload.
+  - Added a helper script to resolve publish requests from workflow inputs, PR body metadata, and maintainer comment overrides.
+  - Updated the Codex PR notes template and cloud runbook to include the `QA Publish Request` block and the current limitation that gitignored Codex-local run bundles are not automatically present in GitHub Actions checkouts.
+- Contract changes: none
+- Integration risks:
+  - The new workflow intentionally blocks fork PRs and same-repo PRs without a repo-visible run bundle; until a rerun automation exists, maintainers still need either a reproducible CI run or a manual publish fallback.
+- Next owner: `codex/qa-platform`

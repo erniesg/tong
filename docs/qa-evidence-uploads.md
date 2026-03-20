@@ -47,6 +47,16 @@ Boundary reminder:
 
 The uploader uses the Wrangler auth already configured for `apps/client`.
 
+In GitHub Actions, set the publishing job environment with:
+
+```bash
+export GH_TOKEN="$GITHUB_TOKEN"
+export GITHUB_TOKEN="$GITHUB_TOKEN"
+export CLOUDFLARE_API_TOKEN=...
+```
+
+The trusted workflow should run `npm run qa:preflight-reviewer-proof` in the same job before attempting upload or GitHub publication.
+
 ## Preflight the publishing shell
 
 Before asking a local or remote operator to publish reviewer-visible proof, run:
@@ -59,8 +69,12 @@ This checks:
 - `TONG_RUNS_R2_BUCKET`
 - `TONG_RUNS_PUBLIC_BASE_URL`
 - `node`, `npm`, `python3`, `ffmpeg`, and `ffprobe`
+- `gh auth status --hostname github.com`
 - `wrangler` through `apps/client`
+- `wrangler whoami` through `apps/client`
 - the repo entry points used by upload, proof-pack generation, and comment rendering
+
+Run this preflight in the same shell that will publish. In some cloud environments, setup-phase secrets or logins may not persist into the later agent shell.
 
 `magick` is reported as a warning rather than a hard failure because upload still works without auto-generated comparison panels.
 

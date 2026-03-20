@@ -45,6 +45,12 @@ const REQUIRED_COMMANDS = [
     description: "Runs capture_reviewer_proof.py",
   },
   {
+    label: "gh",
+    command: "gh",
+    args: ["--version"],
+    description: "Publishes GitHub issue updates from QA runs",
+  },
+  {
     label: "ffmpeg",
     command: "ffmpeg",
     args: ["-version"],
@@ -157,6 +163,48 @@ function checkWrangler(repoRoot) {
   };
 }
 
+function checkGhAuth(repoRoot) {
+  const result = runCheck("gh", ["auth", "status", "--hostname", "github.com"], repoRoot);
+  if (result.status !== 0) {
+    return {
+      kind: "command",
+      label: "gh auth",
+      ok: false,
+      description: "GitHub auth for publishing QA issue updates",
+      detail: firstLine(result.stderr || result.stdout) || "GitHub auth unavailable in current shell",
+    };
+  }
+
+  return {
+    kind: "command",
+    label: "gh auth",
+    ok: true,
+    description: "GitHub auth for publishing QA issue updates",
+    detail: firstLine(result.stdout || result.stderr),
+  };
+}
+
+function checkWranglerAuth(repoRoot) {
+  const result = runCheck("npm", ["--prefix", "apps/client", "exec", "wrangler", "--", "whoami"], repoRoot);
+  if (result.status !== 0) {
+    return {
+      kind: "command",
+      label: "wrangler auth",
+      ok: false,
+      description: "Cloudflare auth for uploading reviewer-visible QA evidence",
+      detail: firstLine(result.stderr || result.stdout) || "Wrangler auth unavailable in current shell",
+    };
+  }
+
+  return {
+    kind: "command",
+    label: "wrangler auth",
+    ok: true,
+    description: "Cloudflare auth for uploading reviewer-visible QA evidence",
+    detail: firstLine(result.stdout || result.stderr),
+  };
+}
+
 function checkEnv(definition) {
   const value = process.env[definition.name];
   if (!value) {
@@ -204,7 +252,9 @@ function buildResult(repoRoot) {
   const required = [
     ...REQUIRED_ENV_VARS.map((entry) => checkEnv(entry)),
     ...REQUIRED_COMMANDS.map((entry) => checkCommand(entry, repoRoot)),
+    checkGhAuth(repoRoot),
     checkWrangler(repoRoot),
+    checkWranglerAuth(repoRoot),
     ...REQUIRED_FILES.map((entry) => checkFile(entry, repoRoot)),
   ];
 
@@ -223,6 +273,7 @@ function buildResult(repoRoot) {
     notes: [
       "`artifacts/qa-runs/...` is local staging only; reviewer-visible proof must publish to `tong-runs` or another reviewer-openable surface.",
       "Missing `magick` does not block uploads, but the uploader will skip auto-generated comparison panels and focused crops.",
+      "Run this preflight in the same shell that will publish. Setup-phase auth in cloud environments may not persist into the later agent shell.",
     ],
   };
 }
@@ -260,6 +311,8 @@ function renderText(result) {
     lines.push("Missing env example:");
     lines.push("- export TONG_RUNS_R2_BUCKET=tong-runs");
     lines.push("- export TONG_RUNS_PUBLIC_BASE_URL=https://runs.tong.berlayar.ai");
+    lines.push("- export GH_TOKEN=<github-token>  # or authenticate gh another way in this shell");
+    lines.push("- export CLOUDFLARE_API_TOKEN=<cloudflare-token>  # or authenticate wrangler another way in this shell");
   }
 
   return lines.join("\n");

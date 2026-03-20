@@ -21,6 +21,7 @@
     "demo:tools": "node scripts/mock_tool_flow_check.mjs",
     "demo:start": "./scripts/run-demo.sh",
     "qa:preflight-reviewer-proof": "node scripts/qa_evidence_preflight.mjs",
+    "qa:resolve-publish-request": "node scripts/resolve_qa_publish_request.mjs",
     "qa:upload-evidence": "node scripts/upload-qa-evidence.mjs",
     "qa:render-comment": "node scripts/render-qa-comment.mjs",
     "secrets:sync:cf": "./scripts/sync-cf-secrets-from-env.sh",

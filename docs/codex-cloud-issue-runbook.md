@@ -143,6 +143,33 @@ Important delivery rules:
 8. For timing-sensitive fix verification, add `reviewer_proof` metadata to `evidence.json`, run `capture_reviewer_proof.py`, and make sure the rendered comment includes ordered frame links and cue timestamps instead of a generic screenshot list.
 9. Do not treat local-only artifact paths as reviewer-visible proof.
 
+## Trusted publish via GitHub Actions
+
+When a Codex cloud task cannot post GitHub comments or upload reviewer-proof artifacts directly because task-shell secrets are unavailable, use the trusted GitHub Actions workflow instead.
+
+Trigger options:
+
+1. Add a `QA Publish Request` JSON block to the PR body.
+2. Comment `/qa-publish` on the PR as a maintainer.
+3. Or run the `Trusted QA Publish` workflow manually with `pr_number`.
+
+Current behavior:
+
+1. The workflow uses trusted GitHub Actions credentials (`GITHUB_TOKEN`) plus repo Cloudflare secrets for publish/upload.
+2. It installs the reviewer-proof tooling (`ffmpeg`, `ffprobe`, ImageMagick, Wrangler auth checks) and runs `npm run qa:preflight-reviewer-proof` in the publishing shell.
+3. If the requested `run_dir` exists in the checked-out branch, it runs the existing trusted publish path:
+
+   ```bash
+   python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir <RUN_DIR>
+   ```
+
+4. If the `run_dir` is not repo-visible, the workflow comments a precise blocker instead of pretending publication succeeded.
+
+Important limitation:
+
+- `artifacts/qa-runs/...` is gitignored local staging, so Codex cloud task bundles are not automatically present in the GitHub Actions checkout.
+- This workflow is therefore the trusted publish/upload step, not yet a full trusted re-validation runner. A later automation can extend it to regenerate run bundles from PR metadata alone.
+
 ## Acceptance policy
 
 Issue workers are not the final product signoff.

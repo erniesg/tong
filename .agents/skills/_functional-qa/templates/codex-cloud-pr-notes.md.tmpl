@@ -25,6 +25,25 @@
 
 {{reviewer_evidence_expectation}}
 
+## QA Publish Request
+
+Include a machine-readable block in the PR body so the trusted GitHub Actions publish workflow can resolve issue metadata without shell access to Codex-local notes.
+
+```json
+{
+  "issue_ref": "{{issue_ref}}",
+  "run_dir": "artifacts/qa-runs/functional-qa/<target-slug>/<run-id>",
+  "route": "/game",
+  "scenario_seed": "",
+  "checkpoint_id": "",
+  "no_auto_evidence_upload": false
+}
+```
+
+Maintainers can then trigger the trusted publish step with either:
+- a PR comment: `/qa-publish`
+- the `Trusted QA Publish` workflow with `pr_number`
+
 ## Readiness Note
 
 {{readiness_reason}}
