@@ -1,3 +1,11 @@
+## 2026-03-21 (Issue 62 Seoul starter-pack cross-lane intent)
+- Date: 2026-03-21
+- Branch/worktree: `codex/issue-62-seoul-starter-pack` + `.worktrees/creative-assets`
+- Intent:
+  - Land the repo-visible Seoul starter-pack set for all current visible Seoul pins under `assets/content-packs/**`, aligned to the post-`#114` map registry and post-`#69` starter-cast registry.
+  - Cross into `apps/server/src/curriculum-graph.mjs` so dashboard/world-roadmap output reflects authored Seoul starter-pack presence instead of old hardcoded per-location assumptions.
+  - Reconcile shared world-content docs with the canonical registry and remove the non-live Tokyo `practice_studio` reserved roster that is not backed by a current map pin.
+
 ## 2026-03-20 (issue #58 KO bootstrap pilot routing intent)
 - Date: 2026-03-20
 - Branch/worktree: `work` (server-ingestion lane crossing into `apps/server/src/index.mjs` in server-api)

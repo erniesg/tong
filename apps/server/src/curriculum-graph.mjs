@@ -133,6 +133,66 @@ function resolveWorldMapLocation(cityId, locationId = null) {
   };
 }
 
+function loadStarterPacks() {
+  const packDir = path.join(repoRoot, 'assets/content-packs');
+  return fs.readdirSync(packDir)
+    .filter((fileName) => fileName.endsWith('.starter.json'))
+    .sort()
+    .map((fileName) => {
+      const relativePath = path.join('assets/content-packs', fileName);
+      const raw = loadJson(relativePath);
+      if (!VALID_CITIES.has(raw.city)) return null;
+
+      const requestedMapLocationId = raw.mapLocationId || raw.location?.id;
+      if (!requestedMapLocationId) return null;
+
+      const resolvedLocation = resolveWorldMapLocation(raw.city, requestedMapLocationId);
+      return {
+        relativePath,
+        packId: raw.packId,
+        templateVersion: raw.templateVersion || '1.0.0',
+        cityId: raw.city,
+        mapLocationId: resolvedLocation.mapLocationId,
+        dagLocationSlot: raw.location?.id || resolvedLocation.dagLocationSlot,
+        playerFacingLocationLabel: raw.playerFacingLocationLabel || resolvedLocation.label,
+        status: raw.status || 'draft',
+        objectiveSeed: cloneJson(raw.objectiveSeed || {}),
+        manifestKeys: cloneJson(raw.manifestKeys || []),
+      };
+    })
+    .filter(Boolean);
+}
+
+const STARTER_PACKS = loadStarterPacks();
+const STARTER_PACK_BY_DAG_KEY = new Map(
+  STARTER_PACKS.map((pack) => [keyFor(pack.cityId, pack.dagLocationSlot), pack]),
+);
+const STARTER_PACK_BY_MAP_KEY = new Map(
+  STARTER_PACKS.map((pack) => [keyFor(pack.cityId, pack.mapLocationId), pack]),
+);
+
+function getStarterPackMetadata(cityId, locationId) {
+  const resolvedLocation = resolveWorldMapLocation(cityId, locationId);
+  return (
+    STARTER_PACK_BY_MAP_KEY.get(keyFor(cityId, resolvedLocation.mapLocationId)) ||
+    STARTER_PACK_BY_DAG_KEY.get(keyFor(cityId, resolvedLocation.dagLocationSlot)) ||
+    null
+  );
+}
+
+function getCityStarterPackCoverage(cityId) {
+  const cityRegistry = getWorldMapCityRegistry(cityId);
+  const liveMapLocationIds = (cityRegistry?.locations || []).map((entry) => entry.mapLocationId);
+  const authoredMapLocationIds = liveMapLocationIds.filter((mapLocationId) =>
+    Boolean(getStarterPackMetadata(cityId, mapLocationId)),
+  );
+
+  return {
+    authoredCount: authoredMapLocationIds.length,
+    totalCount: liveMapLocationIds.length,
+  };
+}
+
 function keyFor(cityId, locationId) {
   return `${cityId}:${locationId}`;
 }
@@ -165,6 +225,42 @@ export function isGraphRuntimeError(error) {
 const SEOUL_FOOD_STREET_PACK = loadJson(
   'packages/contracts/fixtures/location.curriculum-pack.seoul-food-street.sample.json',
 );
+
+function buildStarterPackStub(starterPack) {
+  return {
+    packId: starterPack.packId,
+    version: starterPack.templateVersion,
+    cityId: starterPack.cityId,
+    locationId: starterPack.dagLocationSlot,
+    lang: CITY_LANG[starterPack.cityId],
+    title: `${CITY_LABELS[starterPack.cityId]} ${starterPack.playerFacingLocationLabel}`,
+    summary:
+      starterPack.objectiveSeed?.objectiveId
+        ? `Starter pack scaffold is checked in for ${starterPack.playerFacingLocationLabel}. Seed objective: ${starterPack.objectiveSeed.objectiveId}.`
+        : `Starter pack scaffold is checked in for ${starterPack.playerFacingLocationLabel}.`,
+    goldStandard: false,
+    contentVersionPolicy: 'append_only',
+    nodes: [],
+    edges: [],
+    levels: [],
+    scenarios: [],
+    missions: [],
+    content: {
+      scriptTargets: [],
+      pronunciationTargets: [],
+      vocabularyTargets: [],
+      grammarTargets: [],
+      sentenceFrameTargets: [],
+    },
+    starterPackMetadata: {
+      mapLocationId: starterPack.mapLocationId,
+      playerFacingLocationLabel: starterPack.playerFacingLocationLabel,
+      status: starterPack.status,
+      manifestKeys: cloneJson(starterPack.manifestKeys || []),
+      objectiveSeed: cloneJson(starterPack.objectiveSeed || {}),
+    },
+  };
+}
 
 function buildStubPack(cityId, locationId) {
   const cityLabel = CITY_LABELS[cityId];
@@ -206,6 +302,12 @@ function buildStubPack(cityId, locationId) {
 function buildPackRegistry() {
   const registry = new Map();
   registry.set(keyFor('seoul', 'food_street'), SEOUL_FOOD_STREET_PACK);
+
+  for (const starterPack of STARTER_PACKS) {
+    const key = keyFor(starterPack.cityId, starterPack.dagLocationSlot);
+    if (key === keyFor('seoul', 'food_street')) continue;
+    registry.set(key, buildStarterPackStub(starterPack));
+  }
 
   for (const cityId of VALID_CITIES) {
     for (const locationId of VALID_LOCATIONS) {
@@ -1408,6 +1510,7 @@ function buildRoadmap(persona, foundationEvaluation, overlayCandidates) {
   const seoulFoundationLocation = resolveWorldMapLocation('seoul', 'food_street');
   const tokyoFoundationLocation = resolveWorldMapLocation('tokyo');
   const shanghaiFoundationLocation = resolveWorldMapLocation('shanghai');
+  const seoulCoverage = getCityStarterPackCoverage('seoul');
 
   return [
     {
@@ -1420,11 +1523,15 @@ function buildRoadmap(persona, foundationEvaluation, overlayCandidates) {
       status:
         foundationEvaluation.completedNodeCount > 0 || foundationEvaluation.activeNodeCount > 0
           ? 'in_progress'
-          : 'ready',
+          : seoulCoverage.authoredCount > 0
+            ? 'ready'
+            : 'stub',
       summary:
         foundationEvaluation.completedNodeCount > 0
-          ? 'Core Korean foundation path with active work on ordering language.'
-          : 'Core Korean foundation path is ready to start.',
+          ? `Core Korean foundation path with active work on ordering language. ${seoulCoverage.authoredCount}/${seoulCoverage.totalCount} Seoul starter packs are checked in.`
+          : seoulCoverage.authoredCount > 0
+            ? `${seoulCoverage.authoredCount}/${seoulCoverage.totalCount} Seoul starter packs are checked in and ready for runtime wiring.`
+            : 'Core Korean foundation path is ready to start.',
       activeNodeCount: foundationEvaluation.activeNodeCount,
       completedNodeCount: foundationEvaluation.completedNodeCount,
     },
@@ -1506,23 +1613,30 @@ function buildLegacyWorldRoadmap(persona, foundationEvaluation, overlayCandidate
       proficiency: persona.proficiency.ko || 'beginner',
       locations: LEGACY_SHARED_LOCATIONS.map((location, index) => {
         const resolvedLocation = resolveWorldMapLocation('seoul', location.locationId);
+        const starterPack = getStarterPackMetadata('seoul', location.locationId);
+        const authoredStatus =
+          location.locationId === 'food_street'
+            ? foundationEvaluation.completedNodeCount > 0 || foundationEvaluation.activeNodeCount > 0
+              ? 'active'
+              : starterPack
+                ? 'preview'
+                : 'locked'
+            : starterPack
+              ? 'preview'
+              : 'locked';
+        const authoredProgress =
+          location.locationId === 'food_street'
+            ? `${foundationEvaluation.completedNodeCount}/${foundationEvaluation.nodeEntries.length} nodes completed`
+            : starterPack
+              ? `Starter pack checked in: ${starterPack.packId}`
+              : 'Awaiting authored starter pack';
         return {
           locationId: location.locationId,
           mapLocationId: resolvedLocation.mapLocationId,
           dagLocationSlot: resolvedLocation.dagLocationSlot,
-          label: resolvedLocation.label,
-          status:
-            location.locationId === 'food_street'
-              ? foundationEvaluation.completedNodeCount > 0 || foundationEvaluation.activeNodeCount > 0
-                ? 'active'
-                : 'preview'
-              : index === 1
-                ? 'preview'
-                : 'locked',
-          progress:
-            location.locationId === 'food_street'
-              ? `${foundationEvaluation.completedNodeCount}/${foundationEvaluation.nodeEntries.length} nodes completed`
-              : 'Planned for future authored packs',
+          label: starterPack?.playerFacingLocationLabel || resolvedLocation.label,
+          status: authoredStatus,
+          progress: authoredProgress,
         };
       }),
       levels: seoulLevelProgress,
