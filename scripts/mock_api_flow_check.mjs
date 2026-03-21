@@ -26,7 +26,7 @@ const userId = `mock_user_${Date.now().toString(36)}`;
 const networkTrace = [];
 const profile = {
   nativeLanguage: 'en',
-  targetLanguages: ['ko', 'zh'],
+  targetLanguages: ['ko', 'ja', 'zh'],
   proficiency: {
     ko: 'beginner',
     ja: 'none',
@@ -46,6 +46,14 @@ function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
   }
+}
+
+function includesHangul(value) {
+  return /[\uac00-\ud7af]/u.test(String(value || ''));
+}
+
+function assertNoHangul(value, label) {
+  assert(!includesHangul(value), `${label} should not contain Hangul: ${value}`);
 }
 
 function writeNetworkTrace() {
@@ -288,6 +296,31 @@ async function run() {
   assert(objectiveKo.data?.legacyObjectiveId === 'ko_food_l2_001', 'objectiveKo.legacyObjectiveId mismatch');
   logPass('/api/v1/objectives/next?lang=ko');
 
+  const objectiveJa = await requestJson(
+    `/api/v1/objectives/next?userId=${encodeURIComponent(userId)}&mode=hangout&lang=ja&city=tokyo&location=subway_hub`,
+  );
+  assert(objectiveJa.ok, `/objectives/next ja failed (${objectiveJa.status})`);
+  assert(objectiveJa.data?.lang === 'ja', 'objectiveJa.lang should be ja');
+  assert(objectiveJa.data?.objectiveGraph?.cityId === 'tokyo', 'objectiveJa.objectiveGraph.cityId mismatch');
+  assert(objectiveJa.data?.objectiveGraph?.locationId === 'subway_hub', 'objectiveJa.objectiveGraph.locationId mismatch');
+  assertArray(objectiveJa.data?.objectiveGraph?.targetNodeIds, 'objectiveJa.objectiveGraph.targetNodeIds');
+  assertArray(objectiveJa.data?.coreTargets?.vocabulary, 'objectiveJa.coreTargets.vocabulary');
+  assertArray(objectiveJa.data?.recentMediaRationale?.rankedTerms, 'objectiveJa.recentMediaRationale.rankedTerms');
+  assertArray(objectiveJa.data?.placementHints, 'objectiveJa.placementHints');
+  objectiveJa.data.objectiveGraph.targetNodeIds.forEach((targetNodeId, index) =>
+    assertNoHangul(targetNodeId, `objectiveJa.objectiveGraph.targetNodeIds[${index}]`),
+  );
+  objectiveJa.data.recentMediaRationale.rankedTerms.forEach((term, index) => {
+    assert(term?.lang === 'ja', `objectiveJa.recentMediaRationale.rankedTerms[${index}].lang mismatch`);
+    assertNoHangul(term?.lemma, `objectiveJa.recentMediaRationale.rankedTerms[${index}].lemma`);
+  });
+  assert(
+    typeof objectiveJa.data?.objectiveId === 'string' && objectiveJa.data.objectiveId.startsWith('ja-'),
+    `objectiveJa.objectiveId should start with ja-: ${objectiveJa.data?.objectiveId}`,
+  );
+  assert(objectiveJa.data?.legacyObjectiveId === 'ja_subway_l1_001', 'objectiveJa.legacyObjectiveId mismatch');
+  logPass('/api/v1/objectives/next?lang=ja');
+
   const objectiveZh = await requestJson(
     `/api/v1/objectives/next?userId=${encodeURIComponent(userId)}&mode=hangout&lang=zh&city=shanghai&location=practice_studio`,
   );
@@ -371,8 +404,15 @@ async function run() {
   });
   assert(tokyoBootstrap.ok, `/game/start-or-resume tokyo fallback failed (${tokyoBootstrap.status})`);
   assert(
-    tokyoBootstrap.data?.gameSession?.activeObjective?.lang === 'ko',
-    'gameStart tokyo bootstrap should not force the JA pilot path before the hangout runtime is localized',
+    tokyoBootstrap.data?.gameSession?.activeObjective?.lang === 'ja',
+    'gameStart tokyo bootstrap should align to the JA runtime objective',
+  );
+  assert(tokyoBootstrap.data?.gameSession?.cityId === 'tokyo', 'gameStart tokyo bootstrap city mismatch');
+  assert(tokyoBootstrap.data?.gameSession?.locationId === 'subway_hub', 'gameStart tokyo bootstrap location mismatch');
+  assert(
+    typeof tokyoBootstrap.data?.gameSession?.activeObjective?.objectiveId === 'string' &&
+      tokyoBootstrap.data.gameSession.activeObjective.objectiveId.startsWith('ja-'),
+    `gameStart tokyo bootstrap objective mismatch: ${tokyoBootstrap.data?.gameSession?.activeObjective?.objectiveId}`,
   );
   assert(gameStart.data?.gameSession?.sessionId === gameStart.data.sessionId, 'gameStart.gameSession.sessionId mismatch');
   assert(gameStart.data?.sceneSession?.gameSessionId === gameStart.data.sessionId, 'gameStart.sceneSession.gameSessionId mismatch');

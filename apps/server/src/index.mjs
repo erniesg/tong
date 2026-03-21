@@ -44,6 +44,7 @@ import {
   canonicalObjectiveNodeId,
   defaultObjectiveIdForLang,
   objectiveMatchesLanguage,
+  objectiveIdentityMap,
   resolveObjectiveIdentity,
   withObjectiveIdentity,
 } from './objective-identity.mjs';
@@ -116,6 +117,52 @@ const DEFAULT_OBJECTIVE_BY_LANG = {
   ko: defaultObjectiveIdForLang('ko', 'ko-vocab-food-items'),
   ja: defaultObjectiveIdForLang('ja', 'ja-vocab-subway-transfers'),
   zh: defaultObjectiveIdForLang('zh', 'zh-mission-stage-texting'),
+};
+const OBJECTIVE_RUNTIME_CONFIG = new Map([
+  ['ko-vocab-food-items', {
+    fallbackTerms: ['주문', '메뉴', '떡볶이'],
+    placementReason: 'Food-ordering terms reinforce the Seoul food street hangout.',
+    summary: 'Order street food politely in Korean.',
+    hangoutCopy: {
+      start: '어서 와요! 오늘은 뭐 먹고 싶어요?',
+      resume: '좋아요, 이어서 주문해 볼까요? 방금 멈춘 지점부터예요.',
+      successHint: '좋아요. 주문할 때 바로 쓸 수 있는 자연스러운 표현이었어요.',
+      retryHint: '음식 이름이랑 정중한 끝맺음, 예를 들면 주세요를 붙여 볼까요?',
+      nextTurnEven: '좋아요, 맵기는 어느 정도로 할까요?',
+      nextTurnOdd: '좋아요! 다음 주문도 한국어로 말해 볼까요?',
+    },
+  }],
+  ['ja-vocab-subway-transfers', {
+    fallbackTerms: ['駅', '乗り換え', 'ホーム'],
+    placementReason: 'Transit and meetup language fits the Tokyo subway hangout.',
+    summary: 'Handle a Tokyo station meetup in Japanese.',
+    hangoutCopy: {
+      start: 'いらっしゃい。今日は駅で何をしたい？',
+      resume: 'じゃあ、続けよう。さっきのやり取りからもう一度ね。',
+      successHint: 'いいね。駅でそのまま使える自然な言い方だったよ。',
+      retryHint: '場所の名前に、お願いしますかくださいを足してみよう。',
+      nextTurnEven: 'いいね。次はどこで乗り換えるか言ってみようか。',
+      nextTurnOdd: 'いいね。待ち合わせの場所を日本語で伝えてみよう。',
+    },
+  }],
+  ['zh-mission-stage-texting', {
+    fallbackTerms: ['朋友', '练习', '舞台'],
+    placementReason: 'Performance language supports the Shanghai texting mission.',
+    summary: 'Coordinate a Shanghai practice-studio meetup in Mandarin.',
+    hangoutCopy: {
+      start: '你来了。今天在练习室附近想做什么？',
+      resume: '好，我们继续，从刚才停下来的地方接着说。',
+      successHint: '不错，这句话在练习室见面的时候很自然。',
+      retryHint: '试着加上食物或地点，再配一个礼貌表达，比如请或者我要。',
+      nextTurnEven: '好，那你再说一下想几点见面。',
+      nextTurnOdd: '不错，下一句用中文说明你想点什么吧。',
+    },
+  }],
+]);
+const HANGOUT_MATCH_PATTERNS = {
+  ko: ['주세요', '먹', '주문', '라면', '떡볶이', '메뉴'],
+  ja: ['ください', 'お願いします', 'ラーメン', '注文', 'メニュー', '食べ', '駅'],
+  zh: ['请', '我要', '拉面', '菜单', '点餐', '火锅', '见面'],
 };
 const INGESTION_SOURCES = new Set(['youtube', 'spotify']);
 
@@ -598,22 +645,180 @@ function getWeakestTargetLanguage(profile) {
     })[0] || 'ko';
 }
 
+function getRuntimeObjectiveConfig({ objectiveId = null, lang = null, cityId = null } = {}) {
+  if (objectiveId) {
+    const resolved = resolveObjectiveIdentity(objectiveId);
+    const identity = resolved.identity || null;
+    const runtimeConfig = OBJECTIVE_RUNTIME_CONFIG.get(resolved.canonicalObjectiveId) || {};
+    if (identity || Object.keys(runtimeConfig).length > 0) {
+      return {
+        objectiveId: resolved.canonicalObjectiveId,
+        canonicalObjectiveId: resolved.canonicalObjectiveId,
+        legacyObjectiveId: resolved.legacyObjectiveId,
+        objectiveAliasIds: resolved.objectiveAliasIds,
+        ...(identity || {}),
+        ...runtimeConfig,
+      };
+    }
+  }
+
+  for (const identity of objectiveIdentityMap.objectives || []) {
+    if (lang && identity.lang !== lang) continue;
+    if (cityId && identity.cityId !== cityId) continue;
+    const runtimeConfig = OBJECTIVE_RUNTIME_CONFIG.get(identity.canonicalObjectiveId);
+    if (!runtimeConfig) continue;
+    return {
+      objectiveId: identity.canonicalObjectiveId,
+      canonicalObjectiveId: identity.canonicalObjectiveId,
+      legacyObjectiveId: identity.legacyObjectiveIds?.[0] || null,
+      objectiveAliasIds: [...(identity.legacyObjectiveIds || [])],
+      ...identity,
+      ...runtimeConfig,
+    };
+  }
+
+  return null;
+}
+
 const CITY_PILOT_LANGUAGE = {
   seoul: 'ko',
 };
 
-function getBootstrapPilotLanguage(profile, city) {
-  const weakestTargetLanguage = getWeakestTargetLanguage(profile);
+function getCityPreferredLanguage(profile, city) {
   const targetLanguages = Array.isArray(profile?.targetLanguages)
     ? profile.targetLanguages.filter((lang) => lang === 'ko' || lang === 'ja' || lang === 'zh')
     : [];
-  const cityPilotLanguage = CITY_PILOT_LANGUAGE[city] || null;
+  const supportedLanguages = new Set(
+    (objectiveIdentityMap.objectives || [])
+      .filter((identity) => identity.cityId === city && OBJECTIVE_RUNTIME_CONFIG.has(identity.canonicalObjectiveId))
+      .map((identity) => identity.lang),
+  );
+  return targetLanguages.find((lang) => supportedLanguages.has(lang)) || null;
+}
 
-  if (cityPilotLanguage && targetLanguages.includes(cityPilotLanguage)) {
-    return cityPilotLanguage;
+function getBootstrapPilotLanguage(profile, city) {
+  if (city && CITY_PILOT_LANGUAGE[city]) {
+    const cityPilotLanguage = CITY_PILOT_LANGUAGE[city];
+    const targetLanguages = Array.isArray(profile?.targetLanguages)
+      ? profile.targetLanguages.filter((lang) => lang === 'ko' || lang === 'ja' || lang === 'zh')
+      : [];
+
+    if (targetLanguages.includes(cityPilotLanguage)) {
+      return cityPilotLanguage;
+    }
   }
 
+  const cityPreferredLanguage = getCityPreferredLanguage(profile, city);
+  if (cityPreferredLanguage) {
+    return cityPreferredLanguage;
+  }
+
+  const weakestTargetLanguage = getWeakestTargetLanguage(profile);
   return weakestTargetLanguage;
+}
+
+function uniqueTerms(values = []) {
+  return [...new Set(
+    values
+      .map((value) => String(value || '').trim())
+      .filter((value) => value.length > 0),
+  )];
+}
+
+function getDominantFallbackSource(ingestion) {
+  const youtubeItems = Number(ingestion?.mediaProfile?.sourceBreakdown?.youtube?.itemsConsumed || 0);
+  const spotifyItems = Number(ingestion?.mediaProfile?.sourceBreakdown?.spotify?.itemsConsumed || 0);
+  return youtubeItems >= spotifyItems ? 'youtube' : 'spotify';
+}
+
+function objectiveLinkMatches(link, objectiveId) {
+  if (!link || !objectiveId) return false;
+  const targetCanonicalId = resolveObjectiveIdentity(objectiveId).canonicalObjectiveId;
+  const candidateId =
+    link.canonicalObjectiveId || link.objectiveId || link.legacyObjectiveId || null;
+  return resolveObjectiveIdentity(candidateId).canonicalObjectiveId === targetCanonicalId;
+}
+
+function buildFallbackPlacementHint(objectiveConfig, mode = 'hangout') {
+  if (!objectiveConfig) return null;
+  return withObjectiveIdentity({
+    city: objectiveConfig.cityId,
+    location: objectiveConfig.locationId,
+    mode,
+    placementType: objectiveConfig.objectiveCategory === 'conversation' ? 'mission' : mode,
+    reason: objectiveConfig.placementReason || 'Language-aligned placement.',
+    clusterId: objectiveConfig.clusterId || null,
+  }, objectiveConfig.objectiveId);
+}
+
+function buildObjectiveTermBundle({ ingestion, lang, objectiveId, objectiveConfig, dominantCluster }) {
+  const insightItems = Array.isArray(ingestion?.insights?.items) ? ingestion.insights.items : [];
+  const langItems = insightItems.filter((item) => item?.lang === lang);
+  const scopedObjectiveItems = langItems.filter((item) =>
+    Array.isArray(item?.objectiveLinks) && item.objectiveLinks.some((link) => objectiveLinkMatches(link, objectiveId)),
+  );
+  const scopedClusterItems = dominantCluster
+    ? langItems.filter((item) => item?.clusterId === dominantCluster.clusterId)
+    : [];
+  const fallbackTerms = uniqueTerms(objectiveConfig?.fallbackTerms || []);
+  const vocabulary = uniqueTerms([
+    ...fallbackTerms,
+    ...scopedObjectiveItems.map((item) => item.lemma),
+    ...scopedClusterItems.map((item) => item.lemma),
+  ]).slice(0, 3);
+  const topTerms = Array.isArray(ingestion?.mediaProfile?.learningSignals?.topTerms)
+    ? ingestion.mediaProfile.learningSignals.topTerms.filter((item) => item?.lang === lang)
+    : [];
+  const topTermByLemma = new Map(topTerms.map((item) => [item.lemma, item]));
+  const fallbackSource = getDominantFallbackSource(ingestion);
+  const fallbackPlacementHint = buildFallbackPlacementHint(objectiveConfig);
+
+  return {
+    vocabulary,
+    personalizedTargets: vocabulary.map((lemma) => {
+      const ranked = topTermByLemma.get(lemma);
+      const source = ranked?.dominantSource || fallbackSource;
+      return {
+        lemma,
+        source,
+        linkedNodeIds: [
+          `overlay:${source}:${dominantCluster?.clusterId || objectiveConfig?.clusterId || getDominantClusterId(ingestion)}`,
+          `target:${lemma}`,
+        ],
+      };
+    }),
+    fallbackRankedTerms: vocabulary.map((lemma, index) => {
+      const ranked = topTermByLemma.get(lemma);
+      return {
+        lemma,
+        lang,
+        source: ranked?.dominantSource || fallbackSource,
+        weightedScore: ranked?.weightedScore || Number((Math.max(0.2, 0.9 - index * 0.2)).toFixed(2)),
+        provenance: cloneJson(ranked?.provenance || { sources: [], mediaIds: [], samples: [] }),
+        placementHints: fallbackPlacementHint ? [cloneJson(fallbackPlacementHint)] : [],
+      };
+    }),
+    fallbackPlacementHint,
+  };
+}
+
+function getHangoutCopyBundle({ sceneSession = null, gameSession = null, body = {} } = {}) {
+  const objectiveId =
+    gameSession?.activeObjective?.objectiveId ||
+    sceneSession?.objective?.objectiveId ||
+    body.objectiveId ||
+    DEFAULT_OBJECTIVE_BY_LANG.ko;
+  const objectiveConfig =
+    getRuntimeObjectiveConfig({ objectiveId }) ||
+    getRuntimeObjectiveConfig({
+      lang: body.lang === 'ja' || body.lang === 'zh' || body.lang === 'ko' ? body.lang : 'ko',
+      cityId: body.city || gameSession?.cityId || sceneSession?.cityId || 'seoul',
+    }) ||
+    getRuntimeObjectiveConfig({ objectiveId: DEFAULT_OBJECTIVE_BY_LANG.ko });
+  return {
+    lang: objectiveConfig?.lang || gameSession?.activeObjective?.lang || sceneSession?.objective?.lang || 'ko',
+    copy: objectiveConfig?.hangoutCopy || {},
+  };
 }
 
 function getCaptionsForVideo(videoId = 'karina-variety-demo') {
@@ -768,18 +973,28 @@ function getDominantClusterId(ingestion) {
 
 function getMatchingPlacementHints(candidates = [], { city, location, mode, lang, objectiveId }) {
   const items = Array.isArray(candidates) ? candidates : [];
+  const canonicalObjectiveId = objectiveId ? resolveObjectiveIdentity(objectiveId).canonicalObjectiveId : null;
   const strictMatches = items.filter((candidate) => {
     if (!candidate || typeof candidate !== 'object') return false;
     if (city && candidate.city !== city) return false;
     if (location && candidate.location !== location) return false;
     if (mode && candidate.mode !== mode) return false;
-    if (lang && typeof candidate.objectiveId === 'string' && !candidate.objectiveId.startsWith(`${lang}-`)) return false;
-    if (objectiveId && candidate.objectiveId && candidate.objectiveId !== objectiveId) return false;
+    if (lang && !objectiveMatchesLanguage(candidate.objectiveId, lang)) return false;
+    if (
+      canonicalObjectiveId &&
+      resolveObjectiveIdentity(candidate.objectiveId).canonicalObjectiveId !== canonicalObjectiveId
+    ) {
+      return false;
+    }
     return true;
   });
 
   if (strictMatches.length > 0) {
     return strictMatches;
+  }
+
+  if (lang || canonicalObjectiveId) {
+    return [];
   }
 
   return items.filter((candidate) => {
@@ -794,6 +1009,8 @@ function getMatchingPlacementHints(candidates = [], { city, location, mode, lang
 function buildRecentMediaRationale({ ingestion, city, location, mode, lang, objectiveId }) {
   const mediaProfile = ingestion?.mediaProfile || FIXTURES.mediaProfile;
   const insights = ingestion?.insights || FIXTURES.insights;
+  const objectiveConfig =
+    getRuntimeObjectiveConfig({ objectiveId }) || getRuntimeObjectiveConfig({ lang, cityId: city });
   const topTerms = Array.isArray(mediaProfile?.learningSignals?.topTerms) ? mediaProfile.learningSignals.topTerms : [];
   const insightClusters = Array.isArray(insights?.clusters) ? insights.clusters : [];
   const matchingTerms = topTerms.filter((term) => {
@@ -801,7 +1018,18 @@ function buildRecentMediaRationale({ ingestion, city, location, mode, lang, obje
     if (lang && term.lang !== lang) return false;
     return true;
   });
-  const scopedTerms = matchingTerms.length > 0 ? matchingTerms : topTerms;
+  const fallbackPlacementHint = buildFallbackPlacementHint(objectiveConfig, mode || 'hangout');
+  const fallbackRankedTerms =
+    matchingTerms.length > 0
+      ? []
+      : buildObjectiveTermBundle({
+          ingestion,
+          lang: objectiveConfig?.lang || lang || 'ko',
+          objectiveId: objectiveConfig?.objectiveId || objectiveId || DEFAULT_OBJECTIVE_BY_LANG.ko,
+          objectiveConfig,
+          dominantCluster: insightClusters[0] || null,
+        }).fallbackRankedTerms;
+  const scopedTerms = matchingTerms.length > 0 ? matchingTerms : fallbackRankedTerms;
   const selectedTerms = scopedTerms.slice(0, 3);
   const placementHints = selectedTerms.flatMap((term) =>
     getMatchingPlacementHints(term.placementHints, { city, location, mode, lang, objectiveId }),
@@ -839,14 +1067,20 @@ function buildRecentMediaRationale({ ingestion, city, location, mode, lang, obje
   return {
     generatedAtIso: mediaProfile.generatedAtIso || new Date().toISOString(),
     sourceSummary,
-    reason: rationaleReason,
+    reason: rationaleReason || objectiveConfig?.placementReason || 'Recent media signals were used to personalize the next lesson and hangout objective.',
     rankedTerms: selectedTerms.map((term) => ({
       lemma: term.lemma,
       lang: term.lang,
-      source: term.dominantSource,
+      source: term.dominantSource || term.source,
       weightedScore: term.weightedScore,
       provenance: cloneJson(term.provenance || {}),
-      placementHints: cloneJson(getMatchingPlacementHints(term.placementHints, { city, location, mode, lang, objectiveId })),
+      placementHints: cloneJson(
+        getMatchingPlacementHints(term.placementHints, { city, location, mode, lang, objectiveId }).length > 0
+          ? getMatchingPlacementHints(term.placementHints, { city, location, mode, lang, objectiveId })
+          : fallbackPlacementHint
+            ? [fallbackPlacementHint]
+            : [],
+      ),
     })),
     topicSummary: selectedCluster
       ? {
@@ -857,7 +1091,15 @@ function buildRecentMediaRationale({ ingestion, city, location, mode, lang, obje
           placementHints: cloneJson(clusterPlacementHints),
         }
       : null,
-    placementHints: cloneJson(placementHints.length > 0 ? placementHints : clusterPlacementHints),
+    placementHints: cloneJson(
+      placementHints.length > 0
+        ? placementHints
+        : clusterPlacementHints.length > 0
+          ? clusterPlacementHints
+          : fallbackPlacementHint
+            ? [fallbackPlacementHint]
+            : [],
+    ),
   };
 }
 
@@ -996,6 +1238,7 @@ function buildPersonalizedObjective({
   const dominantCluster =
     ingestion?.insights?.clusters?.find((cluster) => cluster.clusterId === dominantClusterId) ||
     ingestion?.insights?.clusters?.[0];
+  const runtimeObjectiveConfig = getRuntimeObjectiveConfig({ lang, cityId: city });
   const placementCandidates = Array.isArray(ingestion?.mediaProfile?.learningSignals?.placementCandidates)
     ? ingestion.mediaProfile.learningSignals.placementCandidates
     : [];
@@ -1005,25 +1248,29 @@ function buildPersonalizedObjective({
         candidate.city === city &&
         candidate.location === location &&
         candidate.mode === mode &&
-        (candidate.objectiveId?.startsWith(`${lang}-`) || candidate.objectiveId === DEFAULT_OBJECTIVE_BY_LANG[lang]),
+        (
+          objectiveMatchesLanguage(candidate.objectiveId, lang) ||
+          resolveObjectiveIdentity(candidate.objectiveId).canonicalObjectiveId === runtimeObjectiveConfig?.objectiveId
+        ),
     ) ||
     placementCandidates.find(
       (candidate) =>
         candidate.city === city &&
-        candidate.location === location &&
-        candidate.mode === mode,
+        candidate.mode === mode &&
+        objectiveMatchesLanguage(candidate.objectiveId, lang),
     ) ||
     null;
 
   const insightItems = Array.isArray(ingestion?.insights?.items) ? ingestion.insights.items : [];
   const langItems = insightItems.filter((item) => item.lang === lang);
-  const scopedItems = langItems.length > 0 ? langItems : insightItems;
+  const scopedItems = langItems;
   const scopedClusterItems = dominantCluster
     ? scopedItems.filter((item) => item.clusterId === dominantCluster.clusterId)
     : scopedItems;
 
   let objectiveId =
     selectedPlacement?.objectiveId ||
+    runtimeObjectiveConfig?.objectiveId ||
     scopedClusterItems[0]?.objectiveLinks?.[0]?.objectiveId ||
     scopedItems[0]?.objectiveLinks?.[0]?.objectiveId ||
     baseObjective.objectiveId ||
@@ -1039,21 +1286,15 @@ function buildPersonalizedObjective({
     }
   }
 
-  const vocabCandidates = [
-    ...scopedClusterItems.map((item) => item.lemma),
-    ...scopedItems.map((item) => item.lemma),
-    ...(dominantCluster?.topTerms || []),
-  ];
-  const vocabulary = [...new Set(vocabCandidates)].slice(0, 3);
-
-  const topTerms = ingestion?.mediaProfile?.learningSignals?.topTerms || [];
-  const preferredTerms = topTerms.filter((item) => item.lang === lang);
-  const personalizedBase = preferredTerms.length > 0 ? preferredTerms : topTerms;
-  const personalizedTargets = personalizedBase.slice(0, 3).map((item) => ({
-    lemma: item.lemma,
-    source: item.dominantSource,
-    linkedNodeIds: [`overlay:${item.dominantSource}:${dominantClusterId}`, `target:${item.lemma}`],
-  }));
+  const termBundle = buildObjectiveTermBundle({
+    ingestion,
+    lang,
+    objectiveId,
+    objectiveConfig: runtimeObjectiveConfig || getRuntimeObjectiveConfig({ objectiveId }),
+    dominantCluster,
+  });
+  const vocabulary = termBundle.vocabulary;
+  const personalizedTargets = termBundle.personalizedTargets;
 
   const resolvedObjective = resolveObjectiveIdentity(objectiveId);
   const objectiveNodeId = canonicalObjectiveNodeId(objectiveId);
@@ -1123,6 +1364,7 @@ function buildGameActions(lang, objectiveId) {
 }
 
 function buildActiveObjectiveDescriptor({ objective, lang, city, location }) {
+  const runtimeObjectiveConfig = getRuntimeObjectiveConfig({ objectiveId: objective.objectiveId });
   return withObjectiveIdentity({
     lang,
     mode: 'hangout',
@@ -1131,7 +1373,9 @@ function buildActiveObjectiveDescriptor({ objective, lang, city, location }) {
     objectiveCategory: objective.objectiveGraph?.objectiveCategory,
     objectiveNodeId: objective.objectiveGraph?.objectiveNodeId,
     targetNodeIds: cloneJson(objective.objectiveGraph?.targetNodeIds || []),
-    summary: `Resume ${lang.toUpperCase()} practice at ${location.replace(/_/g, ' ')}.`,
+    summary:
+      runtimeObjectiveConfig?.summary ||
+      `Resume ${lang.toUpperCase()} practice at ${location.replace(/_/g, ' ')}.`,
     recentMediaRationale: cloneJson(objective.recentMediaRationale || null),
     placementHints: cloneJson(objective.placementHints || []),
   }, objective.objectiveId);
@@ -1536,13 +1780,19 @@ function findGameSessionForResume({ userId, sessionId, resumeCheckpointId, reque
 
 function createNewGameSession(userId, incomingProfile, requestedCity) {
   const profile = incomingProfile || getProfile(userId) || FIXTURES.gameStart.profile;
-  const dominantClusterId = getDominantClusterId(ensureIngestionForUser(userId));
-  const city =
+  const ingestion = ensureIngestionForUser(userId);
+  const dominantClusterId = getDominantClusterId(ingestion);
+  const requestedOrDerivedCity =
     requestedCity === 'tokyo' || requestedCity === 'shanghai' || requestedCity === 'seoul'
       ? requestedCity
       : CLUSTER_CITY_MAP[dominantClusterId] || FIXTURES.gameStart.city || 'seoul';
-  const location = CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
-  const bootstrapLang = getBootstrapPilotLanguage(profile, city);
+  const bootstrapLang = getBootstrapPilotLanguage(profile, requestedOrDerivedCity);
+  const runtimeObjectiveConfig =
+    getRuntimeObjectiveConfig({ lang: bootstrapLang, cityId: requestedOrDerivedCity }) ||
+    getRuntimeObjectiveConfig({ lang: bootstrapLang });
+  const city = runtimeObjectiveConfig?.cityId || requestedOrDerivedCity;
+  const location =
+    runtimeObjectiveConfig?.locationId || CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
   const objective = buildPersonalizedObjective({
     userId,
     mode: 'hangout',
@@ -1744,7 +1994,8 @@ function handleHangoutRespond(body) {
     };
   }
 
-  const goodPatterns = ['주세요', '먹', '주문', '라면', '떡볶이', '메뉴'];
+  const initialCopyBundle = getHangoutCopyBundle({ sceneSession: existing, body });
+  const goodPatterns = HANGOUT_MATCH_PATTERNS[initialCopyBundle.lang] || HANGOUT_MATCH_PATTERNS.ko;
   const matched = goodPatterns.some((pattern) => userUtterance.includes(pattern));
   const xpDelta = matched ? 8 : 4;
   const spDelta = matched ? 2 : 1;
@@ -1759,6 +2010,7 @@ function handleHangoutRespond(body) {
     existing.score.sp += spDelta;
     existing.score.rp += rpDelta;
     state.sceneSessions.set(sceneSessionId, existing);
+    const statelessCopy = initialCopyBundle.copy;
 
     return {
       statusCode: 200,
@@ -1766,16 +2018,16 @@ function handleHangoutRespond(body) {
         accepted: true,
         feedback: {
           tongHint: matched
-            ? 'Great phrasing. You used practical ordering language.'
-            : 'Try adding a food word plus polite ending like 주세요.',
+            ? statelessCopy.successHint || 'Great phrasing. You used practical ordering language.'
+            : statelessCopy.retryHint || 'Try adding a food word plus polite ending like 주세요.',
           objectiveProgressDelta,
         },
         nextLine: {
           speaker: 'character',
           text:
             existing.turn % 2 === 0
-              ? '좋아요, 맵기는 어느 정도로 할까요?'
-              : '좋아요! 다음 주문도 한국어로 말해 볼까요?',
+              ? statelessCopy.nextTurnEven || '좋아요, 맵기는 어느 정도로 할까요?'
+              : statelessCopy.nextTurnOdd || '좋아요! 다음 주문도 한국어로 말해 볼까요?',
         },
         state: {
           turn: existing.turn,
@@ -1794,6 +2046,12 @@ function handleHangoutRespond(body) {
       },
     };
   }
+
+  const localizedCopy = getHangoutCopyBundle({
+    sceneSession: existing,
+    gameSession,
+    body,
+  }).copy;
 
   gameSession.progression.xp += xpDelta;
   gameSession.progression.sp += spDelta;
@@ -1816,8 +2074,8 @@ function handleHangoutRespond(body) {
 
   const nextLine =
     existing.turn % 2 === 0
-      ? '좋아요, 맵기는 어느 정도로 할까요?'
-      : '좋아요! 다음 주문도 한국어로 말해 볼까요?';
+      ? localizedCopy.nextTurnEven || '좋아요, 맵기는 어느 정도로 할까요?'
+      : localizedCopy.nextTurnOdd || '좋아요! 다음 주문도 한국어로 말해 볼까요?';
   const checkpoint = persistCheckpoint(
     gameSession,
     existing,
@@ -1829,8 +2087,8 @@ function handleHangoutRespond(body) {
     accepted: true,
     feedback: {
       tongHint: matched
-        ? 'Great phrasing. You used practical ordering language.'
-        : 'Try adding a food word plus polite ending like 주세요.',
+        ? localizedCopy.successHint || 'Great phrasing. You used practical ordering language.'
+        : localizedCopy.retryHint || 'Try adding a food word plus polite ending like 주세요.',
       objectiveProgressDelta,
     },
     nextLine: {
@@ -1875,6 +2133,11 @@ function startHangoutScene(body = {}) {
         sp: gameSession.progression.sp,
         rp: gameSession.progression.rp,
       };
+      const localizedCopy = getHangoutCopyBundle({
+        sceneSession,
+        gameSession,
+        body,
+      }).copy;
       sceneSession.score = score;
       state.sceneSessions.set(sceneSession.sceneSessionId, sceneSession);
 
@@ -1899,8 +2162,8 @@ function startHangoutScene(body = {}) {
           speaker: 'character',
           text:
             sceneSession.turn > 1
-              ? '좋아요, 이어서 주문해 볼까요? 방금 멈춘 지점부터예요.'
-              : '어서 와요! 오늘은 뭐 먹고 싶어요?',
+              ? localizedCopy.resume || '좋아요, 이어서 주문해 볼까요? 방금 멈춘 지점부터예요.'
+              : localizedCopy.start || '어서 와요! 오늘은 뭐 먹고 싶어요?',
         },
       };
     }
@@ -1908,6 +2171,7 @@ function startHangoutScene(body = {}) {
 
   const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
   const score = { xp: 0, sp: 0, rp: 0 };
+  const initialCopyBundle = getHangoutCopyBundle({ body });
   state.sceneSessions.set(sceneSessionId, {
     userId,
     turn: 1,
@@ -1926,7 +2190,7 @@ function startHangoutScene(body = {}) {
     },
     initialLine: {
       speaker: 'character',
-      text: '어서 와요! 오늘은 뭐 먹고 싶어요?',
+      text: initialCopyBundle.copy.start || '어서 와요! 오늘은 뭐 먹고 싶어요?',
     },
   };
 }
