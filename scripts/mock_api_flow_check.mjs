@@ -384,6 +384,29 @@ async function run() {
     logPass('/api/v1/graph/dashboard');
   }
 
+  const seoulGraphDashboard = await requestJson(
+    `/api/v1/graph/dashboard?userId=${encodeURIComponent(userId)}&city=seoul&location=cafe`,
+  );
+  if (seoulGraphDashboard.status === 404) {
+    logWarn('/api/v1/graph/dashboard seoul starter-pack coverage unavailable on this runtime; skipped seoul coverage checks');
+  } else {
+    assert(seoulGraphDashboard.ok, `/graph/dashboard seoul failed (${seoulGraphDashboard.status})`);
+    assert(seoulGraphDashboard.data?.selectedPack?.pack?.packId === 'pack.seoul.cafe.starter', 'graphDashboard seoul selectedPack.packId mismatch');
+    assert(seoulGraphDashboard.data?.lessonBundle?.mapLocationId === 'cafe', 'graphDashboard seoul lessonBundle.mapLocationId mismatch');
+    assert(seoulGraphDashboard.data?.hangoutBundle?.mapLocationId === 'cafe', 'graphDashboard seoul hangoutBundle.mapLocationId mismatch');
+    const seoulWorldRoadmap = (seoulGraphDashboard.data?.worldRoadmap || [])
+      .find((city) => city.cityId === 'seoul')
+      ?.locations || [];
+    for (const expectedMapLocationId of ['food_street', 'cafe', 'convenience_store', 'subway_hub', 'practice_studio']) {
+      const entry = seoulWorldRoadmap.find((location) => location.mapLocationId === expectedMapLocationId);
+      assert(entry, `graphDashboard seoul worldRoadmap missing ${expectedMapLocationId}`);
+      assert(entry.status !== 'locked', `graphDashboard seoul worldRoadmap ${expectedMapLocationId} should reflect authored pack presence`);
+    }
+    const chimaekEntry = seoulWorldRoadmap.find((location) => location.mapLocationId === 'practice_studio');
+    assert(chimaekEntry?.label === 'Chimaek Place', 'graphDashboard seoul practice_studio label should preserve Chimaek Place');
+    logPass('/api/v1/graph/dashboard?city=seoul&location=cafe');
+  }
+
   const gameStart = await requestJson('/api/v1/game/start-or-resume', {
     method: 'POST',
     body: JSON.stringify({

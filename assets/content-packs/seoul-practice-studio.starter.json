@@ -1,13 +1,13 @@
 {
   "templateVersion": "1.1.0",
   "packType": "city-location-character-starter",
-  "packId": "pack.seoul.food_street.starter",
+  "packId": "pack.seoul.practice_studio.starter",
   "city": "seoul",
-  "mapLocationId": "food_street",
-  "playerFacingLocationLabel": "Food Street",
+  "mapLocationId": "practice_studio",
+  "playerFacingLocationLabel": "Chimaek Place",
   "location": {
-    "id": "food_street",
-    "assetSlug": "food-street",
+    "id": "practice_studio",
+    "assetSlug": "practice-studio",
     "modes": [
       "learn",
       "hangout"
@@ -15,32 +15,31 @@
   },
   "characterRoster": [
     {
-      "id": "char.seoul.food_street.minseo",
+      "id": "char.seoul.practice_studio.yujin",
       "role": "lead",
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
-        "character.seoul.food_street.minseo.portrait.default",
-        "character.seoul.food_street.minseo.sprite.default",
-        "character.seoul.food_street.minseo.scene.default",
-        "character.seoul.food_street.minseo.voice.reference"
+        "character.seoul.practice_studio.yujin.portrait.default",
+        "character.seoul.practice_studio.yujin.sprite.default",
+        "character.seoul.practice_studio.yujin.scene.default",
+        "character.seoul.practice_studio.yujin.voice.reference"
       ],
       "optionalManifestKeys": [
-        "character.seoul.food_street.minseo.sprite.expression-set",
-        "character.seoul.food_street.minseo.reward.polaroid"
+        "character.seoul.practice_studio.yujin.sprite.expression-set"
       ]
     },
     {
-      "id": "char.seoul.food_street.jiho",
+      "id": "char.seoul.practice_studio.seungwoo",
       "role": "support",
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
-        "character.seoul.food_street.jiho.portrait.default",
-        "character.seoul.food_street.jiho.sprite.default",
-        "character.seoul.food_street.jiho.scene.default",
-        "character.seoul.food_street.jiho.voice.reference"
+        "character.seoul.practice_studio.seungwoo.portrait.default",
+        "character.seoul.practice_studio.seungwoo.sprite.default",
+        "character.seoul.practice_studio.seungwoo.scene.default",
+        "character.seoul.practice_studio.seungwoo.voice.reference"
       ],
       "optionalManifestKeys": [
-        "character.seoul.food_street.jiho.sprite.expression-set"
+        "character.seoul.practice_studio.seungwoo.reward.polaroid"
       ]
     },
     {
@@ -57,7 +56,7 @@
     }
   ],
   "objectiveSeed": {
-    "objectiveId": "seoul-food-street-ordering-v2",
+    "objectiveId": "seoul-chimaek-place-social-v1",
     "targetTypes": [
       "vocabulary",
       "grammar",
@@ -65,13 +64,13 @@
     ],
     "missionGate": {
       "validatedHangoutsRequired": 2,
-      "masteryTierUnlock": "A1.2"
+      "masteryTierUnlock": "A1.3"
     }
   },
   "manifestKeys": [
-    "city.seoul.location.food-street.backdrop.default",
-    "character.seoul.food_street.minseo.portrait.default",
-    "character.seoul.food_street.jiho.portrait.default",
+    "city.seoul.location.practice-studio.backdrop.default",
+    "character.seoul.practice_studio.yujin.portrait.default",
+    "character.seoul.practice_studio.seungwoo.portrait.default",
     "character.tong.expression.neutral"
   ],
   "rewardHooks": {

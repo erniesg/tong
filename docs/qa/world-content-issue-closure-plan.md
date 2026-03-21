@@ -73,6 +73,15 @@ Created on 2026-03-21 as GitHub issue `#114` in `erniesg/tong`.
 
 ## Closeout expectations by issue
 
+## Canonical registry reminders
+
+Treat `packages/contracts/world-map-registry.sample.json` as the current source of truth for live pin identity.
+
+- Seoul live pins: `food_street`, `cafe`, `convenience_store`, `subway_hub`, and the visible pin labeled `Chimaek Place`, which currently uses internal `mapLocationId: practice_studio`.
+- Tokyo live pins: `train_station -> subway_hub`, `izakaya -> food_street`, `konbini -> convenience_store`, `tea_house -> cafe`, `ramen_shop -> food_street`.
+- Shanghai live pins: `metro_station -> subway_hub`, `bbq_stall -> food_street`, `convenience_store -> convenience_store`, `milk_tea_shop -> practice_studio`, `dumpling_shop -> food_street`.
+- Reserved roster/spec entries without a live pin must not be treated as current map coverage.
+
 ### `#60` epic closeout
 
 Block on:
@@ -104,8 +113,11 @@ Block on:
 - prerequisite contracts issue for `mapLocationId -> dagLocationSlot`
 
 Current live Seoul map pins to call out:
-- `chimaek_place`
-- any other live Seoul pins currently shipped in the active map experience
+- `food_street`
+- `cafe`
+- `convenience_store`
+- `subway_hub`
+- visible pin labeled `Chimaek Place`, which currently uses internal `mapLocationId: practice_studio`
 
 Required proof:
 - pack/objective diff summary

@@ -66,11 +66,18 @@ function resolveManifestUri(uri) {
   return path.join(root, uri);
 }
 
+const starterPackDir = path.join(root, "assets/content-packs");
+const starterPackFiles = fs.readdirSync(starterPackDir)
+  .filter((fileName) => fileName.endsWith(".starter.json"))
+  .sort()
+  .map((fileName) => path.join("assets/content-packs", fileName));
+
 const requiredFiles = [
   "packages/contracts/api-contract.md",
   "packages/contracts/game-loop.json",
   "packages/contracts/objective-catalog.sample.json",
   "packages/contracts/objective-identity-map.sample.json",
+  "packages/contracts/world-map-registry.sample.json",
   "packages/contracts/fixtures/captions.enriched.sample.json",
   "packages/contracts/fixtures/dictionary.entry.sample.json",
   "packages/contracts/fixtures/vocab.frequency.sample.json",
@@ -92,7 +99,8 @@ const requiredFiles = [
   "packages/contracts/fixtures/demo.secret-status.sample.json",
   "assets/manifest/runtime-asset-manifest.json",
   "assets/manifest/canonical-asset-manifest.json",
-  "assets/content-packs/seoul-food-street.starter.json",
+  "assets/manifest/starter-cast-registry.json",
+  ...starterPackFiles,
   "assets/rewards/shanghai-reward-bundle.placeholder.json"
 ];
 
@@ -120,6 +128,9 @@ const loop = JSON.parse(
 );
 const objectivesCatalog = JSON.parse(
   fs.readFileSync(path.join(root, "packages/contracts/objective-catalog.sample.json"), "utf8")
+);
+const worldMapRegistry = JSON.parse(
+  fs.readFileSync(path.join(root, "packages/contracts/world-map-registry.sample.json"), "utf8")
 );
 const vocabInsights = JSON.parse(
   fs.readFileSync(path.join(root, "packages/contracts/fixtures/vocab.insights.sample.json"), "utf8")
@@ -191,11 +202,17 @@ const canonicalAssetManifest = JSON.parse(
     "utf8"
   )
 );
-const seoulStarterPack = JSON.parse(
+const starterCastRegistry = JSON.parse(
   fs.readFileSync(
-    path.join(root, "assets/content-packs/seoul-food-street.starter.json"),
+    path.join(root, "assets/manifest/starter-cast-registry.json"),
     "utf8"
   )
+);
+const starterPacks = starterPackFiles.map((relPath) =>
+  JSON.parse(fs.readFileSync(path.join(root, relPath), "utf8"))
+);
+const seoulStarterPack = starterPacks.find(
+  (pack) => pack.city === "seoul" && pack.mapLocationId === "food_street"
 );
 const shanghaiRewardBundle = JSON.parse(
   fs.readFileSync(
@@ -646,7 +663,7 @@ for (const key of canonicalKeys) {
   }
 }
 
-const keyRegex = /^[a-z0-9]+(\.[a-z0-9-]+){3,}$/;
+const keyRegex = /^[a-z0-9_]+(\.[a-z0-9_-]+){3,}$/;
 const seenKeys = new Set();
 for (const asset of runtimeAssetManifest.assets) {
   if (typeof asset.key !== "string" || !keyRegex.test(asset.key)) {
@@ -709,10 +726,17 @@ for (const key of clientRuntimeAssetUsage.manifestKeys) {
   }
 }
 
-for (const ref of seoulStarterPack.manifestKeys ?? []) {
-  if (!seenKeys.has(ref)) {
-    console.error(`Starter pack manifest key not found: ${ref}`);
-    process.exit(1);
+if (!seoulStarterPack) {
+  console.error("Expected a Seoul food_street starter pack in assets/content-packs");
+  process.exit(1);
+}
+
+for (const starterPack of starterPacks) {
+  for (const ref of starterPack.manifestKeys ?? []) {
+    if (!seenKeys.has(ref)) {
+      console.error(`Starter pack manifest key not found (${starterPack.packId}): ${ref}`);
+      process.exit(1);
+    }
   }
 }
 
@@ -721,6 +745,45 @@ for (const ref of shanghaiRewardBundle.manifestKeys ?? []) {
     console.error(`Reward bundle manifest key not found: ${ref}`);
     process.exit(1);
   }
+}
+
+const seoulRegistry = worldMapRegistry.cities.find((city) => city.cityId === "seoul");
+if (!seoulRegistry) {
+  console.error("world-map-registry missing Seoul city entry");
+  process.exit(1);
+}
+
+const authoredSeoulPacks = starterPacks
+  .filter((pack) => pack.city === "seoul")
+  .map((pack) => pack.mapLocationId)
+  .sort();
+const expectedSeoulPacks = seoulRegistry.locations.map((entry) => entry.mapLocationId).sort();
+if (JSON.stringify(authoredSeoulPacks) !== JSON.stringify(expectedSeoulPacks)) {
+  console.error("Seoul starter-pack coverage does not match world-map-registry");
+  console.error(JSON.stringify({ expectedSeoulPacks, authoredSeoulPacks }, null, 2));
+  process.exit(1);
+}
+
+for (const starterPack of starterPacks.filter((pack) => pack.city === "seoul")) {
+  const expectedPackId = `pack.seoul.${starterPack.mapLocationId}.starter`;
+  if (starterPack.packId !== expectedPackId) {
+    console.error(`Unexpected Seoul starter packId for ${starterPack.mapLocationId}: ${starterPack.packId}`);
+    process.exit(1);
+  }
+}
+
+const practiceStudioPack = starterPacks.find(
+  (pack) => pack.city === "seoul" && pack.mapLocationId === "practice_studio"
+);
+if (practiceStudioPack?.playerFacingLocationLabel !== "Chimaek Place") {
+  console.error("Seoul practice_studio starter pack must preserve the Chimaek Place player-facing label");
+  process.exit(1);
+}
+
+const tokyoSlotRosters = starterCastRegistry.cities.find((city) => city.cityId === "tokyo")?.slotRosters ?? [];
+if (tokyoSlotRosters.some((roster) => roster.dagLocationSlot === "practice_studio")) {
+  console.error("Tokyo starter-cast registry still contains a non-live practice_studio reserved roster");
+  process.exit(1);
 }
 
 for (const field of [
@@ -748,3 +811,4 @@ console.log("- Demo secret status fixture validated");
 console.log("- Runtime asset manifest keys validated");
 console.log("- Canonical/runtime manifest parity validated");
 console.log(`- Client runtime manifest keys resolved (${clientRuntimeAssetUsage.manifestKeys.length})`);
+console.log(`- Seoul starter-pack coverage validated (${authoredSeoulPacks.length} packs)`);

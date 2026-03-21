@@ -1,13 +1,13 @@
 {
   "templateVersion": "1.1.0",
   "packType": "city-location-character-starter",
-  "packId": "pack.seoul.food_street.starter",
+  "packId": "pack.seoul.convenience_store.starter",
   "city": "seoul",
-  "mapLocationId": "food_street",
-  "playerFacingLocationLabel": "Food Street",
+  "mapLocationId": "convenience_store",
+  "playerFacingLocationLabel": "Convenience Store",
   "location": {
-    "id": "food_street",
-    "assetSlug": "food-street",
+    "id": "convenience_store",
+    "assetSlug": "convenience-store",
     "modes": [
       "learn",
       "hangout"
@@ -15,32 +15,31 @@
   },
   "characterRoster": [
     {
-      "id": "char.seoul.food_street.minseo",
+      "id": "char.seoul.convenience_store.eunji",
       "role": "lead",
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
-        "character.seoul.food_street.minseo.portrait.default",
-        "character.seoul.food_street.minseo.sprite.default",
-        "character.seoul.food_street.minseo.scene.default",
-        "character.seoul.food_street.minseo.voice.reference"
+        "character.seoul.convenience_store.eunji.portrait.default",
+        "character.seoul.convenience_store.eunji.sprite.default",
+        "character.seoul.convenience_store.eunji.scene.default",
+        "character.seoul.convenience_store.eunji.voice.reference"
       ],
       "optionalManifestKeys": [
-        "character.seoul.food_street.minseo.sprite.expression-set",
-        "character.seoul.food_street.minseo.reward.polaroid"
+        "character.seoul.convenience_store.eunji.sprite.expression-set"
       ]
     },
     {
-      "id": "char.seoul.food_street.jiho",
+      "id": "char.seoul.convenience_store.hyunwoo",
       "role": "support",
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
-        "character.seoul.food_street.jiho.portrait.default",
-        "character.seoul.food_street.jiho.sprite.default",
-        "character.seoul.food_street.jiho.scene.default",
-        "character.seoul.food_street.jiho.voice.reference"
+        "character.seoul.convenience_store.hyunwoo.portrait.default",
+        "character.seoul.convenience_store.hyunwoo.sprite.default",
+        "character.seoul.convenience_store.hyunwoo.scene.default",
+        "character.seoul.convenience_store.hyunwoo.voice.reference"
       ],
       "optionalManifestKeys": [
-        "character.seoul.food_street.jiho.sprite.expression-set"
+        "character.seoul.convenience_store.hyunwoo.reward.polaroid"
       ]
     },
     {
@@ -57,7 +56,7 @@
     }
   ],
   "objectiveSeed": {
-    "objectiveId": "seoul-food-street-ordering-v2",
+    "objectiveId": "seoul-convenience-store-snack-run-v1",
     "targetTypes": [
       "vocabulary",
       "grammar",
@@ -69,9 +68,9 @@
     }
   },
   "manifestKeys": [
-    "city.seoul.location.food-street.backdrop.default",
-    "character.seoul.food_street.minseo.portrait.default",
-    "character.seoul.food_street.jiho.portrait.default",
+    "city.seoul.location.convenience-store.backdrop.default",
+    "character.seoul.convenience_store.eunji.portrait.default",
+    "character.seoul.convenience_store.hyunwoo.portrait.default",
     "character.tong.expression.neutral"
   ],
   "rewardHooks": {
