@@ -60,6 +60,8 @@ function loadJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
 }
 
+const WORLD_MAP_REGISTRY = loadJson('packages/contracts/world-map-registry.sample.json');
+
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -86,6 +88,49 @@ function stableHashNumber(value) {
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function getWorldMapCityRegistry(cityId) {
+  return (WORLD_MAP_REGISTRY.cities || []).find((city) => city.cityId === cityId) || null;
+}
+
+function resolveWorldMapLocation(cityId, locationId = null) {
+  const cityRegistry = getWorldMapCityRegistry(cityId);
+  const fallbackLocationId = locationId || DEFAULT_LOCATION_BY_CITY[cityId] || 'food_street';
+
+  if (!cityRegistry) {
+    return {
+      cityId,
+      mapLocationId: fallbackLocationId,
+      dagLocationSlot: fallbackLocationId,
+      label: LOCATION_LABELS[fallbackLocationId] || fallbackLocationId.replace(/_/g, ' '),
+      legacyLocationIds: [fallbackLocationId],
+    };
+  }
+
+  const requestedLocationId = locationId || cityRegistry.defaultMapLocationId;
+  const normalized = cityRegistry.locations.find(
+    (entry) =>
+      entry.mapLocationId === requestedLocationId ||
+      entry.dagLocationSlot === requestedLocationId ||
+      (entry.legacyLocationIds || []).includes(requestedLocationId),
+  );
+  const fallback = cityRegistry.locations.find((entry) => entry.mapLocationId === cityRegistry.defaultMapLocationId)
+    || cityRegistry.locations[0];
+  const mapLocationId = normalized?.mapLocationId || fallback?.mapLocationId || fallbackLocationId;
+  const dagLocationSlot = normalized?.dagLocationSlot || fallback?.dagLocationSlot || fallbackLocationId;
+
+  return {
+    cityId,
+    mapLocationId,
+    dagLocationSlot,
+    label:
+      normalized?.label ||
+      fallback?.label ||
+      LOCATION_LABELS[dagLocationSlot] ||
+      mapLocationId.replace(/_/g, ' '),
+    legacyLocationIds: unique([dagLocationSlot, ...((normalized?.legacyLocationIds || []))]),
+  };
 }
 
 function keyFor(cityId, locationId) {
@@ -1360,12 +1405,17 @@ function buildOverlayCandidates(persona) {
 function buildRoadmap(persona, foundationEvaluation, overlayCandidates) {
   const hasJapanese = persona.targetLanguages.includes('ja') || persona.goals.some((goal) => goal.lang === 'ja');
   const zhOverlay = overlayCandidates.find((candidate) => candidate.overlay.lang === 'zh');
+  const seoulFoundationLocation = resolveWorldMapLocation('seoul', 'food_street');
+  const tokyoFoundationLocation = resolveWorldMapLocation('tokyo');
+  const shanghaiFoundationLocation = resolveWorldMapLocation('shanghai');
 
   return [
     {
       cityId: 'seoul',
-      locationId: 'food_street',
-      title: 'Seoul Food Street',
+      locationId: seoulFoundationLocation.dagLocationSlot,
+      mapLocationId: seoulFoundationLocation.mapLocationId,
+      dagLocationSlot: seoulFoundationLocation.dagLocationSlot,
+      title: `${CITY_LABELS.seoul} ${seoulFoundationLocation.label}`,
       lang: 'ko',
       status:
         foundationEvaluation.completedNodeCount > 0 || foundationEvaluation.activeNodeCount > 0
@@ -1380,8 +1430,10 @@ function buildRoadmap(persona, foundationEvaluation, overlayCandidates) {
     },
     {
       cityId: 'tokyo',
-      locationId: 'food_street',
-      title: 'Tokyo Food Street',
+      locationId: tokyoFoundationLocation.dagLocationSlot,
+      mapLocationId: tokyoFoundationLocation.mapLocationId,
+      dagLocationSlot: tokyoFoundationLocation.dagLocationSlot,
+      title: `${CITY_LABELS.tokyo} ${tokyoFoundationLocation.label}`,
       lang: 'ja',
       status: hasJapanese ? 'ready' : 'stub',
       summary: hasJapanese
@@ -1392,8 +1444,10 @@ function buildRoadmap(persona, foundationEvaluation, overlayCandidates) {
     },
     {
       cityId: 'shanghai',
-      locationId: 'practice_studio',
-      title: 'Shanghai Practice Studio',
+      locationId: shanghaiFoundationLocation.dagLocationSlot,
+      mapLocationId: shanghaiFoundationLocation.mapLocationId,
+      dagLocationSlot: shanghaiFoundationLocation.dagLocationSlot,
+      title: `${CITY_LABELS.shanghai} ${shanghaiFoundationLocation.label}`,
       lang: 'zh',
       status: zhOverlay ? 'ready' : 'stub',
       summary: zhOverlay
@@ -1450,22 +1504,27 @@ function buildLegacyWorldRoadmap(persona, foundationEvaluation, overlayCandidate
       label: 'Seoul',
       focus: cityFocus.get('ko') || 'foundation',
       proficiency: persona.proficiency.ko || 'beginner',
-      locations: LEGACY_SHARED_LOCATIONS.map((location, index) => ({
-        locationId: location.locationId,
-        label: location.label,
-        status:
-          location.locationId === 'food_street'
-            ? foundationEvaluation.completedNodeCount > 0 || foundationEvaluation.activeNodeCount > 0
-              ? 'active'
-              : 'preview'
-            : index === 1
-              ? 'preview'
-              : 'locked',
-        progress:
-          location.locationId === 'food_street'
-            ? `${foundationEvaluation.completedNodeCount}/${foundationEvaluation.nodeEntries.length} nodes completed`
-            : 'Planned for future authored packs',
-      })),
+      locations: LEGACY_SHARED_LOCATIONS.map((location, index) => {
+        const resolvedLocation = resolveWorldMapLocation('seoul', location.locationId);
+        return {
+          locationId: location.locationId,
+          mapLocationId: resolvedLocation.mapLocationId,
+          dagLocationSlot: resolvedLocation.dagLocationSlot,
+          label: resolvedLocation.label,
+          status:
+            location.locationId === 'food_street'
+              ? foundationEvaluation.completedNodeCount > 0 || foundationEvaluation.activeNodeCount > 0
+                ? 'active'
+                : 'preview'
+              : index === 1
+                ? 'preview'
+                : 'locked',
+          progress:
+            location.locationId === 'food_street'
+              ? `${foundationEvaluation.completedNodeCount}/${foundationEvaluation.nodeEntries.length} nodes completed`
+              : 'Planned for future authored packs',
+        };
+      }),
       levels: seoulLevelProgress,
     },
     {
@@ -1473,12 +1532,17 @@ function buildLegacyWorldRoadmap(persona, foundationEvaluation, overlayCandidate
       label: 'Tokyo',
       focus: cityFocus.get('ja') || 'foundation',
       proficiency: persona.proficiency.ja || 'beginner',
-      locations: LEGACY_SHARED_LOCATIONS.map((location, index) => ({
-        locationId: location.locationId,
-        label: location.label,
-        status: index === 0 ? 'preview' : 'locked',
-        progress: index === 0 ? 'Starter path scaffolded for future pack generation' : 'Locked',
-      })),
+      locations: LEGACY_SHARED_LOCATIONS.map((location, index) => {
+        const resolvedLocation = resolveWorldMapLocation('tokyo', location.locationId);
+        return {
+          locationId: location.locationId,
+          mapLocationId: resolvedLocation.mapLocationId,
+          dagLocationSlot: resolvedLocation.dagLocationSlot,
+          label: resolvedLocation.label,
+          status: index === 0 ? 'preview' : 'locked',
+          progress: index === 0 ? 'Starter path scaffolded for future pack generation' : 'Locked',
+        };
+      }),
       levels: [
         { level: 0, label: 'SCRIPT', status: 'available' },
         { level: 1, label: 'PRONUNCIATION', status: 'locked' },
@@ -1489,22 +1553,27 @@ function buildLegacyWorldRoadmap(persona, foundationEvaluation, overlayCandidate
       label: 'Shanghai',
       focus: cityFocus.get('zh') || 'personalization',
       proficiency: persona.proficiency.zh || 'beginner',
-      locations: LEGACY_SHARED_LOCATIONS.map((location, index) => ({
-        locationId: location.locationId,
-        label: location.label,
-        status:
-          location.locationId === 'practice_studio'
-            ? overlayCandidates.some((candidate) => candidate.overlay.lang === 'zh')
-              ? 'preview'
-              : 'locked'
-            : index === 0
-              ? 'preview'
-              : 'locked',
-        progress:
-          location.locationId === 'practice_studio'
-            ? 'Personalized overlay ready for creator vocabulary'
-            : 'Awaiting generated pack',
-      })),
+      locations: LEGACY_SHARED_LOCATIONS.map((location, index) => {
+        const resolvedLocation = resolveWorldMapLocation('shanghai', location.locationId);
+        return {
+          locationId: location.locationId,
+          mapLocationId: resolvedLocation.mapLocationId,
+          dagLocationSlot: resolvedLocation.dagLocationSlot,
+          label: resolvedLocation.label,
+          status:
+            location.locationId === 'practice_studio'
+              ? overlayCandidates.some((candidate) => candidate.overlay.lang === 'zh')
+                ? 'preview'
+                : 'locked'
+              : index === 0
+                ? 'preview'
+                : 'locked',
+          progress:
+            location.locationId === 'practice_studio'
+              ? 'Personalized overlay ready for creator vocabulary'
+              : 'Awaiting generated pack',
+        };
+      }),
       levels: [
         { level: 0, label: 'FOUNDATION', status: 'available' },
         { level: 1, label: 'VIDEO PROMPTING OVERLAY', status: 'preview' },
@@ -1602,16 +1671,21 @@ function buildLegacyOverlay(overlayCandidates) {
 }
 
 function buildLegacyNextActions(recommendations) {
-  return recommendations.map((recommendation) => ({
-    actionId: recommendation.recommendationId,
-    type: recommendation.type,
-    title: recommendation.title,
-    objectiveId: recommendation.nodeIds?.[0] || null,
-    cityId: recommendation.cityId,
-    locationId: recommendation.locationId,
-    reason: recommendation.reason,
-    recommendedNodeIds: cloneJson(recommendation.nodeIds || []),
-  }));
+  return recommendations.map((recommendation) => {
+    const resolvedLocation = resolveWorldMapLocation(recommendation.cityId, recommendation.locationId);
+    return {
+      actionId: recommendation.recommendationId,
+      type: recommendation.type,
+      title: recommendation.title,
+      objectiveId: recommendation.nodeIds?.[0] || null,
+      cityId: recommendation.cityId,
+      locationId: recommendation.locationId,
+      mapLocationId: resolvedLocation.mapLocationId,
+      dagLocationSlot: resolvedLocation.dagLocationSlot,
+      reason: recommendation.reason,
+      recommendedNodeIds: cloneJson(recommendation.nodeIds || []),
+    };
+  });
 }
 
 function buildLegacyBundleTargets(bundle, evaluation) {
@@ -1646,6 +1720,7 @@ function collectFocusTargetIds(targetProgressItems, limit = 8) {
 }
 
 function buildLessonBundle(pack, evaluation, learnerId, nextUnlocks = []) {
+  const resolvedLocation = resolveWorldMapLocation(pack.cityId, pack.locationId);
   if ((pack.nodes || []).length === 0 || evaluation.nodeEntries.length === 0) {
     return {
       bundleId: `lesson:${pack.packId}:none`,
@@ -1655,6 +1730,8 @@ function buildLessonBundle(pack, evaluation, learnerId, nextUnlocks = []) {
       lang: pack.lang,
       cityId: pack.cityId,
       locationId: pack.locationId,
+      mapLocationId: resolvedLocation.mapLocationId,
+      dagLocationSlot: resolvedLocation.dagLocationSlot,
       title: `${pack.title} lesson bundle`,
       mode: 'learn',
       reason: 'This location does not have an authored lesson bundle yet.',
@@ -1730,6 +1807,8 @@ function buildLessonBundle(pack, evaluation, learnerId, nextUnlocks = []) {
     lang: pack.lang,
     cityId: pack.cityId,
     locationId: pack.locationId,
+    mapLocationId: resolvedLocation.mapLocationId,
+    dagLocationSlot: resolvedLocation.dagLocationSlot,
     title,
     mode: 'learn',
     reason,
@@ -1757,6 +1836,7 @@ function hangoutPriority(entry) {
 }
 
 function buildHangoutBundle(pack, evaluation, learnerId, missionGate = null) {
+  const resolvedLocation = resolveWorldMapLocation(pack.cityId, pack.locationId);
   const scenarios = (pack.scenarios || []).filter((scenario) => scenario.mode === 'hangout');
   if (scenarios.length === 0) {
     return {
@@ -1767,6 +1847,8 @@ function buildHangoutBundle(pack, evaluation, learnerId, missionGate = null) {
       lang: pack.lang,
       cityId: pack.cityId,
       locationId: pack.locationId,
+      mapLocationId: resolvedLocation.mapLocationId,
+      dagLocationSlot: resolvedLocation.dagLocationSlot,
       scenarioId: '',
       title: `${pack.title} hangout bundle`,
       mode: 'hangout',
@@ -1819,6 +1901,8 @@ function buildHangoutBundle(pack, evaluation, learnerId, missionGate = null) {
         lang: pack.lang,
         cityId: pack.cityId,
         locationId: pack.locationId,
+        mapLocationId: resolvedLocation.mapLocationId,
+        dagLocationSlot: resolvedLocation.dagLocationSlot,
         scenarioId: scenario.scenarioId,
         title: 'Food Street Hangout Validation',
         mode: 'hangout',
@@ -1862,6 +1946,8 @@ function buildHangoutBundle(pack, evaluation, learnerId, missionGate = null) {
     lang: pack.lang,
     cityId: pack.cityId,
     locationId: pack.locationId,
+    mapLocationId: resolvedLocation.mapLocationId,
+    dagLocationSlot: resolvedLocation.dagLocationSlot,
     scenarioId: '',
     title: `${pack.title} hangout bundle`,
     mode: 'hangout',

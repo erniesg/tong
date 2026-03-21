@@ -2,20 +2,39 @@
   "learner": {
     "learnerId": "persona_kpop_prompting",
     "displayName": "K-pop creator learner",
-    "targetLanguages": ["ko", "ja", "zh"],
+    "targetLanguages": [
+      "ko",
+      "ja",
+      "zh"
+    ],
     "proficiency": {
       "ko": "beginner",
       "ja": "beginner",
       "zh": "intermediate"
     },
     "goals": [
-      { "lang": "zh", "topic": "video prompting vocabulary" },
-      { "lang": "ko", "topic": "K-pop and performance language" },
-      { "lang": "ja", "topic": "beginner daily conversation" }
+      {
+        "lang": "zh",
+        "topic": "video prompting vocabulary"
+      },
+      {
+        "lang": "ko",
+        "topic": "K-pop and performance language"
+      },
+      {
+        "lang": "ja",
+        "topic": "beginner daily conversation"
+      }
     ],
     "mediaPreferences": {
-      "youtube": ["Chinese prompt engineering explainers", "K-pop performance practice clips"],
-      "spotify": ["aespa", "IVE"]
+      "youtube": [
+        "Chinese prompt engineering explainers",
+        "K-pop performance practice clips"
+      ],
+      "spotify": [
+        "aespa",
+        "IVE"
+      ]
     }
   },
   "progression": {
@@ -32,27 +51,33 @@
       "status": "in_progress",
       "summary": "Core Korean foundation path with active work on ordering language.",
       "activeNodeCount": 4,
-      "completedNodeCount": 6
+      "completedNodeCount": 6,
+      "mapLocationId": "food_street",
+      "dagLocationSlot": "food_street"
     },
     {
       "cityId": "tokyo",
-      "locationId": "food_street",
-      "title": "Tokyo Food Street",
+      "locationId": "subway_hub",
+      "title": "Tokyo Train Station",
       "lang": "ja",
       "status": "ready",
       "summary": "Beginner Japanese path is available but not started.",
       "activeNodeCount": 0,
-      "completedNodeCount": 0
+      "completedNodeCount": 0,
+      "mapLocationId": "train_station",
+      "dagLocationSlot": "subway_hub"
     },
     {
       "cityId": "shanghai",
       "locationId": "practice_studio",
-      "title": "Shanghai Practice Studio",
+      "title": "Shanghai Milk Tea Shop",
       "lang": "zh",
       "status": "ready",
       "summary": "Chinese domain overlay for creator and prompting vocabulary is recommended.",
       "activeNodeCount": 1,
-      "completedNodeCount": 2
+      "completedNodeCount": 2,
+      "mapLocationId": "milk_tea_shop",
+      "dagLocationSlot": "practice_studio"
     }
   ],
   "selectedPack": {
@@ -76,8 +101,18 @@
           "level": 0,
           "title": "Read menu items",
           "description": "Read food names from the stall menu.",
-          "tags": ["hangul", "reading", "food", "menu"],
-          "targetItemIds": ["오뎅", "떡볶이", "라면", "순대"],
+          "tags": [
+            "hangul",
+            "reading",
+            "food",
+            "menu"
+          ],
+          "targetItemIds": [
+            "\uc624\ub385",
+            "\ub5a1\ubcf6\uc774",
+            "\ub77c\uba74",
+            "\uc21c\ub300"
+          ],
           "targetCount": 4,
           "assessmentThreshold": 0.75,
           "objectiveCategory": "script"
@@ -91,7 +126,10 @@
           "level": 1,
           "title": "Pronounce 20 food words",
           "description": "Correctly pronounce common Korean food words from the stall.",
-          "tags": ["pronunciation", "food"],
+          "tags": [
+            "pronunciation",
+            "food"
+          ],
           "targetCount": 20,
           "assessmentThreshold": 0.75,
           "objectiveCategory": "pronunciation"
@@ -105,7 +143,10 @@
           "level": 2,
           "title": "Learn 20 food items",
           "description": "Know the meaning and reading of 20 street food items.",
-          "tags": ["vocabulary", "food"],
+          "tags": [
+            "vocabulary",
+            "food"
+          ],
           "targetCount": 20,
           "assessmentThreshold": 0.8,
           "objectiveCategory": "vocabulary"
@@ -119,7 +160,10 @@
           "level": 2,
           "title": "Learn courtesy phrases",
           "description": "Essential polite phrases for ordering.",
-          "tags": ["vocabulary", "courtesy"],
+          "tags": [
+            "vocabulary",
+            "courtesy"
+          ],
           "targetCount": 5,
           "assessmentThreshold": 0.9,
           "objectiveCategory": "vocabulary"
@@ -131,9 +175,13 @@
           "locationId": "food_street",
           "lang": "ko",
           "level": 3,
-          "title": "Master N + 주세요 pattern",
-          "description": "Use noun plus 주세요 to order food politely.",
-          "tags": ["grammar", "ordering", "polite"],
+          "title": "Master N + \uc8fc\uc138\uc694 pattern",
+          "description": "Use noun plus \uc8fc\uc138\uc694 to order food politely.",
+          "tags": [
+            "grammar",
+            "ordering",
+            "polite"
+          ],
           "targetCount": 1,
           "assessmentThreshold": 0.85,
           "objectiveCategory": "grammar"
@@ -146,48 +194,112 @@
           "lang": "ko",
           "level": 3,
           "title": "Use number + counter patterns",
-          "description": "Order using 하나, 둘, 셋 and 개 counters.",
-          "tags": ["grammar", "numbers", "ordering"],
+          "description": "Order using \ud558\ub098, \ub458, \uc14b and \uac1c counters.",
+          "tags": [
+            "grammar",
+            "numbers",
+            "ordering"
+          ],
           "targetCount": 2,
           "assessmentThreshold": 0.8,
           "objectiveCategory": "grammar"
         }
       ],
       "edges": [
-        { "edgeId": "edge_menu_unlocks_pron", "type": "unlocks", "fromNodeId": "ko-script-menu-reading", "toNodeId": "ko-pron-food-words" },
-        { "edgeId": "edge_pron_requires_vocab", "type": "requires", "fromNodeId": "ko-pron-food-words", "toNodeId": "ko-vocab-food-items" },
-        { "edgeId": "edge_vocab_requires_courtesy", "type": "reinforces", "fromNodeId": "ko-vocab-food-items", "toNodeId": "ko-vocab-courtesy" },
-        { "edgeId": "edge_juseyo_requires_vocab", "type": "requires", "fromNodeId": "ko-vocab-courtesy", "toNodeId": "ko-gram-juseyo" },
-        { "edgeId": "edge_counters_requires_juseyo", "type": "requires", "fromNodeId": "ko-gram-juseyo", "toNodeId": "ko-gram-counters" }
+        {
+          "edgeId": "edge_menu_unlocks_pron",
+          "type": "unlocks",
+          "fromNodeId": "ko-script-menu-reading",
+          "toNodeId": "ko-pron-food-words"
+        },
+        {
+          "edgeId": "edge_pron_requires_vocab",
+          "type": "requires",
+          "fromNodeId": "ko-pron-food-words",
+          "toNodeId": "ko-vocab-food-items"
+        },
+        {
+          "edgeId": "edge_vocab_requires_courtesy",
+          "type": "reinforces",
+          "fromNodeId": "ko-vocab-food-items",
+          "toNodeId": "ko-vocab-courtesy"
+        },
+        {
+          "edgeId": "edge_juseyo_requires_vocab",
+          "type": "requires",
+          "fromNodeId": "ko-vocab-courtesy",
+          "toNodeId": "ko-gram-juseyo"
+        },
+        {
+          "edgeId": "edge_counters_requires_juseyo",
+          "type": "requires",
+          "fromNodeId": "ko-gram-juseyo",
+          "toNodeId": "ko-gram-counters"
+        }
       ],
       "levels": [
         {
           "level": 0,
           "label": "SCRIPT",
           "description": "Can I recognise the symbols?",
-          "objectiveNodeIds": ["ko-script-menu-reading"],
-          "assessmentCriteria": { "minAccuracy": 0.8, "minItemsCompleted": 20, "requiredNodeIds": ["ko-script-menu-reading"] }
+          "objectiveNodeIds": [
+            "ko-script-menu-reading"
+          ],
+          "assessmentCriteria": {
+            "minAccuracy": 0.8,
+            "minItemsCompleted": 20,
+            "requiredNodeIds": [
+              "ko-script-menu-reading"
+            ]
+          }
         },
         {
           "level": 1,
           "label": "PRONUNCIATION",
           "description": "Can I say them correctly?",
-          "objectiveNodeIds": ["ko-pron-food-words"],
-          "assessmentCriteria": { "minAccuracy": 0.75, "minItemsCompleted": 15, "requiredNodeIds": ["ko-pron-food-words"] }
+          "objectiveNodeIds": [
+            "ko-pron-food-words"
+          ],
+          "assessmentCriteria": {
+            "minAccuracy": 0.75,
+            "minItemsCompleted": 15,
+            "requiredNodeIds": [
+              "ko-pron-food-words"
+            ]
+          }
         },
         {
           "level": 2,
           "label": "VOCABULARY",
           "description": "Do I know what they mean?",
-          "objectiveNodeIds": ["ko-vocab-food-items", "ko-vocab-courtesy"],
-          "assessmentCriteria": { "minAccuracy": 0.8, "minItemsCompleted": 30, "requiredNodeIds": ["ko-vocab-food-items", "ko-vocab-courtesy"] }
+          "objectiveNodeIds": [
+            "ko-vocab-food-items",
+            "ko-vocab-courtesy"
+          ],
+          "assessmentCriteria": {
+            "minAccuracy": 0.8,
+            "minItemsCompleted": 30,
+            "requiredNodeIds": [
+              "ko-vocab-food-items",
+              "ko-vocab-courtesy"
+            ]
+          }
         },
         {
           "level": 3,
           "label": "GRAMMAR",
           "description": "Can I build sentences?",
-          "objectiveNodeIds": ["ko-gram-juseyo", "ko-gram-counters"],
-          "assessmentCriteria": { "minAccuracy": 0.8, "minItemsCompleted": 10, "requiredNodeIds": ["ko-gram-juseyo"] }
+          "objectiveNodeIds": [
+            "ko-gram-juseyo",
+            "ko-gram-counters"
+          ],
+          "assessmentCriteria": {
+            "minAccuracy": 0.8,
+            "minItemsCompleted": 10,
+            "requiredNodeIds": [
+              "ko-gram-juseyo"
+            ]
+          }
         }
       ],
       "scenarios": [],
@@ -211,7 +323,11 @@
           "level": 0,
           "title": "Read menu items",
           "description": "Read food names from the stall menu.",
-          "tags": ["hangul", "reading", "menu"]
+          "tags": [
+            "hangul",
+            "reading",
+            "menu"
+          ]
         },
         "state": {
           "learnerId": "persona_kpop_prompting",
@@ -234,7 +350,10 @@
           "level": 1,
           "title": "Pronounce 20 food words",
           "description": "Correctly pronounce common Korean food words from the stall.",
-          "tags": ["pronunciation", "food"]
+          "tags": [
+            "pronunciation",
+            "food"
+          ]
         },
         "state": {
           "learnerId": "persona_kpop_prompting",
@@ -257,7 +376,10 @@
           "level": 2,
           "title": "Learn 20 food items",
           "description": "Know the meaning and reading of 20 street food items.",
-          "tags": ["vocabulary", "food"]
+          "tags": [
+            "vocabulary",
+            "food"
+          ]
         },
         "state": {
           "learnerId": "persona_kpop_prompting",
@@ -281,7 +403,10 @@
           "level": 2,
           "title": "Learn courtesy phrases",
           "description": "Essential polite phrases for ordering.",
-          "tags": ["vocabulary", "courtesy"]
+          "tags": [
+            "vocabulary",
+            "courtesy"
+          ]
         },
         "state": {
           "learnerId": "persona_kpop_prompting",
@@ -304,9 +429,13 @@
           "locationId": "food_street",
           "lang": "ko",
           "level": 3,
-          "title": "Master N + 주세요 pattern",
-          "description": "Use noun plus 주세요 to order food politely.",
-          "tags": ["grammar", "ordering", "polite"]
+          "title": "Master N + \uc8fc\uc138\uc694 pattern",
+          "description": "Use noun plus \uc8fc\uc138\uc694 to order food politely.",
+          "tags": [
+            "grammar",
+            "ordering",
+            "polite"
+          ]
         },
         "state": {
           "learnerId": "persona_kpop_prompting",
@@ -328,8 +457,12 @@
           "lang": "ko",
           "level": 3,
           "title": "Use number + counter patterns",
-          "description": "Order using 하나, 둘, 셋 and 개 counters.",
-          "tags": ["grammar", "numbers", "ordering"]
+          "description": "Order using \ud558\ub098, \ub458, \uc14b and \uac1c counters.",
+          "tags": [
+            "grammar",
+            "numbers",
+            "ordering"
+          ]
         },
         "state": {
           "learnerId": "persona_kpop_prompting",
@@ -337,9 +470,15 @@
           "status": "locked",
           "masteryScore": 0.05,
           "evidenceCount": 0,
-          "blockerNodeIds": ["ko-gram-juseyo", "ko-vocab-numbers"]
+          "blockerNodeIds": [
+            "ko-gram-juseyo",
+            "ko-vocab-numbers"
+          ]
         },
-        "blockers": ["ko-gram-juseyo", "ko-vocab-numbers"]
+        "blockers": [
+          "ko-gram-juseyo",
+          "ko-vocab-numbers"
+        ]
       }
     ]
   },
@@ -349,18 +488,35 @@
       "title": "Chinese Video Prompting Vocabulary",
       "lang": "zh",
       "source": "youtube",
-      "connectedNodeIds": ["overlay_zh_video_prompting"],
+      "connectedNodeIds": [
+        "overlay_zh_video_prompting"
+      ],
       "rationale": "Matches creator-focused learning goals from recent Chinese YouTube usage.",
-      "suggestedTerms": ["镜头", "提示词", "风格", "画面", "生成"]
+      "suggestedTerms": [
+        "\u955c\u5934",
+        "\u63d0\u793a\u8bcd",
+        "\u98ce\u683c",
+        "\u753b\u9762",
+        "\u751f\u6210"
+      ]
     },
     {
       "overlayId": "overlay_ko_kpop_stage",
       "title": "K-pop Stage Language",
       "lang": "ko",
       "source": "spotify",
-      "connectedNodeIds": ["ko-vocab-food-items", "ko-vocab-courtesy"],
+      "connectedNodeIds": [
+        "ko-vocab-food-items",
+        "ko-vocab-courtesy"
+      ],
       "rationale": "Uses aespa and IVE listening habits as motivation to reinforce Korean vocabulary retention.",
-      "suggestedTerms": ["무대", "연습", "안무", "리허설", "파트"]
+      "suggestedTerms": [
+        "\ubb34\ub300",
+        "\uc5f0\uc2b5",
+        "\uc548\ubb34",
+        "\ub9ac\ud5c8\uc124",
+        "\ud30c\ud2b8"
+      ]
     }
   ],
   "recommendations": [
@@ -369,7 +525,9 @@
       "type": "review",
       "title": "Review Korean courtesy phrases",
       "reason": "This is the highest-leverage due item before the next hangout.",
-      "nodeIds": ["ko-vocab-courtesy"],
+      "nodeIds": [
+        "ko-vocab-courtesy"
+      ],
       "cityId": "seoul",
       "locationId": "food_street",
       "lang": "ko",
@@ -379,9 +537,11 @@
     {
       "recommendationId": "rec_dashboard_start_juseyo",
       "type": "lesson",
-      "title": "Open the N + 주세요 grammar session",
+      "title": "Open the N + \uc8fc\uc138\uc694 grammar session",
       "reason": "Current Korean vocabulary coverage is strong enough to begin productive ordering sentences.",
-      "nodeIds": ["ko-gram-juseyo"],
+      "nodeIds": [
+        "ko-gram-juseyo"
+      ],
       "cityId": "seoul",
       "locationId": "food_street",
       "lang": "ko",
@@ -393,7 +553,9 @@
       "type": "overlay",
       "title": "Explore Chinese video prompting vocabulary",
       "reason": "This personalized overlay aligns closely with the learner's creator goal.",
-      "nodeIds": ["overlay_zh_video_prompting"],
+      "nodeIds": [
+        "overlay_zh_video_prompting"
+      ],
       "cityId": "shanghai",
       "locationId": "practice_studio",
       "lang": "zh",
@@ -404,5 +566,149 @@
   "evidence": {
     "totalEvents": 28,
     "lastUpdatedAt": "2026-03-08T10:00:00.000Z"
+  },
+  "worldMapRegistry": {
+    "version": "2026-03-21",
+    "cities": [
+      {
+        "cityId": "seoul",
+        "defaultMapLocationId": "food_street",
+        "locations": [
+          {
+            "mapLocationId": "food_street",
+            "dagLocationSlot": "food_street",
+            "label": "Food Street",
+            "legacyLocationIds": [
+              "food_street"
+            ]
+          },
+          {
+            "mapLocationId": "cafe",
+            "dagLocationSlot": "cafe",
+            "label": "Cafe",
+            "legacyLocationIds": [
+              "cafe"
+            ]
+          },
+          {
+            "mapLocationId": "convenience_store",
+            "dagLocationSlot": "convenience_store",
+            "label": "Convenience Store",
+            "legacyLocationIds": [
+              "convenience_store"
+            ]
+          },
+          {
+            "mapLocationId": "subway_hub",
+            "dagLocationSlot": "subway_hub",
+            "label": "Subway Hub",
+            "legacyLocationIds": [
+              "subway_hub"
+            ]
+          },
+          {
+            "mapLocationId": "practice_studio",
+            "dagLocationSlot": "practice_studio",
+            "label": "Practice Studio",
+            "legacyLocationIds": [
+              "practice_studio"
+            ]
+          }
+        ]
+      },
+      {
+        "cityId": "tokyo",
+        "defaultMapLocationId": "train_station",
+        "locations": [
+          {
+            "mapLocationId": "train_station",
+            "dagLocationSlot": "subway_hub",
+            "label": "Train Station",
+            "legacyLocationIds": [
+              "subway_hub"
+            ]
+          },
+          {
+            "mapLocationId": "izakaya",
+            "dagLocationSlot": "food_street",
+            "label": "Izakaya",
+            "legacyLocationIds": [
+              "food_street"
+            ]
+          },
+          {
+            "mapLocationId": "konbini",
+            "dagLocationSlot": "convenience_store",
+            "label": "Convenience Store",
+            "legacyLocationIds": [
+              "convenience_store"
+            ]
+          },
+          {
+            "mapLocationId": "tea_house",
+            "dagLocationSlot": "cafe",
+            "label": "Tea House",
+            "legacyLocationIds": [
+              "cafe"
+            ]
+          },
+          {
+            "mapLocationId": "ramen_shop",
+            "dagLocationSlot": "food_street",
+            "label": "Ramen Shop",
+            "legacyLocationIds": [
+              "food_street"
+            ]
+          }
+        ]
+      },
+      {
+        "cityId": "shanghai",
+        "defaultMapLocationId": "milk_tea_shop",
+        "locations": [
+          {
+            "mapLocationId": "metro_station",
+            "dagLocationSlot": "subway_hub",
+            "label": "Metro Station",
+            "legacyLocationIds": [
+              "subway_hub"
+            ]
+          },
+          {
+            "mapLocationId": "bbq_stall",
+            "dagLocationSlot": "food_street",
+            "label": "BBQ Stall",
+            "legacyLocationIds": [
+              "food_street"
+            ]
+          },
+          {
+            "mapLocationId": "convenience_store",
+            "dagLocationSlot": "convenience_store",
+            "label": "Convenience Store",
+            "legacyLocationIds": [
+              "convenience_store"
+            ]
+          },
+          {
+            "mapLocationId": "milk_tea_shop",
+            "dagLocationSlot": "practice_studio",
+            "label": "Milk Tea Shop",
+            "legacyLocationIds": [
+              "practice_studio",
+              "cafe"
+            ]
+          },
+          {
+            "mapLocationId": "dumpling_shop",
+            "dagLocationSlot": "food_street",
+            "label": "Dumpling Shop",
+            "legacyLocationIds": [
+              "food_street"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }
