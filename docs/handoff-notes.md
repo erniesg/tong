@@ -219,3 +219,15 @@ Template:
 - Integration risks:
   - The helper is intentionally heuristic. It should inform planning, but `validate-issue` still owns the final evidence strategy after live repro.
 - Next owner: `codex/qa-platform`
+
+## 2026-03-21 (World content issue closure plan)
+- Date: 2026-03-21
+- Branch/worktree: `codex/world-content-closure-plan` (`/Users/erniesg/code/erniesg/tong/.worktrees/world-content-plan`)
+- What changed:
+  - Added a repo-visible closeout plan for the world-content / KG-map alignment work so issue closure uses explicit acceptance criteria, proof requirements, and safe lane ownership instead of implicit assumptions.
+  - Captured the dependency on a contracts-first world-map registry that ties the live `/game` map pins back to the shared DAG location model.
+- Contract changes: none in this note; follow-up implementation should land schema changes in `packages/contracts/**` first.
+- Integration risks:
+  - The live map in `apps/client/components/city-map/CityMap.tsx` and the shared DAG location model still diverge; city starter-pack issues should not close until the mapping layer is explicit.
+  - `assets/manifest/**` remains a collision hotspot across `runtime-assets` and `creative-assets`; keep one active owner per merge window.
+- Next owner: `codex/qa-platform`
