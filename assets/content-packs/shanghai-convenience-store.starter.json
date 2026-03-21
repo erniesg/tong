@@ -1,0 +1,82 @@
+{
+  "templateVersion": "1.1.0",
+  "packType": "city-location-character-starter",
+  "packId": "pack.shanghai.convenience_store.starter",
+  "city": "shanghai",
+  "mapLocationId": "convenience_store",
+  "playerFacingLocationLabel": "Convenience Store",
+  "location": {
+    "id": "convenience_store",
+    "assetSlug": "convenience-store",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "char.shanghai.convenience_store.an",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.shanghai.convenience_store.an.portrait.default",
+        "character.shanghai.convenience_store.an.sprite.default",
+        "character.shanghai.convenience_store.an.scene.default",
+        "character.shanghai.convenience_store.an.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.shanghai.convenience_store.an.sprite.expression-set"
+      ]
+    },
+    {
+      "id": "char.shanghai.convenience_store.yue",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.shanghai.convenience_store.yue.portrait.default",
+        "character.shanghai.convenience_store.yue.sprite.default",
+        "character.shanghai.convenience_store.yue.scene.default",
+        "character.shanghai.convenience_store.yue.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.shanghai.convenience_store.yue.reward.polaroid"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "shanghai-convenience-store-errand-chat-v1",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.3"
+    }
+  },
+  "manifestKeys": [
+    "city.shanghai.location.convenience-store.backdrop.default",
+    "character.shanghai.convenience_store.an.portrait.default",
+    "character.shanghai.convenience_store.yue.portrait.default",
+    "character.tong.expression.neutral"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": null,
+    "polaroidRewardKey": null
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+}

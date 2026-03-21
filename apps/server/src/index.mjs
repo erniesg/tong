@@ -2438,7 +2438,7 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
     }
     case 'graph.dashboard.get': {
       const city = args.city === 'tokyo' || args.city === 'shanghai' || args.city === 'seoul' ? args.city : undefined;
-      const location = city ? resolveWorldMapLocation(city, args.location).dagLocationSlot : args.location;
+      const location = city ? (args.location || undefined) : args.location;
       return {
         statusCode: 200,
         payload: {
@@ -2985,7 +2985,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/v1/graph/dashboard' && req.method === 'GET') {
       const personaId = url.searchParams.get('personaId') || url.searchParams.get('learnerId') || undefined;
       const city = url.searchParams.get('city') || undefined;
-      const location = city ? resolveWorldMapLocation(city, url.searchParams.get('location') || undefined).dagLocationSlot : (url.searchParams.get('location') || undefined);
+      const location = url.searchParams.get('location') || undefined;
       const userId = getUserIdFromQuery(url.searchParams);
       jsonResponse(res, 200, {
         worldMapRegistry: cloneJson(WORLD_MAP_REGISTRY),
