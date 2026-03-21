@@ -219,3 +219,11 @@ Template:
 - Integration risks:
   - The helper is intentionally heuristic. It should inform planning, but `validate-issue` still owns the final evidence strategy after live repro.
 - Next owner: `codex/qa-platform`
+
+## 2026-03-21 (Issue 69 starter-cast roster + bundle intent)
+- Date: 2026-03-21
+- Branch/worktree: `work` (shared root workspace crossing into `assets/**` and `docs/qa/**` for world-content closeout)
+- Intent:
+  - Land a repo-visible starter-cast roster source of truth for issue `#69`, keyed by the canonical `mapLocationId -> dagLocationSlot` registry from `packages/contracts/world-map-registry.sample.json`.
+  - Define stable per-character asset bundle requirements plus optional reward/polaroid hooks that downstream city-pack issues `#62`, `#63`, and `#64` can cite.
+  - Stage the required world-content closeout artifact bundle and PR-ready notes without generating final production art.

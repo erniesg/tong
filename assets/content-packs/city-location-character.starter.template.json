@@ -1,5 +1,5 @@
 {
-  "templateVersion": "1.0.0",
+  "templateVersion": "1.1.0",
   "packType": "city-location-character-starter",
   "packId": "<city>-<location>-starter",
   "city": "<seoul|tokyo|shanghai>",
@@ -13,12 +13,35 @@
   },
   "characterRoster": [
     {
-      "id": "<character-id>",
+      "id": "<char.<city>.<dagLocationSlot>.<name>>",
       "role": "lead",
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
-        "character.<character-id>.portrait.default",
-        "character.<character-id>.sprite.default"
+        "character.<city>.<dagLocationSlot>.<name>.portrait.default",
+        "character.<city>.<dagLocationSlot>.<name>.sprite.default",
+        "character.<city>.<dagLocationSlot>.<name>.scene.default",
+        "character.<city>.<dagLocationSlot>.<name>.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.<city>.<dagLocationSlot>.<name>.sprite.expression-set",
+        "character.<city>.<dagLocationSlot>.<name>.intro.video",
+        "character.<city>.<dagLocationSlot>.<name>.reward.polaroid"
+      ]
+    },
+    {
+      "id": "<char.<city>.<dagLocationSlot>.<name>>",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.<city>.<dagLocationSlot>.<name>.portrait.default",
+        "character.<city>.<dagLocationSlot>.<name>.sprite.default",
+        "character.<city>.<dagLocationSlot>.<name>.scene.default",
+        "character.<city>.<dagLocationSlot>.<name>.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.<city>.<dagLocationSlot>.<name>.sprite.expression-set",
+        "character.<city>.<dagLocationSlot>.<name>.intro.video",
+        "character.<city>.<dagLocationSlot>.<name>.reward.polaroid"
       ]
     },
     {
@@ -27,6 +50,10 @@
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
         "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
       ]
     }
   ],
@@ -47,8 +74,9 @@
     "city.<city>.location.<asset-slug>.ambience.default"
   ],
   "rewardHooks": {
-    "videoCallRewardKey": "<optional: reward.shanghai.video-call.placeholder.v1>",
-    "polaroidRewardKey": "<optional: reward.shanghai.polaroid.placeholder.v1>"
+    "videoCallRewardKey": "<optional: reward.<city>.<mapLocationId>.video_call>",
+    "polaroidRewardKey": "<optional: reward.<city>.<mapLocationId>.polaroid>"
   },
-  "status": "template"
+  "status": "template",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
 }
