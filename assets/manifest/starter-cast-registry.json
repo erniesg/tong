@@ -1,0 +1,360 @@
+{
+  "registryVersion": "2026-03-21",
+  "issue": 69,
+  "dependsOn": [114],
+  "sourceMapRegistry": "packages/contracts/world-map-registry.sample.json",
+  "keyConventions": {
+    "characterId": "char.<city>.<dagLocationSlot>.<name>",
+    "bundleId": "bundle.character.<characterId>",
+    "packId": "pack.<city>.<mapLocationId>.starter",
+    "rewardBundleId": "reward.<city>.<mapLocationId>.<rewardType>",
+    "assetKeyPrefix": "character.<city>.<dagLocationSlot>.<name>",
+    "slotRosterId": "slot.<city>.<dagLocationSlot>.starter"
+  },
+  "assetBundleContract": {
+    "requiredOutputs": [
+      {
+        "logicalAssetType": "portrait.default",
+        "usage": "dialogue-avatar",
+        "notes": "Primary circular or card avatar for dialogue rail, session lists, and roster cards."
+      },
+      {
+        "logicalAssetType": "sprite.default",
+        "usage": "hangout-presence",
+        "notes": "Default full-body or half-body scene sprite used when no emotion-specific pose is available."
+      },
+      {
+        "logicalAssetType": "scene.default",
+        "usage": "learn-hangout-still",
+        "notes": "Static fallback still for runtime-assets when animation or layered compositing is unavailable."
+      },
+      {
+        "logicalAssetType": "voice.reference",
+        "usage": "game-engine-tone-anchor",
+        "notes": "Text-only persona/voice reference JSON or markdown used by creative-assets and game-engine prompt packs."
+      }
+    ],
+    "optionalOutputs": [
+      {
+        "logicalAssetType": "sprite.expression-set",
+        "usage": "emotion-variants",
+        "notes": "Optional expression or pose set keyed by emotion labels such as neutral, cheerful, shy, and focused."
+      },
+      {
+        "logicalAssetType": "intro.video",
+        "usage": "scene-intro-cinematic",
+        "notes": "Optional first-meet clip for higher-fidelity city packs."
+      },
+      {
+        "logicalAssetType": "reward.polaroid",
+        "usage": "collectible-memory",
+        "notes": "Optional collectible card tied to validated hangout milestones or advanced rewards."
+      },
+      {
+        "logicalAssetType": "reward.video-call",
+        "usage": "mission-reward",
+        "notes": "Optional video-call reward clip; required only for reward-bearing advanced mission paths."
+      }
+    ],
+    "runtimeAssumptions": [
+      "Every playable city/map pin resolves through packages/contracts/world-map-registry.sample.json before selecting a roster.",
+      "Each live mapLocationId references one starter slot roster via its dagLocationSlot and may reuse the same two-character roster across multiple pins in the same city.",
+      "Tong remains a global assistant and is not counted toward the two local starter characters per slot.",
+      "If optional outputs are missing, runtime-assets falls back to portrait.default + scene.default without blocking pack approval."
+    ]
+  },
+  "cities": [
+    {
+      "cityId": "seoul",
+      "slotRosters": [
+        {
+          "slotRosterId": "slot.seoul.food_street.starter",
+          "dagLocationSlot": "food_street",
+          "characterIds": [
+            "char.seoul.food_street.minseo",
+            "char.seoul.food_street.jiho"
+          ],
+          "coveredMapLocationIds": [
+            "food_street"
+          ]
+        },
+        {
+          "slotRosterId": "slot.seoul.cafe.starter",
+          "dagLocationSlot": "cafe",
+          "characterIds": [
+            "char.seoul.cafe.sora",
+            "char.seoul.cafe.donghyun"
+          ],
+          "coveredMapLocationIds": [
+            "cafe"
+          ]
+        },
+        {
+          "slotRosterId": "slot.seoul.convenience_store.starter",
+          "dagLocationSlot": "convenience_store",
+          "characterIds": [
+            "char.seoul.convenience_store.eunji",
+            "char.seoul.convenience_store.hyunwoo"
+          ],
+          "coveredMapLocationIds": [
+            "convenience_store"
+          ]
+        },
+        {
+          "slotRosterId": "slot.seoul.subway_hub.starter",
+          "dagLocationSlot": "subway_hub",
+          "characterIds": [
+            "char.seoul.subway_hub.nari",
+            "char.seoul.subway_hub.taemin"
+          ],
+          "coveredMapLocationIds": [
+            "subway_hub"
+          ]
+        },
+        {
+          "slotRosterId": "slot.seoul.practice_studio.starter",
+          "dagLocationSlot": "practice_studio",
+          "characterIds": [
+            "char.seoul.practice_studio.yujin",
+            "char.seoul.practice_studio.seungwoo"
+          ],
+          "coveredMapLocationIds": [
+            "practice_studio"
+          ]
+        }
+      ],
+      "mapPins": [
+        {
+          "mapLocationId": "food_street",
+          "dagLocationSlot": "food_street",
+          "slotRosterId": "slot.seoul.food_street.starter",
+          "packId": "pack.seoul.food_street.starter"
+        },
+        {
+          "mapLocationId": "cafe",
+          "dagLocationSlot": "cafe",
+          "slotRosterId": "slot.seoul.cafe.starter",
+          "packId": "pack.seoul.cafe.starter"
+        },
+        {
+          "mapLocationId": "convenience_store",
+          "dagLocationSlot": "convenience_store",
+          "slotRosterId": "slot.seoul.convenience_store.starter",
+          "packId": "pack.seoul.convenience_store.starter"
+        },
+        {
+          "mapLocationId": "subway_hub",
+          "dagLocationSlot": "subway_hub",
+          "slotRosterId": "slot.seoul.subway_hub.starter",
+          "packId": "pack.seoul.subway_hub.starter"
+        },
+        {
+          "mapLocationId": "practice_studio",
+          "dagLocationSlot": "practice_studio",
+          "slotRosterId": "slot.seoul.practice_studio.starter",
+          "packId": "pack.seoul.practice_studio.starter"
+        }
+      ]
+    },
+    {
+      "cityId": "tokyo",
+      "slotRosters": [
+        {
+          "slotRosterId": "slot.tokyo.subway_hub.starter",
+          "dagLocationSlot": "subway_hub",
+          "characterIds": [
+            "char.tokyo.subway_hub.akira",
+            "char.tokyo.subway_hub.mei"
+          ],
+          "coveredMapLocationIds": [
+            "train_station"
+          ]
+        },
+        {
+          "slotRosterId": "slot.tokyo.food_street.starter",
+          "dagLocationSlot": "food_street",
+          "characterIds": [
+            "char.tokyo.food_street.rin",
+            "char.tokyo.food_street.daichi"
+          ],
+          "coveredMapLocationIds": [
+            "izakaya",
+            "ramen_shop"
+          ]
+        },
+        {
+          "slotRosterId": "slot.tokyo.convenience_store.starter",
+          "dagLocationSlot": "convenience_store",
+          "characterIds": [
+            "char.tokyo.convenience_store.yui",
+            "char.tokyo.convenience_store.kaito"
+          ],
+          "coveredMapLocationIds": [
+            "konbini"
+          ]
+        },
+        {
+          "slotRosterId": "slot.tokyo.cafe.starter",
+          "dagLocationSlot": "cafe",
+          "characterIds": [
+            "char.tokyo.cafe.hina",
+            "char.tokyo.cafe.ren"
+          ],
+          "coveredMapLocationIds": [
+            "tea_house"
+          ]
+        }
+      ],
+      "mapPins": [
+        {
+          "mapLocationId": "train_station",
+          "dagLocationSlot": "subway_hub",
+          "slotRosterId": "slot.tokyo.subway_hub.starter",
+          "packId": "pack.tokyo.train_station.starter"
+        },
+        {
+          "mapLocationId": "izakaya",
+          "dagLocationSlot": "food_street",
+          "slotRosterId": "slot.tokyo.food_street.starter",
+          "packId": "pack.tokyo.izakaya.starter"
+        },
+        {
+          "mapLocationId": "konbini",
+          "dagLocationSlot": "convenience_store",
+          "slotRosterId": "slot.tokyo.convenience_store.starter",
+          "packId": "pack.tokyo.konbini.starter"
+        },
+        {
+          "mapLocationId": "tea_house",
+          "dagLocationSlot": "cafe",
+          "slotRosterId": "slot.tokyo.cafe.starter",
+          "packId": "pack.tokyo.tea_house.starter"
+        },
+        {
+          "mapLocationId": "ramen_shop",
+          "dagLocationSlot": "food_street",
+          "slotRosterId": "slot.tokyo.food_street.starter",
+          "packId": "pack.tokyo.ramen_shop.starter"
+        }
+      ]
+    },
+    {
+      "cityId": "shanghai",
+      "slotRosters": [
+        {
+          "slotRosterId": "slot.shanghai.subway_hub.starter",
+          "dagLocationSlot": "subway_hub",
+          "characterIds": [
+            "char.shanghai.subway_hub.lin",
+            "char.shanghai.subway_hub.wei"
+          ],
+          "coveredMapLocationIds": [
+            "metro_station"
+          ]
+        },
+        {
+          "slotRosterId": "slot.shanghai.food_street.starter",
+          "dagLocationSlot": "food_street",
+          "characterIds": [
+            "char.shanghai.food_street.qiao",
+            "char.shanghai.food_street.ming"
+          ],
+          "coveredMapLocationIds": [
+            "bbq_stall",
+            "dumpling_shop"
+          ]
+        },
+        {
+          "slotRosterId": "slot.shanghai.convenience_store.starter",
+          "dagLocationSlot": "convenience_store",
+          "characterIds": [
+            "char.shanghai.convenience_store.an",
+            "char.shanghai.convenience_store.yue"
+          ],
+          "coveredMapLocationIds": [
+            "convenience_store"
+          ]
+        },
+        {
+          "slotRosterId": "slot.shanghai.practice_studio.starter",
+          "dagLocationSlot": "practice_studio",
+          "characterIds": [
+            "char.shanghai.practice_studio.xinyi",
+            "char.shanghai.practice_studio.zhen"
+          ],
+          "coveredMapLocationIds": [
+            "milk_tea_shop"
+          ],
+          "rewardHooks": {
+            "videoCallRewardBundleId": "reward.shanghai.milk_tea_shop.video_call",
+            "polaroidRewardBundleId": "reward.shanghai.milk_tea_shop.polaroid"
+          }
+        }
+      ],
+      "mapPins": [
+        {
+          "mapLocationId": "metro_station",
+          "dagLocationSlot": "subway_hub",
+          "slotRosterId": "slot.shanghai.subway_hub.starter",
+          "packId": "pack.shanghai.metro_station.starter"
+        },
+        {
+          "mapLocationId": "bbq_stall",
+          "dagLocationSlot": "food_street",
+          "slotRosterId": "slot.shanghai.food_street.starter",
+          "packId": "pack.shanghai.bbq_stall.starter"
+        },
+        {
+          "mapLocationId": "convenience_store",
+          "dagLocationSlot": "convenience_store",
+          "slotRosterId": "slot.shanghai.convenience_store.starter",
+          "packId": "pack.shanghai.convenience_store.starter"
+        },
+        {
+          "mapLocationId": "milk_tea_shop",
+          "dagLocationSlot": "practice_studio",
+          "slotRosterId": "slot.shanghai.practice_studio.starter",
+          "packId": "pack.shanghai.milk_tea_shop.starter",
+          "rewardHooks": {
+            "videoCallRewardBundleId": "reward.shanghai.milk_tea_shop.video_call",
+            "polaroidRewardBundleId": "reward.shanghai.milk_tea_shop.polaroid"
+          }
+        },
+        {
+          "mapLocationId": "dumpling_shop",
+          "dagLocationSlot": "food_street",
+          "slotRosterId": "slot.shanghai.food_street.starter",
+          "packId": "pack.shanghai.dumpling_shop.starter"
+        }
+      ]
+    }
+  ],
+  "characters": [
+    {"characterId":"char.seoul.food_street.minseo","displayName":"Minseo","cityId":"seoul","dagLocationSlot":"food_street","archetype":"night-market host","packRole":"lead","requiredAssetKeys":["character.seoul.food_street.minseo.portrait.default","character.seoul.food_street.minseo.sprite.default","character.seoul.food_street.minseo.scene.default","character.seoul.food_street.minseo.voice.reference"],"optionalAssetKeys":["character.seoul.food_street.minseo.sprite.expression-set","character.seoul.food_street.minseo.reward.polaroid"]},
+    {"characterId":"char.seoul.food_street.jiho","displayName":"Jiho","cityId":"seoul","dagLocationSlot":"food_street","archetype":"late-shift foodie","packRole":"support","requiredAssetKeys":["character.seoul.food_street.jiho.portrait.default","character.seoul.food_street.jiho.sprite.default","character.seoul.food_street.jiho.scene.default","character.seoul.food_street.jiho.voice.reference"],"optionalAssetKeys":["character.seoul.food_street.jiho.sprite.expression-set"]},
+    {"characterId":"char.seoul.cafe.sora","displayName":"Sora","cityId":"seoul","dagLocationSlot":"cafe","archetype":"study-barista","packRole":"lead","requiredAssetKeys":["character.seoul.cafe.sora.portrait.default","character.seoul.cafe.sora.sprite.default","character.seoul.cafe.sora.scene.default","character.seoul.cafe.sora.voice.reference"],"optionalAssetKeys":["character.seoul.cafe.sora.sprite.expression-set"]},
+    {"characterId":"char.seoul.cafe.donghyun","displayName":"Donghyun","cityId":"seoul","dagLocationSlot":"cafe","archetype":"indie songwriter","packRole":"support","requiredAssetKeys":["character.seoul.cafe.donghyun.portrait.default","character.seoul.cafe.donghyun.sprite.default","character.seoul.cafe.donghyun.scene.default","character.seoul.cafe.donghyun.voice.reference"],"optionalAssetKeys":["character.seoul.cafe.donghyun.intro.video"]},
+    {"characterId":"char.seoul.convenience_store.eunji","displayName":"Eunji","cityId":"seoul","dagLocationSlot":"convenience_store","archetype":"overnight clerk","packRole":"lead","requiredAssetKeys":["character.seoul.convenience_store.eunji.portrait.default","character.seoul.convenience_store.eunji.sprite.default","character.seoul.convenience_store.eunji.scene.default","character.seoul.convenience_store.eunji.voice.reference"],"optionalAssetKeys":["character.seoul.convenience_store.eunji.sprite.expression-set"]},
+    {"characterId":"char.seoul.convenience_store.hyunwoo","displayName":"Hyunwoo","cityId":"seoul","dagLocationSlot":"convenience_store","archetype":"snack reviewer","packRole":"support","requiredAssetKeys":["character.seoul.convenience_store.hyunwoo.portrait.default","character.seoul.convenience_store.hyunwoo.sprite.default","character.seoul.convenience_store.hyunwoo.scene.default","character.seoul.convenience_store.hyunwoo.voice.reference"],"optionalAssetKeys":["character.seoul.convenience_store.hyunwoo.reward.polaroid"]},
+    {"characterId":"char.seoul.subway_hub.nari","displayName":"Nari","cityId":"seoul","dagLocationSlot":"subway_hub","archetype":"commuter mentor","packRole":"lead","requiredAssetKeys":["character.seoul.subway_hub.nari.portrait.default","character.seoul.subway_hub.nari.sprite.default","character.seoul.subway_hub.nari.scene.default","character.seoul.subway_hub.nari.voice.reference"],"optionalAssetKeys":["character.seoul.subway_hub.nari.sprite.expression-set"]},
+    {"characterId":"char.seoul.subway_hub.taemin","displayName":"Taemin","cityId":"seoul","dagLocationSlot":"subway_hub","archetype":"busker commuter","packRole":"support","requiredAssetKeys":["character.seoul.subway_hub.taemin.portrait.default","character.seoul.subway_hub.taemin.sprite.default","character.seoul.subway_hub.taemin.scene.default","character.seoul.subway_hub.taemin.voice.reference"],"optionalAssetKeys":["character.seoul.subway_hub.taemin.intro.video"]},
+    {"characterId":"char.seoul.practice_studio.yujin","displayName":"Yujin","cityId":"seoul","dagLocationSlot":"practice_studio","archetype":"dance captain","packRole":"lead","requiredAssetKeys":["character.seoul.practice_studio.yujin.portrait.default","character.seoul.practice_studio.yujin.sprite.default","character.seoul.practice_studio.yujin.scene.default","character.seoul.practice_studio.yujin.voice.reference"],"optionalAssetKeys":["character.seoul.practice_studio.yujin.sprite.expression-set"]},
+    {"characterId":"char.seoul.practice_studio.seungwoo","displayName":"Seungwoo","cityId":"seoul","dagLocationSlot":"practice_studio","archetype":"producer trainee","packRole":"support","requiredAssetKeys":["character.seoul.practice_studio.seungwoo.portrait.default","character.seoul.practice_studio.seungwoo.sprite.default","character.seoul.practice_studio.seungwoo.scene.default","character.seoul.practice_studio.seungwoo.voice.reference"],"optionalAssetKeys":["character.seoul.practice_studio.seungwoo.reward.polaroid"]},
+    {"characterId":"char.tokyo.subway_hub.akira","displayName":"Akira","cityId":"tokyo","dagLocationSlot":"subway_hub","archetype":"rail guide","packRole":"lead","requiredAssetKeys":["character.tokyo.subway_hub.akira.portrait.default","character.tokyo.subway_hub.akira.sprite.default","character.tokyo.subway_hub.akira.scene.default","character.tokyo.subway_hub.akira.voice.reference"],"optionalAssetKeys":["character.tokyo.subway_hub.akira.sprite.expression-set"]},
+    {"characterId":"char.tokyo.subway_hub.mei","displayName":"Mei","cityId":"tokyo","dagLocationSlot":"subway_hub","archetype":"rush-hour illustrator","packRole":"support","requiredAssetKeys":["character.tokyo.subway_hub.mei.portrait.default","character.tokyo.subway_hub.mei.sprite.default","character.tokyo.subway_hub.mei.scene.default","character.tokyo.subway_hub.mei.voice.reference"],"optionalAssetKeys":["character.tokyo.subway_hub.mei.reward.polaroid"]},
+    {"characterId":"char.tokyo.food_street.rin","displayName":"Rin","cityId":"tokyo","dagLocationSlot":"food_street","archetype":"izakaya server","packRole":"lead","requiredAssetKeys":["character.tokyo.food_street.rin.portrait.default","character.tokyo.food_street.rin.sprite.default","character.tokyo.food_street.rin.scene.default","character.tokyo.food_street.rin.voice.reference"],"optionalAssetKeys":["character.tokyo.food_street.rin.sprite.expression-set"]},
+    {"characterId":"char.tokyo.food_street.daichi","displayName":"Daichi","cityId":"tokyo","dagLocationSlot":"food_street","archetype":"ramen regular","packRole":"support","requiredAssetKeys":["character.tokyo.food_street.daichi.portrait.default","character.tokyo.food_street.daichi.sprite.default","character.tokyo.food_street.daichi.scene.default","character.tokyo.food_street.daichi.voice.reference"],"optionalAssetKeys":["character.tokyo.food_street.daichi.intro.video"]},
+    {"characterId":"char.tokyo.convenience_store.yui","displayName":"Yui","cityId":"tokyo","dagLocationSlot":"convenience_store","archetype":"konbini shift lead","packRole":"lead","requiredAssetKeys":["character.tokyo.convenience_store.yui.portrait.default","character.tokyo.convenience_store.yui.sprite.default","character.tokyo.convenience_store.yui.scene.default","character.tokyo.convenience_store.yui.voice.reference"],"optionalAssetKeys":["character.tokyo.convenience_store.yui.sprite.expression-set"]},
+    {"characterId":"char.tokyo.convenience_store.kaito","displayName":"Kaito","cityId":"tokyo","dagLocationSlot":"convenience_store","archetype":"after-school gamer","packRole":"support","requiredAssetKeys":["character.tokyo.convenience_store.kaito.portrait.default","character.tokyo.convenience_store.kaito.sprite.default","character.tokyo.convenience_store.kaito.scene.default","character.tokyo.convenience_store.kaito.voice.reference"],"optionalAssetKeys":["character.tokyo.convenience_store.kaito.reward.polaroid"]},
+    {"characterId":"char.tokyo.cafe.hina","displayName":"Hina","cityId":"tokyo","dagLocationSlot":"cafe","archetype":"tea house host","packRole":"lead","requiredAssetKeys":["character.tokyo.cafe.hina.portrait.default","character.tokyo.cafe.hina.sprite.default","character.tokyo.cafe.hina.scene.default","character.tokyo.cafe.hina.voice.reference"],"optionalAssetKeys":["character.tokyo.cafe.hina.sprite.expression-set"]},
+    {"characterId":"char.tokyo.cafe.ren","displayName":"Ren","cityId":"tokyo","dagLocationSlot":"cafe","archetype":"calligrapher regular","packRole":"support","requiredAssetKeys":["character.tokyo.cafe.ren.portrait.default","character.tokyo.cafe.ren.sprite.default","character.tokyo.cafe.ren.scene.default","character.tokyo.cafe.ren.voice.reference"],"optionalAssetKeys":["character.tokyo.cafe.ren.intro.video"]},
+    {"characterId":"char.shanghai.subway_hub.lin","displayName":"Lin","cityId":"shanghai","dagLocationSlot":"subway_hub","archetype":"metro navigator","packRole":"lead","requiredAssetKeys":["character.shanghai.subway_hub.lin.portrait.default","character.shanghai.subway_hub.lin.sprite.default","character.shanghai.subway_hub.lin.scene.default","character.shanghai.subway_hub.lin.voice.reference"],"optionalAssetKeys":["character.shanghai.subway_hub.lin.sprite.expression-set"]},
+    {"characterId":"char.shanghai.subway_hub.wei","displayName":"Wei","cityId":"shanghai","dagLocationSlot":"subway_hub","archetype":"delivery rider","packRole":"support","requiredAssetKeys":["character.shanghai.subway_hub.wei.portrait.default","character.shanghai.subway_hub.wei.sprite.default","character.shanghai.subway_hub.wei.scene.default","character.shanghai.subway_hub.wei.voice.reference"],"optionalAssetKeys":["character.shanghai.subway_hub.wei.reward.polaroid"]},
+    {"characterId":"char.shanghai.food_street.qiao","displayName":"Qiao","cityId":"shanghai","dagLocationSlot":"food_street","archetype":"bbq vendor","packRole":"lead","requiredAssetKeys":["character.shanghai.food_street.qiao.portrait.default","character.shanghai.food_street.qiao.sprite.default","character.shanghai.food_street.qiao.scene.default","character.shanghai.food_street.qiao.voice.reference"],"optionalAssetKeys":["character.shanghai.food_street.qiao.sprite.expression-set"]},
+    {"characterId":"char.shanghai.food_street.ming","displayName":"Ming","cityId":"shanghai","dagLocationSlot":"food_street","archetype":"dumpling scout","packRole":"support","requiredAssetKeys":["character.shanghai.food_street.ming.portrait.default","character.shanghai.food_street.ming.sprite.default","character.shanghai.food_street.ming.scene.default","character.shanghai.food_street.ming.voice.reference"],"optionalAssetKeys":["character.shanghai.food_street.ming.intro.video"]},
+    {"characterId":"char.shanghai.convenience_store.an","displayName":"An","cityId":"shanghai","dagLocationSlot":"convenience_store","archetype":"night cashier","packRole":"lead","requiredAssetKeys":["character.shanghai.convenience_store.an.portrait.default","character.shanghai.convenience_store.an.sprite.default","character.shanghai.convenience_store.an.scene.default","character.shanghai.convenience_store.an.voice.reference"],"optionalAssetKeys":["character.shanghai.convenience_store.an.sprite.expression-set"]},
+    {"characterId":"char.shanghai.convenience_store.yue","displayName":"Yue","cityId":"shanghai","dagLocationSlot":"convenience_store","archetype":"study-group organizer","packRole":"support","requiredAssetKeys":["character.shanghai.convenience_store.yue.portrait.default","character.shanghai.convenience_store.yue.sprite.default","character.shanghai.convenience_store.yue.scene.default","character.shanghai.convenience_store.yue.voice.reference"],"optionalAssetKeys":["character.shanghai.convenience_store.yue.reward.polaroid"]},
+    {"characterId":"char.shanghai.practice_studio.xinyi","displayName":"Xinyi","cityId":"shanghai","dagLocationSlot":"practice_studio","archetype":"dance challenge streamer","packRole":"lead","requiredAssetKeys":["character.shanghai.practice_studio.xinyi.portrait.default","character.shanghai.practice_studio.xinyi.sprite.default","character.shanghai.practice_studio.xinyi.scene.default","character.shanghai.practice_studio.xinyi.voice.reference"],"optionalAssetKeys":["character.shanghai.practice_studio.xinyi.reward.video-call","character.shanghai.practice_studio.xinyi.reward.polaroid"]},
+    {"characterId":"char.shanghai.practice_studio.zhen","displayName":"Zhen","cityId":"shanghai","dagLocationSlot":"practice_studio","archetype":"sound engineer","packRole":"support","requiredAssetKeys":["character.shanghai.practice_studio.zhen.portrait.default","character.shanghai.practice_studio.zhen.sprite.default","character.shanghai.practice_studio.zhen.scene.default","character.shanghai.practice_studio.zhen.voice.reference"],"optionalAssetKeys":["character.shanghai.practice_studio.zhen.sprite.expression-set","character.shanghai.practice_studio.zhen.reward.video-call"]}
+  ]
+}
