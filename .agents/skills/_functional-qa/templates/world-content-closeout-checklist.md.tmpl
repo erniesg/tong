@@ -1,0 +1,23 @@
+# World-content closeout checklist
+
+Use this checklist when closing or re-scoping `#60`, `#69`, `#62`, `#63`, or `#64`.
+
+## Required references
+- Parent epic or child issue reference
+- Prerequisite contracts issue for `mapLocationId -> dagLocationSlot`
+- Local artifact bundle path under `artifacts/qa-runs/functional-qa/world-content/<lane-or-issue>/<timestamp>/`
+
+## Proof expectations
+- Validation summary for current behavior
+- Explicit blocker or close-ready status
+- Verification command transcript
+- Reviewer-visible proof links for any UI-visible acceptance artifact
+- Pack, manifest, or reward diff summary as applicable
+
+## Closeout checklist
+- [ ] Confirm the prerequisite contracts issue exists and is referenced.
+- [ ] Confirm the issue body or comment names the current live map pins or slot targets it depends on.
+- [ ] Record the local artifact bundle path.
+- [ ] Run the prerequisite regression command set and save output under `verification/`.
+- [ ] Post a GitHub issue update with artifact path, verification result, and closeout status.
+- [ ] If close-ready, add PR-ready notes with title, summary, `Fixes`/`Refs`, and `How to test`.
