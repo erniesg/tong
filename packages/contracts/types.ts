@@ -184,6 +184,8 @@ export interface ObjectiveDescriptor {
   mode: SessionMode;
   cityId: GraphCityId;
   locationId: GraphLocationId;
+  mapLocationId?: MapLocationId;
+  dagLocationSlot?: GraphLocationId;
   objectiveCategory?: ObjectiveCategory;
   objectiveNodeId?: string;
   targetNodeIds?: string[];
@@ -547,6 +549,36 @@ export type GraphLocationId =
   | 'subway_hub'
   | 'practice_studio';
 
+export type MapLocationId =
+  | GraphLocationId
+  | 'metro_station'
+  | 'bbq_stall'
+  | 'milk_tea_shop'
+  | 'dumpling_shop'
+  | 'train_station'
+  | 'izakaya'
+  | 'konbini'
+  | 'tea_house'
+  | 'ramen_shop';
+
+export interface WorldMapLocationRegistryEntry {
+  mapLocationId: MapLocationId;
+  dagLocationSlot: GraphLocationId;
+  label: string;
+  legacyLocationIds?: GraphLocationId[];
+}
+
+export interface WorldMapCityRegistry {
+  cityId: GraphCityId;
+  defaultMapLocationId: MapLocationId;
+  locations: WorldMapLocationRegistryEntry[];
+}
+
+export interface WorldMapRegistry {
+  version: string;
+  cities: WorldMapCityRegistry[];
+}
+
 export type ObjectiveCategory =
   | 'script'
   | 'pronunciation'
@@ -767,6 +799,8 @@ export interface LearnerPersonaProfile {
 export interface WorldRoadmapEntry {
   cityId: GraphCityId;
   locationId: GraphLocationId;
+  mapLocationId?: MapLocationId;
+  dagLocationSlot?: GraphLocationId;
   title: string;
   lang: TargetLanguage;
   status: 'ready' | 'in_progress' | 'stub';
@@ -874,6 +908,7 @@ export interface GraphDashboardResponse {
     sp: number;
     rp: number;
   };
+  worldMapRegistry?: WorldMapRegistry;
   roadmap: WorldRoadmapEntry[];
   nextUnlocks?: GraphNextUnlock[];
   selectedPack: {
@@ -898,6 +933,8 @@ export interface GraphLessonBundleResponse {
   lang?: TargetLanguage;
   cityId?: GraphCityId;
   locationId?: GraphLocationId;
+  mapLocationId?: MapLocationId;
+  dagLocationSlot?: GraphLocationId;
   title: string;
   reason: string;
   focusNodeId?: string;
@@ -913,6 +950,8 @@ export interface GraphHangoutBundleResponse {
   lang?: TargetLanguage;
   cityId?: GraphCityId;
   locationId?: GraphLocationId;
+  mapLocationId?: MapLocationId;
+  dagLocationSlot?: GraphLocationId;
   scenarioId: string;
   title: string;
   reason: string;

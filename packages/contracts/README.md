@@ -10,6 +10,7 @@ Keep this package stable:
 Typed contracts:
 - `types.ts` defines TypeScript request/response models for Tong demo endpoints.
 - `index.ts` re-exports typed contracts for app usage.
+- `world-map-registry.sample.json` is the canonical bridge between live map pins and shared DAG location slots.
 - `objective-identity-map.sample.json` is the canonical alias bridge between graph objective ids and legacy fixture/api ids during migration.
 - `fixtures/game.start-or-resume.sample.json` now includes the additive nested session model used for player resume and QA seed routing.
 - `fixtures/game.session.sample.json`, `fixtures/scene.session.sample.json`, `fixtures/checkpoint.player-resume.sample.json`, and `fixtures/scenario.seed.review-ready.sample.json` are the canonical samples for progression/resume work.

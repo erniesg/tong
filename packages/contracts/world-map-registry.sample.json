@@ -1,0 +1,144 @@
+{
+  "version": "2026-03-21",
+  "cities": [
+    {
+      "cityId": "seoul",
+      "defaultMapLocationId": "food_street",
+      "locations": [
+        {
+          "mapLocationId": "food_street",
+          "dagLocationSlot": "food_street",
+          "label": "Food Street",
+          "legacyLocationIds": [
+            "food_street"
+          ]
+        },
+        {
+          "mapLocationId": "cafe",
+          "dagLocationSlot": "cafe",
+          "label": "Cafe",
+          "legacyLocationIds": [
+            "cafe"
+          ]
+        },
+        {
+          "mapLocationId": "convenience_store",
+          "dagLocationSlot": "convenience_store",
+          "label": "Convenience Store",
+          "legacyLocationIds": [
+            "convenience_store"
+          ]
+        },
+        {
+          "mapLocationId": "subway_hub",
+          "dagLocationSlot": "subway_hub",
+          "label": "Subway Hub",
+          "legacyLocationIds": [
+            "subway_hub"
+          ]
+        },
+        {
+          "mapLocationId": "practice_studio",
+          "dagLocationSlot": "practice_studio",
+          "label": "Practice Studio",
+          "legacyLocationIds": [
+            "practice_studio"
+          ]
+        }
+      ]
+    },
+    {
+      "cityId": "tokyo",
+      "defaultMapLocationId": "train_station",
+      "locations": [
+        {
+          "mapLocationId": "train_station",
+          "dagLocationSlot": "subway_hub",
+          "label": "Train Station",
+          "legacyLocationIds": [
+            "subway_hub"
+          ]
+        },
+        {
+          "mapLocationId": "izakaya",
+          "dagLocationSlot": "food_street",
+          "label": "Izakaya",
+          "legacyLocationIds": [
+            "food_street"
+          ]
+        },
+        {
+          "mapLocationId": "konbini",
+          "dagLocationSlot": "convenience_store",
+          "label": "Convenience Store",
+          "legacyLocationIds": [
+            "convenience_store"
+          ]
+        },
+        {
+          "mapLocationId": "tea_house",
+          "dagLocationSlot": "cafe",
+          "label": "Tea House",
+          "legacyLocationIds": [
+            "cafe"
+          ]
+        },
+        {
+          "mapLocationId": "ramen_shop",
+          "dagLocationSlot": "food_street",
+          "label": "Ramen Shop",
+          "legacyLocationIds": [
+            "food_street"
+          ]
+        }
+      ]
+    },
+    {
+      "cityId": "shanghai",
+      "defaultMapLocationId": "milk_tea_shop",
+      "locations": [
+        {
+          "mapLocationId": "metro_station",
+          "dagLocationSlot": "subway_hub",
+          "label": "Metro Station",
+          "legacyLocationIds": [
+            "subway_hub"
+          ]
+        },
+        {
+          "mapLocationId": "bbq_stall",
+          "dagLocationSlot": "food_street",
+          "label": "BBQ Stall",
+          "legacyLocationIds": [
+            "food_street"
+          ]
+        },
+        {
+          "mapLocationId": "convenience_store",
+          "dagLocationSlot": "convenience_store",
+          "label": "Convenience Store",
+          "legacyLocationIds": [
+            "convenience_store"
+          ]
+        },
+        {
+          "mapLocationId": "milk_tea_shop",
+          "dagLocationSlot": "practice_studio",
+          "label": "Milk Tea Shop",
+          "legacyLocationIds": [
+            "practice_studio",
+            "cafe"
+          ]
+        },
+        {
+          "mapLocationId": "dumpling_shop",
+          "dagLocationSlot": "food_street",
+          "label": "Dumpling Shop",
+          "legacyLocationIds": [
+            "food_street"
+          ]
+        }
+      ]
+    }
+  ]
+}
