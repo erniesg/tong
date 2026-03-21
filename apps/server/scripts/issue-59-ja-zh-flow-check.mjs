@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const args = process.argv.slice(2);
 const baseArg = args.find((arg) => !arg.startsWith('--'));
@@ -10,6 +11,20 @@ const apiBase = (baseArg || process.env.TONG_API_BASE_URL || 'http://localhost:8
 const demoPassword = process.env.TONG_DEMO_PASSWORD || process.env.TONG_DEMO_CODE || '';
 const traceFile = traceFileArg ? traceFileArg.slice('--trace-file='.length) : null;
 const traces = [];
+const __filename = fileURLToPath(import.meta.url);
+const repoRoot = path.resolve(path.dirname(__filename), '../../..');
+const worldMapRegistry = JSON.parse(
+  fs.readFileSync(path.join(repoRoot, 'packages/contracts/world-map-registry.sample.json'), 'utf8'),
+);
+
+function getExpectedMapLocation(cityId, dagLocationSlot) {
+  const cityRegistry = (worldMapRegistry.cities || []).find((city) => city.cityId === cityId);
+  const current = (cityRegistry?.locations || []).find(
+    (entry) => entry.dagLocationSlot === dagLocationSlot && entry.mapLocationId === cityRegistry?.defaultMapLocationId,
+  );
+  const fallback = (cityRegistry?.locations || []).find((entry) => entry.dagLocationSlot === dagLocationSlot);
+  return current?.mapLocationId || fallback?.mapLocationId || dagLocationSlot;
+}
 
 function assert(condition, message) {
   if (!condition) {
@@ -94,10 +109,12 @@ async function requestJson(pathname, init = {}) {
   };
 }
 
-function assertPlacement(payload, { lang, city, location, objectivePrefix }, label) {
+function assertPlacement(payload, { lang, city, location, mapLocationId, objectivePrefix }, label) {
   assert(payload?.gameSession?.activeObjective?.lang === lang, `${label} activeObjective.lang mismatch`);
   assert(payload?.gameSession?.cityId === city, `${label} city mismatch`);
   assert(payload?.gameSession?.locationId === location, `${label} location mismatch`);
+  assert(payload?.gameSession?.mapLocationId === mapLocationId, `${label} mapLocationId mismatch`);
+  assert(payload?.gameSession?.dagLocationSlot === location, `${label} dagLocationSlot mismatch`);
   assert(
     typeof payload?.gameSession?.activeObjective?.objectiveId === 'string' &&
       payload.gameSession.activeObjective.objectiveId.startsWith(objectivePrefix),
@@ -105,10 +122,12 @@ function assertPlacement(payload, { lang, city, location, objectivePrefix }, lab
   );
 }
 
-function assertObjectiveResponse(payload, { lang, city, location, objectivePrefix }, label) {
+function assertObjectiveResponse(payload, { lang, city, location, mapLocationId, objectivePrefix }, label) {
   assert(payload?.lang === lang, `${label} lang mismatch`);
   assert(payload?.objectiveGraph?.cityId === city, `${label} city mismatch`);
   assert(payload?.objectiveGraph?.locationId === location, `${label} location mismatch`);
+  assert(payload?.objectiveGraph?.mapLocationId === mapLocationId, `${label} mapLocationId mismatch`);
+  assert(payload?.objectiveGraph?.dagLocationSlot === location, `${label} dagLocationSlot mismatch`);
   assert(
     typeof payload?.objectiveId === 'string' && payload.objectiveId.startsWith(objectivePrefix),
     `${label} objectiveId mismatch: ${payload?.objectiveId}`,
@@ -160,7 +179,7 @@ async function run() {
   assert(seoulBootstrap.ok, `/game/start-or-resume seoul failed (${seoulBootstrap.status})`);
   assertPlacement(
     seoulBootstrap.data,
-    { lang: 'ko', city: 'seoul', location: 'food_street', objectivePrefix: 'ko-' },
+    { lang: 'ko', city: 'seoul', location: 'food_street', mapLocationId: 'food_street', objectivePrefix: 'ko-' },
     'seoulBootstrap',
   );
   logPass('preserve Seoul KO bootstrap');
@@ -185,20 +204,21 @@ async function run() {
     }),
   });
   assert(jaBootstrap.ok, `/game/start-or-resume tokyo failed (${jaBootstrap.status})`);
+  const jaMapLocationId = getExpectedMapLocation('tokyo', 'subway_hub');
   assertPlacement(
     jaBootstrap.data,
-    { lang: 'ja', city: 'tokyo', location: 'subway_hub', objectivePrefix: 'ja-' },
+    { lang: 'ja', city: 'tokyo', location: 'subway_hub', mapLocationId: jaMapLocationId, objectivePrefix: 'ja-' },
     'jaBootstrap',
   );
   logPass('tokyo bootstrap resolves JA placement');
 
   const jaObjective = await requestJson(
-    `/api/v1/objectives/next?userId=${encodeURIComponent(jaUserId)}&mode=hangout&lang=ja&city=tokyo&location=subway_hub`,
+    `/api/v1/objectives/next?userId=${encodeURIComponent(jaUserId)}&mode=hangout&lang=ja&city=tokyo&location=${encodeURIComponent(jaMapLocationId)}`,
   );
   assert(jaObjective.ok, `/objectives/next ja failed (${jaObjective.status})`);
   assertObjectiveResponse(
     jaObjective.data,
-    { lang: 'ja', city: 'tokyo', location: 'subway_hub', objectivePrefix: 'ja-' },
+    { lang: 'ja', city: 'tokyo', location: 'subway_hub', mapLocationId: jaMapLocationId, objectivePrefix: 'ja-' },
     'jaObjective',
   );
   logPass('objectives/next returns JA-safe targets and rationale');
@@ -209,7 +229,7 @@ async function run() {
       userId: jaUserId,
       sessionId: jaBootstrap.data?.sessionId,
       city: 'tokyo',
-      location: 'subway_hub',
+      location: jaMapLocationId,
       lang: 'ja',
       objectiveId: jaObjective.data?.objectiveId,
     }),
@@ -234,7 +254,7 @@ async function run() {
     body: JSON.stringify({
       userId: `${jaUserId}-stateless`,
       city: 'tokyo',
-      location: 'subway_hub',
+      location: jaMapLocationId,
       lang: 'ja',
       objectiveId: jaObjective.data?.objectiveId,
     }),
@@ -277,20 +297,21 @@ async function run() {
     }),
   });
   assert(zhBootstrap.ok, `/game/start-or-resume shanghai failed (${zhBootstrap.status})`);
+  const zhMapLocationId = getExpectedMapLocation('shanghai', 'practice_studio');
   assertPlacement(
     zhBootstrap.data,
-    { lang: 'zh', city: 'shanghai', location: 'practice_studio', objectivePrefix: 'zh-' },
+    { lang: 'zh', city: 'shanghai', location: 'practice_studio', mapLocationId: zhMapLocationId, objectivePrefix: 'zh-' },
     'zhBootstrap',
   );
   logPass('shanghai bootstrap resolves ZH placement');
 
   const zhObjective = await requestJson(
-    `/api/v1/objectives/next?userId=${encodeURIComponent(zhUserId)}&mode=hangout&lang=zh&city=shanghai&location=practice_studio`,
+    `/api/v1/objectives/next?userId=${encodeURIComponent(zhUserId)}&mode=hangout&lang=zh&city=shanghai&location=${encodeURIComponent(zhMapLocationId)}`,
   );
   assert(zhObjective.ok, `/objectives/next zh failed (${zhObjective.status})`);
   assertObjectiveResponse(
     zhObjective.data,
-    { lang: 'zh', city: 'shanghai', location: 'practice_studio', objectivePrefix: 'zh-' },
+    { lang: 'zh', city: 'shanghai', location: 'practice_studio', mapLocationId: zhMapLocationId, objectivePrefix: 'zh-' },
     'zhObjective',
   );
   logPass('objectives/next returns ZH-safe targets and rationale');
@@ -301,7 +322,7 @@ async function run() {
       userId: zhUserId,
       sessionId: zhBootstrap.data?.sessionId,
       city: 'shanghai',
-      location: 'practice_studio',
+      location: zhMapLocationId,
       lang: 'zh',
       objectiveId: zhObjective.data?.objectiveId,
     }),
@@ -326,7 +347,7 @@ async function run() {
     body: JSON.stringify({
       userId: `${zhUserId}-stateless`,
       city: 'shanghai',
-      location: 'practice_studio',
+      location: zhMapLocationId,
       lang: 'zh',
       objectiveId: zhObjective.data?.objectiveId,
     }),

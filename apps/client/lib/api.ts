@@ -173,6 +173,8 @@ export interface GraphWorldRoadmapLevel {
 
 export interface GraphWorldRoadmapLocation {
   locationId: LocationId;
+  mapLocationId?: LocationId;
+  dagLocationSlot?: LegacyDagLocationId;
   label: string;
   status: 'active' | 'preview' | 'locked';
   progress: string;
@@ -236,6 +238,8 @@ export interface GraphAction {
   objectiveId: string | null;
   cityId: CityId;
   locationId: LocationId;
+  mapLocationId?: LocationId;
+  dagLocationSlot?: LegacyDagLocationId;
   reason: string;
   recommendedNodeIds: string[];
 }
@@ -251,6 +255,8 @@ export interface GraphLessonBundle {
   bundleId: string;
   cityId: CityId;
   locationId: LocationId;
+  mapLocationId?: LocationId;
+  dagLocationSlot?: LegacyDagLocationId;
   objectiveId: string | null;
   title: string;
   mode: 'learn';
@@ -263,6 +269,8 @@ export interface GraphHangoutBundle {
   bundleId: string;
   cityId: CityId;
   locationId: LocationId;
+  mapLocationId?: LocationId;
+  dagLocationSlot?: LegacyDagLocationId;
   objectiveId: string | null;
   title: string;
   mode: 'hangout';
@@ -282,6 +290,7 @@ export interface GraphDashboardResponse {
     };
   };
   progression: ScoreState;
+  worldMapRegistry?: WorldMapRegistry;
   worldRoadmap: GraphWorldRoadmapCity[];
   locationSkillTree: {
     packId: string;
@@ -351,12 +360,14 @@ export interface GraphOverlayProposalResponse {
 }
 
 export type CityId = 'seoul' | 'tokyo' | 'shanghai';
-export type LocationId =
+export type LegacyDagLocationId =
   | 'food_street'
   | 'cafe'
   | 'convenience_store'
   | 'subway_hub'
-  | 'practice_studio'
+  | 'practice_studio';
+export type LocationId =
+  | LegacyDagLocationId
   // Shanghai
   | 'metro_station'
   | 'bbq_stall'
@@ -369,6 +380,24 @@ export type LocationId =
   | 'tea_house'
   | 'ramen_shop';
 
+export interface WorldMapRegistryLocation {
+  mapLocationId: LocationId;
+  dagLocationSlot: LegacyDagLocationId;
+  label: string;
+  legacyLocationIds?: LegacyDagLocationId[];
+}
+
+export interface WorldMapRegistryCity {
+  cityId: CityId;
+  defaultMapLocationId: LocationId;
+  locations: WorldMapRegistryLocation[];
+}
+
+export interface WorldMapRegistry {
+  version: string;
+  cities: WorldMapRegistryCity[];
+}
+
 export interface ObjectiveNextResponse {
   objectiveId: string;
   level: number;
@@ -377,7 +406,9 @@ export interface ObjectiveNextResponse {
   objectiveGraph: {
     objectiveNodeId: string;
     cityId: CityId;
-    locationId: LocationId;
+    locationId: LegacyDagLocationId;
+    mapLocationId?: LocationId;
+    dagLocationSlot?: LegacyDagLocationId;
     objectiveCategory: 'script' | 'pronunciation' | 'vocabulary' | 'grammar' | 'sentences' | 'conversation' | 'mastery';
     targetNodeIds: string[];
     prerequisiteObjectiveIds: string[];

@@ -77,6 +77,7 @@ const FIXTURES = {
   youtubeSync: loadJson('packages/contracts/fixtures/youtube.sync.sample.json'),
   youtubeStatus: loadJson('packages/contracts/fixtures/youtube.status.sample.json'),
 };
+const WORLD_MAP_REGISTRY = loadJson('packages/contracts/world-map-registry.sample.json');
 
 const mockMediaWindowPath = path.join(repoRoot, 'apps/server/data/mock-media-window.json');
 const DEFAULT_USER_ID = 'demo-user-1';
@@ -118,6 +119,39 @@ const DEFAULT_OBJECTIVE_BY_LANG = {
   ja: defaultObjectiveIdForLang('ja', 'ja-vocab-subway-transfers'),
   zh: defaultObjectiveIdForLang('zh', 'zh-mission-stage-texting'),
 };
+
+function getWorldMapCityRegistry(cityId) {
+  return (WORLD_MAP_REGISTRY.cities || []).find((city) => city.cityId === cityId) || null;
+}
+
+function resolveWorldMapLocation(cityId, locationId = null) {
+  const cityRegistry = getWorldMapCityRegistry(cityId);
+  if (!cityRegistry) {
+    return {
+      cityId,
+      mapLocationId: locationId || 'food_street',
+      dagLocationSlot: locationId || 'food_street',
+      legacyLocationIds: [locationId || 'food_street'],
+    };
+  }
+
+  const requestedLocationId = locationId || cityRegistry.defaultMapLocationId;
+  const normalized = cityRegistry.locations.find(
+    (entry) =>
+      entry.mapLocationId === requestedLocationId ||
+      entry.dagLocationSlot === requestedLocationId ||
+      (entry.legacyLocationIds || []).includes(requestedLocationId),
+  );
+  const fallback = cityRegistry.locations.find((entry) => entry.mapLocationId === cityRegistry.defaultMapLocationId)
+    || cityRegistry.locations[0];
+
+  return {
+    cityId,
+    mapLocationId: normalized?.mapLocationId || fallback?.mapLocationId || 'food_street',
+    dagLocationSlot: normalized?.dagLocationSlot || fallback?.dagLocationSlot || 'food_street',
+    legacyLocationIds: [...new Set([normalized?.dagLocationSlot, ...((normalized?.legacyLocationIds || []))].filter(Boolean))],
+  };
+}
 const OBJECTIVE_RUNTIME_CONFIG = new Map([
   ['ko-vocab-food-items', {
     fallbackTerms: ['주문', '메뉴', '떡볶이'],
@@ -593,17 +627,8 @@ function getCityId(query, fallback = 'seoul') {
 }
 
 function getLocationId(query, fallback = 'food_street') {
-  const location = query.get('location') || fallback;
-  if (
-    location === 'food_street' ||
-    location === 'cafe' ||
-    location === 'convenience_store' ||
-    location === 'subway_hub' ||
-    location === 'practice_studio'
-  ) {
-    return location;
-  }
-  return fallback;
+  const city = getCityId(query);
+  return resolveWorldMapLocation(city, query.get('location') || fallback).dagLocationSlot;
 }
 
 function cloneJson(value) {
@@ -651,12 +676,19 @@ function getRuntimeObjectiveConfig({ objectiveId = null, lang = null, cityId = n
     const identity = resolved.identity || null;
     const runtimeConfig = OBJECTIVE_RUNTIME_CONFIG.get(resolved.canonicalObjectiveId) || {};
     if (identity || Object.keys(runtimeConfig).length > 0) {
+      const resolvedMapLocation = resolveWorldMapLocation(
+        identity?.cityId || cityId || 'seoul',
+        identity?.mapLocationId || identity?.locationId || null,
+      );
       return {
         objectiveId: resolved.canonicalObjectiveId,
         canonicalObjectiveId: resolved.canonicalObjectiveId,
         legacyObjectiveId: resolved.legacyObjectiveId,
         objectiveAliasIds: resolved.objectiveAliasIds,
         ...(identity || {}),
+        locationId: resolvedMapLocation.dagLocationSlot,
+        mapLocationId: resolvedMapLocation.mapLocationId,
+        dagLocationSlot: resolvedMapLocation.dagLocationSlot,
         ...runtimeConfig,
       };
     }
@@ -667,12 +699,19 @@ function getRuntimeObjectiveConfig({ objectiveId = null, lang = null, cityId = n
     if (cityId && identity.cityId !== cityId) continue;
     const runtimeConfig = OBJECTIVE_RUNTIME_CONFIG.get(identity.canonicalObjectiveId);
     if (!runtimeConfig) continue;
+    const resolvedMapLocation = resolveWorldMapLocation(
+      identity.cityId,
+      identity.mapLocationId || identity.locationId || null,
+    );
     return {
       objectiveId: identity.canonicalObjectiveId,
       canonicalObjectiveId: identity.canonicalObjectiveId,
       legacyObjectiveId: identity.legacyObjectiveIds?.[0] || null,
       objectiveAliasIds: [...(identity.legacyObjectiveIds || [])],
       ...identity,
+      locationId: resolvedMapLocation.dagLocationSlot,
+      mapLocationId: resolvedMapLocation.mapLocationId,
+      dagLocationSlot: resolvedMapLocation.dagLocationSlot,
       ...runtimeConfig,
     };
   }
@@ -1232,6 +1271,8 @@ function buildPersonalizedObjective({
   city = 'seoul',
   location = 'food_street',
 }) {
+  const resolvedMapLocation = resolveWorldMapLocation(city, location);
+  const dagLocationSlot = resolvedMapLocation.dagLocationSlot;
   const ingestion = ensureIngestionForUser(userId);
   const baseObjective = cloneJson(FIXTURES.objectivesNext);
   const dominantClusterId = getDominantClusterId(ingestion);
@@ -1246,7 +1287,7 @@ function buildPersonalizedObjective({
     placementCandidates.find(
       (candidate) =>
         candidate.city === city &&
-        candidate.location === location &&
+        candidate.location === dagLocationSlot &&
         candidate.mode === mode &&
         (
           objectiveMatchesLanguage(candidate.objectiveId, lang) ||
@@ -1310,7 +1351,7 @@ function buildPersonalizedObjective({
   const recentMediaRationale = buildRecentMediaRationale({
     ingestion,
     city,
-    location,
+    location: dagLocationSlot,
     mode,
     lang,
     objectiveId,
@@ -1323,7 +1364,9 @@ function buildPersonalizedObjective({
     objectiveGraph: {
       objectiveNodeId,
       cityId: city,
-      locationId: location,
+      locationId: dagLocationSlot,
+      mapLocationId: resolvedMapLocation.mapLocationId,
+      dagLocationSlot,
       objectiveCategory: graphCategory,
       targetNodeIds: graphTargetNodeIds,
       prerequisiteObjectiveIds: prerequisiteByLang[lang] || [],
@@ -1365,11 +1408,17 @@ function buildGameActions(lang, objectiveId) {
 
 function buildActiveObjectiveDescriptor({ objective, lang, city, location }) {
   const runtimeObjectiveConfig = getRuntimeObjectiveConfig({ objectiveId: objective.objectiveId });
+  const resolvedMapLocation = resolveWorldMapLocation(
+    city,
+    objective?.objectiveGraph?.mapLocationId || objective?.mapLocationId || location,
+  );
   return withObjectiveIdentity({
     lang,
     mode: 'hangout',
     cityId: city,
-    locationId: location,
+    locationId: resolvedMapLocation.dagLocationSlot,
+    mapLocationId: resolvedMapLocation.mapLocationId,
+    dagLocationSlot: resolvedMapLocation.dagLocationSlot,
     objectiveCategory: objective.objectiveGraph?.objectiveCategory,
     objectiveNodeId: objective.objectiveGraph?.objectiveNodeId,
     targetNodeIds: cloneJson(objective.objectiveGraph?.targetNodeIds || []),
@@ -1409,11 +1458,12 @@ function buildInitialUnlocks(location) {
 }
 
 function buildHangoutRoute(city, location, extras = {}) {
+  const resolvedMapLocation = resolveWorldMapLocation(city, location);
   return {
     pathname: '/game',
     query: {
       city,
-      location,
+      location: resolvedMapLocation.mapLocationId,
       mode: 'hangout',
       ...extras,
     },
@@ -1470,6 +1520,10 @@ function buildScenarioSeeds(gameSession) {
 }
 
 function createCheckpointFromScenarioSeed(gameSession, scenarioSeed, nowIso) {
+  const resolvedMapLocation = resolveWorldMapLocation(
+    scenarioSeed.cityId,
+    scenarioSeed.mapLocationId || scenarioSeed.locationId,
+  );
   return {
     checkpointId: `seed_${gameSession.sessionId}_${scenarioSeed.seedId}`,
     gameSessionId: gameSession.sessionId,
@@ -1477,7 +1531,9 @@ function createCheckpointFromScenarioSeed(gameSession, scenarioSeed, nowIso) {
     kind: 'player_resume',
     route: cloneJson(scenarioSeed.route),
     cityId: scenarioSeed.cityId,
-    locationId: scenarioSeed.locationId,
+    locationId: resolvedMapLocation.dagLocationSlot,
+    mapLocationId: resolvedMapLocation.mapLocationId,
+    dagLocationSlot: resolvedMapLocation.dagLocationSlot,
     mode: scenarioSeed.mode,
     objective: cloneJson(scenarioSeed.objective),
     phase: scenarioSeed.phase,
@@ -1518,6 +1574,8 @@ function createCheckpointRecord(gameSession, sceneSession, boundary, nowIso) {
     }),
     cityId: gameSession.cityId,
     locationId: gameSession.locationId,
+    mapLocationId: gameSession.mapLocationId || resolveWorldMapLocation(gameSession.cityId, gameSession.locationId).mapLocationId,
+    dagLocationSlot: gameSession.dagLocationSlot || gameSession.locationId,
     mode: gameSession.currentMode,
     objective: cloneJson(gameSession.activeObjective),
     phase: sceneSession.phase,
@@ -1561,6 +1619,10 @@ function restoreGameSessionFromCheckpoint(gameSession, checkpoint) {
   gameSession.activeSceneSessionId = checkpoint.sceneSessionId;
   gameSession.currentMode = checkpoint.mode;
   gameSession.activeObjective = cloneJson(checkpoint.objective);
+  gameSession.locationId = checkpoint.dagLocationSlot || checkpoint.locationId;
+  gameSession.mapLocationId =
+    checkpoint.mapLocationId || resolveWorldMapLocation(gameSession.cityId, checkpoint.locationId).mapLocationId;
+  gameSession.dagLocationSlot = checkpoint.dagLocationSlot || checkpoint.locationId;
   gameSession.missionGate = cloneJson(checkpoint.missionGate);
   gameSession.unlocks = cloneJson(checkpoint.unlocks);
   gameSession.rewards = cloneJson(checkpoint.rewards || []);
@@ -1578,6 +1640,8 @@ function hydrateSceneSessionFromCheckpoint(gameSession, checkpoint) {
     sceneId: gameSession.activeSceneId,
     cityId: gameSession.cityId,
     locationId: gameSession.locationId,
+    mapLocationId: gameSession.mapLocationId,
+    dagLocationSlot: gameSession.dagLocationSlot || gameSession.locationId,
     mode: gameSession.currentMode,
     objective: cloneJson(gameSession.activeObjective),
     phase: checkpoint.phase,
@@ -1603,6 +1667,8 @@ function hydrateSceneSessionFromCheckpoint(gameSession, checkpoint) {
   sceneSession.sceneId = gameSession.activeSceneId;
   sceneSession.cityId = checkpoint.cityId;
   sceneSession.locationId = checkpoint.locationId;
+  sceneSession.mapLocationId = checkpoint.mapLocationId || resolveWorldMapLocation(checkpoint.cityId, checkpoint.locationId).mapLocationId;
+  sceneSession.dagLocationSlot = checkpoint.dagLocationSlot || checkpoint.locationId;
   sceneSession.mode = checkpoint.mode;
   sceneSession.objective = cloneJson(checkpoint.objective);
   sceneSession.phase = checkpoint.phase;
@@ -1662,6 +1728,8 @@ function buildGameStartResponse(gameSession, sceneSession, activeCheckpoint, res
     sessionId: gameSession.sessionId,
     city: gameSession.cityId,
     location: gameSession.locationId,
+    mapLocationId: gameSession.mapLocationId || resolveWorldMapLocation(gameSession.cityId, gameSession.locationId).mapLocationId,
+    dagLocationSlot: gameSession.dagLocationSlot || gameSession.locationId,
     mode: gameSession.currentMode,
     sceneId: gameSession.activeSceneId,
     tongPrompt: FIXTURES.gameStart.tongPrompt || 'tong.system.food_street_intro.v1',
@@ -1792,14 +1860,20 @@ function createNewGameSession(userId, incomingProfile, requestedCity) {
     cityId: requestedOrDerivedCity,
   });
   const city = requestedOrDerivedCity;
-  const location =
-    cityRuntimeObjectiveConfig?.locationId || CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
+  const resolvedMapLocation = resolveWorldMapLocation(
+    city,
+    cityRuntimeObjectiveConfig?.mapLocationId ||
+      cityRuntimeObjectiveConfig?.locationId ||
+      CLUSTER_LOCATION_MAP[dominantClusterId] ||
+      null,
+  );
+  const location = resolvedMapLocation.dagLocationSlot;
   const objective = buildPersonalizedObjective({
     userId,
     mode: 'hangout',
     lang: bootstrapLang,
     city,
-    location,
+    location: resolvedMapLocation.mapLocationId,
   });
   const nowIso = new Date().toISOString();
   const sessionId = `sess_${Math.random().toString(36).slice(2, 10)}`;
@@ -1821,6 +1895,8 @@ function createNewGameSession(userId, incomingProfile, requestedCity) {
     profile: cloneJson(profile),
     cityId: city,
     locationId: location,
+    mapLocationId: resolvedMapLocation.mapLocationId,
+    dagLocationSlot: location,
     currentMode: 'hangout',
     activeSceneId: sceneId,
     activeSceneSessionId: sceneSessionId,
@@ -1840,6 +1916,8 @@ function createNewGameSession(userId, incomingProfile, requestedCity) {
     sceneId,
     cityId: city,
     locationId: location,
+    mapLocationId: resolvedMapLocation.mapLocationId,
+    dagLocationSlot: location,
     mode: 'hangout',
     objective: cloneJson(activeObjective),
     phase: 'intro',
@@ -2186,7 +2264,14 @@ function startHangoutScene(body = {}) {
   state.sceneSessions.set(sceneSessionId, {
     userId,
     cityId: body.city || statelessObjectiveConfig?.cityId || 'seoul',
-    locationId: body.location || statelessObjectiveConfig?.locationId || 'food_street',
+    locationId: resolveWorldMapLocation(
+      body.city || statelessObjectiveConfig?.cityId || 'seoul',
+      body.location || statelessObjectiveConfig?.mapLocationId || statelessObjectiveConfig?.locationId || 'food_street',
+    ).dagLocationSlot,
+    mapLocationId: resolveWorldMapLocation(
+      body.city || statelessObjectiveConfig?.cityId || 'seoul',
+      body.location || statelessObjectiveConfig?.mapLocationId || statelessObjectiveConfig?.locationId || 'food_street',
+    ).mapLocationId,
     mode: 'hangout',
     objective: statelessObjectiveConfig
       ? withObjectiveIdentity(
@@ -2334,14 +2419,7 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
       const lang = args.lang === 'ja' || args.lang === 'zh' ? args.lang : 'ko';
       const city =
         args.city === 'tokyo' || args.city === 'shanghai' || args.city === 'seoul' ? args.city : 'seoul';
-      const location =
-        args.location === 'cafe' ||
-        args.location === 'convenience_store' ||
-        args.location === 'subway_hub' ||
-        args.location === 'practice_studio' ||
-        args.location === 'food_street'
-          ? args.location
-          : 'food_street';
+      const location = resolveWorldMapLocation(city, args.location).mapLocationId;
       const objective = buildPersonalizedObjective({
         userId,
         mode,
@@ -2359,12 +2437,17 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
       };
     }
     case 'graph.dashboard.get': {
+      const city = args.city === 'tokyo' || args.city === 'shanghai' || args.city === 'seoul' ? args.city : undefined;
+      const location = city ? resolveWorldMapLocation(city, args.location).dagLocationSlot : args.location;
       return {
         statusCode: 200,
         payload: {
           ok: true,
           tool: toolName,
-          result: getGraphDashboard(args),
+          result: {
+            worldMapRegistry: cloneJson(WORLD_MAP_REGISTRY),
+            ...getGraphDashboard({ ...args, city, location }),
+          },
         },
       };
     }
@@ -2902,9 +2985,12 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/v1/graph/dashboard' && req.method === 'GET') {
       const personaId = url.searchParams.get('personaId') || url.searchParams.get('learnerId') || undefined;
       const city = url.searchParams.get('city') || undefined;
-      const location = url.searchParams.get('location') || undefined;
+      const location = city ? resolveWorldMapLocation(city, url.searchParams.get('location') || undefined).dagLocationSlot : (url.searchParams.get('location') || undefined);
       const userId = getUserIdFromQuery(url.searchParams);
-      jsonResponse(res, 200, getGraphDashboard({ personaId, userId, city, location }));
+      jsonResponse(res, 200, {
+        worldMapRegistry: cloneJson(WORLD_MAP_REGISTRY),
+        ...getGraphDashboard({ personaId, userId, city, location }),
+      });
       return;
     }
 

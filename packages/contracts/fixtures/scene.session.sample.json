@@ -14,16 +14,18 @@
     "objectiveCategory": "vocabulary",
     "objectiveNodeId": "objective:ko-vocab-food-items",
     "targetNodeIds": [
-      "target:메뉴",
-      "target:주문",
-      "target:맵다"
+      "target:\uba54\ub274",
+      "target:\uc8fc\ubb38",
+      "target:\ub9f5\ub2e4"
     ],
     "summary": "Order street food politely in Korean.",
     "canonicalObjectiveId": "ko-vocab-food-items",
     "legacyObjectiveId": "ko_food_l2_001",
     "objectiveAliasIds": [
       "ko_food_l2_001"
-    ]
+    ],
+    "mapLocationId": "food_street",
+    "dagLocationSlot": "food_street"
   },
   "phase": "intro",
   "turn": 1,
@@ -48,5 +50,7 @@
     "allowOnlyDialogueAndHints": true
   },
   "startedAtIso": "2026-03-15T04:55:00.000Z",
-  "updatedAtIso": "2026-03-15T04:55:00.000Z"
+  "updatedAtIso": "2026-03-15T04:55:00.000Z",
+  "mapLocationId": "food_street",
+  "dagLocationSlot": "food_street"
 }

@@ -4,51 +4,75 @@
   "objectives": [
     {
       "canonicalObjectiveId": "ko-script-menu-reading",
-      "legacyObjectiveIds": ["ko_food_l0_001"],
+      "legacyObjectiveIds": [
+        "ko_food_l0_001"
+      ],
       "lang": "ko",
       "cityId": "seoul",
       "locationId": "food_street",
-      "objectiveCategory": "script"
+      "objectiveCategory": "script",
+      "mapLocationId": "food_street",
+      "dagLocationSlot": "food_street"
     },
     {
       "canonicalObjectiveId": "ko-pron-food-words",
-      "legacyObjectiveIds": ["ko_food_l1_004"],
+      "legacyObjectiveIds": [
+        "ko_food_l1_004"
+      ],
       "lang": "ko",
       "cityId": "seoul",
       "locationId": "food_street",
-      "objectiveCategory": "pronunciation"
+      "objectiveCategory": "pronunciation",
+      "mapLocationId": "food_street",
+      "dagLocationSlot": "food_street"
     },
     {
       "canonicalObjectiveId": "ko-vocab-food-items",
-      "legacyObjectiveIds": ["ko_food_l2_001"],
+      "legacyObjectiveIds": [
+        "ko_food_l2_001"
+      ],
       "lang": "ko",
       "cityId": "seoul",
       "locationId": "food_street",
-      "objectiveCategory": "vocabulary"
+      "objectiveCategory": "vocabulary",
+      "mapLocationId": "food_street",
+      "dagLocationSlot": "food_street"
     },
     {
       "canonicalObjectiveId": "ja-vocab-subway-transfers",
-      "legacyObjectiveIds": ["ja_subway_l1_001"],
+      "legacyObjectiveIds": [
+        "ja_subway_l1_001"
+      ],
       "lang": "ja",
       "cityId": "tokyo",
       "locationId": "subway_hub",
-      "objectiveCategory": "vocabulary"
+      "objectiveCategory": "vocabulary",
+      "mapLocationId": "train_station",
+      "dagLocationSlot": "subway_hub"
     },
     {
       "canonicalObjectiveId": "zh-mission-stage-texting",
-      "legacyObjectiveIds": ["zh_stage_l3_002"],
+      "legacyObjectiveIds": [
+        "zh_stage_l3_002"
+      ],
       "lang": "zh",
       "cityId": "shanghai",
       "locationId": "practice_studio",
-      "objectiveCategory": "conversation"
+      "objectiveCategory": "conversation",
+      "mapLocationId": "milk_tea_shop",
+      "dagLocationSlot": "practice_studio"
     },
     {
       "canonicalObjectiveId": "ko-vocab-city-social",
-      "legacyObjectiveIds": ["ko_city_l2_003"],
+      "legacyObjectiveIds": [
+        "ko_city_l2_003"
+      ],
       "lang": "ko",
       "cityId": "seoul",
       "locationId": "subway_hub",
-      "objectiveCategory": "conversation"
+      "objectiveCategory": "conversation",
+      "mapLocationId": "subway_hub",
+      "dagLocationSlot": "subway_hub"
     }
   ]
 }
