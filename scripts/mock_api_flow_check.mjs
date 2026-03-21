@@ -414,6 +414,37 @@ async function run() {
       tokyoBootstrap.data.gameSession.activeObjective.objectiveId.startsWith('ja-'),
     `gameStart tokyo bootstrap objective mismatch: ${tokyoBootstrap.data?.gameSession?.activeObjective?.objectiveId}`,
   );
+
+  const tokyoCityRetentionBootstrap = await requestJson('/api/v1/game/start-or-resume', {
+    method: 'POST',
+    body: JSON.stringify({
+      userId: `${userId}_tokyo_city_retention`,
+      city: 'tokyo',
+      profile: {
+        nativeLanguage: 'en',
+        targetLanguages: ['ko', 'zh'],
+        proficiency: {
+          ko: 'none',
+          zh: 'advanced',
+        },
+      },
+    }),
+  });
+  assert(
+    tokyoCityRetentionBootstrap.ok,
+    `/game/start-or-resume tokyo city retention failed (${tokyoCityRetentionBootstrap.status})`,
+  );
+  assert(
+    tokyoCityRetentionBootstrap.data?.gameSession?.cityId === 'tokyo',
+    `gameStart tokyo city retention mismatch: ${tokyoCityRetentionBootstrap.data?.gameSession?.cityId}`,
+  );
+  assert(
+    typeof tokyoCityRetentionBootstrap.data?.gameSession?.activeObjective?.objectiveId === 'string' &&
+      tokyoCityRetentionBootstrap.data.gameSession.activeObjective.objectiveId.startsWith('ko-'),
+    `gameStart tokyo city retention objective mismatch: ${tokyoCityRetentionBootstrap.data?.gameSession?.activeObjective?.objectiveId}`,
+  );
+  logPass('/api/v1/game/start-or-resume keeps requested city when runtime config is missing');
+
   assert(gameStart.data?.gameSession?.sessionId === gameStart.data.sessionId, 'gameStart.gameSession.sessionId mismatch');
   assert(gameStart.data?.sceneSession?.gameSessionId === gameStart.data.sessionId, 'gameStart.sceneSession.gameSessionId mismatch');
   assert(gameStart.data?.activeCheckpoint?.gameSessionId === gameStart.data.sessionId, 'gameStart.activeCheckpoint.gameSessionId mismatch');
