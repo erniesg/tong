@@ -5,7 +5,7 @@ This file is the repo-visible source of truth for issue `#69`. It defines the ap
 ## Contract decisions
 
 1. **Canonical identity source**: downstream packs must resolve each live `mapLocationId` through `packages/contracts/world-map-registry.sample.json` before choosing characters or rewards.
-2. **Starter roster coverage target**: each shared `dagLocationSlot` gets **two local starter characters per city**. When multiple live map pins in a city map to the same shared slot, they intentionally reuse the same two-character roster. If a city does not yet expose a live map pin for one shared slot, the roster still exists as a reserved starter pair so downstream pack planning stays aligned with the five-slot world model.
+2. **Starter roster coverage target**: each live `mapLocationId` must resolve to an approved two-character local starter roster through its shared `dagLocationSlot`. When multiple live map pins in a city map to the same shared slot, they intentionally reuse the same two-character roster. Reserved shared-slot rosters are optional planning data only and must not be treated as current live map coverage.
 3. **Tong remains global**: Tong is still available as the assistant guide in every session, but Tong is not counted toward the two-character local starter roster.
 4. **Stable logical IDs**:
    - Character ID: `char.<city>.<dagLocationSlot>.<name>`
@@ -53,7 +53,6 @@ This file is the repo-visible source of truth for issue `#69`. It defines the ap
 The machine-readable roster lives in `assets/manifest/starter-cast-registry.json`. Downstream packs should reference that file instead of duplicating names, IDs, or asset key shapes.
 
 ### Reserved shared-slot rosters without a current live map pin
-- Tokyo `practice_studio` still gets an approved starter pair even though the current live Tokyo map pins do not expose that slot yet.
 - Shanghai `cafe` still gets an approved starter pair even though the current live Shanghai map pins do not expose that slot yet.
 
 ### Seoul
@@ -77,8 +76,6 @@ The machine-readable roster lives in `assets/manifest/starter-cast-registry.json
 - `char.tokyo.convenience_store.kaito` — after-school gamer, support
 - `char.tokyo.cafe.hina` — tea house host, lead
 - `char.tokyo.cafe.ren` — calligrapher regular, support
-- `char.tokyo.practice_studio.noa` — underground dance coach, lead
-- `char.tokyo.practice_studio.shin` — rehearsal pianist, support
 
 ### Shanghai
 - `char.shanghai.subway_hub.lin` — metro navigator, lead

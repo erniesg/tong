@@ -1,5 +1,5 @@
 {
-  "manifestVersion": "2026-03-15",
+  "manifestVersion": "2026-03-21",
   "manifestId": "tong-runtime-assets-canonical",
   "owner": "codex/runtime-assets",
   "keyFormat": "domain.scope.name.variant",
@@ -123,6 +123,186 @@
       "promptTemplate": null,
       "status": "draft",
       "uri": "assets/content-packs/seoul-food-street.starter.json"
+    },
+    {
+      "key": "city.seoul.location.cafe.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/locations/seoul-static.png"
+    },
+    {
+      "key": "city.seoul.location.cafe.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "draft",
+      "uri": "assets/content-packs/seoul-cafe.starter.json"
+    },
+    {
+      "key": "city.seoul.location.convenience-store.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/locations/seoul-static.png"
+    },
+    {
+      "key": "city.seoul.location.convenience-store.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "draft",
+      "uri": "assets/content-packs/seoul-convenience-store.starter.json"
+    },
+    {
+      "key": "city.seoul.location.subway-hub.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/locations/seoul-static.png"
+    },
+    {
+      "key": "city.seoul.location.subway-hub.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "draft",
+      "uri": "assets/content-packs/seoul-subway-hub.starter.json"
+    },
+    {
+      "key": "city.seoul.location.practice-studio.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/backdrops/seoul/pojangmacha.png"
+    },
+    {
+      "key": "city.seoul.location.practice-studio.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "draft",
+      "uri": "assets/content-packs/seoul-practice-studio.starter.json"
+    },
+    {
+      "key": "character.seoul.food_street.minseo.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.food_street.jiho.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "character.seoul.cafe.sora.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.cafe.donghyun.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "character.seoul.convenience_store.eunji.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.convenience_store.hyunwoo.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "character.seoul.subway_hub.nari.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.subway_hub.taemin.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "character.seoul.practice_studio.yujin.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.practice_studio.seungwoo.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
     },
     {
       "key": "character.ding-man.portrait.default",

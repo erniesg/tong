@@ -4,6 +4,7 @@
   "packId": "pack.<city>.<mapLocationId>.starter",
   "city": "<seoul|tokyo|shanghai>",
   "mapLocationId": "<food_street|cafe|convenience_store|subway_hub|practice_studio|train_station|izakaya|konbini|tea_house|ramen_shop|metro_station|bbq_stall|milk_tea_shop|dumpling_shop>",
+  "playerFacingLocationLabel": "<optional visible map label>",
   "location": {
     "id": "<food_street|cafe|convenience_store|subway_hub|practice_studio>",
     "assetSlug": "<food-street|cafe|convenience-store|subway-hub|practice-studio|train-station|izakaya|konbini|tea-house|ramen-shop|metro-station|bbq-stall|milk-tea-shop|dumpling-shop>",

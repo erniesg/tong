@@ -1,13 +1,13 @@
 {
   "templateVersion": "1.1.0",
   "packType": "city-location-character-starter",
-  "packId": "pack.seoul.food_street.starter",
+  "packId": "pack.seoul.cafe.starter",
   "city": "seoul",
-  "mapLocationId": "food_street",
-  "playerFacingLocationLabel": "Food Street",
+  "mapLocationId": "cafe",
+  "playerFacingLocationLabel": "Cafe",
   "location": {
-    "id": "food_street",
-    "assetSlug": "food-street",
+    "id": "cafe",
+    "assetSlug": "cafe",
     "modes": [
       "learn",
       "hangout"
@@ -15,32 +15,31 @@
   },
   "characterRoster": [
     {
-      "id": "char.seoul.food_street.minseo",
+      "id": "char.seoul.cafe.sora",
       "role": "lead",
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
-        "character.seoul.food_street.minseo.portrait.default",
-        "character.seoul.food_street.minseo.sprite.default",
-        "character.seoul.food_street.minseo.scene.default",
-        "character.seoul.food_street.minseo.voice.reference"
+        "character.seoul.cafe.sora.portrait.default",
+        "character.seoul.cafe.sora.sprite.default",
+        "character.seoul.cafe.sora.scene.default",
+        "character.seoul.cafe.sora.voice.reference"
       ],
       "optionalManifestKeys": [
-        "character.seoul.food_street.minseo.sprite.expression-set",
-        "character.seoul.food_street.minseo.reward.polaroid"
+        "character.seoul.cafe.sora.sprite.expression-set"
       ]
     },
     {
-      "id": "char.seoul.food_street.jiho",
+      "id": "char.seoul.cafe.donghyun",
       "role": "support",
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
-        "character.seoul.food_street.jiho.portrait.default",
-        "character.seoul.food_street.jiho.sprite.default",
-        "character.seoul.food_street.jiho.scene.default",
-        "character.seoul.food_street.jiho.voice.reference"
+        "character.seoul.cafe.donghyun.portrait.default",
+        "character.seoul.cafe.donghyun.sprite.default",
+        "character.seoul.cafe.donghyun.scene.default",
+        "character.seoul.cafe.donghyun.voice.reference"
       ],
       "optionalManifestKeys": [
-        "character.seoul.food_street.jiho.sprite.expression-set"
+        "character.seoul.cafe.donghyun.intro.video"
       ]
     },
     {
@@ -57,7 +56,7 @@
     }
   ],
   "objectiveSeed": {
-    "objectiveId": "seoul-food-street-ordering-v2",
+    "objectiveId": "seoul-cafe-study-chat-v1",
     "targetTypes": [
       "vocabulary",
       "grammar",
@@ -69,9 +68,9 @@
     }
   },
   "manifestKeys": [
-    "city.seoul.location.food-street.backdrop.default",
-    "character.seoul.food_street.minseo.portrait.default",
-    "character.seoul.food_street.jiho.portrait.default",
+    "city.seoul.location.cafe.backdrop.default",
+    "character.seoul.cafe.sora.portrait.default",
+    "character.seoul.cafe.donghyun.portrait.default",
     "character.tong.expression.neutral"
   ],
   "rewardHooks": {

@@ -33,6 +33,10 @@ Unblock demo validation early while API/plumbing is still in progress.
 4. Starter references for content packs and rewards live in:
    - `assets/content-packs/city-location-character.starter.template.json`
    - `assets/content-packs/seoul-food-street.starter.json`
+   - `assets/content-packs/seoul-cafe.starter.json`
+   - `assets/content-packs/seoul-convenience-store.starter.json`
+   - `assets/content-packs/seoul-subway-hub.starter.json`
+   - `assets/content-packs/seoul-practice-studio.starter.json`
    - `assets/rewards/shanghai-reward-bundle.placeholder.json`
    Pack data should use contract IDs such as `food_street`; reserve hyphenated slugs such as `food-street` for asset keys and file naming.
    - `assets/content-packs/starter-cast-roster.spec.md`

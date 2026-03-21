@@ -1,13 +1,13 @@
 {
   "templateVersion": "1.1.0",
   "packType": "city-location-character-starter",
-  "packId": "pack.seoul.food_street.starter",
+  "packId": "pack.seoul.subway_hub.starter",
   "city": "seoul",
-  "mapLocationId": "food_street",
-  "playerFacingLocationLabel": "Food Street",
+  "mapLocationId": "subway_hub",
+  "playerFacingLocationLabel": "Subway Hub",
   "location": {
-    "id": "food_street",
-    "assetSlug": "food-street",
+    "id": "subway_hub",
+    "assetSlug": "subway-hub",
     "modes": [
       "learn",
       "hangout"
@@ -15,32 +15,31 @@
   },
   "characterRoster": [
     {
-      "id": "char.seoul.food_street.minseo",
+      "id": "char.seoul.subway_hub.nari",
       "role": "lead",
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
-        "character.seoul.food_street.minseo.portrait.default",
-        "character.seoul.food_street.minseo.sprite.default",
-        "character.seoul.food_street.minseo.scene.default",
-        "character.seoul.food_street.minseo.voice.reference"
+        "character.seoul.subway_hub.nari.portrait.default",
+        "character.seoul.subway_hub.nari.sprite.default",
+        "character.seoul.subway_hub.nari.scene.default",
+        "character.seoul.subway_hub.nari.voice.reference"
       ],
       "optionalManifestKeys": [
-        "character.seoul.food_street.minseo.sprite.expression-set",
-        "character.seoul.food_street.minseo.reward.polaroid"
+        "character.seoul.subway_hub.nari.sprite.expression-set"
       ]
     },
     {
-      "id": "char.seoul.food_street.jiho",
+      "id": "char.seoul.subway_hub.taemin",
       "role": "support",
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
-        "character.seoul.food_street.jiho.portrait.default",
-        "character.seoul.food_street.jiho.sprite.default",
-        "character.seoul.food_street.jiho.scene.default",
-        "character.seoul.food_street.jiho.voice.reference"
+        "character.seoul.subway_hub.taemin.portrait.default",
+        "character.seoul.subway_hub.taemin.sprite.default",
+        "character.seoul.subway_hub.taemin.scene.default",
+        "character.seoul.subway_hub.taemin.voice.reference"
       ],
       "optionalManifestKeys": [
-        "character.seoul.food_street.jiho.sprite.expression-set"
+        "character.seoul.subway_hub.taemin.intro.video"
       ]
     },
     {
@@ -57,7 +56,7 @@
     }
   ],
   "objectiveSeed": {
-    "objectiveId": "seoul-food-street-ordering-v2",
+    "objectiveId": "seoul-subway-hub-navigation-v1",
     "targetTypes": [
       "vocabulary",
       "grammar",
@@ -65,13 +64,13 @@
     ],
     "missionGate": {
       "validatedHangoutsRequired": 2,
-      "masteryTierUnlock": "A1.2"
+      "masteryTierUnlock": "A1.3"
     }
   },
   "manifestKeys": [
-    "city.seoul.location.food-street.backdrop.default",
-    "character.seoul.food_street.minseo.portrait.default",
-    "character.seoul.food_street.jiho.portrait.default",
+    "city.seoul.location.subway-hub.backdrop.default",
+    "character.seoul.subway_hub.nari.portrait.default",
+    "character.seoul.subway_hub.taemin.portrait.default",
     "character.tong.expression.neutral"
   ],
   "rewardHooks": {
