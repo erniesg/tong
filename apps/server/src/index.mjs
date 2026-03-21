@@ -48,6 +48,10 @@ import {
   resolveObjectiveIdentity,
   withObjectiveIdentity,
 } from './objective-identity.mjs';
+import {
+  resolveStarterPack,
+  resolveWorldMapLocation,
+} from './starter-pack-registry.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,7 +82,6 @@ const FIXTURES = {
   youtubeStatus: loadJson('packages/contracts/fixtures/youtube.status.sample.json'),
 };
 const WORLD_MAP_REGISTRY = loadJson('packages/contracts/world-map-registry.sample.json');
-
 const mockMediaWindowPath = path.join(repoRoot, 'apps/server/data/mock-media-window.json');
 const DEFAULT_USER_ID = 'demo-user-1';
 const PROFICIENCY_RANK = {
@@ -120,38 +123,6 @@ const DEFAULT_OBJECTIVE_BY_LANG = {
   zh: defaultObjectiveIdForLang('zh', 'zh-mission-stage-texting'),
 };
 
-function getWorldMapCityRegistry(cityId) {
-  return (WORLD_MAP_REGISTRY.cities || []).find((city) => city.cityId === cityId) || null;
-}
-
-function resolveWorldMapLocation(cityId, locationId = null) {
-  const cityRegistry = getWorldMapCityRegistry(cityId);
-  if (!cityRegistry) {
-    return {
-      cityId,
-      mapLocationId: locationId || 'food_street',
-      dagLocationSlot: locationId || 'food_street',
-      legacyLocationIds: [locationId || 'food_street'],
-    };
-  }
-
-  const requestedLocationId = locationId || cityRegistry.defaultMapLocationId;
-  const normalized = cityRegistry.locations.find(
-    (entry) =>
-      entry.mapLocationId === requestedLocationId ||
-      entry.dagLocationSlot === requestedLocationId ||
-      (entry.legacyLocationIds || []).includes(requestedLocationId),
-  );
-  const fallback = cityRegistry.locations.find((entry) => entry.mapLocationId === cityRegistry.defaultMapLocationId)
-    || cityRegistry.locations[0];
-
-  return {
-    cityId,
-    mapLocationId: normalized?.mapLocationId || fallback?.mapLocationId || 'food_street',
-    dagLocationSlot: normalized?.dagLocationSlot || fallback?.dagLocationSlot || 'food_street',
-    legacyLocationIds: [...new Set([normalized?.dagLocationSlot, ...((normalized?.legacyLocationIds || []))].filter(Boolean))],
-  };
-}
 const OBJECTIVE_RUNTIME_CONFIG = new Map([
   ['ko-vocab-food-items', {
     fallbackTerms: ['주문', '메뉴', '떡볶이'],
@@ -191,6 +162,31 @@ const OBJECTIVE_RUNTIME_CONFIG = new Map([
       nextTurnEven: '好，那你再说一下想几点见面。',
       nextTurnOdd: '不错，下一句用中文说明你想点什么吧。',
     },
+  }],
+  ['ko-seoul-food-street-basics', {
+    fallbackTerms: ['주문', '메뉴', '치즈'],
+    placementReason: 'Food-street ordering language stays mapped to the live Seoul food_street pin.',
+    summary: 'Practice starter Seoul food-street ordering language.',
+  }],
+  ['ko-seoul-cafe-study-session', {
+    fallbackTerms: ['공부', '자리', '추천'],
+    placementReason: 'Cafe small talk and study requests resolve through the Seoul cafe registry pin.',
+    summary: 'Handle a Seoul cafe study meetup in Korean.',
+  }],
+  ['ko-seoul-convenience-store-run', {
+    fallbackTerms: ['봉투', '영수증', '간식'],
+    placementReason: 'Convenience-store errands and checkout phrases fit the Seoul convenience_store pin.',
+    summary: 'Run a quick Seoul convenience-store errand in Korean.',
+  }],
+  ['ko-seoul-subway-meetup', {
+    fallbackTerms: ['출구', '환승', '도착'],
+    placementReason: 'Transit coordination resolves through the Seoul subway_hub registry pin.',
+    summary: 'Coordinate a Seoul subway meetup in Korean.',
+  }],
+  ['ko-seoul-chimaek-hangout', {
+    fallbackTerms: ['치맥', '한잔', '같이'],
+    placementReason: 'The visible Seoul Chimaek Place pin resolves internally through the practice_studio mapLocationId.',
+    summary: 'Handle a Seoul Chimaek Place hangout in Korean.',
   }],
 ]);
 const HANGOUT_MATCH_PATTERNS = {
@@ -1272,6 +1268,8 @@ function buildPersonalizedObjective({
   location = 'food_street',
 }) {
   const resolvedMapLocation = resolveWorldMapLocation(city, location);
+  const starterPackResolution = resolveStarterPack(city, resolvedMapLocation.mapLocationId);
+  const starterObjectiveSeed = starterPackResolution.pack?.objectiveSeed || null;
   const dagLocationSlot = resolvedMapLocation.dagLocationSlot;
   const ingestion = ensureIngestionForUser(userId);
   const baseObjective = cloneJson(FIXTURES.objectivesNext);
@@ -1279,7 +1277,7 @@ function buildPersonalizedObjective({
   const dominantCluster =
     ingestion?.insights?.clusters?.find((cluster) => cluster.clusterId === dominantClusterId) ||
     ingestion?.insights?.clusters?.[0];
-  const runtimeObjectiveConfig = getRuntimeObjectiveConfig({ lang, cityId: city });
+  const cityRuntimeObjectiveConfig = getRuntimeObjectiveConfig({ lang, cityId: city });
   const placementCandidates = Array.isArray(ingestion?.mediaProfile?.learningSignals?.placementCandidates)
     ? ingestion.mediaProfile.learningSignals.placementCandidates
     : [];
@@ -1291,7 +1289,7 @@ function buildPersonalizedObjective({
         candidate.mode === mode &&
         (
           objectiveMatchesLanguage(candidate.objectiveId, lang) ||
-          resolveObjectiveIdentity(candidate.objectiveId).canonicalObjectiveId === runtimeObjectiveConfig?.objectiveId
+          resolveObjectiveIdentity(candidate.objectiveId).canonicalObjectiveId === cityRuntimeObjectiveConfig?.objectiveId
         ),
     ) ||
     placementCandidates.find(
@@ -1311,7 +1309,8 @@ function buildPersonalizedObjective({
 
   let objectiveId =
     selectedPlacement?.objectiveId ||
-    runtimeObjectiveConfig?.objectiveId ||
+    starterObjectiveSeed?.objectiveId ||
+    cityRuntimeObjectiveConfig?.objectiveId ||
     scopedClusterItems[0]?.objectiveLinks?.[0]?.objectiveId ||
     scopedItems[0]?.objectiveLinks?.[0]?.objectiveId ||
     baseObjective.objectiveId ||
@@ -1327,11 +1326,12 @@ function buildPersonalizedObjective({
     }
   }
 
+  const runtimeObjectiveConfig = getRuntimeObjectiveConfig({ objectiveId }) || cityRuntimeObjectiveConfig;
   const termBundle = buildObjectiveTermBundle({
     ingestion,
     lang,
     objectiveId,
-    objectiveConfig: runtimeObjectiveConfig || getRuntimeObjectiveConfig({ objectiveId }),
+    objectiveConfig: runtimeObjectiveConfig,
     dominantCluster,
   });
   const vocabulary = termBundle.vocabulary;
@@ -1385,6 +1385,15 @@ function buildPersonalizedObjective({
         ? personalizedTargets
         : cloneJson(baseObjective.personalizedTargets || []),
     recentMediaRationale,
+    starterPack: starterPackResolution.pack
+      ? {
+          packId: starterPackResolution.packId,
+          mapLocationId: starterPackResolution.mapLocationId,
+          dagLocationSlot: starterPackResolution.dagLocationSlot,
+          registryLabel: starterPackResolution.registryLabel,
+          playerFacingLabel: starterPackResolution.playerFacingLabel,
+        }
+      : null,
     placementHints: cloneJson(recentMediaRationale.placementHints || []),
     completionCriteria: {
       ...(baseObjective.completionCriteria || {}),

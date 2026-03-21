@@ -1,0 +1,88 @@
+{
+  "templateVersion": "1.1.0",
+  "packType": "city-location-character-starter",
+  "packId": "pack.seoul.practice_studio.starter",
+  "city": "seoul",
+  "mapLocationId": "practice_studio",
+  "location": {
+    "id": "practice_studio",
+    "assetSlug": "practice-studio",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "char.seoul.practice_studio.yujin",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.seoul.practice_studio.yujin.portrait.default",
+        "character.seoul.practice_studio.yujin.sprite.default",
+        "character.seoul.practice_studio.yujin.scene.default",
+        "character.seoul.practice_studio.yujin.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.seoul.practice_studio.yujin.sprite.expression-set"
+      ]
+    },
+    {
+      "id": "char.seoul.practice_studio.seungwoo",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.seoul.practice_studio.seungwoo.portrait.default",
+        "character.seoul.practice_studio.seungwoo.sprite.default",
+        "character.seoul.practice_studio.seungwoo.scene.default",
+        "character.seoul.practice_studio.seungwoo.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.seoul.practice_studio.seungwoo.reward.polaroid"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "ko-seoul-chimaek-hangout",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.2"
+    }
+  },
+  "manifestKeys": [
+    "city.seoul.location.practice-studio.backdrop.default",
+    "city.seoul.location.practice-studio.ambience.default",
+    "character.seoul.practice_studio.yujin.portrait.default",
+    "character.seoul.practice_studio.yujin.sprite.default",
+    "character.seoul.practice_studio.yujin.scene.default",
+    "character.seoul.practice_studio.yujin.voice.reference",
+    "character.seoul.practice_studio.seungwoo.portrait.default",
+    "character.seoul.practice_studio.seungwoo.sprite.default",
+    "character.seoul.practice_studio.seungwoo.scene.default",
+    "character.seoul.practice_studio.seungwoo.voice.reference",
+    "character.tong.expression.neutral"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": null,
+    "polaroidRewardKey": null
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+}

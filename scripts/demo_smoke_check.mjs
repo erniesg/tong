@@ -93,6 +93,10 @@ const requiredFiles = [
   "assets/manifest/runtime-asset-manifest.json",
   "assets/manifest/canonical-asset-manifest.json",
   "assets/content-packs/seoul-food-street.starter.json",
+  "assets/content-packs/seoul-cafe.starter.json",
+  "assets/content-packs/seoul-convenience-store.starter.json",
+  "assets/content-packs/seoul-subway-hub.starter.json",
+  "assets/content-packs/seoul-practice-studio.starter.json",
   "assets/rewards/shanghai-reward-bundle.placeholder.json"
 ];
 
@@ -191,12 +195,50 @@ const canonicalAssetManifest = JSON.parse(
     "utf8"
   )
 );
-const seoulStarterPack = JSON.parse(
-  fs.readFileSync(
-    path.join(root, "assets/content-packs/seoul-food-street.starter.json"),
-    "utf8"
-  )
-);
+const seoulStarterPacks = [
+  "seoul-food-street.starter.json",
+  "seoul-cafe.starter.json",
+  "seoul-convenience-store.starter.json",
+  "seoul-subway-hub.starter.json",
+  "seoul-practice-studio.starter.json",
+].map((file) => JSON.parse(
+  fs.readFileSync(path.join(root, "assets/content-packs", file), "utf8")
+));
+for (const pack of seoulStarterPacks) {
+  if (pack.templateVersion !== "1.1.0") {
+    console.error(`Seoul starter pack ${pack.packId} must use templateVersion 1.1.0`);
+    process.exit(1);
+  }
+  if (!pack.packId.startsWith("pack.seoul.")) {
+    console.error(`Seoul starter pack ${pack.packId} must use pack.seoul.<mapLocationId>.starter`);
+    process.exit(1);
+  }
+  if (pack.city !== "seoul") {
+    console.error(`Seoul starter pack ${pack.packId} must set city=seoul`);
+    process.exit(1);
+  }
+  if (typeof pack.mapLocationId !== "string" || pack.mapLocationId.length === 0) {
+    console.error(`Seoul starter pack ${pack.packId} missing mapLocationId`);
+    process.exit(1);
+  }
+  if (!Array.isArray(pack.characterRoster) || pack.characterRoster.length < 3) {
+    console.error(`Seoul starter pack ${pack.packId} must include local pair + Tong`);
+    process.exit(1);
+  }
+  if (!pack.characterRoster.some((entry) => entry.id === "tong")) {
+    console.error(`Seoul starter pack ${pack.packId} missing Tong assistant`);
+    process.exit(1);
+  }
+  if (!pack.objectiveSeed || typeof pack.objectiveSeed.objectiveId !== "string") {
+    console.error(`Seoul starter pack ${pack.packId} missing objectiveSeed.objectiveId`);
+    process.exit(1);
+  }
+  if (pack.mapLocationId === "practice_studio" && pack.location.id !== "practice_studio") {
+    console.error("Chimaek Place pack must preserve internal practice_studio slot mapping");
+    process.exit(1);
+  }
+}
+
 const shanghaiRewardBundle = JSON.parse(
   fs.readFileSync(
     path.join(root, "assets/rewards/shanghai-reward-bundle.placeholder.json"),
@@ -646,7 +688,7 @@ for (const key of canonicalKeys) {
   }
 }
 
-const keyRegex = /^[a-z0-9]+(\.[a-z0-9-]+){3,}$/;
+const keyRegex = /^[a-z0-9_]+(\.[a-z0-9_-]+){3,}$/;
 const seenKeys = new Set();
 for (const asset of runtimeAssetManifest.assets) {
   if (typeof asset.key !== "string" || !keyRegex.test(asset.key)) {
@@ -709,10 +751,12 @@ for (const key of clientRuntimeAssetUsage.manifestKeys) {
   }
 }
 
-for (const ref of seoulStarterPack.manifestKeys ?? []) {
-  if (!seenKeys.has(ref)) {
-    console.error(`Starter pack manifest key not found: ${ref}`);
-    process.exit(1);
+for (const pack of seoulStarterPacks) {
+  for (const ref of pack.manifestKeys ?? []) {
+    if (!seenKeys.has(ref)) {
+      console.error(`Starter pack manifest key not found for ${pack.packId}: ${ref}`);
+      process.exit(1);
+    }
   }
 }
 

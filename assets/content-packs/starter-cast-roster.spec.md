@@ -5,7 +5,7 @@ This file is the repo-visible source of truth for issue `#69`. It defines the ap
 ## Contract decisions
 
 1. **Canonical identity source**: downstream packs must resolve each live `mapLocationId` through `packages/contracts/world-map-registry.sample.json` before choosing characters or rewards.
-2. **Starter roster coverage target**: each shared `dagLocationSlot` gets **two local starter characters per city**. When multiple live map pins in a city map to the same shared slot, they intentionally reuse the same two-character roster. If a city does not yet expose a live map pin for one shared slot, the roster still exists as a reserved starter pair so downstream pack planning stays aligned with the five-slot world model.
+2. **Starter roster coverage target**: each shared `dagLocationSlot` gets **two local starter characters per city when that slot is backed by a current live map pin**. When multiple live map pins in a city map to the same shared slot, they intentionally reuse the same two-character roster. Do not keep reserved starter pairs for non-live map pins in checked-in roster sources unless the canonical world-map registry exposes a live backing pin.
 3. **Tong remains global**: Tong is still available as the assistant guide in every session, but Tong is not counted toward the two-character local starter roster.
 4. **Stable logical IDs**:
    - Character ID: `char.<city>.<dagLocationSlot>.<name>`
@@ -36,7 +36,7 @@ This file is the repo-visible source of truth for issue `#69`. It defines the ap
 | Seoul | `cafe` | `cafe` | `char.seoul.cafe.sora`, `char.seoul.cafe.donghyun` | `pack.seoul.cafe.starter` | Study / cafe social pair |
 | Seoul | `convenience_store` | `convenience_store` | `char.seoul.convenience_store.eunji`, `char.seoul.convenience_store.hyunwoo` | `pack.seoul.convenience_store.starter` | Quick errand + slang practice |
 | Seoul | `subway_hub` | `subway_hub` | `char.seoul.subway_hub.nari`, `char.seoul.subway_hub.taemin` | `pack.seoul.subway_hub.starter` | Transit navigation + commute talk |
-| Seoul | `practice_studio` | `practice_studio` | `char.seoul.practice_studio.yujin`, `char.seoul.practice_studio.seungwoo` | `pack.seoul.practice_studio.starter` | Performance / rehearsal lane |
+| Seoul | `practice_studio` | `practice_studio` | `char.seoul.practice_studio.yujin`, `char.seoul.practice_studio.seungwoo` | `pack.seoul.practice_studio.starter` | Live pin is displayed to players as **Chimaek Place** while the registry-backed internal `mapLocationId` remains `practice_studio` |
 | Tokyo | `train_station` | `subway_hub` | `char.tokyo.subway_hub.akira`, `char.tokyo.subway_hub.mei` | `pack.tokyo.train_station.starter` | Reuses shared subway-hub slot |
 | Tokyo | `izakaya` | `food_street` | `char.tokyo.food_street.rin`, `char.tokyo.food_street.daichi` | `pack.tokyo.izakaya.starter` | Same slot pair reused across Tokyo food pins |
 | Tokyo | `konbini` | `convenience_store` | `char.tokyo.convenience_store.yui`, `char.tokyo.convenience_store.kaito` | `pack.tokyo.konbini.starter` | Konbini-specific wrapper on shared slot |
@@ -53,7 +53,6 @@ This file is the repo-visible source of truth for issue `#69`. It defines the ap
 The machine-readable roster lives in `assets/manifest/starter-cast-registry.json`. Downstream packs should reference that file instead of duplicating names, IDs, or asset key shapes.
 
 ### Reserved shared-slot rosters without a current live map pin
-- Tokyo `practice_studio` still gets an approved starter pair even though the current live Tokyo map pins do not expose that slot yet.
 - Shanghai `cafe` still gets an approved starter pair even though the current live Shanghai map pins do not expose that slot yet.
 
 ### Seoul
@@ -77,8 +76,6 @@ The machine-readable roster lives in `assets/manifest/starter-cast-registry.json
 - `char.tokyo.convenience_store.kaito` — after-school gamer, support
 - `char.tokyo.cafe.hina` — tea house host, lead
 - `char.tokyo.cafe.ren` — calligrapher regular, support
-- `char.tokyo.practice_studio.noa` — underground dance coach, lead
-- `char.tokyo.practice_studio.shin` — rehearsal pianist, support
 
 ### Shanghai
 - `char.shanghai.subway_hub.lin` — metro navigator, lead
@@ -94,7 +91,7 @@ The machine-readable roster lives in `assets/manifest/starter-cast-registry.json
 
 ## Downstream issue guidance
 
-- `#62` should cite this file and `assets/manifest/starter-cast-registry.json` as the approved Seoul roster/bundle source.
+- `#62` should cite this file and `assets/manifest/starter-cast-registry.json` as the approved Seoul roster/bundle source, and should explicitly call out the player-facing **Chimaek Place** label versus the internal `practice_studio` pin ID.
 - `#63` should cite the same sources for Tokyo, especially the dual-pin reuse of the `food_street` slot pair across `izakaya` and `ramen_shop`.
 - `#64` should cite the same sources for Shanghai, especially the `milk_tea_shop -> practice_studio` mapping and reward hooks for the advanced texting mission.
 - Runtime-assets can treat the required asset keys in the registry as the coverage checklist for future manifest entries.

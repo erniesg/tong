@@ -1,8 +1,9 @@
 {
-  "templateVersion": "1.0.0",
+  "templateVersion": "1.1.0",
   "packType": "city-location-character-starter",
-  "packId": "seoul-food-street-starter",
+  "packId": "pack.seoul.food_street.starter",
   "city": "seoul",
+  "mapLocationId": "food_street",
   "location": {
     "id": "food_street",
     "assetSlug": "food-street",
@@ -13,19 +14,32 @@
   },
   "characterRoster": [
     {
-      "id": "haeun",
+      "id": "char.seoul.food_street.minseo",
       "role": "lead",
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
-        "character.haeun.portrait.default"
+        "character.seoul.food_street.minseo.portrait.default",
+        "character.seoul.food_street.minseo.sprite.default",
+        "character.seoul.food_street.minseo.scene.default",
+        "character.seoul.food_street.minseo.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.seoul.food_street.minseo.sprite.expression-set",
+        "character.seoul.food_street.minseo.reward.polaroid"
       ]
     },
     {
-      "id": "jin",
+      "id": "char.seoul.food_street.jiho",
       "role": "support",
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
-        "character.jin.portrait.default"
+        "character.seoul.food_street.jiho.portrait.default",
+        "character.seoul.food_street.jiho.sprite.default",
+        "character.seoul.food_street.jiho.scene.default",
+        "character.seoul.food_street.jiho.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.seoul.food_street.jiho.sprite.expression-set"
       ]
     },
     {
@@ -34,11 +48,15 @@
       "relationshipTrack": "rp",
       "requiredManifestKeys": [
         "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
       ]
     }
   ],
   "objectiveSeed": {
-    "objectiveId": "seoul-food-street-v1",
+    "objectiveId": "ko-seoul-food-street-basics",
     "targetTypes": [
       "vocabulary",
       "grammar",
@@ -51,9 +69,21 @@
   },
   "manifestKeys": [
     "city.seoul.location.food-street.backdrop.default",
-    "character.haeun.portrait.default",
-    "character.jin.portrait.default",
+    "city.seoul.location.food-street.ambience.default",
+    "character.seoul.food_street.minseo.portrait.default",
+    "character.seoul.food_street.minseo.sprite.default",
+    "character.seoul.food_street.minseo.scene.default",
+    "character.seoul.food_street.minseo.voice.reference",
+    "character.seoul.food_street.jiho.portrait.default",
+    "character.seoul.food_street.jiho.sprite.default",
+    "character.seoul.food_street.jiho.scene.default",
+    "character.seoul.food_street.jiho.voice.reference",
     "character.tong.expression.neutral"
   ],
-  "status": "draft"
+  "rewardHooks": {
+    "videoCallRewardKey": null,
+    "polaroidRewardKey": null
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
 }

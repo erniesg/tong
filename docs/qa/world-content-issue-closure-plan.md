@@ -104,8 +104,11 @@ Block on:
 - prerequisite contracts issue for `mapLocationId -> dagLocationSlot`
 
 Current live Seoul map pins to call out:
-- `chimaek_place`
-- any other live Seoul pins currently shipped in the active map experience
+- `food_street`
+- `cafe`
+- `convenience_store`
+- `subway_hub`
+- `practice_studio` (player-facing label: **Chimaek Place**)
 
 Required proof:
 - pack/objective diff summary
@@ -125,6 +128,9 @@ Current live Tokyo map pins to call out:
 - `tea_house`
 - `ramen_shop`
 
+Tokyo note:
+- Do **not** carry a checked-in reserved Tokyo `practice_studio` starter roster unless the canonical world-map registry later gains a live Tokyo-backed `practice_studio` pin.
+
 Required proof:
 - pack/objective diff summary
 - dashboard or API trace showing Tokyo pack resolution through the registry
@@ -142,6 +148,9 @@ Current live Shanghai map pins to call out:
 - `convenience_store`
 - `milk_tea_shop`
 - `dumpling_shop`
+
+Canonical registry note:
+- The current registry-backed mappings are Tokyo `train_station -> subway_hub`, `izakaya -> food_street`, `konbini -> convenience_store`, `tea_house -> cafe`, `ramen_shop -> food_street`; and Shanghai `metro_station -> subway_hub`, `bbq_stall -> food_street`, `convenience_store -> convenience_store`, `milk_tea_shop -> practice_studio`, `dumpling_shop -> food_street`.
 
 Required proof:
 - pack/reward-bundle diff summary

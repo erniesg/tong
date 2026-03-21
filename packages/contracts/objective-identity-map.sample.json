@@ -73,6 +73,66 @@
       "objectiveCategory": "conversation",
       "mapLocationId": "subway_hub",
       "dagLocationSlot": "subway_hub"
+    },
+    {
+      "canonicalObjectiveId": "ko-seoul-food-street-basics",
+      "legacyObjectiveIds": [
+        "ko_food_l2_001"
+      ],
+      "lang": "ko",
+      "cityId": "seoul",
+      "locationId": "food_street",
+      "objectiveCategory": "vocabulary",
+      "mapLocationId": "food_street",
+      "dagLocationSlot": "food_street"
+    },
+    {
+      "canonicalObjectiveId": "ko-seoul-cafe-study-session",
+      "legacyObjectiveIds": [
+        "ko_cafe_l2_001"
+      ],
+      "lang": "ko",
+      "cityId": "seoul",
+      "locationId": "cafe",
+      "objectiveCategory": "conversation",
+      "mapLocationId": "cafe",
+      "dagLocationSlot": "cafe"
+    },
+    {
+      "canonicalObjectiveId": "ko-seoul-convenience-store-run",
+      "legacyObjectiveIds": [
+        "ko_store_l2_001"
+      ],
+      "lang": "ko",
+      "cityId": "seoul",
+      "locationId": "convenience_store",
+      "objectiveCategory": "vocabulary",
+      "mapLocationId": "convenience_store",
+      "dagLocationSlot": "convenience_store"
+    },
+    {
+      "canonicalObjectiveId": "ko-seoul-subway-meetup",
+      "legacyObjectiveIds": [
+        "ko_subway_l2_001"
+      ],
+      "lang": "ko",
+      "cityId": "seoul",
+      "locationId": "subway_hub",
+      "objectiveCategory": "conversation",
+      "mapLocationId": "subway_hub",
+      "dagLocationSlot": "subway_hub"
+    },
+    {
+      "canonicalObjectiveId": "ko-seoul-chimaek-hangout",
+      "legacyObjectiveIds": [
+        "ko_chimaek_l2_001"
+      ],
+      "lang": "ko",
+      "cityId": "seoul",
+      "locationId": "practice_studio",
+      "objectiveCategory": "conversation",
+      "mapLocationId": "practice_studio",
+      "dagLocationSlot": "practice_studio"
     }
   ]
 }

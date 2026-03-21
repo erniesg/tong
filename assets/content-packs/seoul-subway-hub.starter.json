@@ -1,0 +1,88 @@
+{
+  "templateVersion": "1.1.0",
+  "packType": "city-location-character-starter",
+  "packId": "pack.seoul.subway_hub.starter",
+  "city": "seoul",
+  "mapLocationId": "subway_hub",
+  "location": {
+    "id": "subway_hub",
+    "assetSlug": "subway-hub",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "char.seoul.subway_hub.nari",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.seoul.subway_hub.nari.portrait.default",
+        "character.seoul.subway_hub.nari.sprite.default",
+        "character.seoul.subway_hub.nari.scene.default",
+        "character.seoul.subway_hub.nari.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.seoul.subway_hub.nari.sprite.expression-set"
+      ]
+    },
+    {
+      "id": "char.seoul.subway_hub.taemin",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.seoul.subway_hub.taemin.portrait.default",
+        "character.seoul.subway_hub.taemin.sprite.default",
+        "character.seoul.subway_hub.taemin.scene.default",
+        "character.seoul.subway_hub.taemin.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.seoul.subway_hub.taemin.intro.video"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "ko-seoul-subway-meetup",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.2"
+    }
+  },
+  "manifestKeys": [
+    "city.seoul.location.subway-hub.backdrop.default",
+    "city.seoul.location.subway-hub.ambience.default",
+    "character.seoul.subway_hub.nari.portrait.default",
+    "character.seoul.subway_hub.nari.sprite.default",
+    "character.seoul.subway_hub.nari.scene.default",
+    "character.seoul.subway_hub.nari.voice.reference",
+    "character.seoul.subway_hub.taemin.portrait.default",
+    "character.seoul.subway_hub.taemin.sprite.default",
+    "character.seoul.subway_hub.taemin.scene.default",
+    "character.seoul.subway_hub.taemin.voice.reference",
+    "character.tong.expression.neutral"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": null,
+    "polaroidRewardKey": null
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+}

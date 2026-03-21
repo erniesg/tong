@@ -1,0 +1,88 @@
+{
+  "templateVersion": "1.1.0",
+  "packType": "city-location-character-starter",
+  "packId": "pack.seoul.convenience_store.starter",
+  "city": "seoul",
+  "mapLocationId": "convenience_store",
+  "location": {
+    "id": "convenience_store",
+    "assetSlug": "convenience-store",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "char.seoul.convenience_store.eunji",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.seoul.convenience_store.eunji.portrait.default",
+        "character.seoul.convenience_store.eunji.sprite.default",
+        "character.seoul.convenience_store.eunji.scene.default",
+        "character.seoul.convenience_store.eunji.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.seoul.convenience_store.eunji.sprite.expression-set"
+      ]
+    },
+    {
+      "id": "char.seoul.convenience_store.hyunwoo",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.seoul.convenience_store.hyunwoo.portrait.default",
+        "character.seoul.convenience_store.hyunwoo.sprite.default",
+        "character.seoul.convenience_store.hyunwoo.scene.default",
+        "character.seoul.convenience_store.hyunwoo.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.seoul.convenience_store.hyunwoo.reward.polaroid"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "ko-seoul-convenience-store-run",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.2"
+    }
+  },
+  "manifestKeys": [
+    "city.seoul.location.convenience-store.backdrop.default",
+    "city.seoul.location.convenience-store.ambience.default",
+    "character.seoul.convenience_store.eunji.portrait.default",
+    "character.seoul.convenience_store.eunji.sprite.default",
+    "character.seoul.convenience_store.eunji.scene.default",
+    "character.seoul.convenience_store.eunji.voice.reference",
+    "character.seoul.convenience_store.hyunwoo.portrait.default",
+    "character.seoul.convenience_store.hyunwoo.sprite.default",
+    "character.seoul.convenience_store.hyunwoo.scene.default",
+    "character.seoul.convenience_store.hyunwoo.voice.reference",
+    "character.tong.expression.neutral"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": null,
+    "polaroidRewardKey": null
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+}

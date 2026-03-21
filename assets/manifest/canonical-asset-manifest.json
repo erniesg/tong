@@ -125,6 +125,536 @@
       "uri": "assets/content-packs/seoul-food-street.starter.json"
     },
     {
+      "key": "city.seoul.location.cafe.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "draft",
+      "uri": "assets/content-packs/seoul-cafe.starter.json"
+    },
+    {
+      "key": "city.seoul.location.convenience-store.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "draft",
+      "uri": "assets/content-packs/seoul-convenience-store.starter.json"
+    },
+    {
+      "key": "city.seoul.location.subway-hub.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "draft",
+      "uri": "assets/content-packs/seoul-subway-hub.starter.json"
+    },
+    {
+      "key": "city.seoul.location.practice-studio.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "draft",
+      "uri": "assets/content-packs/seoul-practice-studio.starter.json"
+    },
+    {
+      "key": "character.seoul.cafe.donghyun.portrait.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.cafe.donghyun.scene.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-still",
+      "uri": "/assets/characters/haeun/scene.png"
+    },
+    {
+      "key": "character.seoul.cafe.donghyun.sprite.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "runtime-sprite",
+      "uri": "/assets/characters/haeun/eye_front_casual.png"
+    },
+    {
+      "key": "character.seoul.cafe.donghyun.voice.reference",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "text",
+      "usage": "voice-reference",
+      "uri": "assets/content-packs/starter-cast-roster.spec.md"
+    },
+    {
+      "key": "character.seoul.cafe.sora.portrait.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.cafe.sora.scene.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-still",
+      "uri": "/assets/characters/haeun/scene.png"
+    },
+    {
+      "key": "character.seoul.cafe.sora.sprite.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "runtime-sprite",
+      "uri": "/assets/characters/haeun/eye_front_casual.png"
+    },
+    {
+      "key": "character.seoul.cafe.sora.voice.reference",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "text",
+      "usage": "voice-reference",
+      "uri": "assets/content-packs/starter-cast-roster.spec.md"
+    },
+    {
+      "key": "character.seoul.convenience_store.eunji.portrait.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.convenience_store.eunji.scene.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-still",
+      "uri": "/assets/characters/haeun/scene.png"
+    },
+    {
+      "key": "character.seoul.convenience_store.eunji.sprite.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "runtime-sprite",
+      "uri": "/assets/characters/haeun/eye_front_casual.png"
+    },
+    {
+      "key": "character.seoul.convenience_store.eunji.voice.reference",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "text",
+      "usage": "voice-reference",
+      "uri": "assets/content-packs/starter-cast-roster.spec.md"
+    },
+    {
+      "key": "character.seoul.convenience_store.hyunwoo.portrait.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.convenience_store.hyunwoo.scene.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-still",
+      "uri": "/assets/characters/haeun/scene.png"
+    },
+    {
+      "key": "character.seoul.convenience_store.hyunwoo.sprite.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "runtime-sprite",
+      "uri": "/assets/characters/haeun/eye_front_casual.png"
+    },
+    {
+      "key": "character.seoul.convenience_store.hyunwoo.voice.reference",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "text",
+      "usage": "voice-reference",
+      "uri": "assets/content-packs/starter-cast-roster.spec.md"
+    },
+    {
+      "key": "character.seoul.food_street.jiho.portrait.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.food_street.jiho.scene.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-still",
+      "uri": "/assets/characters/haeun/scene.png"
+    },
+    {
+      "key": "character.seoul.food_street.jiho.sprite.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "runtime-sprite",
+      "uri": "/assets/characters/haeun/eye_front_casual.png"
+    },
+    {
+      "key": "character.seoul.food_street.jiho.voice.reference",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "text",
+      "usage": "voice-reference",
+      "uri": "assets/content-packs/starter-cast-roster.spec.md"
+    },
+    {
+      "key": "character.seoul.food_street.minseo.portrait.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.food_street.minseo.scene.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-still",
+      "uri": "/assets/characters/haeun/scene.png"
+    },
+    {
+      "key": "character.seoul.food_street.minseo.sprite.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "runtime-sprite",
+      "uri": "/assets/characters/haeun/eye_front_casual.png"
+    },
+    {
+      "key": "character.seoul.food_street.minseo.voice.reference",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "text",
+      "usage": "voice-reference",
+      "uri": "assets/content-packs/starter-cast-roster.spec.md"
+    },
+    {
+      "key": "character.seoul.practice_studio.seungwoo.portrait.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.practice_studio.seungwoo.scene.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-still",
+      "uri": "/assets/characters/haeun/scene.png"
+    },
+    {
+      "key": "character.seoul.practice_studio.seungwoo.sprite.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "runtime-sprite",
+      "uri": "/assets/characters/haeun/eye_front_casual.png"
+    },
+    {
+      "key": "character.seoul.practice_studio.seungwoo.voice.reference",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "text",
+      "usage": "voice-reference",
+      "uri": "assets/content-packs/starter-cast-roster.spec.md"
+    },
+    {
+      "key": "character.seoul.practice_studio.yujin.portrait.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.practice_studio.yujin.scene.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-still",
+      "uri": "/assets/characters/haeun/scene.png"
+    },
+    {
+      "key": "character.seoul.practice_studio.yujin.sprite.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "runtime-sprite",
+      "uri": "/assets/characters/haeun/eye_front_casual.png"
+    },
+    {
+      "key": "character.seoul.practice_studio.yujin.voice.reference",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "text",
+      "usage": "voice-reference",
+      "uri": "assets/content-packs/starter-cast-roster.spec.md"
+    },
+    {
+      "key": "character.seoul.subway_hub.nari.portrait.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.subway_hub.nari.scene.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-still",
+      "uri": "/assets/characters/haeun/scene.png"
+    },
+    {
+      "key": "character.seoul.subway_hub.nari.sprite.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "runtime-sprite",
+      "uri": "/assets/characters/haeun/eye_front_casual.png"
+    },
+    {
+      "key": "character.seoul.subway_hub.nari.voice.reference",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "text",
+      "usage": "voice-reference",
+      "uri": "assets/content-packs/starter-cast-roster.spec.md"
+    },
+    {
+      "key": "character.seoul.subway_hub.taemin.portrait.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.seoul.subway_hub.taemin.scene.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-still",
+      "uri": "/assets/characters/haeun/scene.png"
+    },
+    {
+      "key": "character.seoul.subway_hub.taemin.sprite.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "runtime-sprite",
+      "uri": "/assets/characters/haeun/eye_front_casual.png"
+    },
+    {
+      "key": "character.seoul.subway_hub.taemin.voice.reference",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "text",
+      "usage": "voice-reference",
+      "uri": "assets/content-packs/starter-cast-roster.spec.md"
+    },
+    {
+      "key": "city.seoul.location.cafe.ambience.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "audio",
+      "usage": "scene-ambience",
+      "uri": "/assets/locations/seoul.mp4"
+    },
+    {
+      "key": "city.seoul.location.cafe.backdrop.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-backdrop",
+      "uri": "/assets/backdrops/seoul/pojangmacha.png"
+    },
+    {
+      "key": "city.seoul.location.convenience-store.ambience.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "audio",
+      "usage": "scene-ambience",
+      "uri": "/assets/locations/seoul.mp4"
+    },
+    {
+      "key": "city.seoul.location.convenience-store.backdrop.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-backdrop",
+      "uri": "/assets/backdrops/seoul/pojangmacha.png"
+    },
+    {
+      "key": "city.seoul.location.food-street.ambience.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "audio",
+      "usage": "scene-ambience",
+      "uri": "/assets/locations/seoul.mp4"
+    },
+    {
+      "key": "city.seoul.location.practice-studio.ambience.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "audio",
+      "usage": "scene-ambience",
+      "uri": "/assets/locations/seoul.mp4"
+    },
+    {
+      "key": "city.seoul.location.practice-studio.backdrop.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-backdrop",
+      "uri": "/assets/backdrops/seoul/pojangmacha.png"
+    },
+    {
+      "key": "city.seoul.location.subway-hub.ambience.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "audio",
+      "usage": "scene-ambience",
+      "uri": "/assets/locations/seoul.mp4"
+    },
+    {
+      "key": "city.seoul.location.subway-hub.backdrop.default",
+      "source": "repo",
+      "status": "draft",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "type": "image",
+      "usage": "scene-backdrop",
+      "uri": "/assets/backdrops/seoul/pojangmacha.png"
+    },
+    {
       "key": "character.ding-man.portrait.default",
       "type": "image",
       "usage": "dialogue-avatar",

@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  inferCityFromLocation,
+  listWorldMapLocationIds,
+  resolveStarterPack,
+  resolveWorldMapLocation,
+} from './starter-pack-registry.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,14 +20,6 @@ const CITY_LABELS = {
   shanghai: 'Shanghai',
 };
 
-const LOCATION_LABELS = {
-  food_street: 'Food Street',
-  cafe: 'Cafe',
-  convenience_store: 'Convenience Store',
-  subway_hub: 'Subway Hub',
-  practice_studio: 'Practice Studio',
-};
-
 const CITY_LANG = {
   seoul: 'ko',
   tokyo: 'ja',
@@ -30,8 +28,8 @@ const CITY_LANG = {
 
 const DEFAULT_LOCATION_BY_CITY = {
   seoul: 'food_street',
-  tokyo: 'food_street',
-  shanghai: 'practice_studio',
+  tokyo: 'train_station',
+  shanghai: 'milk_tea_shop',
 };
 
 const LEGACY_SHARED_LOCATIONS = [
@@ -43,7 +41,7 @@ const LEGACY_SHARED_LOCATIONS = [
 ];
 
 const VALID_CITIES = new Set(Object.keys(CITY_LABELS));
-const VALID_LOCATIONS = new Set(Object.keys(LOCATION_LABELS));
+const VALID_LOCATIONS = new Set(listWorldMapLocationIds());
 const LESSON_STATUSES = new Set(['available', 'due', 'learning']);
 const COMPLETED_STATUSES = new Set(['validated', 'mastered']);
 const BLOCKER_CLEAR_STATUSES = new Set(['due', 'validated', 'mastered']);
@@ -59,8 +57,6 @@ const LESSON_CATEGORY_PRIORITY = {
 function loadJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
 }
-
-const WORLD_MAP_REGISTRY = loadJson('packages/contracts/world-map-registry.sample.json');
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
@@ -88,49 +84,6 @@ function stableHashNumber(value) {
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
-}
-
-function getWorldMapCityRegistry(cityId) {
-  return (WORLD_MAP_REGISTRY.cities || []).find((city) => city.cityId === cityId) || null;
-}
-
-function resolveWorldMapLocation(cityId, locationId = null) {
-  const cityRegistry = getWorldMapCityRegistry(cityId);
-  const fallbackLocationId = locationId || DEFAULT_LOCATION_BY_CITY[cityId] || 'food_street';
-
-  if (!cityRegistry) {
-    return {
-      cityId,
-      mapLocationId: fallbackLocationId,
-      dagLocationSlot: fallbackLocationId,
-      label: LOCATION_LABELS[fallbackLocationId] || fallbackLocationId.replace(/_/g, ' '),
-      legacyLocationIds: [fallbackLocationId],
-    };
-  }
-
-  const requestedLocationId = locationId || cityRegistry.defaultMapLocationId;
-  const normalized = cityRegistry.locations.find(
-    (entry) =>
-      entry.mapLocationId === requestedLocationId ||
-      entry.dagLocationSlot === requestedLocationId ||
-      (entry.legacyLocationIds || []).includes(requestedLocationId),
-  );
-  const fallback = cityRegistry.locations.find((entry) => entry.mapLocationId === cityRegistry.defaultMapLocationId)
-    || cityRegistry.locations[0];
-  const mapLocationId = normalized?.mapLocationId || fallback?.mapLocationId || fallbackLocationId;
-  const dagLocationSlot = normalized?.dagLocationSlot || fallback?.dagLocationSlot || fallbackLocationId;
-
-  return {
-    cityId,
-    mapLocationId,
-    dagLocationSlot,
-    label:
-      normalized?.label ||
-      fallback?.label ||
-      LOCATION_LABELS[dagLocationSlot] ||
-      mapLocationId.replace(/_/g, ' '),
-    legacyLocationIds: unique([dagLocationSlot, ...((normalized?.legacyLocationIds || []))]),
-  };
 }
 
 function keyFor(cityId, locationId) {
@@ -168,7 +121,8 @@ const SEOUL_FOOD_STREET_PACK = loadJson(
 
 function buildStubPack(cityId, locationId) {
   const cityLabel = CITY_LABELS[cityId];
-  const locationLabel = LOCATION_LABELS[locationId];
+  const resolvedLocation = resolveWorldMapLocation(cityId, locationId);
+  const locationLabel = resolvedLocation.label;
   const summaries = {
     [keyFor('tokyo', 'food_street')]:
       'Starter Japanese scaffold for the Tokyo food-street route. The canonical pack is still pending authoring.',
@@ -598,12 +552,6 @@ function normalizeLocation(value) {
     });
   }
   return value;
-}
-
-function inferCityFromLocation(locationId) {
-  if (!locationId) return null;
-  if (locationId === 'practice_studio') return 'shanghai';
-  return 'seoul';
 }
 
 function resolveSelection(args = {}) {
@@ -1585,12 +1533,23 @@ function buildLegacyWorldRoadmap(persona, foundationEvaluation, overlayCandidate
 function buildLegacyLocationSkillTree(runtime) {
   const { selection, selectedEvaluation, missionGate } = runtime;
   const pack = selection.pack;
+  const starterPackResolution = resolveStarterPack(selection.cityId, selection.locationId);
 
   return {
     packId: pack.packId,
     cityId: pack.cityId,
     locationId: pack.locationId,
     title: pack.title,
+    starterPackResolution: cloneJson({
+      packId: starterPackResolution.packId,
+      mapLocationId: starterPackResolution.mapLocationId,
+      dagLocationSlot: starterPackResolution.dagLocationSlot,
+      registryLabel: starterPackResolution.registryLabel,
+      playerFacingLabel: starterPackResolution.playerFacingLabel,
+      slotRosterId: starterPackResolution.slotRosterId,
+      rosterRegistrySource: starterPackResolution.rosterRegistrySource,
+      registryResolved: starterPackResolution.registryResolved,
+    }),
     levels: (pack.levels || []).map((level) => {
       const levelNodeIds = new Set(level.objectiveNodeIds || []);
       const levelEntries = selectedEvaluation.nodeEntries.filter((entry) => levelNodeIds.has(entry.node.nodeId));
@@ -2535,6 +2494,7 @@ export function listGraphPersonas() {
 
 export function getGraphDashboard(args = {}) {
   const runtime = buildRuntimeState(args);
+  const selectedStarterPack = resolveStarterPack(runtime.selection.cityId, runtime.selection.locationId);
   const legacyPersona = buildLegacyPersona(runtime.persona);
   const roadmap = buildRoadmap(
     runtime.persona,
@@ -2578,6 +2538,16 @@ export function getGraphDashboard(args = {}) {
     nextUnlocks: cloneJson(runtime.nextUnlocks),
     selectedPack: {
       pack: cloneJson(runtime.selection.pack),
+      starterPackResolution: cloneJson({
+        packId: selectedStarterPack.packId,
+        mapLocationId: selectedStarterPack.mapLocationId,
+        dagLocationSlot: selectedStarterPack.dagLocationSlot,
+        registryLabel: selectedStarterPack.registryLabel,
+        playerFacingLabel: selectedStarterPack.playerFacingLabel,
+        slotRosterId: selectedStarterPack.slotRosterId,
+        rosterRegistrySource: selectedStarterPack.rosterRegistrySource,
+        registryResolved: selectedStarterPack.registryResolved,
+      }),
       nodes: cloneJson(runtime.selectedEvaluation.nodeEntries),
       missionGate: cloneJson(runtime.missionGate),
       lessonBundle: cloneJson(runtime.lessonBundle),

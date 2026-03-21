@@ -1,0 +1,23 @@
+{
+  "request": "http://127.0.0.1:8787/api/v1/graph/dashboard?city=seoul&location=practice_studio",
+  "selectedPack": {
+    "packId": "pack.seoul.practice_studio.starter",
+    "mapLocationId": "practice_studio",
+    "dagLocationSlot": "practice_studio",
+    "registryLabel": "Practice Studio",
+    "playerFacingLabel": "Chimaek Place",
+    "slotRosterId": "slot.seoul.practice_studio.starter",
+    "rosterRegistrySource": "assets/manifest/starter-cast-registry.json",
+    "registryResolved": true
+  },
+  "locationSkillTree": {
+    "packId": "pack.seoul.practice_studio.starter",
+    "mapLocationId": "practice_studio",
+    "dagLocationSlot": "practice_studio",
+    "registryLabel": "Practice Studio",
+    "playerFacingLabel": "Chimaek Place",
+    "slotRosterId": "slot.seoul.practice_studio.starter",
+    "rosterRegistrySource": "assets/manifest/starter-cast-registry.json",
+    "registryResolved": true
+  }
+}

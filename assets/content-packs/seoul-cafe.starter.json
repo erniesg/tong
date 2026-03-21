@@ -1,0 +1,88 @@
+{
+  "templateVersion": "1.1.0",
+  "packType": "city-location-character-starter",
+  "packId": "pack.seoul.cafe.starter",
+  "city": "seoul",
+  "mapLocationId": "cafe",
+  "location": {
+    "id": "cafe",
+    "assetSlug": "cafe",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "char.seoul.cafe.sora",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.seoul.cafe.sora.portrait.default",
+        "character.seoul.cafe.sora.sprite.default",
+        "character.seoul.cafe.sora.scene.default",
+        "character.seoul.cafe.sora.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.seoul.cafe.sora.sprite.expression-set"
+      ]
+    },
+    {
+      "id": "char.seoul.cafe.donghyun",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.seoul.cafe.donghyun.portrait.default",
+        "character.seoul.cafe.donghyun.sprite.default",
+        "character.seoul.cafe.donghyun.scene.default",
+        "character.seoul.cafe.donghyun.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.seoul.cafe.donghyun.intro.video"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "ko-seoul-cafe-study-session",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.2"
+    }
+  },
+  "manifestKeys": [
+    "city.seoul.location.cafe.backdrop.default",
+    "city.seoul.location.cafe.ambience.default",
+    "character.seoul.cafe.sora.portrait.default",
+    "character.seoul.cafe.sora.sprite.default",
+    "character.seoul.cafe.sora.scene.default",
+    "character.seoul.cafe.sora.voice.reference",
+    "character.seoul.cafe.donghyun.portrait.default",
+    "character.seoul.cafe.donghyun.sprite.default",
+    "character.seoul.cafe.donghyun.scene.default",
+    "character.seoul.cafe.donghyun.voice.reference",
+    "character.tong.expression.neutral"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": null,
+    "polaroidRewardKey": null
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+}
