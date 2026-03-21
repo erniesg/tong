@@ -1787,12 +1787,13 @@ function createNewGameSession(userId, incomingProfile, requestedCity) {
       ? requestedCity
       : CLUSTER_CITY_MAP[dominantClusterId] || FIXTURES.gameStart.city || 'seoul';
   const bootstrapLang = getBootstrapPilotLanguage(profile, requestedOrDerivedCity);
-  const runtimeObjectiveConfig =
-    getRuntimeObjectiveConfig({ lang: bootstrapLang, cityId: requestedOrDerivedCity }) ||
-    getRuntimeObjectiveConfig({ lang: bootstrapLang });
-  const city = runtimeObjectiveConfig?.cityId || requestedOrDerivedCity;
+  const cityRuntimeObjectiveConfig = getRuntimeObjectiveConfig({
+    lang: bootstrapLang,
+    cityId: requestedOrDerivedCity,
+  });
+  const city = requestedOrDerivedCity;
   const location =
-    runtimeObjectiveConfig?.locationId || CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
+    cityRuntimeObjectiveConfig?.locationId || CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
   const objective = buildPersonalizedObjective({
     userId,
     mode: 'hangout',
