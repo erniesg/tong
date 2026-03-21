@@ -35,13 +35,13 @@
     "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
     "rankedTerms": [
       {
-        "lemma": "주문",
+        "lemma": "\uc8fc\ubb38",
         "lang": "ko",
         "source": "youtube",
         "weightedScore": 0.95
       },
       {
-        "lemma": "연습",
+        "lemma": "\uc5f0\uc2b5",
         "lang": "ko",
         "source": "spotify",
         "weightedScore": 0.65
@@ -51,8 +51,8 @@
       "clusterId": "food-ordering",
       "label": "Food Ordering",
       "topTerms": [
-        "주문",
-        "메뉴"
+        "\uc8fc\ubb38",
+        "\uba54\ub274"
       ]
     },
     "placementHints": [
@@ -103,16 +103,18 @@
       "objectiveCategory": "vocabulary",
       "objectiveNodeId": "objective:ko-vocab-food-items",
       "targetNodeIds": [
-        "target:메뉴",
-        "target:주문",
-        "target:맵다"
+        "target:\uba54\ub274",
+        "target:\uc8fc\ubb38",
+        "target:\ub9f5\ub2e4"
       ],
       "summary": "Order street food politely in Korean.",
       "canonicalObjectiveId": "ko-vocab-food-items",
       "legacyObjectiveId": "ko_food_l2_001",
       "objectiveAliasIds": [
         "ko_food_l2_001"
-      ]
+      ],
+      "mapLocationId": "food_street",
+      "dagLocationSlot": "food_street"
     },
     "progression": {
       "xp": 110,
@@ -146,7 +148,9 @@
     "resumeSource": "new_session",
     "activeCheckpointId": "ckpt_sess_demo_001_intro",
     "startedAtIso": "2026-03-15T04:55:00.000Z",
-    "updatedAtIso": "2026-03-15T04:55:00.000Z"
+    "updatedAtIso": "2026-03-15T04:55:00.000Z",
+    "mapLocationId": "food_street",
+    "dagLocationSlot": "food_street"
   },
   "sceneSession": {
     "sceneSessionId": "scene_sess_demo_001_001",
@@ -164,16 +168,18 @@
       "objectiveCategory": "vocabulary",
       "objectiveNodeId": "objective:ko-vocab-food-items",
       "targetNodeIds": [
-        "target:메뉴",
-        "target:주문",
-        "target:맵다"
+        "target:\uba54\ub274",
+        "target:\uc8fc\ubb38",
+        "target:\ub9f5\ub2e4"
       ],
       "summary": "Order street food politely in Korean.",
       "canonicalObjectiveId": "ko-vocab-food-items",
       "legacyObjectiveId": "ko_food_l2_001",
       "objectiveAliasIds": [
         "ko_food_l2_001"
-      ]
+      ],
+      "mapLocationId": "food_street",
+      "dagLocationSlot": "food_street"
     },
     "phase": "intro",
     "turn": 1,
@@ -198,7 +204,9 @@
       "allowOnlyDialogueAndHints": true
     },
     "startedAtIso": "2026-03-15T04:55:00.000Z",
-    "updatedAtIso": "2026-03-15T04:55:00.000Z"
+    "updatedAtIso": "2026-03-15T04:55:00.000Z",
+    "mapLocationId": "food_street",
+    "dagLocationSlot": "food_street"
   },
   "activeCheckpoint": {
     "checkpointId": "ckpt_sess_demo_001_intro",
@@ -226,16 +234,18 @@
       "objectiveCategory": "vocabulary",
       "objectiveNodeId": "objective:ko-vocab-food-items",
       "targetNodeIds": [
-        "target:메뉴",
-        "target:주문",
-        "target:맵다"
+        "target:\uba54\ub274",
+        "target:\uc8fc\ubb38",
+        "target:\ub9f5\ub2e4"
       ],
       "summary": "Resume from the current safe intro boundary.",
       "canonicalObjectiveId": "ko-vocab-food-items",
       "legacyObjectiveId": "ko_food_l2_001",
       "objectiveAliasIds": [
         "ko_food_l2_001"
-      ]
+      ],
+      "mapLocationId": "food_street",
+      "dagLocationSlot": "food_street"
     },
     "phase": "intro",
     "turn": 1,
@@ -264,7 +274,9 @@
       "seed": "sess_demo_001_intro",
       "version": 1
     },
-    "createdAtIso": "2026-03-15T04:55:00.000Z"
+    "createdAtIso": "2026-03-15T04:55:00.000Z",
+    "mapLocationId": "food_street",
+    "dagLocationSlot": "food_street"
   },
   "availableScenarioSeeds": [
     {
@@ -294,9 +306,9 @@
         "objectiveCategory": "vocabulary",
         "objectiveNodeId": "objective:ko-vocab-food-items",
         "targetNodeIds": [
-          "target:메뉴",
-          "target:주문",
-          "target:맵다"
+          "target:\uba54\ub274",
+          "target:\uc8fc\ubb38",
+          "target:\ub9f5\ub2e4"
         ],
         "summary": "QA-only seed for deterministic review and proof capture.",
         "canonicalObjectiveId": "ko-vocab-food-items",
@@ -314,11 +326,11 @@
         "prompt": "Hold before the final review decision.",
         "payloadVersion": 1,
         "state": {
-          "targetChar": "뉴",
+          "targetChar": "\ub274",
           "remainingLives": 2,
           "boardPieces": [
-            "ㅁ",
-            "ㅠ"
+            "\u3141",
+            "\u3160"
           ],
           "requiredMatches": 1
         }
@@ -337,5 +349,7 @@
       },
       "notes": "Use for QA/demo capture only; do not expose as player-facing resume."
     }
-  ]
+  ],
+  "mapLocationId": "food_street",
+  "dagLocationSlot": "food_street"
 }

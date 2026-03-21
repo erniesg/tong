@@ -360,6 +360,30 @@ async function run() {
     logPass('/api/v1/graph/evidence');
   }
 
+  const graphDashboard = await requestJson(
+    `/api/v1/graph/dashboard?userId=${encodeURIComponent(userId)}&city=tokyo&location=train_station`,
+  );
+  if (graphDashboard.status === 404) {
+    logWarn('/api/v1/graph/dashboard unavailable on this runtime; skipped graph dashboard contract checks');
+  } else {
+    assert(graphDashboard.ok, `/graph/dashboard failed (${graphDashboard.status})`);
+    assertArray(graphDashboard.data?.worldMapRegistry?.cities, 'graphDashboard.worldMapRegistry.cities');
+    const tokyoRoadmapEntry = (graphDashboard.data?.roadmap || []).find((entry) => entry.cityId === 'tokyo');
+    assert(tokyoRoadmapEntry?.locationId === 'subway_hub', 'graphDashboard roadmap tokyo.locationId mismatch');
+    assert(tokyoRoadmapEntry?.mapLocationId === 'train_station', 'graphDashboard roadmap tokyo.mapLocationId mismatch');
+    assert(tokyoRoadmapEntry?.dagLocationSlot === 'subway_hub', 'graphDashboard roadmap tokyo.dagLocationSlot mismatch');
+    assert(graphDashboard.data?.lessonBundle?.mapLocationId === 'train_station', 'graphDashboard lessonBundle.mapLocationId mismatch');
+    assert(graphDashboard.data?.lessonBundle?.dagLocationSlot === 'subway_hub', 'graphDashboard lessonBundle.dagLocationSlot mismatch');
+    assert(graphDashboard.data?.hangoutBundle?.mapLocationId === 'train_station', 'graphDashboard hangoutBundle.mapLocationId mismatch');
+    assert(graphDashboard.data?.hangoutBundle?.dagLocationSlot === 'subway_hub', 'graphDashboard hangoutBundle.dagLocationSlot mismatch');
+    const tokyoLegacySubwayEntry = (graphDashboard.data?.worldRoadmap || [])
+      .find((city) => city.cityId === 'tokyo')
+      ?.locations?.find((location) => location.locationId === 'subway_hub');
+    assert(tokyoLegacySubwayEntry?.mapLocationId === 'train_station', 'graphDashboard worldRoadmap subway_hub.mapLocationId mismatch');
+    assert(tokyoLegacySubwayEntry?.dagLocationSlot === 'subway_hub', 'graphDashboard worldRoadmap subway_hub.dagLocationSlot mismatch');
+    logPass('/api/v1/graph/dashboard');
+  }
+
   const gameStart = await requestJson('/api/v1/game/start-or-resume', {
     method: 'POST',
     body: JSON.stringify({
