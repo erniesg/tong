@@ -43,7 +43,6 @@ const LEGACY_SHARED_LOCATIONS = [
 ];
 
 const VALID_CITIES = new Set(Object.keys(CITY_LABELS));
-const VALID_LOCATIONS = new Set(Object.keys(LOCATION_LABELS));
 const LESSON_STATUSES = new Set(['available', 'due', 'learning']);
 const COMPLETED_STATUSES = new Set(['validated', 'mastered']);
 const BLOCKER_CLEAR_STATUSES = new Set(['due', 'validated', 'mastered']);
@@ -61,6 +60,19 @@ function loadJson(relativePath) {
 }
 
 const WORLD_MAP_REGISTRY = loadJson('packages/contracts/world-map-registry.sample.json');
+
+const VALID_LOCATION_IDS = new Set(
+  [
+    ...Object.keys(LOCATION_LABELS),
+    ...((WORLD_MAP_REGISTRY.cities || []).flatMap((city) =>
+      (city.locations || []).flatMap((entry) => [
+        entry.mapLocationId,
+        entry.dagLocationSlot,
+        ...((entry.legacyLocationIds || [])),
+      ]),
+    )),
+  ].filter(Boolean),
+);
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
@@ -154,10 +166,15 @@ function loadStarterPacks() {
         cityId: raw.city,
         mapLocationId: resolvedLocation.mapLocationId,
         dagLocationSlot: raw.location?.id || resolvedLocation.dagLocationSlot,
+        locationId: raw.location?.id || resolvedLocation.dagLocationSlot,
+        lang: CITY_LANG[raw.city],
+        title: `${CITY_LABELS[raw.city]} ${raw.playerFacingLocationLabel || resolvedLocation.label}`,
         playerFacingLocationLabel: raw.playerFacingLocationLabel || resolvedLocation.label,
         status: raw.status || 'draft',
+        characterRoster: cloneJson(raw.characterRoster || []),
         objectiveSeed: cloneJson(raw.objectiveSeed || {}),
         manifestKeys: cloneJson(raw.manifestKeys || []),
+        rewardHooks: cloneJson(raw.rewardHooks || {}),
       };
     })
     .filter(Boolean);
@@ -256,8 +273,10 @@ function buildStarterPackStub(starterPack) {
       mapLocationId: starterPack.mapLocationId,
       playerFacingLocationLabel: starterPack.playerFacingLocationLabel,
       status: starterPack.status,
+      characterRoster: cloneJson(starterPack.characterRoster || []),
       manifestKeys: cloneJson(starterPack.manifestKeys || []),
       objectiveSeed: cloneJson(starterPack.objectiveSeed || {}),
+      rewardHooks: cloneJson(starterPack.rewardHooks || {}),
     },
   };
 }
@@ -306,11 +325,13 @@ function buildPackRegistry() {
   for (const starterPack of STARTER_PACKS) {
     const key = keyFor(starterPack.cityId, starterPack.dagLocationSlot);
     if (key === keyFor('seoul', 'food_street')) continue;
-    registry.set(key, buildStarterPackStub(starterPack));
+    if (!registry.has(key)) {
+      registry.set(key, buildStarterPackStub(starterPack));
+    }
   }
 
   for (const cityId of VALID_CITIES) {
-    for (const locationId of VALID_LOCATIONS) {
+    for (const locationId of Object.keys(LOCATION_LABELS)) {
       const key = keyFor(cityId, locationId);
       if (registry.has(key)) continue;
       registry.set(key, buildStubPack(cityId, locationId));
@@ -694,7 +715,7 @@ function normalizeCity(value) {
 
 function normalizeLocation(value) {
   if (value === undefined || value === null || value === '') return null;
-  if (!VALID_LOCATIONS.has(value)) {
+  if (!VALID_LOCATION_IDS.has(value)) {
     throw createGraphError('invalid_graph_location', `Unknown graph location "${value}".`, 400, {
       location: value,
     });
@@ -704,31 +725,42 @@ function normalizeLocation(value) {
 
 function inferCityFromLocation(locationId) {
   if (!locationId) return null;
-  if (locationId === 'practice_studio') return 'shanghai';
-  return 'seoul';
+  for (const city of WORLD_MAP_REGISTRY.cities || []) {
+    const matches = (city.locations || []).some(
+      (entry) =>
+        entry.mapLocationId === locationId ||
+        entry.dagLocationSlot === locationId ||
+        (entry.legacyLocationIds || []).includes(locationId),
+    );
+    if (matches) return city.cityId;
+  }
+  return null;
 }
 
 function resolveSelection(args = {}) {
   const requestedLocation = normalizeLocation(args.location);
   const requestedCity = normalizeCity(args.city) || inferCityFromLocation(requestedLocation) || 'seoul';
-  const locationId = requestedLocation || DEFAULT_LOCATION_BY_CITY[requestedCity];
-  const pack = PACK_REGISTRY.get(keyFor(requestedCity, locationId));
+  const requestedLocationId = requestedLocation || DEFAULT_LOCATION_BY_CITY[requestedCity];
+  const resolvedLocation = resolveWorldMapLocation(requestedCity, requestedLocationId);
+  const pack = getStarterPackMetadata(requestedCity, requestedLocationId)
+    || PACK_REGISTRY.get(keyFor(requestedCity, resolvedLocation.dagLocationSlot));
 
   if (!pack) {
     throw createGraphError(
       'graph_pack_not_found',
-      `No curriculum pack is registered for ${requestedCity}/${locationId}.`,
+      `No curriculum pack is registered for ${requestedCity}/${requestedLocationId}.`,
       404,
       {
         city: requestedCity,
-        location: locationId,
+        location: requestedLocationId,
       },
     );
   }
 
   return {
     cityId: requestedCity,
-    locationId,
+    locationId: resolvedLocation.dagLocationSlot,
+    mapLocationId: resolvedLocation.mapLocationId,
     pack,
   };
 }
@@ -1646,15 +1678,16 @@ function buildLegacyWorldRoadmap(persona, foundationEvaluation, overlayCandidate
       label: 'Tokyo',
       focus: cityFocus.get('ja') || 'foundation',
       proficiency: persona.proficiency.ja || 'beginner',
-      locations: LEGACY_SHARED_LOCATIONS.map((location, index) => {
+      locations: LEGACY_SHARED_LOCATIONS.map((location) => {
         const resolvedLocation = resolveWorldMapLocation('tokyo', location.locationId);
+        const starterPack = getStarterPackMetadata('tokyo', location.locationId);
         return {
           locationId: location.locationId,
           mapLocationId: resolvedLocation.mapLocationId,
           dagLocationSlot: resolvedLocation.dagLocationSlot,
-          label: resolvedLocation.label,
-          status: index === 0 ? 'preview' : 'locked',
-          progress: index === 0 ? 'Starter path scaffolded for future pack generation' : 'Locked',
+          label: starterPack?.playerFacingLocationLabel || resolvedLocation.label,
+          status: starterPack ? 'preview' : 'locked',
+          progress: starterPack ? `Starter pack checked in: ${starterPack.packId}` : 'Awaiting authored starter pack',
         };
       }),
       levels: [
@@ -1667,25 +1700,30 @@ function buildLegacyWorldRoadmap(persona, foundationEvaluation, overlayCandidate
       label: 'Shanghai',
       focus: cityFocus.get('zh') || 'personalization',
       proficiency: persona.proficiency.zh || 'beginner',
-      locations: LEGACY_SHARED_LOCATIONS.map((location, index) => {
+      locations: LEGACY_SHARED_LOCATIONS.map((location) => {
         const resolvedLocation = resolveWorldMapLocation('shanghai', location.locationId);
+        const starterPack = getStarterPackMetadata('shanghai', location.locationId);
         return {
           locationId: location.locationId,
           mapLocationId: resolvedLocation.mapLocationId,
           dagLocationSlot: resolvedLocation.dagLocationSlot,
-          label: resolvedLocation.label,
+          label: starterPack?.playerFacingLocationLabel || resolvedLocation.label,
           status:
             location.locationId === 'practice_studio'
-              ? overlayCandidates.some((candidate) => candidate.overlay.lang === 'zh')
+              ? starterPack || overlayCandidates.some((candidate) => candidate.overlay.lang === 'zh')
                 ? 'preview'
                 : 'locked'
-              : index === 0
+              : starterPack
                 ? 'preview'
                 : 'locked',
           progress:
             location.locationId === 'practice_studio'
-              ? 'Personalized overlay ready for creator vocabulary'
-              : 'Awaiting generated pack',
+              ? starterPack
+                ? `Starter pack checked in: ${starterPack.packId}`
+                : 'Personalized overlay ready for creator vocabulary'
+              : starterPack
+                ? `Starter pack checked in: ${starterPack.packId}`
+                : 'Awaiting generated pack',
         };
       }),
       levels: [

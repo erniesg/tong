@@ -1,3 +1,12 @@
+
+## 2026-03-21 (Issues 63/64 combined Tokyo+Shanghai starter-pack intent)
+- Date: 2026-03-21
+- Branch/worktree: `work` (combined city-pack run crossing creative-assets/runtime-assets/server-api shared files)
+- Intent:
+  - Add repo-visible Tokyo and Shanghai starter-pack files for every live post-#118 map pin under `assets/content-packs/**` using the canonical world-map registry and starter-cast registry.
+  - Update shared manifests, creative-assets docs, and runtime/API validation so dashboard and graph flows resolve authored Tokyo/Shanghai packs by `mapLocationId` through the registry instead of stale slot-only assumptions.
+  - Keep Tokyo free of any non-live `practice_studio` pack and preserve Shanghai `milk_tea_shop -> practice_studio` reward hooks.
+
 ## 2026-03-21 (Issue 62 Seoul starter-pack cross-lane intent)
 - Date: 2026-03-21
 - Branch/worktree: `codex/issue-62-seoul-starter-pack` + `.worktrees/creative-assets`

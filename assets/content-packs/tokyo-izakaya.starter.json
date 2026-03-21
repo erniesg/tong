@@ -1,0 +1,82 @@
+{
+  "templateVersion": "1.1.0",
+  "packType": "city-location-character-starter",
+  "packId": "pack.tokyo.izakaya.starter",
+  "city": "tokyo",
+  "mapLocationId": "izakaya",
+  "playerFacingLocationLabel": "Izakaya",
+  "location": {
+    "id": "food_street",
+    "assetSlug": "izakaya",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "char.tokyo.food_street.rin",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tokyo.food_street.rin.portrait.default",
+        "character.tokyo.food_street.rin.sprite.default",
+        "character.tokyo.food_street.rin.scene.default",
+        "character.tokyo.food_street.rin.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.tokyo.food_street.rin.sprite.expression-set"
+      ]
+    },
+    {
+      "id": "char.tokyo.food_street.daichi",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tokyo.food_street.daichi.portrait.default",
+        "character.tokyo.food_street.daichi.sprite.default",
+        "character.tokyo.food_street.daichi.scene.default",
+        "character.tokyo.food_street.daichi.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.tokyo.food_street.daichi.intro.video"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "tokyo-izakaya-ordering-v1",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.2"
+    }
+  },
+  "manifestKeys": [
+    "city.tokyo.location.izakaya.backdrop.default",
+    "character.tokyo.food_street.rin.portrait.default",
+    "character.tokyo.food_street.daichi.portrait.default",
+    "character.tong.expression.neutral"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": null,
+    "polaroidRewardKey": null
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+}

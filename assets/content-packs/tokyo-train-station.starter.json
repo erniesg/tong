@@ -1,0 +1,82 @@
+{
+  "templateVersion": "1.1.0",
+  "packType": "city-location-character-starter",
+  "packId": "pack.tokyo.train_station.starter",
+  "city": "tokyo",
+  "mapLocationId": "train_station",
+  "playerFacingLocationLabel": "Train Station",
+  "location": {
+    "id": "subway_hub",
+    "assetSlug": "train-station",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "char.tokyo.subway_hub.akira",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tokyo.subway_hub.akira.portrait.default",
+        "character.tokyo.subway_hub.akira.sprite.default",
+        "character.tokyo.subway_hub.akira.scene.default",
+        "character.tokyo.subway_hub.akira.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.tokyo.subway_hub.akira.sprite.expression-set"
+      ]
+    },
+    {
+      "id": "char.tokyo.subway_hub.mei",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tokyo.subway_hub.mei.portrait.default",
+        "character.tokyo.subway_hub.mei.sprite.default",
+        "character.tokyo.subway_hub.mei.scene.default",
+        "character.tokyo.subway_hub.mei.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.tokyo.subway_hub.mei.reward.polaroid"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "tokyo-train-station-commute-v1",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.2"
+    }
+  },
+  "manifestKeys": [
+    "city.tokyo.location.train-station.backdrop.default",
+    "character.tokyo.subway_hub.akira.portrait.default",
+    "character.tokyo.subway_hub.mei.portrait.default",
+    "character.tong.expression.neutral"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": null,
+    "polaroidRewardKey": null
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+}

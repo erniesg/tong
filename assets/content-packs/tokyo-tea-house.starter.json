@@ -1,0 +1,82 @@
+{
+  "templateVersion": "1.1.0",
+  "packType": "city-location-character-starter",
+  "packId": "pack.tokyo.tea_house.starter",
+  "city": "tokyo",
+  "mapLocationId": "tea_house",
+  "playerFacingLocationLabel": "Tea House",
+  "location": {
+    "id": "cafe",
+    "assetSlug": "tea-house",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "char.tokyo.cafe.hina",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tokyo.cafe.hina.portrait.default",
+        "character.tokyo.cafe.hina.sprite.default",
+        "character.tokyo.cafe.hina.scene.default",
+        "character.tokyo.cafe.hina.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.tokyo.cafe.hina.sprite.expression-set"
+      ]
+    },
+    {
+      "id": "char.tokyo.cafe.ren",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tokyo.cafe.ren.portrait.default",
+        "character.tokyo.cafe.ren.sprite.default",
+        "character.tokyo.cafe.ren.scene.default",
+        "character.tokyo.cafe.ren.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.tokyo.cafe.ren.intro.video"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "tokyo-tea-house-polite-orders-v1",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.2"
+    }
+  },
+  "manifestKeys": [
+    "city.tokyo.location.tea-house.backdrop.default",
+    "character.tokyo.cafe.hina.portrait.default",
+    "character.tokyo.cafe.ren.portrait.default",
+    "character.tong.expression.neutral"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": null,
+    "polaroidRewardKey": null
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+}

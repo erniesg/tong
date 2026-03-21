@@ -37,10 +37,21 @@ Unblock demo validation early while API/plumbing is still in progress.
    - `assets/content-packs/seoul-convenience-store.starter.json`
    - `assets/content-packs/seoul-subway-hub.starter.json`
    - `assets/content-packs/seoul-practice-studio.starter.json`
+   - `assets/content-packs/tokyo-train-station.starter.json`
+   - `assets/content-packs/tokyo-izakaya.starter.json`
+   - `assets/content-packs/tokyo-konbini.starter.json`
+   - `assets/content-packs/tokyo-tea-house.starter.json`
+   - `assets/content-packs/tokyo-ramen-shop.starter.json`
+   - `assets/content-packs/shanghai-metro-station.starter.json`
+   - `assets/content-packs/shanghai-bbq-stall.starter.json`
+   - `assets/content-packs/shanghai-convenience-store.starter.json`
+   - `assets/content-packs/shanghai-milk-tea-shop.starter.json`
+   - `assets/content-packs/shanghai-dumpling-shop.starter.json`
    - `assets/rewards/shanghai-reward-bundle.placeholder.json`
    Pack data should use contract IDs such as `food_street`; reserve hyphenated slugs such as `food-street` for asset keys and file naming.
    - `assets/content-packs/starter-cast-roster.spec.md`
    - `assets/manifest/starter-cast-registry.json`
    Issue `#69` makes these the approved starter-cast and per-character asset-bundle source of truth for downstream city-pack work.
+   Tokyo intentionally has no live `practice_studio` pin, while Shanghai's live `milk_tea_shop` pin resolves to `dagLocationSlot: practice_studio` and keeps the advanced reward hooks on that starter pack.
 5. `npm run demo:smoke` now cross-checks concrete client `/assets/...` refs against the runtime manifest and on-disk files.
 6. Final plumbing should swap data sources without redesigning screens.

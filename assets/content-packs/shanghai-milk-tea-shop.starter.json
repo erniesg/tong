@@ -1,0 +1,86 @@
+{
+  "templateVersion": "1.1.0",
+  "packType": "city-location-character-starter",
+  "packId": "pack.shanghai.milk_tea_shop.starter",
+  "city": "shanghai",
+  "mapLocationId": "milk_tea_shop",
+  "playerFacingLocationLabel": "Milk Tea Shop",
+  "location": {
+    "id": "practice_studio",
+    "assetSlug": "milk-tea-shop",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "char.shanghai.practice_studio.xinyi",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.shanghai.practice_studio.xinyi.portrait.default",
+        "character.shanghai.practice_studio.xinyi.sprite.default",
+        "character.shanghai.practice_studio.xinyi.scene.default",
+        "character.shanghai.practice_studio.xinyi.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.shanghai.practice_studio.xinyi.reward.video-call",
+        "character.shanghai.practice_studio.xinyi.reward.polaroid"
+      ]
+    },
+    {
+      "id": "char.shanghai.practice_studio.zhen",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.shanghai.practice_studio.zhen.portrait.default",
+        "character.shanghai.practice_studio.zhen.sprite.default",
+        "character.shanghai.practice_studio.zhen.scene.default",
+        "character.shanghai.practice_studio.zhen.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.shanghai.practice_studio.zhen.sprite.expression-set",
+        "character.shanghai.practice_studio.zhen.reward.video-call"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "shanghai-milk-tea-shop-texting-mission-v1",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 3,
+      "masteryTierUnlock": "A2.1"
+    }
+  },
+  "manifestKeys": [
+    "city.shanghai.location.milk-tea-shop.backdrop.default",
+    "character.shanghai.practice_studio.xinyi.portrait.default",
+    "character.shanghai.practice_studio.zhen.portrait.default",
+    "character.tong.expression.neutral",
+    "reward.shanghai.milk_tea_shop.video_call",
+    "reward.shanghai.milk_tea_shop.polaroid"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": "reward.shanghai.milk_tea_shop.video_call",
+    "polaroidRewardKey": "reward.shanghai.milk_tea_shop.polaroid"
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+}

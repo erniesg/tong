@@ -753,24 +753,38 @@ if (!seoulRegistry) {
   process.exit(1);
 }
 
-const authoredSeoulPacks = starterPacks
-  .filter((pack) => pack.city === "seoul")
-  .map((pack) => pack.mapLocationId)
-  .sort();
-const expectedSeoulPacks = seoulRegistry.locations.map((entry) => entry.mapLocationId).sort();
-if (JSON.stringify(authoredSeoulPacks) !== JSON.stringify(expectedSeoulPacks)) {
-  console.error("Seoul starter-pack coverage does not match world-map-registry");
-  console.error(JSON.stringify({ expectedSeoulPacks, authoredSeoulPacks }, null, 2));
-  process.exit(1);
-}
-
-for (const starterPack of starterPacks.filter((pack) => pack.city === "seoul")) {
-  const expectedPackId = `pack.seoul.${starterPack.mapLocationId}.starter`;
-  if (starterPack.packId !== expectedPackId) {
-    console.error(`Unexpected Seoul starter packId for ${starterPack.mapLocationId}: ${starterPack.packId}`);
+function assertStarterPackCoverage(cityId) {
+  const cityRegistry = worldMapRegistry.cities.find((city) => city.cityId === cityId);
+  if (!cityRegistry) {
+    console.error(`world-map-registry missing ${cityId} city entry`);
     process.exit(1);
   }
+
+  const authoredPacks = starterPacks
+    .filter((pack) => pack.city === cityId)
+    .map((pack) => pack.mapLocationId)
+    .sort();
+  const expectedPacks = cityRegistry.locations.map((entry) => entry.mapLocationId).sort();
+  if (JSON.stringify(authoredPacks) !== JSON.stringify(expectedPacks)) {
+    console.error(`${cityId} starter-pack coverage does not match world-map-registry`);
+    console.error(JSON.stringify({ expectedPacks, authoredPacks }, null, 2));
+    process.exit(1);
+  }
+
+  for (const starterPack of starterPacks.filter((pack) => pack.city === cityId)) {
+    const expectedPackId = `pack.${cityId}.${starterPack.mapLocationId}.starter`;
+    if (starterPack.packId !== expectedPackId) {
+      console.error(`Unexpected ${cityId} starter packId for ${starterPack.mapLocationId}: ${starterPack.packId}`);
+      process.exit(1);
+    }
+  }
+
+  return authoredPacks;
 }
+
+const authoredSeoulPacks = assertStarterPackCoverage("seoul");
+const authoredTokyoPacks = assertStarterPackCoverage("tokyo");
+const authoredShanghaiPacks = assertStarterPackCoverage("shanghai");
 
 const practiceStudioPack = starterPacks.find(
   (pack) => pack.city === "seoul" && pack.mapLocationId === "practice_studio"
@@ -783,6 +797,32 @@ if (practiceStudioPack?.playerFacingLocationLabel !== "Chimaek Place") {
 const tokyoSlotRosters = starterCastRegistry.cities.find((city) => city.cityId === "tokyo")?.slotRosters ?? [];
 if (tokyoSlotRosters.some((roster) => roster.dagLocationSlot === "practice_studio")) {
   console.error("Tokyo starter-cast registry still contains a non-live practice_studio reserved roster");
+  process.exit(1);
+}
+
+if (starterPacks.some((pack) => pack.city === "tokyo" && pack.mapLocationId === "practice_studio")) {
+  console.error("Tokyo should not ship a non-live practice_studio starter pack");
+  process.exit(1);
+}
+
+if (starterPacks.some((pack) => pack.city === "shanghai" && pack.mapLocationId === "cafe")) {
+  console.error("Shanghai should not ship a non-live cafe starter pack");
+  process.exit(1);
+}
+
+const milkTeaPack = starterPacks.find(
+  (pack) => pack.city === "shanghai" && pack.mapLocationId === "milk_tea_shop"
+);
+if (milkTeaPack?.location?.id !== "practice_studio") {
+  console.error("Shanghai milk_tea_shop starter pack must resolve to the practice_studio DAG slot");
+  process.exit(1);
+}
+if (milkTeaPack?.rewardHooks?.videoCallRewardKey !== "reward.shanghai.milk_tea_shop.video_call") {
+  console.error("Shanghai milk_tea_shop starter pack must preserve the video_call reward hook");
+  process.exit(1);
+}
+if (milkTeaPack?.rewardHooks?.polaroidRewardKey !== "reward.shanghai.milk_tea_shop.polaroid") {
+  console.error("Shanghai milk_tea_shop starter pack must preserve the polaroid reward hook");
   process.exit(1);
 }
 
@@ -812,3 +852,5 @@ console.log("- Runtime asset manifest keys validated");
 console.log("- Canonical/runtime manifest parity validated");
 console.log(`- Client runtime manifest keys resolved (${clientRuntimeAssetUsage.manifestKeys.length})`);
 console.log(`- Seoul starter-pack coverage validated (${authoredSeoulPacks.length} packs)`);
+console.log(`- Tokyo starter-pack coverage validated (${authoredTokyoPacks.length} packs)`);
+console.log(`- Shanghai starter-pack coverage validated (${authoredShanghaiPacks.length} packs)`);

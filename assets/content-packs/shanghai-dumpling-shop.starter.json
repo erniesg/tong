@@ -1,0 +1,82 @@
+{
+  "templateVersion": "1.1.0",
+  "packType": "city-location-character-starter",
+  "packId": "pack.shanghai.dumpling_shop.starter",
+  "city": "shanghai",
+  "mapLocationId": "dumpling_shop",
+  "playerFacingLocationLabel": "Dumpling Shop",
+  "location": {
+    "id": "food_street",
+    "assetSlug": "dumpling-shop",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "char.shanghai.food_street.qiao",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.shanghai.food_street.qiao.portrait.default",
+        "character.shanghai.food_street.qiao.sprite.default",
+        "character.shanghai.food_street.qiao.scene.default",
+        "character.shanghai.food_street.qiao.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.shanghai.food_street.qiao.sprite.expression-set"
+      ]
+    },
+    {
+      "id": "char.shanghai.food_street.ming",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.shanghai.food_street.ming.portrait.default",
+        "character.shanghai.food_street.ming.sprite.default",
+        "character.shanghai.food_street.ming.scene.default",
+        "character.shanghai.food_street.ming.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.shanghai.food_street.ming.intro.video"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "shanghai-dumpling-shop-shared-plates-v1",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.3"
+    }
+  },
+  "manifestKeys": [
+    "city.shanghai.location.dumpling-shop.backdrop.default",
+    "character.shanghai.food_street.qiao.portrait.default",
+    "character.shanghai.food_street.ming.portrait.default",
+    "character.tong.expression.neutral"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": null,
+    "polaroidRewardKey": null
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+}
