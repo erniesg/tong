@@ -59,6 +59,7 @@
     "runtimeAssumptions": [
       "Every playable city/map pin resolves through packages/contracts/world-map-registry.sample.json before selecting a roster.",
       "Each live mapLocationId references one starter slot roster via its dagLocationSlot and may reuse the same two-character roster across multiple pins in the same city.",
+      "Cities may also define reserved shared-slot rosters with no current live map pin yet so downstream city-pack planning stays aligned with the five-slot world model.",
       "Tong remains a global assistant and is not counted toward the two local starter characters per slot.",
       "If optional outputs are missing, runtime-assets falls back to portrait.default + scene.default without blocking pack approval."
     ]
@@ -203,6 +204,15 @@
           "coveredMapLocationIds": [
             "tea_house"
           ]
+        },
+        {
+          "slotRosterId": "slot.tokyo.practice_studio.starter",
+          "dagLocationSlot": "practice_studio",
+          "characterIds": [
+            "char.tokyo.practice_studio.noa",
+            "char.tokyo.practice_studio.shin"
+          ],
+          "coveredMapLocationIds": []
         }
       ],
       "mapPins": [
@@ -274,6 +284,15 @@
           "coveredMapLocationIds": [
             "convenience_store"
           ]
+        },
+        {
+          "slotRosterId": "slot.shanghai.cafe.starter",
+          "dagLocationSlot": "cafe",
+          "characterIds": [
+            "char.shanghai.cafe.jing",
+            "char.shanghai.cafe.hao"
+          ],
+          "coveredMapLocationIds": []
         },
         {
           "slotRosterId": "slot.shanghai.practice_studio.starter",
@@ -348,12 +367,16 @@
     {"characterId":"char.tokyo.convenience_store.kaito","displayName":"Kaito","cityId":"tokyo","dagLocationSlot":"convenience_store","archetype":"after-school gamer","packRole":"support","requiredAssetKeys":["character.tokyo.convenience_store.kaito.portrait.default","character.tokyo.convenience_store.kaito.sprite.default","character.tokyo.convenience_store.kaito.scene.default","character.tokyo.convenience_store.kaito.voice.reference"],"optionalAssetKeys":["character.tokyo.convenience_store.kaito.reward.polaroid"]},
     {"characterId":"char.tokyo.cafe.hina","displayName":"Hina","cityId":"tokyo","dagLocationSlot":"cafe","archetype":"tea house host","packRole":"lead","requiredAssetKeys":["character.tokyo.cafe.hina.portrait.default","character.tokyo.cafe.hina.sprite.default","character.tokyo.cafe.hina.scene.default","character.tokyo.cafe.hina.voice.reference"],"optionalAssetKeys":["character.tokyo.cafe.hina.sprite.expression-set"]},
     {"characterId":"char.tokyo.cafe.ren","displayName":"Ren","cityId":"tokyo","dagLocationSlot":"cafe","archetype":"calligrapher regular","packRole":"support","requiredAssetKeys":["character.tokyo.cafe.ren.portrait.default","character.tokyo.cafe.ren.sprite.default","character.tokyo.cafe.ren.scene.default","character.tokyo.cafe.ren.voice.reference"],"optionalAssetKeys":["character.tokyo.cafe.ren.intro.video"]},
+    {"characterId":"char.tokyo.practice_studio.noa","displayName":"Noa","cityId":"tokyo","dagLocationSlot":"practice_studio","archetype":"underground dance coach","packRole":"lead","requiredAssetKeys":["character.tokyo.practice_studio.noa.portrait.default","character.tokyo.practice_studio.noa.sprite.default","character.tokyo.practice_studio.noa.scene.default","character.tokyo.practice_studio.noa.voice.reference"],"optionalAssetKeys":["character.tokyo.practice_studio.noa.sprite.expression-set"]},
+    {"characterId":"char.tokyo.practice_studio.shin","displayName":"Shin","cityId":"tokyo","dagLocationSlot":"practice_studio","archetype":"rehearsal pianist","packRole":"support","requiredAssetKeys":["character.tokyo.practice_studio.shin.portrait.default","character.tokyo.practice_studio.shin.sprite.default","character.tokyo.practice_studio.shin.scene.default","character.tokyo.practice_studio.shin.voice.reference"],"optionalAssetKeys":["character.tokyo.practice_studio.shin.intro.video"]},
     {"characterId":"char.shanghai.subway_hub.lin","displayName":"Lin","cityId":"shanghai","dagLocationSlot":"subway_hub","archetype":"metro navigator","packRole":"lead","requiredAssetKeys":["character.shanghai.subway_hub.lin.portrait.default","character.shanghai.subway_hub.lin.sprite.default","character.shanghai.subway_hub.lin.scene.default","character.shanghai.subway_hub.lin.voice.reference"],"optionalAssetKeys":["character.shanghai.subway_hub.lin.sprite.expression-set"]},
     {"characterId":"char.shanghai.subway_hub.wei","displayName":"Wei","cityId":"shanghai","dagLocationSlot":"subway_hub","archetype":"delivery rider","packRole":"support","requiredAssetKeys":["character.shanghai.subway_hub.wei.portrait.default","character.shanghai.subway_hub.wei.sprite.default","character.shanghai.subway_hub.wei.scene.default","character.shanghai.subway_hub.wei.voice.reference"],"optionalAssetKeys":["character.shanghai.subway_hub.wei.reward.polaroid"]},
     {"characterId":"char.shanghai.food_street.qiao","displayName":"Qiao","cityId":"shanghai","dagLocationSlot":"food_street","archetype":"bbq vendor","packRole":"lead","requiredAssetKeys":["character.shanghai.food_street.qiao.portrait.default","character.shanghai.food_street.qiao.sprite.default","character.shanghai.food_street.qiao.scene.default","character.shanghai.food_street.qiao.voice.reference"],"optionalAssetKeys":["character.shanghai.food_street.qiao.sprite.expression-set"]},
     {"characterId":"char.shanghai.food_street.ming","displayName":"Ming","cityId":"shanghai","dagLocationSlot":"food_street","archetype":"dumpling scout","packRole":"support","requiredAssetKeys":["character.shanghai.food_street.ming.portrait.default","character.shanghai.food_street.ming.sprite.default","character.shanghai.food_street.ming.scene.default","character.shanghai.food_street.ming.voice.reference"],"optionalAssetKeys":["character.shanghai.food_street.ming.intro.video"]},
     {"characterId":"char.shanghai.convenience_store.an","displayName":"An","cityId":"shanghai","dagLocationSlot":"convenience_store","archetype":"night cashier","packRole":"lead","requiredAssetKeys":["character.shanghai.convenience_store.an.portrait.default","character.shanghai.convenience_store.an.sprite.default","character.shanghai.convenience_store.an.scene.default","character.shanghai.convenience_store.an.voice.reference"],"optionalAssetKeys":["character.shanghai.convenience_store.an.sprite.expression-set"]},
     {"characterId":"char.shanghai.convenience_store.yue","displayName":"Yue","cityId":"shanghai","dagLocationSlot":"convenience_store","archetype":"study-group organizer","packRole":"support","requiredAssetKeys":["character.shanghai.convenience_store.yue.portrait.default","character.shanghai.convenience_store.yue.sprite.default","character.shanghai.convenience_store.yue.scene.default","character.shanghai.convenience_store.yue.voice.reference"],"optionalAssetKeys":["character.shanghai.convenience_store.yue.reward.polaroid"]},
+    {"characterId":"char.shanghai.cafe.jing","displayName":"Jing","cityId":"shanghai","dagLocationSlot":"cafe","archetype":"milk-foam barista","packRole":"lead","requiredAssetKeys":["character.shanghai.cafe.jing.portrait.default","character.shanghai.cafe.jing.sprite.default","character.shanghai.cafe.jing.scene.default","character.shanghai.cafe.jing.voice.reference"],"optionalAssetKeys":["character.shanghai.cafe.jing.sprite.expression-set"]},
+    {"characterId":"char.shanghai.cafe.hao","displayName":"Hao","cityId":"shanghai","dagLocationSlot":"cafe","archetype":"tabletop sketch artist","packRole":"support","requiredAssetKeys":["character.shanghai.cafe.hao.portrait.default","character.shanghai.cafe.hao.sprite.default","character.shanghai.cafe.hao.scene.default","character.shanghai.cafe.hao.voice.reference"],"optionalAssetKeys":["character.shanghai.cafe.hao.intro.video"]},
     {"characterId":"char.shanghai.practice_studio.xinyi","displayName":"Xinyi","cityId":"shanghai","dagLocationSlot":"practice_studio","archetype":"dance challenge streamer","packRole":"lead","requiredAssetKeys":["character.shanghai.practice_studio.xinyi.portrait.default","character.shanghai.practice_studio.xinyi.sprite.default","character.shanghai.practice_studio.xinyi.scene.default","character.shanghai.practice_studio.xinyi.voice.reference"],"optionalAssetKeys":["character.shanghai.practice_studio.xinyi.reward.video-call","character.shanghai.practice_studio.xinyi.reward.polaroid"]},
     {"characterId":"char.shanghai.practice_studio.zhen","displayName":"Zhen","cityId":"shanghai","dagLocationSlot":"practice_studio","archetype":"sound engineer","packRole":"support","requiredAssetKeys":["character.shanghai.practice_studio.zhen.portrait.default","character.shanghai.practice_studio.zhen.sprite.default","character.shanghai.practice_studio.zhen.scene.default","character.shanghai.practice_studio.zhen.voice.reference"],"optionalAssetKeys":["character.shanghai.practice_studio.zhen.sprite.expression-set","character.shanghai.practice_studio.zhen.reward.video-call"]}
   ]
