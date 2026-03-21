@@ -381,6 +381,23 @@ async function run() {
       ?.locations?.find((location) => location.locationId === 'subway_hub');
     assert(tokyoLegacySubwayEntry?.mapLocationId === 'train_station', 'graphDashboard worldRoadmap subway_hub.mapLocationId mismatch');
     assert(tokyoLegacySubwayEntry?.dagLocationSlot === 'subway_hub', 'graphDashboard worldRoadmap subway_hub.dagLocationSlot mismatch');
+    const teaHouseDashboard = await requestJson(
+      `/api/v1/graph/dashboard?userId=${encodeURIComponent(userId)}&city=tokyo&location=tea_house`,
+    );
+    assert(teaHouseDashboard.ok, `/graph/dashboard tokyo tea_house failed (${teaHouseDashboard.status})`);
+    assert(teaHouseDashboard.data?.selectedPack?.pack?.packId === 'pack.tokyo.tea_house.starter', 'graphDashboard tokyo tea_house selectedPack.packId mismatch');
+    assert(teaHouseDashboard.data?.selectedPack?.pack?.mapLocationId === 'tea_house', 'graphDashboard tokyo tea_house pack.mapLocationId mismatch');
+    assert(teaHouseDashboard.data?.lessonBundle?.mapLocationId === 'tea_house', 'graphDashboard tokyo tea_house lessonBundle.mapLocationId mismatch');
+    assert(teaHouseDashboard.data?.lessonBundle?.dagLocationSlot === 'cafe', 'graphDashboard tokyo tea_house lessonBundle.dagLocationSlot mismatch');
+    const izakayaDashboard = await requestJson(
+      `/api/v1/graph/dashboard?userId=${encodeURIComponent(userId)}&city=tokyo&location=izakaya`,
+    );
+    assert(izakayaDashboard.ok, `/graph/dashboard tokyo izakaya failed (${izakayaDashboard.status})`);
+    assert(izakayaDashboard.data?.selectedPack?.pack?.packId === 'pack.tokyo.izakaya.starter', 'graphDashboard tokyo izakaya selectedPack.packId mismatch');
+    const izakayaRoster = izakayaDashboard.data?.selectedPack?.pack?.characterRoster || [];
+    assertArray(izakayaRoster, 'graphDashboard tokyo izakaya starter roster');
+    assert(izakayaRoster.some((entry) => entry.id === 'char.tokyo.food_street.rin'), 'graphDashboard tokyo izakaya roster should reuse Rin');
+    assert(izakayaRoster.some((entry) => entry.id === 'char.tokyo.food_street.daichi'), 'graphDashboard tokyo izakaya roster should reuse Daichi');
     logPass('/api/v1/graph/dashboard');
   }
 
@@ -405,6 +422,40 @@ async function run() {
     const chimaekEntry = seoulWorldRoadmap.find((location) => location.mapLocationId === 'practice_studio');
     assert(chimaekEntry?.label === 'Chimaek Place', 'graphDashboard seoul practice_studio label should preserve Chimaek Place');
     logPass('/api/v1/graph/dashboard?city=seoul&location=cafe');
+  }
+
+  const shanghaiGraphDashboard = await requestJson(
+    `/api/v1/graph/dashboard?userId=${encodeURIComponent(userId)}&city=shanghai&location=milk_tea_shop`,
+  );
+  if (shanghaiGraphDashboard.status === 404) {
+    logWarn('/api/v1/graph/dashboard shanghai starter-pack coverage unavailable on this runtime; skipped shanghai coverage checks');
+  } else {
+    assert(shanghaiGraphDashboard.ok, `/graph/dashboard shanghai failed (${shanghaiGraphDashboard.status})`);
+    assert(shanghaiGraphDashboard.data?.selectedPack?.pack?.packId === 'pack.shanghai.milk_tea_shop.starter', 'graphDashboard shanghai selectedPack.packId mismatch');
+    assert(shanghaiGraphDashboard.data?.selectedPack?.pack?.locationId === 'practice_studio', 'graphDashboard shanghai selectedPack.locationId mismatch');
+    assert(shanghaiGraphDashboard.data?.selectedPack?.pack?.mapLocationId === 'milk_tea_shop', 'graphDashboard shanghai pack.mapLocationId mismatch');
+    assert(shanghaiGraphDashboard.data?.lessonBundle?.mapLocationId === 'milk_tea_shop', 'graphDashboard shanghai lessonBundle.mapLocationId mismatch');
+    assert(shanghaiGraphDashboard.data?.lessonBundle?.dagLocationSlot === 'practice_studio', 'graphDashboard shanghai lessonBundle.dagLocationSlot mismatch');
+    assert(shanghaiGraphDashboard.data?.hangoutBundle?.mapLocationId === 'milk_tea_shop', 'graphDashboard shanghai hangoutBundle.mapLocationId mismatch');
+    assert(shanghaiGraphDashboard.data?.hangoutBundle?.dagLocationSlot === 'practice_studio', 'graphDashboard shanghai hangoutBundle.dagLocationSlot mismatch');
+    assert(
+      shanghaiGraphDashboard.data?.selectedPack?.pack?.rewardHooks?.videoCallRewardKey === 'reward.shanghai.milk_tea_shop.video_call',
+      'graphDashboard shanghai video_call reward hook mismatch',
+    );
+    assert(
+      shanghaiGraphDashboard.data?.selectedPack?.pack?.rewardHooks?.polaroidRewardKey === 'reward.shanghai.milk_tea_shop.polaroid',
+      'graphDashboard shanghai polaroid reward hook mismatch',
+    );
+    const dumplingDashboard = await requestJson(
+      `/api/v1/graph/dashboard?userId=${encodeURIComponent(userId)}&city=shanghai&location=dumpling_shop`,
+    );
+    assert(dumplingDashboard.ok, `/graph/dashboard shanghai dumpling_shop failed (${dumplingDashboard.status})`);
+    assert(dumplingDashboard.data?.selectedPack?.pack?.packId === 'pack.shanghai.dumpling_shop.starter', 'graphDashboard shanghai dumpling_shop selectedPack.packId mismatch');
+    const dumplingRoster = dumplingDashboard.data?.selectedPack?.pack?.characterRoster || [];
+    assertArray(dumplingRoster, 'graphDashboard shanghai dumpling_shop starter roster');
+    assert(dumplingRoster.some((entry) => entry.id === 'char.shanghai.food_street.qiao'), 'graphDashboard shanghai dumpling_shop roster should reuse Qiao');
+    assert(dumplingRoster.some((entry) => entry.id === 'char.shanghai.food_street.ming'), 'graphDashboard shanghai dumpling_shop roster should reuse Ming');
+    logPass('/api/v1/graph/dashboard?city=shanghai&location=milk_tea_shop');
   }
 
   const gameStart = await requestJson('/api/v1/game/start-or-resume', {

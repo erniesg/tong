@@ -444,6 +444,318 @@
       "source": "repo",
       "status": "draft",
       "uri": "assets/rewards/shanghai-reward-bundle.placeholder.json"
+    },
+    {
+      "key": "city.tokyo.location.train-station.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/locations/tokyo-static.png"
+    },
+    {
+      "key": "city.tokyo.location.train-station.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "status": "draft",
+      "uri": "assets/content-packs/tokyo-train-station.starter.json"
+    },
+    {
+      "key": "city.tokyo.location.izakaya.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/locations/tokyo-static.png"
+    },
+    {
+      "key": "city.tokyo.location.izakaya.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "status": "draft",
+      "uri": "assets/content-packs/tokyo-izakaya.starter.json"
+    },
+    {
+      "key": "city.tokyo.location.konbini.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/locations/tokyo-static.png"
+    },
+    {
+      "key": "city.tokyo.location.konbini.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "status": "draft",
+      "uri": "assets/content-packs/tokyo-konbini.starter.json"
+    },
+    {
+      "key": "city.tokyo.location.tea-house.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/locations/tokyo-static.png"
+    },
+    {
+      "key": "city.tokyo.location.tea-house.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "status": "draft",
+      "uri": "assets/content-packs/tokyo-tea-house.starter.json"
+    },
+    {
+      "key": "city.tokyo.location.ramen-shop.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/locations/tokyo-static.png"
+    },
+    {
+      "key": "city.tokyo.location.ramen-shop.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "status": "draft",
+      "uri": "assets/content-packs/tokyo-ramen-shop.starter.json"
+    },
+    {
+      "key": "city.shanghai.location.metro-station.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/locations/shanghai-static.png"
+    },
+    {
+      "key": "city.shanghai.location.metro-station.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "status": "draft",
+      "uri": "assets/content-packs/shanghai-metro-station.starter.json"
+    },
+    {
+      "key": "city.shanghai.location.bbq-stall.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/locations/shanghai-static.png"
+    },
+    {
+      "key": "city.shanghai.location.bbq-stall.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "status": "draft",
+      "uri": "assets/content-packs/shanghai-bbq-stall.starter.json"
+    },
+    {
+      "key": "city.shanghai.location.convenience-store.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/locations/shanghai-static.png"
+    },
+    {
+      "key": "city.shanghai.location.convenience-store.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "status": "draft",
+      "uri": "assets/content-packs/shanghai-convenience-store.starter.json"
+    },
+    {
+      "key": "city.shanghai.location.milk-tea-shop.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/locations/shanghai-static.png"
+    },
+    {
+      "key": "city.shanghai.location.milk-tea-shop.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "status": "draft",
+      "uri": "assets/content-packs/shanghai-milk-tea-shop.starter.json"
+    },
+    {
+      "key": "city.shanghai.location.dumpling-shop.backdrop.default",
+      "type": "image",
+      "usage": "hangout-backdrop",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/locations/shanghai-static.png"
+    },
+    {
+      "key": "city.shanghai.location.dumpling-shop.pack.starter",
+      "type": "content-pack",
+      "usage": "scene-authoring",
+      "source": "repo",
+      "status": "draft",
+      "uri": "assets/content-packs/shanghai-dumpling-shop.starter.json"
+    },
+    {
+      "key": "character.tokyo.cafe.hina.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.tokyo.cafe.ren.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "character.tokyo.convenience_store.kaito.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.tokyo.convenience_store.yui.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "character.tokyo.food_street.daichi.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.tokyo.food_street.rin.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "character.tokyo.subway_hub.akira.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.tokyo.subway_hub.mei.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "character.shanghai.convenience_store.an.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.shanghai.convenience_store.yue.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "character.shanghai.food_street.ming.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.shanghai.food_street.qiao.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "character.shanghai.practice_studio.xinyi.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.shanghai.practice_studio.zhen.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "character.shanghai.subway_hub.lin.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/haeun/haeun.png"
+    },
+    {
+      "key": "character.shanghai.subway_hub.wei.portrait.default",
+      "type": "image",
+      "usage": "dialogue-avatar",
+      "source": "repo",
+      "status": "placeholder",
+      "uri": "/assets/characters/jin/jin.png"
+    },
+    {
+      "key": "reward.shanghai.milk_tea_shop.video_call",
+      "type": "video",
+      "usage": "mission-reward",
+      "source": "generated-placeholder",
+      "status": "placeholder",
+      "uri": "assets/rewards/shanghai-video-call.placeholder.mp4"
+    },
+    {
+      "key": "reward.shanghai.milk_tea_shop.polaroid",
+      "type": "image",
+      "usage": "collectible-memory",
+      "source": "generated-placeholder",
+      "status": "placeholder",
+      "uri": "assets/rewards/shanghai-polaroid.placeholder.png"
+    },
+    {
+      "key": "reward.shanghai.milk_tea_shop.bundle",
+      "type": "reward-bundle",
+      "usage": "reward-resolution",
+      "source": "repo",
+      "status": "planned",
+      "uri": "assets/rewards/shanghai-reward-bundle.placeholder.json"
     }
   ]
 }

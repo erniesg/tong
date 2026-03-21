@@ -1,0 +1,82 @@
+{
+  "templateVersion": "1.1.0",
+  "packType": "city-location-character-starter",
+  "packId": "pack.tokyo.konbini.starter",
+  "city": "tokyo",
+  "mapLocationId": "konbini",
+  "playerFacingLocationLabel": "Convenience Store",
+  "location": {
+    "id": "convenience_store",
+    "assetSlug": "konbini",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "char.tokyo.convenience_store.yui",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tokyo.convenience_store.yui.portrait.default",
+        "character.tokyo.convenience_store.yui.sprite.default",
+        "character.tokyo.convenience_store.yui.scene.default",
+        "character.tokyo.convenience_store.yui.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.tokyo.convenience_store.yui.sprite.expression-set"
+      ]
+    },
+    {
+      "id": "char.tokyo.convenience_store.kaito",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tokyo.convenience_store.kaito.portrait.default",
+        "character.tokyo.convenience_store.kaito.sprite.default",
+        "character.tokyo.convenience_store.kaito.scene.default",
+        "character.tokyo.convenience_store.kaito.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.tokyo.convenience_store.kaito.reward.polaroid"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "tokyo-konbini-quick-chat-v1",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.2"
+    }
+  },
+  "manifestKeys": [
+    "city.tokyo.location.konbini.backdrop.default",
+    "character.tokyo.convenience_store.yui.portrait.default",
+    "character.tokyo.convenience_store.kaito.portrait.default",
+    "character.tong.expression.neutral"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": null,
+    "polaroidRewardKey": null
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+}

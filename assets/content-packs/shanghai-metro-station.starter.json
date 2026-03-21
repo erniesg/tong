@@ -1,0 +1,82 @@
+{
+  "templateVersion": "1.1.0",
+  "packType": "city-location-character-starter",
+  "packId": "pack.shanghai.metro_station.starter",
+  "city": "shanghai",
+  "mapLocationId": "metro_station",
+  "playerFacingLocationLabel": "Metro Station",
+  "location": {
+    "id": "subway_hub",
+    "assetSlug": "metro-station",
+    "modes": [
+      "learn",
+      "hangout"
+    ]
+  },
+  "characterRoster": [
+    {
+      "id": "char.shanghai.subway_hub.lin",
+      "role": "lead",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.shanghai.subway_hub.lin.portrait.default",
+        "character.shanghai.subway_hub.lin.sprite.default",
+        "character.shanghai.subway_hub.lin.scene.default",
+        "character.shanghai.subway_hub.lin.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.shanghai.subway_hub.lin.sprite.expression-set"
+      ]
+    },
+    {
+      "id": "char.shanghai.subway_hub.wei",
+      "role": "support",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.shanghai.subway_hub.wei.portrait.default",
+        "character.shanghai.subway_hub.wei.sprite.default",
+        "character.shanghai.subway_hub.wei.scene.default",
+        "character.shanghai.subway_hub.wei.voice.reference"
+      ],
+      "optionalManifestKeys": [
+        "character.shanghai.subway_hub.wei.reward.polaroid"
+      ]
+    },
+    {
+      "id": "tong",
+      "role": "assistant",
+      "relationshipTrack": "rp",
+      "requiredManifestKeys": [
+        "character.tong.expression.neutral"
+      ],
+      "optionalManifestKeys": [
+        "character.tong.expression.cheerful",
+        "character.tong.expression.thinking"
+      ]
+    }
+  ],
+  "objectiveSeed": {
+    "objectiveId": "shanghai-metro-station-navigation-v1",
+    "targetTypes": [
+      "vocabulary",
+      "grammar",
+      "sentenceStructures"
+    ],
+    "missionGate": {
+      "validatedHangoutsRequired": 2,
+      "masteryTierUnlock": "A1.3"
+    }
+  },
+  "manifestKeys": [
+    "city.shanghai.location.metro-station.backdrop.default",
+    "character.shanghai.subway_hub.lin.portrait.default",
+    "character.shanghai.subway_hub.wei.portrait.default",
+    "character.tong.expression.neutral"
+  ],
+  "rewardHooks": {
+    "videoCallRewardKey": null,
+    "polaroidRewardKey": null
+  },
+  "status": "draft",
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+}
