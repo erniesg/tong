@@ -229,6 +229,34 @@ async function run() {
   assertHangoutResponse(jaHangoutRespond.data, 'jaHangoutRespond');
   logPass('hangout/respond returns JA copy');
 
+  const jaStatelessHangoutStart = await requestJson('/api/v1/scenes/hangout/start', {
+    method: 'POST',
+    body: JSON.stringify({
+      userId: `${jaUserId}-stateless`,
+      city: 'tokyo',
+      location: 'subway_hub',
+      lang: 'ja',
+      objectiveId: jaObjective.data?.objectiveId,
+    }),
+  });
+  assert(jaStatelessHangoutStart.ok, `/scenes/hangout/start ja stateless failed (${jaStatelessHangoutStart.status})`);
+  assertHangoutCopy(jaStatelessHangoutStart.data, 'jaStatelessHangoutStart');
+  logPass('hangout/start returns JA copy without a game session');
+
+  const jaStatelessHangoutRespond = await requestJson('/api/v1/scenes/hangout/respond', {
+    method: 'POST',
+    body: JSON.stringify({
+      sceneSessionId: jaStatelessHangoutStart.data?.sceneSessionId,
+      userUtterance: '駅でお願いします',
+    }),
+  });
+  assert(
+    jaStatelessHangoutRespond.ok,
+    `/scenes/hangout/respond ja stateless failed (${jaStatelessHangoutRespond.status})`,
+  );
+  assertHangoutResponse(jaStatelessHangoutRespond.data, 'jaStatelessHangoutRespond');
+  logPass('hangout/respond returns JA copy without a game session');
+
   const zhUserId = `issue59-zh-${Date.now().toString(36)}`;
   const zhProfile = {
     nativeLanguage: 'en',
@@ -292,6 +320,34 @@ async function run() {
   assert(zhHangoutRespond.ok, `/scenes/hangout/respond zh failed (${zhHangoutRespond.status})`);
   assertHangoutResponse(zhHangoutRespond.data, 'zhHangoutRespond');
   logPass('hangout/respond returns ZH copy');
+
+  const zhStatelessHangoutStart = await requestJson('/api/v1/scenes/hangout/start', {
+    method: 'POST',
+    body: JSON.stringify({
+      userId: `${zhUserId}-stateless`,
+      city: 'shanghai',
+      location: 'practice_studio',
+      lang: 'zh',
+      objectiveId: zhObjective.data?.objectiveId,
+    }),
+  });
+  assert(zhStatelessHangoutStart.ok, `/scenes/hangout/start zh stateless failed (${zhStatelessHangoutStart.status})`);
+  assertHangoutCopy(zhStatelessHangoutStart.data, 'zhStatelessHangoutStart');
+  logPass('hangout/start returns ZH copy without a game session');
+
+  const zhStatelessHangoutRespond = await requestJson('/api/v1/scenes/hangout/respond', {
+    method: 'POST',
+    body: JSON.stringify({
+      sceneSessionId: zhStatelessHangoutStart.data?.sceneSessionId,
+      userUtterance: '我要拉面',
+    }),
+  });
+  assert(
+    zhStatelessHangoutRespond.ok,
+    `/scenes/hangout/respond zh stateless failed (${zhStatelessHangoutRespond.status})`,
+  );
+  assertHangoutResponse(zhStatelessHangoutRespond.data, 'zhStatelessHangoutRespond');
+  logPass('hangout/respond returns ZH copy without a game session');
 
   writeTraceFile();
   console.log('');

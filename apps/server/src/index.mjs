@@ -2172,8 +2172,31 @@ function startHangoutScene(body = {}) {
   const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
   const score = { xp: 0, sp: 0, rp: 0 };
   const initialCopyBundle = getHangoutCopyBundle({ body });
+  const statelessObjectiveConfig =
+    getRuntimeObjectiveConfig({ objectiveId: body.objectiveId || null }) ||
+    getRuntimeObjectiveConfig({
+      lang: initialCopyBundle.lang,
+      cityId: body.city || null,
+    }) ||
+    getRuntimeObjectiveConfig({
+      objectiveId: DEFAULT_OBJECTIVE_BY_LANG[initialCopyBundle.lang] || DEFAULT_OBJECTIVE_BY_LANG.ko,
+    }) ||
+    null;
   state.sceneSessions.set(sceneSessionId, {
     userId,
+    cityId: body.city || statelessObjectiveConfig?.cityId || 'seoul',
+    locationId: body.location || statelessObjectiveConfig?.locationId || 'food_street',
+    mode: 'hangout',
+    objective: statelessObjectiveConfig
+      ? withObjectiveIdentity(
+          {
+            lang: statelessObjectiveConfig.lang || initialCopyBundle.lang,
+            mode: 'hangout',
+          },
+          statelessObjectiveConfig.objectiveId,
+        )
+      : null,
+    phase: 'intro',
     turn: 1,
     score: { ...score },
   });
