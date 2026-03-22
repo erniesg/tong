@@ -55,6 +55,10 @@ const repoRoot = path.resolve(__dirname, '../../..');
 
 const PORT = Number(process.env.PORT || 8787);
 const DEMO_PASSWORD = String(process.env.TONG_DEMO_PASSWORD || '').trim();
+const STATE_FILE_PATH = path.resolve(
+  repoRoot,
+  process.env.TONG_STATE_FILE || 'apps/server/data/generated/mock-state.json',
+);
 
 function loadJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
@@ -245,6 +249,132 @@ const state = {
   ingestionByUser: new Map(),
   integrationsByUser: new Map(),
 };
+
+function ensureParentDir(filePath) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+}
+
+function cloneMapEntries(map) {
+  return [...map.entries()].map(([key, value]) => [key, cloneJson(value)]);
+}
+
+function restoreMap(entries = []) {
+  return new Map(entries.map(([key, value]) => [key, cloneJson(value)]));
+}
+
+function uniqueStringList(values = []) {
+  return [...new Set(
+    values
+      .filter((value) => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter(Boolean),
+  )];
+}
+
+function normalizeRewards(rewards = []) {
+  const seen = new Set();
+  return rewards.filter((reward) => {
+    const rewardId = typeof reward?.rewardId === 'string' ? reward.rewardId.trim() : '';
+    if (!rewardId || seen.has(rewardId)) {
+      return false;
+    }
+    seen.add(rewardId);
+    return true;
+  }).map((reward) => cloneJson(reward));
+}
+
+function normalizeUnlocks(unlocks = {}) {
+  return {
+    locationIds: uniqueStringList(unlocks.locationIds || []),
+    missionIds: uniqueStringList(unlocks.missionIds || []),
+    rewardIds: uniqueStringList(unlocks.rewardIds || []),
+  };
+}
+
+function normalizeMissionGate(missionGate = {}, progression = buildInitialProgression()) {
+  return {
+    readiness: Math.max(0, Math.min(1, Number(missionGate.readiness ?? 0.34) || 0.34)),
+    validatedHangouts: Math.max(0, Number(missionGate.validatedHangouts ?? 0) || 0),
+    missionAssessmentUnlocked: Boolean(missionGate.missionAssessmentUnlocked),
+    masteryTier: Math.max(1, Number(missionGate.masteryTier ?? progression.currentMasteryLevel) || 1),
+  };
+}
+
+function normalizeGameSessionState(gameSession) {
+  if (!gameSession) {
+    return gameSession;
+  }
+
+  gameSession.progression = {
+    ...buildInitialProgression(),
+    ...(cloneJson(gameSession.progression || {})),
+  };
+  gameSession.rewards = normalizeRewards(gameSession.rewards || []);
+  gameSession.unlocks = normalizeUnlocks(gameSession.unlocks || {});
+  gameSession.missionGate = normalizeMissionGate(gameSession.missionGate || {}, gameSession.progression);
+  return gameSession;
+}
+
+function normalizeCheckpointState(checkpoint, gameSession = null) {
+  if (!checkpoint) {
+    return checkpoint;
+  }
+
+  checkpoint.rewards = normalizeRewards(checkpoint.rewards || []);
+  checkpoint.unlocks = normalizeUnlocks(checkpoint.unlocks || gameSession?.unlocks || {});
+  checkpoint.missionGate = normalizeMissionGate(
+    checkpoint.missionGate || gameSession?.missionGate || {},
+    gameSession?.progression,
+  );
+  return checkpoint;
+}
+
+function saveDurableState() {
+  ensureParentDir(STATE_FILE_PATH);
+  const payload = {
+    schemaVersion: 1,
+    savedAtIso: new Date().toISOString(),
+    profiles: cloneMapEntries(state.profiles),
+    sessions: cloneMapEntries(state.sessions),
+    sceneSessions: cloneMapEntries(state.sceneSessions),
+    checkpoints: cloneMapEntries(state.checkpoints),
+    activeSessionByUser: [...state.activeSessionByUser.entries()],
+    learnSessions: cloneJson(state.learnSessions),
+    ingestionByUser: cloneMapEntries(state.ingestionByUser),
+    integrationsByUser: cloneMapEntries(state.integrationsByUser),
+  };
+  const tempPath = `${STATE_FILE_PATH}.tmp`;
+  fs.writeFileSync(tempPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  fs.renameSync(tempPath, STATE_FILE_PATH);
+}
+
+function loadDurableState() {
+  if (!fs.existsSync(STATE_FILE_PATH)) {
+    return;
+  }
+
+  const parsed = JSON.parse(fs.readFileSync(STATE_FILE_PATH, 'utf8'));
+  state.profiles = restoreMap(parsed.profiles || []);
+  state.sessions = restoreMap(parsed.sessions || []);
+  state.sceneSessions = restoreMap(parsed.sceneSessions || []);
+  state.checkpoints = restoreMap(parsed.checkpoints || []);
+  state.activeSessionByUser = new Map(parsed.activeSessionByUser || []);
+  state.learnSessions = Array.isArray(parsed.learnSessions)
+    ? cloneJson(parsed.learnSessions)
+    : [...(FIXTURES.learnSessions.items || [])];
+  state.ingestionByUser = restoreMap(parsed.ingestionByUser || []);
+  state.integrationsByUser = restoreMap(parsed.integrationsByUser || []);
+
+  for (const [sessionId, gameSession] of state.sessions.entries()) {
+    normalizeGameSessionState(gameSession);
+    state.sessions.set(sessionId, gameSession);
+  }
+
+  for (const [checkpointId, checkpoint] of state.checkpoints.entries()) {
+    normalizeCheckpointState(checkpoint, state.sessions.get(checkpoint.gameSessionId) || null);
+    state.checkpoints.set(checkpointId, checkpoint);
+  }
+}
 
 const AGENT_TOOL_DEFINITIONS = [
   {
@@ -968,6 +1098,7 @@ function runIngestionForUser(userId = DEFAULT_USER_ID, options = {}) {
   }
 
   state.ingestionByUser.set(userId, result);
+  saveDurableState();
   return result;
 }
 
@@ -1185,6 +1316,7 @@ function setIntegrationState(userId = DEFAULT_USER_ID, provider, patch = {}) {
     ...patch,
   };
   state.integrationsByUser.set(userId, userState);
+  saveDurableState();
   return getIntegrationState(userId, provider);
 }
 
@@ -1457,6 +1589,54 @@ function buildInitialUnlocks(location) {
   };
 }
 
+function getNextLocationUnlock(location) {
+  const progressionOrder = ['food_street', 'cafe', 'convenience_store', 'subway_hub', 'practice_studio'];
+  const index = progressionOrder.indexOf(location);
+  if (index < 0 || index === progressionOrder.length - 1) {
+    return null;
+  }
+  return progressionOrder[index + 1];
+}
+
+function ensureProgressionMilestones(gameSession, nowIso) {
+  normalizeGameSessionState(gameSession);
+
+  if (gameSession.missionGate.validatedHangouts >= 1) {
+    gameSession.missionGate.missionAssessmentUnlocked = true;
+  }
+
+  if (gameSession.missionGate.missionAssessmentUnlocked) {
+    const missionId = `mission.${gameSession.cityId}.${gameSession.mapLocationId || gameSession.locationId}.assessment`;
+    if (!gameSession.unlocks.missionIds.includes(missionId)) {
+      gameSession.unlocks.missionIds.push(missionId);
+    }
+  }
+
+  const nextLocationId = getNextLocationUnlock(gameSession.locationId);
+  if (nextLocationId && !gameSession.unlocks.locationIds.includes(nextLocationId)) {
+    gameSession.unlocks.locationIds.push(nextLocationId);
+  }
+
+  const rewardId = `reward.${gameSession.cityId}.${gameSession.mapLocationId || gameSession.locationId}.validated_hangout`;
+  if (gameSession.missionGate.validatedHangouts >= 1 && !gameSession.unlocks.rewardIds.includes(rewardId)) {
+    gameSession.unlocks.rewardIds.push(rewardId);
+    gameSession.rewards.push({
+      rewardId,
+      rewardType: 'xp_bonus',
+      grantedAtIso: nowIso,
+      metadata: {
+        source: 'validated_hangout',
+        cityId: gameSession.cityId,
+        locationId: gameSession.locationId,
+      },
+    });
+    gameSession.progression.xp += 12;
+    gameSession.progression.sp += 3;
+  }
+
+  normalizeGameSessionState(gameSession);
+}
+
 function buildHangoutRoute(city, location, extras = {}) {
   const resolvedMapLocation = resolveWorldMapLocation(city, location);
   return {
@@ -1599,7 +1779,9 @@ function createCheckpointRecord(gameSession, sceneSession, boundary, nowIso) {
 }
 
 function persistCheckpoint(gameSession, sceneSession, boundary, nowIso = new Date().toISOString()) {
+  normalizeGameSessionState(gameSession);
   const checkpoint = createCheckpointRecord(gameSession, sceneSession, boundary, nowIso);
+  normalizeCheckpointState(checkpoint, gameSession);
   gameSession.activeCheckpointId = checkpoint.checkpointId;
   gameSession.updatedAtIso = nowIso;
   sceneSession.updatedAtIso = nowIso;
@@ -1607,6 +1789,7 @@ function persistCheckpoint(gameSession, sceneSession, boundary, nowIso = new Dat
   state.sceneSessions.set(sceneSession.sceneSessionId, sceneSession);
   state.checkpoints.set(checkpoint.checkpointId, checkpoint);
   state.activeSessionByUser.set(gameSession.userId, gameSession.sessionId);
+  saveDurableState();
   return checkpoint;
 }
 
@@ -1627,6 +1810,7 @@ function restoreGameSessionFromCheckpoint(gameSession, checkpoint) {
   gameSession.unlocks = cloneJson(checkpoint.unlocks);
   gameSession.rewards = cloneJson(checkpoint.rewards || []);
   gameSession.updatedAtIso = checkpoint.createdAtIso || gameSession.updatedAtIso;
+  normalizeGameSessionState(gameSession);
   state.sessions.set(gameSession.sessionId, gameSession);
   return gameSession;
 }
@@ -2035,6 +2219,7 @@ function resumeGameSessionFromScenarioSeed(gameSession, scenarioSeedId) {
   if (state.activeSessionByUser.get(gameSession.userId) === gameSession.sessionId) {
     state.activeSessionByUser.delete(gameSession.userId);
   }
+  saveDurableState();
 
   return buildGameStartResponse(gameSession, sceneSession, checkpoint, 'scenario_seed');
 }
@@ -2139,12 +2324,18 @@ function handleHangoutRespond(body) {
     1,
     Number((gameSession.missionGate.readiness + objectiveProgressDelta).toFixed(2)),
   );
+  if (matched) {
+    gameSession.missionGate.validatedHangouts += 1;
+  }
   existing.progressionDelta.xp += xpDelta;
   existing.progressionDelta.sp += spDelta;
   existing.progressionDelta.rp += rpDelta;
   existing.progressionDelta.objectiveProgressDelta = Number(
     ((existing.progressionDelta.objectiveProgressDelta || 0) + objectiveProgressDelta).toFixed(2),
   );
+  existing.progressionDelta.validatedHangoutsDelta =
+    (existing.progressionDelta.validatedHangoutsDelta || 0) + (matched ? 1 : 0);
+  ensureProgressionMilestones(gameSession, new Date().toISOString());
   existing.score = {
     xp: gameSession.progression.xp,
     sp: gameSession.progression.sp,
@@ -2319,6 +2510,7 @@ function createLearnSession(body = {}) {
     lastMessageAt: new Date().toISOString(),
   }, requestedObjectiveId);
   state.learnSessions.unshift(item);
+  saveDurableState();
 
   return withObjectiveIdentity({
     learnSessionId,
@@ -2339,6 +2531,7 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
     case 'ingestion.run_mock': {
       if (args.profile && typeof args.profile === 'object') {
         state.profiles.set(userId, { userId, profile: args.profile });
+        saveDurableState();
       }
       const includeSources = normalizeIngestionSources(args.includeSources);
       const result = runIngestionForUser(userId, { includeSources });
@@ -3013,6 +3206,7 @@ const server = http.createServer(async (req, res) => {
       const userId = body.userId || getUserIdFromQuery(url.searchParams);
       if (body?.profile && typeof body.profile === 'object') {
         state.profiles.set(userId, { userId, profile: body.profile });
+        saveDurableState();
       }
       const includeSources = normalizeIngestionSources(body.includeSources);
       const result = runIngestionForUser(userId, { includeSources });
@@ -3094,6 +3288,7 @@ const server = http.createServer(async (req, res) => {
       const userId = body.userId || DEFAULT_USER_ID;
       if (body.profile) {
         state.profiles.set(userId, { userId, profile: body.profile });
+        saveDurableState();
       }
       const existingSession = findGameSessionForResume({
         userId,
@@ -3133,6 +3328,7 @@ const server = http.createServer(async (req, res) => {
       const profile = normalizeProfileRecord(body) || normalizeProfileRecord(body.profile);
       const record = profile ? { userId: body.userId, profile } : body;
       state.profiles.set(body.userId, record);
+      saveDurableState();
       jsonResponse(res, 200, { ok: true, profile: record });
       return;
     }
@@ -3230,7 +3426,9 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+loadDurableState();
 ensureIngestionForUser(DEFAULT_USER_ID);
+saveDurableState();
 
 export const __testing = {
   CHECKPOINT_BOUNDARIES,
@@ -3250,6 +3448,7 @@ export const __testing = {
     state.learnSessions = [...(FIXTURES.learnSessions.items || [])];
     state.ingestionByUser.clear();
     ensureIngestionForUser(DEFAULT_USER_ID);
+    saveDurableState();
   },
 };
 
