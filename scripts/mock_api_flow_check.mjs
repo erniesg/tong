@@ -1,17 +1,26 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs';
+import { execSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
 const baseArg = args.find((arg) => !arg.startsWith('-'));
 const strictState = args.includes('--strict-state');
 const checkScenarioSeed = args.includes('--check-scenario-seed');
-const checkProgressionPersistence = args.includes('--check-progression-persistence');
+const checkProgressionPersistence = args.includes('--check-progression-persistence') || strictState;
 const sourcesArg = args.find((arg) => arg.startsWith('--sources='));
 const traceFileArg = args.find((arg) => arg.startsWith('--trace-file='));
+const restartCommandArg = args.find((arg) => arg.startsWith('--restart-command='));
+const restartWaitArg = args.find((arg) => arg.startsWith('--restart-wait-ms='));
 const apiBase = (baseArg || process.env.TONG_API_BASE_URL || 'http://localhost:8787').replace(/\/$/, '');
 const demoPassword = process.env.TONG_DEMO_PASSWORD || process.env.TONG_DEMO_CODE || '';
 const traceFile = traceFileArg ? traceFileArg.slice('--trace-file='.length) : '';
+const restartCommand = restartCommandArg
+  ? restartCommandArg.slice('--restart-command='.length)
+  : (process.env.TONG_RESTART_COMMAND || '').trim();
+const restartWaitMs = restartWaitArg
+  ? Number(restartWaitArg.slice('--restart-wait-ms='.length)) || 1500
+  : Number(process.env.TONG_RESTART_WAIT_MS || 1500);
 const includeSources = sourcesArg
   ? [...new Set(
     sourcesArg
@@ -65,6 +74,10 @@ function assertJsonEqual(actual, expected, label) {
   const actualJson = JSON.stringify(actual);
   const expectedJson = JSON.stringify(expected);
   assert(actualJson === expectedJson, `${label} mismatch`);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function requestJson(pathname, init = {}) {
@@ -122,6 +135,26 @@ async function requestJson(pathname, init = {}) {
   };
 }
 
+async function waitForHealth(timeoutMs = 15000) {
+  const startedAt = Date.now();
+  let lastError = null;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      const response = await requestJson('/health');
+      if (response.ok && response.data?.ok === true) {
+        return;
+      }
+      lastError = new Error(`/health returned ${response.status}`);
+    } catch (error) {
+      lastError = error;
+    }
+    await sleep(500);
+  }
+
+  throw lastError || new Error('Timed out waiting for /health after restart');
+}
+
 function assertArray(value, label) {
   assert(Array.isArray(value), `${label} should be an array`);
   assert(value.length > 0, `${label} should not be empty`);
@@ -136,6 +169,7 @@ async function run() {
   console.log(`Strict stateful checks: ${strictState ? 'enabled' : 'disabled'}`);
   console.log(`Scenario seed checks: ${checkScenarioSeed ? 'enabled' : 'disabled'}`);
   console.log(`Progression persistence checks: ${checkProgressionPersistence ? 'enabled' : 'disabled'}`);
+  console.log(`Restart verification: ${restartCommand ? 'enabled' : 'disabled'}`);
   console.log(`Source scope: ${includeSources.length > 0 ? includeSources.join(', ') : 'all'}`);
 
   const health = await requestJson('/health');
@@ -685,7 +719,83 @@ async function run() {
       resumedGame.data?.activeCheckpoint?.rewards,
       'resumed gameSession.rewards',
     );
+    assertJsonEqual(
+      resumedGame.data?.progression,
+      resumedGame.data?.gameSession?.progression,
+      'resumed top-level progression',
+    );
     logPass('/api/v1/game/start-or-resume progression persistence');
+
+    if (restartCommand) {
+      execSync(restartCommand, {
+        stdio: 'inherit',
+        shell: '/bin/bash',
+      });
+      await waitForHealth(Math.max(restartWaitMs, 1000) + 14000);
+      await sleep(restartWaitMs);
+
+      const restartedGame = await requestJson('/api/v1/game/start-or-resume', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId,
+          profile,
+        }),
+      });
+      assert(restartedGame.ok, `/game/start-or-resume restart failed (${restartedGame.status})`);
+      assert(restartedGame.data?.sessionId === gameStart.data?.sessionId, 'restart should preserve the same sessionId');
+      assert(restartedGame.data?.resumeSource === 'checkpoint', 'restart resume should report checkpoint');
+      assertJsonEqual(
+        restartedGame.data?.activeCheckpoint?.missionGate,
+        respondHangout.data?.activeCheckpoint?.missionGate,
+        'restarted activeCheckpoint.missionGate',
+      );
+      assertJsonEqual(
+        restartedGame.data?.activeCheckpoint?.unlocks,
+        respondHangout.data?.activeCheckpoint?.unlocks,
+        'restarted activeCheckpoint.unlocks',
+      );
+      assertJsonEqual(
+        restartedGame.data?.activeCheckpoint?.rewards,
+        respondHangout.data?.activeCheckpoint?.rewards,
+        'restarted activeCheckpoint.rewards',
+      );
+      assertJsonEqual(
+        restartedGame.data?.progression,
+        resumedGame.data?.progression,
+        'restarted progression',
+      );
+      logPass('/api/v1/game/start-or-resume restart persistence');
+
+      const repeatedResume = await requestJson('/api/v1/game/start-or-resume', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId,
+          profile,
+        }),
+      });
+      assert(repeatedResume.ok, `/game/start-or-resume repeated resume failed (${repeatedResume.status})`);
+      assertJsonEqual(
+        repeatedResume.data?.activeCheckpoint?.missionGate,
+        restartedGame.data?.activeCheckpoint?.missionGate,
+        'repeated resume missionGate',
+      );
+      assertJsonEqual(
+        repeatedResume.data?.activeCheckpoint?.unlocks,
+        restartedGame.data?.activeCheckpoint?.unlocks,
+        'repeated resume unlocks',
+      );
+      assertJsonEqual(
+        repeatedResume.data?.activeCheckpoint?.rewards,
+        restartedGame.data?.activeCheckpoint?.rewards,
+        'repeated resume rewards',
+      );
+      assertJsonEqual(
+        repeatedResume.data?.progression,
+        restartedGame.data?.progression,
+        'repeated resume progression',
+      );
+      logPass('/api/v1/game/start-or-resume repeated resume idempotency');
+    }
   }
   logPass('/api/v1/game/start-or-resume resume');
 
