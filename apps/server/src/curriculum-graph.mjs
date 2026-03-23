@@ -737,14 +737,30 @@ function inferCityFromLocation(locationId) {
   return null;
 }
 
+function isAuthoredPack(pack) {
+  if (!pack) return false;
+  return Boolean(
+    pack.goldStandard ||
+      (Array.isArray(pack.nodes) && pack.nodes.length > 0) ||
+      (Array.isArray(pack.edges) && pack.edges.length > 0) ||
+      (Array.isArray(pack.levels) && pack.levels.length > 0),
+  );
+}
+
 function resolveSelection(args = {}) {
   const requestedLocation = normalizeLocation(args.location);
   const requestedCity = normalizeCity(args.city) || inferCityFromLocation(requestedLocation) || 'seoul';
   const requestedLocationId = requestedLocation || DEFAULT_LOCATION_BY_CITY[requestedCity];
   const resolvedLocation = resolveWorldMapLocation(requestedCity, requestedLocationId);
+  const requestedPack = PACK_REGISTRY.get(keyFor(requestedCity, requestedLocationId));
+  const slotPack = PACK_REGISTRY.get(keyFor(requestedCity, resolvedLocation.dagLocationSlot));
+  const starterPack = getStarterPackMetadata(requestedCity, requestedLocationId);
   const pack =
-    PACK_REGISTRY.get(keyFor(requestedCity, resolvedLocation.dagLocationSlot)) ||
-    PACK_REGISTRY.get(keyFor(requestedCity, requestedLocationId));
+    (isAuthoredPack(requestedPack) && requestedPack) ||
+    (isAuthoredPack(slotPack) && slotPack) ||
+    starterPack ||
+    requestedPack ||
+    slotPack;
 
   if (!pack) {
     throw createGraphError(

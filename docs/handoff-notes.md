@@ -210,6 +210,18 @@ Template:
   - The parser change is intentionally narrow and only affects design-system artifact generation, but any future parser work should continue treating `@import` as a whole-line construct instead of splitting on `;` inside URLs.
   - Local validation artifacts under `artifacts/graph-atlas/` are proof-only and should not be committed with the product changes.
 - Next owner: `codex/client-ui`
+
+## 2026-03-23 (Post-merge PR 122 starter-pack routing hotfix)
+- Date: 2026-03-23
+- Branch/worktree: `main` (shared root workspace touching `apps/server/src/curriculum-graph.mjs`)
+- What changed:
+  - Fixed the post-merge regression in `resolveSelection(...)` so explicit map pins such as `tokyo/ramen_shop` and `shanghai/dumpling_shop` resolve their own starter packs instead of collapsing onto the shared DAG slot starter stub.
+  - Preserved starter-pack metadata on `selectedPack.pack` by falling back to `getStarterPackMetadata(...)` before generic registry stubs, while still allowing authored packs like `seoul_food_street_gold` to win.
+- Contract changes: none
+- Integration risks:
+  - Selection logic now distinguishes authored packs from starter/generic stubs by checking for real authored graph content; future authored-pack registration should keep that signal intact.
+  - Closed PR `#122` still lacks binary reviewer-proof attachment because the current GitHub connector flow can comment but cannot upload image assets directly.
+- Next owner: `codex/server-api`
   - Add a CI-regenerable QA publish recipe for the issue #51 seeded mount flow so same-repo PRs can auto-resolve trusted publish metadata on PR open.
 
 ## 2026-03-20 (KG objective identity unification intent)
