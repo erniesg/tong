@@ -198,6 +198,18 @@ Template:
 - Branch/worktree: `work` (shared root workspace crossing from `client-runtime` into `qa-platform` helper scripts/docs)
 - Intent:
   - Teach the active `/game` bootstrap path to consume deterministic `scenarioSeedId` mounts from the existing `start-or-resume` substrate without collapsing them into ordinary player checkpoints.
+
+## 2026-03-23 (PR 122 graph atlas follow-up)
+- Date: 2026-03-23
+- Branch/worktree: `codex/graph-atlas-rpg-view` (shared root workspace crossing into `apps/client/scripts/design-system/**`)
+- What changed:
+  - Finished PR `#122` validation for the restored `/graph` atlas surface and kept the player-facing branch build clean by reordering the top-level CSS imports in `apps/client/app/globals.css`.
+  - Fixed the design-system CSS parser so line-based `@import` handling no longer breaks on Google Fonts URLs that contain semicolons, then regenerated the tracked `apps/client/design-system.html` artifact from the corrected parser.
+- Contract changes: none
+- Integration risks:
+  - The parser change is intentionally narrow and only affects design-system artifact generation, but any future parser work should continue treating `@import` as a whole-line construct instead of splitting on `;` inside URLs.
+  - Local validation artifacts under `artifacts/graph-atlas/` are proof-only and should not be committed with the product changes.
+- Next owner: `codex/client-ui`
   - Add a CI-regenerable QA publish recipe for the issue #51 seeded mount flow so same-repo PRs can auto-resolve trusted publish metadata on PR open.
 
 ## 2026-03-20 (KG objective identity unification intent)

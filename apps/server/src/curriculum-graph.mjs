@@ -742,8 +742,9 @@ function resolveSelection(args = {}) {
   const requestedCity = normalizeCity(args.city) || inferCityFromLocation(requestedLocation) || 'seoul';
   const requestedLocationId = requestedLocation || DEFAULT_LOCATION_BY_CITY[requestedCity];
   const resolvedLocation = resolveWorldMapLocation(requestedCity, requestedLocationId);
-  const pack = getStarterPackMetadata(requestedCity, requestedLocationId)
-    || PACK_REGISTRY.get(keyFor(requestedCity, resolvedLocation.dagLocationSlot));
+  const pack =
+    PACK_REGISTRY.get(keyFor(requestedCity, resolvedLocation.dagLocationSlot)) ||
+    PACK_REGISTRY.get(keyFor(requestedCity, requestedLocationId));
 
   if (!pack) {
     throw createGraphError(

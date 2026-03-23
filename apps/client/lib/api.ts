@@ -165,6 +165,118 @@ export interface GraphPersonaListResponse {
   items: GraphPersonaSummary[];
 }
 
+export interface GraphPackNode {
+  nodeId: string;
+  cityId: CityId;
+  locationId: LocationId;
+  lang: 'ko' | 'ja' | 'zh';
+  level: number;
+  title: string;
+  description: string;
+  tags: string[];
+  targetItemIds: string[];
+  targetCount: number;
+  assessmentThreshold?: number;
+  objectiveCategory: string;
+}
+
+export interface GraphPackEdge {
+  edgeId: string;
+  type: 'requires' | 'reinforces' | 'unlocks';
+  fromNodeId: string;
+  toNodeId: string;
+  rationale?: string;
+}
+
+export interface GraphSelectedPackNodeTargetProgress {
+  nodeId: string;
+  totalTargetCount: number;
+  completedTargetCount: number;
+  completionRatio: number;
+  remainingTargetIds: string[];
+  weakTargetIds: string[];
+  lastPracticedTargetIds: string[];
+}
+
+export interface GraphSelectedPackNode {
+  node: GraphPackNode;
+  state: {
+    learnerId: string;
+    nodeId: string;
+    status: 'locked' | 'available' | 'learning' | 'due' | 'validated' | 'mastered';
+    masteryScore: number;
+    evidenceCount: number;
+    blockerNodeIds: string[];
+    recommendedReason?: string;
+    nextReviewAt?: string;
+    lastEvidenceAt?: string;
+  };
+  blockers: string[];
+  targetProgress?: GraphSelectedPackNodeTargetProgress;
+  unlocksNodeIds?: string[];
+  missionCritical?: boolean;
+}
+
+export interface GraphMissionGateStatus {
+  missionId: string;
+  title: string;
+  description: string;
+  level: number;
+  status: 'blocked' | 'ready' | 'completed';
+  ready: boolean;
+  completed: boolean;
+  completedAt?: string;
+  requiredNodeIds: string[];
+  completedRequiredNodeIds: string[];
+  remainingRequiredNodeIds: string[];
+  reason: string;
+  rewards: ScoreState;
+}
+
+export interface GraphLanguageSummary {
+  learnerId: string;
+  lang: 'ko' | 'ja' | 'zh';
+  languageTier: {
+    level: number;
+    label: string;
+    description: string;
+  };
+  progressToNextTier: number;
+  completedNodeCount: number;
+  activeNodeCount: number;
+  totalNodeCount: number;
+  nextUnlockNodeIds: string[];
+  recommendedAction: 'lesson' | 'hangout' | 'review' | 'mission';
+}
+
+export interface GraphNextUnlock {
+  nodeId: string;
+  title: string;
+  level: number;
+  objectiveCategory?: string;
+  remainingBlockerNodeIds: string[];
+  pathNodeIds: string[];
+  reason: string;
+}
+
+export interface GraphSelectedPack {
+  pack: {
+    packId: string;
+    version: string;
+    cityId: CityId;
+    locationId: LocationId;
+    mapLocationId?: LocationId;
+    dagLocationSlot?: LegacyDagLocationId;
+    lang: 'ko' | 'ja' | 'zh';
+    title: string;
+    summary: string;
+    nodes: GraphPackNode[];
+    edges: GraphPackEdge[];
+  };
+  nodes: GraphSelectedPackNode[];
+  missionGate?: GraphMissionGateStatus | null;
+}
+
 export interface GraphWorldRoadmapLevel {
   level: number;
   label: string;
@@ -311,6 +423,13 @@ export interface GraphDashboardResponse {
     masteredObjectives: number;
     dueNodeCount: number;
     evidenceCount: number;
+  };
+  selectedPack?: GraphSelectedPack;
+  languageSummary?: GraphLanguageSummary;
+  nextUnlocks?: GraphNextUnlock[];
+  evidence?: {
+    totalEvents: number;
+    lastUpdatedAt?: string;
   };
 }
 

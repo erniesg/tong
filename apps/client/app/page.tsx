@@ -228,6 +228,9 @@ function LandingPage() {
           </div>
         </a>
         <div className="landing-nav-links">
+          <a href="/graph" className="nav-link">
+            Graph
+          </a>
           <a href="/roadmap" className="nav-link">
             Roadmap
           </a>
@@ -424,6 +427,9 @@ function LandingPage() {
           <span>Tong — Live the drama. Learn the language.</span>
         </div>
         <div className="landing-footer-links">
+          <a href="/graph" className="nav-link">
+            Graph
+          </a>
           <a href="/roadmap" className="nav-link">
             Roadmap
           </a>
