@@ -1,5 +1,6 @@
 const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
 const DEMO_PASSWORD_STORAGE_KEY = 'tong.demo.password';
+const API_TIMEOUT_MS = 12000;
 
 function stripDemoPasswordFromUrl() {
   if (typeof window === 'undefined') return;
@@ -553,14 +554,30 @@ export interface ObjectiveNextResponse {
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const demoPassword = getDemoPassword();
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(demoPassword ? { 'x-demo-password': demoPassword } : {}),
-      ...(init?.headers || {}),
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(demoPassword ? { 'x-demo-password': demoPassword } : {}),
+        ...(init?.headers || {}),
+      },
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error(`Request timed out after ${API_TIMEOUT_MS}ms for ${path} via ${API_BASE}`);
+    }
+
+    const message = error instanceof Error ? error.message : 'Network request failed';
+    throw new Error(`Request failed for ${path} via ${API_BASE}: ${message}`);
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     let serverMessage = '';
@@ -575,7 +592,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       throw new Error(serverMessage || 'Demo password is missing or invalid.');
     }
 
-    throw new Error(`Request failed (${response.status}) for ${path}${serverMessage ? `: ${serverMessage}` : ''}`);
+    throw new Error(`Request failed (${response.status}) for ${path} via ${API_BASE}${serverMessage ? `: ${serverMessage}` : ''}`);
   }
 
   return (await response.json()) as T;
