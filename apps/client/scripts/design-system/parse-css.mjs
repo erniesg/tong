@@ -119,10 +119,10 @@ export function parseCSS(filePath) {
   const imports = [];
 
   // 1. Extract @import lines
-  const importRe = /^@import\s+[^;]+;/gm;
+  const importRe = /^@import[^\n]*(?:\n|$)/gm;
   let im;
   while ((im = importRe.exec(cleaned))) {
-    imports.push(im[0]);
+    imports.push(im[0].trim());
   }
 
   // 2. Walk top-level blocks
@@ -136,9 +136,8 @@ export function parseCSS(filePath) {
 
     // Skip @import lines
     if (cleaned.startsWith('@import', pos)) {
-      const semi = cleaned.indexOf(';', pos);
-      if (semi === -1) break;
-      pos = semi + 1;
+      const lineEnd = cleaned.indexOf('\n', pos);
+      pos = lineEnd === -1 ? cleaned.length : lineEnd + 1;
       continue;
     }
 

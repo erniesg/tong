@@ -197,6 +197,9 @@ export default function IntegrationsPage() {
           <Link href="/dashboard" className="nav-link">
             Dashboard
           </Link>
+          <Link href="/graph" className="nav-link">
+            Graph
+          </Link>
         </div>
       </header>
 
