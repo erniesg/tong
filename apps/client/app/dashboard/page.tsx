@@ -6,6 +6,7 @@ import {
   fetchGraphDashboard,
   fetchGraphPersonas,
   fetchTools,
+  getApiBase,
   graphPackValidateTool,
   recordGraphEvidence,
   type GraphDashboardResponse,
@@ -139,6 +140,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [recording, setRecording] = useState<'learn' | 'hangout' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const apiBase = getApiBase();
 
   useEffect(() => {
     void bootstrap();
@@ -153,18 +155,33 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       setError(null);
-      const [personaPayload, toolPayload, validationPayload] = await Promise.all([
+      const [personaResult, toolResult, validationResult] = await Promise.allSettled([
         fetchGraphPersonas(),
         fetchTools(),
         graphPackValidateTool(),
       ]);
 
-      setPersonas(personaPayload.items);
-      setPersonaId((current) => current || personaPayload.items[0]?.personaId || '');
-      setGraphTools(toolPayload.tools.filter((tool) => tool.name.startsWith('graph.')));
-      setValidation(validationPayload.result || null);
+      if (personaResult.status !== 'fulfilled') {
+        throw personaResult.reason;
+      }
+
+      setPersonas(personaResult.value.items);
+      setPersonaId((current) => current || personaResult.value.items[0]?.personaId || '');
+
+      if (toolResult.status === 'fulfilled') {
+        setGraphTools(toolResult.value.tools.filter((tool) => tool.name.startsWith('graph.')));
+      } else {
+        setGraphTools([]);
+      }
+
+      if (validationResult.status === 'fulfilled') {
+        setValidation(validationResult.value.result || null);
+      } else {
+        setValidation(null);
+      }
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load dashboard setup.');
+      const message = loadError instanceof Error ? loadError.message : 'Failed to load dashboard setup.';
+      setError(`${message} Dashboard expects the graph API at ${apiBase}.`);
     } finally {
       setLoading(false);
     }
@@ -177,7 +194,9 @@ export default function DashboardPage() {
       const next = await fetchGraphDashboard({ personaId: activePersonaId });
       setDashboard(next);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load learner dashboard.');
+      const message = loadError instanceof Error ? loadError.message : 'Failed to load learner dashboard.';
+      setDashboard(null);
+      setError(`${message} Dashboard expects the graph API at ${apiBase}.`);
     } finally {
       setLoading(false);
     }
@@ -350,8 +369,14 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+        <p className="demo-access-hint">Graph API base: {apiBase}</p>
         {error && <p style={{ color: '#9f1239' }}>{error}</p>}
         {loading && <p>Loading learner graph...</p>}
+        {!loading && !dashboard && !error && (
+          <p style={{ color: 'var(--muted)' }}>
+            No learner graph data loaded yet. Confirm the graph API is reachable, then refresh.
+          </p>
+        )}
       </section>
 
       {!!dashboard && (
