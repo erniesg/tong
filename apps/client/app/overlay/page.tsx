@@ -91,6 +91,9 @@ export default function OverlayPage() {
           <Link href="/insights" className="nav-link">
             Insights
           </Link>
+          <Link href="/graph" className="nav-link">
+            Graph
+          </Link>
           <Link href="/dashboard" className="nav-link">
             Dashboard
           </Link>
