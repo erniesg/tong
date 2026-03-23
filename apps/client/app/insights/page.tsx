@@ -80,6 +80,9 @@ export default function InsightsPage() {
           <Link href="/overlay" className="nav-link">
             Overlay
           </Link>
+          <Link href="/graph" className="nav-link">
+            Graph
+          </Link>
           <Link href="/game" className="nav-link">
             Game UI
           </Link>
