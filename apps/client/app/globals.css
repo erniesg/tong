@@ -376,7 +376,7 @@ main.app-shell.app-shell--wide {
 .graph-route-layout {
   display: grid;
   gap: 16px;
-  grid-template-columns: minmax(0, 1.85fr) minmax(320px, 0.95fr);
+  grid-template-columns: minmax(0, 2.2fr) minmax(280px, 0.8fr);
   align-items: start;
 }
 
@@ -535,6 +535,9 @@ main.app-shell.app-shell--wide {
 
 .graph-route-copy span {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .graph-route-card--active {
