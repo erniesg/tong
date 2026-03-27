@@ -43,9 +43,9 @@ a {
 }
 
 main.app-shell {
-  max-width: 1440px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 24px 28px 56px;
+  padding: 24px 20px 56px;
 }
 
 .demo-access-bar {
@@ -1394,6 +1394,143 @@ main.app-shell.app-shell--wide {
   }
 }
 
+
+/* -------------------------------------------------------------------------- */
+/* Dashboard                                                                  */
+/* -------------------------------------------------------------------------- */
+
+.dash-nav {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.dash-nav a {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  transition: color 120ms ease;
+}
+
+.dash-nav a:hover {
+  color: var(--ink);
+}
+
+.dash-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-bottom: 8px;
+}
+
+.dash-persona-select {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  min-width: 180px;
+}
+
+.dash-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.dash-stat {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.dash-stat strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.dash-subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.dash-error {
+  color: #9f1239;
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.dash-section {
+  margin-bottom: 20px;
+}
+
+.dash-heading {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+.dash-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.dash-collapsible-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.dash-collapsible-header:hover {
+  background: rgba(0, 0, 0, 0.02);
+  transform: none;
+}
+
+.dash-details {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.dash-details-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.dash-details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.dash-details-body {
+  padding: 0 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
 /* -------------------------------------------------------------------------- */
 /* Tong game parity shell                                                     */
