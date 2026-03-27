@@ -43,9 +43,9 @@ a {
 }
 
 main.app-shell {
-  max-width: 1080px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 24px 20px 56px;
+  padding: 24px clamp(16px, 3vw, 32px) 56px;
 }
 
 .demo-access-bar {
@@ -299,7 +299,7 @@ button.nav-link:hover {
 }
 
 main.app-shell.app-shell--wide {
-  max-width: 1400px;
+  max-width: 1200px;
 }
 
 .graph-hero-card {
