@@ -851,6 +851,8 @@ function getRuntimeObjectiveConfig({ objectiveId = null, lang = null, cityId = n
 
 const CITY_PILOT_LANGUAGE = {
   seoul: 'ko',
+  tokyo: 'ja',
+  shanghai: 'zh',
 };
 
 function getCityPreferredLanguage(profile, city) {
