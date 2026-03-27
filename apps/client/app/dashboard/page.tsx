@@ -327,13 +327,13 @@ export default function DashboardPage() {
           <section className="dash-section">
             <h2 className="dash-heading">What&apos;s Next</h2>
             <div className="grid grid-2">
-              <article className="card stack" style={{ padding: 14 }}>
+              <article className="card stack">
                 <div className="row">
                   <strong>{dashboard.lessonBundle.title}</strong>
                   <span className="pill">lesson</span>
                 </div>
                 <p>{dashboard.lessonBundle.reason}</p>
-                <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+                <div className="row row--start">
                   {dashboard.lessonBundle.targets.map((t) => (
                     <span key={t.nodeId} className="pill">{t.label} {percent(t.mastery_score)}%</span>
                   ))}
@@ -341,19 +341,18 @@ export default function DashboardPage() {
                 <button
                   onClick={() => void simulateEvidence('learn')}
                   disabled={recording !== null || !dashboard.lessonBundle.targets.length}
-                  style={{ alignSelf: 'flex-start' }}
                 >
                   {recording === 'learn' ? 'Recording...' : 'Record Evidence'}
                 </button>
               </article>
 
-              <article className="card stack" style={{ padding: 14 }}>
+              <article className="card stack">
                 <div className="row">
                   <strong>{dashboard.hangoutBundle.title}</strong>
                   <span className="pill">hangout</span>
                 </div>
                 <p>{dashboard.hangoutBundle.reason}</p>
-                <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+                <div className="row row--start">
                   {dashboard.hangoutBundle.targets.map((t) => (
                     <span key={t.nodeId} className="pill">{t.label} {percent(t.mastery_score)}%</span>
                   ))}
@@ -364,7 +363,6 @@ export default function DashboardPage() {
                 <button
                   onClick={() => void simulateEvidence('hangout')}
                   disabled={recording !== null || !dashboard.hangoutBundle.targets.length}
-                  style={{ alignSelf: 'flex-start' }}
                 >
                   {recording === 'hangout' ? 'Recording...' : 'Record Evidence'}
                 </button>
@@ -388,11 +386,11 @@ export default function DashboardPage() {
               <h2 className="dash-heading" style={{ margin: 0 }}>{dashboard.locationSkillTree.title}</h2>
               <span className="pill">{dashboard.locationSkillTree.packId}</span>
             </div>
-            <div className="stack" style={{ gap: 6 }}>
+            <div className="stack stack--tight">
               {dashboard.locationSkillTree.levels.map((level) => {
                 const isOpen = expandedLevels.has(level.level);
                 return (
-                  <div key={level.level} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                  <div key={level.level} className="card card--collapse">
                     <button
                       type="button"
                       className="dash-collapsible-header"
@@ -402,20 +400,20 @@ export default function DashboardPage() {
                       <span style={{ flex: 1 }}>
                         <strong>L{level.level}</strong> {level.name}
                       </span>
-                      <span className="pill" style={{ fontSize: 11 }}>{level.objectives.length} obj</span>
+                      <span className="pill">{level.objectives.length} obj</span>
                       <StatusPill status={level.mission.status} />
                     </button>
                     {isOpen && (
-                      <div className="stack" style={{ padding: '0 14px 14px', gap: 10 }}>
+                      <div className="dash-collapse-body">
                         <p>{level.description}</p>
-                        <div className="row" style={{ justifyContent: 'flex-start' }}>
+                        <div className="row row--start">
                           <span className="pill">~{level.estimatedSessionMinutes} min</span>
                           <span className="pill">
                             {level.mission.reward.xp} XP / {level.mission.reward.sp} SP / {level.mission.reward.rp} RP
                           </span>
                         </div>
                         {level.objectives.map((obj) => (
-                          <div key={obj.objectiveId} style={{ borderTop: '1px solid var(--line)', paddingTop: 8 }}>
+                          <div key={obj.objectiveId} className="dash-divider-row">
                             <div className="row" style={{ marginBottom: 6 }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <strong>{obj.title}</strong>
@@ -423,7 +421,7 @@ export default function DashboardPage() {
                               </div>
                               <StatusPill status={obj.status} />
                             </div>
-                            <div className="row" style={{ justifyContent: 'flex-start', marginBottom: 6 }}>
+                            <div className="row row--start" style={{ marginBottom: 6 }}>
                               <span className="pill">{obj.category}</span>
                               <span className="pill">{obj.validatedTargetCount}/{obj.targetCount} targets</span>
                               {obj.blockers.length > 0 && <span className="pill">Blocked by {obj.blockers.length}</span>}
@@ -442,12 +440,12 @@ export default function DashboardPage() {
           {/* ── World Roadmap (collapsible cities) ──── */}
           <section className="dash-section">
             <h2 className="dash-heading">World Roadmap</h2>
-            <div className="stack" style={{ gap: 6 }}>
+            <div className="stack stack--tight">
               {dashboard.worldRoadmap.map((city) => {
                 const isOpen = expandedCities.has(city.cityId);
                 const activeCount = city.locations.filter((l) => l.status === 'active' || l.status === 'learning').length;
                 return (
-                  <div key={city.cityId} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                  <div key={city.cityId} className="card card--collapse">
                     <button
                       type="button"
                       className="dash-collapsible-header"
@@ -463,19 +461,19 @@ export default function DashboardPage() {
                       <span className="pill">{activeCount}/{city.locations.length} active</span>
                     </button>
                     {isOpen && (
-                      <div className="stack" style={{ padding: '0 14px 14px', gap: 6 }}>
+                      <div className="dash-collapse-body">
                         {city.locations.map((loc) => (
-                          <div key={loc.locationId} className="row" style={{ padding: '6px 0', borderTop: '1px solid var(--line)' }}>
+                          <div key={loc.locationId} className="row dash-divider-row">
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <strong>{loc.label}</strong>
-                              <p style={{ fontSize: 12 }}>{loc.progress}</p>
+                              <p>{loc.progress}</p>
                             </div>
                             <StatusPill status={loc.status} />
                           </div>
                         ))}
-                        <div className="row" style={{ justifyContent: 'flex-start' }}>
+                        <div className="row row--start">
                           {city.levels.map((lvl) => (
-                            <span key={`${city.cityId}-${lvl.level}`} className="pill" style={{ fontSize: 11 }}>
+                            <span key={`${city.cityId}-${lvl.level}`} className="pill">
                               L{lvl.level} {lvl.label}
                             </span>
                           ))}
@@ -497,13 +495,13 @@ export default function DashboardPage() {
             <div className="dash-details-body">
               <p>{dashboard.personalizedOverlay.summary}</p>
               {dashboard.personalizedOverlay.focusCards.map((card) => (
-                <div key={card.overlayId} className="card stack" style={{ padding: 12 }}>
+                <div key={card.overlayId} className="card stack">
                   <div className="row">
                     <strong>{card.title}</strong>
                     <span className="pill">{card.lang.toUpperCase()} · {card.theme}</span>
                   </div>
                   <p>{card.reason}</p>
-                  <div className="row" style={{ justifyContent: 'flex-start' }}>
+                  <div className="row row--start">
                     {card.nodes.map((n) => (
                       <span key={n.nodeId} className="pill">{n.label} · {n.translation}</span>
                     ))}
@@ -520,21 +518,21 @@ export default function DashboardPage() {
               <span className="pill">{dashboard.persona.userId}</span>
             </summary>
             <div className="dash-details-body">
-              <div className="row" style={{ justifyContent: 'flex-start' }}>
+              <div className="row row--start">
                 {Object.entries(dashboard.persona.proficiency).map(([lang, level]) => (
                   <span key={lang} className="pill">{lang.toUpperCase()} {level}</span>
                 ))}
               </div>
-              <div className="stack" style={{ gap: 6 }}>
+              <div className="stack stack--tight">
                 <strong>Goals</strong>
                 {dashboard.persona.goals.map((g) => (
                   <p key={`${g.lang}-${g.theme}`}><strong>{g.lang.toUpperCase()}</strong> {g.objective}</p>
                 ))}
               </div>
               {dashboard.persona.topTerms.length > 0 && (
-                <div className="stack" style={{ gap: 6 }}>
+                <div className="stack stack--tight">
                   <strong>Top terms from media</strong>
-                  <div className="row" style={{ justifyContent: 'flex-start' }}>
+                  <div className="row row--start">
                     {dashboard.persona.topTerms.map((t) => (
                       <span key={`${t.lang}-${t.lemma}`} className="pill">{t.lemma} · {t.source}</span>
                     ))}
@@ -548,9 +546,9 @@ export default function DashboardPage() {
           <details className="dash-details">
             <summary className="dash-details-summary">
               <h3 style={{ margin: 0 }}>Validator</h3>
-              <div className="row" style={{ justifyContent: 'flex-start', gap: 6 }}>
+              <div className="row row--start" style={{ gap: 6 }}>
                 {validatorCities.map((c) => (
-                  <span key={c.cityId} className="pill" style={{ fontSize: 11 }}>
+                  <span key={c.cityId} className="pill">
                     {c.label}: {c.validatorSummary.foundation_authored}A {c.validatorSummary.preview}P {c.validatorSummary.missing}M
                   </span>
                 ))}
@@ -558,13 +556,13 @@ export default function DashboardPage() {
             </summary>
             <div className="dash-details-body">
               {validatorCities.map((city) => (
-                <div key={`v-${city.cityId}`} className="stack" style={{ gap: 6 }}>
+                <div key={`v-${city.cityId}`} className="stack stack--tight">
                   <strong>{city.label}</strong>
                   {city.validatorLocations.map((loc) => (
-                    <div key={`${city.cityId}-${loc.locationId}`} className="row" style={{ padding: '4px 0' }}>
+                    <div key={`${city.cityId}-${loc.locationId}`} className="row dash-divider-row">
                       <span style={{ minWidth: 120 }}>{loc.label}</span>
                       <StatusPill status={loc.validatorStatus} />
-                      <p style={{ flex: 1, fontSize: 12 }}>{loc.note}</p>
+                      <p style={{ flex: 1 }}>{loc.note}</p>
                     </div>
                   ))}
                 </div>
@@ -580,7 +578,7 @@ export default function DashboardPage() {
             </summary>
             <div className="dash-details-body">
               {graphTools.map((tool) => (
-                <div key={tool.name} style={{ borderBottom: '1px solid var(--line)', paddingBottom: 8 }}>
+                <div key={tool.name} className="dash-divider-row">
                   <strong>{tool.name}</strong>
                   <p style={{ marginTop: 2 }}>{tool.description}</p>
                 </div>

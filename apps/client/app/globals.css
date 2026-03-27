@@ -121,8 +121,8 @@ main.app-shell {
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 16px;
+  border-radius: 14px;
+  padding: 14px;
   box-shadow: 0 10px 28px rgba(180, 131, 87, 0.14);
   overflow-wrap: anywhere;
   min-width: 0;
@@ -195,7 +195,7 @@ button,
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 10px 14px;
   transition: transform 140ms ease, background 140ms ease;
   white-space: nowrap;
@@ -1434,7 +1434,7 @@ main.app-shell.app-shell--wide {
   font-size: 14px;
   font-weight: 600;
   padding: 6px 10px;
-  border-radius: 10px;
+  border-radius: 14px;
   border: 1px solid var(--line);
   background: #fff;
   min-width: 180px;
@@ -1480,8 +1480,38 @@ main.app-shell.app-shell--wide {
 .dash-actions-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   margin-top: 10px;
+}
+
+/* Card variant with no padding — used for collapsible containers */
+.card.card--collapse {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Content area inside collapsible cards */
+.dash-collapse-body {
+  padding: 4px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Compact vertical list with tighter gap */
+.stack--tight {
+  gap: 6px;
+}
+
+/* Row that aligns left instead of space-between */
+.row--start {
+  justify-content: flex-start;
+}
+
+/* Divider row inside lists */
+.dash-divider-row {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
 }
 
 .app-shell .dash-collapsible-header,
