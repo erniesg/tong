@@ -43,9 +43,9 @@ a {
 }
 
 main.app-shell {
-  max-width: 1080px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 24px 18px 56px;
+  padding: 24px 28px 56px;
 }
 
 .demo-access-bar {
@@ -124,8 +124,7 @@ main.app-shell {
   border-radius: 18px;
   padding: 16px;
   box-shadow: 0 10px 28px rgba(180, 131, 87, 0.14);
-  overflow-wrap: break-word;
-  word-break: break-word;
+  overflow-wrap: anywhere;
   min-width: 0;
 }
 
@@ -151,6 +150,8 @@ main.app-shell {
   color: #3f4a5a;
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .stack {
@@ -177,12 +178,14 @@ main.app-shell {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 10px;
   min-width: 0;
 }
 
 .row > div {
   min-width: 0;
+  flex: 1 1 0%;
 }
 
 button,
@@ -195,6 +198,8 @@ button,
   border-radius: 12px;
   padding: 10px 14px;
   transition: transform 140ms ease, background 140ms ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Default button style for app shell pages */
