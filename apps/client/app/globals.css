@@ -1409,12 +1409,13 @@ main.app-shell.app-shell--wide {
 .dash-nav a {
   font-size: 13px;
   font-weight: 600;
-  color: var(--muted);
-  transition: color 120ms ease;
+  color: var(--ink);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .dash-nav a:hover {
-  color: var(--ink);
+  opacity: 1;
 }
 
 .dash-toolbar {
@@ -1483,23 +1484,26 @@ main.app-shell.app-shell--wide {
   margin-top: 10px;
 }
 
-.dash-collapsible-header {
+.app-shell .dash-collapsible-header,
+.app-shell .dash-collapsible-header:hover {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
   padding: 12px 14px;
-  background: none;
+  background: transparent;
   border: none;
   cursor: pointer;
   text-align: left;
   font-size: 14px;
   color: var(--ink);
+  border-radius: 0;
+  transform: none;
+  white-space: normal;
 }
 
-.dash-collapsible-header:hover {
+.app-shell .dash-collapsible-header:hover {
   background: rgba(0, 0, 0, 0.02);
-  transform: none;
 }
 
 .dash-details {
