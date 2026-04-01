@@ -11,12 +11,38 @@ import {
   getVideoTask,
   waitForVideoTask,
   listVideoTasks,
+  deleteVideoTask,
   synthesizeSpeech,
   generateSoundEffect,
   generateMusic,
   elevenlabsTTS,
   getVolcengineStatus,
 } from './volcengine.mjs';
+import {
+  getHunyuan3dStatus,
+  submitHunyuan3dProJob,
+  queryHunyuan3dProJob,
+  waitForHunyuan3dProJob,
+  submitHunyuan3dRapidJob,
+  queryHunyuan3dRapidJob,
+  waitForHunyuan3dRapidJob,
+  submitTextureJob,
+  queryTextureJob,
+  waitForTextureJob,
+  submitReduceFaceJob,
+  queryReduceFaceJob,
+  waitForReduceFaceJob,
+  submitUVJob,
+  queryUVJob,
+  waitForUVJob,
+  submitPartJob,
+  queryPartJob,
+  waitForPartJob,
+  submitProfileTo3dJob,
+  queryProfileTo3dJob,
+  waitForProfileTo3dJob,
+  convert3dFormat,
+} from './hunyuan3d.mjs';
 import {
   getReplicateStatus,
   replicateGenerateImage,
@@ -48,6 +74,51 @@ import {
   resolveObjectiveIdentity,
   withObjectiveIdentity,
 } from './objective-identity.mjs';
+import {
+  uploadVideo,
+  analyzeVideo,
+  analyzePlaytestSession,
+  getGeminiVideoStatus,
+  getAnalysisResult,
+  listAnalysisResults,
+  listAnalysisPresets,
+  listUploadedFiles,
+  deleteUploadedFile,
+  ANALYSIS_PRESETS,
+} from './gemini-video.mjs';
+import {
+  scrapeTikTokTrends,
+  scrapeInstagramTrends,
+  scrapeXHSTrends,
+  scrapeAllTrends,
+  getTrendStatus,
+  saveKeywordSet,
+  listKeywordSets,
+  getKeywordSet,
+  deleteKeywordSet,
+  searchPlatform,
+  runTargetedScrape,
+} from './signals.mjs';
+import {
+  runSignalGathering,
+  startScheduler,
+  stopScheduler,
+  getSchedulerStatus,
+} from './signal-scheduler.mjs';
+import {
+  tiktokSearch,
+  tiktokTrending,
+  instagramHashtag,
+  browserSearch,
+  getBrowserScraperStatus,
+  closeBrowser,
+} from './signal-browser.mjs';
+import {
+  runAutoFix,
+  getAutoFixJob,
+  listAutoFixJobs,
+  getAutoFixStatus,
+} from './autofix.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -248,6 +319,7 @@ const state = {
   learnSessions: [...(FIXTURES.learnSessions.items || [])],
   ingestionByUser: new Map(),
   integrationsByUser: new Map(),
+  playtestSessions: new Map(),
 };
 
 function ensureParentDir(filePath) {
@@ -485,22 +557,23 @@ const AGENT_TOOL_DEFINITIONS = [
   },
   {
     name: 'volcengine.video.create',
-    description: 'Create a video generation task using ByteDance Seedance. Supports text-to-video, image-to-video (first frame), first+last frame transitions, reference images (1-4 for style consistency), and draft-to-full promotion. Default 9:16 portrait. Returns task ID for polling.',
+    description: 'Create a video generation task using ByteDance Seedance. Supports text-to-video, image-to-video (first frame), first+last frame, reference images (1-4, or 1-9 for Seedance 2.0), video/audio reference clips, draft preview (60% cost for validation), and draft-to-full promotion. Default 9:16 portrait. Returns task ID for polling.',
     method: 'POST',
     path: '/api/v1/tools/invoke',
     args: {
-      content: 'array (required) – content items. Modes: [{type:"text",text:"..."}] for text-to-video | add {type:"image_url",imageUrl:"..."} for first frame | add two image_urls for first+last frame | up to 4 image_urls for reference | [{type:"draft_task",draftTaskId:"cgt-..."}] to promote draft',
+      content: 'array (required) – content items. Modes: [{type:"text",text:"..."}] text-to-video | add {type:"image_url",imageUrl:"..."} for first frame | two image_urls for first+last | up to 4 image_urls for reference (9 for Seedance 2.0) | {type:"video_url",videoUrl:"..."} video ref (mp4/mov, 2-15s) | {type:"audio_url",audioUrl:"..."} audio ref (wav/mp3, 2-15s) | [{type:"draft_task",draftTaskId:"cgt-..."}] to promote draft to full',
       model: 'string (optional) – model ID, default doubao-seedance-1-5-pro-251215',
       resolution: '480p|720p|1080p (optional, default 720p)',
-      ratio: '16:9|9:16|21:9|1:1|adaptive (optional, default 9:16)',
-      duration: 'number (optional) – video length in seconds (default 5)',
+      ratio: '16:9|9:16|21:9|9:21|1:1|adaptive (optional, default 9:16)',
+      duration: 'number 2-15 (optional) – video length in seconds (default 5)',
       frames: 'number (optional) – frame count (alternative to duration)',
       seed: 'number (optional) – for reproducibility',
       cameraFixed: 'boolean (optional) – lock camera for talking-head shots',
       returnLastFrame: 'boolean (optional) – return last frame URL for clip chaining',
       generateAudio: 'boolean (optional) – generate ambient audio track',
-      draft: 'boolean (optional) – draft mode: 480p preview at ~60% cost, 7-day validity, no last frame',
-      serviceTier: 'default|flex (optional) – flex is 50% cheaper but slower',
+      draft: 'boolean (optional) – draft mode: 480p preview at ~60% cost, 7-day validity, no last frame. Then promote to full via {type:"draft_task",draftTaskId:"..."} content item',
+      serviceTier: 'default|flex (optional) – flex is 50% cheaper but slower (hour-level latency)',
+      executionExpiresAfter: 'number (optional) – timeout in seconds for flex tier tasks',
       callbackUrl: 'string (optional) – webhook URL for status updates',
       watermark: 'boolean (optional, default false)',
     },
@@ -533,6 +606,15 @@ const AGENT_TOOL_DEFINITIONS = [
     args: {
       limit: 'number (optional, default 20)',
       after: 'string (optional) – pagination cursor',
+    },
+  },
+  {
+    name: 'volcengine.video.delete',
+    description: 'Delete or cancel a video generation task. Queued tasks are cancelled; completed tasks have their records removed. Tasks auto-delete after 24h anyway.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      taskId: 'string (required) – task ID to delete/cancel',
     },
   },
   {
@@ -700,6 +782,475 @@ const AGENT_TOOL_DEFINITIONS = [
       style: 'string (optional) – style prefix, e.g. "pencil sketch storyboard style"',
     },
   },
+  // ── Tencent Hunyuan 3D tools ──────────────────────────────────────
+  {
+    name: 'hunyuan3d.status',
+    description: 'Check Tencent Hunyuan 3D API key configuration status.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {},
+  },
+  {
+    name: 'hunyuan3d.pro.submit',
+    description: 'Submit a Hunyuan 3D Pro job — text or image to 3D model. Async, returns jobId for polling. Supports OBJ/GLB/STL/USDZ/FBX output, PBR materials, LowPoly/Geometry/Sketch modes, face count control.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      prompt: 'string (optional) – text description for text-to-3D, mutually exclusive with imageUrl/imageBase64',
+      imageUrl: 'string (optional) – image URL for image-to-3D',
+      imageBase64: 'string (optional) – image base64 for image-to-3D',
+      model: '3.0|3.1 (optional, default 3.0)',
+      enablePBR: 'boolean (optional, default false) – enable PBR material generation',
+      faceCount: 'number 3000-1500000 (optional, default 500000) – polygon face count',
+      generateType: 'Normal|LowPoly|Geometry|Sketch (optional, default Normal)',
+      resultFormat: 'STL|USDZ|FBX (optional) – default returns OBJ+GLB',
+    },
+  },
+  {
+    name: 'hunyuan3d.pro.query',
+    description: 'Query status of a Hunyuan 3D Pro job. Status: WAIT → RUN → DONE|FAIL. When DONE, returns resultFiles with download URLs (OBJ, GLB, preview image).',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required) – job ID from hunyuan3d.pro.submit',
+    },
+  },
+  {
+    name: 'hunyuan3d.pro.wait',
+    description: 'Poll a Hunyuan 3D Pro job until DONE or FAIL. Blocks up to 10 minutes, polling every 5s. Returns completed job with resultFiles.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required) – job ID from hunyuan3d.pro.submit',
+      intervalMs: 'number (optional, default 5000) – poll interval in ms',
+      timeoutMs: 'number (optional, default 600000) – max wait time in ms',
+    },
+  },
+  {
+    name: 'hunyuan3d.rapid.submit',
+    description: 'Submit a Hunyuan 3D Rapid job — faster generation, lower quality. Async, returns jobId. Good for quick previews.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      prompt: 'string (optional) – text description, mutually exclusive with imageUrl/imageBase64',
+      imageUrl: 'string (optional) – image URL for image-to-3D',
+      imageBase64: 'string (optional) – image base64 for image-to-3D',
+      resultFormat: 'OBJ|GLB|STL|USDZ|FBX|MP4 (optional, default OBJ)',
+      enablePBR: 'boolean (optional, default false)',
+    },
+  },
+  {
+    name: 'hunyuan3d.rapid.query',
+    description: 'Query status of a Hunyuan 3D Rapid job. Status: WAIT → RUN → DONE|FAIL.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required) – job ID from hunyuan3d.rapid.submit',
+    },
+  },
+  {
+    name: 'hunyuan3d.rapid.wait',
+    description: 'Poll a Hunyuan 3D Rapid job until DONE or FAIL. Blocks up to 5 minutes, polling every 3s.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required) – job ID from hunyuan3d.rapid.submit',
+      intervalMs: 'number (optional, default 3000) – poll interval in ms',
+      timeoutMs: 'number (optional, default 300000) – max wait time in ms',
+    },
+  },
+  {
+    name: 'hunyuan3d.texture.submit',
+    description: 'Submit a texture generation job — input a white 3D model (OBJ/GLB) plus a reference image or text prompt to generate a textured model. Requires TC3 auth (TENCENT_SECRET_ID/KEY).',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      file3d: 'object (required) – { type: "OBJ"|"GLB", url: "https://..." }',
+      prompt: 'string (optional) – text description for texture',
+      image: 'object (optional) – { url: "..." } or { base64: "..." } reference image',
+      model: '3.0|3.1 (optional, default 3.0) – 3.1 enables multi-view images',
+      enablePBR: 'boolean (optional, default false)',
+    },
+  },
+  {
+    name: 'hunyuan3d.texture.query',
+    description: 'Query status of a texture generation job.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required)',
+    },
+  },
+  {
+    name: 'hunyuan3d.texture.wait',
+    description: 'Poll a texture job until DONE or FAIL.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required)',
+      intervalMs: 'number (optional, default 5000)',
+      timeoutMs: 'number (optional, default 600000)',
+    },
+  },
+  {
+    name: 'hunyuan3d.reduceFace.submit',
+    description: 'Submit a smart topology (reduce face) job — input high-poly 3D model, get clean low-poly output. Uses Polygon 1.5 model. Requires TC3 auth.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      file3d: 'object (required) – { type: "OBJ"|"GLB", url: "https://..." }',
+      polygonType: 'triangle|quadrilateral (optional, default triangle)',
+      faceLevel: 'high|medium|low (optional)',
+    },
+  },
+  {
+    name: 'hunyuan3d.reduceFace.query',
+    description: 'Query status of a reduce face job.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required)',
+    },
+  },
+  {
+    name: 'hunyuan3d.reduceFace.wait',
+    description: 'Poll a reduce face job until DONE or FAIL.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required)',
+      intervalMs: 'number (optional, default 5000)',
+      timeoutMs: 'number (optional, default 600000)',
+    },
+  },
+  {
+    name: 'hunyuan3d.uv.submit',
+    description: 'Submit a UV unwrapping job — input a 3D model (FBX/OBJ/GLB), get UV-mapped output with texture atlas. Requires TC3 auth.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      file: 'object (required) – { type: "FBX"|"OBJ"|"GLB", url: "https://..." }',
+    },
+  },
+  {
+    name: 'hunyuan3d.uv.query',
+    description: 'Query status of a UV unwrapping job.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required)',
+    },
+  },
+  {
+    name: 'hunyuan3d.uv.wait',
+    description: 'Poll a UV job until DONE or FAIL.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required)',
+      intervalMs: 'number (optional, default 5000)',
+      timeoutMs: 'number (optional, default 600000)',
+    },
+  },
+  {
+    name: 'hunyuan3d.part.submit',
+    description: 'Submit a component generation job — input a 3D model (FBX only), auto-split into parts. Requires TC3 auth.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      file: 'object (required) – { type: "FBX", url: "https://..." }',
+      model: '1.5 (optional, default 1.5)',
+    },
+  },
+  {
+    name: 'hunyuan3d.part.query',
+    description: 'Query status of a part generation job.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required)',
+    },
+  },
+  {
+    name: 'hunyuan3d.part.wait',
+    description: 'Poll a part generation job until DONE or FAIL.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required)',
+      intervalMs: 'number (optional, default 5000)',
+      timeoutMs: 'number (optional, default 600000)',
+    },
+  },
+  {
+    name: 'hunyuan3d.profile.submit',
+    description: 'Submit a 3D character generation job — input a head photo + template to generate a 3D character model. Templates: basketball, badminton, pingpong, gymnastics, pilidance, tennis, athletics, footballboykicking1, footballboykicking2, guitar, footballboy, skateboard, futuresoilder, explorer, beardollgirl, bibpantsboy, womansitpose, womanstandpose2, mysteriousprincess, manstandpose2. Requires TC3 auth.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      profile: 'object (required) – { url: "..." } or { base64: "..." } – head photo, min 500px',
+      template: 'string (required) – template ID, e.g. "basketball", "guitar", "pingpong"',
+    },
+  },
+  {
+    name: 'hunyuan3d.profile.query',
+    description: 'Query status of a profile-to-3D character job.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required)',
+    },
+  },
+  {
+    name: 'hunyuan3d.profile.wait',
+    description: 'Poll a profile-to-3D job until DONE or FAIL.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (required)',
+      intervalMs: 'number (optional, default 5000)',
+      timeoutMs: 'number (optional, default 600000)',
+    },
+  },
+  {
+    name: 'hunyuan3d.convert',
+    description: 'Convert a 3D model format (sync). Input OBJ/GLB/FBX (≤60MB), output STL/USDZ/FBX/MP4/GIF. Returns result URL directly. Requires TC3 auth.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      file3dUrl: 'string (required) – URL to source 3D file',
+      format: 'STL|USDZ|FBX|MP4|GIF (required) – target format',
+    },
+  },
+  // ── Gemini Video Understanding tools ──────────────────────────────
+  {
+    name: 'gemini.video.status',
+    description: 'Check Gemini Video API key configuration and available presets.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {},
+  },
+  {
+    name: 'gemini.video.upload',
+    description: 'Upload a video file to Gemini Files API for analysis. Returns fileUri for subsequent analysis calls. Files persist 48h.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      filePath: 'string (required) – local path to video file',
+      mimeType: 'string (optional) – MIME type, default video/webm',
+      displayName: 'string (optional) – human-readable label',
+    },
+  },
+  {
+    name: 'gemini.video.analyze',
+    description: 'Analyze a video using Gemini multimodal understanding. Supports variable schemas for different analysis goals. Use media_resolution "high" for reading UI text, "low" for general analysis.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      fileUri: 'string (required) – Gemini file URI from upload',
+      prompt: 'string (required) – analysis prompt',
+      model: 'flash|pro (optional, default flash) – flash for triage ($0.05/5min), pro for deep analysis ($0.18/5min)',
+      mediaResolution: 'low|medium|high (optional, default low)',
+      responseSchema: 'object (optional) – JSON Schema for structured output',
+      context: 'string (optional) – additional context (annotations, comments)',
+    },
+  },
+  {
+    name: 'gemini.video.analyze_playtest',
+    description: 'Analyze a playtest session recording with annotations and comments. Supports preset analysis types or custom schemas.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      sessionId: 'string (required) – playtest session ID',
+      analysisType: 'ux_friction|translation_quality|content_engagement|trend_analysis (optional, default ux_friction)',
+      customSchema: 'object (optional) – custom JSON Schema, overrides preset',
+      customPrompt: 'string (optional) – custom prompt, overrides preset',
+      model: 'flash|pro (optional)',
+      mediaResolution: 'low|medium|high (optional)',
+      videoPath: 'string (optional) – direct path to video file',
+      annotationsJson: 'string (optional) – annotations JSON',
+      commentsJson: 'string (optional) – comments JSON',
+    },
+  },
+  {
+    name: 'gemini.video.presets',
+    description: 'List available analysis presets (ux_friction, translation_quality, content_engagement, trend_analysis).',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {},
+  },
+  {
+    name: 'gemini.video.results',
+    description: 'List cached analysis results or get a specific result by ID.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      analysisId: 'string (optional) – specific analysis ID to retrieve',
+    },
+  },
+  {
+    name: 'gemini.video.files',
+    description: 'List or delete uploaded files on Gemini. Files auto-expire after 48h.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      action: 'list|delete (optional, default list)',
+      fileName: 'string (required for delete) – e.g. "files/abc123"',
+    },
+  },
+  // ── Auto-fix pipeline tools ────────────────────────────────────────
+  {
+    name: 'autofix.status',
+    description: 'Check auto-fix pipeline status (OpenAI key, gh CLI, repo root).',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {},
+  },
+  {
+    name: 'autofix.run',
+    description: 'Run the auto-fix pipeline for a triaged issue. Generates fix via AI, validates (tsc + server), commits, and creates PR. Set dryRun:true to preview without committing.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      sessionId: 'string (required) – playtest session ID',
+      issue: 'object (required) – triaged issue { category, severity, description, suggestedFix, affectedComponent?, whatUserExpected?, whatActuallyHappened? }',
+      dryRun: 'boolean (optional, default false) – preview fix without committing',
+    },
+  },
+  {
+    name: 'autofix.jobs',
+    description: 'List auto-fix jobs or get a specific job by ID.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      jobId: 'string (optional) – specific job ID',
+    },
+  },
+  // ── Signals tools ─────────────────────────────────────────────────
+  {
+    name: 'signals.keywords.save',
+    description: 'Save a keyword set for targeted signal scraping. Sets can come from AI generation or manual input.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      theme: 'string (required) – e.g. "korean_language_learning"',
+      description: 'string (required) – what this set is designed to find',
+      keywords: 'object (required) – { global: [...], tiktok: [...], instagram: [...], xiaohongshu: [...] }',
+      priority: 'high|medium|low (optional, default medium)',
+      languages: 'array (optional) – ["ko","ja","zh","en"]',
+      source: 'ai|manual (optional, default manual)',
+    },
+  },
+  {
+    name: 'signals.keywords.list',
+    description: 'List all saved keyword sets.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {},
+  },
+  {
+    name: 'signals.keywords.delete',
+    description: 'Delete a keyword set by ID.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: { id: 'string (required)' },
+  },
+  {
+    name: 'signals.search',
+    description: 'Search a specific platform using keywords. Returns matching posts/videos/notes.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      platform: 'tiktok|instagram|xiaohongshu (required)',
+      keywords: 'array (required) – search terms / hashtags',
+      limit: 'number (optional, default 5) – results per keyword',
+    },
+  },
+  {
+    name: 'signals.targeted_scrape',
+    description: 'Run a full targeted scrape using saved keyword sets across all platforms. This is the main entry point for keyword-driven signal gathering.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      keywordSetIds: 'array (optional) – specific set IDs (default: all)',
+      platforms: 'array (optional) – ["tiktok","instagram","xiaohongshu"] (default: all)',
+      limit: 'number (optional, default 5)',
+    },
+  },
+  {
+    name: 'signals.browser_search',
+    description: 'Search TikTok and Instagram via headless browser (Puppeteer). This is the real data path — returns actual video/post data with view counts, authors, captions. Supports TikTok keyword search and Instagram hashtag lookup.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      keyword: 'string (required) – search term or hashtag',
+      platforms: 'array (optional) – ["tiktok","instagram"] (default both)',
+      limit: 'number (optional, default 10)',
+    },
+  },
+  {
+    name: 'signals.browser_status',
+    description: 'Check headless browser scraper status.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {},
+  },
+  {
+    name: 'signals.status',
+    description: 'Check signals intelligence configuration and cache status (last scrape time, cached signal count, API key presence).',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {},
+  },
+  {
+    name: 'signals.tiktok',
+    description: 'Scrape TikTok trending hashtags, sounds, and content format patterns. Uses Creative Center public endpoint or official API if TIKTOK_API_KEY is set. Results cached 15 min. Pass __mock:true for sample data.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      limit: 'number (optional, default 20, max 50)',
+      language: 'string (optional) – filter by language relevance: ko|ja|zh|en',
+      category: 'string (optional) – filter by theme: language_learning|dating_sim|anime|kpop|food|travel',
+      __mock: 'boolean (optional) – return sample data for development',
+    },
+  },
+  {
+    name: 'signals.instagram',
+    description: 'Scrape Instagram trending hashtags and Reels audio. Uses public explore endpoint or Graph API if INSTAGRAM_API_KEY is set. Results cached 15 min.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      limit: 'number (optional, default 20, max 50)',
+      language: 'string (optional) – filter by language relevance: ko|ja|zh|en',
+      category: 'string (optional) – filter by theme',
+      __mock: 'boolean (optional) – return sample data for development',
+    },
+  },
+  {
+    name: 'signals.xiaohongshu',
+    description: 'Scrape Xiaohongshu (RED) trending topics, hashtags, and aesthetic styles. Uses discover page or partner API if XHS_API_KEY is set. Results cached 15 min.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      limit: 'number (optional, default 20, max 50)',
+      language: 'string (optional) – filter by language relevance: ko|ja|zh|en',
+      category: 'string (optional) – filter by theme',
+      __mock: 'boolean (optional) – return sample data for development',
+    },
+  },
+  {
+    name: 'signals.all',
+    description: 'Scrape all trend platforms (TikTok, Instagram, Xiaohongshu) concurrently and return merged results. Partial failures return warnings but do not crash. Results cached per-platform for 15 min.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      platforms: 'string[] (optional) – subset: ["tiktok","instagram","xiaohongshu"]',
+      limit: 'number (optional, default 20 per platform, max 50)',
+      language: 'string (optional) – filter by language relevance: ko|ja|zh|en',
+      category: 'string (optional) – filter by theme',
+      __mock: 'boolean (optional) – return sample data for development',
+    },
+  },
 ];
 
 function jsonResponse(res, statusCode, payload) {
@@ -744,6 +1295,34 @@ async function readJsonBody(req) {
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
+/** Simple multipart/form-data parser for upload endpoints. */
+function parseMultipart(body, boundary) {
+  const sep = Buffer.from(`--${boundary}`);
+  const parts = [];
+  let start = body.indexOf(sep) + sep.length;
+
+  while (start < body.length) {
+    const nextSep = body.indexOf(sep, start);
+    if (nextSep === -1) break;
+    const partBuf = body.subarray(start, nextSep);
+
+    // Find header/body separator (double CRLF)
+    const headerEnd = partBuf.indexOf('\r\n\r\n');
+    if (headerEnd === -1) { start = nextSep + sep.length; continue; }
+
+    const headerStr = partBuf.subarray(0, headerEnd).toString('utf8');
+    const data = partBuf.subarray(headerEnd + 4, partBuf.length - 2); // strip trailing \r\n
+
+    const nameMatch = headerStr.match(/name="([^"]+)"/);
+    const filenameMatch = headerStr.match(/filename="([^"]+)"/);
+    if (nameMatch) {
+      parts.push({ name: nameMatch[1], filename: filenameMatch?.[1], data });
+    }
+    start = nextSep + sep.length;
+  }
+  return parts;
+}
+
 function getLang(query) {
   const lang = query.get('lang') || 'ko';
   if (lang === 'ko' || lang === 'ja' || lang === 'zh') return lang;
@@ -763,6 +1342,52 @@ function getLocationId(query, fallback = 'food_street') {
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+const NANOID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+function generateShortId(length = 10) {
+  let id = '';
+  for (let i = 0; i < length; i++) {
+    id += NANOID_ALPHABET[Math.floor(Math.random() * NANOID_ALPHABET.length)];
+  }
+  return id;
+}
+
+const CITY_LANGUAGE_MAP = { seoul: 'ko', tokyo: 'ja', shanghai: 'zh' };
+
+function createPlaytestSession({ city, sceneType, language, locationId, hangoutId, exerciseTypes, seed }) {
+  const validCities = ['seoul', 'tokyo', 'shanghai'];
+  const validSceneTypes = ['onboarding', 'hangout', 'free_roam', 'exercise'];
+
+  const resolvedCity = validCities.includes(city) ? city : 'seoul';
+  const resolvedSceneType = validSceneTypes.includes(sceneType) ? sceneType : 'hangout';
+  const resolvedLanguage = language || CITY_LANGUAGE_MAP[resolvedCity] || 'ko';
+
+  let sessionId;
+  do {
+    sessionId = generateShortId(10);
+  } while (state.playtestSessions.has(sessionId));
+
+  const session = {
+    sessionId,
+    city: resolvedCity,
+    sceneType: resolvedSceneType,
+    language: resolvedLanguage,
+    locationId: typeof locationId === 'string' ? locationId : undefined,
+    hangoutId: typeof hangoutId === 'string' ? hangoutId : undefined,
+    exerciseTypes: Array.isArray(exerciseTypes) ? exerciseTypes.filter((t) => typeof t === 'string') : undefined,
+    seed: typeof seed === 'number' ? seed : undefined,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+
+  // Remove undefined fields for a clean JSON payload
+  for (const key of Object.keys(session)) {
+    if (session[key] === undefined) delete session[key];
+  }
+
+  state.playtestSessions.set(sessionId, session);
+  return session;
 }
 
 function getUserIdFromQuery(query) {
@@ -2811,6 +3436,20 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
         };
       }
     }
+    case 'volcengine.video.delete': {
+      try {
+        const result = await deleteVideoTask(args.taskId);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
     case 'volcengine.tts.synthesize': {
       try {
         const result = await synthesizeSpeech(args);
@@ -3038,6 +3677,378 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
         };
       }
     }
+    // ── Hunyuan 3D tools ─────────────────────────────────────────
+    case 'hunyuan3d.status': {
+      return {
+        statusCode: 200,
+        payload: { ok: true, tool: toolName, result: getHunyuan3dStatus() },
+      };
+    }
+    case 'hunyuan3d.pro.submit': {
+      try {
+        const result = await submitHunyuan3dProJob(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'hunyuan3d.pro.query': {
+      try {
+        const result = await queryHunyuan3dProJob(args.jobId);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'hunyuan3d.pro.wait': {
+      try {
+        const result = await waitForHunyuan3dProJob(
+          args.jobId,
+          args.intervalMs || 5000,
+          args.timeoutMs || 600000,
+        );
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'hunyuan3d.rapid.submit': {
+      try {
+        const result = await submitHunyuan3dRapidJob(args);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'hunyuan3d.rapid.query': {
+      try {
+        const result = await queryHunyuan3dRapidJob(args.jobId);
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'hunyuan3d.rapid.wait': {
+      try {
+        const result = await waitForHunyuan3dRapidJob(
+          args.jobId,
+          args.intervalMs || 3000,
+          args.timeoutMs || 300000,
+        );
+        return {
+          statusCode: 200,
+          payload: { ok: true, tool: toolName, result },
+        };
+      } catch (err) {
+        return {
+          statusCode: 502,
+          payload: { ok: false, tool: toolName, error: err.message },
+        };
+      }
+    }
+    case 'hunyuan3d.texture.submit': {
+      try {
+        const result = await submitTextureJob(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.texture.query': {
+      try {
+        const result = await queryTextureJob(args.jobId);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.texture.wait': {
+      try {
+        const result = await waitForTextureJob(args.jobId, args.intervalMs || 5000, args.timeoutMs || 600000);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.reduceFace.submit': {
+      try {
+        const result = await submitReduceFaceJob(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.reduceFace.query': {
+      try {
+        const result = await queryReduceFaceJob(args.jobId);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.reduceFace.wait': {
+      try {
+        const result = await waitForReduceFaceJob(args.jobId, args.intervalMs || 5000, args.timeoutMs || 600000);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.uv.submit': {
+      try {
+        const result = await submitUVJob(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.uv.query': {
+      try {
+        const result = await queryUVJob(args.jobId);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.uv.wait': {
+      try {
+        const result = await waitForUVJob(args.jobId, args.intervalMs || 5000, args.timeoutMs || 600000);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.part.submit': {
+      try {
+        const result = await submitPartJob(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.part.query': {
+      try {
+        const result = await queryPartJob(args.jobId);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.part.wait': {
+      try {
+        const result = await waitForPartJob(args.jobId, args.intervalMs || 5000, args.timeoutMs || 600000);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.profile.submit': {
+      try {
+        const result = await submitProfileTo3dJob(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.profile.query': {
+      try {
+        const result = await queryProfileTo3dJob(args.jobId);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.profile.wait': {
+      try {
+        const result = await waitForProfileTo3dJob(args.jobId, args.intervalMs || 5000, args.timeoutMs || 600000);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'hunyuan3d.convert': {
+      try {
+        const result = await convert3dFormat(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    // ── Gemini Video Understanding ─────────────────────────────────
+    case 'gemini.video.status': {
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result: getGeminiVideoStatus() } };
+    }
+    case 'gemini.video.upload': {
+      try {
+        const result = await uploadVideo(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'gemini.video.analyze': {
+      try {
+        const result = await analyzeVideo(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'gemini.video.analyze_playtest': {
+      try {
+        const result = await analyzePlaytestSession(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'gemini.video.presets': {
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result: listAnalysisPresets() } };
+    }
+    case 'gemini.video.results': {
+      const result = args.analysisId ? getAnalysisResult(args.analysisId) : listAnalysisResults();
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+    }
+    case 'gemini.video.files': {
+      try {
+        if (args.action === 'delete' && args.fileName) {
+          const result = await deleteUploadedFile(args.fileName);
+          return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+        }
+        const result = await listUploadedFiles();
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    // ── Auto-fix pipeline ────────────────────────────────────────────
+    case 'autofix.status': {
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result: getAutoFixStatus() } };
+    }
+    case 'autofix.run': {
+      try {
+        const result = await runAutoFix(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'autofix.jobs': {
+      const result = args.jobId ? getAutoFixJob(args.jobId) : listAutoFixJobs();
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+    }
+    // ── Signals keyword + search tools ──────────────────────────────
+    case 'signals.keywords.save': {
+      try {
+        const result = saveKeywordSet(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'signals.keywords.list': {
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result: listKeywordSets() } };
+    }
+    case 'signals.keywords.delete': {
+      const deleted = deleteKeywordSet(args.id);
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result: { deleted, id: args.id } } };
+    }
+    case 'signals.search': {
+      try {
+        const result = await searchPlatform(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'signals.targeted_scrape': {
+      try {
+        const result = await runTargetedScrape(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    // ── Signals generic tools ─────────────────────────────────────────
+    case 'signals.browser_search': {
+      try {
+        const result = await browserSearch(args.keyword, { platforms: args.platforms, limit: args.limit });
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'signals.browser_status': {
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result: getBrowserScraperStatus() } };
+    }
+    case 'signals.status': {
+      return {
+        statusCode: 200,
+        payload: { ok: true, tool: toolName, result: getTrendStatus() },
+      };
+    }
+    case 'signals.tiktok': {
+      try {
+        const result = await scrapeTikTokTrends(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'signals.instagram': {
+      try {
+        const result = await scrapeInstagramTrends(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'signals.xiaohongshu': {
+      try {
+        const result = await scrapeXHSTrends(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'signals.all': {
+      try {
+        const result = await scrapeAllTrends(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
     default:
       return {
         statusCode: 404,
@@ -3079,6 +4090,90 @@ const server = http.createServer(async (req, res) => {
       } catch (err) {
         jsonResponse(res, 400, { ok: false, error: err.message });
       }
+      return;
+    }
+
+    // Playtest session GET/PATCH — no auth required so sharable URLs work without demo password
+    if (pathname.startsWith('/api/v1/playtest/sessions/') && req.method === 'GET') {
+      const sessionId = pathname.replace('/api/v1/playtest/sessions/', '').split('/')[0];
+      const session = state.playtestSessions.get(sessionId);
+      if (!session) {
+        jsonResponse(res, 404, { error: 'session_not_found', sessionId });
+        return;
+      }
+      jsonResponse(res, 200, { sessionId: session.sessionId, config: session, status: session.status, createdAt: session.createdAt });
+      return;
+    }
+
+    // Upload playtest session recording + annotations
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/upload$/) && req.method === 'POST') {
+      const sessionId = pathname.split('/')[5];
+      const session = state.playtestSessions.get(sessionId);
+      if (!session) {
+        jsonResponse(res, 404, { error: 'session_not_found', sessionId });
+        return;
+      }
+
+      // Save raw body to disk — multipart parsing for recordings
+      const runsDir = path.join(repoRoot, 'apps', 'server', 'data', 'runs', sessionId);
+      fs.mkdirSync(runsDir, { recursive: true });
+
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      const body = Buffer.concat(chunks);
+
+      // Extract content type and boundary
+      const contentType = req.headers['content-type'] || '';
+
+      if (contentType.includes('multipart/form-data')) {
+        const boundaryMatch = contentType.match(/boundary=(.+)/);
+        if (boundaryMatch) {
+          const boundary = boundaryMatch[1];
+          const parts = parseMultipart(body, boundary);
+
+          for (const part of parts) {
+            if (part.name === 'recording') {
+              fs.writeFileSync(path.join(runsDir, 'recording.webm'), part.data);
+            } else if (part.name === 'annotations') {
+              fs.writeFileSync(path.join(runsDir, 'annotations.json'), part.data);
+            }
+          }
+        }
+      } else {
+        // Raw body fallback
+        fs.writeFileSync(path.join(runsDir, 'raw-upload'), body);
+      }
+
+      // Save session config alongside
+      fs.writeFileSync(path.join(runsDir, 'config.json'), JSON.stringify(session, null, 2));
+
+      // Mark session as submitted
+      session.status = 'submitted';
+      state.playtestSessions.set(sessionId, session);
+
+      jsonResponse(res, 200, {
+        ok: true,
+        sessionId,
+        storedAt: runsDir,
+        files: fs.readdirSync(runsDir),
+      });
+      return;
+    }
+
+    if (pathname.startsWith('/api/v1/playtest/sessions/') && req.method === 'PATCH') {
+      const sessionId = pathname.replace('/api/v1/playtest/sessions/', '').split('/')[0];
+      const session = state.playtestSessions.get(sessionId);
+      if (!session) {
+        jsonResponse(res, 404, { error: 'session_not_found', sessionId });
+        return;
+      }
+      const body = await readJsonBody(req);
+      const validStatuses = ['pending', 'active', 'submitted'];
+      if (body.status && validStatuses.includes(body.status)) {
+        session.status = body.status;
+        state.playtestSessions.set(sessionId, session);
+      }
+      jsonResponse(res, 200, { sessionId: session.sessionId, config: session, status: session.status, createdAt: session.createdAt });
       return;
     }
 
@@ -3419,6 +4514,187 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    /* ── Auto-fix pipeline (auth required) ── */
+
+    if (pathname === '/api/v1/playtest/autofix' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      if (!body.sessionId || !body.issue) {
+        jsonResponse(res, 400, { error: 'sessionId_and_issue_required' });
+        return;
+      }
+      try {
+        const result = await runAutoFix(body);
+        jsonResponse(res, 200, { ok: true, ...result });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
+      return;
+    }
+
+    if (pathname === '/api/v1/playtest/autofix/jobs' && req.method === 'GET') {
+      const jobId = url.searchParams.get('id');
+      const result = jobId ? getAutoFixJob(jobId) : listAutoFixJobs();
+      jsonResponse(res, 200, { ok: true, result });
+      return;
+    }
+
+    /* ── Playtest sessions — GET list + POST create (auth required) ── */
+
+    if (pathname === '/api/v1/playtest/sessions' && req.method === 'GET') {
+      const allSessions = [...state.playtestSessions.values()]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      jsonResponse(res, 200, { sessions: allSessions });
+      return;
+    }
+
+    if (pathname === '/api/v1/playtest/sessions' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      if (!body.city || !body.sceneType) {
+        jsonResponse(res, 400, { error: 'city_and_sceneType_required' });
+        return;
+      }
+      const session = createPlaytestSession(body);
+      jsonResponse(res, 201, {
+        sessionId: session.sessionId,
+        url: `/playtest/${session.sessionId}`,
+        config: session,
+        createdAt: session.createdAt,
+      });
+      return;
+    }
+
+    // ── Signals keyword + search routes (public) ─────────────────────
+
+    if (pathname === '/api/v1/signals/keywords' && req.method === 'GET') {
+      jsonResponse(res, 200, { ok: true, sets: listKeywordSets() });
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/keywords' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const set = saveKeywordSet(body);
+      jsonResponse(res, 201, { ok: true, set });
+      return;
+    }
+
+    if (pathname.match(/^\/api\/v1\/signals\/keywords\/[^/]+$/) && req.method === 'DELETE') {
+      const id = pathname.split('/').pop();
+      const deleted = deleteKeywordSet(id);
+      jsonResponse(res, 200, { ok: true, deleted, id });
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/search' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      try {
+        const result = await searchPlatform(body);
+        jsonResponse(res, 200, { ok: true, ...result });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/targeted-scrape' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      try {
+        const result = await runTargetedScrape(body);
+        jsonResponse(res, 200, { ok: true, ...result });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
+      return;
+    }
+
+    // ── Browser-based signal search ────────────────────────────────
+
+    if (pathname === '/api/v1/signals/browser-search' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      if (!body.keyword) {
+        jsonResponse(res, 400, { error: 'keyword_required' });
+        return;
+      }
+      try {
+        const result = await browserSearch(body.keyword, { platforms: body.platforms, limit: body.limit });
+        jsonResponse(res, 200, { ok: true, ...result });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
+      return;
+    }
+
+    // ── Signal scheduler routes ─────────────────────────────────────
+
+    if (pathname === '/api/v1/signals/scheduler/status' && req.method === 'GET') {
+      jsonResponse(res, 200, { ok: true, ...getSchedulerStatus() });
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/scheduler/start' && req.method === 'POST') {
+      jsonResponse(res, 200, { ok: true, ...startScheduler() });
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/scheduler/stop' && req.method === 'POST') {
+      jsonResponse(res, 200, { ok: true, ...stopScheduler() });
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/scheduler/run' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      try {
+        const result = await runSignalGathering(body);
+        jsonResponse(res, 200, { ok: true, ...result });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
+      return;
+    }
+
+    // ── Signals generic routes ────────────────────────────────────────
+
+    if (pathname === '/api/v1/signals/status' && req.method === 'GET') {
+      jsonResponse(res, 200, { ok: true, ...getTrendStatus() });
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/latest' && req.method === 'GET') {
+      const platform = url.searchParams.get('platform') || null;
+      const scrapers = {
+        tiktok: scrapeTikTokTrends,
+        instagram: scrapeInstagramTrends,
+        xiaohongshu: scrapeXHSTrends,
+      };
+      const opts = {
+        limit: Number(url.searchParams.get('limit') || 20) || 20,
+        language: url.searchParams.get('language') || undefined,
+        category: url.searchParams.get('category') || undefined,
+      };
+
+      if (platform && scrapers[platform]) {
+        const result = await scrapers[platform](opts);
+        jsonResponse(res, 200, { ok: true, ...result });
+      } else {
+        const result = await scrapeAllTrends(opts);
+        jsonResponse(res, 200, { ok: true, ...result });
+      }
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/scrape' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const options = {
+        platforms: body.platforms || undefined,
+        limit: body.options?.limit || body.limit || 20,
+        language: body.options?.language || body.language || undefined,
+        category: body.options?.category || body.category || undefined,
+        __mock: body.options?.__mock || body.__mock || undefined,
+      };
+      const result = await scrapeAllTrends(options);
+      jsonResponse(res, 200, { ok: true, ...result });
+      return;
+    }
+
     jsonResponse(res, 404, { error: 'not_found', pathname });
   } catch (error) {
     jsonResponse(res, 500, {
@@ -3457,5 +4733,10 @@ export const __testing = {
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   server.listen(PORT, () => {
     console.log(`Tong mock server listening on http://localhost:${PORT}`);
+    // Auto-start signal scheduler if enabled
+    const schedResult = startScheduler();
+    if (schedResult.status === 'started') {
+      console.log(`Signal scheduler started (interval: ${schedResult.intervalMs / 1000}s)`);
+    }
   });
 }
