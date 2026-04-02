@@ -42,7 +42,7 @@
       "rights": "internal-demo",
       "promptTemplate": null,
       "status": "ready",
-      "uri": "/assets/tong_intro.webm"
+      "uri": "/assets/app/tong_opening.mp4"
     },
     {
       "key": "city.seoul.location.food-street.backdrop.default",
