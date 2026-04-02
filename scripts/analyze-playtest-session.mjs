@@ -253,9 +253,24 @@ try {
     console.log(json);
   }
 
-  // Update session in D1 if requested
+  // Update session + store analysis artifact in R2
   if (args['update-session']) {
     try {
+      // Store analysis.json in R2 via artifact endpoint
+      const artifactRes = await fetch(`${apiBase}/api/v1/playtest/sessions/${sessionId}/artifacts`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (tong-pipeline)',
+        },
+        body: JSON.stringify({ type: 'analysis', data: output }),
+      });
+      if (artifactRes.ok) {
+        const artifactData = await artifactRes.json();
+        console.error(`[analyze] Analysis stored in R2: ${artifactData.url}`);
+      }
+
+      // Update session status
       await fetch(`${apiBase}/api/v1/playtest/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: {
