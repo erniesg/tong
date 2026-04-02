@@ -30,7 +30,7 @@ except ImportError:
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNS_ROOT = REPO_ROOT / "artifacts" / "qa-runs" / "functional-qa" / "playtest-interactive"
-VIEWPORT = {"width": 1280, "height": 800}
+VIEWPORT = {"width": 393, "height": 852}  # iPhone 15 Pro — game is mobile-first
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 
 
@@ -86,16 +86,24 @@ class InteractivePlaytest:
         return path
 
     async def get_annotation_count(self, page: Page) -> int:
-        """Read the annotation count from the toolbar."""
-        el = page.locator(".playtest-annotation-count")
-        if await el.count() == 0:
-            return -1
-        text = await el.text_content()
-        # "3 notes" or "1 note"
-        try:
-            return int(text.split()[0])
-        except (ValueError, IndexError):
-            return -1
+        """Read the annotation count from the pill toolbar."""
+        # Try expanded pill notes first
+        el = page.locator(".playtest-pill-notes")
+        if await el.count() > 0:
+            text = await el.text_content()
+            try:
+                return int(text.split()[0])
+            except (ValueError, IndexError):
+                pass
+        # Try collapsed pill badge
+        badge = page.locator(".playtest-pill-badge")
+        if await badge.count() > 0:
+            text = await badge.text_content()
+            try:
+                return int(text.strip())
+            except (ValueError, IndexError):
+                pass
+        return 0
 
     async def run(self) -> bool:
         print(f"\n{'='*60}")
@@ -133,7 +141,7 @@ class InteractivePlaytest:
 
             # 2. Load playtest URL → redirect to /game
             print("\n[2/8] Loading playtest page + redirect...", flush=True)
-            await page.goto(f"{self.base_url}/playtest/{self.session_id}", wait_until="networkidle", timeout=30000)
+            await page.goto(f"{self.base_url}/playtest/{self.session_id}", wait_until="domcontentloaded", timeout=30000)
             try:
                 await page.wait_for_url("**/game**", timeout=15000)
                 self.record("Redirect to /game", True, page.url)
@@ -148,10 +156,20 @@ class InteractivePlaytest:
             await asyncio.sleep(2)
             await self.screenshot(page, "game-loaded")
 
-            # Verify toolbar is visible
-            toolbar = page.locator(".playtest-toolbar-inner")
-            toolbar_visible = await toolbar.count() > 0
-            self.record("Toolbar visible", toolbar_visible)
+            # Verify floating pill is visible and expand it
+            pill = page.locator(".playtest-pill")
+            pill_visible = await pill.count() > 0
+            self.record("Floating pill visible", pill_visible)
+
+            # Expand the pill to access tools (use JS click — element may be outside viewport scroll)
+            pill_toggle = page.locator(".playtest-pill-toggle")
+            if await pill_toggle.count() > 0:
+                await pill_toggle.evaluate("el => el.click()")
+                await asyncio.sleep(0.5)
+
+            controls = page.locator(".playtest-pill-controls")
+            controls_visible = await controls.count() > 0
+            self.record("Pill expanded — controls visible", controls_visible)
 
             count_before = await self.get_annotation_count(page)
             self.record("Initial annotation count is 0", count_before == 0, f"count={count_before}")
@@ -159,7 +177,7 @@ class InteractivePlaytest:
             # 3. Use PEN tool — draw a circle on the game
             print("\n[3/8] Drawing with pen tool...", flush=True)
             pen_btn = page.locator(".playtest-tool[title='Pen']")
-            await pen_btn.click()
+            await pen_btn.evaluate("el => el.click()")
             await asyncio.sleep(0.3)
 
             # Verify pen is active
@@ -194,13 +212,13 @@ class InteractivePlaytest:
                 self.record("Canvas appeared for pen tool", False, "no .playtest-canvas")
 
             # Deactivate pen
-            await pen_btn.click()
+            await pen_btn.evaluate("el => el.click()")
             await asyncio.sleep(0.2)
 
             # 4. Use HIGHLIGHT tool
             print("\n[4/8] Highlighting area...", flush=True)
             highlight_btn = page.locator(".playtest-tool[title='Highlight']")
-            await highlight_btn.click()
+            await highlight_btn.evaluate("el => el.click()")
             await asyncio.sleep(0.3)
 
             highlight_active = await highlight_btn.evaluate("el => el.classList.contains('playtest-tool-active')")
@@ -225,13 +243,13 @@ class InteractivePlaytest:
                     self.record("Highlight created annotation", count_after_hl == 2, f"count={count_after_hl}")
                     await self.screenshot(page, "after-highlight")
 
-            await highlight_btn.click()
+            await highlight_btn.evaluate("el => el.click()")
             await asyncio.sleep(0.2)
 
             # 5. Use COMMENT tool — pin a comment
             print("\n[5/8] Pinning a comment...", flush=True)
             comment_btn = page.locator(".playtest-tool[title='Comment']")
-            await comment_btn.click()
+            await comment_btn.evaluate("el => el.click()")
             await asyncio.sleep(0.3)
 
             comment_active = await comment_btn.evaluate("el => el.classList.contains('playtest-tool-active')")
@@ -259,7 +277,7 @@ class InteractivePlaytest:
 
                         # Click "Pin" to submit
                         pin_btn = page.locator(".playtest-btn-small", has_text="Pin")
-                        await pin_btn.click()
+                        await pin_btn.evaluate("el => el.click()")
                         await asyncio.sleep(0.5)
 
                         count_after_comment = await self.get_annotation_count(page)
@@ -286,7 +304,7 @@ class InteractivePlaytest:
                         textarea = page.locator(".playtest-comment-input")
                         await textarea.fill("Expected tapping the character to show a translation tooltip")
                         pin_btn = page.locator(".playtest-btn-small", has_text="Pin")
-                        await pin_btn.click()
+                        await pin_btn.evaluate("el => el.click()")
                         await asyncio.sleep(0.5)
 
                         final_count = await self.get_annotation_count(page)

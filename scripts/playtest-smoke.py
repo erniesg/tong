@@ -159,11 +159,11 @@ class PlaytestSmokeTest:
                      session_data[:80] if session_data else "null")
 
         # Check if playtest toolbar is in the DOM
-        toolbar_visible = await page.locator(".playtest-toolbar").count() > 0
-        self.record("Overlay: playtest toolbar mounted", toolbar_visible)
+        toolbar_visible = await page.locator(".playtest-pill").count() > 0
+        self.record("Overlay: playtest pill mounted", toolbar_visible)
 
         if toolbar_visible:
-            await self.screenshot(page, "playtest-toolbar-visible")
+            await self.screenshot(page, "playtest-pill-visible")
 
     async def test_upload_to_r2(self) -> None:
         """Upload synthetic recording + annotations to R2 via API."""
