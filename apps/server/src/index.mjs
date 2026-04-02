@@ -414,6 +414,7 @@ function saveDurableState() {
     learnSessions: cloneJson(state.learnSessions),
     ingestionByUser: cloneMapEntries(state.ingestionByUser),
     integrationsByUser: cloneMapEntries(state.integrationsByUser),
+    playtestSessions: cloneMapEntries(state.playtestSessions),
   };
   const tempPath = `${STATE_FILE_PATH}.tmp`;
   fs.writeFileSync(tempPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
@@ -436,6 +437,7 @@ function loadDurableState() {
     : [...(FIXTURES.learnSessions.items || [])];
   state.ingestionByUser = restoreMap(parsed.ingestionByUser || []);
   state.integrationsByUser = restoreMap(parsed.integrationsByUser || []);
+  state.playtestSessions = restoreMap(parsed.playtestSessions || []);
 
   for (const [sessionId, gameSession] of state.sessions.entries()) {
     normalizeGameSessionState(gameSession);

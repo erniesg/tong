@@ -641,6 +641,13 @@ async function readJsonBody(request: Request): Promise<Record<string, any>> {
   return JSON.parse(text);
 }
 
+const PLAYTEST_ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+function generatePlaytestId(length = 12): string {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => PLAYTEST_ID_ALPHABET[b % PLAYTEST_ID_ALPHABET.length]).join('');
+}
+
 function getLang(search: URLSearchParams): Lang {
   const lang = (search.get('lang') || 'ko') as Lang;
   if (lang === 'ko' || lang === 'ja' || lang === 'zh') return lang;
@@ -2176,6 +2183,197 @@ async function handleRequest(request: Request): Promise<Response> {
         sent++;
       }
       return jsonResponse(200, { ok: true, sent });
+    }
+
+    /* ── Playtest sessions ──────────────────────────────────────── */
+
+    // Create session (no auth — lightweight, returns shareable URL)
+    if (pathname === '/api/v1/playtest/sessions' && request.method === 'POST') {
+      const body = await readJsonBody(request);
+      const validCities = ['seoul', 'tokyo', 'shanghai'];
+      const validSceneTypes = ['onboarding', 'hangout', 'free_roam', 'exercise'];
+      const cityLangMap: Record<string, string> = { seoul: 'ko', tokyo: 'ja', shanghai: 'zh' };
+      if (!body.city || !validCities.includes(body.city)) {
+        return jsonResponse(400, { error: 'invalid_city', valid: validCities });
+      }
+      if (!body.sceneType || !validSceneTypes.includes(body.sceneType)) {
+        return jsonResponse(400, { error: 'invalid_scene_type', valid: validSceneTypes });
+      }
+      const sessionId = generatePlaytestId();
+      const language = body.language || cityLangMap[body.city] || 'ko';
+      const env = (globalThis as any).__env;
+      if (env?.DB) {
+        await env.DB.prepare(
+          `INSERT INTO playtest_sessions (session_id, city, scene_type, language, location_id, hangout_id, exercise_types, seed)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          sessionId, body.city, body.sceneType, language,
+          body.locationId || null, body.hangoutId || null,
+          body.exerciseTypes ? JSON.stringify(body.exerciseTypes) : null,
+          body.seed ?? null,
+        ).run();
+      }
+      const domain = env?.NEXT_PUBLIC_TONG_PUBLIC_DOMAIN || 'tong.berlayar.ai';
+      return jsonResponse(201, {
+        sessionId,
+        url: `/playtest/${sessionId}`,
+        fullUrl: `https://${domain}/playtest/${sessionId}`,
+        config: { sessionId, city: body.city, sceneType: body.sceneType, language, locationId: body.locationId, hangoutId: body.hangoutId },
+      });
+    }
+
+    // List sessions
+    if (pathname === '/api/v1/playtest/sessions' && request.method === 'GET') {
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(200, { sessions: [] });
+      const result = await env.DB.prepare(
+        `SELECT * FROM playtest_sessions ORDER BY created_at DESC LIMIT 50`
+      ).all();
+      const sessions = (result.results || []).map((row: any) => ({
+        ...row,
+        exerciseTypes: row.exercise_types ? JSON.parse(row.exercise_types) : undefined,
+        sceneType: row.scene_type,
+        locationId: row.location_id,
+        hangoutId: row.hangout_id,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+      return jsonResponse(200, { sessions });
+    }
+
+    // Get single session (no auth — shareable URLs)
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+$/) && request.method === 'GET') {
+      const sessionId = pathname.split('/').pop()!;
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(404, { error: 'session_not_found' });
+      const row = await env.DB.prepare(
+        `SELECT * FROM playtest_sessions WHERE session_id = ?`
+      ).bind(sessionId).first();
+      if (!row) return jsonResponse(404, { error: 'session_not_found', sessionId });
+      return jsonResponse(200, {
+        sessionId: (row as any).session_id,
+        config: {
+          sessionId: (row as any).session_id,
+          city: (row as any).city,
+          sceneType: (row as any).scene_type,
+          language: (row as any).language,
+          locationId: (row as any).location_id,
+          hangoutId: (row as any).hangout_id,
+          exerciseTypes: (row as any).exercise_types ? JSON.parse((row as any).exercise_types) : undefined,
+          seed: (row as any).seed,
+        },
+        status: (row as any).status,
+        createdAt: (row as any).created_at,
+      });
+    }
+
+    // Update session status
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+$/) && request.method === 'PATCH') {
+      const sessionId = pathname.split('/').pop()!;
+      const body = await readJsonBody(request);
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const validStatuses = ['pending', 'active', 'submitted', 'analyzing', 'fixing', 'deployed'];
+      if (body.status && !validStatuses.includes(body.status)) {
+        return jsonResponse(400, { error: 'invalid_status', valid: validStatuses });
+      }
+      const sets: string[] = [];
+      const vals: any[] = [];
+      if (body.status) { sets.push('status = ?'); vals.push(body.status); }
+      if (body.analysisId) { sets.push('analysis_id = ?'); vals.push(body.analysisId); }
+      if (body.autofixPrUrl) { sets.push('autofix_pr_url = ?'); vals.push(body.autofixPrUrl); }
+      if (body.pipelineRunId) { sets.push('pipeline_run_id = ?'); vals.push(body.pipelineRunId); }
+      if (sets.length === 0) return jsonResponse(400, { error: 'nothing_to_update' });
+      sets.push("updated_at = datetime('now')");
+      vals.push(sessionId);
+      await env.DB.prepare(
+        `UPDATE playtest_sessions SET ${sets.join(', ')} WHERE session_id = ?`
+      ).bind(...vals).run();
+      return jsonResponse(200, { ok: true, sessionId });
+    }
+
+    // Upload recording + annotations to R2
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/upload$/) && request.method === 'POST') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+
+      const row = await env.DB.prepare(
+        `SELECT session_id FROM playtest_sessions WHERE session_id = ?`
+      ).bind(sessionId).first();
+      if (!row) return jsonResponse(404, { error: 'session_not_found', sessionId });
+
+      const contentType = request.headers.get('content-type') || '';
+      const publicBase = env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai';
+      const r2RecordingKey = `playtest/${sessionId}/recording.webm`;
+      const r2AnnotationsKey = `playtest/${sessionId}/annotations.json`;
+
+      if (contentType.includes('multipart/form-data')) {
+        // Parse multipart — Workers support FormData natively
+        const formData = await request.formData();
+        const recording = formData.get('recording');
+        const annotations = formData.get('annotations');
+
+        if (recording && recording instanceof File) {
+          await env.TONG_RUNS_BUCKET.put(r2RecordingKey, recording.stream(), {
+            httpMetadata: { contentType: 'video/webm' },
+          });
+        }
+
+        // Upload screenshots (keyed as screenshot:{annotationId})
+        const screenshotKeys: string[] = [];
+        for (const [key, value] of formData.entries()) {
+          if (key.startsWith('screenshot:') && value instanceof File) {
+            const annotationId = key.slice('screenshot:'.length);
+            const r2Key = `playtest/${sessionId}/screenshots/${annotationId}.png`;
+            await env.TONG_RUNS_BUCKET.put(r2Key, value.stream(), {
+              httpMetadata: { contentType: 'image/png' },
+            });
+            screenshotKeys.push(r2Key);
+          }
+        }
+
+        // Enrich annotations with R2 screenshot URLs before storing
+        if (annotations) {
+          let annotationsText = typeof annotations === 'string' ? annotations : await (annotations as File).text();
+          if (screenshotKeys.length > 0) {
+            try {
+              const parsed = JSON.parse(annotationsText);
+              const arr = Array.isArray(parsed) ? parsed : parsed.annotations || parsed;
+              for (const ann of arr) {
+                if (ann.screenshot) {
+                  ann.screenshotUrl = `${publicBase}/playtest/${sessionId}/screenshots/${ann.id}.png`;
+                }
+              }
+              annotationsText = JSON.stringify(Array.isArray(parsed) ? arr : { ...parsed, annotations: arr });
+            } catch { /* keep original */ }
+          }
+          await env.TONG_RUNS_BUCKET.put(r2AnnotationsKey, annotationsText, {
+            httpMetadata: { contentType: 'application/json' },
+          });
+        }
+      } else {
+        // Raw body — assume recording
+        await env.TONG_RUNS_BUCKET.put(r2RecordingKey, request.body, {
+          httpMetadata: { contentType: contentType || 'video/webm' },
+        });
+      }
+
+      // Update session in D1
+      const screenshotCount = (await env.TONG_RUNS_BUCKET.list({ prefix: `playtest/${sessionId}/screenshots/` })).objects.length;
+      await env.DB.prepare(
+        `UPDATE playtest_sessions SET status = 'submitted', r2_recording_key = ?, r2_annotations_key = ?, updated_at = datetime('now') WHERE session_id = ?`
+      ).bind(r2RecordingKey, r2AnnotationsKey, sessionId).run();
+
+      return jsonResponse(200, {
+        ok: true,
+        sessionId,
+        screenshotCount,
+        recordingUrl: `${publicBase}/${r2RecordingKey}`,
+        annotationsUrl: `${publicBase}/${r2AnnotationsKey}`,
+        screenshotBaseUrl: `${publicBase}/playtest/${sessionId}/screenshots/`,
+      });
     }
 
     return jsonResponse(404, { error: 'not_found', pathname });
