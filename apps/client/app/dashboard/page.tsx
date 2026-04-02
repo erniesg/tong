@@ -152,12 +152,12 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!dashboard) return;
     const activeCity = dashboard.worldRoadmap.find((c) =>
-      c.locations.some((l) => l.status === 'active' || l.status === 'learning'),
+      c.locations.some((l) => l.status === 'active'),
     );
     if (activeCity) setExpandedCities(new Set([activeCity.cityId]));
 
     const activeLevel = dashboard.locationSkillTree.levels.find(
-      (l) => l.mission.status === 'active' || l.mission.status === 'learning' || l.mission.status === 'tracking',
+      (l) => l.mission.status === 'tracking' || l.mission.status === 'ready',
     );
     if (activeLevel) setExpandedLevels(new Set([activeLevel.level]));
   }, [dashboard]);
@@ -443,7 +443,7 @@ export default function DashboardPage() {
             <div className="stack stack--tight">
               {dashboard.worldRoadmap.map((city) => {
                 const isOpen = expandedCities.has(city.cityId);
-                const activeCount = city.locations.filter((l) => l.status === 'active' || l.status === 'learning').length;
+                const activeCount = city.locations.filter((l) => l.status === 'active').length;
                 return (
                   <div key={city.cityId} className="card card--collapse">
                     <button
