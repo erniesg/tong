@@ -1,6 +1,9 @@
-import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
-
-initOpenNextCloudflareForDev();
+try {
+  const { initOpenNextCloudflareForDev } = await import('@opennextjs/cloudflare');
+  initOpenNextCloudflareForDev();
+} catch {
+  // OpenNext Cloudflare adapter unavailable or broken — skip for local dev
+}
 
 function buildAssetRemotePattern(baseUrl) {
   if (!baseUrl) return null;

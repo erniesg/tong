@@ -714,212 +714,67 @@ export default function GraphPage() {
 
   return (
     <main className="app-shell app-shell--wide">
-      <header className="page-header">
-        <p className="kicker">Tong Atlas</p>
-        <h1 className="page-title">Graph view + skill path in one place.</h1>
-        <p className="page-copy">
-          This is the user-facing progression surface the dashboard was missing: an actual node-and-edge graph on top,
-          plus a linear quest path below so learners can see where they are and what opens next.
-        </p>
-        <div className="nav-links">
-          <Link href="/" className="nav-link">
-            Home
-          </Link>
-          <Link href="/dashboard" className="nav-link">
-            Dashboard
-          </Link>
-          <Link href="/overlay" className="nav-link">
-            Overlay
-          </Link>
-          <Link href="/game" className="nav-link">
-            Game UI
-          </Link>
-        </div>
-      </header>
+      {/* ── Compact nav ──────────────────────────── */}
+      <nav className="dash-nav">
+        <Link href="/">Home</Link>
+        <Link href="/dashboard">Dashboard</Link>
+        <Link href="/graph"><strong>Graph</strong></Link>
+        <Link href="/insights">Insights</Link>
+        <Link href="/overlay">Overlay</Link>
+        <Link href="/game">Game</Link>
+      </nav>
 
-      <section className="card graph-hero-card" style={{ marginBottom: 16 }}>
-        <div className="graph-hero-copy">
-          <span className="pill">Player-facing progression map</span>
-          <h2>{selectedPack?.pack.title || dashboard?.locationSkillTree.title || 'Loading route'}</h2>
-          <p>{primaryReason || selectedPack?.pack.summary || 'Loading route status...'}</p>
-          <div className="graph-chip-row">
-            {selectedPersona && <span className="pill">{selectedPersona.displayName}</span>}
-            {dashboard?.persona.focusSummary && <span className="pill">{dashboard.persona.focusSummary}</span>}
-            {dashboard?.languageSummary && (
-              <span className="pill">
-                Next move {statusLabel(dashboard.languageSummary.recommendedAction)}
-              </span>
-            )}
-            {selectedPack?.missionGate && <span className="pill">Mission {statusLabel(selectedPack.missionGate.status)}</span>}
-          </div>
-        </div>
-
-        <div className="graph-hero-stat-grid">
-          <article className="graph-hero-stat">
-            <span className="kicker">Route done</span>
-            <strong>{percent(completionRatio)}%</strong>
-            <p>
-              {completedCount}/{packNodes.length || 0} nodes cleared
-            </p>
-          </article>
-          <article className="graph-hero-stat">
-            <span className="kicker">Tier</span>
-            <strong>
-              {dashboard?.languageSummary ? `L${dashboard.languageSummary.languageTier.level}` : 'L0'}
-            </strong>
-            <p>{dashboard?.languageSummary?.languageTier.label || 'Foundation'}</p>
-          </article>
-          <article className="graph-hero-stat">
-            <span className="kicker">Hangout</span>
-            <strong>{dashboard?.hangoutBundle.targets.length ? 'Ready path' : 'Blocked'}</strong>
-            <p>{dashboard?.hangoutBundle.title || 'No hangout queued yet'}</p>
-          </article>
-          <article className="graph-hero-stat">
-            <span className="kicker">Next unlocks</span>
-            <strong>{dashboard?.nextUnlocks?.length || 0}</strong>
-            <p>{dashboard?.nextUnlocks?.[0]?.title || 'No queued unlocks'}</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="card stack" style={{ marginBottom: 16 }}>
-        <div className="graph-control-grid">
-          <label className="stack">
-            <span className="pill">Persona</span>
-            <select value={personaId} onChange={(event) => setPersonaId(event.target.value)} disabled={loading}>
-              {personas.map((persona) => (
-                <option key={persona.personaId} value={persona.personaId}>
-                  {persona.displayName}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="stack">
-            <span className="pill">Search</span>
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search node title, tag, or id"
-            />
-          </label>
-
-          <label className="stack">
-            <span className="pill">Status</span>
-            <select
-              value={statusFilter}
-              onChange={(event) =>
-                setStatusFilter(event.target.value as 'all' | GraphSelectedPackNode['state']['status'])
-              }
-            >
-              <option value="all">All statuses</option>
-              <option value="locked">Locked</option>
-              <option value="available">Available</option>
-              <option value="learning">Learning</option>
-              <option value="due">Due</option>
-              <option value="validated">Validated</option>
-              <option value="mastered">Mastered</option>
-            </select>
-          </label>
-
-          <div className="stack">
-            <span className="pill">View</span>
-            <div className="graph-chip-row">
-              <button
-                type="button"
-                className={`graph-chip ${viewMode === 'curriculum' ? 'graph-chip--active' : ''}`}
-                onClick={() => setViewMode('curriculum')}
-              >
-                Skill tree
-              </button>
-              <button
-                type="button"
-                className={`graph-chip ${viewMode === 'dependency' ? 'graph-chip--active' : ''}`}
-                onClick={() => setViewMode('dependency')}
-              >
-                Dependency web
-              </button>
-              <button type="button" className="graph-chip" onClick={() => setViewport({ x: 0, y: 0, scale: 1 })}>
-                Reset camera
-              </button>
-            </div>
-          </div>
-
-          <div className="stack">
-            <span className="pill">Edges</span>
-            <div className="graph-chip-row">
-              {(['requires', 'unlocks', 'reinforces'] as const).map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  className={`graph-chip ${edgeVisibility[type] ? 'graph-chip--active' : ''}`}
-                  onClick={() =>
-                    setEdgeVisibility((current) => ({
-                      ...current,
-                      [type]: !current[type],
-                    }))
-                  }
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {!!dashboard && (
-        <section className="graph-world-grid" style={{ marginBottom: 16 }}>
-          {routeOptions.map((cityEntry) => (
-            <article key={cityEntry.cityId} className="card graph-city-card">
-              <div className="row" style={{ alignItems: 'flex-start' }}>
-                <div>
-                  <h3 style={{ marginBottom: 6 }}>{cityEntry.label}</h3>
-                  <p>
-                    {cityEntry.focus} · {cityEntry.proficiency} route
-                  </p>
-                </div>
-                <span className="pill">{cityEntry.locations.length} stops</span>
-              </div>
-
-              <div className="graph-chip-row">
-                {cityEntry.levels.map((level) => (
-                  <span key={`${cityEntry.cityId}-${level.level}`} className="pill">
-                    L{level.level} {level.label}
-                  </span>
-                ))}
-              </div>
-
-              <div className="graph-mini-list">
-                {cityEntry.locations.map((locationEntry) => {
-                  const isSelected =
-                    cityEntry.cityId === city && locationEntry.locationId === location;
-
-                  return (
-                    <button
-                      key={`${cityEntry.cityId}-${locationEntry.locationId}`}
-                      type="button"
-                      className={`graph-route-card ${isSelected ? 'graph-route-card--active' : ''}`}
-                      onClick={() => {
-                        setCity(cityEntry.cityId);
-                        setLocation(locationEntry.locationId);
-                      }}
-                    >
-                      <div className="row" style={{ alignItems: 'flex-start' }}>
-                        <div className="graph-route-copy">
-                          <strong>{locationEntry.label}</strong>
-                          <span>{locationEntry.progress}</span>
-                        </div>
-                        <StatusPill status={isSelected ? 'active' : locationEntry.status} />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </article>
+      {/* ── Toolbar: route selectors + controls ──── */}
+      <section className="dash-toolbar" style={{ marginBottom: 10 }}>
+        <select className="dash-persona-select" value={personaId} onChange={(e) => setPersonaId(e.target.value)} disabled={loading}>
+          {personas.map((p) => (
+            <option key={p.personaId} value={p.personaId}>{p.displayName}</option>
           ))}
-        </section>
-      )}
+        </select>
+
+        <select className="dash-persona-select" value={city} onChange={(e) => setCity(e.target.value as CityId)} style={{ minWidth: 120 }}>
+          {routeOptions.map((c) => (
+            <option key={c.cityId} value={c.cityId}>{c.label}</option>
+          ))}
+        </select>
+
+        <select className="dash-persona-select" value={location} onChange={(e) => setLocation(e.target.value as LocationId)} style={{ minWidth: 140 }}>
+          {(routeOptions.find((c) => c.cityId === city)?.locations || []).map((loc) => (
+            <option key={loc.locationId} value={loc.locationId}>{loc.label}</option>
+          ))}
+        </select>
+
+        <select className="dash-persona-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | GraphSelectedPackNode['state']['status'])} style={{ minWidth: 110 }}>
+          <option value="all">All statuses</option>
+          <option value="locked">Locked</option>
+          <option value="available">Available</option>
+          <option value="learning">Learning</option>
+          <option value="due">Due</option>
+          <option value="validated">Validated</option>
+          <option value="mastered">Mastered</option>
+        </select>
+
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search nodes..."
+          style={{ minWidth: 140, padding: '6px 10px', borderRadius: 14, border: '1px solid var(--line)', fontSize: 14 }}
+        />
+
+        <span className="pill">{percent(completionRatio)}% done</span>
+        <span className="pill">{visibleNodes.length} nodes</span>
+      </section>
+
+      {/* ── Graph controls bar ───────────────────── */}
+      <div className="graph-chip-row" style={{ marginBottom: 10, gap: 6 }}>
+        <button type="button" className={`graph-chip ${viewMode === 'curriculum' ? 'graph-chip--active' : ''}`} onClick={() => setViewMode('curriculum')}>Skill tree</button>
+        <button type="button" className={`graph-chip ${viewMode === 'dependency' ? 'graph-chip--active' : ''}`} onClick={() => setViewMode('dependency')}>Dependency web</button>
+        <button type="button" className="graph-chip" onClick={() => setViewport({ x: 0, y: 0, scale: 1 })}>Reset camera</button>
+        <span style={{ width: 1, height: 20, background: 'var(--line)', margin: '0 4px' }} />
+        {(['requires', 'unlocks', 'reinforces'] as const).map((type) => (
+          <button key={type} type="button" className={`graph-chip ${edgeVisibility[type] ? 'graph-chip--active' : ''}`} onClick={() => setEdgeVisibility((c) => ({ ...c, [type]: !c[type] }))}>{type}</button>
+        ))}
+      </div>
 
       {error && (
         <section className="card" style={{ marginBottom: 16 }}>

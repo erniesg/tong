@@ -46,12 +46,7 @@ function StatusPill({ status }: { status: string }) {
   return (
     <span
       className="pill"
-      style={{
-        background: tone.bg,
-        color: tone.fg,
-        borderColor: tone.border,
-        textTransform: 'capitalize',
-      }}
+      style={{ background: tone.bg, color: tone.fg, borderColor: tone.border, textTransform: 'capitalize' }}
     >
       {status.replace(/_/g, ' ')}
     </span>
@@ -60,15 +55,7 @@ function StatusPill({ status }: { status: string }) {
 
 function ProgressBar({ value }: { value: number }) {
   return (
-    <div
-      style={{
-        width: '100%',
-        height: 10,
-        borderRadius: 999,
-        background: '#f3e7d8',
-        overflow: 'hidden',
-      }}
-    >
+    <div style={{ width: '100%', height: 8, borderRadius: 999, background: '#f3e7d8', overflow: 'hidden' }}>
       <div
         style={{
           width: `${percent(value)}%`,
@@ -101,34 +88,42 @@ function classifyValidatorStatus(args: {
   const progress = (args.progress || '').toLowerCase();
   const matchesAuthoredPack =
     args.authoredPack?.cityId === args.cityId && args.authoredPack?.locationId === args.locationId;
-
-  if (matchesAuthoredPack) {
-    return 'foundation_authored' as const;
-  }
-
-  if (progress.includes('overlay')) {
-    return 'overlay_only' as const;
-  }
-
-  if (args.roadmapStatus === 'preview') {
-    return 'preview' as const;
-  }
-
+  if (matchesAuthoredPack) return 'foundation_authored' as const;
+  if (progress.includes('overlay')) return 'overlay_only' as const;
+  if (args.roadmapStatus === 'preview') return 'preview' as const;
   return 'missing' as const;
 }
 
 function validatorStatusDescription(status: ValidatorSurfaceStatus, progress: string) {
   switch (status) {
     case 'foundation_authored':
-      return 'Foundation-authored pack is present in the current read model.';
+      return 'Foundation-authored pack present.';
     case 'overlay_only':
-      return 'Only overlay coverage is surfaced right now; no authored foundation pack is shown.';
+      return 'Overlay only; no authored foundation pack.';
     case 'preview':
-      return progress || 'Preview scaffold exists, but the pack is not yet truly authored.';
+      return progress || 'Preview scaffold, not yet authored.';
     case 'missing':
     default:
-      return progress || 'No authored or preview pack is surfaced for this city/location yet.';
+      return progress || 'No pack surfaced yet.';
   }
+}
+
+/* ── Chevron for expand/collapse ──────────────────────── */
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        transition: 'transform 200ms ease',
+        transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
+        fontSize: 14,
+        color: 'var(--muted)',
+        flexShrink: 0,
+      }}
+    >
+      &#9654;
+    </span>
+  );
 }
 
 export default function DashboardPage() {
@@ -140,6 +135,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [recording, setRecording] = useState<'learn' | 'hangout' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set());
+  const [expandedLevels, setExpandedLevels] = useState<Set<number>>(new Set());
   const apiBase = getApiBase();
 
   useEffect(() => {
@@ -151,6 +148,20 @@ export default function DashboardPage() {
     void refreshDashboard(personaId);
   }, [personaId]);
 
+  // Auto-expand active city and active skill tree level
+  useEffect(() => {
+    if (!dashboard) return;
+    const activeCity = dashboard.worldRoadmap.find((c) =>
+      c.locations.some((l) => l.status === 'active' || l.status === 'learning'),
+    );
+    if (activeCity) setExpandedCities(new Set([activeCity.cityId]));
+
+    const activeLevel = dashboard.locationSkillTree.levels.find(
+      (l) => l.mission.status === 'active' || l.mission.status === 'learning' || l.mission.status === 'tracking',
+    );
+    if (activeLevel) setExpandedLevels(new Set([activeLevel.level]));
+  }, [dashboard]);
+
   async function bootstrap() {
     try {
       setLoading(true);
@@ -160,28 +171,18 @@ export default function DashboardPage() {
         fetchTools(),
         graphPackValidateTool(),
       ]);
-
-      if (personaResult.status !== 'fulfilled') {
-        throw personaResult.reason;
-      }
-
+      if (personaResult.status !== 'fulfilled') throw personaResult.reason;
       setPersonas(personaResult.value.items);
       setPersonaId((current) => current || personaResult.value.items[0]?.personaId || '');
-
-      if (toolResult.status === 'fulfilled') {
-        setGraphTools(toolResult.value.tools.filter((tool) => tool.name.startsWith('graph.')));
-      } else {
-        setGraphTools([]);
-      }
-
-      if (validationResult.status === 'fulfilled') {
-        setValidation(validationResult.value.result || null);
-      } else {
-        setValidation(null);
-      }
+      setGraphTools(
+        toolResult.status === 'fulfilled'
+          ? toolResult.value.tools.filter((tool) => tool.name.startsWith('graph.'))
+          : [],
+      );
+      setValidation(validationResult.status === 'fulfilled' ? validationResult.value.result || null : null);
     } catch (loadError) {
-      const message = loadError instanceof Error ? loadError.message : 'Failed to load dashboard setup.';
-      setError(`${message} Dashboard expects the graph API at ${apiBase}.`);
+      const message = loadError instanceof Error ? loadError.message : 'Failed to load dashboard.';
+      setError(`${message} API: ${apiBase}`);
     } finally {
       setLoading(false);
     }
@@ -191,12 +192,11 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       setError(null);
-      const next = await fetchGraphDashboard({ personaId: activePersonaId });
-      setDashboard(next);
+      setDashboard(await fetchGraphDashboard({ personaId: activePersonaId }));
     } catch (loadError) {
-      const message = loadError instanceof Error ? loadError.message : 'Failed to load learner dashboard.';
+      const message = loadError instanceof Error ? loadError.message : 'Failed to load dashboard.';
       setDashboard(null);
-      setError(`${message} Dashboard expects the graph API at ${apiBase}.`);
+      setError(`${message} API: ${apiBase}`);
     } finally {
       setLoading(false);
     }
@@ -206,18 +206,12 @@ export default function DashboardPage() {
     const bundle = mode === 'learn' ? dashboard?.lessonBundle : dashboard?.hangoutBundle;
     const target = bundle?.targets?.[0];
     if (!personaId || !target) return;
-
     try {
       setRecording(mode);
       setError(null);
       await recordGraphEvidence({
         personaId,
-        event: {
-          nodeId: target.nodeId,
-          mode,
-          quality: mode === 'learn' ? 0.86 : 0.92,
-          source: `dashboard.${mode}`,
-        },
+        event: { nodeId: target.nodeId, mode, quality: mode === 'learn' ? 0.86 : 0.92, source: `dashboard.${mode}` },
       });
       await refreshDashboard(personaId);
     } catch (recordError) {
@@ -234,543 +228,367 @@ export default function DashboardPage() {
 
   const validatorCities = useMemo(() => {
     if (!dashboard) return [];
-
     return dashboard.worldRoadmap.map((city) => {
-      const locations = SHARED_LOCATION_ORDER.map((sharedLocation) => {
-        const roadmapLocation = city.locations.find((location) => location.locationId === sharedLocation.locationId);
+      const locations = SHARED_LOCATION_ORDER.map((shared) => {
+        const roadmapLoc = city.locations.find((l) => l.locationId === shared.locationId);
         const validatorStatus = classifyValidatorStatus({
           cityId: city.cityId,
-          locationId: sharedLocation.locationId,
-          roadmapStatus: roadmapLocation?.status,
-          progress: roadmapLocation?.progress,
-          authoredPack: {
-            cityId: dashboard.locationSkillTree.cityId,
-            locationId: dashboard.locationSkillTree.locationId,
-          },
+          locationId: shared.locationId,
+          roadmapStatus: roadmapLoc?.status,
+          progress: roadmapLoc?.progress,
+          authoredPack: { cityId: dashboard.locationSkillTree.cityId, locationId: dashboard.locationSkillTree.locationId },
         });
-
         return {
-          locationId: sharedLocation.locationId,
-          label: sharedLocation.label,
+          locationId: shared.locationId,
+          label: shared.label,
           validatorStatus,
-          roadmapStatus: roadmapLocation?.status || 'locked',
-          progress: roadmapLocation?.progress || 'Missing from roadmap read model.',
-          note: validatorStatusDescription(validatorStatus, roadmapLocation?.progress || ''),
+          roadmapStatus: roadmapLoc?.status || 'locked',
+          progress: roadmapLoc?.progress || 'Missing.',
+          note: validatorStatusDescription(validatorStatus, roadmapLoc?.progress || ''),
         };
       });
-
-      return {
-        ...city,
-        validatorSummary: locations.reduce<Record<ValidatorSurfaceStatus, number>>(
-          (summary, location) => {
-            summary[location.validatorStatus] += 1;
-            return summary;
-          },
-          {
-            foundation_authored: 0,
-            overlay_only: 0,
-            preview: 0,
-            missing: 0,
-          },
-        ),
-        validatorLocations: locations,
-      };
+      const summary = locations.reduce<Record<ValidatorSurfaceStatus, number>>(
+        (s, l) => { s[l.validatorStatus] += 1; return s; },
+        { foundation_authored: 0, overlay_only: 0, preview: 0, missing: 0 },
+      );
+      return { ...city, validatorSummary: summary, validatorLocations: locations };
     });
   }, [dashboard]);
 
-  const validatorNotes = useMemo(() => {
-    return validatorCities.flatMap((city) =>
-      city.validatorLocations.map((location) => ({
-        id: `${city.cityId}-${location.locationId}`,
-        title: `${city.label} · ${location.label}`,
-        status: location.validatorStatus,
-        note: location.note,
-      })),
-    );
-  }, [validatorCities]);
+  function toggleCity(cityId: string) {
+    setExpandedCities((prev) => {
+      const next = new Set(prev);
+      next.has(cityId) ? next.delete(cityId) : next.add(cityId);
+      return next;
+    });
+  }
+
+  function toggleLevel(level: number) {
+    setExpandedLevels((prev) => {
+      const next = new Set(prev);
+      next.has(level) ? next.delete(level) : next.add(level);
+      return next;
+    });
+  }
 
   return (
     <main className="app-shell">
-      <header className="page-header">
-        <p className="kicker">Learner Graph Dashboard</p>
-        <h1 className="page-title">Foundation map + user-specific media overlays</h1>
-        <p className="page-copy">
-          This view shows the curriculum graph, learner progression, K-pop/creator overlays, and an all-city validator
-          readout that distinguishes truly authored packs from overlay-only, preview, and missing coverage.
-        </p>
-        <div className="nav-links">
-          <Link href="/" className="nav-link">
-            Home
-          </Link>
-          <Link href="/insights" className="nav-link">
-            Insights
-          </Link>
-          <Link href="/integrations" className="nav-link">
-            Integrations
-          </Link>
-          <Link href="/overlay" className="nav-link">
-            Overlay
-          </Link>
-          <Link href="/graph" className="nav-link">
-            Graph
-          </Link>
-          <Link href="/game" className="nav-link">
-            Game UI
-          </Link>
-        </div>
-      </header>
+      {/* ── Nav ──────────────────────────────────────── */}
+      <nav className="dash-nav">
+        <Link href="/">Home</Link>
+        <Link href="/insights">Insights</Link>
+        <Link href="/integrations">Integrations</Link>
+        <Link href="/overlay">Overlay</Link>
+        <Link href="/graph">Graph</Link>
+        <Link href="/game">Game</Link>
+      </nav>
 
-      <section className="card stack" style={{ marginBottom: 16 }}>
-        <div className="grid grid-2">
-          <div className="stack">
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div>
-                <h3 style={{ marginBottom: 6 }}>Persona</h3>
-                <p>Switch between mocked learner profiles to preview foundation and personalized overlays.</p>
-              </div>
-              {validation && <StatusPill status={validation.valid ? 'validated' : 'locked'} />}
-            </div>
-            <select value={personaId} onChange={(event) => setPersonaId(event.target.value)} disabled={loading}>
-              {personas.map((persona) => (
-                <option key={persona.personaId} value={persona.personaId}>
-                  {persona.displayName}
-                </option>
-              ))}
-            </select>
-            {selectedPersona && (
-              <p>
-                <strong>{selectedPersona.displayName}</strong>: {selectedPersona.focusSummary}
-              </p>
-            )}
-          </div>
+      {/* ── Toolbar: persona + stats + validation ────── */}
+      <section className="dash-toolbar">
+        <select
+          className="dash-persona-select"
+          value={personaId}
+          onChange={(e) => setPersonaId(e.target.value)}
+          disabled={loading}
+        >
+          {personas.map((p) => (
+            <option key={p.personaId} value={p.personaId}>{p.displayName}</option>
+          ))}
+        </select>
 
-          <div className="stack">
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div>
-                <h3 style={{ marginBottom: 6 }}>Runtime Controls</h3>
-                <p>Record mock evidence to prove the dashboard reacts to graph-driven progression.</p>
-              </div>
-              <button className="secondary" onClick={() => void refreshDashboard()} disabled={loading || !personaId}>
-                Refresh
-              </button>
-            </div>
-            <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-              <button onClick={() => void simulateEvidence('learn')} disabled={recording !== null || !dashboard?.lessonBundle.targets?.length}>
-                {recording === 'learn' ? 'Recording lesson...' : 'Record Lesson Evidence'}
-              </button>
-              <button onClick={() => void simulateEvidence('hangout')} disabled={recording !== null || !dashboard?.hangoutBundle.targets?.length}>
-                {recording === 'hangout' ? 'Recording hangout...' : 'Record Hangout Evidence'}
-              </button>
-            </div>
-            {validation && (
-              <p>
-                Canonical pack validation: <strong>{validation.summary || (validation.valid ? 'valid' : 'invalid')}</strong>
-              </p>
-            )}
+        {dashboard && (
+          <div className="dash-stats">
+            <span className="dash-stat"><strong>{dashboard.progression.xp}</strong> XP</span>
+            <span className="dash-stat"><strong>{dashboard.progression.sp}</strong> SP</span>
+            <span className="dash-stat"><strong>{dashboard.progression.rp}</strong> RP</span>
           </div>
-        </div>
-        <p className="demo-access-hint">Graph API base: {apiBase}</p>
-        {error && <p style={{ color: '#9f1239' }}>{error}</p>}
-        {loading && <p>Loading learner graph...</p>}
-        {!loading && !dashboard && !error && (
-          <p style={{ color: 'var(--muted)' }}>
-            No learner graph data loaded yet. Confirm the graph API is reachable, then refresh.
-          </p>
         )}
+
+        {validation && <StatusPill status={validation.valid ? 'validated' : 'locked'} />}
+
+        <button
+          className="secondary"
+          onClick={() => void refreshDashboard()}
+          disabled={loading || !personaId}
+          style={{ marginLeft: 'auto' }}
+        >
+          {loading ? 'Loading...' : 'Refresh'}
+        </button>
       </section>
+
+      {selectedPersona && (
+        <p className="dash-subtitle">{selectedPersona.focusSummary}</p>
+      )}
+      {error && <p className="dash-error">{error}</p>}
 
       {!!dashboard && (
         <>
-          <section className="grid grid-3" style={{ marginBottom: 16 }}>
-            {[
-              { label: 'XP', value: dashboard.progression.xp, detail: `${dashboard.metrics.validatedObjectives} validated objectives` },
-              { label: 'SP', value: dashboard.progression.sp, detail: `${dashboard.lessonBundle.targets.length} lesson targets queued` },
-              { label: 'RP', value: dashboard.progression.rp, detail: `${dashboard.hangoutBundle.targets.length} hangout targets queued` },
-            ].map((item) => (
-              <article key={item.label} className="card stack">
-                <span className="kicker">{item.label}</span>
-                <h2 style={{ margin: 0 }}>{item.value}</h2>
-                <p>{item.detail}</p>
-              </article>
-            ))}
-          </section>
-
-          <section className="grid grid-2" style={{ marginBottom: 16 }}>
-            <article className="card stack">
-              <div className="row" style={{ alignItems: 'flex-start' }}>
-                <div>
-                  <h3>Learner Profile</h3>
-                  <p>{dashboard.persona.focusSummary}</p>
+          {/* ── What's Next: bundles + actions ──────── */}
+          <section className="dash-section">
+            <h2 className="dash-heading">What&apos;s Next</h2>
+            <div className="grid grid-2">
+              <article className="card stack">
+                <div className="row">
+                  <strong>{dashboard.lessonBundle.title}</strong>
+                  <span className="pill">lesson</span>
                 </div>
-                <span className="pill">{dashboard.persona.userId}</span>
-              </div>
-              <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                {Object.entries(dashboard.persona.proficiency).map(([lang, level]) => (
-                  <span key={lang} className="pill">
-                    {lang.toUpperCase()} {level}
+                <p>{dashboard.lessonBundle.reason}</p>
+                <div className="row row--start">
+                  {dashboard.lessonBundle.targets.map((t) => (
+                    <span key={t.nodeId} className="pill">{t.label} {percent(t.mastery_score)}%</span>
+                  ))}
+                </div>
+                <button
+                  onClick={() => void simulateEvidence('learn')}
+                  disabled={recording !== null || !dashboard.lessonBundle.targets.length}
+                >
+                  {recording === 'learn' ? 'Recording...' : 'Record Evidence'}
+                </button>
+              </article>
+
+              <article className="card stack">
+                <div className="row">
+                  <strong>{dashboard.hangoutBundle.title}</strong>
+                  <span className="pill">hangout</span>
+                </div>
+                <p>{dashboard.hangoutBundle.reason}</p>
+                <div className="row row--start">
+                  {dashboard.hangoutBundle.targets.map((t) => (
+                    <span key={t.nodeId} className="pill">{t.label} {percent(t.mastery_score)}%</span>
+                  ))}
+                  {dashboard.hangoutBundle.suggestedPhrases.map((p) => (
+                    <span key={p} className="pill">{p}</span>
+                  ))}
+                </div>
+                <button
+                  onClick={() => void simulateEvidence('hangout')}
+                  disabled={recording !== null || !dashboard.hangoutBundle.targets.length}
+                >
+                  {recording === 'hangout' ? 'Recording...' : 'Record Evidence'}
+                </button>
+              </article>
+            </div>
+
+            {dashboard.nextActions.length > 0 && (
+              <div className="dash-actions-bar">
+                {dashboard.nextActions.map((a) => (
+                  <span key={a.actionId} className="pill" title={a.reason}>
+                    {a.type}: {a.title}
                   </span>
                 ))}
               </div>
-              <div className="stack">
-                <span className="pill">Goals</span>
-                {dashboard.persona.goals.map((goal) => (
-                  <p key={`${goal.lang}-${goal.theme}`}>
-                    <strong>{goal.lang.toUpperCase()}</strong> {goal.objective}
-                  </p>
-                ))}
-              </div>
-              <div className="stack">
-                <span className="pill">Top terms from media</span>
-                <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                  {dashboard.persona.topTerms.map((term) => (
-                    <span key={`${term.lang}-${term.lemma}`} className="pill">
-                      {term.lemma} · {term.source}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </article>
-
-            <article className="card stack">
-              <div className="row" style={{ alignItems: 'flex-start' }}>
-                <div>
-                  <h3>Agent Tool Surface</h3>
-                  <p>Reusable graph tools the app and future agent skills can consume.</p>
-                </div>
-                <span className="pill">{graphTools.length} tools</span>
-              </div>
-              {graphTools.map((tool) => (
-                <div key={tool.name} style={{ borderBottom: '1px solid var(--line)', paddingBottom: 10 }}>
-                  <strong>{tool.name}</strong>
-                  <p style={{ marginTop: 4 }}>{tool.description}</p>
-                </div>
-              ))}
-            </article>
+            )}
           </section>
 
-          <section className="card stack" style={{ marginBottom: 16 }}>
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div>
-                <h3>All-City Graph Validator Dashboard</h3>
-                <p>
-                  Read-model audit for Seoul, Tokyo, and Shanghai. Each location is classified from the existing
-                  roadmap, selected pack, and overlay summary without inventing new backend semantics.
-                </p>
-              </div>
-              <span className="pill">{validatorCities.length} cities</span>
+          {/* ── Skill Tree (collapsible levels) ─────── */}
+          <section className="dash-section">
+            <div className="row">
+              <h2 className="dash-heading" style={{ margin: 0 }}>{dashboard.locationSkillTree.title}</h2>
+              <span className="pill">{dashboard.locationSkillTree.packId}</span>
             </div>
-
-            <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-              <StatusPill status="foundation_authored" />
-              <StatusPill status="overlay_only" />
-              <StatusPill status="preview" />
-              <StatusPill status="missing" />
-            </div>
-
-            <div className="grid grid-3">
-              {validatorCities.map((city) => (
-                <article key={`validator-${city.cityId}`} className="card stack" style={{ padding: 14 }}>
-                  <div className="row" style={{ alignItems: 'flex-start' }}>
-                    <div>
-                      <strong>{city.label}</strong>
-                      <p>
-                        {city.focus} · {city.proficiency} proficiency
-                      </p>
-                    </div>
-                    <span className="pill">{city.validatorLocations.length} locations</span>
-                  </div>
-
-                  <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                    {city.validatorSummary.foundation_authored > 0 && (
-                      <span className="pill">
-                        {city.validatorSummary.foundation_authored} authored
+            <div className="stack stack--tight">
+              {dashboard.locationSkillTree.levels.map((level) => {
+                const isOpen = expandedLevels.has(level.level);
+                return (
+                  <div key={level.level} className="card card--collapse">
+                    <button
+                      type="button"
+                      className="dash-collapsible-header"
+                      onClick={() => toggleLevel(level.level)}
+                    >
+                      <Chevron open={isOpen} />
+                      <span style={{ flex: 1 }}>
+                        <strong>L{level.level}</strong> {level.name}
                       </span>
-                    )}
-                    {city.validatorSummary.overlay_only > 0 && (
-                      <span className="pill">
-                        {city.validatorSummary.overlay_only} overlay-only
-                      </span>
-                    )}
-                    {city.validatorSummary.preview > 0 && (
-                      <span className="pill">
-                        {city.validatorSummary.preview} preview
-                      </span>
-                    )}
-                    {city.validatorSummary.missing > 0 && (
-                      <span className="pill">
-                        {city.validatorSummary.missing} missing
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="stack" style={{ gap: 10 }}>
-                    {city.validatorLocations.map((location) => (
-                      <div
-                        key={`${city.cityId}-${location.locationId}`}
-                        style={{
-                          border: '1px solid var(--line)',
-                          borderRadius: 14,
-                          padding: 12,
-                          background: '#fffaf2',
-                        }}
-                      >
-                        <div className="row" style={{ alignItems: 'flex-start', marginBottom: 8 }}>
-                          <div>
-                            <strong>{location.label}</strong>
-                            <p>{location.note}</p>
+                      <span className="pill">{level.objectives.length} obj</span>
+                      <StatusPill status={level.mission.status} />
+                    </button>
+                    {isOpen && (
+                      <div className="dash-collapse-body">
+                        <p>{level.description}</p>
+                        <div className="row row--start">
+                          <span className="pill">~{level.estimatedSessionMinutes} min</span>
+                          <span className="pill">
+                            {level.mission.reward.xp} XP / {level.mission.reward.sp} SP / {level.mission.reward.rp} RP
+                          </span>
+                        </div>
+                        {level.objectives.map((obj) => (
+                          <div key={obj.objectiveId} className="dash-divider-row">
+                            <div className="row" style={{ marginBottom: 6 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <strong>{obj.title}</strong>
+                                <p>{obj.description}</p>
+                              </div>
+                              <StatusPill status={obj.status} />
+                            </div>
+                            <div className="row row--start" style={{ marginBottom: 6 }}>
+                              <span className="pill">{obj.category}</span>
+                              <span className="pill">{obj.validatedTargetCount}/{obj.targetCount} targets</span>
+                              {obj.blockers.length > 0 && <span className="pill">Blocked by {obj.blockers.length}</span>}
+                            </div>
+                            <ProgressBar value={obj.mastery_score} />
                           </div>
-                          <StatusPill status={location.validatorStatus} />
-                        </div>
-                        <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                          <span className="pill">Roadmap {location.roadmapStatus.replace(/_/g, ' ')}</span>
-                          <span className="pill">{location.locationId}</span>
-                        </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                </article>
-              ))}
-            </div>
-
-            <div className="grid grid-2">
-              <article className="card stack" style={{ padding: 14 }}>
-                <div className="row" style={{ alignItems: 'flex-start' }}>
-                  <div>
-                    <h3 style={{ marginBottom: 6 }}>Truly Authored Now</h3>
-                    <p>The current read model only exposes authored foundation coverage where a canonical pack is actually loaded.</p>
-                  </div>
-                  <StatusPill status="foundation_authored" />
-                </div>
-                {validatorNotes
-                  .filter((item) => item.status === 'foundation_authored' || item.status === 'overlay_only')
-                  .map((item) => (
-                    <div key={item.id} style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
-                      <div className="row" style={{ alignItems: 'flex-start' }}>
-                        <strong>{item.title}</strong>
-                        <StatusPill status={item.status} />
-                      </div>
-                      <p>{item.note}</p>
-                    </div>
-                  ))}
-              </article>
-
-              <article className="card stack" style={{ padding: 14 }}>
-                <div className="row" style={{ alignItems: 'flex-start' }}>
-                  <div>
-                    <h3 style={{ marginBottom: 6 }}>Still Stubbed / Not Yet Authored</h3>
-                    <p>These locations remain preview scaffolds or entirely missing in the current pack readout.</p>
-                  </div>
-                  <StatusPill status="preview" />
-                </div>
-                {validatorNotes
-                  .filter((item) => item.status === 'preview' || item.status === 'missing')
-                  .map((item) => (
-                    <div key={item.id} style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
-                      <div className="row" style={{ alignItems: 'flex-start' }}>
-                        <strong>{item.title}</strong>
-                        <StatusPill status={item.status} />
-                      </div>
-                      <p>{item.note}</p>
-                    </div>
-                  ))}
-              </article>
+                );
+              })}
             </div>
           </section>
 
-          <section className="card stack" style={{ marginBottom: 16 }}>
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div>
-                <h3>World Roadmap</h3>
-                <p>Foundation-first progression across the three cities, with Seoul active and the other routes ready for future packs or overlays.</p>
-              </div>
-              <span className="pill">{dashboard.worldRoadmap.length} cities</span>
-            </div>
-            <div className="grid grid-3">
-              {dashboard.worldRoadmap.map((city) => (
-                <article key={city.cityId} className="card stack" style={{ padding: 14 }}>
-                  <div className="row" style={{ alignItems: 'flex-start' }}>
-                    <div>
-                      <strong>{city.label}</strong>
-                      <p>{city.focus}</p>
-                    </div>
-                    <StatusPill status={city.locations[0]?.status || 'preview'} />
-                  </div>
-                  <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                    <span className="pill">{city.cityId.toUpperCase()}</span>
-                    <span className="pill">Proficiency {city.proficiency}</span>
-                  </div>
-                  <div className="stack">
-                    {city.locations.map((location) => (
-                      <div key={location.locationId} className="row">
-                        <div>
-                          <strong>{location.label}</strong>
-                          <p>{location.progress}</p>
-                        </div>
-                        <StatusPill status={location.status} />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                    {city.levels.map((level) => (
-                      <span key={`${city.cityId}-${level.level}`} className="pill">
-                        L{level.level} {level.label}
-                      </span>
-                    ))}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="grid grid-2" style={{ marginBottom: 16 }}>
-            <article className="card stack">
-              <div className="row" style={{ alignItems: 'flex-start' }}>
-                <div>
-                  <h3>{dashboard.locationSkillTree.title}</h3>
-                  <p>Core path for the first reference location. Each objective state is derived from graph evidence, not hardcoded UI progress.</p>
-                </div>
-                <span className="pill">{dashboard.locationSkillTree.packId}</span>
-              </div>
-              {dashboard.locationSkillTree.levels.map((level) => (
-                <div key={level.level} className="card stack" style={{ padding: 14 }}>
-                  <div className="row" style={{ alignItems: 'flex-start' }}>
-                    <div>
-                      <strong>
-                        L{level.level} · {level.name}
-                      </strong>
-                      <p>{level.description}</p>
-                    </div>
-                    <StatusPill status={level.mission.status} />
-                  </div>
-                  <p>Mission: {level.mission.title}</p>
-                  <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                    <span className="pill">~{level.estimatedSessionMinutes} min</span>
-                    <span className="pill">
-                      Reward {level.mission.reward.xp} XP / {level.mission.reward.sp} SP / {level.mission.reward.rp} RP
-                    </span>
-                  </div>
-                  {level.objectives.map((objective) => (
-                    <div key={objective.objectiveId} style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
-                      <div className="row" style={{ alignItems: 'flex-start' }}>
-                        <div>
-                          <strong>{objective.title}</strong>
-                          <p>{objective.description}</p>
-                        </div>
-                        <StatusPill status={objective.status} />
-                      </div>
-                      <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start', marginBottom: 8 }}>
-                        <span className="pill">{objective.category}</span>
-                        <span className="pill">
-                          {objective.validatedTargetCount}/{objective.targetCount} targets
+          {/* ── World Roadmap (collapsible cities) ──── */}
+          <section className="dash-section">
+            <h2 className="dash-heading">World Roadmap</h2>
+            <div className="stack stack--tight">
+              {dashboard.worldRoadmap.map((city) => {
+                const isOpen = expandedCities.has(city.cityId);
+                const activeCount = city.locations.filter((l) => l.status === 'active' || l.status === 'learning').length;
+                return (
+                  <div key={city.cityId} className="card card--collapse">
+                    <button
+                      type="button"
+                      className="dash-collapsible-header"
+                      onClick={() => toggleCity(city.cityId)}
+                    >
+                      <Chevron open={isOpen} />
+                      <span style={{ flex: 1 }}>
+                        <strong>{city.label}</strong>
+                        <span style={{ color: 'var(--muted)', marginLeft: 8 }}>
+                          {city.focus} · {city.proficiency}
                         </span>
-                        {objective.blockers.length > 0 && <span className="pill">Blocked by {objective.blockers.length}</span>}
+                      </span>
+                      <span className="pill">{activeCount}/{city.locations.length} active</span>
+                    </button>
+                    {isOpen && (
+                      <div className="dash-collapse-body">
+                        {city.locations.map((loc) => (
+                          <div key={loc.locationId} className="row dash-divider-row">
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <strong>{loc.label}</strong>
+                              <p>{loc.progress}</p>
+                            </div>
+                            <StatusPill status={loc.status} />
+                          </div>
+                        ))}
+                        <div className="row row--start">
+                          {city.levels.map((lvl) => (
+                            <span key={`${city.cityId}-${lvl.level}`} className="pill">
+                              L{lvl.level} {lvl.label}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <ProgressBar value={objective.mastery_score} />
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </article>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
 
-            <article className="card stack">
-              <div className="row" style={{ alignItems: 'flex-start' }}>
-                <div>
-                  <h3>Personalized Overlay</h3>
-                  <p>{dashboard.personalizedOverlay.summary}</p>
-                </div>
-                <span className="pill">{dashboard.personalizedOverlay.focusCards.length} focus cards</span>
-              </div>
+          {/* ── Personalized Overlay (collapsed) ────── */}
+          <details className="dash-details">
+            <summary className="dash-details-summary">
+              <h3 style={{ margin: 0 }}>Personalized Overlay</h3>
+              <span className="pill">{dashboard.personalizedOverlay.focusCards.length} cards</span>
+            </summary>
+            <div className="dash-details-body">
+              <p>{dashboard.personalizedOverlay.summary}</p>
               {dashboard.personalizedOverlay.focusCards.map((card) => (
-                <div key={card.overlayId} className="card stack" style={{ padding: 14 }}>
-                  <div className="row" style={{ alignItems: 'flex-start' }}>
-                    <div>
-                      <strong>{card.title}</strong>
-                      <p>{card.description}</p>
-                    </div>
-                    <span className="pill">
-                      {card.lang.toUpperCase()} · {card.theme}
-                    </span>
+                <div key={card.overlayId} className="card stack">
+                  <div className="row">
+                    <strong>{card.title}</strong>
+                    <span className="pill">{card.lang.toUpperCase()} · {card.theme}</span>
                   </div>
                   <p>{card.reason}</p>
-                  <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                    {card.nodes.map((node) => (
-                      <span key={node.nodeId} className="pill">
-                        {node.label} · {node.translation}
-                      </span>
+                  <div className="row row--start">
+                    {card.nodes.map((n) => (
+                      <span key={n.nodeId} className="pill">{n.label} · {n.translation}</span>
                     ))}
                   </div>
                 </div>
               ))}
-            </article>
-          </section>
-
-          <section className="grid grid-2" style={{ marginBottom: 16 }}>
-            <article className="card stack">
-              <div className="row" style={{ alignItems: 'flex-start' }}>
-                <div>
-                  <h3>Lesson Bundle</h3>
-                  <p>{dashboard.lessonBundle.reason}</p>
-                </div>
-                <span className="pill">learn</span>
-              </div>
-              <strong>{dashboard.lessonBundle.title}</strong>
-              <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                {dashboard.lessonBundle.targets.map((target) => (
-                  <span key={target.nodeId} className="pill">
-                    {target.label} · {percent(target.mastery_score)}%
-                  </span>
-                ))}
-              </div>
-            </article>
-
-            <article className="card stack">
-              <div className="row" style={{ alignItems: 'flex-start' }}>
-                <div>
-                  <h3>Hangout Bundle</h3>
-                  <p>{dashboard.hangoutBundle.reason}</p>
-                </div>
-                <span className="pill">hangout</span>
-              </div>
-              <strong>{dashboard.hangoutBundle.title}</strong>
-              <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                {dashboard.hangoutBundle.targets.map((target) => (
-                  <span key={target.nodeId} className="pill">
-                    {target.label} · {percent(target.mastery_score)}%
-                  </span>
-                ))}
-              </div>
-              <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                {dashboard.hangoutBundle.suggestedPhrases.map((phrase) => (
-                  <span key={phrase} className="pill">
-                    {phrase}
-                  </span>
-                ))}
-              </div>
-            </article>
-          </section>
-
-          <section className="card stack">
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <div>
-                <h3>Next Actions</h3>
-                <p>Deterministic graph recommendations surfaced for both product UI and agentic tooling.</p>
-              </div>
-              <span className="pill">{dashboard.nextActions.length} actions</span>
             </div>
-            {dashboard.nextActions.map((action) => (
-              <div key={action.actionId} style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
-                <div className="row" style={{ alignItems: 'flex-start' }}>
-                  <div>
-                    <strong>{action.title}</strong>
-                    <p>{action.reason}</p>
-                  </div>
-                  <span className="pill">{action.type}</span>
-                </div>
+          </details>
+
+          {/* ── Learner Profile (collapsed) ─────────── */}
+          <details className="dash-details">
+            <summary className="dash-details-summary">
+              <h3 style={{ margin: 0 }}>Learner Profile</h3>
+              <span className="pill">{dashboard.persona.userId}</span>
+            </summary>
+            <div className="dash-details-body">
+              <div className="row row--start">
+                {Object.entries(dashboard.persona.proficiency).map(([lang, level]) => (
+                  <span key={lang} className="pill">{lang.toUpperCase()} {level}</span>
+                ))}
               </div>
-            ))}
-          </section>
+              <div className="stack stack--tight">
+                <strong>Goals</strong>
+                {dashboard.persona.goals.map((g) => (
+                  <p key={`${g.lang}-${g.theme}`}><strong>{g.lang.toUpperCase()}</strong> {g.objective}</p>
+                ))}
+              </div>
+              {dashboard.persona.topTerms.length > 0 && (
+                <div className="stack stack--tight">
+                  <strong>Top terms from media</strong>
+                  <div className="row row--start">
+                    {dashboard.persona.topTerms.map((t) => (
+                      <span key={`${t.lang}-${t.lemma}`} className="pill">{t.lemma} · {t.source}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </details>
+
+          {/* ── Validator Dashboard (collapsed) ──────── */}
+          <details className="dash-details">
+            <summary className="dash-details-summary">
+              <h3 style={{ margin: 0 }}>Validator</h3>
+              <div className="row row--start" style={{ gap: 6 }}>
+                {validatorCities.map((c) => (
+                  <span key={c.cityId} className="pill">
+                    {c.label}: {c.validatorSummary.foundation_authored}A {c.validatorSummary.preview}P {c.validatorSummary.missing}M
+                  </span>
+                ))}
+              </div>
+            </summary>
+            <div className="dash-details-body">
+              {validatorCities.map((city) => (
+                <div key={`v-${city.cityId}`} className="stack stack--tight">
+                  <strong>{city.label}</strong>
+                  {city.validatorLocations.map((loc) => (
+                    <div key={`${city.cityId}-${loc.locationId}`} className="row dash-divider-row">
+                      <span style={{ minWidth: 120 }}>{loc.label}</span>
+                      <StatusPill status={loc.validatorStatus} />
+                      <p style={{ flex: 1 }}>{loc.note}</p>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </details>
+
+          {/* ── Agent Tools (collapsed) ─────────────── */}
+          <details className="dash-details">
+            <summary className="dash-details-summary">
+              <h3 style={{ margin: 0 }}>Agent Tools</h3>
+              <span className="pill">{graphTools.length} tools</span>
+            </summary>
+            <div className="dash-details-body">
+              {graphTools.map((tool) => (
+                <div key={tool.name} className="dash-divider-row">
+                  <strong>{tool.name}</strong>
+                  <p style={{ marginTop: 2 }}>{tool.description}</p>
+                </div>
+              ))}
+            </div>
+          </details>
         </>
       )}
+
+      <p className="demo-access-hint" style={{ marginTop: 16 }}>API: {apiBase}</p>
     </main>
   );
 }
