@@ -89,6 +89,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
         mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
           ? 'video/webm;codecs=vp9'
           : 'video/webm',
+        videoBitsPerSecond: 1_000_000, // 1 Mbps — keeps recordings under 100MB for ~10 min
       });
 
       chunksRef.current = [];

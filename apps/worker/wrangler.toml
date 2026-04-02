@@ -8,5 +8,9 @@ binding = "DB"
 database_name = "tong-signups"
 database_id = "8554e675-5b60-48b1-b330-f50be1a81859"
 
+[[r2_buckets]]
+binding = "TONG_RUNS_BUCKET"
+bucket_name = "tong-runs"
+
 [observability]
 enabled = true

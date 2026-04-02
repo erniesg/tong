@@ -91,8 +91,12 @@ export async function uploadVideo(args) {
     bytes = args.buffer;
   } else if (args.filePath) {
     bytes = fs.readFileSync(args.filePath);
+  } else if (args.url) {
+    const urlRes = await fetch(args.url);
+    if (!urlRes.ok) throw new Error(`Failed to fetch video from ${args.url}: ${urlRes.status}`);
+    bytes = Buffer.from(await urlRes.arrayBuffer());
   } else {
-    throw new Error('Either filePath or buffer is required');
+    throw new Error('filePath, buffer, or url is required');
   }
 
   // Step 1: Start resumable upload
@@ -544,9 +548,17 @@ export async function analyzePlaytestSession(args) {
     });
     fileUri = uploaded.fileUri;
   }
+  if (!fileUri && args.videoUrl) {
+    const uploaded = await uploadVideo({
+      url: args.videoUrl,
+      displayName: `playtest-${args.sessionId}`,
+      mimeType: args.videoUrl.endsWith('.mp4') ? 'video/mp4' : 'video/webm',
+    });
+    fileUri = uploaded.fileUri;
+  }
 
   if (!fileUri) {
-    throw new Error('No video file provided — supply fileUri or videoPath');
+    throw new Error('No video file provided — supply fileUri, videoPath, or videoUrl');
   }
 
   return analyzeVideo({
