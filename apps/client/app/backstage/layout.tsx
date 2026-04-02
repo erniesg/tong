@@ -9,6 +9,7 @@ const TABS = [
   { href: '/backstage/signals', label: 'Signals' },
   { href: '/backstage/campaigns', label: 'Campaigns' },
   { href: '/backstage/triage', label: 'Triage' },
+  { href: '/backstage/replay', label: 'Replay' },
 ];
 
 export default function BackstageLayout({ children }: { children: React.ReactNode }) {

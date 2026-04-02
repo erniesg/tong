@@ -8499,3 +8499,159 @@ main.app-shell.app-shell--wide {
     align-items: flex-start;
   }
 }
+
+/* ── Replay page ───────────────────────────────────────────────────── */
+
+.replay-timeline-bar {
+  position: relative;
+  height: 32px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  margin: 0 0 12px;
+}
+
+.replay-timeline-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--ink, #f5f0e8);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  padding: 0;
+}
+
+.replay-marker-draw { background: var(--orange, #ff6b2c); }
+.replay-marker-comment { background: var(--mint, #5ce0c2); }
+
+.replay-timeline-active {
+  transform: translate(-50%, -50%) scale(1.5);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
+}
+
+.replay-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 0 0 16px;
+}
+
+.replay-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.replay-screenshot-container {
+  position: relative;
+  background: #0d0d1a;
+  border-radius: 12px;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+}
+
+.replay-screenshot {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.replay-no-screenshot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 200px;
+  color: var(--muted, #888);
+  font-size: 0.85rem;
+}
+
+.replay-svg-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.replay-pin {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--mint, #5ce0c2);
+  border: 2px solid white;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.replay-details {
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.replay-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.replay-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.replay-comment-text {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ink, #f5f0e8);
+}
+
+.replay-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.replay-gallery-card {
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.replay-gallery-card:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.replay-gallery-img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  display: block;
+}
+
+.replay-gallery-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 4px;
+}
+
+.replay-gallery-text {
+  padding: 0 10px 8px;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted, #888);
+  line-height: 1.4;
+}
