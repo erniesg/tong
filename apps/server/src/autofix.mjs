@@ -14,23 +14,45 @@
  * Requires: git, gh CLI, and OPENAI_API_KEY for code generation.
  */
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
 // ── Configuration ────────────────────────────────────────────────────
 
 const OPENAI_API_KEY = () => process.env.OPENAI_API_KEY || '';
-const REPO_ROOT = process.env.TONG_REPO_ROOT || execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+const REPO_ROOT = process.env.TONG_REPO_ROOT || execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 
 // In-memory fix job tracker
 const fixJobs = new Map();
 
+// Mutex to prevent concurrent git operations
+let gitLock = null;
+
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function run(cmd, opts = {}) {
+/**
+ * Validate that a resolved path stays within REPO_ROOT.
+ * Prevents path traversal (e.g. "../../etc/passwd").
+ */
+function assertSafePath(filePath) {
+  const resolved = path.resolve(filePath);
+  const root = path.resolve(REPO_ROOT);
+  if (!resolved.startsWith(root + path.sep) && resolved !== root) {
+    throw new Error(`Path traversal blocked: ${filePath} resolves outside repo root`);
+  }
+  return resolved;
+}
+
+/**
+ * Run a git/CLI command safely using execFileSync (no shell interpolation).
+ * @param {string} bin – executable name
+ * @param {string[]} args – argument array
+ * @param {object} [opts]
+ */
+function run(bin, args = [], opts = {}) {
   try {
-    return execSync(cmd, {
+    return execFileSync(bin, args, {
       cwd: REPO_ROOT,
       encoding: 'utf8',
       timeout: 60000,
@@ -63,14 +85,24 @@ async function generateFix(issue) {
   // Read the affected file if we know it
   let fileContext = '';
   if (issue.affectedComponent) {
-    // Try to find the file
-    const searchResult = run(`grep -rl "${issue.affectedComponent}" apps/client/components/ apps/client/app/ --include="*.tsx" --include="*.ts" -l 2>/dev/null | head -3`);
-    if (searchResult && !searchResult.error) {
-      const files = searchResult.split('\n').filter(Boolean);
-      for (const f of files) {
-        const content = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
-        if (content.length < 10000) {
-          fileContext += `\n--- File: ${f} ---\n${content}\n`;
+    // Sanitize: only allow alphanumeric, hyphens, underscores, dots
+    const sanitized = issue.affectedComponent.replace(/[^a-zA-Z0-9._-]/g, '');
+    if (sanitized) {
+      const searchResult = run('grep', [
+        '-rl', sanitized,
+        'apps/client/components/', 'apps/client/app/',
+        '--include=*.tsx', '--include=*.ts',
+      ]);
+      if (searchResult && !searchResult.error) {
+        const files = searchResult.split('\n').filter(Boolean).slice(0, 3);
+        for (const f of files) {
+          try {
+            const fullPath = assertSafePath(path.join(REPO_ROOT, f));
+            const content = fs.readFileSync(fullPath, 'utf8');
+            if (content.length < 10000) {
+              fileContext += `\n--- File: ${f} ---\n${content}\n`;
+            }
+          } catch { /* skip files outside repo root */ }
         }
       }
     }
@@ -154,6 +186,14 @@ export async function runAutoFix(args) {
   };
   fixJobs.set(jobId, job);
 
+  // Acquire git lock — only one autofix can run at a time
+  if (gitLock) {
+    job.status = 'error';
+    job.error = 'Another auto-fix is already in progress';
+    fixJobs.set(jobId, job);
+    return job;
+  }
+
   try {
     // Step 1: Generate fix
     const fix = await generateFix(issue);
@@ -172,31 +212,36 @@ export async function runAutoFix(args) {
       return job;
     }
 
+    // Validate fix.filePath before any git operations
+    const filePath = assertSafePath(path.join(REPO_ROOT, fix.filePath));
+
+    // Acquire lock for git operations
+    gitLock = jobId;
+
     // Step 2: Create branch
     const branch = generateBranchName(issue);
     job.branch = branch;
     job.status = 'applying';
     fixJobs.set(jobId, job);
 
-    run('git stash --include-untracked');
-    const branchResult = run(`git checkout -b ${branch} main`);
+    run('git', ['stash', '--include-untracked']);
+    const branchResult = run('git', ['checkout', '-b', branch, 'main']);
     if (branchResult?.error) {
-      run('git stash pop');
+      run('git', ['stash', 'pop']);
       throw new Error(`Failed to create branch: ${branchResult.message}`);
     }
 
     // Step 3: Apply fix
-    const filePath = path.join(REPO_ROOT, fix.filePath);
     if (!fs.existsSync(filePath)) {
-      run(`git checkout main`);
-      run('git stash pop');
+      run('git', ['checkout', 'main']);
+      run('git', ['stash', 'pop']);
       throw new Error(`File not found: ${fix.filePath}`);
     }
 
     let content = fs.readFileSync(filePath, 'utf8');
     if (!content.includes(fix.searchString)) {
-      run(`git checkout main`);
-      run('git stash pop');
+      run('git', ['checkout', 'main']);
+      run('git', ['stash', 'pop']);
       throw new Error(`Search string not found in ${fix.filePath} — fix may be stale`);
     }
 
@@ -205,7 +250,7 @@ export async function runAutoFix(args) {
 
     // Apply CSS if needed
     if (fix.cssAddition) {
-      const cssPath = path.join(REPO_ROOT, 'apps/client/app/globals.css');
+      const cssPath = assertSafePath(path.join(REPO_ROOT, 'apps/client/app/globals.css'));
       fs.appendFileSync(cssPath, `\n${fix.cssAddition}\n`);
     }
 
@@ -213,17 +258,17 @@ export async function runAutoFix(args) {
     job.status = 'validating';
     fixJobs.set(jobId, job);
 
-    const tscResult = run('cd apps/client && npx tsc --noEmit 2>&1 | tail -5', { timeout: 120000 });
-    const serverResult = run("node -e \"import('./apps/server/src/index.mjs').then(() => console.log('OK')).catch(e => console.error('FAIL:', e.message))\"");
+    const tscResult = run('npx', ['tsc', '--noEmit'], { cwd: path.join(REPO_ROOT, 'apps/client'), timeout: 120000 });
+    const serverResult = run('node', ['-e', "import('./apps/server/src/index.mjs').then(() => console.log('OK')).catch(e => console.error('FAIL:', e.message))"]);
 
     const tscOk = !tscResult?.error && !tscResult?.includes('error TS');
     const serverOk = !serverResult?.error && serverResult?.includes?.('OK');
 
     // If validation fails, revert
     if (!tscOk || !serverOk) {
-      run(`git checkout -- .`);
-      run(`git checkout main`);
-      run('git stash pop');
+      run('git', ['checkout', '--', '.']);
+      run('git', ['checkout', 'main']);
+      run('git', ['stash', 'pop']);
       job.status = 'validation_failed';
       job.validationErrors = { tsc: tscResult, server: serverResult };
       fixJobs.set(jobId, job);
@@ -234,18 +279,26 @@ export async function runAutoFix(args) {
     job.status = 'committing';
     fixJobs.set(jobId, job);
 
-    run(`git add ${fix.filePath}`);
-    if (fix.cssAddition) run('git add apps/client/app/globals.css');
+    run('git', ['add', fix.filePath]);
+    if (fix.cssAddition) run('git', ['add', 'apps/client/app/globals.css']);
 
-    const commitMsg = `fix(autofix): ${fix.explanation}\n\nPlaytest session: ${sessionId}\nCategory: ${issue.category}\nSeverity: ${issue.severity}/5\n\nCo-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>`;
-    run(`git commit -m "${commitMsg.replace(/"/g, '\\"')}"`);
+    const commitMsg = [
+      `fix(autofix): ${fix.explanation}`,
+      '',
+      `Playtest session: ${sessionId}`,
+      `Category: ${issue.category}`,
+      `Severity: ${issue.severity}/5`,
+      '',
+      'Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>',
+    ].join('\n');
+    run('git', ['commit', '-m', commitMsg]);
 
-    const pushResult = run(`git push -u origin ${branch}`);
+    const pushResult = run('git', ['push', '-u', 'origin', branch]);
     if (pushResult?.error) {
       job.status = 'push_failed';
       job.error = pushResult.message;
-      run(`git checkout main`);
-      run('git stash pop');
+      run('git', ['checkout', 'main']);
+      run('git', ['stash', 'pop']);
       fixJobs.set(jobId, job);
       return job;
     }
@@ -254,33 +307,36 @@ export async function runAutoFix(args) {
     job.status = 'creating_pr';
     fixJobs.set(jobId, job);
 
-    const prBody = `## Auto-fix from playtest triage
+    const prBody = [
+      '## Auto-fix from playtest triage',
+      '',
+      `**Session:** ${sessionId}`,
+      `**Category:** ${issue.category}`,
+      `**Severity:** ${issue.severity}/5`,
+      '',
+      '### Issue',
+      issue.description,
+      '',
+      '### Fix',
+      fix.explanation,
+      '',
+      '### File changed',
+      `\`${fix.filePath}\``,
+      '',
+      '### Validation',
+      '- TypeScript: passed',
+      '- Server load: passed',
+      '',
+      '---',
+      'Generated by Tong auto-fix pipeline from playtest session analysis.',
+    ].join('\n');
 
-**Session:** ${sessionId}
-**Category:** ${issue.category}
-**Severity:** ${issue.severity}/5
-
-### Issue
-${issue.description}
-
-### Fix
-${fix.explanation}
-
-### File changed
-\`${fix.filePath}\`
-
-### Validation
-- TypeScript: passed
-- Server load: passed
-
----
-Generated by Tong auto-fix pipeline from playtest session analysis.`;
-
-    const prResult = run(`gh pr create --title "fix(autofix): ${fix.explanation.replace(/"/g, '\\"')}" --body "${prBody.replace(/"/g, '\\"').replace(/\n/g, '\\n')}" --base main`);
+    const prTitle = `fix(autofix): ${fix.explanation}`;
+    const prResult = run('gh', ['pr', 'create', '--title', prTitle, '--body', prBody, '--base', 'main']);
 
     // Switch back to main
-    run('git checkout main');
-    run('git stash pop');
+    run('git', ['checkout', 'main']);
+    run('git', ['stash', 'pop']);
 
     if (prResult?.error) {
       job.status = 'pr_failed';
@@ -297,11 +353,13 @@ Generated by Tong auto-fix pipeline from playtest session analysis.`;
     job.error = err.message;
     // Try to return to main
     try {
-      run('git checkout main');
-      run('git stash pop');
+      run('git', ['checkout', 'main']);
+      run('git', ['stash', 'pop']);
     } catch { /* best effort */ }
     fixJobs.set(jobId, job);
     return job;
+  } finally {
+    gitLock = null;
   }
 }
 
@@ -322,6 +380,7 @@ export function getAutoFixStatus() {
     openaiKeyConfigured: Boolean(OPENAI_API_KEY()),
     repoRoot: REPO_ROOT,
     jobCount: fixJobs.size,
-    ghAvailable: !run('which gh')?.error,
+    locked: Boolean(gitLock),
+    ghAvailable: !run('which', ['gh'])?.error,
   };
 }
