@@ -54,7 +54,7 @@ interface AnalysisResult {
   };
 }
 
-type Tab = 'timeline' | 'gallery' | 'analysis' | 'trace';
+type Tab = 'session' | 'gallery' | 'analysis' | 'trace';
 
 /* ── API helpers ──────────────────────────────────────────────────── */
 
@@ -117,7 +117,7 @@ export default function ReplayPage() {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [agentTrace, setAgentTrace] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('timeline');
+  const [activeTab, setActiveTab] = useState<Tab>('session');
   const [activeAnnotation, setActiveAnnotation] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
@@ -131,7 +131,7 @@ export default function ReplayPage() {
   const loadSession = useCallback(async (id: string) => {
     setSelectedId(id);
     setActiveAnnotation(0);
-    setActiveTab('timeline');
+    setActiveTab('session');
     const [anns, anal, trace] = await Promise.all([
       fetchAnnotations(id),
       fetchAnalysis(id),
@@ -193,13 +193,13 @@ export default function ReplayPage() {
             <>
               {/* Tab bar */}
               <div className="signals-controls" style={{ marginBottom: 16 }}>
-                {(['timeline', 'gallery', 'analysis', 'trace'] as Tab[]).map((tab) => (
+                {(['session', 'gallery', 'analysis', 'trace'] as Tab[]).map((tab) => (
                   <button
                     key={tab}
                     className={`signals-platform-btn ${activeTab === tab ? 'signals-platform-active' : ''}`}
                     onClick={() => setActiveTab(tab)}
                   >
-                    {tab === 'timeline' ? `Timeline (${annotations.length})` :
+                    {tab === 'session' ? `Session (${annotations.length})` :
                      tab === 'gallery' ? `Screenshots (${screenshotAnnotations.length})` :
                      tab === 'analysis' ? `Analysis${analysis ? ` (${analysis.summary.issueCount})` : ''}` :
                      `Agent Trace${agentTrace ? '' : ' (none)'}`}
@@ -207,9 +207,26 @@ export default function ReplayPage() {
                 ))}
               </div>
 
-              {/* ── Timeline tab ──────────────────────────────── */}
-              {activeTab === 'timeline' && (
+              {/* ── Session tab: video + timeline + annotations ── */}
+              {activeTab === 'session' && (
                 <div>
+                  {/* Video player */}
+                  <div className="replay-video-container">
+                    <video
+                      className="replay-video"
+                      src={`${R2_BASE}/playtest/${selectedId}/recording.webm`}
+                      controls
+                      playsInline
+                      preload="metadata"
+                    />
+                    <div className="replay-video-meta">
+                      <span>{selected?.city} / {selected?.scene_type}</span>
+                      <span>{selected?.language}</span>
+                      <span>{annotations.length} annotation{annotations.length !== 1 ? 's' : ''}</span>
+                      <span>{screenshotAnnotations.length} screenshot{screenshotAnnotations.length !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+
                   {annotations.length === 0 ? (
                     <div className="triage-empty">No annotations in this session</div>
                   ) : (
@@ -325,7 +342,7 @@ export default function ReplayPage() {
                     <div className="replay-gallery">
                       {screenshotAnnotations.map((ann) => (
                         <div key={ann.id} className="replay-gallery-card" onClick={() => {
-                          setActiveTab('timeline');
+                          setActiveTab('session');
                           setActiveAnnotation(annotations.indexOf(ann));
                         }}>
                           {ann.screenshotUrl ? (
