@@ -30,6 +30,22 @@
       "uri": "/assets/app/tong_opening.mp4"
     },
     {
+      "key": "app.tong.video.transparent",
+      "type": "video",
+      "usage": "tong-character-overlay",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/tong_intro.webm"
+    },
+    {
+      "key": "app.tong.video.transparent.hevc",
+      "type": "video",
+      "usage": "tong-character-overlay-safari",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/tong_intro_hevc.mov"
+    },
+    {
       "key": "city.seoul.location.food-street.backdrop.default",
       "type": "image",
       "usage": "hangout-backdrop",
