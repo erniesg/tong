@@ -7625,49 +7625,96 @@ main.app-shell.app-shell--wide {
   pointer-events: auto;
 }
 
-.playtest-toolbar {
+/* ── Floating pill toolbar ──────────────────────────────────────── */
+
+.playtest-pill {
   position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 20px;
+  right: 20px;
   z-index: 950;
+  pointer-events: auto;
+}
+
+.playtest-pill-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  padding: 8px 16px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.playtest-pill-toggle:hover {
+  background: rgba(0, 0, 0, 0.85);
+  transform: scale(1.03);
+}
+
+.playtest-pill-label {
+  font-weight: 500;
+}
+
+.playtest-pill-badge {
+  background: var(--orange, #ff6b2c);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 7px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.playtest-pill-controls {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 12px;
+  min-width: 200px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-.playtest-toolbar-toggle {
-  background: rgba(0, 0, 0, 0.7);
+.playtest-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.playtest-pill-time {
+  font-size: 13px;
+  font-weight: 600;
   color: #fff;
-  border: none;
-  border-radius: 0 0 8px 8px;
-  padding: 4px 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.playtest-pill-notes {
   font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: auto;
+}
+
+.playtest-pill-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
   cursor: pointer;
-  backdrop-filter: blur(8px);
+  padding: 2px 4px;
+  margin-left: 4px;
 }
 
-.playtest-toolbar-inner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(12px);
-  padding: 8px 16px;
-  border-radius: 0 0 12px 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.playtest-toolbar-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 8px;
-  border-right: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.playtest-toolbar-group:last-child {
-  border-right: none;
+.playtest-pill-close:hover {
+  color: #fff;
 }
 
 .playtest-btn {
@@ -8654,4 +8701,27 @@ main.app-shell.app-shell--wide {
   font-size: 0.75rem;
   color: var(--muted, #888);
   line-height: 1.4;
+}
+
+.replay-video-container {
+  margin-bottom: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0d0d1a;
+}
+
+.replay-video {
+  width: 100%;
+  display: block;
+  max-height: 400px;
+  background: #0d0d1a;
+}
+
+.replay-video-meta {
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  color: var(--muted, #888);
+  background: rgba(255,255,255,0.03);
 }
