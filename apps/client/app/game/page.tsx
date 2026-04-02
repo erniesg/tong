@@ -1682,7 +1682,7 @@ export default function GamePage() {
                 preload="auto"
                 loop
               >
-                <source src={GAME_INTRO_VIDEO_URL} type='video/webm; codecs="vp09.02.10.08.01"' />
+                <source src={GAME_INTRO_VIDEO_URL} type="video/mp4" />
               </video>
                 <div className="tg-tong-intro-subtitle">
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
