@@ -2305,6 +2305,7 @@ async function handleRequest(request: Request): Promise<Response> {
       if (!row) return jsonResponse(404, { error: 'session_not_found', sessionId });
 
       const contentType = request.headers.get('content-type') || '';
+      const publicBase = env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai';
       const r2RecordingKey = `playtest/${sessionId}/recording.webm`;
       const r2AnnotationsKey = `playtest/${sessionId}/annotations.json`;
 
@@ -2319,8 +2320,35 @@ async function handleRequest(request: Request): Promise<Response> {
             httpMetadata: { contentType: 'video/webm' },
           });
         }
+
+        // Upload screenshots (keyed as screenshot:{annotationId})
+        const screenshotKeys: string[] = [];
+        for (const [key, value] of formData.entries()) {
+          if (key.startsWith('screenshot:') && value instanceof File) {
+            const annotationId = key.slice('screenshot:'.length);
+            const r2Key = `playtest/${sessionId}/screenshots/${annotationId}.png`;
+            await env.TONG_RUNS_BUCKET.put(r2Key, value.stream(), {
+              httpMetadata: { contentType: 'image/png' },
+            });
+            screenshotKeys.push(r2Key);
+          }
+        }
+
+        // Enrich annotations with R2 screenshot URLs before storing
         if (annotations) {
-          const annotationsText = typeof annotations === 'string' ? annotations : await (annotations as File).text();
+          let annotationsText = typeof annotations === 'string' ? annotations : await (annotations as File).text();
+          if (screenshotKeys.length > 0) {
+            try {
+              const parsed = JSON.parse(annotationsText);
+              const arr = Array.isArray(parsed) ? parsed : parsed.annotations || parsed;
+              for (const ann of arr) {
+                if (ann.screenshot) {
+                  ann.screenshotUrl = `${publicBase}/playtest/${sessionId}/screenshots/${ann.id}.png`;
+                }
+              }
+              annotationsText = JSON.stringify(Array.isArray(parsed) ? arr : { ...parsed, annotations: arr });
+            } catch { /* keep original */ }
+          }
           await env.TONG_RUNS_BUCKET.put(r2AnnotationsKey, annotationsText, {
             httpMetadata: { contentType: 'application/json' },
           });
@@ -2333,16 +2361,18 @@ async function handleRequest(request: Request): Promise<Response> {
       }
 
       // Update session in D1
+      const screenshotCount = (await env.TONG_RUNS_BUCKET.list({ prefix: `playtest/${sessionId}/screenshots/` })).objects.length;
       await env.DB.prepare(
         `UPDATE playtest_sessions SET status = 'submitted', r2_recording_key = ?, r2_annotations_key = ?, updated_at = datetime('now') WHERE session_id = ?`
       ).bind(r2RecordingKey, r2AnnotationsKey, sessionId).run();
 
-      const publicBase = env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai';
       return jsonResponse(200, {
         ok: true,
         sessionId,
+        screenshotCount,
         recordingUrl: `${publicBase}/${r2RecordingKey}`,
         annotationsUrl: `${publicBase}/${r2AnnotationsKey}`,
+        screenshotBaseUrl: `${publicBase}/playtest/${sessionId}/screenshots/`,
       });
     }
 

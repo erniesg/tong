@@ -32,6 +32,7 @@ interface Props {
   onSubmit: (data: {
     recording: Blob;
     annotations: Annotation[];
+    screenshots: Map<string, Blob>;
   }) => void;
   /** Optional: AI clarification handler */
   onRequestClarification?: (comment: Annotation) => Promise<string | null>;
@@ -66,10 +67,66 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const isDrawing = useRef(false);
   const currentPath = useRef<string[]>([]);
 
+  // Screenshot blobs keyed by annotation ID
+  const screenshotBlobsRef = useRef<Map<string, Blob>>(new Map());
+
   const currentTimestamp = useCallback(() => {
     if (!startTimeRef.current) return 0;
     return Math.floor((Date.now() - startTimeRef.current) / 1000);
   }, []);
+
+  /* ── Screenshot capture ──────────────────────────────────────── */
+
+  /** Capture the game viewport + drawing overlay as a PNG blob. */
+  const captureScreenshot = useCallback(async (annotationId: string): Promise<void> => {
+    const target = targetRef.current;
+    if (!target) return;
+    try {
+      // Create an offscreen canvas matching the viewport
+      const rect = target.getBoundingClientRect();
+      const offscreen = document.createElement('canvas');
+      offscreen.width = rect.width;
+      offscreen.height = rect.height;
+      const ctx = offscreen.getContext('2d');
+      if (!ctx) return;
+
+      // Capture the game viewport via the MediaRecorder's video stream frame
+      // (if recording), or fall back to a white placeholder
+      const stream = mediaRecorderRef.current?.stream;
+      const videoTrack = stream?.getVideoTracks()[0];
+      if (videoTrack && 'ImageCapture' in window) {
+        try {
+          const capture = new (window as any).ImageCapture(videoTrack);
+          const bitmap = await capture.grabFrame();
+          ctx.drawImage(bitmap, 0, 0, rect.width, rect.height);
+          bitmap.close();
+        } catch {
+          // ImageCapture not supported or failed — fill with dark bg
+          ctx.fillStyle = '#0d0d1a';
+          ctx.fillRect(0, 0, rect.width, rect.height);
+        }
+      } else {
+        ctx.fillStyle = '#0d0d1a';
+        ctx.fillRect(0, 0, rect.width, rect.height);
+      }
+
+      // Composite the drawing canvas overlay on top
+      const drawingCanvas = canvasRef.current;
+      if (drawingCanvas) {
+        ctx.drawImage(drawingCanvas, 0, 0);
+      }
+
+      // Convert to blob and store
+      const blob = await new Promise<Blob | null>((resolve) =>
+        offscreen.toBlob(resolve, 'image/png'),
+      );
+      if (blob) {
+        screenshotBlobsRef.current.set(annotationId, blob);
+      }
+    } catch {
+      // Screenshot capture is best-effort — don't block annotation
+    }
+  }, [targetRef]);
 
   /* ── Recording controls ──────────────────────────────────────── */
 
@@ -138,7 +195,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     recorder.onstop = () => {
       recorder.stream.getTracks().forEach((t) => t.stop());
       const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-      onSubmit({ recording: blob, annotations });
+      onSubmit({ recording: blob, annotations, screenshots: screenshotBlobsRef.current });
     };
 
     if (recorder.state !== 'inactive') recorder.stop();
@@ -211,36 +268,44 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     if (ctx) ctx.globalAlpha = 1;
 
     if (currentPath.current.length > 1) {
+      const id = `draw-${Date.now()}`;
       const annotation: Annotation = {
-        id: `draw-${Date.now()}`,
+        id,
         timestamp: currentTimestamp(),
         type: 'draw',
         pathData: currentPath.current.join(' '),
         color: penColor,
+        screenshot: id,
       };
       setAnnotations((prev) => [...prev, annotation]);
+      // Capture screenshot with the drawing included (fire-and-forget)
+      void captureScreenshot(id);
     }
     currentPath.current = [];
-  }, [penColor, currentTimestamp]);
+  }, [penColor, currentTimestamp, captureScreenshot]);
 
   /* ── Comment submission with optional AI clarification ────────── */
 
   const submitComment = useCallback(async () => {
     if (!commentText.trim() || !commentPos) return;
 
+    const id = `comment-${Date.now()}`;
     const annotation: Annotation = {
-      id: `comment-${Date.now()}`,
+      id,
       timestamp: currentTimestamp(),
       type: 'comment',
       text: commentText.trim(),
       x: commentPos.x,
       y: commentPos.y,
       clarified: false,
+      screenshot: id,
     };
 
     setAnnotations((prev) => [...prev, annotation]);
     setCommentText('');
     setAiReply(null);
+    // Capture screenshot at comment moment
+    void captureScreenshot(id);
 
     // Request AI clarification if handler provided
     if (onRequestClarification) {

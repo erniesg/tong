@@ -43,6 +43,7 @@ const {
   uploadVideo,
   analyzeVideo,
   analyzePlaytestSession,
+  analyzePlaytestScreenshots,
   ANALYSIS_PRESETS,
   listAnalysisPresets,
 } = await import(resolve(SERVER_SRC, 'gemini-video.mjs'));
@@ -60,6 +61,7 @@ const { values: args } = parseArgs({
     'video-path': { type: 'string' },
     annotations: { type: 'string' },
     output: { type: 'string' },
+    mode: { type: 'string', default: 'screenshots' },
     'update-session': { type: 'boolean', default: false },
     'list-presets': { type: 'boolean', default: false },
     help: { type: 'boolean', default: false },
@@ -150,7 +152,34 @@ if (args.annotations) {
   }
 }
 
-// ── Build video source ──────────────────────────────────────────────
+// ── Build screenshots list (for screenshot mode) ────────────────────
+
+let screenshotEntries = [];
+if (annotationsJson) {
+  try {
+    const allAnnotations = JSON.parse(annotationsJson);
+    const arr = Array.isArray(allAnnotations) ? allAnnotations : allAnnotations.annotations || [];
+    screenshotEntries = arr
+      .filter((a) => a.screenshotUrl || a.screenshot)
+      .map((a) => ({
+        id: a.id,
+        url: a.screenshotUrl || `${r2Base}/playtest/${sessionId}/screenshots/${a.id}.png`,
+        timestamp: a.timestamp,
+        type: a.type,
+        text: a.text,
+      }));
+  } catch { /* ignore parse errors */ }
+}
+
+// ── Determine analysis mode ─────────────────────────────────────────
+
+const mode = args.mode === 'video' ? 'video'
+  : screenshotEntries.length > 0 ? 'screenshots'
+  : 'video'; // fallback to video if no screenshots
+
+console.error(`[analyze] Mode: ${mode}${mode === 'screenshots' ? ` (${screenshotEntries.length} screenshots)` : ''}`);
+
+// ── Build video source (for video mode) ─────────────────────────────
 
 const videoUrl = args['video-path']
   ? undefined
@@ -158,38 +187,54 @@ const videoUrl = args['video-path']
 
 const videoPath = args['video-path'] || undefined;
 
-if (videoUrl) {
-  console.error(`[analyze] Video URL: ${videoUrl}`);
-} else {
-  console.error(`[analyze] Video path: ${videoPath}`);
+if (mode === 'video') {
+  if (videoUrl) {
+    console.error(`[analyze] Video URL: ${videoUrl}`);
+  } else {
+    console.error(`[analyze] Video path: ${videoPath}`);
+  }
 }
 
 // ── Run analysis ────────────────────────────────────────────────────
 
-console.error(`[analyze] Uploading to Gemini and analyzing...`);
+console.error(`[analyze] Analyzing with Gemini (${mode} mode)...`);
 
 try {
-  const result = await analyzePlaytestSession({
-    sessionId,
-    analysisType: args.preset,
-    model: args.model,
-    mediaResolution: args.resolution,
-    videoUrl,
-    videoPath,
-    annotationsJson,
-    commentsJson,
-  });
+  let result;
+
+  if (mode === 'screenshots') {
+    result = await analyzePlaytestScreenshots({
+      sessionId,
+      screenshots: screenshotEntries,
+      annotationsJson,
+      commentsJson,
+      analysisType: args.preset,
+      model: args.model,
+    });
+  } else {
+    result = await analyzePlaytestSession({
+      sessionId,
+      analysisType: args.preset,
+      model: args.model,
+      mediaResolution: args.resolution,
+      videoUrl,
+      videoPath,
+      annotationsJson,
+      commentsJson,
+    });
+  }
 
   // Enrich with metadata
   const output = {
     sessionId,
+    mode,
     preset: args.preset,
     model: result.model,
     analysisId: result.analysisId,
+    screenshotCount: result.screenshotCount || 0,
     tokensUsed: result.tokensUsed,
     createdAt: result.createdAt,
     result: result.result,
-    // Summary stats
     summary: {
       issueCount: result.result?.issues?.length || 0,
       autoFixableCount: (result.result?.issues || []).filter((i) => i.autoFixable).length,

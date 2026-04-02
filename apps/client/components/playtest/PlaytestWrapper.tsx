@@ -26,13 +26,18 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleSubmit = useCallback(
-    async (data: { recording: Blob; annotations: Annotation[] }) => {
+    async (data: { recording: Blob; annotations: Annotation[]; screenshots: Map<string, Blob> }) => {
       if (!sessionId) return;
 
-      // Upload recording as multipart form data
+      // Upload recording + annotations + screenshots as multipart form data
       const formData = new FormData();
       formData.append('recording', data.recording, `${sessionId}.webm`);
       formData.append('annotations', JSON.stringify(data.annotations));
+
+      // Append each screenshot keyed by annotation ID
+      for (const [annotationId, blob] of data.screenshots) {
+        formData.append(`screenshot:${annotationId}`, blob, `${annotationId}.png`);
+      }
 
       try {
         await fetch(`${API_BASE}/api/v1/playtest/sessions/${sessionId}/upload`, {
