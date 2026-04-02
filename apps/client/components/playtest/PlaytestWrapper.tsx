@@ -108,7 +108,7 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
   if (!sessionId) return <>{children}</>;
 
   return (
-    <div ref={frameRef} style={{ position: 'relative' }}>
+    <div ref={frameRef} style={{ position: 'relative', width: '100%', minHeight: '100dvh' }}>
       {children}
       <PlaytestOverlay
         targetRef={frameRef}

@@ -365,6 +365,48 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     return () => observer.disconnect();
   }, [targetRef]);
 
+  /* ── Auto-save on navigate away / tab close ──────────────────── */
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (annotations.length > 0 || chunksRef.current.length > 0) {
+        // Try to upload what we have via sendBeacon
+        const data = JSON.stringify(annotations);
+        navigator.sendBeacon?.(
+          `${typeof window !== 'undefined' ? (window as any).__NEXT_DATA__?.runtimeConfig?.NEXT_PUBLIC_TONG_API_BASE || '' : ''}/api/v1/playtest/sessions/${sessionId}/upload`,
+          new Blob([
+            JSON.stringify({ annotations: data }),
+          ], { type: 'application/json' }),
+        );
+        e.preventDefault();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && annotations.length > 0) {
+        // Page going to background — save annotations via sendBeacon
+        const formData = new FormData();
+        formData.append('annotations', JSON.stringify(annotations));
+        if (chunksRef.current.length > 0) {
+          const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+          formData.append('recording', blob, `${sessionId}.webm`);
+        }
+        // sendBeacon with FormData
+        navigator.sendBeacon?.(
+          `${process.env.NEXT_PUBLIC_TONG_API_BASE || 'https://tong-api.erniesg.workers.dev'}/api/v1/playtest/sessions/${sessionId}/upload`,
+          formData,
+        );
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [annotations, sessionId]);
+
   /* ── Cleanup ───────────────────────────────────────────────────── */
 
   useEffect(() => {
@@ -374,7 +416,6 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       if (mediaRecorderRef.current?.state !== 'inactive') {
         mediaRecorderRef.current?.stop();
       }
-      // Remove hidden canvas
       if (frameCaptureRef.current) {
         frameCaptureRef.current.remove();
         frameCaptureRef.current = null;
