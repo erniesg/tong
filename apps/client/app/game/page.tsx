@@ -39,6 +39,8 @@ import { buildResumePrompt, hydrateResumeState, type ResumeBootstrapPayload } fr
 
 const GAME_LOGO_URL = runtimeAssetUrl('app.logo.transparent.default');
 const GAME_INTRO_VIDEO_URL = runtimeAssetUrl('app.intro.video.default');
+const TONG_TRANSPARENT_VIDEO_URL = runtimeAssetUrl('app.tong.video.transparent');
+const TONG_TRANSPARENT_HEVC_URL = runtimeAssetUrl('app.tong.video.transparent.hevc', '/assets/tong_intro_hevc.mov');
 const SEOUL_FOOD_STREET_BACKDROP_URL = runtimeAssetUrl('city.seoul.location.food-street.backdrop.default');
 
 const NPC_SPRITES: Record<string, { name: string; nameLocal: string; nameZh: string; src: string; idleVideo?: string; color: string }> = {
@@ -1682,7 +1684,8 @@ export default function GamePage() {
                 preload="auto"
                 loop
               >
-                <source src={GAME_INTRO_VIDEO_URL} type="video/mp4" />
+                <source src={TONG_TRANSPARENT_HEVC_URL} type="video/quicktime" />
+                <source src={TONG_TRANSPARENT_VIDEO_URL} type="video/webm" />
               </video>
                 <div className="tg-tong-intro-subtitle">
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
