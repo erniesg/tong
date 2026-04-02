@@ -2376,6 +2376,48 @@ async function handleRequest(request: Request): Promise<Response> {
       });
     }
 
+    // Store/retrieve artifacts (analysis results, agent traces) in R2
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/artifacts$/) && request.method === 'PUT') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const body = await readJsonBody(request);
+      const validTypes = ['analysis', 'agent-trace'];
+      if (!body.type || !validTypes.includes(body.type)) {
+        return jsonResponse(400, { error: 'invalid_type', valid: validTypes });
+      }
+      const r2Key = `playtest/${sessionId}/${body.type}.json`;
+      await env.TONG_RUNS_BUCKET.put(r2Key, JSON.stringify(body.data, null, 2), {
+        httpMetadata: { contentType: 'application/json' },
+      });
+      // Update D1 with artifact key
+      if (env?.DB) {
+        if (body.type === 'analysis') {
+          await env.DB.prepare(
+            `UPDATE playtest_sessions SET analysis_id = ?, updated_at = datetime('now') WHERE session_id = ?`
+          ).bind(body.data?.analysisId || r2Key, sessionId).run();
+        }
+      }
+      const publicBase = env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai';
+      return jsonResponse(200, { ok: true, key: r2Key, url: `${publicBase}/${r2Key}` });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/artifacts\/[^/]+$/) && request.method === 'GET') {
+      const parts = pathname.split('/');
+      const sessionId = parts[5];
+      const artifactType = parts[7];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const r2Key = `playtest/${sessionId}/${artifactType}.json`;
+      const obj = await env.TONG_RUNS_BUCKET.get(r2Key);
+      if (!obj) return jsonResponse(404, { error: 'artifact_not_found', type: artifactType });
+      const data = await obj.text();
+      return new Response(data, {
+        status: 200,
+        headers: { 'Content-Type': 'application/json; charset=utf-8', ...CORS_HEADERS },
+      });
+    }
+
     return jsonResponse(404, { error: 'not_found', pathname });
   } catch (error) {
     return jsonResponse(500, {
