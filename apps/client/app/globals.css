@@ -1842,12 +1842,7 @@ main.app-shell.app-shell--wide {
   animation: tongFadeIn 1s ease 0.2s forwards;
 }
 
-/* Mobile: mp4 fallback has baked bg — use cover so no CSS bg peeks through */
-@media (max-width: 768px) {
-  .tg-tong-intro-video {
-    object-fit: cover;
-  }
-}
+/* Transparent video: contain preserves alpha — no cover needed */
 
 .tg-tong-intro-canvas {
   position: absolute;
@@ -7842,41 +7837,50 @@ main.app-shell.app-shell--wide {
   z-index: 9991;
   transform: translate(-50%, -100%);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  pointer-events: none;
+  gap: 6px;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .playtest-pin-dot {
   width: 12px;
   height: 12px;
-  background: var(--accent);
+  min-width: 12px;
+  background: var(--orange, #ff6b2c);
   border: 2px solid #fff;
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
-.playtest-pin-time {
-  font-size: 10px;
+.playtest-pin-label {
+  font-size: 11px;
   color: #fff;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 1px 4px;
-  border-radius: 3px;
-  margin-top: 2px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  padding: 3px 8px;
+  border-radius: 6px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* ── Comment popover ───────────────────────────────────────────── */
 
-.playtest-comment-popover {
+.playtest-comment-bar {
   position: fixed;
-  z-index: 9995;
-  transform: translate(-50%, 8px);
+  bottom: 80px;
+  left: 12px;
+  right: 12px;
+  z-index: 10000;
   background: rgba(15, 15, 15, 0.92);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px;
-  width: 260px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
