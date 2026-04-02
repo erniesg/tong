@@ -27,6 +27,7 @@
     "qa:resolve-publish-request": "node scripts/resolve_qa_publish_request.mjs",
     "qa:resolve-codex-pr-request": "node scripts/resolve_codex_create_pr_request.mjs",
     "qa:upload-evidence": "node scripts/upload-qa-evidence.mjs",
+    "runtime-assets:upload": "node scripts/upload-runtime-assets.mjs",
     "qa:render-comment": "node scripts/render-qa-comment.mjs",
     "secrets:sync:cf": "./scripts/sync-cf-secrets-from-env.sh",
     "build:client:cf": "npm --prefix apps/client run cf:build",
