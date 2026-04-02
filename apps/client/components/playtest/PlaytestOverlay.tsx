@@ -429,7 +429,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
 
   return (
     <>
-      {/* Drawing canvas overlay */}
+      {/* Drawing canvas overlay — always mounted when a tool is active */}
       {activeTool !== 'none' && (
         <canvas
           ref={canvasRef}
@@ -438,7 +438,21 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
-          style={{ cursor: activeTool === 'comment' ? 'crosshair' : 'default' }}
+          onTouchStart={(e) => {
+            e.preventDefault(); // Prevent scroll + ensure canvas gets touch
+            const touch = e.touches[0];
+            if (touch) handlePointerDown({ clientX: touch.clientX, clientY: touch.clientY } as any);
+          }}
+          onTouchMove={(e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            if (touch) handlePointerMove({ clientX: touch.clientX, clientY: touch.clientY } as any);
+          }}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            handlePointerUp();
+          }}
+          style={{ cursor: activeTool === 'comment' ? 'crosshair' : 'default', touchAction: 'none' }}
         />
       )}
 
@@ -447,7 +461,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
         <div
           key={a.id}
           className="playtest-pin"
-          style={{ left: `${(a.x ?? 0) * 100}%`, top: `${(a.y ?? 0) * 100}%` }}
+          style={{ left: `${(a.x ?? 0) * 100}vw`, top: `${(a.y ?? 0) * 100}vh` }}
           title={a.text}
         >
           <span className="playtest-pin-dot" />
@@ -455,11 +469,14 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
         </div>
       ))}
 
-      {/* Comment popover */}
+      {/* Comment popover — positioned in viewport coords */}
       {commentPos && (
         <div
           className="playtest-comment-popover"
-          style={{ left: `${commentPos.x * 100}%`, top: `${commentPos.y * 100}%` }}
+          style={{
+            left: `${Math.min(commentPos.x * 100, 70)}vw`,
+            top: `${Math.min(commentPos.y * 100, 60)}vh`,
+          }}
         >
           <textarea
             className="playtest-comment-input"
