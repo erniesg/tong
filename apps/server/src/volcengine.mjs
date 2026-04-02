@@ -163,6 +163,18 @@ export async function createVideoTask(args) {
         draft_task: { id: item.draftTaskId || item.id },
       };
     }
+    if (item.type === 'video_url') {
+      return {
+        type: 'video_url',
+        video_url: { url: item.videoUrl || item.url },
+      };
+    }
+    if (item.type === 'audio_url') {
+      return {
+        type: 'audio_url',
+        audio_url: { url: item.audioUrl || item.url },
+      };
+    }
     return { type: 'text', text: item.text };
   });
 
@@ -182,6 +194,7 @@ export async function createVideoTask(args) {
   if (args.generateAudio != null) body.generate_audio = args.generateAudio;
   if (args.draft != null) body.draft = args.draft;
   if (args.serviceTier) body.service_tier = args.serviceTier;
+  if (args.executionExpiresAfter != null) body.execution_expires_after = args.executionExpiresAfter;
   if (args.callbackUrl) body.callback_url = args.callbackUrl;
 
   const response = await fetch(`${ARK_API_BASE}/contents/generations/tasks`, {
@@ -300,6 +313,33 @@ export async function waitForVideoTask(taskId, intervalMs = 10000, timeoutMs = 6
   }
 
   throw new Error(`Video task ${taskId} timed out after ${timeoutMs}ms`);
+}
+
+/**
+ * Delete or cancel a video generation task.
+ * Queued tasks are cancelled; completed tasks have their records removed.
+ *
+ * @param {string} taskId - Task ID to delete/cancel
+ * @returns {Promise<{id: string, deleted: boolean}>}
+ */
+export async function deleteVideoTask(taskId) {
+  const apiKey = ARK_API_KEY();
+  if (!apiKey) {
+    throw new Error('VOLCENGINE_ARK_API_KEY is not configured');
+  }
+
+  const response = await fetch(`${ARK_API_BASE}/contents/generations/tasks/${taskId}`, {
+    method: 'DELETE',
+    headers: arkHeaders(),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Volcengine video task delete error (${response.status}): ${text}`);
+  }
+
+  videoTasks.delete(taskId);
+  return { id: taskId, deleted: true };
 }
 
 function normalizeVideoTask(data) {
