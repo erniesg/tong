@@ -1198,9 +1198,13 @@ main.app-shell.app-shell--wide {
   z-index: 40;
   display: flex;
   align-items: center;
-  padding: 6px 14px;
+  gap: 6px;
+  padding: 6px 20px 8px;
   padding-top: calc(6px + env(safe-area-inset-top, 0px));
-  background: none;
+  background: rgba(0, 0, 0, 0.40);
+  border-radius: 0 0 20px 20px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   cursor: pointer;
   user-select: none;
 }
@@ -1211,16 +1215,22 @@ main.app-shell.app-shell--wide {
 }
 
 .scene-hud-pull-tab-chevron {
-  font-size: var(--game-text-xs);
-  color: rgba(255,255,255,0.85);
+  font-size: var(--game-text-base);
+  color: rgba(255,255,255,0.9);
   text-shadow: 0 1px 4px rgba(0,0,0,0.6);
   transition: color 0.3s, text-shadow 0.3s;
+  animation: hud-tab-nudge 4s ease-in-out infinite;
 }
 
 .scene-hud-pull-tab-chevron.charge-done {
   color: rgb(168, 85, 247);
   text-shadow: 0 0 8px rgba(168, 85, 247, 0.8);
   animation: charge-done-pulse 2s ease-in-out infinite;
+}
+
+@keyframes hud-tab-nudge {
+  0%, 70%, 100% { transform: translateY(0); }
+  85% { transform: translateY(4px); }
 }
 
 @keyframes charge-done-pulse {

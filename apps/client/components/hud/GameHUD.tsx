@@ -71,10 +71,10 @@ export function GameHUD({ xp, sp, rp, locationLabel, cityId, explainLang, charge
           <div className="scene-hud-location">{locationLabel}</div>
         )}
         <div className="scene-hud-scores">
-          <span className="scene-hud-score"><b>{xp}</b> XP</span>
-          <span className="scene-hud-score"><b>{sp}</b> SP</span>
+          <span className="scene-hud-score" title="Experience Points — earned by completing exercises"><b>{xp}</b> XP</span>
+          <span className="scene-hud-score" title="Story Points — earned through conversations"><b>{sp}</b> SP</span>
           {rp !== undefined && (
-            <span className="scene-hud-score"><b>{Math.round(rp)}</b> RP</span>
+            <span className="scene-hud-score" title="Relationship Points — how well you connect with Tong"><b>{Math.round(rp)}</b> RP</span>
           )}
         </div>
         <div className="scene-hud-flags">
