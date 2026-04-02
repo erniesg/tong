@@ -54,6 +54,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const [expanded, setExpanded] = useState(false);
   const [aiReply, setAiReply] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const draggingPin = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
@@ -236,16 +237,6 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (activeTool === 'comment') {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        setCommentPos({
-          x: (e.clientX - rect.left) / rect.width,
-          y: (e.clientY - rect.top) / rect.height,
-        });
-        return;
-      }
       if (activeTool !== 'pen' && activeTool !== 'highlight') return;
       isDrawing.current = true;
       const [x, y] = getCanvasPos(e);
@@ -348,22 +339,54 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     setCommentPos(null);
   }, []);
 
+  /* ── Draggable pins ────────────────────────────────────────────── */
+
+  const handlePinDragStart = useCallback((id: string, clientX: number, clientY: number) => {
+    const ann = annotations.find((a) => a.id === id);
+    if (!ann) return;
+    draggingPin.current = { id, startX: clientX, startY: clientY, origX: ann.x ?? 0.5, origY: ann.y ?? 0.5 };
+  }, [annotations]);
+
+  const handlePinDragMove = useCallback((clientX: number, clientY: number) => {
+    const d = draggingPin.current;
+    if (!d) return;
+    const dx = (clientX - d.startX) / window.innerWidth;
+    const dy = (clientY - d.startY) / window.innerHeight;
+    const newX = Math.max(0, Math.min(1, d.origX + dx));
+    const newY = Math.max(0, Math.min(1, d.origY + dy));
+    setAnnotations((prev) =>
+      prev.map((a) => a.id === d.id ? { ...a, x: newX, y: newY } : a),
+    );
+  }, []);
+
+  const handlePinDragEnd = useCallback(() => {
+    draggingPin.current = null;
+  }, []);
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => handlePinDragMove(e.clientX, e.clientY);
+    const onUp = () => handlePinDragEnd();
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [handlePinDragMove, handlePinDragEnd]);
+
   /* ── Resize canvas ─────────────────────────────────────────────── */
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const target = targetRef.current;
-    if (!canvas || !target) return;
+    if (!canvas) return;
     const resize = () => {
-      const rect = target.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     };
     resize();
-    const observer = new ResizeObserver(resize);
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [targetRef]);
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, [activeTool]);
 
   /* ── Auto-save on navigate away / tab close ──────────────────── */
 
@@ -430,7 +453,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   return (
     <>
       {/* Drawing canvas overlay — always mounted when a tool is active */}
-      {activeTool !== 'none' && (
+      {(activeTool === 'pen' || activeTool === 'highlight') && (
         <canvas
           ref={canvasRef}
           className="playtest-canvas"
@@ -439,7 +462,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
           onTouchStart={(e) => {
-            e.preventDefault(); // Prevent scroll + ensure canvas gets touch
+            e.preventDefault();
             const touch = e.touches[0];
             if (touch) handlePointerDown({ clientX: touch.clientX, clientY: touch.clientY } as any);
           }}
@@ -452,35 +475,38 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
             e.preventDefault();
             handlePointerUp();
           }}
-          style={{ cursor: activeTool === 'comment' ? 'crosshair' : 'default', touchAction: 'none' }}
+          style={{ touchAction: 'none' }}
         />
       )}
 
-      {/* Comment pins */}
+      {/* Draggable comment pins */}
       {annotations.filter((a) => a.type === 'comment').map((a) => (
         <div
           key={a.id}
           className="playtest-pin"
-          style={{ left: `${(a.x ?? 0) * 100}vw`, top: `${(a.y ?? 0) * 100}vh` }}
+          style={{
+            left: `${(a.x ?? 0.5) * 100}vw`,
+            top: `${(a.y ?? 0.5) * 100}vh`,
+            cursor: 'grab',
+            touchAction: 'none',
+          }}
           title={a.text}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            handlePinDragStart(a.id, e.clientX, e.clientY);
+          }}
         >
           <span className="playtest-pin-dot" />
-          <span className="playtest-pin-time">{fmt(a.timestamp)}</span>
+          <span className="playtest-pin-label">{a.text}</span>
         </div>
       ))}
 
-      {/* Comment popover — positioned in viewport coords */}
+      {/* Comment input bar — anchored to bottom of screen */}
       {commentPos && (
-        <div
-          className="playtest-comment-popover"
-          style={{
-            left: `${Math.min(commentPos.x * 100, 70)}vw`,
-            top: `${Math.min(commentPos.y * 100, 60)}vh`,
-          }}
-        >
+        <div className="playtest-comment-bar">
           <textarea
             className="playtest-comment-input"
-            placeholder="What felt off?"
+            placeholder="What felt off? Type your note..."
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             onKeyDown={(e) => {
@@ -565,8 +591,16 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
                 title="Highlight"
               >&#9618;</button>
               <button
-                className={`playtest-tool ${activeTool === 'comment' ? 'playtest-tool-active' : ''}`}
-                onClick={() => setActiveTool(activeTool === 'comment' ? 'none' : 'comment')}
+                className={`playtest-tool ${commentPos ? 'playtest-tool-active' : ''}`}
+                onClick={() => {
+                  setActiveTool('none');
+                  if (commentPos) {
+                    setCommentPos(null);
+                    setCommentText('');
+                  } else {
+                    setCommentPos({ x: 0.5, y: 0.5 });
+                  }
+                }}
                 title="Comment"
               >&#128172;</button>
             </div>
