@@ -571,6 +571,115 @@ export async function analyzePlaytestSession(args) {
   });
 }
 
+// ── 3b. Screenshot Gallery Analysis ─────────────────────────────────
+
+/**
+ * Analyse a playtest session using annotated screenshots instead of video.
+ * ~70% cheaper than video analysis: inline images skip the Files API.
+ *
+ * @param {object} args
+ * @param {string} args.sessionId
+ * @param {Array<{url: string, timestamp: number, type: string, text?: string, id: string}>} args.screenshots
+ * @param {string} [args.annotationsJson]
+ * @param {string} [args.commentsJson]
+ * @param {string} [args.analysisType]
+ * @param {object} [args.customSchema]
+ * @param {string} [args.customPrompt]
+ * @param {string} [args.model]
+ * @returns {Promise<object>}
+ */
+export async function analyzePlaytestScreenshots(args) {
+  const key = apiKey();
+  if (!key) throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
+
+  const preset = args.analysisType ? ANALYSIS_PRESETS[args.analysisType] : null;
+  const prompt = args.customPrompt || preset?.prompt || ANALYSIS_PRESETS.ux_friction.prompt;
+  const schema = args.customSchema || preset?.schema || ANALYSIS_PRESETS.ux_friction.schema;
+
+  // Build parts: alternating screenshot images + annotation context
+  const parts = [];
+
+  for (const ss of args.screenshots) {
+    // Fetch screenshot and encode as inline base64
+    const res = await fetch(ss.url);
+    if (!res.ok) {
+      console.warn(`[gemini] Failed to fetch screenshot ${ss.id}: ${res.status}`);
+      continue;
+    }
+    const buffer = Buffer.from(await res.arrayBuffer());
+    parts.push({
+      inline_data: { mime_type: 'image/png', data: buffer.toString('base64') },
+    });
+    const label = ss.type === 'comment'
+      ? `[Screenshot at ${ss.timestamp}s — comment: "${ss.text}"]`
+      : `[Screenshot at ${ss.timestamp}s — ${ss.type} annotation]`;
+    parts.push({ text: label });
+  }
+
+  if (parts.length === 0) {
+    throw new Error('No screenshots available for analysis');
+  }
+
+  // Add full annotations + comments context
+  if (args.annotationsJson) {
+    parts.push({ text: `Full annotation data:\n${args.annotationsJson}` });
+  }
+  if (args.commentsJson) {
+    parts.push({ text: `User comments:\n${args.commentsJson}` });
+  }
+
+  parts.push({ text: prompt });
+
+  const modelId = MODELS[args.model || DEFAULT_MODEL];
+  const body = {
+    contents: [{ role: 'user', parts }],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: schema,
+    },
+  };
+
+  const res = await fetch(
+    `${apiBase()}/v1beta/models/${modelId}:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: geminiHeaders(),
+      body: JSON.stringify(body),
+    },
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Gemini screenshot analysis failed (${res.status}): ${text}`);
+  }
+
+  const data = await res.json();
+  const candidate = data.candidates?.[0];
+  const content = candidate?.content?.parts?.[0]?.text || '';
+  const tokensUsed = data.usageMetadata || {};
+
+  let parsed = content;
+  try { parsed = JSON.parse(content); } catch { /* raw text fallback */ }
+
+  const analysisId = `analysis-${uuid()}`;
+  const result = {
+    analysisId,
+    model: modelId,
+    mode: 'screenshots',
+    screenshotCount: args.screenshots.length,
+    result: parsed,
+    tokensUsed: {
+      inputTokens: tokensUsed.promptTokenCount || 0,
+      outputTokens: tokensUsed.candidatesTokenCount || 0,
+      totalTokens: tokensUsed.totalTokenCount || 0,
+    },
+    createdAt: new Date().toISOString(),
+  };
+
+  analysisResults.set(analysisId, result);
+  return result;
+}
+
 // ── 4. Status & Utilities ───────────────────────────────────────────
 
 /**
