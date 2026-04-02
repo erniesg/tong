@@ -515,7 +515,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
 
             {/* Color picker (when drawing) */}
             {(activeTool === 'pen' || activeTool === 'highlight') && (
-              <div className="playtest-pill-row">
+              <div className="playtest-pill-row playtest-colors">
                 {COLORS.map((c) => (
                   <button
                     key={c}
