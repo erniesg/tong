@@ -7618,9 +7618,9 @@ main.app-shell.app-shell--wide {
 /* ── Playtest Overlay ──────────────────────────────────────────── */
 
 .playtest-canvas {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 900;
+  z-index: 9990;
   touch-action: none;
   pointer-events: auto;
 }
@@ -7628,10 +7628,10 @@ main.app-shell.app-shell--wide {
 /* ── Floating pill toolbar ──────────────────────────────────────── */
 
 .playtest-pill {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  z-index: 950;
+  position: fixed;
+  bottom: 24px;
+  right: 16px;
+  z-index: 9999;
   pointer-events: auto;
 }
 
@@ -7838,8 +7838,8 @@ main.app-shell.app-shell--wide {
 /* ── Comment pins ──────────────────────────────────────────────── */
 
 .playtest-pin {
-  position: absolute;
-  z-index: 910;
+  position: fixed;
+  z-index: 9991;
   transform: translate(-50%, -100%);
   display: flex;
   flex-direction: column;
@@ -7868,8 +7868,8 @@ main.app-shell.app-shell--wide {
 /* ── Comment popover ───────────────────────────────────────────── */
 
 .playtest-comment-popover {
-  position: absolute;
-  z-index: 960;
+  position: fixed;
+  z-index: 9995;
   transform: translate(-50%, 8px);
   background: rgba(15, 15, 15, 0.92);
   backdrop-filter: blur(12px);
