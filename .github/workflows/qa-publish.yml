@@ -302,6 +302,26 @@ jobs:
             echo "- Dry run: \`${{ needs.resolve.outputs.dry_run }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Auto-merge autofix PRs
+        if: success() && startsWith(needs.resolve.outputs.head_ref, 'autofix/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Autofix branch detected: ${{ needs.resolve.outputs.head_ref }}"
+          echo "Enabling auto-merge for PR #${{ needs.resolve.outputs.pr_number }}..."
+          gh pr merge "${{ needs.resolve.outputs.pr_number }}" \
+            --repo "${{ github.repository }}" \
+            --auto --squash \
+            --subject "fix(autofix): $(gh pr view ${{ needs.resolve.outputs.pr_number }} --repo ${{ github.repository }} --json title -q .title)" || {
+            echo "Auto-merge failed (branch protection may not be configured). Commenting instead."
+            gh pr comment "${{ needs.resolve.outputs.pr_number }}" --repo "${{ github.repository }}" --body "$(cat <<'AUTOMERGE'
+          QA publish succeeded. This is an autofix PR — auto-merge was requested but could not be enabled (branch protection rules may need 'Allow auto-merge').
+
+          To merge manually: \`gh pr merge ${{ needs.resolve.outputs.pr_number }} --squash\`
+          AUTOMERGE
+            )"
+          }
+
       - name: Stop local QA services
         if: always() && needs.resolve.outputs.qa_recipe != ''
         run: |
