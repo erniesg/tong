@@ -11,6 +11,7 @@ const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787
  */
 export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,9 +46,10 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
           body: formData,
         });
 
-        // Clear the playtest session marker
+        // Mark as submitted but keep sessionId so wrapper div stays mounted
+        // (prevents React from remounting children and resetting game state)
         sessionStorage.removeItem('tong_playtest_session');
-        setSessionId(null);
+        setSubmitted(true);
       } catch (err) {
         console.error('Failed to upload playtest session:', err);
       }
@@ -105,17 +107,24 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
     [sessionId],
   );
 
-  if (!sessionId) return <>{children}</>;
+  const isActive = Boolean(sessionId) && !submitted;
 
   return (
-    <div ref={frameRef} style={{ position: 'relative', width: '100%', minHeight: '100dvh' }}>
+    <div ref={frameRef} className="playtest-wrapper" style={{ position: 'relative', width: '100%', minHeight: '100dvh', overflowX: 'hidden' }}>
       {children}
-      <PlaytestOverlay
-        targetRef={frameRef}
-        sessionId={sessionId}
-        onSubmit={handleSubmit}
-        onRequestClarification={handleClarification}
-      />
+      {isActive && (
+        <PlaytestOverlay
+          targetRef={frameRef}
+          sessionId={sessionId!}
+          onSubmit={handleSubmit}
+          onRequestClarification={handleClarification}
+        />
+      )}
+      {submitted && (
+        <div className="playtest-submitted-toast">
+          Session submitted — thanks for playtesting!
+        </div>
+      )}
     </div>
   );
 }

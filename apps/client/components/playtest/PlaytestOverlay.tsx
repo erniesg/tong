@@ -10,6 +10,7 @@ export interface Annotation {
   type: 'draw' | 'comment';
   pathData?: string;
   color?: string;
+  lineWidth?: number;
   text?: string;
   clarified?: boolean;
   category?: string;
@@ -30,7 +31,8 @@ interface Props {
   onRequestClarification?: (comment: Annotation) => Promise<string | null>;
 }
 
-type Tool = 'none' | 'pen' | 'highlight' | 'comment';
+type Tool = 'none' | 'draw' | 'comment';
+type PanelView = 'tools' | 'notes' | 'comment' | 'ai-reply';
 
 /* ── Component ────────────────────────────────────────────────────── */
 
@@ -42,19 +44,24 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const startTimeRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
 
-  // Frame capture: hidden canvas mirrors the game viewport via rAF
   const frameCaptureRef = useRef<HTMLCanvasElement | null>(null);
   const frameLoopRef = useRef<number>(0);
 
   const [activeTool, setActiveTool] = useState<Tool>('none');
   const [penColor, setPenColor] = useState('#ff6b2c');
+  const [penWidth, setPenWidth] = useState<3 | 20>(3);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [commentText, setCommentText] = useState('');
-  const [commentPos, setCommentPos] = useState<{ x: number; y: number } | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [panelView, setPanelView] = useState<PanelView>('tools');
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editText, setEditText] = useState('');
   const [aiReply, setAiReply] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const draggingPin = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const [aiInputText, setAiInputText] = useState('');
+
+  // Undo stack: each entry is an annotation + the canvas state before it
+  const drawHistory = useRef<ImageData[]>([]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
@@ -69,13 +76,11 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const fmt = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-  /* ── Frame capture: mirror viewport to hidden canvas ──────────── */
+  /* ── Frame capture ──────────────────────────────────────────────── */
 
   const startFrameCapture = useCallback(() => {
     const target = targetRef.current;
     if (!target) return;
-
-    // Create a hidden canvas that mirrors the DOM
     let fc = frameCaptureRef.current;
     if (!fc) {
       fc = document.createElement('canvas');
@@ -83,7 +88,6 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       document.body.appendChild(fc);
       frameCaptureRef.current = fc;
     }
-
     const captureFrame = () => {
       if (!target) return;
       const rect = target.getBoundingClientRect();
@@ -91,33 +95,25 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
         fc!.width = rect.width;
         fc!.height = rect.height;
       }
-
-      // Use the target's internal canvases if available (game renders to <canvas>)
       const gameCanvases = target.querySelectorAll('canvas');
       const ctx = fc!.getContext('2d');
       if (ctx && gameCanvases.length > 0) {
         ctx.clearRect(0, 0, fc!.width, fc!.height);
-        // Draw game background
         ctx.fillStyle = '#0d0d1a';
         ctx.fillRect(0, 0, fc!.width, fc!.height);
-        // Composite all game canvases
         for (const gc of gameCanvases) {
           try {
             const gcRect = gc.getBoundingClientRect();
-            ctx.drawImage(gc,
-              gcRect.left - rect.left, gcRect.top - rect.top,
-              gcRect.width, gcRect.height,
-            );
-          } catch { /* tainted canvas — skip */ }
+            ctx.drawImage(gc, gcRect.left - rect.left, gcRect.top - rect.top, gcRect.width, gcRect.height);
+          } catch { /* tainted */ }
         }
       }
       frameLoopRef.current = requestAnimationFrame(captureFrame);
     };
-
     frameLoopRef.current = requestAnimationFrame(captureFrame);
   }, [targetRef]);
 
-  /* ── Screenshot capture ──────────────────────────────────────── */
+  /* ── Screenshot capture ─────────────────────────────────────────── */
 
   const captureScreenshot = useCallback(async (annotationId: string): Promise<void> => {
     const target = targetRef.current;
@@ -129,13 +125,10 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       offscreen.height = rect.height;
       const ctx = offscreen.getContext('2d');
       if (!ctx) return;
-
-      // Try frame capture canvas first (most reliable)
       const fc = frameCaptureRef.current;
       if (fc && fc.width > 0) {
         ctx.drawImage(fc, 0, 0, rect.width, rect.height);
       } else {
-        // Fallback: try to capture game canvases directly
         ctx.fillStyle = '#0d0d1a';
         ctx.fillRect(0, 0, rect.width, rect.height);
         const gameCanvases = target.querySelectorAll('canvas');
@@ -143,238 +136,222 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
           try {
             const gcRect = gc.getBoundingClientRect();
             ctx.drawImage(gc, gcRect.left - rect.left, gcRect.top - rect.top, gcRect.width, gcRect.height);
-          } catch { /* skip tainted */ }
+          } catch { /* skip */ }
         }
       }
-
-      // Composite drawing overlay
       const drawingCanvas = canvasRef.current;
-      if (drawingCanvas) {
-        ctx.drawImage(drawingCanvas, 0, 0);
-      }
-
-      const blob = await new Promise<Blob | null>((resolve) =>
-        offscreen.toBlob(resolve, 'image/png'),
-      );
-      if (blob) {
-        screenshotBlobsRef.current.set(annotationId, blob);
-      }
+      if (drawingCanvas) ctx.drawImage(drawingCanvas, 0, 0);
+      const blob = await new Promise<Blob | null>((resolve) => offscreen.toBlob(resolve, 'image/png'));
+      if (blob) screenshotBlobsRef.current.set(annotationId, blob);
     } catch { /* best-effort */ }
   }, [targetRef]);
 
-  /* ── Recording: auto-start using canvas.captureStream() ────── */
+  /* ── Recording ──────────────────────────────────────────────────── */
 
   const startRecording = useCallback(() => {
     const fc = frameCaptureRef.current;
     if (!fc) return;
-
+    startTimeRef.current = Date.now();
+    timerRef.current = setInterval(() => {
+      setRecordingTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
+    }, 1000);
+    if (typeof fc.captureStream !== 'function') { setIsRecording(true); return; }
     try {
-      const stream = fc.captureStream(15); // 15 fps — good quality, small files
-      const recorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-          ? 'video/webm;codecs=vp9'
-          : 'video/webm',
-        videoBitsPerSecond: 1_000_000,
-      });
-
+      const stream = fc.captureStream(15);
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : MediaRecorder.isTypeSupported('video/webm')
+          ? 'video/webm'
+          : MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : '';
+      if (!mimeType) { setIsRecording(true); return; }
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 1_000_000 });
       chunksRef.current = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.start(1000);
       mediaRecorderRef.current = recorder;
-      startTimeRef.current = Date.now();
       setIsRecording(true);
-
-      timerRef.current = setInterval(() => {
-        setRecordingTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
-      }, 1000);
-    } catch (err) {
-      console.error('Failed to start canvas recording:', err);
-    }
+    } catch { setIsRecording(true); }
   }, []);
 
   const stopAndSubmit = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     const recorder = mediaRecorderRef.current;
     if (!recorder) {
-      // No recording — submit annotations only
-      const emptyBlob = new Blob([], { type: 'video/webm' });
-      onSubmit({ recording: emptyBlob, annotations, screenshots: screenshotBlobsRef.current });
+      onSubmit({ recording: new Blob([], { type: 'video/webm' }), annotations, screenshots: screenshotBlobsRef.current });
       return;
     }
-
     recorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-      onSubmit({ recording: blob, annotations, screenshots: screenshotBlobsRef.current });
+      onSubmit({ recording: new Blob(chunksRef.current, { type: 'video/webm' }), annotations, screenshots: screenshotBlobsRef.current });
     };
     if (recorder.state !== 'inactive') recorder.stop();
     setIsRecording(false);
   }, [annotations, onSubmit]);
 
-  // Auto-start: begin frame capture + recording when component mounts
   useEffect(() => {
     const timer = setTimeout(() => {
       startFrameCapture();
-      // Small delay to let frame capture initialize
       setTimeout(() => startRecording(), 500);
-    }, 1000); // Wait for game to render first frame
+    }, 1000);
     return () => clearTimeout(timer);
   }, [startFrameCapture, startRecording]);
 
-  /* ── Drawing ───────────────────────────────────────────────────── */
+  /* ── Drawing ────────────────────────────────────────────────────── */
 
-  const getCanvasPos = useCallback(
-    (e: React.PointerEvent): [number, number] => {
+  const startDraw = useCallback(
+    (clientX: number, clientY: number) => {
+      if (activeTool !== 'draw') return;
       const canvas = canvasRef.current;
-      if (!canvas) return [0, 0];
-      const rect = canvas.getBoundingClientRect();
-      return [e.clientX - rect.left, e.clientY - rect.top];
-    },
-    [],
-  );
-
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      if (activeTool !== 'pen' && activeTool !== 'highlight') return;
+      if (!canvas) return;
+      // Save canvas state for undo before starting new stroke
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        drawHistory.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+      }
       isDrawing.current = true;
-      const [x, y] = getCanvasPos(e);
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
       currentPath.current = [`M ${x} ${y}`];
-      const ctx = canvasRef.current?.getContext('2d');
       if (!ctx) return;
       ctx.beginPath();
       ctx.moveTo(x, y);
       ctx.strokeStyle = penColor;
-      ctx.lineWidth = activeTool === 'highlight' ? 20 : 3;
+      ctx.lineWidth = penWidth;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.globalAlpha = activeTool === 'highlight' ? 0.35 : 1;
+      ctx.globalAlpha = penWidth >= 20 ? 0.35 : 1;
     },
-    [activeTool, penColor, getCanvasPos],
+    [activeTool, penColor, penWidth],
   );
 
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent) => {
+  const moveDraw = useCallback(
+    (clientX: number, clientY: number) => {
       if (!isDrawing.current) return;
-      const [x, y] = getCanvasPos(e);
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
       currentPath.current.push(`L ${x} ${y}`);
-      const ctx = canvasRef.current?.getContext('2d');
+      const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.lineTo(x, y);
       ctx.stroke();
     },
-    [getCanvasPos],
+    [],
   );
 
-  const handlePointerUp = useCallback(() => {
+  const endDraw = useCallback(() => {
     if (!isDrawing.current) return;
     isDrawing.current = false;
     const ctx = canvasRef.current?.getContext('2d');
     if (ctx) ctx.globalAlpha = 1;
-    if (currentPath.current.length > 1) {
+    const pathData = currentPath.current.join(' ');
+    if (currentPath.current.length >= 1 && pathData) {
       const id = `draw-${Date.now()}`;
       setAnnotations((prev) => [...prev, {
         id, timestamp: currentTimestamp(), type: 'draw',
-        pathData: currentPath.current.join(' '), color: penColor, screenshot: id,
+        pathData, color: penColor, lineWidth: penWidth, screenshot: id,
       }]);
       void captureScreenshot(id);
     }
     currentPath.current = [];
-  }, [penColor, currentTimestamp, captureScreenshot]);
+  }, [penColor, penWidth, currentTimestamp, captureScreenshot]);
 
-  /* ── Comment ───────────────────────────────────────────────────── */
+  const undoDraw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const prev = drawHistory.current.pop();
+    if (prev) {
+      ctx.putImageData(prev, 0, 0);
+      // Remove the last draw annotation
+      setAnnotations((a) => {
+        let lastDrawIdx = -1;
+        for (let i = a.length - 1; i >= 0; i--) {
+          if (a[i].type === 'draw') { lastDrawIdx = i; break; }
+        }
+        if (lastDrawIdx >= 0) return a.filter((_, i) => i !== lastDrawIdx);
+        return a;
+      });
+    }
+  }, []);
+
+  /* ── Comment (inside pill panel) ────────────────────────────────── */
 
   const submitComment = useCallback(async () => {
-    if (!commentText.trim() || !commentPos) return;
+    if (!commentText.trim()) return;
     const id = `comment-${Date.now()}`;
     const annotation: Annotation = {
       id, timestamp: currentTimestamp(), type: 'comment',
-      text: commentText.trim(), x: commentPos.x, y: commentPos.y,
+      text: commentText.trim(), x: 0.5, y: 0.5,
       clarified: false, screenshot: id,
     };
     setAnnotations((prev) => [...prev, annotation]);
     setCommentText('');
-    setAiReply(null);
     void captureScreenshot(id);
 
     if (onRequestClarification) {
       setAiLoading(true);
       try {
         const reply = await onRequestClarification(annotation);
-        if (reply) setAiReply(reply);
+        if (reply) {
+          setAiReply(reply);
+          setAiInputText('');
+          setPanelView('ai-reply');
+          return;
+        }
       } catch { /* optional */ } finally {
         setAiLoading(false);
       }
-    } else {
-      setCommentPos(null);
     }
-  }, [commentText, commentPos, currentTimestamp, onRequestClarification, captureScreenshot]);
+    // No AI reply — go back to tools
+    setPanelView('tools');
+  }, [commentText, currentTimestamp, onRequestClarification, captureScreenshot]);
 
-  const handleAiResponse = useCallback(
-    (response: string) => {
+  const handleAiResponse = useCallback(() => {
+    if (aiInputText.trim()) {
       setAnnotations((prev) => {
         const updated = [...prev];
         const last = updated[updated.length - 1];
         if (last?.type === 'comment') {
-          last.text += `\n---\nAI: ${aiReply}\nUser: ${response}`;
+          last.text += `\n---\nAI: ${aiReply}\nUser: ${aiInputText.trim()}`;
           last.clarified = true;
         }
         return updated;
       });
-      setAiReply(null);
-      setCommentPos(null);
-    },
-    [aiReply],
-  );
+    } else {
+      // Just mark as clarified
+      setAnnotations((prev) => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last?.type === 'comment') last.clarified = true;
+        return updated;
+      });
+    }
+    setAiReply(null);
+    setAiInputText('');
+    setPanelView('tools');
+  }, [aiReply, aiInputText]);
 
-  const dismissAi = useCallback(() => {
+  /* ── Edit annotation in notes view ──────────────────────────────── */
+
+  const saveEdit = useCallback((idx: number) => {
     setAnnotations((prev) => {
       const updated = [...prev];
-      const last = updated[updated.length - 1];
-      if (last?.type === 'comment') last.clarified = true;
+      if (updated[idx]) updated[idx] = { ...updated[idx], text: editText.trim() || updated[idx].text };
       return updated;
     });
-    setAiReply(null);
-    setCommentPos(null);
+    setEditingIdx(null);
+    setEditText('');
+  }, [editText]);
+
+  const deleteAnnotation = useCallback((idx: number) => {
+    setAnnotations((prev) => prev.filter((_, i) => i !== idx));
   }, []);
 
-  /* ── Draggable pins ────────────────────────────────────────────── */
-
-  const handlePinDragStart = useCallback((id: string, clientX: number, clientY: number) => {
-    const ann = annotations.find((a) => a.id === id);
-    if (!ann) return;
-    draggingPin.current = { id, startX: clientX, startY: clientY, origX: ann.x ?? 0.5, origY: ann.y ?? 0.5 };
-  }, [annotations]);
-
-  const handlePinDragMove = useCallback((clientX: number, clientY: number) => {
-    const d = draggingPin.current;
-    if (!d) return;
-    const dx = (clientX - d.startX) / window.innerWidth;
-    const dy = (clientY - d.startY) / window.innerHeight;
-    const newX = Math.max(0, Math.min(1, d.origX + dx));
-    const newY = Math.max(0, Math.min(1, d.origY + dy));
-    setAnnotations((prev) =>
-      prev.map((a) => a.id === d.id ? { ...a, x: newX, y: newY } : a),
-    );
-  }, []);
-
-  const handlePinDragEnd = useCallback(() => {
-    draggingPin.current = null;
-  }, []);
-
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => handlePinDragMove(e.clientX, e.clientY);
-    const onUp = () => handlePinDragEnd();
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    return () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-  }, [handlePinDragMove, handlePinDragEnd]);
-
-  /* ── Resize canvas ─────────────────────────────────────────────── */
+  /* ── Resize canvas ──────────────────────────────────────────────── */
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -382,171 +359,78 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      drawHistory.current = []; // clear history on resize (canvas cleared)
     };
     resize();
     window.addEventListener('resize', resize);
     return () => window.removeEventListener('resize', resize);
   }, [activeTool]);
 
-  /* ── Auto-save on navigate away / tab close ──────────────────── */
+  /* ── Auto-save ──────────────────────────────────────────────────── */
+
+  const uploadUrl = `${process.env.NEXT_PUBLIC_TONG_API_BASE || 'https://tong-api.erniesg.workers.dev'}/api/v1/playtest/sessions/${sessionId}/upload`;
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (annotations.length > 0 || chunksRef.current.length > 0) {
-        // Try to upload what we have via sendBeacon
-        const data = JSON.stringify(annotations);
-        navigator.sendBeacon?.(
-          `${typeof window !== 'undefined' ? (window as any).__NEXT_DATA__?.runtimeConfig?.NEXT_PUBLIC_TONG_API_BASE || '' : ''}/api/v1/playtest/sessions/${sessionId}/upload`,
-          new Blob([
-            JSON.stringify({ annotations: data }),
-          ], { type: 'application/json' }),
-        );
+        const formData = new FormData();
+        formData.append('annotations', JSON.stringify(annotations));
+        navigator.sendBeacon?.(uploadUrl, formData);
         e.preventDefault();
       }
     };
-
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && annotations.length > 0) {
-        // Page going to background — save annotations via sendBeacon
         const formData = new FormData();
         formData.append('annotations', JSON.stringify(annotations));
         if (chunksRef.current.length > 0) {
-          const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-          formData.append('recording', blob, `${sessionId}.webm`);
+          formData.append('recording', new Blob(chunksRef.current, { type: 'video/webm' }), `${sessionId}.webm`);
         }
-        // sendBeacon with FormData
-        navigator.sendBeacon?.(
-          `${process.env.NEXT_PUBLIC_TONG_API_BASE || 'https://tong-api.erniesg.workers.dev'}/api/v1/playtest/sessions/${sessionId}/upload`,
-          formData,
-        );
+        navigator.sendBeacon?.(uploadUrl, formData);
       }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [annotations, sessionId]);
+  }, [annotations, sessionId, uploadUrl]);
 
-  /* ── Cleanup ───────────────────────────────────────────────────── */
+  /* ── Cleanup ────────────────────────────────────────────────────── */
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (frameLoopRef.current) cancelAnimationFrame(frameLoopRef.current);
-      if (mediaRecorderRef.current?.state !== 'inactive') {
-        mediaRecorderRef.current?.stop();
-      }
-      if (frameCaptureRef.current) {
-        frameCaptureRef.current.remove();
-        frameCaptureRef.current = null;
-      }
+      if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
+      if (frameCaptureRef.current) { frameCaptureRef.current.remove(); frameCaptureRef.current = null; }
     };
   }, []);
 
   const COLORS = ['#ff6b2c', '#ef4444', '#3b82f6', '#22c55e', '#eab308', '#ffffff'];
+  const drawCount = annotations.filter((a) => a.type === 'draw').length;
 
-  /* ── Render ────────────────────────────────────────────────────── */
+  /* ── Render ─────────────────────────────────────────────────────── */
 
   return (
     <>
-      {/* Drawing canvas overlay — always mounted when a tool is active */}
-      {(activeTool === 'pen' || activeTool === 'highlight') && (
+      {/* Drawing canvas */}
+      {activeTool === 'draw' && (
         <canvas
           ref={canvasRef}
           className="playtest-canvas"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerUp}
-          onTouchStart={(e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            if (touch) handlePointerDown({ clientX: touch.clientX, clientY: touch.clientY } as any);
-          }}
-          onTouchMove={(e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            if (touch) handlePointerMove({ clientX: touch.clientX, clientY: touch.clientY } as any);
-          }}
-          onTouchEnd={(e) => {
-            e.preventDefault();
-            handlePointerUp();
-          }}
+          onPointerDown={(e) => { e.preventDefault(); startDraw(e.clientX, e.clientY); }}
+          onPointerMove={(e) => moveDraw(e.clientX, e.clientY)}
+          onPointerUp={endDraw}
+          onPointerLeave={endDraw}
           style={{ touchAction: 'none' }}
         />
       )}
 
-      {/* Draggable comment pins */}
-      {annotations.filter((a) => a.type === 'comment').map((a) => (
-        <div
-          key={a.id}
-          className="playtest-pin"
-          style={{
-            left: `${(a.x ?? 0.5) * 100}vw`,
-            top: `${(a.y ?? 0.5) * 100}vh`,
-            cursor: 'grab',
-            touchAction: 'none',
-          }}
-          title={a.text}
-          onPointerDown={(e) => {
-            e.preventDefault();
-            handlePinDragStart(a.id, e.clientX, e.clientY);
-          }}
-        >
-          <span className="playtest-pin-dot" />
-          <span className="playtest-pin-label">{a.text}</span>
-        </div>
-      ))}
-
-      {/* Comment input bar — anchored to bottom of screen */}
-      {commentPos && (
-        <div className="playtest-comment-bar">
-          <textarea
-            className="playtest-comment-input"
-            placeholder="What felt off? Type your note..."
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(); }
-            }}
-            autoFocus
-          />
-          {aiLoading && <div className="playtest-ai-loading">AI is thinking...</div>}
-          {aiReply && (
-            <div className="playtest-ai-reply">
-              <p className="playtest-ai-text">{aiReply}</p>
-              <div className="playtest-ai-actions">
-                <input
-                  className="playtest-ai-input"
-                  placeholder="Reply to AI..."
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleAiResponse((e.target as HTMLInputElement).value);
-                  }}
-                />
-                <button className="playtest-ai-dismiss" onClick={dismissAi}>
-                  Clear enough
-                </button>
-              </div>
-            </div>
-          )}
-          <div className="playtest-comment-actions">
-            <button className="playtest-btn-small" onClick={submitComment}>Pin</button>
-            <button
-              className="playtest-btn-small playtest-btn-muted"
-              onClick={() => { setCommentPos(null); setCommentText(''); }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Floating pill toolbar (bottom-right) ──────────────────── */}
+      {/* ── Single pill — everything lives here ───────────────────── */}
       <div className={`playtest-pill ${expanded ? 'playtest-pill-expanded' : ''}`}>
-        {/* Collapsed: just recording indicator + expand button */}
+        {/* Collapsed pill */}
         {!expanded && (
           <button className="playtest-pill-toggle" onClick={() => setExpanded(true)}>
             {isRecording && <span className="playtest-recording-indicator" />}
@@ -559,70 +443,183 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
           </button>
         )}
 
-        {/* Expanded: full controls */}
+        {/* Expanded pill — all views render here */}
         {expanded && (
           <div className="playtest-pill-controls">
-            {/* Recording status */}
+            {/* ── Header (always visible) ──────────────────────────── */}
             <div className="playtest-pill-row">
+              {panelView !== 'tools' && (
+                <button
+                  className="playtest-pill-back"
+                  onClick={() => { setPanelView('tools'); setAiReply(null); setCommentText(''); }}
+                >
+                  &#8249;
+                </button>
+              )}
               {isRecording && <span className="playtest-recording-indicator" />}
               <span className="playtest-pill-time">{fmt(recordingTime)}</span>
-              <span className="playtest-pill-notes">
-                {annotations.length} note{annotations.length !== 1 ? 's' : ''}
-              </span>
+              <span style={{ flex: 1 }} />
               <button
                 className="playtest-pill-close"
-                onClick={() => setExpanded(false)}
-                aria-label="Collapse"
+                onClick={() => { setExpanded(false); setPanelView('tools'); }}
               >
                 &#x2715;
               </button>
             </div>
 
-            {/* Tools */}
-            <div className="playtest-pill-row">
-              <button
-                className={`playtest-tool ${activeTool === 'pen' ? 'playtest-tool-active' : ''}`}
-                onClick={() => setActiveTool(activeTool === 'pen' ? 'none' : 'pen')}
-                title="Pen"
-              >&#9998;</button>
-              <button
-                className={`playtest-tool ${activeTool === 'highlight' ? 'playtest-tool-active' : ''}`}
-                onClick={() => setActiveTool(activeTool === 'highlight' ? 'none' : 'highlight')}
-                title="Highlight"
-              >&#9618;</button>
-              <button
-                className={`playtest-tool ${commentPos ? 'playtest-tool-active' : ''}`}
-                onClick={() => {
-                  setActiveTool('none');
-                  if (commentPos) {
-                    setCommentPos(null);
-                    setCommentText('');
-                  } else {
-                    setCommentPos({ x: 0.5, y: 0.5 });
-                  }
-                }}
-                title="Comment"
-              >&#128172;</button>
-            </div>
-
-            {/* Color picker (when drawing) */}
-            {(activeTool === 'pen' || activeTool === 'highlight') && (
-              <div className="playtest-pill-row playtest-colors">
-                {COLORS.map((c) => (
+            {/* ── Tools view ───────────────────────────────────────── */}
+            {panelView === 'tools' && (
+              <>
+                <div className="playtest-pill-row">
                   <button
-                    key={c}
-                    className={`playtest-color-swatch ${penColor === c ? 'playtest-color-active' : ''}`}
-                    style={{ background: c }}
-                    onClick={() => setPenColor(c)}
-                  />
-                ))}
+                    className={`playtest-tool ${activeTool === 'draw' ? 'playtest-tool-active' : ''}`}
+                    onClick={() => setActiveTool(activeTool === 'draw' ? 'none' : 'draw')}
+                    title="Draw"
+                  >&#9998;</button>
+                  <button
+                    className="playtest-tool"
+                    onClick={() => { setActiveTool('none'); setPanelView('comment'); }}
+                    title="Comment"
+                  >&#128172;</button>
+                  <button
+                    className="playtest-tool"
+                    onClick={() => setPanelView('notes')}
+                    title="Notes"
+                  >
+                    &#128221;{annotations.length > 0 ? ` ${annotations.length}` : ''}
+                  </button>
+                </div>
+
+                {/* Draw options */}
+                {activeTool === 'draw' && (
+                  <>
+                    <div className="playtest-pill-row">
+                      <button
+                        className={`playtest-tool ${penWidth === 3 ? 'playtest-tool-active' : ''}`}
+                        onClick={() => setPenWidth(3)}
+                      >
+                        <span style={{ display: 'inline-block', width: 14, height: 2, background: 'currentColor', borderRadius: 1 }} />
+                      </button>
+                      <button
+                        className={`playtest-tool ${penWidth === 20 ? 'playtest-tool-active' : ''}`}
+                        onClick={() => setPenWidth(20)}
+                      >
+                        <span style={{ display: 'inline-block', width: 14, height: 8, background: 'currentColor', borderRadius: 2, opacity: 0.5 }} />
+                      </button>
+                      {drawCount > 0 && (
+                        <button className="playtest-tool" onClick={undoDraw} title="Undo">
+                          &#8630;
+                        </button>
+                      )}
+                    </div>
+                    <div className="playtest-pill-row playtest-colors">
+                      {COLORS.map((c) => (
+                        <button
+                          key={c}
+                          className={`playtest-color-swatch ${penColor === c ? 'playtest-color-active' : ''}`}
+                          style={{ background: c }}
+                          onClick={() => setPenColor(c)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <button className="playtest-btn playtest-btn-submit" onClick={stopAndSubmit}>
+                  Submit Session
+                </button>
+              </>
+            )}
+
+            {/* ── Comment view (inside pill) ───────────────────────── */}
+            {panelView === 'comment' && (
+              <div className="playtest-pill-comment">
+                <textarea
+                  className="playtest-comment-input"
+                  placeholder="What felt off?"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(); }
+                  }}
+                  rows={2}
+                  autoFocus
+                />
+                {aiLoading && <div className="playtest-ai-loading">AI is thinking...</div>}
+                <div className="playtest-pill-row" style={{ justifyContent: 'flex-end' }}>
+                  <button
+                    className="playtest-btn-small playtest-btn-muted"
+                    onClick={() => { setPanelView('tools'); setCommentText(''); }}
+                  >
+                    Cancel
+                  </button>
+                  <button className="playtest-btn-small" onClick={submitComment}>
+                    Pin
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Submit */}
-            <button className="playtest-btn playtest-btn-submit" onClick={stopAndSubmit}>
-              Done
-            </button>
+            {/* ── AI reply view (inside pill) ──────────────────────── */}
+            {panelView === 'ai-reply' && aiReply && (
+              <div className="playtest-pill-comment">
+                <p className="playtest-ai-text">{aiReply}</p>
+                <input
+                  className="playtest-comment-input"
+                  style={{ minHeight: 'auto', padding: '8px' }}
+                  placeholder="Reply to AI (optional)..."
+                  value={aiInputText}
+                  onChange={(e) => setAiInputText(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAiResponse(); }}
+                  autoFocus
+                />
+                <div className="playtest-pill-row" style={{ justifyContent: 'flex-end' }}>
+                  <button className="playtest-btn-small playtest-btn-muted" onClick={handleAiResponse}>
+                    Skip
+                  </button>
+                  <button className="playtest-btn-small" onClick={handleAiResponse}>
+                    Save
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Notes view ───────────────────────────────────────── */}
+            {panelView === 'notes' && (
+              <div className="playtest-notes-list">
+                {annotations.length === 0 && (
+                  <p className="playtest-notes-empty">No notes yet</p>
+                )}
+                {annotations.map((a, i) => (
+                  <div key={a.id} className="playtest-note-item">
+                    <span className="playtest-note-time">{fmt(a.timestamp)}</span>
+                    <span className="playtest-note-type"
+                      dangerouslySetInnerHTML={{ __html: a.type === 'draw' ? '&#9998;' : '&#128172;' }}
+                    />
+                    {editingIdx === i ? (
+                      <div className="playtest-note-edit">
+                        <input
+                          className="playtest-note-edit-input"
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(i); }}
+                          autoFocus
+                        />
+                        <button className="playtest-note-save" onClick={() => saveEdit(i)}>&#10003;</button>
+                      </div>
+                    ) : (
+                      <span
+                        className="playtest-note-text"
+                        onClick={() => { setEditingIdx(i); setEditText(a.text || `${a.type} @ ${fmt(a.timestamp)}`); }}
+                      >
+                        {a.text || `${a.type} annotation`}
+                      </span>
+                    )}
+                    <button className="playtest-note-delete" onClick={() => deleteAnnotation(i)}>&#x2715;</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
