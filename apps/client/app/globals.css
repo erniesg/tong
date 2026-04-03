@@ -8189,23 +8189,25 @@ body:has(.playtest-pill-expanded) {
   display: block;
   width: 100%;
   text-align: left;
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 10px 12px;
   margin-bottom: 8px;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background 0.15s;
   font-family: inherit;
+  color: inherit;
 }
 
 .triage-session-card:hover {
-  border-color: var(--accent);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.09);
 }
 
 .triage-session-selected {
   border-color: var(--accent);
-  background: rgba(255, 107, 44, 0.06);
+  background: rgba(255, 107, 44, 0.1);
 }
 
 .triage-session-top {

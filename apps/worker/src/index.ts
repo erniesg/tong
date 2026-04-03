@@ -2267,6 +2267,66 @@ async function handleRequest(request: Request): Promise<Response> {
       });
     }
 
+    // Proxy annotations from R2 (avoids CORS on direct R2 access)
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/annotations$/) && request.method === 'GET') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/annotations.json`);
+      if (!obj) return jsonResponse(404, { error: 'no_annotations' });
+      const body = await obj.text();
+      return new Response(body, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'max-age=60',
+        },
+      });
+    }
+
+    // Proxy recording from R2 (avoids CORS on direct R2 access)
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/recording$/) && (request.method === 'GET' || request.method === 'HEAD')) {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/recording.webm`);
+      if (!obj) return jsonResponse(404, { error: 'no_recording' });
+      if (request.method === 'HEAD') {
+        return new Response(null, {
+          headers: {
+            'Content-Type': 'video/webm',
+            'Content-Length': String(obj.size),
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      }
+      return new Response(obj.body, {
+        headers: {
+          'Content-Type': 'video/webm',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'max-age=300',
+        },
+      });
+    }
+
+    // Proxy screenshots from R2
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/screenshots\/[^/]+$/) && request.method === 'GET') {
+      const parts = pathname.split('/');
+      const sessionId = parts[5];
+      const filename = parts[7];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/screenshots/${filename}`);
+      if (!obj) return jsonResponse(404, { error: 'not_found' });
+      return new Response(obj.body, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'max-age=3600',
+        },
+      });
+    }
+
     // Update session status
     if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+$/) && request.method === 'PATCH') {
       const sessionId = pathname.split('/').pop()!;

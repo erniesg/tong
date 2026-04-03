@@ -49,6 +49,16 @@ async function fetchSessions(): Promise<PlaytestSession[]> {
 }
 
 async function fetchAnnotations(sessionId: string): Promise<Annotation[]> {
+  // Try Worker API proxy first (avoids R2 CORS issues), fallback to direct R2
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/playtest/sessions/${sessionId}/annotations`, {
+      headers: { 'x-demo-password': localStorage.getItem('tong_demo_pw') || '' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return Array.isArray(data) ? data : data.annotations || [];
+    }
+  } catch { /* try direct */ }
   try {
     const res = await fetch(`${RUNS_BASE}/playtest/${sessionId}/annotations.json`);
     if (!res.ok) return [];
@@ -59,8 +69,19 @@ async function fetchAnnotations(sessionId: string): Promise<Annotation[]> {
   }
 }
 
-function recordingUrl(sessionId: string) {
-  return `${RUNS_BASE}/playtest/${sessionId}/recording.webm`;
+async function checkRecording(sessionId: string): Promise<string | null> {
+  // Try Worker API proxy first, fallback to direct R2
+  const proxyUrl = `${API_BASE}/api/v1/playtest/sessions/${sessionId}/recording`;
+  try {
+    const res = await fetch(proxyUrl, { method: 'HEAD' });
+    if (res.ok) return proxyUrl;
+  } catch { /* try direct */ }
+  const directUrl = `${RUNS_BASE}/playtest/${sessionId}/recording.webm`;
+  try {
+    const res = await fetch(directUrl, { method: 'HEAD' });
+    if (res.ok && (res.headers.get('content-length') || '0') !== '0') return directUrl;
+  } catch { /* no recording */ }
+  return null;
 }
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
@@ -68,11 +89,7 @@ function recordingUrl(sessionId: string) {
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-const STATUS_COLORS: Record<string, string> = {
-  submitted: '#22c55e',
-  active: '#3b82f6',
-  pending: '#94a3b8',
-};
+/* Status uses triage-status-{status} classes for consistent styling */
 
 /* ── Component ────────────────────────────────────────────────────── */
 
@@ -82,7 +99,7 @@ export default function PlaytestViewerPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [loadingAnnotations, setLoadingAnnotations] = useState(false);
-  const [hasRecording, setHasRecording] = useState(false);
+  const [recordingSrc, setRecordingSrc] = useState<string | null>(null);
   const [activeAnnotation, setActiveAnnotation] = useState<string | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -99,17 +116,14 @@ export default function PlaytestViewerPage() {
     setAnnotations([]);
     setActiveAnnotation(null);
     setScreenshotPreview(null);
+    setRecordingSrc(null);
     setLoadingAnnotations(true);
 
-    // Check if recording exists
-    try {
-      const res = await fetch(recordingUrl(sessionId), { method: 'HEAD' });
-      setHasRecording(res.ok && (res.headers.get('content-length') || '0') !== '0');
-    } catch {
-      setHasRecording(false);
-    }
-
-    const anns = await fetchAnnotations(sessionId);
+    const [recUrl, anns] = await Promise.all([
+      checkRecording(sessionId),
+      fetchAnnotations(sessionId),
+    ]);
+    setRecordingSrc(recUrl);
     setAnnotations(anns);
     setLoadingAnnotations(false);
   }, []);
@@ -119,10 +133,12 @@ export default function PlaytestViewerPage() {
     if (videoRef.current && ann.timestamp) {
       videoRef.current.currentTime = ann.timestamp;
     }
-    if (ann.screenshotUrl) {
-      setScreenshotPreview(ann.screenshotUrl);
+    if (ann.screenshotUrl && selected) {
+      // Use Worker proxy to avoid CORS issues with R2 direct URLs
+      const proxyUrl = `${API_BASE}/api/v1/playtest/sessions/${selected}/screenshots/${ann.id}.png`;
+      setScreenshotPreview(proxyUrl);
     }
-  }, []);
+  }, [selected]);
 
   const selectedSession = sessions.find((s) => s.sessionId === selected);
   const submittedCount = sessions.filter((s) => s.status === 'submitted').length;
@@ -153,10 +169,7 @@ export default function PlaytestViewerPage() {
             >
               <div className="triage-session-top">
                 <span className="triage-session-id">{s.sessionId.slice(0, 8)}</span>
-                <span
-                  className="triage-status"
-                  style={{ color: STATUS_COLORS[s.status] || '#94a3b8' }}
-                >
+                <span className={`triage-status triage-status-${s.status}`}>
                   {s.status}
                 </span>
               </div>
@@ -189,7 +202,7 @@ export default function PlaytestViewerPage() {
               </div>
 
               {/* Recording player */}
-              {hasRecording && (
+              {recordingSrc && (
                 <div className="playtest-viewer-video">
                   <video
                     ref={videoRef}
@@ -198,12 +211,12 @@ export default function PlaytestViewerPage() {
                     preload="metadata"
                     style={{ width: '100%', borderRadius: 8, background: '#000' }}
                   >
-                    <source src={recordingUrl(selected)} type="video/webm" />
+                    <source src={recordingSrc} type="video/webm" />
                   </video>
                 </div>
               )}
 
-              {!hasRecording && !loadingAnnotations && (
+              {!recordingSrc && !loadingAnnotations && (
                 <div className="playtest-viewer-no-video">
                   No recording available (annotations-only session)
                 </div>
