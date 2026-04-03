@@ -8185,29 +8185,36 @@ body:has(.playtest-pill-expanded) {
   color: var(--muted);
 }
 
-.triage-session-card {
+/* Override .app-shell button orange for session cards */
+.triage-session-card,
+.app-shell .triage-session-card {
   display: block;
   width: 100%;
   text-align: left;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #fff;
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 12px;
   margin-bottom: 8px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   font-family: inherit;
-  color: inherit;
+  color: #1a1a1a;
 }
 
-.triage-session-card:hover {
-  border-color: rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.09);
-}
-
-.triage-session-selected {
+.triage-session-card:hover,
+.app-shell .triage-session-card:hover {
   border-color: var(--accent);
-  background: rgba(255, 107, 44, 0.1);
+  background: #fff;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.triage-session-selected,
+.app-shell .triage-session-selected {
+  border-color: var(--accent);
+  border-width: 2px;
+  background: #fffaf6;
 }
 
 .triage-session-top {
@@ -8567,16 +8574,16 @@ body:has(.playtest-pill-expanded) {
   text-align: center;
   color: var(--muted);
   font-size: 13px;
-  background: rgba(255, 255, 255, 0.03);
+  background: #fafaf8;
   border-radius: 8px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed var(--line);
 }
 
 .playtest-viewer-screenshot {
-  background: rgba(255, 255, 255, 0.03);
+  background: #fafaf8;
   border-radius: 8px;
   padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line);
 }
 
 .playtest-viewer-annotations {
@@ -8585,31 +8592,37 @@ body:has(.playtest-pill-expanded) {
   gap: 8px;
 }
 
-.playtest-viewer-ann {
+/* Override .app-shell button for annotation cards */
+.playtest-viewer-ann,
+.app-shell .playtest-viewer-ann {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #fff;
+  border: 1px solid var(--line);
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
-  color: inherit;
+  color: #1a1a1a;
   font-family: inherit;
   font-size: inherit;
   width: 100%;
   transition: background 0.15s, border-color 0.15s;
 }
 
-.playtest-viewer-ann:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.15);
+.playtest-viewer-ann:hover,
+.app-shell .playtest-viewer-ann:hover {
+  background: #fafaf8;
+  border-color: var(--accent);
+  transform: none;
 }
 
-.playtest-viewer-ann-active {
-  border-color: var(--accent, #ff6b2c);
-  background: rgba(255, 107, 44, 0.08);
+.playtest-viewer-ann-active,
+.app-shell .playtest-viewer-ann-active {
+  border-color: var(--accent);
+  border-width: 2px;
+  background: #fffaf6;
 }
 
 .playtest-viewer-ann-header {
@@ -8622,21 +8635,21 @@ body:has(.playtest-pill-expanded) {
 .playtest-viewer-ann-time {
   font-family: monospace;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.05);
   padding: 1px 6px;
   border-radius: 4px;
 }
 
 .playtest-viewer-ann-type {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--muted);
 }
 
 .playtest-viewer-ann-clarified {
   font-size: 10px;
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.15);
+  color: #1e40af;
+  background: #dbeafe;
   padding: 1px 6px;
   border-radius: 4px;
 }
@@ -8647,7 +8660,7 @@ body:has(.playtest-pill-expanded) {
 
 .playtest-viewer-ann-text {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #374151;
   line-height: 1.4;
   margin: 0;
   white-space: pre-wrap;

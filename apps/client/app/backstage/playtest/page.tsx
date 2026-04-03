@@ -33,18 +33,20 @@ const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787
 const RUNS_BASE = 'https://runs.tong.berlayar.ai';
 
 async function fetchSessions(): Promise<PlaytestSession[]> {
-  const res = await fetch(`${API_BASE}/api/v1/playtest/sessions`, {
-    headers: { 'x-demo-password': localStorage.getItem('tong_demo_pw') || '' },
-  });
+  const pw = typeof window !== 'undefined' ? localStorage.getItem('tong_demo_pw') || '' : '';
+  const headers: Record<string, string> = {};
+  if (pw) headers['x-demo-password'] = pw;
+  const res = await fetch(`${API_BASE}/api/v1/playtest/sessions`, { headers });
   if (!res.ok) return [];
   const data = await res.json();
-  return (data.sessions || data || []).map((s: Record<string, unknown>) => ({
-    sessionId: s.sessionId || s.session_id,
-    city: s.city,
-    sceneType: s.sceneType || s.scene_type,
-    language: s.language,
-    status: s.status,
-    createdAt: s.createdAt || s.created_at,
+  const list = data.sessions || data || [];
+  return (Array.isArray(list) ? list : []).map((s: Record<string, unknown>) => ({
+    sessionId: String(s.sessionId || s.session_id || ''),
+    city: String(s.city || ''),
+    sceneType: String(s.sceneType || s.scene_type || ''),
+    language: String(s.language || ''),
+    status: (s.status || 'pending') as PlaytestSession['status'],
+    createdAt: String(s.createdAt || s.created_at || ''),
   }));
 }
 
