@@ -458,9 +458,10 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
               <button
                 className="playtest-pill-close"
                 onClick={() => { setExpanded(false); setPanelView('tools'); }}
-                aria-label="Collapse"
+                aria-label="Minimize"
+                title="Minimize"
               >
-                &#x2715;
+                &#x25BE;
               </button>
             </div>
 

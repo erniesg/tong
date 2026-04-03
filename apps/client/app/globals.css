@@ -7612,11 +7612,10 @@ main.app-shell.app-shell--wide {
 
 /* ── Playtest Overlay ──────────────────────────────────────────── */
 
-/* Prevent any playtest element from causing horizontal scroll.
-   .playtest-wrapper is always mounted once a session starts (even after submit).
-   Both html+body needed — iOS Safari sometimes ignores body-only overflow. */
-html:has(.playtest-wrapper),
-body:has(.playtest-wrapper) {
+/* Prevent playtest overlay elements from causing horizontal scroll.
+   Scoped to .playtest-pill-expanded to avoid interfering with game scroll. */
+html:has(.playtest-pill-expanded),
+body:has(.playtest-pill-expanded) {
   overflow-x: hidden;
 }
 

@@ -110,7 +110,7 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
   const isActive = Boolean(sessionId) && !submitted;
 
   return (
-    <div ref={frameRef} className="playtest-wrapper" style={{ position: 'relative', width: '100%', minHeight: '100dvh', overflowX: 'hidden' }}>
+    <div ref={frameRef} className="playtest-wrapper" style={{ position: 'relative', width: '100%', minHeight: '100dvh' }}>
       {children}
       {isActive && (
         <PlaytestOverlay
