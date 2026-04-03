@@ -54,14 +54,15 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const [commentText, setCommentText] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [panelView, setPanelView] = useState<PanelView>('tools');
-  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [aiReply, setAiReply] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInputText, setAiInputText] = useState('');
 
-  // Undo stack: each entry is an annotation + the canvas state before it
+  // Undo stack: each entry is the canvas state before a stroke
   const drawHistory = useRef<ImageData[]>([]);
+  const recordingMimeRef = useRef('video/webm');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
@@ -165,6 +166,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
           : MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : '';
       if (!mimeType) { setIsRecording(true); return; }
       const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 1_000_000 });
+      recordingMimeRef.current = mimeType;
       chunksRef.current = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.start(1000);
@@ -181,7 +183,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       return;
     }
     recorder.onstop = () => {
-      onSubmit({ recording: new Blob(chunksRef.current, { type: 'video/webm' }), annotations, screenshots: screenshotBlobsRef.current });
+      onSubmit({ recording: new Blob(chunksRef.current, { type: recordingMimeRef.current }), annotations, screenshots: screenshotBlobsRef.current });
     };
     if (recorder.state !== 'inactive') recorder.stop();
     setIsRecording(false);
@@ -202,10 +204,11 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       if (activeTool !== 'draw') return;
       const canvas = canvasRef.current;
       if (!canvas) return;
-      // Save canvas state for undo before starting new stroke
+      // Save canvas state for undo before starting new stroke (cap at 16)
       const ctx = canvas.getContext('2d');
       if (ctx) {
         drawHistory.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+        if (drawHistory.current.length > 16) drawHistory.current.shift();
       }
       isDrawing.current = true;
       const rect = canvas.getBoundingClientRect();
@@ -247,7 +250,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     const ctx = canvasRef.current?.getContext('2d');
     if (ctx) ctx.globalAlpha = 1;
     const pathData = currentPath.current.join(' ');
-    if (currentPath.current.length >= 1 && pathData) {
+    if (currentPath.current.length > 1 && pathData) {
       const id = `draw-${Date.now()}`;
       setAnnotations((prev) => [...prev, {
         id, timestamp: currentTimestamp(), type: 'draw',
@@ -311,25 +314,17 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   }, [commentText, currentTimestamp, onRequestClarification, captureScreenshot]);
 
   const handleAiResponse = useCallback(() => {
-    if (aiInputText.trim()) {
-      setAnnotations((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last?.type === 'comment') {
-          last.text += `\n---\nAI: ${aiReply}\nUser: ${aiInputText.trim()}`;
-          last.clarified = true;
-        }
-        return updated;
-      });
-    } else {
-      // Just mark as clarified
-      setAnnotations((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last?.type === 'comment') last.clarified = true;
-        return updated;
-      });
-    }
+    setAnnotations((prev) => {
+      const updated = [...prev];
+      const last = updated[updated.length - 1];
+      if (last?.type === 'comment') {
+        const text = aiInputText.trim()
+          ? `${last.text}\n---\nAI: ${aiReply}\nUser: ${aiInputText.trim()}`
+          : last.text;
+        updated[updated.length - 1] = { ...last, text, clarified: true };
+      }
+      return updated;
+    });
     setAiReply(null);
     setAiInputText('');
     setPanelView('tools');
@@ -337,18 +332,16 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
 
   /* ── Edit annotation in notes view ──────────────────────────────── */
 
-  const saveEdit = useCallback((idx: number) => {
-    setAnnotations((prev) => {
-      const updated = [...prev];
-      if (updated[idx]) updated[idx] = { ...updated[idx], text: editText.trim() || updated[idx].text };
-      return updated;
-    });
-    setEditingIdx(null);
+  const saveEdit = useCallback((id: string) => {
+    setAnnotations((prev) =>
+      prev.map((a) => a.id === id ? { ...a, text: editText.trim() || a.text } : a),
+    );
+    setEditingId(null);
     setEditText('');
   }, [editText]);
 
-  const deleteAnnotation = useCallback((idx: number) => {
-    setAnnotations((prev) => prev.filter((_, i) => i !== idx));
+  const deleteAnnotation = useCallback((id: string) => {
+    setAnnotations((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
   /* ── Resize canvas ──────────────────────────────────────────────── */
@@ -405,6 +398,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       if (frameLoopRef.current) cancelAnimationFrame(frameLoopRef.current);
       if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
       if (frameCaptureRef.current) { frameCaptureRef.current.remove(); frameCaptureRef.current = null; }
+      drawHistory.current = [];
     };
   }, []);
 
@@ -424,6 +418,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
           onPointerMove={(e) => moveDraw(e.clientX, e.clientY)}
           onPointerUp={endDraw}
           onPointerLeave={endDraw}
+          onPointerCancel={endDraw}
           style={{ touchAction: 'none' }}
         />
       )}
@@ -452,6 +447,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
                 <button
                   className="playtest-pill-back"
                   onClick={() => { setPanelView('tools'); setAiReply(null); setCommentText(''); }}
+                  aria-label="Back"
                 >
                   &#8249;
                 </button>
@@ -462,6 +458,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
               <button
                 className="playtest-pill-close"
                 onClick={() => { setExpanded(false); setPanelView('tools'); }}
+                aria-label="Collapse"
               >
                 &#x2715;
               </button>
@@ -590,32 +587,30 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
                 {annotations.length === 0 && (
                   <p className="playtest-notes-empty">No notes yet</p>
                 )}
-                {annotations.map((a, i) => (
+                {annotations.map((a) => (
                   <div key={a.id} className="playtest-note-item">
                     <span className="playtest-note-time">{fmt(a.timestamp)}</span>
-                    <span className="playtest-note-type"
-                      dangerouslySetInnerHTML={{ __html: a.type === 'draw' ? '&#9998;' : '&#128172;' }}
-                    />
-                    {editingIdx === i ? (
+                    <span className="playtest-note-type">{a.type === 'draw' ? '\u270E' : '\uD83D\uDCAC'}</span>
+                    {editingId === a.id ? (
                       <div className="playtest-note-edit">
                         <input
                           className="playtest-note-edit-input"
                           value={editText}
                           onChange={(e) => setEditText(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(i); }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(a.id); }}
                           autoFocus
                         />
-                        <button className="playtest-note-save" onClick={() => saveEdit(i)}>&#10003;</button>
+                        <button className="playtest-note-save" onClick={() => saveEdit(a.id)} aria-label="Save">&#10003;</button>
                       </div>
                     ) : (
                       <span
                         className="playtest-note-text"
-                        onClick={() => { setEditingIdx(i); setEditText(a.text || `${a.type} @ ${fmt(a.timestamp)}`); }}
+                        onClick={() => { setEditingId(a.id); setEditText(a.text || `${a.type} @ ${fmt(a.timestamp)}`); }}
                       >
                         {a.text || `${a.type} annotation`}
                       </span>
                     )}
-                    <button className="playtest-note-delete" onClick={() => deleteAnnotation(i)}>&#x2715;</button>
+                    <button className="playtest-note-delete" onClick={() => deleteAnnotation(a.id)} aria-label="Delete">&#x2715;</button>
                   </div>
                 ))}
               </div>

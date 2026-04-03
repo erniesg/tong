@@ -222,7 +222,7 @@ export default function PlaytestPage() {
     );
   }
 
-  /* ── Ready — brief redirect state while window.location updates ── */
+  /* ── Ready — brief redirect state while router.push navigates ── */
   return (
     <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d1a', minHeight: '100dvh' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
