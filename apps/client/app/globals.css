@@ -8540,6 +8540,134 @@ body:has(.playtest-pill-expanded) {
   }
 }
 
+/* ── Playtest Viewer ──────────────────────────────────────────── */
+
+.playtest-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.playtest-viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.playtest-viewer-video {
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+
+.playtest-viewer-no-video {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.playtest-viewer-screenshot {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.playtest-viewer-annotations {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.playtest-viewer-ann {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  width: 100%;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.playtest-viewer-ann:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.playtest-viewer-ann-active {
+  border-color: var(--accent, #ff6b2c);
+  background: rgba(255, 107, 44, 0.08);
+}
+
+.playtest-viewer-ann-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.playtest-viewer-ann-time {
+  font-family: monospace;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.playtest-viewer-ann-type {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.playtest-viewer-ann-clarified {
+  font-size: 10px;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.playtest-viewer-ann-has-screenshot {
+  font-size: 12px;
+}
+
+.playtest-viewer-ann-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.4;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.playtest-viewer-ann-draw {
+  display: flex;
+  padding: 4px 0;
+}
+
+.playtest-viewer-ann-draw svg {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.playtest-viewer-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+}
+
 /* ── Backstage Layout ──────────────────────────────────────────── */
 
 .backstage-topbar {

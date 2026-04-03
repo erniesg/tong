@@ -8,6 +8,7 @@ const TABS = [
   { href: '/backstage/director', label: 'Director' },
   { href: '/backstage/signals', label: 'Signals' },
   { href: '/backstage/campaigns', label: 'Campaigns' },
+  { href: '/backstage/playtest', label: 'Playtest' },
   { href: '/backstage/triage', label: 'Triage' },
   { href: '/backstage/replay', label: 'Replay' },
 ];
