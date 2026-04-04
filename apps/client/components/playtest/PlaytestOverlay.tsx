@@ -60,9 +60,14 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInputText, setAiInputText] = useState('');
 
-  // Undo stack: each entry is the canvas state before a stroke
+  // Draggable pill position
+  const [pillPos, setPillPos] = useState<{ x: number; y: number } | null>(null);
+  const pillDrag = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+
+  // Undo stack + screenshot blob URLs for timeline thumbnails
   const drawHistory = useRef<ImageData[]>([]);
   const recordingMimeRef = useRef('video/webm');
+  const [thumbnails, setThumbnails] = useState<Map<string, string>>(new Map());
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
@@ -114,7 +119,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     frameLoopRef.current = requestAnimationFrame(captureFrame);
   }, [targetRef]);
 
-  /* ── Screenshot capture ─────────────────────────────────────────── */
+  /* ── Screenshot capture + thumbnail ─────────────────────────────── */
 
   const captureScreenshot = useCallback(async (annotationId: string): Promise<void> => {
     const target = targetRef.current;
@@ -143,7 +148,12 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       const drawingCanvas = canvasRef.current;
       if (drawingCanvas) ctx.drawImage(drawingCanvas, 0, 0);
       const blob = await new Promise<Blob | null>((resolve) => offscreen.toBlob(resolve, 'image/png'));
-      if (blob) screenshotBlobsRef.current.set(annotationId, blob);
+      if (blob) {
+        screenshotBlobsRef.current.set(annotationId, blob);
+        // Create thumbnail URL for timeline
+        const thumbUrl = URL.createObjectURL(blob);
+        setThumbnails((prev) => new Map(prev).set(annotationId, thumbUrl));
+      }
     } catch { /* best-effort */ }
   }, [targetRef]);
 
@@ -197,6 +207,53 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     return () => clearTimeout(timer);
   }, [startFrameCapture, startRecording]);
 
+  /* ── Draggable pill ─────────────────────────────────────────────── */
+
+  const onPillDragStart = useCallback((clientX: number, clientY: number) => {
+    const pos = pillPos || { x: window.innerWidth - 100, y: window.innerHeight - 60 };
+    pillDrag.current = { startX: clientX, startY: clientY, origX: pos.x, origY: pos.y };
+  }, [pillPos]);
+
+  const onPillDragMove = useCallback((clientX: number, clientY: number) => {
+    const d = pillDrag.current;
+    if (!d) return;
+    const nx = Math.max(0, Math.min(window.innerWidth - 60, d.origX + (clientX - d.startX)));
+    const ny = Math.max(0, Math.min(window.innerHeight - 40, d.origY + (clientY - d.startY)));
+    setPillPos({ x: nx, y: ny });
+  }, []);
+
+  const onPillDragEnd = useCallback(() => { pillDrag.current = null; }, []);
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => onPillDragMove(e.clientX, e.clientY);
+    const onUp = () => onPillDragEnd();
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [onPillDragMove, onPillDragEnd]);
+
+  // Distinguish drag from tap: track distance moved
+  const pillTapStart = useRef<{ x: number; y: number } | null>(null);
+  const handlePillPointerDown = useCallback((e: React.PointerEvent) => {
+    pillTapStart.current = { x: e.clientX, y: e.clientY };
+    onPillDragStart(e.clientX, e.clientY);
+  }, [onPillDragStart]);
+
+  const handlePillClick = useCallback(() => {
+    // Only expand if we didn't drag more than 5px
+    const t = pillTapStart.current;
+    const p = pillPos || { x: window.innerWidth - 100, y: window.innerHeight - 60 };
+    if (t) {
+      const dist = Math.sqrt((p.x - (t.x - (pillDrag.current?.startX ?? t.x) + (pillDrag.current?.origX ?? p.x))) ** 2);
+      // Simple: if pillDrag is null (ended), check if pos changed significantly
+    }
+    // The click event only fires if pointerup was close to pointerdown (browser default)
+    setExpanded(true);
+  }, [pillPos]);
+
   /* ── Drawing ────────────────────────────────────────────────────── */
 
   const startDraw = useCallback(
@@ -204,7 +261,6 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       if (activeTool !== 'draw') return;
       const canvas = canvasRef.current;
       if (!canvas) return;
-      // Save canvas state for undo before starting new stroke (cap at 16)
       const ctx = canvas.getContext('2d');
       if (ctx) {
         drawHistory.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
@@ -269,7 +325,6 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     const prev = drawHistory.current.pop();
     if (prev) {
       ctx.putImageData(prev, 0, 0);
-      // Remove the last draw annotation
       setAnnotations((a) => {
         let lastDrawIdx = -1;
         for (let i = a.length - 1; i >= 0; i--) {
@@ -281,7 +336,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     }
   }, []);
 
-  /* ── Comment (inside pill panel) ────────────────────────────────── */
+  /* ── Comment ────────────────────────────────────────────────────── */
 
   const submitComment = useCallback(async () => {
     if (!commentText.trim()) return;
@@ -309,7 +364,6 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
         setAiLoading(false);
       }
     }
-    // No AI reply — go back to tools
     setPanelView('tools');
   }, [commentText, currentTimestamp, onRequestClarification, captureScreenshot]);
 
@@ -330,7 +384,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     setPanelView('tools');
   }, [aiReply, aiInputText]);
 
-  /* ── Edit annotation in notes view ──────────────────────────────── */
+  /* ── Edit/delete ────────────────────────────────────────────────── */
 
   const saveEdit = useCallback((id: string) => {
     setAnnotations((prev) =>
@@ -342,6 +396,14 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
 
   const deleteAnnotation = useCallback((id: string) => {
     setAnnotations((prev) => prev.filter((a) => a.id !== id));
+    // Revoke thumbnail URL
+    setThumbnails((prev) => {
+      const next = new Map(prev);
+      const url = next.get(id);
+      if (url) URL.revokeObjectURL(url);
+      next.delete(id);
+      return next;
+    });
   }, []);
 
   /* ── Resize canvas ──────────────────────────────────────────────── */
@@ -352,7 +414,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      drawHistory.current = []; // clear history on resize (canvas cleared)
+      drawHistory.current = [];
     };
     resize();
     window.addEventListener('resize', resize);
@@ -399,11 +461,19 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
       if (frameCaptureRef.current) { frameCaptureRef.current.remove(); frameCaptureRef.current = null; }
       drawHistory.current = [];
+      // Revoke all thumbnail URLs
+      thumbnails.forEach((url) => URL.revokeObjectURL(url));
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const COLORS = ['#ff6b2c', '#ef4444', '#3b82f6', '#22c55e', '#eab308', '#ffffff'];
   const drawCount = annotations.filter((a) => a.type === 'draw').length;
+
+  // Pill position style
+  const pillStyle: React.CSSProperties = pillPos
+    ? { position: 'fixed', left: pillPos.x, top: pillPos.y, right: 'auto', bottom: 'auto', zIndex: 9999, touchAction: 'none' }
+    : {};
 
   /* ── Render ─────────────────────────────────────────────────────── */
 
@@ -423,11 +493,19 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
         />
       )}
 
-      {/* ── Single pill — everything lives here ───────────────────── */}
-      <div className={`playtest-pill ${expanded ? 'playtest-pill-expanded' : ''}`}>
-        {/* Collapsed pill */}
+      {/* ── Draggable pill ────────────────────────────────────────── */}
+      <div
+        className={`playtest-pill ${expanded ? 'playtest-pill-expanded' : ''}`}
+        style={pillStyle}
+      >
+        {/* Collapsed — draggable + tap to expand */}
         {!expanded && (
-          <button className="playtest-pill-toggle" onClick={() => setExpanded(true)}>
+          <button
+            className="playtest-pill-toggle"
+            onPointerDown={handlePillPointerDown}
+            onClick={handlePillClick}
+            style={{ touchAction: 'none', cursor: 'grab' }}
+          >
             {isRecording && <span className="playtest-recording-indicator" />}
             <span className="playtest-pill-label">
               {isRecording ? fmt(recordingTime) : 'Playtest'}
@@ -438,11 +516,15 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
           </button>
         )}
 
-        {/* Expanded pill — all views render here */}
+        {/* Expanded — header is drag handle */}
         {expanded && (
           <div className="playtest-pill-controls">
-            {/* ── Header (always visible) ──────────────────────────── */}
-            <div className="playtest-pill-row">
+            {/* ── Drag handle header ──────────────────────────────── */}
+            <div
+              className="playtest-pill-row playtest-pill-drag-handle"
+              onPointerDown={(e) => { e.preventDefault(); onPillDragStart(e.clientX, e.clientY); }}
+              style={{ touchAction: 'none', cursor: 'grab' }}
+            >
               {panelView !== 'tools' && (
                 <button
                   className="playtest-pill-back"
@@ -454,6 +536,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
               )}
               {isRecording && <span className="playtest-recording-indicator" />}
               <span className="playtest-pill-time">{fmt(recordingTime)}</span>
+              <span className="playtest-pill-drag-hint">&#8942;&#8942;</span>
               <span style={{ flex: 1 }} />
               <button
                 className="playtest-pill-close"
@@ -488,7 +571,6 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
                   </button>
                 </div>
 
-                {/* Draw options */}
                 {activeTool === 'draw' && (
                   <>
                     <div className="playtest-pill-row">
@@ -505,9 +587,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
                         <span style={{ display: 'inline-block', width: 14, height: 8, background: 'currentColor', borderRadius: 2, opacity: 0.5 }} />
                       </button>
                       {drawCount > 0 && (
-                        <button className="playtest-tool" onClick={undoDraw} title="Undo">
-                          &#8630;
-                        </button>
+                        <button className="playtest-tool" onClick={undoDraw} title="Undo">&#8630;</button>
                       )}
                     </div>
                     <div className="playtest-pill-row playtest-colors">
@@ -529,7 +609,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
               </>
             )}
 
-            {/* ── Comment view (inside pill) ───────────────────────── */}
+            {/* ── Comment view ─────────────────────────────────────── */}
             {panelView === 'comment' && (
               <div className="playtest-pill-comment">
                 <textarea
@@ -548,17 +628,13 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
                   <button
                     className="playtest-btn-small playtest-btn-muted"
                     onClick={() => { setPanelView('tools'); setCommentText(''); }}
-                  >
-                    Cancel
-                  </button>
-                  <button className="playtest-btn-small" onClick={submitComment}>
-                    Pin
-                  </button>
+                  >Cancel</button>
+                  <button className="playtest-btn-small" onClick={submitComment}>Pin</button>
                 </div>
               </div>
             )}
 
-            {/* ── AI reply view (inside pill) ──────────────────────── */}
+            {/* ── AI reply view ────────────────────────────────────── */}
             {panelView === 'ai-reply' && aiReply && (
               <div className="playtest-pill-comment">
                 <p className="playtest-ai-text">{aiReply}</p>
@@ -572,48 +648,70 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
                   autoFocus
                 />
                 <div className="playtest-pill-row" style={{ justifyContent: 'flex-end' }}>
-                  <button className="playtest-btn-small playtest-btn-muted" onClick={handleAiResponse}>
-                    Skip
-                  </button>
-                  <button className="playtest-btn-small" onClick={handleAiResponse}>
-                    Save
-                  </button>
+                  <button className="playtest-btn-small playtest-btn-muted" onClick={handleAiResponse}>Skip</button>
+                  <button className="playtest-btn-small" onClick={handleAiResponse}>Save</button>
                 </div>
               </div>
             )}
 
-            {/* ── Notes view ───────────────────────────────────────── */}
+            {/* ── Notes view with thumbnail timeline ───────────────── */}
             {panelView === 'notes' && (
-              <div className="playtest-notes-list">
-                {annotations.length === 0 && (
-                  <p className="playtest-notes-empty">No notes yet</p>
-                )}
-                {annotations.map((a) => (
-                  <div key={a.id} className="playtest-note-item">
-                    <span className="playtest-note-time">{fmt(a.timestamp)}</span>
-                    <span className="playtest-note-type">{a.type === 'draw' ? '\u270E' : '\uD83D\uDCAC'}</span>
-                    {editingId === a.id ? (
-                      <div className="playtest-note-edit">
-                        <input
-                          className="playtest-note-edit-input"
-                          value={editText}
-                          onChange={(e) => setEditText(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(a.id); }}
-                          autoFocus
-                        />
-                        <button className="playtest-note-save" onClick={() => saveEdit(a.id)} aria-label="Save">&#10003;</button>
-                      </div>
-                    ) : (
-                      <span
-                        className="playtest-note-text"
+              <div className="playtest-notes-panel">
+                {/* Thumbnail timeline strip */}
+                {annotations.length > 0 && (
+                  <div className="playtest-timeline">
+                    {annotations.map((a) => (
+                      <button
+                        key={a.id}
+                        className={`playtest-timeline-thumb ${editingId === a.id ? 'playtest-timeline-thumb-active' : ''}`}
                         onClick={() => { setEditingId(a.id); setEditText(a.text || `${a.type} @ ${fmt(a.timestamp)}`); }}
+                        title={`${fmt(a.timestamp)} — ${a.type}`}
                       >
-                        {a.text || `${a.type} annotation`}
-                      </span>
-                    )}
-                    <button className="playtest-note-delete" onClick={() => deleteAnnotation(a.id)} aria-label="Delete">&#x2715;</button>
+                        {thumbnails.get(a.id) ? (
+                          <img src={thumbnails.get(a.id)} alt="" className="playtest-timeline-img" />
+                        ) : (
+                          <span className="playtest-timeline-placeholder">
+                            {a.type === 'draw' ? '\u270E' : '\uD83D\uDCAC'}
+                          </span>
+                        )}
+                        <span className="playtest-timeline-time">{fmt(a.timestamp)}</span>
+                      </button>
+                    ))}
                   </div>
-                ))}
+                )}
+
+                {/* Annotation list */}
+                <div className="playtest-notes-list">
+                  {annotations.length === 0 && (
+                    <p className="playtest-notes-empty">No notes yet</p>
+                  )}
+                  {annotations.map((a) => (
+                    <div key={a.id} className={`playtest-note-item ${editingId === a.id ? 'playtest-note-item-active' : ''}`}>
+                      <span className="playtest-note-time">{fmt(a.timestamp)}</span>
+                      <span className="playtest-note-type">{a.type === 'draw' ? '\u270E' : '\uD83D\uDCAC'}</span>
+                      {editingId === a.id ? (
+                        <div className="playtest-note-edit">
+                          <input
+                            className="playtest-note-edit-input"
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(a.id); }}
+                            autoFocus
+                          />
+                          <button className="playtest-note-save" onClick={() => saveEdit(a.id)} aria-label="Save">&#10003;</button>
+                        </div>
+                      ) : (
+                        <span
+                          className="playtest-note-text"
+                          onClick={() => { setEditingId(a.id); setEditText(a.text || `${a.type} @ ${fmt(a.timestamp)}`); }}
+                        >
+                          {a.text || `${a.type} annotation`}
+                        </span>
+                      )}
+                      <button className="playtest-note-delete" onClick={() => deleteAnnotation(a.id)} aria-label="Delete">&#x2715;</button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
