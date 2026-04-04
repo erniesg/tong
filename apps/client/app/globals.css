@@ -8909,6 +8909,79 @@ body:has(.playtest-pill-expanded) {
   border-radius: 4px;
 }
 
+/* ── Filmstrip player ─────────────────────────────────────────── */
+
+.playtest-filmstrip-player {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #000;
+}
+
+.playtest-filmstrip-frame {
+  position: relative;
+  aspect-ratio: 9 / 16;
+  max-height: 500px;
+  margin: 0 auto;
+}
+
+.playtest-filmstrip-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.playtest-filmstrip-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #1a1a1a;
+}
+
+.playtest-filmstrip-controls button {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playtest-filmstrip-controls button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.playtest-filmstrip-controls button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.playtest-filmstrip-time {
+  font-family: monospace;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 40px;
+}
+
+.playtest-filmstrip-scrubber {
+  flex: 1;
+  accent-color: var(--accent, #ff6b2c);
+  height: 4px;
+}
+
+.playtest-filmstrip-counter {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  min-width: 40px;
+  text-align: right;
+}
+
 /* ── State log viewer ─────────────────────────────────────────── */
 
 .playtest-viewer-statelog {

@@ -27,7 +27,7 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleSubmit = useCallback(
-    async (data: { recording: Blob; annotations: Annotation[]; screenshots: Map<string, Blob>; stateLog: unknown }) => {
+    async (data: { recording: Blob; annotations: Annotation[]; screenshots: Map<string, Blob>; stateLog: unknown; filmstrip: { ts: number; blob: Blob }[] }) => {
       if (!sessionId) return;
 
       // Upload recording + annotations + screenshots + state log as multipart form data
@@ -41,6 +41,11 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
       // Append each screenshot keyed by annotation ID
       for (const [annotationId, blob] of data.screenshots) {
         formData.append(`screenshot:${annotationId}`, blob, `${annotationId}.png`);
+      }
+
+      // Append filmstrip frames (periodic full-DOM captures)
+      for (const frame of data.filmstrip) {
+        formData.append(`filmstrip:${frame.ts}`, frame.blob, `frame-${frame.ts}.jpg`);
       }
 
       try {

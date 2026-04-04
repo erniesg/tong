@@ -30,6 +30,7 @@ interface Props {
     annotations: Annotation[];
     screenshots: Map<string, Blob>;
     stateLog: unknown;
+    filmstrip: { ts: number; blob: Blob }[];
   }) => void;
   onRequestClarification?: (comment: Annotation) => Promise<string | null>;
 }
@@ -79,6 +80,9 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const drawHistory = useRef<ImageData[]>([]);
   const recordingMimeRef = useRef('video/webm');
   const [thumbnails, setThumbnails] = useState<Map<string, string>>(new Map());
+
+  // Filmstrip: periodic full-DOM screenshots for playback on mobile
+  const filmstripRef = useRef<{ ts: number; blob: Blob }[]>([]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
@@ -243,13 +247,14 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       sessionLogger.logStateSnapshot(qa.getState());
     }
     const stateLog = sessionLogger.getCurrent();
+    const filmstrip = filmstripRef.current.slice(); // copy
     const recorder = mediaRecorderRef.current;
     if (!recorder) {
-      onSubmit({ recording: new Blob([], { type: 'video/webm' }), annotations, screenshots: screenshotBlobsRef.current, stateLog });
+      onSubmit({ recording: new Blob([], { type: 'video/webm' }), annotations, screenshots: screenshotBlobsRef.current, stateLog, filmstrip });
       return;
     }
     recorder.onstop = () => {
-      onSubmit({ recording: new Blob(chunksRef.current, { type: recordingMimeRef.current }), annotations, screenshots: screenshotBlobsRef.current, stateLog });
+      onSubmit({ recording: new Blob(chunksRef.current, { type: recordingMimeRef.current }), annotations, screenshots: screenshotBlobsRef.current, stateLog, filmstrip });
     };
     if (recorder.state !== 'inactive') recorder.stop();
     setIsRecording(false);
@@ -285,15 +290,53 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   // Periodic state snapshots every 10s for replay reconstruction
   useEffect(() => {
     const interval = setInterval(() => {
-      if (typeof window !== 'undefined' && // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).__TONG_QA__) {
-        const qa = // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).__TONG_QA__ as { getState: () => Record<string, unknown> };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (typeof window !== 'undefined' && (window as any).__TONG_QA__) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const qa = (window as any).__TONG_QA__ as { getState: () => Record<string, unknown> };
         sessionLogger.logStateSnapshot(qa.getState());
       }
     }, 10_000);
     return () => clearInterval(interval);
   }, []);
+
+  // Filmstrip: capture full-DOM screenshot every 5s for mobile playback
+  useEffect(() => {
+    const target = targetRef.current;
+    if (!target) return;
+    const interval = setInterval(async () => {
+      if (!startTimeRef.current) return; // not recording yet
+      try {
+        const canvas = await html2canvas(target, {
+          backgroundColor: '#0d0d1a',
+          scale: 0.5, // half resolution for speed + size
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+          ignoreElements: (el) => {
+            const cls = el.className || '';
+            return typeof cls === 'string' && (
+              cls.includes('playtest-pill') ||
+              cls.includes('playtest-canvas') ||
+              cls.includes('playtest-place') ||
+              cls.includes('playtest-marker') ||
+              cls.includes('playtest-submitted')
+            );
+          },
+        });
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, 'image/jpeg', 0.7), // JPEG for smaller size
+        );
+        if (blob) {
+          const ts = Math.floor((Date.now() - startTimeRef.current) / 1000);
+          filmstripRef.current.push({ ts, blob });
+          // Cap at 120 frames (10 min at 5s intervals) to limit memory
+          if (filmstripRef.current.length > 120) filmstripRef.current.shift();
+        }
+      } catch { /* best-effort */ }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [targetRef]);
 
   /* ── Draggable pill ─────────────────────────────────────────────── */
 

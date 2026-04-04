@@ -160,6 +160,9 @@ export default function PlaytestViewerPage() {
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [stateLog, setStateLog] = useState<StateLog | null>(null);
   const [showStateLog, setShowStateLog] = useState(false);
+  const [filmstrip, setFilmstrip] = useState<{ ts: number; url: string }[]>([]);
+  const [filmstripIdx, setFilmstripIdx] = useState(0);
+  const [filmstripPlaying, setFilmstripPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -179,13 +182,23 @@ export default function PlaytestViewerPage() {
     setShowStateLog(false);
     setLoadingAnnotations(true);
 
-    const [recUrl, anns, log] = await Promise.all([
+    const [recUrl, anns, log, filmstripData] = await Promise.all([
       checkRecording(sessionId),
       fetchAnnotations(sessionId),
       fetchStateLog(sessionId),
+      fetch(`${API_BASE}/api/v1/playtest/sessions/${sessionId}/filmstrip`)
+        .then((r) => r.ok ? r.json() : [])
+        .catch(() => []) as Promise<{ ts: number; url: string }[]>,
     ]);
     setRecordingSrc(recUrl);
     setStateLog(log);
+    // Rewrite filmstrip URLs to go through Worker proxy
+    setFilmstrip((filmstripData || []).map((f: { ts: number; url: string }) => ({
+      ts: f.ts,
+      url: `${API_BASE}/api/v1/playtest/sessions/${sessionId}/filmstrip/frame-${f.ts}.jpg`,
+    })));
+    setFilmstripIdx(0);
+    setFilmstripPlaying(false);
     setAnnotations(anns);
     setLoadingAnnotations(false);
   }, []);
@@ -201,6 +214,18 @@ export default function PlaytestViewerPage() {
       setScreenshotPreview(proxyUrl);
     }
   }, [selected]);
+
+  // Filmstrip auto-play: advance frame every 500ms when playing
+  useEffect(() => {
+    if (!filmstripPlaying || filmstrip.length === 0) return;
+    const interval = setInterval(() => {
+      setFilmstripIdx((prev) => {
+        if (prev >= filmstrip.length - 1) { setFilmstripPlaying(false); return prev; }
+        return prev + 1;
+      });
+    }, 500);
+    return () => clearInterval(interval);
+  }, [filmstripPlaying, filmstrip.length]);
 
   const selectedSession = sessions.find((s) => s.sessionId === selected);
   const submittedCount = sessions.filter((s) => s.status === 'submitted').length;
@@ -278,9 +303,35 @@ export default function PlaytestViewerPage() {
                 </div>
               )}
 
-              {!recordingSrc && !loadingAnnotations && (
+              {/* Filmstrip player — full-DOM captures every 5s */}
+              {filmstrip.length > 0 && (
+                <div className="playtest-filmstrip-player">
+                  <div className="playtest-filmstrip-frame">
+                    <img src={filmstrip[filmstripIdx]?.url} alt={`Frame at ${fmt(filmstrip[filmstripIdx]?.ts || 0)}`} />
+                  </div>
+                  <div className="playtest-filmstrip-controls">
+                    <button onClick={() => setFilmstripIdx(Math.max(0, filmstripIdx - 1))} disabled={filmstripIdx === 0}>&lt;</button>
+                    <button onClick={() => setFilmstripPlaying(!filmstripPlaying)}>
+                      {filmstripPlaying ? '\u23F8' : '\u25B6'}
+                    </button>
+                    <button onClick={() => setFilmstripIdx(Math.min(filmstrip.length - 1, filmstripIdx + 1))} disabled={filmstripIdx >= filmstrip.length - 1}>&gt;</button>
+                    <span className="playtest-filmstrip-time">{fmt(filmstrip[filmstripIdx]?.ts || 0)}</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={filmstrip.length - 1}
+                      value={filmstripIdx}
+                      onChange={(e) => { setFilmstripIdx(Number(e.target.value)); setFilmstripPlaying(false); }}
+                      className="playtest-filmstrip-scrubber"
+                    />
+                    <span className="playtest-filmstrip-counter">{filmstripIdx + 1}/{filmstrip.length}</span>
+                  </div>
+                </div>
+              )}
+
+              {!recordingSrc && filmstrip.length === 0 && !loadingAnnotations && (
                 <div className="playtest-viewer-no-video">
-                  No recording available (annotations-only session)
+                  No recording or filmstrip available
                 </div>
               )}
 
