@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import html2canvas from 'html2canvas';
 import { sessionLogger } from '@/lib/debug/session-logger';
 
 /* ── Types ────────────────────────────────────────────────────────── */
@@ -129,42 +130,48 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     frameLoopRef.current = requestAnimationFrame(captureFrame);
   }, [targetRef]);
 
-  /* ── Screenshot capture + thumbnail ─────────────────────────────── */
+  /* ── Screenshot capture (html2canvas — full DOM) ─────────────── */
 
   const captureScreenshot = useCallback(async (annotationId: string): Promise<void> => {
     const target = targetRef.current;
     if (!target) return;
     try {
-      const rect = target.getBoundingClientRect();
-      const offscreen = document.createElement('canvas');
-      offscreen.width = rect.width;
-      offscreen.height = rect.height;
-      const ctx = offscreen.getContext('2d');
-      if (!ctx) return;
-      const fc = frameCaptureRef.current;
-      if (fc && fc.width > 0) {
-        ctx.drawImage(fc, 0, 0, rect.width, rect.height);
-      } else {
-        ctx.fillStyle = '#0d0d1a';
-        ctx.fillRect(0, 0, rect.width, rect.height);
-        const gameCanvases = target.querySelectorAll('canvas');
-        for (const gc of gameCanvases) {
-          try {
-            const gcRect = gc.getBoundingClientRect();
-            ctx.drawImage(gc, gcRect.left - rect.left, gcRect.top - rect.top, gcRect.width, gcRect.height);
-          } catch { /* skip */ }
-        }
-      }
+      // html2canvas renders the full DOM tree to a canvas — captures everything visible
+      const canvas = await html2canvas(target, {
+        backgroundColor: '#0d0d1a',
+        scale: 1, // 1x for speed; 2x for retina quality if needed
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        // Ignore the playtest overlay elements so they don't appear in screenshots
+        ignoreElements: (el) => {
+          const cls = el.className || '';
+          return typeof cls === 'string' && (
+            cls.includes('playtest-pill') ||
+            cls.includes('playtest-canvas') ||
+            cls.includes('playtest-place') ||
+            cls.includes('playtest-marker') ||
+            cls.includes('playtest-submitted')
+          );
+        },
+      });
+
+      // Composite drawing overlay on top if active
       const drawingCanvas = canvasRef.current;
-      if (drawingCanvas) ctx.drawImage(drawingCanvas, 0, 0);
-      const blob = await new Promise<Blob | null>((resolve) => offscreen.toBlob(resolve, 'image/png'));
+      if (drawingCanvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.drawImage(drawingCanvas, 0, 0);
+      }
+
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
       if (blob) {
         screenshotBlobsRef.current.set(annotationId, blob);
-        // Create thumbnail URL for timeline
         const thumbUrl = URL.createObjectURL(blob);
         setThumbnails((prev) => new Map(prev).set(annotationId, thumbUrl));
       }
-    } catch { /* best-effort */ }
+    } catch (err) {
+      console.warn('html2canvas screenshot failed:', err);
+    }
   }, [targetRef]);
 
   /* ── Recording ──────────────────────────────────────────────────── */
