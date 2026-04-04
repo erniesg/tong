@@ -25,12 +25,29 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 try:
     from playwright.async_api import async_playwright, Page, BrowserContext
 except ImportError:
     print("ERROR: playwright not installed. Run: pip install playwright && playwright install chromium")
     sys.exit(1)
+
+
+def _get_proxy_config() -> dict | None:
+    """Parse HTTP(S)_PROXY env vars into Playwright proxy config."""
+    proxy_url = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY") or ""
+    if not proxy_url:
+        return None
+    parsed = urlparse(proxy_url)
+    if not parsed.hostname:
+        return None
+    config: dict[str, str] = {"server": f"http://{parsed.hostname}:{parsed.port}"}
+    if parsed.username:
+        config["username"] = parsed.username
+    if parsed.password:
+        config["password"] = parsed.password
+    return config
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNS_ROOT = REPO_ROOT / "artifacts" / "qa-runs" / "functional-qa" / "playtest-smoke"
@@ -112,7 +129,7 @@ class PlaytestSmokeTest:
         """Open /playtest/{id} and verify it renders."""
         url = f"{self.base_url}/playtest/{self.session_id}"
         print(f"\n  Opening {url}", flush=True)
-        await page.goto(url, wait_until="networkidle", timeout=30000)
+        await page.goto(url, wait_until="domcontentloaded", timeout=60000)
         await self.screenshot(page, "playtest-initial-load")
 
         # The page should show "Loading playtest session..." spinner
@@ -124,7 +141,7 @@ class PlaytestSmokeTest:
         """Verify the playtest page redirects to /game with correct params."""
         # Wait for redirect — the page does window.location.href = /game?fresh=1&lang=ko
         try:
-            await page.wait_for_url("**/game**", timeout=15000)
+            await page.wait_for_url("**/game**", timeout=30000)
             current_url = page.url
             has_game = "/game" in current_url
             has_fresh = "fresh=1" in current_url
@@ -139,7 +156,7 @@ class PlaytestSmokeTest:
         """Wait for the game scene to render."""
         try:
             # Wait for scene-root or any game content
-            await page.wait_for_selector(".scene-root, .game-viewport, .onboarding-root, [class*='scene']", timeout=20000)
+            await page.wait_for_selector(".scene-root, .game-viewport, .onboarding-root, [class*='scene']", timeout=40000)
             await asyncio.sleep(2)  # Let animations settle
             await self.screenshot(page, "game-loaded")
             self.record("Game: scene root visible", True)
@@ -252,10 +269,15 @@ class PlaytestSmokeTest:
 
         # Steps 2-5: Browser tests
         async with async_playwright() as pw:
-            browser = await pw.chromium.launch(headless=True)
+            launch_opts: dict[str, Any] = {"headless": True}
+            proxy_cfg = _get_proxy_config()
+            if proxy_cfg:
+                launch_opts["proxy"] = proxy_cfg
+            browser = await pw.chromium.launch(**launch_opts)
             context = await browser.new_context(
                 viewport=VIEWPORT,
                 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                ignore_https_errors=True,
             )
             page = await context.new_page()
 
