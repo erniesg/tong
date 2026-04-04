@@ -1738,11 +1738,11 @@ export default function GamePage() {
                     onKeyDown={(e) => e.key === 'Enter' && profileInput.englishName.trim() && handleNameNext()}
                   />
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 'auto', paddingTop: 16, paddingBottom: 16 }}>
                   <button
                     className="tg-menu-btn-primary"
                     onClick={() => setIntroStep(0)}
-                    style={{ flex: '0 0 auto', padding: '10px 18px', background: 'rgba(255,255,255,0.1)' }}
+                    style={{ flex: '0 0 auto', padding: '14px 22px', background: 'rgba(255,255,255,0.1)', fontSize: 16 }}
                   >
                     Back
                   </button>
@@ -1750,7 +1750,7 @@ export default function GamePage() {
                     className="tg-menu-btn-primary"
                     onClick={handleNameNext}
                     disabled={!profileInput.englishName.trim()}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, padding: '14px 22px', fontSize: 16 }}
                   >
                     Next
                   </button>
@@ -1810,18 +1810,18 @@ export default function GamePage() {
                     </div>
                   ))}
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 'auto', paddingTop: 16, paddingBottom: 16 }}>
                   <button
                     className="tg-menu-btn-primary"
                     onClick={() => { changeTongExpression('thinking'); setIntroStep(1); }}
-                    style={{ flex: '0 0 auto', padding: '10px 18px', background: 'rgba(255,255,255,0.1)' }}
+                    style={{ flex: '0 0 auto', padding: '14px 22px', background: 'rgba(255,255,255,0.1)', fontSize: 16 }}
                   >
                     Back
                   </button>
                   <button
                     className="tg-menu-btn-primary"
                     onClick={handleLanguageNext}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, padding: '14px 22px', fontSize: 16 }}
                   >
                     Next
                   </button>
