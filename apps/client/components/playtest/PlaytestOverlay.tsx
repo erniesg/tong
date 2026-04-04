@@ -597,16 +597,19 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    const target = targetRef.current;
     if (!canvas) return;
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      // Size canvas to game container, not window — prevents drawing outside game area
+      const rect = target?.getBoundingClientRect();
+      canvas.width = rect?.width || window.innerWidth;
+      canvas.height = rect?.height || window.innerHeight;
       drawHistory.current = [];
     };
     resize();
     window.addEventListener('resize', resize);
     return () => window.removeEventListener('resize', resize);
-  }, [activeTool]);
+  }, [activeTool, targetRef]);
 
   /* ── Auto-save ──────────────────────────────────────────────────── */
 
@@ -661,9 +664,14 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const COLORS = ['#ff6b2c', '#ef4444', '#3b82f6', '#22c55e', '#eab308', '#ffffff'];
   const drawCount = annotations.filter((a) => a.type === 'draw').length;
 
-  // Pill position style
+  // Pill position style — clamp so expanded panel stays in viewport
   const pillStyle: React.CSSProperties = pillPos
-    ? { position: 'fixed', left: pillPos.x, top: pillPos.y, right: 'auto', bottom: 'auto', zIndex: 9999, touchAction: 'none' }
+    ? {
+        position: 'fixed',
+        left: Math.min(pillPos.x, window.innerWidth - (expanded ? 256 : 120)),
+        top: Math.min(pillPos.y, window.innerHeight - (expanded ? 300 : 50)),
+        right: 'auto', bottom: 'auto', zIndex: 9999, touchAction: 'none',
+      }
     : {};
 
   /* ── Render ─────────────────────────────────────────────────────── */

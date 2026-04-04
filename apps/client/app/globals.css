@@ -1912,7 +1912,7 @@ main.app-shell.app-shell--wide {
 /* Trainee profile card — positioned below avatar */
 .tg-trainee-profile {
   position: absolute;
-  top: 30%;
+  top: 18%;
   left: 5%;
   right: 5%;
   bottom: 0;
@@ -1920,6 +1920,14 @@ main.app-shell.app-shell--wide {
   padding: 8px 18px;
   padding-bottom: 24px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* On shorter screens, reduce gap further */
+@media (max-height: 700px) {
+  .tg-trainee-profile { top: 10%; }
 }
 
 .tg-dialogue-panel {
@@ -2555,6 +2563,8 @@ main.app-shell.app-shell--wide {
   color: var(--color-text);
   font-size: var(--game-text-base);
   line-height: 1.5;
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 /* Full radius when inside modal */
@@ -3672,8 +3682,9 @@ main.app-shell.app-shell--wide {
   padding: 0;
   width: 100%;
   max-width: none;
-  max-height: 85vh;
-  overflow-y: auto;
+  max-height: 100dvh;
+  overflow-y: hidden;
+  touch-action: none;
   animation: slideUp 0.3s ease-out;
 }
 
@@ -7635,6 +7646,7 @@ body:has(.playtest-pill-expanded) {
   right: 16px;
   z-index: 9999;
   pointer-events: auto;
+  max-width: calc(100vw - 24px);
 }
 
 .playtest-pill-toggle {
@@ -7683,7 +7695,7 @@ body:has(.playtest-pill-expanded) {
   border-radius: 16px;
   padding: 12px;
   min-width: 180px;
-  max-width: calc(100vw - 32px);
+  width: min(240px, calc(100vw - 32px));
   box-sizing: border-box;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }

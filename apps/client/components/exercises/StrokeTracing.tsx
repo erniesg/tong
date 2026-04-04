@@ -17,8 +17,10 @@ interface Point {
   y: number;
 }
 
-const BRUSH_MIN = 2;
-const BRUSH_MAX = 5;
+// Thicker strokes on mobile for better visibility and precision
+const IS_MOBILE = typeof window !== 'undefined' && window.innerWidth < 600;
+const BRUSH_MIN = IS_MOBILE ? 4 : 2;
+const BRUSH_MAX = IS_MOBILE ? 10 : 5;
 const VELOCITY_CAP = 8;
 const PASS_THRESHOLD = 0.80;
 const ALPHA_THRESHOLD = 30;
@@ -344,7 +346,7 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
         style={{
           width: '100%',
           height: '100%',
-          touchAction: active && !cellState.done ? 'none' : 'auto',
+          touchAction: 'none',
           cursor: active && !cellState.done ? 'crosshair' : 'default',
           pointerEvents: active && !cellState.done ? 'auto' : 'none',
         }}
@@ -352,9 +354,9 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
         onMouseMove={moveDraw}
         onMouseUp={endDraw}
         onMouseLeave={endDraw}
-        onTouchStart={startDraw}
-        onTouchMove={moveDraw}
-        onTouchEnd={endDraw}
+        onTouchStart={(e) => { e.preventDefault(); startDraw(e); }}
+        onTouchMove={(e) => { e.preventDefault(); moveDraw(e); }}
+        onTouchEnd={(e) => { e.preventDefault(); endDraw(); }}
       />
       {cellState.done && (
         <div style={{
@@ -786,7 +788,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
                 borderRadius: 12,
                 background: 'rgba(255,255,255,0.05)',
                 border: '2px solid rgba(255,255,255,0.1)',
-                touchAction: submitted ? 'auto' : 'none',
+                touchAction: 'none',
                 cursor: submitted ? 'default' : 'crosshair',
                 pointerEvents: submitted ? 'none' : 'auto',
               }}
@@ -794,9 +796,9 @@ export function StrokeTracing({ exercise, onResult }: Props) {
               onMouseMove={draw_single}
               onMouseUp={endDraw_single}
               onMouseLeave={endDraw_single}
-              onTouchStart={startDraw_single}
-              onTouchMove={draw_single}
-              onTouchEnd={endDraw_single}
+              onTouchStart={(e) => { e.preventDefault(); startDraw_single(e); }}
+              onTouchMove={(e) => { e.preventDefault(); draw_single(e); }}
+              onTouchEnd={(e) => { e.preventDefault(); endDraw_single(); }}
             />
           </div>
 
