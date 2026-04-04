@@ -7882,6 +7882,9 @@ main.app-shell.app-shell--wide {
   border-radius: 12px;
   padding: 10px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
+  overflow: hidden;
 }
 
 .playtest-comment-input {
@@ -7891,10 +7894,11 @@ main.app-shell.app-shell--wide {
   border-radius: 6px;
   color: #fff;
   padding: 8px;
-  font-size: 13px;
+  font-size: 16px;
   font-family: inherit;
   resize: vertical;
   min-height: 48px;
+  box-sizing: border-box;
 }
 
 .playtest-comment-input::placeholder {
@@ -7943,7 +7947,7 @@ main.app-shell.app-shell--wide {
   border-radius: 4px;
   color: #fff;
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: 16px;
   font-family: inherit;
 }
 
