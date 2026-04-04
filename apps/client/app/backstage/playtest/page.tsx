@@ -91,6 +91,60 @@ async function checkRecording(sessionId: string): Promise<string | null> {
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
+interface StateLogEntry {
+  ts: number;
+  kind: string;
+  data: Record<string, unknown>;
+}
+
+interface StateLog {
+  id: string;
+  mode: string;
+  cityId: string;
+  locationId: string;
+  startedAt: number;
+  endedAt?: number;
+  entries: StateLogEntry[];
+}
+
+async function fetchStateLog(sessionId: string): Promise<StateLog | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/playtest/sessions/${sessionId}/state-log`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+const LOG_KIND_LABELS: Record<string, string> = {
+  session_start: 'Session started',
+  ai_request: 'User message',
+  ai_response: 'AI response',
+  tool_call: 'Tool call',
+  tool_result: 'Tool result',
+  exercise_shown: 'Exercise shown',
+  exercise_result: 'Exercise result',
+  choice_shown: 'Choices offered',
+  choice_selected: 'Choice selected',
+  user_tap: 'User tap',
+  phase_change: 'Phase change',
+  scene_summary: 'Scene summary',
+  state_snapshot: 'State snapshot',
+  qa_trace: 'QA trace',
+  error: 'Error',
+};
+
+const LOG_KIND_COLORS: Record<string, string> = {
+  ai_request: '#3b82f6',
+  ai_response: '#8b5cf6',
+  tool_call: '#f59e0b',
+  exercise_shown: '#22c55e',
+  exercise_result: '#22c55e',
+  phase_change: '#ef4444',
+  state_snapshot: '#94a3b8',
+  user_tap: '#06b6d4',
+  error: '#ef4444',
+};
+
 /* Status uses triage-status-{status} classes for consistent styling */
 
 /* ── Component ────────────────────────────────────────────────────── */
@@ -104,6 +158,8 @@ export default function PlaytestViewerPage() {
   const [recordingSrc, setRecordingSrc] = useState<string | null>(null);
   const [activeAnnotation, setActiveAnnotation] = useState<string | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [stateLog, setStateLog] = useState<StateLog | null>(null);
+  const [showStateLog, setShowStateLog] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -119,13 +175,17 @@ export default function PlaytestViewerPage() {
     setActiveAnnotation(null);
     setScreenshotPreview(null);
     setRecordingSrc(null);
+    setStateLog(null);
+    setShowStateLog(false);
     setLoadingAnnotations(true);
 
-    const [recUrl, anns] = await Promise.all([
+    const [recUrl, anns, log] = await Promise.all([
       checkRecording(sessionId),
       fetchAnnotations(sessionId),
+      fetchStateLog(sessionId),
     ]);
     setRecordingSrc(recUrl);
+    setStateLog(log);
     setAnnotations(anns);
     setLoadingAnnotations(false);
   }, []);
@@ -298,6 +358,49 @@ export default function PlaytestViewerPage() {
                   </button>
                 ))}
               </div>
+
+              {/* State replay log */}
+              {stateLog && (
+                <div className="playtest-viewer-statelog">
+                  <button
+                    className="playtest-viewer-statelog-toggle"
+                    onClick={() => setShowStateLog(!showStateLog)}
+                  >
+                    <h3 className="triage-section-title" style={{ margin: 0 }}>
+                      State Log ({stateLog.entries.length} events)
+                    </h3>
+                    <span>{showStateLog ? '\u25B4' : '\u25BE'}</span>
+                  </button>
+
+                  {showStateLog && (
+                    <div className="playtest-viewer-statelog-entries">
+                      {stateLog.entries.map((entry, i) => {
+                        const relTime = Math.floor((entry.ts - stateLog.startedAt) / 1000);
+                        const color = LOG_KIND_COLORS[entry.kind] || '#94a3b8';
+                        return (
+                          <div key={i} className="playtest-statelog-entry">
+                            <span className="playtest-statelog-time">{fmt(relTime)}</span>
+                            <span className="playtest-statelog-kind" style={{ color }}>
+                              {LOG_KIND_LABELS[entry.kind] || entry.kind}
+                            </span>
+                            <span className="playtest-statelog-data">
+                              {entry.kind === 'tool_call' && `${entry.data.toolName}()`}
+                              {entry.kind === 'ai_request' && String(entry.data.content || '').slice(0, 80)}
+                              {entry.kind === 'exercise_shown' && `${entry.data.exerciseType}: ${entry.data.exerciseId}`}
+                              {entry.kind === 'exercise_result' && (entry.data.correct ? 'Correct' : 'Incorrect')}
+                              {entry.kind === 'choice_selected' && `→ ${entry.data.choiceId}`}
+                              {entry.kind === 'user_tap' && String(entry.data.action || '')}
+                              {entry.kind === 'phase_change' && `${entry.data.from} → ${entry.data.to}`}
+                              {entry.kind === 'state_snapshot' && `phase:${entry.data.phase}`}
+                              {entry.kind === 'error' && String(entry.data.message || '')}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Quick actions */}
               <div className="playtest-viewer-actions">

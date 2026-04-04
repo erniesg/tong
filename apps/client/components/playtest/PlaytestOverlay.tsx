@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { sessionLogger } from '@/lib/debug/session-logger';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -27,6 +28,7 @@ interface Props {
     recording: Blob;
     annotations: Annotation[];
     screenshots: Map<string, Blob>;
+    stateLog: unknown;
   }) => void;
   onRequestClarification?: (comment: Annotation) => Promise<string | null>;
 }
@@ -195,13 +197,21 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
 
   const stopAndSubmit = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    // Snapshot final state before submitting
+    if (typeof window !== 'undefined' && // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__TONG_QA__) {
+      const qa = // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__TONG_QA__ as { getState: () => Record<string, unknown> };
+      sessionLogger.logStateSnapshot(qa.getState());
+    }
+    const stateLog = sessionLogger.getCurrent();
     const recorder = mediaRecorderRef.current;
     if (!recorder) {
-      onSubmit({ recording: new Blob([], { type: 'video/webm' }), annotations, screenshots: screenshotBlobsRef.current });
+      onSubmit({ recording: new Blob([], { type: 'video/webm' }), annotations, screenshots: screenshotBlobsRef.current, stateLog });
       return;
     }
     recorder.onstop = () => {
-      onSubmit({ recording: new Blob(chunksRef.current, { type: recordingMimeRef.current }), annotations, screenshots: screenshotBlobsRef.current });
+      onSubmit({ recording: new Blob(chunksRef.current, { type: recordingMimeRef.current }), annotations, screenshots: screenshotBlobsRef.current, stateLog });
     };
     if (recorder.state !== 'inactive') recorder.stop();
     setIsRecording(false);
@@ -214,6 +224,19 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     }, 1000);
     return () => clearTimeout(timer);
   }, [startFrameCapture, startRecording]);
+
+  // Periodic state snapshots every 10s for replay reconstruction
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (typeof window !== 'undefined' && // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__TONG_QA__) {
+        const qa = // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__TONG_QA__ as { getState: () => Record<string, unknown> };
+        sessionLogger.logStateSnapshot(qa.getState());
+      }
+    }, 10_000);
+    return () => clearInterval(interval);
+  }, []);
 
   /* ── Draggable pill ─────────────────────────────────────────────── */
 

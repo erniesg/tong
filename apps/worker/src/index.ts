@@ -2284,6 +2284,19 @@ async function handleRequest(request: Request): Promise<Response> {
       });
     }
 
+    // Proxy state log from R2
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/state-log$/) && request.method === 'GET') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/state-log.json`);
+      if (!obj) return jsonResponse(404, { error: 'no_state_log' });
+      const body = await obj.text();
+      return new Response(body, {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=60' },
+      });
+    }
+
     // Proxy recording from R2 (avoids CORS on direct R2 access)
     if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/recording$/) && (request.method === 'GET' || request.method === 'HEAD')) {
       const sessionId = pathname.split('/')[5];
@@ -2392,6 +2405,15 @@ async function handleRequest(request: Request): Promise<Response> {
             });
             screenshotKeys.push(r2Key);
           }
+        }
+
+        // Store state log if provided
+        const stateLog = formData.get('stateLog');
+        if (stateLog) {
+          const logText = typeof stateLog === 'string' ? stateLog : await (stateLog as File).text();
+          await env.TONG_RUNS_BUCKET.put(`playtest/${sessionId}/state-log.json`, logText, {
+            httpMetadata: { contentType: 'application/json' },
+          });
         }
 
         // Enrich annotations with R2 screenshot URLs before storing
