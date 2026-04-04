@@ -8037,6 +8037,147 @@ body:has(.playtest-pill-expanded) {
   color: rgba(255, 255, 255, 0.4);
 }
 
+/* ── Tap-to-place overlay ─────────────────────────────────────── */
+
+.playtest-place-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9995;
+  cursor: crosshair;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.playtest-place-hint {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: playtest-hint-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes playtest-hint-pulse {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.6; }
+}
+
+/* ── Temporal comment markers ─────────────────────────────────── */
+
+.playtest-marker {
+  position: fixed;
+  z-index: 9992;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.3s ease;
+  cursor: grab;
+}
+
+.playtest-marker-placing {
+  pointer-events: none;
+  animation: playtest-marker-bounce 0.3s ease-out;
+}
+
+@keyframes playtest-marker-bounce {
+  0% { transform: translate(-50%, -50%) scale(0.3); }
+  60% { transform: translate(-50%, -50%) scale(1.2); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.playtest-marker-dot {
+  display: block;
+  width: 20px;
+  height: 20px;
+  background: var(--accent, #ff6b2c);
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s;
+}
+
+.playtest-marker:active .playtest-marker-dot {
+  transform: scale(1.2);
+}
+
+.playtest-marker-expanded .playtest-marker-dot {
+  background: #fff;
+  border-color: var(--accent, #ff6b2c);
+}
+
+/* Marker popover */
+.playtest-marker-popover {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 15, 15, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-width: 180px;
+  max-width: 260px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: playtest-popover-in 0.15s ease-out;
+  pointer-events: auto;
+}
+
+@keyframes playtest-popover-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.playtest-marker-text {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0 0 6px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.playtest-marker-edit-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #fff;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  margin-bottom: 6px;
+  box-sizing: border-box;
+}
+
+.playtest-marker-edit-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.playtest-marker-edit-actions button {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #fff;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.playtest-marker-edit-actions button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.playtest-marker-edit-actions button:last-child {
+  color: #ef4444;
+}
+
 /* ── Drag handle hint ──────────────────────────────────────────── */
 
 .playtest-pill-drag-handle {

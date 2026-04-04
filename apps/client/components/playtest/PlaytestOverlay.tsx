@@ -60,6 +60,14 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInputText, setAiInputText] = useState('');
 
+  // Comment placement: tap screen to place, then type
+  const [placingComment, setPlacingComment] = useState(false);
+  const [commentPos, setCommentPos] = useState<{ x: number; y: number } | null>(null);
+
+  // Temporal marker: expanded popover + drag
+  const [expandedMarkerId, setExpandedMarkerId] = useState<string | null>(null);
+  const markerDrag = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
+
   // Draggable pill position
   const [pillPos, setPillPos] = useState<{ x: number; y: number } | null>(null);
   const pillDrag = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
@@ -224,17 +232,6 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
 
   const onPillDragEnd = useCallback(() => { pillDrag.current = null; }, []);
 
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => onPillDragMove(e.clientX, e.clientY);
-    const onUp = () => onPillDragEnd();
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    return () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-  }, [onPillDragMove, onPillDragEnd]);
-
   // Distinguish drag from tap: track distance moved
   const pillTapStart = useRef<{ x: number; y: number } | null>(null);
   const handlePillPointerDown = useCallback((e: React.PointerEvent) => {
@@ -253,6 +250,72 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     // The click event only fires if pointerup was close to pointerdown (browser default)
     setExpanded(true);
   }, [pillPos]);
+
+  /* ── Place comment on screen ─────────────────────────────────── */
+
+  const handlePlaceTap = useCallback((e: React.PointerEvent) => {
+    if (!placingComment) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const x = e.clientX / window.innerWidth;
+    const y = e.clientY / window.innerHeight;
+    setCommentPos({ x, y });
+    setPlacingComment(false);
+    setPanelView('comment');
+    setExpanded(true);
+  }, [placingComment]);
+
+  /* ── Marker drag ────────────────────────────────────────────────── */
+
+  const onMarkerDragStart = useCallback((id: string, clientX: number, clientY: number) => {
+    const ann = annotations.find((a) => a.id === id);
+    if (!ann) return;
+    markerDrag.current = { id, startX: clientX, startY: clientY, origX: ann.x ?? 0.5, origY: ann.y ?? 0.5 };
+  }, [annotations]);
+
+  const onMarkerDragMove = useCallback((clientX: number, clientY: number) => {
+    const d = markerDrag.current;
+    if (!d) return;
+    const dx = (clientX - d.startX) / window.innerWidth;
+    const dy = (clientY - d.startY) / window.innerHeight;
+    const nx = Math.max(0.02, Math.min(0.98, d.origX + dx));
+    const ny = Math.max(0.02, Math.min(0.98, d.origY + dy));
+    setAnnotations((prev) =>
+      prev.map((a) => a.id === d.id ? { ...a, x: nx, y: ny } : a),
+    );
+  }, []);
+
+  const onMarkerDragEnd = useCallback(() => {
+    const d = markerDrag.current;
+    markerDrag.current = null;
+    // If barely moved, treat as tap → toggle popover
+    if (d) {
+      const ann = annotations.find((a) => a.id === d.id);
+      if (ann) {
+        const moved = Math.abs((ann.x ?? 0.5) - d.origX) + Math.abs((ann.y ?? 0.5) - d.origY);
+        if (moved < 0.01) {
+          setExpandedMarkerId((prev) => prev === d.id ? null : d.id);
+        }
+      }
+    }
+  }, [annotations]);
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      onPillDragMove(e.clientX, e.clientY);
+      onMarkerDragMove(e.clientX, e.clientY);
+    };
+    const onUp = () => {
+      onPillDragEnd();
+      onMarkerDragEnd();
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [onPillDragMove, onPillDragEnd, onMarkerDragMove, onMarkerDragEnd]);
 
   /* ── Drawing ────────────────────────────────────────────────────── */
 
@@ -339,15 +402,16 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   /* ── Comment ────────────────────────────────────────────────────── */
 
   const submitComment = useCallback(async () => {
-    if (!commentText.trim()) return;
+    if (!commentText.trim() || !commentPos) return;
     const id = `comment-${Date.now()}`;
     const annotation: Annotation = {
       id, timestamp: currentTimestamp(), type: 'comment',
-      text: commentText.trim(), x: 0.5, y: 0.5,
+      text: commentText.trim(), x: commentPos.x, y: commentPos.y,
       clarified: false, screenshot: id,
     };
     setAnnotations((prev) => [...prev, annotation]);
     setCommentText('');
+    setCommentPos(null);
     void captureScreenshot(id);
 
     if (onRequestClarification) {
@@ -365,7 +429,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       }
     }
     setPanelView('tools');
-  }, [commentText, currentTimestamp, onRequestClarification, captureScreenshot]);
+  }, [commentText, commentPos, currentTimestamp, onRequestClarification, captureScreenshot]);
 
   const handleAiResponse = useCallback(() => {
     setAnnotations((prev) => {
@@ -493,6 +557,83 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
         />
       )}
 
+      {/* Tap-to-place overlay — covers screen when placing a comment */}
+      {placingComment && (
+        <div
+          className="playtest-place-overlay"
+          onPointerDown={handlePlaceTap}
+          style={{ touchAction: 'none' }}
+        >
+          <div className="playtest-place-hint">Tap where you want to add a note</div>
+        </div>
+      )}
+
+      {/* Preview marker while placing */}
+      {commentPos && panelView === 'comment' && (
+        <div
+          className="playtest-marker playtest-marker-placing"
+          style={{ left: `${commentPos.x * 100}%`, top: `${commentPos.y * 100}%` }}
+        >
+          <span className="playtest-marker-dot" />
+        </div>
+      )}
+
+      {/* ── Temporal comment markers ──────────────────────────────── */}
+      {annotations.filter((a) => a.type === 'comment' && a.x != null && a.y != null).map((a) => {
+        const delta = Math.abs(recordingTime - a.timestamp);
+        const PIN_WINDOW = 4;
+        if (delta > PIN_WINDOW) return null;
+        const opacity = delta <= 2 ? 1 : 1 - (delta - 2) / (PIN_WINDOW - 2);
+        const isExpanded = expandedMarkerId === a.id;
+        return (
+          <div
+            key={`marker-${a.id}`}
+            className={`playtest-marker ${isExpanded ? 'playtest-marker-expanded' : ''}`}
+            style={{
+              left: `${(a.x ?? 0.5) * 100}%`,
+              top: `${(a.y ?? 0.5) * 100}%`,
+              opacity,
+              pointerEvents: opacity > 0.2 ? 'auto' : 'none',
+              touchAction: 'none',
+            }}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onMarkerDragStart(a.id, e.clientX, e.clientY);
+            }}
+          >
+            <span className="playtest-marker-dot" />
+            {isExpanded && (
+              <div className="playtest-marker-popover">
+                {editingId === a.id ? (
+                  <>
+                    <input
+                      className="playtest-marker-edit-input"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { saveEdit(a.id); setExpandedMarkerId(null); } }}
+                      autoFocus
+                    />
+                    <div className="playtest-marker-edit-actions">
+                      <button onClick={() => { saveEdit(a.id); setExpandedMarkerId(null); }}>Save</button>
+                      <button onClick={() => { deleteAnnotation(a.id); setExpandedMarkerId(null); }}>Delete</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="playtest-marker-text">{a.text}</p>
+                    <div className="playtest-marker-edit-actions">
+                      <button onClick={() => { setEditingId(a.id); setEditText(a.text || ''); }}>Edit</button>
+                      <button onClick={() => { deleteAnnotation(a.id); setExpandedMarkerId(null); }}>Delete</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
       {/* ── Draggable pill ────────────────────────────────────────── */}
       <div
         className={`playtest-pill ${expanded ? 'playtest-pill-expanded' : ''}`}
@@ -558,9 +699,13 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
                     title="Draw"
                   >&#9998;</button>
                   <button
-                    className="playtest-tool"
-                    onClick={() => { setActiveTool('none'); setPanelView('comment'); }}
-                    title="Comment"
+                    className={`playtest-tool ${placingComment ? 'playtest-tool-active' : ''}`}
+                    onClick={() => {
+                      setActiveTool('none');
+                      setPlacingComment(!placingComment);
+                      setExpanded(false); // collapse pill so user can tap the game
+                    }}
+                    title="Comment — tap screen to place"
                   >&#128172;</button>
                   <button
                     className="playtest-tool"
