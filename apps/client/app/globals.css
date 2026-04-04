@@ -1912,7 +1912,7 @@ main.app-shell.app-shell--wide {
 /* Trainee profile card — positioned below avatar */
 .tg-trainee-profile {
   position: absolute;
-  top: 22%;
+  top: 30%;
   left: 5%;
   right: 5%;
   bottom: 0;
@@ -1920,10 +1920,6 @@ main.app-shell.app-shell--wide {
   padding: 8px 18px;
   padding-bottom: 24px;
   overflow-y: auto;
-}
-
-@media (max-height: 700px) {
-  .tg-trainee-profile { top: 14%; }
 }
 
 .tg-dialogue-panel {
