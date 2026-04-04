@@ -11,6 +11,7 @@ const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787
  */
 export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
 
@@ -49,17 +50,18 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
       }
 
       try {
+        setUploading(true);
         await fetch(`${API_BASE}/api/v1/playtest/sessions/${sessionId}/upload`, {
           method: 'POST',
           body: formData,
         });
 
-        // Mark as submitted but keep sessionId so wrapper div stays mounted
-        // (prevents React from remounting children and resetting game state)
         sessionStorage.removeItem('tong_playtest_session');
+        setUploading(false);
         setSubmitted(true);
       } catch (err) {
         console.error('Failed to upload playtest session:', err);
+        setUploading(false);
       }
     },
     [sessionId],
@@ -115,7 +117,7 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
     [sessionId],
   );
 
-  const isActive = Boolean(sessionId) && !submitted;
+  const isActive = Boolean(sessionId) && !submitted && !uploading;
 
   return (
     <div ref={frameRef} className="playtest-wrapper" style={{ position: 'relative', width: '100%', minHeight: '100dvh' }}>
@@ -127,6 +129,11 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
           onSubmit={handleSubmit}
           onRequestClarification={handleClarification}
         />
+      )}
+      {uploading && (
+        <div className="playtest-uploading-toast">
+          Uploading session...
+        </div>
       )}
       {submitted && (
         <div className="playtest-submitted-toast">

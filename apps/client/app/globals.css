@@ -1912,7 +1912,7 @@ main.app-shell.app-shell--wide {
 /* Trainee profile card — positioned below avatar */
 .tg-trainee-profile {
   position: absolute;
-  top: 18%;
+  top: 22%;
   left: 5%;
   right: 5%;
   bottom: 0;
@@ -1920,14 +1920,10 @@ main.app-shell.app-shell--wide {
   padding: 8px 18px;
   padding-bottom: 24px;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
 }
 
-/* On shorter screens, reduce gap further */
 @media (max-height: 700px) {
-  .tg-trainee-profile { top: 10%; }
+  .tg-trainee-profile { top: 14%; }
 }
 
 .tg-dialogue-panel {
@@ -7885,6 +7881,24 @@ body:has(.playtest-pill-expanded) {
 }
 
 /* ── Submitted toast ──────────────────────────────────────────── */
+
+.playtest-uploading-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: rgba(59, 130, 246, 0.9);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  animation: playtest-toast-in 0.3s ease-out;
+}
 
 .playtest-submitted-toast {
   position: fixed;
