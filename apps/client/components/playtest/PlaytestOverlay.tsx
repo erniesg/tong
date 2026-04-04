@@ -174,33 +174,64 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     }
   }, [targetRef]);
 
-  /* ── Recording ──────────────────────────────────────────────────── */
+  /* ── Recording: getDisplayMedia → captureStream → screenshots-only ── */
 
-  const startRecording = useCallback(() => {
-    const fc = frameCaptureRef.current;
-    if (!fc) return;
+  const displayStreamRef = useRef<MediaStream | null>(null);
+
+  const startRecordingFromStream = useCallback((stream: MediaStream) => {
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : MediaRecorder.isTypeSupported('video/webm')
+        ? 'video/webm'
+        : MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : '';
+    if (!mimeType) { setIsRecording(true); return; }
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2_000_000 });
+    recordingMimeRef.current = mimeType;
+    chunksRef.current = [];
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    recorder.start(1000);
+    mediaRecorderRef.current = recorder;
+    setIsRecording(true);
+  }, []);
+
+  const startRecording = useCallback(async () => {
     startTimeRef.current = Date.now();
     timerRef.current = setInterval(() => {
       setRecordingTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }, 1000);
-    if (typeof fc.captureStream !== 'function') { setIsRecording(true); return; }
-    try {
-      const stream = fc.captureStream(15);
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : MediaRecorder.isTypeSupported('video/webm')
-          ? 'video/webm'
-          : MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : '';
-      if (!mimeType) { setIsRecording(true); return; }
-      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 1_000_000 });
-      recordingMimeRef.current = mimeType;
-      chunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      recorder.start(1000);
-      mediaRecorderRef.current = recorder;
-      setIsRecording(true);
-    } catch { setIsRecording(true); }
-  }, []);
+
+    // Tier 1: getDisplayMedia — full screen capture (desktop only, needs permission)
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { displaySurface: 'browser' } as MediaTrackConstraints,
+          audio: false,
+        });
+        displayStreamRef.current = stream;
+        // If user stops sharing via browser UI, clean up
+        stream.getVideoTracks()[0]?.addEventListener('ended', () => {
+          displayStreamRef.current = null;
+        });
+        startRecordingFromStream(stream);
+        return;
+      } catch {
+        // User denied or not supported — fall through to Tier 2
+      }
+    }
+
+    // Tier 2: canvas.captureStream — captures game canvases only
+    const fc = frameCaptureRef.current;
+    if (fc && typeof fc.captureStream === 'function') {
+      try {
+        const stream = fc.captureStream(15);
+        startRecordingFromStream(stream);
+        return;
+      } catch { /* fall through */ }
+    }
+
+    // Tier 3: screenshots only — no video recording
+    setIsRecording(true);
+  }, [startRecordingFromStream]);
 
   const stopAndSubmit = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -225,11 +256,30 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   }, [annotations, onSubmit]);
 
   useEffect(() => {
+    // Log browser metadata at session start
+    sessionLogger.logTrace('playtest_session_start', {
+      sessionId,
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      language: navigator.language,
+      screenWidth: screen.width,
+      screenHeight: screen.height,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio,
+      touchSupport: 'ontouchstart' in window,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      connection: (navigator as any).connection
+        ? { effectiveType: (navigator as any).connection.effectiveType, downlink: (navigator as any).connection.downlink }
+        : null,
+    });
+
     const timer = setTimeout(() => {
       startFrameCapture();
       setTimeout(() => startRecording(), 500);
     }, 1000);
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startFrameCapture, startRecording]);
 
   // Periodic state snapshots every 10s for replay reconstruction
@@ -554,6 +604,10 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       if (frameLoopRef.current) cancelAnimationFrame(frameLoopRef.current);
       if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
       if (frameCaptureRef.current) { frameCaptureRef.current.remove(); frameCaptureRef.current = null; }
+      if (displayStreamRef.current) {
+        displayStreamRef.current.getTracks().forEach((t) => t.stop());
+        displayStreamRef.current = null;
+      }
       drawHistory.current = [];
       // Revoke all thumbnail URLs
       thumbnails.forEach((url) => URL.revokeObjectURL(url));
