@@ -1738,7 +1738,7 @@ export default function GamePage() {
                     onKeyDown={(e) => e.key === 'Enter' && profileInput.englishName.trim() && handleNameNext()}
                   />
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 'auto', paddingTop: 16, paddingBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
                   <button
                     className="tg-menu-btn-primary"
                     onClick={() => setIntroStep(0)}
@@ -1810,7 +1810,7 @@ export default function GamePage() {
                     </div>
                   ))}
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 'auto', paddingTop: 16, paddingBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
                   <button
                     className="tg-menu-btn-primary"
                     onClick={() => { changeTongExpression('thinking'); setIntroStep(1); }}
