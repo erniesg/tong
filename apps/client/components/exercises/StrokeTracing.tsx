@@ -721,8 +721,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
               flexWrap: 'wrap',
               justifyContent: 'center',
               gap: 10,
-              maxWidth: 'min(95vw, 500px)',
-              margin: '0 auto',
+              width: '100%',
             }}
           >
             {cellStates.map((cell, i) => (
