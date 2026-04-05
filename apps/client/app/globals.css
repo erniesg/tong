@@ -2550,7 +2550,6 @@ main.app-shell.app-shell--wide {
 /* ── Exercise card ────────────────────────────────────────── */
 .exercise-card {
   background: rgba(22, 33, 62, 0.95);
-  backdrop-filter: blur(14px);
   border-radius: 16px;
   color: var(--color-text);
   font-size: var(--game-text-base);
@@ -2643,11 +2642,10 @@ main.app-shell.app-shell--wide {
   pointer-events: none;
 }
 
-/* Card takes up most of viewport, sits at bottom. Top gap shows backdrop through. */
+/* Card wraps its content naturally and sits at bottom. Backdrop shows above. */
 .exercise-float-card {
   position: relative;
   width: 100%;
-  height: 92vh;
   max-height: calc(100% - 48px);
   display: flex;
   flex-direction: column;
