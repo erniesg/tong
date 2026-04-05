@@ -9,7 +9,7 @@
   "toolCalls": [
 
     {"_phase": "ACT 1 — PHASE 1: GROUND"},
-    { "toolCallId": "f-01", "toolName": "set_backdrop", "args": { "backdropUrl": "/assets/locations/seoul.mp4", "transition": "fade", "ambientDescription": "A bustling Seoul pojangmacha street at night. Lanterns sway, steam rises from food stalls." } },
+    { "toolCallId": "f-01", "toolName": "set_backdrop", "args": { "backdropUrl": "{{asset:city.seoul.location.food-street.backdrop.default}}", "transition": "fade", "ambientDescription": "A bustling Seoul pojangmacha street at night. Lanterns sway, steam rises from food stalls." } },
     { "toolCallId": "f-02", "toolName": "tong_whisper", "args": { "message": "Hey! I'm Tong — I live in your phone, and I'll be your guide tonight. Look around — this is a 포장마차 street in Seoul.", "translation": null } },
     { "toolCallId": "f-03", "toolName": "tong_whisper", "args": { "message": "Every sign here is in 한글 — the Korean alphabet. Right now they're just shapes to you. By the end of tonight, you'll be reading them.", "translation": null } },
 
@@ -34,7 +34,7 @@
     { "toolCallId": "f-15", "toolName": "offer_choices", "args": { "prompt": "Someone's approaching the pojangmacha...", "choices": [ { "id": "wave", "text": "Wave hello" }, { "id": "wait", "text": "Wait and see" } ] } },
 
     {"_phase": "ACT 2 — PHASE 1: ENTRANCE (cinematic + first impression)"},
-    { "toolCallId": "f-16", "toolName": "play_cinematic", "args": { "videoUrl": "/assets/cinematics/haeun-intro-placeholder.mp4", "caption": null, "autoAdvance": false } },
+    { "toolCallId": "f-16", "toolName": "play_cinematic", "args": { "videoUrl": "{{asset:cinematic.haeun.intro.3}}", "caption": null, "autoAdvance": false } },
     { "toolCallId": "f-17", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "...어? 새 얼굴이네. 포장마차 처음이야?", "translation": "Oh? A new face. First time at the pojangmacha?", "expression": "surprised", "affinityDelta": 2 } },
 
     {"_phase": "ACT 2 — PHASE 2: CONNECTION (banter + choice)"},
@@ -61,7 +61,7 @@
 
     {"_phase": "ACT 2 — PHASE 5: FAREWELL (NPC goodbye → exit cinematic → Tong recap → end_scene)"},
     { "toolCallId": "f-34", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "You know what, you should come back. I'll show you the real Seoul — not the tourist stuff. But you better keep practicing.", "translation": null, "expression": "cheerful", "affinityDelta": 2 } },
-    { "toolCallId": "f-35", "toolName": "play_cinematic", "args": { "videoUrl": "/assets/cinematics/haeun-exit-placeholder.mp4", "caption": null, "autoAdvance": false } },
+    { "toolCallId": "f-35", "toolName": "play_cinematic", "args": { "videoUrl": "{{asset:cinematic.haeun.exit.3}}", "caption": null, "autoAdvance": false } },
     { "toolCallId": "f-36", "toolName": "tong_whisper", "args": { "message": "Nice work tonight! You learned ㅎ, ㅏ, ㅇ, ㅡ, ㄴ — and built 하은. Five jamo and a real Korean name. Not bad for your first night in Seoul.", "translation": null } },
     { "toolCallId": "f-37", "toolName": "end_scene", "args": { "summary": "First night in Seoul. Learned 5 jamo (ㅎ, ㅏ, ㅇ, ㅡ, ㄴ), built syllable blocks (하, 은), and read Haeun's name. Haeun is impressed.", "xpEarned": 120, "affinityChanges": [{ "characterId": "haeun", "delta": 19 }], "calibratedLevel": 1 } }
   ]

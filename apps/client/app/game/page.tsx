@@ -1074,8 +1074,26 @@ export default function GamePage() {
           exitLineTranslationRef.current = clip.translation.replace(/{playerName}/g, playerName).replace(/{chineseName}/g, playerName);
         }
 
-        // Inject tool calls — skip to fixtureScene if specified
-        const toolCalls = (fixture.toolCalls || []) as { toolCallId: string; toolName: string; args: Record<string, unknown> }[];
+        // Resolve {{asset:key}} placeholders in tool call args
+        const resolveAssets = (obj: unknown): unknown => {
+          if (typeof obj === 'string') {
+            return obj.replace(/\{\{asset:([^}]+)\}\}/g, (_, key) => runtimeAssetUrl(key));
+          }
+          if (Array.isArray(obj)) return obj.map(resolveAssets);
+          if (obj && typeof obj === 'object') {
+            const resolved: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(obj)) {
+              resolved[k] = resolveAssets(v);
+            }
+            return resolved;
+          }
+          return obj;
+        };
+
+        // Filter out _phase comment entries, resolve assets, inject
+        const toolCalls = ((fixture.toolCalls || []) as Record<string, unknown>[])
+          .filter((t) => t.toolName) // skip _phase markers
+          .map((t) => resolveAssets(t)) as { toolCallId: string; toolName: string; args: Record<string, unknown> }[];
         const startFrom = Math.min(fixtureScene, toolCalls.length - 1);
         const toInject = toolCalls.slice(Math.max(0, startFrom));
 
