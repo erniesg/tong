@@ -1,111 +1,55 @@
 {
   "id": "stroke-trace-korean-basic",
-  "title": "Korean Script — First Characters",
+  "title": "Seoul Onboarding — Haeun (static replay)",
   "city": "seoul",
   "npc": "haeun",
   "location": "food_street",
   "language": "ko",
   "playerName": "Player",
   "toolCalls": [
-    {
-      "toolCallId": "fix-1",
-      "toolName": "set_backdrop",
-      "args": { "backdropUrl": "/assets/locations/seoul.mp4" }
-    },
-    {
-      "toolCallId": "fix-2",
-      "toolName": "tong_whisper",
-      "args": { "message": "Hey! I'm Tong. Tonight we're learning the Korean alphabet — Hangul. It's easier than you think!", "translation": null }
-    },
-    {
-      "toolCallId": "fix-3",
-      "toolName": "npc_speak",
-      "args": { "characterId": "haeun", "text": "안녕! Welcome to Seoul! I'm Haeun — I'll be showing you around tonight.", "translation": "Hi! Welcome to Seoul!", "expression": "cheerful" }
-    },
-    {
-      "toolCallId": "fix-4",
-      "toolName": "npc_speak",
-      "args": { "characterId": "haeun", "text": "See all those signs? They're in Hangul — the Korean alphabet. Let me teach you your first character.", "translation": null, "expression": "neutral" }
-    },
-    {
-      "toolCallId": "fix-5",
-      "toolName": "npc_speak",
-      "args": { "characterId": "haeun", "text": "This is ㅎ — 'hieut'. It makes the 'h' sound, like in my name — Haeun!", "translation": null, "expression": "cheerful" }
-    },
-    {
-      "toolCallId": "fix-6",
-      "toolName": "show_exercise",
-      "args": {
-        "exerciseType": "stroke_tracing",
-        "objectiveId": "ko-jamo-hieut",
-        "exerciseData": {
-          "type": "stroke_tracing",
-          "id": "fix-trace-hieut",
-          "objectiveId": "ko-jamo-hieut",
-          "difficulty": 1,
-          "prompt": "Trace: ㅎ (hieut)",
-          "targetChar": "ㅎ",
-          "ghostOverlay": true,
-          "explanation": "hieut — the 'h' sound",
-          "romanization": "h",
-          "meaning": "consonant 'h'"
-        }
-      }
-    },
-    {
-      "toolCallId": "fix-7",
-      "toolName": "npc_speak",
-      "args": { "characterId": "haeun", "text": "Nice work! Now let's learn a vowel — ㅏ. This is 'ah', like saying 'ahhh'.", "translation": null, "expression": "cheerful" }
-    },
-    {
-      "toolCallId": "fix-8",
-      "toolName": "show_exercise",
-      "args": {
-        "exerciseType": "stroke_tracing",
-        "objectiveId": "ko-jamo-a",
-        "exerciseData": {
-          "type": "stroke_tracing",
-          "id": "fix-trace-a",
-          "objectiveId": "ko-jamo-a",
-          "difficulty": 1,
-          "prompt": "Trace: ㅏ (a)",
-          "targetChar": "ㅏ",
-          "ghostOverlay": true,
-          "explanation": "a — the 'ah' vowel",
-          "romanization": "a",
-          "meaning": "vowel 'ah'"
-        }
-      }
-    },
-    {
-      "toolCallId": "fix-9",
-      "toolName": "npc_speak",
-      "args": { "characterId": "haeun", "text": "You're getting it! Now combine them — ㅎ + ㅏ = 하. That's 'ha' — like the start of my name!", "translation": null, "expression": "excited" }
-    },
-    {
-      "toolCallId": "fix-10",
-      "toolName": "show_exercise",
-      "args": {
-        "exerciseType": "stroke_tracing",
-        "objectiveId": "ko-syllable-ha",
-        "exerciseData": {
-          "type": "stroke_tracing",
-          "id": "fix-trace-ha",
-          "objectiveId": "ko-syllable-ha",
-          "difficulty": 2,
-          "prompt": "Trace: 하 (ha)",
-          "targetChar": "하",
-          "ghostOverlay": true,
-          "explanation": "ha — ㅎ + ㅏ combined",
-          "romanization": "ha",
-          "meaning": "first syllable of Haeun"
-        }
-      }
-    },
-    {
-      "toolCallId": "fix-11",
-      "toolName": "npc_speak",
-      "args": { "characterId": "haeun", "text": "Amazing! You just read your first Korean! 하 — 'ha'. Next time we'll learn more. See you around the food street!", "translation": null, "expression": "cheerful" }
-    }
+    { "toolCallId": "f-01", "toolName": "set_backdrop", "args": { "backdropUrl": "/assets/locations/seoul.mp4", "transition": "fade", "ambientDescription": "A bustling Seoul pojangmacha street at night. Lanterns glow warmly." } },
+
+    { "toolCallId": "f-02", "toolName": "tong_whisper", "args": { "message": "Hey! I'm Tong — I live in your phone, and I'll be your guide tonight. Look around — this is a 포장마차 street in Seoul. Every sign here is written in Hangul.", "translation": null } },
+    { "toolCallId": "f-03", "toolName": "tong_whisper", "args": { "message": "Your mission: don't just point and hope. If you can read the signs, you can order like a local. And trust me, you'll want to — the 치맥 here is legendary.", "translation": null } },
+
+    { "toolCallId": "f-04", "toolName": "tong_whisper", "args": { "message": "Here's the good news: 한글 is an alphabet — just 24 letters, not thousands. A king made it so everyone could learn to read in an afternoon. You've got this.", "translation": null } },
+
+    { "toolCallId": "f-05", "toolName": "tong_whisper", "args": { "message": "Let's steal a letter from a name you'll meet soon: 하은. Her name starts with ㅎ — the 'h' sound. See how it looks like a face with a hat? That's your first letter.", "translation": null } },
+    { "toolCallId": "f-06", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-consonants-basic", "exerciseData": { "type": "stroke_tracing", "id": "fix-trace-hieut", "objectiveId": "ko-script-consonants-basic", "difficulty": 1, "prompt": "Trace: ㅎ (hieut)", "targetChar": "ㅎ", "ghostOverlay": true, "explanation": "hieut — the 'h' sound", "romanization": "h", "meaning": "consonant h" } } },
+
+    { "toolCallId": "f-07", "toolName": "tong_whisper", "args": { "message": "Nice! Now the vowel — ㅏ. It's 'ah', like saying 'ahhh'. A vertical line with a short stroke to the right.", "translation": null } },
+    { "toolCallId": "f-08", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-vowels-basic", "exerciseData": { "type": "stroke_tracing", "id": "fix-trace-a", "objectiveId": "ko-script-vowels-basic", "difficulty": 1, "prompt": "Trace: ㅏ (a)", "targetChar": "ㅏ", "ghostOverlay": true, "explanation": "a — the 'ah' vowel", "romanization": "a", "meaning": "vowel ah" } } },
+
+    { "toolCallId": "f-09", "toolName": "tong_whisper", "args": { "message": "In Korean, consonants and vowels stack into blocks. ㅎ + ㅏ = 하 — that's 'ha'! The first part of 하은's name.", "translation": null } },
+    { "toolCallId": "f-10", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-syllables-basic", "exerciseData": { "type": "stroke_tracing", "id": "fix-trace-ha", "objectiveId": "ko-script-syllables-basic", "difficulty": 2, "prompt": "Trace: 하 (ha)", "targetChar": "하", "ghostOverlay": true, "explanation": "ha — ㅎ + ㅏ combined", "romanization": "ha", "meaning": "syllable ha" } } },
+
+    { "toolCallId": "f-11", "toolName": "tong_whisper", "args": { "message": "You just built your first Korean syllable! Speaking of which... I think someone's coming. There's a regular here you should meet.", "translation": null } },
+    { "toolCallId": "f-12", "toolName": "offer_choices", "args": { "prompt": "Someone's approaching the pojangmacha...", "choices": [ { "id": "wave", "text": "Wave hello" }, { "id": "wait", "text": "Wait and see" } ] } },
+
+    { "toolCallId": "f-13", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "...어? 새 얼굴이네. 포장마차 처음이야?", "translation": "Oh? A new face. First time at the pojangmacha?", "expression": "surprised", "affinityDelta": 2 } },
+    { "toolCallId": "f-14", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "I'm 하은. And yeah, I practically live here. The 떡볶이 is my weakness.", "translation": null, "expression": "cheerful" } },
+
+    { "toolCallId": "f-15", "toolName": "offer_choices", "args": { "prompt": "Haeun seems friendly enough. How do you respond?", "choices": [ { "id": "compliment", "text": "This place is amazing!" }, { "id": "food", "text": "What should I order?" }, { "id": "name", "text": "하은... did I say that right?" } ] } },
+
+    { "toolCallId": "f-16", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "Hah, not bad! Most people can't even try. Alright, you've got my attention.", "translation": null, "expression": "cheerful", "affinityDelta": 3 } },
+
+    { "toolCallId": "f-17", "toolName": "tong_whisper", "args": { "message": "She liked that! Let's keep learning — you'll need more characters to read the menu. Let's learn ㅇ — it's the silent placeholder.", "translation": null } },
+    { "toolCallId": "f-18", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-consonants-basic", "exerciseData": { "type": "stroke_tracing", "id": "fix-trace-ieung", "objectiveId": "ko-script-consonants-basic", "difficulty": 1, "prompt": "Trace: ㅇ (ieung)", "targetChar": "ㅇ", "ghostOverlay": true, "explanation": "ieung — silent placeholder (or 'ng' at the end)", "romanization": "ng/silent", "meaning": "consonant ieung" } } },
+
+    { "toolCallId": "f-19", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "Oh you're learning 한글? 진짜? That's... actually kind of cool. Most tourists just use their phone.", "translation": null, "expression": "surprised", "affinityDelta": 2 } },
+
+    { "toolCallId": "f-20", "toolName": "tong_whisper", "args": { "message": "Now ㅡ — the vowel 'eu'. A horizontal line. Together with ㅇ, you get 으 — the 'eu' syllable.", "translation": null } },
+    { "toolCallId": "f-21", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-vowels-basic", "exerciseData": { "type": "stroke_tracing", "id": "fix-trace-eu", "objectiveId": "ko-script-vowels-basic", "difficulty": 1, "prompt": "Trace: ㅡ (eu)", "targetChar": "ㅡ", "ghostOverlay": true, "explanation": "eu — a tight 'uh' vowel", "romanization": "eu", "meaning": "vowel eu" } } },
+
+    { "toolCallId": "f-22", "toolName": "tong_whisper", "args": { "message": "Last one — ㄴ, the 'n' sound. Now you know all the parts of 하은's name! Let's put it together.", "translation": null } },
+    { "toolCallId": "f-23", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-consonants-basic", "exerciseData": { "type": "stroke_tracing", "id": "fix-trace-nieun", "objectiveId": "ko-script-consonants-basic", "difficulty": 1, "prompt": "Trace: ㄴ (nieun)", "targetChar": "ㄴ", "ghostOverlay": true, "explanation": "nieun — the 'n' sound", "romanization": "n", "meaning": "consonant n" } } },
+
+    { "toolCallId": "f-24", "toolName": "tong_whisper", "args": { "message": "Time for the big test — build 하은's full name from the jamo you learned!", "translation": null } },
+    { "toolCallId": "f-25", "toolName": "show_exercise", "args": { "exerciseType": "block_crush", "objectiveId": "ko-script-syllables-basic", "exerciseData": { "type": "block_crush", "id": "fix-bc-haeun", "objectiveId": "ko-script-syllables-basic", "difficulty": 2, "prompt": "Build: 하은", "language": "ko", "targetChar": "하은", "components": [], "romanization": "ha-eun", "meaning": "Haeun (name)", "stage": "intro" } } },
+
+    { "toolCallId": "f-26", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "Wait... you can actually read my name now? 진짜 대박. Okay, I'm impressed.", "translation": "Wait... you can actually read my name now? Seriously, amazing.", "expression": "amazed", "affinityDelta": 5 } },
+    { "toolCallId": "f-27", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "You know what, you should come back. I'll show you the real Seoul — not the tourist stuff. But you better keep practicing.", "translation": null, "expression": "cheerful", "affinityDelta": 2 } },
+
+    { "toolCallId": "f-28", "toolName": "tong_whisper", "args": { "message": "Nice work tonight! You learned ㅎ, ㅏ, ㅇ, ㅡ, ㄴ — and built 하은. That's five jamo and a real Korean name. Not bad for your first night.", "translation": null } }
   ]
 }
