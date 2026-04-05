@@ -153,13 +153,6 @@ export function SceneView({
       {currentExercise ? (
         <div className={`exercise-float-wrapper${exerciseDone ? ' exercise-float-dismissing' : ''}`}>
           <div className="exercise-float-card" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="exercise-dismiss-btn"
-              onClick={(e) => { e.stopPropagation(); onExerciseDismiss?.(); }}
-              aria-label="Minimize exercise"
-            >
-              &#x25BE;
-            </button>
             <ExerciseRenderer
               exercise={currentExercise}
               onResult={(correct) => {
@@ -168,6 +161,13 @@ export function SceneView({
                 setTimeout(() => onExerciseDismiss?.(), 300);
               }}
             />
+            <button
+              className="exercise-dismiss-btn"
+              onClick={(e) => { e.stopPropagation(); onExerciseDismiss?.(); }}
+              aria-label="Minimize exercise"
+            >
+              &#x25BE;
+            </button>
           </div>
         </div>
       ) : choices ? (
