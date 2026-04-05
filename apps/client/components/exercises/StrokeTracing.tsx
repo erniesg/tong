@@ -19,8 +19,8 @@ interface Point {
 
 // Thicker strokes on mobile for better visibility and precision
 const IS_MOBILE = typeof window !== 'undefined' && window.innerWidth < 600;
-const BRUSH_MIN = IS_MOBILE ? 10 : 4;
-const BRUSH_MAX = IS_MOBILE ? 20 : 8;
+const BRUSH_MIN = IS_MOBILE ? 14 : 5;
+const BRUSH_MAX = IS_MOBILE ? 28 : 10;
 const VELOCITY_CAP = 8;
 const PASS_THRESHOLD = 0.80;
 const ALPHA_THRESHOLD = 30;
