@@ -2628,6 +2628,8 @@ main.app-shell.app-shell--wide {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .exercise-float-wrapper.exercise-float-dismissing {
