@@ -94,7 +94,7 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
     ctx.save();
-    ctx.font = `${cssW * 0.9}px ${CANVAS_FONT_FAMILY}`;
+    ctx.font = `bold ${cssW * 0.95}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
@@ -457,7 +457,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
     ctx.save();
-    ctx.font = `${cssW * 0.9}px ${CANVAS_FONT_FAMILY}`;
+    ctx.font = `bold ${cssW * 0.95}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;

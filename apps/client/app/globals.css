@@ -2614,17 +2614,19 @@ main.app-shell.app-shell--wide {
 /* ── Exercise floating card ─────────────────────────────── */
 .exercise-float-wrapper {
   position: absolute;
-  inset: 0;
+  top: 48px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 16px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  justify-content: flex-start;
+  gap: 0;
+  padding: 0 12px 12px;
   pointer-events: auto;
   z-index: 8;
-  background: rgba(13, 13, 26, 0.95);
+  background: rgba(13, 13, 26, 0.97);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   overflow-y: hidden;
