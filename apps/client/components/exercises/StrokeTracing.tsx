@@ -26,6 +26,38 @@ const PASS_THRESHOLD = 0.80;
 const ALPHA_THRESHOLD = 30;
 const GOLD_COLOR = '#f0c040';
 const CANVAS_FONT_FAMILY = "'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', sans-serif";
+const GLYPH_FILL = 0.90; // fraction of cell the glyph should fill
+
+/** Measure a glyph and return the font size + position to visually center it in a square cell. */
+function computeGlyphLayout(ctx: CanvasRenderingContext2D, char: string, cellSize: number) {
+  const refSize = 100;
+  ctx.save();
+  ctx.font = `900 ${refSize}px ${CANVAS_FONT_FAMILY}`;
+  ctx.textBaseline = 'alphabetic';
+  const m = ctx.measureText(char);
+  ctx.restore();
+
+  const glyphW = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+  const glyphH = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+  if (glyphW === 0 || glyphH === 0) {
+    return { fontSize: cellSize, x: cellSize / 2, y: cellSize / 2 };
+  }
+
+  const scale = (cellSize * GLYPH_FILL) / Math.max(glyphW, glyphH);
+  const fontSize = refSize * scale;
+
+  // Re-measure at final size for precise centering
+  ctx.save();
+  ctx.font = `900 ${fontSize}px ${CANVAS_FONT_FAMILY}`;
+  ctx.textBaseline = 'alphabetic';
+  const fm = ctx.measureText(char);
+  ctx.restore();
+
+  // With alphabetic baseline, glyph spans y-ascent..y+descent
+  // Center: y = cellSize/2 + (ascent - descent) / 2
+  const y = cellSize / 2 + (fm.actualBoundingBoxAscent - fm.actualBoundingBoxDescent) / 2;
+  return { fontSize, x: cellSize / 2, y };
+}
 
 /** Map bare jamo to their full Korean names for TTS. */
 const JAMO_TO_SYLLABLE: Record<string, string> = {
@@ -93,12 +125,13 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
   const guideColor = `rgba(100, 120, 150, ${ghostOpacity})`;
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
+    const { fontSize, x, y } = computeGlyphLayout(ctx, targetChar, cssW);
     ctx.save();
-    ctx.font = `900 ${cssW * 1.5}px ${CANVAS_FONT_FAMILY}`;
+    ctx.font = `900 ${fontSize}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = color;
-    ctx.fillText(targetChar, cssW / 2, cssW / 2);
+    ctx.fillText(targetChar, x, y);
     ctx.restore();
   }, [targetChar]);
 
@@ -167,11 +200,12 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
     const refCtx = refCanvas.getContext('2d');
     if (refCtx) {
       refCtx.scale(dpr, dpr);
-      refCtx.font = `900 ${size * 1.5}px ${CANVAS_FONT_FAMILY}`;
+      const { fontSize, x, y } = computeGlyphLayout(refCtx, targetChar, size);
+      refCtx.font = `900 ${fontSize}px ${CANVAS_FONT_FAMILY}`;
       refCtx.textAlign = 'center';
-      refCtx.textBaseline = 'middle';
+      refCtx.textBaseline = 'alphabetic';
       refCtx.fillStyle = 'white';
-      refCtx.fillText(targetChar, size / 2, size / 2);
+      refCtx.fillText(targetChar, x, y);
     }
     refCanvasRef.current = refCanvas;
 
@@ -462,12 +496,13 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   /* ── Single-trace mode (original) ─────────────────────────── */
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
+    const { fontSize, x, y } = computeGlyphLayout(ctx, exercise.targetChar, cssW);
     ctx.save();
-    ctx.font = `900 ${cssW * 1.5}px ${CANVAS_FONT_FAMILY}`;
+    ctx.font = `900 ${fontSize}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = color;
-    ctx.fillText(exercise.targetChar, cssW / 2, cssW / 2);
+    ctx.fillText(exercise.targetChar, x, y);
     ctx.restore();
   }, [exercise.targetChar]);
 
@@ -516,10 +551,11 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     const refCtx = refCanvas.getContext('2d');
     if (refCtx) {
       refCtx.scale(dpr, dpr);
-      refCtx.font = `900 ${rect.width * 1.5}px ${CANVAS_FONT_FAMILY}`;
-      refCtx.textAlign = 'center'; refCtx.textBaseline = 'middle';
+      const { fontSize, x, y } = computeGlyphLayout(refCtx, exercise.targetChar, rect.width);
+      refCtx.font = `900 ${fontSize}px ${CANVAS_FONT_FAMILY}`;
+      refCtx.textAlign = 'center'; refCtx.textBaseline = 'alphabetic';
       refCtx.fillStyle = 'white';
-      refCtx.fillText(exercise.targetChar, rect.width / 2, rect.height / 2);
+      refCtx.fillText(exercise.targetChar, x, y);
     }
     refCanvasRef.current = refCanvas;
 
@@ -734,6 +770,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
               justifyContent: 'center',
               gap: 10,
               width: '100%',
+              padding: '0 8px',
             }}
           >
             {cellStates.map((cell, i) => (
