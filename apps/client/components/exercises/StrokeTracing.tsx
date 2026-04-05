@@ -19,8 +19,8 @@ interface Point {
 
 // Thicker strokes on mobile for better visibility and precision
 const IS_MOBILE = typeof window !== 'undefined' && window.innerWidth < 600;
-const BRUSH_MIN = IS_MOBILE ? 14 : 5;
-const BRUSH_MAX = IS_MOBILE ? 28 : 10;
+const BRUSH_MIN = IS_MOBILE ? 6 : 3;
+const BRUSH_MAX = IS_MOBILE ? 12 : 6;
 const VELOCITY_CAP = 8;
 const PASS_THRESHOLD = 0.80;
 const ALPHA_THRESHOLD = 30;
@@ -94,7 +94,7 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
     ctx.save();
-    ctx.font = `bold ${cssW * 0.95}px ${CANVAS_FONT_FAMILY}`;
+    ctx.font = `900 ${cssW}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
@@ -457,7 +457,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
     ctx.save();
-    ctx.font = `bold ${cssW * 0.95}px ${CANVAS_FONT_FAMILY}`;
+    ctx.font = `900 ${cssW}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
