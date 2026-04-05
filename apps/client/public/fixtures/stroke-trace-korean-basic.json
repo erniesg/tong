@@ -19,12 +19,12 @@
 
     {"_phase": "ACT 1 — PHASE 3: FIRST JAMO (ㅎ)"},
     { "toolCallId": "f-06", "toolName": "tong_whisper", "args": { "message": "Let's steal a letter from a name you'll meet soon: 하은. Her name starts with ㅎ — the 'h' sound. See how it looks like a face with a hat?", "translation": null } },
-    { "toolCallId": "f-07", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-consonants-basic", "exerciseData": { "type": "stroke_tracing", "id": "fix-trace-hieut", "objectiveId": "ko-script-consonants-basic", "difficulty": 1, "prompt": "Trace: ㅎ (hieut)", "targetChar": "ㅎ", "ghostOverlay": true, "explanation": "hieut — the 'h' sound", "romanization": "h", "meaning": "consonant h" } } },
+    { "toolCallId": "f-07", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-consonants-basic", "hintItems": ["ㅎ"] } },
     { "toolCallId": "f-08", "toolName": "tong_whisper", "args": { "message": "That's it! ㅎ — the first letter of 하은. You'll recognize it everywhere now.", "translation": null } },
 
     {"_phase": "ACT 1 — PHASE 4: BUILD UP (ㅏ + block_crush 하)"},
     { "toolCallId": "f-09", "toolName": "tong_whisper", "args": { "message": "Now the vowel — ㅏ. It's 'ah', like saying 'ahhh'. A vertical line with a short stroke to the right.", "translation": null } },
-    { "toolCallId": "f-10", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-vowels-basic", "exerciseData": { "type": "stroke_tracing", "id": "fix-trace-a", "objectiveId": "ko-script-vowels-basic", "difficulty": 1, "prompt": "Trace: ㅏ (a)", "targetChar": "ㅏ", "ghostOverlay": true, "explanation": "a — the 'ah' vowel", "romanization": "a", "meaning": "vowel ah" } } },
+    { "toolCallId": "f-10", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-vowels-basic", "hintItems": ["ㅏ"] } },
     { "toolCallId": "f-11", "toolName": "tong_whisper", "args": { "message": "In Korean, consonants and vowels stack into blocks. ㅎ + ㅏ = 하 — that's 'ha'! Let's build it.", "translation": null } },
     { "toolCallId": "f-12", "toolName": "show_exercise", "args": { "exerciseType": "block_crush", "objectiveId": "ko-script-syllables-basic", "exerciseData": { "type": "block_crush", "id": "fix-bc-ha", "objectiveId": "ko-script-syllables-basic", "difficulty": 1, "prompt": "Build: 하", "language": "ko", "targetChar": "하", "components": [], "romanization": "ha", "meaning": "syllable ha", "stage": "intro" } } },
     { "toolCallId": "f-13", "toolName": "tong_whisper", "args": { "message": "You just built your first Korean syllable! 하 — 'ha'. That's the start of a name you're about to hear.", "translation": null } },
@@ -45,24 +45,24 @@
 
     {"_phase": "ACT 2 — PHASE 3: EXERCISE GRIND (remaining jamo)"},
     { "toolCallId": "f-22", "toolName": "tong_whisper", "args": { "message": "She liked that! Let's keep learning — for the second syllable 은, you need ㅇ, ㅡ, and ㄴ.", "translation": null } },
-    { "toolCallId": "f-23", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-consonants-basic", "exerciseData": { "type": "stroke_tracing", "id": "fix-trace-ieung", "objectiveId": "ko-script-consonants-basic", "difficulty": 1, "prompt": "Trace: ㅇ (ieung)", "targetChar": "ㅇ", "ghostOverlay": true, "explanation": "ieung — silent or 'ng'", "romanization": "ng/silent", "meaning": "consonant ieung" } } },
+    { "toolCallId": "f-23", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-consonants-basic", "hintItems": ["ㅇ"] } },
     { "toolCallId": "f-24", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "Oh you're learning 한글? 진짜? That's... actually kind of cool.", "translation": null, "expression": "surprised", "affinityDelta": 2 } },
-    { "toolCallId": "f-25", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-vowels-basic", "exerciseData": { "type": "stroke_tracing", "id": "fix-trace-eu", "objectiveId": "ko-script-vowels-basic", "difficulty": 1, "prompt": "Trace: ㅡ (eu)", "targetChar": "ㅡ", "ghostOverlay": true, "explanation": "eu — a tight 'uh' vowel", "romanization": "eu", "meaning": "vowel eu" } } },
+    { "toolCallId": "f-25", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-vowels-basic", "hintItems": ["ㅡ"] } },
     { "toolCallId": "f-26", "toolName": "tong_whisper", "args": { "message": "Last jamo — ㄴ, the 'n' sound. Like an L-shape.", "translation": null } },
-    { "toolCallId": "f-27", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-consonants-basic", "exerciseData": { "type": "stroke_tracing", "id": "fix-trace-nieun", "objectiveId": "ko-script-consonants-basic", "difficulty": 1, "prompt": "Trace: ㄴ (nieun)", "targetChar": "ㄴ", "ghostOverlay": true, "explanation": "nieun — the 'n' sound", "romanization": "n", "meaning": "consonant n" } } },
+    { "toolCallId": "f-27", "toolName": "show_exercise", "args": { "exerciseType": "stroke_tracing", "objectiveId": "ko-script-consonants-basic", "hintItems": ["ㄴ"] } },
     { "toolCallId": "f-28", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "Wait, you actually learned all five? 대박... Most tourists give up after the first one.", "translation": "Wait, you actually learned all five? Amazing...", "expression": "amazed", "affinityDelta": 3 } },
 
     {"_phase": "ACT 2 — PHASE 4: NAME TEST (pronunciation_select + block_crush)"},
     { "toolCallId": "f-29", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "Okay, big test — can you read my name? Listen carefully...", "translation": null, "expression": "cheerful" } },
-    { "toolCallId": "f-30", "toolName": "show_exercise", "args": { "exerciseType": "pronunciation_select", "objectiveId": "ko-script-syllables-basic", "hintItems": ["하은"], "hintCount": 1 } },
+    { "toolCallId": "f-30", "toolName": "show_exercise", "args": { "exerciseType": "pronunciation_select", "objectiveId": "ko-script-syllables-basic", "hintItems": ["하은"] } },
     { "toolCallId": "f-31", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "Not bad! Now build it — put the pieces together.", "translation": null, "expression": "cheerful", "affinityDelta": 2 } },
     { "toolCallId": "f-32", "toolName": "show_exercise", "args": { "exerciseType": "block_crush", "objectiveId": "ko-script-syllables-basic", "exerciseData": { "type": "block_crush", "id": "fix-bc-haeun", "objectiveId": "ko-script-syllables-basic", "difficulty": 2, "prompt": "Build: 하은", "language": "ko", "targetChar": "하은", "components": [], "romanization": "ha-eun", "meaning": "Haeun (name)", "stage": "intro" } } },
     { "toolCallId": "f-33", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "You... actually did it. 진짜 대박. You can read my name. Okay, I'm officially impressed.", "translation": "You... actually did it. Seriously amazing.", "expression": "amazed", "affinityDelta": 5 } },
 
-    {"_phase": "ACT 2 — PHASE 5: FAREWELL (NPC goodbye → exit cinematic → Tong recap → end_scene)"},
+    {"_phase": "ACT 2 — PHASE 5: FAREWELL"},
     { "toolCallId": "f-34", "toolName": "npc_speak", "args": { "characterId": "haeun", "text": "You know what, you should come back. I'll show you the real Seoul — not the tourist stuff. But you better keep practicing.", "translation": null, "expression": "cheerful", "affinityDelta": 2 } },
     { "toolCallId": "f-35", "toolName": "play_cinematic", "args": { "videoUrl": "{{asset:cinematic.haeun.exit.3}}", "caption": null, "autoAdvance": false } },
     { "toolCallId": "f-36", "toolName": "tong_whisper", "args": { "message": "Nice work tonight! You learned ㅎ, ㅏ, ㅇ, ㅡ, ㄴ — and built 하은. Five jamo and a real Korean name. Not bad for your first night in Seoul.", "translation": null } },
-    { "toolCallId": "f-37", "toolName": "end_scene", "args": { "summary": "First night in Seoul. Learned 5 jamo (ㅎ, ㅏ, ㅇ, ㅡ, ㄴ), built syllable blocks (하, 은), and read Haeun's name. Haeun is impressed.", "xpEarned": 120, "affinityChanges": [{ "characterId": "haeun", "delta": 19 }], "calibratedLevel": 1 } }
+    { "toolCallId": "f-37", "toolName": "end_scene", "args": { "summary": "First night in Seoul. Learned 5 jamo (ㅎ, ㅏ, ㅇ, ㅡ, ㄴ), built syllable blocks (하, 은), and read Haeun's name.", "xpEarned": 120, "affinityChanges": [{ "characterId": "haeun", "delta": 19 }], "calibratedLevel": 1 } }
   ]
 }
