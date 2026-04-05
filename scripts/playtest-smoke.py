@@ -122,9 +122,10 @@ class PlaytestSmokeTest:
 
     async def test_redirect_to_game(self, page: Page) -> None:
         """Verify the playtest page redirects to /game with correct params."""
-        # Wait for redirect — the page does window.location.href = /game?fresh=1&lang=ko
+        # Wait for redirect — page uses router.push (client-side) or window.location.href
+        # Workers cold start can be slow, allow 30s
         try:
-            await page.wait_for_url("**/game**", timeout=15000)
+            await page.wait_for_url("**/game**", timeout=30000)
             current_url = page.url
             has_game = "/game" in current_url
             has_fresh = "fresh=1" in current_url
@@ -149,6 +150,9 @@ class PlaytestSmokeTest:
 
     async def test_playtest_overlay(self, page: Page) -> None:
         """Check if PlaytestWrapper detected the session and mounted the overlay."""
+        # Wait for hydration — PlaytestWrapper reads sessionStorage on mount
+        await asyncio.sleep(3)
+
         # Check sessionStorage for playtest session marker
         session_data = await page.evaluate("""() => {
             return sessionStorage.getItem('tong_playtest_session');
@@ -158,8 +162,12 @@ class PlaytestSmokeTest:
         self.record("Overlay: sessionStorage has playtest marker", has_session,
                      session_data[:80] if session_data else "null")
 
-        # Check if playtest toolbar is in the DOM
-        toolbar_visible = await page.locator(".playtest-pill").count() > 0
+        # Wait for overlay pill to mount (PlaytestOverlay auto-starts after 1s delay)
+        try:
+            await page.wait_for_selector(".playtest-pill", timeout=8000)
+            toolbar_visible = True
+        except Exception:
+            toolbar_visible = await page.locator(".playtest-pill").count() > 0
         self.record("Overlay: playtest pill mounted", toolbar_visible)
 
         if toolbar_visible:

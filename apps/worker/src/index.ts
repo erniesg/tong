@@ -2267,6 +2267,104 @@ async function handleRequest(request: Request): Promise<Response> {
       });
     }
 
+    // Proxy annotations from R2 (avoids CORS on direct R2 access)
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/annotations$/) && request.method === 'GET') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/annotations.json`);
+      if (!obj) return jsonResponse(404, { error: 'no_annotations' });
+      const body = await obj.text();
+      return new Response(body, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'max-age=60',
+        },
+      });
+    }
+
+    // Proxy state log from R2
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/state-log$/) && request.method === 'GET') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/state-log.json`);
+      if (!obj) return jsonResponse(404, { error: 'no_state_log' });
+      const body = await obj.text();
+      return new Response(body, {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=60' },
+      });
+    }
+
+    // Proxy filmstrip manifest + frames from R2
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/filmstrip$/) && request.method === 'GET') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/filmstrip/manifest.json`);
+      if (!obj) return jsonResponse(404, { error: 'no_filmstrip' });
+      return new Response(await obj.text(), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/filmstrip\/[^/]+$/) && request.method === 'GET') {
+      const parts = pathname.split('/');
+      const sessionId = parts[5];
+      const filename = parts[7];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/filmstrip/${filename}`);
+      if (!obj) return jsonResponse(404, { error: 'not_found' });
+      return new Response(obj.body, {
+        headers: { 'Content-Type': 'image/jpeg', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=3600' },
+      });
+    }
+
+    // Proxy recording from R2 (avoids CORS on direct R2 access)
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/recording$/) && (request.method === 'GET' || request.method === 'HEAD')) {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/recording.webm`);
+      if (!obj) return jsonResponse(404, { error: 'no_recording' });
+      if (request.method === 'HEAD') {
+        return new Response(null, {
+          headers: {
+            'Content-Type': 'video/webm',
+            'Content-Length': String(obj.size),
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      }
+      return new Response(obj.body, {
+        headers: {
+          'Content-Type': 'video/webm',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'max-age=300',
+        },
+      });
+    }
+
+    // Proxy screenshots from R2
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/screenshots\/[^/]+$/) && request.method === 'GET') {
+      const parts = pathname.split('/');
+      const sessionId = parts[5];
+      const filename = parts[7];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/screenshots/${filename}`);
+      if (!obj) return jsonResponse(404, { error: 'not_found' });
+      return new Response(obj.body, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'max-age=3600',
+        },
+      });
+    }
+
     // Update session status
     if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+$/) && request.method === 'PATCH') {
       const sessionId = pathname.split('/').pop()!;
@@ -2332,6 +2430,38 @@ async function handleRequest(request: Request): Promise<Response> {
             });
             screenshotKeys.push(r2Key);
           }
+        }
+
+        // Upload filmstrip frames (keyed as filmstrip:{timestamp})
+        let filmstripCount = 0;
+        const filmstripManifest: { ts: number; url: string }[] = [];
+        for (const [key, value] of formData.entries()) {
+          if (key.startsWith('filmstrip:') && value instanceof File) {
+            const ts = parseInt(key.slice('filmstrip:'.length), 10);
+            const r2Key = `playtest/${sessionId}/filmstrip/frame-${ts}.jpg`;
+            await env.TONG_RUNS_BUCKET.put(r2Key, value.stream(), {
+              httpMetadata: { contentType: 'image/jpeg' },
+            });
+            filmstripManifest.push({ ts, url: `${publicBase}/${r2Key}` });
+            filmstripCount++;
+          }
+        }
+        if (filmstripManifest.length > 0) {
+          filmstripManifest.sort((a, b) => a.ts - b.ts);
+          await env.TONG_RUNS_BUCKET.put(
+            `playtest/${sessionId}/filmstrip/manifest.json`,
+            JSON.stringify(filmstripManifest),
+            { httpMetadata: { contentType: 'application/json' } },
+          );
+        }
+
+        // Store state log if provided
+        const stateLog = formData.get('stateLog');
+        if (stateLog) {
+          const logText = typeof stateLog === 'string' ? stateLog : await (stateLog as File).text();
+          await env.TONG_RUNS_BUCKET.put(`playtest/${sessionId}/state-log.json`, logText, {
+            httpMetadata: { contentType: 'application/json' },
+          });
         }
 
         // Enrich annotations with R2 screenshot URLs before storing
