@@ -3,86 +3,109 @@
   "title": "Korean Script — First Characters",
   "city": "seoul",
   "npc": "haeun",
-  "npcName": "Haeun",
   "location": "food_street",
   "language": "ko",
-  "background": "/assets/locations/seoul.mp4",
-  "scenes": [
+  "playerName": "Player",
+  "toolCalls": [
     {
-      "type": "dialogue",
-      "speaker": "haeun",
-      "text": "Hey! Welcome to Seoul. I'm Haeun — I'll be showing you around tonight."
+      "toolCallId": "fix-1",
+      "toolName": "set_backdrop",
+      "args": { "backdropUrl": "/assets/locations/seoul.mp4" }
     },
     {
-      "type": "dialogue",
-      "speaker": "haeun",
-      "text": "See all these signs? They're written in Hangul — the Korean alphabet. Let me teach you the basics."
+      "toolCallId": "fix-2",
+      "toolName": "tong_whisper",
+      "args": { "message": "Hey! I'm Tong. Tonight we're learning the Korean alphabet — Hangul. It's easier than you think!", "translation": null }
     },
     {
-      "type": "dialogue",
-      "speaker": "haeun",
-      "text": "Let's start with ㅎ — this is 'hieut', the 'h' sound. Try tracing it!"
+      "toolCallId": "fix-3",
+      "toolName": "npc_speak",
+      "args": { "characterId": "haeun", "text": "안녕! Welcome to Seoul! I'm Haeun — I'll be showing you around tonight.", "translation": "Hi! Welcome to Seoul!", "expression": "cheerful" }
     },
     {
-      "type": "exercise",
-      "exerciseType": "stroke_tracing",
-      "exerciseId": "fixture-trace-hieut",
-      "data": {
-        "targetChar": "ㅎ",
-        "label": "hieut (h)",
-        "mode": "single"
+      "toolCallId": "fix-4",
+      "toolName": "npc_speak",
+      "args": { "characterId": "haeun", "text": "See all those signs? They're in Hangul — the Korean alphabet. Let me teach you your first character.", "translation": null, "expression": "neutral" }
+    },
+    {
+      "toolCallId": "fix-5",
+      "toolName": "npc_speak",
+      "args": { "characterId": "haeun", "text": "This is ㅎ — 'hieut'. It makes the 'h' sound, like in my name — Haeun!", "translation": null, "expression": "cheerful" }
+    },
+    {
+      "toolCallId": "fix-6",
+      "toolName": "show_exercise",
+      "args": {
+        "exerciseType": "stroke_tracing",
+        "objectiveId": "ko-jamo-hieut",
+        "exerciseData": {
+          "type": "stroke_tracing",
+          "id": "fix-trace-hieut",
+          "objectiveId": "ko-jamo-hieut",
+          "difficulty": 1,
+          "prompt": "Trace: ㅎ (hieut)",
+          "targetChar": "ㅎ",
+          "ghostOverlay": true,
+          "explanation": "hieut — the 'h' sound",
+          "romanization": "h",
+          "meaning": "consonant 'h'"
+        }
       }
     },
     {
-      "type": "dialogue",
-      "speaker": "haeun",
-      "text": "Nice! That's the 'h' in my name — Haeun. Now let's learn the vowel ㅏ — that's 'ah'."
+      "toolCallId": "fix-7",
+      "toolName": "npc_speak",
+      "args": { "characterId": "haeun", "text": "Nice work! Now let's learn a vowel — ㅏ. This is 'ah', like saying 'ahhh'.", "translation": null, "expression": "cheerful" }
     },
     {
-      "type": "exercise",
-      "exerciseType": "stroke_tracing",
-      "exerciseId": "fixture-trace-a",
-      "data": {
-        "targetChar": "ㅏ",
-        "label": "a (ah)",
-        "mode": "single"
+      "toolCallId": "fix-8",
+      "toolName": "show_exercise",
+      "args": {
+        "exerciseType": "stroke_tracing",
+        "objectiveId": "ko-jamo-a",
+        "exerciseData": {
+          "type": "stroke_tracing",
+          "id": "fix-trace-a",
+          "objectiveId": "ko-jamo-a",
+          "difficulty": 1,
+          "prompt": "Trace: ㅏ (a)",
+          "targetChar": "ㅏ",
+          "ghostOverlay": true,
+          "explanation": "a — the 'ah' vowel",
+          "romanization": "a",
+          "meaning": "vowel 'ah'"
+        }
       }
     },
     {
-      "type": "dialogue",
-      "speaker": "haeun",
-      "text": "You're getting it! Now put them together — ㅎ + ㅏ = 하. That means 'ha' — like the start of my name!"
+      "toolCallId": "fix-9",
+      "toolName": "npc_speak",
+      "args": { "characterId": "haeun", "text": "You're getting it! Now combine them — ㅎ + ㅏ = 하. That's 'ha' — like the start of my name!", "translation": null, "expression": "excited" }
     },
     {
-      "type": "exercise",
-      "exerciseType": "stroke_tracing",
-      "exerciseId": "fixture-trace-ha",
-      "data": {
-        "targetChar": "하",
-        "label": "ha",
-        "mode": "single"
+      "toolCallId": "fix-10",
+      "toolName": "show_exercise",
+      "args": {
+        "exerciseType": "stroke_tracing",
+        "objectiveId": "ko-syllable-ha",
+        "exerciseData": {
+          "type": "stroke_tracing",
+          "id": "fix-trace-ha",
+          "objectiveId": "ko-syllable-ha",
+          "difficulty": 2,
+          "prompt": "Trace: 하 (ha)",
+          "targetChar": "하",
+          "ghostOverlay": true,
+          "explanation": "ha — ㅎ + ㅏ combined",
+          "romanization": "ha",
+          "meaning": "first syllable of Haeun"
+        }
       }
     },
     {
-      "type": "dialogue",
-      "speaker": "haeun",
-      "text": "Perfect! Let's practice ㅎ a few more times to build muscle memory."
-    },
-    {
-      "type": "exercise",
-      "exerciseType": "stroke_tracing",
-      "exerciseId": "fixture-drill-hieut",
-      "data": {
-        "targetChar": "ㅎ",
-        "label": "hieut (h) — drill",
-        "mode": "grid_drill",
-        "reps": 3
-      }
-    },
-    {
-      "type": "dialogue",
-      "speaker": "haeun",
-      "text": "Amazing work! You just learned your first Korean characters. Next time, we'll learn more consonants. See you around the food street!"
+      "toolCallId": "fix-11",
+      "toolName": "npc_speak",
+      "args": { "characterId": "haeun", "text": "Amazing! You just read your first Korean! 하 — 'ha'. Next time we'll learn more. See you around the food street!", "translation": null, "expression": "cheerful" }
     }
   ]
 }
