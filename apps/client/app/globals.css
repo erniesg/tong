@@ -2549,7 +2549,7 @@ main.app-shell.app-shell--wide {
 
 /* ── Exercise card ────────────────────────────────────────── */
 .exercise-card {
-  background: rgba(22, 33, 62, 0.95);
+  background: rgb(22, 33, 62);
   border-radius: 16px;
   color: var(--color-text);
   font-size: var(--game-text-base);
@@ -3703,7 +3703,7 @@ main.app-shell.app-shell--wide {
 }
 
 .exercise-modal-content {
-  background: rgba(22, 33, 62, 0.98);
+  background: rgb(22, 33, 62);
   border-radius: 0;
   padding: 16px;
   padding-bottom: env(safe-area-inset-bottom, 16px);
