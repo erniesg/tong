@@ -1057,14 +1057,14 @@ export default function GamePage() {
         setActiveNpc(npcId);
         setPlayerLevel(0);
         setIsIntroHangout(true);
-        setIntroAct(2); // Skip Act 1 cinematics, go straight to content
-        setNpcRevealed(true);
+        setIntroAct(1); // Start from Act 1 — Tong solo, NPC hidden
+        setNpcRevealed(false); // NPC revealed by npc_speak in tool queue
         setSceneReady(true);
 
         dispatch({ type: 'SET_PLAYER_PROFILE', profile: { englishName: playerName, chineseName: '' } });
         dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: fixtureCity, lang: fixtureLang });
 
-        // Pick videos (won't be used but prevents errors)
+        // Set up video refs — needed for act transitions and exit cinematic
         const config = TUTORIAL_VIDEO_CONFIG[npcId];
         if (config) {
           introVideoUrlRef.current = pickRandom(config.introVideoUrls);
