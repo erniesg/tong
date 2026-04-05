@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { dispatch } from '@/lib/store/game-store';
 import type { CityId, AppLang } from '@/lib/api';
 
@@ -118,6 +118,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 export default function PlaytestPage() {
   const params = useParams();
+  const router = useRouter();
   const id = typeof params.id === 'string' ? params.id : '';
 
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -160,12 +161,13 @@ export default function PlaytestPage() {
     void load();
   }, [load]);
 
-  // Once we have the game URL, redirect immediately (client-side navigation preserves store state)
+  // Once we have the game URL, navigate using Next.js router (no full page reload,
+  // preserves React tree, sessionStorage, and game store state)
   useEffect(() => {
     if (loadState === 'ready' && gameUrl) {
-      window.location.href = gameUrl;
+      router.push(gameUrl);
     }
-  }, [loadState, gameUrl]);
+  }, [loadState, gameUrl, router]);
 
   /* ── Loading ──────────────────────────────────────────────── */
   if (loadState === 'loading') {
@@ -220,7 +222,7 @@ export default function PlaytestPage() {
     );
   }
 
-  /* ── Ready — brief redirect state while window.location updates ── */
+  /* ── Ready — brief redirect state while router.push navigates ── */
   return (
     <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d1a', minHeight: '100dvh' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>

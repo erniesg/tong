@@ -24,6 +24,7 @@ export interface LogEntry {
     | 'user_tap'
     | 'phase_change'
     | 'scene_summary'
+    | 'state_snapshot'
     | 'error';
   data: Record<string, unknown>;
 }
@@ -158,6 +159,10 @@ export const sessionLogger = {
 
   logSceneSummary(summary: Record<string, unknown>): void {
     pushEntry({ kind: 'scene_summary', data: summary });
+  },
+
+  logStateSnapshot(state: Record<string, unknown>): void {
+    pushEntry({ kind: 'state_snapshot', data: state });
   },
 
   logError(message: string, detail?: unknown): void {

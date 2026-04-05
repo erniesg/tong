@@ -272,11 +272,18 @@ function getWeakestLangIndex(sliders: [number, number, number]): number {
   return minIdx;
 }
 
+/* (FixtureMode removed — fixtures now inject tool calls into the real game page) */
+
 /* ── component ──────────────────────────────────────────── */
 
 export default function GamePage() {
   const searchParams = useSearchParams();
   const gameState = useGameState();
+
+  /* ── Fixture mode: ?fixture=name loads static test fixture ──── */
+  const fixtureParam = searchParams.get('fixture');
+  const fixtureScene = Number(searchParams.get('scene') || '0');
+  const fixtureLoadedRef = useRef(false);
 
   /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester, ?dev_intro=1 fresh intro hangout, ?fresh=1 replay from opening */
   const phaseParam = searchParams.get('phase');
@@ -295,7 +302,7 @@ export default function GamePage() {
   const skipToCityMap = phaseParam === 'city_map';
   const skipToLearn = phaseParam === 'learn';
   const [phase, setPhase] = useState<Phase>(
-    freshStart ? 'opening' : devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : seededBootstrapRequested || skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : skipToLearn ? 'learn' : 'opening'
+    fixtureParam ? 'hangout' : freshStart ? 'opening' : devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : seededBootstrapRequested || skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : skipToLearn ? 'learn' : 'opening'
   );
   const openingVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -1024,6 +1031,81 @@ export default function GamePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [devIntro, qaRunId]);
 
+  /* ── Fixture mode: load JSON, set up scene, inject tool calls ── */
+  useEffect(() => {
+    if (!fixtureParam || fixtureLoadedRef.current || sceneStartedRef.current) return;
+    fixtureLoadedRef.current = true;
+    sceneStartedRef.current = true;
+
+    fetch(`/fixtures/${fixtureParam}.json`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`Fixture not found: ${fixtureParam}`);
+        return r.json();
+      })
+      .then((fixture) => {
+        // Set up scene state exactly like dev_intro
+        dispatch({ type: 'RESET' });
+        const npcId = fixture.npc || 'haeun';
+        const npcChar = CHARACTER_MAP[npcId] ?? HAEUN;
+        const fixtureCity = (fixture.city ?? 'seoul') as CityId;
+        const fixtureLang = (fixture.language ?? 'ko') as AppLang;
+        const playerName = fixture.playerName || 'Player';
+
+        npcRef.current = npcChar;
+        setCity(fixtureCity);
+        setLocation(fixture.location || 'food_street');
+        setActiveNpc(npcId);
+        setPlayerLevel(0);
+        setIsIntroHangout(true);
+        setIntroAct(2); // Skip Act 1 cinematics, go straight to content
+        setNpcRevealed(true);
+        setSceneReady(true);
+
+        dispatch({ type: 'SET_PLAYER_PROFILE', profile: { englishName: playerName, chineseName: '' } });
+        dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: fixtureCity, lang: fixtureLang });
+
+        // Pick videos (won't be used but prevents errors)
+        const config = TUTORIAL_VIDEO_CONFIG[npcId];
+        if (config) {
+          introVideoUrlRef.current = pickRandom(config.introVideoUrls);
+          const clip = pickRandom(config.exitClips);
+          exitVideoUrlRef.current = clip.video;
+          exitLineRef.current = clip.line.replace(/{playerName}/g, playerName).replace(/{chineseName}/g, playerName);
+          exitLineTranslationRef.current = clip.translation.replace(/{playerName}/g, playerName).replace(/{chineseName}/g, playerName);
+        }
+
+        // Resolve {{asset:key}} placeholders in tool call args
+        const resolveAssets = (obj: unknown): unknown => {
+          if (typeof obj === 'string') {
+            return obj.replace(/\{\{asset:([^}]+)\}\}/g, (_, key) => runtimeAssetUrl(key));
+          }
+          if (Array.isArray(obj)) return obj.map(resolveAssets);
+          if (obj && typeof obj === 'object') {
+            const resolved: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(obj)) {
+              resolved[k] = resolveAssets(v);
+            }
+            return resolved;
+          }
+          return obj;
+        };
+
+        // Filter out _phase comment entries, resolve assets, inject
+        const toolCalls = ((fixture.toolCalls || []) as Record<string, unknown>[])
+          .filter((t) => t.toolName) // skip _phase markers
+          .map((t) => resolveAssets(t)) as { toolCallId: string; toolName: string; args: Record<string, unknown> }[];
+        const startFrom = Math.min(fixtureScene, toolCalls.length - 1);
+        const toInject = toolCalls.slice(Math.max(0, startFrom));
+
+        console.log(`[Fixture] Loaded "${fixture.id}" — injecting ${toInject.length} tool calls (from scene ${startFrom})`);
+        setToolQueue(toInject);
+      })
+      .catch((err) => {
+        console.error('[Fixture] Failed to load:', err);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixtureParam]);
+
   /* ── Tool queue processor ───────────────────────────────── */
   useEffect(() => {
     if (toolQueue.length === 0 || processingRef.current) return;
@@ -1333,8 +1415,8 @@ export default function GamePage() {
       setToolQueue((prev) => prev.slice(1));
       processingRef.current = false;
 
-      // If nothing left in queue after dequeuing, request next turn
-      if (remainingAfterDequeue === 0 && !chatLoading) {
+      // If nothing left in queue after dequeuing, request next turn (skip in fixture mode)
+      if (remainingAfterDequeue === 0 && !chatLoading && !fixtureParam) {
         const msg = buildScenePrompt('Continue.');
         sessionLogger.logUserTap('continue');
         sessionLogger.logAIRequest(msg);
@@ -1411,13 +1493,16 @@ export default function GamePage() {
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
 
-    const msg = buildScenePrompt(summarizeExercise(result.exerciseId, result.correct));
     console.log('[VN] advanceAfterExercise:', result.exerciseId, result.correct, 'chatLoading:', chatLoading);
-    sessionLogger.logAIRequest(msg);
-    setContinuePending(true);
     traceQA('advance_after_exercise', { exerciseId: result.exerciseId, correct: result.correct, chatLoading });
-    void append({ role: 'user', content: msg });
-  }, [append, buildScenePrompt, chatLoading, traceQA]);
+    // In fixture mode, don't call AI — just let the queue continue
+    if (!fixtureParam) {
+      const msg = buildScenePrompt(summarizeExercise(result.exerciseId, result.correct));
+      sessionLogger.logAIRequest(msg);
+      setContinuePending(true);
+      void append({ role: 'user', content: msg });
+    }
+  }, [append, buildScenePrompt, chatLoading, traceQA, fixtureParam]);
 
   const handleExerciseDismiss = useCallback(() => {
     if (exerciseResultRef.current) {
@@ -1443,11 +1528,13 @@ export default function GamePage() {
       console.log('[VN] Act 1 → Act 2 transition triggered by SUSPENSE_CHOICE (offer_choices response)');
     }
 
-    const msg = buildScenePrompt(`Choice: ${choiceId}`);
-    sessionLogger.logAIRequest(msg);
-    setContinuePending(true);
-    void append({ role: 'user', content: msg });
-  }, [append, buildScenePrompt, isIntroHangout, introAct]);
+    if (!fixtureParam) {
+      const msg = buildScenePrompt(`Choice: ${choiceId}`);
+      sessionLogger.logAIRequest(msg);
+      setContinuePending(true);
+      void append({ role: 'user', content: msg });
+    }
+  }, [append, buildScenePrompt, isIntroHangout, introAct, fixtureParam]);
 
   const handleCinematicEnd = useCallback(() => {
     setCinematic(null);
@@ -1459,8 +1546,8 @@ export default function GamePage() {
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
 
-    // If nothing left in queue after dequeuing, request next AI turn
-    if (remainingAfterDequeue === 0 && !chatLoading) {
+    // If nothing left in queue after dequeuing, request next AI turn (skip in fixture mode)
+    if (remainingAfterDequeue === 0 && !chatLoading && !fixtureParam) {
       const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
       const msg = `${ctx}Continue.`;
       sessionLogger.logUserTap('cinematic_end');
@@ -1468,7 +1555,7 @@ export default function GamePage() {
       setContinuePending(true);
       void append({ role: 'user', content: msg });
     }
-  }, [isIntroHangout, npcRevealed, toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
+  }, [isIntroHangout, npcRevealed, toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn, fixtureParam]);
 
   const handleDismissTong = useCallback(() => {
     traceQA('handle_dismiss_tong', { processing: processingRef.current, queueLength: toolQueue.length });
@@ -1579,6 +1666,8 @@ export default function GamePage() {
   }, [qaRunId, getQaState]);
 
   /* ── renders ──────────────────────────────────────────── */
+
+  /* Fixture mode — no early return, handled via useEffect below */
 
   /* Opening phase — logo animation */
   if (phase === 'opening') {
@@ -1738,11 +1827,11 @@ export default function GamePage() {
                     onKeyDown={(e) => e.key === 'Enter' && profileInput.englishName.trim() && handleNameNext()}
                   />
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
                   <button
                     className="tg-menu-btn-primary"
                     onClick={() => setIntroStep(0)}
-                    style={{ flex: '0 0 auto', padding: '10px 18px', background: 'rgba(255,255,255,0.1)' }}
+                    style={{ flex: '0 0 auto', padding: '14px 22px', background: 'rgba(255,255,255,0.1)', fontSize: 16 }}
                   >
                     Back
                   </button>
@@ -1750,7 +1839,7 @@ export default function GamePage() {
                     className="tg-menu-btn-primary"
                     onClick={handleNameNext}
                     disabled={!profileInput.englishName.trim()}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, padding: '14px 22px', fontSize: 16 }}
                   >
                     Next
                   </button>
@@ -1810,18 +1899,18 @@ export default function GamePage() {
                     </div>
                   ))}
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
                   <button
                     className="tg-menu-btn-primary"
                     onClick={() => { changeTongExpression('thinking'); setIntroStep(1); }}
-                    style={{ flex: '0 0 auto', padding: '10px 18px', background: 'rgba(255,255,255,0.1)' }}
+                    style={{ flex: '0 0 auto', padding: '14px 22px', background: 'rgba(255,255,255,0.1)', fontSize: 16 }}
                   >
                     Back
                   </button>
                   <button
                     className="tg-menu-btn-primary"
                     onClick={handleLanguageNext}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, padding: '14px 22px', fontSize: 16 }}
                   >
                     Next
                   </button>
