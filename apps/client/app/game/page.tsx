@@ -1510,11 +1510,13 @@ export default function GamePage() {
       console.log('[VN] Act 1 → Act 2 transition triggered by SUSPENSE_CHOICE (offer_choices response)');
     }
 
-    const msg = buildScenePrompt(`Choice: ${choiceId}`);
-    sessionLogger.logAIRequest(msg);
-    setContinuePending(true);
-    void append({ role: 'user', content: msg });
-  }, [append, buildScenePrompt, isIntroHangout, introAct]);
+    if (!fixtureParam) {
+      const msg = buildScenePrompt(`Choice: ${choiceId}`);
+      sessionLogger.logAIRequest(msg);
+      setContinuePending(true);
+      void append({ role: 'user', content: msg });
+    }
+  }, [append, buildScenePrompt, isIntroHangout, introAct, fixtureParam]);
 
   const handleCinematicEnd = useCallback(() => {
     setCinematic(null);
