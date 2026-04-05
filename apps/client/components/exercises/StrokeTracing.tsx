@@ -190,16 +190,19 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
     drawScene();
   }, [targetChar, drawScene]);
 
-  const getPoint = useCallback((e: React.TouchEvent | React.MouseEvent): Point | null => {
+  const getPoint = useCallback((e: React.TouchEvent | React.MouseEvent): { pt: Point; pressure: number } | null => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
     if ('touches' in e) {
       const touch = e.touches[0];
       if (!touch) return null;
-      return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+      return { pt: { x: touch.clientX - rect.left, y: touch.clientY - rect.top }, pressure: (touch as unknown as { force?: number }).force ?? 0 };
     }
-    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top };
+    const me = e as React.MouseEvent;
+    // PointerEvent has pressure, MouseEvent doesn't
+    const pressure = 'pressure' in e.nativeEvent ? (e.nativeEvent as PointerEvent).pressure : 0;
+    return { pt: { x: me.clientX - rect.left, y: me.clientY - rect.top }, pressure };
   }, []);
 
   const stampCircle = useCallback((revealCtx: CanvasRenderingContext2D, x: number, y: number, radius: number) => {
@@ -286,13 +289,13 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
     e.stopPropagation();
     setDrawing(true);
     setHasDrawn(true);
-    const pt = getPoint(e);
-    if (pt) {
+    const result = getPoint(e);
+    if (result) {
       const now = performance.now();
-      prevPointRef.current = pt;
+      prevPointRef.current = result.pt;
       prevTimeRef.current = now;
       curBrushRef.current = BRUSH_MAX;
-      revealStroke(null, pt, now);
+      revealStroke(null, result.pt, now, result.pressure);
     }
   }, [active, cellState.done, getPoint, revealStroke]);
 
@@ -300,11 +303,11 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
     if (!drawing || !active || cellState.done) return;
     e.preventDefault();
     e.stopPropagation();
-    const pt = getPoint(e);
-    if (!pt) return;
+    const result = getPoint(e);
+    if (!result) return;
     const now = performance.now();
-    revealStroke(prevPointRef.current, pt, now);
-    prevPointRef.current = pt;
+    revealStroke(prevPointRef.current, result.pt, now, result.pressure);
+    prevPointRef.current = result.pt;
     prevTimeRef.current = now;
   }, [drawing, active, cellState.done, getPoint, revealStroke]);
 
@@ -533,16 +536,19 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     drawScene();
   }, [exercise.targetChar, drawScene, isDrill]);
 
-  const getPoint = useCallback((e: React.TouchEvent | React.MouseEvent): Point | null => {
+  const getPoint = useCallback((e: React.TouchEvent | React.MouseEvent): { pt: Point; pressure: number } | null => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
     if ('touches' in e) {
       const touch = e.touches[0];
       if (!touch) return null;
-      return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+      return { pt: { x: touch.clientX - rect.left, y: touch.clientY - rect.top }, pressure: (touch as unknown as { force?: number }).force ?? 0 };
     }
-    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top };
+    const me = e as React.MouseEvent;
+    // PointerEvent has pressure, MouseEvent doesn't
+    const pressure = 'pressure' in e.nativeEvent ? (e.nativeEvent as PointerEvent).pressure : 0;
+    return { pt: { x: me.clientX - rect.left, y: me.clientY - rect.top }, pressure };
   }, []);
 
   const stampCircle = useCallback((revealCtx: CanvasRenderingContext2D, x: number, y: number, radius: number) => {
@@ -596,23 +602,23 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     if (submitted) return;
     e.preventDefault();
     setDrawing(true); setHasDrawn(true);
-    const pt = getPoint(e);
-    if (pt) {
+    const result = getPoint(e);
+    if (result) {
       const now = performance.now();
-      prevPointRef.current = pt; prevTimeRef.current = now;
+      prevPointRef.current = result.pt; prevTimeRef.current = now;
       curBrushRef.current = BRUSH_MAX;
-      revealStroke(null, pt, now);
+      revealStroke(null, result.pt, now, result.pressure);
     }
   }, [getPoint, submitted, revealStroke]);
 
   const draw_single = useCallback((e: React.TouchEvent | React.MouseEvent) => {
     if (!drawing || submitted) return;
     e.preventDefault();
-    const pt = getPoint(e);
-    if (!pt) return;
+    const result = getPoint(e);
+    if (!result) return;
     const now = performance.now();
-    revealStroke(prevPointRef.current, pt, now);
-    prevPointRef.current = pt; prevTimeRef.current = now;
+    revealStroke(prevPointRef.current, result.pt, now, result.pressure);
+    prevPointRef.current = result.pt; prevTimeRef.current = now;
   }, [drawing, getPoint, submitted, revealStroke]);
 
   const endDraw_single = useCallback(() => {
