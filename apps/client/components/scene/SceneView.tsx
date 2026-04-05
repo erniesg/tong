@@ -77,13 +77,19 @@ export function SceneView({
   onDismissTong = () => {},
 }: SceneViewProps) {
   const [exerciseDone, setExerciseDone] = useState(false);
-  const exerciseRef = useRef(currentExercise);
-  // Keep ref updated when exercise changes (but don't clear on dismiss)
+  const [exerciseHidden, setExerciseHidden] = useState(false);
+  const [mountedExercise, setMountedExercise] = useState(currentExercise);
+
   useEffect(() => {
     if (currentExercise) {
-      exerciseRef.current = currentExercise;
+      setMountedExercise(currentExercise);
       setExerciseDone(false);
+      setExerciseHidden(false);
+    } else if (mountedExercise) {
+      // Dismissed — hide but keep mounted to preserve state
+      setExerciseHidden(true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentExercise]);
 
   const prevBackdropRef = useRef(backgroundUrl);
@@ -149,16 +155,22 @@ export function SceneView({
         onDismiss={onDismissTong}
       />
 
-      {/* Layer 4: Interactive area at bottom */}
-      {currentExercise ? (
-        <div className={`exercise-float-wrapper${exerciseDone ? ' exercise-float-dismissing' : ''}`}>
+      {/* Layer 4a: Exercise — stays mounted when dismissed to preserve tracing state */}
+      {mountedExercise && (
+        <div
+          className={`exercise-float-wrapper${exerciseDone ? ' exercise-float-dismissing' : ''}`}
+          style={exerciseHidden ? { display: 'none' } : undefined}
+        >
           <div className="exercise-float-card" onClick={(e) => e.stopPropagation()}>
             <ExerciseRenderer
-              exercise={currentExercise}
+              exercise={mountedExercise}
               onResult={(correct) => {
                 setExerciseDone(true);
-                onExerciseResult(currentExercise.id, correct);
-                setTimeout(() => onExerciseDismiss?.(), 300);
+                onExerciseResult(mountedExercise.id, correct);
+                setTimeout(() => {
+                  setMountedExercise(null);
+                  onExerciseDismiss?.();
+                }, 300);
               }}
             />
             <button
@@ -170,7 +182,10 @@ export function SceneView({
             </button>
           </div>
         </div>
-      ) : choices ? (
+      )}
+
+      {/* Layer 4b: Other interactive elements (show when exercise is hidden or absent) */}
+      {(exerciseHidden || !mountedExercise) && (choices ? (
         <ChoiceButtons choices={choices} prompt={choicePrompt} onSelect={onChoice} disabled={isStreaming} targetLang={targetLang} />
       ) : currentMessage ? (
         <DialogueBox
@@ -203,7 +218,7 @@ export function SceneView({
             {continueLabel}
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }
