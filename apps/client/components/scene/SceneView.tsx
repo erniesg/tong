@@ -77,8 +77,14 @@ export function SceneView({
   onDismissTong = () => {},
 }: SceneViewProps) {
   const [exerciseDone, setExerciseDone] = useState(false);
-  // Reset exerciseDone when exercise changes
-  useEffect(() => { setExerciseDone(false); }, [currentExercise]);
+  const exerciseRef = useRef(currentExercise);
+  // Keep ref updated when exercise changes (but don't clear on dismiss)
+  useEffect(() => {
+    if (currentExercise) {
+      exerciseRef.current = currentExercise;
+      setExerciseDone(false);
+    }
+  }, [currentExercise]);
 
   const prevBackdropRef = useRef(backgroundUrl);
   const backdropTransition = backgroundTransition === 'fade' && prevBackdropRef.current !== backgroundUrl;
