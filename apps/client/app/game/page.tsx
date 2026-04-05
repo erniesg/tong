@@ -1062,7 +1062,8 @@ export default function GamePage() {
         setSceneReady(true);
 
         dispatch({ type: 'SET_PLAYER_PROFILE', profile: { englishName: playerName, chineseName: '' } });
-        dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: fixtureCity, lang: fixtureLang });
+        // explainIn = UI language (English), NOT the target language being taught
+        dispatch({ type: 'SET_EXPLAIN_LANGUAGE', cityId: fixtureCity, lang: 'en' as AppLang });
 
         // Set up video refs — needed for act transitions and exit cinematic
         const config = TUTORIAL_VIDEO_CONFIG[npcId];
