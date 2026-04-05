@@ -682,7 +682,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   const cols = totalReps <= 4 ? 2 : totalReps <= 9 ? 3 : 4;
 
   return (
-    <div className="exercise-card p-4" style={{ justifyContent: 'space-between' }}>
+    <div className="exercise-card p-4">
       <p className="text-[length:var(--game-text-lg)] font-medium mb-3 text-ko m-0">{exercise.prompt}</p>
 
       {/* Target character + romanization + sound */}
@@ -734,8 +734,6 @@ export function StrokeTracing({ exercise, onResult }: Props) {
               justifyContent: 'center',
               gap: 10,
               width: '100%',
-              flex: 1,
-              alignContent: 'center',
             }}
           >
             {cellStates.map((cell, i) => (
