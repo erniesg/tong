@@ -1,0 +1,88 @@
+{
+  "id": "stroke-trace-korean-basic",
+  "title": "Korean Script — First Characters",
+  "city": "seoul",
+  "npc": "haeun",
+  "npcName": "Haeun",
+  "location": "food_street",
+  "language": "ko",
+  "background": "/assets/locations/seoul.mp4",
+  "scenes": [
+    {
+      "type": "dialogue",
+      "speaker": "haeun",
+      "text": "Hey! Welcome to Seoul. I'm Haeun — I'll be showing you around tonight."
+    },
+    {
+      "type": "dialogue",
+      "speaker": "haeun",
+      "text": "See all these signs? They're written in Hangul — the Korean alphabet. Let me teach you the basics."
+    },
+    {
+      "type": "dialogue",
+      "speaker": "haeun",
+      "text": "Let's start with ㅎ — this is 'hieut', the 'h' sound. Try tracing it!"
+    },
+    {
+      "type": "exercise",
+      "exerciseType": "stroke_tracing",
+      "exerciseId": "fixture-trace-hieut",
+      "data": {
+        "targetChar": "ㅎ",
+        "label": "hieut (h)",
+        "mode": "single"
+      }
+    },
+    {
+      "type": "dialogue",
+      "speaker": "haeun",
+      "text": "Nice! That's the 'h' in my name — Haeun. Now let's learn the vowel ㅏ — that's 'ah'."
+    },
+    {
+      "type": "exercise",
+      "exerciseType": "stroke_tracing",
+      "exerciseId": "fixture-trace-a",
+      "data": {
+        "targetChar": "ㅏ",
+        "label": "a (ah)",
+        "mode": "single"
+      }
+    },
+    {
+      "type": "dialogue",
+      "speaker": "haeun",
+      "text": "You're getting it! Now put them together — ㅎ + ㅏ = 하. That means 'ha' — like the start of my name!"
+    },
+    {
+      "type": "exercise",
+      "exerciseType": "stroke_tracing",
+      "exerciseId": "fixture-trace-ha",
+      "data": {
+        "targetChar": "하",
+        "label": "ha",
+        "mode": "single"
+      }
+    },
+    {
+      "type": "dialogue",
+      "speaker": "haeun",
+      "text": "Perfect! Let's practice ㅎ a few more times to build muscle memory."
+    },
+    {
+      "type": "exercise",
+      "exerciseType": "stroke_tracing",
+      "exerciseId": "fixture-drill-hieut",
+      "data": {
+        "targetChar": "ㅎ",
+        "label": "hieut (h) — drill",
+        "mode": "grid_drill",
+        "reps": 3
+      }
+    },
+    {
+      "type": "dialogue",
+      "speaker": "haeun",
+      "text": "Amazing work! You just learned your first Korean characters. Next time, we'll learn more consonants. See you around the food street!"
+    }
+  ]
+}

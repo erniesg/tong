@@ -10,6 +10,7 @@ import type { CompletedSession } from '@/lib/store/session-store';
 import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
 import type { Character } from '@/lib/types/relationship';
 import { SceneView } from '@/components/scene/SceneView';
+import { FixturePlayer } from '@/components/scene/FixturePlayer';
 import { generateExercise } from '@/lib/exercises/generators';
 import { getTargetByChar } from '@/lib/content/block-crush-data';
 import { parseExerciseData } from '@/lib/exercises/validate';
@@ -272,11 +273,56 @@ function getWeakestLangIndex(sliders: [number, number, number]): number {
   return minIdx;
 }
 
+/* ── Fixture mode wrapper ───────────────────────────────── */
+
+function FixtureMode({ fixtureName, startScene }: { fixtureName: string; startScene: number }) {
+  const [fixture, setFixture] = useState<Record<string, unknown> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/fixtures/${fixtureName}.json`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`Fixture not found: ${fixtureName}`);
+        return r.json();
+      })
+      .then(setFixture)
+      .catch((e) => setError(e.message));
+  }, [fixtureName]);
+
+  if (error) {
+    return (
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#e8485c', textAlign: 'center', padding: 24 }}>
+          <p style={{ fontSize: 18, fontWeight: 600 }}>{error}</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 8 }}>
+            Available: stroke-trace-korean-basic
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!fixture) {
+    return (
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'rgba(255,255,255,0.5)' }}>Loading fixture...</p>
+      </div>
+    );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <FixturePlayer fixture={fixture as any} startScene={startScene} />;
+}
+
 /* ── component ──────────────────────────────────────────── */
 
 export default function GamePage() {
   const searchParams = useSearchParams();
   const gameState = useGameState();
+
+  /* ── Fixture mode: ?fixture=name loads static test fixture ──── */
+  const fixtureParam = searchParams.get('fixture');
+  const fixtureScene = Number(searchParams.get('scene') || '0');
 
   /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester, ?dev_intro=1 fresh intro hangout, ?fresh=1 replay from opening */
   const phaseParam = searchParams.get('phase');
@@ -1579,6 +1625,11 @@ export default function GamePage() {
   }, [qaRunId, getQaState]);
 
   /* ── renders ──────────────────────────────────────────── */
+
+  /* Fixture mode — static test fixture, no LLM */
+  if (fixtureParam) {
+    return <FixtureMode fixtureName={fixtureParam} startScene={fixtureScene} />;
+  }
 
   /* Opening phase — logo animation */
   if (phase === 'opening') {

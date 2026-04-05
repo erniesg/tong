@@ -7621,6 +7621,43 @@ main.app-shell.app-shell--wide {
   }
 }
 
+/* ── Fixture nav bar ──────────────────────────────────────────── */
+
+.fixture-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 20;
+  gap: 8px;
+}
+
+.fixture-nav-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #fff;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.fixture-nav-btn:hover { background: rgba(255, 255, 255, 0.2); }
+.fixture-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.fixture-nav-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  text-align: center;
+}
+
 /* ── Playtest Overlay ──────────────────────────────────────────── */
 
 /* Prevent playtest overlay elements from causing horizontal scroll.
