@@ -720,13 +720,13 @@ export function StrokeTracing({ exercise, onResult }: Props) {
               display: 'flex',
               flexWrap: 'wrap',
               justifyContent: 'center',
-              gap: 6,
-              maxWidth: 360,
+              gap: 10,
+              maxWidth: 'min(95vw, 500px)',
               margin: '0 auto',
             }}
           >
             {cellStates.map((cell, i) => (
-              <div key={i} style={{ width: `calc(${100 / cols}% - ${6 * (cols - 1) / cols}px)` }}>
+              <div key={i} style={{ width: `calc(${100 / cols}% - ${10 * (cols - 1) / cols}px)` }}>
                 <CellCanvas
                   targetChar={exercise.targetChar}
                   ghostOpacity={cellGhostOpacity(i)}
