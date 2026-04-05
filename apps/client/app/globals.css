@@ -1912,7 +1912,7 @@ main.app-shell.app-shell--wide {
 /* Trainee profile card — positioned below avatar */
 .tg-trainee-profile {
   position: absolute;
-  top: 30%;
+  top: 18%;
   left: 5%;
   right: 5%;
   bottom: 0;
@@ -1920,6 +1920,9 @@ main.app-shell.app-shell--wide {
   padding: 8px 18px;
   padding-bottom: 24px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .tg-dialogue-panel {
@@ -3658,6 +3661,7 @@ main.app-shell.app-shell--wide {
   -webkit-backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
+  overscroll-behavior: none;
   justify-content: center;
   animation: fadeIn 0.2s ease-out;
 }
@@ -3672,8 +3676,9 @@ main.app-shell.app-shell--wide {
   padding: 0;
   width: 100%;
   max-width: none;
-  max-height: 85vh;
+  max-height: 100dvh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   animation: slideUp 0.3s ease-out;
 }
 

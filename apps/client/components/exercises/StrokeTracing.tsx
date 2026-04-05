@@ -17,8 +17,8 @@ interface Point {
   y: number;
 }
 
-const BRUSH_MIN = 2;
-const BRUSH_MAX = 5;
+const BRUSH_MIN = 4;
+const BRUSH_MAX = 8;
 const VELOCITY_CAP = 8;
 const PASS_THRESHOLD = 0.80;
 const ALPHA_THRESHOLD = 30;

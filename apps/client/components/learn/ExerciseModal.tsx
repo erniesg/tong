@@ -33,8 +33,16 @@ export function ExerciseModal({ exercise, onResult, readOnly }: ExerciseModalPro
   // Prevent body scroll while modal is open
   useEffect(() => {
     document.body.style.overflow = 'hidden';
+    const preventScroll = (e: TouchEvent) => {
+      // Allow scroll inside .exercise-modal-content if content overflows
+      const target = e.target as HTMLElement;
+      if (target.closest('.exercise-modal-content')) return;
+      e.preventDefault();
+    };
+    document.addEventListener('touchmove', preventScroll, { passive: false });
     return () => {
       document.body.style.overflow = '';
+      document.removeEventListener('touchmove', preventScroll);
     };
   }, []);
 
