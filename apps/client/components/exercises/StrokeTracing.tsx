@@ -19,75 +19,16 @@ interface Point {
 
 // Thicker strokes on mobile for better visibility and precision
 const IS_MOBILE = typeof window !== 'undefined' && window.innerWidth < 600;
-const BRUSH_MIN = IS_MOBILE ? 3 : 2;
-const BRUSH_MAX = IS_MOBILE ? 7 : 4;
+const BRUSH_MIN = IS_MOBILE ? 5 : 2;
+const BRUSH_MAX = IS_MOBILE ? 12 : 5;
 const VELOCITY_CAP = 8;
 const PASS_THRESHOLD = 0.80;
 const ALPHA_THRESHOLD = 30;
 const GOLD_COLOR = '#f0c040';
 const CANVAS_FONT_FAMILY = "'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', sans-serif";
-const GLYPH_FILL = 0.90; // fraction of cell the glyph should fill
-
-/**
- * Pixel-scan approach: render glyph to a temp canvas, find its true bounding box,
- * then compute font size + offset to visually center it. Works on every browser/font.
- */
-const _glyphCache = new Map<string, { fontSize: number; x: number; y: number }>();
-
-function computeGlyphLayout(_ctx: CanvasRenderingContext2D, char: string, cellSize: number) {
-  const key = `${char}:${Math.round(cellSize)}`;
-  const cached = _glyphCache.get(key);
-  if (cached) return cached;
-
-  const sz = 200; // reference canvas size
-  const refFont = sz * 0.7;
-  const tc = document.createElement('canvas');
-  tc.width = sz; tc.height = sz;
-  const c = tc.getContext('2d');
-  if (!c) return { fontSize: cellSize * 0.8, x: cellSize / 2, y: cellSize / 2 };
-
-  c.font = `900 ${refFont}px ${CANVAS_FONT_FAMILY}`;
-  c.textAlign = 'center';
-  c.textBaseline = 'middle';
-  c.fillStyle = 'white';
-  c.fillText(char, sz / 2, sz / 2);
-
-  // Scan pixels to find actual rendered bounds
-  const img = c.getImageData(0, 0, sz, sz).data;
-  let top = sz, bottom = 0, left = sz, right = 0;
-  for (let row = 0; row < sz; row++) {
-    for (let col = 0; col < sz; col++) {
-      if (img[(row * sz + col) * 4 + 3] > 10) {
-        if (row < top) top = row;
-        if (row > bottom) bottom = row;
-        if (col < left) left = col;
-        if (col > right) right = col;
-      }
-    }
-  }
-
-  if (bottom <= top || right <= left) {
-    return { fontSize: cellSize * 0.8, x: cellSize / 2, y: cellSize / 2 };
-  }
-
-  const glyphW = right - left;
-  const glyphH = bottom - top;
-  // How far the visual center drifted from the canvas center
-  const driftY = ((top + bottom) / 2 - sz / 2) / refFont;
-  const driftX = ((left + right) / 2 - sz / 2) / refFont;
-
-  // Scale font so glyph fills GLYPH_FILL of cell
-  const scale = (cellSize * GLYPH_FILL) / Math.max(glyphW, glyphH);
-  const fontSize = refFont * scale;
-
-  const result = {
-    fontSize,
-    x: cellSize / 2 - driftX * fontSize,
-    y: cellSize / 2 - driftY * fontSize,
-  };
-  _glyphCache.set(key, result);
-  return result;
-}
+// Font size = cell width * this value. CJK glyphs occupy ~65% of the em square,
+// so 1.25 * 0.65 ≈ 0.81 → glyph fills ~81% of the cell.
+const FONT_SCALE = 1.25;
 
 /** Map bare jamo to their full Korean names for TTS. */
 const JAMO_TO_SYLLABLE: Record<string, string> = {
@@ -155,13 +96,12 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
   const guideColor = `rgba(100, 120, 150, ${ghostOpacity})`;
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
-    const { fontSize, x, y } = computeGlyphLayout(ctx, targetChar, cssW);
     ctx.save();
-    ctx.font = `900 ${fontSize}px ${CANVAS_FONT_FAMILY}`;
+    ctx.font = `900 ${cssW * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
-    ctx.fillText(targetChar, x, y);
+    ctx.fillText(targetChar, cssW / 2, cssW / 2);
     ctx.restore();
   }, [targetChar]);
 
@@ -230,12 +170,11 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
     const refCtx = refCanvas.getContext('2d');
     if (refCtx) {
       refCtx.scale(dpr, dpr);
-      const { fontSize, x, y } = computeGlyphLayout(refCtx, targetChar, size);
-      refCtx.font = `900 ${fontSize}px ${CANVAS_FONT_FAMILY}`;
+      refCtx.font = `900 ${size * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
       refCtx.textAlign = 'center';
       refCtx.textBaseline = 'middle';
       refCtx.fillStyle = 'white';
-      refCtx.fillText(targetChar, x, y);
+      refCtx.fillText(targetChar, size / 2, size / 2);
     }
     refCanvasRef.current = refCanvas;
 
@@ -526,13 +465,12 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   /* ── Single-trace mode (original) ─────────────────────────── */
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
-    const { fontSize, x, y } = computeGlyphLayout(ctx, exercise.targetChar, cssW);
     ctx.save();
-    ctx.font = `900 ${fontSize}px ${CANVAS_FONT_FAMILY}`;
+    ctx.font = `900 ${cssW * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
-    ctx.fillText(exercise.targetChar, x, y);
+    ctx.fillText(exercise.targetChar, cssW / 2, cssW / 2);
     ctx.restore();
   }, [exercise.targetChar]);
 
@@ -581,11 +519,10 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     const refCtx = refCanvas.getContext('2d');
     if (refCtx) {
       refCtx.scale(dpr, dpr);
-      const { fontSize, x, y } = computeGlyphLayout(refCtx, exercise.targetChar, rect.width);
-      refCtx.font = `900 ${fontSize}px ${CANVAS_FONT_FAMILY}`;
+      refCtx.font = `900 ${rect.width * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
       refCtx.textAlign = 'center'; refCtx.textBaseline = 'middle';
       refCtx.fillStyle = 'white';
-      refCtx.fillText(exercise.targetChar, x, y);
+      refCtx.fillText(exercise.targetChar, rect.width / 2, rect.height / 2);
     }
     refCanvasRef.current = refCanvas;
 
