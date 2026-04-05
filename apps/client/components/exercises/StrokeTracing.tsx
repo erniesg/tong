@@ -167,7 +167,7 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
     const refCtx = refCanvas.getContext('2d');
     if (refCtx) {
       refCtx.scale(dpr, dpr);
-      refCtx.font = `${size * 0.7}px ${CANVAS_FONT_FAMILY}`;
+      refCtx.font = `900 ${size}px ${CANVAS_FONT_FAMILY}`;
       refCtx.textAlign = 'center';
       refCtx.textBaseline = 'middle';
       refCtx.fillStyle = 'white';
@@ -209,7 +209,7 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
     revealCtx.fill();
   }, []);
 
-  const revealStroke = useCallback((from: Point | null, to: Point, now: number) => {
+  const revealStroke = useCallback((from: Point | null, to: Point, now: number, pressure?: number) => {
     const revealCanvas = revealCanvasRef.current;
     if (!revealCanvas) return;
     const revealCtx = revealCanvas.getContext('2d');
@@ -225,6 +225,9 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
       const f = Math.min(velocity / VELOCITY_CAP, 1);
       const target = BRUSH_MAX - f * (BRUSH_MAX - BRUSH_MIN);
       radius = curBrushRef.current + (target - curBrushRef.current) * 0.4;
+    }
+    if (pressure != null && pressure > 0) {
+      radius *= 0.5 + pressure * 0.8;
     }
     curBrushRef.current = radius;
 
@@ -510,7 +513,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     const refCtx = refCanvas.getContext('2d');
     if (refCtx) {
       refCtx.scale(dpr, dpr);
-      refCtx.font = `${rect.width * 0.7}px ${CANVAS_FONT_FAMILY}`;
+      refCtx.font = `900 ${rect.width}px ${CANVAS_FONT_FAMILY}`;
       refCtx.textAlign = 'center'; refCtx.textBaseline = 'middle';
       refCtx.fillStyle = 'white';
       refCtx.fillText(exercise.targetChar, rect.width / 2, rect.height / 2);
@@ -549,7 +552,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     revealCtx.fill();
   }, []);
 
-  const revealStroke = useCallback((from: Point | null, to: Point, now: number) => {
+  const revealStroke = useCallback((from: Point | null, to: Point, now: number, pressure?: number) => {
     const revealCanvas = revealCanvasRef.current;
     if (!revealCanvas) return;
     const revealCtx = revealCanvas.getContext('2d');
@@ -565,6 +568,9 @@ export function StrokeTracing({ exercise, onResult }: Props) {
       const f = Math.min(velocity / VELOCITY_CAP, 1);
       const target = BRUSH_MAX - f * (BRUSH_MAX - BRUSH_MIN);
       radius = curBrushRef.current + (target - curBrushRef.current) * 0.4;
+    }
+    if (pressure != null && pressure > 0) {
+      radius *= 0.5 + pressure * 0.8;
     }
     curBrushRef.current = radius;
 
@@ -670,7 +676,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   const cols = totalReps <= 4 ? 2 : totalReps <= 9 ? 3 : 4;
 
   return (
-    <div className="exercise-card p-5">
+    <div className="exercise-card p-4" style={{ justifyContent: 'space-between' }}>
       <p className="text-[length:var(--game-text-lg)] font-medium mb-3 text-ko m-0">{exercise.prompt}</p>
 
       {/* Target character + romanization + sound */}
