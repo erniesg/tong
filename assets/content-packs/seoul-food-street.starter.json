@@ -79,5 +79,67 @@
     "polaroidRewardKey": null
   },
   "status": "draft",
-  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json",
+  "scriptedMessagingScenes": [
+    {
+      "sceneId": "promo.seoul.kakao.food_street.night-bite-001",
+      "cityId": "seoul",
+      "objectiveId": "seoul-food-street-ordering-v2",
+      "title": "Kakao-style pre-hangout bite run",
+      "hookText": "Tong opens a KakaoTalk-like ping so Minseo can lock the tteokbokki order before the line grows.",
+      "speakers": [
+        {
+          "id": "tong",
+          "displayName": "Tong",
+          "avatarEmoji": "🐾"
+        },
+        {
+          "id": "character",
+          "displayName": "Minseo",
+          "avatarEmoji": "🧡"
+        },
+        {
+          "id": "player",
+          "displayName": "You",
+          "avatarEmoji": "🙂"
+        }
+      ],
+      "rows": [
+        {
+          "rowId": "seoul-promo-1",
+          "speakerId": "tong",
+          "atMs": 0,
+          "typingMs": 500,
+          "primaryText": "민서가 카톡 왔어. 떡볶이 줄 길어지기 전에 메뉴부터 맞추자!",
+          "localExplanationText": "-기 전에 = before doing; 메뉴부터 = menu first for fast ordering.",
+          "englishText": "Minseo just pinged you. Let's align the order before the tteokbokki line gets long!"
+        },
+        {
+          "rowId": "seoul-promo-2",
+          "speakerId": "character",
+          "atMs": 1700,
+          "typingMs": 700,
+          "primaryText": "나 포장마차 앞! 너 오면 순대랑 튀김 같이 시킬까?",
+          "englishText": "I'm in front of the stall! When you arrive, should we order soondae and fried snacks too?"
+        },
+        {
+          "rowId": "seoul-promo-3",
+          "speakerId": "player",
+          "atMs": 3600,
+          "typingMs": 550,
+          "primaryText": "좋아, 맵기는 중간으로 부탁해 😊",
+          "englishText": "Sounds good—let's ask for medium spice 😊"
+        },
+        {
+          "rowId": "seoul-promo-4",
+          "speakerId": "tong",
+          "atMs": 5400,
+          "typingMs": 600,
+          "primaryText": "완벽해. 도착하면 나 왔어 한마디만 보내면 자연스러워.",
+          "localExplanationText": "나 왔어 = casual way to say I'm here in close-friend chat.",
+          "englishText": "Perfect. When you arrive, just send I'm here—it sounds natural."
+        }
+      ]
+    }
+  ]
 }

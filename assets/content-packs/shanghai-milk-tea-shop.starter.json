@@ -82,5 +82,67 @@
     "polaroidRewardKey": "reward.shanghai.milk_tea_shop.polaroid"
   },
   "status": "draft",
-  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json",
+  "scriptedMessagingScenes": [
+    {
+      "sceneId": "promo.shanghai.wechat.milk_tea.mission-001",
+      "cityId": "shanghai",
+      "objectiveId": "shanghai-milk-tea-shop-texting-mission-v1",
+      "title": "WeChat-style advanced texting mission warm-up",
+      "hookText": "Tong runs a WeChat-like mission teaser before Xinyi starts the timed texting challenge.",
+      "speakers": [
+        {
+          "id": "tong",
+          "displayName": "Tong",
+          "avatarEmoji": "🐾"
+        },
+        {
+          "id": "character",
+          "displayName": "Xinyi",
+          "avatarEmoji": "🧋"
+        },
+        {
+          "id": "player",
+          "displayName": "You",
+          "avatarEmoji": "🙂"
+        }
+      ],
+      "rows": [
+        {
+          "rowId": "shanghai-promo-1",
+          "speakerId": "tong",
+          "atMs": 0,
+          "typingMs": 520,
+          "primaryText": "欣怡要开高级聊天任务了，先热身一轮微信节奏。",
+          "localExplanationText": "先…一轮 = do one round first; 节奏 = pacing or rhythm of chat timing.",
+          "englishText": "Xinyi is about to open the advanced texting mission, so let's warm up with one WeChat-paced round."
+        },
+        {
+          "rowId": "shanghai-promo-2",
+          "speakerId": "character",
+          "atMs": 1850,
+          "typingMs": 700,
+          "primaryText": "我在奶茶店二楼靠窗，你到地铁口后先发定位。",
+          "englishText": "I'm on the second floor by the window. After you reach the metro exit, send your location first."
+        },
+        {
+          "rowId": "shanghai-promo-3",
+          "speakerId": "player",
+          "atMs": 3750,
+          "typingMs": 520,
+          "primaryText": "收到，我换乘完就发你，顺便帮你带三分糖。",
+          "englishText": "Got it. I'll send it after transferring, and I'll bring your drink at 30% sugar too."
+        },
+        {
+          "rowId": "shanghai-promo-4",
+          "speakerId": "character",
+          "atMs": 5500,
+          "typingMs": 620,
+          "primaryText": "稳！任务通过后我给你开视频奖励，还会掉落拍立得卡。",
+          "localExplanationText": "开视频奖励 = unlock a video-call reward; 掉落拍立得卡 = polaroid memory drop.",
+          "englishText": "Nice! Pass the mission and I'll unlock a video-call reward, plus a polaroid memory drop."
+        }
+      ]
+    }
+  ]
 }

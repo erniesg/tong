@@ -78,5 +78,66 @@
     "polaroidRewardKey": null
   },
   "status": "draft",
-  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json"
+  "rosterRegistrySource": "assets/manifest/starter-cast-registry.json",
+  "scriptedMessagingScenes": [
+    {
+      "sceneId": "promo.tokyo.line.tea_house.meetup-001",
+      "cityId": "tokyo",
+      "objectiveId": "tokyo-tea-house-polite-orders-v1",
+      "title": "LINE-style tea house meetup sync",
+      "hookText": "Tong queues a LINE-like chat beat so Hina can reserve a calm corner seat.",
+      "speakers": [
+        {
+          "id": "tong",
+          "displayName": "Tong",
+          "avatarEmoji": "🐾"
+        },
+        {
+          "id": "character",
+          "displayName": "Hina",
+          "avatarEmoji": "🍵"
+        },
+        {
+          "id": "player",
+          "displayName": "You",
+          "avatarEmoji": "🙂"
+        }
+      ],
+      "rows": [
+        {
+          "rowId": "tokyo-promo-1",
+          "speakerId": "tong",
+          "atMs": 0,
+          "typingMs": 450,
+          "primaryText": "ひなさんからLINE。今のうちに席と注文の言い方を合わせよう。",
+          "localExplanationText": "今のうちに = while you still can; 言い方を合わせる = align phrasing.",
+          "englishText": "LINE from Hina. Let's align seat and ordering phrasing while we have time."
+        },
+        {
+          "rowId": "tokyo-promo-2",
+          "speakerId": "character",
+          "atMs": 1650,
+          "typingMs": 680,
+          "primaryText": "先に着いたよ。静かな奥の席を取っておいたから、来たら教えてね。",
+          "englishText": "I got here first. I saved a quiet seat in the back, so message me when you arrive."
+        },
+        {
+          "rowId": "tokyo-promo-3",
+          "speakerId": "player",
+          "atMs": 3550,
+          "typingMs": 520,
+          "primaryText": "ありがとう！抹茶ラテをお願いしてもいい？",
+          "englishText": "Thanks! Could you order a matcha latte for me?"
+        },
+        {
+          "rowId": "tokyo-promo-4",
+          "speakerId": "tong",
+          "atMs": 5250,
+          "typingMs": 570,
+          "primaryText": "いい流れ。丁寧にするなら「お願いしてもいい？」がぴったり。",
+          "englishText": "Great flow. For polite casual tone, asking Could you works perfectly."
+        }
+      ]
+    }
+  ]
 }
