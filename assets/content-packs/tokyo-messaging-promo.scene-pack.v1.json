@@ -1,0 +1,110 @@
+{
+  "packVersion": "1.0.0",
+  "packType": "scripted-messaging-promo-scene-pack",
+  "packId": "pack.tokyo.messaging_promo.v1",
+  "cityId": "tokyo",
+  "messagingSkin": "line_like",
+  "contract": {
+    "scriptedSceneShape": "packages/contracts/types.ts#ScriptedMessagingScene",
+    "sourceIssue": "#124"
+  },
+  "captureDefaults": {
+    "translationMode": "primary_with_english",
+    "ready": true,
+    "recommendedAspect": "9:16"
+  },
+  "scene": {
+    "sceneId": "tokyo-line-afterwork-rally-v1",
+    "cityId": "tokyo",
+    "objectiveId": "ja-izakaya-hangout-linkup-v1",
+    "title": "LINE check-in before the izakaya meetup",
+    "hookText": "Tong rehearses polite-but-casual timing language before after-work plans.",
+    "speakers": [
+      {
+        "id": "tong",
+        "displayName": "Tong",
+        "avatarEmoji": "🐾"
+      },
+      {
+        "id": "character",
+        "displayName": "Akira",
+        "avatarEmoji": "🍶"
+      },
+      {
+        "id": "player",
+        "displayName": "You",
+        "avatarEmoji": "🙂"
+      }
+    ],
+    "rows": [
+      {
+        "rowId": "tokyo-line-1",
+        "speakerId": "tong",
+        "atMs": 0,
+        "typingMs": 520,
+        "primaryText": "アキラから、店前で合流しようって来たよ。",
+        "localExplanationText": "合流(ごうりゅう)=meet up/join, 〜しようって=quoted casual proposal.",
+        "englishText": "Akira just texted: let's meet up in front of the place."
+      },
+      {
+        "rowId": "tokyo-line-2",
+        "speakerId": "character",
+        "atMs": 2350,
+        "typingMs": 760,
+        "primaryText": "先に席だけ取っておくね。遅れそうなら一言ちょうだい！",
+        "localExplanationText": "席を取っておく=reserve a seat in advance; 一言ちょうだい=give me a quick heads-up.",
+        "englishText": "I'll reserve a table first. If you'll be late, send me a quick note!"
+      },
+      {
+        "rowId": "tokyo-line-3",
+        "speakerId": "player",
+        "atMs": 4820,
+        "typingMs": 480,
+        "primaryText": "了解！山手線を降りたらすぐ向かう。",
+        "englishText": "Got it! I'll head over right after I get off the Yamanote Line."
+      }
+    ]
+  },
+  "promoMetadata": {
+    "titleCard": "Tokyo • LINE-style meetup timing",
+    "speakerAvatarAssignments": [
+      {
+        "speakerId": "tong",
+        "manifestKey": "character.tong.expression.neutral"
+      },
+      {
+        "speakerId": "character",
+        "manifestKey": "character.tokyo.subway_hub.akira.portrait.default"
+      },
+      {
+        "speakerId": "player",
+        "manifestKey": "character.tong.expression.thinking"
+      }
+    ],
+    "pacingBeats": [
+      {
+        "beatId": "context-open",
+        "startAtMs": 0,
+        "endAtMs": 2200,
+        "intent": "Tong introduces who texted and where"
+      },
+      {
+        "beatId": "social-etiquette",
+        "startAtMs": 2200,
+        "endAtMs": 4700,
+        "intent": "Character models a polite but efficient meetup norm"
+      },
+      {
+        "beatId": "route-confirm",
+        "startAtMs": 4700,
+        "endAtMs": 6500,
+        "intent": "Player confirms transit-linked arrival"
+      }
+    ],
+    "messageCadence": {
+      "style": "clean-line",
+      "targetRowsPerMinute": 26,
+      "notes": "Slightly more formal pacing; keep one practical detail per message."
+    }
+  }
+}

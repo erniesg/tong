@@ -1,0 +1,110 @@
+{
+  "packVersion": "1.0.0",
+  "packType": "scripted-messaging-promo-scene-pack",
+  "packId": "pack.seoul.messaging_promo.v1",
+  "cityId": "seoul",
+  "messagingSkin": "kakao_like",
+  "contract": {
+    "scriptedSceneShape": "packages/contracts/types.ts#ScriptedMessagingScene",
+    "sourceIssue": "#124"
+  },
+  "captureDefaults": {
+    "translationMode": "primary_local_explanation_with_english",
+    "ready": true,
+    "recommendedAspect": "9:16"
+  },
+  "scene": {
+    "sceneId": "seoul-kakao-night-market-linkup-v1",
+    "cityId": "seoul",
+    "objectiveId": "ko-food-street-hangout-linkup-v1",
+    "title": "Kakao ping before Food Street hangout",
+    "hookText": "Tong nudges a quick, natural check-in before the street-food meetup.",
+    "speakers": [
+      {
+        "id": "tong",
+        "displayName": "Tong",
+        "avatarEmoji": "🐾"
+      },
+      {
+        "id": "character",
+        "displayName": "Minseo",
+        "avatarEmoji": "🍢"
+      },
+      {
+        "id": "player",
+        "displayName": "You",
+        "avatarEmoji": "🙂"
+      }
+    ],
+    "rows": [
+      {
+        "rowId": "seoul-kakao-1",
+        "speakerId": "tong",
+        "atMs": 0,
+        "typingMs": 560,
+        "primaryText": "민서가 지금 푸드스트리트 줄 길다고 알려줬어.",
+        "localExplanationText": "민서+가(주어), 줄 길다(줄이 길다), 알려줬어(알려 주었다).",
+        "englishText": "Minseo says the Food Street line is long right now."
+      },
+      {
+        "rowId": "seoul-kakao-2",
+        "speakerId": "character",
+        "atMs": 2200,
+        "typingMs": 700,
+        "primaryText": "나 먼저 떡볶이 포장해둘게. 오면 바로 먹자!",
+        "localExplanationText": "먼저(先に), 포장해둘게(미리 포장해 둘게), 먹자(함께 먹자).",
+        "englishText": "I'll order tteokbokki first. Let's eat as soon as you get here!"
+      },
+      {
+        "rowId": "seoul-kakao-3",
+        "speakerId": "player",
+        "atMs": 4550,
+        "typingMs": 440,
+        "primaryText": "좋아, 5분 안에 도착! 매운맛으로 부탁해 😆",
+        "englishText": "Perfect, I'll be there in five! Make it spicy 😆"
+      }
+    ]
+  },
+  "promoMetadata": {
+    "titleCard": "Seoul • Kakao-style pre-hangout ping",
+    "speakerAvatarAssignments": [
+      {
+        "speakerId": "tong",
+        "manifestKey": "character.tong.expression.neutral"
+      },
+      {
+        "speakerId": "character",
+        "manifestKey": "character.seoul.food_street.minseo.portrait.default"
+      },
+      {
+        "speakerId": "player",
+        "manifestKey": "character.tong.expression.cheerful"
+      }
+    ],
+    "pacingBeats": [
+      {
+        "beatId": "setup",
+        "startAtMs": 0,
+        "endAtMs": 2000,
+        "intent": "Tong frames urgency and destination context"
+      },
+      {
+        "beatId": "friend-nudge",
+        "startAtMs": 2000,
+        "endAtMs": 4400,
+        "intent": "Local friend pushes concrete action and tone"
+      },
+      {
+        "beatId": "player-commit",
+        "startAtMs": 4400,
+        "endAtMs": 6200,
+        "intent": "Player confirms timing and preference"
+      }
+    ],
+    "messageCadence": {
+      "style": "snappy-kakao",
+      "targetRowsPerMinute": 28,
+      "notes": "Front-load context, then tighten to one action reply per bubble."
+    }
+  }
+}

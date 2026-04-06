@@ -1,0 +1,114 @@
+{
+  "packVersion": "1.0.0",
+  "packType": "scripted-messaging-promo-scene-pack",
+  "packId": "pack.shanghai.messaging_promo.v1",
+  "cityId": "shanghai",
+  "messagingSkin": "wechat_like",
+  "contract": {
+    "scriptedSceneShape": "packages/contracts/types.ts#ScriptedMessagingScene",
+    "sourceIssue": "#124"
+  },
+  "captureDefaults": {
+    "translationMode": "primary_local_explanation_with_english",
+    "ready": true,
+    "recommendedAspect": "9:16"
+  },
+  "scene": {
+    "sceneId": "shanghai-wechat-advanced-mission-setup-v1",
+    "cityId": "shanghai",
+    "objectiveId": "zh-milk-tea-texting-mission-setup-v1",
+    "title": "WeChat setup before advanced texting mission",
+    "hookText": "Tong queues mission-ready phrasing before the Shanghai reward path unlock.",
+    "speakers": [
+      {
+        "id": "tong",
+        "displayName": "Tong",
+        "avatarEmoji": "🐾"
+      },
+      {
+        "id": "character",
+        "displayName": "Xinyi",
+        "avatarEmoji": "🧋"
+      },
+      {
+        "id": "player",
+        "displayName": "You",
+        "avatarEmoji": "🙂"
+      }
+    ],
+    "rows": [
+      {
+        "rowId": "shanghai-wechat-1",
+        "speakerId": "tong",
+        "atMs": 0,
+        "typingMs": 540,
+        "primaryText": "欣怡在群里问：你到奶茶店后，先点单还是先找座位？",
+        "localExplanationText": "在群里问=asks in the group chat; 先…还是先…=first A or first B pattern.",
+        "englishText": "Xinyi asked in the group: when you get to the milk tea shop, order first or find seats first?"
+      },
+      {
+        "rowId": "shanghai-wechat-2",
+        "speakerId": "character",
+        "atMs": 2280,
+        "typingMs": 740,
+        "primaryText": "你到了发定位，我和振就从地铁口过去接你。",
+        "localExplanationText": "发定位=share live location; 地铁口=subway exit; 过去接你=come pick you up.",
+        "englishText": "When you arrive, send your location. Zhen and I will come from the subway exit to meet you."
+      },
+      {
+        "rowId": "shanghai-wechat-3",
+        "speakerId": "player",
+        "atMs": 4700,
+        "typingMs": 500,
+        "primaryText": "收到！我先练好点单句子，到了马上发你。",
+        "englishText": "Got it! I'll practice the ordering lines first and send you my location as soon as I arrive."
+      }
+    ]
+  },
+  "promoMetadata": {
+    "titleCard": "Shanghai • WeChat mission warm-up",
+    "speakerAvatarAssignments": [
+      {
+        "speakerId": "tong",
+        "manifestKey": "character.tong.expression.cheerful"
+      },
+      {
+        "speakerId": "character",
+        "manifestKey": "character.shanghai.practice_studio.xinyi.portrait.default"
+      },
+      {
+        "speakerId": "player",
+        "manifestKey": "character.tong.expression.neutral"
+      }
+    ],
+    "pacingBeats": [
+      {
+        "beatId": "mission-context",
+        "startAtMs": 0,
+        "endAtMs": 2100,
+        "intent": "Tong frames a mission-style decision prompt"
+      },
+      {
+        "beatId": "coordination",
+        "startAtMs": 2100,
+        "endAtMs": 4550,
+        "intent": "Character gives actionable coordination steps"
+      },
+      {
+        "beatId": "readiness-commit",
+        "startAtMs": 4550,
+        "endAtMs": 6600,
+        "intent": "Player confirms prep plus arrival protocol"
+      }
+    ],
+    "messageCadence": {
+      "style": "wechat-mission",
+      "targetRowsPerMinute": 27,
+      "notes": "Keep command-like phrasing concise so the scene transitions cleanly into mission mode."
+    },
+    "rewardPathHint": {
+      "videoCallRewardKey": "reward.shanghai.milk_tea_shop.video_call",
+      "polaroidRewardKey": "reward.shanghai.milk_tea_shop.polaroid"
+    }
+  }
+}

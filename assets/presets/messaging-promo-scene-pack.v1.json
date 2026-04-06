@@ -1,0 +1,32 @@
+{
+  "presetVersion": "1.0.0",
+  "presetId": "preset.messaging-promo.scenes.v1",
+  "purpose": "capture-ready scripted messaging promo rotation",
+  "remoteDependencies": "none",
+  "scenePacks": [
+    {
+      "cityId": "seoul",
+      "manifestKey": "city.seoul.learn.messaging-promo.pack.v1",
+      "packPath": "assets/content-packs/seoul-messaging-promo.scene-pack.v1.json",
+      "sceneId": "seoul-kakao-night-market-linkup-v1"
+    },
+    {
+      "cityId": "tokyo",
+      "manifestKey": "city.tokyo.learn.messaging-promo.pack.v1",
+      "packPath": "assets/content-packs/tokyo-messaging-promo.scene-pack.v1.json",
+      "sceneId": "tokyo-line-afterwork-rally-v1"
+    },
+    {
+      "cityId": "shanghai",
+      "manifestKey": "city.shanghai.learn.messaging-promo.pack.v1",
+      "packPath": "assets/content-packs/shanghai-messaging-promo.scene-pack.v1.json",
+      "sceneId": "shanghai-wechat-advanced-mission-setup-v1"
+    }
+  ],
+  "captureChecklist": [
+    "load pack by manifest key",
+    "start scene at row 1 with typing indicators enabled",
+    "render English translation lane at minimum",
+    "keep speaker avatars mapped to declared manifest keys"
+  ]
+}

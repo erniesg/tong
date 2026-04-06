@@ -49,6 +49,10 @@ Unblock demo validation early while API/plumbing is still in progress.
    - `assets/content-packs/shanghai-dumpling-shop.starter.json`
    - `assets/rewards/shanghai-reward-bundle.placeholder.json`
    Pack data should use contract IDs such as `food_street`; reserve hyphenated slugs such as `food-street` for asset keys and file naming.
+   - `assets/content-packs/seoul-messaging-promo.scene-pack.v1.json`
+   - `assets/content-packs/tokyo-messaging-promo.scene-pack.v1.json`
+   - `assets/content-packs/shanghai-messaging-promo.scene-pack.v1.json`
+   - `assets/presets/messaging-promo-scene-pack.v1.json`
    - `assets/content-packs/starter-cast-roster.spec.md`
    - `assets/manifest/starter-cast-registry.json`
    Issue `#69` makes these the approved starter-cast and per-character asset-bundle source of truth for downstream city-pack work.
