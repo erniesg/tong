@@ -1,0 +1,40 @@
+{
+  "sceneId": "scripted-learn-shanghai-convenience-intro-v1",
+  "cityId": "shanghai",
+  "lang": "zh",
+  "title": "Shanghai convenience store drill",
+  "hookText": "Set up deterministic text pacing for advanced CN follow-up missions.",
+  "defaultTranslationMode": "primary_only",
+  "rows": [
+    {
+      "rowId": "row-1",
+      "speaker": "tong",
+      "speakerLabel": "Tong",
+      "primaryText": "先热身一下，我们用简短消息完成点单。",
+      "englishText": "Let's warm up with short messages to complete an order.",
+      "localExplanationText": "先...一下 = first do ... briefly",
+      "typingDurationMs": 680,
+      "revealDelayMs": 220
+    },
+    {
+      "rowId": "row-2",
+      "speaker": "partner",
+      "speakerLabel": "Lin",
+      "primaryText": "我要一杯无糖奶茶，再加一个饭团。",
+      "englishText": "I'd like a sugar-free milk tea and one rice ball.",
+      "localExplanationText": "再加 = add on",
+      "typingDurationMs": 740,
+      "revealDelayMs": 320
+    },
+    {
+      "rowId": "row-3",
+      "speaker": "player",
+      "speakerLabel": "Player",
+      "primaryText": "好的，我现在帮你下单。",
+      "englishText": "Got it, I'll place the order now.",
+      "localExplanationText": "帮你 = help you",
+      "typingDurationMs": 520,
+      "revealDelayMs": 260
+    }
+  ]
+}

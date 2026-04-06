@@ -1,0 +1,40 @@
+{
+  "sceneId": "scripted-learn-seoul-food-street-intro-v1",
+  "cityId": "seoul",
+  "lang": "ko",
+  "title": "Seoul food stall warm-up",
+  "hookText": "Order 떡볶이 with natural pacing before hangout mode.",
+  "defaultTranslationMode": "primary_with_english",
+  "rows": [
+    {
+      "rowId": "row-1",
+      "speaker": "tong",
+      "speakerLabel": "Tong",
+      "primaryText": "준비됐어? 오늘은 자연스럽게 주문해 보자.",
+      "englishText": "Ready? Today we'll practice ordering naturally.",
+      "localExplanationText": "준비됐어 = are you ready?",
+      "typingDurationMs": 650,
+      "revealDelayMs": 200
+    },
+    {
+      "rowId": "row-2",
+      "speaker": "partner",
+      "speakerLabel": "Minji",
+      "primaryText": "떡볶이 하나랑 어묵도 주세요.",
+      "englishText": "One tteokbokki and fish cake too, please.",
+      "localExplanationText": "-도 주세요 = please add ... too",
+      "typingDurationMs": 720,
+      "revealDelayMs": 320
+    },
+    {
+      "rowId": "row-3",
+      "speaker": "player",
+      "speakerLabel": "Player",
+      "primaryText": "네, 맵기는 보통으로 할게요.",
+      "englishText": "Yes, I'll keep the spice level medium.",
+      "localExplanationText": "-으로 할게요 = I'll go with ...",
+      "typingDurationMs": 540,
+      "revealDelayMs": 260
+    }
+  ]
+}

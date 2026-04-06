@@ -268,3 +268,11 @@ Template:
   - Land a repo-visible starter-cast roster source of truth for issue `#69`, keyed by the canonical `mapLocationId -> dagLocationSlot` registry from `packages/contracts/world-map-registry.sample.json`.
   - Define stable per-character asset bundle requirements plus optional reward/polaroid hooks that downstream city-pack issues `#62`, `#63`, and `#64` can cite.
   - Stage the required world-content closeout artifact bundle and PR-ready notes without generating final production art.
+
+## 2026-04-06 (Issue 124 contracts + learn player intent)
+- Date: 2026-04-06
+- Branch/worktree: `work` (client-ui lane crossing into shared `packages/contracts/**`)
+- Intent:
+  - Add additive scripted messaging scene contracts and city-specific fixtures for Seoul/Tokyo/Shanghai so follow-up capture work can rely on checked-in deterministic payloads.
+  - Extract a reusable learn-surface scripted message player component with deterministic playback states (`idle|playing|paused|finished`) and translation lane switching.
+  - Keep this dependency-setter scoped to contracts + reusable player primitives (no 9:16 route or final promo copy pack).

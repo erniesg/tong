@@ -1,0 +1,40 @@
+{
+  "sceneId": "scripted-learn-tokyo-cafe-intro-v1",
+  "cityId": "tokyo",
+  "lang": "ja",
+  "title": "Tokyo cafe ordering starter",
+  "hookText": "Practice polite drink ordering before scripted roleplay.",
+  "defaultTranslationMode": "primary_with_local_and_english",
+  "rows": [
+    {
+      "rowId": "row-1",
+      "speaker": "tong",
+      "speakerLabel": "Tong",
+      "primaryText": "今日はカフェで注文の流れを練習しよう。",
+      "englishText": "Let's practice the cafe ordering flow today.",
+      "localExplanationText": "〜しよう = let's do ...",
+      "typingDurationMs": 700,
+      "revealDelayMs": 210
+    },
+    {
+      "rowId": "row-2",
+      "speaker": "partner",
+      "speakerLabel": "Haru",
+      "primaryText": "アイスラテを一つお願いします。",
+      "englishText": "One iced latte, please.",
+      "localExplanationText": "お願いします = polite request",
+      "typingDurationMs": 680,
+      "revealDelayMs": 300
+    },
+    {
+      "rowId": "row-3",
+      "speaker": "player",
+      "speakerLabel": "Player",
+      "primaryText": "砂糖は少なめでお願いします。",
+      "englishText": "Please make it with less sugar.",
+      "localExplanationText": "少なめ = on the lighter side",
+      "typingDurationMs": 560,
+      "revealDelayMs": 260
+    }
+  ]
+}
