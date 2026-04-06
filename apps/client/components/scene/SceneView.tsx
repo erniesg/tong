@@ -162,6 +162,13 @@ export function SceneView({
           style={exerciseHidden ? { display: 'none' } : undefined}
         >
           <div className="exercise-float-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="exercise-dismiss-btn"
+              onClick={(e) => { e.stopPropagation(); onExerciseDismiss?.(); }}
+              aria-label="Minimize exercise"
+            >
+              &#x25BE;
+            </button>
             <ExerciseRenderer
               exercise={mountedExercise}
               onResult={(correct) => {
@@ -173,13 +180,6 @@ export function SceneView({
                 }, 300);
               }}
             />
-            <button
-              className="exercise-dismiss-btn"
-              onClick={(e) => { e.stopPropagation(); onExerciseDismiss?.(); }}
-              aria-label="Minimize exercise"
-            >
-              &#x25BE;
-            </button>
           </div>
         </div>
       )}
