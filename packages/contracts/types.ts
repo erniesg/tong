@@ -463,6 +463,36 @@ export interface LearnSessionCreateResponse {
   };
 }
 
+export type ScriptedMessagingPlayerState = 'idle' | 'playing' | 'paused' | 'finished';
+
+export type ScriptedMessagingTranslationMode =
+  | 'primary_only'
+  | 'primary_with_english'
+  | 'primary_with_local_and_english';
+
+export type ScriptedMessagingSpeaker = 'tong' | 'partner' | 'player';
+
+export interface ScriptedMessagingSceneRow {
+  rowId: string;
+  speaker: ScriptedMessagingSpeaker;
+  speakerLabel: string;
+  primaryText: string;
+  englishText?: string;
+  localExplanationText?: string;
+  typingDurationMs: number;
+  revealDelayMs: number;
+}
+
+export interface ScriptedMessagingScene {
+  sceneId: string;
+  cityId: GraphCityId;
+  lang: TargetLanguage;
+  title: string;
+  hookText: string;
+  defaultTranslationMode: ScriptedMessagingTranslationMode;
+  rows: ScriptedMessagingSceneRow[];
+}
+
 export interface IngestionSourceItem {
   id: string;
   source: 'youtube' | 'spotify';

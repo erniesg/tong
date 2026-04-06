@@ -14,6 +14,7 @@ Typed contracts:
 - `objective-identity-map.sample.json` is the canonical alias bridge between graph objective ids and legacy fixture/api ids during migration.
 - `fixtures/game.start-or-resume.sample.json` now includes the additive nested session model used for player resume and QA seed routing.
 - `fixtures/game.session.sample.json`, `fixtures/scene.session.sample.json`, `fixtures/checkpoint.player-resume.sample.json`, and `fixtures/scenario.seed.review-ready.sample.json` are the canonical samples for progression/resume work.
+- `fixtures/scripted.messaging.scene.seoul.sample.json`, `fixtures/scripted.messaging.scene.tokyo.sample.json`, and `fixtures/scripted.messaging.scene.shanghai.sample.json` are the canonical scripted learn-mode messaging samples for deterministic scene playback.
 
 Curriculum graph fixtures:
 - `fixtures/curriculum.graph.food-street.sample.json` is the canonical typed curriculum-graph sample.
