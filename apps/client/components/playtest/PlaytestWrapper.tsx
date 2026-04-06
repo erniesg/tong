@@ -33,7 +33,10 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
 
       // Upload recording + annotations + screenshots + state log as multipart form data
       const formData = new FormData();
-      formData.append('recording', data.recording, `${sessionId}.webm`);
+      // Only include recording if it has actual content (not the empty fallback blob)
+      if (data.recording.size > 0) {
+        formData.append('recording', data.recording, `${sessionId}.webm`);
+      }
       formData.append('annotations', JSON.stringify(data.annotations));
       if (data.stateLog) {
         formData.append('stateLog', JSON.stringify(data.stateLog));
