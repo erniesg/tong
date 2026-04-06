@@ -14,6 +14,15 @@ interface ScriptedMessagingPlayerProps {
   scene: ScriptedMessagingScene;
   translationMode: ScriptedMessagingTranslationMode;
   tickMs?: number;
+  initialElapsedMs?: number;
+  initialState?: ScriptedMessagingPlayerState;
+  sceneStartMs?: number;
+  hideDefaultControls?: boolean;
+  controlSignal?: {
+    id: number;
+    action: 'play' | 'pause' | 'restart' | 'jump_to_scene_start';
+  };
+  onElapsedChange?: (elapsedMs: number) => void;
   onStateChange?: (state: ScriptedMessagingPlayerState) => void;
 }
 
@@ -23,11 +32,23 @@ function byCityPalette(skin: CitySkinId) {
   return { bg: 'rgba(255, 243, 231, 0.72)', border: 'rgba(249, 115, 22, 0.25)' };
 }
 
-export function ScriptedMessagingPlayer({ scene, translationMode, tickMs = 100, onStateChange }: ScriptedMessagingPlayerProps) {
-  const [state, setState] = useState<ScriptedMessagingPlayerState>('idle');
-  const [elapsedMs, setElapsedMs] = useState(0);
+export function ScriptedMessagingPlayer({
+  scene,
+  translationMode,
+  tickMs = 100,
+  initialElapsedMs = 0,
+  initialState = 'idle',
+  sceneStartMs,
+  hideDefaultControls = false,
+  controlSignal,
+  onElapsedChange,
+  onStateChange,
+}: ScriptedMessagingPlayerProps) {
+  const [state, setState] = useState<ScriptedMessagingPlayerState>(initialState);
+  const [elapsedMs, setElapsedMs] = useState(initialElapsedMs);
   const skin = getCitySkin(scene.cityId);
   const palette = byCityPalette(skin);
+  const effectiveSceneStartMs = sceneStartMs ?? scene.rows[0]?.atMs ?? 0;
 
   const maxAtMs = useMemo(
     () => scene.rows.reduce((max, row) => Math.max(max, row.atMs), 0),
@@ -37,6 +58,15 @@ export function ScriptedMessagingPlayer({ scene, translationMode, tickMs = 100, 
   useEffect(() => {
     onStateChange?.(state);
   }, [onStateChange, state]);
+
+  useEffect(() => {
+    onElapsedChange?.(elapsedMs);
+  }, [elapsedMs, onElapsedChange]);
+
+  useEffect(() => {
+    setElapsedMs(initialElapsedMs);
+    setState(initialState);
+  }, [initialElapsedMs, initialState, scene.sceneId]);
 
   useEffect(() => {
     if (state !== 'playing') return;
@@ -54,6 +84,25 @@ export function ScriptedMessagingPlayer({ scene, translationMode, tickMs = 100, 
 
     return () => window.clearInterval(timer);
   }, [maxAtMs, state, tickMs]);
+
+  useEffect(() => {
+    if (!controlSignal) return;
+    if (controlSignal.action === 'play') {
+      setState('playing');
+      return;
+    }
+    if (controlSignal.action === 'pause') {
+      setState((prev) => (prev === 'playing' ? 'paused' : prev));
+      return;
+    }
+    if (controlSignal.action === 'restart') {
+      setElapsedMs(0);
+      setState('playing');
+      return;
+    }
+    setElapsedMs(effectiveSceneStartMs);
+    setState('paused');
+  }, [controlSignal, effectiveSceneStartMs]);
 
   const visibleRows = scene.rows.filter((row) => row.atMs <= elapsedMs);
   const typingRow = scene.rows.find((row) => {
@@ -125,12 +174,14 @@ export function ScriptedMessagingPlayer({ scene, translationMode, tickMs = 100, 
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 8, padding: 8 }}>
-        <button type="button" className="tg-chip" onClick={start}>Start</button>
-        <button type="button" className="tg-chip" onClick={pause}>Pause</button>
-        <button type="button" className="tg-chip" onClick={resume}>Resume</button>
-        <button type="button" className="tg-chip" onClick={reset}>Reset</button>
-      </div>
+      {!hideDefaultControls && (
+        <div style={{ display: 'flex', gap: 8, padding: 8 }}>
+          <button type="button" className="tg-chip" onClick={start}>Start</button>
+          <button type="button" className="tg-chip" onClick={pause}>Pause</button>
+          <button type="button" className="tg-chip" onClick={resume}>Resume</button>
+          <button type="button" className="tg-chip" onClick={reset}>Reset</button>
+        </div>
+      )}
     </section>
   );
 }

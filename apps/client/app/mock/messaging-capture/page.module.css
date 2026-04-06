@@ -1,0 +1,137 @@
+.page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  display: grid;
+  gap: 14px;
+}
+
+.header {
+  display: grid;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.4rem, 3.5vw, 2rem);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.controls label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.playback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.playback button {
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+.playback button:hover {
+  background: #fff4e7;
+}
+
+.status {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.viewportWrap {
+  display: flex;
+  justify-content: center;
+}
+
+.viewport {
+  width: min(100%, 430px);
+  min-height: min(90vh, 880px);
+  aspect-ratio: 9 / 16;
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid #d7c8b6;
+  background: linear-gradient(180deg, #f8fbff, #eef3f9);
+  box-shadow: 0 20px 48px rgba(32, 44, 67, 0.2);
+  padding: 12px;
+}
+
+.hookOverlay {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  z-index: 5;
+  border-radius: 14px;
+  background: rgba(10, 18, 34, 0.88);
+  color: #f5f8ff;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.hookLabel {
+  margin: 0;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.72;
+}
+
+.hookText {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+}
+
+.notes {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.notes h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.notes ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.notes p {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  .viewport {
+    width: min(100%, 420px);
+  }
+}

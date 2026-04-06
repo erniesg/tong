@@ -43,3 +43,18 @@
 ## Demo guardrails
 - Keep server-backed and mocked paths functionally identical.
 - If remote API is unavailable, run in local-mock mode with same UI.
+
+## Deterministic messaging capture route (issue #125)
+- Route: `/mock/messaging-capture`
+- Purpose: stable 9:16 scripted messaging playback for promo/reviewer recording.
+- Built on the shared scripted scene/player from issue #124 (no duplicate renderer).
+- Playback controls: Play, Pause, Restart, Jump to scene start.
+- Query params:
+  - `fixture=seoul_intro|tokyo_translation|shanghai_hook`
+  - `city=seoul|tokyo|shanghai`
+  - `sceneId=<scene-id-from-fixture>`
+  - `mode=primary_only|primary_with_english|primary_local_explanation_with_english`
+  - `autoplay=1`
+  - `startAtMs=<number>`
+- Example:
+  - `/mock/messaging-capture?fixture=tokyo_translation&autoplay=1&mode=primary_with_english&startAtMs=0`
