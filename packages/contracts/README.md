@@ -26,3 +26,5 @@ Naming note:
 - The shared contract uses `learnerId` as the stable user-specific identifier.
 - The mock dashboard runtime also accepts `personaId` as an alias because the first milestone is driven by persona fixtures.
 - Objective payloads now carry canonical graph `objectiveId` values plus additive `legacyObjectiveId` / `objectiveAliasIds` compatibility fields while consumers migrate.
+
+- `fixtures/learn.scripted-scenes.sample.json` demonstrates deterministic scripted learn-mode messaging scenes for Seoul, Tokyo, and Shanghai.
