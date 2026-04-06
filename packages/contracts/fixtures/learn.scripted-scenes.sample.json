@@ -1,0 +1,121 @@
+{
+  "scenes": [
+    {
+      "sceneId": "seoul-food-street-check-in",
+      "cityId": "seoul",
+      "objectiveId": "ko-vocab-food-items",
+      "title": "After-school street food check-in",
+      "hookText": "Tong opens the Kakao-like chat before the hangout.",
+      "speakers": [
+        { "id": "tong", "displayName": "Tong", "avatarEmoji": "🐾" },
+        { "id": "character", "displayName": "Haeun", "avatarEmoji": "🌸" },
+        { "id": "player", "displayName": "You", "avatarEmoji": "🙂" }
+      ],
+      "rows": [
+        {
+          "rowId": "seoul-1",
+          "speakerId": "tong",
+          "atMs": 0,
+          "typingMs": 500,
+          "primaryText": "해은이가 떡볶이 먹으러 가자고 했어!",
+          "localExplanationText": "해은 + -이(주어), 떡볶이(음식), -자고 했어(제안 전달)",
+          "englishText": "Haeun asked if we should go eat tteokbokki!"
+        },
+        {
+          "rowId": "seoul-2",
+          "speakerId": "character",
+          "atMs": 2200,
+          "typingMs": 600,
+          "primaryText": "나 지금 푸드스트리트 앞이야. 너는?",
+          "localExplanationText": "나(저), 지금(현재), 앞(앞쪽), 너는?(주제 전환 질문)",
+          "englishText": "I'm in front of Food Street now. What about you?"
+        },
+        {
+          "rowId": "seoul-3",
+          "speakerId": "player",
+          "atMs": 4200,
+          "primaryText": "나도 거의 도착했어!",
+          "englishText": "I'm almost there too!"
+        }
+      ]
+    },
+    {
+      "sceneId": "tokyo-cafe-time-check",
+      "cityId": "tokyo",
+      "objectiveId": "ja-cafe-meetup-time",
+      "title": "LINE-style cafe meetup check",
+      "hookText": "Tong rehearses a quick meetup exchange.",
+      "speakers": [
+        { "id": "tong", "displayName": "Tong", "avatarEmoji": "🐾" },
+        { "id": "character", "displayName": "Aoi", "avatarEmoji": "🍵" },
+        { "id": "player", "displayName": "You", "avatarEmoji": "🙂" }
+      ],
+      "rows": [
+        {
+          "rowId": "tokyo-1",
+          "speakerId": "tong",
+          "atMs": 0,
+          "typingMs": 500,
+          "primaryText": "青井さんからメッセージだよ。",
+          "localExplanationText": "青井さん(이름+존칭), から(~에서), メッセージ(메시지), だよ(설명)",
+          "englishText": "You got a message from Aoi."
+        },
+        {
+          "rowId": "tokyo-2",
+          "speakerId": "character",
+          "atMs": 2100,
+          "typingMs": 600,
+          "primaryText": "カフェに六時半に着きます。先に席を取っておくね。",
+          "localExplanationText": "六時半(6:30), 着きます(도착하다), 先に(먼저), 席を取る(자리 맡다)",
+          "englishText": "I'll arrive at the cafe at 6:30. I'll grab a seat first."
+        },
+        {
+          "rowId": "tokyo-3",
+          "speakerId": "player",
+          "atMs": 4300,
+          "primaryText": "ありがとう、すぐ向かう！",
+          "englishText": "Thanks, heading there now!"
+        }
+      ]
+    },
+    {
+      "sceneId": "shanghai-subway-plan",
+      "cityId": "shanghai",
+      "objectiveId": "zh-subway-route-plan",
+      "title": "WeChat-style subway route planning",
+      "hookText": "Tong queues a route-planning drill before mission mode.",
+      "speakers": [
+        { "id": "tong", "displayName": "Tong", "avatarEmoji": "🐾" },
+        { "id": "character", "displayName": "Mei", "avatarEmoji": "🚇" },
+        { "id": "player", "displayName": "You", "avatarEmoji": "🙂" }
+      ],
+      "rows": [
+        {
+          "rowId": "shanghai-1",
+          "speakerId": "tong",
+          "atMs": 0,
+          "typingMs": 500,
+          "primaryText": "美美在问你坐几号线。",
+          "localExplanationText": "在问(묻는 중), 坐(타다), 几号线(몇 호선)",
+          "englishText": "Mei is asking which subway line you'll take."
+        },
+        {
+          "rowId": "shanghai-2",
+          "speakerId": "character",
+          "atMs": 2200,
+          "typingMs": 600,
+          "primaryText": "我先到人民广场站，你到了给我发消息。",
+          "localExplanationText": "先(먼저), 到(도착), 给我发消息(나에게 메시지 보내)",
+          "englishText": "I'll get to People's Square first; message me when you arrive."
+        },
+        {
+          "rowId": "shanghai-3",
+          "speakerId": "player",
+          "atMs": 4300,
+          "primaryText": "好，我换乘以后告诉你。",
+          "englishText": "Okay, I'll tell you after I transfer."
+        }
+      ]
+    }
+  ]
+}
