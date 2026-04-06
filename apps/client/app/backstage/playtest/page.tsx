@@ -4,6 +4,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
+interface DeviceMeta {
+  userAgent?: string;
+  platform?: string;
+  screenWidth?: number;
+  screenHeight?: number;
+  viewportWidth?: number;
+  viewportHeight?: number;
+  devicePixelRatio?: number;
+  touchSupport?: boolean;
+}
+
 interface PlaytestSession {
   sessionId: string;
   city: string;
@@ -11,6 +22,7 @@ interface PlaytestSession {
   language: string;
   status: 'pending' | 'active' | 'submitted';
   createdAt: string;
+  device?: DeviceMeta;
 }
 
 interface Annotation {
@@ -50,8 +62,43 @@ async function fetchSessions(): Promise<PlaytestSession[]> {
   }));
 }
 
+/** Fetch device metadata from the session's state log (qa_trace → playtest_session_start) */
+async function fetchDeviceMeta(sessionId: string): Promise<DeviceMeta | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/playtest/sessions/${sessionId}/state-log`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const entries = data.logs || data.entries || [];
+    const qaEntry = entries.find(
+      (e: { kind: string; data?: { event?: string } }) =>
+        e.kind === 'qa_trace' && e.data?.event === 'playtest_session_start',
+    );
+    if (!qaEntry?.data) return null;
+    const d = qaEntry.data;
+    return {
+      userAgent: d.userAgent,
+      platform: d.platform,
+      screenWidth: d.screenWidth,
+      screenHeight: d.screenHeight,
+      viewportWidth: d.viewportWidth,
+      viewportHeight: d.viewportHeight,
+      devicePixelRatio: d.devicePixelRatio,
+      touchSupport: d.touchSupport,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function deleteSessions(sessionIds: string[]): Promise<void> {
+  await Promise.allSettled(
+    sessionIds.map((id) =>
+      fetch(`${API_BASE}/api/v1/playtest/sessions/${id}`, { method: 'DELETE' }),
+    ),
+  );
+}
+
 async function fetchAnnotations(sessionId: string): Promise<Annotation[]> {
-  // Try Worker API proxy first (avoids R2 CORS issues), fallback to direct R2
   try {
     const res = await fetch(`${API_BASE}/api/v1/playtest/sessions/${sessionId}/annotations`, {
       headers: { 'x-demo-password': localStorage.getItem('tong_demo_pw') || '' },
@@ -72,11 +119,10 @@ async function fetchAnnotations(sessionId: string): Promise<Annotation[]> {
 }
 
 async function checkRecording(sessionId: string): Promise<string | null> {
-  // Try Worker API proxy first, fallback to direct R2
   const proxyUrl = `${API_BASE}/api/v1/playtest/sessions/${sessionId}/recording`;
   try {
     const res = await fetch(proxyUrl, { method: 'HEAD' });
-    if (res.ok) return proxyUrl;
+    if (res.ok && (res.headers.get('content-length') || '0') !== '0') return proxyUrl;
   } catch { /* try direct */ }
   const directUrl = `${RUNS_BASE}/playtest/${sessionId}/recording.webm`;
   try {
@@ -90,6 +136,28 @@ async function checkRecording(sessionId: string): Promise<string | null> {
 
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
+function parseDevice(meta: DeviceMeta | undefined): string {
+  if (!meta) return '';
+  const parts: string[] = [];
+  if (meta.platform) parts.push(meta.platform);
+  if (meta.screenWidth && meta.screenHeight) parts.push(`${meta.screenWidth}x${meta.screenHeight}`);
+  if (meta.devicePixelRatio && meta.devicePixelRatio > 1) parts.push(`${meta.devicePixelRatio}x`);
+  if (meta.touchSupport) parts.push('touch');
+  // Extract browser from UA
+  const ua = meta.userAgent || '';
+  if (ua.includes('Safari') && !ua.includes('Chrome')) parts.push('Safari');
+  else if (ua.includes('Chrome')) parts.push('Chrome');
+  else if (ua.includes('Firefox')) parts.push('Firefox');
+  return parts.join(' · ');
+}
+
+/** Check if annotation has real AI clarification content (not just auto-tagged) */
+function hasRealClarification(ann: Annotation): boolean {
+  if (!ann.clarified || !ann.text) return false;
+  // Real clarification has the "---\nAI:" separator appended by handleAiResponse
+  return ann.text.includes('\n---\nAI:');
+}
 
 interface StateLogEntry {
   ts: number;
@@ -145,8 +213,6 @@ const LOG_KIND_COLORS: Record<string, string> = {
   error: '#ef4444',
 };
 
-/* Status uses triage-status-{status} classes for consistent styling */
-
 /* ── Component ────────────────────────────────────────────────────── */
 
 export default function PlaytestViewerPage() {
@@ -165,10 +231,24 @@ export default function PlaytestViewerPage() {
   const [filmstripPlaying, setFilmstripPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Bulk selection state
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
-    fetchSessions().then((s) => {
-      setSessions(s);
+    fetchSessions().then(async (list) => {
+      setSessions(list);
       setLoading(false);
+      // Fetch device metadata for each session in parallel (best-effort)
+      const metas = await Promise.allSettled(
+        list.map((s) => fetchDeviceMeta(s.sessionId)),
+      );
+      setSessions((prev) =>
+        prev.map((s, i) => ({
+          ...s,
+          device: metas[i].status === 'fulfilled' && metas[i].value ? metas[i].value! : undefined,
+        })),
+      );
     });
   }, []);
 
@@ -192,7 +272,6 @@ export default function PlaytestViewerPage() {
     ]);
     setRecordingSrc(recUrl);
     setStateLog(log);
-    // Rewrite filmstrip URLs to go through Worker proxy
     setFilmstrip((filmstripData || []).map((f: { ts: number; url: string }) => ({
       ts: f.ts,
       url: `${API_BASE}/api/v1/playtest/sessions/${sessionId}/filmstrip/frame-${f.ts}.jpg`,
@@ -209,13 +288,12 @@ export default function PlaytestViewerPage() {
       videoRef.current.currentTime = ann.timestamp;
     }
     if (ann.screenshotUrl && selected) {
-      // Use Worker proxy to avoid CORS issues with R2 direct URLs
       const proxyUrl = `${API_BASE}/api/v1/playtest/sessions/${selected}/screenshots/${ann.id}.png`;
       setScreenshotPreview(proxyUrl);
     }
   }, [selected]);
 
-  // Filmstrip auto-play: advance frame every 500ms when playing
+  // Filmstrip auto-play
   useEffect(() => {
     if (!filmstripPlaying || filmstrip.length === 0) return;
     const interval = setInterval(() => {
@@ -226,6 +304,40 @@ export default function PlaytestViewerPage() {
     }, 500);
     return () => clearInterval(interval);
   }, [filmstripPlaying, filmstrip.length]);
+
+  // Bulk selection helpers
+  const allChecked = sessions.length > 0 && checked.size === sessions.length;
+  const someChecked = checked.size > 0;
+
+  const toggleAll = () => {
+    if (allChecked) {
+      setChecked(new Set());
+    } else {
+      setChecked(new Set(sessions.map((s) => s.sessionId)));
+    }
+  };
+
+  const toggleOne = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (checked.size === 0) return;
+    const confirmed = confirm(`Delete ${checked.size} session${checked.size > 1 ? 's' : ''}? This cannot be undone.`);
+    if (!confirmed) return;
+    setDeleting(true);
+    await deleteSessions([...checked]);
+    setSessions((prev) => prev.filter((s) => !checked.has(s.sessionId)));
+    if (selected && checked.has(selected)) setSelected(null);
+    setChecked(new Set());
+    setDeleting(false);
+  };
 
   const selectedSession = sessions.find((s) => s.sessionId === selected);
   const submittedCount = sessions.filter((s) => s.status === 'submitted').length;
@@ -243,30 +355,79 @@ export default function PlaytestViewerPage() {
       <div className="triage-layout">
         {/* ── Session list ──────────────────────────────────────── */}
         <div className="triage-sidebar">
-          <h2 className="triage-section-title">Sessions</h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <h2 className="triage-section-title" style={{ margin: 0 }}>Sessions</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--muted, #888)', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  ref={(el) => { if (el) el.indeterminate = someChecked && !allChecked; }}
+                  onChange={toggleAll}
+                  style={{ cursor: 'pointer' }}
+                />
+                All
+              </label>
+              {someChecked && (
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={deleting}
+                  style={{
+                    background: '#ef4444',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 4,
+                    padding: '3px 8px',
+                    fontSize: 11,
+                    cursor: deleting ? 'wait' : 'pointer',
+                    opacity: deleting ? 0.6 : 1,
+                  }}
+                >
+                  {deleting ? 'Deleting...' : `Delete (${checked.size})`}
+                </button>
+              )}
+            </div>
+          </div>
           {loading && <p className="triage-muted">Loading...</p>}
           {!loading && sessions.length === 0 && (
             <p className="triage-muted">No playtest sessions yet.</p>
           )}
           {sessions.map((s) => (
-            <button
+            <div
               key={s.sessionId}
-              className={`triage-session-card ${selected === s.sessionId ? 'triage-session-selected' : ''}`}
-              onClick={() => selectSession(s.sessionId)}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}
             >
-              <div className="triage-session-top">
-                <span className="triage-session-id">{s.sessionId.slice(0, 8)}</span>
-                <span className={`triage-status triage-status-${s.status}`}>
-                  {s.status}
-                </span>
-              </div>
-              <div className="triage-session-meta">
-                {s.city} · {s.sceneType} · {s.language}
-              </div>
-              <div className="triage-session-time">
-                {new Date(s.createdAt + 'Z').toLocaleString()}
-              </div>
-            </button>
+              <input
+                type="checkbox"
+                checked={checked.has(s.sessionId)}
+                onClick={(e) => toggleOne(s.sessionId, e)}
+                onChange={() => {}}
+                style={{ marginTop: 10, cursor: 'pointer', flexShrink: 0 }}
+              />
+              <button
+                className={`triage-session-card ${selected === s.sessionId ? 'triage-session-selected' : ''}`}
+                onClick={() => selectSession(s.sessionId)}
+                style={{ flex: 1 }}
+              >
+                <div className="triage-session-top">
+                  <span className="triage-session-id">{s.sessionId.slice(0, 8)}</span>
+                  <span className={`triage-status triage-status-${s.status}`}>
+                    {s.status}
+                  </span>
+                </div>
+                <div className="triage-session-meta">
+                  {s.city} · {s.sceneType} · {s.language}
+                </div>
+                {s.device && (
+                  <div className="triage-session-meta" style={{ fontSize: 10, opacity: 0.6 }}>
+                    {parseDevice(s.device)}
+                  </div>
+                )}
+                <div className="triage-session-time">
+                  {new Date(s.createdAt + 'Z').toLocaleString()}
+                </div>
+              </button>
+            </div>
           ))}
         </div>
 
@@ -286,9 +447,18 @@ export default function PlaytestViewerPage() {
                 <span className="triage-session-id" style={{ fontSize: 12 }}>
                   {selected}
                 </span>
+                {selectedSession?.device && (
+                  <div style={{ fontSize: 12, color: 'var(--muted, #888)', marginTop: 4 }}>
+                    {selectedSession.device.platform}
+                    {selectedSession.device.screenWidth ? ` · ${selectedSession.device.screenWidth}x${selectedSession.device.screenHeight}` : ''}
+                    {selectedSession.device.devicePixelRatio ? ` · ${selectedSession.device.devicePixelRatio}x DPR` : ''}
+                    {selectedSession.device.viewportWidth ? ` · viewport ${selectedSession.device.viewportWidth}x${selectedSession.device.viewportHeight}` : ''}
+                    {selectedSession.device.touchSupport ? ' · touch' : ''}
+                  </div>
+                )}
               </div>
 
-              {/* Recording player */}
+              {/* Recording player — only show if non-empty */}
               {recordingSrc && (
                 <div className="playtest-viewer-video">
                   <video
@@ -303,7 +473,7 @@ export default function PlaytestViewerPage() {
                 </div>
               )}
 
-              {/* Filmstrip player — full-DOM captures every 5s */}
+              {/* Filmstrip player */}
               {filmstrip.length > 0 && (
                 <div className="playtest-filmstrip-player">
                   <div className="playtest-filmstrip-frame">
@@ -378,7 +548,7 @@ export default function PlaytestViewerPage() {
                       <span className="playtest-viewer-ann-type">
                         {ann.type === 'draw' ? '\u270E draw' : '\uD83D\uDCAC comment'}
                       </span>
-                      {ann.clarified && (
+                      {hasRealClarification(ann) && (
                         <span className="playtest-viewer-ann-clarified">AI clarified</span>
                       )}
                       {ann.screenshotUrl && (

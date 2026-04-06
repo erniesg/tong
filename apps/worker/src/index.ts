@@ -2397,6 +2397,29 @@ async function handleRequest(request: Request): Promise<Response> {
       return jsonResponse(200, { ok: true, sessionId });
     }
 
+    // Delete a session and its R2 artifacts
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+$/) && request.method === 'DELETE') {
+      const sessionId = pathname.split('/').pop()!;
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      await env.DB.prepare(
+        `DELETE FROM playtest_sessions WHERE session_id = ?`
+      ).bind(sessionId).run();
+      // Best-effort cleanup of R2 artifacts
+      if (env?.TONG_RUNS_BUCKET) {
+        const prefix = `playtest/${sessionId}/`;
+        try {
+          const list = await env.TONG_RUNS_BUCKET.list({ prefix });
+          if (list.objects.length > 0) {
+            await Promise.allSettled(
+              list.objects.map((obj: { key: string }) => env.TONG_RUNS_BUCKET.delete(obj.key)),
+            );
+          }
+        } catch { /* best-effort */ }
+      }
+      return jsonResponse(200, { ok: true, deleted: sessionId });
+    }
+
     // Upload recording + annotations to R2
     if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/upload$/) && request.method === 'POST') {
       const sessionId = pathname.split('/')[5];
