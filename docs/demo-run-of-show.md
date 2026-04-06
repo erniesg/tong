@@ -43,3 +43,30 @@
 ## Demo guardrails
 - Keep server-backed and mocked paths functionally identical.
 - If remote API is unavailable, run in local-mock mode with same UI.
+
+## Deterministic messaging promo capture route (Issue #125)
+
+Use `/mock/messaging-promo` for 9:16 scripted messaging capture.
+
+### Query params
+
+- `fixture`: `seoul_default` | `tokyo_bilingual` | `shanghai_bilingual`
+- `city`: `seoul` | `tokyo` | `shanghai`
+- `scene`: scene id from `learn.scripted-scenes.sample.json`
+- `mode`: `primary_only` | `primary_with_english` | `primary_local_explanation_with_english`
+- `autoplay`: `1` or `0`
+- `hook`: `overlay` | `inline` | `off`
+- `tickMs`: deterministic timer step (clamped 40..400)
+
+### Stable entry examples
+
+- Seoul default replay: `/mock/messaging-promo?fixture=seoul_default`
+- Tokyo JP+EN replay: `/mock/messaging-promo?fixture=tokyo_bilingual`
+- Shanghai ZH+EN replay: `/mock/messaging-promo?fixture=shanghai_bilingual`
+
+Playback controls are in-route and deterministic:
+
+1. Play
+2. Pause
+3. Restart
+4. Jump to scene start
