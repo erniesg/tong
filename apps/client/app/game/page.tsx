@@ -834,9 +834,11 @@ export default function GamePage() {
 
   const latestNpcSpeakInvocation = getLatestNpcSpeakInvocation(messages);
   const queuedNpcSpeakId = toolQueue[0]?.toolName === 'npc_speak' ? toolQueue[0].toolCallId : null;
+  // Only render the streamed message if it matches the queue head or the current
+  // blocking message. This prevents showing the *second* npc_speak while the first
+  // is still waiting in the queue (which causes a backwards jump when streaming ends).
   const shouldRenderStreamedNpcMessage = latestNpcSpeakInvocation != null && (
-    ((latestNpcSpeakInvocation.state === 'partial-call' || latestNpcSpeakInvocation.state === 'call') && chatLoading)
-    || latestNpcSpeakInvocation.toolCallId === queuedNpcSpeakId
+    (latestNpcSpeakInvocation.toolCallId === queuedNpcSpeakId && chatLoading)
     || latestNpcSpeakInvocation.toolCallId === currentMessage?.id
   );
   const streamedNpcMessage = shouldRenderStreamedNpcMessage && latestNpcSpeakInvocation
