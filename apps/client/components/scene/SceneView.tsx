@@ -200,12 +200,11 @@ export function SceneView({
         />
       ) : isStreaming || sceneBusy || !sceneReady ? (
         <div
-          className="absolute bottom-0 left-0 right-0 cursor-pointer"
+          className="absolute bottom-0 left-0 right-0"
           style={{ padding: '20px 20px calc(20px + var(--safe-bottom, 0px))' }}
-          onClick={onContinue}
         >
           <div className="scene-continue-label animate-pulse">
-            {continueLabel || 'Tap to continue'}
+            …
           </div>
         </div>
       ) : (

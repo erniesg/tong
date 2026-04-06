@@ -18,6 +18,9 @@ interface PlaytestConfig {
   hangoutId?: string;
   exerciseTypes?: string[];
   seed?: number;
+  npc?: string;
+  playerName?: string;
+  chineseName?: string;
   status: PlaytestStatus;
   createdAt: string;
 }
@@ -61,7 +64,15 @@ function buildGameUrl(config: PlaytestConfig): string {
 
   switch (config.sceneType) {
     case 'hangout': {
-      params.set('phase', 'hangout');
+      if (config.npc) {
+        // Intro hangout: use dev_intro mode with NPC + player profile
+        params.set('dev_intro', '1');
+        params.set('npc', config.npc);
+        if (config.playerName) params.set('name', config.playerName);
+        if (config.chineseName) params.set('cn_name', config.chineseName);
+      } else {
+        params.set('phase', 'hangout');
+      }
       if (config.locationId) params.set('location', config.locationId);
       if (config.city) params.set('city', config.city);
       break;

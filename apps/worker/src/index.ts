@@ -2203,14 +2203,19 @@ async function handleRequest(request: Request): Promise<Response> {
       const language = body.language || cityLangMap[body.city] || 'ko';
       const env = (globalThis as any).__env;
       if (env?.DB) {
+        const configExtras: Record<string, string> = {};
+        if (body.npc) configExtras.npc = body.npc;
+        if (body.playerName) configExtras.playerName = body.playerName;
+        if (body.chineseName) configExtras.chineseName = body.chineseName;
         await env.DB.prepare(
-          `INSERT INTO playtest_sessions (session_id, city, scene_type, language, location_id, hangout_id, exercise_types, seed)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO playtest_sessions (session_id, city, scene_type, language, location_id, hangout_id, exercise_types, seed, config_extras)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           sessionId, body.city, body.sceneType, language,
           body.locationId || null, body.hangoutId || null,
           body.exerciseTypes ? JSON.stringify(body.exerciseTypes) : null,
           body.seed ?? null,
+          Object.keys(configExtras).length ? JSON.stringify(configExtras) : null,
         ).run();
       }
       const domain = env?.NEXT_PUBLIC_TONG_PUBLIC_DOMAIN || 'tong.berlayar.ai';
@@ -2218,7 +2223,7 @@ async function handleRequest(request: Request): Promise<Response> {
         sessionId,
         url: `/playtest/${sessionId}`,
         fullUrl: `https://${domain}/playtest/${sessionId}`,
-        config: { sessionId, city: body.city, sceneType: body.sceneType, language, locationId: body.locationId, hangoutId: body.hangoutId },
+        config: { sessionId, city: body.city, sceneType: body.sceneType, language, locationId: body.locationId, hangoutId: body.hangoutId, npc: body.npc, playerName: body.playerName, chineseName: body.chineseName },
       });
     }
 
@@ -2250,6 +2255,7 @@ async function handleRequest(request: Request): Promise<Response> {
         `SELECT * FROM playtest_sessions WHERE session_id = ?`
       ).bind(sessionId).first();
       if (!row) return jsonResponse(404, { error: 'session_not_found', sessionId });
+      const extras = (row as any).config_extras ? JSON.parse((row as any).config_extras) : {};
       return jsonResponse(200, {
         sessionId: (row as any).session_id,
         config: {
@@ -2261,6 +2267,7 @@ async function handleRequest(request: Request): Promise<Response> {
           hangoutId: (row as any).hangout_id,
           exerciseTypes: (row as any).exercise_types ? JSON.parse((row as any).exercise_types) : undefined,
           seed: (row as any).seed,
+          ...extras,
         },
         status: (row as any).status,
         createdAt: (row as any).created_at,
