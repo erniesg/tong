@@ -268,3 +268,11 @@ Template:
   - Land a repo-visible starter-cast roster source of truth for issue `#69`, keyed by the canonical `mapLocationId -> dagLocationSlot` registry from `packages/contracts/world-map-registry.sample.json`.
   - Define stable per-character asset bundle requirements plus optional reward/polaroid hooks that downstream city-pack issues `#62`, `#63`, and `#64` can cite.
   - Stage the required world-content closeout artifact bundle and PR-ready notes without generating final production art.
+
+## 2026-04-06 (Issue 125 mock-ui capture route cross-lane intent)
+- Date: 2026-04-06
+- Branch/worktree: `work` (mock-ui lane with cross-lane touch in `apps/client/components/learn/**`)
+- Intent:
+  - Reuse the existing scripted messaging renderer from #124 for a new deterministic 9:16 mock capture route.
+  - Extend `ScriptedMessagingPlayer` controls/additive API (no second renderer) so mock-ui can drive play/pause/restart/jump deterministically.
+  - Keep global style churn minimal and document route/query fixtures in demo run-of-show.

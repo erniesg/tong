@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import type {
   ScriptedMessagingPlayerState,
   ScriptedMessagingScene,
@@ -14,7 +14,22 @@ interface ScriptedMessagingPlayerProps {
   scene: ScriptedMessagingScene;
   translationMode: ScriptedMessagingTranslationMode;
   tickMs?: number;
+  hookOverlayMs?: number;
+  showHookOverlay?: boolean;
+  showControls?: boolean;
   onStateChange?: (state: ScriptedMessagingPlayerState) => void;
+  onElapsedChange?: (elapsedMs: number) => void;
+}
+
+export interface ScriptedMessagingPlayerHandle {
+  play: () => void;
+  pause: () => void;
+  restart: () => void;
+  jumpToSceneStart: () => void;
+  getSnapshot: () => {
+    state: ScriptedMessagingPlayerState;
+    elapsedMs: number;
+  };
 }
 
 function byCityPalette(skin: CitySkinId) {
@@ -23,7 +38,19 @@ function byCityPalette(skin: CitySkinId) {
   return { bg: 'rgba(255, 243, 231, 0.72)', border: 'rgba(249, 115, 22, 0.25)' };
 }
 
-export function ScriptedMessagingPlayer({ scene, translationMode, tickMs = 100, onStateChange }: ScriptedMessagingPlayerProps) {
+export const ScriptedMessagingPlayer = forwardRef<ScriptedMessagingPlayerHandle, ScriptedMessagingPlayerProps>(function ScriptedMessagingPlayer(
+  {
+    scene,
+    translationMode,
+    tickMs = 100,
+    hookOverlayMs = 1800,
+    showHookOverlay = false,
+    showControls = true,
+    onStateChange,
+    onElapsedChange,
+  },
+  ref,
+) {
   const [state, setState] = useState<ScriptedMessagingPlayerState>('idle');
   const [elapsedMs, setElapsedMs] = useState(0);
   const skin = getCitySkin(scene.cityId);
@@ -35,8 +62,17 @@ export function ScriptedMessagingPlayer({ scene, translationMode, tickMs = 100, 
   );
 
   useEffect(() => {
+    setState('idle');
+    setElapsedMs(0);
+  }, [scene.sceneId]);
+
+  useEffect(() => {
     onStateChange?.(state);
   }, [onStateChange, state]);
+
+  useEffect(() => {
+    onElapsedChange?.(elapsedMs);
+  }, [elapsedMs, onElapsedChange]);
 
   useEffect(() => {
     if (state !== 'playing') return;
@@ -61,32 +97,74 @@ export function ScriptedMessagingPlayer({ scene, translationMode, tickMs = 100, 
     return typingMs > 0 && elapsedMs >= row.atMs - typingMs && elapsedMs < row.atMs;
   });
 
-  const start = useCallback(() => {
-    setElapsedMs(0);
-    setState('playing');
+  const play = useCallback(() => {
+    setState((prev) => {
+      if (prev === 'finished') {
+        setElapsedMs(0);
+      }
+      return 'playing';
+    });
   }, []);
 
   const pause = useCallback(() => {
     setState((prev) => (prev === 'playing' ? 'paused' : prev));
   }, []);
 
-  const resume = useCallback(() => {
-    setState((prev) => (prev === 'paused' ? 'playing' : prev));
+  const restart = useCallback(() => {
+    setElapsedMs(0);
+    setState('playing');
   }, []);
 
-  const reset = useCallback(() => {
+  const jumpToSceneStart = useCallback(() => {
     setElapsedMs(0);
-    setState('idle');
+    setState((prev) => (prev === 'playing' ? 'paused' : prev === 'finished' ? 'idle' : prev));
   }, []);
+
+  useImperativeHandle(ref, () => ({
+    play,
+    pause,
+    restart,
+    jumpToSceneStart,
+    getSnapshot: () => ({ state, elapsedMs }),
+  }), [elapsedMs, jumpToSceneStart, pause, play, restart, state]);
+
+  const progress = maxAtMs > 0 ? Math.min(100, (elapsedMs / (maxAtMs + 1000)) * 100) : 0;
+  const showHookCard = Boolean(scene.hookText) && showHookOverlay && elapsedMs < hookOverlayMs;
 
   return (
-    <section className="learn-chat-container" data-city-skin={skin}>
-      <div style={{ padding: 12, borderRadius: 14, background: palette.bg, border: `1px solid ${palette.border}` }}>
+    <section className="learn-chat-container" data-city-skin={skin} style={{ position: 'relative' }}>
+      {showHookCard && scene.hookText && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 12,
+            zIndex: 2,
+            borderRadius: 16,
+            display: 'grid',
+            placeItems: 'center',
+            padding: 20,
+            background: 'rgba(8, 15, 32, 0.72)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            color: '#fff',
+            textAlign: 'center',
+            fontSize: 16,
+            fontWeight: 600,
+            lineHeight: 1.4,
+          }}
+        >
+          {scene.hookText}
+        </div>
+      )}
+
+      <div style={{ padding: 12, borderRadius: 14, background: palette.bg, border: `1px solid ${palette.border}`, margin: 10 }}>
         <p style={{ margin: 0, fontSize: 12, opacity: 0.72 }}>{scene.title}</p>
-        {scene.hookText && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{scene.hookText}</p>}
+        {!showHookOverlay && scene.hookText && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{scene.hookText}</p>}
         <p style={{ margin: '8px 0 0', fontSize: 12 }}>
           <strong>state:</strong> {state} · <strong>t:</strong> {elapsedMs}ms
         </p>
+        <div aria-hidden style={{ marginTop: 8, height: 5, borderRadius: 999, background: 'rgba(0, 0, 0, 0.08)' }}>
+          <div style={{ width: `${progress}%`, height: '100%', borderRadius: 999, background: 'rgba(0,0,0,0.35)' }} />
+        </div>
       </div>
 
       <div className="learn-chat-scroll" style={{ maxHeight: 420 }}>
@@ -125,12 +203,14 @@ export function ScriptedMessagingPlayer({ scene, translationMode, tickMs = 100, 
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 8, padding: 8 }}>
-        <button type="button" className="tg-chip" onClick={start}>Start</button>
-        <button type="button" className="tg-chip" onClick={pause}>Pause</button>
-        <button type="button" className="tg-chip" onClick={resume}>Resume</button>
-        <button type="button" className="tg-chip" onClick={reset}>Reset</button>
-      </div>
+      {showControls && (
+        <div style={{ display: 'flex', gap: 8, padding: 8, flexWrap: 'wrap' }}>
+          <button type="button" className="tg-chip" onClick={play}>Play</button>
+          <button type="button" className="tg-chip" onClick={pause}>Pause</button>
+          <button type="button" className="tg-chip" onClick={restart}>Restart</button>
+          <button type="button" className="tg-chip" onClick={jumpToSceneStart}>Jump to scene start</button>
+        </div>
+      )}
     </section>
   );
-}
+});
