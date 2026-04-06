@@ -262,6 +262,7 @@ export default function PlaytestViewerPage() {
   const [activeTab, setActiveTab] = useState<ViewerTab>('filmstrip');
   const [activeAnnotation, setActiveAnnotation] = useState<string | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [expandedLogEntries, setExpandedLogEntries] = useState<Set<number>>(new Set());
 
   // Bulk selection
   const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -298,6 +299,7 @@ export default function PlaytestViewerPage() {
     setStateLog(null);
     setAnalysis(null);
     setAgentTrace(null);
+    setExpandedLogEntries(new Set());
     setActiveTab('filmstrip');
     setLoadingData(true);
 
@@ -750,23 +752,48 @@ export default function PlaytestViewerPage() {
                       {stateLog.entries.map((entry, i) => {
                         const relTime = Math.floor((entry.ts - stateLog.startedAt) / 1000);
                         const color = LOG_KIND_COLORS[entry.kind] || '#94a3b8';
+                        const isExpanded = expandedLogEntries.has(i);
+                        const hasData = entry.data && Object.keys(entry.data).length > 0;
+                        const summaryText =
+                          entry.kind === 'tool_call' ? `${entry.data.toolName}()` :
+                          entry.kind === 'ai_request' ? String(entry.data.content || '').slice(0, 80) :
+                          entry.kind === 'exercise_shown' ? `${entry.data.exerciseType}: ${entry.data.exerciseId}` :
+                          entry.kind === 'exercise_result' ? (entry.data.correct ? 'Correct' : 'Incorrect') :
+                          entry.kind === 'choice_selected' ? `\u2192 ${entry.data.choiceId}` :
+                          entry.kind === 'user_tap' ? String(entry.data.action || '') :
+                          entry.kind === 'phase_change' ? `${entry.data.from} \u2192 ${entry.data.to}` :
+                          entry.kind === 'state_snapshot' ? `phase:${entry.data.phase}` :
+                          entry.kind === 'error' ? String(entry.data.message || '') :
+                          '';
                         return (
-                          <div key={i} className="playtest-statelog-entry">
-                            <span className="playtest-statelog-time">{fmt(relTime)}</span>
-                            <span className="playtest-statelog-kind" style={{ color }}>
-                              {LOG_KIND_LABELS[entry.kind] || entry.kind}
-                            </span>
-                            <span className="playtest-statelog-data">
-                              {entry.kind === 'tool_call' && `${entry.data.toolName}()`}
-                              {entry.kind === 'ai_request' && String(entry.data.content || '').slice(0, 80)}
-                              {entry.kind === 'exercise_shown' && `${entry.data.exerciseType}: ${entry.data.exerciseId}`}
-                              {entry.kind === 'exercise_result' && (entry.data.correct ? 'Correct' : 'Incorrect')}
-                              {entry.kind === 'choice_selected' && `→ ${entry.data.choiceId}`}
-                              {entry.kind === 'user_tap' && String(entry.data.action || '')}
-                              {entry.kind === 'phase_change' && `${entry.data.from} → ${entry.data.to}`}
-                              {entry.kind === 'state_snapshot' && `phase:${entry.data.phase}`}
-                              {entry.kind === 'error' && String(entry.data.message || '')}
-                            </span>
+                          <div key={i} className={`playtest-statelog-row ${isExpanded ? 'playtest-statelog-row-expanded' : ''}`}>
+                            <div
+                              className="playtest-statelog-entry"
+                              onClick={() => {
+                                if (!hasData) return;
+                                setExpandedLogEntries((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(i)) next.delete(i);
+                                  else next.add(i);
+                                  return next;
+                                });
+                              }}
+                              style={hasData ? { cursor: 'pointer' } : undefined}
+                            >
+                              {hasData && (
+                                <span className="playtest-statelog-toggle">{isExpanded ? '\u25BC' : '\u25B6'}</span>
+                              )}
+                              <span className="playtest-statelog-time">{fmt(relTime)}</span>
+                              <span className="playtest-statelog-kind" style={{ color }}>
+                                {LOG_KIND_LABELS[entry.kind] || entry.kind}
+                              </span>
+                              <span className="playtest-statelog-data">
+                                {summaryText}
+                              </span>
+                            </div>
+                            {isExpanded && hasData && (
+                              <pre className="playtest-statelog-json">{JSON.stringify(entry.data, null, 2)}</pre>
+                            )}
                           </div>
                         );
                       })}
