@@ -8879,6 +8879,98 @@ body:has(.playtest-pill-expanded) {
   }
 }
 
+/* ── Playtest Session Cards (div-based, avoids .app-shell button override) ── */
+
+.playtest-filter-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.playtest-filter-select {
+  flex: 1;
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.playtest-filter-sort,
+.app-shell .playtest-filter-sort {
+  font-size: 11px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--muted);
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.playtest-filter-sort:hover,
+.app-shell .playtest-filter-sort:hover {
+  background: #f5f5f5;
+  transform: none;
+}
+
+.playtest-session-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.playtest-session-card {
+  flex: 1;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.playtest-session-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.playtest-session-card-selected {
+  border-color: var(--accent);
+  border-width: 2px;
+  background: #fffaf6;
+}
+
+.playtest-session-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.playtest-session-card-id {
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: monospace;
+  color: var(--ink);
+}
+
+.playtest-session-card-meta {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.playtest-session-card-time {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
 /* ── Playtest Viewer ──────────────────────────────────────────── */
 
 .playtest-viewer {

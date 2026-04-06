@@ -235,6 +235,10 @@ export default function PlaytestViewerPage() {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
 
+  // Filter & sort
+  const [statusFilter, setStatusFilter] = useState<'all' | PlaytestSession['status']>('all');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
   useEffect(() => {
     fetchSessions().then(async (list) => {
       setSessions(list);
@@ -339,8 +343,18 @@ export default function PlaytestViewerPage() {
     setDeleting(false);
   };
 
+  const filteredSessions = sessions
+    .filter((s) => statusFilter === 'all' || s.status === statusFilter)
+    .sort((a, b) => {
+      const ta = new Date(a.createdAt + 'Z').getTime() || 0;
+      const tb = new Date(b.createdAt + 'Z').getTime() || 0;
+      return sortOrder === 'desc' ? tb - ta : ta - tb;
+    });
+
   const selectedSession = sessions.find((s) => s.sessionId === selected);
   const submittedCount = sessions.filter((s) => s.status === 'submitted').length;
+  const pendingCount = sessions.filter((s) => s.status === 'pending').length;
+  const activeCount = sessions.filter((s) => s.status === 'active').length;
 
   return (
     <div>
@@ -348,7 +362,7 @@ export default function PlaytestViewerPage() {
         <h1 className="triage-title">Playtest Viewer</h1>
         <p className="triage-subtitle">
           {sessions.length} session{sessions.length !== 1 ? 's' : ''} ·{' '}
-          {submittedCount} submitted
+          {submittedCount} submitted · {activeCount} active · {pendingCount} pending
         </p>
       </div>
 
@@ -388,14 +402,39 @@ export default function PlaytestViewerPage() {
               )}
             </div>
           </div>
+
+          {/* Filter & sort controls */}
+          <div className="playtest-filter-bar">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+              className="playtest-filter-select"
+            >
+              <option value="all">All ({sessions.length})</option>
+              <option value="submitted">Submitted ({submittedCount})</option>
+              <option value="active">Active ({activeCount})</option>
+              <option value="pending">Pending ({pendingCount})</option>
+            </select>
+            <button
+              onClick={() => setSortOrder((o) => o === 'desc' ? 'asc' : 'desc')}
+              className="playtest-filter-sort"
+              title={sortOrder === 'desc' ? 'Newest first' : 'Oldest first'}
+            >
+              {sortOrder === 'desc' ? '\u2193 Newest' : '\u2191 Oldest'}
+            </button>
+          </div>
+
           {loading && <p className="triage-muted">Loading...</p>}
           {!loading && sessions.length === 0 && (
             <p className="triage-muted">No playtest sessions yet.</p>
           )}
-          {sessions.map((s) => (
+          {!loading && sessions.length > 0 && filteredSessions.length === 0 && (
+            <p className="triage-muted">No {statusFilter} sessions.</p>
+          )}
+          {filteredSessions.map((s) => (
             <div
               key={s.sessionId}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}
+              className="playtest-session-row"
             >
               <input
                 type="checkbox"
@@ -404,29 +443,28 @@ export default function PlaytestViewerPage() {
                 onChange={() => {}}
                 style={{ marginTop: 10, cursor: 'pointer', flexShrink: 0 }}
               />
-              <button
-                className={`triage-session-card ${selected === s.sessionId ? 'triage-session-selected' : ''}`}
+              <div
+                className={`playtest-session-card ${selected === s.sessionId ? 'playtest-session-card-selected' : ''}`}
                 onClick={() => selectSession(s.sessionId)}
-                style={{ flex: 1 }}
               >
-                <div className="triage-session-top">
-                  <span className="triage-session-id">{s.sessionId.slice(0, 8)}</span>
+                <div className="playtest-session-card-top">
+                  <span className="playtest-session-card-id">{s.sessionId.slice(0, 8)}</span>
                   <span className={`triage-status triage-status-${s.status}`}>
                     {s.status}
                   </span>
                 </div>
-                <div className="triage-session-meta">
-                  {s.city} · {s.sceneType} · {s.language}
+                <div className="playtest-session-card-meta">
+                  {s.city || '—'} · {s.sceneType || '—'} · {s.language || '—'}
                 </div>
                 {s.device && (
-                  <div className="triage-session-meta" style={{ fontSize: 10, opacity: 0.6 }}>
+                  <div className="playtest-session-card-meta" style={{ fontSize: 10, opacity: 0.6 }}>
                     {parseDevice(s.device)}
                   </div>
                 )}
-                <div className="triage-session-time">
-                  {new Date(s.createdAt + 'Z').toLocaleString()}
+                <div className="playtest-session-card-time">
+                  {s.createdAt ? new Date(s.createdAt + 'Z').toLocaleString() : '—'}
                 </div>
-              </button>
+              </div>
             </div>
           ))}
         </div>
