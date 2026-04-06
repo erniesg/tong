@@ -19,16 +19,15 @@ interface Point {
 
 // Thicker strokes on mobile for better visibility and precision
 const IS_MOBILE = typeof window !== 'undefined' && window.innerWidth < 600;
-const BRUSH_MIN = IS_MOBILE ? 5 : 2;
-const BRUSH_MAX = IS_MOBILE ? 12 : 5;
+const BRUSH_MIN = IS_MOBILE ? 6 : 3;
+const BRUSH_MAX = IS_MOBILE ? 15 : 6;
 const VELOCITY_CAP = 8;
 const PASS_THRESHOLD = 0.80;
 const ALPHA_THRESHOLD = 30;
 const GOLD_COLOR = '#f0c040';
 const CANVAS_FONT_FAMILY = "'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', sans-serif";
-// Font size = cell width * this value. CJK glyphs occupy ~65% of the em square,
-// so 1.25 * 0.65 ≈ 0.81 → glyph fills ~81% of the cell.
 const FONT_SCALE = 1.25;
+const FONT_WEIGHT = 400; // ~14px strokes, matches BRUSH_MAX 15
 
 /** Map bare jamo to their full Korean names for TTS. */
 const JAMO_TO_SYLLABLE: Record<string, string> = {
@@ -92,16 +91,17 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
   const curBrushRef = useRef(BRUSH_MAX);
   const dprRef = useRef(2);
   const cssSizeRef = useRef({ w: 0, h: 0 });
+  const yOffsetRef = useRef(0); // pixel-scan correction
 
   const guideColor = `rgba(100, 120, 150, ${ghostOpacity})`;
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
     ctx.save();
-    ctx.font = `900 ${cssW * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
+    ctx.font = `${FONT_WEIGHT} ${cssW * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
-    ctx.fillText(targetChar, cssW / 2, cssW / 2);
+    ctx.fillText(targetChar, cssW / 2, cssW / 2 + yOffsetRef.current);
     ctx.restore();
   }, [targetChar]);
 
@@ -150,47 +150,85 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    let cancelled = false;
 
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 2;
-    dprRef.current = dpr;
-    const size = rect.width;
-    cssSizeRef.current = { w: size, h: size };
+    const init = () => {
+      if (cancelled) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 2;
+      dprRef.current = dpr;
+      const size = rect.width;
+      cssSizeRef.current = { w: size, h: size };
 
-    const px = size * dpr;
+      const px = size * dpr;
 
-    canvas.width = px;
-    canvas.height = px;
-    const ctx = canvas.getContext('2d');
-    if (ctx) ctx.scale(dpr, dpr);
+      canvas.width = px;
+      canvas.height = px;
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.scale(dpr, dpr);
 
-    const refCanvas = document.createElement('canvas');
-    refCanvas.width = px;
-    refCanvas.height = px;
-    const refCtx = refCanvas.getContext('2d');
-    if (refCtx) {
-      refCtx.scale(dpr, dpr);
-      refCtx.font = `900 ${size * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
-      refCtx.textAlign = 'center';
-      refCtx.textBaseline = 'middle';
-      refCtx.fillStyle = 'white';
-      refCtx.fillText(targetChar, size / 2, size / 2);
-    }
-    refCanvasRef.current = refCanvas;
+      // Pixel-scan: render to a temp canvas to find true glyph bounds
+      const scanCanvas = document.createElement('canvas');
+      const scanPx = 200;
+      scanCanvas.width = scanPx; scanCanvas.height = scanPx;
+      const scanCtx = scanCanvas.getContext('2d');
+      if (scanCtx) {
+        const scanFont = scanPx * 0.7;
+        scanCtx.font = `${FONT_WEIGHT} ${scanFont}px ${CANVAS_FONT_FAMILY}`;
+        scanCtx.textAlign = 'center';
+        scanCtx.textBaseline = 'middle';
+        scanCtx.fillStyle = 'white';
+        scanCtx.fillText(targetChar, scanPx / 2, scanPx / 2);
 
-    const revealCanvas = document.createElement('canvas');
-    revealCanvas.width = px;
-    revealCanvas.height = px;
-    revealCanvasRef.current = revealCanvas;
+        const img = scanCtx.getImageData(0, 0, scanPx, scanPx).data;
+        let top = scanPx, bottom = 0;
+        for (let row = 0; row < scanPx; row++) {
+          for (let col = 0; col < scanPx; col++) {
+            if (img[(row * scanPx + col) * 4 + 3] > 10) {
+              if (row < top) top = row;
+              if (row > bottom) bottom = row;
+            }
+          }
+        }
+        if (bottom > top) {
+          const visualCenter = (top + bottom) / 2;
+          const drift = (visualCenter - scanPx / 2) / scanFont;
+          yOffsetRef.current = -drift * size * FONT_SCALE;
+        }
+      }
 
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = px;
-    tempCanvas.height = px;
-    const tempCtx = tempCanvas.getContext('2d');
-    if (tempCtx) tempCtx.scale(dpr, dpr);
-    tempCanvasRef.current = tempCanvas;
+      const refCanvas = document.createElement('canvas');
+      refCanvas.width = px;
+      refCanvas.height = px;
+      const refCtx = refCanvas.getContext('2d');
+      if (refCtx) {
+        refCtx.scale(dpr, dpr);
+        refCtx.font = `${FONT_WEIGHT} ${size * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
+        refCtx.textAlign = 'center';
+        refCtx.textBaseline = 'middle';
+        refCtx.fillStyle = 'white';
+        refCtx.fillText(targetChar, size / 2, size / 2 + yOffsetRef.current);
+      }
+      refCanvasRef.current = refCanvas;
 
-    drawScene();
+      const revealCanvas = document.createElement('canvas');
+      revealCanvas.width = px;
+      revealCanvas.height = px;
+      revealCanvasRef.current = revealCanvas;
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = px;
+      tempCanvas.height = px;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (tempCtx) tempCtx.scale(dpr, dpr);
+      tempCanvasRef.current = tempCanvas;
+
+      drawScene();
+    };
+
+    // Wait for web font, then init so pixel-scan uses the real font
+    document.fonts.ready.then(init);
+    return () => { cancelled = true; };
   }, [targetChar, drawScene]);
 
   const getPoint = useCallback((e: React.TouchEvent | React.MouseEvent): { pt: Point; pressure: number } | null => {
@@ -411,6 +449,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   const curBrushRef = useRef(BRUSH_MAX);
   const dprRef = useRef(2);
   const cssSizeRef = useRef({ w: 0, h: 0 });
+  const yOffsetRef = useRef(0);
 
   const [drawing, setDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
@@ -466,11 +505,11 @@ export function StrokeTracing({ exercise, onResult }: Props) {
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
     ctx.save();
-    ctx.font = `900 ${cssW * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
+    ctx.font = `${FONT_WEIGHT} ${cssW * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
-    ctx.fillText(exercise.targetChar, cssW / 2, cssW / 2);
+    ctx.fillText(exercise.targetChar, cssW / 2, cssW / 2 + yOffsetRef.current);
     ctx.restore();
   }, [exercise.targetChar]);
 
@@ -500,43 +539,79 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   }, [drawChar]);
 
   useEffect(() => {
-    if (isDrill) return; // Skip for drill mode
+    if (isDrill) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 2;
-    dprRef.current = dpr;
-    cssSizeRef.current = { w: rect.width, h: rect.height };
-    const pxW = rect.width * dpr;
-    const pxH = rect.height * dpr;
+    let cancelled = false;
 
-    canvas.width = pxW; canvas.height = pxH;
-    const ctx = canvas.getContext('2d');
-    if (ctx) ctx.scale(dpr, dpr);
+    const init = () => {
+      if (cancelled) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 2;
+      dprRef.current = dpr;
+      cssSizeRef.current = { w: rect.width, h: rect.height };
+      const pxW = rect.width * dpr;
+      const pxH = rect.height * dpr;
 
-    const refCanvas = document.createElement('canvas');
-    refCanvas.width = pxW; refCanvas.height = pxH;
-    const refCtx = refCanvas.getContext('2d');
-    if (refCtx) {
-      refCtx.scale(dpr, dpr);
-      refCtx.font = `900 ${rect.width * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
-      refCtx.textAlign = 'center'; refCtx.textBaseline = 'middle';
-      refCtx.fillStyle = 'white';
-      refCtx.fillText(exercise.targetChar, rect.width / 2, rect.height / 2);
-    }
-    refCanvasRef.current = refCanvas;
+      canvas.width = pxW; canvas.height = pxH;
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.scale(dpr, dpr);
 
-    const revealCanvas = document.createElement('canvas');
-    revealCanvas.width = pxW; revealCanvas.height = pxH;
-    revealCanvasRef.current = revealCanvas;
+      // Pixel-scan for y-offset
+      const scanCanvas = document.createElement('canvas');
+      const scanPx = 200;
+      scanCanvas.width = scanPx; scanCanvas.height = scanPx;
+      const scanCtx = scanCanvas.getContext('2d');
+      if (scanCtx) {
+        const scanFont = scanPx * 0.7;
+        scanCtx.font = `${FONT_WEIGHT} ${scanFont}px ${CANVAS_FONT_FAMILY}`;
+        scanCtx.textAlign = 'center';
+        scanCtx.textBaseline = 'middle';
+        scanCtx.fillStyle = 'white';
+        scanCtx.fillText(exercise.targetChar, scanPx / 2, scanPx / 2);
+        const img = scanCtx.getImageData(0, 0, scanPx, scanPx).data;
+        let top = scanPx, bottom = 0;
+        for (let row = 0; row < scanPx; row++) {
+          for (let col = 0; col < scanPx; col++) {
+            if (img[(row * scanPx + col) * 4 + 3] > 10) {
+              if (row < top) top = row;
+              if (row > bottom) bottom = row;
+            }
+          }
+        }
+        if (bottom > top) {
+          const drift = ((top + bottom) / 2 - scanPx / 2) / scanFont;
+          yOffsetRef.current = -drift * rect.width * FONT_SCALE;
+        }
+      }
 
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = pxW; tempCanvas.height = pxH;
-    const tempCtx = tempCanvas.getContext('2d');
-    if (tempCtx) tempCtx.scale(dpr, dpr);
-    tempCanvasRef.current = tempCanvas;
+      const refCanvas = document.createElement('canvas');
+      refCanvas.width = pxW; refCanvas.height = pxH;
+      const refCtx = refCanvas.getContext('2d');
+      if (refCtx) {
+        refCtx.scale(dpr, dpr);
+        refCtx.font = `${FONT_WEIGHT} ${rect.width * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
+        refCtx.textAlign = 'center'; refCtx.textBaseline = 'middle';
+        refCtx.fillStyle = 'white';
+        refCtx.fillText(exercise.targetChar, rect.width / 2, rect.height / 2 + yOffsetRef.current);
+      }
+      refCanvasRef.current = refCanvas;
 
-    drawScene();
+      const revealCanvas = document.createElement('canvas');
+      revealCanvas.width = pxW; revealCanvas.height = pxH;
+      revealCanvasRef.current = revealCanvas;
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = pxW; tempCanvas.height = pxH;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (tempCtx) tempCtx.scale(dpr, dpr);
+      tempCanvasRef.current = tempCanvas;
+
+      drawScene();
+    };
+
+    document.fonts.ready.then(init);
+    return () => { cancelled = true; };
   }, [exercise.targetChar, drawScene, isDrill]);
 
   const getPoint = useCallback((e: React.TouchEvent | React.MouseEvent): { pt: Point; pressure: number } | null => {
