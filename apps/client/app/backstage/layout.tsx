@@ -10,7 +10,6 @@ const TABS = [
   { href: '/backstage/campaigns', label: 'Campaigns' },
   { href: '/backstage/playtest', label: 'Playtest' },
   { href: '/backstage/triage', label: 'Triage' },
-  { href: '/backstage/replay', label: 'Replay' },
 ];
 
 export default function BackstageLayout({ children }: { children: React.ReactNode }) {
