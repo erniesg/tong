@@ -6,7 +6,9 @@ tong.zip
 
 .worktrees/
 .wrangler/
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/settings.json
 node_modules/
 .next/
 .open-next/
