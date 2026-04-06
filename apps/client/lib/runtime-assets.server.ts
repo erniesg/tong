@@ -23,7 +23,7 @@ export async function loadHydratedRuntimeAssetManifest(): Promise<RuntimeAssetMa
 
   try {
     const response = await fetch(manifestUrl, {
-      cache: 'no-store',
+      next: { revalidate: 300 },
       headers: {
         Accept: 'application/json',
         'User-Agent': 'tong-client-runtime-assets/1.0',
