@@ -772,6 +772,38 @@
       "source": "repo",
       "status": "planned",
       "uri": "assets/rewards/shanghai-reward-bundle.placeholder.json"
+    },
+    {
+      "key": "city.seoul.learn.messaging-promo.pack.v1",
+      "type": "content-pack",
+      "usage": "scripted-messaging-promo",
+      "source": "repo",
+      "status": "ready",
+      "uri": "assets/content-packs/seoul-messaging-promo.scene-pack.v1.json"
+    },
+    {
+      "key": "city.tokyo.learn.messaging-promo.pack.v1",
+      "type": "content-pack",
+      "usage": "scripted-messaging-promo",
+      "source": "repo",
+      "status": "ready",
+      "uri": "assets/content-packs/tokyo-messaging-promo.scene-pack.v1.json"
+    },
+    {
+      "key": "city.shanghai.learn.messaging-promo.pack.v1",
+      "type": "content-pack",
+      "usage": "scripted-messaging-promo",
+      "source": "repo",
+      "status": "ready",
+      "uri": "assets/content-packs/shanghai-messaging-promo.scene-pack.v1.json"
+    },
+    {
+      "key": "preset.messaging-promo.scenes.v1",
+      "type": "preset",
+      "usage": "scripted-messaging-capture-sequence",
+      "source": "repo",
+      "status": "ready",
+      "uri": "assets/presets/messaging-promo-scene-pack.v1.json"
     }
   ]
 }
