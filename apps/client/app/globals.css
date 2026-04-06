@@ -9204,17 +9204,32 @@ body:has(.playtest-pill-expanded) {
   border-top: 1px solid var(--line);
 }
 
+.playtest-statelog-row {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.playtest-statelog-row-expanded {
+  background: rgba(0, 0, 0, 0.02);
+}
+
 .playtest-statelog-entry {
   display: flex;
   align-items: baseline;
   gap: 8px;
   padding: 3px 14px;
   font-size: 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .playtest-statelog-entry:hover {
   background: rgba(0, 0, 0, 0.02);
+}
+
+.playtest-statelog-toggle {
+  font-size: 9px;
+  color: var(--muted);
+  flex-shrink: 0;
+  width: 10px;
+  user-select: none;
 }
 
 .playtest-statelog-time {
@@ -9238,6 +9253,22 @@ body:has(.playtest-pill-expanded) {
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+}
+
+.playtest-statelog-json {
+  margin: 0;
+  padding: 8px 14px 8px 46px;
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #374151;
+  background: rgba(0, 0, 0, 0.03);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .playtest-viewer-actions {
