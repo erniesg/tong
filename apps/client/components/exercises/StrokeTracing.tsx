@@ -33,6 +33,13 @@ interface TTSOptions {
   includeText?: boolean;
 }
 
+interface CoverageMetrics {
+  score: number;
+  overallCoverage: number;
+  averageCoreCoverage: number;
+  minCoreCoverage: number;
+}
+
 const VELOCITY_CAP = 8;
 const PASS_THRESHOLD = 0.80;
 const ALPHA_THRESHOLD = 30;
@@ -46,6 +53,12 @@ const GUIDE_PADDING_RATIO = 0.03;
 const GUIDE_BRUSH_PADDING_MULTIPLIER = 0.55;
 const GUIDE_MIN_CONTENT_RATIO = 0.78;
 const MOBILE_BREAKPOINT = 600;
+const SCORE_GRID_MIN = 6;
+const SCORE_GRID_MAX = 8;
+const SCORE_OCCUPIED_TILE_RATIO = 0.015;
+const SCORE_CORE_TILE_RATIO = 0.18;
+const MIN_OVERALL_COVERAGE = 0.72;
+const MIN_CORE_TILE_COVERAGE = 0.28;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -117,6 +130,85 @@ function measureGlyphLayout(targetChar: string, boxW: number, boxH: number, brus
   const yOffset = -((centerY - GUIDE_SCAN_PX / 2) / baseFontSize) * finalFontSize;
 
   return { fontSize: finalFontSize, xOffset, yOffset };
+}
+
+function getCoverageGridSize(width: number, height: number) {
+  return clamp(Math.round(Math.min(width, height) / 56), SCORE_GRID_MIN, SCORE_GRID_MAX);
+}
+
+function computeCoverageMetrics(refData: Uint8ClampedArray, revealData: Uint8ClampedArray, width: number, height: number): CoverageMetrics {
+  const cols = getCoverageGridSize(width, height);
+  const rows = cols;
+  const tileTarget = new Uint32Array(cols * rows);
+  const tileCovered = new Uint32Array(cols * rows);
+  let refPixels = 0;
+  let revealedPixels = 0;
+
+  for (let y = 0; y < height; y++) {
+    const tileY = Math.min(Math.floor((y * rows) / height), rows - 1);
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      if (refData[idx + 3] <= ALPHA_THRESHOLD) continue;
+
+      const tileX = Math.min(Math.floor((x * cols) / width), cols - 1);
+      const tileIdx = tileY * cols + tileX;
+      refPixels++;
+      tileTarget[tileIdx]++;
+
+      if (revealData[idx + 3] > ALPHA_THRESHOLD) {
+        revealedPixels++;
+        tileCovered[tileIdx]++;
+      }
+    }
+  }
+
+  const overallCoverage = refPixels === 0 ? 0 : revealedPixels / refPixels;
+  const tileArea = (width / cols) * (height / rows);
+  const maxTileTarget = tileTarget.reduce((max, value) => Math.max(max, value), 0);
+  const occupiedThreshold = Math.max(12, tileArea * SCORE_OCCUPIED_TILE_RATIO);
+  const coreThreshold = Math.max(occupiedThreshold * 2, maxTileTarget * SCORE_CORE_TILE_RATIO);
+  let occupiedCoverageSum = 0;
+  let occupiedCount = 0;
+  let coreCoverageSum = 0;
+  let coreCount = 0;
+  let minCoreCoverage = 1;
+
+  for (let i = 0; i < tileTarget.length; i++) {
+    const targetPixels = tileTarget[i];
+    if (targetPixels < occupiedThreshold) continue;
+
+    const coverage = tileCovered[i] / targetPixels;
+    occupiedCoverageSum += coverage;
+    occupiedCount++;
+
+    if (targetPixels >= coreThreshold) {
+      coreCoverageSum += coverage;
+      coreCount++;
+      minCoreCoverage = Math.min(minCoreCoverage, coverage);
+    }
+  }
+
+  const averageOccupiedCoverage = occupiedCount > 0 ? occupiedCoverageSum / occupiedCount : overallCoverage;
+  const averageCoreCoverage = coreCount > 0 ? coreCoverageSum / coreCount : averageOccupiedCoverage;
+  if (coreCount === 0) {
+    minCoreCoverage = averageCoreCoverage;
+  }
+
+  const score = (
+    overallCoverage * 0.55 +
+    averageCoreCoverage * 0.25 +
+    minCoreCoverage * 0.2
+  );
+
+  return { score, overallCoverage, averageCoreCoverage, minCoreCoverage };
+}
+
+function isPassingCoverage(metrics: CoverageMetrics) {
+  return (
+    metrics.score >= PASS_THRESHOLD &&
+    metrics.overallCoverage >= MIN_OVERALL_COVERAGE &&
+    metrics.minCoreCoverage >= MIN_CORE_TILE_COVERAGE
+  );
 }
 
 /** Map bare jamo to their full Korean names for TTS. */
@@ -389,31 +481,24 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
     drawScene();
   }, [drawScene, stampCircle]);
 
-  const computeScore = useCallback((): number => {
+  const computeScore = useCallback((): CoverageMetrics => {
     const refCanvas = refCanvasRef.current;
     const revealCanvas = revealCanvasRef.current;
-    if (!refCanvas || !revealCanvas) return 0;
+    if (!refCanvas || !revealCanvas) {
+      return { score: 0, overallCoverage: 0, averageCoreCoverage: 0, minCoreCoverage: 0 };
+    }
 
     const w = refCanvas.width;
     const h = refCanvas.height;
     const refCtx = refCanvas.getContext('2d');
     const revealCtx = revealCanvas.getContext('2d');
-    if (!refCtx || !revealCtx) return 0;
+    if (!refCtx || !revealCtx) {
+      return { score: 0, overallCoverage: 0, averageCoreCoverage: 0, minCoreCoverage: 0 };
+    }
 
     const refData = refCtx.getImageData(0, 0, w, h).data;
     const revealData = revealCtx.getImageData(0, 0, w, h).data;
-
-    let refPixels = 0;
-    let revealedPixels = 0;
-
-    for (let i = 0; i < refData.length; i += 4) {
-      if (refData[i + 3] > ALPHA_THRESHOLD) {
-        refPixels++;
-        if (revealData[i + 3] > ALPHA_THRESHOLD) revealedPixels++;
-      }
-    }
-
-    return refPixels === 0 ? 0 : revealedPixels / refPixels;
+    return computeCoverageMetrics(refData, revealData, w, h);
   }, []);
 
   const startDraw = useCallback((e: React.TouchEvent | React.MouseEvent) => {
@@ -451,10 +536,10 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
 
     // Auto-submit on pen-up if user has drawn
     if (hasDrawn && active && !cellState.done) {
-      const score = computeScore();
-      if (score >= PASS_THRESHOLD) {
-        onPass(score);
-      } else if (score > 0.15) {
+      const metrics = computeScore();
+      if (isPassingCoverage(metrics)) {
+        onPass(metrics.score);
+      } else if (metrics.overallCoverage > 0.15) {
         // Some effort but not enough — let them keep going
       } else {
         // Barely drew anything — ignore
@@ -780,31 +865,28 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     setDrawing(false); prevPointRef.current = null;
   }, []);
 
-  const computeScore_single = useCallback((): number => {
+  const computeScore_single = useCallback((): CoverageMetrics => {
     const refCanvas = refCanvasRef.current;
     const revealCanvas = revealCanvasRef.current;
-    if (!refCanvas || !revealCanvas) return 0;
+    if (!refCanvas || !revealCanvas) {
+      return { score: 0, overallCoverage: 0, averageCoreCoverage: 0, minCoreCoverage: 0 };
+    }
     const w = refCanvas.width; const h = refCanvas.height;
     const refCtx = refCanvas.getContext('2d');
     const revealCtx = revealCanvas.getContext('2d');
-    if (!refCtx || !revealCtx) return 0;
+    if (!refCtx || !revealCtx) {
+      return { score: 0, overallCoverage: 0, averageCoreCoverage: 0, minCoreCoverage: 0 };
+    }
     const refData = refCtx.getImageData(0, 0, w, h).data;
     const revealData = revealCtx.getImageData(0, 0, w, h).data;
-    let refPixels = 0; let revealedPixels = 0;
-    for (let i = 0; i < refData.length; i += 4) {
-      if (refData[i + 3] > ALPHA_THRESHOLD) {
-        refPixels++;
-        if (revealData[i + 3] > ALPHA_THRESHOLD) revealedPixels++;
-      }
-    }
-    return refPixels === 0 ? 0 : revealedPixels / refPixels;
+    return computeCoverageMetrics(refData, revealData, w, h);
   }, []);
 
   const handleSubmit_single = useCallback(() => {
     if (!hasDrawn || submitted) return;
     setSubmitted(true);
-    const score = computeScore_single();
-    const correct = score >= PASS_THRESHOLD;
+    const metrics = computeScore_single();
+    const correct = isPassingCoverage(metrics);
     const ttsChar = JAMO_TO_SYLLABLE[exercise.targetChar] ? exercise.targetChar : (exercise.sound ?? exercise.targetChar);
     if (correct && exercise.meaning) {
       const localMeaning = getMeaning(exercise.meaning, lang, exercise.targetChar);
@@ -812,8 +894,8 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     } else if (correct) {
       playTTS(ttsChar, ttsLang);
     }
-    setResult({ correct, score });
-    onResult(correct, `${Math.round(score * 100)}% coverage`);
+    setResult({ correct, score: metrics.score });
+    onResult(correct, `${Math.round(metrics.score * 100)}% score`);
   }, [hasDrawn, submitted, computeScore_single, onResult, exercise, ttsLang, lang]);
 
   const handleClear_single = useCallback(() => {
