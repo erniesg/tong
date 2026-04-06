@@ -17,17 +17,107 @@ interface Point {
   y: number;
 }
 
-// Thicker strokes on mobile for better visibility and precision
-const IS_MOBILE = typeof window !== 'undefined' && window.innerWidth < 600;
-const BRUSH_MIN = IS_MOBILE ? 6 : 3;
-const BRUSH_MAX = IS_MOBILE ? 15 : 6;
+interface BrushRange {
+  min: number;
+  max: number;
+}
+
+interface GlyphLayout {
+  fontSize: number;
+  xOffset: number;
+  yOffset: number;
+}
+
+interface TTSOptions {
+  interrupt?: boolean;
+  includeText?: boolean;
+}
+
 const VELOCITY_CAP = 8;
 const PASS_THRESHOLD = 0.80;
 const ALPHA_THRESHOLD = 30;
 const GOLD_COLOR = '#f0c040';
 const CANVAS_FONT_FAMILY = "'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', sans-serif";
-const FONT_SCALE = 1.25;
-const FONT_WEIGHT = 400; // ~14px strokes, matches BRUSH_MAX 15
+const FONT_WEIGHT = 460; // ~15% heavier guide so the target reads stronger on mobile
+const GUIDE_SCAN_PX = 256;
+const GUIDE_BASE_FONT_SCALE = 1.05;
+const GUIDE_MAX_FONT_SCALE = 1.7;
+const GUIDE_PADDING_RATIO = 0.03;
+const GUIDE_BRUSH_PADDING_MULTIPLIER = 0.55;
+const GUIDE_MIN_CONTENT_RATIO = 0.78;
+const MOBILE_BREAKPOINT = 600;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getBrushRange(canvasSize: number): BrushRange {
+  const isCompactViewport = typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT;
+  const max = isCompactViewport
+    ? clamp(canvasSize * 0.094, 11.5, 17)
+    : clamp(canvasSize * 0.0575, 4.6, 8);
+  const min = Math.max(isCompactViewport ? 5.75 : 2.9, max * 0.44);
+  return { min, max };
+}
+
+function measureGlyphLayout(targetChar: string, boxW: number, boxH: number, brushMax: number): GlyphLayout {
+  const scanCanvas = document.createElement('canvas');
+  scanCanvas.width = GUIDE_SCAN_PX;
+  scanCanvas.height = GUIDE_SCAN_PX;
+  const scanCtx = scanCanvas.getContext('2d');
+  const fallbackSize = Math.min(boxW, boxH) * GUIDE_BASE_FONT_SCALE;
+
+  if (!scanCtx) {
+    return { fontSize: fallbackSize, xOffset: 0, yOffset: 0 };
+  }
+
+  const baseFontSize = GUIDE_SCAN_PX * GUIDE_BASE_FONT_SCALE;
+  scanCtx.font = `${FONT_WEIGHT} ${baseFontSize}px ${CANVAS_FONT_FAMILY}`;
+  scanCtx.textAlign = 'center';
+  scanCtx.textBaseline = 'middle';
+  scanCtx.fillStyle = 'white';
+  scanCtx.fillText(targetChar, GUIDE_SCAN_PX / 2, GUIDE_SCAN_PX / 2);
+
+  const img = scanCtx.getImageData(0, 0, GUIDE_SCAN_PX, GUIDE_SCAN_PX).data;
+  let left = GUIDE_SCAN_PX;
+  let right = -1;
+  let top = GUIDE_SCAN_PX;
+  let bottom = -1;
+
+  for (let row = 0; row < GUIDE_SCAN_PX; row++) {
+    for (let col = 0; col < GUIDE_SCAN_PX; col++) {
+      if (img[(row * GUIDE_SCAN_PX + col) * 4 + 3] > 10) {
+        if (col < left) left = col;
+        if (col > right) right = col;
+        if (row < top) top = row;
+        if (row > bottom) bottom = row;
+      }
+    }
+  }
+
+  if (right < left || bottom < top) {
+    return { fontSize: fallbackSize, xOffset: 0, yOffset: 0 };
+  }
+
+  const glyphW = right - left + 1;
+  const glyphH = bottom - top + 1;
+  const minDim = Math.min(boxW, boxH);
+  const inset = Math.max(brushMax * GUIDE_BRUSH_PADDING_MULTIPLIER, minDim * GUIDE_PADDING_RATIO);
+  const targetW = Math.max(minDim * GUIDE_MIN_CONTENT_RATIO, boxW - inset * 2);
+  const targetH = Math.max(minDim * GUIDE_MIN_CONTENT_RATIO, boxH - inset * 2);
+  const fittedFontSize = baseFontSize * Math.min(targetW / glyphW, targetH / glyphH);
+  const finalFontSize = clamp(
+    fittedFontSize,
+    minDim * GUIDE_BASE_FONT_SCALE,
+    minDim * GUIDE_MAX_FONT_SCALE,
+  );
+  const centerX = (left + right) / 2;
+  const centerY = (top + bottom) / 2;
+  const xOffset = -((centerX - GUIDE_SCAN_PX / 2) / baseFontSize) * finalFontSize;
+  const yOffset = -((centerY - GUIDE_SCAN_PX / 2) / baseFontSize) * finalFontSize;
+
+  return { fontSize: finalFontSize, xOffset, yOffset };
+}
 
 /** Map bare jamo to their full Korean names for TTS. */
 const JAMO_TO_SYLLABLE: Record<string, string> = {
@@ -42,24 +132,46 @@ const LANG_TO_BCP47: Record<string, string> = {
   ko: 'ko-KR', ja: 'ja-JP', zh: 'zh-CN',
 };
 
-function playTTS(text: string, language?: string, thenMeaning?: string, meaningLang?: string) {
+function playTTS(
+  text: string,
+  language?: string,
+  thenMeaning?: string,
+  meaningLang?: string,
+  options?: TTSOptions,
+) {
   const ttsText = JAMO_TO_SYLLABLE[text] ?? text;
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  const synth = window.speechSynthesis;
+  const interrupt = options?.interrupt ?? false;
+  const includeText = options?.includeText ?? true;
+  const speakMeaning = () => {
+    if (!thenMeaning || !meaningLang) return;
+    const meaningUtter = new SpeechSynthesisUtterance(thenMeaning);
+    meaningUtter.lang = LANG_TO_BCP47[meaningLang] ?? 'en-US';
+    meaningUtter.rate = 0.85;
+    synth.speak(meaningUtter);
+  };
+
+  if (interrupt) {
+    synth.cancel();
+  }
+
+  if (!includeText) {
+    speakMeaning();
+    return;
+  }
+
   const utter = new SpeechSynthesisUtterance(ttsText);
   utter.lang = LANG_TO_BCP47[language ?? 'ko'] ?? 'ko-KR';
   utter.rate = 0.8;
-  window.speechSynthesis.cancel();
   if (thenMeaning && meaningLang) {
     utter.onend = () => {
       setTimeout(() => {
-        const meaningUtter = new SpeechSynthesisUtterance(thenMeaning);
-        meaningUtter.lang = LANG_TO_BCP47[meaningLang] ?? 'en-US';
-        meaningUtter.rate = 0.85;
-        window.speechSynthesis.speak(meaningUtter);
-      }, 500);
+        speakMeaning();
+      }, 300);
     };
   }
-  window.speechSynthesis.speak(utter);
+  synth.speak(utter);
 }
 
 /* ── Single cell canvas logic ─────────────────────────────── */
@@ -88,20 +200,22 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
   const [hasDrawn, setHasDrawn] = useState(false);
   const prevPointRef = useRef<Point | null>(null);
   const prevTimeRef = useRef(0);
-  const curBrushRef = useRef(BRUSH_MAX);
+  const curBrushRef = useRef(12);
   const dprRef = useRef(2);
   const cssSizeRef = useRef({ w: 0, h: 0 });
-  const yOffsetRef = useRef(0); // pixel-scan correction
+  const glyphLayoutRef = useRef<GlyphLayout>({ fontSize: 0, xOffset: 0, yOffset: 0 });
+  const brushRangeRef = useRef<BrushRange>({ min: 4.5, max: 12 });
 
   const guideColor = `rgba(100, 120, 150, ${ghostOpacity})`;
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
+    const { fontSize, xOffset, yOffset } = glyphLayoutRef.current;
     ctx.save();
-    ctx.font = `${FONT_WEIGHT} ${cssW * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
+    ctx.font = `${FONT_WEIGHT} ${fontSize || cssW * GUIDE_BASE_FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
-    ctx.fillText(targetChar, cssW / 2, cssW / 2 + yOffsetRef.current);
+    ctx.fillText(targetChar, cssW / 2 + xOffset, cssW / 2 + yOffset);
     ctx.restore();
   }, [targetChar]);
 
@@ -159,6 +273,7 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
       dprRef.current = dpr;
       const size = rect.width;
       cssSizeRef.current = { w: size, h: size };
+      brushRangeRef.current = getBrushRange(size);
 
       const px = size * dpr;
 
@@ -167,35 +282,7 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
       const ctx = canvas.getContext('2d');
       if (ctx) ctx.scale(dpr, dpr);
 
-      // Pixel-scan: render to a temp canvas to find true glyph bounds
-      const scanCanvas = document.createElement('canvas');
-      const scanPx = 200;
-      scanCanvas.width = scanPx; scanCanvas.height = scanPx;
-      const scanCtx = scanCanvas.getContext('2d');
-      if (scanCtx) {
-        const scanFont = scanPx * 0.7;
-        scanCtx.font = `${FONT_WEIGHT} ${scanFont}px ${CANVAS_FONT_FAMILY}`;
-        scanCtx.textAlign = 'center';
-        scanCtx.textBaseline = 'middle';
-        scanCtx.fillStyle = 'white';
-        scanCtx.fillText(targetChar, scanPx / 2, scanPx / 2);
-
-        const img = scanCtx.getImageData(0, 0, scanPx, scanPx).data;
-        let top = scanPx, bottom = 0;
-        for (let row = 0; row < scanPx; row++) {
-          for (let col = 0; col < scanPx; col++) {
-            if (img[(row * scanPx + col) * 4 + 3] > 10) {
-              if (row < top) top = row;
-              if (row > bottom) bottom = row;
-            }
-          }
-        }
-        if (bottom > top) {
-          const visualCenter = (top + bottom) / 2;
-          const drift = (visualCenter - scanPx / 2) / scanFont;
-          yOffsetRef.current = -drift * size * FONT_SCALE;
-        }
-      }
+      glyphLayoutRef.current = measureGlyphLayout(targetChar, size, size, brushRangeRef.current.max);
 
       const refCanvas = document.createElement('canvas');
       refCanvas.width = px;
@@ -203,11 +290,15 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
       const refCtx = refCanvas.getContext('2d');
       if (refCtx) {
         refCtx.scale(dpr, dpr);
-        refCtx.font = `${FONT_WEIGHT} ${size * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
+        refCtx.font = `${FONT_WEIGHT} ${glyphLayoutRef.current.fontSize}px ${CANVAS_FONT_FAMILY}`;
         refCtx.textAlign = 'center';
         refCtx.textBaseline = 'middle';
         refCtx.fillStyle = 'white';
-        refCtx.fillText(targetChar, size / 2, size / 2 + yOffsetRef.current);
+        refCtx.fillText(
+          targetChar,
+          size / 2 + glyphLayoutRef.current.xOffset,
+          size / 2 + glyphLayoutRef.current.yOffset,
+        );
       }
       refCanvasRef.current = refCanvas;
 
@@ -227,7 +318,7 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
     };
 
     // Wait for web font, then init so pixel-scan uses the real font
-    document.fonts.ready.then(init);
+    (document.fonts?.ready ?? Promise.resolve()).then(init);
     return () => { cancelled = true; };
   }, [targetChar, drawScene]);
 
@@ -259,7 +350,8 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
     const revealCtx = revealCanvas.getContext('2d');
     if (!revealCtx) return;
 
-    let radius = BRUSH_MAX;
+    const brushRange = brushRangeRef.current;
+    let radius = brushRange.max;
     if (from) {
       const dx = to.x - from.x;
       const dy = to.y - from.y;
@@ -267,7 +359,7 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
       const dt = Math.max(now - prevTimeRef.current, 1);
       const velocity = dist / dt;
       const f = Math.min(velocity / VELOCITY_CAP, 1);
-      const target = BRUSH_MAX - f * (BRUSH_MAX - BRUSH_MIN);
+      const target = brushRange.max - f * (brushRange.max - brushRange.min);
       radius = curBrushRef.current + (target - curBrushRef.current) * 0.4;
     }
     if (pressure != null && pressure > 0) {
@@ -335,7 +427,7 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, on
       const now = performance.now();
       prevPointRef.current = result.pt;
       prevTimeRef.current = now;
-      curBrushRef.current = BRUSH_MAX;
+      curBrushRef.current = brushRangeRef.current.max;
       revealStroke(null, result.pt, now, result.pressure);
     }
   }, [active, cellState.done, getPoint, revealStroke]);
@@ -446,10 +538,11 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   const tempCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const prevPointRef = useRef<Point | null>(null);
   const prevTimeRef = useRef(0);
-  const curBrushRef = useRef(BRUSH_MAX);
+  const curBrushRef = useRef(12);
   const dprRef = useRef(2);
   const cssSizeRef = useRef({ w: 0, h: 0 });
-  const yOffsetRef = useRef(0);
+  const glyphLayoutRef = useRef<GlyphLayout>({ fontSize: 0, xOffset: 0, yOffset: 0 });
+  const brushRangeRef = useRef<BrushRange>({ min: 4.5, max: 12 });
 
   const [drawing, setDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
@@ -463,12 +556,13 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   const [activeCell, setActiveCell] = useState(0);
   const allDone = isDrill && cellStates.every((c) => c.done);
   const drillCompletedRef = useRef(false);
+  const hasExampleWords = (exercise.exampleWords?.length ?? 0) > 0;
 
   /** Ghost opacity per cell in drill mode — always keeps a faint guide visible. */
   const cellGhostOpacity = useCallback((idx: number) => {
-    if (totalReps <= 1) return 0.35;
+    if (totalReps <= 1) return 0.4;
     const progress = idx / (totalReps - 1);
-    return Math.max(0.10, 0.35 * (1 - progress));
+    return Math.max(0.12, 0.4 * (1 - progress));
   }, [totalReps]);
 
   const handleCellPass = useCallback((cellIdx: number, score: number) => {
@@ -491,12 +585,9 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     if (drillCompletedRef.current) return;
     if (isDrill && cellStates.every((c) => c.done)) {
       drillCompletedRef.current = true;
-      const ttsChar = JAMO_TO_SYLLABLE[exercise.targetChar] ? exercise.targetChar : (exercise.sound ?? exercise.targetChar);
       if (exercise.meaning) {
         const localMeaning = getMeaning(exercise.meaning, lang, exercise.targetChar);
-        playTTS(ttsChar, ttsLang, localMeaning, lang);
-      } else {
-        playTTS(ttsChar, ttsLang);
+        playTTS(exercise.targetChar, ttsLang, localMeaning, lang, { includeText: false });
       }
     }
   }, [cellStates, isDrill, exercise, ttsLang, lang]);
@@ -504,12 +595,13 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   /* ── Single-trace mode (original) ─────────────────────────── */
 
   const drawChar = useCallback((ctx: CanvasRenderingContext2D, color: string, cssW: number) => {
+    const { fontSize, xOffset, yOffset } = glyphLayoutRef.current;
     ctx.save();
-    ctx.font = `${FONT_WEIGHT} ${cssW * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
+    ctx.font = `${FONT_WEIGHT} ${fontSize || cssW * GUIDE_BASE_FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
-    ctx.fillText(exercise.targetChar, cssW / 2, cssW / 2 + yOffsetRef.current);
+    ctx.fillText(exercise.targetChar, cssW / 2 + xOffset, cssW / 2 + yOffset);
     ctx.restore();
   }, [exercise.targetChar]);
 
@@ -550,6 +642,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
       const dpr = window.devicePixelRatio || 2;
       dprRef.current = dpr;
       cssSizeRef.current = { w: rect.width, h: rect.height };
+      brushRangeRef.current = getBrushRange(Math.min(rect.width, rect.height));
       const pxW = rect.width * dpr;
       const pxH = rect.height * dpr;
 
@@ -557,43 +650,26 @@ export function StrokeTracing({ exercise, onResult }: Props) {
       const ctx = canvas.getContext('2d');
       if (ctx) ctx.scale(dpr, dpr);
 
-      // Pixel-scan for y-offset
-      const scanCanvas = document.createElement('canvas');
-      const scanPx = 200;
-      scanCanvas.width = scanPx; scanCanvas.height = scanPx;
-      const scanCtx = scanCanvas.getContext('2d');
-      if (scanCtx) {
-        const scanFont = scanPx * 0.7;
-        scanCtx.font = `${FONT_WEIGHT} ${scanFont}px ${CANVAS_FONT_FAMILY}`;
-        scanCtx.textAlign = 'center';
-        scanCtx.textBaseline = 'middle';
-        scanCtx.fillStyle = 'white';
-        scanCtx.fillText(exercise.targetChar, scanPx / 2, scanPx / 2);
-        const img = scanCtx.getImageData(0, 0, scanPx, scanPx).data;
-        let top = scanPx, bottom = 0;
-        for (let row = 0; row < scanPx; row++) {
-          for (let col = 0; col < scanPx; col++) {
-            if (img[(row * scanPx + col) * 4 + 3] > 10) {
-              if (row < top) top = row;
-              if (row > bottom) bottom = row;
-            }
-          }
-        }
-        if (bottom > top) {
-          const drift = ((top + bottom) / 2 - scanPx / 2) / scanFont;
-          yOffsetRef.current = -drift * rect.width * FONT_SCALE;
-        }
-      }
+      glyphLayoutRef.current = measureGlyphLayout(
+        exercise.targetChar,
+        rect.width,
+        rect.height,
+        brushRangeRef.current.max,
+      );
 
       const refCanvas = document.createElement('canvas');
       refCanvas.width = pxW; refCanvas.height = pxH;
       const refCtx = refCanvas.getContext('2d');
       if (refCtx) {
         refCtx.scale(dpr, dpr);
-        refCtx.font = `${FONT_WEIGHT} ${rect.width * FONT_SCALE}px ${CANVAS_FONT_FAMILY}`;
+        refCtx.font = `${FONT_WEIGHT} ${glyphLayoutRef.current.fontSize}px ${CANVAS_FONT_FAMILY}`;
         refCtx.textAlign = 'center'; refCtx.textBaseline = 'middle';
         refCtx.fillStyle = 'white';
-        refCtx.fillText(exercise.targetChar, rect.width / 2, rect.height / 2 + yOffsetRef.current);
+        refCtx.fillText(
+          exercise.targetChar,
+          rect.width / 2 + glyphLayoutRef.current.xOffset,
+          rect.height / 2 + glyphLayoutRef.current.yOffset,
+        );
       }
       refCanvasRef.current = refCanvas;
 
@@ -610,7 +686,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
       drawScene();
     };
 
-    document.fonts.ready.then(init);
+    (document.fonts?.ready ?? Promise.resolve()).then(init);
     return () => { cancelled = true; };
   }, [exercise.targetChar, drawScene, isDrill]);
 
@@ -642,7 +718,8 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     const revealCtx = revealCanvas.getContext('2d');
     if (!revealCtx) return;
 
-    let radius = BRUSH_MAX;
+    const brushRange = brushRangeRef.current;
+    let radius = brushRange.max;
     if (from) {
       const dx = to.x - from.x;
       const dy = to.y - from.y;
@@ -650,7 +727,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
       const dt = Math.max(now - prevTimeRef.current, 1);
       const velocity = dist / dt;
       const f = Math.min(velocity / VELOCITY_CAP, 1);
-      const target = BRUSH_MAX - f * (BRUSH_MAX - BRUSH_MIN);
+      const target = brushRange.max - f * (brushRange.max - brushRange.min);
       radius = curBrushRef.current + (target - curBrushRef.current) * 0.4;
     }
     if (pressure != null && pressure > 0) {
@@ -684,7 +761,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     if (result) {
       const now = performance.now();
       prevPointRef.current = result.pt; prevTimeRef.current = now;
-      curBrushRef.current = BRUSH_MAX;
+      curBrushRef.current = brushRangeRef.current.max;
       revealStroke(null, result.pt, now, result.pressure);
     }
   }, [getPoint, submitted, revealStroke]);
@@ -770,7 +847,11 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             {exercise.targetChar}
           </span>
           <button
-            onClick={(e) => { e.stopPropagation(); const c = JAMO_TO_SYLLABLE[exercise.targetChar] ? exercise.targetChar : (exercise.sound ?? exercise.targetChar); playTTS(c, ttsLang); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              const c = JAMO_TO_SYLLABLE[exercise.targetChar] ? exercise.targetChar : (exercise.sound ?? exercise.targetChar);
+              playTTS(c, ttsLang, undefined, undefined, { interrupt: true });
+            }}
             style={{
               background: 'rgba(255,255,255,0.1)',
               border: 'none',
@@ -812,6 +893,8 @@ export function StrokeTracing({ exercise, onResult }: Props) {
               justifyContent: 'center',
               gap: 10,
               width: '100%',
+              flex: hasExampleWords ? '0 1 auto' : 1,
+              alignContent: hasExampleWords ? 'flex-start' : 'center',
               padding: '0 8px',
             }}
           >
@@ -959,7 +1042,10 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             {exercise.exampleWords.map((ex, i) => (
               <button
                 key={i}
-                onClick={(e) => { e.stopPropagation(); playTTS(ex.word, ttsLang); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  playTTS(ex.word, ttsLang, undefined, undefined, { interrupt: true });
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
