@@ -260,10 +260,26 @@ class PlaytestSmokeTest:
 
         # Steps 2-5: Browser tests
         async with async_playwright() as pw:
-            browser = await pw.chromium.launch(headless=True)
+            browser = await pw.chromium.launch(headless=True, args=["--no-sandbox"])
+
+            # Detect proxy from environment for containerised runs
+            import os
+            from urllib.parse import urlparse as _urlparse
+            _proxy_url = os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")
+            _proxy_cfg: dict | None = None
+            if _proxy_url:
+                _p = _urlparse(_proxy_url)
+                _proxy_cfg = {
+                    "server": f"{_p.scheme}://{_p.hostname}:{_p.port}",
+                    "username": _p.username or "",
+                    "password": _p.password or "",
+                }
+
             context = await browser.new_context(
                 viewport=VIEWPORT,
                 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                ignore_https_errors=True,
+                **({"proxy": _proxy_cfg} if _proxy_cfg else {}),
             )
             page = await context.new_page()
 
