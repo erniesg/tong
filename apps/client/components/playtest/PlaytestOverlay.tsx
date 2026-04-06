@@ -137,13 +137,18 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   /* ── Screenshot capture (html2canvas — full DOM) ─────────────── */
 
   const captureScreenshot = useCallback(async (annotationId: string): Promise<void> => {
-    const target = targetRef.current;
-    if (!target) return;
+    // Capture the full visible page — use documentElement for true full-screen
+    const target = document.documentElement;
     try {
-      // html2canvas renders the full DOM tree to a canvas — captures everything visible
       const canvas = await html2canvas(target, {
         backgroundColor: '#0d0d1a',
-        scale: 1, // 1x for speed; 2x for retina quality if needed
+        scale: window.devicePixelRatio > 1 ? 1 : 1, // 1x for speed
+        width: window.innerWidth,
+        height: window.innerHeight,
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight,
+        scrollX: 0,
+        scrollY: 0,
         logging: false,
         useCORS: true,
         allowTaint: true,
@@ -176,7 +181,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     } catch (err) {
       console.warn('html2canvas screenshot failed:', err);
     }
-  }, [targetRef]);
+  }, []);
 
   /* ── Recording: getDisplayMedia → captureStream → screenshots-only ── */
 
@@ -300,16 +305,20 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     return () => clearInterval(interval);
   }, []);
 
-  // Filmstrip: capture full-DOM screenshot every 5s for mobile playback
+  // Filmstrip: capture full-screen screenshot every 5s for mobile playback
   useEffect(() => {
-    const target = targetRef.current;
-    if (!target) return;
     const interval = setInterval(async () => {
       if (!startTimeRef.current) return; // not recording yet
       try {
-        const canvas = await html2canvas(target, {
+        const canvas = await html2canvas(document.documentElement, {
           backgroundColor: '#0d0d1a',
           scale: 0.5, // half resolution for speed + size
+          width: window.innerWidth,
+          height: window.innerHeight,
+          windowWidth: window.innerWidth,
+          windowHeight: window.innerHeight,
+          scrollX: 0,
+          scrollY: 0,
           logging: false,
           useCORS: true,
           allowTaint: true,
@@ -336,7 +345,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       } catch { /* best-effort */ }
     }, 5000);
     return () => clearInterval(interval);
-  }, [targetRef]);
+  }, []);
 
   /* ── Draggable pill ─────────────────────────────────────────────── */
 
