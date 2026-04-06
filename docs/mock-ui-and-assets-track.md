@@ -53,5 +53,7 @@ Unblock demo validation early while API/plumbing is still in progress.
    - `assets/manifest/starter-cast-registry.json`
    Issue `#69` makes these the approved starter-cast and per-character asset-bundle source of truth for downstream city-pack work.
    Tokyo intentionally has no live `practice_studio` pin, while Shanghai's live `milk_tea_shop` pin resolves to `dagLocationSlot: practice_studio` and keeps the advanced reward hooks on that starter pack.
-5. `npm run demo:smoke` now cross-checks concrete client `/assets/...` refs against the runtime manifest and on-disk files.
-6. Final plumbing should swap data sources without redesigning screens.
+5. Scripted messaging promo scenes should live under each relevant starter pack as `scriptedMessagingScenes` and follow `packages/contracts` `ScriptedMessagingScene` shape (`sceneId`, `cityId`, `objectiveId`, `title`, `hookText`, `speakers`, `rows`).
+6. `sceneId` values should stay stable and manifest-friendly with a city/platform/location prefix (example: `promo.seoul.kakao.food_street.*`).
+7. `npm run demo:smoke` now cross-checks concrete client `/assets/...` refs against the runtime manifest and on-disk files.
+8. Final plumbing should swap data sources without redesigning screens.
