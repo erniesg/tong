@@ -1202,7 +1202,17 @@ export async function runTargetedScrape(options = {}) {
     : [...keywordSets.values()];
 
   if (sets.length === 0) {
-    return { results: [], warnings: ['no keyword sets configured — generate or add keywords first'], keywordSets: 0 };
+    return {
+      results: [],
+      warnings: ['no keyword sets configured — generate or add keywords first'],
+      keywordSets: 0,
+      execution: {
+        mode: executionMode,
+        portable: executionMode !== 'live',
+        liveScrapeRequired: executionMode === 'live',
+        dependencies: executionMode === 'live' ? buildSignalLiveDependencyHints() : [],
+      },
+    };
   }
 
   const platforms = options.platforms || ['tiktok', 'instagram', 'xiaohongshu'];

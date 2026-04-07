@@ -4004,7 +4004,7 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
     // ── Signals generic tools ─────────────────────────────────────────
     case 'signals.browser_search': {
       try {
-        const result = await browserSearch(args.keyword, { platforms: args.platforms, limit: args.limit });
+        const result = await browserSearch(args.keyword, { platforms: args.platforms, limit: args.limit, executionMode: args.executionMode });
         return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
       } catch (err) {
         return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
