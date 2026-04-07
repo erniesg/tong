@@ -109,10 +109,16 @@ export async function tiktokSearch(keyword, limit = 10) {
       );
 
       if (cards.length === 0) {
-        // Fallback: parse the full page text
+        // Fallback: extract video links from all anchors + parse text blocks
+        const videoLinks = Array.from(document.querySelectorAll('a[href*="/video/"]'))
+          .map((a) => a.href)
+          .filter((h, i, arr) => arr.indexOf(h) === i)
+          .slice(0, maxItems);
+
         const text = document.body.innerText;
         const blocks = text.split(/\n{2,}/).filter((b) => b.length > 20);
-        for (const block of blocks.slice(0, maxItems)) {
+        for (let idx = 0; idx < blocks.length && items.length < maxItems; idx++) {
+          const block = blocks[idx];
           const viewMatch = block.match(/(\d+(?:\.\d+)?[KMB]?)\s*$/m);
           const hashtagMatches = block.match(/#[\w\u4e00-\u9fff\uac00-\ud7af]+/g) || [];
           if (viewMatch || hashtagMatches.length > 0) {
@@ -122,6 +128,8 @@ export async function tiktokSearch(keyword, limit = 10) {
               author: '',
               stats: { views: viewMatch?.[1] || null },
               hashtags: hashtagMatches,
+              videoPageUrl: videoLinks[items.length] || '',
+              thumbnailUrl: '',
             });
           }
         }
@@ -135,12 +143,20 @@ export async function tiktokSearch(keyword, limit = 10) {
         const views = viewEl?.textContent || '';
         const hashtags = desc.match(/#[\w\u4e00-\u9fff\uac00-\ud7af]+/g) || [];
 
+        // Extract video page URL and thumbnail
+        const videoLink = card.querySelector('a[href*="/video/"]')?.href
+          || card.querySelector('a[href*="/@"]')?.href
+          || '';
+        const thumbnail = card.querySelector('img[src*="tiktok"], img[class*="poster"], img')?.src || '';
+
         items.push({
           type: 'video',
           title: desc.slice(0, 300),
           author: author.replace(/^@/, ''),
           stats: { views },
           hashtags,
+          videoPageUrl: videoLink,
+          thumbnailUrl: thumbnail,
         });
       }
       return items;
