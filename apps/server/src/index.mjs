@@ -4004,7 +4004,7 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
     // ── Signals generic tools ─────────────────────────────────────────
     case 'signals.browser_search': {
       try {
-        const result = await browserSearch(args.keyword, { platforms: args.platforms, limit: args.limit });
+        const result = await browserSearch(args.keyword, { platforms: args.platforms, limit: args.limit, executionMode: args.executionMode });
         return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
       } catch (err) {
         return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
@@ -4589,7 +4589,10 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/v1/signals/search' && req.method === 'POST') {
       const body = await readJsonBody(req);
       try {
-        const result = await searchPlatform(body);
+        const result = await searchPlatform({
+          ...body,
+          executionMode: body.executionMode || body.mode,
+        });
         jsonResponse(res, 200, { ok: true, ...result });
       } catch (err) {
         jsonResponse(res, 502, { ok: false, error: err.message });
@@ -4600,7 +4603,10 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/v1/signals/targeted-scrape' && req.method === 'POST') {
       const body = await readJsonBody(req);
       try {
-        const result = await runTargetedScrape(body);
+        const result = await runTargetedScrape({
+          ...body,
+          executionMode: body.executionMode || body.mode,
+        });
         jsonResponse(res, 200, { ok: true, ...result });
       } catch (err) {
         jsonResponse(res, 502, { ok: false, error: err.message });
@@ -4617,11 +4623,20 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       try {
-        const result = await browserSearch(body.keyword, { platforms: body.platforms, limit: body.limit });
+        const result = await browserSearch(body.keyword, {
+          platforms: body.platforms,
+          limit: body.limit,
+          executionMode: body.executionMode || body.mode,
+        });
         jsonResponse(res, 200, { ok: true, ...result });
       } catch (err) {
         jsonResponse(res, 502, { ok: false, error: err.message });
       }
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/browser-status' && req.method === 'GET') {
+      jsonResponse(res, 200, { ok: true, ...getBrowserScraperStatus() });
       return;
     }
 

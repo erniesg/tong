@@ -57,3 +57,18 @@ Unblock demo validation early while API/plumbing is still in progress.
 6. `sceneId` values should stay stable and manifest-friendly with a city/platform/location prefix (example: `promo.seoul.kakao.food_street.*`).
 7. `npm run demo:smoke` now cross-checks concrete client `/assets/...` refs against the runtime manifest and on-disk files.
 8. Final plumbing should swap data sources without redesigning screens.
+
+
+## Scripted messaging promo recording proof (follow-up)
+
+Use the deterministic starter-pack promo presets:
+
+- `http://localhost:3000/mock/messaging-promo?fixture=seoul_default`
+- `http://localhost:3000/mock/messaging-promo?fixture=tokyo_bilingual`
+- `http://localhost:3000/mock/messaging-promo?fixture=shanghai_bilingual`
+
+Short reviewer checklist:
+
+1. Verify first-message typing is visible immediately (no hook/title mask).
+2. Trigger playback with visible click/tap on `Play` or `Restart`.
+3. Confirm stable post-state where delivered bubbles and typing cadence are readable.

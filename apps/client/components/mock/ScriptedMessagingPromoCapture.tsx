@@ -51,7 +51,7 @@ export function ScriptedMessagingPromoCapture({ initialSearchParams }: ScriptedM
     scene: string;
     autoplay?: boolean;
   }) => {
-    const query = buildPromoQuery({ ...next, hook: resolved.showHookOverlay ? 'overlay' : 'inline', tickMs: resolved.tickMs });
+    const query = buildPromoQuery({ ...next, hook: resolved.hookMode, tickMs: resolved.tickMs });
     setParams(new URLSearchParams(query));
     router.replace(`/mock/messaging-promo?${query}`);
   };
@@ -107,12 +107,12 @@ export function ScriptedMessagingPromoCapture({ initialSearchParams }: ScriptedM
 
         <div style={{ fontSize: 12, color: 'var(--muted)', display: 'grid', gap: 4 }}>
           <span>
-            <strong>Fixtures:</strong>{' '}
+            <strong>Recording presets:</strong>{' '}
             {Object.entries(PROMO_ROUTE_FIXTURES).map(([fixtureKey, fixture]) => {
               const href = `/mock/messaging-promo?${new URLSearchParams(fixture).toString()}`;
               return (
                 <a key={fixtureKey} href={href} style={{ marginRight: 10, textDecoration: 'underline' }}>
-                  {fixtureKey}
+                  {fixtureKey.replace(/_/g, " ")}
                 </a>
               );
             })}
@@ -142,6 +142,7 @@ export function ScriptedMessagingPromoCapture({ initialSearchParams }: ScriptedM
           tickMs={resolved.tickMs}
           showHookOverlay={resolved.showHookOverlay}
           showControls={false}
+          showSceneMeta={false}
           onStateChange={setPlayerState}
           onElapsedChange={setElapsedMs}
         />

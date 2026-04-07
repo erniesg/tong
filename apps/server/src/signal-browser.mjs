@@ -14,17 +14,52 @@
  *   - Instagram Reels topics (login required)
  */
 
-import puppeteer from 'puppeteer';
-
 // ── Shared browser instance ─────────────────────────────────────────
 
 let browserInstance = null;
 let browserLaunchPromise = null;
+let puppeteerModulePromise = null;
+
+const BROWSER_EXECUTION_MODES = ['live', 'mock', 'preflight'];
+
+function resolveExecutionMode(options = {}) {
+  const requested = String(
+    options.executionMode ||
+    options.mode ||
+    process.env.SIGNALS_BROWSER_MODE ||
+    process.env.SIGNALS_EXECUTION_MODE ||
+    'live',
+  ).toLowerCase();
+
+  if (BROWSER_EXECUTION_MODES.includes(requested)) return requested;
+  return 'live';
+}
+
+function buildLiveDependencyHints() {
+  return [
+    'puppeteer package',
+    'headless chrome launch support (--no-sandbox)',
+    'outbound network access to tiktok.com and instagram.com',
+  ];
+}
+
+async function loadPuppeteer() {
+  if (!puppeteerModulePromise) {
+    puppeteerModulePromise = import('puppeteer')
+      .then((mod) => mod.default || mod)
+      .catch((err) => {
+        puppeteerModulePromise = null;
+        throw err;
+      });
+  }
+  return puppeteerModulePromise;
+}
 
 async function getBrowser() {
   if (browserInstance?.connected) return browserInstance;
   if (browserLaunchPromise) return browserLaunchPromise;
 
+  const puppeteer = await loadPuppeteer();
   browserLaunchPromise = puppeteer.launch({
     headless: 'new',
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
@@ -246,8 +281,59 @@ export async function instagramHashtag(hashtag, limit = 10) {
  * @returns {Promise<{ results: object[], warnings: string[] }>}
  */
 export async function browserSearch(keyword, options = {}) {
-  const platforms = options.platforms || ['tiktok', 'instagram'];
+  const executionMode = resolveExecutionMode(options);
+  const normalizedPlatforms = options.platforms || ['tiktok', 'instagram'];
   const limit = options.limit || 10;
+
+  if (executionMode === 'preflight') {
+    return {
+      results: [],
+      warnings: ['preflight mode — live browser scraping skipped'],
+      keyword,
+      scrapedAt: new Date().toISOString(),
+      execution: {
+        mode: 'preflight',
+        portable: true,
+        liveScrapeRequired: true,
+        dependencies: buildLiveDependencyHints(),
+        requestedPlatforms: normalizedPlatforms,
+      },
+    };
+  }
+
+  if (executionMode === 'mock') {
+    const now = new Date().toISOString();
+    const results = normalizedPlatforms.flatMap((platform) =>
+      Array.from({ length: Math.min(limit, 2) }, (_, index) => ({
+        platform,
+        keyword,
+        type: platform === 'instagram' ? 'reel' : 'video',
+        title: `[Mock] ${keyword} ${platform} item ${index + 1}`,
+        author: `mock_${platform}_${index + 1}`,
+        stats: {
+          views: (index + 1) * 1000,
+          likes: (index + 1) * 200,
+        },
+        hashtags: [`#${String(keyword).replace(/\s+/g, '')}`],
+        scrapedAt: now,
+      })),
+    );
+    return {
+      results,
+      warnings: ['mock mode — no live browser session launched'],
+      keyword,
+      scrapedAt: now,
+      execution: {
+        mode: 'mock',
+        portable: true,
+        liveScrapeRequired: false,
+        dependencies: [],
+        requestedPlatforms: normalizedPlatforms,
+      },
+    };
+  }
+
+  const platforms = normalizedPlatforms;
   const results = [];
   const warnings = [];
 
@@ -268,7 +354,19 @@ export async function browserSearch(keyword, options = {}) {
     }
   }
 
-  return { results, warnings, keyword, scrapedAt: new Date().toISOString() };
+  return {
+    results,
+    warnings,
+    keyword,
+    scrapedAt: new Date().toISOString(),
+    execution: {
+      mode: 'live',
+      portable: false,
+      liveScrapeRequired: true,
+      dependencies: buildLiveDependencyHints(),
+      requestedPlatforms: platforms,
+    },
+  };
 }
 
 // ── Cleanup ─────────────────────────────────────────────────────────
@@ -287,9 +385,17 @@ export async function closeBrowser() {
  * Check browser scraper status.
  */
 export function getBrowserScraperStatus() {
+  const mode = resolveExecutionMode();
   return {
+    mode,
     browserConnected: browserInstance?.connected || false,
+    executionModes: BROWSER_EXECUTION_MODES,
     supportedPlatforms: ['tiktok', 'instagram'],
     unsupported: ['xiaohongshu (login required)'],
+    dependencies: {
+      live: buildLiveDependencyHints(),
+      preflight: ['none'],
+      mock: ['none'],
+    },
   };
 }

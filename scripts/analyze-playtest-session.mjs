@@ -61,7 +61,7 @@ const { values: args } = parseArgs({
     'video-path': { type: 'string' },
     annotations: { type: 'string' },
     output: { type: 'string' },
-    mode: { type: 'string', default: 'screenshots' },
+    mode: { type: 'string', default: 'video' },
     'update-session': { type: 'boolean', default: false },
     'list-presets': { type: 'boolean', default: false },
     help: { type: 'boolean', default: false },
@@ -77,6 +77,7 @@ Options:
   --preset           Analysis preset (default: ux_friction)
   --model            flash | pro (default: flash)
   --resolution       low | medium | high (default: low)
+  --mode             video | screenshots | auto (default: video)
   --api-base         Worker API URL
   --r2-base          R2 public URL
   --video-path       Local video file (skips R2 fetch)
@@ -173,9 +174,10 @@ if (annotationsJson) {
 
 // ── Determine analysis mode ─────────────────────────────────────────
 
-const mode = args.mode === 'video' ? 'video'
-  : screenshotEntries.length > 0 ? 'screenshots'
-  : 'video'; // fallback to video if no screenshots
+const requestedMode = args.mode === 'auto' ? 'auto' : args.mode === 'screenshots' ? 'screenshots' : 'video';
+const mode = requestedMode === 'auto'
+  ? (screenshotEntries.length > 0 ? 'screenshots' : 'video')
+  : requestedMode;
 
 console.error(`[analyze] Mode: ${mode}${mode === 'screenshots' ? ` (${screenshotEntries.length} screenshots)` : ''}`);
 

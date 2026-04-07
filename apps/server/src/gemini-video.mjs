@@ -66,7 +66,8 @@ function uuid() {
  *
  * @param {object} args
  * @param {string} [args.filePath]     – Local file path to upload
- * @param {Buffer} [args.buffer]       – Raw video bytes (alternative to filePath)
+ * @param {string} [args.url]          – Public URL to download and upload
+ * @param {Buffer} [args.buffer]       – Raw video bytes (alternative to filePath/url)
  * @param {string} [args.mimeType]     – MIME type (default: video/webm)
  * @param {string} [args.displayName]  – Human-readable name
  * @returns {Promise<{ fileUri: string, displayName: string, mimeType: string, sizeBytes: number, expiresAt: string }>}
@@ -79,7 +80,7 @@ export async function uploadVideo(args) {
   const displayName = args.displayName || `playtest-${Date.now()}`;
 
   // Check cache
-  const cacheKey = args.filePath || displayName;
+  const cacheKey = args.filePath || args.url || displayName;
   const cached = fileCache.get(cacheKey);
   if (cached && new Date(cached.expiresAt) > new Date()) {
     return cached;
