@@ -39,30 +39,51 @@ let lastRunStatus = null;
 const KEYWORD_GEN_PROMPT = `You are generating search keywords for a social media signals scraper.
 The product is Tong — a dating-sim language learning game set in Seoul, Tokyo, and Shanghai.
 
-Generate 5-7 themed keyword clusters. For each cluster output a JSON object:
-{
-  "theme": "short_snake_case_name",
-  "description": "what this finds",
-  "keywords": {
-    "global": ["english terms"],
-    "tiktok": ["#hashtags", "search terms"],
-    "instagram": ["#hashtags"],
-    "xiaohongshu": ["中文关键词", "english terms"]
-  },
-  "priority": "high|medium|low",
-  "languages": ["ko","ja","zh","en"]
-}
-
-Cover these angles:
+Generate 5-7 themed keyword clusters covering:
 1. Language learning content (Korean, Japanese, Chinese)
 2. Dating sim / visual novel / otome game aesthetic
 3. K-pop, anime, Asian culture content that our audience watches
 4. Competitor apps (Duolingo, Drops, etc.)
 5. Travel content for Seoul, Tokyo, Shanghai
 6. Trending formats and challenges related to languages
-7. Xiaohongshu lifestyle / aesthetic content about learning languages
+7. Xiaohongshu lifestyle / aesthetic content about learning languages`;
 
-Output a JSON array of these objects. No markdown, just the array.`;
+const KEYWORD_SET_SCHEMA = {
+  name: 'keyword_sets',
+  strict: true,
+  schema: {
+    type: 'object',
+    properties: {
+      sets: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            theme: { type: 'string', description: 'short_snake_case cluster name' },
+            description: { type: 'string', description: 'what this keyword cluster finds' },
+            keywords: {
+              type: 'object',
+              properties: {
+                global: { type: 'array', items: { type: 'string' } },
+                tiktok: { type: 'array', items: { type: 'string' } },
+                instagram: { type: 'array', items: { type: 'string' } },
+                xiaohongshu: { type: 'array', items: { type: 'string' } },
+              },
+              required: ['global', 'tiktok', 'instagram', 'xiaohongshu'],
+              additionalProperties: false,
+            },
+            priority: { type: 'string', enum: ['high', 'medium', 'low'] },
+            languages: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['theme', 'description', 'keywords', 'priority', 'languages'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['sets'],
+    additionalProperties: false,
+  },
+};
 
 async function generateKeywordsServerSide() {
   const apiKey = OPENAI_API_KEY();
@@ -78,7 +99,7 @@ async function generateKeywordsServerSide() {
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: KEYWORD_GEN_PROMPT }],
       temperature: 0.7,
-      response_format: { type: 'json_object' },
+      response_format: { type: 'json_schema', json_schema: KEYWORD_SET_SCHEMA },
     }),
   });
 
@@ -91,11 +112,7 @@ async function generateKeywordsServerSide() {
   const content = data.choices?.[0]?.message?.content;
   if (!content) throw new Error('No response from OpenAI');
 
-  const parsed = JSON.parse(content);
-  // OpenAI wraps arrays in varying keys — find the first array value
-  if (Array.isArray(parsed)) return parsed;
-  const arr = Object.values(parsed).find((v) => Array.isArray(v));
-  return arr || [parsed];
+  return JSON.parse(content).sets;
 }
 
 // ── Keyword Generation from Brief ───────────────────────────────────
@@ -152,7 +169,7 @@ export async function generateKeywordsFromBrief(brief, options = {}) {
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      response_format: { type: 'json_object' },
+      response_format: { type: 'json_schema', json_schema: KEYWORD_SET_SCHEMA },
     }),
   });
 
@@ -165,8 +182,7 @@ export async function generateKeywordsFromBrief(brief, options = {}) {
   const content = data.choices?.[0]?.message?.content;
   if (!content) throw new Error('No response from OpenAI');
 
-  const parsed = JSON.parse(content);
-  return Array.isArray(parsed) ? parsed : (parsed.sets || parsed.clusters || parsed.keyword_sets || [parsed]);
+  return JSON.parse(content).sets;
 }
 
 // ── Daily Run ───────────────────────────────────────────────────────
