@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "results": [],
+  "warnings": [
+    "preflight mode — live browser scraping skipped"
+  ],
+  "keyword": "learn korean",
+  "scrapedAt": "2026-04-06T00:00:00.000Z",
+  "execution": {
+    "mode": "preflight",
+    "portable": true,
+    "liveScrapeRequired": true,
+    "dependencies": [
+      "puppeteer package",
+      "headless chrome launch support (--no-sandbox)",
+      "outbound network access to tiktok.com and instagram.com"
+    ],
+    "requestedPlatforms": [
+      "tiktok",
+      "instagram"
+    ]
+  }
+}
