@@ -463,6 +463,48 @@ Consider the user's annotations as direct feedback.`,
     },
   },
 
+  scene_decomposition: {
+    name: 'Scene Decomposition',
+    description: 'Decompose a video into timestamped scenes with visual type, audio layer, automation difficulty, and overall hook/format analysis',
+    prompt: 'Analyze this video and decompose it into individual scenes/segments. For each scene identify: the visual type (talking_head, text_overlay, product_shot, data_viz, b_roll, screen_recording, split_screen, transition, outro_cta), the audio layer (voiceover, trending_sound, original_music, silence, speech), any text/overlay content visible, the visual style, and how automatable this scene would be (trivial = can generate with Remotion/text-to-video, moderate = needs some stock footage, hard = needs original human footage). Also identify the hook technique used in the first 3 seconds and the overall content format.',
+    schema: {
+      type: 'OBJECT',
+      properties: {
+        hookTechnique: { type: 'STRING', description: 'How the video hooks viewers in first 3 seconds' },
+        contentFormat: { type: 'STRING', description: 'Overall format: tutorial, storytime, challenge, POV, review, etc.' },
+        totalDurationEstimate: { type: 'INTEGER' },
+        scenes: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              startTimestamp: { type: 'STRING', description: 'MM:SS' },
+              endTimestamp: { type: 'STRING', description: 'MM:SS' },
+              sceneType: { type: 'STRING', description: 'talking_head|text_overlay|product_shot|data_viz|b_roll|screen_recording|split_screen|transition|outro_cta' },
+              audioLayer: { type: 'STRING', description: 'voiceover|trending_sound|original_music|silence|speech|mixed' },
+              textContent: { type: 'STRING', description: 'Any visible text/overlay content' },
+              visualStyle: { type: 'STRING', description: 'Brief description of visual aesthetic' },
+              automationDifficulty: { type: 'STRING', description: 'trivial|moderate|hard' },
+              description: { type: 'STRING', description: 'What happens in this scene' },
+            },
+            required: ['startTimestamp', 'endTimestamp', 'sceneType', 'audioLayer', 'automationDifficulty', 'description'],
+          },
+        },
+        audioSummary: {
+          type: 'OBJECT',
+          properties: {
+            hasVoiceover: { type: 'BOOLEAN' },
+            hasTrendingSound: { type: 'BOOLEAN' },
+            language: { type: 'STRING' },
+            transcript: { type: 'STRING', description: 'Brief transcript or summary of speech content' },
+          },
+        },
+        automatabilityScore: { type: 'INTEGER', description: '0-100 how much of this video could be auto-generated' },
+      },
+      required: ['hookTechnique', 'contentFormat', 'scenes', 'automatabilityScore'],
+    },
+  },
+
   trend_analysis: {
     name: 'Social Media Trend Analysis',
     description: 'Analyze scraped social media videos for trend patterns',
