@@ -58,11 +58,17 @@ Use `/mock/messaging-promo` for 9:16 scripted messaging capture.
 - `hook`: `overlay` | `inline` | `off`
 - `tickMs`: deterministic timer step (clamped 40..400)
 
-### Stable entry examples
+### Stable entry examples (starter-pack scenes)
 
 - Seoul default replay: `/mock/messaging-promo?fixture=seoul_default`
 - Tokyo JP+EN replay: `/mock/messaging-promo?fixture=tokyo_bilingual`
 - Shanghai ZH+EN replay: `/mock/messaging-promo?fixture=shanghai_bilingual`
+
+Exact recording URLs:
+
+- `http://localhost:3000/mock/messaging-promo?fixture=seoul_default`
+- `http://localhost:3000/mock/messaging-promo?fixture=tokyo_bilingual`
+- `http://localhost:3000/mock/messaging-promo?fixture=shanghai_bilingual`
 
 Playback controls are in-route and deterministic:
 
@@ -70,3 +76,10 @@ Playback controls are in-route and deterministic:
 2. Pause
 3. Restart
 4. Jump to scene start
+
+### Reviewer-facing recording checklist
+
+1. Keep `hook=off` so first message typing remains visible from frame 1.
+2. Capture readable pre-state (first bubble lane visible, timeline at `t=0ms`).
+3. Show one visible playback interaction (`Play` or `Restart`).
+4. Hold a stable post-state with at least two delivered messages visible.
