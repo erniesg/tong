@@ -1257,13 +1257,19 @@ export default function SignalsPage() {
                     {filterStats.total - filterStats.afterEngagementFilter} dropped (&lt;{minViews.toLocaleString()} views)
                   </span>
                   <span style={{ color: 'var(--muted)', fontWeight: 400 }}>→</span>
-                  <span style={{ color: 'var(--mint)' }}>{filterStats.returned} passed</span>
+                  <span style={{ color: 'var(--mint)' }}>{filterStats.afterEngagementFilter} passed</span>
+                  {filterStats.returned < filterStats.afterEngagementFilter && (
+                    <>
+                      <span style={{ color: 'var(--muted)', fontWeight: 400 }}>→</span>
+                      <span>{filterStats.returned} returned (top N)</span>
+                    </>
+                  )}
                 </div>
 
                 {/* Dropped results collapsible */}
                 {droppedResults.length > 0 && (
                   <CollapsibleSection
-                    label={`What was dropped (${droppedResults.length})`}
+                    label={`What was dropped (${filterStats ? filterStats.total - filterStats.afterEngagementFilter : droppedResults.length})`}
                     defaultOpen={false}
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
