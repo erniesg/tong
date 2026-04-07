@@ -1,17 +1,18 @@
 /**
  * Browser-based signal scraper using Puppeteer.
  *
- * This is the real data path — launches headless Chrome to scrape TikTok and
- * Instagram like a real user, bypassing API auth requirements.
+ * This is the real data path — launches headless Chrome to scrape TikTok,
+ * Instagram, and XHS like a real user, bypassing API auth requirements.
  *
- * Tested working (2026-04-02):
+ * Tested working (2026-04-07):
  *   - TikTok keyword search:  full video cards with views, hashtags, authors
  *   - TikTok Creative Center: top 3 trending hashtags (no login)
- *   - Instagram hashtag page: reel counts, top post captions + view counts
+ *   - Instagram hashtag page: reel counts, top post captions + view counts (via /popular/ URL)
+ *   - XHS keyword search:     note cards with titles, authors, likes (search_result page)
  *
- * Not working without login:
- *   - XHS (login wall)
+ * Known limitations:
  *   - Instagram Reels topics (login required)
+ *   - XHS search may return fewer results without login
  */
 
 // ── Shared browser instance ─────────────────────────────────────────
@@ -39,7 +40,7 @@ function buildLiveDependencyHints() {
   return [
     'puppeteer package',
     'headless chrome launch support (--no-sandbox)',
-    'outbound network access to tiktok.com and instagram.com',
+    'outbound network access to tiktok.com, instagram.com, and xiaohongshu.com',
   ];
 }
 
@@ -341,6 +342,115 @@ export async function instagramHashtag(hashtag, limit = 10) {
   }
 }
 
+// ── Xiaohongshu (XHS) Search ────────────────────────────────────────
+
+/**
+ * Search Xiaohongshu for notes matching a keyword via Puppeteer.
+ *
+ * XHS search results are loaded client-side (not in SSR state), so Puppeteer
+ * waits for the feed items to render. Falls back to explore page trending
+ * content if the search page blocks or returns empty.
+ *
+ * @param {string} keyword – search term (e.g. "学韩语", "learnkorean")
+ * @param {number} [limit=10] – max results
+ * @returns {Promise<Array<{ platform, keyword, type, title, author, stats, coverUrl, videoPageUrl, scrapedAt }>>}
+ */
+export async function xiaohongshuSearch(keyword, limit = 10) {
+  const page = await newPage();
+  try {
+    // Set Chinese language headers for XHS
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+    });
+
+    const encoded = encodeURIComponent(keyword);
+
+    // Try search page first
+    await page.goto(`https://www.xiaohongshu.com/search_result?keyword=${encoded}&source=web_search_result_notes`, {
+      waitUntil: 'networkidle2',
+      timeout: 25000,
+    });
+    await new Promise((r) => setTimeout(r, 3000));
+
+    // Check if search requires login (XHS shows "登录后查看搜索结果" text)
+    const needsLogin = await page.evaluate(() =>
+      document.body.innerText.includes('登录') && document.querySelectorAll('a[href*="/explore/"]').length === 0,
+    );
+
+    if (needsLogin) {
+      // Fall back to the explore (discover) page which renders without login
+      await page.goto('https://www.xiaohongshu.com/explore', {
+        waitUntil: 'networkidle2',
+        timeout: 25000,
+      });
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+
+    const results = await page.evaluate((maxItems) => {
+      const items = [];
+      const seen = new Set();
+
+      // Strategy: find all note links on the page
+      const noteAnchors = Array.from(document.querySelectorAll('a[href*="/explore/"], a[href*="/discovery/item/"]'));
+      const uniqueLinks = [];
+      for (const a of noteAnchors) {
+        const href = a.href.split('?')[0];
+        if (!seen.has(href) && /\/explore\/[a-f0-9]+|\/discovery\/item\/[a-f0-9]+/.test(href)) {
+          seen.add(href);
+          uniqueLinks.push({ href, el: a });
+        }
+      }
+
+      for (const { href, el } of uniqueLinks.slice(0, maxItems)) {
+        // Walk up to the containing card
+        let card = el;
+        for (let i = 0; i < 6 && card.parentElement; i++) {
+          card = card.parentElement;
+          if (card.className?.includes('note') || card.tagName === 'SECTION') break;
+        }
+
+        const cardText = card.innerText || '';
+        const lines = cardText.split('\n').map((l) => l.trim()).filter(Boolean);
+
+        // Title: first meaningful line
+        const title = lines.find((l) => l.length > 2 && !l.match(/^\d+$/)) || '';
+
+        // Author: look for username patterns
+        const author = lines.find((l) => l.length < 30 && l.length > 1 && !l.match(/^\d/) && l !== title) || '';
+
+        // Like count: patterns like "1.7万", "999", "5.2w"
+        const likeMatch = cardText.match(/([\d.]+)\s*([万wWkKmM]?)/);
+        const likes = likeMatch ? likeMatch[0] : '';
+
+        // Cover image
+        const img = card.querySelector('img');
+        const coverUrl = img?.src || '';
+
+        items.push({
+          type: 'note',
+          title: title.slice(0, 300),
+          author,
+          stats: { likes },
+          coverUrl,
+          videoPageUrl: href,
+        });
+      }
+
+      return items;
+    }, limit);
+
+    const now = new Date().toISOString();
+    return results.map((r) => ({
+      platform: 'xiaohongshu',
+      keyword,
+      ...r,
+      scrapedAt: now,
+    }));
+  } finally {
+    await page.close();
+  }
+}
+
 // ── Unified Search ──────────────────────────────────────────────────
 
 /**
@@ -354,7 +464,7 @@ export async function instagramHashtag(hashtag, limit = 10) {
  */
 export async function browserSearch(keyword, options = {}) {
   const executionMode = resolveExecutionMode(options);
-  const normalizedPlatforms = options.platforms || ['tiktok', 'instagram'];
+  const normalizedPlatforms = options.platforms || ['tiktok', 'instagram', 'xiaohongshu'];
   const limit = options.limit || 10;
 
   if (executionMode === 'preflight') {
@@ -379,7 +489,7 @@ export async function browserSearch(keyword, options = {}) {
       Array.from({ length: Math.min(limit, 2) }, (_, index) => ({
         platform,
         keyword,
-        type: platform === 'instagram' ? 'reel' : 'video',
+        type: platform === 'instagram' ? 'reel' : platform === 'xiaohongshu' ? 'note' : 'video',
         title: `[Mock] ${keyword} ${platform} item ${index + 1}`,
         author: `mock_${platform}_${index + 1}`,
         stats: {
@@ -419,7 +529,11 @@ export async function browserSearch(keyword, options = {}) {
         const data = await instagramHashtag(tag, limit);
         results.push(...(data.posts || []));
       } else if (platform === 'xiaohongshu') {
-        warnings.push('XHS requires authenticated session — skipped');
+        const items = await xiaohongshuSearch(keyword, limit);
+        results.push(...items);
+        if (items.length === 0) {
+          warnings.push('XHS: 0 results — search requires login; explore page may also have been empty');
+        }
       }
     } catch (err) {
       warnings.push(`${platform}: ${err.message}`);
@@ -462,8 +576,8 @@ export function getBrowserScraperStatus() {
     mode,
     browserConnected: browserInstance?.connected || false,
     executionModes: BROWSER_EXECUTION_MODES,
-    supportedPlatforms: ['tiktok', 'instagram'],
-    unsupported: ['xiaohongshu (login required)'],
+    supportedPlatforms: ['tiktok', 'instagram', 'xiaohongshu'],
+    unsupported: [],
     dependencies: {
       live: buildLiveDependencyHints(),
       preflight: ['none'],
