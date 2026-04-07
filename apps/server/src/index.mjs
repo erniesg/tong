@@ -104,7 +104,14 @@ import {
   startScheduler,
   stopScheduler,
   getSchedulerStatus,
+  generateKeywordsFromBrief,
 } from './signal-scheduler.mjs';
+import {
+  filterByEngagement,
+  scoreRelevance,
+  runFilterPipeline,
+  extractBriefFromMultimodal,
+} from './signal-filter.mjs';
 import {
   tiktokSearch,
   tiktokTrending,
@@ -1251,6 +1258,55 @@ const AGENT_TOOL_DEFINITIONS = [
       language: 'string (optional) – filter by language relevance: ko|ja|zh|en',
       category: 'string (optional) – filter by theme',
       __mock: 'boolean (optional) – return sample data for development',
+    },
+  },
+  {
+    name: 'signals.extract_brief',
+    description: 'Extract a structured product brief from multimodal inputs (text, images, repo context) via Gemini Flash. The brief is used for keyword generation and relevance scoring.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      text: 'string (optional) – product description or campaign goal',
+      imageUrls: 'string[] (optional) – screenshot/product image URLs',
+      repoContext: 'boolean (optional) – read CLAUDE.md + package.json for product context',
+      executionMode: 'string (optional) – "live"|"mock"|"preflight"',
+    },
+  },
+  {
+    name: 'signals.filter.engagement',
+    description: 'Filter search results by engagement thresholds (views, likes). Pure function, free, instant.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      results: 'object[] (required) – scraped results with .stats.views/.stats.likes',
+      minViews: 'number (optional, default 0)',
+      minLikes: 'number (optional, default 0)',
+    },
+  },
+  {
+    name: 'signals.filter.relevance',
+    description: 'Score search results for relevance to a product brief using Gemini Flash on thumbnails + metadata.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      results: 'object[] (required) – search results',
+      brief: 'object (required) – { description, keywords?, targetAudience? }',
+      batchSize: 'number (optional, default 5)',
+      executionMode: 'string (optional) – "live"|"mock"|"preflight"',
+    },
+  },
+  {
+    name: 'signals.filter.pipeline',
+    description: 'Two-pass filter: engagement threshold → Gemini relevance scoring. Returns ranked results.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      results: 'object[] (required) – scraped results',
+      brief: 'object (required) – { description, keywords?, targetAudience? }',
+      minViews: 'number (optional, default 10000)',
+      minLikes: 'number (optional, default 0)',
+      topN: 'number (optional) – limit output to top N results',
+      executionMode: 'string (optional) – "live"|"mock"|"preflight"',
     },
   },
 ];
@@ -4051,6 +4107,39 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
         return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
       }
     }
+    // ── Signals filter + brief tools ──────────────────────────────────
+    case 'signals.extract_brief': {
+      try {
+        const result = await extractBriefFromMultimodal(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'signals.filter.engagement': {
+      try {
+        const result = filterByEngagement(args.results || [], { minViews: args.minViews, minLikes: args.minLikes });
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'signals.filter.relevance': {
+      try {
+        const result = await scoreRelevance(args.results || [], args.brief || {}, { batchSize: args.batchSize, executionMode: args.executionMode });
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'signals.filter.pipeline': {
+      try {
+        const result = await runFilterPipeline(args.results || [], args.brief || {}, { minViews: args.minViews, minLikes: args.minLikes, topN: args.topN, executionMode: args.executionMode });
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
     default:
       return {
         statusCode: 404,
@@ -4637,6 +4726,52 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/v1/signals/browser-status' && req.method === 'GET') {
       jsonResponse(res, 200, { ok: true, ...getBrowserScraperStatus() });
+      return;
+    }
+
+    // ── Signal filter + brief routes ─────────────────────────────────
+
+    if (pathname === '/api/v1/signals/extract-brief' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      try {
+        const result = await extractBriefFromMultimodal(body);
+        jsonResponse(res, 200, { ok: true, ...result });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/generate-keywords' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      try {
+        // Step 1: extract brief from multimodal inputs
+        const { brief } = await extractBriefFromMultimodal(body);
+        // Step 2: generate keywords from brief via OpenAI
+        const sets = await generateKeywordsFromBrief(brief);
+        // Step 3: save keyword sets
+        for (const kw of sets) {
+          saveKeywordSet({ ...kw, source: 'multimodal' });
+        }
+        jsonResponse(res, 200, { ok: true, brief, keywordSets: sets, saved: sets.length });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/filter' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      try {
+        const result = await runFilterPipeline(
+          body.results || [],
+          body.brief || {},
+          { minViews: body.minViews, minLikes: body.minLikes, topN: body.topN, batchSize: body.batchSize, executionMode: body.executionMode },
+        );
+        jsonResponse(res, 200, { ok: true, ...result });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
       return;
     }
 

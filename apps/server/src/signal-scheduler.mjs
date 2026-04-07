@@ -96,6 +96,63 @@ async function generateKeywordsServerSide() {
   return Array.isArray(parsed) ? parsed : (parsed.sets || parsed.clusters || parsed.keyword_sets || [parsed]);
 }
 
+// ── Keyword Generation from Brief ───────────────────────────────────
+
+/**
+ * Generate keyword sets from a structured product brief.
+ * Reuses the OpenAI keyword gen with the brief injected as context.
+ *
+ * @param {object} brief — from extractBriefFromMultimodal()
+ * @param {string} brief.description
+ * @param {string[]} [brief.keywords]
+ * @param {string} [brief.targetAudience]
+ * @param {string[]} [brief.contentAngles]
+ * @param {string[]} [brief.languages]
+ * @returns {Promise<object[]>} — keyword sets in existing schema
+ */
+export async function generateKeywordsFromBrief(brief) {
+  const apiKey = OPENAI_API_KEY();
+  if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
+
+  const briefContext = [
+    `Product: ${brief.productName || brief.description}`,
+    brief.description && `Description: ${brief.description}`,
+    brief.targetAudience && `Target audience: ${brief.targetAudience}`,
+    brief.contentAngles?.length && `Content angles: ${brief.contentAngles.join(', ')}`,
+    brief.languages?.length && `Languages: ${brief.languages.join(', ')}`,
+    brief.keywords?.length && `Seed keywords: ${brief.keywords.join(', ')}`,
+    brief.campaignGoals?.length && `Campaign goals: ${brief.campaignGoals.join(', ')}`,
+  ].filter(Boolean).join('\n');
+
+  const prompt = `${KEYWORD_GEN_PROMPT}\n\nAdditional product context:\n${briefContext}`;
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`OpenAI error (${res.status}): ${text}`);
+  }
+
+  const data = await res.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error('No response from OpenAI');
+
+  const parsed = JSON.parse(content);
+  return Array.isArray(parsed) ? parsed : (parsed.sets || parsed.clusters || parsed.keyword_sets || [parsed]);
+}
+
 // ── Daily Run ───────────────────────────────────────────────────────
 
 /**
