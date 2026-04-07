@@ -113,6 +113,11 @@ import {
   extractBriefFromMultimodal,
 } from './signal-filter.mjs';
 import {
+  downloadVideo,
+  downloadBatch,
+  getDownloadStatus,
+} from './video-download.mjs';
+import {
   tiktokSearch,
   tiktokTrending,
   instagramHashtag,
@@ -4769,6 +4774,36 @@ const server = http.createServer(async (req, res) => {
           { minViews: body.minViews, minLikes: body.minLikes, topN: body.topN, batchSize: body.batchSize, executionMode: body.executionMode },
         );
         jsonResponse(res, 200, { ok: true, ...result });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
+      return;
+    }
+
+    // ── Video download routes ─────────────────────────────────────────
+
+    if (pathname === '/api/v1/signals/download-status' && req.method === 'GET') {
+      try {
+        const result = await getDownloadStatus();
+        jsonResponse(res, 200, { ok: true, ...result });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/download' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      try {
+        if (body.results) {
+          const result = await downloadBatch(body.results, { outputDir: body.outputDir, concurrency: body.concurrency, timeout: body.timeout });
+          jsonResponse(res, 200, { ok: true, ...result });
+        } else if (body.url) {
+          const result = await downloadVideo({ url: body.url, outputDir: body.outputDir, filename: body.filename, timeout: body.timeout });
+          jsonResponse(res, 200, { ok: true, ...result });
+        } else {
+          jsonResponse(res, 400, { ok: false, error: 'url or results[] required' });
+        }
       } catch (err) {
         jsonResponse(res, 502, { ok: false, error: err.message });
       }
