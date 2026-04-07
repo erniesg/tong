@@ -17,6 +17,7 @@
     "test:api-flow:cloud": "node scripts/mock_api_flow_check.mjs ${TONG_REMOTE_API_BASE_URL:-https://tong-api.erniesg.workers.dev}",
     "test:graph-contracts": "node scripts/graph_contract_check.mjs",
     "test:dashboard-smoke": "node scripts/dashboard_smoke_check.mjs",
+    "test:signals-contracts": "node scripts/signals_contract_check.mjs",
     "demo:smoke": "node scripts/demo_smoke_check.mjs",
     "demo:tools": "node scripts/mock_tool_flow_check.mjs",
     "demo:start": "./scripts/run-demo.sh",

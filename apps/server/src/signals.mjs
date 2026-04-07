@@ -56,6 +56,26 @@ function setCache(key, data) {
   trendCache.set(key, { data, ts: Date.now() });
 }
 
+const SIGNAL_EXECUTION_MODES = ['live', 'mock', 'preflight'];
+
+function resolveSignalsExecutionMode(options = {}) {
+  const requested = String(
+    options.executionMode ||
+    options.mode ||
+    process.env.SIGNALS_EXECUTION_MODE ||
+    (MOCK_MODE() ? 'mock' : 'live'),
+  ).toLowerCase();
+  if (SIGNAL_EXECUTION_MODES.includes(requested)) return requested;
+  return MOCK_MODE() ? 'mock' : 'live';
+}
+
+function buildSignalLiveDependencyHints() {
+  return [
+    'outbound network access to tiktok.com, instagram.com, xiaohongshu.com',
+    'target platforms not blocking automated scraping from this runtime',
+  ];
+}
+
 // ── Rate-limit helper ────────────────────────────────────────────────
 
 const lastRequestAt = {};
@@ -908,13 +928,21 @@ export async function scrapeAllTrends(options = {}) {
  * @returns {{ available: boolean, lastScrape: string|null, trendCount: number, config: object }}
  */
 export function getTrendStatus() {
+  const executionMode = resolveSignalsExecutionMode();
   return {
     available: true,
     lastScrape: lastScrapeAt,
     trendCount: cachedTrendCount,
     cacheTtlMs: CACHE_TTL_MS,
     mockMode: MOCK_MODE(),
+    executionMode,
+    executionModes: SIGNAL_EXECUTION_MODES,
     keywordSets: keywordSets.size,
+    dependencies: {
+      live: buildSignalLiveDependencyHints(),
+      preflight: ['none'],
+      mock: ['none'],
+    },
     config: {
       tiktokApiKeyConfigured: Boolean(TIKTOK_API_KEY()),
       instagramApiKeyConfigured: Boolean(INSTAGRAM_API_KEY()),
@@ -979,9 +1007,36 @@ export function deleteKeywordSet(id) {
  */
 export async function searchPlatform(args) {
   const { platform, keywords, limit = 5 } = args;
+  const executionMode = resolveSignalsExecutionMode(args);
   if (!keywords?.length) return { results: [], warnings: ['no keywords provided'] };
 
-  if (MOCK_MODE()) return mockSearch(platform, keywords, limit);
+  if (executionMode === 'preflight') {
+    return {
+      results: [],
+      warnings: ['preflight mode — platform search skipped'],
+      platform,
+      keywordsSearched: keywords.length,
+      execution: {
+        mode: 'preflight',
+        portable: true,
+        liveScrapeRequired: true,
+        dependencies: buildSignalLiveDependencyHints(),
+      },
+    };
+  }
+
+  if (executionMode === 'mock' || MOCK_MODE()) {
+    const mockResult = mockSearch(platform, keywords, limit);
+    return {
+      ...mockResult,
+      execution: {
+        mode: 'mock',
+        portable: true,
+        liveScrapeRequired: false,
+        dependencies: [],
+      },
+    };
+  }
 
   const results = [];
   const warnings = [];
@@ -1007,7 +1062,18 @@ export async function searchPlatform(args) {
     }
   }
 
-  return { results, warnings, platform, keywordsSearched: keywords.length };
+  return {
+    results,
+    warnings,
+    platform,
+    keywordsSearched: keywords.length,
+    execution: {
+      mode: 'live',
+      portable: false,
+      liveScrapeRequired: true,
+      dependencies: buildSignalLiveDependencyHints(),
+    },
+  };
 }
 
 async function searchTikTok(keyword, limit) {
@@ -1130,6 +1196,7 @@ function mockSearch(platform, keywords, limit) {
  * @returns {Promise<object>}
  */
 export async function runTargetedScrape(options = {}) {
+  const executionMode = resolveSignalsExecutionMode(options);
   const sets = options.keywordSetIds
     ? options.keywordSetIds.map((id) => keywordSets.get(id)).filter(Boolean)
     : [...keywordSets.values()];
@@ -1151,7 +1218,12 @@ export async function runTargetedScrape(options = {}) {
       ];
       if (keywords.length === 0) continue;
 
-      const { results, warnings } = await searchPlatform({ platform, keywords, limit });
+      const { results, warnings } = await searchPlatform({
+        platform,
+        keywords,
+        limit,
+        executionMode,
+      });
       // Tag results with the keyword set for traceability
       for (const r of results) r.keywordSetId = set.id;
       allResults.push(...results);
@@ -1168,5 +1240,11 @@ export async function runTargetedScrape(options = {}) {
     platforms,
     warnings: allWarnings,
     scrapedAt: lastScrapeAt,
+    execution: {
+      mode: executionMode,
+      portable: executionMode !== 'live',
+      liveScrapeRequired: executionMode === 'live',
+      dependencies: executionMode === 'live' ? buildSignalLiveDependencyHints() : [],
+    },
   };
 }

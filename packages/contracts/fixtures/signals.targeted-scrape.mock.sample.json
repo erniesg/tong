@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "results": [
+    {
+      "platform": "tiktok",
+      "keyword": "learn korean",
+      "type": "video",
+      "title": "[Mock] learn korean content #1 — trending tiktok format",
+      "author": "creator_ab12",
+      "stats": {
+        "views": 50000,
+        "likes": 3500
+      },
+      "scrapedAt": "2026-04-06T00:00:00.000Z",
+      "keywordSetId": "kw-sample"
+    }
+  ],
+  "keywordSets": 1,
+  "platforms": [
+    "tiktok",
+    "instagram"
+  ],
+  "warnings": [
+    "mock mode — no real network calls"
+  ],
+  "scrapedAt": "2026-04-06T00:00:00.000Z",
+  "execution": {
+    "mode": "mock",
+    "portable": true,
+    "liveScrapeRequired": false,
+    "dependencies": []
+  }
+}
