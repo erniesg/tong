@@ -251,7 +251,28 @@ export async function instagramHashtag(hashtag, limit = 10) {
       const reelCountMatch = text.match(/([\d.]+[KMB]?)\s*reels?\s+about/i);
       const reelCount = reelCountMatch?.[1] || null;
 
-      // Extract individual posts — pattern: author\nviewCount\ncaption
+      // Extract post links — find <a> tags pointing to /p/ or /reel/ paths
+      const postAnchors = Array.from(document.querySelectorAll('a[href*="/p/"], a[href*="/reel/"]'));
+      const seen = new Set();
+      const postLinks = [];
+      for (const a of postAnchors) {
+        const href = a.href.split('?')[0];
+        if (!seen.has(href)) {
+          seen.add(href);
+          // Try to get thumbnail from nearest img
+          let el = a;
+          let img = null;
+          for (let i = 0; i < 5 && el; i++) {
+            img = el.querySelector('img');
+            if (img) break;
+            el = el.parentElement;
+          }
+          const thumbnailUrl = img?.src || '';
+          postLinks.push({ href, thumbnailUrl });
+        }
+      }
+
+      // Extract individual posts via text pattern — author\nviewCount\ncaption
       const lines = text.split(/\n/).map((l) => l.trim()).filter(Boolean);
       const posts = [];
 
@@ -264,13 +285,39 @@ export async function instagramHashtag(hashtag, limit = 10) {
           if (author.length > 30 || /^(Log|Sign|Watch|View)/.test(author)) { continue; }
 
           // Caption is everything on the next line(s) until the next view count or author
-          let caption = lines[i + 1] || '';
+          const caption = lines[i + 1] || '';
           const hashtags = caption.match(/#[\w\u4e00-\u9fff\uac00-\ud7af]+/g) || [];
+
+          // Match post link by index (posts appear in DOM order matching text order)
+          const linkData = postLinks[posts.length] || {};
+
+          // Determine type: /reel/ links are video reels, /p/ may be image or video
+          const isReel = (linkData.href || '').includes('/reel/');
+
           posts.push({
             author,
             stats: { views: viewMatch[1] },
             caption: caption.slice(0, 300),
             hashtags,
+            videoPageUrl: linkData.href || '',
+            thumbnailUrl: linkData.thumbnailUrl || '',
+            type: isReel ? 'reel' : 'post',
+          });
+        }
+      }
+
+      // If text-based extraction found nothing but we have post links, fall back to link-only
+      if (posts.length === 0 && postLinks.length > 0) {
+        for (const linkData of postLinks.slice(0, maxItems)) {
+          const isReel = linkData.href.includes('/reel/');
+          posts.push({
+            author: '',
+            stats: { views: '' },
+            caption: '',
+            hashtags: [],
+            videoPageUrl: linkData.href,
+            thumbnailUrl: linkData.thumbnailUrl,
+            type: isReel ? 'reel' : 'post',
           });
         }
       }
@@ -285,7 +332,6 @@ export async function instagramHashtag(hashtag, limit = 10) {
       posts: data.posts.map((p) => ({
         platform: 'instagram',
         keyword: `#${tag}`,
-        type: 'reel',
         ...p,
         scrapedAt: now,
       })),

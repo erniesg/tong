@@ -116,6 +116,8 @@ import {
   downloadVideo,
   downloadBatch,
   getDownloadStatus,
+  extractThumbnail,
+  extractThumbnailBatch,
 } from './video-download.mjs';
 import {
   tiktokSearch,
@@ -4807,6 +4809,53 @@ const server = http.createServer(async (req, res) => {
       } catch (err) {
         jsonResponse(res, 502, { ok: false, error: err.message });
       }
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/extract-thumbnails' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      try {
+        if (body.results) {
+          const result = await extractThumbnailBatch(body.results, {
+            outputDir: body.outputDir,
+            concurrency: body.concurrency,
+            timeout: body.timeout,
+          });
+          jsonResponse(res, 200, { ok: true, ...result });
+        } else if (body.url) {
+          const result = await extractThumbnail({ url: body.url, outputDir: body.outputDir, id: body.id, timeout: body.timeout });
+          jsonResponse(res, 200, { ok: true, ...result });
+        } else {
+          jsonResponse(res, 400, { ok: false, error: 'url or results[] required' });
+        }
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
+      return;
+    }
+
+    // ── Cached thumbnail static serving ───────────────────────────────
+    // GET /thumbnails/<filename>.jpg — serves from artifacts/thumbnails/
+    if (pathname.startsWith('/thumbnails/') && req.method === 'GET') {
+      const filename = path.basename(pathname); // prevent path traversal
+      const thumbnailDir = path.join(process.cwd(), 'artifacts', 'thumbnails');
+      const filePath = path.join(thumbnailDir, filename);
+      if (!filePath.startsWith(thumbnailDir)) {
+        jsonResponse(res, 400, { error: 'invalid_path' });
+        return;
+      }
+      if (!fs.existsSync(filePath)) {
+        jsonResponse(res, 404, { error: 'thumbnail_not_found', filename });
+        return;
+      }
+      const stat = fs.statSync(filePath);
+      res.writeHead(200, {
+        'Content-Type': 'image/jpeg',
+        'Content-Length': stat.size,
+        'Cache-Control': 'public, max-age=86400',
+        'Access-Control-Allow-Origin': '*',
+      });
+      fs.createReadStream(filePath).pipe(res);
       return;
     }
 

@@ -16,6 +16,7 @@ import crypto from 'node:crypto';
 const execFileAsync = promisify(execFile);
 
 const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), 'artifacts', 'videos');
+const DEFAULT_THUMBNAIL_DIR = path.join(process.cwd(), 'artifacts', 'thumbnails');
 
 // ── yt-dlp wrapper ──────────────────────────────────────────────────
 
@@ -158,6 +159,106 @@ export async function downloadBatch(results, options = {}) {
   }
 
   return { downloads, errors, total: downloadable.length, skipped: results.length - downloadable.length };
+}
+
+/**
+ * Extract a stable thumbnail JPG for a single video without downloading it.
+ * Uses yt-dlp --write-thumbnail --skip-download to produce ~28KB JPG files.
+ *
+ * @param {object} args
+ * @param {string} args.url — video page URL (TikTok, Instagram, XHS)
+ * @param {string} [args.outputDir] — directory to write JPG (default: artifacts/thumbnails)
+ * @param {string} [args.id] — output filename stem (without extension); defaults to random hex
+ * @param {number} [args.timeout] — timeout ms (default: 30000)
+ * @returns {Promise<{ thumbnailPath: string, size: number, id: string }>}
+ */
+export async function extractThumbnail(args) {
+  const { url } = args;
+  if (!url) throw new Error('url is required');
+
+  const outputDir = args.outputDir || DEFAULT_THUMBNAIL_DIR;
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  const id = args.id || crypto.randomBytes(6).toString('hex');
+  const outputTemplate = path.join(outputDir, id);
+
+  const ytdlpArgs = [
+    url,
+    '--write-thumbnail',
+    '--skip-download',
+    '--convert-thumbnails', 'jpg',
+    '-o', outputTemplate,
+    '--no-playlist',
+  ];
+
+  try {
+    await execFileAsync('yt-dlp', ytdlpArgs, {
+      timeout: args.timeout || 30000,
+      maxBuffer: 5 * 1024 * 1024,
+    });
+  } catch (err) {
+    if (err.killed) throw new Error(`Thumbnail extraction timed out for ${url}`);
+    throw new Error(`yt-dlp thumbnail extraction failed for ${url}: ${err.message}`);
+  }
+
+  // yt-dlp writes <outputTemplate>.jpg when --convert-thumbnails jpg is used
+  const thumbnailPath = `${outputTemplate}.jpg`;
+  if (!fs.existsSync(thumbnailPath)) {
+    throw new Error(`Thumbnail file not found after extraction: ${thumbnailPath}`);
+  }
+
+  const stats = fs.statSync(thumbnailPath);
+  return { thumbnailPath, size: stats.size, id };
+}
+
+/**
+ * Extract thumbnails for a batch of scraped results.
+ * Adds thumbnailLocalPath to each result that succeeds.
+ *
+ * @param {object[]} results — scraped results with .videoPageUrl or .url
+ * @param {object} [options]
+ * @param {string} [options.outputDir] — override thumbnail output directory
+ * @param {number} [options.concurrency=3] — parallel extractions (max 5)
+ * @param {number} [options.timeout] — per-extraction timeout ms
+ * @returns {Promise<{ results: object[], errors: object[] }>}
+ */
+export async function extractThumbnailBatch(results, options = {}) {
+  const concurrency = Math.max(1, Math.min(options.concurrency ?? 3, 5));
+  const outputDir = options.outputDir || DEFAULT_THUMBNAIL_DIR;
+  const enriched = [];
+  const errors = [];
+
+  const eligible = results.filter((r) => r.videoPageUrl || r.url);
+
+  for (let i = 0; i < eligible.length; i += concurrency) {
+    const batch = eligible.slice(i, i + concurrency);
+    const promises = batch.map(async (r) => {
+      const url = r.videoPageUrl || r.url;
+      const platform = r.platform || 'unknown';
+      const id = `${platform}-${crypto.randomBytes(4).toString('hex')}`;
+      try {
+        const thumb = await extractThumbnail({ url, outputDir, id, timeout: options.timeout });
+        return { ...r, thumbnailLocalPath: thumb.thumbnailPath, thumbnailSize: thumb.size };
+      } catch (err) {
+        errors.push({ url, platform, error: err.message });
+        return r; // return original without thumbnailLocalPath
+      }
+    });
+
+    const batchResults = await Promise.allSettled(promises);
+    for (const result of batchResults) {
+      enriched.push(result.status === 'fulfilled' ? result.value : result.reason);
+    }
+  }
+
+  // Include results that had no URL unchanged
+  const ineligible = results.filter((r) => !r.videoPageUrl && !r.url);
+  return {
+    results: [...enriched, ...ineligible],
+    errors,
+    total: results.length,
+    extracted: enriched.filter((r) => r.thumbnailLocalPath).length,
+  };
 }
 
 /**
