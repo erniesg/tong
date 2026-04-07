@@ -4960,19 +4960,31 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        // Determine MIME type from URL/path extension
-        const source = body.url || body.filePath || '';
-        const mimeType = source.endsWith('.mp4') ? 'video/mp4' : 'video/webm';
+        // For social media URLs, download via yt-dlp first (direct fetch gets HTML, not video)
+        let filePath = body.filePath;
+        let downloadedPath = null;
+        if (body.url && !filePath) {
+          const isSocialUrl = /tiktok\.com|instagram\.com|xiaohongshu\.com|douyin\.com/.test(body.url);
+          if (isSocialUrl) {
+            const dl = await downloadVideo({ url: body.url, timeout: 120000 });
+            filePath = dl.filePath;
+            downloadedPath = dl.filePath;
+          }
+        }
+
+        const source = body.url || filePath || '';
+        const mimeType = (filePath || source).endsWith('.mp4') ? 'video/mp4' : 'video/webm';
         const displayName = `signals-${Date.now()}`;
 
-        const uploadArgs = body.url
-          ? { url: body.url, mimeType, displayName }
-          : { filePath: body.filePath, mimeType, displayName };
+        const uploadArgs = filePath
+          ? { filePath, mimeType, displayName }
+          : { url: body.url, mimeType, displayName };
 
         const { fileUri } = await uploadVideo(uploadArgs);
 
         const analysis = await analyzeVideo({
           fileUri,
+          mimeType,
           prompt: preset.prompt,
           model: body.model || 'flash',
           mediaResolution: body.mediaResolution || 'low',
