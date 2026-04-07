@@ -17,6 +17,7 @@ interface ScriptedMessagingPlayerProps {
   hookOverlayMs?: number;
   showHookOverlay?: boolean;
   showControls?: boolean;
+  showSceneMeta?: boolean;
   onStateChange?: (state: ScriptedMessagingPlayerState) => void;
   onElapsedChange?: (elapsedMs: number) => void;
 }
@@ -46,6 +47,7 @@ export const ScriptedMessagingPlayer = forwardRef<ScriptedMessagingPlayerHandle,
     hookOverlayMs = 1800,
     showHookOverlay = false,
     showControls = true,
+    showSceneMeta = true,
     onStateChange,
     onElapsedChange,
   },
@@ -156,16 +158,18 @@ export const ScriptedMessagingPlayer = forwardRef<ScriptedMessagingPlayerHandle,
         </div>
       )}
 
-      <div style={{ padding: 12, borderRadius: 14, background: palette.bg, border: `1px solid ${palette.border}`, margin: 10 }}>
-        <p style={{ margin: 0, fontSize: 12, opacity: 0.72 }}>{scene.title}</p>
-        {!showHookOverlay && scene.hookText && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{scene.hookText}</p>}
-        <p style={{ margin: '8px 0 0', fontSize: 12 }}>
-          <strong>state:</strong> {state} · <strong>t:</strong> {elapsedMs}ms
-        </p>
-        <div aria-hidden style={{ marginTop: 8, height: 5, borderRadius: 999, background: 'rgba(0, 0, 0, 0.08)' }}>
-          <div style={{ width: `${progress}%`, height: '100%', borderRadius: 999, background: 'rgba(0,0,0,0.35)' }} />
+      {showSceneMeta && (
+        <div style={{ padding: 12, borderRadius: 14, background: palette.bg, border: `1px solid ${palette.border}`, margin: 10 }}>
+          <p style={{ margin: 0, fontSize: 12, opacity: 0.72 }}>{scene.title}</p>
+          {!showHookOverlay && scene.hookText && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{scene.hookText}</p>}
+          <p style={{ margin: '8px 0 0', fontSize: 12 }}>
+            <strong>state:</strong> {state} · <strong>t:</strong> {elapsedMs}ms
+          </p>
+          <div aria-hidden style={{ marginTop: 8, height: 5, borderRadius: 999, background: 'rgba(0, 0, 0, 0.08)' }}>
+            <div style={{ width: `${progress}%`, height: '100%', borderRadius: 999, background: 'rgba(0,0,0,0.35)' }} />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="learn-chat-scroll" style={{ maxHeight: 420 }}>
         {visibleRows.map((row) => {
