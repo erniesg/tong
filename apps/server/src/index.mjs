@@ -4748,7 +4748,7 @@ const server = http.createServer(async (req, res) => {
         // Step 1: extract brief from multimodal inputs
         const { brief } = await extractBriefFromMultimodal(body);
         // Step 2: generate keywords from brief via OpenAI
-        const sets = await generateKeywordsFromBrief(brief);
+        const sets = await generateKeywordsFromBrief(brief, { executionMode: body.executionMode || body.mode });
         // Step 3: save keyword sets
         for (const kw of sets) {
           saveKeywordSet({ ...kw, source: 'multimodal' });

@@ -23,7 +23,7 @@ const GEMINI_API_KEY = () => process.env.GOOGLE_GEMINI_API_KEY || '';
 const MOCK_MODE = () => process.env.SIGNALS_MOCK === 'true' || process.env.SIGNALS_MOCK === '1';
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com';
-const FLASH_MODEL = 'gemini-2.5-flash';
+const FLASH_MODEL = 'gemini-3-flash-preview';
 
 const EXECUTION_MODES = ['live', 'mock', 'preflight'];
 
@@ -117,7 +117,7 @@ const RELEVANCE_SCHEMA = {
  */
 export async function scoreRelevance(results, brief, options = {}) {
   const mode = resolveMode(options);
-  const batchSize = options.batchSize ?? 5;
+  const batchSize = Math.max(1, Math.min(Number(options.batchSize) || 5, 20));
 
   if (mode === 'preflight') {
     return {
@@ -216,8 +216,9 @@ export async function scoreRelevance(results, brief, options = {}) {
     });
 
     const batchResults = await Promise.allSettled(promises);
-    for (const result of batchResults) {
-      scored.push(result.status === 'fulfilled' ? result.value : { ...batch[0], _relevance: { relevanceScore: 0, reasoning: 'error', matchedKeywords: [] } });
+    for (let j = 0; j < batchResults.length; j++) {
+      const result = batchResults[j];
+      scored.push(result.status === 'fulfilled' ? result.value : { ...batch[j], _relevance: { relevanceScore: 0, reasoning: `error: ${result.reason?.message || 'unknown'}`, matchedKeywords: [] } });
     }
   }
 

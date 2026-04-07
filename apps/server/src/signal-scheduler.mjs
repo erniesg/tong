@@ -110,7 +110,21 @@ async function generateKeywordsServerSide() {
  * @param {string[]} [brief.languages]
  * @returns {Promise<object[]>} — keyword sets in existing schema
  */
-export async function generateKeywordsFromBrief(brief) {
+export async function generateKeywordsFromBrief(brief, options = {}) {
+  const executionMode = String(options.executionMode || options.mode || process.env.SIGNALS_EXECUTION_MODE || '').toLowerCase();
+  const isMock = executionMode === 'mock' || process.env.SIGNALS_MOCK === 'true' || process.env.SIGNALS_MOCK === '1';
+
+  if (executionMode === 'preflight') {
+    return [{ theme: 'preflight', description: 'preflight mode — keyword gen skipped', keywords: { global: [], tiktok: [], instagram: [], xiaohongshu: [] }, priority: 'low', languages: brief.languages || ['en'] }];
+  }
+
+  if (isMock) {
+    return [
+      { theme: 'mock_language_learning', description: '[mock] language learning keywords', keywords: { global: ['language learning', 'learn korean'], tiktok: ['#learnkorean', '#studyjapanese'], instagram: ['#languagelearning'], xiaohongshu: ['学韩语', '日语学习'] }, priority: 'high', languages: brief.languages || ['ko', 'ja', 'zh', 'en'] },
+      { theme: 'mock_dating_sim', description: '[mock] dating sim keywords', keywords: { global: ['dating sim', 'visual novel'], tiktok: ['#datingsim', '#otomegame'], instagram: ['#visualnovel'], xiaohongshu: ['恋爱游戏'] }, priority: 'medium', languages: ['en', 'ja'] },
+    ];
+  }
+
   const apiKey = OPENAI_API_KEY();
   if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
 
