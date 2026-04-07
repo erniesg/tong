@@ -101,64 +101,74 @@ export async function tiktokSearch(keyword, limit = 10) {
     await new Promise((r) => setTimeout(r, 3000));
 
     const results = await page.evaluate((maxItems) => {
-      // TikTok search renders video cards with descriptions
       const items = [];
-      // Try multiple selector patterns (TikTok changes class names)
-      const cards = document.querySelectorAll(
-        '[data-e2e="search_top-item"], [class*="DivItemContainer"], [class*="search-card"]',
-      );
+      const seen = new Set();
 
-      if (cards.length === 0) {
-        // Fallback: extract video links from all anchors + parse text blocks
-        const videoLinks = Array.from(document.querySelectorAll('a[href*="/video/"]'))
-          .map((a) => a.href)
-          .filter((h, i, arr) => arr.indexOf(h) === i)
-          .slice(0, maxItems);
-
-        const text = document.body.innerText;
-        const blocks = text.split(/\n{2,}/).filter((b) => b.length > 20);
-        for (let idx = 0; idx < blocks.length && items.length < maxItems; idx++) {
-          const block = blocks[idx];
-          const viewMatch = block.match(/(\d+(?:\.\d+)?[KMB]?)\s*$/m);
-          const hashtagMatches = block.match(/#[\w\u4e00-\u9fff\uac00-\ud7af]+/g) || [];
-          if (viewMatch || hashtagMatches.length > 0) {
-            items.push({
-              type: 'video',
-              title: block.split('\n')[0]?.slice(0, 200) || '',
-              author: '',
-              stats: { views: viewMatch?.[1] || null },
-              hashtags: hashtagMatches,
-              videoPageUrl: videoLinks[items.length] || '',
-              thumbnailUrl: '',
-            });
-          }
+      // Strategy: find all unique video links on the page, then extract metadata per link
+      const videoAnchors = Array.from(document.querySelectorAll('a[href*="/video/"]'));
+      const uniqueLinks = [];
+      for (const a of videoAnchors) {
+        const href = a.href.split('?')[0]; // strip query params
+        if (!seen.has(href)) {
+          seen.add(href);
+          uniqueLinks.push({ href, el: a });
         }
-        return items;
       }
 
-      for (const card of Array.from(cards).slice(0, maxItems)) {
-        const desc = card.querySelector('[class*="SpanText"], [class*="desc"], [data-e2e*="desc"]')?.textContent || '';
-        const author = card.querySelector('[class*="author"], [data-e2e*="author"], a[href*="/@"]')?.textContent || '';
-        const viewEl = card.querySelector('[class*="count"], [class*="views"], [class*="play"]');
-        const views = viewEl?.textContent || '';
-        const hashtags = desc.match(/#[\w\u4e00-\u9fff\uac00-\ud7af]+/g) || [];
+      for (const { href, el } of uniqueLinks.slice(0, maxItems)) {
+        // Walk up to find the containing card
+        let card = el;
+        for (let i = 0; i < 8 && card.parentElement; i++) {
+          card = card.parentElement;
+          // Stop at a likely card boundary
+          if (card.getAttribute('data-e2e') || card.className?.includes('Item') || card.className?.includes('card')) break;
+        }
 
-        // Extract video page URL and thumbnail
-        const videoLink = card.querySelector('a[href*="/video/"]')?.href
-          || card.querySelector('a[href*="/@"]')?.href
+        // Extract text from the card area
+        const cardText = card.innerText || '';
+        const lines = cardText.split('\n').map((l) => l.trim()).filter(Boolean);
+
+        // Find description: longest line with hashtags or > 20 chars
+        const descLine = lines.find((l) => l.includes('#') && l.length > 10)
+          || lines.find((l) => l.length > 20)
           || '';
-        const thumbnail = card.querySelector('img[src*="tiktok"], img[class*="poster"], img')?.src || '';
+
+        // Find author: look for @username pattern or username from URL
+        const urlMatch = href.match(/@([^/]+)/);
+        const authorFromUrl = urlMatch?.[1] || '';
+        const authorLine = lines.find((l) => l.startsWith('@'));
+        const author = authorLine?.replace(/^@/, '') || authorFromUrl;
+
+        // Find view count: look for patterns like "1.7M", "42.2K", "618"
+        const viewPatterns = lines.map((l) => {
+          const m = l.match(/^(\d+(?:\.\d+)?)\s*([KMB]?)$/i);
+          return m ? l : null;
+        }).filter(Boolean);
+        const views = viewPatterns[0] || '';
+
+        // Hashtags from description
+        const hashtags = descLine.match(/#[\w\u4e00-\u9fff\uac00-\ud7af]+/g) || [];
+
+        // Clean title: remove author suffix patterns like "username2024-11-27"
+        let title = descLine.replace(/#[\w\u4e00-\u9fff\uac00-\ud7af]+/g, '').trim();
+        title = title.replace(/\s+[\w.]+\d{4}-\d{1,2}-\d{1,2}$/, '').trim();
+
+        // Thumbnail: find img inside or near the card
+        const img = card.querySelector('img[src*="tiktok"], img[src*="tos-"], img')
+          || el.querySelector('img');
+        const thumbnailUrl = img?.src || '';
 
         items.push({
           type: 'video',
-          title: desc.slice(0, 300),
-          author: author.replace(/^@/, ''),
+          title: title.slice(0, 300) || `Video by @${author}`,
+          author,
           stats: { views },
           hashtags,
-          videoPageUrl: videoLink,
-          thumbnailUrl: thumbnail,
+          videoPageUrl: href,
+          thumbnailUrl,
         });
       }
+
       return items;
     }, limit);
 

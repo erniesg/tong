@@ -190,7 +190,7 @@ export default function SignalsPage() {
           results: searchResults,
           brief: brief || { description: briefText || 'language learning game', keywords: [] },
           minViews,
-          executionMode: 'mock', // use mock for now until live scoring is tested
+          executionMode: 'live',
         }),
       });
       const data = await res.json();
@@ -252,7 +252,7 @@ export default function SignalsPage() {
           results: searchData.results || [],
           brief: kwData.brief || { description: 'language learning game', keywords: [] },
           minViews,
-          executionMode: 'mock',
+          executionMode: 'live',
         }),
       });
       const filterData = await filterRes.json();
@@ -500,44 +500,80 @@ export default function SignalsPage() {
             </div>
           )}
 
-          {!loading && searchResults.length === 0 && (
+          {!loading && searchResults.length === 0 && filteredResults.length === 0 && (
             <div className="triage-empty">
-              No results yet. Generate keywords first, then run a targeted scrape.
+              No results yet. Use the Pipeline tab to search, or run a targeted scrape from Keywords.
+            </div>
+          )}
+
+          {filterStats && (
+            <div style={{ fontSize: 12, opacity: 0.7, padding: '0 4px 8px' }}>
+              {filterStats.total} scraped → {filterStats.afterEngagementFilter} passed engagement → {filterStats.returned} ranked
             </div>
           )}
 
           {!loading && (filteredResults.length > 0 || searchResults.length > 0) && (
-            <div className="triage-issues">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
               {(filteredResults.length > 0 ? filteredResults : searchResults).map((r, i) => (
-                <div key={i} className="triage-issue">
-                  <div className="triage-issue-header">
-                    <span className="triage-issue-time">{r.platform}</span>
+                <a
+                  key={i}
+                  href={r.videoPageUrl || '#'}
+                  target="_blank"
+                  rel="noopener"
+                  style={{
+                    display: 'block',
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    background: 'var(--card-bg, #1e293b)',
+                    border: '1px solid rgba(148,163,184,0.15)',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    transition: 'transform 0.15s, box-shadow 0.15s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.03)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.25)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
+                >
+                  <div style={{ position: 'relative', aspectRatio: '9/16', background: '#0f172a' }}>
+                    {r.thumbnailUrl ? (
+                      <img src={r.thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 32, opacity: 0.3 }}>▶</div>
+                    )}
                     {r._relevance && (
-                      <span className="triage-issue-severity" style={{ background: r._relevance.relevanceScore > 70 ? '#22c55e' : r._relevance.relevanceScore > 40 ? '#f59e0b' : '#94a3b8' }}>
-                        {r._relevance.relevanceScore}%
+                      <span style={{
+                        position: 'absolute', top: 6, left: 6, padding: '2px 7px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                        background: r._relevance.relevanceScore > 70 ? '#22c55e' : r._relevance.relevanceScore > 40 ? '#f59e0b' : '#94a3b8',
+                        color: '#fff',
+                      }}>
+                        {r._relevance.relevanceScore}
                       </span>
                     )}
-                    <span className="triage-auto-badge">{r.keyword}</span>
                     {(r._parsedViews || r.stats?.views) && (
-                      <span className="triage-issue-time">{(r._parsedViews || r.stats.views)?.toLocaleString()} views</span>
+                      <span style={{
+                        position: 'absolute', bottom: 6, right: 6, padding: '2px 6px', borderRadius: 6, fontSize: 10,
+                        background: 'rgba(0,0,0,0.7)', color: '#fff',
+                      }}>
+                        {(r._parsedViews || r.stats.views)?.toLocaleString()} views
+                      </span>
+                    )}
+                    <span style={{
+                      position: 'absolute', top: 6, right: 6, padding: '2px 6px', borderRadius: 6, fontSize: 10,
+                      background: r.platform === 'tiktok' ? '#000' : r.platform === 'instagram' ? '#833AB4' : '#ff2442',
+                      color: '#fff',
+                    }}>
+                      {r.platform}
+                    </span>
+                  </div>
+                  <div style={{ padding: '8px 10px 10px' }}>
+                    <p style={{ margin: 0, fontSize: 12, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {r.title || '(no title)'}
+                    </p>
+                    {r.author && <p style={{ margin: '3px 0 0', fontSize: 11, opacity: 0.6 }}>@{r.author}</p>}
+                    {r._relevance?.reasoning && r._relevance.reasoning !== '[mock] synthetic relevance score' && (
+                      <p style={{ margin: '4px 0 0', fontSize: 10, opacity: 0.5, lineHeight: 1.2 }}>{r._relevance.reasoning}</p>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    {r.thumbnailUrl && (
-                      <img src={r.thumbnailUrl} alt="" style={{ width: 60, height: 80, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
-                    )}
-                    <div style={{ minWidth: 0 }}>
-                      <p className="triage-issue-desc" style={{ margin: 0 }}>{r.title || '(no title)'}</p>
-                      {r.author && <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: '2px 0 0' }}>@{r.author}</p>}
-                      {r._relevance?.reasoning && <p style={{ fontSize: '0.7rem', opacity: 0.6, margin: '4px 0 0' }}>{r._relevance.reasoning}</p>}
-                      {r.videoPageUrl && (
-                        <a href={r.videoPageUrl} target="_blank" rel="noopener" style={{ fontSize: '0.7rem', color: 'var(--mint)' }}>
-                          View on {r.platform}
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                </a>
               ))}
             </div>
           )}
