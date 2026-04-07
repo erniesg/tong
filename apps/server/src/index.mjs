@@ -1316,6 +1316,19 @@ const AGENT_TOOL_DEFINITIONS = [
       executionMode: 'string (optional) – "live"|"mock"|"preflight"',
     },
   },
+  {
+    name: 'signals.analyze_video',
+    description: 'Upload a video to Gemini and run scene decomposition (or any analysis preset) to produce timestamped scene-level fingerprints. Key input for clustering reusable video components.',
+    method: 'POST',
+    path: '/api/v1/signals/analyze-video',
+    args: {
+      url: 'string (optional) – public URL of the video to analyze',
+      filePath: 'string (optional) – local file path to analyze',
+      preset: 'string (optional, default "scene_decomposition") – analysis preset key',
+      model: 'string (optional, default "flash") – "flash"|"pro"',
+      mediaResolution: 'string (optional, default "low") – "low"|"medium"|"high"',
+    },
+  },
 ];
 
 function jsonResponse(res, statusCode, payload) {
@@ -4928,6 +4941,53 @@ const server = http.createServer(async (req, res) => {
       };
       const result = await scrapeAllTrends(options);
       jsonResponse(res, 200, { ok: true, ...result });
+      return;
+    }
+
+    // ── Scene fingerprinting / video analysis route ───────────────────
+
+    if (pathname === '/api/v1/signals/analyze-video' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      if (!body.url && !body.filePath) {
+        jsonResponse(res, 400, { ok: false, error: 'url or filePath is required' });
+        return;
+      }
+      try {
+        const presetKey = body.preset || 'scene_decomposition';
+        const preset = ANALYSIS_PRESETS[presetKey];
+        if (!preset) {
+          jsonResponse(res, 400, { ok: false, error: `Unknown preset: ${presetKey}. Available: ${Object.keys(ANALYSIS_PRESETS).join(', ')}` });
+          return;
+        }
+
+        // Determine MIME type from URL/path extension
+        const source = body.url || body.filePath || '';
+        const mimeType = source.endsWith('.mp4') ? 'video/mp4' : 'video/webm';
+        const displayName = `signals-${Date.now()}`;
+
+        const uploadArgs = body.url
+          ? { url: body.url, mimeType, displayName }
+          : { filePath: body.filePath, mimeType, displayName };
+
+        const { fileUri } = await uploadVideo(uploadArgs);
+
+        const analysis = await analyzeVideo({
+          fileUri,
+          prompt: preset.prompt,
+          model: body.model || 'flash',
+          mediaResolution: body.mediaResolution || 'low',
+          responseSchema: preset.schema,
+        });
+
+        jsonResponse(res, 200, {
+          ok: true,
+          preset: presetKey,
+          source: body.url || body.filePath,
+          ...analysis,
+        });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
       return;
     }
 

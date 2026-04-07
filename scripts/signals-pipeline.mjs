@@ -25,6 +25,7 @@ const SERVER_SRC = resolve(__dirname, '..', 'apps', 'server', 'src');
 const { extractBriefFromMultimodal, filterByEngagement, runFilterPipeline } = await import(resolve(SERVER_SRC, 'signal-filter.mjs'));
 const { generateKeywordsFromBrief } = await import(resolve(SERVER_SRC, 'signal-scheduler.mjs'));
 const { saveKeywordSet, runTargetedScrape, searchPlatform } = await import(resolve(SERVER_SRC, 'signals.mjs'));
+const { uploadVideo, analyzeVideo, ANALYSIS_PRESETS } = await import(resolve(SERVER_SRC, 'gemini-video.mjs'));
 
 // ── CLI args ────────────────────────────────────────────────────────
 
@@ -43,6 +44,9 @@ const { positionals, values: args } = parseArgs({
     top: { type: 'string' },
     output: { type: 'string' },
     mode: { type: 'string', default: 'live' },
+    preset: { type: 'string', default: 'scene_decomposition' },
+    model: { type: 'string', default: 'flash' },
+    'media-resolution': { type: 'string', default: 'low' },
     help: { type: 'boolean', default: false },
   },
   strict: false,
@@ -54,30 +58,35 @@ if (args.help || !command) {
   console.log(`Video Signals Pipeline CLI
 
 Commands:
-  keywords    Generate keywords from product brief (multimodal)
-  search      Search platforms with keyword sets
-  filter      Filter results by engagement + relevance
-  run         Full pipeline: keywords → search → filter
+  keywords     Generate keywords from product brief (multimodal)
+  search       Search platforms with keyword sets
+  filter       Filter results by engagement + relevance
+  fingerprint  Scene-decompose top videos via Gemini (produces 04-fingerprints.json)
+  run          Full pipeline: keywords → search → filter
 
 Options:
-  --text <str>           Product description or campaign goal
-  --image <url>          Product image URLs (repeatable)
-  --repo-context         Read CLAUDE.md + package.json for context
-  --keywords-from <file> Load keyword sets from JSON file
-  --results-from <file>  Load search results from JSON file
-  --platforms <list>     Comma-separated: tiktok,xiaohongshu,instagram
-  --min-views <n>        Engagement threshold (default: 10000)
-  --min-likes <n>        Like threshold (default: 0)
-  --brief <str>          Product brief for relevance scoring
-  --top <n>              Return top N results
-  --output <file>        Write JSON output to file
-  --mode <str>           live|mock|preflight (default: live)
-  --help                 Show this help
+  --text <str>              Product description or campaign goal
+  --image <url>             Product image URLs (repeatable)
+  --repo-context            Read CLAUDE.md + package.json for context
+  --keywords-from <file>    Load keyword sets from JSON file
+  --results-from <file>     Load search results from JSON file
+  --platforms <list>        Comma-separated: tiktok,xiaohongshu,instagram
+  --min-views <n>           Engagement threshold (default: 10000)
+  --min-likes <n>           Like threshold (default: 0)
+  --brief <str>             Product brief for relevance scoring
+  --top <n>                 Return top N results (fingerprint: number of videos to analyze, default 5)
+  --output <file>           Write JSON output to file
+  --mode <str>              live|mock|preflight (default: live)
+  --preset <str>            Analysis preset for fingerprint (default: scene_decomposition)
+  --model <str>             Gemini model for fingerprint: flash|pro (default: flash)
+  --media-resolution <str>  low|medium|high for fingerprint (default: low)
+  --help                    Show this help
 
 Examples:
   node scripts/signals-pipeline.mjs keywords --text "dating sim language learning" --repo-context
   node scripts/signals-pipeline.mjs search --keywords-from ./keywords.json --platforms tiktok
   node scripts/signals-pipeline.mjs filter --results-from ./results.json --min-views 5000
+  node scripts/signals-pipeline.mjs fingerprint --results-from ./03-filtered.json --top 5 --output ./04-fingerprints.json
   node scripts/signals-pipeline.mjs run --text "microdrama inspirations" --min-views 5000 --top 20`);
   process.exit(0);
 }
@@ -229,9 +238,111 @@ async function cmdRun() {
   return fullResult;
 }
 
+async function cmdFingerprint() {
+  if (!args['results-from']) {
+    throw new Error('--results-from is required for fingerprint command');
+  }
+
+  const presetKey = args.preset || 'scene_decomposition';
+  if (!ANALYSIS_PRESETS[presetKey]) {
+    throw new Error(`Unknown preset: ${presetKey}. Available: ${Object.keys(ANALYSIS_PRESETS).join(', ')}`);
+  }
+  const preset = ANALYSIS_PRESETS[presetKey];
+
+  const raw = JSON.parse(fs.readFileSync(args['results-from'], 'utf8'));
+  // Support both flat arrays and ranked arrays from filter output
+  const allResults = raw.ranked || raw.results || (Array.isArray(raw) ? raw : []);
+
+  const topN = args.top ? Number(args.top) : 5;
+  const candidates = allResults.slice(0, topN);
+
+  if (candidates.length === 0) {
+    throw new Error('No results found in input file');
+  }
+
+  console.error(`[pipeline] Fingerprinting ${candidates.length} videos with preset "${presetKey}" (model: ${args.model || 'flash'})...`);
+
+  const fingerprints = [];
+
+  for (let i = 0; i < candidates.length; i++) {
+    const item = candidates[i];
+    // Normalise the video URL — filter output may nest it in different fields
+    const videoUrl = item.videoUrl || item.video_url || item.url || item.downloadUrl || item.video?.url || null;
+
+    if (!videoUrl) {
+      console.error(`[pipeline]   [${i + 1}/${candidates.length}] Skipping — no video URL: ${item.id || JSON.stringify(item).slice(0, 60)}`);
+      fingerprints.push({ source: item, error: 'no_video_url', analysisId: null, result: null });
+      continue;
+    }
+
+    console.error(`[pipeline]   [${i + 1}/${candidates.length}] Uploading: ${videoUrl.slice(0, 80)}...`);
+
+    try {
+      const source = videoUrl;
+      const mimeType = source.endsWith('.mp4') ? 'video/mp4' : 'video/webm';
+      const displayName = `fingerprint-${Date.now()}-${i}`;
+
+      const { fileUri } = await uploadVideo({ url: videoUrl, mimeType, displayName });
+
+      console.error(`[pipeline]   [${i + 1}/${candidates.length}] Analyzing...`);
+
+      const analysis = await analyzeVideo({
+        fileUri,
+        prompt: preset.prompt,
+        model: args.model || 'flash',
+        mediaResolution: args['media-resolution'] || 'low',
+        responseSchema: preset.schema,
+      });
+
+      const sceneCount = analysis.result?.scenes?.length ?? 0;
+      const autoScore = analysis.result?.automatabilityScore ?? 'n/a';
+      console.error(`[pipeline]   [${i + 1}/${candidates.length}] Done — ${sceneCount} scenes, automatability: ${autoScore}/100`);
+
+      fingerprints.push({
+        source: {
+          id: item.id,
+          platform: item.platform,
+          author: item.author,
+          caption: item.caption,
+          views: item.views,
+          likes: item.likes,
+          videoUrl,
+          thumbnailUrl: item.thumbnailUrl || item.thumbnail_url || null,
+          relevanceScore: item.relevanceScore || null,
+        },
+        preset: presetKey,
+        analysisId: analysis.analysisId,
+        model: analysis.model,
+        tokensUsed: analysis.tokensUsed,
+        result: analysis.result,
+        analyzedAt: analysis.createdAt,
+      });
+    } catch (err) {
+      console.error(`[pipeline]   [${i + 1}/${candidates.length}] Error: ${err.message}`);
+      fingerprints.push({ source: item, error: err.message, analysisId: null, result: null });
+    }
+  }
+
+  const successful = fingerprints.filter((f) => f.result !== null).length;
+  const totalTokens = fingerprints.reduce((sum, f) => sum + (f.tokensUsed?.totalTokens || 0), 0);
+
+  console.error(`[pipeline] Fingerprinting complete: ${successful}/${candidates.length} succeeded, ${totalTokens} total tokens used`);
+
+  const output = {
+    preset: presetKey,
+    model: args.model || 'flash',
+    analyzedAt: new Date().toISOString(),
+    stats: { total: candidates.length, successful, failed: candidates.length - successful, totalTokens },
+    fingerprints,
+  };
+
+  writeOutput(output, 'Fingerprints');
+  return output;
+}
+
 // ── Dispatch ────────────────────────────────────────────────────────
 
-const commands = { keywords: cmdKeywords, search: cmdSearch, filter: cmdFilter, run: cmdRun };
+const commands = { keywords: cmdKeywords, search: cmdSearch, filter: cmdFilter, fingerprint: cmdFingerprint, run: cmdRun };
 
 if (!commands[command]) {
   console.error(`Unknown command: ${command}. Use --help for usage.`);
