@@ -199,6 +199,24 @@ export default function SignalsPage() {
     } catch { /* noop */ } finally { setLoading(false); setPipelineStep(''); }
   }, [searchResults, brief, briefText, minViews]);
 
+  const handleLoadCachedRun = useCallback(async () => {
+    setLoading(true);
+    setPipelineStep('Loading cached run...');
+    try {
+      const [kwRes, searchRes, filterRes] = await Promise.all([
+        fetch('/signals-cache/01-keywords.json').then((r) => r.json()),
+        fetch('/signals-cache/02-search-with-urls.json').then((r) => r.json()),
+        fetch('/signals-cache/03-filtered.json').then((r) => r.json()),
+      ]);
+      if (kwRes.brief) setBrief(kwRes.brief);
+      if (kwRes.keywordSets) setKeywordSets(kwRes.keywordSets.map((s: KeywordSet, i: number) => ({ ...s, id: s.id || `cached-${i}` })));
+      setSearchResults(searchRes.results || []);
+      setFilteredResults(filterRes.ranked || []);
+      setFilterStats(filterRes.stats || null);
+      setActiveTab('results');
+    } catch { setPipelineStep('Cache not found'); } finally { setLoading(false); setPipelineStep(''); }
+  }, []);
+
   const handleRunFullPipeline = useCallback(async () => {
     setLoading(true);
     setPipelineStep('Step 1/4: Extracting brief...');
@@ -364,6 +382,14 @@ export default function SignalsPage() {
                 disabled={loading}
               >
                 Keywords Only
+              </button>
+              <button
+                className="triage-btn-analyze"
+                style={{ background: '#64748b' }}
+                onClick={handleLoadCachedRun}
+                disabled={loading}
+              >
+                Load Cached Run
               </button>
             </div>
           </div>
