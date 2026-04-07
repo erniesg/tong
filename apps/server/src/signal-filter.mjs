@@ -239,7 +239,7 @@ export async function scoreRelevance(results, brief, options = {}) {
 export async function runFilterPipeline(results, brief, options = {}) {
   // Pass 1: engagement
   const { passed, dropped: engagementDropped } = filterByEngagement(results, {
-    minViews: options.minViews ?? 10000,
+    minViews: options.minViews ?? 2000,
     minLikes: options.minLikes ?? 0,
   });
 
