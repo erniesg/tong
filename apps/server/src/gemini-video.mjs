@@ -22,7 +22,8 @@ import path from 'node:path';
 const GEMINI_API_KEY = () => process.env.GOOGLE_GEMINI_API_KEY || '';
 
 const MODELS = {
-  flash: 'gemini-3-flash-preview',
+  flash: 'gemini-2.5-flash',
+  'flash-lite': 'gemini-3.1-flash-lite-preview',
   pro: 'gemini-3.1-pro-preview',
 };
 
@@ -237,7 +238,7 @@ export async function analyzeVideo(args) {
 
   // Build contents
   const parts = [
-    { file_data: { file_uri: args.fileUri, mime_type: 'video/webm' } },
+    { file_data: { file_uri: args.fileUri, mime_type: args.mimeType || 'video/mp4' } },
   ];
 
   // Add context (annotations, comments) as text if provided
@@ -473,33 +474,26 @@ Consider the user's annotations as direct feedback.`,
         hookTechnique: { type: 'STRING', description: 'How the video hooks viewers in first 3 seconds' },
         contentFormat: { type: 'STRING', description: 'Overall format: tutorial, storytime, challenge, POV, review, etc.' },
         totalDurationEstimate: { type: 'INTEGER' },
+        audioLanguage: { type: 'STRING', description: 'Primary spoken language (ISO code or name)' },
+        hasVoiceover: { type: 'STRING', description: 'yes or no' },
+        hasTrendingSound: { type: 'STRING', description: 'yes or no' },
+        transcript: { type: 'STRING', description: 'Brief transcript or summary of speech content' },
+        automatabilityScore: { type: 'INTEGER', description: '0-100 how much of this video could be auto-generated' },
         scenes: {
           type: 'ARRAY',
           items: {
             type: 'OBJECT',
             properties: {
-              startTimestamp: { type: 'STRING', description: 'MM:SS' },
-              endTimestamp: { type: 'STRING', description: 'MM:SS' },
-              sceneType: { type: 'STRING', description: 'talking_head|text_overlay|product_shot|data_viz|b_roll|screen_recording|split_screen|transition|outro_cta' },
-              audioLayer: { type: 'STRING', description: 'voiceover|trending_sound|original_music|silence|speech|mixed' },
-              textContent: { type: 'STRING', description: 'Any visible text/overlay content' },
-              visualStyle: { type: 'STRING', description: 'Brief description of visual aesthetic' },
-              automationDifficulty: { type: 'STRING', description: 'trivial|moderate|hard' },
+              start: { type: 'STRING', description: 'MM:SS' },
+              end: { type: 'STRING', description: 'MM:SS' },
+              type: { type: 'STRING', description: 'talking_head, text_overlay, product_shot, data_viz, b_roll, screen_recording, split_screen, transition, outro_cta' },
+              audio: { type: 'STRING', description: 'voiceover, trending_sound, original_music, silence, speech, mixed' },
+              automationDifficulty: { type: 'STRING', description: 'trivial, moderate, or hard' },
               description: { type: 'STRING', description: 'What happens in this scene' },
             },
-            required: ['startTimestamp', 'endTimestamp', 'sceneType', 'audioLayer', 'automationDifficulty', 'description'],
+            required: ['start', 'end', 'type', 'description'],
           },
         },
-        audioSummary: {
-          type: 'OBJECT',
-          properties: {
-            hasVoiceover: { type: 'BOOLEAN' },
-            hasTrendingSound: { type: 'BOOLEAN' },
-            language: { type: 'STRING' },
-            transcript: { type: 'STRING', description: 'Brief transcript or summary of speech content' },
-          },
-        },
-        automatabilityScore: { type: 'INTEGER', description: '0-100 how much of this video could be auto-generated' },
       },
       required: ['hookTechnique', 'contentFormat', 'scenes', 'automatabilityScore'],
     },
