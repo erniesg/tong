@@ -92,8 +92,10 @@ async function generateKeywordsServerSide() {
   if (!content) throw new Error('No response from OpenAI');
 
   const parsed = JSON.parse(content);
-  // Handle both { sets: [...] } and direct array
-  return Array.isArray(parsed) ? parsed : (parsed.sets || parsed.clusters || parsed.keyword_sets || [parsed]);
+  // OpenAI wraps arrays in varying keys — find the first array value
+  if (Array.isArray(parsed)) return parsed;
+  const arr = Object.values(parsed).find((v) => Array.isArray(v));
+  return arr || [parsed];
 }
 
 // ── Keyword Generation from Brief ───────────────────────────────────
