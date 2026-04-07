@@ -234,8 +234,9 @@ export async function extractThumbnailBatch(results, options = {}) {
     const batch = eligible.slice(i, i + concurrency);
     const promises = batch.map(async (r) => {
       const url = r.videoPageUrl || r.url;
-      const platform = r.platform || 'unknown';
-      const id = `${platform}-${crypto.randomBytes(4).toString('hex')}`;
+      // Use video ID from URL for stable filenames (e.g. .../video/7441780 → 7441780)
+      const urlId = url.split('/').filter(Boolean).pop() || '';
+      const id = urlId || `${r.platform || 'unknown'}-${crypto.randomBytes(4).toString('hex')}`;
       try {
         const thumb = await extractThumbnail({ url, outputDir, id, timeout: options.timeout });
         return { ...r, thumbnailLocalPath: thumb.thumbnailPath, thumbnailSize: thumb.size };
