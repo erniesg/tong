@@ -699,34 +699,47 @@ async function scrapeXHSTrendsRaw(options = {}) {
     if (res.ok) {
       const html = await res.text();
 
-      // XHS embeds JSON state in a <script> tag
-      const stateMatch = html.match(/__INITIAL_SSR_STATE__\s*=\s*(\{[\s\S]*?\});?\s*<\/script>/);
+      // XHS embeds JSON state in a <script> tag — variable name is __INITIAL_STATE__ (not __INITIAL_SSR_STATE__)
+      const stateMatch = html.match(/__INITIAL_STATE__\s*=\s*(\{[\s\S]*?\})\s*<\/script>/);
       if (stateMatch) {
         try {
-          const state = JSON.parse(stateMatch[1]);
+          // XHS uses JavaScript `undefined` literals which are invalid JSON — replace with null
+          const rawJson = stateMatch[1].replace(/\bundefined\b/g, 'null');
+          const state = JSON.parse(rawJson);
+          // Explore page embeds feed items in state.feed.feeds[] with noteCard metadata
+          const exploreFeedItems = state?.feed?.feeds || [];
           const hotList =
             state?.exploreStore?.hotTopics ||
             state?.hotTopics ||
             state?.data?.hotTopicList ||
-            [];
+            exploreFeedItems;
 
           if (hotList.length > 0) {
             const trends = hotList.slice(0, limit).map((item) => {
-              const name = item.title || item.name || '';
-              const rel = inferRelevance(name, item.desc || '');
+              // Handle both hot topic objects and explore feed items (noteCard shape)
+              const noteCard = item.noteCard || item;
+              const name = noteCard.displayTitle || noteCard.title || item.title || item.name || '';
+              const user = noteCard.user || {};
+              const interact = noteCard.interactInfo || {};
+              const desc = noteCard.desc || item.desc || '';
+              const rel = inferRelevance(name, desc);
               return {
                 platform: 'xiaohongshu',
-                type: 'topic',
+                type: noteCard.type === 'video' ? 'video' : (item.type === 'hashtag' ? 'hashtag' : 'topic'),
                 name,
-                description: item.desc || `XHS trending topic: ${name}`,
+                description: desc || `XHS trending topic: ${name}`,
                 engagement: {
                   posts: item.noteCount || item.count || undefined,
+                  likes: interact.likedCount || undefined,
                   growth: 'stable',
                 },
+                author: user.nickname || undefined,
                 relevance: {
                   ...rel,
-                  formatNotes: item.type || '',
+                  formatNotes: noteCard.type || item.type || '',
                 },
+                sourceUrl: item.id ? `https://www.xiaohongshu.com/explore/${item.id}` : undefined,
+                coverUrl: noteCard.cover?.urlDefault || noteCard.cover?.url || undefined,
                 scrapedAt: now,
               };
             });
@@ -736,7 +749,7 @@ async function scrapeXHSTrendsRaw(options = {}) {
           warnings.push('XHS: failed to parse embedded state JSON');
         }
       } else {
-        warnings.push('XHS: __INITIAL_SSR_STATE__ not found in page HTML');
+        warnings.push('XHS: __INITIAL_STATE__ not found in page HTML');
       }
     } else {
       warnings.push(`XHS discover page returned ${res.status}`);
@@ -1106,13 +1119,57 @@ async function searchTikTok(keyword, limit) {
 }
 
 async function searchInstagram(keyword, limit) {
+  // NOTE: Instagram's ?__a=1&__d=dis JSON endpoint is dead (returns 404/500 as of 2026-04).
+  // The Puppeteer-based browser search (signal-browser.mjs → instagramHashtag) works via
+  // the /popular/ URL. This fetch-based path is kept as a fallback for when IG restores
+  // the JSON API or for environments with an INSTAGRAM_API_KEY (Graph API).
   const encoded = encodeURIComponent(keyword.replace('#', ''));
+  const apiKey = INSTAGRAM_API_KEY();
+
+  // Try Graph API if configured
+  if (apiKey) {
+    try {
+      const searchRes = await rateLimitedFetch('instagram',
+        `https://graph.facebook.com/v19.0/ig_hashtag_search?user_id=me&q=${encoded}&access_token=${apiKey}`,
+      );
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        const hashtagId = searchData?.data?.[0]?.id;
+        if (hashtagId) {
+          const mediaRes = await rateLimitedFetch('instagram',
+            `https://graph.facebook.com/v19.0/${hashtagId}/top_media?user_id=me&fields=id,caption,like_count,comments_count,permalink,thumbnail_url&access_token=${apiKey}`,
+          );
+          if (mediaRes.ok) {
+            const mediaData = await mediaRes.json();
+            return (mediaData?.data || []).slice(0, limit).map((item) => ({
+              platform: 'instagram',
+              keyword,
+              type: 'post',
+              shortcode: item.id || '',
+              caption: item.caption || '',
+              stats: {
+                likes: item.like_count || 0,
+                comments: item.comments_count || 0,
+              },
+              videoPageUrl: item.permalink || '',
+              thumbnailUrl: item.thumbnail_url || '',
+              scrapedAt: new Date().toISOString(),
+            }));
+          }
+        }
+      }
+    } catch {
+      // Graph API failed, fall through
+    }
+  }
+
+  // Legacy JSON endpoint — no longer works without auth but kept for forward-compat
   try {
     const res = await rateLimitedFetch('instagram',
       `https://www.instagram.com/explore/tags/${encoded}/?__a=1&__d=dis`,
       { headers: { 'User-Agent': UA, Accept: 'application/json' } },
     );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) return []; // Expected: IG returns 404/500 for this endpoint
     const data = await res.json();
     const edges = data?.graphql?.hashtag?.edge_hashtag_to_media?.edges || [];
     return edges.slice(0, limit).map((edge) => ({
@@ -1136,30 +1193,42 @@ async function searchInstagram(keyword, limit) {
 async function searchXHS(keyword, limit) {
   const encoded = encodeURIComponent(keyword);
   try {
+    // XHS search page loads results client-side, so SSR state has empty feeds.
+    // Fetch the search page and extract __INITIAL_STATE__ with the correct variable name.
     const res = await rateLimitedFetch('xiaohongshu',
       `https://www.xiaohongshu.com/search_result?keyword=${encoded}&page=1&sort=general`,
-      { headers: { 'User-Agent': UA, Accept: 'text/html' } },
+      { headers: { 'User-Agent': UA, Accept: 'text/html', 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' } },
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const html = await res.text();
-    // Extract __INITIAL_SSR_STATE__ JSON from page
-    const match = html.match(/__INITIAL_SSR_STATE__\s*=\s*({.+?})\s*<\/script>/s);
+    // XHS uses __INITIAL_STATE__ (not __INITIAL_SSR_STATE__) and `undefined` literals
+    const match = html.match(/__INITIAL_STATE__\s*=\s*(\{[\s\S]+?\})\s*<\/script>/);
     if (!match) return [];
-    const state = JSON.parse(match[1]);
-    const notes = state?.Main?.searchResult?.notes || [];
-    return notes.slice(0, limit).map((note) => ({
-      platform: 'xiaohongshu',
-      keyword,
-      type: 'note',
-      title: note.title || '',
-      author: note.user?.nickname || '',
-      stats: {
-        likes: note.likes || 0,
-        collects: note.collects || 0,
-      },
-      coverUrl: note.cover?.url || '',
-      scrapedAt: new Date().toISOString(),
-    }));
+    const rawJson = match[1].replace(/\bundefined\b/g, 'null');
+    const state = JSON.parse(rawJson);
+    // Search feeds are loaded client-side, so state.search.feeds is typically empty.
+    // Try state.search.feeds first, then fall back to state.feed.feeds (explore items).
+    const searchFeeds = state?.search?.feeds || [];
+    const feeds = searchFeeds.length > 0 ? searchFeeds : (state?.feed?.feeds || []);
+    return feeds.slice(0, limit).map((item) => {
+      const noteCard = item.noteCard || item;
+      const user = noteCard.user || {};
+      const interact = noteCard.interactInfo || {};
+      return {
+        platform: 'xiaohongshu',
+        keyword,
+        type: noteCard.type === 'video' ? 'video' : 'note',
+        title: noteCard.displayTitle || noteCard.title || item.title || '',
+        author: user.nickname || item.user?.nickname || '',
+        stats: {
+          likes: interact.likedCount || item.likes || 0,
+          collects: item.collects || 0,
+        },
+        coverUrl: noteCard.cover?.urlDefault || noteCard.cover?.url || item.cover?.url || '',
+        videoPageUrl: item.id ? `https://www.xiaohongshu.com/explore/${item.id}` : '',
+        scrapedAt: new Date().toISOString(),
+      };
+    });
   } catch {
     return [];
   }
