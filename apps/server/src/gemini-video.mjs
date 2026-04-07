@@ -22,8 +22,7 @@ import path from 'node:path';
 const GEMINI_API_KEY = () => process.env.GOOGLE_GEMINI_API_KEY || '';
 
 const MODELS = {
-  flash: 'gemini-2.5-flash',
-  'flash-lite': 'gemini-3.1-flash-lite-preview',
+  flash: 'gemini-3.1-flash-lite-preview',
   pro: 'gemini-3.1-pro-preview',
 };
 

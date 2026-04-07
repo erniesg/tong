@@ -23,7 +23,7 @@ const GEMINI_API_KEY = () => process.env.GOOGLE_GEMINI_API_KEY || '';
 const MOCK_MODE = () => process.env.SIGNALS_MOCK === 'true' || process.env.SIGNALS_MOCK === '1';
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com';
-const FLASH_MODEL = 'gemini-2.5-flash';
+const FLASH_MODEL = 'gemini-3.1-flash-lite-preview';
 
 const EXECUTION_MODES = ['live', 'mock', 'preflight'];
 
