@@ -74,6 +74,40 @@ async function main() {
     assert.equal(signalStatus.ok, true);
     assert.equal(Array.isArray(signalStatus.executionModes), true);
 
+    // ── Filter pipeline (mock mode) ────────────────────────────────
+
+    const mockResults = [
+      { title: 'Learn Korean fast', stats: { views: 50000, likes: 3000 }, platform: 'tiktok', author: 'test' },
+      { title: 'Low view video', stats: { views: 500, likes: 10 }, platform: 'tiktok', author: 'test2' },
+      { title: 'Popular Chinese', stats: { views: 200000, likes: 15000 }, platform: 'tiktok', author: 'test3' },
+    ];
+
+    const filterResult = await postJson('/api/v1/signals/filter', {
+      results: mockResults,
+      brief: { description: 'language learning app', keywords: ['korean', 'chinese'] },
+      minViews: 10000,
+      executionMode: 'mock',
+    });
+    assert.equal(filterResult.ok, true);
+    assert.equal(filterResult.stats.total, 3);
+    assert.equal(filterResult.stats.engagementDropped, 1, 'should drop 1 low-view result');
+    assert.equal(filterResult.stats.afterEngagementFilter, 2);
+    assert.equal(Array.isArray(filterResult.ranked), true);
+    assert.equal(filterResult.ranked.length, 2);
+    // Mock mode should have _relevance on results
+    assert(filterResult.ranked[0]._relevance, 'scored results should have _relevance');
+
+    // ── Brief extraction (mock mode) ────────────────────────────────
+
+    const briefResult = await postJson('/api/v1/signals/extract-brief', {
+      text: 'dating sim language learning game',
+      executionMode: 'mock',
+    });
+    assert.equal(briefResult.ok, true);
+    assert(briefResult.brief, 'should return a brief object');
+    assert(briefResult.brief.productName, 'brief should have productName');
+    assert(Array.isArray(briefResult.brief.keywords), 'brief should have keywords array');
+
     console.log('signals_contract_check: ok');
   } finally {
     child.kill('SIGTERM');
