@@ -170,11 +170,6 @@ export async function xhsSearch(keyword, limit = 20, options = {}) {
 export function getXhsStatus() {
   return {
     providers: getProviderOrder(),
-    'puppeteer-cookie': {
-      cookieConfigured: hasCookie(),
-      cookieSource: process.env.XHS_COOKIE ? 'env' : hasCookie() ? 'file' : 'none',
-      note: 'refresh cookies every ~7 days',
-    },
     rapidapi: {
       configured: Boolean(RAPIDAPI_KEY()),
       host: RAPIDAPI_HOST,
