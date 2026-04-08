@@ -10,6 +10,10 @@
  *   - pip install xhs: anti-bot blocks built-in signer (code 300011)
  *   - Apify free actors: paid-only or timeout
  *
+ * Future: IP block (300012) from probing clears in hours/days. When it does,
+ * cookie + Chrome profile approach may work with puppeteer-extra-plugin-stealth
+ * for browser fingerprint spoofing. Worth retrying then.
+ *
  * Configure via env:
  *   X-RapidAPI-Key             — enables RapidAPI provider
  *   SIGNALS_XHS_PROVIDERS     — comma-separated provider order override
