@@ -16,6 +16,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { logLlmCall, estimateCost } from './llm-logger.mjs';
 
 // ── Configuration ────────────────────────────────────────────────────
 
@@ -187,6 +188,7 @@ export async function scoreRelevance(results, brief, options = {}) {
         },
       };
 
+      const t0 = Date.now();
       const apiRes = await fetch(
         `${GEMINI_BASE}/v1beta/models/${FLASH_MODEL}:generateContent?key=${key}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
@@ -201,16 +203,28 @@ export async function scoreRelevance(results, brief, options = {}) {
       }
 
       const data = await apiRes.json();
+      const durationMs = Date.now() - t0;
       const tokens = data.usageMetadata || {};
       totalCost.inputTokens += tokens.promptTokenCount || 0;
       totalCost.outputTokens += tokens.candidatesTokenCount || 0;
 
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
       let parsed;
       try {
-        parsed = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
+        parsed = JSON.parse(rawText);
       } catch {
         parsed = { relevanceScore: 50, reasoning: 'parse error', matchedKeywords: [] };
       }
+
+      logLlmCall({
+        step: 5,
+        name: 'scoreRelevance',
+        model: FLASH_MODEL,
+        input: parts,
+        output: rawText,
+        tokens: { input: tokens.promptTokenCount || 0, output: tokens.candidatesTokenCount || 0 },
+        durationMs,
+      });
 
       return { ...r, _relevance: parsed };
     });
@@ -223,7 +237,15 @@ export async function scoreRelevance(results, brief, options = {}) {
   }
 
   scored.sort((a, b) => (b._relevance?.relevanceScore ?? 0) - (a._relevance?.relevanceScore ?? 0));
-  return { scored, cost: totalCost, execution: { mode: 'live' } };
+
+  const llm = {
+    model: FLASH_MODEL,
+    tokens: { input: totalCost.inputTokens, output: totalCost.outputTokens, total: totalCost.inputTokens + totalCost.outputTokens },
+    cost: estimateCost(FLASH_MODEL, { input: totalCost.inputTokens, output: totalCost.outputTokens }),
+    calls: totalCost.calls,
+  };
+
+  return { scored, cost: totalCost, execution: { mode: 'live' }, llm };
 }
 
 // ── Full Filter Pipeline ────────────────────────────────────────────
@@ -244,7 +266,7 @@ export async function runFilterPipeline(results, brief, options = {}) {
   });
 
   // Pass 2: relevance
-  const { scored, cost, execution } = await scoreRelevance(passed, brief, {
+  const { scored, cost, execution, llm } = await scoreRelevance(passed, brief, {
     batchSize: options.batchSize,
     executionMode: options.executionMode,
   });
@@ -264,6 +286,7 @@ export async function runFilterPipeline(results, brief, options = {}) {
     },
     cost,
     execution,
+    llm,
   };
 }
 
@@ -390,6 +413,7 @@ export async function extractBriefFromMultimodal(inputs = {}) {
     },
   };
 
+  const t0 = Date.now();
   const res = await fetch(
     `${GEMINI_BASE}/v1beta/models/${FLASH_MODEL}:generateContent?key=${key}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
@@ -401,12 +425,25 @@ export async function extractBriefFromMultimodal(inputs = {}) {
   }
 
   const data = await res.json();
+  const durationMs = Date.now() - t0;
+  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
   let parsed;
   try {
-    parsed = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
+    parsed = JSON.parse(rawText);
   } catch {
     throw new Error('Failed to parse Gemini brief extraction response');
   }
 
-  return { brief: parsed, execution: { mode: 'live' } };
+  const meta = data.usageMetadata || {};
+  const llm = logLlmCall({
+    step: 1,
+    name: 'extractBriefFromMultimodal',
+    model: FLASH_MODEL,
+    input: parts,
+    output: rawText,
+    tokens: { input: meta.promptTokenCount || 0, output: meta.candidatesTokenCount || 0, total: meta.totalTokenCount || 0 },
+    durationMs,
+  });
+
+  return { brief: parsed, execution: { mode: 'live' }, llm };
 }

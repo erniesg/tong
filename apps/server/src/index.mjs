@@ -112,6 +112,7 @@ import {
   runFilterPipeline,
   extractBriefFromMultimodal,
 } from './signal-filter.mjs';
+import { getLlmLogs, clearLlmLogs } from './llm-logger.mjs';
 import {
   downloadVideo,
   downloadBatch,
@@ -4244,8 +4245,8 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
     case 'signals.keywords.generate': {
       try {
         const brief = await extractBriefFromMultimodal({ text: args.text, repoContext: args.repoContext ?? true, imageUrls: args.imageUrls, executionMode: args.executionMode });
-        const sets = await generateKeywordsFromBrief(brief.brief, { executionMode: args.executionMode });
-        return { statusCode: 200, payload: { ok: true, tool: toolName, brief: brief.brief, keywordSets: sets } };
+        const kwResult = await generateKeywordsFromBrief(brief.brief, { executionMode: args.executionMode });
+        return { statusCode: 200, payload: { ok: true, tool: toolName, brief: brief.brief, keywordSets: kwResult.sets, llm: { brief: brief.llm, keywords: kwResult.llm } } };
       } catch (err) {
         return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
       }
@@ -4875,14 +4876,14 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req);
       try {
         // Step 1: extract brief from multimodal inputs
-        const { brief } = await extractBriefFromMultimodal(body);
+        const briefResult = await extractBriefFromMultimodal(body);
         // Step 2: generate keywords from brief via OpenAI
-        const sets = await generateKeywordsFromBrief(brief, { executionMode: body.executionMode || body.mode });
+        const kwResult = await generateKeywordsFromBrief(briefResult.brief, { executionMode: body.executionMode || body.mode });
         // Step 3: save keyword sets
-        for (const kw of sets) {
+        for (const kw of kwResult.sets) {
           saveKeywordSet({ ...kw, source: 'multimodal' });
         }
-        jsonResponse(res, 200, { ok: true, brief, keywordSets: sets, saved: sets.length });
+        jsonResponse(res, 200, { ok: true, brief: briefResult.brief, keywordSets: kwResult.sets, saved: kwResult.sets.length, llm: { brief: briefResult.llm, keywords: kwResult.llm } });
       } catch (err) {
         jsonResponse(res, 502, { ok: false, error: err.message });
       }
@@ -5103,6 +5104,22 @@ const server = http.createServer(async (req, res) => {
       } catch (err) {
         jsonResponse(res, 502, { ok: false, error: err.message });
       }
+      return;
+    }
+
+    // ── LLM call logs ──────────────────────────────────────────────────
+
+    if (pathname === '/api/v1/signals/llm-logs' && req.method === 'GET') {
+      const step = url.searchParams.get('step');
+      const limit = Number(url.searchParams.get('limit') || 200);
+      const logs = getLlmLogs({ step: step != null ? Number(step) : undefined, limit });
+      jsonResponse(res, 200, { ok: true, logs, count: logs.length });
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/llm-logs' && req.method === 'DELETE') {
+      clearLlmLogs();
+      jsonResponse(res, 200, { ok: true, cleared: true });
       return;
     }
 

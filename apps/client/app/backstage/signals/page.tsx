@@ -157,6 +157,14 @@ interface SceneClusterData {
   scenes: ClusterScene[];
 }
 
+interface LlmMeta {
+  model: string;
+  tokens: { input: number; output: number; total: number };
+  cost: { inputCost: number; outputCost: number; totalCost: number };
+  durationMs: number;
+  calls?: number;
+}
+
 type StepStatus = 'idle' | 'loading' | 'done' | 'error';
 
 interface PipelineState {
@@ -303,6 +311,120 @@ function CollapsibleSection({
         {label}
       </button>
       {open && <div style={{ marginTop: 8 }}>{children}</div>}
+    </div>
+  );
+}
+
+function LlmCallDetail({ llm, label }: { llm: LlmMeta | null; label?: string }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!llm) return null;
+  const cost = llm.cost?.totalCost ?? 0;
+  return (
+    <div
+      style={{
+        borderTop: '1px solid var(--line)',
+        marginTop: 8,
+        paddingTop: 6,
+      }}
+    >
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'var(--muted)',
+          fontSize: 11,
+          fontFamily: 'var(--font-mono, monospace)',
+          padding: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+        }}
+      >
+        <span style={{ fontSize: 9 }}>{expanded ? '▾' : '▸'}</span>
+        <span style={{ color: 'var(--accent)', fontWeight: 600 }}>LLM</span>
+        {label && <span>{label}</span>}
+        <span>{llm.model}</span>
+        <span style={{ opacity: 0.7 }}>
+          {llm.tokens.input.toLocaleString()} in / {llm.tokens.output.toLocaleString()} out
+        </span>
+        <span style={{ color: cost > 0.01 ? '#f59e0b' : '#22c55e' }}>
+          ${cost.toFixed(4)}
+        </span>
+        {llm.durationMs > 0 && (
+          <span style={{ opacity: 0.5 }}>{(llm.durationMs / 1000).toFixed(1)}s</span>
+        )}
+        {llm.calls != null && llm.calls > 1 && (
+          <span style={{ opacity: 0.5 }}>({llm.calls} calls)</span>
+        )}
+      </button>
+      {expanded && (
+        <div
+          style={{
+            marginTop: 6,
+            padding: 8,
+            background: 'rgba(0,0,0,0.03)',
+            borderRadius: 6,
+            fontSize: 11,
+            fontFamily: 'var(--font-mono, monospace)',
+            lineHeight: 1.5,
+          }}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '2px 12px' }}>
+            <span style={{ color: 'var(--muted)' }}>Model</span>
+            <span>{llm.model}</span>
+            <span style={{ color: 'var(--muted)' }}>Input tokens</span>
+            <span>{llm.tokens.input.toLocaleString()}</span>
+            <span style={{ color: 'var(--muted)' }}>Output tokens</span>
+            <span>{llm.tokens.output.toLocaleString()}</span>
+            <span style={{ color: 'var(--muted)' }}>Total tokens</span>
+            <span>{llm.tokens.total.toLocaleString()}</span>
+            <span style={{ color: 'var(--muted)' }}>Input cost</span>
+            <span>${llm.cost.inputCost.toFixed(6)}</span>
+            <span style={{ color: 'var(--muted)' }}>Output cost</span>
+            <span>${llm.cost.outputCost.toFixed(6)}</span>
+            <span style={{ color: 'var(--muted)' }}>Total cost</span>
+            <span style={{ fontWeight: 600 }}>${llm.cost.totalCost.toFixed(6)}</span>
+            {llm.durationMs > 0 && (
+              <>
+                <span style={{ color: 'var(--muted)' }}>Duration</span>
+                <span>{(llm.durationMs / 1000).toFixed(2)}s</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PipelineCostSummary({ metas }: { metas: (LlmMeta | null)[] }) {
+  const valid = metas.filter((m): m is LlmMeta => m != null);
+  if (valid.length === 0) return null;
+  const totalCost = valid.reduce((sum, m) => sum + (m.cost?.totalCost ?? 0), 0);
+  const totalCalls = valid.reduce((sum, m) => sum + (m.calls ?? 1), 0);
+  const totalTokens = valid.reduce((sum, m) => sum + (m.tokens?.total ?? 0), 0);
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '8px 14px',
+        background: 'rgba(0,0,0,0.03)',
+        borderRadius: 8,
+        fontSize: 12,
+        fontFamily: 'var(--font-mono, monospace)',
+        color: 'var(--muted)',
+      }}
+    >
+      <span style={{ fontWeight: 600, color: 'var(--fg)' }}>Pipeline cost</span>
+      <span style={{ color: totalCost > 0.05 ? '#f59e0b' : '#22c55e', fontWeight: 600 }}>
+        ${totalCost.toFixed(4)}
+      </span>
+      <span>{totalCalls} LLM call{totalCalls !== 1 ? 's' : ''}</span>
+      <span>{totalTokens.toLocaleString()} tokens</span>
     </div>
   );
 }
@@ -524,6 +646,12 @@ export default function SignalsPage() {
   const [sceneClusterData, setSceneClusterData] = useState<SceneClusterData | null>(null);
   const [activeClusterTab, setActiveClusterTab] = useState('clip');
 
+  // LLM metadata per step
+  const [llmBrief, setLlmBrief] = useState<LlmMeta | null>(null);
+  const [llmKeywords, setLlmKeywords] = useState<LlmMeta | null>(null);
+  const [llmScore, setLlmScore] = useState<LlmMeta | null>(null);
+  const [llmFingerprint, setLlmFingerprint] = useState<LlmMeta | null>(null);
+
   // Inputs
   const [briefText, setBriefText] = useState('');
   const [repoContext, setRepoContext] = useState(true);
@@ -601,6 +729,7 @@ export default function SignalsPage() {
       const data = await res.json();
       if (data.brief) {
         setBriefData(data.brief);
+        if (data.llm) setLlmBrief(data.llm);
         setStatus('brief', 'done');
       } else {
         setStatus('brief', 'error', 'No brief returned');
@@ -624,6 +753,8 @@ export default function SignalsPage() {
       });
       const data = await res.json();
       if (data.brief) setBriefData(data.brief);
+      if (data.llm?.brief) setLlmBrief(data.llm.brief);
+      if (data.llm?.keywords) setLlmKeywords(data.llm.keywords);
       if (data.keywordSets) {
         const sets = data.keywordSets.map((s: KeywordSet, i: number) => ({
           ...s,
@@ -697,6 +828,7 @@ export default function SignalsPage() {
       const data = await res.json();
       const ranked: SearchResult[] = data.ranked || [];
       setFilteredResults(ranked);
+      if (data.llm) setLlmScore(data.llm);
 
       const stats: FilterStats = data.stats || {
         total: searchResults.length,
@@ -847,6 +979,8 @@ export default function SignalsPage() {
       const kwData = await kwRes.json();
       const resolvedBrief: Brief | null = kwData.brief || null;
       if (resolvedBrief) setBriefData(resolvedBrief);
+      if (kwData.llm?.brief) setLlmBrief(kwData.llm.brief);
+      if (kwData.llm?.keywords) setLlmKeywords(kwData.llm.keywords);
       if (kwData.keywordSets) {
         setKeywordSets(
           kwData.keywordSets.map((s: KeywordSet, i: number) => ({ ...s, id: s.id || `gen-${i}` })),
@@ -884,6 +1018,7 @@ export default function SignalsPage() {
       const filterData = await filterRes.json();
       const ranked: SearchResult[] = filterData.ranked || [];
       setFilteredResults(ranked);
+      if (filterData.llm) setLlmScore(filterData.llm);
       const stats: FilterStats = filterData.stats || {
         total: rawResults.length,
         afterEngagementFilter: ranked.length,
@@ -972,6 +1107,9 @@ export default function SignalsPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Pipeline cost summary ────────────────────────────────── */}
+      <PipelineCostSummary metas={[llmBrief, llmKeywords, llmScore, llmFingerprint]} />
 
       {/* ── Pipeline steps ─────────────────────────────────────────── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1068,6 +1206,8 @@ export default function SignalsPage() {
           >
             Extract Brief
           </button>
+
+          <LlmCallDetail llm={llmBrief} label="Brief extraction" />
         </div>
 
         {/* ── STEP 2: Keywords ───────────────────────────────────── */}
@@ -1237,6 +1377,8 @@ export default function SignalsPage() {
           >
             Generate Keywords
           </button>
+
+          <LlmCallDetail llm={llmKeywords} label="Keyword generation" />
         </div>
 
         {/* ── STEP 3: Search ─────────────────────────────────────── */}
@@ -1632,6 +1774,8 @@ export default function SignalsPage() {
           >
             Score Relevance
           </button>
+
+          <LlmCallDetail llm={llmScore} label="Relevance scoring" />
         </div>
 
         {/* ── STEP 6: Download ────────────────────────────────── */}
@@ -1963,6 +2107,8 @@ export default function SignalsPage() {
               No fingerprints yet. Run the CLI fingerprint command, then Load Cached Run.
             </div>
           )}
+
+          <LlmCallDetail llm={llmFingerprint} label="Video fingerprinting" />
         </div>
 
         {/* ── STEP 8: Scene Clusters ────────────────────────────── */}
