@@ -56,6 +56,27 @@ import {
   replicateWaitForPrediction,
 } from './replicate.mjs';
 import {
+  buildSpatialPrompt,
+  formatToImageSize,
+  computeSubjectLayout,
+  computeMultiSubjectLayout,
+  computeTextSafeZones,
+} from './compose.mjs';
+import {
+  extractSubject,
+  interactiveSegment,
+  generateContour,
+  compositeImage,
+  sam2Health,
+} from './sam2-client.mjs';
+import {
+  listFormats as compositorListFormats,
+  getFormatsByPlatform as compositorGetFormatsByPlatform,
+  renderStill as compositorRenderStill,
+  renderBatch as compositorRenderBatch,
+  renderVideo as compositorRenderVideo,
+} from './compositor.mjs';
+import {
   GRAPH_TOOL_DEFINITIONS,
   getGraphDashboard,
   getGraphHangoutBundle,
@@ -1398,6 +1419,172 @@ const AGENT_TOOL_DEFINITIONS = [
       results: 'object[] (required) – results with .videoPageUrl or .url',
       concurrency: 'number (optional, default 2) – parallel downloads (max 5)',
       timeout: 'number (optional, default 120000) – per-download timeout ms',
+    },
+  },
+  // ── Compositor tools ─────────────────────────────────────────────
+  {
+    name: 'compositor.formats.list',
+    description: 'List all available platform format presets (Instagram, TikTok, LinkedIn, YouTube, Xiaohongshu, etc.) with dimensions and safe zones.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      platform: 'string (optional) – filter by platform, e.g. "instagram"',
+    },
+  },
+  {
+    name: 'compositor.render.still',
+    description: 'Render a composition as a still image (PNG) at exact platform dimensions. Returns output file path.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      compositionId: 'string (required) – EventPoster or SocialCard',
+      format: 'string (required) – format key, e.g. instagram-story, youtube-thumbnail',
+      background: 'object (required) – { imageUrl: string, fit?: cover|contain|fill, blur?: number, brightness?: number }',
+      subject: 'object (optional) – { imageUrl: string, gravity?: string, offsetX?: number, offsetY?: number, scale?: number, dropShadow?: object, contourLine?: object }',
+      text: 'array (required) – [{ content, fontSize?, color?, position: { x: 0-1, y: 0-1, anchor? }, fontWeight?, textTransform?, shadow?, enterAnimation? }]',
+      gradient: 'object (optional) – { enabled?, direction?, color?, height?: 0-1 }',
+      branding: 'object (optional) – { logoUrl?, logoPosition?, logoScale? }',
+      showSafeZones: 'boolean (optional, default false) – overlay platform safe zones for preview',
+    },
+  },
+  {
+    name: 'compositor.render.batch',
+    description: 'Render the same composition across multiple platform formats simultaneously. Returns array of output paths + manifest.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      compositionId: 'string (required) – EventPoster or SocialCard',
+      formats: 'array (required) – format keys, e.g. ["instagram-story", "linkedin-post", "youtube-thumbnail"]',
+      background: 'object (required)',
+      subject: 'object (optional)',
+      text: 'array (required)',
+      gradient: 'object (optional)',
+      branding: 'object (optional)',
+    },
+  },
+  {
+    name: 'compositor.render.video',
+    description: 'Render a composition as an MP4 video with layer animations.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      compositionId: 'string (required)',
+      format: 'string (required)',
+      fps: 'number (optional, default 30)',
+      durationInFrames: 'number (required) – total frames (e.g. 150 = 5sec at 30fps)',
+      background: 'object (required)',
+      subject: 'object (optional)',
+      text: 'array (required) – text blocks with enterFrame/exitFrame/enterAnimation for video',
+      gradient: 'object (optional)',
+      branding: 'object (optional)',
+    },
+  },
+  // ── Segmentation & Compositing tools ─────────────────────────────
+  {
+    name: 'segment.extract',
+    description: 'Auto-segment the largest foreground subject from an image using SAM2. Returns transparent PNG (alpha channel). Subject photos are processed locally and never sent to AI image generation APIs.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      imageBase64: 'string (required if no imageUrl) – base64-encoded image',
+      imageUrl: 'string (required if no imageBase64) – URL of image to segment',
+    },
+  },
+  {
+    name: 'segment.interactive',
+    description: 'Segment with point or bounding box prompts. Use when the user wants to select exactly what to extract (e.g. "just my face" or "the character on the left").',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      imageBase64: 'string (required) – base64-encoded image',
+      points: 'array (optional) – [{ x, y, label: 1|0 }] point prompts (1=foreground, 0=background)',
+      box: 'array (optional) – [x1, y1, x2, y2] bounding box prompt',
+    },
+  },
+  {
+    name: 'segment.contour',
+    description: 'Generate contour/outline from a segmentation mask. Returns RGBA PNG with just the outlines (for contour-line effects like those on TikTok/Reels).',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      maskBase64: 'string (required) – base64 mask from segment.extract or segment.interactive',
+      color: 'string (optional, default #FFFFFF) – hex color for contour line',
+      width: 'number (optional, default 3) – contour line width in pixels',
+    },
+  },
+  {
+    name: 'segment.composite',
+    description: 'Composite multiple layers (extracted subjects, character assets, contours) onto a background. Each layer has position, size, opacity, and optional drop shadow. Use this for creative compositing: your photo + tong on shoulder + outlines + generated background.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      backgroundBase64: 'string (required) – base64 background image',
+      width: 'number (required) – output width in pixels',
+      height: 'number (required) – output height in pixels',
+      layers: 'array (required) – [{ imageBase64, x, y, width?, height?, opacity?, dropShadow?: { blur, offsetX, offsetY, color } }]',
+    },
+  },
+  {
+    name: 'segment.health',
+    description: 'Check SAM2 sidecar health and whether GPU/mock mode is active.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {},
+  },
+  // ── Compose pipeline tools ───────────────────────────────────────
+  {
+    name: 'compose.spatial_prompt',
+    description: 'Enhance an image generation prompt with spatial directives based on where subjects will be placed. Call this before generating a background when you know a subject will be composited on top.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      prompt: 'string (required) – base prompt for image generation',
+      subjectGravity: 'string (optional) – where subject goes: bottom-center, center-left, center-right, top-center, center',
+      subjectScale: 'number (optional, default 0.6) – how much of canvas the subject occupies',
+    },
+  },
+  {
+    name: 'compose.format_size',
+    description: 'Get the recommended image generation size for a platform format. Maps format key to Seedream/Gemini size parameters.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      format: 'string (required) – format key, e.g. instagram-story',
+    },
+  },
+  {
+    name: 'compose.subject_layout',
+    description: 'Compute pixel position for a subject given gravity, scale, and canvas dimensions. Use this to plan where subjects go before calling segment.composite.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      gravity: 'string (required) – placement gravity',
+      scale: 'number (optional, default 0.6) – fraction of canvas height',
+      canvasWidth: 'number (required)',
+      canvasHeight: 'number (required)',
+      subjectAspect: 'number (optional, default 0.56) – width/height ratio of subject',
+    },
+  },
+  {
+    name: 'compose.multi_subject_layout',
+    description: 'Compute layout for multiple subjects (e.g. your photo + tong character). Returns positions that avoid overlaps.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      subjects: 'array (required) – [{ id, gravity, scale, aspect }]',
+      canvasWidth: 'number (required)',
+      canvasHeight: 'number (required)',
+    },
+  },
+  {
+    name: 'compose.text_safe_zones',
+    description: 'Find rectangular zones where text can be placed without overlapping subjects. Returns safe rects sorted by area.',
+    method: 'POST',
+    path: '/api/v1/tools/invoke',
+    args: {
+      subjectLayouts: 'array (required) – [{ x, y, width, height }] from compose.subject_layout',
+      canvasWidth: 'number (required)',
+      canvasHeight: 'number (required)',
     },
   },
 ];
@@ -4269,6 +4456,109 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
       } catch (err) {
         return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
       }
+    }
+    // ── Compositor tools ─────────────────────────────────────────
+    case 'compositor.formats.list': {
+      const platform = args.platform;
+      const formats = platform
+        ? compositorGetFormatsByPlatform(platform)
+        : compositorListFormats();
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result: formats } };
+    }
+    case 'compositor.render.still': {
+      try {
+        const result = await compositorRenderStill(args);
+        if (!result.ok) {
+          return { statusCode: 400, payload: { ok: false, tool: toolName, error: result.error } };
+        }
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'compositor.render.batch': {
+      try {
+        const result = await compositorRenderBatch(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'compositor.render.video': {
+      try {
+        const result = await compositorRenderVideo(args);
+        if (!result.ok) {
+          return { statusCode: 400, payload: { ok: false, tool: toolName, error: result.error } };
+        }
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    // ── Segmentation & Compositing tools ─────────────────────────
+    case 'segment.extract': {
+      try {
+        const result = await extractSubject(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'segment.interactive': {
+      try {
+        const result = await interactiveSegment(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'segment.contour': {
+      try {
+        const result = await generateContour(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'segment.composite': {
+      try {
+        const result = await compositeImage(args);
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'segment.health': {
+      try {
+        const result = await sam2Health();
+        return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: `SAM2 sidecar not reachable: ${err.message}` } };
+      }
+    }
+    // ── Compose pipeline tools ─────────────────────────────────────
+    case 'compose.spatial_prompt': {
+      const result = buildSpatialPrompt(args.prompt, {
+        subjectGravity: args.subjectGravity,
+        subjectScale: args.subjectScale,
+      });
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result: { enhancedPrompt: result } } };
+    }
+    case 'compose.format_size': {
+      const result = formatToImageSize(args.format);
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+    }
+    case 'compose.subject_layout': {
+      const result = computeSubjectLayout(args);
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+    }
+    case 'compose.multi_subject_layout': {
+      const result = computeMultiSubjectLayout(args);
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
+    }
+    case 'compose.text_safe_zones': {
+      const result = computeTextSafeZones(args);
+      return { statusCode: 200, payload: { ok: true, tool: toolName, result } };
     }
     default:
       return {
