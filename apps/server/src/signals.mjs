@@ -23,6 +23,7 @@
  */
 
 import { apifySearch } from './signal-apify.mjs';
+import { xhsSearch } from './signal-xhs.mjs';
 
 // ── Configuration ────────────────────────────────────────────────────
 
@@ -1079,14 +1080,17 @@ export async function searchPlatform(args) {
       let items = [];
       const backend = getScraperBackend(platform);
 
-      if (backend === 'apify' && (platform === 'xiaohongshu' || platform === 'instagram')) {
+      if (platform === 'xiaohongshu') {
+        // Multi-provider XHS search (RapidAPI → Puppeteer fallthrough)
+        const { results: xhsResults, warnings: xhsWarnings } = await xhsSearch(keyword, limit, { executionMode });
+        items = xhsResults;
+        if (xhsWarnings.length) warnings.push(...xhsWarnings.map((w) => `xiaohongshu: ${w}`));
+      } else if (backend === 'apify' && platform === 'instagram') {
         items = await apifySearch(platform, keyword, limit, { executionMode });
       } else if (platform === 'tiktok') {
         items = await searchTikTok(keyword, limit);
       } else if (platform === 'instagram') {
         items = await searchInstagram(keyword, limit);
-      } else if (platform === 'xiaohongshu') {
-        items = await searchXHS(keyword, limit);
       }
       setCache(cacheKey, items);
       results.push(...items);

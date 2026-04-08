@@ -139,6 +139,10 @@ import {
   apifySearch,
   getApifyStatus,
 } from './signal-apify.mjs';
+import {
+  xhsSearch,
+  getXhsStatus,
+} from './signal-xhs.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
