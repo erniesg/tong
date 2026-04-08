@@ -39,6 +39,8 @@
     "dev:extension": "npm --prefix apps/extension run dev",
     "zip": "./scripts/build-extension-bundle.sh",
     "launch:agents": "./scripts/launch-parallel-agents.sh",
-    "test:kg-contract-schema": "node scripts/kg_contract_schema_check.mjs"
+    "test:kg-contract-schema": "node scripts/kg_contract_schema_check.mjs",
+    "dev:remotion": "npm --prefix packages/remotion run preview",
+    "dev:sam2": "SAM2_MOCK=1 python3 -m uvicorn server:app --port 8100 --app-dir packages/sam2"
   }
 }

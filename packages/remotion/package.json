@@ -1,0 +1,24 @@
+{
+  "name": "@tong/remotion",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "preview": "remotion preview src/index.ts",
+    "render": "remotion render src/index.ts",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.447",
+    "@remotion/cli": "4.0.447",
+    "@remotion/renderer": "4.0.447",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "4.0.447",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "typescript": "^5.6.3"
+  }
+}

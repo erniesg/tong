@@ -1,0 +1,16 @@
+# Core (always needed — contour + composite run without any model)
+fastapi>=0.115.0
+uvicorn>=0.30.0
+pillow>=10.0.0
+numpy>=1.24.0
+opencv-python-headless>=4.8.0
+
+# For local segmentation (pick one):
+# SAM3 (recommended, requires Python 3.12+, PyTorch 2.7+):
+#   pip install torch==2.10.0 torchvision --index-url https://download.pytorch.org/whl/cu128
+#   git clone https://github.com/facebookresearch/sam3.git && cd sam3 && pip install -e .
+#
+# SAM2 (fallback, works on Python 3.10+, PyTorch 2.6+, MPS/CPU):
+#   pip install sam2
+#
+# Or skip both — use SEGMENT_PROVIDER=replicate with SAM3/BiRefNet via Replicate API
