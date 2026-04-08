@@ -133,6 +133,12 @@ import {
   listAutoFixJobs,
   getAutoFixStatus,
 } from './autofix.mjs';
+import {
+  apifyXhsSearch,
+  apifyInstagramSearch,
+  apifySearch,
+  getApifyStatus,
+} from './signal-apify.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1327,6 +1333,25 @@ const AGENT_TOOL_DEFINITIONS = [
       preset: 'string (optional, default "scene_decomposition") – analysis preset key',
       model: 'string (optional, default "flash") – "flash"|"pro"',
       mediaResolution: 'string (optional, default "low") – "low"|"medium"|"high"',
+    },
+  },
+  {
+    name: 'signals.apify_status',
+    description: 'Check Apify scraper status (token configured, supported platforms, actor IDs).',
+    method: 'GET',
+    path: '/api/v1/signals/apify-status',
+    args: {},
+  },
+  {
+    name: 'signals.apify_search',
+    description: 'Search XHS or Instagram via Apify actors. Provides reliable keyword search for XHS (bypasses login wall) and full IG content types (posts, reels, carousels).',
+    method: 'POST',
+    path: '/api/v1/signals/apify-search',
+    args: {
+      platform: 'string (required) – "xiaohongshu" or "instagram"',
+      keyword: 'string (required) – search term / hashtag',
+      limit: 'number (optional, default 20)',
+      executionMode: 'string (optional) – "live"|"mock"|"preflight"',
     },
   },
 ];
@@ -4160,6 +4185,17 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
         return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
       }
     }
+    case 'signals.apify_status': {
+      return { statusCode: 200, payload: { ok: true, tool: toolName, ...getApifyStatus() } };
+    }
+    case 'signals.apify_search': {
+      try {
+        const results = await apifySearch(args.platform, args.keyword, args.limit || 20, { executionMode: args.executionMode });
+        return { statusCode: 200, payload: { ok: true, tool: toolName, platform: args.platform, keyword: args.keyword, count: results.length, results } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
     default:
       return {
         statusCode: 404,
@@ -4941,6 +4977,33 @@ const server = http.createServer(async (req, res) => {
       };
       const result = await scrapeAllTrends(options);
       jsonResponse(res, 200, { ok: true, ...result });
+      return;
+    }
+
+    // ── Apify search routes ─────────────────────────────────────────
+
+    if (pathname === '/api/v1/signals/apify-status' && req.method === 'GET') {
+      jsonResponse(res, 200, { ok: true, ...getApifyStatus() });
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/apify-search' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      if (!body.platform || !body.keyword) {
+        jsonResponse(res, 400, { ok: false, error: 'platform and keyword are required' });
+        return;
+      }
+      try {
+        const results = await apifySearch(
+          body.platform,
+          body.keyword,
+          body.limit || 20,
+          { executionMode: body.executionMode || 'live' },
+        );
+        jsonResponse(res, 200, { ok: true, platform: body.platform, keyword: body.keyword, count: results.length, results });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
       return;
     }
 

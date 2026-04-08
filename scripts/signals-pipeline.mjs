@@ -26,6 +26,7 @@ const { extractBriefFromMultimodal, filterByEngagement, runFilterPipeline } = aw
 const { generateKeywordsFromBrief } = await import(resolve(SERVER_SRC, 'signal-scheduler.mjs'));
 const { saveKeywordSet, runTargetedScrape, searchPlatform } = await import(resolve(SERVER_SRC, 'signals.mjs'));
 const { uploadVideo, analyzeVideo, ANALYSIS_PRESETS } = await import(resolve(SERVER_SRC, 'gemini-video.mjs'));
+const { downloadVideo } = await import(resolve(SERVER_SRC, 'video-download.mjs'));
 
 // ── CLI args ────────────────────────────────────────────────────────
 
@@ -266,28 +267,44 @@ async function cmdFingerprint() {
 
   for (let i = 0; i < candidates.length; i++) {
     const item = candidates[i];
-    // Normalise the video URL — filter output may nest it in different fields
-    const videoUrl = item.videoUrl || item.video_url || item.url || item.downloadUrl || item.video?.url || null;
+    // Normalise the video URL — filter output uses videoPageUrl (TikTok/IG page URLs)
+    const videoUrl = item.videoPageUrl || item.videoUrl || item.video_url || item.url || item.downloadUrl || item.video?.url || null;
 
     if (!videoUrl) {
-      console.error(`[pipeline]   [${i + 1}/${candidates.length}] Skipping — no video URL: ${item.id || JSON.stringify(item).slice(0, 60)}`);
+      console.error(`[pipeline]   [${i + 1}/${candidates.length}] Skipping — no video URL: ${item.id || item.title || JSON.stringify(item).slice(0, 60)}`);
       fingerprints.push({ source: item, error: 'no_video_url', analysisId: null, result: null });
       continue;
     }
 
-    console.error(`[pipeline]   [${i + 1}/${candidates.length}] Uploading: ${videoUrl.slice(0, 80)}...`);
+    const tag = `[${i + 1}/${candidates.length}]`;
 
     try {
-      const source = videoUrl;
-      const mimeType = source.endsWith('.mp4') ? 'video/mp4' : 'video/webm';
+      let filePath = null;
+      let mimeType = 'video/mp4';
+
+      // Social media page URLs need yt-dlp download before Gemini upload
+      const isSocialUrl = /tiktok\.com|instagram\.com|xiaohongshu\.com|douyin\.com/.test(videoUrl);
+      if (isSocialUrl) {
+        console.error(`[pipeline]   ${tag} Downloading via yt-dlp: ${videoUrl.slice(0, 80)}...`);
+        const dl = await downloadVideo({ url: videoUrl, timeout: 120000 });
+        filePath = dl.filePath;
+        mimeType = filePath.endsWith('.mp4') ? 'video/mp4' : filePath.endsWith('.webm') ? 'video/webm' : 'video/mp4';
+        console.error(`[pipeline]   ${tag} Downloaded: ${dl.filename} (${(dl.size / 1024 / 1024).toFixed(1)} MB)`);
+      } else {
+        mimeType = videoUrl.endsWith('.mp4') ? 'video/mp4' : 'video/webm';
+      }
+
+      console.error(`[pipeline]   ${tag} Uploading to Gemini...`);
       const displayName = `fingerprint-${Date.now()}-${i}`;
+      const uploadArgs = filePath
+        ? { filePath, mimeType, displayName }
+        : { url: videoUrl, mimeType, displayName };
+      const { fileUri } = await uploadVideo(uploadArgs);
 
-      const { fileUri } = await uploadVideo({ url: videoUrl, mimeType, displayName });
-
-      console.error(`[pipeline]   [${i + 1}/${candidates.length}] Analyzing...`);
-
+      console.error(`[pipeline]   ${tag} Analyzing...`);
       const analysis = await analyzeVideo({
         fileUri,
+        mimeType,
         prompt: preset.prompt,
         model: args.model || 'flash',
         mediaResolution: args['media-resolution'] || 'low',
@@ -296,19 +313,20 @@ async function cmdFingerprint() {
 
       const sceneCount = analysis.result?.scenes?.length ?? 0;
       const autoScore = analysis.result?.automatabilityScore ?? 'n/a';
-      console.error(`[pipeline]   [${i + 1}/${candidates.length}] Done — ${sceneCount} scenes, automatability: ${autoScore}/100`);
+      console.error(`[pipeline]   ${tag} Done — ${sceneCount} scenes, automatability: ${autoScore}/100`);
 
       fingerprints.push({
         source: {
           id: item.id,
           platform: item.platform,
           author: item.author,
+          title: item.title,
           caption: item.caption,
-          views: item.views,
-          likes: item.likes,
+          views: item.stats?.views || item.views,
+          likes: item.stats?.likes || item.likes,
           videoUrl,
-          thumbnailUrl: item.thumbnailUrl || item.thumbnail_url || null,
-          relevanceScore: item.relevanceScore || null,
+          thumbnailUrl: item.thumbnailUrl || item.thumbnailCached || item.thumbnail_url || null,
+          relevanceScore: item._relevance?.relevanceScore || item.relevanceScore || null,
         },
         preset: presetKey,
         analysisId: analysis.analysisId,
@@ -318,7 +336,7 @@ async function cmdFingerprint() {
         analyzedAt: analysis.createdAt,
       });
     } catch (err) {
-      console.error(`[pipeline]   [${i + 1}/${candidates.length}] Error: ${err.message}`);
+      console.error(`[pipeline]   ${tag} Error: ${err.message}`);
       fingerprints.push({ source: item, error: err.message, analysisId: null, result: null });
     }
   }
