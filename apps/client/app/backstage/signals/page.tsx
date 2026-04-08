@@ -111,6 +111,26 @@ interface FingerprintData {
   fingerprints: Fingerprint[];
 }
 
+interface DownloadedVideo {
+  filePath: string;
+  filename: string;
+  size: number;
+  duration?: number;
+  title?: string;
+  url: string;
+  platform?: string;
+  sourceTitle?: string;
+  sourceAuthor?: string;
+  sourceStats?: { views?: number | string; likes?: number | string };
+}
+
+interface DownloadResult {
+  downloads: DownloadedVideo[];
+  errors: { error: string; url: string; platform?: string }[];
+  total: number;
+  skipped: number;
+}
+
 interface ClusterScene {
   video_id: string;
   scene_idx: number;
@@ -145,6 +165,7 @@ interface PipelineState {
   search: StepStatus;
   filter: StepStatus;
   score: StepStatus;
+  download: StepStatus;
   fingerprint: StepStatus;
   sceneClusters: StepStatus;
 }
@@ -497,6 +518,7 @@ export default function SignalsPage() {
   const [filteredResults, setFilteredResults] = useState<SearchResult[]>([]);
   const [droppedResults, setDroppedResults] = useState<DroppedResult[]>([]);
   const [filterStats, setFilterStats] = useState<FilterStats | null>(null);
+  const [downloadResult, setDownloadResult] = useState<DownloadResult | null>(null);
   const [fingerprintData, setFingerprintData] = useState<FingerprintData | null>(null);
   const [expandedFingerprints, setExpandedFingerprints] = useState<Set<number>>(new Set());
   const [sceneClusterData, setSceneClusterData] = useState<SceneClusterData | null>(null);
@@ -516,6 +538,7 @@ export default function SignalsPage() {
     search: 'idle',
     filter: 'idle',
     score: 'idle',
+    download: 'idle',
     fingerprint: 'idle',
     sceneClusters: 'idle',
   });
@@ -704,14 +727,39 @@ export default function SignalsPage() {
   }, [searchResults, brief, briefText, minViews, setStatus]);
 
   // ── Step 5: Score is done inside filter in this API, so we surface the ranked output
-  // The /filter endpoint with executionMode:'live' already scores — we just expose the output.
   const handleScore = useCallback(async () => {
-    // Score = re-run filter with live mode to trigger relevance scoring
     await handleFilter();
     if (filteredResults.length > 0) {
       setStatus('score', 'done');
     }
+
+  // ── Step 6: Download videos ─────────────────────────────────────────
   }, [handleFilter, filteredResults.length, setStatus]);
+
+  const handleDownload = useCallback(async () => {
+    if (!filteredResults.length) return;
+    setStatus('download', 'loading', `Downloading ${filteredResults.length} videos...`);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/signals/download`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          results: filteredResults,
+          concurrency: 2,
+          timeout: 120000,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setDownloadResult(data as DownloadResult);
+        setStatus('download', 'done', `${data.downloads?.length || 0} downloaded, ${data.errors?.length || 0} failed`);
+      } else {
+        setStatus('download', 'error', data.error || 'Download failed');
+      }
+    } catch {
+      setStatus('download', 'error', 'Request failed');
+    }
+  }, [filteredResults, setStatus]);
 
   // ── Load Cached Run ────────────────────────────────────────────────
   const handleLoadCachedRun = useCallback(async () => {
@@ -760,6 +808,7 @@ export default function SignalsPage() {
 
       setStepStatus({
         brief: 'done', keywords: 'done', search: 'done', filter: 'done', score: 'done',
+        download: fpRes?.fingerprints ? 'done' : 'idle',
         fingerprint: fpRes?.fingerprints ? 'done' : 'idle',
         sceneClusters: scRes?.scenes ? 'done' : 'idle',
       });
@@ -781,7 +830,7 @@ export default function SignalsPage() {
     setFilteredResults([]);
     setDroppedResults([]);
     setFilterStats(null);
-    setStepStatus({ brief: 'idle', keywords: 'idle', search: 'idle', filter: 'idle', score: 'idle', fingerprint: 'idle', sceneClusters: 'idle' });
+    setStepStatus({ brief: 'idle', keywords: 'idle', search: 'idle', filter: 'idle', score: 'idle', download: 'idle', fingerprint: 'idle', sceneClusters: 'idle' });
 
     try {
       // Step 1+2: generate-keywords returns both brief and sets
@@ -1262,34 +1311,78 @@ export default function SignalsPage() {
           {/* Output — raw result counts */}
           {searchResults.length > 0 && stepStatus.search === 'done' && (
             <CollapsibleSection label={`Output — ${searchResults.length} raw results`} defaultOpen>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {(['tiktok', 'instagram', 'xiaohongshu'] as const).map((p) => {
-                  const count = searchResults.filter((r) => r.platform === p).length;
-                  if (count === 0) return null;
+                  const platformResults = searchResults.filter((r) => r.platform === p);
+                  if (platformResults.length === 0) return null;
+                  const label = p === 'xiaohongshu' ? 'XHS' : p === 'instagram' ? 'Instagram' : 'TikTok';
                   return (
-                    <div
+                    <CollapsibleSection
                       key={p}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}
+                      label={`${label} — ${platformResults.length} results`}
+                      defaultOpen={platformResults.length > 0 && platformResults.length <= 20}
                     >
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: 6,
-                          fontSize: 11,
-                          background: platformColor(p),
-                          color: '#fff',
-                          textTransform: 'capitalize',
-                          minWidth: 72,
-                          textAlign: 'center',
-                        }}
-                      >
-                        {p === 'xiaohongshu' ? 'XHS' : p === 'instagram' ? 'Instagram' : 'TikTok'}
-                      </span>
-                      <span style={{ fontWeight: 600 }}>{count}</span>
-                      <span style={{ color: 'var(--muted)' }}>results</span>
-                    </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {platformResults.map((r, ri) => {
+                          const views = r._parsedViews || (typeof r.stats?.views === 'number' ? r.stats.views : 0);
+                          return (
+                            <a
+                              key={ri}
+                              href={r.videoPageUrl || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '40px 1fr auto auto',
+                                gap: 8,
+                                alignItems: 'center',
+                                padding: '4px 6px',
+                                borderRadius: 6,
+                                fontSize: 12,
+                                textDecoration: 'none',
+                                color: 'inherit',
+                                background: ri % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                              }}
+                            >
+                              {(r.thumbnailCached || r.thumbnailUrl) ? (
+                                <img
+                                  src={r.thumbnailCached || r.thumbnailUrl}
+                                  alt=""
+                                  style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }}
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              ) : (
+                                <span style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--line)', borderRadius: 4, fontSize: 16, color: 'var(--muted)' }}>
+                                  {r.type === 'reel' || r.type === 'video' ? '▶' : '◻'}
+                                </span>
+                              )}
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {r.title || '(no title)'}
+                              </span>
+                              {r.author && (
+                                <span style={{ color: 'var(--muted)', flexShrink: 0, fontSize: 11 }}>
+                                  @{r.author}
+                                </span>
+                              )}
+                              <span style={{ color: 'var(--muted)', flexShrink: 0, fontSize: 11, minWidth: 50, textAlign: 'right' }}>
+                                {views > 0 ? formatViews(views) : r.stats?.likes ? `${formatViews(r.stats.likes)} likes` : '—'}
+                              </span>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </CollapsibleSection>
                   );
                 })}
+                {/* Provider/scraper breakdown */}
+                {(() => {
+                  const providers = new Set(searchResults.map((r) => (r as SearchResult & { _provider?: string; _scraper?: string })._provider || (r as SearchResult & { _scraper?: string })._scraper || 'puppeteer'));
+                  return (
+                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>
+                      Scrapers: {[...providers].join(', ')}
+                    </div>
+                  );
+                })()}
               </div>
             </CollapsibleSection>
           )}
@@ -1541,10 +1634,102 @@ export default function SignalsPage() {
           </button>
         </div>
 
-        {/* ── STEP 6: Fingerprints ──────────────────────────────── */}
+        {/* ── STEP 6: Download ────────────────────────────────── */}
         <div className="card" style={{ display: 'grid', gap: 14 }}>
           <StepHeader
             number={6}
+            title="Download Videos"
+            status={stepStatus.download}
+            summary={
+              downloadResult
+                ? `${downloadResult.downloads.length} downloaded, ${downloadResult.errors.length} failed`
+                : undefined
+            }
+          />
+
+          <CollapsibleSection label="Input" defaultOpen={!downloadResult}>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+              {filteredResults.length > 0
+                ? `${filteredResults.length} ranked videos ready for download via yt-dlp.`
+                : 'Run Steps 3-5 first to get ranked videos.'}
+            </div>
+          </CollapsibleSection>
+
+          {downloadResult && downloadResult.downloads.length > 0 && (
+            <CollapsibleSection
+              label={`Output — ${downloadResult.downloads.length} videos (${downloadResult.errors.length} errors)`}
+              defaultOpen
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {downloadResult.downloads.map((dl, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr auto auto auto',
+                      gap: 8,
+                      alignItems: 'center',
+                      padding: '6px 8px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      background: i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {dl.sourceTitle || dl.title || dl.filename}
+                    </span>
+                    {dl.platform && (
+                      <span style={{ padding: '1px 6px', borderRadius: 4, fontSize: 10, background: platformColor(dl.platform), color: '#fff' }}>
+                        {dl.platform}
+                      </span>
+                    )}
+                    <span style={{ color: 'var(--muted)', fontSize: 11 }}>
+                      {(dl.size / 1024 / 1024).toFixed(1)} MB
+                    </span>
+                    {dl.duration && (
+                      <span style={{ color: 'var(--muted)', fontSize: 11 }}>
+                        {Math.round(dl.duration)}s
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {downloadResult.errors.length > 0 && (
+                <CollapsibleSection label={`${downloadResult.errors.length} errors`}>
+                  <div style={{ fontSize: 11, color: '#ef4444' }}>
+                    {downloadResult.errors.map((e, i) => (
+                      <div key={i}>{e.platform}: {e.error?.slice(0, 80)}</div>
+                    ))}
+                  </div>
+                </CollapsibleSection>
+              )}
+            </CollapsibleSection>
+          )}
+
+          {stepStatus.download === 'loading' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)', fontSize: 13 }}>
+              <div className="triage-spinner" style={{ width: 18, height: 18 }} />
+              {stepMessages.download || 'Downloading videos...'}
+            </div>
+          )}
+          {stepStatus.download === 'error' && (
+            <p style={{ margin: 0, color: '#ef4444', fontSize: 12 }}>{stepMessages.download}</p>
+          )}
+
+          <button
+            className="triage-btn-analyze"
+            style={{ alignSelf: 'flex-start' }}
+            onClick={handleDownload}
+            disabled={isAnyLoading || filteredResults.length === 0}
+          >
+            Download Videos
+          </button>
+        </div>
+
+        {/* ── STEP 7: Fingerprints ──────────────────────────────── */}
+        <div className="card" style={{ display: 'grid', gap: 14 }}>
+          <StepHeader
+            number={7}
             title="Scene Fingerprints"
             status={stepStatus.fingerprint}
             summary={
@@ -1780,10 +1965,10 @@ export default function SignalsPage() {
           )}
         </div>
 
-        {/* ── STEP 7: Scene Clusters ────────────────────────────── */}
+        {/* ── STEP 8: Scene Clusters ────────────────────────────── */}
         <div className="card" style={{ display: 'grid', gap: 14 }}>
           <StepHeader
-            number={7}
+            number={8}
             title="Scene Clusters"
             status={stepStatus.sceneClusters}
             summary={

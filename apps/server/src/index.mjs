@@ -1358,6 +1358,47 @@ const AGENT_TOOL_DEFINITIONS = [
       executionMode: 'string (optional) – "live"|"mock"|"preflight"',
     },
   },
+  {
+    name: 'signals.keywords.generate',
+    description: 'Generate keyword sets from a product brief (multimodal: text + images + repo context). Returns both the extracted brief and platform-specific keyword sets.',
+    method: 'POST',
+    path: '/api/v1/signals/generate-keywords',
+    args: {
+      text: 'string (optional) – product description or campaign goal',
+      repoContext: 'boolean (optional, default true) – include CLAUDE.md + package.json',
+      imageUrls: 'string[] (optional) – product image URLs',
+    },
+  },
+  {
+    name: 'signals.xhs_search',
+    description: 'Search XHS (Xiaohongshu) via multi-provider fallthrough: RapidAPI → Puppeteer. Returns keyword search results with titles, authors, likes, cover images.',
+    method: 'POST',
+    path: '/api/v1/signals/xhs-search',
+    args: {
+      keyword: 'string (required) – search term (Chinese or English)',
+      limit: 'number (optional, default 20)',
+      sort: 'string (optional) – "general"|"popularity_descending"|"time_descending"',
+      noteType: 'string (optional) – "_0" (all), "_1" (video), "_2" (image)',
+    },
+  },
+  {
+    name: 'signals.xhs_status',
+    description: 'Check XHS search provider status — which providers are configured and available.',
+    method: 'GET',
+    path: '/api/v1/signals/xhs-status',
+    args: {},
+  },
+  {
+    name: 'signals.download_batch',
+    description: 'Download videos from ranked/filtered results via yt-dlp. Returns file paths, sizes, durations. Supports TikTok, Instagram, XHS.',
+    method: 'POST',
+    path: '/api/v1/signals/download',
+    args: {
+      results: 'object[] (required) – results with .videoPageUrl or .url',
+      concurrency: 'number (optional, default 2) – parallel downloads (max 5)',
+      timeout: 'number (optional, default 120000) – per-download timeout ms',
+    },
+  },
 ];
 
 function jsonResponse(res, statusCode, payload) {
@@ -4200,6 +4241,34 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
         return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
       }
     }
+    case 'signals.keywords.generate': {
+      try {
+        const brief = await extractBriefFromMultimodal({ text: args.text, repoContext: args.repoContext ?? true, imageUrls: args.imageUrls, executionMode: args.executionMode });
+        const sets = await generateKeywordsFromBrief(brief.brief, { executionMode: args.executionMode });
+        return { statusCode: 200, payload: { ok: true, tool: toolName, brief: brief.brief, keywordSets: sets } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'signals.xhs_search': {
+      try {
+        const { results, provider, warnings } = await xhsSearch(args.keyword, args.limit || 20, { sort: args.sort, noteType: args.noteType, executionMode: args.executionMode });
+        return { statusCode: 200, payload: { ok: true, tool: toolName, keyword: args.keyword, provider, count: results.length, warnings, results } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
+    case 'signals.xhs_status': {
+      return { statusCode: 200, payload: { ok: true, tool: toolName, ...getXhsStatus() } };
+    }
+    case 'signals.download_batch': {
+      try {
+        const result = await downloadBatch(args.results || [], { concurrency: args.concurrency, timeout: args.timeout });
+        return { statusCode: 200, payload: { ok: true, tool: toolName, ...result } };
+      } catch (err) {
+        return { statusCode: 502, payload: { ok: false, tool: toolName, error: err.message } };
+      }
+    }
     default:
       return {
         statusCode: 404,
@@ -5005,6 +5074,32 @@ const server = http.createServer(async (req, res) => {
           { executionMode: body.executionMode || 'live' },
         );
         jsonResponse(res, 200, { ok: true, platform: body.platform, keyword: body.keyword, count: results.length, results });
+      } catch (err) {
+        jsonResponse(res, 502, { ok: false, error: err.message });
+      }
+      return;
+    }
+
+    // ── XHS multi-provider search routes ────────────────────────────
+
+    if (pathname === '/api/v1/signals/xhs-status' && req.method === 'GET') {
+      jsonResponse(res, 200, { ok: true, ...getXhsStatus() });
+      return;
+    }
+
+    if (pathname === '/api/v1/signals/xhs-search' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      if (!body.keyword) {
+        jsonResponse(res, 400, { ok: false, error: 'keyword is required' });
+        return;
+      }
+      try {
+        const { results, provider, warnings } = await xhsSearch(
+          body.keyword,
+          body.limit || 20,
+          { sort: body.sort, noteType: body.noteType, executionMode: body.executionMode },
+        );
+        jsonResponse(res, 200, { ok: true, keyword: body.keyword, provider, count: results.length, warnings, results });
       } catch (err) {
         jsonResponse(res, 502, { ok: false, error: err.message });
       }
