@@ -16,6 +16,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { logLlmCall } from './llm-logger.mjs';
 
 // ── Configuration ────────────────────────────────────────────────────
 
@@ -260,6 +261,7 @@ export async function analyzeVideo(args) {
     body.generationConfig.responseSchema = args.responseSchema;
   }
 
+  const t0 = Date.now();
   const res = await fetch(
     `${apiBase()}/v1beta/models/${modelId}:generateContent?key=${key}`,
     {
@@ -275,6 +277,7 @@ export async function analyzeVideo(args) {
   }
 
   const data = await res.json();
+  const durationMs = Date.now() - t0;
 
   // Extract response
   const candidate = data.candidates?.[0];
@@ -291,6 +294,16 @@ export async function analyzeVideo(args) {
     }
   }
 
+  const llm = logLlmCall({
+    step: 7,
+    name: 'analyzeVideo',
+    model: modelId,
+    input: parts,
+    output: content,
+    tokens: { input: tokensUsed.promptTokenCount || 0, output: tokensUsed.candidatesTokenCount || 0, total: tokensUsed.totalTokenCount || 0 },
+    durationMs,
+  });
+
   const analysisId = `analysis-${uuid()}`;
   const result = {
     analysisId,
@@ -301,6 +314,7 @@ export async function analyzeVideo(args) {
       outputTokens: tokensUsed.candidatesTokenCount || 0,
       totalTokens: tokensUsed.totalTokenCount || 0,
     },
+    llm,
     createdAt: new Date().toISOString(),
   };
 

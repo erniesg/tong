@@ -118,7 +118,8 @@ async function cmdKeywords() {
   console.error(`[pipeline] Seed keywords: ${brief.keywords?.slice(0, 5).join(', ')}...`);
 
   console.error('[pipeline] Step 2: Generating keyword sets via OpenAI...');
-  const sets = await generateKeywordsFromBrief(brief, { executionMode: args.mode });
+  const kwResult = await generateKeywordsFromBrief(brief, { executionMode: args.mode });
+  const sets = kwResult.sets || kwResult;
 
   console.error(`[pipeline] Generated ${sets.length} keyword sets`);
   for (const s of sets) {

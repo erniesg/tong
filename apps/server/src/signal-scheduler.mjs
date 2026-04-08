@@ -18,6 +18,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { logLlmCall } from './llm-logger.mjs';
 import {
   saveKeywordSet,
   listKeywordSets,
@@ -89,6 +90,7 @@ async function generateKeywordsServerSide() {
   const apiKey = OPENAI_API_KEY();
   if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
 
+  const t0 = Date.now();
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -109,8 +111,20 @@ async function generateKeywordsServerSide() {
   }
 
   const data = await res.json();
+  const durationMs = Date.now() - t0;
   const content = data.choices?.[0]?.message?.content;
   if (!content) throw new Error('No response from OpenAI');
+
+  const usage = data.usage || {};
+  logLlmCall({
+    step: 2,
+    name: 'generateKeywordsServerSide',
+    model: data.model || 'gpt-4o-mini',
+    input: KEYWORD_GEN_PROMPT,
+    output: content,
+    tokens: { input: usage.prompt_tokens || 0, output: usage.completion_tokens || 0, total: usage.total_tokens || 0 },
+    durationMs,
+  });
 
   return JSON.parse(content).sets;
 }
@@ -134,14 +148,14 @@ export async function generateKeywordsFromBrief(brief, options = {}) {
   const isMock = executionMode === 'mock' || process.env.SIGNALS_MOCK === 'true' || process.env.SIGNALS_MOCK === '1';
 
   if (executionMode === 'preflight') {
-    return [{ theme: 'preflight', description: 'preflight mode — keyword gen skipped', keywords: { global: [], tiktok: [], instagram: [], xiaohongshu: [] }, priority: 'low', languages: brief.languages || ['en'] }];
+    return { sets: [{ theme: 'preflight', description: 'preflight mode — keyword gen skipped', keywords: { global: [], tiktok: [], instagram: [], xiaohongshu: [] }, priority: 'low', languages: brief.languages || ['en'] }], llm: null };
   }
 
   if (isMock) {
-    return [
+    return { sets: [
       { theme: 'mock_language_learning', description: '[mock] language learning keywords', keywords: { global: ['language learning', 'learn korean'], tiktok: ['#learnkorean', '#studyjapanese'], instagram: ['#languagelearning'], xiaohongshu: ['学韩语', '日语学习'] }, priority: 'high', languages: brief.languages || ['ko', 'ja', 'zh', 'en'] },
       { theme: 'mock_dating_sim', description: '[mock] dating sim keywords', keywords: { global: ['dating sim', 'visual novel'], tiktok: ['#datingsim', '#otomegame'], instagram: ['#visualnovel'], xiaohongshu: ['恋爱游戏'] }, priority: 'medium', languages: ['en', 'ja'] },
-    ];
+    ], llm: null };
   }
 
   const apiKey = OPENAI_API_KEY();
@@ -159,6 +173,7 @@ export async function generateKeywordsFromBrief(brief, options = {}) {
 
   const prompt = `${KEYWORD_GEN_PROMPT}\n\nAdditional product context:\n${briefContext}`;
 
+  const t0 = Date.now();
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -179,10 +194,22 @@ export async function generateKeywordsFromBrief(brief, options = {}) {
   }
 
   const data = await res.json();
+  const durationMs = Date.now() - t0;
   const content = data.choices?.[0]?.message?.content;
   if (!content) throw new Error('No response from OpenAI');
 
-  return JSON.parse(content).sets;
+  const usage = data.usage || {};
+  const llm = logLlmCall({
+    step: 2,
+    name: 'generateKeywordsFromBrief',
+    model: data.model || 'gpt-4o-mini',
+    input: prompt,
+    output: content,
+    tokens: { input: usage.prompt_tokens || 0, output: usage.completion_tokens || 0, total: usage.total_tokens || 0 },
+    durationMs,
+  });
+
+  return { sets: JSON.parse(content).sets, llm };
 }
 
 // ── Daily Run ───────────────────────────────────────────────────────
