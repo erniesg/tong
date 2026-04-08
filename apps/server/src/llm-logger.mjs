@@ -67,7 +67,7 @@ function sanitizeParts(parts) {
  * @param {number} [entry.durationMs]
  * @param {string} [entry.status] — 'success' | 'error'
  * @param {string} [entry.runId]
- * @returns {{ model: string, tokens: object, cost: object, durationMs: number }}
+ * @returns {{ model: string, tokens: object, cost: object, durationMs: number, input: *, output: * }}
  */
 export function logLlmCall(entry) {
   const tokens = {
@@ -77,6 +77,7 @@ export function logLlmCall(entry) {
   };
   const cost = estimateCost(entry.model, tokens);
 
+  // JSONL gets sanitized (truncated base64)
   const line = {
     timestamp: new Date().toISOString(),
     runId: entry.runId || null,
@@ -98,8 +99,15 @@ export function logLlmCall(entry) {
     console.warn('[llm-logger] Failed to write log:', err.message);
   }
 
-  // Return the metadata for attaching to API responses
-  return { model: entry.model, tokens, cost, durationMs: line.durationMs };
+  // API response gets full input/output (including images) for backstage rendering
+  return {
+    model: entry.model,
+    tokens,
+    cost,
+    durationMs: line.durationMs,
+    input: entry.input,
+    output: entry.output,
+  };
 }
 
 /**

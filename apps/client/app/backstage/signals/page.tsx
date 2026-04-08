@@ -157,12 +157,20 @@ interface SceneClusterData {
   scenes: ClusterScene[];
 }
 
+interface LlmPart {
+  text?: string;
+  inline_data?: { mime_type: string; data: string };
+  file_data?: { mime_type: string; file_uri: string };
+}
+
 interface LlmMeta {
   model: string;
   tokens: { input: number; output: number; total: number };
   cost: { inputCost: number; outputCost: number; totalCost: number };
   durationMs: number;
   calls?: number;
+  input?: string | LlmPart[];
+  output?: string;
 }
 
 type StepStatus = 'idle' | 'loading' | 'done' | 'error';
@@ -315,10 +323,62 @@ function CollapsibleSection({
   );
 }
 
+function LlmInputParts({ input }: { input: string | LlmPart[] }) {
+  if (typeof input === 'string') {
+    return (
+      <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 11, lineHeight: 1.5 }}>
+        {input}
+      </pre>
+    );
+  }
+  if (!Array.isArray(input)) return null;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {input.map((part, i) => {
+        if (part.inline_data?.data) {
+          const src = `data:${part.inline_data.mime_type};base64,${part.inline_data.data}`;
+          return (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 10, color: 'var(--muted)' }}>
+                image ({part.inline_data.mime_type})
+              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={src}
+                alt={`LLM input image ${i}`}
+                style={{ maxWidth: 280, maxHeight: 200, borderRadius: 6, border: '1px solid var(--line)' }}
+              />
+            </div>
+          );
+        }
+        if (part.file_data) {
+          return (
+            <div key={i} style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--font-mono, monospace)' }}>
+              file: {part.file_data.file_uri} ({part.file_data.mime_type})
+            </div>
+          );
+        }
+        if (part.text) {
+          return (
+            <pre key={i} style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 11, lineHeight: 1.5 }}>
+              {part.text}
+            </pre>
+          );
+        }
+        return null;
+      })}
+    </div>
+  );
+}
+
 function LlmCallDetail({ llm, label }: { llm: LlmMeta | null; label?: string }) {
   const [expanded, setExpanded] = useState(false);
+  const [showInput, setShowInput] = useState(false);
+  const [showOutput, setShowOutput] = useState(false);
   if (!llm) return null;
   const cost = llm.cost?.totalCost ?? 0;
+  const hasInput = llm.input != null && (typeof llm.input === 'string' ? llm.input.length > 0 : llm.input.length > 0);
+  const hasOutput = llm.output != null && llm.output.length > 0;
   return (
     <div
       style={{
@@ -340,6 +400,7 @@ function LlmCallDetail({ llm, label }: { llm: LlmMeta | null; label?: string }) 
           display: 'flex',
           alignItems: 'center',
           gap: 6,
+          flexWrap: 'wrap',
         }}
       >
         <span style={{ fontSize: 9 }}>{expanded ? '▾' : '▸'}</span>
@@ -369,8 +430,12 @@ function LlmCallDetail({ llm, label }: { llm: LlmMeta | null; label?: string }) 
             fontSize: 11,
             fontFamily: 'var(--font-mono, monospace)',
             lineHeight: 1.5,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
           }}
         >
+          {/* Token / cost grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '2px 12px' }}>
             <span style={{ color: 'var(--muted)' }}>Model</span>
             <span>{llm.model}</span>
@@ -393,6 +458,58 @@ function LlmCallDetail({ llm, label }: { llm: LlmMeta | null; label?: string }) 
               </>
             )}
           </div>
+
+          {/* Input (prompt + images) */}
+          {hasInput && (
+            <div>
+              <button
+                onClick={() => setShowInput((v) => !v)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                  fontSize: 11, color: 'var(--accent)', fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                <span style={{ fontSize: 9 }}>{showInput ? '▾' : '▸'}</span>
+                Input (prompt{Array.isArray(llm.input) ? ` — ${llm.input.length} parts` : ''})
+              </button>
+              {showInput && (
+                <div style={{
+                  marginTop: 6, padding: 8, background: 'rgba(0,0,0,0.03)',
+                  borderRadius: 4, maxHeight: 400, overflow: 'auto',
+                }}>
+                  <LlmInputParts input={llm.input!} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Output (raw response) */}
+          {hasOutput && (
+            <div>
+              <button
+                onClick={() => setShowOutput((v) => !v)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                  fontSize: 11, color: 'var(--accent)', fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                <span style={{ fontSize: 9 }}>{showOutput ? '▾' : '▸'}</span>
+                Output ({llm.output!.length.toLocaleString()} chars)
+              </button>
+              {showOutput && (
+                <div style={{
+                  marginTop: 6, padding: 8, background: 'rgba(0,0,0,0.03)',
+                  borderRadius: 4, maxHeight: 400, overflow: 'auto',
+                }}>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 11, lineHeight: 1.5 }}>
+                    {llm.output}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
