@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PlaytestOverlay, type Annotation } from './PlaytestOverlay';
 
-const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'https://tong-api.erniesg.workers.dev';
 
 /**
  * Wraps game content and conditionally mounts the PlaytestOverlay

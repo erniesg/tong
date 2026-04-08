@@ -38,7 +38,7 @@ const CITY_TO_LANG: Record<string, AppLang> = { seoul: 'ko', tokyo: 'ja', shangh
 
 /* ── API helper — no demo password required for GET/PATCH ──── */
 
-const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'https://tong-api.erniesg.workers.dev';
 
 async function fetchSession(id: string): Promise<PlaytestSessionResponse> {
   const res = await fetch(`${API_BASE}/api/v1/playtest/sessions/${id}`);
