@@ -2,21 +2,20 @@
  * XHS (Xiaohongshu / RED) search — multi-provider with automatic fallthrough.
  *
  * Providers (tried in order):
- *   1. RapidAPI "Xiaohongshu All API" — flaky but works with retries
- *   2. Apify actor — paid/unreliable free tier
- *   3. Puppeteer + cookies — requires manual cookie refresh every ~7 days
- *   4. Puppeteer (no auth) — falls back to explore feed (NOT keyword search)
+ *   1. rapidapi         — RapidAPI "Xiaohongshu All API" (works, needs retries)
+ *   2. puppeteer        — Puppeteer no-auth (explore feed only, NOT keyword search)
+ *
+ * What doesn't work (tested 2026-04-08):
+ *   - Puppeteer + cookies: XHS blocks headless browser fingerprint even with valid cookies
+ *   - pip install xhs: anti-bot blocks built-in signer (code 300011)
+ *   - Apify free actors: paid-only or timeout
  *
  * Configure via env:
- *   X-RapidAPI-Key           — enables RapidAPI provider
- *   APIFY_API_TOKEN           — enables Apify provider
- *   XHS_COOKIES_PATH          — path to cookies JSON for Puppeteer auth
- *   SIGNALS_XHS_PROVIDERS     — comma-separated provider order (default: rapidapi,puppeteer)
- *
- * All providers normalise results to the same shape.
+ *   X-RapidAPI-Key             — enables RapidAPI provider
+ *   SIGNALS_XHS_PROVIDERS     — comma-separated provider order override
  */
 
-// ── Configuration ────────────────────────────────────────────────────
+// RapidAPI is fetch-only, Puppeteer is imported dynamically
 
 const RAPIDAPI_KEY = () => process.env['X-RapidAPI-Key'] || process.env.RAPIDAPI_KEY || '';
 const RAPIDAPI_HOST = 'xiaohongshu-all-api.p.rapidapi.com';
@@ -24,37 +23,24 @@ const RAPIDAPI_HOST = 'xiaohongshu-all-api.p.rapidapi.com';
 function getProviderOrder() {
   const env = process.env.SIGNALS_XHS_PROVIDERS || '';
   if (env) return env.split(',').map((p) => p.trim().toLowerCase());
-  // Default: try rapidapi first, then puppeteer
   const providers = [];
   if (RAPIDAPI_KEY()) providers.push('rapidapi');
   providers.push('puppeteer');
   return providers;
 }
 
-// ── RapidAPI Provider ───────────────────────────────────────────────
+// ── Provider: RapidAPI ──────────────────────────────────────────────
 
-/**
- * Search XHS via RapidAPI "Xiaohongshu All API".
- * Flaky — returns 503 on first attempts, needs retries.
- *
- * @param {string} keyword
- * @param {number} limit — page size (API returns ~20 per page)
- * @param {object} options — { sort, noteType, noteTime, maxRetries }
- * @returns {Promise<object[]>} — normalised results
- */
 async function rapidapiSearch(keyword, limit = 20, options = {}) {
   const key = RAPIDAPI_KEY();
   if (!key) throw new Error('X-RapidAPI-Key not configured');
 
   const maxRetries = options.maxRetries ?? 5;
-  const sort = options.sort || 'general';
-  const noteType = options.noteType || '_0';
-
   const params = new URLSearchParams({
     keyword,
     page: '1',
-    sort,
-    noteType,
+    sort: options.sort || 'general',
+    noteType: options.noteType || '_0',
   });
   if (options.noteTime) params.set('noteTime', options.noteTime);
 
@@ -76,12 +62,31 @@ async function rapidapiSearch(keyword, limit = 20, options = {}) {
       );
 
       const data = await res.json();
-
       if (data.code === 0 && data.data) {
-        const items = data.data.items || [];
-        return items.slice(0, limit).map((item) => normaliseRapidapiResult(item, keyword));
+        return (data.data.items || []).slice(0, limit).map((item) => {
+          const note = item.note || item;
+          const user = note.user || {};
+          const interact = note.interact_info || {};
+          return {
+            platform: 'xiaohongshu',
+            keyword,
+            type: note.type === 'video' ? 'video' : 'note',
+            title: note.display_title || note.title || note.desc?.slice(0, 100) || '',
+            author: user.nickname || user.nick_name || '',
+            stats: {
+              likes: parseInt(interact.liked_count || note.liked_count || '0', 10) || 0,
+              collects: parseInt(interact.collected_count || '0', 10) || 0,
+              comments: parseInt(interact.comment_count || '0', 10) || 0,
+            },
+            coverUrl: note.images_list?.[0]?.url || '',
+            videoPageUrl: note.note_id ? `https://www.xiaohongshu.com/explore/${note.note_id}` : '',
+            thumbnailUrl: note.images_list?.[0]?.url || '',
+            scrapedAt: new Date().toISOString(),
+            _provider: 'rapidapi',
+            _raw: { noteId: note.note_id, imageCount: note.images_list?.length || 0 },
+          };
+        });
       }
-
       lastError = new Error(`RapidAPI code ${data.code}: ${data.message || 'unknown'}`);
     } catch (err) {
       lastError = err;
@@ -91,60 +96,15 @@ async function rapidapiSearch(keyword, limit = 20, options = {}) {
   throw lastError || new Error('RapidAPI search failed after retries');
 }
 
-function normaliseRapidapiResult(item, keyword) {
-  const note = item.note || item;
-  const user = note.user || {};
-  const interact = note.interact_info || {};
+// ── Provider: Puppeteer (no auth) ───────────────────────────────────
 
-  return {
-    platform: 'xiaohongshu',
-    keyword,
-    type: note.type === 'video' ? 'video' : 'note',
-    title: note.display_title || note.title || note.desc?.slice(0, 100) || '',
-    author: user.nickname || user.nick_name || '',
-    stats: {
-      likes: parseInt(interact.liked_count || note.liked_count || '0', 10) || 0,
-      collects: parseInt(interact.collected_count || '0', 10) || 0,
-      comments: parseInt(interact.comment_count || '0', 10) || 0,
-    },
-    coverUrl: note.images_list?.[0]?.url || note.images_list?.[0]?.url_size_large || '',
-    videoPageUrl: note.note_id
-      ? `https://www.xiaohongshu.com/explore/${note.note_id}`
-      : '',
-    thumbnailUrl: note.images_list?.[0]?.url || '',
-    scrapedAt: new Date().toISOString(),
-    _provider: 'rapidapi',
-    _raw: {
-      noteId: note.note_id,
-      noteType: note.type,
-      imageCount: note.images_list?.length || 0,
-      hasVideo: Boolean(note.video?.url || note.video_info?.url),
-    },
-  };
-}
-
-// ── Puppeteer Provider (cookie-based) ───────────────────────────────
-
-/**
- * Search XHS via Puppeteer with injected cookies.
- * Falls back to explore feed if no cookies / login required.
- */
 async function puppeteerSearch(keyword, limit = 20) {
-  // Dynamically import to avoid loading Puppeteer when not needed
   const { xiaohongshuSearch } = await import('./signal-browser.mjs');
   return xiaohongshuSearch(keyword, limit);
 }
 
 // ── Unified Search ──────────────────────────────────────────────────
 
-/**
- * Search XHS using the first available provider that succeeds.
- *
- * @param {string} keyword — search term (Chinese or English)
- * @param {number} [limit=20]
- * @param {object} [options] — { sort, noteType, noteTime, executionMode, providers }
- * @returns {Promise<{ results: object[], provider: string, warnings: string[] }>}
- */
 export async function xhsSearch(keyword, limit = 20, options = {}) {
   if (options.executionMode === 'preflight') {
     return { results: [], provider: 'preflight', warnings: [] };
@@ -192,7 +152,6 @@ export async function xhsSearch(keyword, limit = 20, options = {}) {
       if (results.length > 0) {
         return { results, provider, warnings };
       }
-
       warnings.push(`${provider}: returned 0 results`);
     } catch (err) {
       warnings.push(`${provider}: ${err.message}`);
@@ -207,10 +166,19 @@ export async function xhsSearch(keyword, limit = 20, options = {}) {
 export function getXhsStatus() {
   return {
     providers: getProviderOrder(),
+    'puppeteer-cookie': {
+      cookieConfigured: hasCookie(),
+      cookieSource: process.env.XHS_COOKIE ? 'env' : hasCookie() ? 'file' : 'none',
+      note: 'refresh cookies every ~7 days',
+    },
     rapidapi: {
       configured: Boolean(RAPIDAPI_KEY()),
       host: RAPIDAPI_HOST,
+      note: 'flaky, needs retries (~35s), burns credits',
     },
-    puppeteer: { available: true, note: 'falls back to explore feed without cookies' },
+    puppeteer: {
+      available: true,
+      note: 'explore feed only without cookies — NOT keyword search',
+    },
   };
 }
