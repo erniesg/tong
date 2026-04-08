@@ -13,15 +13,31 @@
  * Platforms actively block scrapers; the module degrades gracefully and returns
  * partial results with a `warnings` array rather than crashing.
  *
+ * Scraper backend selection (per-platform):
+ *   SIGNALS_SCRAPER_XIAOHONGSHU=apify  → use Apify actor instead of fetch/Puppeteer
+ *   SIGNALS_SCRAPER_INSTAGRAM=apify    → use Apify actor instead of fetch/Puppeteer
+ *   Default: 'fetch' (existing fetch-based scrapers)
+ *
  * Rate limiting: minimum 1-second gap between outgoing requests enforced per-platform.
  * Cache TTL: 15 minutes (signals are slow-moving; no need to re-scrape every call).
  */
+
+import { apifySearch } from './signal-apify.mjs';
 
 // ── Configuration ────────────────────────────────────────────────────
 
 const TIKTOK_API_KEY = () => process.env.TIKTOK_API_KEY || '';
 const INSTAGRAM_API_KEY = () => process.env.INSTAGRAM_API_KEY || '';
 const XHS_API_KEY = () => process.env.XHS_API_KEY || '';
+
+/**
+ * Per-platform scraper backend: 'fetch' (default), 'apify', or 'puppeteer'.
+ * Configured via SIGNALS_SCRAPER_{PLATFORM} env vars.
+ */
+function getScraperBackend(platform) {
+  const envKey = `SIGNALS_SCRAPER_${platform.toUpperCase()}`;
+  return (process.env[envKey] || 'fetch').toLowerCase();
+}
 
 const CACHE_TTL_MS = Number(process.env.SIGNALS_CACHE_TTL_MS || process.env.TRENDS_CACHE_TTL_MS || 15 * 60 * 1000);
 const MOCK_MODE = () =>
@@ -1061,7 +1077,11 @@ export async function searchPlatform(args) {
 
     try {
       let items = [];
-      if (platform === 'tiktok') {
+      const backend = getScraperBackend(platform);
+
+      if (backend === 'apify' && (platform === 'xiaohongshu' || platform === 'instagram')) {
+        items = await apifySearch(platform, keyword, limit, { executionMode });
+      } else if (platform === 'tiktok') {
         items = await searchTikTok(keyword, limit);
       } else if (platform === 'instagram') {
         items = await searchInstagram(keyword, limit);
@@ -1071,7 +1091,7 @@ export async function searchPlatform(args) {
       setCache(cacheKey, items);
       results.push(...items);
     } catch (err) {
-      warnings.push(`${platform}/${keyword}: ${err.message}`);
+      warnings.push(`${platform}/${keyword} [${getScraperBackend(platform)}]: ${err.message}`);
     }
   }
 

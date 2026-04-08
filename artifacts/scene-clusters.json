@@ -1,0 +1,631 @@
+{
+  "total_scenes": 27,
+  "clustering": {
+    "clip": {
+      "n_clusters": 3,
+      "n_noise": 3,
+      "labels": [
+        -1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        -1,
+        1,
+        1,
+        -1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        1,
+        2,
+        1,
+        2,
+        1,
+        1,
+        1
+      ]
+    },
+    "videomae": {
+      "n_clusters": 3,
+      "n_noise": 16,
+      "labels": [
+        1,
+        2,
+        1,
+        1,
+        2,
+        -1,
+        -1,
+        -1,
+        2,
+        2,
+        2,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    },
+    "text": {
+      "n_clusters": 2,
+      "n_noise": 10,
+      "labels": [
+        0,
+        -1,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        -1,
+        -1,
+        1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        0,
+        1,
+        0,
+        -1,
+        0,
+        1,
+        -1
+      ]
+    },
+    "audio": {
+      "n_clusters": 2,
+      "n_noise": 5,
+      "labels": [
+        -1,
+        0,
+        0,
+        0,
+        -1,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        -1,
+        1,
+        -1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        -1,
+        1,
+        1
+      ]
+    },
+    "combined": {
+      "n_clusters": 3,
+      "n_noise": 16,
+      "labels": [
+        -1,
+        0,
+        0,
+        0,
+        -1,
+        -1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        2,
+        -1,
+        -1,
+        -1,
+        2,
+        -1,
+        -1,
+        2,
+        -1
+      ]
+    }
+  },
+  "scenes": [
+    {
+      "video_id": "10d5f7c7178e",
+      "scene_idx": 0,
+      "start_sec": 0.0,
+      "end_sec": 4.13,
+      "duration_sec": 4.13,
+      "keyframe_path": "artifacts/scenes/10d5f7c7178e/scene_000.jpg",
+      "audio_path": "artifacts/scenes/10d5f7c7178e/scene_000.wav",
+      "transcript": "Here's your easiest guide to introducing yourself in Korean.",
+      "clusters": {
+        "clip": -1,
+        "videomae": 1,
+        "text": 0,
+        "audio": -1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "10d5f7c7178e",
+      "scene_idx": 1,
+      "start_sec": 4.13,
+      "end_sec": 73.43,
+      "duration_sec": 69.3,
+      "keyframe_path": "artifacts/scenes/10d5f7c7178e/scene_001.jpg",
+      "audio_path": "artifacts/scenes/10d5f7c7178e/scene_001.wav",
+      "transcript": "\uc548\ub155\ud558\uc138\uc694. \uc548\ub155\ud558\uc138\uc720 I'm name. \uc800\ub294 name\uc785\ub2c8\ub2e4. \uc800\ub294 name\uc785\ub2c8\ub2e4. I'm from country. country\uc5d0\uc11c \uc654\uc5b4\uc694. country\uc5d0\uc11c \uc654\uc5b4\uc694. I'm number years old. \uc800\ub294 number \uc0b4\uc774\uc5d0\uc694. \uc800\ub294 number \uc0b4\uc774\uc5d0\uc694. I like the topic of interest. \uc800\ub294 interest \uc88b\uc544\ud574\uc694. \uc800\ub294 interest \uc88b\uc544\ud574\uc694. It's nice to meet you. \ub9cc\ub098\uc11c \ubc18\uac11\uc2b5\ub2c8\ub2e4. \ub9cc\ub098\uc11c \ubc18\uac11\uc2b5\ub2c8\ub2e4.",
+      "clusters": {
+        "clip": 0,
+        "videomae": 2,
+        "text": -1,
+        "audio": 0,
+        "combined": 0
+      }
+    },
+    {
+      "video_id": "10d5f7c7178e",
+      "scene_idx": 2,
+      "start_sec": 73.43,
+      "end_sec": 94.33,
+      "duration_sec": 20.9,
+      "keyframe_path": "artifacts/scenes/10d5f7c7178e/scene_002.jpg",
+      "audio_path": "artifacts/scenes/10d5f7c7178e/scene_002.wav",
+      "transcript": "Thank you in advance or I look forward to working with you. \uc798 \ubd80\ud0c1\ub4dc\ub9bd\ub2c8\ub2e4. \uc798 \ubd80\ud0c1\ub4dc\ub9bd\ub2c8\ub2e4. Thank you. \uac10\uc0ac\ud569\ub2c8\ub2e4. \uac10\uc0ac\ud569\ub2c8\ub2e4.",
+      "clusters": {
+        "clip": 0,
+        "videomae": 1,
+        "text": 0,
+        "audio": 0,
+        "combined": 0
+      }
+    },
+    {
+      "video_id": "10d5f7c7178e",
+      "scene_idx": 3,
+      "start_sec": 94.33,
+      "end_sec": 99.23,
+      "duration_sec": 4.9,
+      "keyframe_path": "artifacts/scenes/10d5f7c7178e/scene_003.jpg",
+      "audio_path": "artifacts/scenes/10d5f7c7178e/scene_003.wav",
+      "transcript": "Now plug in your own information and try introducing yourself in Korean.",
+      "clusters": {
+        "clip": 0,
+        "videomae": 1,
+        "text": 0,
+        "audio": 0,
+        "combined": 0
+      }
+    },
+    {
+      "video_id": "10d5f7c7178e",
+      "scene_idx": 4,
+      "start_sec": 99.23,
+      "end_sec": 99.77,
+      "duration_sec": 0.53,
+      "keyframe_path": "artifacts/scenes/10d5f7c7178e/scene_004.jpg",
+      "audio_path": "artifacts/scenes/10d5f7c7178e/scene_004.wav",
+      "transcript": "",
+      "clusters": {
+        "clip": 0,
+        "videomae": 2,
+        "text": 1,
+        "audio": -1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "2476db64807e",
+      "scene_idx": 0,
+      "start_sec": 0.0,
+      "end_sec": 3.07,
+      "duration_sec": 3.07,
+      "keyframe_path": "artifacts/scenes/2476db64807e/scene_000.jpg",
+      "audio_path": "artifacts/scenes/2476db64807e/scene_000.wav",
+      "transcript": "Let's practice Korean Dremot di Rago",
+      "clusters": {
+        "clip": 0,
+        "videomae": -1,
+        "text": 1,
+        "audio": 0,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "2476db64807e",
+      "scene_idx": 1,
+      "start_sec": 3.07,
+      "end_sec": 22.27,
+      "duration_sec": 19.2,
+      "keyframe_path": "artifacts/scenes/2476db64807e/scene_001.jpg",
+      "audio_path": "artifacts/scenes/2476db64807e/scene_001.wav",
+      "transcript": "\uc65c \uc774\ub807\uac8c \ubc14\ubd24\uc5b4\uc694? \uc774\ub97c \ud574\uc11c \ubc14\ubd24\uc5b4\uc694. \uc774\ub97c \ud558\ub290\ub77c \ubc14\ubd24\uc5b4\uc694. \uc65c \uc219\uc81c\ub97c \ubabb\ud588\uc5b4\uc694? \uce5c\uad6c\ub97c \ub9cc\ub098\uc11c \ubabb\ud588\uc5b4\uc694. \uce5c\uad6c\ub97c \ub9cc\ub098\ub290\ub77c \ubabb\ud588\uc5b4\uc694.",
+      "clusters": {
+        "clip": 0,
+        "videomae": -1,
+        "text": 0,
+        "audio": 1,
+        "combined": 1
+      }
+    },
+    {
+      "video_id": "2476db64807e",
+      "scene_idx": 2,
+      "start_sec": 22.27,
+      "end_sec": 27.2,
+      "duration_sec": 4.93,
+      "keyframe_path": "artifacts/scenes/2476db64807e/scene_002.jpg",
+      "audio_path": "artifacts/scenes/2476db64807e/scene_002.wav",
+      "transcript": "\uc8fc\uc778 \ucc3d\uacb9\uc0b4\uc744 \uba39\ub290\ub77c \uae30\ubd84\uc774 \uc88b\uc544\uc694 \ub561",
+      "clusters": {
+        "clip": 0,
+        "videomae": -1,
+        "text": 0,
+        "audio": 1,
+        "combined": 1
+      }
+    },
+    {
+      "video_id": "2476db64807e",
+      "scene_idx": 3,
+      "start_sec": 27.2,
+      "end_sec": 32.4,
+      "duration_sec": 5.2,
+      "keyframe_path": "artifacts/scenes/2476db64807e/scene_003.jpg",
+      "audio_path": "artifacts/scenes/2476db64807e/scene_003.wav",
+      "transcript": "\ud55c\uacb9\uc0b4\uc744 \uba39\uc5b4\uc11c \uae30\ubd84\uc774 \uc88b\uc544\uc694 \ub124\uac00 \uc624\ub298 \uc544 \ucd94\uc6cc\uc694",
+      "clusters": {
+        "clip": 0,
+        "videomae": 2,
+        "text": 0,
+        "audio": 1,
+        "combined": 1
+      }
+    },
+    {
+      "video_id": "2476db64807e",
+      "scene_idx": 4,
+      "start_sec": 32.4,
+      "end_sec": 35.9,
+      "duration_sec": 3.5,
+      "keyframe_path": "artifacts/scenes/2476db64807e/scene_004.jpg",
+      "audio_path": "artifacts/scenes/2476db64807e/scene_004.wav",
+      "transcript": "\ub561! \ube44\uac00 \uc640\uc11c \ucd94\uc6cc\uc694",
+      "clusters": {
+        "clip": 0,
+        "videomae": 2,
+        "text": 0,
+        "audio": 1,
+        "combined": 1
+      }
+    },
+    {
+      "video_id": "2476db64807e",
+      "scene_idx": 5,
+      "start_sec": 35.9,
+      "end_sec": 38.97,
+      "duration_sec": 3.07,
+      "keyframe_path": "artifacts/scenes/2476db64807e/scene_005.jpg",
+      "audio_path": "artifacts/scenes/2476db64807e/scene_005.wav",
+      "transcript": "\uc774\ub54c\ub294 \uadf8\ub0e5 \uc544\uc18c \uc5b4\uc100\ub97c \uc0ac\uc6a9\ud574\uc8fc\uc138\uc694",
+      "clusters": {
+        "clip": 0,
+        "videomae": 2,
+        "text": 0,
+        "audio": 1,
+        "combined": 1
+      }
+    },
+    {
+      "video_id": "7aceb4ae3149",
+      "scene_idx": 0,
+      "start_sec": 0.0,
+      "end_sec": 29.33,
+      "duration_sec": 29.33,
+      "keyframe_path": "artifacts/scenes/7aceb4ae3149/scene_000.jpg",
+      "audio_path": "artifacts/scenes/7aceb4ae3149/scene_000.wav",
+      "transcript": "I have to say 5, 4, 3, 2, 1. Korean. Go. Sa. Sam. I. I. I. That's a good boy.",
+      "clusters": {
+        "clip": -1,
+        "videomae": -1,
+        "text": -1,
+        "audio": -1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 0,
+      "start_sec": 0.0,
+      "end_sec": 15.02,
+      "duration_sec": 15.02,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_000.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_000.wav",
+      "transcript": "Who do you like the most? She's entrapping me. This is not even cool, man. Okay, just for the bit Imagine I pick her sister. Imagine I pick her sister. Her face all happy here will go",
+      "clusters": {
+        "clip": 1,
+        "videomae": -1,
+        "text": -1,
+        "audio": 1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 1,
+      "start_sec": 15.02,
+      "end_sec": 21.85,
+      "duration_sec": 6.83,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_001.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_001.wav",
+      "transcript": "for the bit. I don't think I changed one.",
+      "clusters": {
+        "clip": 1,
+        "videomae": 0,
+        "text": 1,
+        "audio": -1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 2,
+      "start_sec": 21.85,
+      "end_sec": 23.58,
+      "duration_sec": 1.73,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_002.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_002.wav",
+      "transcript": "Yeah, no matter what answer I go with it.",
+      "clusters": {
+        "clip": -1,
+        "videomae": -1,
+        "text": -1,
+        "audio": 1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 3,
+      "start_sec": 23.58,
+      "end_sec": 25.83,
+      "duration_sec": 2.25,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_003.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_003.wav",
+      "transcript": "she's not gonna like besides herself. On YouTube...",
+      "clusters": {
+        "clip": 1,
+        "videomae": -1,
+        "text": -1,
+        "audio": 1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 4,
+      "start_sec": 25.83,
+      "end_sec": 27.03,
+      "duration_sec": 1.2,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_004.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_004.wav",
+      "transcript": "So... I saw...",
+      "clusters": {
+        "clip": 1,
+        "videomae": -1,
+        "text": -1,
+        "audio": 1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 5,
+      "start_sec": 27.03,
+      "end_sec": 30.78,
+      "duration_sec": 3.75,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_005.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_005.wav",
+      "transcript": "B\u8fd9\u4e2a\u51fa\u304b\u304a\u304d\u307e\u3059aki\u306f\u3044\u306dBMusic\u30ad\u30e3\u30ce\u30a4 completed\u00f3and\u7d9a\u3044\u3066 1985sh",
+      "clusters": {
+        "clip": 1,
+        "videomae": -1,
+        "text": -1,
+        "audio": 1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 6,
+      "start_sec": 30.78,
+      "end_sec": 34.92,
+      "duration_sec": 4.13,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_006.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_006.wav",
+      "transcript": "\uc5b4\ub514\uac00 \uc81c\uc77c \uc88b\uc740\ub370?",
+      "clusters": {
+        "clip": 1,
+        "videomae": 0,
+        "text": 0,
+        "audio": 1,
+        "combined": 2
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 7,
+      "start_sec": 34.92,
+      "end_sec": 36.7,
+      "duration_sec": 1.78,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_007.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_007.wav",
+      "transcript": "ooh forward smoke",
+      "clusters": {
+        "clip": 2,
+        "videomae": 0,
+        "text": -1,
+        "audio": 1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 8,
+      "start_sec": 36.7,
+      "end_sec": 57.25,
+      "duration_sec": 20.55,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_008.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_008.wav",
+      "transcript": "\ub098\uc644? \ud639\uc2dc \uc9c0\uae08 \ubc18\uae30 \uc788\uaca0\uc5b4? \ub0c4\uc0c8\ub294? \ub2f9\uc5f0\ud558\uc9c0! \ub098\ub3c4 \ubc18\uae30 \ub0c4\uc0c8\uac00 \uc81c\uc77c \uc88b\uc544 \uc57c \ub108 \ubcc0\ud0dc\ub0d0 \uc544\ub2c8... \uc57d\uac04... \ub9d0\ub791\ud574 \ub9d0\ub791\ud574 How do you talk to women like this? \uc138\uc0c1\uc5d0 \uc81c\uc77c \uc88b\uc544 \ucd5c\uace0\uc758 \ubc18\uae30 That is crazy",
+      "clusters": {
+        "clip": 1,
+        "videomae": -1,
+        "text": 0,
+        "audio": 1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 9,
+      "start_sec": 57.25,
+      "end_sec": 61.5,
+      "duration_sec": 4.25,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_009.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_009.wav",
+      "transcript": "It doesn't turn on, it changes. What does that mean?",
+      "clusters": {
+        "clip": 2,
+        "videomae": -1,
+        "text": 1,
+        "audio": 1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 10,
+      "start_sec": 61.5,
+      "end_sec": 71.27,
+      "duration_sec": 9.77,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_010.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_010.wav",
+      "transcript": "\uc6b0",
+      "clusters": {
+        "clip": 1,
+        "videomae": -1,
+        "text": 0,
+        "audio": 1,
+        "combined": 2
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 11,
+      "start_sec": 71.27,
+      "end_sec": 73.23,
+      "duration_sec": 1.97,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_011.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_011.wav",
+      "transcript": "coupling 1 \ub123\uc5b4\uc8fc\ub294 \uc5f0\uc545\uc774 benefic pineapple\uc758 \ud06c\uae30\ucc98\ub7fc",
+      "clusters": {
+        "clip": 2,
+        "videomae": -1,
+        "text": -1,
+        "audio": 1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 12,
+      "start_sec": 73.23,
+      "end_sec": 74.55,
+      "duration_sec": 1.32,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_012.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_012.wav",
+      "transcript": "\uc751! \ud639\uc2dc...? \ubd88\uc744 \uc774\uac83\ub4f1",
+      "clusters": {
+        "clip": 1,
+        "videomae": -1,
+        "text": 0,
+        "audio": -1,
+        "combined": -1
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 13,
+      "start_sec": 74.55,
+      "end_sec": 75.38,
+      "duration_sec": 0.83,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_013.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_013.wav",
+      "transcript": "",
+      "clusters": {
+        "clip": 1,
+        "videomae": -1,
+        "text": 1,
+        "audio": 1,
+        "combined": 2
+      }
+    },
+    {
+      "video_id": "d05044b0cecf",
+      "scene_idx": 14,
+      "start_sec": 75.38,
+      "end_sec": 80.95,
+      "duration_sec": 5.57,
+      "keyframe_path": "artifacts/scenes/d05044b0cecf/scene_014.jpg",
+      "audio_path": "artifacts/scenes/d05044b0cecf/scene_014.wav",
+      "transcript": "Okay, this is not what I was expecting. This is a wild way to do things.",
+      "clusters": {
+        "clip": 1,
+        "videomae": -1,
+        "text": -1,
+        "audio": 1,
+        "combined": -1
+      }
+    }
+  ]
+}

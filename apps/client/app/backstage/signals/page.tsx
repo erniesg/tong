@@ -60,6 +60,83 @@ interface DroppedResult {
   reason?: string;
 }
 
+interface FingerprintScene {
+  start: string;
+  end: string;
+  type: string;
+  audio?: string;
+  automationDifficulty?: string;
+  description: string;
+}
+
+interface FingerprintResult {
+  hookTechnique?: string;
+  contentFormat?: string;
+  automatabilityScore?: number;
+  audioLanguage?: string;
+  hasVoiceover?: string;
+  hasTrendingSound?: string;
+  transcript?: string;
+  totalDurationEstimate?: number;
+  scenes?: FingerprintScene[];
+}
+
+interface Fingerprint {
+  source: {
+    id?: string;
+    platform?: string;
+    author?: string;
+    title?: string;
+    caption?: string;
+    views?: string | number;
+    likes?: string | number;
+    videoUrl?: string;
+    thumbnailUrl?: string;
+    relevanceScore?: number;
+  };
+  preset?: string;
+  analysisId?: string;
+  model?: string;
+  tokensUsed?: { inputTokens?: number; outputTokens?: number; totalTokens?: number };
+  result: FingerprintResult | null;
+  error?: string;
+  analyzedAt?: string;
+}
+
+interface FingerprintData {
+  preset: string;
+  model: string;
+  analyzedAt: string;
+  stats: { total: number; successful: number; failed: number; totalTokens: number };
+  fingerprints: Fingerprint[];
+}
+
+interface ClusterScene {
+  video_id: string;
+  scene_idx: number;
+  start_sec: number;
+  end_sec: number;
+  duration_sec: number;
+  keyframe_path: string;
+  audio_path: string;
+  transcript: string;
+  thumbnail?: string;
+  umap?: Record<string, [number, number]>;
+  clusters?: Record<string, number>;
+}
+
+interface ClusterInfo {
+  n_clusters: number;
+  n_noise: number;
+  labels: number[];
+}
+
+interface SceneClusterData {
+  total_scenes: number;
+  clustering: Record<string, ClusterInfo>;
+  scenes: ClusterScene[];
+}
+
 type StepStatus = 'idle' | 'loading' | 'done' | 'error';
 
 interface PipelineState {
@@ -68,6 +145,8 @@ interface PipelineState {
   search: StepStatus;
   filter: StepStatus;
   score: StepStatus;
+  fingerprint: StepStatus;
+  sceneClusters: StepStatus;
 }
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
@@ -97,6 +176,28 @@ function relevanceColor(score: number): string {
   if (score > 70) return '#22c55e';
   if (score > 40) return '#f59e0b';
   return '#94a3b8';
+}
+
+function automationColor(difficulty?: string): string {
+  if (difficulty === 'trivial') return '#22c55e';
+  if (difficulty === 'moderate') return '#f59e0b';
+  if (difficulty === 'hard') return '#ef4444';
+  return '#94a3b8';
+}
+
+function sceneTypeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    talking_head: 'Talking Head',
+    text_overlay: 'Text Overlay',
+    product_shot: 'Product Shot',
+    data_viz: 'Data Viz',
+    b_roll: 'B-Roll',
+    screen_recording: 'Screen Rec',
+    split_screen: 'Split Screen',
+    transition: 'Transition',
+    outro_cta: 'Outro/CTA',
+  };
+  return labels[type] || type;
 }
 
 /* ── Sub-components ───────────────────────────────────────────────── */
@@ -396,6 +497,10 @@ export default function SignalsPage() {
   const [filteredResults, setFilteredResults] = useState<SearchResult[]>([]);
   const [droppedResults, setDroppedResults] = useState<DroppedResult[]>([]);
   const [filterStats, setFilterStats] = useState<FilterStats | null>(null);
+  const [fingerprintData, setFingerprintData] = useState<FingerprintData | null>(null);
+  const [expandedFingerprints, setExpandedFingerprints] = useState<Set<number>>(new Set());
+  const [sceneClusterData, setSceneClusterData] = useState<SceneClusterData | null>(null);
+  const [activeClusterTab, setActiveClusterTab] = useState('clip');
 
   // Inputs
   const [briefText, setBriefText] = useState('');
@@ -411,6 +516,8 @@ export default function SignalsPage() {
     search: 'idle',
     filter: 'idle',
     score: 'idle',
+    fingerprint: 'idle',
+    sceneClusters: 'idle',
   });
   const [stepMessages, setStepMessages] = useState<Partial<Record<keyof PipelineState, string>>>({});
   const [expandedKeywordSets, setExpandedKeywordSets] = useState<Set<string>>(new Set());
@@ -610,10 +717,12 @@ export default function SignalsPage() {
   const handleLoadCachedRun = useCallback(async () => {
     setFullPipelineRunning(true);
     try {
-      const [kwRes, searchRes, filterRes] = await Promise.all([
+      const [kwRes, searchRes, filterRes, fpRes, scRes] = await Promise.all([
         fetch('/signals-cache/01-keywords.json').then((r) => r.json()),
         fetch('/signals-cache/02-search-with-urls.json').then((r) => r.json()),
         fetch('/signals-cache/03-filtered.json').then((r) => r.json()),
+        fetch('/signals-cache/04-fingerprints.json').then((r) => r.json()).catch(() => null),
+        fetch('/signals-cache/05-scene-clusters.json').then((r) => r.json()).catch(() => null),
       ]);
       if (kwRes.brief) setBriefData(kwRes.brief);
       if (kwRes.keywordSets)
@@ -646,7 +755,14 @@ export default function SignalsPage() {
           })),
       );
 
-      setStepStatus({ brief: 'done', keywords: 'done', search: 'done', filter: 'done', score: 'done' });
+      if (fpRes && fpRes.fingerprints) setFingerprintData(fpRes);
+      if (scRes && scRes.scenes) setSceneClusterData(scRes);
+
+      setStepStatus({
+        brief: 'done', keywords: 'done', search: 'done', filter: 'done', score: 'done',
+        fingerprint: fpRes?.fingerprints ? 'done' : 'idle',
+        sceneClusters: scRes?.scenes ? 'done' : 'idle',
+      });
     } catch {
       // cache files not found — show error on brief step
       setStatus('brief', 'error', 'Cache files not found at /signals-cache/*.json');
@@ -665,7 +781,7 @@ export default function SignalsPage() {
     setFilteredResults([]);
     setDroppedResults([]);
     setFilterStats(null);
-    setStepStatus({ brief: 'idle', keywords: 'idle', search: 'idle', filter: 'idle', score: 'idle' });
+    setStepStatus({ brief: 'idle', keywords: 'idle', search: 'idle', filter: 'idle', score: 'idle', fingerprint: 'idle', sceneClusters: 'idle' });
 
     try {
       // Step 1+2: generate-keywords returns both brief and sets
@@ -1423,6 +1539,461 @@ export default function SignalsPage() {
           >
             Score Relevance
           </button>
+        </div>
+
+        {/* ── STEP 6: Fingerprints ──────────────────────────────── */}
+        <div className="card" style={{ display: 'grid', gap: 14 }}>
+          <StepHeader
+            number={6}
+            title="Scene Fingerprints"
+            status={stepStatus.fingerprint}
+            summary={
+              fingerprintData
+                ? `${fingerprintData.stats.successful}/${fingerprintData.stats.total} videos analyzed`
+                : undefined
+            }
+          />
+
+          {/* Input */}
+          <CollapsibleSection label="Input" defaultOpen={!fingerprintData}>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+              {filteredResults.length > 0 ? (
+                <>
+                  {filteredResults.length} ranked videos available for fingerprinting.
+                  Run <code style={{ fontSize: 11, background: 'var(--line)', padding: '1px 4px', borderRadius: 3 }}>
+                    node scripts/signals-pipeline.mjs fingerprint --results-from ./03-filtered.json --top 5
+                  </code> to generate, then load cached run.
+                </>
+              ) : (
+                'Run Steps 3-5 first to get ranked videos to fingerprint.'
+              )}
+            </div>
+          </CollapsibleSection>
+
+          {/* Output — fingerprint cards with scene timelines */}
+          {fingerprintData && fingerprintData.fingerprints.length > 0 && (
+            <CollapsibleSection
+              label={`Output — ${fingerprintData.stats.successful} fingerprints (${fingerprintData.stats.totalTokens.toLocaleString()} tokens)`}
+              defaultOpen
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {fingerprintData.fingerprints.map((fp, idx) => {
+                  const isExpanded = expandedFingerprints.has(idx);
+                  const r = fp.result;
+                  const source = fp.source;
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        border: '1px solid var(--line)',
+                        borderRadius: 10,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {/* Header row */}
+                      <button
+                        onClick={() =>
+                          setExpandedFingerprints((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(idx)) next.delete(idx);
+                            else next.add(idx);
+                            return next;
+                          })
+                        }
+                        style={{
+                          width: '100%',
+                          background: 'transparent',
+                          border: 'none',
+                          padding: '10px 12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <span style={{ fontSize: 10, color: 'var(--muted)' }}>
+                          {isExpanded ? '▾' : '▸'}
+                        </span>
+                        {source?.platform && (
+                          <span
+                            style={{
+                              padding: '2px 6px',
+                              borderRadius: 6,
+                              fontSize: 10,
+                              background: platformColor(source.platform),
+                              color: '#fff',
+                              textTransform: 'capitalize',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {source.platform}
+                          </span>
+                        )}
+                        <span style={{ fontWeight: 600, fontSize: 13, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {source?.title || source?.author ? `@${source.author}` : `Video ${idx + 1}`}
+                        </span>
+                        {r ? (
+                          <>
+                            <span className="triage-auto-badge" style={{ background: automationColor(r.automatabilityScore && r.automatabilityScore > 70 ? 'trivial' : r.automatabilityScore && r.automatabilityScore > 40 ? 'moderate' : 'hard'), color: '#fff' }}>
+                              {r.automatabilityScore ?? '?'}/100
+                            </span>
+                            <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>
+                              {r.scenes?.length ?? 0} scenes
+                            </span>
+                          </>
+                        ) : (
+                          <span style={{ fontSize: 11, color: '#ef4444', flexShrink: 0 }}>
+                            {fp.error || 'failed'}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Expanded detail */}
+                      {isExpanded && r && (
+                        <div style={{ padding: '0 12px 12px', borderTop: '1px solid var(--line)' }}>
+                          {/* Meta row */}
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                              gap: 8,
+                              marginTop: 10,
+                              fontSize: 12,
+                            }}
+                          >
+                            {r.hookTechnique && (
+                              <div>
+                                <span style={{ color: 'var(--muted)', display: 'block', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Hook</span>
+                                {r.hookTechnique}
+                              </div>
+                            )}
+                            {r.contentFormat && (
+                              <div>
+                                <span style={{ color: 'var(--muted)', display: 'block', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Format</span>
+                                {r.contentFormat}
+                              </div>
+                            )}
+                            {r.audioLanguage && (
+                              <div>
+                                <span style={{ color: 'var(--muted)', display: 'block', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Language</span>
+                                {r.audioLanguage}
+                              </div>
+                            )}
+                            {r.totalDurationEstimate && (
+                              <div>
+                                <span style={{ color: 'var(--muted)', display: 'block', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Duration</span>
+                                ~{r.totalDurationEstimate}s
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Transcript */}
+                          {r.transcript && (
+                            <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)', fontStyle: 'italic', lineHeight: 1.4 }}>
+                              {r.transcript.slice(0, 200)}{r.transcript.length > 200 ? '...' : ''}
+                            </div>
+                          )}
+
+                          {/* Scene timeline */}
+                          {r.scenes && r.scenes.length > 0 && (
+                            <div style={{ marginTop: 12 }}>
+                              <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)' }}>
+                                Scene Timeline
+                              </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+                                {r.scenes.map((scene, si) => (
+                                  <div
+                                    key={si}
+                                    style={{
+                                      display: 'grid',
+                                      gridTemplateColumns: '60px 100px 80px 1fr',
+                                      gap: 8,
+                                      alignItems: 'center',
+                                      padding: '4px 8px',
+                                      borderRadius: 6,
+                                      background: si % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                                      fontSize: 12,
+                                    }}
+                                  >
+                                    <span style={{ fontFamily: 'monospace', color: 'var(--muted)', fontSize: 11 }}>
+                                      {scene.start}–{scene.end}
+                                    </span>
+                                    <span>
+                                      <Chip label={sceneTypeLabel(scene.type)} />
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: 10,
+                                        fontWeight: 600,
+                                        color: automationColor(scene.automationDifficulty),
+                                      }}
+                                    >
+                                      {scene.automationDifficulty || '—'}
+                                      {scene.audio && (
+                                        <span style={{ fontWeight: 400, color: 'var(--muted)', marginLeft: 4 }}>
+                                          {scene.audio}
+                                        </span>
+                                      )}
+                                    </span>
+                                    <span style={{ color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {scene.description}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Token usage */}
+                          {fp.tokensUsed && (
+                            <div style={{ marginTop: 8, fontSize: 10, color: 'var(--muted)' }}>
+                              {fp.model} · {fp.tokensUsed.totalTokens?.toLocaleString()} tokens
+                              {fp.analyzedAt && ` · ${new Date(fp.analyzedAt).toLocaleString()}`}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CollapsibleSection>
+          )}
+
+          {stepStatus.fingerprint === 'loading' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)', fontSize: 13 }}>
+              <div className="triage-spinner" style={{ width: 18, height: 18 }} />
+              Analyzing videos...
+            </div>
+          )}
+          {stepStatus.fingerprint === 'error' && (
+            <p style={{ margin: 0, color: '#ef4444', fontSize: 12 }}>Failed to load fingerprints</p>
+          )}
+
+          {!fingerprintData && stepStatus.fingerprint !== 'loading' && (
+            <div className="triage-empty" style={{ padding: '20px 0' }}>
+              No fingerprints yet. Run the CLI fingerprint command, then Load Cached Run.
+            </div>
+          )}
+        </div>
+
+        {/* ── STEP 7: Scene Clusters ────────────────────────────── */}
+        <div className="card" style={{ display: 'grid', gap: 14 }}>
+          <StepHeader
+            number={7}
+            title="Scene Clusters"
+            status={stepStatus.sceneClusters}
+            summary={
+              sceneClusterData
+                ? `${sceneClusterData.total_scenes} scenes, ${Object.keys(sceneClusterData.clustering).length} embeddings`
+                : undefined
+            }
+          />
+
+          {/* Input */}
+          <CollapsibleSection label="Input" defaultOpen={!sceneClusterData}>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+              Unsupervised scene clustering via embeddings (CLIP, VideoMAE, Whisper, audio).
+              Run <code style={{ fontSize: 11, background: 'var(--line)', padding: '1px 4px', borderRadius: 3 }}>
+                python3 scripts/embed-scenes.py
+              </code> to generate, then Load Cached Run.
+            </div>
+          </CollapsibleSection>
+
+          {/* Output */}
+          {sceneClusterData && sceneClusterData.scenes.length > 0 && (() => {
+            const clusterKeys = Object.keys(sceneClusterData.clustering);
+            const activeInfo = sceneClusterData.clustering[activeClusterTab];
+            const scenes = sceneClusterData.scenes;
+
+            // Group scenes by cluster for the active tab
+            const clusterGroups: Record<number, ClusterScene[]> = {};
+            scenes.forEach((s) => {
+              const label = s.clusters?.[activeClusterTab] ?? -1;
+              if (!clusterGroups[label]) clusterGroups[label] = [];
+              clusterGroups[label].push(s);
+            });
+
+            // UMAP bounds
+            const umapPoints = scenes.map((s) => s.umap?.[activeClusterTab] || [0, 0]);
+            const xs = umapPoints.map((p) => p[0]);
+            const ys = umapPoints.map((p) => p[1]);
+            const xMin = Math.min(...xs), xMax = Math.max(...xs);
+            const yMin = Math.min(...ys), yMax = Math.max(...ys);
+            const xRange = xMax - xMin || 1;
+            const yRange = yMax - yMin || 1;
+
+            const CLUSTER_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1'];
+
+            return (
+              <CollapsibleSection
+                label={`Output — ${scenes.length} scenes across ${clusterKeys.length} embedding types`}
+                defaultOpen
+              >
+                {/* Embedding type tabs */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+                  {clusterKeys.map((key) => {
+                    const info = sceneClusterData.clustering[key];
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setActiveClusterTab(key)}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 8,
+                          border: `1px solid ${activeClusterTab === key ? 'var(--accent)' : 'var(--line)'}`,
+                          background: activeClusterTab === key ? 'rgba(255,107,44,0.12)' : 'transparent',
+                          color: activeClusterTab === key ? 'var(--accent)' : 'var(--muted)',
+                          fontSize: 12,
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        {key} ({info.n_clusters}c / {info.n_noise}n)
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* UMAP scatter with keyframe thumbnails */}
+                <div
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                    aspectRatio: '16/9',
+                    background: '#0f172a',
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    marginBottom: 16,
+                  }}
+                >
+                  {scenes.map((s, i) => {
+                    const [ux, uy] = s.umap?.[activeClusterTab] || [0, 0];
+                    const left = ((ux - xMin) / xRange) * 90 + 5;
+                    const top = ((uy - yMin) / yRange) * 85 + 5;
+                    const cluster = s.clusters?.[activeClusterTab] ?? -1;
+                    const borderColor = cluster >= 0 ? CLUSTER_COLORS[cluster % CLUSTER_COLORS.length] : '#475569';
+
+                    return (
+                      <div
+                        key={i}
+                        title={`${s.video_id} scene ${s.scene_idx}\n${s.start_sec.toFixed(1)}-${s.end_sec.toFixed(1)}s\n${s.transcript?.slice(0, 80) || '(silence)'}`}
+                        style={{
+                          position: 'absolute',
+                          left: `${left}%`,
+                          top: `${top}%`,
+                          transform: 'translate(-50%, -50%)',
+                          width: 48,
+                          height: 48,
+                          borderRadius: 6,
+                          border: `2px solid ${borderColor}`,
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          transition: 'transform 0.15s, z-index 0s',
+                          zIndex: 1,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translate(-50%, -50%) scale(2.5)';
+                          e.currentTarget.style.zIndex = '10';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translate(-50%, -50%)';
+                          e.currentTarget.style.zIndex = '1';
+                        }}
+                      >
+                        {s.thumbnail && (
+                          <img
+                            src={s.thumbnail}
+                            alt=""
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Stats bar */}
+                {activeInfo && (
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
+                    <strong>{activeClusterTab}</strong>: {activeInfo.n_clusters} clusters, {activeInfo.n_noise} noise points
+                  </div>
+                )}
+
+                {/* Cluster groups with keyframe strips */}
+                {Object.keys(clusterGroups)
+                  .sort((a, b) => Number(a) - Number(b))
+                  .map((cid) => {
+                    const label = Number(cid) >= 0 ? `Cluster ${cid}` : 'Noise';
+                    const color = Number(cid) >= 0 ? CLUSTER_COLORS[Number(cid) % CLUSTER_COLORS.length] : '#475569';
+                    const group = clusterGroups[Number(cid)];
+
+                    return (
+                      <div key={cid} style={{ marginBottom: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                          <span style={{
+                            width: 10, height: 10, borderRadius: '50%',
+                            background: color, flexShrink: 0,
+                          }} />
+                          <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
+                          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{group.length} scenes</span>
+                        </div>
+                        <div style={{
+                          display: 'flex', gap: 6, overflowX: 'auto',
+                          paddingBottom: 6,
+                        }}>
+                          {group.map((s, gi) => (
+                            <div
+                              key={gi}
+                              style={{
+                                flexShrink: 0,
+                                width: 100,
+                                borderRadius: 8,
+                                overflow: 'hidden',
+                                border: '1px solid var(--line)',
+                                background: 'var(--panel)',
+                              }}
+                            >
+                              {s.thumbnail && (
+                                <img
+                                  src={s.thumbnail}
+                                  alt=""
+                                  style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block' }}
+                                />
+                              )}
+                              <div style={{ padding: '4px 6px' }}>
+                                <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--muted)' }}>
+                                  {s.start_sec.toFixed(1)}-{s.end_sec.toFixed(1)}s
+                                </div>
+                                <div style={{
+                                  fontSize: 10, color: 'var(--ink)',
+                                  overflow: 'hidden', textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}>
+                                  {s.transcript?.slice(0, 30) || '(silence)'}
+                                </div>
+                                <div style={{ fontSize: 9, color: 'var(--muted)' }}>
+                                  {s.video_id.slice(0, 8)}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </CollapsibleSection>
+            );
+          })()}
+
+          {!sceneClusterData && stepStatus.sceneClusters !== 'loading' && (
+            <div className="triage-empty" style={{ padding: '20px 0' }}>
+              No scene clusters yet. Run embed-scenes.py, then Load Cached Run.
+            </div>
+          )}
         </div>
 
       </div>

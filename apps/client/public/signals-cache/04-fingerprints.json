@@ -1,0 +1,333 @@
+{
+  "preset": "scene_decomposition",
+  "model": "flash",
+  "analyzedAt": "2026-04-08T02:36:12.412Z",
+  "stats": {
+    "total": 3,
+    "successful": 3,
+    "failed": 0,
+    "totalTokens": 17870
+  },
+  "fingerprints": [
+    {
+      "source": {
+        "platform": "tiktok",
+        "author": "gracesooda",
+        "title": "Video by @gracesooda",
+        "views": "63.3K",
+        "videoUrl": "https://www.tiktok.com/@gracesooda/video/7342872001104645394",
+        "thumbnailUrl": "https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0037/80eacb1a8b594eab97654f1391c53824_1709645621~tplv-tiktokx-origin.image?dr=14575&x-expires=1775743200&x-signature=TD1zyDb3qK%2F3EXXAZccNLY7UKtY%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my",
+        "relevanceScore": 88
+      },
+      "preset": "scene_decomposition",
+      "analysisId": "analysis-2e17e65c-b9f9-4f30-8923-621afcf98abd",
+      "model": "gemini-3.1-flash-lite-preview",
+      "tokensUsed": {
+        "inputTokens": 9035,
+        "outputTokens": 1382,
+        "totalTokens": 10417
+      },
+      "result": {
+        "hookTechnique": "Direct and relevant text overlay stating the educational purpose of the video.",
+        "contentFormat": "tutorial",
+        "scenes": [
+          {
+            "start": "00:00",
+            "end": "00:03",
+            "type": "talking_head",
+            "description": "The speaker introduces the topic of how to introduce yourself in Korean.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "00:03",
+            "end": "00:06",
+            "type": "talking_head",
+            "description": "The speaker teaches the word for 'Hello'.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "00:06",
+            "end": "00:12",
+            "type": "talking_head",
+            "description": "The speaker continues to explain 'Hello'.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "00:12",
+            "end": "00:18",
+            "type": "talking_head",
+            "description": "The speaker explains how to say their name.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "00:18",
+            "end": "00:24",
+            "type": "talking_head",
+            "description": "The speaker completes the sentence for saying their name.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "00:24",
+            "end": "00:29",
+            "type": "talking_head",
+            "description": "The speaker explains how to mention their origin country.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "00:29",
+            "end": "00:35",
+            "type": "talking_head",
+            "description": "The speaker continues the explanation for mentioning their origin country.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "00:35",
+            "end": "00:41",
+            "type": "talking_head",
+            "description": "The speaker explains how to state their age.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "00:41",
+            "end": "00:47",
+            "type": "talking_head",
+            "description": "The speaker continues the explanation for stating their age.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "00:47",
+            "end": "00:54",
+            "type": "talking_head",
+            "description": "The speaker explains how to talk about likes/interests.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "00:54",
+            "end": "01:01",
+            "type": "talking_head",
+            "description": "The speaker continues the explanation about likes/interests.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "01:01",
+            "end": "01:06",
+            "type": "talking_head",
+            "description": "The speaker teaches the phrase 'Nice to meet you'.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "01:06",
+            "end": "01:12",
+            "type": "talking_head",
+            "description": "The speaker continues with 'Nice to meet you'.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "01:12",
+            "end": "01:19",
+            "type": "talking_head",
+            "description": "The speaker teaches the phrase 'Thanks in advance'.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "01:19",
+            "end": "01:25",
+            "type": "talking_head",
+            "description": "The speaker continues with 'Thanks in advance'.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "01:25",
+            "end": "01:33",
+            "type": "talking_head",
+            "description": "The speaker teaches the phrase 'Thank you'.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "01:33",
+            "end": "01:40",
+            "type": "outro_cta",
+            "description": "The speaker encourages the audience to try introducing themselves.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          }
+        ],
+        "automatabilityScore": 90,
+        "audioLanguage": "English/Korean",
+        "hasTrendingSound": "no",
+        "hasVoiceover": "yes",
+        "totalDurationEstimate": 100,
+        "transcript": "The speaker teaches several essential Korean phrases to introduce oneself, including greeting, stating name, age, origin, and interest, and concludes by inviting the viewer to practice."
+      },
+      "analyzedAt": "2026-04-08T02:35:36.344Z"
+    },
+    {
+      "source": {
+        "platform": "tiktok",
+        "author": "hoorimi",
+        "title": "Video by @hoorimi",
+        "views": "3281",
+        "videoUrl": "https://www.tiktok.com/@hoorimi/video/7366266881822559505",
+        "thumbnailUrl": "https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0037/874f72e9ba554ec39338a549f43a4827_1715092670~tplv-tiktokx-origin.image?dr=14575&x-expires=1775743200&x-signature=jkEY1rVucFIVGOk8srS5qVpZDhU%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my",
+        "relevanceScore": 85
+      },
+      "preset": "scene_decomposition",
+      "analysisId": "analysis-88ec84fb-7bc0-43e2-8262-7e381aa1812f",
+      "model": "gemini-3.1-flash-lite-preview",
+      "tokensUsed": {
+        "inputTokens": 3612,
+        "outputTokens": 643,
+        "totalTokens": 4255
+      },
+      "result": {
+        "hookTechnique": "Direct address with clear visual and auditory labeling of the learning topic.",
+        "contentFormat": "Tutorial",
+        "scenes": [
+          {
+            "start": "00:00",
+            "end": "00:03",
+            "type": "talking_head",
+            "description": "Creator introduces the Korean grammar topic: Verb + 느라고.",
+            "audio": "speech",
+            "automationDifficulty": "hard"
+          },
+          {
+            "start": "00:03",
+            "end": "00:09",
+            "type": "talking_head",
+            "description": "Creator presents examples comparing basic and intermediate grammar.",
+            "audio": "speech",
+            "automationDifficulty": "hard"
+          },
+          {
+            "start": "00:09",
+            "end": "00:12",
+            "type": "talking_head",
+            "description": "Creator highlights the intermediate usage.",
+            "audio": "speech",
+            "automationDifficulty": "hard"
+          },
+          {
+            "start": "00:12",
+            "end": "00:19",
+            "type": "talking_head",
+            "description": "Creator presents another example set with beginner and intermediate grammar.",
+            "audio": "speech",
+            "automationDifficulty": "hard"
+          },
+          {
+            "start": "00:19",
+            "end": "00:22",
+            "type": "talking_head",
+            "description": "Creator clarifies the intermediate usage.",
+            "audio": "speech",
+            "automationDifficulty": "hard"
+          },
+          {
+            "start": "00:22",
+            "end": "00:36",
+            "type": "talking_head",
+            "description": "Creator explains grammatical cautions using visual cues to show correct and incorrect usage.",
+            "audio": "speech",
+            "automationDifficulty": "hard"
+          },
+          {
+            "start": "00:36",
+            "end": "00:38",
+            "type": "talking_head",
+            "description": "Conclusion and tip on using an alternative grammar structure.",
+            "audio": "speech",
+            "automationDifficulty": "hard"
+          }
+        ],
+        "automatabilityScore": 20,
+        "audioLanguage": "Korean",
+        "hasTrendingSound": "no",
+        "hasVoiceover": "yes",
+        "totalDurationEstimate": 38,
+        "transcript": "In this Korean grammar video, we explore the use of -느라고, a structure used to explain reasons for a situation, typically focusing on a time-consuming action."
+      },
+      "analyzedAt": "2026-04-08T02:35:53.812Z"
+    },
+    {
+      "source": {
+        "platform": "tiktok",
+        "author": "norajoy_official",
+        "title": "Video by @norajoy_official",
+        "views": "22.8K",
+        "videoUrl": "https://www.tiktok.com/@norajoy_official/video/7601653098452421906",
+        "thumbnailUrl": "https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0037/o8SR4R8xqCIQnAFjtDZQ90pLlfI9Ayf7g7fDEc~tplv-tiktokx-origin.image?dr=14575&x-expires=1775743200&x-signature=ox1bSoUiE02X%2F%2F0CplEJMpGUUac%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=my",
+        "relevanceScore": 85
+      },
+      "preset": "scene_decomposition",
+      "analysisId": "analysis-8e38ea13-e535-4a52-a2d1-c35b8750ee2f",
+      "model": "gemini-3.1-flash-lite-preview",
+      "tokensUsed": {
+        "inputTokens": 2731,
+        "outputTokens": 467,
+        "totalTokens": 3198
+      },
+      "result": {
+        "hookTechnique": "Direct value proposition, telling the user exactly what they will learn.",
+        "contentFormat": "educational",
+        "scenes": [
+          {
+            "start": "00:00",
+            "end": "00:11",
+            "type": "talking_head",
+            "description": "Woman is sitting on a brown couch and counting down from 5 to 1 in English while text overlays the screen with the numbers. She is wearing a white long sleeve top and blue shorts.",
+            "audio": "speech",
+            "automationDifficulty": "moderate"
+          },
+          {
+            "start": "00:11",
+            "end": "00:13",
+            "type": "talking_head",
+            "description": "The speaker says 'In Korean' while a text overlay appears with the same text.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          },
+          {
+            "start": "00:13",
+            "end": "00:26",
+            "type": "talking_head",
+            "description": "She counts down from 5 to 1 in Korean while text overlays the screen.",
+            "audio": "speech",
+            "automationDifficulty": "moderate"
+          },
+          {
+            "start": "00:26",
+            "end": "00:29",
+            "type": "talking_head",
+            "description": "She says 'Good Job' as the video concludes.",
+            "audio": "speech",
+            "automationDifficulty": "trivial"
+          }
+        ],
+        "automatabilityScore": 60,
+        "audioLanguage": "English, Korean",
+        "hasTrendingSound": "no",
+        "hasVoiceover": "no",
+        "totalDurationEstimate": 29,
+        "transcript": "How to say Five, Four, Three, Two, One. In Korean. Oh, Sah, Saam, Yee, Il. Good Job!"
+      },
+      "analyzedAt": "2026-04-08T02:36:12.411Z"
+    }
+  ]
+}
