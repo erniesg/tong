@@ -3,14 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Machine After the Muse — 8 Poster Variations</title>
+<title>The Machine After the Muse — Poster Variations</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Abril+Fatface&family=Archivo:wght@400;700;900&family=VT323&family=Chakra+Petch:wght@400;600;700&family=Libre+Caslon+Display&family=Spectral:ital,wght@0,400;0,700;1,400&family=Russo+One&family=Archivo+Narrow:wght@400;700&family=Michroma&family=Rajdhani:wght@400;600;700&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:ital,wght@0,400;0,700;1,400&family=Azeret+Mono:wght@400;700&family=Karla:wght@400;700&display=swap" rel="stylesheet">
 <style>
-/* ============================================================
-   GALLERY
-   ============================================================ */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
@@ -22,23 +19,52 @@ body {
 
 .gallery-header {
   max-width: 1500px;
-  margin: 0 auto 56px;
+  margin: 0 auto 48px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
 }
 
-.gallery-header h1 {
+.gallery-header .left h1 {
   font-family: 'Archivo', sans-serif;
   font-weight: 900;
-  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  font-size: clamp(1.6rem, 2.5vw, 2.4rem);
   letter-spacing: -0.03em;
   color: oklch(0.92 0 0);
   margin-bottom: 6px;
 }
 
-.gallery-header p {
-  font-size: 0.95rem;
-  color: oklch(0.5 0 0);
-  max-width: 70ch;
+.gallery-header .left p {
+  font-size: 0.9rem;
+  color: oklch(0.48 0 0);
+  max-width: 65ch;
   line-height: 1.5;
+}
+
+/* Toggle button */
+.toggle-btn {
+  font-family: 'Azeret Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: oklch(0.7 0 0);
+  background: oklch(0.18 0.005 260);
+  border: 1px solid oklch(0.28 0.005 260);
+  padding: 10px 18px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  margin-top: 6px;
+}
+
+.toggle-btn:hover { background: oklch(0.22 0.008 260); color: oklch(0.85 0 0); }
+
+.toggle-btn.active {
+  background: oklch(0.25 0.01 260);
+  color: oklch(0.95 0 0);
+  border-color: oklch(0.45 0.01 260);
 }
 
 .gallery {
@@ -47,6 +73,27 @@ body {
   gap: 56px;
   max-width: 1500px;
   margin: 0 auto;
+}
+
+.section-divider {
+  grid-column: 1 / -1;
+  padding: 32px 0 8px;
+  border-top: 1px solid oklch(0.22 0.005 260);
+}
+
+.section-divider h2 {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 900;
+  font-size: 1.1rem;
+  color: oklch(0.6 0 0);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.section-divider p {
+  font-size: 0.8rem;
+  color: oklch(0.4 0 0);
+  margin-top: 4px;
 }
 
 .poster-card { display: flex; flex-direction: column; gap: 14px; }
@@ -71,19 +118,13 @@ body {
 
 .poster-label .layers {
   font-family: 'Azeret Mono', monospace;
-  font-size: 0.65rem;
-  color: oklch(0.38 0 0);
+  font-size: 0.6rem;
+  color: oklch(0.35 0 0);
   margin-left: auto;
 }
 
 /* ============================================================
-   POSTER BASE — 3-layer text-behind compositing
-   Layer 0: .bg-img   (full generated image as atmosphere)
-   Layer 1: decorative (shapes, textures)
-   Layer 2: .text-behind (MASSIVE title)
-   Layer 3: .figure-fg  (figure-only.png cutout IN FRONT of text)
-   Layer 4: .details    (event info)
-   Layer 5: .overlay    (scan lines, halftone, etc.)
+   POSTER BASE
    ============================================================ */
 .poster {
   position: relative;
@@ -97,7 +138,6 @@ body {
   position: absolute;
   z-index: 0;
   pointer-events: none;
-  /* Sized per-poster to match figure-fg so figures align */
 }
 
 .poster .bg-img img {
@@ -145,15 +185,71 @@ body {
 }
 
 /* ============================================================
+   FULL-SIZE FIGURE TOGGLE
+   When active: figure-only fills the entire poster
+   ============================================================ */
+body.figure-full .poster .figure-fg {
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+}
+
+body.figure-full .poster .figure-fg img {
+  object-fit: cover !important;
+  object-position: center 35% !important;
+}
+
+body.figure-full .poster .bg-img {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+}
+
+body.figure-full .poster .bg-img img {
+  object-fit: cover !important;
+  object-position: center 35% !important;
+}
+
+/* ============================================================
+   FORMAT ICONS — shared styles for multi-format output icons
+   ============================================================ */
+.format-icons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.format-icons .icon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.format-icons svg {
+  flex-shrink: 0;
+}
+
+.format-icons .label {
+  font-size: 1.6cqw;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ============================================================
    POSTER 1: BRUTALIST EDITORIAL
-   Layers: gray bg → text → figure-only foreground
    ============================================================ */
 .poster-1 {
   background: oklch(0.78 0.008 80);
   font-family: 'Anton', sans-serif;
 }
 
-/* Exposed grid */
 .poster-1::before {
   content: '';
   position: absolute;
@@ -185,23 +281,20 @@ body {
 .poster-1 .text-behind .l5 { font-size: 38cqw; color: oklch(0.48 0.19 25); }
 
 .poster-1 .figure-fg {
-  left: 50%;
-  top: 50%;
+  left: 50%; top: 50%;
   transform: translate(-50%, -50%);
-  width: 75%;
-  height: 68%;
+  width: 75%; height: 68%;
 }
 
 .poster-1 .details {
-  bottom: 3%;
-  left: 4%;
+  bottom: 3%; left: 4%;
 }
 
 .poster-1 .details .speaker {
   font-family: 'Azeret Mono', monospace;
   font-size: 2.2cqw;
   letter-spacing: 0.08em;
-  color: oklch(0.2 0 0);
+  color: oklch(0.22 0 0);
   text-transform: uppercase;
 }
 
@@ -223,521 +316,23 @@ body {
 .poster-1 .details::before {
   content: '';
   display: block;
-  width: 50px;
-  height: 3px;
+  width: 50px; height: 3px;
   background: oklch(0.48 0.19 25);
   margin-bottom: 8px;
 }
 
 /* ============================================================
-   POSTER 2: VAPORWAVE DREAMER
-   Layers: gradient-bg full image → text → figure-only foreground
-   Uses themachineafterthemuse3.png as atmospheric bg
-   ============================================================ */
-.poster-2 {
-  background: oklch(0.75 0.08 310);
-  font-family: 'Abril Fatface', serif;
-}
-
-/* bg-img aligned to figure-fg dimensions */
-.poster-2 .bg-img {
-  left: 50%;
-  top: 48%;
-  transform: translate(-50%, -50%);
-  width: 70%;
-  height: 66%;
-}
-
-.poster-2 .bg-img img {
-  opacity: 0.5;
-  filter: blur(6px) saturate(1.3);
-  transform: scale(1.15);
-}
-
-.poster-2 .text-behind {
-  top: 3%;
-  padding: 0 2%;
-}
-
-.poster-2 .text-behind span {
-  display: block;
-  line-height: 0.92;
-  color: oklch(0.99 0.005 320);
-}
-
-.poster-2 .text-behind .l1 { font-size: 24cqw; letter-spacing: 0.08em; }
-.poster-2 .text-behind .l2 { font-size: 38cqw; letter-spacing: -0.02em; }
-.poster-2 .text-behind .l3 { font-size: 30cqw; letter-spacing: 0.03em; }
-.poster-2 .text-behind .l4 { font-size: 24cqw; letter-spacing: 0.08em; }
-.poster-2 .text-behind .l5 { font-size: 36cqw; letter-spacing: -0.01em; }
-
-.poster-2 .figure-fg {
-  left: 50%;
-  top: 48%;
-  transform: translate(-50%, -50%);
-  width: 70%;
-  height: 66%;
-}
-
-.poster-2 .details {
-  bottom: 4%;
-  left: 0; right: 0;
-  text-align: center;
-}
-
-.poster-2 .details .speaker {
-  font-family: 'Karla', sans-serif;
-  font-size: 2.4cqw;
-  color: oklch(0.99 0.005 320 / 0.85);
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-}
-
-.poster-2 .details .date {
-  font-family: 'Abril Fatface', serif;
-  font-size: 4.8cqw;
-  color: oklch(0.99 0.005 320);
-  line-height: 1.1;
-  margin-top: 2px;
-}
-
-.poster-2 .details .time {
-  font-family: 'Karla', sans-serif;
-  font-size: 2cqw;
-  color: oklch(0.99 0.005 320 / 0.6);
-  letter-spacing: 0.15em;
-}
-
-/* ============================================================
-   POSTER 3: SWISS MODERNIST
-   Layers: white bg + white-bg full image (faded) → text → figure-only
-   Uses themachineafterthemuse.png as subtle bg texture
-   ============================================================ */
-.poster-3 {
-  background: oklch(0.98 0 0);
-  font-family: 'Archivo', sans-serif;
-}
-
-/* bg-img aligned to figure-fg */
-.poster-3 .bg-img {
-  left: 50%;
-  top: 48%;
-  transform: translate(-50%, -50%);
-  width: 64%;
-  height: 64%;
-}
-
-.poster-3 .bg-img img {
-  opacity: 0.06;
-  filter: grayscale(1);
-}
-
-/* Red accent bar */
-.poster-3::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 2.5%;
-  background: oklch(0.55 0.22 27);
-  z-index: 6;
-}
-
-.poster-3 .text-behind {
-  top: 3%;
-  left: -2%; right: -2%;
-}
-
-.poster-3 .text-behind span {
-  display: block;
-  font-weight: 900;
-  line-height: 0.88;
-  color: oklch(0.14 0 0);
-  letter-spacing: -0.05em;
-}
-
-.poster-3 .text-behind .l1 { font-size: 24cqw; }
-.poster-3 .text-behind .l2 { font-size: 40cqw; }
-.poster-3 .text-behind .l3 { font-size: 32cqw; color: oklch(0.55 0.22 27); }
-.poster-3 .text-behind .l4 { font-size: 24cqw; }
-.poster-3 .text-behind .l5 { font-size: 38cqw; }
-
-.poster-3 .figure-fg {
-  left: 50%;
-  top: 48%;
-  transform: translate(-50%, -50%);
-  width: 64%;
-  height: 64%;
-}
-
-.poster-3 .details {
-  left: 5%;
-  bottom: 3%;
-  max-width: 52%;
-}
-
-.poster-3 .details .speaker {
-  font-weight: 400;
-  font-size: 2.4cqw;
-  color: oklch(0.35 0 0);
-}
-
-.poster-3 .details .date {
-  font-weight: 700;
-  font-size: 3.5cqw;
-  color: oklch(0.14 0 0);
-  line-height: 1.2;
-  margin-top: 2px;
-}
-
-.poster-3 .details .time {
-  font-weight: 400;
-  font-size: 2.2cqw;
-  color: oklch(0.55 0.22 27);
-}
-
-.poster-3 .details .topics {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.poster-3 .details .topics span {
-  font-size: 1.7cqw;
-  color: oklch(0.45 0 0);
-  line-height: 1.3;
-}
-
-/* ============================================================
-   POSTER 4: GLITCH CYBERPUNK
-   Layers: black-bg full image (atmosphere) → neon text → figure-only (screen blend)
-   Uses themachineafterthemuse4.png as bg, figure-only as glowing fg
-   ============================================================ */
-.poster-4 {
-  background: oklch(0.05 0 0);
-  font-family: 'VT323', monospace;
-}
-
-/* bg-img aligned to figure-fg */
-.poster-4 .bg-img {
-  left: 50%;
-  top: 48%;
-  transform: translate(-50%, -50%);
-  width: 72%;
-  height: 68%;
-}
-
-.poster-4 .bg-img img {
-  opacity: 0.35;
-  filter: blur(3px) saturate(0.5) brightness(0.7);
-}
-
-/* Scan lines */
-.poster-4 .overlay {
-  background: repeating-linear-gradient(
-    0deg,
-    transparent 0px, transparent 3px,
-    oklch(0 0 0 / 0.12) 3px, oklch(0 0 0 / 0.12) 4px
-  );
-}
-
-/* CRT vignette */
-.poster-4::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 6;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 45%, oklch(0 0 0 / 0.6) 100%);
-}
-
-.poster-4 .text-behind {
-  top: 2%;
-  padding: 0 2%;
-}
-
-.poster-4 .text-behind span {
-  display: block;
-  font-family: 'Chakra Petch', sans-serif;
-  font-weight: 700;
-  line-height: 0.9;
-  color: oklch(0.78 0.24 155);
-  text-shadow:
-    3px 0 oklch(0.6 0.2 25 / 0.7),
-    -3px 0 oklch(0.55 0.2 265 / 0.7);
-}
-
-.poster-4 .text-behind .l1 { font-size: 24cqw; letter-spacing: 0.06em; }
-.poster-4 .text-behind .l2 { font-size: 38cqw; letter-spacing: -0.03em; }
-.poster-4 .text-behind .l3 { font-size: 30cqw; letter-spacing: 0.01em; }
-.poster-4 .text-behind .l4 { font-size: 24cqw; letter-spacing: 0.06em; }
-.poster-4 .text-behind .l5 { font-size: 36cqw; letter-spacing: -0.02em; }
-
-.poster-4 .figure-fg {
-  left: 50%;
-  top: 48%;
-  transform: translate(-50%, -50%);
-  width: 72%;
-  height: 68%;
-}
-
-.poster-4 .figure-fg img {
-  filter: contrast(1.2) brightness(1.1) saturate(0.5);
-  mix-blend-mode: screen;
-}
-
-.poster-4 .details {
-  bottom: 3%;
-  left: 4%;
-}
-
-.poster-4 .details .speaker {
-  font-size: 3cqw;
-  color: oklch(0.78 0.24 155);
-}
-
-.poster-4 .details .speaker::before { content: '> '; color: oklch(0.5 0.15 155); }
-
-.poster-4 .details .date {
-  font-family: 'Chakra Petch', sans-serif;
-  font-weight: 600;
-  font-size: 4.5cqw;
-  color: oklch(0.88 0.02 155);
-  line-height: 1.1;
-}
-
-.poster-4 .details .time {
-  font-size: 2.5cqw;
-  color: oklch(0.5 0.12 155);
-  letter-spacing: 0.1em;
-}
-
-.poster-4 .details .topics {
-  margin-top: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.poster-4 .details .topics span {
-  font-size: 2cqw;
-  color: oklch(0.45 0.08 155);
-}
-
-.poster-4 .details .topics span::before { content: '// '; color: oklch(0.3 0.06 155); }
-
-/* ============================================================
-   POSTER 5: CLASSICAL GALLERY
-   Layers: cream bg → italic serif text → figure-only (sepia)
-   ============================================================ */
-.poster-5 {
-  background: oklch(0.94 0.015 85);
-  font-family: 'Libre Caslon Display', serif;
-}
-
-/* Double ornamental frame */
-.poster-5::before {
-  content: '';
-  position: absolute;
-  top: 3%; left: 4%; right: 4%; bottom: 3%;
-  border: 1px solid oklch(0.7 0.03 80);
-  z-index: 6;
-  pointer-events: none;
-}
-
-.poster-5::after {
-  content: '';
-  position: absolute;
-  top: 4.5%; left: 5.5%; right: 5.5%; bottom: 4.5%;
-  border: 0.5px solid oklch(0.75 0.025 80);
-  z-index: 6;
-  pointer-events: none;
-}
-
-.poster-5 .text-behind {
-  top: 5%;
-  padding: 0 6%;
-}
-
-.poster-5 .text-behind span {
-  display: block;
-  font-family: 'Spectral', serif;
-  font-style: italic;
-  line-height: 0.95;
-  color: oklch(0.62 0.05 80);
-}
-
-.poster-5 .text-behind .l1 { font-size: 22cqw; letter-spacing: 0.05em; }
-.poster-5 .text-behind .l2 { font-size: 34cqw; letter-spacing: 0.01em; }
-.poster-5 .text-behind .l3 { font-size: 28cqw; letter-spacing: 0.04em; }
-.poster-5 .text-behind .l4 { font-size: 22cqw; letter-spacing: 0.05em; }
-.poster-5 .text-behind .l5 { font-size: 32cqw; letter-spacing: 0.02em; }
-
-.poster-5 .figure-fg {
-  left: 50%;
-  top: 48%;
-  transform: translate(-50%, -50%);
-  width: 62%;
-  height: 62%;
-}
-
-.poster-5 .figure-fg img {
-  filter: sepia(0.2) contrast(1.05);
-}
-
-.poster-5 .details {
-  bottom: 5%;
-  left: 0; right: 0;
-  text-align: center;
-}
-
-.poster-5 .details .title-sm {
-  font-size: 3.5cqw;
-  color: oklch(0.3 0.03 80);
-  letter-spacing: 0.04em;
-  line-height: 1.2;
-}
-
-.poster-5 .details .divider {
-  display: block;
-  width: 36px;
-  height: 1px;
-  background: oklch(0.6 0.05 80);
-  margin: 6px auto;
-}
-
-.poster-5 .details .speaker {
-  font-family: 'Spectral', serif;
-  font-style: italic;
-  font-size: 2.2cqw;
-  color: oklch(0.45 0.02 80);
-}
-
-.poster-5 .details .date {
-  font-family: 'Spectral', serif;
-  font-size: 2.4cqw;
-  color: oklch(0.35 0.03 80);
-  margin-top: 3px;
-}
-
-.poster-5 .details .time {
-  font-family: 'Spectral', serif;
-  font-style: italic;
-  font-size: 1.9cqw;
-  color: oklch(0.5 0.02 80);
-}
-
-/* ============================================================
-   POSTER 6: KINETIC SUPREMATIST
-   Layers: white + bold geo shapes → angled text → figure-only (desaturated)
-   ============================================================ */
-.poster-6 {
-  background: oklch(0.97 0.005 80);
-  font-family: 'Russo One', sans-serif;
-}
-
-.poster-6 .red-bar {
-  position: absolute;
-  top: -20%; left: 55%;
-  width: 35%; height: 140%;
-  background: oklch(0.5 0.22 27);
-  transform: rotate(-18deg);
-  z-index: 1;
-}
-
-.poster-6 .black-tri {
-  position: absolute;
-  bottom: 0; left: 0;
-  width: 0; height: 0;
-  border-bottom: 30cqh solid oklch(0.12 0 0);
-  border-right: 45cqw solid transparent;
-  z-index: 1;
-}
-
-.poster-6 .geo-circle {
-  position: absolute;
-  width: 10cqw; height: 10cqw;
-  border-radius: 50%;
-  background: oklch(0.12 0 0);
-  top: 8%; left: 10%;
-  z-index: 1;
-}
-
-.poster-6 .text-behind {
-  top: 4%;
-  left: -10%; right: -10%;
-  transform: rotate(-12deg);
-  transform-origin: center 30%;
-}
-
-.poster-6 .text-behind span {
-  display: block;
-  line-height: 0.88;
-  letter-spacing: -0.02em;
-}
-
-.poster-6 .text-behind .l1 { font-size: 24cqw; color: oklch(0.12 0 0); }
-.poster-6 .text-behind .l2 { font-size: 38cqw; color: oklch(0.12 0 0); }
-.poster-6 .text-behind .l3 { font-size: 30cqw; color: oklch(0.97 0 0); }
-.poster-6 .text-behind .l4 { font-size: 24cqw; color: oklch(0.12 0 0); }
-.poster-6 .text-behind .l5 { font-size: 36cqw; color: oklch(0.97 0 0); }
-
-.poster-6 .figure-fg {
-  left: 8%;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 60%;
-  height: 62%;
-}
-
-.poster-6 .figure-fg img {
-  filter: contrast(1.3) saturate(0.15);
-}
-
-.poster-6 .details {
-  bottom: 4%;
-  left: 5%;
-  z-index: 4;
-}
-
-.poster-6 .details .speaker {
-  font-family: 'Archivo Narrow', sans-serif;
-  font-size: 2.5cqw;
-  color: oklch(0.97 0 0);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-}
-
-.poster-6 .details .date {
-  font-size: 6cqw;
-  color: oklch(0.97 0 0);
-  line-height: 1;
-}
-
-.poster-6 .details .time {
-  font-family: 'Archivo Narrow', sans-serif;
-  font-size: 2.5cqw;
-  color: oklch(0.97 0 0 / 0.6);
-  letter-spacing: 0.1em;
-}
-
-/* ============================================================
    POSTER 7: LIQUID CHROME
-   Layers: dark bg + black-bg full image (blurred atmosphere) → silver text → figure-only
-   Uses themachineafterthemuse4.png as deep atmospheric layer
    ============================================================ */
 .poster-7 {
   background: oklch(0.08 0.003 260);
   font-family: 'Michroma', sans-serif;
 }
 
-/* bg-img aligned to figure-fg */
 .poster-7 .bg-img {
-  left: 50%;
-  top: 46%;
+  left: 50%; top: 46%;
   transform: translate(-50%, -50%);
-  width: 72%;
-  height: 66%;
+  width: 72%; height: 66%;
 }
 
 .poster-7 .bg-img img {
@@ -745,7 +340,6 @@ body {
   filter: blur(10px) brightness(0.6) saturate(0.3);
 }
 
-/* Reflective horizon */
 .poster-7::before {
   content: '';
   position: absolute;
@@ -774,11 +368,9 @@ body {
 .poster-7 .text-behind .l5 { font-size: 34cqw; }
 
 .poster-7 .figure-fg {
-  left: 50%;
-  top: 46%;
+  left: 50%; top: 46%;
   transform: translate(-50%, -50%);
-  width: 72%;
-  height: 66%;
+  width: 72%; height: 66%;
 }
 
 .poster-7 .figure-fg img {
@@ -815,182 +407,384 @@ body {
 }
 
 /* ============================================================
-   POSTER 8: NEWSPAPER BROADSHEET
-   Layers: newsprint bg + white-bg full image (halftone/faded) → serif text → figure-only (grayscale)
-   Uses themachineafterthemuse.png as faded halftone bg texture
+   POSTER 4: GLITCH CYBERPUNK (for the info panel style)
    ============================================================ */
-.poster-8 {
-  background: oklch(0.96 0.012 88);
-  font-family: 'Old Standard TT', serif;
+.poster-4 {
+  background: oklch(0.05 0 0);
+  font-family: 'VT323', monospace;
 }
 
-/* bg-img aligned to figure-fg */
-.poster-8 .bg-img {
-  left: 50%;
-  top: 46%;
-  transform: translate(-50%, -48%);
-  width: 52%;
-  height: 54%;
+.poster-4 .bg-img {
+  left: 50%; top: 48%;
+  transform: translate(-50%, -50%);
+  width: 72%; height: 68%;
 }
 
-.poster-8 .bg-img img {
-  opacity: 0.08;
-  filter: grayscale(1) contrast(1.5);
+.poster-4 .bg-img img {
+  opacity: 0.35;
+  filter: blur(3px) saturate(0.5) brightness(0.7);
 }
 
-/* Halftone dot overlay */
-.poster-8 .overlay {
-  background:
-    radial-gradient(circle, oklch(0.12 0 0 / 0.06) 0.7px, transparent 0.7px);
-  background-size: 3px 3px;
+.poster-4 .overlay {
+  background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, oklch(0 0 0 / 0.12) 3px, oklch(0 0 0 / 0.12) 4px);
 }
 
-/* Column rule */
-.poster-8::before {
+.poster-4::after {
   content: '';
-  position: absolute;
-  top: 22%; bottom: 4%;
-  left: 50%;
-  width: 0.5px;
-  background: oklch(0.7 0.01 88);
-  z-index: 6;
+  position: absolute; inset: 0;
+  z-index: 6; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 45%, oklch(0 0 0 / 0.55) 100%);
 }
 
-/* Masthead rule */
-.poster-8::after {
-  content: '';
-  position: absolute;
-  top: 17%;
-  left: 5%; right: 5%;
-  height: 2px;
-  background: oklch(0.15 0.005 88);
-  z-index: 6;
+.poster-4 .text-behind { top: 2%; padding: 0 2%; }
+
+.poster-4 .text-behind span {
+  display: block;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  line-height: 0.9;
+  color: oklch(0.78 0.24 155);
+  text-shadow: 3px 0 oklch(0.6 0.2 25 / 0.7), -3px 0 oklch(0.55 0.2 265 / 0.7);
 }
 
-.poster-8 .masthead {
-  position: absolute;
-  top: 2%; left: 5%; right: 5%;
-  z-index: 6;
-  text-align: center;
+.poster-4 .text-behind .l1 { font-size: 24cqw; letter-spacing: 0.06em; }
+.poster-4 .text-behind .l2 { font-size: 38cqw; letter-spacing: -0.03em; }
+.poster-4 .text-behind .l3 { font-size: 30cqw; letter-spacing: 0.01em; }
+.poster-4 .text-behind .l4 { font-size: 24cqw; letter-spacing: 0.06em; }
+.poster-4 .text-behind .l5 { font-size: 36cqw; letter-spacing: -0.02em; }
+
+.poster-4 .figure-fg {
+  left: 50%; top: 48%;
+  transform: translate(-50%, -50%);
+  width: 72%; height: 68%;
 }
 
-.poster-8 .masthead .dateline {
-  font-family: 'Source Serif 4', serif;
-  font-size: 1.5cqw;
-  color: oklch(0.45 0.01 88);
-  letter-spacing: 0.1em;
+.poster-4 .figure-fg img {
+  filter: contrast(1.2) brightness(1.1) saturate(0.5);
+  mix-blend-mode: screen;
+}
+
+.poster-4 .details {
+  bottom: 3%; left: 4%;
+}
+
+.poster-4 .details .speaker { font-size: 3cqw; color: oklch(0.78 0.24 155); }
+.poster-4 .details .speaker::before { content: '> '; color: oklch(0.5 0.15 155); }
+
+.poster-4 .details .date {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 600;
+  font-size: 4.5cqw;
+  color: oklch(0.88 0.02 155);
+  line-height: 1.1;
+}
+
+.poster-4 .details .time { font-size: 2.5cqw; color: oklch(0.5 0.12 155); letter-spacing: 0.1em; }
+
+.poster-4 .details .topics { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
+.poster-4 .details .topics span { font-size: 2cqw; color: oklch(0.45 0.08 155); }
+.poster-4 .details .topics span::before { content: '// '; color: oklch(0.3 0.06 155); }
+
+/* ============================================================
+   NEW VARIANTS — BRUTALIST v2: Dark Brutalist + format icons
+   ============================================================ */
+.poster-b2 {
+  background: oklch(0.1 0.005 260);
+  font-family: 'Anton', sans-serif;
+}
+
+.poster-b2 .text-behind {
+  top: 1%;
+  align-items: flex-start;
+  padding-left: 3%;
+  text-align: left;
+}
+
+.poster-b2 .text-behind span {
+  display: block;
+  line-height: 0.88;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  color: oklch(0.92 0 0);
+}
+
+.poster-b2 .text-behind .l1 { font-size: 26cqw; }
+.poster-b2 .text-behind .l2 { font-size: 40cqw; }
+.poster-b2 .text-behind .l3 { font-size: 32cqw; color: oklch(0.48 0.19 25); }
+.poster-b2 .text-behind .l4 { font-size: 26cqw; }
+.poster-b2 .text-behind .l5 { font-size: 38cqw; color: oklch(0.48 0.19 25); }
+
+.poster-b2 .figure-fg {
+  left: 50%; top: 48%;
+  transform: translate(-50%, -50%);
+  width: 75%; height: 70%;
+}
+
+.poster-b2 .figure-fg img {
+  filter: brightness(1.1) contrast(1.2) saturate(0.4);
+}
+
+.poster-b2 .details {
+  bottom: 3%; left: 4%; right: 4%;
+}
+
+.poster-b2 .details .speaker {
+  font-family: 'Azeret Mono', monospace;
+  font-size: 2.2cqw;
+  color: oklch(0.6 0 0);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.poster-8 .masthead .paper-title {
-  font-weight: 700;
-  font-size: 7.5cqw;
-  color: oklch(0.12 0.005 88);
-  line-height: 0.95;
-  letter-spacing: -0.02em;
+.poster-b2 .details .date {
+  font-size: 5cqw;
+  color: oklch(0.92 0 0);
+  line-height: 1;
+  margin-top: 2px;
 }
 
-.poster-8 .masthead .edition {
-  font-family: 'Source Serif 4', serif;
-  font-style: italic;
-  font-size: 1.4cqw;
-  color: oklch(0.5 0.01 88);
+.poster-b2 .details .time {
+  font-family: 'Azeret Mono', monospace;
+  font-size: 2cqw;
+  color: oklch(0.48 0.19 25);
+  letter-spacing: 0.1em;
   margin-top: 3px;
 }
 
-.poster-8 .text-behind {
-  top: 20%;
-  left: -4%; right: -4%;
+.poster-b2 .details .format-icons .icon { color: oklch(0.55 0 0); }
+.poster-b2 .details .format-icons .label { color: oklch(0.45 0 0); font-family: 'Azeret Mono', monospace; }
+
+/* ============================================================
+   BRUTALIST v3: White brutalist + red/black + format icons
+   ============================================================ */
+.poster-b3 {
+  background: oklch(0.95 0.005 80);
+  font-family: 'Anton', sans-serif;
 }
 
-.poster-8 .text-behind span {
+.poster-b3 .text-behind {
+  top: 2%;
+  align-items: flex-start;
+  padding-left: 4%;
+  text-align: left;
+}
+
+.poster-b3 .text-behind span {
   display: block;
-  font-weight: 700;
-  line-height: 0.92;
-  color: oklch(0.8 0.012 88);
+  line-height: 0.88;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
 }
 
-.poster-8 .text-behind .l1 { font-size: 20cqw; letter-spacing: 0.03em; }
-.poster-8 .text-behind .l2 { font-size: 32cqw; letter-spacing: -0.01em; }
-.poster-8 .text-behind .l3 { font-size: 26cqw; letter-spacing: 0.03em; }
-.poster-8 .text-behind .l4 { font-size: 20cqw; letter-spacing: 0.03em; }
-.poster-8 .text-behind .l5 { font-size: 30cqw; letter-spacing: 0.01em; }
+.poster-b3 .text-behind .l1 { font-size: 26cqw; color: oklch(0.12 0 0); }
+.poster-b3 .text-behind .l2 { font-size: 40cqw; color: oklch(0.5 0.22 27); }
+.poster-b3 .text-behind .l3 { font-size: 32cqw; color: oklch(0.12 0 0); }
+.poster-b3 .text-behind .l4 { font-size: 26cqw; color: oklch(0.5 0.22 27); }
+.poster-b3 .text-behind .l5 { font-size: 38cqw; color: oklch(0.12 0 0); }
 
-.poster-8 .figure-fg {
-  left: 50%;
-  top: 46%;
-  transform: translate(-50%, -48%);
-  width: 52%;
-  height: 54%;
+.poster-b3 .figure-fg {
+  left: 50%; top: 48%;
+  transform: translate(-50%, -50%);
+  width: 72%; height: 68%;
 }
 
-.poster-8 .figure-fg img {
-  filter: grayscale(1) contrast(1.2);
+.poster-b3 .details {
+  bottom: 3%; left: 4%; right: 4%;
 }
 
-.poster-8 .details {
-  bottom: 2%;
-  left: 5%; right: 5%;
+.poster-b3 .details .speaker {
+  font-family: 'Azeret Mono', monospace;
+  font-size: 2.2cqw;
+  color: oklch(0.35 0 0);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.poster-b3 .details .date {
+  font-size: 5cqw;
+  color: oklch(0.12 0 0);
+  line-height: 1; margin-top: 2px;
+}
+
+.poster-b3 .details .time {
+  font-family: 'Azeret Mono', monospace;
+  font-size: 2cqw;
+  color: oklch(0.5 0.22 27);
+  letter-spacing: 0.1em;
+  margin-top: 3px;
+}
+
+.poster-b3 .details .format-icons .icon { color: oklch(0.5 0.22 27); }
+.poster-b3 .details .format-icons .label { color: oklch(0.4 0 0); font-family: 'Azeret Mono', monospace; }
+
+/* ============================================================
+   CHROME v2: Cool blue chrome + format icons
+   ============================================================ */
+.poster-c2 {
+  background: linear-gradient(175deg, oklch(0.14 0.01 240) 0%, oklch(0.06 0.005 260) 100%);
+  font-family: 'Michroma', sans-serif;
+}
+
+.poster-c2 .bg-img {
+  left: 50%; top: 46%;
+  transform: translate(-50%, -50%);
+  width: 75%; height: 68%;
+}
+
+.poster-c2 .bg-img img {
+  opacity: 0.2;
+  filter: blur(8px) brightness(0.5) saturate(0.2);
+}
+
+.poster-c2 .text-behind { top: 2%; padding: 0 1%; }
+
+.poster-c2 .text-behind span {
+  display: block;
+  line-height: 0.88;
+  color: oklch(0.5 0.02 240);
+  letter-spacing: 0.04em;
+}
+
+.poster-c2 .text-behind .l1 { font-size: 22cqw; }
+.poster-c2 .text-behind .l2 { font-size: 36cqw; }
+.poster-c2 .text-behind .l3 { font-size: 28cqw; }
+.poster-c2 .text-behind .l4 { font-size: 22cqw; }
+.poster-c2 .text-behind .l5 { font-size: 34cqw; }
+
+.poster-c2 .figure-fg {
+  left: 50%; top: 46%;
+  transform: translate(-50%, -50%);
+  width: 75%; height: 68%;
+}
+
+.poster-c2 .figure-fg img {
+  filter: brightness(1.1) contrast(1.2) saturate(0.25);
+}
+
+/* Horizontal accent lines */
+.poster-c2::before {
+  content: '';
+  position: absolute;
+  top: 4%; left: 6%; width: 18%; height: 0.5px;
+  background: oklch(0.5 0.02 240);
   z-index: 6;
 }
 
-.poster-8 .details .col-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 18px;
+.poster-c2::after {
+  content: '';
+  position: absolute;
+  top: 4%; right: 6%; width: 18%; height: 0.5px;
+  background: oklch(0.5 0.02 240);
+  z-index: 6;
 }
 
-.poster-8 .details .col-left .headline {
-  font-weight: 700;
-  font-size: 3cqw;
-  color: oklch(0.15 0 88);
-  line-height: 1.2;
-  margin-bottom: 4px;
+.poster-c2 .details {
+  bottom: 3%; left: 0; right: 0;
+  text-align: center;
 }
 
-.poster-8 .details .col-left .byline {
-  font-family: 'Source Serif 4', serif;
-  font-style: italic;
-  font-size: 1.7cqw;
-  color: oklch(0.4 0.01 88);
-}
-
-.poster-8 .details .col-left .body-text {
-  font-family: 'Source Serif 4', serif;
-  font-size: 1.6cqw;
-  color: oklch(0.3 0.008 88);
-  line-height: 1.45;
-  margin-top: 4px;
-}
-
-.poster-8 .details .col-right .topics-header {
-  font-weight: 700;
-  font-size: 2.1cqw;
-  color: oklch(0.15 0 88);
+.poster-c2 .details .speaker {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 2cqw;
+  color: oklch(0.5 0.02 240);
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 4px;
 }
 
-.poster-8 .details .col-right .topic {
-  font-family: 'Source Serif 4', serif;
-  font-size: 1.5cqw;
-  color: oklch(0.35 0.008 88);
-  line-height: 1.5;
-  padding: 2px 0;
+.poster-c2 .details .date {
+  font-size: 3.5cqw;
+  color: oklch(0.7 0.015 240);
+  letter-spacing: 0.1em;
+  line-height: 1.3;
 }
 
-.poster-8 .details .col-right .topic + .topic {
-  border-top: 0.5px solid oklch(0.75 0.01 88);
+.poster-c2 .details .time {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: 2cqw;
+  color: oklch(0.4 0.01 240);
+  letter-spacing: 0.2em;
 }
 
-.poster-8 .details .col-right .classified {
-  font-family: 'Source Serif 4', serif;
-  font-size: 1.3cqw;
-  color: oklch(0.5 0.01 88);
-  font-style: italic;
-  margin-top: 6px;
+.poster-c2 .details .format-icons {
+  justify-content: center;
 }
+
+.poster-c2 .details .format-icons .icon { color: oklch(0.5 0.02 240); }
+.poster-c2 .details .format-icons .label { color: oklch(0.4 0.01 240); font-family: 'Rajdhani', sans-serif; font-weight: 600; }
+
+/* ============================================================
+   CHROME v3: Warm copper chrome + cyberpunk info panel
+   ============================================================ */
+.poster-c3 {
+  background: linear-gradient(170deg, oklch(0.12 0.015 55) 0%, oklch(0.06 0.005 40) 100%);
+  font-family: 'Michroma', sans-serif;
+}
+
+.poster-c3 .text-behind { top: 2%; padding: 0 1%; }
+
+.poster-c3 .text-behind span {
+  display: block;
+  line-height: 0.88;
+  color: oklch(0.4 0.04 55);
+  letter-spacing: 0.04em;
+}
+
+.poster-c3 .text-behind .l1 { font-size: 22cqw; }
+.poster-c3 .text-behind .l2 { font-size: 36cqw; }
+.poster-c3 .text-behind .l3 { font-size: 28cqw; }
+.poster-c3 .text-behind .l4 { font-size: 22cqw; }
+.poster-c3 .text-behind .l5 { font-size: 34cqw; }
+
+.poster-c3 .figure-fg {
+  left: 50%; top: 46%;
+  transform: translate(-50%, -50%);
+  width: 72%; height: 66%;
+}
+
+.poster-c3 .figure-fg img {
+  filter: brightness(1.05) contrast(1.15) saturate(0.5) sepia(0.15);
+}
+
+/* Cyberpunk-style info panel */
+.poster-c3 .details {
+  bottom: 2%; left: 4%; right: 4%;
+  background: oklch(0.06 0.005 40 / 0.85);
+  border: 1px solid oklch(0.35 0.04 55 / 0.4);
+  padding: 12px 16px;
+  border-radius: 2px;
+}
+
+.poster-c3 .details .speaker {
+  font-family: 'VT323', monospace;
+  font-size: 2.8cqw;
+  color: oklch(0.7 0.06 55);
+}
+
+.poster-c3 .details .speaker::before { content: '> '; color: oklch(0.45 0.04 55); }
+
+.poster-c3 .details .date {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 600;
+  font-size: 4.2cqw;
+  color: oklch(0.82 0.04 55);
+  line-height: 1.1;
+}
+
+.poster-c3 .details .time {
+  font-family: 'VT323', monospace;
+  font-size: 2.2cqw;
+  color: oklch(0.5 0.04 55);
+  letter-spacing: 0.1em;
+}
+
+.poster-c3 .details .topics { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
+.poster-c3 .details .topics span { font-family: 'VT323', monospace; font-size: 1.9cqw; color: oklch(0.45 0.03 55); }
+.poster-c3 .details .topics span::before { content: '// '; color: oklch(0.3 0.02 55); }
+
+.poster-c3 .details .format-icons { margin-top: 8px; padding-top: 8px; border-top: 1px solid oklch(0.25 0.03 55 / 0.5); }
+.poster-c3 .details .format-icons .icon { color: oklch(0.6 0.05 55); }
+.poster-c3 .details .format-icons .label { color: oklch(0.45 0.03 55); font-family: 'VT323', monospace; }
 
 /* ============================================================
    RESPONSIVE
@@ -1004,18 +798,29 @@ body {
 <body>
 
 <header class="gallery-header">
-  <h1>The Machine After the Muse</h1>
-  <p>8 poster variations. 3-layer text-behind compositing: background image (atmosphere) → massive title text → figure-only.png foreground cutout. The bust occludes the text; letters peek around the edges.</p>
+  <div class="left">
+    <h1>The Machine After the Muse</h1>
+    <p>Text-behind compositing: bg atmosphere → massive title → figure-only.png foreground cutout. Toggle full-size to make the figure fill the entire poster.</p>
+  </div>
+  <button class="toggle-btn" onclick="this.classList.toggle('active'); document.body.classList.toggle('figure-full')">
+    Toggle: Full-Size Figure
+  </button>
 </header>
 
 <div class="gallery">
 
-  <!-- 01 BRUTALIST EDITORIAL: gray bg → text → figure-only -->
+  <!-- SECTION: FAVORITES -->
+  <div class="section-divider">
+    <h2>Brutalist Editorial + Liquid Chrome</h2>
+    <p>The two strongest directions — with new variants, format icons, and cyberpunk info panels</p>
+  </div>
+
+  <!-- 01 BRUTALIST ORIGINAL -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">01</span>
-      <h3>Brutalist Editorial</h3>
-      <span class="layers">bg → text → figure-only</span>
+      <h3>Brutalist — Concrete</h3>
+      <span class="layers">gray bg → text → figure-only</span>
     </div>
     <div class="poster poster-1">
       <div class="text-behind">
@@ -1036,17 +841,14 @@ body {
     </div>
   </article>
 
-  <!-- 02 VAPORWAVE: gradient full image (blurred) → text → figure-only -->
+  <!-- 02 BRUTALIST v2: Dark -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">02</span>
-      <h3>Vaporwave Dreamer</h3>
-      <span class="layers">gradient-img → text → figure-only</span>
+      <h3>Brutalist — Dark</h3>
+      <span class="layers">black bg → text → figure-only + format icons</span>
     </div>
-    <div class="poster poster-2">
-      <div class="bg-img">
-        <img src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
-      </div>
+    <div class="poster poster-b2">
       <div class="text-behind">
         <span class="l1">The</span>
         <span class="l2">Machine</span>
@@ -1060,22 +862,41 @@ body {
       <div class="details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
-        <p class="time">3:00 — 4:00 PM</p>
+        <p class="time">15:00 — 16:00</p>
+        <div class="format-icons">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
+            <span class="label">pdf</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg>
+            <span class="label">mp4</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="M2 16l5-5 3 3 4-4 8 8"/></svg>
+            <span class="label">png</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg>
+            <span class="label">ig</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 18l-6-6 6-6M16 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="label">html</span>
+          </span>
+        </div>
       </div>
     </div>
   </article>
 
-  <!-- 03 SWISS: white bg + faded white-bg image → text → figure-only -->
+  <!-- 03 BRUTALIST v3: White + Red -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">03</span>
-      <h3>Swiss Modernist</h3>
-      <span class="layers">white-img (6%) → text → figure-only</span>
+      <h3>Brutalist — White/Red</h3>
+      <span class="layers">white bg → text (red/black) → figure-only + icons</span>
     </div>
-    <div class="poster poster-3">
-      <div class="bg-img">
-        <img src="/Users/erniesg/Downloads/themachineafterthemuse.png" alt="">
-      </div>
+    <div class="poster poster-b3">
       <div class="text-behind">
         <span class="l1">The</span>
         <span class="l2">Machine</span>
@@ -1088,23 +909,44 @@ body {
       </div>
       <div class="details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
-        <p class="date">27 April 2026</p>
-        <p class="time">3:00 – 4:00 PM</p>
-        <div class="topics">
-          <span>Landscape + What's Coming</span>
-          <span>Agentic AI: Brief to Multi-Format Output</span>
-          <span>Taste, Judgment & the Last Mile</span>
+        <p class="date">27 April</p>
+        <p class="time">15:00 — 16:00</p>
+        <div class="format-icons">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
+            <span class="label">pdf</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg>
+            <span class="label">mp4</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="M2 16l5-5 3 3 4-4 8 8"/></svg>
+            <span class="label">png</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg>
+            <span class="label">ig</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v18M8 7v10M4 10v4M16 7v10M20 10v4" stroke-linecap="round"/></svg>
+            <span class="label">wav</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 18l-6-6 6-6M16 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="label">html</span>
+          </span>
         </div>
       </div>
     </div>
   </article>
 
-  <!-- 04 CYBERPUNK: black-bg full image (atmosphere) → neon text → figure-only (screen) -->
+  <!-- 04 CYBERPUNK (reference for info panel) -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">04</span>
       <h3>Glitch Cyberpunk</h3>
-      <span class="layers">black-img (30%) → text → figure-only (screen)</span>
+      <span class="layers">black-img → neon text → figure-only (screen)</span>
     </div>
     <div class="poster poster-4">
       <div class="bg-img">
@@ -1134,69 +976,12 @@ body {
     </div>
   </article>
 
-  <!-- 05 CLASSICAL: cream bg → italic text → figure-only (sepia) -->
+  <!-- 05 CHROME ORIGINAL -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">05</span>
-      <h3>Classical Gallery</h3>
-      <span class="layers">cream bg → text → figure-only (sepia)</span>
-    </div>
-    <div class="poster poster-5">
-      <div class="text-behind">
-        <span class="l1">The</span>
-        <span class="l2">Machine</span>
-        <span class="l3">After</span>
-        <span class="l4">the</span>
-        <span class="l5">Muse</span>
-      </div>
-      <div class="figure-fg">
-        <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
-      </div>
-      <div class="details">
-        <p class="title-sm">The Machine After the Muse</p>
-        <span class="divider"></span>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
-        <p class="date">27 April, Sunday</p>
-        <p class="time">Three o'clock in the afternoon</p>
-      </div>
-    </div>
-  </article>
-
-  <!-- 06 SUPREMATIST: white + shapes → angled text → figure-only -->
-  <article class="poster-card">
-    <div class="poster-label">
-      <span class="poster-number">06</span>
-      <h3>Kinetic Suprematist</h3>
-      <span class="layers">shapes → text (-12deg) → figure-only</span>
-    </div>
-    <div class="poster poster-6">
-      <div class="red-bar"></div>
-      <div class="black-tri"></div>
-      <div class="geo-circle"></div>
-      <div class="text-behind">
-        <span class="l1">The</span>
-        <span class="l2">Machine</span>
-        <span class="l3">After</span>
-        <span class="l4">the</span>
-        <span class="l5">Muse</span>
-      </div>
-      <div class="figure-fg">
-        <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
-      </div>
-      <div class="details">
-        <p class="speaker">Chen Enjiao</p>
-        <p class="date">27 APR</p>
-        <p class="time">15:00 — 16:00</p>
-      </div>
-    </div>
-  </article>
-
-  <!-- 07 CHROME: dark bg + black-bg image (blurred) → silver text → figure-only -->
-  <article class="poster-card">
-    <div class="poster-label">
-      <span class="poster-number">07</span>
-      <h3>Liquid Chrome</h3>
-      <span class="layers">black-img (blur) → text → figure-only</span>
+      <h3>Chrome — Steel</h3>
+      <span class="layers">black-img (blur) → silver text → figure-only</span>
     </div>
     <div class="poster poster-7">
       <div class="bg-img">
@@ -1220,21 +1005,16 @@ body {
     </div>
   </article>
 
-  <!-- 08 NEWSPAPER: newsprint + white-bg image (halftone) → serif text → figure-only (grayscale) -->
+  <!-- 06 CHROME v2: Cool Blue -->
   <article class="poster-card">
     <div class="poster-label">
-      <span class="poster-number">08</span>
-      <h3>Newspaper Broadsheet</h3>
-      <span class="layers">white-img (halftone) → text → figure-only (mono)</span>
+      <span class="poster-number">06</span>
+      <h3>Chrome — Cold Blue</h3>
+      <span class="layers">blue-black bg → blue text → figure-only + icons</span>
     </div>
-    <div class="poster poster-8">
+    <div class="poster poster-c2">
       <div class="bg-img">
-        <img src="/Users/erniesg/Downloads/themachineafterthemuse.png" alt="">
-      </div>
-      <div class="masthead">
-        <p class="dateline">Sunday, 27 April 2026 — Final Edition</p>
-        <h2 class="paper-title">The Daily Muse</h2>
-        <p class="edition">Singapore &middot; Est. 2026 &middot; Vol. I No. 1</p>
+        <img src="/Users/erniesg/Downloads/themachineafterthemuse4.png" alt="">
       </div>
       <div class="text-behind">
         <span class="l1">The</span>
@@ -1247,22 +1027,142 @@ body {
         <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
       </div>
       <div class="details">
-        <div class="col-layout">
-          <div class="col-left">
-            <p class="headline">The Machine After the Muse: AI Meets the Last Mile of Taste</p>
-            <p class="byline">By Chen Enjiao (Ernie)</p>
-            <p class="body-text">An afternoon at the frontier where artificial intelligence confronts creative judgment — from agentic pipelines to the irreducible human element.</p>
-          </div>
-          <div class="col-right">
-            <p class="topics-header">Programme</p>
-            <p class="topic">I. Landscape + What's Coming</p>
-            <p class="topic">II. Agentic AI: Brief to Multi-Format Output (Live Demo)</p>
-            <p class="topic">III. Taste, Judgment & the Last Mile</p>
-            <p class="classified">3:00–4:00 PM. Free admission. All are welcome.</p>
-          </div>
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 PM — 4:00 PM</p>
+        <div class="format-icons">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
+            <span class="label">pdf</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg>
+            <span class="label">mp4</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="M2 16l5-5 3 3 4-4 8 8"/></svg>
+            <span class="label">png</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg>
+            <span class="label">ig</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 18l-6-6 6-6M16 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="label">html</span>
+          </span>
         </div>
       </div>
-      <div class="overlay"></div>
+    </div>
+  </article>
+
+  <!-- 07 CHROME v3: Warm Copper + Cyberpunk Info Panel -->
+  <article class="poster-card">
+    <div class="poster-label">
+      <span class="poster-number">07</span>
+      <h3>Chrome — Copper + Terminal</h3>
+      <span class="layers">copper bg → warm text → figure-only + cyber panel</span>
+    </div>
+    <div class="poster poster-c3">
+      <div class="text-behind">
+        <span class="l1">The</span>
+        <span class="l2">Machine</span>
+        <span class="l3">After</span>
+        <span class="l4">the</span>
+        <span class="l5">Muse</span>
+      </div>
+      <div class="figure-fg">
+        <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
+      </div>
+      <div class="details">
+        <p class="speaker">chen_enjiao.exe</p>
+        <p class="date">27.04.26</p>
+        <p class="time">15:00–16:00 SGT</p>
+        <div class="topics">
+          <span>landscape + what's coming</span>
+          <span>agentic_ai.demo()</span>
+          <span>taste.judgment.last_mile</span>
+        </div>
+        <div class="format-icons">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
+            <span class="label">pdf</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg>
+            <span class="label">mp4</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="M2 16l5-5 3 3 4-4 8 8"/></svg>
+            <span class="label">png</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg>
+            <span class="label">ig</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v18M8 7v10M4 10v4M16 7v10M20 10v4" stroke-linecap="round"/></svg>
+            <span class="label">wav</span>
+          </span>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 18l-6-6 6-6M16 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="label">html</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 08 BRUTALIST — Dark + Cyberpunk Panel + Full Image BG -->
+  <article class="poster-card">
+    <div class="poster-label">
+      <span class="poster-number">08</span>
+      <h3>Brutalist — Dark + Terminal</h3>
+      <span class="layers">black-img → text → figure-only + cyber panel + icons</span>
+    </div>
+    <div class="poster poster-b2">
+      <div class="bg-img">
+        <img src="/Users/erniesg/Downloads/themachineafterthemuse4.png" alt="" style="opacity:0.2; filter:blur(6px) brightness(0.5);">
+      </div>
+      <div class="text-behind">
+        <span class="l1">The</span>
+        <span class="l2">Machine</span>
+        <span class="l3">After</span>
+        <span class="l4">the</span>
+        <span class="l5">Muse</span>
+      </div>
+      <div class="figure-fg">
+        <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
+      </div>
+      <div class="details" style="background: oklch(0.06 0 0 / 0.8); border: 1px solid oklch(0.3 0 0 / 0.4); padding: 10px 14px; border-radius: 2px;">
+        <p class="speaker" style="color: oklch(0.78 0.24 155);">
+          <span style="color: oklch(0.5 0.15 155);">> </span>chen_enjiao.exe
+        </p>
+        <p class="date" style="font-family: 'Chakra Petch', sans-serif; color: oklch(0.88 0.02 155);">27.04.26</p>
+        <p class="time" style="color: oklch(0.5 0.12 155);">15:00–16:00 SGT</p>
+        <div class="format-icons" style="margin-top:8px; padding-top:8px; border-top: 1px solid oklch(0.25 0 0 / 0.5);">
+          <span class="icon" style="color: oklch(0.6 0.15 155);">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
+            <span class="label" style="color: oklch(0.45 0.08 155); font-family: 'VT323', monospace;">pdf</span>
+          </span>
+          <span class="icon" style="color: oklch(0.6 0.15 155);">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg>
+            <span class="label" style="color: oklch(0.45 0.08 155); font-family: 'VT323', monospace;">mp4</span>
+          </span>
+          <span class="icon" style="color: oklch(0.6 0.15 155);">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="M2 16l5-5 3 3 4-4 8 8"/></svg>
+            <span class="label" style="color: oklch(0.45 0.08 155); font-family: 'VT323', monospace;">png</span>
+          </span>
+          <span class="icon" style="color: oklch(0.6 0.15 155);">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg>
+            <span class="label" style="color: oklch(0.45 0.08 155); font-family: 'VT323', monospace;">ig</span>
+          </span>
+          <span class="icon" style="color: oklch(0.6 0.15 155);">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 18l-6-6 6-6M16 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="label" style="color: oklch(0.45 0.08 155); font-family: 'VT323', monospace;">html</span>
+          </span>
+        </div>
+      </div>
     </div>
   </article>
 
