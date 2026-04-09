@@ -115,10 +115,10 @@ body {
 .poster .text-behind .l4 { position: relative; z-index: 16; }
 .poster .text-behind .l5 { position: relative; z-index: 18; }
 
-/* Pieces weave between text lines by default */
-.poster .piece-robo { z-index: 11; }
-.poster .piece-bust { z-index: 13; }
-.poster .piece-wire { z-index: 17; }
+/* ALL pieces — consistent scale across every poster */
+.poster .piece-bust { z-index: 13; left: 15%; top: 20%; width: 38%; height: auto; }
+.poster .piece-robo { z-index: 11; right: 0%; top: 10%; width: 31%; height: auto; }
+.poster .piece-wire { z-index: 17; left: -3%; bottom: 20%; width: 33%; height: auto; }
 
 /* Figure as single image */
 .poster .figure-fg {
@@ -212,22 +212,8 @@ body.figure-full .poster .figure-fg img {
 .poster-brut-comp .text-behind .l5 { font-size: 38cqw; color: oklch(0.48 0.19 25); }
 
 /* Bust: centered, covers "Machine"/"After" area */
-.poster-brut-comp .piece-bust {
-  left: 15%; top: 18%;
-  width: 50%; height: auto;
-}
 /* Robotic hand: upper-right, fingers peek over "Machine" letters */
-.poster-brut-comp .piece-robo {
-  right: -2%; top: 12%;
-  width: 41%; height: auto;
-  z-index: 3;
-}
 /* Wireframe hand: lower-left, reaches toward "Muse" */
-.poster-brut-comp .piece-wire {
-  left: -8%; bottom: 18%;
-  width: 42%; height: auto;
-  z-index: 3;
-}
 
 .poster-brut-comp .details { bottom: 3%; left: 4%; }
 .poster-brut-comp .details .speaker { font-family: 'Azeret Mono', monospace; font-size: 2.2cqw; letter-spacing: 0.08em; color: oklch(0.22 0 0); text-transform: uppercase; }
@@ -251,10 +237,6 @@ body.figure-full .poster .figure-fg img {
 .poster-dark-comp .text-behind .l3 { font-size: 32cqw; }
 .poster-dark-comp .text-behind .l4 { font-size: 26cqw; }
 .poster-dark-comp .text-behind .l5 { font-size: 38cqw; }
-
-.poster-dark-comp .piece-bust { left: 15%; top: 18%; width: 50%; height: auto; }
-.poster-dark-comp .piece-robo { right: -2%; top: 12%; width: 42%; height: auto; }
-.poster-dark-comp .piece-wire { left: -8%; bottom: 18%; width: 43%; height: auto; }
 
 .poster-dark-comp .details {
   bottom: 2%; left: 3%; right: 3%;
@@ -310,22 +292,6 @@ body.figure-full .poster .figure-fg img {
 .poster-chrome-comp .text-behind .l4 { font-size: 22cqw; }
 .poster-chrome-comp .text-behind .l5 { font-size: 34cqw; }
 
-.poster-chrome-comp .piece-bust {
-  left: 15%; top: 18%;
-  width: 50%; height: auto;
-  filter: brightness(1.15) contrast(1.2) saturate(0.3);
-}
-.poster-chrome-comp .piece-robo {
-  right: -2%; top: 12%;
-  width: 41%; height: auto;
-  filter: brightness(1.2) contrast(1.1) saturate(0.4);
-}
-.poster-chrome-comp .piece-wire {
-  left: -8%; bottom: 16%;
-  width: 42%; height: auto;
-  filter: brightness(1.1) saturate(0.3);
-}
-
 /* chrome line removed — using timeline bar in details instead */
 .poster-chrome-comp .details { bottom: 3%; left: 0; right: 0; text-align: center; }
 .poster-chrome-comp .details .speaker { font-family: 'Rajdhani', sans-serif; font-size: 2cqw; color: oklch(0.55 0.04 55); letter-spacing: 0.35em; text-transform: uppercase; }
@@ -349,10 +315,6 @@ body.figure-full .poster .figure-fg img {
 .poster-copper .text-behind .l3 { font-size: 28cqw; }
 .poster-copper .text-behind .l4 { font-size: 22cqw; }
 .poster-copper .text-behind .l5 { font-size: 34cqw; }
-
-.poster-copper .piece-bust { left: 15%; top: 18%; width: 50%; height: auto; filter: brightness(1.05) contrast(1.15) saturate(0.5) sepia(0.15); }
-.poster-copper .piece-robo { right: -2%; top: 12%; width: 41%; height: auto; filter: brightness(1.1) saturate(0.6) sepia(0.1); }
-.poster-copper .piece-wire { left: -8%; bottom: 18%; width: 43%; height: auto; filter: brightness(1.0) saturate(0.4) sepia(0.1); }
 
 .poster-copper .details {
   bottom: 2%; left: 3%; right: 3%;
@@ -386,10 +348,6 @@ body.figure-full .poster .figure-fg img {
 .poster-whitered .text-behind .l3 { font-size: 32cqw; color: oklch(0.12 0 0); }
 .poster-whitered .text-behind .l4 { font-size: 26cqw; color: oklch(0.5 0.22 27); }
 .poster-whitered .text-behind .l5 { font-size: 38cqw; color: oklch(0.12 0 0); }
-
-.poster-whitered .piece-bust { left: 15%; top: 18%; width: 50%; height: auto; }
-.poster-whitered .piece-robo { right: -2%; top: 12%; width: 41%; height: auto; }
-.poster-whitered .piece-wire { left: -8%; bottom: 18%; width: 43%; height: auto; }
 
 .poster-whitered .details { bottom: 3%; left: 4%; }
 .poster-whitered .details .speaker { font-family: 'Azeret Mono', monospace; font-size: 2.2cqw; color: oklch(0.35 0 0); letter-spacing: 0.08em; text-transform: uppercase; }
@@ -444,16 +402,7 @@ body.figure-full .poster .figure-fg img {
 .v3-text .l5 { font-size: 34cqw; margin-left: auto; margin-right: 4%; width: fit-content; }
 
 /* V3 poster pieces — scaled down to not dominate the poster */
-.poster-v3-white .piece-bust, .poster-v3-black .piece-bust, .poster-v3ds .piece-bust {
-  left: 15%; top: 22%; width: 38%; height: auto;
-}
-.poster-v3-white .piece-robo, .poster-v3-black .piece-robo, .poster-v3ds .piece-robo {
-  right: 0%; top: 10%; width: 31%; height: auto;
-}
-.poster-v3-white .piece-wire, .poster-v3-black .piece-wire, .poster-v3ds .piece-wire {
-  left: -3%; bottom: 22%; width: 33%; height: auto;
-}
-
+.poster-v3-white .piece-bust, .poster-v3-black .piece-bust, .poster-v3-white .piece-robo, .poster-v3-black .piece-robo, .poster-v3-white .piece-wire, .poster-v3-black .piece-wire, 
 /* Shared details centered */
 .v3-details {
   bottom: 2%; left: 3%; right: 3%;
@@ -464,27 +413,27 @@ body.figure-full .poster .figure-fg img {
 .v3-details .time { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 2cqw; letter-spacing: 0.2em; }
 .v3-details .platform-icons { margin-top: 6px; justify-content: center; }
 
-/* Timeline bar above details */
-.timeline-bar {
-  width: 100%;
-  height: 1px;
-  background: currentColor;
-  opacity: 0.5;
-  margin-bottom: 8px;
-}
-
-/* 3-column talk topics with progress bars */
+/* Talk topics — ONE faded line above, section bars, no other lines */
 .talk-topics {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1.4fr 1fr;
   gap: 6px;
-  margin-top: 8px;
+  padding-top: 12px;
+  margin-bottom: 10px;
   font-family: 'Rajdhani', sans-serif;
   font-size: 1.4cqw;
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1.3;
-  opacity: 0.8;
+}
+.talk-topics::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  opacity: 0.5;
 }
 .talk-topics .topic-bar {
   height: 2px;
@@ -568,9 +517,6 @@ body.figure-full .poster .figure-fg img {
 .poster-v3d .text-behind .l3 { font-size: 32cqw; color: oklch(0.72 0.08 50); }
 .poster-v3d .text-behind .l4 { font-size: 26cqw; color: oklch(0.65 0.06 300); }
 .poster-v3d .text-behind .l5 { font-size: 38cqw; color: oklch(0.72 0.08 50); }
-.poster-v3d .piece-bust { left: 15%; top: 18%; width: 50%; height: auto; }
-.poster-v3d .piece-robo { right: -2%; top: 12%; width: 42%; height: auto; }
-.poster-v3d .piece-wire { left: -8%; bottom: 18%; width: 43%; height: auto; }
 .poster-v3d .details {
   bottom: 2%; left: 3%; right: 3%;
   background: oklch(0.08 0.03 300 / 0.85);
@@ -628,7 +574,11 @@ body.figure-full .poster .figure-fg img {
       </div>
       <div class="figure-fg"><img src="/Users/erniesg/Downloads/figure-only.png" alt=""></div>
       <div class="details">
-        <div class="timeline-bar"></div>
+        <div class="talk-topics">
+          <div><div class="topic-bar"></div>Landscape + what's coming</div>
+          <div><div class="topic-bar"></div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div><div class="topic-bar"></div>Taste, judgment & the last mile</div>
+        </div>
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 PM — 4:00 PM</p>
@@ -650,15 +600,9 @@ body.figure-full .poster .figure-fg img {
       <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="">
       <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="">
       <div class="details">
-        <div class="timeline-bar"></div>
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 PM — 4:00 PM</p>
-        <div class="talk-topics">
-          <div><div class="topic-bar"></div>Landscape + what's coming</div>
-          <div><div class="topic-bar"></div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div><div class="topic-bar"></div>Taste, judgment & the last mile</div>
-        </div>
         <div class="platform-icons">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-label="TikTok"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-label="Instagram"><path d="M12 0C8.74 0 8.33.01 7.05.07 5.75.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38S.93 3.35.63 4.14C.33 4.9.13 5.75.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.3.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.61.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.3-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.61.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.3-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13S20.65.93 19.86.63C19.1.33 18.25.13 16.95.07 15.67.01 15.26 0 12 0zm0 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.43.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.43.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.43-.36-1.06-.41-2.23-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.43-.16 1.06-.36 2.23-.41 1.27-.06 1.65-.07 4.85-.07zM12 5.84A6.16 6.16 0 1 0 12 18.16 6.16 6.16 0 0 0 12 5.84zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.41-11.85a1.44 1.44 0 1 0 0 2.88 1.44 1.44 0 0 0 0-2.88z"/></svg>
@@ -681,7 +625,11 @@ body.figure-full .poster .figure-fg img {
       <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="">
       <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="">
       <div class="details">
-        <div class="timeline-bar"></div>
+        <div class="talk-topics">
+          <div><div class="topic-bar"></div>Landscape + what's coming</div>
+          <div><div class="topic-bar"></div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div><div class="topic-bar"></div>Taste, judgment & the last mile</div>
+        </div>
         <p class="speaker">chen_enjiao.exe</p>
         <p class="date">27.04.26</p>
         <p class="time">15:00–16:00 SGT</p>
@@ -717,15 +665,9 @@ body.figure-full .poster .figure-fg img {
       <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="">
       <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="">
       <div class="details v3-details">
-        <div class="timeline-bar"></div>
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
-        <div class="talk-topics">
-          <div><div class="topic-bar"></div>Landscape + what's coming</div>
-          <div><div class="topic-bar"></div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div><div class="topic-bar"></div>Taste, judgment & the last mile</div>
-        </div>
         <div class="platform-icons">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-label="TikTok"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-label="Instagram"><path d="M12 0C8.74 0 8.33.01 7.05.07 5.75.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38S.93 3.35.63 4.14C.33 4.9.13 5.75.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.3.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.61.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.3-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.61.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.3-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13S20.65.93 19.86.63C19.1.33 18.25.13 16.95.07 15.67.01 15.26 0 12 0zm0 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.43.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.43.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.43-.36-1.06-.41-2.23-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.43-.16 1.06-.36 2.23-.41 1.27-.06 1.65-.07 4.85-.07zM12 5.84A6.16 6.16 0 1 0 12 18.16 6.16 6.16 0 0 0 12 5.84zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.41-11.85a1.44 1.44 0 1 0 0 2.88 1.44 1.44 0 0 0 0-2.88z"/></svg>
@@ -746,15 +688,14 @@ body.figure-full .poster .figure-fg img {
       <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="">
       <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="">
       <div class="details v3-details">
-        <div class="timeline-bar"></div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
-        <p class="date">27 April</p>
-        <p class="time">3:00 — 4:00 PM</p>
         <div class="talk-topics">
           <div><div class="topic-bar"></div>Landscape + what's coming</div>
           <div><div class="topic-bar"></div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
           <div><div class="topic-bar"></div>Taste, judgment & the last mile</div>
         </div>
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
         <div class="platform-icons">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-label="TikTok"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-label="Instagram"><path d="M12 0C8.74 0 8.33.01 7.05.07 5.75.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.38S.93 3.35.63 4.14C.33 4.9.13 5.75.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.3.26 2.15.56 2.91.3.79.72 1.46 1.38 2.13.67.66 1.34 1.08 2.13 1.38.76.3 1.61.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.3-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.38.66-.67 1.08-1.34 1.38-2.13.3-.76.5-1.61.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.3-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.38-2.13S20.65.93 19.86.63C19.1.33 18.25.13 16.95.07 15.67.01 15.26 0 12 0zm0 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.43.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.43.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.43-.36-1.06-.41-2.23-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.43-.16 1.06-.36 2.23-.41 1.27-.06 1.65-.07 4.85-.07zM12 5.84A6.16 6.16 0 1 0 12 18.16 6.16 6.16 0 0 0 12 5.84zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.41-11.85a1.44 1.44 0 1 0 0 2.88 1.44 1.44 0 0 0 0-2.88z"/></svg>
@@ -762,8 +703,6 @@ body.figure-full .poster .figure-fg img {
         </div></div>
     </div>
   </article>
-
-
 
 </div>
 
