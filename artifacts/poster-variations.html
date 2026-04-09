@@ -6,7 +6,7 @@
 <title>The Machine After the Muse — Poster Variations</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Abril+Fatface&family=Archivo:wght@400;700;900&family=VT323&family=Chakra+Petch:wght@400;600;700&family=Libre+Caslon+Display&family=Spectral:ital,wght@0,400;0,700;1,400&family=Russo+One&family=Archivo+Narrow:wght@400;700&family=Michroma&family=Rajdhani:wght@400;600;700&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:ital,wght@0,400;0,700;1,400&family=Azeret+Mono:wght@400;700&family=Karla:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Abril+Fatface&family=Archivo:wght@400;700;900&family=VT323&family=Chakra+Petch:wght@400;600;700&family=Michroma&family=Rajdhani:wght@400;600;700&family=Azeret+Mono:wght@400;700&family=Karla:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -23,7 +23,7 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 32px;
+  gap: 24px;
   flex-wrap: wrap;
 }
 
@@ -33,95 +33,58 @@ body {
   font-size: clamp(1.6rem, 2.5vw, 2.4rem);
   letter-spacing: -0.03em;
   color: oklch(0.92 0 0);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .gallery-header .left p {
-  font-size: 0.9rem;
-  color: oklch(0.48 0 0);
-  max-width: 65ch;
+  font-size: 0.85rem;
+  color: oklch(0.45 0 0);
+  max-width: 60ch;
   line-height: 1.5;
 }
 
-/* Toggle button */
 .toggle-btn {
   font-family: 'Azeret Mono', monospace;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   letter-spacing: 0.04em;
-  color: oklch(0.7 0 0);
+  color: oklch(0.65 0 0);
   background: oklch(0.18 0.005 260);
   border: 1px solid oklch(0.28 0.005 260);
-  padding: 10px 18px;
-  border-radius: 3px;
+  padding: 8px 14px;
+  border-radius: 2px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
   white-space: nowrap;
-  margin-top: 6px;
+  margin-top: 4px;
+  transition: all 0.15s;
 }
-
 .toggle-btn:hover { background: oklch(0.22 0.008 260); color: oklch(0.85 0 0); }
-
-.toggle-btn.active {
-  background: oklch(0.25 0.01 260);
-  color: oklch(0.95 0 0);
-  border-color: oklch(0.45 0.01 260);
-}
+.toggle-btn.active { background: oklch(0.25 0.01 260); color: oklch(0.95 0 0); border-color: oklch(0.45 0.01 260); }
 
 .gallery {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 56px;
+  gap: 48px;
   max-width: 1500px;
   margin: 0 auto;
 }
 
 .section-divider {
   grid-column: 1 / -1;
-  padding: 32px 0 8px;
-  border-top: 1px solid oklch(0.22 0.005 260);
+  padding: 28px 0 4px;
+  border-top: 1px solid oklch(0.2 0.005 260);
 }
-
 .section-divider h2 {
   font-family: 'Archivo', sans-serif;
   font-weight: 900;
-  font-size: 1.1rem;
-  color: oklch(0.6 0 0);
-  letter-spacing: 0.02em;
+  font-size: 1rem;
+  color: oklch(0.55 0 0);
   text-transform: uppercase;
 }
 
-.section-divider p {
-  font-size: 0.8rem;
-  color: oklch(0.4 0 0);
-  margin-top: 4px;
-}
-
-.poster-card { display: flex; flex-direction: column; gap: 14px; }
-
-.poster-label { display: flex; align-items: baseline; gap: 10px; }
-
-.poster-number {
-  font-family: 'Azeret Mono', monospace;
-  font-size: 0.72rem;
-  color: oklch(0.42 0 0);
-  letter-spacing: 0.05em;
-}
-
-.poster-label h3 {
-  font-family: 'Archivo', sans-serif;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: oklch(0.68 0 0);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
-.poster-label .layers {
-  font-family: 'Azeret Mono', monospace;
-  font-size: 0.6rem;
-  color: oklch(0.35 0 0);
-  margin-left: auto;
-}
+.poster-card { display: flex; flex-direction: column; gap: 12px; }
+.poster-label { display: flex; align-items: baseline; gap: 8px; }
+.poster-number { font-family: 'Azeret Mono', monospace; font-size: 0.7rem; color: oklch(0.4 0 0); }
+.poster-label h3 { font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 0.85rem; color: oklch(0.65 0 0); text-transform: uppercase; }
 
 /* ============================================================
    POSTER BASE
@@ -132,19 +95,6 @@ body {
   overflow: hidden;
   border-radius: 2px;
   container-type: size;
-}
-
-.poster .bg-img {
-  position: absolute;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.poster .bg-img img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
 }
 
 .poster .text-behind {
@@ -159,12 +109,12 @@ body {
   user-select: none;
 }
 
+/* Figure as single image */
 .poster .figure-fg {
   position: absolute;
   z-index: 3;
   pointer-events: none;
 }
-
 .poster .figure-fg img {
   display: block;
   width: 100%;
@@ -172,623 +122,280 @@ body {
   object-fit: contain;
 }
 
-.poster .details {
+/* Figure as individual pieces */
+.poster .piece {
   position: absolute;
-  z-index: 4;
-}
-
-.poster .overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
+  z-index: 3;
   pointer-events: none;
+  object-fit: contain;
 }
 
-/* ============================================================
-   FULL-SIZE FIGURE TOGGLE
-   When active: figure-only fills the entire poster
-   ============================================================ */
+.poster .details { position: absolute; z-index: 4; }
+.poster .overlay { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+
+/* Full-size toggle */
 body.figure-full .poster .figure-fg {
-  left: 0 !important;
-  top: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
+  left: 0 !important; top: 0 !important;
+  width: 100% !important; height: 100% !important;
   transform: none !important;
 }
-
 body.figure-full .poster .figure-fg img {
   object-fit: cover !important;
   object-position: center 35% !important;
 }
 
-body.figure-full .poster .bg-img {
-  left: 0 !important;
-  top: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  transform: none !important;
-}
-
-body.figure-full .poster .bg-img img {
-  object-fit: cover !important;
-  object-position: center 35% !important;
-}
-
 /* ============================================================
-   FORMAT ICONS — shared styles for multi-format output icons
+   PLATFORM ICONS — TikTok, IG, XHS, YouTube, LinkedIn
    ============================================================ */
-.format-icons {
+.platform-icons {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
   margin-top: 8px;
 }
-
-.format-icons .icon {
+.platform-icons .plat {
   display: flex;
   align-items: center;
   gap: 4px;
 }
-
-.format-icons svg {
-  flex-shrink: 0;
-}
-
-.format-icons .label {
+.platform-icons .plat-label {
   font-size: 1.6cqw;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 /* ============================================================
-   POSTER 1: BRUTALIST EDITORIAL
+   POSTER: BRUTALIST CONCRETE (original)
    ============================================================ */
-.poster-1 {
+.poster-brut {
   background: oklch(0.78 0.008 80);
   font-family: 'Anton', sans-serif;
 }
-
-.poster-1::before {
+.poster-brut::before {
   content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
+  position: absolute; inset: 0; z-index: 1;
   background:
-    repeating-linear-gradient(90deg, transparent, transparent calc(100% / 6 - 0.5px), oklch(0.7 0.005 80 / 0.3) calc(100% / 6 - 0.5px), oklch(0.7 0.005 80 / 0.3) calc(100% / 6)),
-    repeating-linear-gradient(0deg, transparent, transparent calc(100% / 9 - 0.5px), oklch(0.7 0.005 80 / 0.3) calc(100% / 9 - 0.5px), oklch(0.7 0.005 80 / 0.3) calc(100% / 9));
+    repeating-linear-gradient(90deg, transparent, transparent calc(100%/6 - .5px), oklch(0.7 0.005 80 / 0.3) calc(100%/6 - .5px), oklch(0.7 0.005 80 / 0.3) calc(100%/6)),
+    repeating-linear-gradient(0deg, transparent, transparent calc(100%/9 - .5px), oklch(0.7 0.005 80 / 0.3) calc(100%/9 - .5px), oklch(0.7 0.005 80 / 0.3) calc(100%/9));
 }
-
-.poster-1 .text-behind {
-  top: 2%;
-  align-items: flex-start;
-  padding-left: 4%;
-  text-align: left;
-}
-
-.poster-1 .text-behind span {
-  display: block;
-  line-height: 0.88;
-  text-transform: uppercase;
-  letter-spacing: -0.04em;
-}
-
-.poster-1 .text-behind .l1 { font-size: 26cqw; color: oklch(0.16 0 0); }
-.poster-1 .text-behind .l2 { font-size: 40cqw; color: oklch(0.16 0 0); }
-.poster-1 .text-behind .l3 { font-size: 32cqw; color: oklch(0.48 0.19 25); }
-.poster-1 .text-behind .l4 { font-size: 26cqw; color: oklch(0.16 0 0); }
-.poster-1 .text-behind .l5 { font-size: 38cqw; color: oklch(0.48 0.19 25); }
-
-.poster-1 .figure-fg {
-  left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-  width: 75%; height: 68%;
-}
-
-.poster-1 .details {
-  bottom: 3%; left: 4%;
-}
-
-.poster-1 .details .speaker {
-  font-family: 'Azeret Mono', monospace;
-  font-size: 2.2cqw;
-  letter-spacing: 0.08em;
-  color: oklch(0.22 0 0);
-  text-transform: uppercase;
-}
-
-.poster-1 .details .date {
-  font-size: 4.5cqw;
-  color: oklch(0.16 0 0);
-  line-height: 1;
-  margin-top: 2px;
-}
-
-.poster-1 .details .time {
-  font-family: 'Azeret Mono', monospace;
-  font-size: 2cqw;
-  color: oklch(0.48 0.19 25);
-  letter-spacing: 0.1em;
-  margin-top: 3px;
-}
-
-.poster-1 .details::before {
-  content: '';
-  display: block;
-  width: 50px; height: 3px;
-  background: oklch(0.48 0.19 25);
-  margin-bottom: 8px;
-}
+.poster-brut .text-behind { top: 2%; align-items: flex-start; padding-left: 4%; text-align: left; }
+.poster-brut .text-behind span { display: block; line-height: 0.88; text-transform: uppercase; letter-spacing: -0.04em; }
+.poster-brut .text-behind .l1 { font-size: 26cqw; color: oklch(0.16 0 0); }
+.poster-brut .text-behind .l2 { font-size: 40cqw; color: oklch(0.16 0 0); }
+.poster-brut .text-behind .l3 { font-size: 32cqw; color: oklch(0.48 0.19 25); }
+.poster-brut .text-behind .l4 { font-size: 26cqw; color: oklch(0.16 0 0); }
+.poster-brut .text-behind .l5 { font-size: 38cqw; color: oklch(0.48 0.19 25); }
+.poster-brut .figure-fg { left: 50%; top: 50%; transform: translate(-50%,-50%); width: 75%; height: 68%; }
+.poster-brut .details { bottom: 3%; left: 4%; }
+.poster-brut .details .speaker { font-family: 'Azeret Mono', monospace; font-size: 2.2cqw; letter-spacing: 0.08em; color: oklch(0.22 0 0); text-transform: uppercase; }
+.poster-brut .details .date { font-size: 4.5cqw; color: oklch(0.16 0 0); line-height: 1; margin-top: 2px; }
+.poster-brut .details .time { font-family: 'Azeret Mono', monospace; font-size: 2cqw; color: oklch(0.48 0.19 25); letter-spacing: 0.1em; margin-top: 3px; }
+.poster-brut .details::before { content: ''; display: block; width: 50px; height: 3px; background: oklch(0.48 0.19 25); margin-bottom: 8px; }
 
 /* ============================================================
-   POSTER 7: LIQUID CHROME
+   POSTER: BRUTALIST COMPOSITED — 3 pieces placed around type
+   The robotic hand peeks through "Machine", bust behind center
    ============================================================ */
-.poster-7 {
-  background: oklch(0.08 0.003 260);
-  font-family: 'Michroma', sans-serif;
+.poster-brut-comp {
+  background: oklch(0.78 0.008 80);
+  font-family: 'Anton', sans-serif;
+}
+.poster-brut-comp .text-behind { top: 2%; align-items: flex-start; padding-left: 4%; text-align: left; }
+.poster-brut-comp .text-behind span { display: block; line-height: 0.88; text-transform: uppercase; letter-spacing: -0.04em; }
+.poster-brut-comp .text-behind .l1 { font-size: 26cqw; color: oklch(0.16 0 0); }
+.poster-brut-comp .text-behind .l2 { font-size: 40cqw; color: oklch(0.16 0 0); }
+.poster-brut-comp .text-behind .l3 { font-size: 32cqw; color: oklch(0.48 0.19 25); }
+.poster-brut-comp .text-behind .l4 { font-size: 26cqw; color: oklch(0.16 0 0); }
+.poster-brut-comp .text-behind .l5 { font-size: 38cqw; color: oklch(0.48 0.19 25); }
+
+/* Bust: centered, covers "Machine"/"After" area */
+.poster-brut-comp .piece-bust {
+  left: 15%; top: 18%;
+  width: 55%; height: auto;
+}
+/* Robotic hand: upper-right, fingers peek over "Machine" letters */
+.poster-brut-comp .piece-robo {
+  right: -2%; top: 12%;
+  width: 42%; height: auto;
+  z-index: 3;
+}
+/* Wireframe hand: lower-left, reaches toward "Muse" */
+.poster-brut-comp .piece-wire {
+  left: -3%; bottom: 18%;
+  width: 48%; height: auto;
+  z-index: 3;
 }
 
-.poster-7 .bg-img {
-  left: 50%; top: 46%;
-  transform: translate(-50%, -50%);
-  width: 72%; height: 66%;
-}
-
-.poster-7 .bg-img img {
-  opacity: 0.25;
-  filter: blur(10px) brightness(0.6) saturate(0.3);
-}
-
-.poster-7::before {
-  content: '';
-  position: absolute;
-  top: 65%; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, oklch(0.5 0.01 260), transparent);
-  z-index: 6;
-}
-
-.poster-7 .text-behind {
-  top: 3%;
-  padding: 0 1%;
-}
-
-.poster-7 .text-behind span {
-  display: block;
-  line-height: 0.88;
-  color: oklch(0.45 0.008 260);
-  letter-spacing: 0.04em;
-}
-
-.poster-7 .text-behind .l1 { font-size: 22cqw; }
-.poster-7 .text-behind .l2 { font-size: 36cqw; }
-.poster-7 .text-behind .l3 { font-size: 28cqw; }
-.poster-7 .text-behind .l4 { font-size: 22cqw; }
-.poster-7 .text-behind .l5 { font-size: 34cqw; }
-
-.poster-7 .figure-fg {
-  left: 50%; top: 46%;
-  transform: translate(-50%, -50%);
-  width: 72%; height: 66%;
-}
-
-.poster-7 .figure-fg img {
-  filter: brightness(1.15) contrast(1.2) saturate(0.35);
-}
-
-.poster-7 .details {
-  bottom: 3%;
-  left: 0; right: 0;
-  text-align: center;
-}
-
-.poster-7 .details .speaker {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 2cqw;
-  color: oklch(0.48 0.01 260);
-  letter-spacing: 0.35em;
-  text-transform: uppercase;
-}
-
-.poster-7 .details .date {
-  font-size: 3.5cqw;
-  color: oklch(0.68 0.01 260);
-  letter-spacing: 0.1em;
-  line-height: 1.3;
-}
-
-.poster-7 .details .time {
-  font-family: 'Rajdhani', sans-serif;
-  font-weight: 600;
-  font-size: 2cqw;
-  color: oklch(0.4 0.008 260);
-  letter-spacing: 0.2em;
-}
+.poster-brut-comp .details { bottom: 3%; left: 4%; }
+.poster-brut-comp .details .speaker { font-family: 'Azeret Mono', monospace; font-size: 2.2cqw; letter-spacing: 0.08em; color: oklch(0.22 0 0); text-transform: uppercase; }
+.poster-brut-comp .details .date { font-size: 4.5cqw; color: oklch(0.16 0 0); line-height: 1; margin-top: 2px; }
+.poster-brut-comp .details .time { font-family: 'Azeret Mono', monospace; font-size: 2cqw; color: oklch(0.48 0.19 25); letter-spacing: 0.1em; margin-top: 3px; }
+.poster-brut-comp .details::before { content: ''; display: block; width: 50px; height: 3px; background: oklch(0.48 0.19 25); margin-bottom: 8px; }
 
 /* ============================================================
-   POSTER 4: GLITCH CYBERPUNK (for the info panel style)
+   POSTER: DARK BRUTALIST COMPOSITED
    ============================================================ */
-.poster-4 {
-  background: oklch(0.05 0 0);
-  font-family: 'VT323', monospace;
-}
-
-.poster-4 .bg-img {
-  left: 50%; top: 48%;
-  transform: translate(-50%, -50%);
-  width: 72%; height: 68%;
-}
-
-.poster-4 .bg-img img {
-  opacity: 0.35;
-  filter: blur(3px) saturate(0.5) brightness(0.7);
-}
-
-.poster-4 .overlay {
-  background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, oklch(0 0 0 / 0.12) 3px, oklch(0 0 0 / 0.12) 4px);
-}
-
-.poster-4::after {
-  content: '';
-  position: absolute; inset: 0;
-  z-index: 6; pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 45%, oklch(0 0 0 / 0.55) 100%);
-}
-
-.poster-4 .text-behind { top: 2%; padding: 0 2%; }
-
-.poster-4 .text-behind span {
-  display: block;
-  font-family: 'Chakra Petch', sans-serif;
-  font-weight: 700;
-  line-height: 0.9;
-  color: oklch(0.78 0.24 155);
-  text-shadow: 3px 0 oklch(0.6 0.2 25 / 0.7), -3px 0 oklch(0.55 0.2 265 / 0.7);
-}
-
-.poster-4 .text-behind .l1 { font-size: 24cqw; letter-spacing: 0.06em; }
-.poster-4 .text-behind .l2 { font-size: 38cqw; letter-spacing: -0.03em; }
-.poster-4 .text-behind .l3 { font-size: 30cqw; letter-spacing: 0.01em; }
-.poster-4 .text-behind .l4 { font-size: 24cqw; letter-spacing: 0.06em; }
-.poster-4 .text-behind .l5 { font-size: 36cqw; letter-spacing: -0.02em; }
-
-.poster-4 .figure-fg {
-  left: 50%; top: 48%;
-  transform: translate(-50%, -50%);
-  width: 72%; height: 68%;
-}
-
-.poster-4 .figure-fg img {
-  filter: contrast(1.2) brightness(1.1) saturate(0.5);
-  mix-blend-mode: screen;
-}
-
-.poster-4 .details {
-  bottom: 3%; left: 4%;
-}
-
-.poster-4 .details .speaker { font-size: 3cqw; color: oklch(0.78 0.24 155); }
-.poster-4 .details .speaker::before { content: '> '; color: oklch(0.5 0.15 155); }
-
-.poster-4 .details .date {
-  font-family: 'Chakra Petch', sans-serif;
-  font-weight: 600;
-  font-size: 4.5cqw;
-  color: oklch(0.88 0.02 155);
-  line-height: 1.1;
-}
-
-.poster-4 .details .time { font-size: 2.5cqw; color: oklch(0.5 0.12 155); letter-spacing: 0.1em; }
-
-.poster-4 .details .topics { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
-.poster-4 .details .topics span { font-size: 2cqw; color: oklch(0.45 0.08 155); }
-.poster-4 .details .topics span::before { content: '// '; color: oklch(0.3 0.06 155); }
-
-/* ============================================================
-   NEW VARIANTS — BRUTALIST v2: Dark Brutalist + format icons
-   ============================================================ */
-.poster-b2 {
+.poster-dark-comp {
   background: oklch(0.1 0.005 260);
   font-family: 'Anton', sans-serif;
 }
+.poster-dark-comp .text-behind { top: 2%; align-items: flex-start; padding-left: 4%; text-align: left; }
+.poster-dark-comp .text-behind span { display: block; line-height: 0.88; text-transform: uppercase; letter-spacing: -0.04em; color: oklch(0.92 0 0); }
+.poster-dark-comp .text-behind .l3 { color: oklch(0.48 0.19 25); }
+.poster-dark-comp .text-behind .l5 { color: oklch(0.48 0.19 25); }
+.poster-dark-comp .text-behind .l1 { font-size: 26cqw; }
+.poster-dark-comp .text-behind .l2 { font-size: 40cqw; }
+.poster-dark-comp .text-behind .l3 { font-size: 32cqw; }
+.poster-dark-comp .text-behind .l4 { font-size: 26cqw; }
+.poster-dark-comp .text-behind .l5 { font-size: 38cqw; }
 
-.poster-b2 .text-behind {
-  top: 1%;
-  align-items: flex-start;
-  padding-left: 3%;
-  text-align: left;
+.poster-dark-comp .piece-bust { left: 15%; top: 18%; width: 55%; height: auto; }
+.poster-dark-comp .piece-robo { right: -2%; top: 12%; width: 42%; height: auto; }
+.poster-dark-comp .piece-wire { left: -3%; bottom: 18%; width: 48%; height: auto; }
+
+.poster-dark-comp .details {
+  bottom: 2%; left: 3%; right: 3%;
+  background: oklch(0.06 0 0 / 0.85);
+  border: 1px solid oklch(0.3 0 0 / 0.4);
+  padding: 10px 14px;
+  border-radius: 2px;
 }
-
-.poster-b2 .text-behind span {
-  display: block;
-  line-height: 0.88;
-  text-transform: uppercase;
-  letter-spacing: -0.04em;
-  color: oklch(0.92 0 0);
-}
-
-.poster-b2 .text-behind .l1 { font-size: 26cqw; }
-.poster-b2 .text-behind .l2 { font-size: 40cqw; }
-.poster-b2 .text-behind .l3 { font-size: 32cqw; color: oklch(0.48 0.19 25); }
-.poster-b2 .text-behind .l4 { font-size: 26cqw; }
-.poster-b2 .text-behind .l5 { font-size: 38cqw; color: oklch(0.48 0.19 25); }
-
-.poster-b2 .figure-fg {
-  left: 50%; top: 48%;
-  transform: translate(-50%, -50%);
-  width: 75%; height: 70%;
-}
-
-.poster-b2 .figure-fg img {
-  filter: brightness(1.1) contrast(1.2) saturate(0.4);
-}
-
-.poster-b2 .details {
-  bottom: 3%; left: 4%; right: 4%;
-}
-
-.poster-b2 .details .speaker {
-  font-family: 'Azeret Mono', monospace;
-  font-size: 2.2cqw;
-  color: oklch(0.6 0 0);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.poster-b2 .details .date {
-  font-size: 5cqw;
-  color: oklch(0.92 0 0);
-  line-height: 1;
-  margin-top: 2px;
-}
-
-.poster-b2 .details .time {
-  font-family: 'Azeret Mono', monospace;
-  font-size: 2cqw;
-  color: oklch(0.48 0.19 25);
-  letter-spacing: 0.1em;
-  margin-top: 3px;
-}
-
-.poster-b2 .details .format-icons .icon { color: oklch(0.55 0 0); }
-.poster-b2 .details .format-icons .label { color: oklch(0.45 0 0); font-family: 'Azeret Mono', monospace; }
+.poster-dark-comp .details .speaker { font-family: 'VT323', monospace; font-size: 2.8cqw; color: oklch(0.78 0.24 155); }
+.poster-dark-comp .details .speaker::before { content: '> '; color: oklch(0.5 0.15 155); }
+.poster-dark-comp .details .date { font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 4.2cqw; color: oklch(0.88 0.02 155); line-height: 1.1; }
+.poster-dark-comp .details .time { font-family: 'VT323', monospace; font-size: 2.2cqw; color: oklch(0.5 0.12 155); letter-spacing: 0.1em; }
+.poster-dark-comp .details .topics { margin-top: 4px; display: flex; flex-direction: column; gap: 1px; }
+.poster-dark-comp .details .topics span { font-family: 'VT323', monospace; font-size: 1.8cqw; color: oklch(0.42 0.08 155); }
+.poster-dark-comp .details .topics span::before { content: '// '; color: oklch(0.3 0.06 155); }
+.poster-dark-comp .details .platform-icons { margin-top: 6px; padding-top: 6px; border-top: 1px solid oklch(0.25 0 0 / 0.5); }
+.poster-dark-comp .details .platform-icons .plat { color: oklch(0.55 0.15 155); }
+.poster-dark-comp .details .platform-icons .plat-label { color: oklch(0.42 0.08 155); font-family: 'VT323', monospace; }
 
 /* ============================================================
-   BRUTALIST v3: White brutalist + red/black + format icons
+   POSTER: CHROME STEEL (original)
    ============================================================ */
-.poster-b3 {
-  background: oklch(0.95 0.005 80);
-  font-family: 'Anton', sans-serif;
-}
-
-.poster-b3 .text-behind {
-  top: 2%;
-  align-items: flex-start;
-  padding-left: 4%;
-  text-align: left;
-}
-
-.poster-b3 .text-behind span {
-  display: block;
-  line-height: 0.88;
-  text-transform: uppercase;
-  letter-spacing: -0.04em;
-}
-
-.poster-b3 .text-behind .l1 { font-size: 26cqw; color: oklch(0.12 0 0); }
-.poster-b3 .text-behind .l2 { font-size: 40cqw; color: oklch(0.5 0.22 27); }
-.poster-b3 .text-behind .l3 { font-size: 32cqw; color: oklch(0.12 0 0); }
-.poster-b3 .text-behind .l4 { font-size: 26cqw; color: oklch(0.5 0.22 27); }
-.poster-b3 .text-behind .l5 { font-size: 38cqw; color: oklch(0.12 0 0); }
-
-.poster-b3 .figure-fg {
-  left: 50%; top: 48%;
-  transform: translate(-50%, -50%);
-  width: 72%; height: 68%;
-}
-
-.poster-b3 .details {
-  bottom: 3%; left: 4%; right: 4%;
-}
-
-.poster-b3 .details .speaker {
-  font-family: 'Azeret Mono', monospace;
-  font-size: 2.2cqw;
-  color: oklch(0.35 0 0);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.poster-b3 .details .date {
-  font-size: 5cqw;
-  color: oklch(0.12 0 0);
-  line-height: 1; margin-top: 2px;
-}
-
-.poster-b3 .details .time {
-  font-family: 'Azeret Mono', monospace;
-  font-size: 2cqw;
-  color: oklch(0.5 0.22 27);
-  letter-spacing: 0.1em;
-  margin-top: 3px;
-}
-
-.poster-b3 .details .format-icons .icon { color: oklch(0.5 0.22 27); }
-.poster-b3 .details .format-icons .label { color: oklch(0.4 0 0); font-family: 'Azeret Mono', monospace; }
-
-/* ============================================================
-   CHROME v2: Cool blue chrome + format icons
-   ============================================================ */
-.poster-c2 {
-  background: linear-gradient(175deg, oklch(0.14 0.01 240) 0%, oklch(0.06 0.005 260) 100%);
+.poster-chrome {
+  background: oklch(0.08 0.003 260);
   font-family: 'Michroma', sans-serif;
 }
-
-.poster-c2 .bg-img {
-  left: 50%; top: 46%;
-  transform: translate(-50%, -50%);
-  width: 75%; height: 68%;
-}
-
-.poster-c2 .bg-img img {
-  opacity: 0.2;
-  filter: blur(8px) brightness(0.5) saturate(0.2);
-}
-
-.poster-c2 .text-behind { top: 2%; padding: 0 1%; }
-
-.poster-c2 .text-behind span {
-  display: block;
-  line-height: 0.88;
-  color: oklch(0.5 0.02 240);
-  letter-spacing: 0.04em;
-}
-
-.poster-c2 .text-behind .l1 { font-size: 22cqw; }
-.poster-c2 .text-behind .l2 { font-size: 36cqw; }
-.poster-c2 .text-behind .l3 { font-size: 28cqw; }
-.poster-c2 .text-behind .l4 { font-size: 22cqw; }
-.poster-c2 .text-behind .l5 { font-size: 34cqw; }
-
-.poster-c2 .figure-fg {
-  left: 50%; top: 46%;
-  transform: translate(-50%, -50%);
-  width: 75%; height: 68%;
-}
-
-.poster-c2 .figure-fg img {
-  filter: brightness(1.1) contrast(1.2) saturate(0.25);
-}
-
-/* Horizontal accent lines */
-.poster-c2::before {
-  content: '';
-  position: absolute;
-  top: 4%; left: 6%; width: 18%; height: 0.5px;
-  background: oklch(0.5 0.02 240);
-  z-index: 6;
-}
-
-.poster-c2::after {
-  content: '';
-  position: absolute;
-  top: 4%; right: 6%; width: 18%; height: 0.5px;
-  background: oklch(0.5 0.02 240);
-  z-index: 6;
-}
-
-.poster-c2 .details {
-  bottom: 3%; left: 0; right: 0;
-  text-align: center;
-}
-
-.poster-c2 .details .speaker {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 2cqw;
-  color: oklch(0.5 0.02 240);
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-}
-
-.poster-c2 .details .date {
-  font-size: 3.5cqw;
-  color: oklch(0.7 0.015 240);
-  letter-spacing: 0.1em;
-  line-height: 1.3;
-}
-
-.poster-c2 .details .time {
-  font-family: 'Rajdhani', sans-serif;
-  font-weight: 600;
-  font-size: 2cqw;
-  color: oklch(0.4 0.01 240);
-  letter-spacing: 0.2em;
-}
-
-.poster-c2 .details .format-icons {
-  justify-content: center;
-}
-
-.poster-c2 .details .format-icons .icon { color: oklch(0.5 0.02 240); }
-.poster-c2 .details .format-icons .label { color: oklch(0.4 0.01 240); font-family: 'Rajdhani', sans-serif; font-weight: 600; }
+.poster-chrome .text-behind { top: 3%; padding: 0 1%; }
+.poster-chrome .text-behind span { display: block; line-height: 0.88; color: oklch(0.45 0.008 260); letter-spacing: 0.04em; }
+.poster-chrome .text-behind .l1 { font-size: 22cqw; }
+.poster-chrome .text-behind .l2 { font-size: 36cqw; }
+.poster-chrome .text-behind .l3 { font-size: 28cqw; }
+.poster-chrome .text-behind .l4 { font-size: 22cqw; }
+.poster-chrome .text-behind .l5 { font-size: 34cqw; }
+.poster-chrome .figure-fg { left: 50%; top: 46%; transform: translate(-50%,-50%); width: 72%; height: 66%; }
+.poster-chrome .figure-fg img { filter: brightness(1.15) contrast(1.2) saturate(0.35); }
+.poster-chrome::before { content: ''; position: absolute; top: 65%; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, oklch(0.5 0.01 260), transparent); z-index: 6; }
+.poster-chrome .details { bottom: 3%; left: 0; right: 0; text-align: center; }
+.poster-chrome .details .speaker { font-family: 'Rajdhani', sans-serif; font-size: 2cqw; color: oklch(0.48 0.01 260); letter-spacing: 0.35em; text-transform: uppercase; }
+.poster-chrome .details .date { font-size: 3.5cqw; color: oklch(0.68 0.01 260); letter-spacing: 0.1em; line-height: 1.3; }
+.poster-chrome .details .time { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 2cqw; color: oklch(0.4 0.008 260); letter-spacing: 0.2em; }
 
 /* ============================================================
-   CHROME v3: Warm copper chrome + cyberpunk info panel
+   POSTER: CHROME COMPOSITED — pieces float around type
    ============================================================ */
-.poster-c3 {
+.poster-chrome-comp {
+  background: oklch(0.08 0.003 260);
+  font-family: 'Michroma', sans-serif;
+}
+.poster-chrome-comp .text-behind { top: 3%; padding: 0 1%; }
+.poster-chrome-comp .text-behind span { display: block; line-height: 0.88; color: oklch(0.45 0.008 260); letter-spacing: 0.04em; }
+.poster-chrome-comp .text-behind .l1 { font-size: 22cqw; }
+.poster-chrome-comp .text-behind .l2 { font-size: 36cqw; }
+.poster-chrome-comp .text-behind .l3 { font-size: 28cqw; }
+.poster-chrome-comp .text-behind .l4 { font-size: 22cqw; }
+.poster-chrome-comp .text-behind .l5 { font-size: 34cqw; }
+
+.poster-chrome-comp .piece-bust {
+  left: 18%; top: 18%;
+  width: 52%; height: auto;
+  filter: brightness(1.15) contrast(1.2) saturate(0.3);
+}
+.poster-chrome-comp .piece-robo {
+  right: -3%; top: 10%;
+  width: 40%; height: auto;
+  filter: brightness(1.2) contrast(1.1) saturate(0.4);
+}
+.poster-chrome-comp .piece-wire {
+  left: -4%; bottom: 16%;
+  width: 46%; height: auto;
+  filter: brightness(1.1) saturate(0.3);
+}
+
+.poster-chrome-comp::before { content: ''; position: absolute; top: 65%; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, oklch(0.5 0.01 260), transparent); z-index: 6; }
+.poster-chrome-comp .details { bottom: 3%; left: 0; right: 0; text-align: center; }
+.poster-chrome-comp .details .speaker { font-family: 'Rajdhani', sans-serif; font-size: 2cqw; color: oklch(0.48 0.01 260); letter-spacing: 0.35em; text-transform: uppercase; }
+.poster-chrome-comp .details .date { font-size: 3.5cqw; color: oklch(0.68 0.01 260); letter-spacing: 0.1em; line-height: 1.3; }
+.poster-chrome-comp .details .time { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 2cqw; color: oklch(0.4 0.008 260); letter-spacing: 0.2em; }
+.poster-chrome-comp .details .platform-icons { justify-content: center; margin-top: 6px; }
+.poster-chrome-comp .details .platform-icons .plat { color: oklch(0.5 0.01 260); }
+.poster-chrome-comp .details .platform-icons .plat-label { color: oklch(0.38 0.008 260); font-family: 'Rajdhani', sans-serif; font-weight: 600; }
+
+/* ============================================================
+   POSTER: CHROME COPPER + CYBERPUNK PANEL
+   ============================================================ */
+.poster-copper {
   background: linear-gradient(170deg, oklch(0.12 0.015 55) 0%, oklch(0.06 0.005 40) 100%);
   font-family: 'Michroma', sans-serif;
 }
+.poster-copper .text-behind { top: 2%; padding: 0 1%; }
+.poster-copper .text-behind span { display: block; line-height: 0.88; color: oklch(0.4 0.04 55); letter-spacing: 0.04em; }
+.poster-copper .text-behind .l1 { font-size: 22cqw; }
+.poster-copper .text-behind .l2 { font-size: 36cqw; }
+.poster-copper .text-behind .l3 { font-size: 28cqw; }
+.poster-copper .text-behind .l4 { font-size: 22cqw; }
+.poster-copper .text-behind .l5 { font-size: 34cqw; }
 
-.poster-c3 .text-behind { top: 2%; padding: 0 1%; }
+.poster-copper .piece-bust { left: 18%; top: 16%; width: 52%; height: auto; filter: brightness(1.05) contrast(1.15) saturate(0.5) sepia(0.15); }
+.poster-copper .piece-robo { right: -3%; top: 10%; width: 40%; height: auto; filter: brightness(1.1) saturate(0.6) sepia(0.1); }
+.poster-copper .piece-wire { left: -4%; bottom: 18%; width: 46%; height: auto; filter: brightness(1.0) saturate(0.4) sepia(0.1); }
 
-.poster-c3 .text-behind span {
-  display: block;
-  line-height: 0.88;
-  color: oklch(0.4 0.04 55);
-  letter-spacing: 0.04em;
-}
-
-.poster-c3 .text-behind .l1 { font-size: 22cqw; }
-.poster-c3 .text-behind .l2 { font-size: 36cqw; }
-.poster-c3 .text-behind .l3 { font-size: 28cqw; }
-.poster-c3 .text-behind .l4 { font-size: 22cqw; }
-.poster-c3 .text-behind .l5 { font-size: 34cqw; }
-
-.poster-c3 .figure-fg {
-  left: 50%; top: 46%;
-  transform: translate(-50%, -50%);
-  width: 72%; height: 66%;
-}
-
-.poster-c3 .figure-fg img {
-  filter: brightness(1.05) contrast(1.15) saturate(0.5) sepia(0.15);
-}
-
-/* Cyberpunk-style info panel */
-.poster-c3 .details {
-  bottom: 2%; left: 4%; right: 4%;
+.poster-copper .details {
+  bottom: 2%; left: 3%; right: 3%;
   background: oklch(0.06 0.005 40 / 0.85);
   border: 1px solid oklch(0.35 0.04 55 / 0.4);
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-radius: 2px;
 }
-
-.poster-c3 .details .speaker {
-  font-family: 'VT323', monospace;
-  font-size: 2.8cqw;
-  color: oklch(0.7 0.06 55);
-}
-
-.poster-c3 .details .speaker::before { content: '> '; color: oklch(0.45 0.04 55); }
-
-.poster-c3 .details .date {
-  font-family: 'Chakra Petch', sans-serif;
-  font-weight: 600;
-  font-size: 4.2cqw;
-  color: oklch(0.82 0.04 55);
-  line-height: 1.1;
-}
-
-.poster-c3 .details .time {
-  font-family: 'VT323', monospace;
-  font-size: 2.2cqw;
-  color: oklch(0.5 0.04 55);
-  letter-spacing: 0.1em;
-}
-
-.poster-c3 .details .topics { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
-.poster-c3 .details .topics span { font-family: 'VT323', monospace; font-size: 1.9cqw; color: oklch(0.45 0.03 55); }
-.poster-c3 .details .topics span::before { content: '// '; color: oklch(0.3 0.02 55); }
-
-.poster-c3 .details .format-icons { margin-top: 8px; padding-top: 8px; border-top: 1px solid oklch(0.25 0.03 55 / 0.5); }
-.poster-c3 .details .format-icons .icon { color: oklch(0.6 0.05 55); }
-.poster-c3 .details .format-icons .label { color: oklch(0.45 0.03 55); font-family: 'VT323', monospace; }
+.poster-copper .details .speaker { font-family: 'VT323', monospace; font-size: 2.8cqw; color: oklch(0.7 0.06 55); }
+.poster-copper .details .speaker::before { content: '> '; color: oklch(0.45 0.04 55); }
+.poster-copper .details .date { font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 4.2cqw; color: oklch(0.82 0.04 55); line-height: 1.1; }
+.poster-copper .details .time { font-family: 'VT323', monospace; font-size: 2.2cqw; color: oklch(0.5 0.04 55); letter-spacing: 0.1em; }
+.poster-copper .details .topics { margin-top: 4px; display: flex; flex-direction: column; gap: 1px; }
+.poster-copper .details .topics span { font-family: 'VT323', monospace; font-size: 1.8cqw; color: oklch(0.42 0.03 55); }
+.poster-copper .details .topics span::before { content: '// '; color: oklch(0.3 0.02 55); }
+.poster-copper .details .platform-icons { margin-top: 6px; padding-top: 6px; border-top: 1px solid oklch(0.25 0.03 55 / 0.5); }
+.poster-copper .details .platform-icons .plat { color: oklch(0.55 0.05 55); }
+.poster-copper .details .platform-icons .plat-label { color: oklch(0.42 0.03 55); font-family: 'VT323', monospace; }
 
 /* ============================================================
-   RESPONSIVE
+   POSTER: WHITE/RED BRUTALIST COMPOSITED
    ============================================================ */
+.poster-whitered {
+  background: oklch(0.95 0.005 80);
+  font-family: 'Anton', sans-serif;
+}
+.poster-whitered .text-behind { top: 2%; align-items: flex-start; padding-left: 4%; text-align: left; }
+.poster-whitered .text-behind span { display: block; line-height: 0.88; text-transform: uppercase; letter-spacing: -0.04em; }
+.poster-whitered .text-behind .l1 { font-size: 26cqw; color: oklch(0.12 0 0); }
+.poster-whitered .text-behind .l2 { font-size: 40cqw; color: oklch(0.5 0.22 27); }
+.poster-whitered .text-behind .l3 { font-size: 32cqw; color: oklch(0.12 0 0); }
+.poster-whitered .text-behind .l4 { font-size: 26cqw; color: oklch(0.5 0.22 27); }
+.poster-whitered .text-behind .l5 { font-size: 38cqw; color: oklch(0.12 0 0); }
+
+.poster-whitered .piece-bust { left: 18%; top: 18%; width: 52%; height: auto; }
+.poster-whitered .piece-robo { right: -2%; top: 10%; width: 40%; height: auto; }
+.poster-whitered .piece-wire { left: -3%; bottom: 18%; width: 46%; height: auto; }
+
+.poster-whitered .details { bottom: 3%; left: 4%; }
+.poster-whitered .details .speaker { font-family: 'Azeret Mono', monospace; font-size: 2.2cqw; color: oklch(0.35 0 0); letter-spacing: 0.08em; text-transform: uppercase; }
+.poster-whitered .details .date { font-size: 5cqw; color: oklch(0.12 0 0); line-height: 1; margin-top: 2px; }
+.poster-whitered .details .time { font-family: 'Azeret Mono', monospace; font-size: 2cqw; color: oklch(0.5 0.22 27); letter-spacing: 0.1em; margin-top: 3px; }
+.poster-whitered .details .platform-icons .plat { color: oklch(0.5 0.22 27); }
+.poster-whitered .details .platform-icons .plat-label { color: oklch(0.35 0 0); font-family: 'Azeret Mono', monospace; }
+
 @media (max-width: 1100px) {
   .gallery { grid-template-columns: 1fr; max-width: 700px; }
   body { padding: 32px 24px; }
@@ -800,39 +407,32 @@ body.figure-full .poster .bg-img img {
 <header class="gallery-header">
   <div class="left">
     <h1>The Machine After the Muse</h1>
-    <p>Text-behind compositing: bg atmosphere → massive title → figure-only.png foreground cutout. Toggle full-size to make the figure fill the entire poster.</p>
+    <p>Composited text-behind: bust, robotic hand, wireframe hand as independent pieces placed around the typography. Social platform icons for multi-format output.</p>
   </div>
   <button class="toggle-btn" onclick="this.classList.toggle('active'); document.body.classList.toggle('figure-full')">
     Toggle: Full-Size Figure
   </button>
 </header>
 
+<!-- Reusable platform icons snippet -->
+
 <div class="gallery">
 
-  <!-- SECTION: FAVORITES -->
   <div class="section-divider">
-    <h2>Brutalist Editorial + Liquid Chrome</h2>
-    <p>The two strongest directions — with new variants, format icons, and cyberpunk info panels</p>
+    <h2>Brutalist Direction</h2>
   </div>
 
-  <!-- 01 BRUTALIST ORIGINAL -->
+  <!-- 01 BRUTALIST CONCRETE — single figure-only -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">01</span>
-      <h3>Brutalist — Concrete</h3>
-      <span class="layers">gray bg → text → figure-only</span>
+      <h3>Concrete — Single Layer</h3>
     </div>
-    <div class="poster poster-1">
+    <div class="poster poster-brut">
       <div class="text-behind">
-        <span class="l1">The</span>
-        <span class="l2">Machine</span>
-        <span class="l3">After</span>
-        <span class="l4">the</span>
-        <span class="l5">Muse</span>
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <div class="figure-fg">
-        <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
-      </div>
+      <div class="figure-fg"><img src="/Users/erniesg/Downloads/figure-only.png" alt=""></div>
       <div class="details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
@@ -841,127 +441,67 @@ body.figure-full .poster .bg-img img {
     </div>
   </article>
 
-  <!-- 02 BRUTALIST v2: Dark -->
+  <!-- 02 BRUTALIST CONCRETE — composited pieces -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">02</span>
-      <h3>Brutalist — Dark</h3>
-      <span class="layers">black bg → text → figure-only + format icons</span>
+      <h3>Concrete — Composited Pieces</h3>
     </div>
-    <div class="poster poster-b2">
+    <div class="poster poster-brut-comp">
       <div class="text-behind">
-        <span class="l1">The</span>
-        <span class="l2">Machine</span>
-        <span class="l3">After</span>
-        <span class="l4">the</span>
-        <span class="l5">Muse</span>
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <div class="figure-fg">
-        <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
-      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/part-bust.png" alt="">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/part-robotic-hand.png" alt="">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/part-wireframe-hand.png" alt="">
       <div class="details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">15:00 — 16:00</p>
-        <div class="format-icons">
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
-            <span class="label">pdf</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg>
-            <span class="label">mp4</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="M2 16l5-5 3 3 4-4 8 8"/></svg>
-            <span class="label">png</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg>
-            <span class="label">ig</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 18l-6-6 6-6M16 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="label">html</span>
-          </span>
-        </div>
       </div>
     </div>
   </article>
 
-  <!-- 03 BRUTALIST v3: White + Red -->
+  <!-- 03 WHITE/RED — composited pieces -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">03</span>
-      <h3>Brutalist — White/Red</h3>
-      <span class="layers">white bg → text (red/black) → figure-only + icons</span>
+      <h3>White/Red — Composited</h3>
     </div>
-    <div class="poster poster-b3">
+    <div class="poster poster-whitered">
       <div class="text-behind">
-        <span class="l1">The</span>
-        <span class="l2">Machine</span>
-        <span class="l3">After</span>
-        <span class="l4">the</span>
-        <span class="l5">Muse</span>
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <div class="figure-fg">
-        <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
-      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/part-bust.png" alt="">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/part-robotic-hand.png" alt="">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/part-wireframe-hand.png" alt="">
       <div class="details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">15:00 — 16:00</p>
-        <div class="format-icons">
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
-            <span class="label">pdf</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg>
-            <span class="label">mp4</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="M2 16l5-5 3 3 4-4 8 8"/></svg>
-            <span class="label">png</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg>
-            <span class="label">ig</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v18M8 7v10M4 10v4M16 7v10M20 10v4" stroke-linecap="round"/></svg>
-            <span class="label">wav</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 18l-6-6 6-6M16 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="label">html</span>
-          </span>
+        <div class="platform-icons">
+          <span class="plat"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3v9.5a3.5 3.5 0 1 1-2-3.16"/><path d="M15 3c0 3 2 5.5 6 6.5"/><path d="M15 3v6c0 3 2 5.5 6 6.5"/></svg><span class="plat-label">TikTok</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg><span class="plat-label">IG</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 12h8M12 8v8" stroke-linecap="round"/></svg><span class="plat-label">XHS</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg><span class="plat-label">YT</span></span>
         </div>
       </div>
     </div>
   </article>
 
-  <!-- 04 CYBERPUNK (reference for info panel) -->
+  <!-- 04 DARK BRUTALIST — composited + terminal panel -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">04</span>
-      <h3>Glitch Cyberpunk</h3>
-      <span class="layers">black-img → neon text → figure-only (screen)</span>
+      <h3>Dark — Terminal Panel</h3>
     </div>
-    <div class="poster poster-4">
-      <div class="bg-img">
-        <img src="/Users/erniesg/Downloads/themachineafterthemuse4.png" alt="">
-      </div>
+    <div class="poster poster-dark-comp">
       <div class="text-behind">
-        <span class="l1">The</span>
-        <span class="l2">Mach1ne</span>
-        <span class="l3">Aft3r</span>
-        <span class="l4">the</span>
-        <span class="l5">Mus3</span>
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <div class="figure-fg">
-        <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
-      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/part-bust.png" alt="">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/part-robotic-hand.png" alt="">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/part-wireframe-hand.png" alt="">
       <div class="details">
         <p class="speaker">chen_enjiao.exe</p>
         <p class="date">27.04.26</p>
@@ -971,32 +511,32 @@ body.figure-full .poster .bg-img img {
           <span>agentic_ai.demo()</span>
           <span>taste.judgment.last_mile</span>
         </div>
+        <div class="platform-icons">
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3v9.5a3.5 3.5 0 1 1-2-3.16"/><path d="M15 3c0 3 2 5.5 6 6.5"/><path d="M15 3v6c0 3 2 5.5 6 6.5"/></svg><span class="plat-label">TikTok</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg><span class="plat-label">IG</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 12h8M12 8v8" stroke-linecap="round"/></svg><span class="plat-label">XHS</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg><span class="plat-label">YT</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg><span class="plat-label">LI</span></span>
+        </div>
       </div>
-      <div class="overlay"></div>
     </div>
   </article>
 
-  <!-- 05 CHROME ORIGINAL -->
+  <div class="section-divider">
+    <h2>Chrome Direction</h2>
+  </div>
+
+  <!-- 05 CHROME STEEL — single figure-only -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">05</span>
-      <h3>Chrome — Steel</h3>
-      <span class="layers">black-img (blur) → silver text → figure-only</span>
+      <h3>Steel — Single Layer</h3>
     </div>
-    <div class="poster poster-7">
-      <div class="bg-img">
-        <img src="/Users/erniesg/Downloads/themachineafterthemuse4.png" alt="">
-      </div>
+    <div class="poster poster-chrome">
       <div class="text-behind">
-        <span class="l1">The</span>
-        <span class="l2">Machine</span>
-        <span class="l3">After</span>
-        <span class="l4">the</span>
-        <span class="l5">Muse</span>
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <div class="figure-fg">
-        <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
-      </div>
+      <div class="figure-fg"><img src="/Users/erniesg/Downloads/figure-only.png" alt=""></div>
       <div class="details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
@@ -1005,75 +545,46 @@ body.figure-full .poster .bg-img img {
     </div>
   </article>
 
-  <!-- 06 CHROME v2: Cool Blue -->
+  <!-- 06 CHROME — composited pieces -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">06</span>
-      <h3>Chrome — Cold Blue</h3>
-      <span class="layers">blue-black bg → blue text → figure-only + icons</span>
+      <h3>Steel — Composited Pieces</h3>
     </div>
-    <div class="poster poster-c2">
-      <div class="bg-img">
-        <img src="/Users/erniesg/Downloads/themachineafterthemuse4.png" alt="">
-      </div>
+    <div class="poster poster-chrome-comp">
       <div class="text-behind">
-        <span class="l1">The</span>
-        <span class="l2">Machine</span>
-        <span class="l3">After</span>
-        <span class="l4">the</span>
-        <span class="l5">Muse</span>
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <div class="figure-fg">
-        <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
-      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/part-bust.png" alt="">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/part-robotic-hand.png" alt="">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/part-wireframe-hand.png" alt="">
       <div class="details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 PM — 4:00 PM</p>
-        <div class="format-icons">
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
-            <span class="label">pdf</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg>
-            <span class="label">mp4</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="M2 16l5-5 3 3 4-4 8 8"/></svg>
-            <span class="label">png</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg>
-            <span class="label">ig</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 18l-6-6 6-6M16 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="label">html</span>
-          </span>
+        <div class="platform-icons">
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3v9.5a3.5 3.5 0 1 1-2-3.16"/><path d="M15 3c0 3 2 5.5 6 6.5"/><path d="M15 3v6c0 3 2 5.5 6 6.5"/></svg><span class="plat-label">TikTok</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg><span class="plat-label">IG</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 12h8M12 8v8" stroke-linecap="round"/></svg><span class="plat-label">XHS</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg><span class="plat-label">YT</span></span>
         </div>
       </div>
     </div>
   </article>
 
-  <!-- 07 CHROME v3: Warm Copper + Cyberpunk Info Panel -->
+  <!-- 07 CHROME COPPER — composited + terminal -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">07</span>
-      <h3>Chrome — Copper + Terminal</h3>
-      <span class="layers">copper bg → warm text → figure-only + cyber panel</span>
+      <h3>Copper — Terminal Panel</h3>
     </div>
-    <div class="poster poster-c3">
+    <div class="poster poster-copper">
       <div class="text-behind">
-        <span class="l1">The</span>
-        <span class="l2">Machine</span>
-        <span class="l3">After</span>
-        <span class="l4">the</span>
-        <span class="l5">Muse</span>
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <div class="figure-fg">
-        <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
-      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/part-bust.png" alt="">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/part-robotic-hand.png" alt="">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/part-wireframe-hand.png" alt="">
       <div class="details">
         <p class="speaker">chen_enjiao.exe</p>
         <p class="date">27.04.26</p>
@@ -1083,85 +594,34 @@ body.figure-full .poster .bg-img img {
           <span>agentic_ai.demo()</span>
           <span>taste.judgment.last_mile</span>
         </div>
-        <div class="format-icons">
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
-            <span class="label">pdf</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg>
-            <span class="label">mp4</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="M2 16l5-5 3 3 4-4 8 8"/></svg>
-            <span class="label">png</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg>
-            <span class="label">ig</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v18M8 7v10M4 10v4M16 7v10M20 10v4" stroke-linecap="round"/></svg>
-            <span class="label">wav</span>
-          </span>
-          <span class="icon">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 18l-6-6 6-6M16 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="label">html</span>
-          </span>
+        <div class="platform-icons">
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3v9.5a3.5 3.5 0 1 1-2-3.16"/><path d="M15 3c0 3 2 5.5 6 6.5"/><path d="M15 3v6c0 3 2 5.5 6 6.5"/></svg><span class="plat-label">TikTok</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg><span class="plat-label">IG</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 12h8M12 8v8" stroke-linecap="round"/></svg><span class="plat-label">XHS</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg><span class="plat-label">YT</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg><span class="plat-label">LI</span></span>
         </div>
       </div>
     </div>
   </article>
 
-  <!-- 08 BRUTALIST — Dark + Cyberpunk Panel + Full Image BG -->
+  <!-- 08 CHROME — single figure, full-size optimized -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">08</span>
-      <h3>Brutalist — Dark + Terminal</h3>
-      <span class="layers">black-img → text → figure-only + cyber panel + icons</span>
+      <h3>Steel — Full-Size Optimized</h3>
     </div>
-    <div class="poster poster-b2">
-      <div class="bg-img">
-        <img src="/Users/erniesg/Downloads/themachineafterthemuse4.png" alt="" style="opacity:0.2; filter:blur(6px) brightness(0.5);">
-      </div>
+    <div class="poster poster-chrome">
       <div class="text-behind">
-        <span class="l1">The</span>
-        <span class="l2">Machine</span>
-        <span class="l3">After</span>
-        <span class="l4">the</span>
-        <span class="l5">Muse</span>
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <div class="figure-fg">
-        <img src="/Users/erniesg/Downloads/figure-only.png" alt="">
+      <div class="figure-fg" style="left:0;top:0;width:100%;height:100%;transform:none;">
+        <img src="/Users/erniesg/Downloads/figure-only.png" alt="" style="object-fit:cover; object-position:center 35%;">
       </div>
-      <div class="details" style="background: oklch(0.06 0 0 / 0.8); border: 1px solid oklch(0.3 0 0 / 0.4); padding: 10px 14px; border-radius: 2px;">
-        <p class="speaker" style="color: oklch(0.78 0.24 155);">
-          <span style="color: oklch(0.5 0.15 155);">> </span>chen_enjiao.exe
-        </p>
-        <p class="date" style="font-family: 'Chakra Petch', sans-serif; color: oklch(0.88 0.02 155);">27.04.26</p>
-        <p class="time" style="color: oklch(0.5 0.12 155);">15:00–16:00 SGT</p>
-        <div class="format-icons" style="margin-top:8px; padding-top:8px; border-top: 1px solid oklch(0.25 0 0 / 0.5);">
-          <span class="icon" style="color: oklch(0.6 0.15 155);">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
-            <span class="label" style="color: oklch(0.45 0.08 155); font-family: 'VT323', monospace;">pdf</span>
-          </span>
-          <span class="icon" style="color: oklch(0.6 0.15 155);">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 10,16 16,12" fill="currentColor" stroke="none"/></svg>
-            <span class="label" style="color: oklch(0.45 0.08 155); font-family: 'VT323', monospace;">mp4</span>
-          </span>
-          <span class="icon" style="color: oklch(0.6 0.15 155);">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="M2 16l5-5 3 3 4-4 8 8"/></svg>
-            <span class="label" style="color: oklch(0.45 0.08 155); font-family: 'VT323', monospace;">png</span>
-          </span>
-          <span class="icon" style="color: oklch(0.6 0.15 155);">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg>
-            <span class="label" style="color: oklch(0.45 0.08 155); font-family: 'VT323', monospace;">ig</span>
-          </span>
-          <span class="icon" style="color: oklch(0.6 0.15 155);">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 18l-6-6 6-6M16 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="label" style="color: oklch(0.45 0.08 155); font-family: 'VT323', monospace;">html</span>
-          </span>
-        </div>
+      <div class="details">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 PM — 4:00 PM</p>
       </div>
     </div>
   </article>
