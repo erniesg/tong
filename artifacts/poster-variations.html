@@ -460,7 +460,27 @@ body.figure-full .poster .figure-fg img {
 .poster-v3v .details .platform-icons .plat { color: oklch(0.35 0.08 300); }
 .poster-v3v .details .platform-icons .plat-label { color: oklch(0.3 0.06 300); font-family: 'Azeret Mono', monospace; }
 
-/* 10: V3 dark mode — deep violet bg + lavender text */
+/* 10: V3 dark — Michroma/Rajdhani (Steel font, no terminal panel) */
+.poster-v3ds {
+  background: oklch(0.08 0.02 300);
+  font-family: 'Michroma', sans-serif;
+}
+.poster-v3ds .text-behind { top: 3%; padding: 0 1%; }
+.poster-v3ds .text-behind span { display: block; line-height: 0.88; color: oklch(0.4 0.04 300); letter-spacing: 0.04em; }
+.poster-v3ds .text-behind .l1 { font-size: 22cqw; }
+.poster-v3ds .text-behind .l2 { font-size: 36cqw; }
+.poster-v3ds .text-behind .l3 { font-size: 28cqw; }
+.poster-v3ds .text-behind .l4 { font-size: 22cqw; }
+.poster-v3ds .text-behind .l5 { font-size: 34cqw; }
+.poster-v3ds .details { bottom: 3%; left: 0; right: 0; text-align: center; }
+.poster-v3ds .details .speaker { font-family: 'Rajdhani', sans-serif; font-size: 2cqw; color: oklch(0.55 0.04 300); letter-spacing: 0.35em; text-transform: uppercase; }
+.poster-v3ds .details .date { font-size: 3.5cqw; color: oklch(0.7 0.04 300); letter-spacing: 0.1em; line-height: 1.3; }
+.poster-v3ds .details .time { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 2cqw; color: oklch(0.45 0.03 300); letter-spacing: 0.2em; }
+.poster-v3ds .details .platform-icons { justify-content: center; margin-top: 6px; }
+.poster-v3ds .details .platform-icons .plat { color: oklch(0.5 0.04 300); }
+.poster-v3ds .details .platform-icons .plat-label { color: oklch(0.4 0.03 300); font-family: 'Rajdhani', sans-serif; font-weight: 600; }
+
+/* 11: V3 dark mode — deep violet bg + lavender text */
 .poster-v3d {
   background: linear-gradient(170deg, oklch(0.15 0.04 300) 0%, oklch(0.1 0.03 320) 100%);
   font-family: 'Anton', sans-serif;
@@ -752,10 +772,35 @@ body.figure-full .poster .figure-fg img {
     </div>
   </article>
 
-  <!-- 10 V3 — dark + terminal panel -->
+  <!-- 10 V3 Dark — clean Michroma/Rajdhani (Steel font) -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">10</span>
+      <h3>V3 Dark — Steel Font</h3>
+    </div>
+    <div class="poster poster-v3ds">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="" style="filter:brightness(0.35) saturate(0.8);">
+      <div class="text-behind">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="v3-fg" src="/Users/erniesg/Downloads/figure-only.png" alt="">
+      <div class="details">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 PM — 4:00 PM</p>
+        <div class="platform-icons">
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3v9.5a3.5 3.5 0 1 1-2-3.16"/><path d="M15 3c0 3 2 5.5 6 6.5"/><path d="M15 3v6c0 3 2 5.5 6 6.5"/></svg><span class="plat-label">TikTok</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg><span class="plat-label">IG</span></span>
+          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 12h8M12 8v8" stroke-linecap="round"/></svg><span class="plat-label">XHS</span></span>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 11 V3 — dark + terminal panel -->
+  <article class="poster-card">
+    <div class="poster-label">
+      <span class="poster-number">11</span>
       <h3>V3 Dark — Terminal Panel</h3>
     </div>
     <div class="poster poster-v3d">
