@@ -115,10 +115,10 @@ body {
 .poster .text-behind .l4 { position: relative; z-index: 16; }
 .poster .text-behind .l5 { position: relative; z-index: 18; }
 
-/* ALL pieces — consistent scale across every poster */
-.poster .piece-bust { z-index: 13; left: 15%; top: 20%; width: 38%; height: auto; }
-.poster .piece-robo { z-index: 11; right: 0%; top: 10%; width: 31%; height: auto; }
-.poster .piece-wire { z-index: 17; left: -3%; bottom: 20%; width: 33%; height: auto; }
+/* ALL pieces — v3 composition positions, 0.65x scale, consistent everywhere */
+.poster .piece-bust { z-index: 13; left: 8%; top: 20%; width: 38%; height: auto; }
+.poster .piece-robo { z-index: 11; right: -8%; top: 3%; width: 31%; height: auto; }
+.poster .piece-wire { z-index: 17; left: -8%; bottom: 8%; width: 33%; height: auto; }
 
 /* Figure as single image */
 .poster .figure-fg {
@@ -403,15 +403,18 @@ body.figure-full .poster .figure-fg img {
 
 /* V3 poster pieces — scaled down to not dominate the poster */
 .poster-v3-white .piece-bust, .poster-v3-black .piece-bust, .poster-v3-white .piece-robo, .poster-v3-black .piece-robo, .poster-v3-white .piece-wire, .poster-v3-black .piece-wire, 
-/* Shared details centered */
+/* V3 details — DARK text by default (light gradient bg) */
 .v3-details {
   bottom: 2%; left: 3%; right: 3%;
   text-align: center;
+  color: oklch(0.15 0.03 320);
 }
-.v3-details .speaker { font-family: 'Rajdhani', sans-serif; font-size: 2cqw; letter-spacing: 0.35em; text-transform: uppercase; }
-.v3-details .date { font-family: 'Michroma', sans-serif; font-size: 3.5cqw; letter-spacing: 0.1em; line-height: 1.3; }
-.v3-details .time { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 2cqw; letter-spacing: 0.2em; }
+.v3-details .speaker { font-family: 'Rajdhani', sans-serif; font-size: 2cqw; letter-spacing: 0.35em; text-transform: uppercase; color: oklch(0.2 0.03 320); }
+.v3-details .date { font-family: 'Michroma', sans-serif; font-size: 3.5cqw; letter-spacing: 0.1em; line-height: 1.3; color: oklch(0.12 0.03 320); }
+.v3-details .time { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 2cqw; letter-spacing: 0.2em; color: oklch(0.2 0.03 320); }
+.v3-details .talk-topics { color: oklch(0.15 0.03 320); }
 .v3-details .platform-icons { margin-top: 6px; justify-content: center; }
+.v3-details .platform-icons svg { color: oklch(0.15 0.03 320); opacity: 0.85; }
 
 /* Talk topics — ONE faded line above, section bars, no other lines */
 .talk-topics {
@@ -920,7 +923,8 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     const size = parseFloat(getComputedStyle(selectedText).fontSize);
     const poster = selectedText.closest('.poster');
     const sizeCqw = (size / poster.clientWidth * 100).toFixed(1);
-    textInfo.innerHTML = `<b>"${selectedText.textContent}"</b><br>font-size: ${size.toFixed(0)}px (${sizeCqw}cqw)<br><span style="opacity:0.5">scroll=resize text</span>`;
+    const z = parseInt(selectedText.style.zIndex) || parseInt(getComputedStyle(selectedText).zIndex) || 0;
+    textInfo.innerHTML = `<b>"${selectedText.textContent}"</b><br>font-size: ${size.toFixed(0)}px (${sizeCqw}cqw) &nbsp; z: ${z}<br><span style="opacity:0.5">scroll=resize · [/]=z-index</span>`;
     textInfo.classList.add('visible');
   }
 
@@ -936,6 +940,21 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     selectedText.style.fontSize = Math.max(10, curr + delta) + 'px';
     updateTextInfo();
   }, { passive: false });
+
+  // [ ] to change text z-index
+  document.addEventListener('keydown', e => {
+    if (!selectedText) return;
+    const cur = parseInt(selectedText.style.zIndex) || parseInt(getComputedStyle(selectedText).zIndex) || 10;
+    if (e.code === 'BracketRight') {
+      e.preventDefault();
+      selectedText.style.setProperty('z-index', cur + 1, 'important');
+      updateTextInfo();
+    } else if (e.code === 'BracketLeft') {
+      e.preventDefault();
+      selectedText.style.setProperty('z-index', cur - 1, 'important');
+      updateTextInfo();
+    }
+  });
 
   // Deselect text when clicking elsewhere
   document.addEventListener('click', e => {
