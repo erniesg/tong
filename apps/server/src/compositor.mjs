@@ -66,13 +66,14 @@ export function getFormat(id) {
  * Render a single still image (PNG) via Remotion CLI.
  *
  * @param {object} args
- * @param {string} args.compositionId - 'EventPoster' or 'SocialCard'
+ * @param {string} [args.compositionId] - 'EventPoster' or 'SocialCard' (auto-detected if omitted)
  * @param {string} args.format - format key from PLATFORM_FORMATS
  * @param {object} args.background - { imageUrl, fit?, blur?, brightness?, opacity? }
  * @param {object} [args.subject] - { imageUrl, gravity?, offsetX?, offsetY?, scale?, ... }
  * @param {object[]} [args.text] - array of text block props
  * @param {object} [args.gradient] - gradient overlay props
  * @param {object} [args.branding] - branding props
+ * @param {object} [args.brand] - brand preset name or config (see BRAND_PRESETS)
  * @param {boolean} [args.showSafeZones] - show safe zone overlays
  * @returns {Promise<{ok, outputPath, width, height, format, error?}>}
  */
@@ -82,7 +83,13 @@ export async function renderStill(args) {
     return { ok: false, error: `Unknown format: ${args.format}` };
   }
 
-  const compositionId = `${args.compositionId}-${args.format}`;
+  // Auto-select composition: EventPoster when subject is provided, SocialCard otherwise
+  const resolvedComposition = args.compositionId || (args.subject ? 'EventPoster' : 'SocialCard');
+  // Upgrade SocialCard→EventPoster if caller passed a subject but forgot to switch
+  const finalComposition = (resolvedComposition === 'SocialCard' && args.subject)
+    ? 'EventPoster'
+    : resolvedComposition;
+  const compositionId = `${finalComposition}-${args.format}`;
   const jobId = `job-${randomUUID().slice(0, 8)}`;
   const jobDir = path.join(COMPOSITIONS_DIR, jobId);
   mkdirSync(jobDir, { recursive: true });
@@ -218,9 +225,66 @@ export async function renderVideo(args) {
   }
 }
 
+// ── Brand Presets ─────────────────────────────────────────────────
+// Centralized brand configurations. AI orchestrator picks a preset
+// or passes a custom brand config. Presets enforce consistent
+// typography, colors, and branding across all formats.
+
+const BRAND_PRESETS = {
+  tong: {
+    name: 'Tong',
+    fonts: {
+      heading: { family: 'Inter', weight: 800, letterSpacing: -1, transform: 'uppercase' },
+      subheading: { family: 'Inter', weight: 600, letterSpacing: 0, transform: 'none' },
+      body: { family: 'Inter', weight: 400, letterSpacing: 0, transform: 'none' },
+      accent: { family: 'Inter', weight: 700, letterSpacing: 2, transform: 'uppercase' },
+    },
+    colors: {
+      primary: '#FF6B2C',       // tong orange
+      secondary: '#1A1A2E',     // dark navy
+      accent: '#FFD93D',        // gold
+      text: '#FFFFFF',
+      textMuted: 'rgba(255,255,255,0.7)',
+      gradientBase: 'rgba(26,26,46,0.85)',
+    },
+    gradient: {
+      enabled: true,
+      direction: 'bottom-up',
+      color: 'rgba(26,26,46,0.85)',
+      height: 0.5,
+    },
+    subject: {
+      gravity: 'bottom-center',
+      scale: 0.75,
+      dropShadow: { color: 'rgba(0,0,0,0.4)', blur: 30, offsetX: 0, offsetY: 15 },
+    },
+  },
+};
+
+export function listBrandPresets() {
+  return Object.entries(BRAND_PRESETS).map(([id, b]) => ({ id, name: b.name }));
+}
+
+export function getBrandPreset(id) {
+  return BRAND_PRESETS[id] || null;
+}
+
 // ── Internal Helpers ───────────────────────────────────────────────
 
+function resolveBrand(args) {
+  if (!args.brand) return {};
+  // String → lookup preset; object → use directly
+  const preset = typeof args.brand === 'string' ? BRAND_PRESETS[args.brand] : args.brand;
+  return preset || {};
+}
+
 function buildInputProps(args, fmt, videoOverrides = {}) {
+  const brand = resolveBrand(args);
+
+  // Merge brand defaults into text blocks (brand fonts/colors as fallbacks)
+  const brandTextDefaults = brand.fonts?.heading || {};
+  const brandColor = brand.colors?.text || '#FFFFFF';
+
   return {
     format: {
       width: fmt.width,
@@ -237,8 +301,13 @@ function buildInputProps(args, fmt, videoOverrides = {}) {
       brightness: args.background?.brightness ?? 1,
       opacity: args.background?.opacity ?? 1,
     },
-    ...(args.subject ? { subject: args.subject } : {}),
-    gradient: args.gradient || {
+    ...(args.subject ? {
+      subject: {
+        ...brand.subject,
+        ...args.subject,
+      },
+    } : {}),
+    gradient: args.gradient || brand.gradient || {
       enabled: true,
       direction: 'bottom-up',
       color: 'rgba(0,0,0,0.7)',
@@ -246,10 +315,10 @@ function buildInputProps(args, fmt, videoOverrides = {}) {
     },
     text: (args.text || []).map(t => ({
       content: t.content || '',
-      fontFamily: t.fontFamily || 'Inter',
+      fontFamily: t.fontFamily || brandTextDefaults.family || 'Inter',
       fontSize: t.fontSize || 48,
-      fontWeight: t.fontWeight || 700,
-      color: t.color || '#FFFFFF',
+      fontWeight: t.fontWeight || brandTextDefaults.weight || 700,
+      color: t.color || brandColor,
       textAlign: t.textAlign || 'center',
       position: {
         x: t.position?.x ?? 0.5,
@@ -258,8 +327,8 @@ function buildInputProps(args, fmt, videoOverrides = {}) {
       },
       maxWidth: t.maxWidth || 0.9,
       lineHeight: t.lineHeight || 1.2,
-      letterSpacing: t.letterSpacing || 0,
-      textTransform: t.textTransform || 'none',
+      letterSpacing: t.letterSpacing ?? brandTextDefaults.letterSpacing ?? 0,
+      textTransform: t.textTransform || brandTextDefaults.transform || 'none',
       shadow: t.shadow,
       enterFrame: t.enterFrame,
       exitFrame: t.exitFrame,
