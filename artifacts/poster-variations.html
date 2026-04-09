@@ -99,7 +99,6 @@ body {
 
 .poster .text-behind {
   position: absolute;
-  z-index: 2;
   left: 0; right: 0;
   display: flex;
   flex-direction: column;
@@ -108,6 +107,18 @@ body {
   pointer-events: none;
   user-select: none;
 }
+
+/* Each text line + piece gets its own z-index for weaving */
+.poster .text-behind .l1 { position: relative; z-index: 10; }
+.poster .text-behind .l2 { position: relative; z-index: 12; }
+.poster .text-behind .l3 { position: relative; z-index: 14; }
+.poster .text-behind .l4 { position: relative; z-index: 16; }
+.poster .text-behind .l5 { position: relative; z-index: 18; }
+
+/* Pieces weave between text lines by default */
+.poster .piece-robo { z-index: 11 !important; } /* behind Machine, in front of The */
+.poster .piece-bust { z-index: 13 !important; } /* behind After, in front of Machine */
+.poster .piece-wire { z-index: 17 !important; } /* behind Muse, in front of the */
 
 /* Figure as single image */
 .poster .figure-fg {
@@ -149,19 +160,26 @@ body.figure-full .poster .figure-fg img {
    ============================================================ */
 .platform-icons {
   display: flex;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
   margin-top: 8px;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: 1.5cqw;
+  letter-spacing: 0.08em;
 }
 .platform-icons .plat {
   display: flex;
   align-items: center;
-  gap: 4px;
 }
-.platform-icons .plat-label {
-  font-size: 1.6cqw;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+.platform-icons .plat::after {
+  content: '·';
+  margin-left: 6px;
+  opacity: 0.4;
+}
+.platform-icons .plat:last-child::after {
+  content: '';
+  margin: 0;
 }
 
 /* ============================================================
@@ -441,6 +459,17 @@ body.figure-full .poster .figure-fg img {
 .v3-text .l4 { font-size: 22cqw; font-family: 'Rajdhani', sans-serif; font-weight: 600; text-transform: lowercase; margin-left: auto; margin-right: 4%; width: fit-content; }
 .v3-text .l5 { font-size: 34cqw; margin-left: auto; margin-right: 4%; width: fit-content; }
 
+/* V3 poster pieces — v3 canvas proportions */
+.poster-v3-white .piece-bust, .poster-v3-black .piece-bust, .poster-v3ds .piece-bust {
+  left: 10%; top: 20%; width: 57%; height: auto;
+}
+.poster-v3-white .piece-robo, .poster-v3-black .piece-robo, .poster-v3ds .piece-robo {
+  right: -5%; top: 8%; width: 47%; height: auto;
+}
+.poster-v3-white .piece-wire, .poster-v3-black .piece-wire, .poster-v3ds .piece-wire {
+  left: -5%; bottom: 20%; width: 50%; height: auto;
+}
+
 /* Shared details centered */
 .v3-details {
   bottom: 2%; left: 3%; right: 3%;
@@ -458,13 +487,13 @@ body.figure-full .poster .figure-fg img {
   gap: 8px;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid currentColor;
-  opacity: 0.6;
+  border-top: 1px solid oklch(0.15 0.03 320 / 0.5);
   font-family: 'Rajdhani', sans-serif;
   font-size: 1.5cqw;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1.3;
+  color: oklch(0.18 0.04 320);
 }
 .v3-details .talk-topics .topic-demo {
   font-size: 1.3cqw;
@@ -478,7 +507,8 @@ body.figure-full .poster .figure-fg img {
 .poster-v3-white .v3-details .speaker { color: oklch(0.2 0.04 320 / 0.8); }
 .poster-v3-white .v3-details .date { color: oklch(0.15 0.04 320); }
 .poster-v3-white .v3-details .time { color: oklch(0.25 0.03 320 / 0.7); }
-.poster-v3-white .v3-details .talk-topics { color: oklch(0.25 0.03 320); }
+.poster-v3-white .v3-details .talk-topics { color: oklch(0.2 0.04 320); opacity: 1; }
+.poster-v3-white .v3-details .talk-topics .topic-demo { opacity: 0.8; }
 .poster-v3-white .v3-details .platform-icons .plat { color: oklch(0.25 0.04 320 / 0.7); }
 .poster-v3-white .v3-details .platform-icons .plat-label { color: oklch(0.25 0.03 320 / 0.6); font-family: 'Rajdhani', sans-serif; font-weight: 600; }
 
@@ -625,12 +655,10 @@ body.figure-full .poster .figure-fg img {
         <p class="date">27 April</p>
         <p class="time">3:00 PM — 4:00 PM</p>
         <div class="platform-icons">
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3v9.5a3.5 3.5 0 1 1-2-3.16"/><path d="M15 3c0 3 2 5.5 6 6.5"/><path d="M15 3v6c0 3 2 5.5 6 6.5"/></svg><span class="plat-label">TikTok</span></span>
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg><span class="plat-label">IG</span></span>
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 12h8M12 8v8" stroke-linecap="round"/></svg><span class="plat-label">XHS</span></span>
-
-        </div>
-      </div>
+          <span class="plat">TikTok</span>
+          <span class="plat">Instagram</span>
+          <span class="plat">Xiaohongshu</span>
+        </div></div>
     </div>
   </article>
 
@@ -657,13 +685,10 @@ body.figure-full .poster .figure-fg img {
           <span>taste.judgment.last_mile</span>
         </div>
         <div class="platform-icons">
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3v9.5a3.5 3.5 0 1 1-2-3.16"/><path d="M15 3c0 3 2 5.5 6 6.5"/><path d="M15 3v6c0 3 2 5.5 6 6.5"/></svg><span class="plat-label">TikTok</span></span>
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg><span class="plat-label">IG</span></span>
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 12h8M12 8v8" stroke-linecap="round"/></svg><span class="plat-label">XHS</span></span>
-
-
-        </div>
-      </div>
+          <span class="plat">TikTok</span>
+          <span class="plat">Instagram</span>
+          <span class="plat">Xiaohongshu</span>
+        </div></div>
     </div>
   </article>
 
@@ -682,7 +707,9 @@ body.figure-full .poster .figure-fg img {
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="v3-fg" src="/Users/erniesg/Downloads/sam3-composite-v3.png" alt="">
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="">
       <div class="details v3-details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
@@ -693,11 +720,10 @@ body.figure-full .poster .figure-fg img {
           <div>Taste, judgment & the last mile</div>
         </div>
         <div class="platform-icons">
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3v9.5a3.5 3.5 0 1 1-2-3.16"/><path d="M15 3c0 3 2 5.5 6 6.5"/><path d="M15 3v6c0 3 2 5.5 6 6.5"/></svg><span class="plat-label">TikTok</span></span>
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg><span class="plat-label">IG</span></span>
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 12h8M12 8v8" stroke-linecap="round"/></svg><span class="plat-label">XHS</span></span>
-        </div>
-      </div>
+          <span class="plat">TikTok</span>
+          <span class="plat">Instagram</span>
+          <span class="plat">Xiaohongshu</span>
+        </div></div>
     </div>
   </article>
 
@@ -709,7 +735,9 @@ body.figure-full .poster .figure-fg img {
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="v3-fg" src="/Users/erniesg/Downloads/sam3-composite-v3.png" alt="">
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="">
       <div class="details v3-details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
@@ -720,44 +748,14 @@ body.figure-full .poster .figure-fg img {
           <div>Taste, judgment & the last mile</div>
         </div>
         <div class="platform-icons">
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3v9.5a3.5 3.5 0 1 1-2-3.16"/><path d="M15 3c0 3 2 5.5 6 6.5"/><path d="M15 3v6c0 3 2 5.5 6 6.5"/></svg><span class="plat-label">TikTok</span></span>
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg><span class="plat-label">IG</span></span>
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 12h8M12 8v8" stroke-linecap="round"/></svg><span class="plat-label">XHS</span></span>
-        </div>
-      </div>
+          <span class="plat">TikTok</span>
+          <span class="plat">Instagram</span>
+          <span class="plat">Xiaohongshu</span>
+        </div></div>
     </div>
   </article>
 
 
-  <!-- 11 V3 — dark + terminal panel -->
-  <article class="poster-card">
-    <div class="poster-label">
-      <span class="poster-number">11</span>
-      <h3>V3 Dark — Terminal Panel</h3>
-    </div>
-    <div class="poster poster-v3d">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="" style="filter:blur(30px) brightness(0.35) saturate(0.8);">
-      <div class="text-behind">
-        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
-      </div>
-      <img class="v3-fg" src="/Users/erniesg/Downloads/sam3-composite-v3.png" alt="">
-      <div class="details">
-        <p class="speaker">chen_enjiao.exe</p>
-        <p class="date">27.04.26</p>
-        <p class="time">15:00–16:00 SGT</p>
-        <div class="topics">
-          <span>landscape + what's coming</span>
-          <span>agentic_ai.demo()</span>
-          <span>taste.judgment.last_mile</span>
-        </div>
-        <div class="platform-icons">
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3v9.5a3.5 3.5 0 1 1-2-3.16"/><path d="M15 3c0 3 2 5.5 6 6.5"/><path d="M15 3v6c0 3 2 5.5 6 6.5"/></svg><span class="plat-label">TikTok</span></span>
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/></svg><span class="plat-label">IG</span></span>
-          <span class="plat"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 12h8M12 8v8" stroke-linecap="round"/></svg><span class="plat-label">XHS</span></span>
-        </div>
-      </div>
-    </div>
-  </article>
 
 </div>
 
@@ -966,6 +964,77 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
       textInfo.classList.remove('visible');
     }
   });
+})();
+
+// ============================================================
+// SAVE / LOAD layout + EXPORT poster as PNG
+// ============================================================
+(function() {
+  const toolbar = document.createElement('div');
+  toolbar.style.cssText = 'position:fixed;top:12px;right:12px;z-index:9999;display:flex;gap:8px;';
+
+  function btn(label, fn) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.style.cssText = 'font-family:"Azeret Mono",monospace;font-size:11px;padding:6px 12px;background:oklch(0.18 0.01 260/0.92);color:oklch(0.8 0 0);border:1px solid oklch(0.3 0.01 260);border-radius:3px;cursor:pointer;';
+    b.onclick = fn;
+    toolbar.appendChild(b);
+    return b;
+  }
+
+  btn('Save Layout', () => {
+    const state = {};
+    document.querySelectorAll('.piece').forEach((p, i) => {
+      const id = p.className + '-' + i;
+      state[id] = {
+        left: p.style.left, top: p.style.top,
+        width: p.style.width, rotate: p.dataset.rotate || '0',
+        transform: p.style.transform
+      };
+    });
+    localStorage.setItem('poster-layout', JSON.stringify(state));
+    alert('Layout saved to localStorage');
+  });
+
+  btn('Load Layout', () => {
+    const raw = localStorage.getItem('poster-layout');
+    if (!raw) { alert('No saved layout'); return; }
+    const state = JSON.parse(raw);
+    document.querySelectorAll('.piece').forEach((p, i) => {
+      const id = p.className + '-' + i;
+      const s = state[id];
+      if (!s) return;
+      if (s.left) p.style.left = s.left;
+      if (s.top) p.style.top = s.top;
+      if (s.width) p.style.width = s.width;
+      if (s.rotate) { p.dataset.rotate = s.rotate; p.style.transform = s.transform || ''; }
+      p.style.position = 'absolute';
+      p.style.right = 'auto';
+      p.style.bottom = 'auto';
+    });
+    alert('Layout loaded');
+  });
+
+  btn('Log CSS', () => {
+    let css = '';
+    document.querySelectorAll('.piece').forEach(p => {
+      const poster = p.closest('.poster');
+      const pw = poster.clientWidth, ph = poster.clientHeight;
+      const r = p.getBoundingClientRect();
+      const pr = poster.getBoundingClientRect();
+      const name = p.classList[1] || 'piece';
+      const leftPct = ((r.left - pr.left) / pw * 100).toFixed(1);
+      const topPct = ((r.top - pr.top) / ph * 100).toFixed(1);
+      const widthPct = (r.width / pw * 100).toFixed(1);
+      const rot = p.dataset.rotate || '0';
+      css += `${name}: left:${leftPct}% top:${topPct}% width:${widthPct}% rotate:${rot}deg\n`;
+    });
+    console.log(css);
+    navigator.clipboard?.writeText(css);
+    alert('CSS logged to console + clipboard');
+  });
+
+  document.body.appendChild(toolbar);
 })();
 </script>
 </body>
