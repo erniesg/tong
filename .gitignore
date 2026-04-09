@@ -17,9 +17,15 @@ __pycache__/
 *.tsbuildinfo
 reference-notes/
 apps/server/data/generated/
+apps/server/data/compositions/
+apps/server/data/logs/
 artifacts/qa-runs/*
 !artifacts/qa-runs/.gitkeep
+artifacts/signals-cache/
+artifacts/thumbnails/
+artifacts/scenes/
 test-results/
+.xhs-cookie
 
 # Large binary assets — store externally, not in git
 *.mp4
