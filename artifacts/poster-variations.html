@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Machine After the Muse — 8 Poster Variations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Abril+Fatface&family=Archivo:wght@400;700;900&family=VT323&family=Chakra+Petch:wght@400;600;700&family=Libre+Caslon+Display&family=Spectral:ital,wght@0,400;0,700;1,400&family=Russo+One&family=Archivo+Narrow:wght@400;700&family=Michroma&family=Rajdhani:wght@400;600;700&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:ital,wght@0,400;0,700;1,400&family=Azeret+Mono:wght@400;700&family=Karla:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   GALLERY CHROME
+   ============================================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: oklch(0.11 0.008 260);
+  color: oklch(0.82 0 0);
+  font-family: 'Karla', sans-serif;
+  padding: 64px 48px;
+  min-height: 100vh;
+}
+
+.gallery-header {
+  max-width: 1500px;
+  margin: 0 auto 64px;
+}
+
+.gallery-header h1 {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  letter-spacing: -0.03em;
+  color: oklch(0.92 0 0);
+  margin-bottom: 8px;
+}
+
+.gallery-header p {
+  font-size: 1rem;
+  color: oklch(0.55 0 0);
+  max-width: 60ch;
+  line-height: 1.5;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 56px;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+.poster-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.poster-label {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.poster-number {
+  font-family: 'Azeret Mono', monospace;
+  font-size: 0.75rem;
+  color: oklch(0.45 0 0);
+  letter-spacing: 0.05em;
+}
+
+.poster-label h3 {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: oklch(0.72 0 0);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   SHARED POSTER BASE
+   ============================================================ */
+.poster {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 2px;
+  container-type: size;
+}
+
+.poster .text-behind {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.poster .figure-layer {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.poster .figure-layer img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.poster .details {
+  position: absolute;
+  z-index: 3;
+}
+
+.poster .overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* ============================================================
+   POSTER 1: BRUTALIST EDITORIAL
+   ============================================================ */
+.poster-1 {
+  background: oklch(0.78 0.008 80);
+  font-family: 'Anton', sans-serif;
+}
+
+/* Exposed grid lines */
+.poster-1::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    repeating-linear-gradient(90deg, transparent, transparent calc(100% / 6 - 1px), oklch(0.72 0.005 80 / 0.4) calc(100% / 6 - 1px), oklch(0.72 0.005 80 / 0.4) calc(100% / 6)),
+    repeating-linear-gradient(0deg, transparent, transparent calc(100% / 9 - 1px), oklch(0.72 0.005 80 / 0.4) calc(100% / 9 - 1px), oklch(0.72 0.005 80 / 0.4) calc(100% / 9));
+}
+
+/* Crop marks */
+.poster-1::after {
+  content: '';
+  position: absolute;
+  top: 16px; left: 16px; right: 16px; bottom: 16px;
+  border: 1px solid oklch(0.55 0.01 80 / 0.3);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.poster-1 .text-behind {
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding-left: 5%;
+}
+
+.poster-1 .text-behind .line-1 {
+  font-size: 22cqw;
+  line-height: 0.85;
+  color: oklch(0.15 0.01 80);
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+
+.poster-1 .text-behind .line-2 {
+  font-size: 28cqw;
+  line-height: 0.85;
+  color: oklch(0.5 0.18 25);
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  margin-top: -2%;
+}
+
+.poster-1 .figure-layer {
+  right: -8%;
+  bottom: 5%;
+  width: 75%;
+  height: 80%;
+}
+
+.poster-1 .details {
+  bottom: 5%;
+  left: 5%;
+  max-width: 45%;
+}
+
+.poster-1 .details .speaker {
+  font-family: 'Azeret Mono', monospace;
+  font-size: 2.4cqw;
+  letter-spacing: 0.08em;
+  color: oklch(0.2 0 0);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.poster-1 .details .date {
+  font-family: 'Anton', sans-serif;
+  font-size: 4.5cqw;
+  color: oklch(0.15 0.01 80);
+  line-height: 1;
+}
+
+.poster-1 .details .time {
+  font-family: 'Azeret Mono', monospace;
+  font-size: 2cqw;
+  color: oklch(0.5 0.18 25);
+  margin-top: 4px;
+  letter-spacing: 0.1em;
+}
+
+/* Red rule */
+.poster-1 .details::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 3px;
+  background: oklch(0.5 0.18 25);
+  margin-bottom: 12px;
+}
+
+/* ============================================================
+   POSTER 2: VAPORWAVE DREAMER
+   ============================================================ */
+.poster-2 {
+  background: linear-gradient(170deg, oklch(0.82 0.09 55) 0%, oklch(0.78 0.1 320) 50%, oklch(0.7 0.12 290) 100%);
+  font-family: 'Abril Fatface', serif;
+}
+
+/* Floating geometric shapes */
+.poster-2::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 15% 20%, oklch(0.35 0.12 340 / 0.7) 0, oklch(0.35 0.12 340 / 0.7) 18px, transparent 18px),
+    radial-gradient(circle at 75% 15%, oklch(0.3 0.06 280 / 0.6) 0, oklch(0.3 0.06 280 / 0.6) 14px, transparent 14px),
+    radial-gradient(circle at 85% 60%, oklch(0.35 0.12 340 / 0.5) 0, oklch(0.35 0.12 340 / 0.5) 22px, transparent 22px),
+    radial-gradient(circle at 20% 75%, oklch(0.3 0.06 280 / 0.5) 0, oklch(0.3 0.06 280 / 0.5) 10px, transparent 10px),
+    radial-gradient(circle at 60% 85%, oklch(0.4 0.1 340 / 0.4) 0, oklch(0.4 0.1 340 / 0.4) 16px, transparent 16px);
+}
+
+.poster-2 .text-behind {
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 0 3%;
+}
+
+.poster-2 .text-behind .line-1 {
+  font-size: 14cqw;
+  line-height: 0.95;
+  color: oklch(0.98 0.01 320 / 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.poster-2 .text-behind .line-2 {
+  font-size: 20cqw;
+  line-height: 0.9;
+  color: oklch(0.98 0.01 320 / 0.35);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+.poster-2 .text-behind .line-3 {
+  font-size: 11cqw;
+  line-height: 0.95;
+  color: oklch(0.98 0.01 320 / 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.poster-2 .figure-layer {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 72%;
+  height: 75%;
+}
+
+.poster-2 .details {
+  bottom: 6%;
+  left: 0;
+  right: 0;
+  text-align: center;
+}
+
+.poster-2 .details .speaker {
+  font-family: 'Karla', sans-serif;
+  font-size: 2.8cqw;
+  color: oklch(0.98 0.01 320 / 0.9);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.poster-2 .details .date {
+  font-family: 'Abril Fatface', serif;
+  font-size: 5cqw;
+  color: oklch(0.98 0.01 320);
+  line-height: 1.1;
+}
+
+.poster-2 .details .time {
+  font-family: 'Karla', sans-serif;
+  font-size: 2.2cqw;
+  color: oklch(0.98 0.01 320 / 0.7);
+  letter-spacing: 0.15em;
+  margin-top: 4px;
+}
+
+/* ============================================================
+   POSTER 3: SWISS MODERNIST
+   ============================================================ */
+.poster-3 {
+  background: oklch(0.98 0 0);
+  font-family: 'Archivo', sans-serif;
+}
+
+.poster-3 .text-behind {
+  top: 18%;
+  left: -3%;
+  right: -3%;
+}
+
+.poster-3 .text-behind .line-1 {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 900;
+  font-size: 24cqw;
+  line-height: 0.88;
+  color: oklch(0.92 0 0);
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+}
+
+.poster-3 .text-behind .line-2 {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 900;
+  font-size: 24cqw;
+  line-height: 0.88;
+  color: oklch(0.92 0 0);
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+}
+
+.poster-3 .figure-layer {
+  right: 2%;
+  top: 10%;
+  width: 60%;
+  height: 70%;
+}
+
+/* Red accent bar */
+.poster-3::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2.5%;
+  background: oklch(0.55 0.22 27);
+  z-index: 5;
+}
+
+.poster-3 .details {
+  left: 5%;
+  bottom: 5%;
+  max-width: 50%;
+}
+
+.poster-3 .details .title-sm {
+  font-weight: 900;
+  font-size: 4cqw;
+  color: oklch(0.15 0 0);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin-bottom: 16px;
+}
+
+.poster-3 .details .speaker {
+  font-weight: 400;
+  font-size: 2.4cqw;
+  color: oklch(0.35 0 0);
+  margin-bottom: 2px;
+}
+
+.poster-3 .details .date {
+  font-weight: 700;
+  font-size: 3.2cqw;
+  color: oklch(0.15 0 0);
+  line-height: 1.2;
+}
+
+.poster-3 .details .time {
+  font-weight: 400;
+  font-size: 2.4cqw;
+  color: oklch(0.55 0.22 27);
+  margin-top: 2px;
+}
+
+.poster-3 .details .topics {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.poster-3 .details .topics span {
+  font-size: 1.8cqw;
+  color: oklch(0.45 0 0);
+  line-height: 1.3;
+}
+
+/* ============================================================
+   POSTER 4: GLITCH CYBERPUNK
+   ============================================================ */
+.poster-4 {
+  background: oklch(0.06 0 0);
+  font-family: 'VT323', monospace;
+}
+
+/* Scan lines */
+.poster-4 .overlay {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 3px,
+    oklch(0 0 0 / 0.15) 3px,
+    oklch(0 0 0 / 0.15) 4px
+  );
+  z-index: 6;
+}
+
+/* CRT vignette */
+.poster-4::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 50%, oklch(0 0 0 / 0.6) 100%);
+}
+
+.poster-4 .text-behind {
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.poster-4 .text-behind .line-1 {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 20cqw;
+  line-height: 0.9;
+  color: oklch(0.75 0.22 155);
+  text-transform: uppercase;
+  letter-spacing: -0.03em;
+  text-shadow:
+    3px 0 oklch(0.65 0.2 25 / 0.7),
+    -3px 0 oklch(0.6 0.2 260 / 0.7);
+}
+
+.poster-4 .text-behind .line-2 {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 26cqw;
+  line-height: 0.85;
+  color: oklch(0.8 0.25 155);
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  text-shadow:
+    4px 0 oklch(0.65 0.2 25 / 0.6),
+    -4px 0 oklch(0.6 0.2 260 / 0.6);
+}
+
+.poster-4 .figure-layer {
+  left: 50%;
+  top: 48%;
+  transform: translate(-50%, -50%);
+  width: 78%;
+  height: 80%;
+}
+
+.poster-4 .figure-layer img {
+  filter: contrast(1.3) brightness(0.9) saturate(0.6);
+  mix-blend-mode: screen;
+}
+
+/* Glitch bar */
+.poster-4 .glitch-bar {
+  position: absolute;
+  z-index: 5;
+  height: 3px;
+  background: oklch(0.75 0.22 155 / 0.5);
+  animation: glitch-slide 4s infinite;
+}
+
+.poster-4 .glitch-bar:nth-child(1) { top: 35%; left: 10%; width: 40%; }
+.poster-4 .glitch-bar:nth-child(2) { top: 58%; left: 30%; width: 55%; animation-delay: 1.5s; }
+
+@keyframes glitch-slide {
+  0%, 100% { transform: translateX(0); opacity: 0.4; }
+  10% { transform: translateX(15px); opacity: 0.8; }
+  12% { transform: translateX(-8px); opacity: 0.3; }
+  14% { transform: translateX(0); opacity: 0.5; }
+}
+
+.poster-4 .details {
+  bottom: 5%;
+  left: 5%;
+  right: 5%;
+}
+
+.poster-4 .details .speaker {
+  font-family: 'VT323', monospace;
+  font-size: 3cqw;
+  color: oklch(0.75 0.22 155);
+  letter-spacing: 0.08em;
+}
+
+.poster-4 .details .speaker::before {
+  content: '> ';
+  color: oklch(0.55 0.15 155);
+}
+
+.poster-4 .details .date {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 600;
+  font-size: 4.5cqw;
+  color: oklch(0.9 0.02 155);
+  line-height: 1.1;
+}
+
+.poster-4 .details .time {
+  font-family: 'VT323', monospace;
+  font-size: 2.5cqw;
+  color: oklch(0.55 0.15 155);
+  letter-spacing: 0.1em;
+}
+
+.poster-4 .details .topics {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.poster-4 .details .topics span {
+  font-family: 'VT323', monospace;
+  font-size: 2cqw;
+  color: oklch(0.5 0.1 155);
+}
+
+.poster-4 .details .topics span::before {
+  content: '// ';
+  color: oklch(0.35 0.08 155);
+}
+
+/* ============================================================
+   POSTER 5: CLASSICAL GALLERY
+   ============================================================ */
+.poster-5 {
+  background: oklch(0.94 0.015 85);
+  font-family: 'Libre Caslon Display', serif;
+}
+
+/* Ornamental frame */
+.poster-5::before {
+  content: '';
+  position: absolute;
+  top: 3%;
+  left: 4%;
+  right: 4%;
+  bottom: 3%;
+  border: 1px solid oklch(0.7 0.03 80);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.poster-5::after {
+  content: '';
+  position: absolute;
+  top: 4.5%;
+  left: 5.5%;
+  right: 5.5%;
+  bottom: 4.5%;
+  border: 0.5px solid oklch(0.75 0.025 80);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.poster-5 .text-behind {
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 0 8%;
+}
+
+.poster-5 .text-behind .line-1 {
+  font-family: 'Spectral', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 16cqw;
+  line-height: 0.92;
+  color: oklch(0.82 0.02 80);
+  letter-spacing: 0.04em;
+}
+
+.poster-5 .text-behind .line-2 {
+  font-family: 'Spectral', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 12cqw;
+  line-height: 0.92;
+  color: oklch(0.85 0.02 80);
+  letter-spacing: 0.06em;
+  margin-top: 2%;
+}
+
+.poster-5 .figure-layer {
+  left: 50%;
+  top: 45%;
+  transform: translate(-50%, -50%);
+  width: 65%;
+  height: 68%;
+}
+
+.poster-5 .figure-layer img {
+  filter: sepia(0.15) contrast(1.05);
+}
+
+.poster-5 .details {
+  bottom: 6%;
+  left: 0;
+  right: 0;
+  text-align: center;
+}
+
+.poster-5 .details .title-sm {
+  font-family: 'Libre Caslon Display', serif;
+  font-size: 4.5cqw;
+  color: oklch(0.3 0.03 80);
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+}
+
+.poster-5 .details .divider {
+  display: block;
+  width: 40px;
+  height: 1px;
+  background: oklch(0.6 0.05 80);
+  margin: 10px auto;
+}
+
+.poster-5 .details .speaker {
+  font-family: 'Spectral', serif;
+  font-style: italic;
+  font-size: 2.5cqw;
+  color: oklch(0.45 0.02 80);
+  letter-spacing: 0.05em;
+}
+
+.poster-5 .details .date {
+  font-family: 'Spectral', serif;
+  font-size: 2.8cqw;
+  color: oklch(0.35 0.03 80);
+  margin-top: 6px;
+  line-height: 1.3;
+}
+
+.poster-5 .details .time {
+  font-family: 'Spectral', serif;
+  font-style: italic;
+  font-size: 2.2cqw;
+  color: oklch(0.5 0.02 80);
+}
+
+/* ============================================================
+   POSTER 6: KINETIC SUPREMATIST
+   ============================================================ */
+.poster-6 {
+  background: oklch(0.97 0.005 80);
+  font-family: 'Russo One', sans-serif;
+}
+
+/* Red diagonal bar */
+.poster-6::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: 55%;
+  width: 35%;
+  height: 140%;
+  background: oklch(0.5 0.22 27);
+  transform: rotate(-18deg);
+  z-index: 0;
+}
+
+/* Black triangle */
+.poster-6::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-bottom: 30cqh solid oklch(0.12 0 0);
+  border-right: 45cqw solid transparent;
+  z-index: 0;
+}
+
+.poster-6 .text-behind {
+  top: 8%;
+  left: -8%;
+  right: -8%;
+  transform: rotate(-12deg);
+  transform-origin: center;
+}
+
+.poster-6 .text-behind .line-1 {
+  font-size: 22cqw;
+  line-height: 0.88;
+  color: oklch(0.12 0 0);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.poster-6 .text-behind .line-2 {
+  font-size: 16cqw;
+  line-height: 0.88;
+  color: oklch(0.97 0.005 80);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 1%;
+}
+
+.poster-6 .figure-layer {
+  left: 5%;
+  top: 20%;
+  width: 60%;
+  height: 65%;
+}
+
+.poster-6 .figure-layer img {
+  filter: contrast(1.3) saturate(0.3);
+}
+
+/* Small black circle */
+.poster-6 .geo-circle {
+  position: absolute;
+  width: 10cqw;
+  height: 10cqw;
+  border-radius: 50%;
+  background: oklch(0.12 0 0);
+  top: 10%;
+  left: 12%;
+  z-index: 0;
+}
+
+.poster-6 .details {
+  bottom: 6%;
+  left: 6%;
+  z-index: 5;
+}
+
+.poster-6 .details .speaker {
+  font-family: 'Archivo Narrow', sans-serif;
+  font-size: 2.5cqw;
+  color: oklch(0.97 0.005 80);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.poster-6 .details .date {
+  font-family: 'Russo One', sans-serif;
+  font-size: 6cqw;
+  color: oklch(0.97 0.005 80);
+  line-height: 1;
+}
+
+.poster-6 .details .time {
+  font-family: 'Archivo Narrow', sans-serif;
+  font-size: 2.5cqw;
+  color: oklch(0.97 0.005 80 / 0.7);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   POSTER 7: LIQUID CHROME
+   ============================================================ */
+.poster-7 {
+  background: linear-gradient(175deg, oklch(0.15 0.005 260) 0%, oklch(0.08 0.002 260) 100%);
+  font-family: 'Michroma', sans-serif;
+}
+
+/* Reflective horizon line */
+.poster-7::before {
+  content: '';
+  position: absolute;
+  top: 62%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, oklch(0.55 0.01 260), transparent);
+  z-index: 5;
+}
+
+.poster-7 .text-behind {
+  bottom: 15%;
+  left: -3%;
+  right: -3%;
+  text-align: center;
+}
+
+.poster-7 .text-behind .line-1 {
+  font-size: 25cqw;
+  line-height: 0.85;
+  color: oklch(0.38 0.008 260);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.poster-7 .text-behind .line-2 {
+  font-size: 15cqw;
+  line-height: 0.9;
+  color: oklch(0.28 0.005 260);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-top: 1%;
+}
+
+.poster-7 .figure-layer {
+  left: 50%;
+  top: 5%;
+  transform: translateX(-50%);
+  width: 75%;
+  height: 72%;
+}
+
+.poster-7 .figure-layer img {
+  filter: brightness(1.1) contrast(1.15) saturate(0.5);
+}
+
+/* Metallic accent lines */
+.poster-7 .chrome-line {
+  position: absolute;
+  z-index: 5;
+  height: 0.5px;
+  background: oklch(0.65 0.01 260);
+}
+
+.poster-7 .chrome-line:nth-child(1) { top: 4%; left: 8%; width: 15%; }
+.poster-7 .chrome-line:nth-child(2) { top: 4%; right: 8%; width: 15%; }
+
+.poster-7 .details {
+  bottom: 4%;
+  left: 0;
+  right: 0;
+  text-align: center;
+}
+
+.poster-7 .details .speaker {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 400;
+  font-size: 2cqw;
+  color: oklch(0.55 0.01 260);
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+}
+
+.poster-7 .details .date {
+  font-family: 'Michroma', sans-serif;
+  font-size: 3.5cqw;
+  color: oklch(0.75 0.01 260);
+  line-height: 1.3;
+  letter-spacing: 0.1em;
+}
+
+.poster-7 .details .time {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: 2cqw;
+  color: oklch(0.45 0.008 260);
+  letter-spacing: 0.2em;
+}
+
+/* ============================================================
+   POSTER 8: NEWSPAPER BROADSHEET
+   ============================================================ */
+.poster-8 {
+  background: oklch(0.96 0.012 88);
+  font-family: 'Old Standard TT', serif;
+}
+
+/* Halftone dot overlay on image area */
+.poster-8 .overlay {
+  background:
+    radial-gradient(circle, oklch(0.12 0.005 260 / 0.08) 0.8px, transparent 0.8px);
+  background-size: 3px 3px;
+  z-index: 4;
+}
+
+/* Column rule */
+.poster-8::before {
+  content: '';
+  position: absolute;
+  top: 22%;
+  bottom: 5%;
+  left: 50%;
+  width: 0.5px;
+  background: oklch(0.7 0.01 88);
+  z-index: 5;
+}
+
+/* Masthead rule */
+.poster-8::after {
+  content: '';
+  position: absolute;
+  top: 17%;
+  left: 5%;
+  right: 5%;
+  height: 2px;
+  background: oklch(0.15 0.005 88);
+  z-index: 5;
+}
+
+.poster-8 .masthead {
+  position: absolute;
+  top: 2%;
+  left: 5%;
+  right: 5%;
+  z-index: 5;
+  text-align: center;
+}
+
+.poster-8 .masthead .dateline {
+  font-family: 'Source Serif 4', serif;
+  font-size: 1.6cqw;
+  color: oklch(0.45 0.01 88);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.poster-8 .masthead .paper-title {
+  font-family: 'Old Standard TT', serif;
+  font-weight: 700;
+  font-size: 8cqw;
+  color: oklch(0.12 0.005 88);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+
+.poster-8 .masthead .edition {
+  font-family: 'Source Serif 4', serif;
+  font-style: italic;
+  font-size: 1.5cqw;
+  color: oklch(0.5 0.01 88);
+  margin-top: 4px;
+}
+
+.poster-8 .text-behind {
+  top: 28%;
+  left: -5%;
+  right: -5%;
+  text-align: center;
+}
+
+.poster-8 .text-behind .line-1 {
+  font-family: 'Old Standard TT', serif;
+  font-weight: 700;
+  font-size: 14cqw;
+  line-height: 0.92;
+  color: oklch(0.88 0.01 88);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.poster-8 .figure-layer {
+  left: 50%;
+  top: 25%;
+  transform: translateX(-50%);
+  width: 52%;
+  height: 55%;
+}
+
+.poster-8 .figure-layer img {
+  filter: grayscale(1) contrast(1.2);
+}
+
+.poster-8 .details {
+  bottom: 3%;
+  left: 5%;
+  right: 5%;
+  z-index: 5;
+}
+
+.poster-8 .details .col-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 24px;
+}
+
+.poster-8 .details .col-left .headline {
+  font-family: 'Old Standard TT', serif;
+  font-weight: 700;
+  font-size: 3.5cqw;
+  color: oklch(0.15 0.005 88);
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.poster-8 .details .col-left .byline {
+  font-family: 'Source Serif 4', serif;
+  font-style: italic;
+  font-size: 2cqw;
+  color: oklch(0.4 0.01 88);
+}
+
+.poster-8 .details .col-left .body-text {
+  font-family: 'Source Serif 4', serif;
+  font-size: 1.8cqw;
+  color: oklch(0.3 0.008 88);
+  line-height: 1.45;
+  margin-top: 6px;
+}
+
+.poster-8 .details .col-right .topics-header {
+  font-family: 'Old Standard TT', serif;
+  font-weight: 700;
+  font-size: 2.5cqw;
+  color: oklch(0.15 0.005 88);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.poster-8 .details .col-right .topic {
+  font-family: 'Source Serif 4', serif;
+  font-size: 1.7cqw;
+  color: oklch(0.35 0.008 88);
+  line-height: 1.5;
+  padding: 3px 0;
+}
+
+.poster-8 .details .col-right .topic + .topic {
+  border-top: 0.5px solid oklch(0.75 0.01 88);
+}
+
+.poster-8 .details .col-right .classified {
+  font-family: 'Source Serif 4', serif;
+  font-size: 1.5cqw;
+  color: oklch(0.5 0.01 88);
+  line-height: 1.4;
+  margin-top: 10px;
+  font-style: italic;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 1100px) {
+  .gallery { grid-template-columns: 1fr; max-width: 700px; }
+  body { padding: 32px 24px; }
+}
+
+@media (max-width: 600px) {
+  body { padding: 20px 16px; }
+  .gallery { gap: 40px; }
+}
+</style>
+</head>
+<body>
+
+<header class="gallery-header">
+  <h1>The Machine After the Muse</h1>
+  <p>8 poster variations — text-behind depth effect, wildly divergent aesthetics. Event: 27 April, 3:00–4:00 PM by Chen Enjiao (Ernie).</p>
+</header>
+
+<div class="gallery">
+
+  <!-- ====== POSTER 1: BRUTALIST EDITORIAL ====== -->
+  <article class="poster-card">
+    <div class="poster-label">
+      <span class="poster-number">01</span>
+      <h3>Brutalist Editorial</h3>
+    </div>
+    <div class="poster poster-1">
+      <div class="text-behind">
+        <span class="line-1">Machine</span>
+        <span class="line-2">Muse</span>
+      </div>
+      <div class="figure-layer">
+        <img src="/Users/erniesg/Downloads/figure-only.png" alt="The Machine After the Muse — marble bust with robotic and wireframe hands">
+      </div>
+      <div class="details">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">15:00 — 16:00</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- ====== POSTER 2: VAPORWAVE DREAMER ====== -->
+  <article class="poster-card">
+    <div class="poster-label">
+      <span class="poster-number">02</span>
+      <h3>Vaporwave Dreamer</h3>
+    </div>
+    <div class="poster poster-2">
+      <div class="text-behind">
+        <span class="line-1">The Machine</span>
+        <span class="line-2">After</span>
+        <span class="line-3">The Muse</span>
+      </div>
+      <div class="figure-layer">
+        <img src="/Users/erniesg/Downloads/figure-only.png" alt="The Machine After the Muse">
+      </div>
+      <div class="details">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- ====== POSTER 3: SWISS MODERNIST ====== -->
+  <article class="poster-card">
+    <div class="poster-label">
+      <span class="poster-number">03</span>
+      <h3>Swiss Modernist</h3>
+    </div>
+    <div class="poster poster-3">
+      <div class="text-behind">
+        <span class="line-1">Machine</span>
+        <span class="line-2">Muse</span>
+      </div>
+      <div class="figure-layer">
+        <img src="/Users/erniesg/Downloads/figure-only.png" alt="The Machine After the Muse">
+      </div>
+      <div class="details">
+        <p class="title-sm">The Machine<br>After the Muse</p>
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April 2026</p>
+        <p class="time">3:00 – 4:00 PM</p>
+        <div class="topics">
+          <span>Landscape + What's Coming</span>
+          <span>Agentic AI: Brief to Multi-Format Output</span>
+          <span>Taste, Judgment & the Last Mile</span>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ====== POSTER 4: GLITCH CYBERPUNK ====== -->
+  <article class="poster-card">
+    <div class="poster-label">
+      <span class="poster-number">04</span>
+      <h3>Glitch Cyberpunk</h3>
+    </div>
+    <div class="poster poster-4">
+      <div class="text-behind">
+        <span class="line-1">Mach1ne</span>
+        <span class="line-2">Mus3</span>
+      </div>
+      <div class="figure-layer">
+        <img src="/Users/erniesg/Downloads/themachineafterthemuse4.png" alt="The Machine After the Muse">
+      </div>
+      <div class="glitch-bar"></div>
+      <div class="glitch-bar"></div>
+      <div class="details">
+        <p class="speaker">chen_enjiao.exe</p>
+        <p class="date">27.04.26</p>
+        <p class="time">15:00–16:00 SGT</p>
+        <div class="topics">
+          <span>landscape + what's coming</span>
+          <span>agentic_ai.demo()</span>
+          <span>taste.judgment.last_mile</span>
+        </div>
+      </div>
+      <div class="overlay"></div>
+    </div>
+  </article>
+
+  <!-- ====== POSTER 5: CLASSICAL GALLERY ====== -->
+  <article class="poster-card">
+    <div class="poster-label">
+      <span class="poster-number">05</span>
+      <h3>Classical Gallery</h3>
+    </div>
+    <div class="poster poster-5">
+      <div class="text-behind">
+        <span class="line-1">Machina</span>
+        <span class="line-2">et Musa</span>
+      </div>
+      <div class="figure-layer">
+        <img src="/Users/erniesg/Downloads/figure-only.png" alt="The Machine After the Muse">
+      </div>
+      <div class="details">
+        <p class="title-sm">The Machine After the Muse</p>
+        <span class="divider"></span>
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April, Sunday</p>
+        <p class="time">Three o'clock in the afternoon</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- ====== POSTER 6: KINETIC SUPREMATIST ====== -->
+  <article class="poster-card">
+    <div class="poster-label">
+      <span class="poster-number">06</span>
+      <h3>Kinetic Suprematist</h3>
+    </div>
+    <div class="poster poster-6">
+      <div class="geo-circle"></div>
+      <div class="text-behind">
+        <span class="line-1">After The</span>
+        <span class="line-2">Muse</span>
+      </div>
+      <div class="figure-layer">
+        <img src="/Users/erniesg/Downloads/figure-only.png" alt="The Machine After the Muse">
+      </div>
+      <div class="details">
+        <p class="speaker">Chen Enjiao</p>
+        <p class="date">27 APR</p>
+        <p class="time">15:00 — 16:00</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- ====== POSTER 7: LIQUID CHROME ====== -->
+  <article class="poster-card">
+    <div class="poster-label">
+      <span class="poster-number">07</span>
+      <h3>Liquid Chrome</h3>
+    </div>
+    <div class="poster poster-7">
+      <div class="chrome-line"></div>
+      <div class="chrome-line"></div>
+      <div class="text-behind">
+        <span class="line-1">Muse</span>
+        <span class="line-2">Machine</span>
+      </div>
+      <div class="figure-layer">
+        <img src="/Users/erniesg/Downloads/figure-only.png" alt="The Machine After the Muse">
+      </div>
+      <div class="details">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 PM — 4:00 PM</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- ====== POSTER 8: NEWSPAPER BROADSHEET ====== -->
+  <article class="poster-card">
+    <div class="poster-label">
+      <span class="poster-number">08</span>
+      <h3>Newspaper Broadsheet</h3>
+    </div>
+    <div class="poster poster-8">
+      <div class="masthead">
+        <p class="dateline">Sunday, 27 April 2026 &mdash; Final Edition</p>
+        <h2 class="paper-title">The Daily Muse</h2>
+        <p class="edition">Singapore &middot; Est. 2026 &middot; Vol. I No. 1</p>
+      </div>
+      <div class="text-behind">
+        <span class="line-1">The Machine</span>
+      </div>
+      <div class="figure-layer">
+        <img src="/Users/erniesg/Downloads/figure-only.png" alt="The Machine After the Muse">
+      </div>
+      <div class="details">
+        <div class="col-layout">
+          <div class="col-left">
+            <p class="headline">The Machine After the Muse: AI Meets the Last Mile of Taste</p>
+            <p class="byline">By Chen Enjiao (Ernie)</p>
+            <p class="body-text">An afternoon examining the frontier where artificial intelligence confronts creative judgment. From agentic pipelines to the irreducible human element, this talk maps the territory between automation and artistry.</p>
+          </div>
+          <div class="col-right">
+            <p class="topics-header">Programme</p>
+            <p class="topic">I. Landscape + What's Coming</p>
+            <p class="topic">II. Agentic AI: Brief to Multi-Format Output (Live Demo)</p>
+            <p class="topic">III. Taste, Judgment & the Last Mile</p>
+            <p class="classified">3:00–4:00 PM. Free admission. All are welcome.</p>
+          </div>
+        </div>
+      </div>
+      <div class="overlay"></div>
+    </div>
+  </article>
+
+</div>
+
+</body>
+</html>
