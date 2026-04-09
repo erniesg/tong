@@ -761,6 +761,28 @@ body.figure-full .poster .figure-fg img {
 
 </div>
 
+<style>
+/* Interactive piece controls */
+.piece.selected { outline: 2px solid oklch(0.7 0.2 155); outline-offset: 2px; cursor: grab; }
+.piece.dragging { cursor: grabbing; }
+.piece { cursor: pointer; }
+.piece-info {
+  position: fixed; bottom: 12px; left: 12px;
+  background: oklch(0.12 0.01 260 / 0.92);
+  color: oklch(0.8 0 0);
+  font-family: 'Azeret Mono', monospace;
+  font-size: 11px;
+  padding: 10px 14px;
+  border-radius: 4px;
+  z-index: 9999;
+  pointer-events: none;
+  display: none;
+  line-height: 1.6;
+  border: 1px solid oklch(0.3 0.01 260);
+}
+.piece-info.visible { display: block; }
+</style>
+
 <script>
 // Auto-fit: reduce font-size (not scaleX!) so letters stay WIDE and chunky
 function fitText() {
@@ -788,6 +810,163 @@ function fitText() {
 window.addEventListener('load', fitText);
 window.addEventListener('resize', fitText);
 document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeout(fitText, 50));
+// ============================================================
+// INTERACTIVE PIECE COMPOSITOR
+// Click to select, drag to move, scroll to resize, shift+scroll to rotate
+// ============================================================
+(function() {
+  const info = document.createElement('div');
+  info.className = 'piece-info';
+  document.body.appendChild(info);
+
+  let selected = null;
+  let dragging = false;
+  let startX, startY, startLeft, startTop;
+
+  function getTransform(el) {
+    const s = el.style;
+    return {
+      left: parseFloat(s.left) || parseFloat(getComputedStyle(el).left) || 0,
+      top: parseFloat(s.top) || parseFloat(getComputedStyle(el).top) || 0,
+      width: parseFloat(s.width) || parseFloat(getComputedStyle(el).width) || 100,
+      rotate: parseFloat(el.dataset.rotate) || 0,
+    };
+  }
+
+  function updateInfo() {
+    if (!selected) { info.classList.remove('visible'); return; }
+    const poster = selected.closest('.poster');
+    const pw = poster.clientWidth, ph = poster.clientHeight;
+    const r = selected.getBoundingClientRect();
+    const pr = poster.getBoundingClientRect();
+    const leftPct = ((r.left - pr.left) / pw * 100).toFixed(1);
+    const topPct = ((r.top - pr.top) / ph * 100).toFixed(1);
+    const widthPct = (r.width / pw * 100).toFixed(1);
+    const rot = parseFloat(selected.dataset.rotate) || 0;
+    const name = selected.classList.contains('piece-bust') ? 'BUST' :
+                 selected.classList.contains('piece-robo') ? 'ROBOTIC HAND' : 'WIREFRAME HAND';
+    info.innerHTML = `<b>${name}</b><br>left: ${leftPct}% &nbsp; top: ${topPct}%<br>width: ${widthPct}% &nbsp; rotate: ${rot.toFixed(1)}°<br><span style="opacity:0.5">drag=move · scroll=resize · shift+scroll=rotate</span>`;
+    info.classList.add('visible');
+  }
+
+  // Click to select
+  document.addEventListener('mousedown', e => {
+    const piece = e.target.closest('.piece');
+    if (selected) selected.classList.remove('selected');
+    if (!piece) { selected = null; updateInfo(); return; }
+
+    selected = piece;
+    piece.classList.add('selected');
+    dragging = true;
+    piece.classList.add('dragging');
+
+    const poster = piece.closest('.poster');
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = piece.offsetLeft;
+    startTop = piece.offsetTop;
+
+    // Switch to pixel positioning for precise control
+    piece.style.position = 'absolute';
+    piece.style.right = 'auto';
+    piece.style.bottom = 'auto';
+    piece.style.left = startLeft + 'px';
+    piece.style.top = startTop + 'px';
+
+    e.preventDefault();
+    updateInfo();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging || !selected) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    selected.style.left = (startLeft + dx) + 'px';
+    selected.style.top = (startTop + dy) + 'px';
+    updateInfo();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (selected) selected.classList.remove('dragging');
+    dragging = false;
+  });
+
+  // Scroll to resize, shift+scroll to rotate
+  document.addEventListener('wheel', e => {
+    if (!selected) return;
+    const piece = selected;
+    e.preventDefault();
+
+    if (e.shiftKey) {
+      // Rotate
+      const rot = (parseFloat(piece.dataset.rotate) || 0) + e.deltaY * 0.2;
+      piece.dataset.rotate = rot;
+      piece.style.transform = `rotate(${rot}deg)`;
+    } else {
+      // Resize
+      const curr = piece.clientWidth;
+      const delta = -e.deltaY * 0.5;
+      piece.style.width = Math.max(50, curr + delta) + 'px';
+      piece.style.height = 'auto';
+    }
+    updateInfo();
+  }, { passive: false });
+})();
+
+// ============================================================
+// EDITABLE TEXT SIZES — click text line, scroll to resize
+// ============================================================
+(function() {
+  let selectedText = null;
+  const textInfo = document.createElement('div');
+  textInfo.className = 'piece-info';
+  textInfo.style.left = 'auto';
+  textInfo.style.right = '12px';
+  document.body.appendChild(textInfo);
+
+  document.querySelectorAll('.text-behind span').forEach(span => {
+    span.style.cursor = 'text';
+    span.style.pointerEvents = 'auto';
+    span.addEventListener('click', e => {
+      e.stopPropagation();
+      if (selectedText) selectedText.style.outline = '';
+      selectedText = span;
+      span.style.outline = '1px dashed oklch(0.7 0.2 50)';
+      updateTextInfo();
+    });
+  });
+
+  function updateTextInfo() {
+    if (!selectedText) { textInfo.classList.remove('visible'); return; }
+    const size = parseFloat(getComputedStyle(selectedText).fontSize);
+    const poster = selectedText.closest('.poster');
+    const sizeCqw = (size / poster.clientWidth * 100).toFixed(1);
+    textInfo.innerHTML = `<b>"${selectedText.textContent}"</b><br>font-size: ${size.toFixed(0)}px (${sizeCqw}cqw)<br><span style="opacity:0.5">scroll=resize text</span>`;
+    textInfo.classList.add('visible');
+  }
+
+  document.addEventListener('wheel', e => {
+    if (!selectedText) return;
+    // Only handle when no piece is selected
+    const piece = document.querySelector('.piece.selected');
+    if (piece) return;
+
+    e.preventDefault();
+    const curr = parseFloat(getComputedStyle(selectedText).fontSize);
+    const delta = -e.deltaY * 0.3;
+    selectedText.style.fontSize = Math.max(10, curr + delta) + 'px';
+    updateTextInfo();
+  }, { passive: false });
+
+  // Deselect text when clicking elsewhere
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.text-behind')) {
+      if (selectedText) selectedText.style.outline = '';
+      selectedText = null;
+      textInfo.classList.remove('visible');
+    }
+  });
+})();
 </script>
 </body>
 </html>
