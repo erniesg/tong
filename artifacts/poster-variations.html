@@ -400,16 +400,17 @@ body.figure-full .poster .figure-fg img {
    V3 SHARED — bg and fg layers with matching object-fit
    Both images are 9:16 aspect ratio; same cover crop = aligned figures
    ============================================================ */
-/* v3 bg: fills poster */
+/* v3 bg: fills poster, blurred so only gradient/color shows — no duplicate figure */
 .v3-bg {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: -5%;
+  width: 110%;
+  height: 110%;
   object-fit: cover;
   object-position: center 38%;
   pointer-events: none;
   z-index: 0;
+  filter: blur(30px) saturate(1.15);
 }
 
 /* v3 fg: centered, constrained — text peeks around edges */
@@ -738,7 +739,7 @@ body.figure-full .poster .figure-fg img {
       <h3>V3 Dark — Terminal Panel</h3>
     </div>
     <div class="poster poster-v3d">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="" style="filter:brightness(0.35) saturate(0.8);">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="" style="filter:blur(30px) brightness(0.35) saturate(0.8);">
       <div class="text-behind">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
