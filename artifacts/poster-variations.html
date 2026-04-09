@@ -418,47 +418,43 @@ body.figure-full .poster .figure-fg img {
    Colors extracted from themachineafterthemuse3.png
    ============================================================ */
 
-/* 08: V3 gradient bg + blurred v3 image + segments */
+/* 08: V3 bg — warm cream text, Michroma flush left */
 .poster-v3 {
-  background: linear-gradient(170deg, oklch(0.82 0.07 50) 0%, oklch(0.78 0.07 340) 40%, oklch(0.72 0.06 300) 100%);
-  font-family: 'Anton', sans-serif;
+  background: oklch(0.75 0.06 310);
+  font-family: 'Michroma', sans-serif;
 }
-.poster-v3 .text-behind { top: 2%; align-items: flex-start; padding-left: 4%; text-align: left; }
-.poster-v3 .text-behind span { display: block; line-height: 0.88; text-transform: uppercase; letter-spacing: -0.04em; color: oklch(0.98 0.02 300); }
-.poster-v3 .piece-bust { left: 15%; top: 18%; width: 55%; height: auto; }
-.poster-v3 .piece-robo { right: -2%; top: 12%; width: 42%; height: auto; }
-.poster-v3 .piece-wire { left: -3%; bottom: 18%; width: 48%; height: auto; }
-.poster-v3 .text-behind .l1 { font-size: 26cqw; }
-.poster-v3 .text-behind .l2 { font-size: 40cqw; }
-.poster-v3 .text-behind .l3 { font-size: 32cqw; }
-.poster-v3 .text-behind .l4 { font-size: 26cqw; }
-.poster-v3 .text-behind .l5 { font-size: 38cqw; }
+.poster-v3 .text-behind { top: 3%; align-items: flex-start; padding-left: 4%; text-align: left; }
+.poster-v3 .text-behind span { display: block; line-height: 0.88; letter-spacing: 0.04em; color: oklch(0.95 0.015 60); }
+.poster-v3 .text-behind .l1 { font-size: 22cqw; }
+.poster-v3 .text-behind .l2 { font-size: 36cqw; }
+.poster-v3 .text-behind .l3 { font-size: 28cqw; }
+.poster-v3 .text-behind .l4 { font-size: 22cqw; }
+.poster-v3 .text-behind .l5 { font-size: 34cqw; }
 .poster-v3 .details { bottom: 3%; left: 4%; }
-.poster-v3 .details .speaker { font-family: 'Azeret Mono', monospace; font-size: 2.2cqw; color: oklch(0.25 0.06 300); letter-spacing: 0.08em; text-transform: uppercase; }
-.poster-v3 .details .date { font-size: 4.5cqw; color: oklch(0.2 0.05 300); line-height: 1; margin-top: 2px; }
-.poster-v3 .details .time { font-family: 'Azeret Mono', monospace; font-size: 2cqw; color: oklch(0.4 0.06 300); letter-spacing: 0.1em; margin-top: 3px; }
+.poster-v3 .details .speaker { font-family: 'Rajdhani', sans-serif; font-size: 2cqw; color: oklch(0.95 0.01 60 / 0.8); letter-spacing: 0.35em; text-transform: uppercase; }
+.poster-v3 .details .date { font-size: 3.5cqw; color: oklch(0.95 0.015 60); letter-spacing: 0.1em; line-height: 1.3; }
+.poster-v3 .details .time { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 2cqw; color: oklch(0.95 0.01 60 / 0.6); letter-spacing: 0.2em; }
 
-/* 09: V3 gradient + deep violet text */
+/* 09: V3 bg — deep plum text + crimson accents, Michroma flush left */
 .poster-v3v {
-  background: linear-gradient(170deg, oklch(0.82 0.07 50) 0%, oklch(0.78 0.07 340) 40%, oklch(0.72 0.06 300) 100%);
-  font-family: 'Anton', sans-serif;
+  background: oklch(0.75 0.06 310);
+  font-family: 'Michroma', sans-serif;
 }
-.poster-v3v .text-behind { top: 2%; align-items: flex-start; padding-left: 4%; text-align: left; }
-.poster-v3v .text-behind span { display: block; line-height: 0.88; text-transform: uppercase; letter-spacing: -0.04em; }
-.poster-v3v .text-behind .l1 { font-size: 26cqw; color: oklch(0.22 0.08 300); }
-.poster-v3v .text-behind .l2 { font-size: 40cqw; color: oklch(0.22 0.08 300); }
-.poster-v3v .text-behind .l3 { font-size: 32cqw; color: oklch(0.65 0.12 340); }
-.poster-v3v .text-behind .l4 { font-size: 26cqw; color: oklch(0.22 0.08 300); }
-.poster-v3v .text-behind .l5 { font-size: 38cqw; color: oklch(0.65 0.12 340); }
-.poster-v3v .piece-bust { left: 15%; top: 18%; width: 55%; height: auto; }
-.poster-v3v .piece-robo { right: -2%; top: 12%; width: 42%; height: auto; }
-.poster-v3v .piece-wire { left: -3%; bottom: 18%; width: 48%; height: auto; }
+.poster-v3v .text-behind { top: 3%; align-items: flex-start; padding-left: 4%; text-align: left; }
+.poster-v3v .text-behind span { display: block; line-height: 0.88; letter-spacing: 0.04em; }
+/* Deep plum #3a1f3d = oklch(0.22 0.06 320) */
+.poster-v3v .text-behind .l1 { font-size: 22cqw; color: oklch(0.22 0.06 320); }
+.poster-v3v .text-behind .l2 { font-size: 36cqw; color: oklch(0.22 0.06 320); }
+/* Crimson #8b2040 = oklch(0.4 0.15 5) — from the image's geometric blocks */
+.poster-v3v .text-behind .l3 { font-size: 28cqw; color: oklch(0.4 0.15 5); }
+.poster-v3v .text-behind .l4 { font-size: 22cqw; color: oklch(0.22 0.06 320); }
+.poster-v3v .text-behind .l5 { font-size: 34cqw; color: oklch(0.4 0.15 5); }
 .poster-v3v .details { bottom: 3%; left: 4%; }
-.poster-v3v .details .speaker { font-family: 'Azeret Mono', monospace; font-size: 2.2cqw; color: oklch(0.3 0.06 300); letter-spacing: 0.08em; text-transform: uppercase; }
-.poster-v3v .details .date { font-size: 4.5cqw; color: oklch(0.2 0.05 300); line-height: 1; margin-top: 2px; }
-.poster-v3v .details .time { font-family: 'Azeret Mono', monospace; font-size: 2cqw; color: oklch(0.5 0.08 340); letter-spacing: 0.1em; margin-top: 3px; }
-.poster-v3v .details .platform-icons .plat { color: oklch(0.35 0.08 300); }
-.poster-v3v .details .platform-icons .plat-label { color: oklch(0.3 0.06 300); font-family: 'Azeret Mono', monospace; }
+.poster-v3v .details .speaker { font-family: 'Rajdhani', sans-serif; font-size: 2cqw; color: oklch(0.22 0.06 320 / 0.8); letter-spacing: 0.35em; text-transform: uppercase; }
+.poster-v3v .details .date { font-size: 3.5cqw; color: oklch(0.22 0.06 320); letter-spacing: 0.1em; line-height: 1.3; }
+.poster-v3v .details .time { font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 2cqw; color: oklch(0.35 0.05 320); letter-spacing: 0.2em; }
+.poster-v3v .details .platform-icons .plat { color: oklch(0.35 0.06 320); }
+.poster-v3v .details .platform-icons .plat-label { color: oklch(0.28 0.04 320); font-family: 'Rajdhani', sans-serif; font-weight: 600; }
 
 /* 10: V3 dark — Michroma/Rajdhani (Steel font, no terminal panel) */
 .poster-v3ds {
