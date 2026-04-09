@@ -127,6 +127,67 @@ describe('renderStill', () => {
   });
 });
 
+// ── Auto-composition selection ─────────────────────────────────────
+
+describe('auto-composition selection', () => {
+  it('auto-selects EventPoster when subject is provided without compositionId', async () => {
+    const result = await compositor.renderStill({
+      format: 'instagram-post',
+      background: { imageUrl: '' },
+      subject: {
+        imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+        gravity: 'bottom-center',
+        scale: 0.75,
+      },
+      text: [{ content: 'AUTO-SELECT', fontSize: 48, position: { x: 0.5, y: 0.3, anchor: 'center' } }],
+    });
+
+    assert.ok(result.ok, `auto-select should succeed: ${result.error || ''}`);
+    await rm(path.dirname(result.outputPath), { recursive: true, force: true });
+  });
+
+  it('upgrades SocialCard to EventPoster when subject is passed', async () => {
+    const result = await compositor.renderStill({
+      compositionId: 'SocialCard',
+      format: 'instagram-post',
+      background: { imageUrl: '' },
+      subject: {
+        imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+        gravity: 'bottom-center',
+        scale: 0.75,
+      },
+      text: [{ content: 'UPGRADE', fontSize: 48, position: { x: 0.5, y: 0.3, anchor: 'center' } }],
+    });
+
+    assert.ok(result.ok, `upgrade should succeed: ${result.error || ''}`);
+    await rm(path.dirname(result.outputPath), { recursive: true, force: true });
+  });
+});
+
+// ── Brand presets ─────────────────────────────────────────────────
+
+describe('brand presets', () => {
+  it('lists available brand presets', () => {
+    const presets = compositor.listBrandPresets();
+    assert.ok(Array.isArray(presets));
+    assert.ok(presets.length >= 1, 'should have at least tong preset');
+    const tong = presets.find(p => p.id === 'tong');
+    assert.ok(tong, 'tong preset should exist');
+  });
+
+  it('returns tong brand preset details', () => {
+    const preset = compositor.getBrandPreset('tong');
+    assert.ok(preset);
+    assert.ok(preset.fonts?.heading);
+    assert.ok(preset.colors?.primary);
+  });
+
+  it('returns null for unknown preset', () => {
+    const preset = compositor.getBrandPreset('nonexistent');
+    assert.equal(preset, null);
+  });
+});
+
 // ── renderBatch ────────────────────────────────────────────────────
 
 describe('renderBatch', () => {
