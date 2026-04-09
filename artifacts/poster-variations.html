@@ -397,6 +397,23 @@ body.figure-full .poster .figure-fg img {
 .poster-whitered .details .platform-icons .plat-label { color: oklch(0.35 0 0); font-family: 'Azeret Mono', monospace; }
 
 /* ============================================================
+   V3 SHARED — bg and fg layers with matching object-fit
+   Both images are 9:16 aspect ratio; same cover crop = aligned figures
+   ============================================================ */
+.v3-bg, .v3-fg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 38%;
+  pointer-events: none;
+}
+
+.v3-bg { z-index: 0; }
+.v3-fg { z-index: 3; }
+
+/* ============================================================
    V3 GRADIENT — peach→rose→lavender from actual image palette
    Colors extracted from themachineafterthemuse3.png
    ============================================================ */
@@ -687,24 +704,21 @@ body.figure-full .poster .figure-fg img {
 
   <div class="section-divider">
     <h2>V3 Gradient Direction</h2>
+    <p>v3 as bg (same aspect ratio as figure-only, so object-fit:cover aligns perfectly) → text → figure-only foreground</p>
   </div>
 
-  <!-- 08 V3 GRADIENT — full v3 bg + segments + text behind -->
+  <!-- 08 V3 — full v3 bg + figure-only fg, white text -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">08</span>
-      <h3>V3 Gradient — Composited</h3>
+      <h3>V3 — White Text</h3>
     </div>
     <div class="poster poster-v3">
-      <div class="bg-img" style="position:absolute;inset:0;z-index:0;">
-        <img src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="" style="width:100%;height:100%;object-fit:cover;opacity:0.4;filter:blur(8px) saturate(1.2);">
-      </div>
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/seg-bust.png" alt="">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/seg-robotic-hand.png" alt="">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/seg-wireframe-hand.png" alt="">
+      <img class="v3-fg" src="/Users/erniesg/Downloads/figure-only.png" alt="">
       <div class="details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
@@ -713,19 +727,18 @@ body.figure-full .poster .figure-fg img {
     </div>
   </article>
 
-  <!-- 09 V3 GRADIENT — dark violet text on gradient -->
+  <!-- 09 V3 — violet text -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">09</span>
-      <h3>V3 Gradient — Violet Text</h3>
+      <h3>V3 — Violet Text</h3>
     </div>
     <div class="poster poster-v3v">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/seg-bust.png" alt="">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/seg-robotic-hand.png" alt="">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/seg-wireframe-hand.png" alt="">
+      <img class="v3-fg" src="/Users/erniesg/Downloads/figure-only.png" alt="">
       <div class="details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
@@ -739,19 +752,18 @@ body.figure-full .poster .figure-fg img {
     </div>
   </article>
 
-  <!-- 10 V3 GRADIENT — dark bg + terminal panel -->
+  <!-- 10 V3 — dark + terminal panel -->
   <article class="poster-card">
     <div class="poster-label">
       <span class="poster-number">10</span>
       <h3>V3 Dark — Terminal Panel</h3>
     </div>
     <div class="poster poster-v3d">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="" style="filter:brightness(0.35) saturate(0.8);">
       <div class="text-behind">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/seg-bust.png" alt="">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/seg-robotic-hand.png" alt="">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/seg-wireframe-hand.png" alt="">
+      <img class="v3-fg" src="/Users/erniesg/Downloads/figure-only.png" alt="">
       <div class="details">
         <p class="speaker">chen_enjiao.exe</p>
         <p class="date">27.04.26</p>
