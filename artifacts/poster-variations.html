@@ -770,18 +770,21 @@ function fitText() {
   document.querySelectorAll('.poster').forEach(poster => {
     const maxW = poster.clientWidth * 0.93;
     poster.querySelectorAll('.text-behind span').forEach(span => {
-      // Reset to CSS-defined size
+      // Reset
       span.style.fontSize = '';
       span.style.transform = '';
+      // Temporarily inline-block to measure natural width
+      const origDisplay = getComputedStyle(span).display;
+      const origAlign = getComputedStyle(span).textAlign;
       span.style.display = 'inline-block';
       span.style.whiteSpace = 'nowrap';
-      // Measure at CSS size
       const currentSize = parseFloat(getComputedStyle(span).fontSize);
       const natural = span.scrollWidth;
-      // Shrink font-size proportionally — preserves letter width:height ratio
       if (natural > maxW) {
         span.style.fontSize = (currentSize * maxW / natural) + 'px';
       }
+      // Restore block display so text-align works
+      span.style.display = 'block';
     });
   });
 }
