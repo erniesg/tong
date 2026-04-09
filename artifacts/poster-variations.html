@@ -373,16 +373,15 @@ body.figure-full .poster .figure-fg img {
   filter: blur(30px) saturate(1.15);
 }
 
-/* v3 fg: centered, constrained — text peeks around edges */
+/* v3 fg: same cover+position as v3-bg so figures align */
 .v3-fg {
   position: absolute;
-  left: 50%;
-  top: 42%;
-  transform: translate(-50%, -50%);
-  width: 80%;
-  height: auto;
-  object-fit: contain;
-  pointer-events: none;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 38%;
+  pointer-events: auto;
   z-index: 3;
 }
 
@@ -599,9 +598,7 @@ body.figure-full .poster .figure-fg img {
       <div class="text-behind">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="">
+      <img class="v3-fg" src="/Users/erniesg/Downloads/figure-only-v2-2x.png" alt="">
       <div class="details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
@@ -624,9 +621,7 @@ body.figure-full .poster .figure-fg img {
       <div class="text-behind">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="">
+      <img class="v3-fg" src="/Users/erniesg/Downloads/figure-only-v2-2x.png" alt="">
       <div class="details">
         <div class="talk-topics">
           <div><div class="topic-bar"></div>Landscape + what's coming</div>
@@ -664,9 +659,7 @@ body.figure-full .poster .figure-fg img {
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="">
+      <img class="v3-fg" src="/Users/erniesg/Downloads/figure-only-v2-2x.png" alt="">
       <div class="details v3-details">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
@@ -687,9 +680,7 @@ body.figure-full .poster .figure-fg img {
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="">
+      <img class="v3-fg" src="/Users/erniesg/Downloads/figure-only-v2-2x.png" alt="">
       <div class="details v3-details">
         <div class="talk-topics">
           <div><div class="topic-bar"></div>Landscape + what's coming</div>
