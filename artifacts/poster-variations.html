@@ -875,6 +875,65 @@ body.figure-full .poster .figure-fg img {
   width: 92%;
 }
 
+.gallery.is-curated > :not(.keep-gallery):not(.keep-divider) {
+  display: none;
+}
+
+.v3-details.is-event-first .speaker {
+  margin-top: 0;
+}
+.v3-details.is-event-first .date {
+  margin-top: -2px;
+}
+.v3-details.is-event-first .time {
+  margin-top: -2px;
+}
+.v3-details.is-event-first .talk-topics {
+  margin-top: 12px;
+}
+
+.poster-v3-night-circuit .v3-details .speaker,
+.poster-v3-noir-circuit .v3-details .speaker {
+  color: oklch(0.9 0.018 220 / 0.88);
+}
+.poster-v3-night-circuit .v3-details .date,
+.poster-v3-noir-circuit .v3-details .date {
+  color: oklch(0.97 0.008 190);
+}
+.poster-v3-night-circuit .v3-details .time,
+.poster-v3-noir-circuit .v3-details .time {
+  color: oklch(0.88 0.016 210 / 0.84);
+}
+.poster-v3-night-circuit .v3-details .talk-topics,
+.poster-v3-noir-circuit .v3-details .talk-topics {
+  color: oklch(0.94 0.022 215);
+  text-shadow:
+    0 0 14px oklch(0.3 0.06 220 / 0.12),
+    0 1px 10px oklch(0.01 0.002 285 / 0.48);
+}
+.poster-v3-night-circuit .v3-details .talk-topics .topic-demo,
+.poster-v3-noir-circuit .v3-details .talk-topics .topic-demo {
+  color: oklch(0.9 0.018 200 / 0.92);
+  opacity: 1;
+}
+.poster-v3-night-circuit .v3-details .talk-topics .topic-track .track-segment,
+.poster-v3-noir-circuit .v3-details .talk-topics .topic-track .track-segment {
+  background: linear-gradient(90deg, transparent 0%, color-mix(in oklab, currentColor 72%, white) 18%, currentColor 100%);
+  opacity: 0.62;
+}
+.poster-v3-night-circuit .v3-details .talk-topics .topic-track .track-segment.is-middle,
+.poster-v3-noir-circuit .v3-details .talk-topics .topic-track .track-segment.is-middle {
+  background: currentColor;
+}
+.poster-v3-night-circuit .v3-details .talk-topics .topic-track .track-segment.is-end,
+.poster-v3-noir-circuit .v3-details .talk-topics .topic-track .track-segment.is-end {
+  background: linear-gradient(90deg, currentColor 0%, color-mix(in oklab, currentColor 72%, white) 82%, transparent 100%);
+}
+.poster-v3-night-circuit .v3-details .talk-topics .topic-track .track-break::before,
+.poster-v3-noir-circuit .v3-details .talk-topics .topic-track .track-break::before {
+  opacity: 0.98;
+}
+
 /* 10: V3 dark — Michroma/Rajdhani (Steel font, no terminal panel) */
 .poster-v3ds {
   background: oklch(0.08 0.02 300);
@@ -946,7 +1005,7 @@ body.figure-full .poster .figure-fg img {
 
 <!-- Reusable platform icons snippet -->
 
-<div class="gallery">
+<div class="gallery is-curated">
 
   <div class="section-divider">
     <h2>Chrome Direction</h2>
@@ -1357,7 +1416,12 @@ body.figure-full .poster .figure-fg img {
     </div>
   </article>
 
-  <article class="poster-card">
+  <div class="section-divider keep-divider">
+    <h2>Night Frame</h2>
+    <p>Dark-room direction with the line system and event block treated as the main poster structure.</p>
+  </div>
+
+  <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">24</span><h3>Night Frame — Narrow Slit</h3></div>
     <div class="poster poster-v3-night">
       <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
@@ -1380,7 +1444,7 @@ body.figure-full .poster .figure-fg img {
     </div>
   </article>
 
-  <article class="poster-card">
+  <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">25</span><h3>Night Frame — Chapter Capsule</h3></div>
     <div class="poster poster-v3-night">
       <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
@@ -1403,12 +1467,12 @@ body.figure-full .poster .figure-fg img {
     </div>
   </article>
 
-  <div class="section-divider">
+  <div class="section-divider keep-divider">
     <h2>Black Bg + Panel Variations</h2>
     <p>Same dark composition, same chapter capsule, only the panel logic changes.</p>
   </div>
 
-  <article class="poster-card">
+  <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">26</span><h3>Black Field — Bare</h3></div>
     <div class="poster poster-v3-noir">
       <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
@@ -1431,7 +1495,7 @@ body.figure-full .poster .figure-fg img {
     </div>
   </article>
 
-  <article class="poster-card">
+  <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">27</span><h3>Black Field — Smoke Panel</h3></div>
     <div class="poster poster-v3-noir poster-v3-noir-softpanel">
       <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
@@ -1454,7 +1518,7 @@ body.figure-full .poster .figure-fg img {
     </div>
   </article>
 
-  <article class="poster-card">
+  <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">28</span><h3>Black Field — Horizon Band</h3></div>
     <div class="poster poster-v3-noir poster-v3-noir-band">
       <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
@@ -1477,7 +1541,7 @@ body.figure-full .poster .figure-fg img {
     </div>
   </article>
 
-  <article class="poster-card">
+  <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">29</span><h3>Black Field — Thin Frame</h3></div>
     <div class="poster poster-v3-noir poster-v3-noir-frame">
       <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
@@ -1496,6 +1560,103 @@ body.figure-full .poster .figure-fg img {
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
+      </div>
+    </div>
+  </article>
+
+  <div class="section-divider keep-divider">
+    <h2>Feedback Iterations</h2>
+    <p>Applying the latest notes: event block first, line below, less solid markers, more symmetry, and a cyan-white sci-fi accent.</p>
+  </div>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">30</span><h3>Night Frame — Event First</h3></div>
+    <div class="poster poster-v3-night">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;opacity:0.94;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;opacity:0.94;">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;opacity:0.9;">
+      <div class="details v3-details is-event-first">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-slit">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">31</span><h3>Night Frame — Symmetry + Circuit Tint</h3></div>
+    <div class="poster poster-v3-night poster-v3-night-circuit">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:31%;width:57%;height:auto;opacity:0.96;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;opacity:0.95;">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:73%;width:50%;height:auto;opacity:0.94;">
+      <div class="details v3-details is-event-first">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-slit">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">32</span><h3>Black Field — Smoke Panel Event First</h3></div>
+    <div class="poster poster-v3-noir poster-v3-noir-softpanel">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:34%;width:57%;height:auto;opacity:0.95;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;opacity:0.94;">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:75%;width:50%;height:auto;opacity:0.92;">
+      <div class="details v3-details is-event-first">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-slit">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">33</span><h3>Black Field — Thin Frame Circuit</h3></div>
+    <div class="poster poster-v3-noir poster-v3-noir-frame poster-v3-noir-circuit">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:30%;width:57%;height:auto;opacity:0.97;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;opacity:0.95;">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:71%;width:50%;height:auto;opacity:0.95;">
+      <div class="details v3-details is-event-first">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-slit">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
       </div>
     </div>
   </article>
