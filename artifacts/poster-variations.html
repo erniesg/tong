@@ -140,6 +140,62 @@ body {
   pointer-events: auto;
   object-fit: contain;
 }
+.poster .piece-glass-hand {
+  z-index: 15;
+  background:
+    radial-gradient(circle at 24% 22%, oklch(0.99 0.008 70 / 0.12), transparent 24%),
+    radial-gradient(circle at 68% 56%, oklch(0.74 0.03 300 / 0.05), transparent 30%),
+    linear-gradient(135deg, oklch(0.97 0.008 70 / 0.08) 0%, oklch(0.9 0.01 250 / 0.02) 24%, oklch(0.82 0.016 300 / 0.1) 48%, oklch(0.95 0.008 70 / 0.02) 72%, oklch(0.92 0.012 260 / 0.12) 100%);
+  border-radius: 0;
+  opacity: 0.72;
+  filter:
+    drop-shadow(0 10px 18px oklch(0.02 0.004 305 / 0.14))
+    drop-shadow(0 0 18px oklch(0.82 0.02 260 / 0.08));
+  backdrop-filter: blur(10px) saturate(1.14);
+  -webkit-backdrop-filter: blur(10px) saturate(1.14);
+  mix-blend-mode: screen;
+  -webkit-mask-image: url('/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png');
+  mask-image: url('/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png');
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+.poster .piece-glass-underlay {
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0.12;
+  filter: saturate(0.62) brightness(0.8) contrast(1.06);
+}
+.poster .piece-glass-hand::before,
+.poster .piece-glass-hand::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: inherit;
+  mask-image: inherit;
+  -webkit-mask-repeat: inherit;
+  mask-repeat: inherit;
+  -webkit-mask-size: inherit;
+  mask-size: inherit;
+  -webkit-mask-position: inherit;
+  mask-position: inherit;
+}
+.poster .piece-glass-hand::before {
+  background:
+    linear-gradient(180deg, oklch(0.99 0.006 70 / 0.22), transparent 28%),
+    linear-gradient(105deg, transparent 0 30%, oklch(0.99 0.006 70 / 0.16) 44%, transparent 56% 100%);
+  mix-blend-mode: screen;
+  opacity: 0.68;
+}
+.poster .piece-glass-hand::after {
+  background:
+    linear-gradient(135deg, oklch(0.72 0.03 300 / 0.12), transparent 40%),
+    linear-gradient(315deg, transparent 0 54%, oklch(0.96 0.008 70 / 0.12) 68%, transparent 82%);
+  opacity: 0.54;
+}
 
 .poster .details { position: absolute; z-index: 4; }
 .poster .overlay { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
@@ -750,7 +806,6 @@ body.figure-full .poster .figure-fg img {
   filter: blur(24px) saturate(0.75) brightness(0.42);
   opacity: 0.78;
 }
-.poster-v3-night .v3-text { z-index: 3; }
 .poster-v3-night .v3-text span { color: oklch(0.93 0.006 60); }
 .poster-v3-night .v3-details {
   bottom: 2%; left: 3%; right: 3%;
@@ -806,7 +861,6 @@ body.figure-full .poster .figure-fg img {
   filter: blur(26px) saturate(0.42) brightness(0.28);
   opacity: 0.58;
 }
-.poster-v3-noir .v3-text { z-index: 3; }
 .poster-v3-noir .v3-text span { color: oklch(0.94 0.004 70); }
 .poster-v3-noir .v3-details {
   bottom: 2.4%;
@@ -875,6 +929,92 @@ body.figure-full .poster .figure-fg img {
     0 18px 38px oklch(0.02 0.005 305 / 0.34);
 }
 .poster-v3-night-band .v3-details .speaker { margin-top: 8px; }
+
+.poster-v3-bustforward .piece-bust {
+  z-index: 15 !important;
+}
+.poster-v3-bustforward .piece-robo {
+  z-index: 7 !important;
+  opacity: 0.42 !important;
+  filter: saturate(0.58) brightness(0.78);
+}
+.poster-v3-bustforward .piece-wire {
+  z-index: 7 !important;
+  opacity: 0.52 !important;
+}
+.poster-v3-bustforward .v3-text .l1,
+.poster-v3-bustforward .v3-text .l2,
+.poster-v3-bustforward .v3-text .l4,
+.poster-v3-bustforward .v3-text .l5 {
+  z-index: 8 !important;
+  opacity: 0.72;
+}
+.poster-v3-bustforward .v3-text .l3 {
+  z-index: 11 !important;
+  opacity: 0.9;
+}
+
+.poster-v3-overlapwindow .piece-bust {
+  z-index: 14 !important;
+}
+.poster-v3-overlapwindow .piece-robo {
+  z-index: 7 !important;
+  opacity: 0.38 !important;
+  filter: saturate(0.56) brightness(0.76);
+}
+.poster-v3-overlapwindow .piece-wire {
+  z-index: 7 !important;
+  opacity: 0.48 !important;
+}
+.poster-v3-overlapwindow .v3-text .l1,
+.poster-v3-overlapwindow .v3-text .l2,
+.poster-v3-overlapwindow .v3-text .l4,
+.poster-v3-overlapwindow .v3-text .l5 {
+  z-index: 8 !important;
+  opacity: 0.68;
+}
+.poster-v3-overlapwindow .v3-text .l3 {
+  z-index: 16 !important;
+  opacity: 0.98;
+  text-shadow: 0 0 18px oklch(0.98 0.008 60 / 0.08);
+}
+
+.piece-bust-halo {
+  z-index: 12 !important;
+  pointer-events: none;
+  background: color-mix(in oklab, oklch(0.11 0.018 305) 84%, black);
+  opacity: 0.98;
+  filter: blur(18px);
+  -webkit-mask-image: url('/Users/erniesg/Downloads/sam3-bust-head-0-masked.png');
+  mask-image: url('/Users/erniesg/Downloads/sam3-bust-head-0-masked.png');
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  mask-position: center;
+  transform: scale(1.04);
+}
+.poster-v3-knockout .piece-bust {
+  z-index: 14 !important;
+}
+.poster-v3-knockout .piece-robo {
+  z-index: 7 !important;
+  opacity: 0.34 !important;
+  filter: saturate(0.52) brightness(0.74);
+}
+.poster-v3-knockout .piece-wire {
+  z-index: 7 !important;
+  opacity: 0.44 !important;
+}
+.poster-v3-knockout .v3-text .l1,
+.poster-v3-knockout .v3-text .l2,
+.poster-v3-knockout .v3-text .l3,
+.poster-v3-knockout .v3-text .l4,
+.poster-v3-knockout .v3-text .l5 {
+  z-index: 8 !important;
+  opacity: 0.84;
+}
 
 .poster-v3-noir-frame .v3-details {
   left: 6%;
@@ -1619,6 +1759,105 @@ body.figure-full .poster .figure-fg img {
       <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:18%;top:27%;width:62%;height:auto;opacity:1;">
       <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
       <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:-2%;top:77%;width:46%;height:auto;opacity:0.78;">
+      <div class="details v3-details is-event-first">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">38</span><h3>Night Frame — Masked Glass Hand</h3></div>
+    <div class="poster poster-v3-night poster-v3-night-band">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:18%;top:27%;width:62%;height:auto;opacity:1;">
+      <img class="piece piece-robo piece-glass-underlay" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;">
+      <div class="piece piece-robo piece-glass-hand" style="left:59.5%;top:-1.5%;width:41.2%;height:20.4%;"></div>
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:-2%;top:77%;width:46%;height:auto;opacity:0.78;">
+      <div class="details v3-details is-event-first">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <div class="section-divider keep-divider">
+    <h2>Composition Studies</h2>
+    <p>Three stricter bust/type relationships: bust-forward, one intentional overlap window, and a soft knockout halo that clears the type around the sculpture.</p>
+  </div>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">39</span><h3>Bust-Forward Editorial</h3></div>
+    <div class="poster poster-v3-night poster-v3-night-band poster-v3-bustforward">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:17%;top:25%;width:64%;height:auto;opacity:1;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:62%;top:-2%;width:38%;height:auto;">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:-4%;top:79%;width:42%;height:auto;">
+      <div class="details v3-details is-event-first">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">40</span><h3>Single Overlap Window</h3></div>
+    <div class="poster poster-v3-night poster-v3-night-band poster-v3-overlapwindow">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:18%;top:27%;width:62%;height:auto;opacity:1;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:60%;top:-1%;width:37%;height:auto;">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:-3%;top:78%;width:43%;height:auto;">
+      <div class="details v3-details is-event-first">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">41</span><h3>Knockout Halo Type</h3></div>
+    <div class="poster poster-v3-night poster-v3-night-band poster-v3-knockout">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <div class="piece piece-bust piece-bust-halo" style="left:18%;top:27%;width:62%;height:50.5%;"></div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:18%;top:27%;width:62%;height:auto;opacity:1;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:60%;top:-1%;width:37%;height:auto;">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:-3%;top:78%;width:43%;height:auto;">
       <div class="details v3-details is-event-first">
         <p class="speaker">Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
