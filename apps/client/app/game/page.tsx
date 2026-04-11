@@ -263,10 +263,15 @@ function buildContextBlock(
   return `[HANGOUT_CONTEXT]${ctx}[/HANGOUT_CONTEXT] `;
 }
 
-/** Find the weakest language (lowest slider value), breaking ties left-to-right. */
-function getWeakestLangIndex(sliders: [number, number, number]): number {
-  let minIdx = 0;
-  for (let i = 1; i < sliders.length; i++) {
+function getWeakestSelectedLangIndex(
+  sliders: [number, number, number],
+  selected: [boolean, boolean, boolean],
+): number {
+  const firstSelectedIdx = selected.findIndex(Boolean);
+  if (firstSelectedIdx === -1) return 0;
+  let minIdx = firstSelectedIdx;
+  for (let i = 0; i < sliders.length; i++) {
+    if (!selected[i]) continue;
     if (sliders[i] < sliders[minIdx]) minIdx = i;
   }
   return minIdx;
@@ -395,6 +400,7 @@ export default function GamePage() {
 
   /* proficiency sliders (0-6 each, maps directly to GAME_LEVELS) */
   const [sliders, setSliders] = useState<[number, number, number]>([0, 0, 0]);
+  const [selectedLanguages, setSelectedLanguages] = useState<[boolean, boolean, boolean]>([true, true, true]);
 
   /* hangout state */
   const [loading, setLoading] = useState(false);
@@ -575,8 +581,11 @@ export default function GamePage() {
     setError('');
     setLoading(true);
 
-    const weakIdx = getWeakestLangIndex(sliders);
-    const primaryLang = LANG_KEYS[weakIdx] as 'ko' | 'ja' | 'zh';
+    const weakIdx = getWeakestSelectedLangIndex(sliders, selectedLanguages);
+    const primaryLang = LANG_LABELS[weakIdx]?.key ?? 'ko';
+    const targetLanguages = LANG_LABELS
+      .map((lang, idx) => (selectedLanguages[idx] ? lang.key : null))
+      .filter((lang): lang is 'ko' | 'ja' | 'zh' => lang !== null);
 
     const weakLevel = sliders[weakIdx];
     const preferredCity = (LANG_TO_CITY[primaryLang] ?? 'seoul') as CityId;
@@ -676,11 +685,11 @@ export default function GamePage() {
         city: primaryCity,
         profile: {
           nativeLanguage: 'en',
-          targetLanguages: ['ko', 'ja', 'zh'],
+          targetLanguages: targetLanguages.length > 0 ? targetLanguages : ['ko'],
           proficiency: {
-            ko: SLIDER_TO_LEVEL[sliders[2]] ?? 'none',
-            ja: SLIDER_TO_LEVEL[sliders[1]] ?? 'none',
-            zh: SLIDER_TO_LEVEL[sliders[0]] ?? 'none',
+            ko: selectedLanguages[2] ? (SLIDER_TO_LEVEL[sliders[2]] ?? 'none') : 'none',
+            ja: selectedLanguages[1] ? (SLIDER_TO_LEVEL[sliders[1]] ?? 'none') : 'none',
+            zh: selectedLanguages[0] ? (SLIDER_TO_LEVEL[sliders[0]] ?? 'none') : 'none',
           },
         },
         preferRomance: true,
@@ -1855,12 +1864,33 @@ export default function GamePage() {
               <div className="tg-trainee-profile">
                 <div className="tg-tong-intro-subtitle" style={{ position: 'relative', bottom: 'auto', padding: 0, background: 'none' }}>
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
-                  <p className="dialogue-text">How familiar are you with these?</p>
+                  <p className="dialogue-text">Pick the languages you want to learn first, then set your level.</p>
+                </div>
+                <div className="proficiency-panel" style={{ marginTop: 12, gap: 8 }}>
+                  {LANG_LABELS.map((lang, idx) => (
+                    <label
+                      key={`${lang.key}-toggle`}
+                      className="proficiency-lang"
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px' }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedLanguages[idx]}
+                        onChange={(e) => {
+                          const next = [...selectedLanguages] as [boolean, boolean, boolean];
+                          next[idx] = e.target.checked;
+                          setSelectedLanguages(next);
+                        }}
+                      />
+                      <span className="proficiency-lang-name">{lang.flag} {lang.name}</span>
+                    </label>
+                  ))}
                 </div>
                 <div className="proficiency-panel" style={{ marginTop: 12 }}>
                   {LANG_LABELS.map((lang, idx) => {
                     const val = sliders[idx];
                     const gameLvl = GAME_LEVELS[val];
+                    const enabled = selectedLanguages[idx];
                     return (
                       <div key={lang.key} className="proficiency-lang">
                         <div className="proficiency-lang-header">
@@ -1868,7 +1898,7 @@ export default function GamePage() {
                             {lang.flag} {lang.name}
                           </span>
                           <span className="proficiency-lang-level">
-                            {gameLvl.name}
+                            {enabled ? gameLvl.name : 'Not selected'}
                           </span>
                         </div>
                         <input
@@ -1877,10 +1907,13 @@ export default function GamePage() {
                           max={6}
                           step={1}
                           value={val}
+                          disabled={!enabled}
                           onChange={(e) => handleSlider(idx, Number(e.target.value))}
                           className="proficiency-slider"
                         />
-                        <p className="proficiency-desc">Lv.{gameLvl.level} — {gameLvl.desc}</p>
+                        <p className="proficiency-desc">
+                          {enabled ? `Lv.${gameLvl.level} — ${gameLvl.desc}` : 'Enable this language to include it in your journey.'}
+                        </p>
                       </div>
                     );
                   })}
@@ -1913,6 +1946,7 @@ export default function GamePage() {
                   <button
                     className="tg-menu-btn-primary"
                     onClick={handleLanguageNext}
+                    disabled={!selectedLanguages.some(Boolean)}
                     style={{ flex: 1, padding: '14px 22px', fontSize: 16 }}
                   >
                     Next
