@@ -860,16 +860,19 @@ body.figure-full .poster .figure-fg img {
 .poster-v3-noir-band .v3-details .speaker { margin-top: 8px; }
 
 .poster-v3-night-band .v3-details {
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 14px 26px 14px;
+  left: 4%;
+  right: 4%;
+  bottom: 3.2%;
+  padding: 14px 20px 8px;
   background:
-    linear-gradient(180deg, oklch(0.15 0.01 300 / 0.03), oklch(0.08 0.008 300 / 0.6) 24%, oklch(0.06 0.008 300 / 0.84) 100%);
-  border-top: 1px solid oklch(0.88 0.008 60 / 0.1);
-  border-radius: 0;
+    linear-gradient(180deg, oklch(0.17 0.012 300 / 0.08), oklch(0.1 0.01 300 / 0.22) 18%, oklch(0.07 0.008 300 / 0.72) 62%, oklch(0.06 0.008 300 / 0.86) 100%);
+  border: 1px solid oklch(0.88 0.008 60 / 0.1);
+  border-top-color: oklch(0.92 0.01 60 / 0.18);
+  border-radius: 18px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 -18px 48px oklch(0.02 0.005 305 / 0.32);
+  box-shadow:
+    inset 0 1px 0 oklch(0.92 0.01 60 / 0.08),
+    0 18px 38px oklch(0.02 0.005 305 / 0.34);
 }
 .poster-v3-night-band .v3-details .speaker { margin-top: 8px; }
 
@@ -1568,7 +1571,7 @@ body.figure-full .poster .figure-fg img {
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
       <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;opacity:0.94;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:61%;top:3%;width:39%;height:auto;opacity:0.94;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:61%;top:3%;width:39%;height:auto;opacity:0.42;filter:saturate(0.58) brightness(0.78);">
       <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;opacity:0.9;">
       <div class="details v3-details is-event-first">
         <p class="speaker">Chen Enjiao (Ernie)</p>
@@ -1614,7 +1617,7 @@ body.figure-full .poster .figure-fg img {
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
       <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:18%;top:27%;width:62%;height:auto;opacity:1;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:67%;top:-1%;width:31%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
       <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:-2%;top:77%;width:46%;height:auto;opacity:0.78;">
       <div class="details v3-details is-event-first">
         <p class="speaker">Chen Enjiao (Ernie)</p>
@@ -1713,6 +1716,54 @@ body.figure-full .poster .figure-fg img {
 .piece.selected { outline: 2px solid oklch(0.7 0.2 155); outline-offset: 2px; cursor: grab; }
 .piece.dragging { cursor: grabbing; }
 .piece { cursor: pointer; }
+.piece-selection {
+  position: fixed;
+  border: 1px solid oklch(0.72 0.19 155 / 0.95);
+  box-shadow: 0 0 0 1px oklch(0.08 0.01 260 / 0.65);
+  pointer-events: none;
+  z-index: 9998;
+  display: none;
+}
+.piece-selection.visible { display: block; }
+.piece-handle {
+  position: absolute;
+  background: oklch(0.78 0.2 155);
+  border: 1px solid oklch(0.08 0.01 260 / 0.8);
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px oklch(0.08 0.01 260 / 0.24);
+  pointer-events: auto;
+}
+.piece-handle[data-dir="n"],
+.piece-handle[data-dir="s"] {
+  width: 22px;
+  height: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+.piece-handle[data-dir="e"],
+.piece-handle[data-dir="w"] {
+  width: 8px;
+  height: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+.piece-handle[data-dir="n"] { top: -5px; }
+.piece-handle[data-dir="s"] { bottom: -5px; }
+.piece-handle[data-dir="e"] { right: -5px; }
+.piece-handle[data-dir="w"] { left: -5px; }
+.piece-handle[data-dir="ne"],
+.piece-handle[data-dir="nw"],
+.piece-handle[data-dir="se"],
+.piece-handle[data-dir="sw"] {
+  width: 12px;
+  height: 12px;
+}
+.piece-handle[data-dir="nw"] { top: -6px; left: -6px; cursor: nwse-resize; }
+.piece-handle[data-dir="ne"] { top: -6px; right: -6px; cursor: nesw-resize; }
+.piece-handle[data-dir="sw"] { bottom: -6px; left: -6px; cursor: nesw-resize; }
+.piece-handle[data-dir="se"] { bottom: -6px; right: -6px; cursor: nwse-resize; }
 .piece-info {
   position: fixed; bottom: 12px; left: 12px;
   background: oklch(0.12 0.01 260 / 0.92);
@@ -1830,9 +1881,26 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
   info.className = 'piece-info';
   document.body.appendChild(info);
 
+  const selection = document.createElement('div');
+  selection.className = 'piece-selection';
+  selection.innerHTML = `
+    <span class="piece-handle" data-dir="n"></span>
+    <span class="piece-handle" data-dir="e"></span>
+    <span class="piece-handle" data-dir="s"></span>
+    <span class="piece-handle" data-dir="w"></span>
+    <span class="piece-handle" data-dir="nw"></span>
+    <span class="piece-handle" data-dir="ne"></span>
+    <span class="piece-handle" data-dir="sw"></span>
+    <span class="piece-handle" data-dir="se"></span>
+  `;
+  document.body.appendChild(selection);
+
   let selected = null;
   let dragging = false;
+  let resizing = false;
+  let resizeDir = '';
   let startX, startY, startLeft, startTop;
+  let startWidth, startHeight, startRight, startBottom, aspectRatio;
   let editMode = 'pieces'; // 'pieces' or 'text'
 
   // Mode toggle: pieces mode raises pieces above text for clicking
@@ -1863,7 +1931,11 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
   }
 
   function updateInfo() {
-    if (!selected) { info.classList.remove('visible'); return; }
+    if (!selected) {
+      info.classList.remove('visible');
+      selection.classList.remove('visible');
+      return;
+    }
     const poster = selected.closest('.poster');
     const pw = poster.clientWidth, ph = poster.clientHeight;
     const r = selected.getBoundingClientRect();
@@ -1875,12 +1947,52 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     const name = selected.classList.contains('piece-bust') ? 'BUST' :
                  selected.classList.contains('piece-robo') ? 'ROBOTIC HAND' : 'WIREFRAME HAND';
     const z = parseInt(getComputedStyle(selected).zIndex) || 0;
-    info.innerHTML = `<b>${name}</b><br>left: ${leftPct}% &nbsp; top: ${topPct}%<br>width: ${widthPct}% &nbsp; rotate: ${rot.toFixed(1)}° &nbsp; z: ${z}<br><span style="opacity:0.5">drag=move · scroll=resize · shift+scroll=rotate · [/]=z-index</span>`;
+    info.innerHTML = `<b>${name}</b><br>left: ${leftPct}% &nbsp; top: ${topPct}%<br>width: ${widthPct}% &nbsp; rotate: ${rot.toFixed(1)}° &nbsp; z: ${z}<br><span style="opacity:0.5">drag=move · handles=resize · scroll=resize · shift+scroll=rotate · [/]=z-index</span>`;
     info.classList.add('visible');
+    selection.style.left = `${r.left}px`;
+    selection.style.top = `${r.top}px`;
+    selection.style.width = `${r.width}px`;
+    selection.style.height = `${r.height}px`;
+    selection.classList.add('visible');
   }
 
   // Click to select
   document.addEventListener('mousedown', e => {
+    const handle = e.target.closest('.piece-handle');
+    if (handle && selected) {
+      const piece = selected;
+      const poster = piece.closest('.poster');
+      const posterRect = poster.getBoundingClientRect();
+      const pieceRect = piece.getBoundingClientRect();
+      const naturalRatio = piece.naturalWidth && piece.naturalHeight
+        ? piece.naturalWidth / piece.naturalHeight
+        : (pieceRect.width / Math.max(pieceRect.height, 1));
+
+      resizing = true;
+      dragging = false;
+      resizeDir = handle.dataset.dir || '';
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = piece.offsetLeft;
+      startTop = piece.offsetTop;
+      startWidth = piece.offsetWidth;
+      startHeight = piece.offsetHeight;
+      startRight = poster.clientWidth - startLeft - startWidth;
+      startBottom = poster.clientHeight - startTop - startHeight;
+      aspectRatio = naturalRatio || 1;
+
+      piece.style.position = 'absolute';
+      piece.style.right = 'auto';
+      piece.style.bottom = 'auto';
+      piece.style.left = startLeft + 'px';
+      piece.style.top = startTop + 'px';
+
+      e.preventDefault();
+      e.stopPropagation();
+      updateInfo();
+      return;
+    }
+
     const piece = e.target.closest('.piece');
     if (selected) selected.classList.remove('selected');
     if (!piece) { selected = null; updateInfo(); return; }
@@ -1908,6 +2020,48 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
   });
 
   document.addEventListener('mousemove', e => {
+    if (resizing && selected) {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      const poster = selected.closest('.poster');
+      let nextLeft = startLeft;
+      let nextTop = startTop;
+      let nextWidth = startWidth;
+      let nextHeight = startHeight;
+
+      const horizontal = resizeDir.includes('e') ? dx : resizeDir.includes('w') ? -dx : 0;
+      const vertical = resizeDir.includes('s') ? dy : resizeDir.includes('n') ? -dy : 0;
+      let sizeDelta = horizontal;
+
+      if (!resizeDir.includes('e') && !resizeDir.includes('w')) {
+        sizeDelta = vertical * aspectRatio;
+      } else if (resizeDir.includes('n') || resizeDir.includes('s')) {
+        sizeDelta = (horizontal + vertical * aspectRatio) / 2;
+      }
+
+      nextWidth = Math.max(50, startWidth + sizeDelta);
+      nextHeight = nextWidth / aspectRatio;
+
+      if (resizeDir.includes('w')) nextLeft = startLeft + (startWidth - nextWidth);
+      if (resizeDir.includes('n')) nextTop = startTop + (startHeight - nextHeight);
+      if (!resizeDir.includes('n') && !resizeDir.includes('s') && (resizeDir.includes('e') || resizeDir.includes('w'))) {
+        nextTop = startTop + (startHeight - nextHeight) / 2;
+      }
+      if (!resizeDir.includes('e') && !resizeDir.includes('w') && (resizeDir.includes('n') || resizeDir.includes('s'))) {
+        nextLeft = startLeft + (startWidth - nextWidth) / 2;
+      }
+
+      nextLeft = Math.min(Math.max(nextLeft, -poster.clientWidth), poster.clientWidth * 2);
+      nextTop = Math.min(Math.max(nextTop, -poster.clientHeight), poster.clientHeight * 2);
+
+      selected.style.left = `${nextLeft}px`;
+      selected.style.top = `${nextTop}px`;
+      selected.style.width = `${nextWidth}px`;
+      selected.style.height = 'auto';
+      updateInfo();
+      return;
+    }
+
     if (!dragging || !selected) return;
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
@@ -1919,6 +2073,8 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
   document.addEventListener('mouseup', () => {
     if (selected) selected.classList.remove('dragging');
     dragging = false;
+    resizing = false;
+    resizeDir = '';
   });
 
   // Scroll to resize, shift+scroll to rotate
