@@ -506,10 +506,7 @@ body.figure-full .poster .figure-fg img {
 .talk-topics {
   position: relative;
   display: grid;
-  grid-template-columns:
-    minmax(0, var(--topic-1, 15fr))
-    minmax(0, var(--topic-2, 25fr))
-    minmax(0, var(--topic-3, 20fr));
+  grid-template-columns: 1fr 3fr 1fr;
   align-items: start;
   gap: 12px;
   padding-top: 22px;
@@ -930,10 +927,17 @@ body.figure-full .poster .figure-fg img {
     linear-gradient(180deg, oklch(0.1 0.005 285 / 0.12), oklch(0.06 0.004 285 / 0.38) 40%, oklch(0.04 0.003 285 / 0.72) 100%);
   border-top: none;
   border-radius: 0;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(9px);
   box-shadow: 0 -18px 48px oklch(0.01 0.002 285 / 0.34);
 }
+.poster-v3-noir-band .text-behind .l5 { z-index: 3; }
 .poster-v3-noir-band .v3-details .speaker { margin-top: 8px; }
+
+.poster-v3-noir-band-nametop .v3-details { display: flex; flex-direction: column; }
+.poster-v3-noir-band-nametop .v3-details .speaker { order: -3; margin-top: 0; margin-bottom: 2px; }
+.poster-v3-noir-band-nametop .v3-details .date { order: -2; }
+.poster-v3-noir-band-nametop .v3-details .time { order: -1; margin-bottom: 10px; }
+.poster-v3-noir-band-nametop .v3-details .talk-topics { order: 0; }
 
 .poster-v3-night-band .v3-details {
   left: 4%;
@@ -1099,6 +1103,121 @@ body.figure-full .poster .figure-fg img {
 <!-- Reusable platform icons snippet -->
 
 <div class="gallery is-curated">
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">28b</span><h3>Black Field — Name Top</h3></div>
+    <div class="poster poster-v3-noir poster-v3-noir-band poster-v3-noir-band-nametop">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <div class="details v3-details">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">28r</span><h3>Name Top — Rounded Inset</h3></div>
+    <div class="poster poster-v3-noir poster-v3-noir-softpanel poster-v3-noir-band-nametop">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <div class="details v3-details">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">28f</span><h3>Name Top — Rect Inset</h3></div>
+    <div class="poster poster-v3-noir poster-v3-noir-frame poster-v3-noir-band-nametop">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <div class="details v3-details">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">28n</span><h3>Name Top — Night Frame</h3></div>
+    <div class="poster poster-v3-night poster-v3-noir-band-nametop">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <div class="details v3-details">
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">28a</span><h3>Black Field — Topics Top</h3></div>
+    <div class="poster poster-v3-noir poster-v3-noir-band">
+      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <div class="details v3-details">
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+        </div>
+        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+      </div>
+    </div>
+  </article>
 
   <div class="section-divider">
     <h2>Chrome Direction</h2>
@@ -1566,37 +1685,14 @@ body.figure-full .poster .figure-fg img {
   </article>
 
   <article class="poster-card keep-gallery">
-    <div class="poster-label"><span class="poster-number">28</span><h3>Black Field — Horizon Band</h3></div>
-    <div class="poster poster-v3-noir poster-v3-noir-band">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
-      <div class="text-behind v3-text">
-        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
-      </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
-      <div class="details v3-details">
-        <div class="talk-topics is-capsule">
-          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
-          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
-        </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
-        <p class="date">27 April</p>
-        <p class="time">3:00 — 4:00 PM</p>
-      </div>
-    </div>
-  </article>
-
-  <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">29</span><h3>Black Field — Thin Frame</h3></div>
     <div class="poster poster-v3-noir poster-v3-noir-frame">
       <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
       <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-capsule">
@@ -1927,6 +2023,24 @@ body.figure-full .poster .figure-fg img {
   border: 1px solid oklch(0.3 0.01 260);
 }
 .piece-info.visible { display: block; }
+.snap-guide {
+  position: absolute;
+  background: oklch(0.65 0.25 155);
+  pointer-events: none;
+  z-index: 9990;
+  display: none;
+}
+.snap-guide.visible { display: block; }
+.snap-guide-h {
+  height: 1px;
+  left: 0; right: 0;
+  box-shadow: 0 0 4px oklch(0.65 0.25 155 / 0.6);
+}
+.snap-guide-v {
+  width: 1px;
+  top: 0; bottom: 0;
+  box-shadow: 0 0 4px oklch(0.65 0.25 155 / 0.6);
+}
 </style>
 
 <script>
@@ -1962,9 +2076,8 @@ function syncTopicDurations() {
       return Number.isFinite(minutes) && minutes > 0 ? minutes : 0;
     });
 
-    durations.forEach((minutes, index) => {
-      if (minutes > 0) topics.style.setProperty(`--topic-${index + 1}`, `${minutes}fr`);
-    });
+    // Grid columns are fixed at 1fr 3fr 1fr (20/60/20)
+    // Duration values only drive track-bar segment positions
 
     let track = topics.querySelector(':scope > .topic-track');
     if (!track) {
@@ -1983,17 +2096,12 @@ function syncTopicDurations() {
       topics.prepend(track);
     }
 
-    const total = durations.reduce((sum, value) => sum + value, 0);
-    if (!total) return;
-
-    const breakPositions = [
-      durations[0] / total,
-      (durations[0] + durations[1]) / total,
-    ];
+    // Fixed 20/60/20 proportions for bar segments
+    const breakPositions = [0.2, 0.8];
     const segmentPositions = [
-      { left: 0, width: breakPositions[0] },
-      { left: breakPositions[0], width: breakPositions[1] - breakPositions[0] },
-      { left: breakPositions[1], width: 1 - breakPositions[1] },
+      { left: 0, width: 0.2 },
+      { left: 0.2, width: 0.6 },
+      { left: 0.8, width: 0.2 },
     ];
 
     [...track.querySelectorAll('.track-break')].forEach((marker, index) => {
@@ -2042,6 +2150,52 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     <span class="piece-handle" data-dir="se"></span>
   `;
   document.body.appendChild(selection);
+
+  // Snap guides
+  const SNAP_THRESHOLD = 6; // px
+  const guideH = document.createElement('div');
+  guideH.className = 'snap-guide snap-guide-h';
+  const guideV = document.createElement('div');
+  guideV.className = 'snap-guide snap-guide-v';
+
+  function showGuides(el) {
+    const poster = el.closest('.poster');
+    if (!poster) return { snapX: null, snapY: null };
+    if (guideH.parentElement !== poster) poster.appendChild(guideH);
+    if (guideV.parentElement !== poster) poster.appendChild(guideV);
+
+    const pw = poster.clientWidth, ph = poster.clientHeight;
+    const cx = pw / 2, cy = ph / 2;
+    const pr = poster.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    const elCx = (er.left + er.width / 2) - pr.left;
+    const elCy = (er.top + er.height / 2) - pr.top;
+
+    let snapX = null, snapY = null;
+
+    if (Math.abs(elCx - cx) < SNAP_THRESHOLD) {
+      guideV.style.left = cx + 'px';
+      guideV.classList.add('visible');
+      snapX = cx - er.width / 2;
+    } else {
+      guideV.classList.remove('visible');
+    }
+
+    if (Math.abs(elCy - cy) < SNAP_THRESHOLD) {
+      guideH.style.top = cy + 'px';
+      guideH.classList.add('visible');
+      snapY = cy - er.height / 2;
+    } else {
+      guideH.classList.remove('visible');
+    }
+
+    return { snapX, snapY };
+  }
+
+  function hideGuides() {
+    guideH.classList.remove('visible');
+    guideV.classList.remove('visible');
+  }
 
   let selected = null;
   let dragging = false;
@@ -2136,12 +2290,16 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     const rot = parseFloat(selected.dataset.rotate) || 0;
     const isPanel = selected.classList.contains('details');
     const blur = isPanel ? getBackdropBlurPx(selected) : getBlurPx(selected);
+    const isText = selected.parentElement && selected.parentElement.classList.contains('text-behind');
     const name = isPanel ? 'PANEL' :
+                 isText ? 'TEXT: ' + selected.textContent :
                  selected.classList.contains('piece-bust') ? 'BUST' :
                  selected.classList.contains('piece-robo') ? 'ROBOTIC HAND' : 'WIREFRAME HAND';
     const z = parseInt(getComputedStyle(selected).zIndex) || 0;
     const controls = isPanel
       ? 'option+scroll=blur · option+↑/↓=blur'
+      : isText
+      ? 'drag=move · [/]=z-index'
       : 'drag=move · handles=resize · scroll=resize · shift+scroll=rotate · option+scroll=blur · option+↑/↓=blur · [/]=z-index';
     info.innerHTML = `<b>${name}</b><br>left: ${leftPct}% &nbsp; top: ${topPct}%<br>width: ${widthPct}% &nbsp; rotate: ${rot.toFixed(1)}° &nbsp; blur: ${blur.toFixed(2)}px &nbsp; z: ${z}<br><span style="opacity:0.5">${controls}</span>`;
     info.classList.add('visible');
@@ -2193,17 +2351,42 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
       return;
     }
 
-    const piece = e.target.closest('.piece, .details');
+    const textSpan = e.target.closest('.text-behind span');
+    const piece = textSpan || e.target.closest('.piece, .details');
     if (!piece) { selectEditable(null); return; }
 
     selectEditable(piece);
     if (piece.classList.contains('details')) {
-      dragging = false;
-      resizing = false;
-      resizeDir = '';
+      dragging = true;
+      piece.classList.add('dragging');
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = piece.offsetLeft;
+      startTop = piece.offsetTop;
+      const w = piece.offsetWidth;
+      piece.style.position = 'absolute';
+      piece.style.right = 'auto';
+      piece.style.bottom = 'auto';
+      piece.style.left = startLeft + 'px';
+      piece.style.top = startTop + 'px';
+      piece.style.width = w + 'px';
       e.preventDefault();
       return;
     }
+
+    if (textSpan) {
+      dragging = true;
+      textSpan.classList.add('dragging');
+      startX = e.clientX;
+      startY = e.clientY;
+      const tx = parseFloat(textSpan.dataset.tx) || 0;
+      const ty = parseFloat(textSpan.dataset.ty) || 0;
+      startLeft = tx;
+      startTop = ty;
+      e.preventDefault();
+      return;
+    }
+
     dragging = true;
     piece.classList.add('dragging');
 
@@ -2270,8 +2453,23 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     if (!dragging || !selected) return;
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
-    selected.style.left = (startLeft + dx) + 'px';
-    selected.style.top = (startTop + dy) + 'px';
+    const isText = selected.parentElement && selected.parentElement.classList.contains('text-behind');
+    if (isText) {
+      const tx = startLeft + dx;
+      const ty = startTop + dy;
+      selected.dataset.tx = tx;
+      selected.dataset.ty = ty;
+      selected.style.transform = `translate(${tx}px, ${ty}px)`;
+      showGuides(selected);
+    } else {
+      let nextLeft = startLeft + dx;
+      let nextTop = startTop + dy;
+      selected.style.left = nextLeft + 'px';
+      selected.style.top = nextTop + 'px';
+      const { snapX, snapY } = showGuides(selected);
+      if (snapX !== null) selected.style.left = snapX + 'px';
+      if (snapY !== null) selected.style.top = snapY + 'px';
+    }
     updateInfo();
   });
 
@@ -2280,6 +2478,7 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     dragging = false;
     resizing = false;
     resizeDir = '';
+    hideGuides();
   });
 
   // Scroll to resize, shift+scroll to rotate
@@ -2381,7 +2580,9 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     const poster = selectedText.closest('.poster');
     const sizeCqw = (size / poster.clientWidth * 100).toFixed(1);
     const z = parseInt(selectedText.style.zIndex) || parseInt(getComputedStyle(selectedText).zIndex) || 0;
-    textInfo.innerHTML = `<b>"${selectedText.textContent}"</b><br>font-size: ${size.toFixed(0)}px (${sizeCqw}cqw) &nbsp; z: ${z}<br><span style="opacity:0.5">scroll=resize · [/]=z-index</span>`;
+    const tx = parseFloat(selectedText.dataset.tx) || 0;
+    const ty = parseFloat(selectedText.dataset.ty) || 0;
+    textInfo.innerHTML = `<b>"${selectedText.textContent}"</b><br>font-size: ${size.toFixed(0)}px (${sizeCqw}cqw) &nbsp; z: ${z}<br>offset: ${tx.toFixed(0)}px, ${ty.toFixed(0)}px<br><span style="opacity:0.5">drag=move · scroll=resize · [/]=z-index</span>`;
     textInfo.classList.add('visible');
   }
 
@@ -2439,42 +2640,102 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     return b;
   }
 
+  function getPosterKey(el) {
+    const card = el.closest('.poster-card');
+    if (!card) return null;
+    const num = card.querySelector('.poster-number');
+    return num ? num.textContent.trim() : null;
+  }
+
+  function getElKey(el, poster) {
+    const siblings = [...poster.querySelectorAll('.piece, .details')];
+    const idx = siblings.indexOf(el);
+    const cls = el.classList.contains('details') ? 'details' :
+                el.classList.contains('piece-bust') ? 'bust' :
+                el.classList.contains('piece-robo') ? 'robo' :
+                el.classList.contains('piece-wire') ? 'wire' : 'piece-' + idx;
+    return cls;
+  }
+
   btn('Save Layout', () => {
     const state = {};
-    document.querySelectorAll('.piece, .details').forEach((p, i) => {
-      const id = p.className + '-' + i;
-      state[id] = {
-        left: p.style.left, top: p.style.top,
-        width: p.style.width, rotate: p.dataset.rotate || '0',
-        transform: p.style.transform,
-        filter: p.style.filter,
-        backdropFilter: p.style.backdropFilter || p.style.webkitBackdropFilter || ''
-      };
+    document.querySelectorAll('.poster-card').forEach(card => {
+      const num = card.querySelector('.poster-number');
+      if (!num) return;
+      const key = num.textContent.trim();
+      const poster = card.querySelector('.poster');
+      if (!poster) return;
+      state[key] = { _texts: {} };
+      poster.querySelectorAll('.piece, .details').forEach(p => {
+        const elKey = getElKey(p, poster);
+        state[key][elKey] = {
+          left: p.style.left, top: p.style.top,
+          width: p.style.width, rotate: p.dataset.rotate || '0',
+          transform: p.style.transform,
+          filter: p.style.filter,
+          zIndex: p.style.zIndex || '',
+          opacity: p.style.opacity || '',
+          backdropFilter: p.style.backdropFilter || p.style.webkitBackdropFilter || ''
+        };
+      });
+      poster.querySelectorAll('.text-behind span').forEach(span => {
+        const cls = [...span.classList].find(c => c.startsWith('l')) || span.textContent;
+        state[key]._texts[cls] = {
+          tx: span.dataset.tx || '',
+          ty: span.dataset.ty || '',
+          transform: span.style.transform || '',
+          fontSize: span.style.fontSize || '',
+          zIndex: span.style.zIndex || '',
+        };
+      });
     });
     localStorage.setItem('poster-layout', JSON.stringify(state));
-    alert('Layout saved to localStorage');
+    alert('Layout saved (' + Object.keys(state).length + ' posters)');
   });
 
   btn('Load Layout', () => {
     const raw = localStorage.getItem('poster-layout');
     if (!raw) { alert('No saved layout'); return; }
     const state = JSON.parse(raw);
-    document.querySelectorAll('.piece, .details').forEach((p, i) => {
-      const id = p.className + '-' + i;
-      const s = state[id];
-      if (!s) return;
-      if (s.left) p.style.left = s.left;
-      if (s.top) p.style.top = s.top;
-      if (s.width) p.style.width = s.width;
-      if (s.rotate) { p.dataset.rotate = s.rotate; p.style.transform = s.transform || ''; }
-      if (typeof s.filter === 'string') p.style.filter = s.filter;
-      if (typeof s.backdropFilter === 'string') {
-        p.style.backdropFilter = s.backdropFilter;
-        p.style.webkitBackdropFilter = s.backdropFilter;
+    // Variants that should inherit from a parent poster's saved layout
+    const inheritMap = { '28r': '28b', '28f': '28b', '28n': '28b', '28a': '28b' };
+
+    document.querySelectorAll('.poster-card').forEach(card => {
+      const num = card.querySelector('.poster-number');
+      if (!num) return;
+      const key = num.textContent.trim();
+      const posterState = state[key] || state[inheritMap[key]] || null;
+      if (!posterState) return;
+      const poster = card.querySelector('.poster');
+      if (!poster) return;
+      poster.querySelectorAll('.piece, .details').forEach(p => {
+        const elKey = getElKey(p, poster);
+        const s = posterState[elKey];
+        if (!s) return;
+        if (s.left) { p.style.left = s.left; p.style.position = 'absolute'; p.style.right = 'auto'; }
+        if (s.top) { p.style.top = s.top; p.style.bottom = 'auto'; }
+        if (s.width) p.style.width = s.width;
+        if (s.rotate && s.rotate !== '0') { p.dataset.rotate = s.rotate; p.style.transform = s.transform || ''; }
+        if (typeof s.filter === 'string' && s.filter) p.style.filter = s.filter;
+        if (s.zIndex) p.style.zIndex = s.zIndex;
+        if (s.opacity) p.style.opacity = s.opacity;
+        if (typeof s.backdropFilter === 'string' && s.backdropFilter) {
+          p.style.backdropFilter = s.backdropFilter;
+          p.style.webkitBackdropFilter = s.backdropFilter;
+        }
+      });
+      if (posterState._texts) {
+        poster.querySelectorAll('.text-behind span').forEach(span => {
+          const cls = [...span.classList].find(c => c.startsWith('l')) || span.textContent;
+          const t = posterState._texts[cls];
+          if (!t) return;
+          if (t.tx) span.dataset.tx = t.tx;
+          if (t.ty) span.dataset.ty = t.ty;
+          if (t.transform) span.style.transform = t.transform;
+          if (t.fontSize) span.style.fontSize = t.fontSize;
+          if (t.zIndex) span.style.setProperty('z-index', t.zIndex, 'important');
+        });
       }
-      p.style.position = 'absolute';
-      p.style.right = 'auto';
-      p.style.bottom = 'auto';
     });
     alert('Layout loaded');
   });
@@ -2501,6 +2762,53 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
   });
 
   document.body.appendChild(toolbar);
+
+  // Auto-load saved layout on page open
+  const autoRaw = localStorage.getItem('poster-layout');
+  if (autoRaw) {
+    const inheritMap = { '28r': '28b', '28f': '28b', '28n': '28b', '28a': '28b' };
+    const state = JSON.parse(autoRaw);
+    document.querySelectorAll('.poster-card').forEach(card => {
+      const num = card.querySelector('.poster-number');
+      if (!num) return;
+      const key = num.textContent.trim();
+      const posterState = state[key] || state[inheritMap[key]] || null;
+      if (!posterState) return;
+      const poster = card.querySelector('.poster');
+      if (!poster) return;
+      poster.querySelectorAll('.piece, .details').forEach(p => {
+        const elKey = p.classList.contains('details') ? 'details' :
+                      p.classList.contains('piece-bust') ? 'bust' :
+                      p.classList.contains('piece-robo') ? 'robo' :
+                      p.classList.contains('piece-wire') ? 'wire' : 'piece';
+        const s = posterState[elKey];
+        if (!s) return;
+        if (s.left) { p.style.left = s.left; p.style.position = 'absolute'; p.style.right = 'auto'; }
+        if (s.top) { p.style.top = s.top; p.style.bottom = 'auto'; }
+        if (s.width) p.style.width = s.width;
+        if (s.rotate && s.rotate !== '0') { p.dataset.rotate = s.rotate; p.style.transform = s.transform || ''; }
+        if (typeof s.filter === 'string' && s.filter) p.style.filter = s.filter;
+        if (s.zIndex) p.style.zIndex = s.zIndex;
+        if (s.opacity) p.style.opacity = s.opacity;
+        if (typeof s.backdropFilter === 'string' && s.backdropFilter) {
+          p.style.backdropFilter = s.backdropFilter;
+          p.style.webkitBackdropFilter = s.backdropFilter;
+        }
+      });
+      if (posterState._texts) {
+        poster.querySelectorAll('.text-behind span').forEach(span => {
+          const cls = [...span.classList].find(c => c.startsWith('l')) || span.textContent;
+          const t = posterState._texts[cls];
+          if (!t) return;
+          if (t.tx) span.dataset.tx = t.tx;
+          if (t.ty) span.dataset.ty = t.ty;
+          if (t.transform) span.style.transform = t.transform;
+          if (t.fontSize) span.style.fontSize = t.fontSize;
+          if (t.zIndex) span.style.setProperty('z-index', t.zIndex, 'important');
+        });
+      }
+    });
+  }
 })();
 </script>
 </body>
