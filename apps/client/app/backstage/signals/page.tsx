@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useChat } from 'ai/react';
 
 const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
@@ -140,6 +140,17 @@ interface ClusterScene {
   keyframe_path: string;
   audio_path: string;
   transcript: string;
+  transcript_source?: string;
+  transcript_span_start_sec?: number | null;
+  transcript_span_end_sec?: number | null;
+  transcript_segment_count?: number;
+  local_motif_id?: string;
+  local_motif_index?: number;
+  local_motif_count?: number;
+  local_motif_occurrence_index?: number;
+  is_representative?: boolean;
+  representative_scene_idx?: number;
+  motif_similarity?: number;
   thumbnail?: string;
   umap?: Record<string, [number, number]>;
   clusters?: Record<string, number>;
@@ -149,12 +160,40 @@ interface ClusterInfo {
   n_clusters: number;
   n_noise: number;
   labels: number[];
+  representative_labels?: number[];
+  representative_count?: number;
 }
 
 interface SceneClusterData {
   total_scenes: number;
+  total_representatives?: number;
+  total_local_motifs?: number;
   clustering: Record<string, ClusterInfo>;
   scenes: ClusterScene[];
+}
+
+interface ClusterSceneSource {
+  url: string;
+  platform?: string;
+  author?: string;
+  title?: string;
+  confidence?: 'high' | 'medium' | 'low';
+}
+
+interface SceneSourceManifest {
+  sources: Record<string, ClusterSceneSource>;
+}
+
+function buildLocalClusterVideoUrl(videoId: string, startSec?: number): string {
+  const base = `/api/local/videos/${encodeURIComponent(videoId)}`;
+  if (typeof startSec !== 'number' || !Number.isFinite(startSec) || startSec <= 0) {
+    return base;
+  }
+  return `${base}#t=${Math.floor(startSec)}`;
+}
+
+function isSameClusterScene(a: ClusterScene | null, b: ClusterScene): boolean {
+  return Boolean(a) && a!.video_id === b.video_id && a!.scene_idx === b.scene_idx;
 }
 
 interface LlmPart {
@@ -747,9 +786,199 @@ function ThumbnailCard({ result }: { result: SearchResult }) {
   );
 }
 
+function SceneClusterDetailPanel({
+  scene,
+  source,
+}: {
+  scene: ClusterScene;
+  source?: ClusterSceneSource | null;
+}) {
+  const fullVideoUrl = buildLocalClusterVideoUrl(scene.video_id);
+  const sceneStartUrl = buildLocalClusterVideoUrl(scene.video_id, scene.start_sec);
+
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr)',
+        alignItems: 'start',
+        gap: 14,
+        padding: 14,
+        borderRadius: 12,
+        border: '1px solid var(--line)',
+        background: 'rgba(255,255,255,0.6)',
+        maxWidth: '100%',
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ display: 'grid', gap: 10, minWidth: 0 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <Chip label={`video ${scene.video_id.slice(0, 8)}`} />
+          <Chip label={`scene ${scene.scene_idx}`} />
+          <Chip label={`${scene.start_sec.toFixed(1)}s → ${scene.end_sec.toFixed(1)}s`} />
+          <Chip label={`${scene.duration_sec.toFixed(1)}s`} />
+          {scene.local_motif_id && <Chip label={`motif ${scene.local_motif_index ?? 0}`} />}
+          {scene.local_motif_count != null && <Chip label={`${scene.local_motif_count}x in video`} />}
+          {scene.local_motif_occurrence_index != null && (
+            <Chip label={`occurrence ${scene.local_motif_occurrence_index}`} />
+          )}
+          {scene.is_representative && <Chip label="representative" />}
+        </div>
+
+        <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
+          <div>
+            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Transcript
+            </p>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--ink)', overflowWrap: 'anywhere' }}>
+              {scene.transcript || '(silence)'}
+            </p>
+          </div>
+
+          {scene.clusters && (
+            <div>
+              <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Cluster Membership
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {Object.entries(scene.clusters).map(([key, value]) => (
+                  <Chip key={key} label={`${key}: ${value >= 0 ? value : 'noise'}`} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(scene.transcript_source || scene.transcript_segment_count || scene.motif_similarity != null) && (
+            <div>
+              <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Segment Metadata
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {scene.transcript_source && <Chip label={scene.transcript_source} />}
+                {scene.transcript_segment_count != null && (
+                  <Chip label={`${scene.transcript_segment_count} transcript segs`} />
+                )}
+                {scene.motif_similarity != null && (
+                  <Chip label={`motif sim ${scene.motif_similarity.toFixed(2)}`} />
+                )}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <a
+              href={fullVideoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="triage-btn-analyze"
+              style={{ textDecoration: 'none' }}
+            >
+              Open Full Video
+            </a>
+            <a
+              href={sceneStartUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="signals-platform-btn"
+              style={{ textDecoration: 'none' }}
+            >
+              Open At Scene Start
+            </a>
+            {source?.url && (
+              <a
+                href={source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="signals-platform-btn"
+                style={{ textDecoration: 'none' }}
+              >
+                Visit Source Post
+              </a>
+            )}
+          </div>
+
+          {source?.url ? (
+            <div style={{ display: 'grid', gap: 4 }}>
+              <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Source
+              </p>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--ink)', overflowWrap: 'anywhere' }}>
+                {[source.platform, source.author ? `@${source.author}` : null, source.title]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </p>
+              {source.confidence && (
+                <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)' }}>
+                  Cached join confidence: {source.confidence}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>
+              Source post unavailable for this cached scene set.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div
+        style={{
+          minWidth: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            maxWidth: 340,
+            borderRadius: 12,
+            overflow: 'hidden',
+            background: '#0f172a',
+          }}
+        >
+          <video
+            key={`${scene.video_id}-${scene.scene_idx}`}
+            src={fullVideoUrl}
+            controls
+            playsInline
+            preload="metadata"
+            poster={scene.thumbnail}
+            onLoadedMetadata={(event) => {
+              const video = event.currentTarget;
+              const targetTime = Math.max(
+                0,
+                Math.min(scene.start_sec, Math.max((video.duration || scene.start_sec) - 0.1, 0)),
+              );
+              if (Number.isFinite(targetTime) && Math.abs(video.currentTime - targetTime) > 0.25) {
+                try {
+                  video.currentTime = targetTime;
+                } catch {
+                  // Ignore seek errors during initial metadata load.
+                }
+              }
+            }}
+            style={{
+              width: '100%',
+              height: 'auto',
+              maxHeight: 620,
+              background: '#0f172a',
+              display: 'block',
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Page ────────────────────────────────────────────────────── */
 
 export default function SignalsPage() {
+  const pageTopRef = useRef<HTMLDivElement | null>(null);
+  const pendingCachedRunScrollResetRef = useRef(false);
+
   // Step data
   const [brief, setBriefData] = useState<Brief | null>(null);
   const [keywordSets, setKeywordSets] = useState<KeywordSet[]>([]);
@@ -761,6 +990,8 @@ export default function SignalsPage() {
   const [fingerprintData, setFingerprintData] = useState<FingerprintData | null>(null);
   const [expandedFingerprints, setExpandedFingerprints] = useState<Set<number>>(new Set());
   const [sceneClusterData, setSceneClusterData] = useState<SceneClusterData | null>(null);
+  const [sceneSourceManifest, setSceneSourceManifest] = useState<SceneSourceManifest | null>(null);
+  const [selectedClusterScene, setSelectedClusterScene] = useState<ClusterScene | null>(null);
   const [activeClusterTab, setActiveClusterTab] = useState('clip');
 
   // LLM metadata per step
@@ -830,6 +1061,52 @@ export default function SignalsPage() {
     },
     [],
   );
+
+  const resetScrollToPageTop = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    pageTopRef.current?.scrollIntoView({ block: 'start', inline: 'nearest' });
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!pendingCachedRunScrollResetRef.current || fullPipelineRunning || typeof window === 'undefined') {
+      return;
+    }
+
+    let rafA = 0;
+    let rafB = 0;
+    let timeoutId = 0;
+
+    const runReset = () => {
+      resetScrollToPageTop();
+    };
+
+    runReset();
+    rafA = window.requestAnimationFrame(() => {
+      runReset();
+      rafB = window.requestAnimationFrame(runReset);
+    });
+    timeoutId = window.setTimeout(() => {
+      runReset();
+      pendingCachedRunScrollResetRef.current = false;
+    }, 180);
+
+    return () => {
+      window.cancelAnimationFrame(rafA);
+      window.cancelAnimationFrame(rafB);
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    filteredResults.length,
+    fingerprintData,
+    fullPipelineRunning,
+    keywordSets.length,
+    resetScrollToPageTop,
+    sceneClusterData,
+    searchResults.length,
+  ]);
 
   // ── Step 1: Extract Brief ──────────────────────────────────────────
   const handleExtractBrief = useCallback(async () => {
@@ -1013,13 +1290,19 @@ export default function SignalsPage() {
   // ── Load Cached Run ────────────────────────────────────────────────
   const handleLoadCachedRun = useCallback(async () => {
     setFullPipelineRunning(true);
+    setExpandedFingerprints(new Set());
+    setActiveClusterTab('clip');
+    setSelectedClusterScene(null);
+    pendingCachedRunScrollResetRef.current = true;
+    resetScrollToPageTop();
     try {
-      const [kwRes, searchRes, filterRes, fpRes, scRes] = await Promise.all([
+      const [kwRes, searchRes, filterRes, fpRes, scRes, sourceRes] = await Promise.all([
         fetch('/signals-cache/01-keywords.json').then((r) => r.json()),
         fetch('/signals-cache/02-search-with-urls.json').then((r) => r.json()),
         fetch('/signals-cache/03-filtered.json').then((r) => r.json()),
         fetch('/signals-cache/04-fingerprints.json').then((r) => r.json()).catch(() => null),
         fetch('/signals-cache/05-scene-clusters.json').then((r) => r.json()).catch(() => null),
+        fetch('/signals-cache/05-scene-sources.json').then((r) => r.json()).catch(() => null),
       ]);
       if (kwRes.brief) setBriefData(kwRes.brief);
       if (kwRes.keywordSets)
@@ -1053,7 +1336,14 @@ export default function SignalsPage() {
       );
 
       if (fpRes && fpRes.fingerprints) setFingerprintData(fpRes);
-      if (scRes && scRes.scenes) setSceneClusterData(scRes);
+      if (scRes && scRes.scenes) {
+        setSceneClusterData(scRes);
+        setSelectedClusterScene(scRes.scenes[0] || null);
+      } else {
+        setSceneClusterData(null);
+        setSelectedClusterScene(null);
+      }
+      setSceneSourceManifest(sourceRes?.sources ? sourceRes : null);
 
       setStepStatus({
         brief: 'done', keywords: 'done', search: 'done', filter: 'done', score: 'done',
@@ -1067,7 +1357,7 @@ export default function SignalsPage() {
     } finally {
       setFullPipelineRunning(false);
     }
-  }, [minViews, setStatus]);
+  }, [minViews, resetScrollToPageTop, setStatus]);
 
   // ── Run Full Pipeline ──────────────────────────────────────────────
   const handleRunFullPipeline = useCallback(async () => {
@@ -1079,6 +1369,13 @@ export default function SignalsPage() {
     setFilteredResults([]);
     setDroppedResults([]);
     setFilterStats(null);
+    setDownloadResult(null);
+    setFingerprintData(null);
+    setExpandedFingerprints(new Set());
+    setSceneClusterData(null);
+    setSceneSourceManifest(null);
+    setSelectedClusterScene(null);
+    setActiveClusterTab('clip');
     setStepStatus({ brief: 'idle', keywords: 'idle', search: 'idle', filter: 'idle', score: 'idle', download: 'idle', fingerprint: 'idle', sceneClusters: 'idle' });
 
     try {
@@ -1202,7 +1499,10 @@ export default function SignalsPage() {
   /* ── Render ─────────────────────────────────────────────────────── */
 
   return (
-    <div>
+    <div
+      ref={pageTopRef}
+      style={{ maxWidth: '100%', overflowX: 'hidden', overflowAnchor: 'none' }}
+    >
       {/* ── Page header ───────────────────────────────────────────── */}
       <div className="backstage-section-header">
         <h2 className="backstage-section-title">Signals Intelligence</h2>
@@ -1229,7 +1529,7 @@ export default function SignalsPage() {
       <PipelineCostSummary metas={[llmBrief, llmKeywords, llmScore, llmFingerprint]} />
 
       {/* ── Pipeline steps ─────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0, maxWidth: '100%' }}>
 
         {/* ── STEP 1: Product Brief ──────────────────────────────── */}
         <div className="card" style={{ display: 'grid', gap: 14 }}>
@@ -1914,6 +2214,11 @@ export default function SignalsPage() {
                 ? `${filteredResults.length} ranked videos ready for download via yt-dlp.`
                 : 'Run Steps 3-5 first to get ranked videos.'}
             </div>
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
+              Live collection works best against your local server at <code style={{ fontSize: 11 }}>localhost:8787</code>.
+              Remote/preflight backends may scrape in mock or preflight mode only, and often do not have the
+              yt-dlp/ffmpeg stack needed for download plus later clustering.
+            </div>
           </CollapsibleSection>
 
           {downloadResult && downloadResult.downloads.length > 0 && (
@@ -2236,7 +2541,7 @@ export default function SignalsPage() {
             status={stepStatus.sceneClusters}
             summary={
               sceneClusterData
-                ? `${sceneClusterData.total_scenes} scenes, ${Object.keys(sceneClusterData.clustering).length} embeddings`
+                ? `${sceneClusterData.total_scenes} scenes, ${sceneClusterData.total_local_motifs ?? sceneClusterData.total_representatives ?? sceneClusterData.total_scenes} motifs, ${Object.keys(sceneClusterData.clustering).length} embeddings`
                 : undefined
             }
           />
@@ -2244,10 +2549,14 @@ export default function SignalsPage() {
           {/* Input */}
           <CollapsibleSection label="Input" defaultOpen={!sceneClusterData}>
             <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-              Unsupervised scene clustering via embeddings (CLIP, VideoMAE, Whisper, audio).
+              Unsupervised raw-scene clustering via embeddings (CLIP, VideoMAE, full-video transcript alignment, audio).
               Run <code style={{ fontSize: 11, background: 'var(--line)', padding: '1px 4px', borderRadius: 3 }}>
                 python3 scripts/embed-scenes.py
               </code> to generate, then Load Cached Run.
+            </div>
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
+              This step is local-only today: it depends on Python ML packages, Whisper transcription, ffmpeg, and
+              local access to downloaded MP4s under <code style={{ fontSize: 11 }}>artifacts/videos</code>.
             </div>
           </CollapsibleSection>
 
@@ -2256,6 +2565,11 @@ export default function SignalsPage() {
             const clusterKeys = Object.keys(sceneClusterData.clustering);
             const activeInfo = sceneClusterData.clustering[activeClusterTab];
             const scenes = sceneClusterData.scenes;
+            const resolvedSelectedScene =
+              scenes.find((scene) => isSameClusterScene(selectedClusterScene, scene)) || scenes[0];
+            const resolvedSelectedSceneSource = resolvedSelectedScene
+              ? sceneSourceManifest?.sources?.[resolvedSelectedScene.video_id] || null
+              : null;
 
             // Group scenes by cluster for the active tab
             const clusterGroups: Record<number, ClusterScene[]> = {};
@@ -2278,7 +2592,7 @@ export default function SignalsPage() {
 
             return (
               <CollapsibleSection
-                label={`Output — ${scenes.length} scenes across ${clusterKeys.length} embedding types`}
+                label={`Output — ${scenes.length} scenes / ${sceneClusterData.total_local_motifs ?? sceneClusterData.total_representatives ?? scenes.length} motifs across ${clusterKeys.length} embedding types`}
                 defaultOpen
               >
                 {/* Embedding type tabs */}
@@ -2324,10 +2638,14 @@ export default function SignalsPage() {
                     const top = ((uy - yMin) / yRange) * 85 + 5;
                     const cluster = s.clusters?.[activeClusterTab] ?? -1;
                     const borderColor = cluster >= 0 ? CLUSTER_COLORS[cluster % CLUSTER_COLORS.length] : '#475569';
+                    const isSelected = isSameClusterScene(resolvedSelectedScene, s);
 
                     return (
-                      <div
+                      <button
                         key={i}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => setSelectedClusterScene(s)}
                         title={`${s.video_id} scene ${s.scene_idx}\n${s.start_sec.toFixed(1)}-${s.end_sec.toFixed(1)}s\n${s.transcript?.slice(0, 80) || '(silence)'}`}
                         style={{
                           position: 'absolute',
@@ -2337,11 +2655,14 @@ export default function SignalsPage() {
                           width: 48,
                           height: 48,
                           borderRadius: 6,
-                          border: `2px solid ${borderColor}`,
+                          border: `2px solid ${isSelected ? '#f8fafc' : borderColor}`,
+                          boxShadow: isSelected ? `0 0 0 3px ${borderColor}` : 'none',
                           overflow: 'hidden',
                           cursor: 'pointer',
                           transition: 'transform 0.15s, z-index 0s',
                           zIndex: 1,
+                          padding: 0,
+                          background: 'transparent',
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.transform = 'translate(-50%, -50%) scale(2.5)';
@@ -2359,7 +2680,7 @@ export default function SignalsPage() {
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
                         )}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -2368,6 +2689,15 @@ export default function SignalsPage() {
                 {activeInfo && (
                   <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
                     <strong>{activeClusterTab}</strong>: {activeInfo.n_clusters} clusters, {activeInfo.n_noise} noise points
+                  </div>
+                )}
+
+                {resolvedSelectedScene && (
+                  <div style={{ marginBottom: 16, maxWidth: '100%' }}>
+                    <SceneClusterDetailPanel
+                      scene={resolvedSelectedScene}
+                      source={resolvedSelectedSceneSource}
+                    />
                   </div>
                 )}
 
@@ -2392,17 +2722,26 @@ export default function SignalsPage() {
                         <div style={{
                           display: 'flex', gap: 6, overflowX: 'auto',
                           paddingBottom: 6,
+                          maxWidth: '100%',
                         }}>
                           {group.map((s, gi) => (
-                            <div
+                            <button
                               key={gi}
+                              type="button"
+                              aria-pressed={isSameClusterScene(resolvedSelectedScene, s)}
+                              onClick={() => setSelectedClusterScene(s)}
                               style={{
                                 flexShrink: 0,
                                 width: 100,
                                 borderRadius: 8,
                                 overflow: 'hidden',
-                                border: '1px solid var(--line)',
+                                border: isSameClusterScene(resolvedSelectedScene, s)
+                                  ? `2px solid ${color}`
+                                  : '1px solid var(--line)',
                                 background: 'var(--panel)',
+                                padding: 0,
+                                textAlign: 'left',
+                                cursor: 'pointer',
                               }}
                             >
                               {s.thumbnail && (
@@ -2427,7 +2766,7 @@ export default function SignalsPage() {
                                   {s.video_id.slice(0, 8)}
                                 </div>
                               </div>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       </div>

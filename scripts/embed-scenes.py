@@ -9,14 +9,16 @@ Usage:
 
 Steps:
   1. Scene detection (pyscenedetect ContentDetector)
-  2. Keyframe + audio extraction (ffmpeg)
-  3. Embedding extraction:
+  2. Full-video transcription (Whisper with timestamps)
+  3. Keyframe + audio extraction (ffmpeg)
+  4. Embedding extraction:
      a. CLIP frame embeddings (ViT-B-32, 512d)
      b. VideoMAE temporal embeddings (videomae-base, 768d)
-     c. Whisper transcription → sentence-transformer text embeddings (384d)
+     c. Full-video transcript alignment → sentence-transformer text embeddings (384d)
      d. Mel-spectrogram audio embeddings (128d)
-  4. HDBSCAN clustering (per-component + combined)
-  5. UMAP 2D projection + HTML visualization
+  5. Intra-video motif grouping (representative scene per recurring motif)
+  6. HDBSCAN clustering over motif representatives (per-component + combined)
+  7. UMAP 2D projection + HTML visualization
 
 Output:
   artifacts/scenes/{video_id}/scene_{NNN}.jpg    — keyframes
@@ -29,7 +31,7 @@ Output:
 import argparse
 import hashlib
 import json
-import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -43,8 +45,16 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 VIDEOS_DIR = REPO_ROOT / "artifacts" / "videos"
 SCENES_DIR = REPO_ROOT / "artifacts" / "scenes"
 OUTPUT_DIR = REPO_ROOT / "artifacts"
+CLIENT_SIGNAL_CACHE_DIR = REPO_ROOT / "apps" / "client" / "public" / "signals-cache"
+CLIENT_SIGNAL_SCENES_DIR = CLIENT_SIGNAL_CACHE_DIR / "scenes"
 
 DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
+MOTIF_COMPONENT_WEIGHTS = {
+    "clip": 0.35,
+    "videomae": 0.35,
+    "text": 0.20,
+    "audio": 0.10,
+}
 
 # ── 1. Scene Detection ───────────────────────────────────────────────
 
@@ -98,6 +108,17 @@ def extract_audio_clip(video_path, scene, output_path):
         capture_output=True, timeout=30,
     )
     return output_path.exists()
+
+
+def cache_scene_thumbnail(video_id, scene_idx, keyframe_path):
+    """Copy a keyframe into the checked-in client cache for local inspection."""
+    if not keyframe_path.exists():
+        return None
+    CLIENT_SIGNAL_SCENES_DIR.mkdir(parents=True, exist_ok=True)
+    cached_name = f"{video_id}_s{scene_idx:03d}.jpg"
+    cached_path = CLIENT_SIGNAL_SCENES_DIR / cached_name
+    shutil.copy2(keyframe_path, cached_path)
+    return f"/signals-cache/scenes/{cached_name}"
 
 
 # ── 2. Embedding Extraction ──────────────────────────────────────────
@@ -179,22 +200,46 @@ class WhisperTranscriber:
         self.text_model = SentenceTransformer("all-MiniLM-L6-v2", device=DEVICE)
         print(f"  SentenceTransformer loaded on {DEVICE}")
 
+    def transcribe_full_media(self, media_path):
+        """Return (full_text, timestamped_segments[]) from the complete video."""
+        result = self.whisper_model.transcribe(
+            str(media_path),
+            language=None,
+            fp16=False,
+            verbose=False,
+        )
+        segments = []
+        for segment in result.get("segments", []):
+            text = (segment.get("text") or "").strip()
+            if not text:
+                continue
+            segments.append({
+                "start_sec": round(float(segment.get("start", 0.0)), 2),
+                "end_sec": round(float(segment.get("end", 0.0)), 2),
+                "text": text,
+            })
+        transcript = " ".join(segment["text"] for segment in segments).strip()
+        return transcript, segments
+
+    def embed_text(self, text):
+        """Return normalized text embedding (384d) or zeros for empty text."""
+        text = (text or "").strip()
+        if not text:
+            return np.zeros(384, dtype=np.float32)
+        embedding = self.text_model.encode(text, normalize_embeddings=True)
+        return np.array(embedding, dtype=np.float32)
+
     def transcribe_and_embed(self, audio_path):
         """Return (transcript_text, text_embedding_384d)."""
         if not audio_path.exists() or audio_path.stat().st_size < 100:
             return "", np.zeros(384, dtype=np.float32)
 
-        import whisper
         result = self.whisper_model.transcribe(
-            str(audio_path), language=None, fp16=False,
+            str(audio_path), language=None, fp16=False, verbose=False,
         )
         text = result.get("text", "").strip()
 
-        if not text:
-            return "", np.zeros(384, dtype=np.float32)
-
-        embedding = self.text_model.encode(text, normalize_embeddings=True)
-        return text, np.array(embedding, dtype=np.float32)
+        return text, self.embed_text(text)
 
 
 class AudioEmbedder:
@@ -229,6 +274,185 @@ class AudioEmbedder:
 
 # ── 3. Pipeline ──────────────────────────────────────────────────────
 
+def normalize_vector(vec):
+    arr = np.array(vec, dtype=np.float32)
+    norm = np.linalg.norm(arr)
+    if norm > 0:
+        arr = arr / norm
+    return arr
+
+
+def cosine_similarity(vec_a, vec_b):
+    a = normalize_vector(vec_a)
+    b = normalize_vector(vec_b)
+    if np.allclose(a, 0) or np.allclose(b, 0):
+        return 0.0
+    return float(np.dot(a, b))
+
+
+def build_scene_feature_vector(scene):
+    parts = []
+    for key, weight in MOTIF_COMPONENT_WEIGHTS.items():
+        parts.append(normalize_vector(scene["embeddings"][key]) * weight)
+    return normalize_vector(np.concatenate(parts, axis=0))
+
+
+def align_transcript_to_scene(scene, transcript_segments, margin=0.35):
+    """Project full-video transcript segments onto a detected raw scene."""
+    if not transcript_segments:
+        return "", None, None, 0
+
+    scene_start = float(scene["start_sec"])
+    scene_end = float(scene["end_sec"])
+    matched = []
+    seen_spans = set()
+
+    for segment in transcript_segments:
+        start = float(segment["start_sec"])
+        end = float(segment["end_sec"])
+        overlap = min(scene_end + margin, end) - max(scene_start - margin, start)
+        if overlap <= 0:
+            continue
+        key = (start, end, segment["text"])
+        if key not in seen_spans:
+            matched.append(segment)
+            seen_spans.add(key)
+
+    if not matched:
+        for segment in transcript_segments:
+            midpoint = (float(segment["start_sec"]) + float(segment["end_sec"])) / 2
+            if scene_start - margin <= midpoint <= scene_end + margin:
+                matched.append(segment)
+
+    if not matched:
+        return "", None, None, 0
+
+    transcript = " ".join(segment["text"] for segment in matched).strip()
+    span_start = round(min(float(segment["start_sec"]) for segment in matched), 2)
+    span_end = round(max(float(segment["end_sec"]) for segment in matched), 2)
+    return transcript, span_start, span_end, len(matched)
+
+
+def assign_local_motifs(all_scenes, similarity_threshold=0.82):
+    """Group recurring scenes within each video before global clustering."""
+    scenes_by_video = {}
+    for scene in all_scenes:
+        scenes_by_video.setdefault(scene["video_id"], []).append(scene)
+
+    representatives = []
+    total_motifs = 0
+
+    for video_id, scenes in scenes_by_video.items():
+        ordered = sorted(scenes, key=lambda s: (s["start_sec"], s["scene_idx"]))
+        motifs = []
+
+        for scene in ordered:
+            feature_vec = build_scene_feature_vector(scene)
+            scene["_motif_feature_vec"] = feature_vec
+            best_motif = None
+            best_similarity = -1.0
+
+            for motif in motifs:
+                similarity = cosine_similarity(feature_vec, motif["centroid"])
+                if similarity > best_similarity:
+                    best_similarity = similarity
+                    best_motif = motif
+
+            if best_motif is not None and best_similarity >= similarity_threshold:
+                best_motif["members"].append(scene)
+                stacked = np.stack([member["_motif_feature_vec"] for member in best_motif["members"]], axis=0)
+                best_motif["centroid"] = normalize_vector(stacked.mean(axis=0))
+            else:
+                motifs.append({
+                    "members": [scene],
+                    "centroid": feature_vec.copy(),
+                })
+
+        motifs.sort(key=lambda motif: min(member["start_sec"] for member in motif["members"]))
+        total_motifs += len(motifs)
+        print(f"  {video_id}: {len(ordered)} raw scenes → {len(motifs)} local motifs")
+
+        for motif_index, motif in enumerate(motifs):
+            members = sorted(motif["members"], key=lambda s: (s["start_sec"], s["scene_idx"]))
+            centroid = normalize_vector(
+                np.stack([member["_motif_feature_vec"] for member in members], axis=0).mean(axis=0)
+            )
+            ranked_members = sorted(
+                members,
+                key=lambda scene: (
+                    -cosine_similarity(scene["_motif_feature_vec"], centroid),
+                    scene["start_sec"],
+                    scene["scene_idx"],
+                ),
+            )
+            representative = ranked_members[0]
+            motif_count = len(members)
+            motif_id = f"{video_id}:m{motif_index:02d}"
+
+            for occurrence_index, scene in enumerate(members, start=1):
+                similarity_to_centroid = cosine_similarity(scene["_motif_feature_vec"], centroid)
+                scene["local_motif_id"] = motif_id
+                scene["local_motif_index"] = motif_index
+                scene["local_motif_count"] = motif_count
+                scene["local_motif_occurrence_index"] = occurrence_index
+                scene["is_representative"] = scene["scene_idx"] == representative["scene_idx"]
+                scene["representative_scene_idx"] = representative["scene_idx"]
+                scene["motif_similarity"] = round(similarity_to_centroid, 3)
+
+            representatives.append(representative)
+
+    for scene in all_scenes:
+        scene.pop("_motif_feature_vec", None)
+
+    representatives.sort(key=lambda s: (s["video_id"], s["start_sec"], s["scene_idx"]))
+    return representatives, total_motifs
+
+
+def jitter_projection(base_xy, scene, projection_key):
+    """Spread recurring motif members slightly around their representative."""
+    if scene.get("is_representative") or scene.get("local_motif_count", 1) <= 1:
+        return [round(float(base_xy[0]), 3), round(float(base_xy[1]), 3)]
+
+    digest = hashlib.md5(
+        f"{projection_key}:{scene['video_id']}:{scene['scene_idx']}".encode("utf-8")
+    ).hexdigest()
+    angle = (int(digest[:6], 16) / 0xFFFFFF) * (2 * np.pi)
+    radius = min(0.12, 0.03 * scene.get("local_motif_occurrence_index", 1))
+    return [
+        round(float(base_xy[0] + np.cos(angle) * radius), 3),
+        round(float(base_xy[1] + np.sin(angle) * radius), 3),
+    ]
+
+
+def propagate_representative_clusters(all_scenes, representatives, cluster_results, projections):
+    """Assign representative cluster labels/UMAP coordinates back onto all raw scenes."""
+    rep_lookup = {}
+    for index, rep in enumerate(representatives):
+        rep["clusters"] = {key: labels[index] for key, labels in cluster_results.items()}
+        rep["umap"] = {
+            key: [
+                round(float(projections.get(key, [[0, 0]] * len(representatives))[index][0]), 3),
+                round(float(projections.get(key, [[0, 0]] * len(representatives))[index][1]), 3),
+            ]
+            for key in cluster_results.keys()
+        }
+        rep_lookup[(rep["video_id"], rep["scene_idx"])] = rep
+
+    propagated_labels = {key: [] for key in cluster_results.keys()}
+
+    for scene in all_scenes:
+        rep_key = (scene["video_id"], scene["representative_scene_idx"])
+        representative = rep_lookup[rep_key]
+        scene["clusters"] = dict(representative["clusters"])
+        scene["umap"] = {
+            key: jitter_projection(representative["umap"][key], scene, key)
+            for key in representative["umap"].keys()
+        }
+        for key in propagated_labels.keys():
+            propagated_labels[key].append(scene["clusters"][key])
+
+    return propagated_labels
+
 def deduplicate_videos(video_dir):
     """Return list of unique video paths (by file hash)."""
     seen = {}
@@ -253,20 +477,43 @@ def process_video(video_path, clip_emb, vmae_emb, whisper_emb, audio_emb):
     scenes = detect_scenes(video_path)
     print(f"  Found {len(scenes)} scenes")
 
+    # 2. Full-video transcription
+    print("  Transcribing full video...")
+    full_transcript, transcript_segments = whisper_emb.transcribe_full_media(video_path)
+    print(
+        f"  Transcript: {len(transcript_segments)} timestamped segments"
+        f"{f', {len(full_transcript)} chars' if full_transcript else ''}"
+    )
+
     results = []
     for scene in scenes:
         idx = scene["idx"]
         keyframe_path = scene_dir / f"scene_{idx:03d}.jpg"
         audio_path = scene_dir / f"scene_{idx:03d}.wav"
 
-        # 2. Extract keyframe + audio
+        # 3. Extract keyframe + audio
         extract_keyframe(video_path, scene, keyframe_path)
         extract_audio_clip(video_path, scene, audio_path)
+        thumbnail_path = cache_scene_thumbnail(video_id, idx, keyframe_path)
 
-        # 3. Embeddings
+        # 4. Scene-level alignment + embeddings
+        transcript, transcript_span_start, transcript_span_end, transcript_segment_count = align_transcript_to_scene(
+            scene,
+            transcript_segments,
+        )
+        transcript_source = "full_video_alignment"
+        text_vec = whisper_emb.embed_text(transcript)
+
+        if not transcript:
+            transcript, text_vec = whisper_emb.transcribe_and_embed(audio_path)
+            transcript_source = "scene_audio_fallback" if transcript else "empty"
+            if transcript:
+                transcript_span_start = round(scene["start_sec"], 2)
+                transcript_span_end = round(scene["end_sec"], 2)
+                transcript_segment_count = 1
+
         clip_vec = clip_emb.embed_image(keyframe_path) if keyframe_path.exists() else np.zeros(512, dtype=np.float32)
         vmae_vec = vmae_emb.embed_segment(video_path, scene["start_sec"], scene["end_sec"])
-        transcript, text_vec = whisper_emb.transcribe_and_embed(audio_path)
         audio_vec = audio_emb.embed_audio(audio_path)
 
         results.append({
@@ -278,6 +525,11 @@ def process_video(video_path, clip_emb, vmae_emb, whisper_emb, audio_emb):
             "keyframe_path": str(keyframe_path.relative_to(REPO_ROOT)),
             "audio_path": str(audio_path.relative_to(REPO_ROOT)),
             "transcript": transcript,
+            "transcript_source": transcript_source,
+            "transcript_span_start_sec": transcript_span_start,
+            "transcript_span_end_sec": transcript_span_end,
+            "transcript_segment_count": transcript_segment_count,
+            "thumbnail": thumbnail_path,
             "embeddings": {
                 "clip": clip_vec.tolist(),
                 "videomae": vmae_vec.tolist(),
@@ -288,7 +540,15 @@ def process_video(video_path, clip_emb, vmae_emb, whisper_emb, audio_emb):
         print(f"    scene {idx}: {scene['start_sec']:.1f}-{scene['end_sec']:.1f}s"
               f"  transcript={transcript[:40]!r}...")
 
-    return results
+    video_metadata = {
+        "video_id": video_id,
+        "video_path": str(video_path.relative_to(REPO_ROOT)),
+        "scene_count": len(scenes),
+        "full_transcript": full_transcript,
+        "transcript_segments": transcript_segments,
+    }
+
+    return results, video_metadata
 
 
 # ── 4. Clustering ────────────────────────────────────────────────────
@@ -350,15 +610,15 @@ def umap_project(matrices, cluster_results):
 
 # ── 5. Output ────────────────────────────────────────────────────────
 
-def write_html_viz(all_scenes, cluster_results, projections, output_path):
+def write_html_viz(all_scenes, output_path):
     """Write interactive HTML scatter plot."""
     # Build data for each embedding type
     tabs = []
     for key in ["clip", "videomae", "text", "audio", "combined"]:
         points = []
-        for i, scene in enumerate(all_scenes):
-            xy = projections.get(key, [[0,0]] * len(all_scenes))[i]
-            cluster = cluster_results.get(key, [-1] * len(all_scenes))[i]
+        for scene in all_scenes:
+            xy = scene.get("umap", {}).get(key, [0, 0])
+            cluster = scene.get("clusters", {}).get(key, -1)
             points.append({
                 "x": round(xy[0], 3),
                 "y": round(xy[1], 3),
@@ -368,6 +628,9 @@ def write_html_viz(all_scenes, cluster_results, projections, output_path):
                 "time": f"{scene['start_sec']:.1f}-{scene['end_sec']:.1f}s",
                 "transcript": scene["transcript"][:80],
                 "keyframe": scene["keyframe_path"],
+                "motif": scene.get("local_motif_id"),
+                "motifCount": scene.get("local_motif_count", 1),
+                "representative": bool(scene.get("is_representative")),
             })
         tabs.append({"key": key, "points": points})
 
@@ -448,6 +711,7 @@ function render() {{
       tip.innerHTML = `<b>${{closest.video}}</b> scene ${{closest.scene}}<br>
         ${{closest.time}}<br>
         cluster: ${{closest.cluster}}<br>
+        motif: ${{closest.motif || '—'}} (${{closest.motifCount}}x, ${{closest.representative ? 'rep' : 'member'}})<br>
         <i>${{closest.transcript || '(no speech)'}}</i>`;
     }} else {{
       tip.style.display = 'none';
@@ -475,6 +739,7 @@ def main():
             print("No cached embeddings found. Run without --skip-extract first.")
             sys.exit(1)
         all_scenes = json.loads(emb_path.read_text())["scenes"]
+        video_metadata = []
         print(f"Loaded {len(all_scenes)} cached scenes")
     else:
         # Get video list
@@ -496,9 +761,11 @@ def main():
 
         # Process each video
         all_scenes = []
+        video_metadata = []
         for video_path in videos:
-            scenes = process_video(video_path, clip_emb, vmae_emb, whisper_emb, audio_emb)
+            scenes, video_meta = process_video(video_path, clip_emb, vmae_emb, whisper_emb, audio_emb)
             all_scenes.extend(scenes)
+            video_metadata.append(video_meta)
 
         print(f"\nTotal scenes: {len(all_scenes)}")
 
@@ -507,17 +774,36 @@ def main():
         emb_path.write_text(json.dumps({"scenes": all_scenes}, indent=2))
         print(f"Embeddings saved: {emb_path}")
 
-    # Cluster
-    print("\nClustering...")
-    cluster_results, matrices = cluster_scenes(all_scenes)
+        transcript_path = OUTPUT_DIR / "video-transcripts.json"
+        transcript_payload = {"videos": video_metadata}
+        transcript_path.write_text(json.dumps(transcript_payload, indent=2))
+        print(f"Video transcripts saved: {transcript_path}")
 
-    # UMAP
+        CLIENT_SIGNAL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        client_transcript_path = CLIENT_SIGNAL_CACHE_DIR / "06-video-transcripts.json"
+        client_transcript_path.write_text(json.dumps(transcript_payload, indent=2))
+        print(f"Client transcript cache saved: {client_transcript_path}")
+
+    # Intra-video motif grouping
+    print("\nGrouping recurring scenes within each video...")
+    representatives, total_motifs = assign_local_motifs(all_scenes)
+    print(f"Representative scenes: {len(representatives)} / {len(all_scenes)} raw scenes")
+
+    # Cluster representative scenes only
+    print("\nClustering motif representatives...")
+    representative_cluster_results, matrices = cluster_scenes(representatives)
+
+    # UMAP on representatives only
     print("\nUMAP projection...")
-    projections = umap_project(matrices, cluster_results)
+    projections = umap_project(matrices, representative_cluster_results)
 
-    # Add cluster assignments to scenes
-    for i, scene in enumerate(all_scenes):
-        scene["clusters"] = {k: v[i] for k, v in cluster_results.items()}
+    # Propagate representative assignments back onto all raw scenes
+    propagated_cluster_results = propagate_representative_clusters(
+        all_scenes,
+        representatives,
+        representative_cluster_results,
+        projections,
+    )
 
     # Save cluster results
     cluster_path = OUTPUT_DIR / "scene-clusters.json"
@@ -528,18 +814,22 @@ def main():
         cluster_scenes_out.append(out)
     cluster_path.write_text(json.dumps({
         "total_scenes": len(all_scenes),
+        "total_representatives": len(representatives),
+        "total_local_motifs": total_motifs,
         "clustering": {k: {
             "n_clusters": len(set(v)) - (1 if -1 in v else 0),
             "n_noise": v.count(-1),
-            "labels": v,
-        } for k, v in cluster_results.items()},
+            "labels": propagated_cluster_results[k],
+            "representative_labels": v,
+            "representative_count": len(representatives),
+        } for k, v in representative_cluster_results.items()},
         "scenes": cluster_scenes_out,
     }, indent=2))
     print(f"Clusters saved: {cluster_path}")
 
     # HTML visualization
     viz_path = OUTPUT_DIR / "scene-clusters.html"
-    write_html_viz(all_scenes, cluster_results, projections, viz_path)
+    write_html_viz(all_scenes, viz_path)
 
     print("\nDone!")
 
