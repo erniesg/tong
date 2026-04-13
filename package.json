@@ -39,6 +39,7 @@
     "codex:cloud-plan": "python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py plan",
     "build:extension": "npm --prefix apps/extension run build",
     "dev:extension": "npm --prefix apps/extension run dev",
+    "poster:export": "node scripts/export-poster-variation.mjs",
     "zip": "./scripts/build-extension-bundle.sh",
     "launch:agents": "./scripts/launch-parallel-agents.sh",
     "test:kg-contract-schema": "node scripts/kg_contract_schema_check.mjs",
