@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Abril+Fatface&family=Archivo:wght@400;700;900&family=VT323&family=Chakra+Petch:wght@400;600;700&family=Michroma&family=Rajdhani:wght@400;600;700&family=Azeret+Mono:wght@400;700&family=Karla:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -95,6 +96,14 @@ body {
   overflow: hidden;
   border-radius: 2px;
   container-type: size;
+  --export-inset-top: 0px;
+  --export-inset-right: 0px;
+  --export-inset-bottom: 0px;
+  --export-inset-left: 0px;
+}
+
+.poster-story-9x16 {
+  aspect-ratio: 9 / 16;
 }
 
 .poster .text-behind {
@@ -140,6 +149,12 @@ body {
   pointer-events: auto;
   object-fit: contain;
 }
+.poster .robo-feather {
+  position: absolute;
+  pointer-events: none;
+  object-fit: contain;
+  transform-origin: center center;
+}
 .poster .piece-glass-hand {
   z-index: 15;
   background:
@@ -154,8 +169,8 @@ body {
   backdrop-filter: blur(10px) saturate(1.14);
   -webkit-backdrop-filter: blur(10px) saturate(1.14);
   mix-blend-mode: screen;
-  -webkit-mask-image: url('/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png');
-  mask-image: url('/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png');
+  -webkit-mask-image: url('downloads/sam3-robotic-hand-0-masked.png');
+  mask-image: url('downloads/sam3-robotic-hand-0-masked.png');
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-size: contain;
@@ -463,8 +478,8 @@ body.figure-full .poster .figure-fg img {
   height: 18%;
   z-index: 19;
   pointer-events: none;
-  -webkit-mask-image: url('/Users/erniesg/Downloads/sam3-bust-head-0-masked.png');
-  mask-image: url('/Users/erniesg/Downloads/sam3-bust-head-0-masked.png');
+  -webkit-mask-image: url('downloads/sam3-bust-head-0-masked.png');
+  mask-image: url('downloads/sam3-bust-head-0-masked.png');
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: 18% 27%;
@@ -512,7 +527,7 @@ body.figure-full .poster .figure-fg img {
   padding-top: 22px;
   margin-bottom: 10px;
   font-family: 'Rajdhani', sans-serif;
-  font-size: 1.4cqw;
+  font-size: 2.1cqw;
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1.3;
@@ -537,8 +552,9 @@ body.figure-full .poster .figure-fg img {
   left: 0;
   right: 0;
   height: 14px;
-  pointer-events: none;
-  z-index: 0;
+  pointer-events: auto;
+  cursor: grab;
+  z-index: 2;
 }
 .talk-topics .topic-track .track-bar {
   position: absolute;
@@ -572,8 +588,8 @@ body.figure-full .poster .figure-fg img {
   display: none;
 }
 .talk-topics .topic-demo {
-  font-size: 1.2cqw;
-  margin-top: 6px;
+  font-size: 2.1cqw;
+  margin-top: 0;
   opacity: 0.72;
 }
 .talk-topics.is-marker {
@@ -918,11 +934,14 @@ body.figure-full .poster .figure-fg img {
   box-shadow: 0 16px 34px oklch(0.01 0.002 285 / 0.4);
 }
 
+/* Night-bg override — only the poster background color differs */
+.poster-v3-noir.night-bg { background: oklch(0.11 0.018 305); }
+
 .poster-v3-noir-band .v3-details {
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 14px 26px 14px;
+  padding: 20px 26px;
   background:
     linear-gradient(180deg, oklch(0.1 0.005 285 / 0.12), oklch(0.06 0.004 285 / 0.38) 40%, oklch(0.04 0.003 285 / 0.72) 100%);
   border-top: none;
@@ -933,11 +952,43 @@ body.figure-full .poster .figure-fg img {
 .poster-v3-noir-band .text-behind .l5 { z-index: 3; }
 .poster-v3-noir-band .v3-details .speaker { margin-top: 8px; }
 
+/* 28m: Text-mask cutout — text shape reveals the composited poster image
+   (bg + bust + hands) through background-clip:text. JS stacks all piece images
+   as background layers aligned to the poster and re-runs on drag so the mask
+   stays live. */
+.poster-v3-noir-band-textmask .text-behind .l4,
+.poster-v3-noir-band-textmask .text-behind .l5 {
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: contrast(1.1) saturate(1.2) brightness(1.1);
+}
+.poster-v3-noir-band-textmask.is-file-fallback .text-behind .l4,
+.poster-v3-noir-band-textmask.is-file-fallback .text-behind .l5 {
+  background: none !important;
+  color: oklch(0.82 0.15 80) !important;
+  -webkit-text-fill-color: currentColor;
+  filter: none;
+}
+
+/* 28ft: FITNESS-style — solid-color text, bust passes in front */
+.poster-v3-noir-band-fitness .text-behind .l4,
+.poster-v3-noir-band-fitness .text-behind .l5 {
+  color: oklch(0.82 0.15 80) !important;
+  text-shadow: none;
+}
+.poster-v3-noir-band-fitness .text-behind .l4 { z-index: 5; }
+.poster-v3-noir-band-fitness .text-behind .l5 { z-index: 5; }
+.poster-v3-noir-band-fitness .piece-bust { z-index: 13; }
+
 .poster-v3-noir-band-nametop .v3-details { display: flex; flex-direction: column; }
 .poster-v3-noir-band-nametop .v3-details .speaker { order: -3; margin-top: 0; margin-bottom: 2px; }
 .poster-v3-noir-band-nametop .v3-details .date { order: -2; }
-.poster-v3-noir-band-nametop .v3-details .time { order: -1; margin-bottom: 10px; }
-.poster-v3-noir-band-nametop .v3-details .talk-topics { order: 0; }
+.poster-v3-noir-band-nametop .v3-details .time { order: -1; margin-bottom: 15px; }
+.poster-v3-noir-band-nametop .v3-details .talk-topics { order: 0; margin-bottom: 0; padding-top: 17px; }
 
 .poster-v3-night-band .v3-details {
   left: 4%;
@@ -953,6 +1004,9 @@ body.figure-full .poster .figure-fg img {
   box-shadow:
     inset 0 1px 0 oklch(0.92 0.01 60 / 0.08),
     0 18px 38px oklch(0.02 0.005 305 / 0.34);
+}
+.poster-v3-night-band {
+  --export-inset-bottom: 3.2%;
 }
 .poster-v3-night-band .v3-details .speaker { margin-top: 8px; }
 
@@ -1105,23 +1159,69 @@ body.figure-full .poster .figure-fg img {
 <div class="gallery is-curated">
 
   <article class="poster-card keep-gallery">
-    <div class="poster-label"><span class="poster-number">28b</span><h3>Black Field — Name Top</h3></div>
-    <div class="poster poster-v3-noir poster-v3-noir-band poster-v3-noir-band-nametop">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+    <div class="poster-label"><span class="poster-number">28rn</span><h3>Name Top — Rounded Inset (Night)</h3></div>
+    <div class="poster poster-v3-noir poster-v3-noir-softpanel poster-v3-noir-band-nametop night-bg">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery" data-default-source="28r">
+    <div class="poster-label"><span class="poster-number">28rn9</span><h3>28rn — 9:16 Export</h3></div>
+    <div class="poster poster-story-9x16 poster-v3-noir poster-v3-noir-softpanel poster-v3-noir-band-nametop night-bg">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <div class="details v3-details">
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">28b</span><h3>Black Field — Name Top</h3></div>
+    <div class="poster poster-v3-noir poster-v3-noir-band poster-v3-noir-band-nametop">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <div class="details v3-details">
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
       </div>
     </div>
@@ -1130,21 +1230,21 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">28r</span><h3>Name Top — Rounded Inset</h3></div>
     <div class="poster poster-v3-noir poster-v3-noir-softpanel poster-v3-noir-band-nametop">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
       </div>
     </div>
@@ -1153,21 +1253,21 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">28f</span><h3>Name Top — Rect Inset</h3></div>
     <div class="poster poster-v3-noir poster-v3-noir-frame poster-v3-noir-band-nametop">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
       </div>
     </div>
@@ -1176,21 +1276,67 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">28n</span><h3>Name Top — Night Frame</h3></div>
     <div class="poster poster-v3-night poster-v3-noir-band-nametop">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">28m</span><h3>Name Top — Text Mask</h3></div>
+    <div class="poster poster-v3-noir poster-v3-noir-band poster-v3-noir-band-nametop poster-v3-noir-band-textmask">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <div class="details v3-details">
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="poster-card keep-gallery">
+    <div class="poster-label"><span class="poster-number">28ft</span><h3>Name Top — Fitness (Text Behind Bust)</h3></div>
+    <div class="poster poster-v3-noir poster-v3-noir-band poster-v3-noir-band-nametop poster-v3-noir-band-fitness">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
+      <div class="text-behind v3-text">
+        <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
+      </div>
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <div class="details v3-details">
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
+        <p class="date">27 April</p>
+        <p class="time">3:00 — 4:00 PM</p>
+        <div class="talk-topics is-capsule">
+          <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
+          <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
       </div>
     </div>
@@ -1199,20 +1345,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">28a</span><h3>Black Field — Topics Top</h3></div>
     <div class="poster poster-v3-noir poster-v3-noir-band">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1233,14 +1379,14 @@ body.figure-full .poster .figure-fg img {
       <div class="text-behind">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <div class="figure-fg"><img src="/Users/erniesg/Downloads/figure-only-v2.png" alt=""></div>
+      <div class="figure-fg"><img src="downloads/figure-only-v2.png" alt=""></div>
       <div class="details">
         <div class="talk-topics is-tick">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 PM — 4:00 PM</p>
       </div>
@@ -1257,11 +1403,11 @@ body.figure-full .poster .figure-fg img {
       <div class="text-behind">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:44%;height:auto;opacity:0.82;filter:blur(0.2px) saturate(0.92) brightness(0.98);">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:44%;height:auto;opacity:0.82;filter:blur(0.2px) saturate(0.92) brightness(0.98);">
       <div class="details">
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 PM — 4:00 PM</p>
         <div class="platform-icons">
@@ -1282,14 +1428,14 @@ body.figure-full .poster .figure-fg img {
       <div class="text-behind">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details">
         <div class="talk-topics is-tick">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
         <p class="speaker">chen_enjiao.exe</p>
         <p class="date">27.04.26</p>
@@ -1318,15 +1464,15 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">08</span><h3>V3 — White</h3></div>
     <div class="poster poster-v3-white">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
         <div class="platform-icons">
@@ -1341,20 +1487,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">09</span><h3>V3 — Black</h3></div>
     <div class="poster poster-v3-black">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-tick">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
         <div class="platform-icons">
@@ -1373,20 +1519,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">13</span><h3>Soft Ink</h3></div>
     <div class="poster poster-v3-softink">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-tick">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1396,20 +1542,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">14</span><h3>Panel Ink</h3></div>
     <div class="poster poster-v3-panel">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1419,20 +1565,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">15</span><h3>Night Frame</h3></div>
     <div class="poster poster-v3-night">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1447,20 +1593,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">16</span><h3>Step 1 — Shared Rule + Bars</h3></div>
     <div class="poster poster-v3-softink">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-bars">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1470,20 +1616,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">17</span><h3>Step 2 — Shared Rule Only</h3></div>
     <div class="poster poster-v3-softink">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-shared">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1493,20 +1639,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">18</span><h3>Step 3 — Marker Breaks</h3></div>
     <div class="poster poster-v3-softink">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-marker">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1516,20 +1662,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">19</span><h3>Step 4 — Through Tick</h3></div>
     <div class="poster poster-v3-softink">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-tick">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1539,20 +1685,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">20</span><h3>Step 5 — Rectangular Gate</h3></div>
     <div class="poster poster-v3-softink">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-rect">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1562,20 +1708,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">21</span><h3>Step 6 — Pinched Notch</h3></div>
     <div class="poster poster-v3-softink">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-notch">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1585,20 +1731,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">22</span><h3>Step 7 — Narrow Slit</h3></div>
     <div class="poster poster-v3-softink">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-slit">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1608,20 +1754,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">23</span><h3>Step 8 — Chapter Capsule</h3></div>
     <div class="poster poster-v3-softink">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1636,20 +1782,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">24</span><h3>Night Frame — Base</h3></div>
     <div class="poster poster-v3-night">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1664,20 +1810,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">27</span><h3>Black Field — Smoke Panel</h3></div>
     <div class="poster poster-v3-noir poster-v3-noir-softpanel">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1687,20 +1833,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">29</span><h3>Black Field — Thin Frame</h3></div>
     <div class="poster poster-v3-noir poster-v3-noir-frame">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21.6%;top:18%;width:56.8%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1715,21 +1861,21 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">30</span><h3>Night Frame — Transparency Drop</h3></div>
     <div class="poster poster-v3-night poster-v3-night-band">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;opacity:0.84;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;opacity:0.86;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;opacity:0.82;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;opacity:0.84;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;opacity:0.86;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;opacity:0.82;">
       <div class="details v3-details is-event-first">
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
       </div>
     </div>
@@ -1738,21 +1884,21 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">31</span><h3>Night Frame — Circuit White Tint</h3></div>
     <div class="poster poster-v3-night poster-v3-night-band poster-v3-night-circuit">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;opacity:0.94;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:61%;top:3%;width:39%;height:auto;opacity:0.42;filter:saturate(0.58) brightness(0.78);">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;opacity:0.9;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;opacity:0.94;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:61%;top:3%;width:39%;height:auto;opacity:0.42;filter:saturate(0.58) brightness(0.78);">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;opacity:0.9;">
       <div class="details v3-details is-event-first">
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
       </div>
     </div>
@@ -1761,21 +1907,21 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">32</span><h3>Night Frame — Symmetry Shift</h3></div>
     <div class="poster poster-v3-night poster-v3-night-band">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:29%;width:57%;height:auto;opacity:0.95;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:61%;top:3%;width:39%;height:auto;opacity:0.94;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:69%;width:50%;height:auto;opacity:0.92;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:29%;width:57%;height:auto;opacity:0.95;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:61%;top:3%;width:39%;height:auto;opacity:0.94;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:69%;width:50%;height:auto;opacity:0.92;">
       <div class="details v3-details is-event-first">
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
       </div>
     </div>
@@ -1784,21 +1930,21 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">36</span><h3>Night Frame — Top Hand De-Emphasis</h3></div>
     <div class="poster poster-v3-night poster-v3-night-band">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:18%;top:27%;width:62%;height:auto;opacity:1;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:-2%;top:77%;width:46%;height:auto;opacity:0.78;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:18%;top:27%;width:62%;height:auto;opacity:1;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:-2%;top:77%;width:46%;height:auto;opacity:0.78;">
       <div class="details v3-details is-event-first">
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
       </div>
     </div>
@@ -1807,7 +1953,7 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">37</span><h3>Night Frame — Bust Overlap Glass Type</h3></div>
     <div class="poster poster-v3-night poster-v3-night-band">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
@@ -1830,24 +1976,24 @@ body.figure-full .poster .figure-fg img {
           </defs>
           <g clip-path="url(#afterGlassClip37)">
             <rect x="0" y="0" width="1000" height="320" fill="rgba(48,40,58,0.78)"></rect>
-            <image href="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" x="70" y="-16" width="780" height="440" preserveAspectRatio="xMidYMid slice" filter="url(#afterGlassDistort37)" opacity="0.96"></image>
+            <image href="downloads/sam3-bust-head-0-masked.png" x="70" y="-16" width="780" height="440" preserveAspectRatio="xMidYMid slice" filter="url(#afterGlassDistort37)" opacity="0.96"></image>
             <rect x="0" y="0" width="1000" height="320" fill="url(#afterGlassTint37)"></rect>
           </g>
           <text x="500" y="238" text-anchor="middle" font-family="Michroma" font-size="252" letter-spacing="8" fill="none" stroke="rgba(255,255,255,0.48)" stroke-width="10" stroke-linejoin="round">After</text>
           <text x="500" y="238" text-anchor="middle" font-family="Michroma" font-size="252" letter-spacing="8" fill="rgba(255,255,255,0.14)">After</text>
         </svg>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:18%;top:27%;width:62%;height:auto;opacity:1;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:-2%;top:77%;width:46%;height:auto;opacity:0.78;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:18%;top:27%;width:62%;height:auto;opacity:1;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;opacity:0.56;filter:saturate(0.72) brightness(0.84);z-index:4;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:-2%;top:77%;width:46%;height:auto;opacity:0.78;">
       <div class="details v3-details is-event-first">
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
       </div>
     </div>
@@ -1856,22 +2002,22 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card keep-gallery">
     <div class="poster-label"><span class="poster-number">38</span><h3>Night Frame — Masked Glass Hand</h3></div>
     <div class="poster poster-v3-night poster-v3-night-band">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:18%;top:27%;width:62%;height:auto;opacity:1;">
-      <img class="piece piece-robo piece-glass-underlay" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:18%;top:27%;width:62%;height:auto;opacity:1;">
+      <img class="piece piece-robo piece-glass-underlay" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:59.5%;top:-1.5%;width:41.2%;height:auto;">
       <div class="piece piece-robo piece-glass-hand" style="left:59.5%;top:-1.5%;width:41.2%;height:20.4%;"></div>
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:-2%;top:77%;width:46%;height:auto;opacity:0.78;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:-2%;top:77%;width:46%;height:auto;opacity:0.78;">
       <div class="details v3-details is-event-first">
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
         <div class="talk-topics is-capsule">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
       </div>
     </div>
@@ -1889,16 +2035,16 @@ body.figure-full .poster .figure-fg img {
       <div class="text-behind">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details">
         <div class="talk-topics">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 PM — 4:00 PM</p>
       </div>
@@ -1909,20 +2055,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">11</span><h3>V3 White — Editable Pieces</h3></div>
     <div class="poster poster-v3-white">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -1933,20 +2079,20 @@ body.figure-full .poster .figure-fg img {
   <article class="poster-card">
     <div class="poster-label"><span class="poster-number">12</span><h3>V3 Black — Editable Pieces</h3></div>
     <div class="poster poster-v3-black">
-      <img class="v3-bg" src="/Users/erniesg/Downloads/themachineafterthemuse3.png" alt="">
+      <img class="v3-bg" src="downloads/themachineafterthemuse3.png" alt="">
       <div class="text-behind v3-text">
         <span class="l1">The</span><span class="l2">Machine</span><span class="l3">After</span><span class="l4">the</span><span class="l5">Muse</span>
       </div>
-      <img class="piece piece-bust" src="/Users/erniesg/Downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
-      <img class="piece piece-robo" src="/Users/erniesg/Downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
-      <img class="piece piece-wire" src="/Users/erniesg/Downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
+      <img class="piece piece-bust" src="downloads/sam3-bust-head-0-masked.png" alt="" style="left:21%;top:38%;width:57%;height:auto;">
+      <img class="piece piece-robo" src="downloads/sam3-robotic-hand-0-masked.png" alt="" style="left:53%;top:16%;width:47%;height:auto;">
+      <img class="piece piece-wire" src="downloads/sam3-wireframe-hand-1-masked.png" alt="" style="left:0%;top:81%;width:50%;height:auto;">
       <div class="details v3-details">
         <div class="talk-topics">
           <div class="topic-item"><div class="topic-duration">15 min</div>Landscape + what's coming</div>
           <div class="topic-item"><div class="topic-duration">25 min</div>Agentic AI: brief to multi-format output<div class="topic-demo">&#9654; live demo</div></div>
-          <div class="topic-item"><div class="topic-duration">20 min</div>Taste, judgment & the last mile</div>
+          <div class="topic-item"><div class="topic-duration">20 min</div>Taste & the last mile</div>
         </div>
-        <p class="speaker">Chen Enjiao (Ernie)</p>
+        <p class="speaker">By Chen Enjiao (Ernie)</p>
         <p class="date">27 April</p>
         <p class="time">3:00 — 4:00 PM</p>
       </div>
@@ -2041,6 +2187,33 @@ body.figure-full .poster .figure-fg img {
   top: 0; bottom: 0;
   box-shadow: 0 0 4px oklch(0.65 0.25 155 / 0.6);
 }
+/* Distance indicator — dashed line with px label between two edges */
+.dist-guide {
+  position: absolute;
+  pointer-events: none;
+  z-index: 9991;
+  display: none;
+  color: oklch(0.7 0.2 50);
+  font-family: 'Azeret Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+}
+.dist-guide.visible { display: flex; align-items: center; justify-content: center; }
+.dist-guide-v {
+  border-left: 1px dashed oklch(0.7 0.2 50);
+  border-right: 1px dashed oklch(0.7 0.2 50);
+  flex-direction: column;
+}
+.dist-guide-h {
+  border-top: 1px dashed oklch(0.7 0.2 50);
+  border-bottom: 1px dashed oklch(0.7 0.2 50);
+}
+.dist-guide .dist-label {
+  background: oklch(0.08 0.01 260);
+  padding: 1px 4px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
 </style>
 
 <script>
@@ -2051,7 +2224,6 @@ function fitText() {
     poster.querySelectorAll('.text-behind span').forEach(span => {
       // Reset
       span.style.fontSize = '';
-      span.style.transform = '';
       // Temporarily inline-block to measure natural width
       const origDisplay = getComputedStyle(span).display;
       const origAlign = getComputedStyle(span).textAlign;
@@ -2127,6 +2299,288 @@ window.addEventListener('load', syncTopicDurations);
 window.addEventListener('load', syncDates);
 window.addEventListener('resize', fitText);
 window.addEventListener('resize', syncTopicDurations);
+
+const isFileProtocol = location.protocol === 'file:';
+
+function isPrimaryRoboPiece(el) {
+  return !!el &&
+    el.tagName === 'IMG' &&
+    el.classList.contains('piece-robo') &&
+    !el.classList.contains('piece-glass-underlay');
+}
+
+function getRoboFeatherBlurPx(el) {
+  const value = parseFloat(el?.dataset?.roboFeatherBlur || '3');
+  return Number.isFinite(value) ? value : 3;
+}
+
+function setRoboFeatherBlurPx(el, blurPx) {
+  if (!el) return;
+  el.dataset.roboFeatherBlur = Math.max(0, blurPx).toFixed(2);
+}
+
+function getRoboFeatherOpacity(el) {
+  const value = parseFloat(el?.dataset?.roboFeatherOpacity || '0.42');
+  return Number.isFinite(value) ? value : 0.42;
+}
+
+function setRoboFeatherOpacity(el, opacity) {
+  if (!el) return;
+  const next = Math.max(0, Math.min(1, opacity));
+  el.dataset.roboFeatherOpacity = next.toFixed(2);
+}
+
+function setupRoboticHandFeathering() {
+  const syncFeather = (piece, feather) => {
+    const computed = getComputedStyle(piece);
+    const baseFilter = piece.style.filter || '';
+    const baseOpacity = parseFloat(piece.style.opacity || computed.opacity || '1');
+    const computedZ = parseInt(piece.style.zIndex || computed.zIndex || '11', 10);
+
+    feather.src = piece.currentSrc || piece.src;
+    feather.style.left = piece.style.left || computed.left;
+    feather.style.right = piece.style.right || computed.right;
+    feather.style.top = piece.style.top || computed.top;
+    feather.style.bottom = piece.style.bottom || computed.bottom;
+    feather.style.width = piece.style.width || computed.width;
+    feather.style.height = piece.style.height || computed.height;
+    feather.style.transform = piece.style.transform || computed.transform;
+    feather.style.filter = [baseFilter, `blur(${getRoboFeatherBlurPx(piece).toFixed(2)}px)`].filter(Boolean).join(' ');
+    feather.style.opacity = String(Math.max(0, Math.min(1, baseOpacity * getRoboFeatherOpacity(piece))));
+    feather.style.zIndex = String(Number.isFinite(computedZ) ? computedZ - 1 : 10);
+  };
+
+  document.querySelectorAll('img.piece-robo:not(.piece-glass-underlay)').forEach((piece, index) => {
+    if (piece.dataset.roboFeatherReady === 'true') return;
+    if (!piece.dataset.roboFeatherBlur) piece.dataset.roboFeatherBlur = '3.00';
+    if (!piece.dataset.roboFeatherOpacity) piece.dataset.roboFeatherOpacity = '0.42';
+
+    const feather = document.createElement('img');
+    feather.className = 'robo-feather';
+    feather.alt = '';
+    feather.setAttribute('aria-hidden', 'true');
+    feather.dataset.roboFeatherFor = piece.dataset.roboFeatherId || `robo-feather-${index}`;
+    piece.dataset.roboFeatherId = feather.dataset.roboFeatherFor;
+    piece.dataset.roboFeatherReady = 'true';
+    piece.parentNode.insertBefore(feather, piece);
+
+    const sync = () => syncFeather(piece, feather);
+    sync();
+
+    const observer = new MutationObserver(sync);
+    observer.observe(piece, {
+      attributes: true,
+      attributeFilter: ['style', 'src', 'data-robo-feather-blur', 'data-robo-feather-opacity']
+    });
+  });
+}
+
+// 28m: generate a STILL composite image (bust + robot hand + wire hand at
+// their current positions + a night-style bg color) and set it as .v3-bg's src
+// — replacing themuse3.png. Pieces are hidden since they're baked in.
+function alignTextMask() {
+  const posters = document.querySelectorAll('.poster-v3-noir-band-textmask');
+  if (posters.length === 0) return;
+  if (isFileProtocol) {
+    posters.forEach(poster => poster.classList.add('is-file-fallback'));
+    return;
+  }
+
+  posters.forEach((poster, i) => {
+    poster.classList.remove('is-file-fallback');
+    if (poster.dataset.compositeApplied === 'true') {
+      return;
+    }
+    const pr = poster.getBoundingClientRect();
+    if (!pr.width) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(pr.width);
+    canvas.height = Math.round(pr.height);
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#1a1725';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const items = [];
+    poster.querySelectorAll('.piece').forEach(piece => {
+      if (!piece.complete || !piece.naturalWidth) return;
+      const cs = getComputedStyle(piece);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return;
+      const z = parseInt(piece.style.zIndex) || parseInt(cs.zIndex) || 3;
+      const r = piece.getBoundingClientRect();
+      items.push({
+        img: piece, z,
+        x: r.left - pr.left, y: r.top - pr.top,
+        w: r.width, h: r.height,
+        opacity: parseFloat(piece.style.opacity || cs.opacity) || 1,
+      });
+    });
+    items.sort((a, b) => a.z - b.z);
+
+    for (const it of items) {
+      ctx.save();
+      ctx.globalAlpha = it.opacity;
+      try {
+        ctx.drawImage(it.img, it.x, it.y, it.w, it.h);
+      } catch (e) {
+        console.warn('[28m] drawImage failed for', it.img.src, e);
+      }
+      ctx.restore();
+    }
+
+    let dataUrl;
+    try {
+      dataUrl = canvas.toDataURL('image/png');
+    } catch (e) {
+      console.warn('[28m] canvas tainted (CORS) — falling back to visible text. Open via http://localhost:8080/ to fix.', e);
+      // Fallback: make l4/l5 text visible as solid color since canvas mask can't render
+      poster.querySelectorAll('.text-behind .l4, .text-behind .l5').forEach(span => {
+        span.style.color = 'oklch(0.94 0.004 70)';
+        span.style.webkitTextFillColor = 'oklch(0.94 0.004 70)';
+        span.style.backgroundImage = 'none';
+      });
+      return;
+    }
+
+    const bg = poster.querySelector('.v3-bg');
+    if (bg) {
+      bg.src = dataUrl;
+    }
+    poster.querySelectorAll('.piece').forEach(p => p.style.visibility = 'hidden');
+    poster.dataset.compositeApplied = 'true';
+    window.__28mComposite = dataUrl;
+  });
+}
+window.alignTextMask = alignTextMask;
+
+// Live mirror: 28rn mirrors 28r's piece/panel/text positions in real-time
+function findPosterByNum(num) {
+  for (const card of document.querySelectorAll('.poster-card')) {
+    const n = card.querySelector('.poster-number');
+    if (n && n.textContent.trim() === num) return card.querySelector('.poster');
+  }
+  return null;
+}
+const PANEL_CHILD_SELECTOR = '.v3-details > p, .v3-details > .talk-topics > .topic-item, .v3-details .topic-demo, .v3-details .talk-topics .topic-track';
+
+function pctOf(value, total) {
+  if (!total) return '0%';
+  return ((value / total) * 100).toFixed(3) + '%';
+}
+
+function copyRelativeBox(sourceEl, targetEl, sourcePoster, targetPoster) {
+  const sourceRect = sourceEl.getBoundingClientRect();
+  const posterRect = sourcePoster.getBoundingClientRect();
+  const left = sourceRect.left - posterRect.left;
+  const top = sourceRect.top - posterRect.top;
+  const width = sourceRect.width;
+  const height = sourceRect.height;
+  targetEl.style.position = 'absolute';
+  targetEl.style.right = 'auto';
+  targetEl.style.bottom = 'auto';
+  targetEl.style.left = pctOf(left, posterRect.width);
+  targetEl.style.top = pctOf(top, posterRect.height);
+  targetEl.style.width = pctOf(width, posterRect.width);
+  const rawHeight = (sourceEl.style.height || '').trim();
+  targetEl.style.height = (sourceEl.tagName === 'IMG' || rawHeight === '' || rawHeight === 'auto')
+    ? 'auto'
+    : pctOf(height, posterRect.height);
+}
+
+function copyScaledTranslate(sourceEl, targetEl, sourceBaseWidth, sourceBaseHeight, targetBaseWidth, targetBaseHeight) {
+  const sourceTx = parseFloat(sourceEl.dataset.tx) || 0;
+  const sourceTy = parseFloat(sourceEl.dataset.ty) || 0;
+  const hasTranslate = sourceEl.dataset.tx || sourceEl.dataset.ty || (sourceEl.style.transform || '').includes('translate(');
+  if (!hasTranslate) {
+    delete targetEl.dataset.tx;
+    delete targetEl.dataset.ty;
+    targetEl.style.transform = '';
+    return;
+  }
+  const nextTx = sourceBaseWidth ? (sourceTx / sourceBaseWidth) * targetBaseWidth : sourceTx;
+  const nextTy = sourceBaseHeight ? (sourceTy / sourceBaseHeight) * targetBaseHeight : sourceTy;
+  targetEl.dataset.tx = nextTx.toFixed(3);
+  targetEl.dataset.ty = nextTy.toFixed(3);
+  targetEl.style.transform = `translate(${nextTx.toFixed(3)}px, ${nextTy.toFixed(3)}px)`;
+}
+
+function syncPoster(sourceNum, targetNum) {
+  const source = findPosterByNum(sourceNum);
+  const target = findPosterByNum(targetNum);
+  if (!source || !target) return;
+  ['piece-bust', 'piece-robo', 'piece-wire'].forEach(cls => {
+    const s = source.querySelector('.' + cls);
+    const t = target.querySelector('.' + cls);
+    if (s && t) {
+      copyRelativeBox(s, t, source, target);
+      t.style.filter = s.style.filter || '';
+      t.style.opacity = s.style.opacity || '';
+      t.style.zIndex = s.style.zIndex || '';
+      if (s.dataset.rotate) t.dataset.rotate = s.dataset.rotate;
+      else delete t.dataset.rotate;
+      t.style.transform = s.dataset.rotate ? `rotate(${parseFloat(s.dataset.rotate).toFixed(3)}deg)` : '';
+      if (isPrimaryRoboPiece(s) && isPrimaryRoboPiece(t)) {
+        if (s.dataset.roboFeatherBlur) t.dataset.roboFeatherBlur = s.dataset.roboFeatherBlur;
+        else delete t.dataset.roboFeatherBlur;
+        if (s.dataset.roboFeatherOpacity) t.dataset.roboFeatherOpacity = s.dataset.roboFeatherOpacity;
+        else delete t.dataset.roboFeatherOpacity;
+      }
+    }
+  });
+  const sd = source.querySelector('.details');
+  const td = target.querySelector('.details');
+  if (sd && td) {
+    copyRelativeBox(sd, td, source, target);
+    td.style.backdropFilter = sd.style.backdropFilter || sd.style.webkitBackdropFilter || '';
+    td.style.webkitBackdropFilter = sd.style.backdropFilter || sd.style.webkitBackdropFilter || '';
+    td.style.opacity = sd.style.opacity || '';
+    td.style.zIndex = sd.style.zIndex || '';
+    td.style.transform = '';
+  }
+  source.querySelectorAll('.text-behind span').forEach(ss => {
+    const cls = [...ss.classList].find(c => c.startsWith('l'));
+    if (!cls) return;
+    const ts = target.querySelector('.text-behind .' + cls);
+    if (ts) {
+      copyScaledTranslate(ss, ts, source.clientWidth, source.clientHeight, target.clientWidth, target.clientHeight);
+      if (ss.style.fontSize) {
+        const sourceSize = parseFloat(getComputedStyle(ss).fontSize) || 0;
+        const scaledSize = source.clientWidth ? (sourceSize / source.clientWidth) * target.clientWidth : sourceSize;
+        ts.style.fontSize = scaledSize ? scaledSize.toFixed(3) + 'px' : '';
+      } else {
+        ts.style.fontSize = '';
+      }
+      if (ss.style.zIndex) ts.style.setProperty('z-index', ss.style.zIndex, 'important');
+      else ts.style.removeProperty('z-index');
+    }
+  });
+  // Also sync panel children (speaker, date, time, topic-items)
+  const sourceChildren = [...source.querySelectorAll(PANEL_CHILD_SELECTOR)];
+  const targetChildren = [...target.querySelectorAll(PANEL_CHILD_SELECTOR)];
+  sourceChildren.forEach((sc, i) => {
+    const tc = targetChildren[i];
+    if (!tc) return;
+    copyScaledTranslate(sc, tc, sd?.clientWidth || source.clientWidth, sd?.clientHeight || source.clientHeight, td?.clientWidth || target.clientWidth, td?.clientHeight || target.clientHeight);
+    if (sc.style.zIndex) tc.style.setProperty('z-index', sc.style.zIndex, 'important');
+    else tc.style.removeProperty('z-index');
+  });
+}
+function setupLiveMirror(sourceNum, targetNum) {
+  const source = findPosterByNum(sourceNum);
+  if (!source) return;
+  const observer = new MutationObserver(() => syncPoster(sourceNum, targetNum));
+  const opts = { attributes: true, attributeFilter: ['style', 'data-tx', 'data-ty', 'data-robo-feather-blur', 'data-robo-feather-opacity'] };
+  source.querySelectorAll('.piece, .details, .text-behind span, ' + PANEL_CHILD_SELECTOR).forEach(el => observer.observe(el, opts));
+  syncPoster(sourceNum, targetNum);
+}
+window.syncMirror = () => {};
+// 28rn and 28rn9 are now INDEPENDENT — load/export should use their own saved state.
+setupRoboticHandFeathering();
+alignTextMask();
+window.addEventListener('resize', alignTextMask);
+window.addEventListener('load', () => { alignTextMask(); setTimeout(alignTextMask, 300); });
+
 document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeout(fitText, 50));
 // ============================================================
 // INTERACTIVE PIECE COMPOSITOR
@@ -2151,12 +2605,106 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
   `;
   document.body.appendChild(selection);
 
-  // Snap guides
+  // Snap guides + distance indicators (Illustrator-style smart guides)
   const SNAP_THRESHOLD = 6; // px
   const guideH = document.createElement('div');
   guideH.className = 'snap-guide snap-guide-h';
   const guideV = document.createElement('div');
   guideV.className = 'snap-guide snap-guide-v';
+
+  // Distance indicators: top, bottom, left, right
+  const dists = {
+    top: mkDist('v'), bottom: mkDist('v'),
+    left: mkDist('h'), right: mkDist('h'),
+  };
+  function mkDist(orient) {
+    const d = document.createElement('div');
+    d.className = 'dist-guide dist-guide-' + orient;
+    const lbl = document.createElement('span');
+    lbl.className = 'dist-label';
+    d.appendChild(lbl);
+    return d;
+  }
+  function showDistances(el) {
+    const poster = el.closest('.poster');
+    if (!poster) return;
+    Object.values(dists).forEach(d => {
+      if (d.parentElement !== poster) poster.appendChild(d);
+    });
+    const pr = poster.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    const elTop = er.top - pr.top;
+    const elBot = er.bottom - pr.top;
+    const elLeft = er.left - pr.left;
+    const elRight = er.right - pr.left;
+
+    // Find nearest sibling edges — include pieces, panel, text spans, and panel children
+    let nearestTop = 0, nearestBot = poster.clientHeight;
+    let nearestLeft = 0, nearestRight = poster.clientWidth;
+    poster.querySelectorAll('.piece, .details, .text-behind span, .v3-details > p, .v3-details > .talk-topics > .topic-item, .v3-details .topic-demo, .v3-details .talk-topics .topic-track').forEach(sib => {
+      if (sib === el) return;
+      const sr = sib.getBoundingClientRect();
+      const sTop = sr.top - pr.top, sBot = sr.bottom - pr.top;
+      const sLeft = sr.left - pr.left, sRight = sr.right - pr.left;
+      // horizontal overlap → can measure vertical distance
+      if (sRight > elLeft && sLeft < elRight) {
+        if (sBot <= elTop && sBot > nearestTop) nearestTop = sBot;
+        if (sTop >= elBot && sTop < nearestBot) nearestBot = sTop;
+      }
+      // vertical overlap → can measure horizontal distance
+      if (sBot > elTop && sTop < elBot) {
+        if (sRight <= elLeft && sRight > nearestLeft) nearestLeft = sRight;
+        if (sLeft >= elRight && sLeft < nearestRight) nearestRight = sLeft;
+      }
+    });
+
+    // Top indicator
+    const topGap = elTop - nearestTop;
+    if (topGap > 2) {
+      dists.top.style.left = (elLeft + er.width / 2 - 12) + 'px';
+      dists.top.style.top = nearestTop + 'px';
+      dists.top.style.width = '24px';
+      dists.top.style.height = topGap + 'px';
+      dists.top.querySelector('.dist-label').textContent = Math.round(topGap) + 'px';
+      dists.top.classList.add('visible');
+    } else dists.top.classList.remove('visible');
+
+    // Bottom indicator
+    const botGap = nearestBot - elBot;
+    if (botGap > 2) {
+      dists.bottom.style.left = (elLeft + er.width / 2 - 12) + 'px';
+      dists.bottom.style.top = elBot + 'px';
+      dists.bottom.style.width = '24px';
+      dists.bottom.style.height = botGap + 'px';
+      dists.bottom.querySelector('.dist-label').textContent = Math.round(botGap) + 'px';
+      dists.bottom.classList.add('visible');
+    } else dists.bottom.classList.remove('visible');
+
+    // Left indicator
+    const leftGap = elLeft - nearestLeft;
+    if (leftGap > 2) {
+      dists.left.style.top = (elTop + er.height / 2 - 8) + 'px';
+      dists.left.style.left = nearestLeft + 'px';
+      dists.left.style.width = leftGap + 'px';
+      dists.left.style.height = '16px';
+      dists.left.querySelector('.dist-label').textContent = Math.round(leftGap) + 'px';
+      dists.left.classList.add('visible');
+    } else dists.left.classList.remove('visible');
+
+    // Right indicator
+    const rightGap = nearestRight - elRight;
+    if (rightGap > 2) {
+      dists.right.style.top = (elTop + er.height / 2 - 8) + 'px';
+      dists.right.style.left = elRight + 'px';
+      dists.right.style.width = rightGap + 'px';
+      dists.right.style.height = '16px';
+      dists.right.querySelector('.dist-label').textContent = Math.round(rightGap) + 'px';
+      dists.right.classList.add('visible');
+    } else dists.right.classList.remove('visible');
+  }
+  function hideDistances() {
+    Object.values(dists).forEach(d => d.classList.remove('visible'));
+  }
 
   function showGuides(el) {
     const poster = el.closest('.poster');
@@ -2254,8 +2802,9 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     document.querySelectorAll('.piece').forEach(p => {
       p.style.pointerEvents = mode === 'pieces' ? 'auto' : 'none';
     });
+    // Details panel always clickable (for drag + panel-child edits)
     document.querySelectorAll('.details').forEach(d => {
-      d.style.pointerEvents = mode === 'pieces' ? 'auto' : 'none';
+      d.style.pointerEvents = 'auto';
     });
     document.querySelectorAll('.text-behind span').forEach(s => {
       s.style.pointerEvents = mode === 'text' ? 'auto' : 'none';
@@ -2289,6 +2838,7 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     const widthPct = (r.width / pw * 100).toFixed(1);
     const rot = parseFloat(selected.dataset.rotate) || 0;
     const isPanel = selected.classList.contains('details');
+    const isRobo = isPrimaryRoboPiece(selected);
     const blur = isPanel ? getBackdropBlurPx(selected) : getBlurPx(selected);
     const isText = selected.parentElement && selected.parentElement.classList.contains('text-behind');
     const name = isPanel ? 'PANEL' :
@@ -2297,13 +2847,22 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
                  selected.classList.contains('piece-robo') ? 'ROBOTIC HAND' : 'WIREFRAME HAND';
     const z = parseInt(getComputedStyle(selected).zIndex) || 0;
     const controls = isPanel
-      ? 'option+scroll=blur · option+↑/↓=blur'
+      ? 'drag=move · handles=resize · option+scroll=blur'
       : isText
       ? 'drag=move · [/]=z-index'
+      : isRobo
+      ? 'drag=move · handles=resize · scroll=resize · shift+scroll=rotate · option+scroll=edge blur · option+shift+scroll=edge opacity · option+↑/↓=edge blur · option+shift+↑/↓=edge opacity · [/]=z-index'
       : 'drag=move · handles=resize · scroll=resize · shift+scroll=rotate · option+scroll=blur · option+↑/↓=blur · [/]=z-index';
-    info.innerHTML = `<b>${name}</b><br>left: ${leftPct}% &nbsp; top: ${topPct}%<br>width: ${widthPct}% &nbsp; rotate: ${rot.toFixed(1)}° &nbsp; blur: ${blur.toFixed(2)}px &nbsp; z: ${z}<br><span style="opacity:0.5">${controls}</span>`;
+    const blurLine = isPanel
+      ? `panel blur: ${blur.toFixed(2)}px`
+      : isRobo
+      ? `edge blur: ${getRoboFeatherBlurPx(selected).toFixed(2)}px · edge opacity: ${(getRoboFeatherOpacity(selected) * 100).toFixed(0)}%`
+      : `blur: ${blur.toFixed(2)}px`;
+    info.innerHTML = `<b>${name}</b><br>left: ${leftPct}% &nbsp; top: ${topPct}%<br>width: ${widthPct}% &nbsp; height: ${(r.height / ph * 100).toFixed(1)}% &nbsp; z: ${z}<br>${blurLine}<br><span style="opacity:0.5">${controls}</span>`;
     info.classList.add('visible');
-    if (isPanel) {
+    // Hide resize handles for text spans and panel children (drag-only)
+    const isDragOnly = isText || (selected.matches && selected.matches('.v3-details > p, .v3-details > .talk-topics > .topic-item, .v3-details .topic-demo, .v3-details .talk-topics .topic-track, .v3-details .speaker, .v3-details .date, .v3-details .time'));
+    if (isDragOnly) {
       selection.classList.remove('visible');
     } else {
       selection.style.left = `${r.left}px`;
@@ -2352,7 +2911,9 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     }
 
     const textSpan = e.target.closest('.text-behind span');
-    const piece = textSpan || e.target.closest('.piece, .details');
+    // Panel children (speaker, date, time, topic items) — draggable via transform
+    const panelChild = !textSpan && e.target.closest('.v3-details > p, .v3-details > .talk-topics > .topic-item, .v3-details .topic-demo, .v3-details .talk-topics .topic-track, .v3-details .speaker, .v3-details .date, .v3-details .time');
+    const piece = textSpan || panelChild || e.target.closest('.piece, .details');
     if (!piece) { selectEditable(null); return; }
 
     selectEditable(piece);
@@ -2387,6 +2948,17 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
       return;
     }
 
+    if (panelChild) {
+      dragging = true;
+      panelChild.classList.add('dragging');
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = parseFloat(panelChild.dataset.tx) || 0;
+      startTop = parseFloat(panelChild.dataset.ty) || 0;
+      e.preventDefault();
+      return;
+    }
+
     dragging = true;
     piece.classList.add('dragging');
 
@@ -2412,10 +2984,25 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       const poster = selected.closest('.poster');
+      const isPanelResize = selected.classList.contains('details');
       let nextLeft = startLeft;
       let nextTop = startTop;
       let nextWidth = startWidth;
       let nextHeight = startHeight;
+
+      if (isPanelResize) {
+        // Free width/height resize for the panel (not aspect-locked)
+        if (resizeDir.includes('e')) nextWidth = Math.max(50, startWidth + dx);
+        if (resizeDir.includes('w')) { nextWidth = Math.max(50, startWidth - dx); nextLeft = startLeft + (startWidth - nextWidth); }
+        if (resizeDir.includes('s')) nextHeight = Math.max(30, startHeight + dy);
+        if (resizeDir.includes('n')) { nextHeight = Math.max(30, startHeight - dy); nextTop = startTop + (startHeight - nextHeight); }
+        selected.style.left = `${nextLeft}px`;
+        selected.style.top = `${nextTop}px`;
+        selected.style.width = `${nextWidth}px`;
+        selected.style.height = `${nextHeight}px`;
+        updateInfo();
+        return;
+      }
 
       const horizontal = resizeDir.includes('e') ? dx : resizeDir.includes('w') ? -dx : 0;
       const vertical = resizeDir.includes('s') ? dy : resizeDir.includes('n') ? -dy : 0;
@@ -2454,13 +3041,89 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
     const isText = selected.parentElement && selected.parentElement.classList.contains('text-behind');
-    if (isText) {
-      const tx = startLeft + dx;
-      const ty = startTop + dy;
+    const isPanelChild = selected.matches && selected.matches('.v3-details > p, .v3-details > .talk-topics > .topic-item, .v3-details .topic-demo, .v3-details .talk-topics .topic-track, .v3-details .speaker, .v3-details .date, .v3-details .time');
+    if (isText || isPanelChild) {
+      if (Math.abs(dx) < 2 && Math.abs(dy) < 2 && !selected.dataset.tx) return;
+      let tx = startLeft + dx;
+      let ty = startTop + dy;
+      selected.style.transform = `translate(${tx}px, ${ty}px)`;
+      const poster = selected.closest('.poster');
+      if (poster) {
+        const pr = poster.getBoundingClientRect();
+        const er = selected.getBoundingClientRect();
+        const elL = er.left - pr.left;
+        const elR = er.right - pr.left;
+        const elT = er.top - pr.top;
+        const elB = er.bottom - pr.top;
+        const elCx = elL + er.width / 2;
+        const elCy = elT + er.height / 2;
+        const cx = poster.clientWidth / 2;
+        const cy = poster.clientHeight / 2;
+        const SNAP = 6;
+
+        // Collect alignment candidates — siblings of same "kind"
+        const siblings = [];
+        // Other topic items / panel-child / text spans
+        const selectorSet = isText
+          ? '.text-behind span'
+          : '.v3-details > p, .v3-details > .talk-topics > .topic-item, .v3-details .topic-demo, .v3-details .talk-topics .topic-track';
+        poster.querySelectorAll(selectorSet).forEach(s => {
+          if (s === selected) return;
+          const sr = s.getBoundingClientRect();
+          siblings.push({
+            el: s,
+            top: sr.top - pr.top,
+            bot: sr.bottom - pr.top,
+            left: sr.left - pr.left,
+            right: sr.right - pr.left,
+            cx: (sr.left - pr.left) + sr.width / 2,
+            cy: (sr.top - pr.top) + sr.height / 2,
+          });
+        });
+
+        // Horizontal alignment (vertical line): elCx vs center | elL vs left | elR vs right
+        let snapX = null, snapVLineX = null;
+        if (Math.abs(elCx - cx) < SNAP) { snapX = cx - elCx; snapVLineX = cx; }
+        for (const s of siblings) {
+          if (snapX !== null) break;
+          if (Math.abs(elCx - s.cx) < SNAP) { snapX = s.cx - elCx; snapVLineX = s.cx; break; }
+          if (Math.abs(elL - s.left) < SNAP) { snapX = s.left - elL; snapVLineX = s.left; break; }
+          if (Math.abs(elR - s.right) < SNAP) { snapX = s.right - elR; snapVLineX = s.right; break; }
+        }
+
+        // Vertical alignment (horizontal line): elCy vs center | elT vs top | elB vs bottom
+        let snapY = null, snapHLineY = null;
+        if (Math.abs(elCy - cy) < SNAP) { snapY = cy - elCy; snapHLineY = cy; }
+        for (const s of siblings) {
+          if (snapY !== null) break;
+          if (Math.abs(elCy - s.cy) < SNAP) { snapY = s.cy - elCy; snapHLineY = s.cy; break; }
+          if (Math.abs(elT - s.top) < SNAP) { snapY = s.top - elT; snapHLineY = s.top; break; }
+          if (Math.abs(elB - s.bot) < SNAP) { snapY = s.bot - elB; snapHLineY = s.bot; break; }
+        }
+
+        if (guideV.parentElement !== poster) poster.appendChild(guideV);
+        if (guideH.parentElement !== poster) poster.appendChild(guideH);
+
+        if (snapX !== null) {
+          tx += snapX;
+          guideV.style.left = snapVLineX + 'px';
+          guideV.classList.add('visible');
+        } else {
+          guideV.classList.remove('visible');
+        }
+        if (snapY !== null) {
+          ty += snapY;
+          guideH.style.top = snapHLineY + 'px';
+          guideH.classList.add('visible');
+        } else {
+          guideH.classList.remove('visible');
+        }
+        selected.style.transform = `translate(${tx}px, ${ty}px)`;
+      }
       selected.dataset.tx = tx;
       selected.dataset.ty = ty;
-      selected.style.transform = `translate(${tx}px, ${ty}px)`;
-      showGuides(selected);
+      if (isText && window.alignTextMask) window.alignTextMask();
+      showDistances(selected);
     } else {
       let nextLeft = startLeft + dx;
       let nextTop = startTop + dy;
@@ -2469,8 +3132,10 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
       const { snapX, snapY } = showGuides(selected);
       if (snapX !== null) selected.style.left = snapX + 'px';
       if (snapY !== null) selected.style.top = snapY + 'px';
+      showDistances(selected);
     }
     updateInfo();
+    if (window.alignTextMask) window.alignTextMask();
   });
 
   document.addEventListener('mouseup', () => {
@@ -2479,6 +3144,8 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     resizing = false;
     resizeDir = '';
     hideGuides();
+    hideDistances();
+    if (window.alignTextMask) window.alignTextMask();
   });
 
   // Scroll to resize, shift+scroll to rotate
@@ -2488,7 +3155,15 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     e.preventDefault();
 
     if (e.altKey) {
-      if (piece.classList.contains('details')) {
+      if (isPrimaryRoboPiece(piece)) {
+        if (e.shiftKey) {
+          const opacity = getRoboFeatherOpacity(piece) - e.deltaY * 0.001;
+          setRoboFeatherOpacity(piece, opacity);
+        } else {
+          const blur = getRoboFeatherBlurPx(piece) - e.deltaY * 0.01;
+          setRoboFeatherBlurPx(piece, blur);
+        }
+      } else if (piece.classList.contains('details')) {
         const blur = getBackdropBlurPx(piece) - e.deltaY * 0.01;
         setBackdropBlurPx(piece, blur);
       } else {
@@ -2519,10 +3194,19 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
     if (!selected) return;
     if (e.altKey && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
       e.preventDefault();
-      const delta = e.code === 'ArrowUp' ? 0.2 : -0.2;
-      if (selected.classList.contains('details')) {
+      if (isPrimaryRoboPiece(selected)) {
+        if (e.shiftKey) {
+          const delta = e.code === 'ArrowUp' ? 0.02 : -0.02;
+          setRoboFeatherOpacity(selected, getRoboFeatherOpacity(selected) + delta);
+        } else {
+          const delta = e.code === 'ArrowUp' ? 0.2 : -0.2;
+          setRoboFeatherBlurPx(selected, getRoboFeatherBlurPx(selected) + delta);
+        }
+      } else if (selected.classList.contains('details')) {
+        const delta = e.code === 'ArrowUp' ? 0.2 : -0.2;
         setBackdropBlurPx(selected, getBackdropBlurPx(selected) + delta);
       } else {
+        const delta = e.code === 'ArrowUp' ? 0.2 : -0.2;
         setBlurPx(selected, getBlurPx(selected) + delta);
       }
       updateInfo();
@@ -2624,11 +3308,273 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
   });
 })();
 
+// Add per-poster "PNG" button that exports that poster using html2canvas
+(function() {
+  function waitForFrames(count = 2) {
+    return new Promise(resolve => {
+      const step = () => {
+        count -= 1;
+        if (count <= 0) {
+          resolve();
+          return;
+        }
+        requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
+  function getPosterFilename(card) {
+    const num = card.querySelector('.poster-number');
+    const raw = num ? num.textContent.trim() : 'export';
+    const safe = raw.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '');
+    return `poster-${safe || 'export'}.png`;
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function canvasToBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+        reject(new Error('Failed to encode PNG.'));
+      }, 'image/png');
+    });
+  }
+
+  function parseInsetValue(raw, base) {
+    const value = (raw || '').trim();
+    if (!value) return 0;
+    if (value.endsWith('%')) return (parseFloat(value) / 100) * base;
+    if (value.endsWith('px')) return parseFloat(value);
+    const numeric = parseFloat(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+  }
+
+  function getPosterExportRect(poster) {
+    const rect = poster.getBoundingClientRect();
+    const styles = getComputedStyle(poster);
+    const insetTop = parseInsetValue(styles.getPropertyValue('--export-inset-top'), rect.height);
+    const insetRight = parseInsetValue(styles.getPropertyValue('--export-inset-right'), rect.width);
+    const insetBottom = parseInsetValue(styles.getPropertyValue('--export-inset-bottom'), rect.height);
+    const insetLeft = parseInsetValue(styles.getPropertyValue('--export-inset-left'), rect.width);
+    const width = Math.max(1, rect.width - insetLeft - insetRight);
+    const height = Math.max(1, rect.height - insetTop - insetBottom);
+    return {
+      left: rect.left + insetLeft,
+      top: rect.top + insetTop,
+      width,
+      height,
+      posterWidth: rect.width,
+      posterHeight: rect.height,
+      insetTop,
+      insetRight,
+      insetBottom,
+      insetLeft
+    };
+  }
+
+  function cropCanvasToExportRect(canvas, poster, exportRect) {
+    const scaleX = canvas.width / exportRect.posterWidth;
+    const scaleY = canvas.height / exportRect.posterHeight;
+    const sx = Math.max(0, Math.round(exportRect.insetLeft * scaleX));
+    const sy = Math.max(0, Math.round(exportRect.insetTop * scaleY));
+    const sw = Math.max(1, Math.min(canvas.width - sx, Math.round(exportRect.width * scaleX)));
+    const sh = Math.max(1, Math.min(canvas.height - sy, Math.round(exportRect.height * scaleY)));
+    if (sx === 0 && sy === 0 && sw === canvas.width && sh === canvas.height) return canvas;
+
+    const cropped = document.createElement('canvas');
+    cropped.width = sw;
+    cropped.height = sh;
+    const ctx = cropped.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D context unavailable.');
+    ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+    return cropped;
+  }
+
+  function hideEditorOverlays() {
+    const hidden = [];
+    document.querySelectorAll('.piece-info, .piece-selection, .snap-guide, .dist-guide, .layout-toolbar').forEach(el => {
+      if (getComputedStyle(el).display !== 'none') {
+        hidden.push([el, el.style.display]);
+        el.style.display = 'none';
+      }
+    });
+    return () => {
+      hidden.forEach(([el, display]) => {
+        el.style.display = display;
+      });
+    };
+  }
+
+  async function renderPosterWithHtml2Canvas(poster) {
+    if (!window.html2canvas) throw new Error('html2canvas not loaded');
+    const exportRect = getPosterExportRect(poster);
+    const render = async options => {
+      const canvas = await window.html2canvas(poster, options);
+      return cropCanvasToExportRect(canvas, poster, exportRect);
+    };
+    try {
+      return await render({
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false
+      });
+    } catch (err) {
+      return await render({
+        backgroundColor: null,
+        scale: 2,
+        foreignObjectRendering: true,
+        logging: false
+      });
+    }
+  }
+
+  async function capturePosterFromCurrentTab(poster) {
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      throw new Error('This browser cannot capture the current tab for file:// PNG export.');
+    }
+
+    const previousScrollX = window.scrollX;
+    const previousScrollY = window.scrollY;
+    poster.scrollIntoView({ block: 'center', inline: 'center' });
+    await waitForFrames(3);
+
+    const exportRect = getPosterExportRect(poster);
+    if (!exportRect.width || !exportRect.height) {
+      window.scrollTo(previousScrollX, previousScrollY);
+      throw new Error('The poster is not visible enough to capture.');
+    }
+
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: false,
+      preferCurrentTab: true
+    });
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+
+    try {
+      const [track] = stream.getVideoTracks();
+      const displaySurface = track?.getSettings?.().displaySurface;
+      if (displaySurface && displaySurface !== 'browser') {
+        throw new Error('Choose the current browser tab in the share dialog, then try export again.');
+      }
+
+      video.srcObject = stream;
+      await new Promise((resolve, reject) => {
+        video.onloadedmetadata = () => resolve();
+        video.onerror = () => reject(new Error('Failed to read the shared tab stream.'));
+      });
+      await video.play().catch(() => {});
+      await waitForFrames(4);
+
+      const scaleX = video.videoWidth / window.innerWidth;
+      const scaleY = video.videoHeight / window.innerHeight;
+      const sx = Math.max(0, Math.round(exportRect.left * scaleX));
+      const sy = Math.max(0, Math.round(exportRect.top * scaleY));
+      const sw = Math.max(1, Math.min(video.videoWidth - sx, Math.round(exportRect.width * scaleX)));
+      const sh = Math.max(1, Math.min(video.videoHeight - sy, Math.round(exportRect.height * scaleY)));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = sw;
+      canvas.height = sh;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas 2D context unavailable.');
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      return canvas;
+    } finally {
+      video.pause();
+      video.srcObject = null;
+      stream.getTracks().forEach(track => track.stop());
+      window.scrollTo(previousScrollX, previousScrollY);
+    }
+  }
+
+  document.querySelectorAll('.poster-card').forEach(card => {
+    const label = card.querySelector('.poster-label');
+    if (!label) return;
+    const btn = document.createElement('button');
+    btn.textContent = 'PNG';
+    btn.style.cssText = 'font-family:"Azeret Mono",monospace;font-size:10px;padding:3px 8px;margin-left:8px;background:oklch(0.2 0.02 260/0.95);color:oklch(0.85 0 0);border:1px solid oklch(0.35 0.02 260);border-radius:3px;cursor:pointer;';
+    if (isFileProtocol) {
+      btn.title = 'On file:// Chrome will ask you to share this tab so the poster can be saved as a PNG.';
+    }
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      const poster = card.querySelector('.poster');
+      if (!poster) { alert('Poster not found'); return; }
+      const restoreOverlays = hideEditorOverlays();
+      const filename = getPosterFilename(card);
+      const originalText = btn.textContent;
+      btn.textContent = isFileProtocol ? 'Share tab…' : '...';
+      try {
+        let canvas;
+        if (isFileProtocol) {
+          canvas = await capturePosterFromCurrentTab(poster);
+        } else {
+          try {
+            canvas = await renderPosterWithHtml2Canvas(poster);
+          } catch (err1) {
+            console.warn('[export] html2canvas failed, falling back to current-tab capture', err1);
+            btn.textContent = 'Share tab…';
+            canvas = await capturePosterFromCurrentTab(poster);
+          }
+        }
+        const blob = await canvasToBlob(canvas);
+        downloadBlob(blob, filename);
+      } catch (err) {
+        console.error(err);
+        const message = 'Export failed: ' + err.message;
+        if (isFileProtocol) {
+          alert(message + '\n\nChoose the current browser tab when Chrome asks what to share. If you cancel that prompt, PNG export cannot complete from file://.');
+        } else {
+          alert(message + '\n\nOpen http://localhost:8080/poster-variations.html for best export support.');
+        }
+      } finally {
+        restoreOverlays();
+        btn.textContent = originalText;
+      }
+    };
+    label.appendChild(btn);
+  });
+
+  // Auto-export via ?export=28r
+  const params = new URLSearchParams(location.search);
+  const targetNum = params.get('export');
+  if (targetNum && !isFileProtocol) {
+    setTimeout(() => {
+      document.querySelectorAll('.poster-card').forEach(card => {
+        const num = card.querySelector('.poster-number');
+        if (num && num.textContent.trim() === targetNum) {
+          card.querySelector('button')?.click();
+        }
+      });
+    }, 1500);
+  } else if (targetNum) {
+    console.warn('[export] auto-export is disabled on file:// because screen capture requires a real user click.');
+  }
+})();
+
 // ============================================================
 // SAVE / LOAD layout + EXPORT poster as PNG
 // ============================================================
 (function() {
   const toolbar = document.createElement('div');
+  toolbar.className = 'layout-toolbar';
   toolbar.style.cssText = 'position:fixed;top:12px;right:12px;z-index:9999;display:flex;gap:8px;';
 
   function btn(label, fn) {
@@ -2656,8 +3602,126 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
                 el.classList.contains('piece-wire') ? 'wire' : 'piece-' + idx;
     return cls;
   }
+  const inheritMap = { '28r': '28b', '28rn': '28b', '28f': '28b', '28n': '28b', '28a': '28b', '28m': '28b', '28ft': '28b' };
+  const strictMirrors = new Set();
 
-  btn('Save Layout', () => {
+  function getPanelChildKey(el, poster) {
+    const children = [...poster.querySelectorAll(PANEL_CHILD_SELECTOR)];
+    return 'panel-' + children.indexOf(el);
+  }
+
+  function serializeBoxState(el, poster) {
+    const posterRect = poster.getBoundingClientRect();
+    const rect = el.getBoundingClientRect();
+    const rawHeight = (el.style.height || '').trim();
+    return {
+      left: pctOf(rect.left - posterRect.left, posterRect.width),
+      top: pctOf(rect.top - posterRect.top, posterRect.height),
+      width: pctOf(rect.width, posterRect.width),
+      height: (el.tagName === 'IMG' || rawHeight === '' || rawHeight === 'auto') ? 'auto' : pctOf(rect.height, posterRect.height),
+      rotate: el.dataset.rotate || '0',
+      roboFeatherBlur: el.dataset.roboFeatherBlur || '',
+      roboFeatherOpacity: el.dataset.roboFeatherOpacity || '',
+      transform: el.style.transform || '',
+      filter: el.style.filter || '',
+      zIndex: el.style.zIndex || '',
+      opacity: el.style.opacity || '',
+      backdropFilter: el.style.backdropFilter || el.style.webkitBackdropFilter || ''
+    };
+  }
+
+  function serializePosterTextState(span, poster) {
+    const tx = parseFloat(span.dataset.tx) || 0;
+    const ty = parseFloat(span.dataset.ty) || 0;
+    const sizePx = parseFloat(getComputedStyle(span).fontSize) || 0;
+    return {
+      tx: span.dataset.tx || '',
+      ty: span.dataset.ty || '',
+      txPct: span.dataset.tx ? pctOf(tx, poster.clientWidth) : '',
+      tyPct: span.dataset.ty ? pctOf(ty, poster.clientHeight) : '',
+      transform: span.style.transform || '',
+      fontSize: span.style.fontSize || '',
+      fontSizeCqw: span.style.fontSize ? ((sizePx / poster.clientWidth) * 100).toFixed(4) + 'cqw' : '',
+      zIndex: span.style.zIndex || ''
+    };
+  }
+
+  function serializePanelChildState(el, panel) {
+    const tx = parseFloat(el.dataset.tx) || 0;
+    const ty = parseFloat(el.dataset.ty) || 0;
+    return {
+      tx: el.dataset.tx || '',
+      ty: el.dataset.ty || '',
+      txPct: el.dataset.tx ? pctOf(tx, panel.clientWidth) : '',
+      tyPct: el.dataset.ty ? pctOf(ty, panel.clientHeight) : '',
+      transform: el.style.transform || '',
+      zIndex: el.style.zIndex || ''
+    };
+  }
+
+  function applyBoxState(el, saved) {
+    if (!saved) return;
+    if (saved.left) {
+      el.style.position = 'absolute';
+      el.style.right = 'auto';
+      el.style.left = saved.left;
+    }
+    if (saved.top) {
+      el.style.bottom = 'auto';
+      el.style.top = saved.top;
+    }
+    if (saved.width) el.style.width = saved.width;
+    if (typeof saved.height === 'string' && saved.height) el.style.height = saved.height;
+    const rotate = parseFloat(saved.rotate || '0');
+    if (Number.isFinite(rotate) && Math.abs(rotate) > 0.0001) {
+      el.dataset.rotate = String(rotate);
+      el.style.transform = `rotate(${rotate.toFixed(3)}deg)`;
+    } else {
+      delete el.dataset.rotate;
+      el.style.transform = '';
+    }
+    el.style.filter = typeof saved.filter === 'string' ? saved.filter : '';
+    el.style.zIndex = saved.zIndex || '';
+    el.style.opacity = saved.opacity || '';
+    if (el.classList.contains('details')) {
+      el.style.backdropFilter = saved.backdropFilter || '';
+      el.style.webkitBackdropFilter = saved.backdropFilter || '';
+    }
+    if (typeof saved.roboFeatherBlur === 'string' && saved.roboFeatherBlur) el.dataset.roboFeatherBlur = saved.roboFeatherBlur;
+    else delete el.dataset.roboFeatherBlur;
+    if (typeof saved.roboFeatherOpacity === 'string' && saved.roboFeatherOpacity) el.dataset.roboFeatherOpacity = saved.roboFeatherOpacity;
+    else delete el.dataset.roboFeatherOpacity;
+  }
+
+  function applyTranslateState(el, saved, baseWidth, baseHeight, options = {}) {
+    if (!saved) return;
+    const hasPct = (typeof saved.txPct === 'string' && saved.txPct) || (typeof saved.tyPct === 'string' && saved.tyPct);
+    const hasRaw = (typeof saved.tx === 'string' && saved.tx) || (typeof saved.ty === 'string' && saved.ty) || saved.transform;
+    if (hasPct || hasRaw) {
+      const tx = (typeof saved.txPct === 'string' && saved.txPct)
+        ? (parseFloat(saved.txPct) / 100) * baseWidth
+        : (parseFloat(saved.tx) || 0);
+      const ty = (typeof saved.tyPct === 'string' && saved.tyPct)
+        ? (parseFloat(saved.tyPct) / 100) * baseHeight
+        : (parseFloat(saved.ty) || 0);
+      el.dataset.tx = tx.toFixed(3);
+      el.dataset.ty = ty.toFixed(3);
+      el.style.transform = `translate(${tx.toFixed(3)}px, ${ty.toFixed(3)}px)`;
+    } else {
+      delete el.dataset.tx;
+      delete el.dataset.ty;
+      el.style.transform = '';
+    }
+    if (options.allowFontSize) {
+      if (saved.fontSizeCqw) el.style.fontSize = saved.fontSizeCqw;
+      else if (saved.fontSize) el.style.fontSize = saved.fontSize;
+      else el.style.fontSize = '';
+    }
+    if (saved.zIndex) el.style.setProperty('z-index', saved.zIndex, 'important');
+    else el.style.removeProperty('z-index');
+  }
+
+  function buildLayoutState() {
     const state = {};
     document.querySelectorAll('.poster-card').forEach(card => {
       const num = card.querySelector('.poster-number');
@@ -2665,79 +3729,112 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
       const key = num.textContent.trim();
       const poster = card.querySelector('.poster');
       if (!poster) return;
-      state[key] = { _texts: {} };
-      poster.querySelectorAll('.piece, .details').forEach(p => {
-        const elKey = getElKey(p, poster);
-        state[key][elKey] = {
-          left: p.style.left, top: p.style.top,
-          width: p.style.width, rotate: p.dataset.rotate || '0',
-          transform: p.style.transform,
-          filter: p.style.filter,
-          zIndex: p.style.zIndex || '',
-          opacity: p.style.opacity || '',
-          backdropFilter: p.style.backdropFilter || p.style.webkitBackdropFilter || ''
-        };
+      state[key] = { _texts: {}, _panelChildren: {} };
+      poster.querySelectorAll('.piece, .details').forEach(el => {
+        state[key][getElKey(el, poster)] = serializeBoxState(el, poster);
       });
       poster.querySelectorAll('.text-behind span').forEach(span => {
-        const cls = [...span.classList].find(c => c.startsWith('l')) || span.textContent;
-        state[key]._texts[cls] = {
-          tx: span.dataset.tx || '',
-          ty: span.dataset.ty || '',
-          transform: span.style.transform || '',
-          fontSize: span.style.fontSize || '',
-          zIndex: span.style.zIndex || '',
-        };
+        const textKey = [...span.classList].find(c => c.startsWith('l')) || span.textContent;
+        state[key]._texts[textKey] = serializePosterTextState(span, poster);
       });
+      const panel = poster.querySelector('.details');
+      if (panel) {
+        poster.querySelectorAll(PANEL_CHILD_SELECTOR).forEach(child => {
+          state[key]._panelChildren[getPanelChildKey(child, poster)] = serializePanelChildState(child, panel);
+        });
+      }
     });
+    return state;
+  }
+
+  function resolveState(state, key) {
+    if (strictMirrors.has(key)) return null;
+    const seen = new Set();
+    let current = key;
+    while (current && !seen.has(current)) {
+      if (state[current]) return state[current];
+      seen.add(current);
+      current = inheritMap[current];
+    }
+    return null;
+  }
+
+  function applyPosterState(poster, posterState) {
+    if (!poster || !posterState) return;
+    poster.querySelectorAll('.piece, .details').forEach(el => {
+      applyBoxState(el, posterState[getElKey(el, poster)]);
+    });
+    poster.querySelectorAll('.text-behind span').forEach(span => {
+      const textKey = [...span.classList].find(c => c.startsWith('l')) || span.textContent;
+      applyTranslateState(span, posterState._texts?.[textKey], poster.clientWidth, poster.clientHeight, { allowFontSize: true });
+    });
+    const panel = poster.querySelector('.details');
+    if (panel) {
+      poster.querySelectorAll(PANEL_CHILD_SELECTOR).forEach(child => {
+        applyTranslateState(child, posterState._panelChildren?.[getPanelChildKey(child, poster)], panel.clientWidth, panel.clientHeight);
+      });
+    }
+  }
+
+  function autoscaleDerivedPosters(state = {}) {
+    document.querySelectorAll('.poster-card[data-default-source]').forEach(card => {
+      const num = card.querySelector('.poster-number');
+      if (!num) return;
+      const key = num.textContent.trim();
+      if (state[key]) return;
+      const sourceKey = card.dataset.defaultSource;
+      if (sourceKey) syncPoster(sourceKey, key);
+    });
+  }
+
+  function applyLayoutState(state) {
+    document.querySelectorAll('.poster-card').forEach(card => {
+      const num = card.querySelector('.poster-number');
+      if (!num) return;
+      const key = num.textContent.trim();
+      const poster = card.querySelector('.poster');
+      if (!poster) return;
+      const posterState = strictMirrors.has(key)
+        ? null
+        : (state[key] || (card.dataset.defaultSource ? null : resolveState(state, key)));
+      if (!posterState) return;
+      applyPosterState(poster, posterState);
+    });
+    autoscaleDerivedPosters(state);
+    [80, 220, 480].forEach(ms => setTimeout(() => autoscaleDerivedPosters(state), ms));
+    if (window.alignTextMask) {
+      window.alignTextMask();
+      setTimeout(() => window.alignTextMask(), 120);
+    }
+  }
+
+  function loadSavedLayout() {
+    const raw = localStorage.getItem('poster-layout');
+    if (!raw) return false;
+    applyLayoutState(JSON.parse(raw));
+    return true;
+  }
+
+  window.loadSavedLayout = loadSavedLayout;
+
+  btn('Save Layout', () => {
+    const state = buildLayoutState();
     localStorage.setItem('poster-layout', JSON.stringify(state));
     alert('Layout saved (' + Object.keys(state).length + ' posters)');
   });
 
   btn('Load Layout', () => {
-    const raw = localStorage.getItem('poster-layout');
-    if (!raw) { alert('No saved layout'); return; }
-    const state = JSON.parse(raw);
-    // Variants that should inherit from a parent poster's saved layout
-    const inheritMap = { '28r': '28b', '28f': '28b', '28n': '28b', '28a': '28b' };
-
-    document.querySelectorAll('.poster-card').forEach(card => {
-      const num = card.querySelector('.poster-number');
-      if (!num) return;
-      const key = num.textContent.trim();
-      const posterState = state[key] || state[inheritMap[key]] || null;
-      if (!posterState) return;
-      const poster = card.querySelector('.poster');
-      if (!poster) return;
-      poster.querySelectorAll('.piece, .details').forEach(p => {
-        const elKey = getElKey(p, poster);
-        const s = posterState[elKey];
-        if (!s) return;
-        if (s.left) { p.style.left = s.left; p.style.position = 'absolute'; p.style.right = 'auto'; }
-        if (s.top) { p.style.top = s.top; p.style.bottom = 'auto'; }
-        if (s.width) p.style.width = s.width;
-        if (s.rotate && s.rotate !== '0') { p.dataset.rotate = s.rotate; p.style.transform = s.transform || ''; }
-        if (typeof s.filter === 'string' && s.filter) p.style.filter = s.filter;
-        if (s.zIndex) p.style.zIndex = s.zIndex;
-        if (s.opacity) p.style.opacity = s.opacity;
-        if (typeof s.backdropFilter === 'string' && s.backdropFilter) {
-          p.style.backdropFilter = s.backdropFilter;
-          p.style.webkitBackdropFilter = s.backdropFilter;
-        }
-      });
-      if (posterState._texts) {
-        poster.querySelectorAll('.text-behind span').forEach(span => {
-          const cls = [...span.classList].find(c => c.startsWith('l')) || span.textContent;
-          const t = posterState._texts[cls];
-          if (!t) return;
-          if (t.tx) span.dataset.tx = t.tx;
-          if (t.ty) span.dataset.ty = t.ty;
-          if (t.transform) span.style.transform = t.transform;
-          if (t.fontSize) span.style.fontSize = t.fontSize;
-          if (t.zIndex) span.style.setProperty('z-index', t.zIndex, 'important');
-        });
-      }
-    });
+    if (!loadSavedLayout()) { alert('No saved layout'); return; }
     alert('Layout loaded');
+  });
+
+  btn('Reset 28rn9', () => {
+    syncPoster('28r', '28rn9');
+    if (window.alignTextMask) {
+      window.alignTextMask();
+      setTimeout(() => window.alignTextMask(), 120);
+    }
+    alert('28rn9 reset from 28r. Hit Save Layout to persist.');
   });
 
   btn('Log CSS', () => {
@@ -2764,50 +3861,8 @@ document.querySelector('.toggle-btn')?.addEventListener('click', () => setTimeou
   document.body.appendChild(toolbar);
 
   // Auto-load saved layout on page open
-  const autoRaw = localStorage.getItem('poster-layout');
-  if (autoRaw) {
-    const inheritMap = { '28r': '28b', '28f': '28b', '28n': '28b', '28a': '28b' };
-    const state = JSON.parse(autoRaw);
-    document.querySelectorAll('.poster-card').forEach(card => {
-      const num = card.querySelector('.poster-number');
-      if (!num) return;
-      const key = num.textContent.trim();
-      const posterState = state[key] || state[inheritMap[key]] || null;
-      if (!posterState) return;
-      const poster = card.querySelector('.poster');
-      if (!poster) return;
-      poster.querySelectorAll('.piece, .details').forEach(p => {
-        const elKey = p.classList.contains('details') ? 'details' :
-                      p.classList.contains('piece-bust') ? 'bust' :
-                      p.classList.contains('piece-robo') ? 'robo' :
-                      p.classList.contains('piece-wire') ? 'wire' : 'piece';
-        const s = posterState[elKey];
-        if (!s) return;
-        if (s.left) { p.style.left = s.left; p.style.position = 'absolute'; p.style.right = 'auto'; }
-        if (s.top) { p.style.top = s.top; p.style.bottom = 'auto'; }
-        if (s.width) p.style.width = s.width;
-        if (s.rotate && s.rotate !== '0') { p.dataset.rotate = s.rotate; p.style.transform = s.transform || ''; }
-        if (typeof s.filter === 'string' && s.filter) p.style.filter = s.filter;
-        if (s.zIndex) p.style.zIndex = s.zIndex;
-        if (s.opacity) p.style.opacity = s.opacity;
-        if (typeof s.backdropFilter === 'string' && s.backdropFilter) {
-          p.style.backdropFilter = s.backdropFilter;
-          p.style.webkitBackdropFilter = s.backdropFilter;
-        }
-      });
-      if (posterState._texts) {
-        poster.querySelectorAll('.text-behind span').forEach(span => {
-          const cls = [...span.classList].find(c => c.startsWith('l')) || span.textContent;
-          const t = posterState._texts[cls];
-          if (!t) return;
-          if (t.tx) span.dataset.tx = t.tx;
-          if (t.ty) span.dataset.ty = t.ty;
-          if (t.transform) span.style.transform = t.transform;
-          if (t.fontSize) span.style.fontSize = t.fontSize;
-          if (t.zIndex) span.style.setProperty('z-index', t.zIndex, 'important');
-        });
-      }
-    });
+  if (!loadSavedLayout()) {
+    autoscaleDerivedPosters({});
   }
 })();
 </script>
