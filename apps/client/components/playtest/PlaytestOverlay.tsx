@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { sessionLogger } from '@/lib/debug/session-logger';
+import { getPublicApiBase } from '@/lib/public-api-base';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -622,7 +623,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
 
   /* ── Auto-save ──────────────────────────────────────────────────── */
 
-  const uploadUrl = `${process.env.NEXT_PUBLIC_TONG_API_BASE || 'https://tong-api.erniesg.workers.dev'}/api/v1/playtest/sessions/${sessionId}/upload`;
+  const uploadUrl = `${getPublicApiBase()}/api/v1/playtest/sessions/${sessionId}/upload`;
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {

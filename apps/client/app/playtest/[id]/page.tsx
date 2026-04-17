@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { dispatch } from '@/lib/store/game-store';
 import type { CityId, AppLang } from '@/lib/api';
+import { getPublicApiBase } from '@/lib/public-api-base';
 
 /* ── Types ────────────────────────────────────────────────── */
 
@@ -38,7 +39,7 @@ const CITY_TO_LANG: Record<string, AppLang> = { seoul: 'ko', tokyo: 'ja', shangh
 
 /* ── API helper — no demo password required for GET/PATCH ──── */
 
-const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const API_BASE = getPublicApiBase();
 
 async function fetchSession(id: string): Promise<PlaytestSessionResponse> {
   const res = await fetch(`${API_BASE}/api/v1/playtest/sessions/${id}`);
@@ -64,7 +65,13 @@ function buildGameUrl(config: PlaytestConfig): string {
 
   switch (config.sceneType) {
     case 'hangout': {
-      if (config.npc) {
+      if (config.hangoutId) {
+        params.set('phase', 'hangout');
+        params.set('mode', 'fixture');
+        params.set('fixtureId', config.hangoutId);
+        if (config.city) params.set('city', config.city);
+        if (config.locationId) params.set('location', config.locationId);
+      } else if (config.npc) {
         // Intro hangout: use dev_intro mode with NPC + player profile
         params.set('dev_intro', '1');
         params.set('npc', config.npc);
@@ -103,6 +110,9 @@ function buildGameUrl(config: PlaytestConfig): string {
   if (config.seed !== undefined) {
     params.set('seed', String(config.seed));
   }
+
+  params.set('qa_run_id', config.sessionId);
+  params.set('qa_trace', '1');
 
   return `/game?${params.toString()}`;
 }
