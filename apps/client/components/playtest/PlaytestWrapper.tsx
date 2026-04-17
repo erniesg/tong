@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PlaytestOverlay, type Annotation } from './PlaytestOverlay';
+import { getPublicApiBase } from '@/lib/public-api-base';
 
-const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const API_BASE = getPublicApiBase();
 
 /**
  * Wraps game content and conditionally mounts the PlaytestOverlay
