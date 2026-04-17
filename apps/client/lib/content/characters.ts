@@ -1,5 +1,6 @@
 import type { Character, RelationshipStage } from '../types/relationship';
 import { runtimeAssetUrl } from '@/lib/runtime-assets';
+import { SHANGHAI_CHARACTER_MAP } from './shanghai/characters';
 
 function stageMap(
   stages: Record<
@@ -231,7 +232,10 @@ export const CHARACTER_MAP: Record<string, Character> = {
   haeun: HAEUN,
   jin: JIN,
   tong: TONG,
+  ...SHANGHAI_CHARACTER_MAP,
 };
+
+export { SHOUCHENG, DINGMAN, FANGAYI, getCharacter, voiceRulesBlock } from './shanghai/characters';
 
 /** @deprecated Use HAEUN instead */
 export const HAUEN = HAEUN;
