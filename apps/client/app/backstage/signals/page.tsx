@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useChat } from 'ai/react';
 
-const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'https://tong-api.erniesg.workers.dev';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
