@@ -17,10 +17,10 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { buildFileContext, generateFix as generateFixFromModel } from '../../../scripts/lib/autofix-core.mjs';
 
 // ── Configuration ────────────────────────────────────────────────────
 
-const OPENAI_API_KEY = () => process.env.OPENAI_API_KEY || '';
 const REPO_ROOT = process.env.TONG_REPO_ROOT || execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 
 // In-memory fix job tracker
@@ -79,88 +79,8 @@ function generateBranchName(issue) {
  * Returns { filePath, original, fixed, explanation }.
  */
 async function generateFix(issue) {
-  const apiKey = OPENAI_API_KEY();
-  if (!apiKey) throw new Error('OPENAI_API_KEY is not configured');
-
-  // Read the affected file if we know it
-  let fileContext = '';
-  if (issue.affectedComponent) {
-    // Sanitize: only allow alphanumeric, hyphens, underscores, dots
-    const sanitized = issue.affectedComponent.replace(/[^a-zA-Z0-9._-]/g, '');
-    if (sanitized) {
-      const searchResult = run('grep', [
-        '-rl', sanitized,
-        'apps/client/components/', 'apps/client/app/',
-        '--include=*.tsx', '--include=*.ts',
-      ]);
-      if (searchResult && !searchResult.error) {
-        const files = searchResult.split('\n').filter(Boolean).slice(0, 3);
-        for (const f of files) {
-          try {
-            const fullPath = assertSafePath(path.join(REPO_ROOT, f));
-            const content = fs.readFileSync(fullPath, 'utf8');
-            if (content.length < 10000) {
-              fileContext += `\n--- File: ${f} ---\n${content}\n`;
-            }
-          } catch { /* skip files outside repo root */ }
-        }
-      }
-    }
-  }
-
-  const prompt = `You are fixing a bug in a Next.js 14 + TypeScript language learning game called Tong.
-
-Issue from playtest analysis:
-- Category: ${issue.category}
-- Severity: ${issue.severity}/5
-- Description: ${issue.description}
-- What user expected: ${issue.whatUserExpected || 'not specified'}
-- What actually happened: ${issue.whatActuallyHappened || 'not specified'}
-- Suggested fix: ${issue.suggestedFix}
-- Affected component: ${issue.affectedComponent || 'unknown'}
-
-${fileContext ? `Relevant source code:\n${fileContext}` : 'No source files found for this component.'}
-
-Conventions:
-- Plain CSS classes in globals.css, NOT Tailwind utilities
-- Functional components with hooks
-- Game state via singleton store (dispatch / useGameState)
-
-Respond with a JSON object:
-{
-  "filePath": "relative path from repo root",
-  "searchString": "exact string to find and replace (include enough context to be unique)",
-  "replaceString": "the fixed code",
-  "explanation": "one sentence explaining the fix",
-  "cssAddition": "optional CSS to append to globals.css, or null"
-}
-
-If you cannot determine a fix, respond with: { "skip": true, "reason": "..." }`;
-
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`OpenAI API error (${res.status}): ${text}`);
-  }
-
-  const data = await res.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error('No response from OpenAI');
-
-  return JSON.parse(content);
+  const fileContext = buildFileContext(issue, REPO_ROOT, (bin, args) => run(bin, args));
+  return generateFixFromModel(issue, { fileContext });
 }
 
 // ── 2. Apply, Validate, PR ──────────────────────────────────────────
@@ -377,7 +297,7 @@ export function listAutoFixJobs() {
 
 export function getAutoFixStatus() {
   return {
-    openaiKeyConfigured: Boolean(OPENAI_API_KEY()),
+    openaiKeyConfigured: Boolean(process.env.OPENAI_API_KEY),
     repoRoot: REPO_ROOT,
     jobCount: fixJobs.size,
     locked: Boolean(gitLock),

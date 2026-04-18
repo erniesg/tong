@@ -1,0 +1,271 @@
+name: Playtest Autofix
+
+on:
+  workflow_dispatch:
+    inputs:
+      session_id:
+        description: "Playtest session id"
+        required: true
+        type: string
+      issue_ref:
+        description: "Issue ref, e.g. erniesg/tong#137"
+        required: true
+        type: string
+      issue_json:
+        description: "Triaged issue JSON payload"
+        required: true
+        type: string
+      recording_url:
+        description: "Optional recording URL from playtest analysis"
+        required: false
+        type: string
+      branch:
+        description: "Autofix branch name"
+        required: false
+        default: "autofix/playtest-run"
+        type: string
+
+permissions:
+  actions: write
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      TONG_RUNS_R2_BUCKET: ${{ vars.TONG_RUNS_R2_BUCKET }}
+      TONG_RUNS_PUBLIC_BASE_URL: ${{ vars.TONG_RUNS_PUBLIC_BASE_URL }}
+      NEXT_PUBLIC_TONG_ASSETS_BASE_URL: ${{ vars.NEXT_PUBLIC_TONG_ASSETS_BASE_URL }}
+      TONG_ASSETS_R2_BUCKET: ${{ vars.TONG_ASSETS_R2_BUCKET }}
+      TONG_RUNTIME_ASSET_MANIFEST_KEY: ${{ vars.TONG_RUNTIME_ASSET_MANIFEST_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/client/package-lock.json
+            apps/server/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          fi
+          npm --prefix apps/client ci
+          npm --prefix apps/server ci
+
+      - name: Run remote-safe autofix
+        id: autofix
+        env:
+          ISSUE_JSON: ${{ inputs.issue_json }}
+        run: |
+          mkdir -p artifacts/autofix
+          printf '%s' "$ISSUE_JSON" > artifacts/autofix/issue.json
+          set +e
+          node scripts/autofix-from-analysis.mjs \
+            --issue-json-file artifacts/autofix/issue.json \
+            --output artifacts/autofix/result.json
+          autofix_exit_code=$?
+          set -e
+          if [ ! -f artifacts/autofix/result.json ]; then
+            exit "$autofix_exit_code"
+          fi
+          echo "result_path=artifacts/autofix/result.json" >> "$GITHUB_OUTPUT"
+          echo "exit_code=$autofix_exit_code" >> "$GITHUB_OUTPUT"
+
+      - name: Read autofix outcome
+        id: status
+        env:
+          RESULT_PATH: ${{ steps.autofix.outputs.result_path }}
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync(process.env.RESULT_PATH, 'utf8'));
+
+          let state = 'error';
+          let verdict = 'blocked';
+          let reproStatus = 'blocked';
+          let fixStatus = 'inconclusive';
+          let confidence = '0.40';
+
+          if (result.skipped) {
+            state = 'skipped';
+            verdict = 'ambiguous';
+            reproStatus = 'not-run';
+            fixStatus = 'inconclusive';
+            confidence = '0.62';
+          } else if (result.ok) {
+            state = 'validated';
+            verdict = 'fixed';
+            reproStatus = 'not-reproduced';
+            fixStatus = 'fixed';
+            confidence = '0.86';
+          } else if (result.error) {
+            state = 'error';
+          } else {
+            state = 'validation_failed';
+            verdict = 'reproduced';
+            reproStatus = 'reproduced';
+            fixStatus = 'still-reproduces';
+            confidence = '0.74';
+          }
+
+          const output = [
+            `state=${state}`,
+            `verdict=${verdict}`,
+            `repro_status=${reproStatus}`,
+            `fix_status=${fixStatus}`,
+            `confidence=${confidence}`,
+          ].join('\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+          NODE
+
+      - name: Build QA validation bundle
+        id: qa
+        env:
+          RESULT_PATH: ${{ steps.autofix.outputs.result_path }}
+          AUTOFIX_STATE: ${{ steps.status.outputs.state }}
+          AUTOFIX_VERDICT: ${{ steps.status.outputs.verdict }}
+          AUTOFIX_REPRO_STATUS: ${{ steps.status.outputs.repro_status }}
+          AUTOFIX_FIX_STATUS: ${{ steps.status.outputs.fix_status }}
+          AUTOFIX_CONFIDENCE: ${{ steps.status.outputs.confidence }}
+          ISSUE_REF: ${{ inputs.issue_ref }}
+          RECORDING_URL: ${{ inputs.recording_url }}
+        run: |
+          run_dir="$(python .agents/skills/_functional-qa/scripts/qa_runtime.py init-run validate-issue --target '${{ inputs.issue_ref }}')"
+          echo "run_dir=$run_dir" >> "$GITHUB_OUTPUT"
+
+          mkdir -p "$run_dir/logs"
+          cp "${{ steps.autofix.outputs.result_path }}" "$run_dir/logs/autofix-result.json"
+
+          python .agents/skills/_functional-qa/scripts/qa_runtime.py finalize-run \
+            --run-dir "$run_dir" \
+            --verdict "${{ steps.status.outputs.verdict }}" \
+            --repro-status "${{ steps.status.outputs.repro_status }}" \
+            --fix-status "${{ steps.status.outputs.fix_status }}" \
+            --issue-accuracy accurate \
+            --confidence "${{ steps.status.outputs.confidence }}"
+
+          RUN_DIR="$run_dir" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          run_dir = Path(os.environ["RUN_DIR"])
+          result = json.loads(Path(os.environ["RESULT_PATH"]).read_text(encoding="utf-8"))
+
+          findings = []
+          if result.get("error"):
+            findings.append(f"- Autofix runner returned `{result['error']}`.")
+          elif result.get("skipped"):
+            reason = result.get("fix", {}).get("reason") or "No code change was proposed."
+            findings.append(f"- Autofix runner skipped applying a fix: {reason}")
+          elif result.get("ok"):
+            changed_files = result.get("changedFiles") or []
+            if changed_files:
+              findings.append("- Autofix runner applied and validated changes in:")
+              findings.extend(f"  - `{path}`" for path in changed_files)
+            else:
+              findings.append("- Autofix runner completed without file changes.")
+          else:
+            findings.append("- Autofix runner completed with a non-passing validation result.")
+
+          summary = "\n".join([
+            "# Summary",
+            "",
+            f"- Issue: `{os.environ['ISSUE_REF']}`",
+            f"- Autofix state: `{os.environ['AUTOFIX_STATE']}`",
+            f"- Verdict: `{os.environ['AUTOFIX_VERDICT']}`",
+            f"- Repro status: `{os.environ['AUTOFIX_REPRO_STATUS']}`",
+            f"- Fix status: `{os.environ['AUTOFIX_FIX_STATUS']}`",
+            f"- Confidence: `{os.environ['AUTOFIX_CONFIDENCE']}`",
+            "",
+            "## Findings",
+            *findings,
+            "",
+            "## Evidence",
+            "- Raw autofix output: `logs/autofix-result.json`",
+            f"- Recording URL input: `{os.environ.get('RECORDING_URL', '')}`",
+          ]) + "\n"
+
+          (run_dir / "summary.md").write_text(summary, encoding="utf-8")
+          PY
+
+      - name: Upload reviewer evidence bundle
+        run: |
+          npm run qa:upload-evidence -- --run-dir "${{ steps.qa.outputs.run_dir }}" --include-supporting || true
+
+      - name: Publish QA issue update
+        run: |
+          python .agents/skills/_functional-qa/scripts/qa_runtime.py publish-github --run-dir "${{ steps.qa.outputs.run_dir }}"
+
+      - name: Commit autofix output
+        id: commit
+        if: steps.status.outputs.state == 'validated'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${{ inputs.branch }}"
+          git add .
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "fix(autofix): apply remote autofix for ${{ inputs.issue_ref }}"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create pull request
+        id: cpr
+        if: steps.commit.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "fix(autofix): apply remote autofix for ${{ inputs.issue_ref }}"
+          branch: ${{ inputs.branch }}
+          base: main
+          title: "fix(autofix): remote autofix for ${{ inputs.issue_ref }}"
+          body: |
+            ## Remote autofix output
+
+            - Session: `${{ inputs.session_id }}`
+            - Issue: `${{ inputs.issue_ref }}`
+            - Recording: `${{ inputs.recording_url }}`
+            - Autofix result: `${{ steps.autofix.outputs.result_path }}`
+            - QA run dir: `${{ steps.qa.outputs.run_dir }}`
+
+            This PR was created by `playtest-autofix.yml` using `scripts/autofix-from-analysis.mjs`.
+
+      - name: Dispatch trusted QA publish for PR
+        if: steps.cpr.outputs.pull-request-number != ''
+        run: |
+          gh workflow run qa-publish.yml --repo "${{ github.repository }}" -f pr_number="${{ steps.cpr.outputs.pull-request-number }}"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Playtest Autofix"
+            echo
+            echo "- Session: \`${{ inputs.session_id }}\`"
+            echo "- Issue: \`${{ inputs.issue_ref }}\`"
+            echo "- Recording: \`${{ inputs.recording_url }}\`"
+            echo "- Result state: \`${{ steps.status.outputs.state }}\`"
+            echo "- Result JSON: \`${{ steps.autofix.outputs.result_path }}\`"
+            echo "- QA run: \`${{ steps.qa.outputs.run_dir }}\`"
+            echo "- PR: ${{ steps.cpr.outputs.pull-request-url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
