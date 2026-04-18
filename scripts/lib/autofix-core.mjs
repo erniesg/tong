@@ -26,7 +26,11 @@ function normalizeFixPayload(payload) {
     };
   }
 
-  if (!payload.filePath || !payload.searchString || !payload.replaceString) {
+  const hasFilePath = typeof payload.filePath === 'string' && payload.filePath.length > 0;
+  const hasSearchString = typeof payload.searchString === 'string' && payload.searchString.length > 0;
+  const hasReplaceString = typeof payload.replaceString === 'string';
+
+  if (!hasFilePath || !hasSearchString || !hasReplaceString) {
     throw new Error('Fix payload missing one of: filePath, searchString, replaceString');
   }
 

@@ -69,13 +69,69 @@ jobs:
 
       - name: Run remote-safe autofix
         id: autofix
+        env:
+          ISSUE_JSON: ${{ inputs.issue_json }}
         run: |
           mkdir -p artifacts/autofix
-          printf '%s' '${{ inputs.issue_json }}' > artifacts/autofix/issue.json
+          printf '%s' "$ISSUE_JSON" > artifacts/autofix/issue.json
+          set +e
           node scripts/autofix-from-analysis.mjs \
             --issue-json-file artifacts/autofix/issue.json \
             --output artifacts/autofix/result.json
+          autofix_exit_code=$?
+          set -e
+          if [ ! -f artifacts/autofix/result.json ]; then
+            exit "$autofix_exit_code"
+          fi
           echo "result_path=artifacts/autofix/result.json" >> "$GITHUB_OUTPUT"
+          echo "exit_code=$autofix_exit_code" >> "$GITHUB_OUTPUT"
+
+      - name: Read autofix outcome
+        id: status
+        env:
+          RESULT_PATH: ${{ steps.autofix.outputs.result_path }}
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync(process.env.RESULT_PATH, 'utf8'));
+
+          let state = 'error';
+          let verdict = 'blocked';
+          let reproStatus = 'blocked';
+          let fixStatus = 'inconclusive';
+          let confidence = '0.40';
+
+          if (result.skipped) {
+            state = 'skipped';
+            verdict = 'ambiguous';
+            reproStatus = 'not-run';
+            fixStatus = 'inconclusive';
+            confidence = '0.62';
+          } else if (result.ok) {
+            state = 'validated';
+            verdict = 'fixed';
+            reproStatus = 'not-reproduced';
+            fixStatus = 'fixed';
+            confidence = '0.86';
+          } else if (result.error) {
+            state = 'error';
+          } else {
+            state = 'validation_failed';
+            verdict = 'reproduced';
+            reproStatus = 'reproduced';
+            fixStatus = 'still-reproduces';
+            confidence = '0.74';
+          }
+
+          const output = [
+            `state=${state}`,
+            `verdict=${verdict}`,
+            `repro_status=${reproStatus}`,
+            `fix_status=${fixStatus}`,
+            `confidence=${confidence}`,
+          ].join('\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+          NODE
 
       - name: Build QA validation bundle
         id: qa
@@ -88,11 +144,11 @@ jobs:
 
           python .agents/skills/_functional-qa/scripts/qa_runtime.py finalize-run \
             --run-dir "$run_dir" \
-            --verdict fixed \
-            --repro-status not-reproduced \
-            --fix-status fixed \
+            --verdict "${{ steps.status.outputs.verdict }}" \
+            --repro-status "${{ steps.status.outputs.repro_status }}" \
+            --fix-status "${{ steps.status.outputs.fix_status }}" \
             --issue-accuracy accurate \
-            --confidence 0.86
+            --confidence "${{ steps.status.outputs.confidence }}"
 
       - name: Upload reviewer evidence bundle
         run: |
@@ -104,6 +160,7 @@ jobs:
 
       - name: Commit autofix output
         id: commit
+        if: steps.status.outputs.state == 'validated'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -151,6 +208,7 @@ jobs:
             echo "- Session: \`${{ inputs.session_id }}\`"
             echo "- Issue: \`${{ inputs.issue_ref }}\`"
             echo "- Recording: \`${{ inputs.recording_url }}\`"
+            echo "- Result state: \`${{ steps.status.outputs.state }}\`"
             echo "- Result JSON: \`${{ steps.autofix.outputs.result_path }}\`"
             echo "- QA run: \`${{ steps.qa.outputs.run_dir }}\`"
             echo "- PR: ${{ steps.cpr.outputs.pull-request-url }}"
