@@ -12,6 +12,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     translationLanguage: 'en',
   },
   subtitles: {
+    overlayEnabled: true,
     showOriginal: true,
     showRomanization: true,
     showTranslation: true,
