@@ -276,3 +276,11 @@ Template:
   - Reuse the existing scripted messaging renderer from #124 for a new deterministic 9:16 mock capture route.
   - Extend `ScriptedMessagingPlayer` controls/additive API (no second renderer) so mock-ui can drive play/pause/restart/jump deterministically.
   - Keep global style churn minimal and document route/query fixtures in demo run-of-show.
+
+## 2026-04-17 (Issue 103 opt-in YouTube telemetry intent)
+- Date: 2026-04-17
+- Branch/worktree: `work` (server-ingestion lane crossing into shared `packages/contracts/**` and `apps/server/src/index.mjs`)
+- Intent:
+  - Add contracts/fixtures and ingestion normalization for explicit opt-in YouTube watch telemetry sessions.
+  - Add an API ingestion path that accepts consented telemetry payloads, prevents active-playback double counting, and feeds the existing ingestion pipeline.
+  - Keep scope limited to `erniesg/tong#103` evidence and verification flow.

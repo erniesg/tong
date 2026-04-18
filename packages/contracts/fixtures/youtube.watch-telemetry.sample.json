@@ -1,0 +1,42 @@
+{
+  "userId": "demo-user-1",
+  "optIn": {
+    "enabled": true,
+    "grantedAtIso": "2026-04-16T09:00:00.000Z",
+    "consentVersion": "youtube-watch-v1",
+    "retentionDays": 30,
+    "syncToServer": true
+  },
+  "sessions": [
+    {
+      "sessionId": "yt_watch_1001",
+      "videoId": "abc123xyz",
+      "videoUrl": "https://www.youtube.com/watch?v=abc123xyz",
+      "title": "K-variety snack challenge",
+      "sourceLang": "ko",
+      "subtitleTrack": "ko",
+      "sessionStartIso": "2026-04-16T09:10:00.000Z",
+      "sessionEndIso": "2026-04-16T09:42:00.000Z",
+      "videoDurationSeconds": 1800,
+      "activePlaybackSegments": [
+        { "startOffsetSec": 0, "endOffsetSec": 240, "reason": "playing" },
+        { "startOffsetSec": 300, "endOffsetSec": 920, "reason": "playing" },
+        { "startOffsetSec": 880, "endOffsetSec": 1200, "reason": "foreground" }
+      ]
+    },
+    {
+      "sessionId": "yt_watch_1002",
+      "videoId": "jpn777tokyo",
+      "videoUrl": "https://youtu.be/jpn777tokyo",
+      "title": "Tokyo street interview",
+      "sourceLang": "ja",
+      "subtitleTrack": "ja",
+      "sessionStartIso": "2026-04-16T18:00:00.000Z",
+      "sessionEndIso": "2026-04-16T18:22:00.000Z",
+      "videoDurationSeconds": 1560,
+      "activePlaybackSegments": [
+        { "startOffsetSec": 60, "endOffsetSec": 610, "reason": "playing" }
+      ]
+    }
+  ]
+}

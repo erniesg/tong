@@ -2,7 +2,12 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadGeneratedSnapshot, runMockIngestion, writeGeneratedSnapshots } from './ingestion.mjs';
+import {
+  convertYoutubeWatchTelemetryToEvents,
+  loadGeneratedSnapshot,
+  runMockIngestion,
+  writeGeneratedSnapshots,
+} from './ingestion.mjs';
 import {
   generateImage,
   generateBackdrop,
@@ -2060,6 +2065,30 @@ function runIngestionForUser(userId = DEFAULT_USER_ID, options = {}) {
     writeGeneratedSnapshots(result);
   }
 
+  state.ingestionByUser.set(userId, result);
+  saveDurableState();
+  return result;
+}
+
+function runIngestionForUserWithEvents(userId = DEFAULT_USER_ID, events = []) {
+  const sourceItems = events.map((event, idx) => ({
+    id: event.mediaId || event.eventId || `youtube_${idx + 1}`,
+    source: event.source === 'spotify' ? 'spotify' : 'youtube',
+    title: event.title || event.mediaId || `media_${idx + 1}`,
+    lang: event.lang || 'ko',
+    minutes: Number(event.minutes || 0),
+    text: event.text || event.title || '',
+    mediaId: event.mediaId || `youtube_${idx + 1}`,
+    playedAtIso: event.consumedAtIso || new Date().toISOString(),
+    tokens: Array.isArray(event.tokens) ? event.tokens : [],
+    eventId: event.eventId || `evt_${idx + 1}`,
+  }));
+  const snapshot = {
+    windowStartIso: sourceItems[0]?.playedAtIso || new Date().toISOString(),
+    windowEndIso: sourceItems[sourceItems.length - 1]?.playedAtIso || new Date().toISOString(),
+    sourceItems,
+  };
+  const result = runMockIngestion(snapshot, { userId });
   state.ingestionByUser.set(userId, result);
   saveDurableState();
   return result;
@@ -4819,6 +4848,35 @@ const server = http.createServer(async (req, res) => {
       const includeSources = normalizeIngestionSources(body.includeSources);
       const result = runIngestionForUser(userId, { includeSources });
       jsonResponse(res, 200, formatIngestionRunResponse(result));
+      return;
+    }
+
+    if (pathname === '/api/v1/telemetry/youtube/watch' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const conversion = convertYoutubeWatchTelemetryToEvents(body);
+      const userId = conversion.userId || body.userId || getUserIdFromQuery(url.searchParams);
+      if (conversion.acceptedEvents.length === 0) {
+        jsonResponse(res, 202, {
+          ok: true,
+          userId,
+          acceptedEvents: [],
+          droppedSessions: conversion.droppedSessions,
+          summary: conversion.summary,
+          ingestion: null,
+          reason: 'no-consented-active-watch-events',
+        });
+        return;
+      }
+
+      const ingestion = runIngestionForUserWithEvents(userId, conversion.acceptedEvents);
+      jsonResponse(res, 200, {
+        ok: true,
+        userId,
+        acceptedEvents: conversion.acceptedEvents,
+        droppedSessions: conversion.droppedSessions,
+        summary: conversion.summary,
+        ingestion: formatIngestionRunResponse(ingestion),
+      });
       return;
     }
 

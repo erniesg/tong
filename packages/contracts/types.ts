@@ -523,6 +523,69 @@ export interface MediaIngestionEvent {
   consumedAtIso: string;
   tokens: string[];
   text?: string;
+  telemetry?: {
+    optInGrantedAtIso?: string;
+    consentVersion?: string;
+    retentionDays?: number;
+    syncToServer?: boolean;
+    videoUrl?: string | null;
+    sessionStartIso?: string | null;
+    sessionEndIso?: string | null;
+    activePlaybackSeconds?: number;
+    completionRatio?: number;
+    subtitleTrack?: string | null;
+  };
+}
+
+export interface YouTubeWatchTelemetryOptIn {
+  enabled: boolean;
+  grantedAtIso: string;
+  consentVersion: string;
+  retentionDays: number;
+  syncToServer: boolean;
+}
+
+export interface YouTubeWatchTelemetrySegment {
+  startOffsetSec: number;
+  endOffsetSec: number;
+  reason?: 'playing' | 'seeking' | 'foreground' | 'manual';
+}
+
+export interface YouTubeWatchTelemetrySession {
+  sessionId: string;
+  videoId?: string;
+  videoUrl?: string;
+  title?: string;
+  sourceLang?: TargetLanguage;
+  subtitleTrack?: string;
+  sessionStartIso: string;
+  sessionEndIso: string;
+  videoDurationSeconds?: number;
+  completionRatio?: number;
+  activePlaybackSegments: YouTubeWatchTelemetrySegment[];
+}
+
+export interface YouTubeWatchTelemetryIngestRequest {
+  userId: string;
+  optIn: YouTubeWatchTelemetryOptIn;
+  sessions: YouTubeWatchTelemetrySession[];
+}
+
+export interface YouTubeWatchTelemetryIngestResponse {
+  ok: boolean;
+  userId: string;
+  acceptedEvents: MediaIngestionEvent[];
+  droppedSessions: Array<{
+    sessionId: string;
+    reason: string;
+  }>;
+  summary: {
+    acceptedSessions: number;
+    droppedSessions: number;
+    totalMinutes: number;
+  };
+  ingestion: IngestionRunResponse | null;
+  reason?: string;
 }
 
 export interface IngestionSnapshot {

@@ -220,6 +220,56 @@ function parseIso(input, fallbackIso) {
   return value;
 }
 
+function clamp01(value) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+function parseSeconds(value, fallback = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(0, parsed);
+}
+
+function mergeSegmentRanges(segments = []) {
+  const ranges = segments
+    .map((segment) => {
+      const start = parseSeconds(segment?.startOffsetSec, 0);
+      const end = parseSeconds(segment?.endOffsetSec, start);
+      return end > start ? { start, end } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+
+  const merged = [];
+  for (const range of ranges) {
+    const last = merged[merged.length - 1];
+    if (!last || range.start > last.end) {
+      merged.push({ ...range });
+      continue;
+    }
+    last.end = Math.max(last.end, range.end);
+  }
+  return merged;
+}
+
+function extractYouTubeVideoId(videoId, videoUrl) {
+  const rawVideoId = String(videoId || '').trim();
+  if (rawVideoId) return rawVideoId;
+  const rawUrl = String(videoUrl || '').trim();
+  if (!rawUrl) return '';
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.searchParams.get('v')) {
+      return parsed.searchParams.get('v') || '';
+    }
+    const shortMatch = parsed.pathname.match(/^\/([A-Za-z0-9_-]{6,})$/);
+    return shortMatch?.[1] || rawUrl;
+  } catch {
+    return rawUrl;
+  }
+}
+
 function detectLang(term) {
   if (HANGUL_REGEX.test(term)) return 'ko';
   if (KANA_REGEX.test(term)) return 'ja';
@@ -414,6 +464,95 @@ export function buildMediaEventsFromSnapshot(snapshot, userId = 'demo-user-1') {
       text: item.text || '',
     };
   });
+}
+
+export function convertYoutubeWatchTelemetryToEvents(payload = {}) {
+  const telemetry = payload && typeof payload === 'object' ? payload : {};
+  const userId = String(telemetry.userId || 'demo-user-1').trim() || 'demo-user-1';
+  const consent = telemetry.optIn && typeof telemetry.optIn === 'object' ? telemetry.optIn : {};
+  const hasConsent = Boolean(consent.enabled && consent.grantedAtIso);
+  const consentVersion = String(consent.consentVersion || '').trim() || 'v1';
+  const retentionDays = Math.max(1, Number(consent.retentionDays || 30) || 30);
+  const syncToServer = consent.syncToServer !== false;
+  const sessions = Array.isArray(telemetry.sessions) ? telemetry.sessions : [];
+  const acceptedEvents = [];
+  const droppedSessions = [];
+
+  if (!hasConsent || !syncToServer) {
+    return {
+      userId,
+      acceptedEvents,
+      droppedSessions: sessions.map((session) => ({
+        sessionId: session?.sessionId || '',
+        reason: hasConsent ? 'sync-disabled' : 'missing-opt-in',
+      })),
+      summary: {
+        acceptedSessions: 0,
+        droppedSessions: sessions.length,
+        totalMinutes: 0,
+      },
+    };
+  }
+
+  for (const [idx, session] of sessions.entries()) {
+    const playbackSegments = Array.isArray(session?.activePlaybackSegments) ? session.activePlaybackSegments : [];
+    const mergedSegments = mergeSegmentRanges(playbackSegments);
+    const activeSeconds = mergedSegments.reduce((sum, segment) => sum + (segment.end - segment.start), 0);
+    const activeMinutes = Number((activeSeconds / 60).toFixed(2));
+    const videoDurationSeconds = parseSeconds(session?.videoDurationSeconds, 0);
+    const completionRatio = clamp01(videoDurationSeconds > 0 ? activeSeconds / videoDurationSeconds : Number(session?.completionRatio || 0));
+    const mediaId = extractYouTubeVideoId(session?.videoId, session?.videoUrl);
+
+    if (!mediaId || activeMinutes <= 0) {
+      droppedSessions.push({
+        sessionId: session?.sessionId || `session_${idx + 1}`,
+        reason: !mediaId ? 'missing-video-id' : 'no-active-playback',
+      });
+      continue;
+    }
+
+    const consumedAtIso = session?.sessionEndIso || session?.lastEventAtIso || session?.sessionStartIso || consent.grantedAtIso;
+    const title = String(session?.title || mediaId).trim() || mediaId;
+    const subtitleTrack = String(session?.subtitleTrack || '').trim() || null;
+    const sourceLang = session?.sourceLang || 'ko';
+    const text = subtitleTrack ? `${title} ${subtitleTrack}` : title;
+    const tokens = extractTokens(text);
+    acceptedEvents.push({
+      eventId: session?.sessionId || `yt_watch_${idx + 1}`,
+      userId,
+      source: 'youtube',
+      mediaId,
+      title,
+      lang: sourceLang,
+      minutes: activeMinutes,
+      consumedAtIso,
+      tokens,
+      text,
+      telemetry: {
+        optInGrantedAtIso: consent.grantedAtIso,
+        consentVersion,
+        retentionDays,
+        syncToServer,
+        videoUrl: session?.videoUrl || null,
+        sessionStartIso: session?.sessionStartIso || null,
+        sessionEndIso: session?.sessionEndIso || null,
+        activePlaybackSeconds: Number(activeSeconds.toFixed(3)),
+        completionRatio: Number(completionRatio.toFixed(4)),
+        subtitleTrack,
+      },
+    });
+  }
+
+  return {
+    userId,
+    acceptedEvents,
+    droppedSessions,
+    summary: {
+      acceptedSessions: acceptedEvents.length,
+      droppedSessions: droppedSessions.length,
+      totalMinutes: Number(acceptedEvents.reduce((sum, event) => sum + Number(event.minutes || 0), 0).toFixed(2)),
+    },
+  };
 }
 
 export function runMockIngestion(snapshot, options = {}) {

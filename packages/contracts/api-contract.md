@@ -259,6 +259,67 @@ Shape:
 Related modeling fixture:
 - `packages/contracts/fixtures/planner.lesson-context.sample.json` captures generated lesson/scene recommendation inputs derived from canonical media events for ingestion experiments.
 
+## YouTube Watch Telemetry Fixture (Opt-in Extension Feed)
+Path:
+`packages/contracts/fixtures/youtube.watch-telemetry.sample.json`
+
+Notes:
+- Represents an explicit user opt-in plus session-level watch telemetry.
+- `activePlaybackSegments` are merged by the server so overlapping ranges are not double-counted.
+- Downstream ingestion receives canonical media events with `minutes`, `completionRatio`, subtitle language hints, and consent metadata.
+
+## POST `/api/v1/telemetry/youtube/watch`
+Request (shape excerpt):
+```json
+{
+  "userId": "demo-user-1",
+  "optIn": {
+    "enabled": true,
+    "grantedAtIso": "2026-04-16T09:00:00.000Z",
+    "consentVersion": "youtube-watch-v1",
+    "retentionDays": 30,
+    "syncToServer": true
+  },
+  "sessions": [
+    {
+      "sessionId": "yt_watch_1001",
+      "videoId": "abc123xyz",
+      "videoUrl": "https://www.youtube.com/watch?v=abc123xyz",
+      "sourceLang": "ko",
+      "subtitleTrack": "ko",
+      "sessionStartIso": "2026-04-16T09:10:00.000Z",
+      "sessionEndIso": "2026-04-16T09:42:00.000Z",
+      "videoDurationSeconds": 1800,
+      "activePlaybackSegments": [
+        { "startOffsetSec": 0, "endOffsetSec": 240, "reason": "playing" },
+        { "startOffsetSec": 300, "endOffsetSec": 920, "reason": "playing" }
+      ]
+    }
+  ]
+}
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "userId": "demo-user-1",
+  "acceptedEvents": [],
+  "droppedSessions": [],
+  "summary": {
+    "acceptedSessions": 1,
+    "droppedSessions": 0,
+    "totalMinutes": 17.67
+  },
+  "ingestion": {
+    "success": true,
+    "generatedAtIso": "2026-04-17T00:00:00.000Z",
+    "sourceCount": { "youtube": 1, "spotify": 0 },
+    "topTerms": []
+  }
+}
+```
+
 ## GET `/api/v1/tools`
 Response:
 ```json
