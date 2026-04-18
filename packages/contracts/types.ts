@@ -525,6 +525,47 @@ export interface MediaIngestionEvent {
   text?: string;
 }
 
+export interface YouTubeTelemetryConsent {
+  enabled: boolean;
+  grantedAtIso: string;
+  policyVersion: string;
+  retentionDays: number;
+}
+
+export interface YouTubeWatchTelemetryEvent {
+  eventId: string;
+  sessionId: string;
+  videoId: string;
+  videoUrl?: string;
+  title?: string;
+  lang?: TargetLanguage;
+  subtitleTrack?: string;
+  sessionStartedAtIso: string;
+  sessionEndedAtIso: string;
+  activeWatchMs: number;
+  completionRatio: number;
+  eventCapturedAtIso: string;
+}
+
+export interface YouTubeWatchTelemetryIngestRequest {
+  userId?: string;
+  consent: YouTubeTelemetryConsent;
+  events: YouTubeWatchTelemetryEvent[];
+}
+
+export interface YouTubeWatchTelemetryIngestResponse {
+  ok: true;
+  userId: string;
+  acceptedEvents: number;
+  dedupedEvents: number;
+  retainedEvents: number;
+  retentionDays: number;
+  ingestionWindow: {
+    windowStartIso: string;
+    windowEndIso: string;
+  };
+}
+
 export interface IngestionSnapshot {
   windowStartIso: string;
   windowEndIso: string;
