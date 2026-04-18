@@ -33,6 +33,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'system',
   autoPauseOnNewWord: false,
   showDifficultyIndicators: true,
+  youtubeWatchTelemetryOptIn: false,
 };
 
 export class StorageManager {

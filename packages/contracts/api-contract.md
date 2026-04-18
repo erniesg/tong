@@ -231,6 +231,59 @@ Response:
 }
 ```
 
+## POST `/api/v1/integrations/youtube/watch-telemetry`
+Purpose:
+- Ingest explicit opt-in YouTube watch telemetry emitted by the extension.
+- Retain only privacy-bounded fields needed for ingestion and frequency personalization.
+
+Fixture:
+`packages/contracts/fixtures/youtube.watch-telemetry.sample.json`
+
+Request:
+```json
+{
+  "userId": "demo-user-1",
+  "consent": {
+    "enabled": true,
+    "grantedAtIso": "2026-04-17T16:30:00.000Z",
+    "policyVersion": "youtube-watch-telemetry-v1",
+    "retentionDays": 30
+  },
+  "events": [
+    {
+      "eventId": "yt_watch_evt_001",
+      "sessionId": "yt_session_001",
+      "videoId": "abc123def45",
+      "videoUrl": "https://www.youtube.com/watch?v=abc123def45",
+      "title": "Korean street food ordering phrases",
+      "lang": "ko",
+      "subtitleTrack": "ko",
+      "sessionStartedAtIso": "2026-04-17T16:31:00.000Z",
+      "sessionEndedAtIso": "2026-04-17T16:43:30.000Z",
+      "activeWatchMs": 692000,
+      "completionRatio": 0.82,
+      "eventCapturedAtIso": "2026-04-17T16:43:32.000Z"
+    }
+  ]
+}
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "userId": "demo-user-1",
+  "acceptedEvents": 1,
+  "dedupedEvents": 0,
+  "retainedEvents": 12,
+  "retentionDays": 30,
+  "ingestionWindow": {
+    "windowStartIso": "2026-04-14T16:43:32.000Z",
+    "windowEndIso": "2026-04-17T16:43:32.000Z"
+  }
+}
+```
+
 ## Canonical Media Events Fixture (Connector-Independent)
 Used by topic modeling/frequency workstreams so they can iterate without live Spotify/YouTube sync.
 

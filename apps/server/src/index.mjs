@@ -197,6 +197,7 @@ const FIXTURES = {
   youtubeConnect: loadJson('packages/contracts/fixtures/youtube.connect.sample.json'),
   youtubeSync: loadJson('packages/contracts/fixtures/youtube.sync.sample.json'),
   youtubeStatus: loadJson('packages/contracts/fixtures/youtube.status.sample.json'),
+  youtubeWatchTelemetry: loadJson('packages/contracts/fixtures/youtube.watch-telemetry.sample.json'),
 };
 const WORLD_MAP_REGISTRY = loadJson('packages/contracts/world-map-registry.sample.json');
 
@@ -364,6 +365,7 @@ const state = {
   activeSessionByUser: new Map(),
   learnSessions: [...(FIXTURES.learnSessions.items || [])],
   ingestionByUser: new Map(),
+  youtubeTelemetryByUser: new Map(),
   integrationsByUser: new Map(),
   playtestSessions: new Map(),
 };
@@ -459,6 +461,7 @@ function saveDurableState() {
     activeSessionByUser: [...state.activeSessionByUser.entries()],
     learnSessions: cloneJson(state.learnSessions),
     ingestionByUser: cloneMapEntries(state.ingestionByUser),
+    youtubeTelemetryByUser: cloneMapEntries(state.youtubeTelemetryByUser),
     integrationsByUser: cloneMapEntries(state.integrationsByUser),
     playtestSessions: cloneMapEntries(state.playtestSessions),
   };
@@ -482,6 +485,7 @@ function loadDurableState() {
     ? cloneJson(parsed.learnSessions)
     : [...(FIXTURES.learnSessions.items || [])];
   state.ingestionByUser = restoreMap(parsed.ingestionByUser || []);
+  state.youtubeTelemetryByUser = restoreMap(parsed.youtubeTelemetryByUser || []);
   state.integrationsByUser = restoreMap(parsed.integrationsByUser || []);
   state.playtestSessions = restoreMap(parsed.playtestSessions || []);
 
@@ -2022,9 +2026,69 @@ function normalizeIngestionSources(input) {
   )];
 }
 
-function buildIngestionSnapshotForUser(options = {}) {
+function getYouTubeTelemetryState(userId = DEFAULT_USER_ID) {
+  return state.youtubeTelemetryByUser.get(userId) || {
+    consent: null,
+    events: [],
+  };
+}
+
+function deriveMediaIdFromYouTubeTelemetry(event = {}) {
+  const videoId = typeof event.videoId === 'string' ? event.videoId.trim() : '';
+  if (videoId) return videoId;
+  const url = typeof event.videoUrl === 'string' ? event.videoUrl : '';
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    return parsed.searchParams.get('v') || '';
+  } catch {
+    return '';
+  }
+}
+
+function deriveLangFromTelemetry(event = {}) {
+  const lang = String(event.lang || '').trim().toLowerCase();
+  if (lang === 'ko' || lang === 'ja' || lang === 'zh') return lang;
+  const subtitleTrack = String(event.subtitleTrack || '').trim().toLowerCase();
+  if (subtitleTrack.startsWith('ko')) return 'ko';
+  if (subtitleTrack.startsWith('ja')) return 'ja';
+  if (subtitleTrack.startsWith('zh')) return 'zh';
+  return 'ko';
+}
+
+function buildSnapshotSourceItemFromTelemetryEvent(event = {}) {
+  const activeWatchMs = Number(event.activeWatchMs || 0);
+  const minutes = Math.max(0, Math.round((activeWatchMs / 60000) * 100) / 100);
+  const mediaId = deriveMediaIdFromYouTubeTelemetry(event);
+  const consumedAtIso = event.eventCapturedAtIso || event.sessionEndedAtIso || new Date().toISOString();
+  const subtitleTrack = typeof event.subtitleTrack === 'string' ? event.subtitleTrack.trim() : '';
+  const completionRatio = Number(event.completionRatio || 0);
+  const title = String(event.title || mediaId || 'YouTube watch session').trim();
+  const textFragments = [title];
+  if (subtitleTrack) textFragments.push(`subtitle:${subtitleTrack}`);
+  if (!Number.isNaN(completionRatio)) textFragments.push(`completion:${completionRatio.toFixed(2)}`);
+  return {
+    id: event.sessionId || event.eventId || `yt_telemetry_${mediaId || Date.now()}`,
+    source: 'youtube',
+    title,
+    lang: deriveLangFromTelemetry(event),
+    minutes,
+    text: textFragments.join(' '),
+    mediaId,
+    playedAtIso: consumedAtIso,
+    tokens: [],
+  };
+}
+
+function buildIngestionSnapshotForUser(userId = DEFAULT_USER_ID, options = {}) {
   const includeSources = normalizeIngestionSources(options.includeSources);
   const snapshot = JSON.parse(fs.readFileSync(mockMediaWindowPath, 'utf8'));
+  const telemetryState = getYouTubeTelemetryState(userId);
+  const telemetryEvents = Array.isArray(telemetryState.events) ? telemetryState.events : [];
+  if (telemetryEvents.length > 0) {
+    const sourceItemsFromTelemetry = telemetryEvents.map(buildSnapshotSourceItemFromTelemetryEvent);
+    snapshot.sourceItems = [...(snapshot.sourceItems || []), ...sourceItemsFromTelemetry];
+  }
   if (includeSources.length > 0) {
     snapshot.sourceItems = (snapshot.sourceItems || []).filter((item) => includeSources.includes(item.source));
   }
@@ -2051,7 +2115,7 @@ function loadDefaultGeneratedIngestion() {
 
 function runIngestionForUser(userId = DEFAULT_USER_ID, options = {}) {
   const includeSources = normalizeIngestionSources(options.includeSources);
-  const snapshot = buildIngestionSnapshotForUser({ includeSources });
+  const snapshot = buildIngestionSnapshotForUser(userId, { includeSources });
   const result = runMockIngestion(snapshot, {
     userId,
   });
@@ -2233,6 +2297,102 @@ function buildRecentMediaRationale({ ingestion, city, location, mode, lang, obje
             ? [fallbackPlacementHint]
             : [],
     ),
+  };
+}
+
+function normalizeYouTubeTelemetryConsent(consent = {}) {
+  const defaultConsent = FIXTURES.youtubeWatchTelemetry.request.consent;
+  const retentionDays = Number(consent.retentionDays ?? defaultConsent.retentionDays);
+  return {
+    enabled: consent.enabled === true,
+    grantedAtIso: consent.grantedAtIso || new Date().toISOString(),
+    policyVersion: String(consent.policyVersion || defaultConsent.policyVersion),
+    retentionDays: Math.max(1, Math.min(90, Number.isFinite(retentionDays) ? retentionDays : defaultConsent.retentionDays)),
+  };
+}
+
+function normalizeYouTubeTelemetryEvent(event = {}) {
+  const mediaId = deriveMediaIdFromYouTubeTelemetry(event);
+  const sessionStartedAtIso = event.sessionStartedAtIso || event.eventCapturedAtIso || new Date().toISOString();
+  const sessionEndedAtIso = event.sessionEndedAtIso || event.eventCapturedAtIso || sessionStartedAtIso;
+  const activeWatchMs = Math.max(0, Number(event.activeWatchMs || 0));
+  const completionRatio = Math.max(0, Math.min(1, Number(event.completionRatio || 0)));
+  return {
+    eventId: String(event.eventId || `${mediaId || 'yt'}:${sessionEndedAtIso}`),
+    sessionId: String(event.sessionId || `${mediaId || 'yt'}:${sessionStartedAtIso}`),
+    videoId: mediaId,
+    videoUrl: typeof event.videoUrl === 'string' ? event.videoUrl : undefined,
+    title: typeof event.title === 'string' ? event.title : undefined,
+    lang: deriveLangFromTelemetry(event),
+    subtitleTrack: typeof event.subtitleTrack === 'string' ? event.subtitleTrack : undefined,
+    sessionStartedAtIso,
+    sessionEndedAtIso,
+    activeWatchMs,
+    completionRatio,
+    eventCapturedAtIso: event.eventCapturedAtIso || sessionEndedAtIso,
+  };
+}
+
+function ingestYouTubeWatchTelemetry(userId = DEFAULT_USER_ID, payload = {}) {
+  const consent = normalizeYouTubeTelemetryConsent(payload.consent || {});
+  if (!consent.enabled) {
+    return {
+      ok: true,
+      userId,
+      acceptedEvents: 0,
+      dedupedEvents: 0,
+      retainedEvents: 0,
+      retentionDays: consent.retentionDays,
+      ingestionWindow: {
+        windowStartIso: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        windowEndIso: new Date().toISOString(),
+      },
+    };
+  }
+
+  const incomingEvents = Array.isArray(payload.events) ? payload.events : [];
+  const normalizedIncoming = incomingEvents.map((event) => normalizeYouTubeTelemetryEvent(event));
+  const existingState = getYouTubeTelemetryState(userId);
+  const existingEvents = Array.isArray(existingState.events) ? existingState.events : [];
+  const dedupeSet = new Set(existingEvents.map((event) => `${event.eventId}:${event.sessionId}`));
+  const acceptedEvents = [];
+  let dedupedEvents = 0;
+  for (const event of normalizedIncoming) {
+    const dedupeKey = `${event.eventId}:${event.sessionId}`;
+    if (dedupeSet.has(dedupeKey)) {
+      dedupedEvents += 1;
+      continue;
+    }
+    dedupeSet.add(dedupeKey);
+    acceptedEvents.push(event);
+  }
+
+  const retentionMs = consent.retentionDays * 24 * 60 * 60 * 1000;
+  const windowEnd = Date.now();
+  const windowStart = windowEnd - retentionMs;
+  const retainedEvents = [...existingEvents, ...acceptedEvents].filter((event) => {
+    const timestamp = new Date(event.eventCapturedAtIso || event.sessionEndedAtIso || 0).getTime();
+    return Number.isFinite(timestamp) && timestamp >= windowStart;
+  }).sort((a, b) => new Date(a.eventCapturedAtIso).getTime() - new Date(b.eventCapturedAtIso).getTime());
+
+  state.youtubeTelemetryByUser.set(userId, {
+    consent,
+    events: retainedEvents,
+    updatedAtIso: new Date().toISOString(),
+  });
+  saveDurableState();
+
+  return {
+    ok: true,
+    userId,
+    acceptedEvents: acceptedEvents.length,
+    dedupedEvents,
+    retainedEvents: retainedEvents.length,
+    retentionDays: consent.retentionDays,
+    ingestionWindow: {
+      windowStartIso: new Date(windowStart).toISOString(),
+      windowEndIso: new Date(windowEnd).toISOString(),
+    },
   };
 }
 
@@ -4891,6 +5051,22 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/api/v1/integrations/youtube/watch-telemetry' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const userId = body.userId || getUserIdFromQuery(url.searchParams);
+      const consent = normalizeYouTubeTelemetryConsent(body.consent || {});
+      if (!consent.enabled) {
+        jsonResponse(res, 403, {
+          error: 'consent_required',
+          message: 'youtube watch telemetry is opt-in and requires consent.enabled=true',
+        });
+        return;
+      }
+      const result = ingestYouTubeWatchTelemetry(userId, body);
+      jsonResponse(res, 200, result);
+      return;
+    }
+
     if (pathname === '/api/v1/game/start-or-resume' && req.method === 'POST') {
       const body = await readJsonBody(req);
       const userId = body.userId || DEFAULT_USER_ID;
@@ -5502,6 +5678,7 @@ export const __testing = {
     state.activeSessionByUser.clear();
     state.learnSessions = [...(FIXTURES.learnSessions.items || [])];
     state.ingestionByUser.clear();
+    state.youtubeTelemetryByUser.clear();
     ensureIngestionForUser(DEFAULT_USER_ID);
     saveDurableState();
   },

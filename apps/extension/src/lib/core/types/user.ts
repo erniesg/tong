@@ -61,6 +61,8 @@ export interface UserPreferences {
   autoPauseOnNewWord: boolean;
   /** Show difficulty indicators */
   showDifficultyIndicators: boolean;
+  /** Opt-in extension telemetry for YouTube watch frequency/duration */
+  youtubeWatchTelemetryOptIn?: boolean;
 }
 
 /**
