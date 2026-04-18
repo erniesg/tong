@@ -270,10 +270,13 @@ function buildContextBlock(
 }
 
 /** Find the weakest language (lowest slider value), breaking ties left-to-right. */
-function getWeakestLangIndex(sliders: [number, number, number]): number {
-  let minIdx = 0;
-  for (let i = 1; i < sliders.length; i++) {
-    if (sliders[i] < sliders[minIdx]) minIdx = i;
+function getWeakestLangIndex(sliders: [number, number, number], candidateIndices?: number[]): number {
+  const indices = candidateIndices && candidateIndices.length > 0
+    ? candidateIndices
+    : sliders.map((_, index) => index);
+  let minIdx = indices[0] ?? 0;
+  for (const index of indices.slice(1)) {
+    if (sliders[index] < sliders[minIdx]) minIdx = index;
   }
   return minIdx;
 }
@@ -600,10 +603,16 @@ export default function GamePage() {
     setError('');
     setLoading(true);
 
-    const weakIdx = getWeakestLangIndex(sliders);
-    const primaryLang = LANG_KEYS[weakIdx] as 'ko' | 'ja' | 'zh';
-    const targetLanguages = LANG_KEYS.filter((langKey) => selectedTargetLanguages[langKey]);
-    const safeTargetLanguages = targetLanguages.length > 0 ? targetLanguages : (['ko'] as (keyof UserProficiency)[]);
+    const selectedLanguageIndices = LANG_LABELS.flatMap((lang, index) => (
+      selectedTargetLanguages[lang.key] ? [index] : []
+    ));
+    const defaultLanguageIndex = LANG_LABELS.findIndex((lang) => lang.key === 'ko');
+    const safeSelectedLanguageIndices = selectedLanguageIndices.length > 0
+      ? selectedLanguageIndices
+      : [defaultLanguageIndex >= 0 ? defaultLanguageIndex : 0];
+    const weakIdx = getWeakestLangIndex(sliders, safeSelectedLanguageIndices);
+    const primaryLang = (LANG_LABELS[weakIdx]?.key ?? 'ko') as 'ko' | 'ja' | 'zh';
+    const safeTargetLanguages = safeSelectedLanguageIndices.map((index) => LANG_LABELS[index].key);
 
     const weakLevel = sliders[weakIdx];
     const preferredCity = (LANG_TO_CITY[primaryLang] ?? 'seoul') as CityId;
