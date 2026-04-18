@@ -2080,8 +2080,17 @@ function buildSnapshotSourceItemFromTelemetryEvent(event = {}) {
   };
 }
 
-function buildIngestionSnapshotForUser(userId = DEFAULT_USER_ID, options = {}) {
-  const includeSources = normalizeIngestionSources(options.includeSources);
+function buildIngestionSnapshotForUser(userIdOrOptions = DEFAULT_USER_ID, options = {}) {
+  let userId = DEFAULT_USER_ID;
+  let resolvedOptions = options;
+
+  if (typeof userIdOrOptions === 'string' && userIdOrOptions.trim()) {
+    userId = userIdOrOptions;
+  } else if (userIdOrOptions && typeof userIdOrOptions === 'object' && !Array.isArray(userIdOrOptions)) {
+    resolvedOptions = userIdOrOptions;
+  }
+
+  const includeSources = normalizeIngestionSources(resolvedOptions.includeSources);
   const snapshot = JSON.parse(fs.readFileSync(mockMediaWindowPath, 'utf8'));
   const telemetryState = getYouTubeTelemetryState(userId);
   const telemetryEvents = Array.isArray(telemetryState.events) ? telemetryState.events : [];
@@ -3672,7 +3681,7 @@ async function invokeAgentTool(toolName, rawArgs = {}) {
     }
     case 'ingestion.snapshot.get': {
       const includeSources = normalizeIngestionSources(args.includeSources);
-      const snapshot = buildIngestionSnapshotForUser({ includeSources });
+      const snapshot = buildIngestionSnapshotForUser(userId, { includeSources });
       const sourceItems = Array.isArray(snapshot.sourceItems) ? snapshot.sourceItems : [];
       return {
         statusCode: 200,
