@@ -129,6 +129,10 @@ class TongContent {
     switch (message.type) {
       case 'TOGGLE_OVERLAY': {
         const isVisible = this.overlay?.toggle() ?? false;
+        void chrome.runtime.sendMessage({
+          type: 'SET_PREFERENCES',
+          payload: { subtitles: { overlayEnabled: isVisible } },
+        });
         sendResponse({ success: true, data: { isVisible } });
         break;
       }
@@ -141,6 +145,8 @@ class TongContent {
             hasOverlay: this.overlay !== null,
             detectedLanguage: this.overlay?.getDetectedLanguage() ?? null,
             selectedTrackId: this.overlay?.getSelectedTrackId() ?? null,
+            resolverReasonCode: this.overlay?.getResolverReasonCode() ?? null,
+            resolverDetail: this.overlay?.getResolverDetail() ?? null,
           },
         });
         break;
@@ -152,6 +158,8 @@ class TongContent {
             tracks: this.overlay?.getAvailableTracks() ?? [],
             selectedTrackId: this.overlay?.getSelectedTrackId() ?? null,
             detectedLanguage: this.overlay?.getDetectedLanguage() ?? null,
+            resolverReasonCode: this.overlay?.getResolverReasonCode() ?? null,
+            resolverDetail: this.overlay?.getResolverDetail() ?? null,
           },
         });
         break;

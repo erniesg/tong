@@ -19,6 +19,8 @@ export interface LanguageLearningConfig {
  * Subtitle display preferences
  */
 export interface SubtitlePreferences {
+  /** Persisted overlay visibility gate */
+  overlayEnabled: boolean;
   /** Show original subtitles */
   showOriginal: boolean;
   /** Show romanization */

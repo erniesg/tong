@@ -27,6 +27,8 @@ function Popup() {
   const [tracks, setTracks] = useState<TrackInfo[]>([]);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
+  const [resolverReasonCode, setResolverReasonCode] = useState<string | null>(null);
+  const [resolverDetail, setResolverDetail] = useState<string | null>(null);
 
   useEffect(() => {
     loadPreferences();
@@ -55,6 +57,8 @@ function Popup() {
           setSubtitlesVisible(stateResp.data.isVisible);
           setHasOverlay(stateResp.data.hasOverlay);
           setDetectedLanguage(stateResp.data.detectedLanguage || null);
+          setResolverReasonCode(stateResp.data.resolverReasonCode || null);
+          setResolverDetail(stateResp.data.resolverDetail || null);
         }
 
         const tracksResp = await chrome.tabs.sendMessage(tab.id, { type: 'GET_TRACKS' });
@@ -64,6 +68,8 @@ function Popup() {
           if (tracksResp.data.detectedLanguage) {
             setDetectedLanguage(tracksResp.data.detectedLanguage);
           }
+          setResolverReasonCode(tracksResp.data.resolverReasonCode || null);
+          setResolverDetail(tracksResp.data.resolverDetail || null);
         }
       }
     } catch {
@@ -225,6 +231,15 @@ function Popup() {
             <label>
               <input
                 type="checkbox"
+                checked={preferences?.subtitles.overlayEnabled ?? true}
+                onChange={() => toggleSetting('overlayEnabled')}
+              />
+              Overlay Enabled
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
                 checked={preferences?.subtitles.showOriginal}
                 onChange={() => toggleSetting('showOriginal')}
               />
@@ -329,6 +344,13 @@ function Popup() {
               <span className="value">
                 {LANG_LABELS[detectedLanguage] || detectedLanguage.toUpperCase()}
               </span>
+            </div>
+          )}
+
+          {resolverReasonCode && (
+            <div className="info-row">
+              <span className="label">Resolver:</span>
+              <span className="value" title={resolverDetail || ''}>{resolverReasonCode}</span>
             </div>
           )}
         </section>

@@ -10,7 +10,8 @@
     "build:prod": "vite build --mode production && vite build --config vite.content.config.ts --mode production && vite build --config vite.interceptor.config.ts --mode production",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "audit:captions": "node --experimental-strip-types scripts/caption_audit_runner.mjs"
   },
   "dependencies": {
     "preact": "^10.19.0",
