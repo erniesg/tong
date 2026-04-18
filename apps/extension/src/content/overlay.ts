@@ -1007,13 +1007,27 @@ export class SubtitleOverlay {
   async updatePreferences() {
     const oldTranslationLang = this.preferences?.languages?.translationLanguage;
     const oldPrimaryTarget = this.preferences?.languages?.primaryTarget;
-    const wasVisible = this.isVisible;
 
     await this.loadPreferences();
     this.applyStyles();
 
+    const decision = resolveCaptionLanguage({
+      preferences: this.preferences,
+      tracks: this.availableTracks,
+      selectedTrackId: this.selectedTrackId,
+      manualTrackOverride: this.manualTrackOverride,
+      cues: this.cues,
+      pageMetadata: this.getPageMetadataSignals(),
+    });
+
+    this.resolverReasonCode = decision.reasonCode;
+    this.resolverDetail = decision.detail;
+    this.detectedLanguage = decision.sourceLanguage;
+    this.selectedTrackId = decision.selectedTrackId;
+    this.isVisible = decision.shouldShowOverlay;
+
     const persistedOverlayEnabled = this.preferences?.subtitles.overlayEnabled ?? true;
-    this.isVisible = persistedOverlayEnabled ? wasVisible : false;
+    this.isVisible = persistedOverlayEnabled ? this.isVisible : false;
     this.applyVisibility();
 
     const newPrimaryTarget = this.preferences?.languages?.primaryTarget;
