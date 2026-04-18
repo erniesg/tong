@@ -1,6 +1,10 @@
 /**
  * API client for Tong backend
  */
+import type {
+  YouTubeWatchTelemetryRequest,
+  YouTubeWatchTelemetryResponse,
+} from '@tong/core';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://tong-api.erniesg.workers.dev';
 
@@ -119,6 +123,16 @@ export class ApiClient {
 
     const response = await this.get(`/api/vocabulary?${params}`);
     return response.data as unknown[];
+  }
+
+  /**
+   * Ingest explicit opt-in YouTube watch telemetry for personalization.
+   */
+  async ingestYouTubeWatchTelemetry(
+    payload: YouTubeWatchTelemetryRequest
+  ): Promise<YouTubeWatchTelemetryResponse> {
+    const response = await this.post('/api/v1/integrations/youtube/watch-telemetry', payload);
+    return response.data as YouTubeWatchTelemetryResponse;
   }
 
   /**

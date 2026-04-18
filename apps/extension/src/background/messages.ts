@@ -4,6 +4,7 @@
 
 import type { StorageManager } from './storage';
 import type { ApiClient } from './api';
+import type { YouTubeWatchTelemetryRequest } from '@tong/core';
 
 export type MessageType =
   | 'GET_PREFERENCES'
@@ -17,6 +18,7 @@ export type MessageType =
   | 'GET_TRACKS'
   | 'CHANGE_TRACK'
   | 'SYNC_STATE'
+  | 'INGEST_YOUTUBE_WATCH_TELEMETRY'
   | 'GET_YT_CAPTION_TRACKS'
   | 'FETCH_YT_SUBTITLES'
   | 'GOOGLE_TRANSLATE';
@@ -60,6 +62,9 @@ export class MessageHandler {
 
       case 'GOOGLE_TRANSLATE':
         return this.googleTranslate(message.payload as { url: string });
+
+      case 'INGEST_YOUTUBE_WATCH_TELEMETRY':
+        return this.ingestYouTubeWatchTelemetry(message.payload as YouTubeWatchTelemetryRequest);
 
       case 'SAVE_VOCABULARY':
         return this.saveVocabulary(message.payload);
@@ -275,6 +280,17 @@ export class MessageHandler {
           },
         };
       }
+    }
+  }
+
+  private async ingestYouTubeWatchTelemetry(
+    payload: YouTubeWatchTelemetryRequest
+  ): Promise<MessageResponse> {
+    try {
+      const result = await this.api.ingestYouTubeWatchTelemetry(payload);
+      return { success: true, data: result };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
     }
   }
 

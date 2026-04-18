@@ -6,11 +6,13 @@
 import { YouTubeAdapter } from './adapters/youtube';
 import { SubtitleOverlay } from './overlay';
 import type { PlatformAdapter } from './adapters/types';
+import { YouTubeWatchTelemetryReporter } from './youtube-watch-telemetry';
 
 class TongContent {
   private adapter: PlatformAdapter | null = null;
   private overlay: SubtitleOverlay | null = null;
   private currentVideoId: string | null = null;
+  private telemetryReporter: YouTubeWatchTelemetryReporter | null = null;
 
   constructor() {
     // Register message listener immediately so popup can always reach us
@@ -58,6 +60,8 @@ class TongContent {
     console.log('[Tong] New video detected:', newVideoId);
 
     // Clean up old overlay
+    this.telemetryReporter?.destroy();
+    this.telemetryReporter = null;
     this.overlay?.destroy();
     this.overlay = null;
 
@@ -97,6 +101,18 @@ class TongContent {
     // Create subtitle overlay
     this.overlay = new SubtitleOverlay(video, this.adapter);
     await this.overlay.init();
+
+    if (this.adapter.platform === 'youtube') {
+      this.telemetryReporter = new YouTubeWatchTelemetryReporter({
+        video,
+        adapter: this.adapter,
+        getOverlayState: () => ({
+          detectedLanguage: this.overlay?.getDetectedLanguage() ?? null,
+          selectedTrackId: this.overlay?.getSelectedTrackId() ?? null,
+        }),
+      });
+      await this.telemetryReporter.init();
+    }
 
     console.log('[Tong] Content script ready');
 
@@ -175,7 +191,8 @@ class TongContent {
       }
 
       case 'UPDATE_PREFERENCES':
-        this.overlay?.updatePreferences();
+        void this.overlay?.updatePreferences();
+        void this.telemetryReporter?.updatePreferences();
         sendResponse({ success: true });
         break;
 
