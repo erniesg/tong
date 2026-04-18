@@ -176,12 +176,25 @@ async function main() {
 }
 
 main().catch((error) => {
+  let outputPath = '';
+  try {
+    outputPath = parseArgs(process.argv).output || '';
+  } catch {
+    outputPath = '';
+  }
+
   const failure = {
     ok: false,
     skipped: false,
+    finishedAt: new Date().toISOString(),
     error: error.message,
     stack: error.stack,
   };
+
+  if (outputPath) {
+    fs.writeFileSync(path.resolve(outputPath), `${JSON.stringify(failure, null, 2)}\n`);
+  }
+
   process.stdout.write(`${JSON.stringify(failure, null, 2)}\n`);
   process.exit(1);
 });
