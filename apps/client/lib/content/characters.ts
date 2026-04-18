@@ -1,5 +1,6 @@
 import type { Character, RelationshipStage } from '../types/relationship';
 import { runtimeAssetUrl } from '@/lib/runtime-assets';
+import { SHANGHAI_CHARACTER_MAP, getShanghaiCharacter, voiceRulesBlock } from './shanghai/characters';
 
 function stageMap(
   stages: Record<
@@ -231,6 +232,7 @@ export const CHARACTER_MAP: Record<string, Character> = {
   haeun: HAEUN,
   jin: JIN,
   tong: TONG,
+  ...SHANGHAI_CHARACTER_MAP,
 };
 
 /** @deprecated Use HAEUN instead */
@@ -297,3 +299,9 @@ export const TUTORIAL_VIDEO_CONFIG: Record<string, TutorialVideoConfig> = {
     sceneImageUrl: runtimeAssetUrl('character.jin.scene.default'),
   },
 };
+
+export function getCharacter(characterId: string): Character | null {
+  return CHARACTER_MAP[characterId] ?? getShanghaiCharacter(characterId);
+}
+
+export { getShanghaiCharacter, voiceRulesBlock };
