@@ -116,6 +116,14 @@ body {
   accent-color: #3b82f6;
 }
 
+.checkbox-group p {
+  margin-top: 6px;
+  margin-left: 28px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
 .footer {
   display: flex;
   flex-direction: column;

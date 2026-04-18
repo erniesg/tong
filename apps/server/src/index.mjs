@@ -2363,23 +2363,52 @@ function ingestYouTubeWatchTelemetry(userId = DEFAULT_USER_ID, payload = {}) {
   const normalizedIncoming = incomingEvents.map((event) => normalizeYouTubeTelemetryEvent(event));
   const existingState = getYouTubeTelemetryState(userId);
   const existingEvents = Array.isArray(existingState.events) ? existingState.events : [];
-  const dedupeSet = new Set(existingEvents.map((event) => `${event.eventId}:${event.sessionId}`));
+  const retainedBySession = new Map(existingEvents.map((event) => [event.sessionId, event]));
   const acceptedEvents = [];
   let dedupedEvents = 0;
+
+  const isTelemetryUpdateNewer = (incoming, existing) => {
+    const incomingCapturedAt = new Date(incoming.eventCapturedAtIso || incoming.sessionEndedAtIso || 0).getTime();
+    const existingCapturedAt = new Date(existing.eventCapturedAtIso || existing.sessionEndedAtIso || 0).getTime();
+    if (Number.isFinite(incomingCapturedAt) && Number.isFinite(existingCapturedAt) && incomingCapturedAt !== existingCapturedAt) {
+      return incomingCapturedAt > existingCapturedAt;
+    }
+    if (incoming.activeWatchMs !== existing.activeWatchMs) {
+      return incoming.activeWatchMs > existing.activeWatchMs;
+    }
+    if (incoming.completionRatio !== existing.completionRatio) {
+      return incoming.completionRatio > existing.completionRatio;
+    }
+    return incoming.eventId !== existing.eventId;
+  };
+
   for (const event of normalizedIncoming) {
-    const dedupeKey = `${event.eventId}:${event.sessionId}`;
-    if (dedupeSet.has(dedupeKey)) {
+    const existingEvent = retainedBySession.get(event.sessionId);
+    if (!existingEvent) {
+      retainedBySession.set(event.sessionId, event);
+      acceptedEvents.push(event);
+      continue;
+    }
+
+    const sameSnapshot =
+      existingEvent.eventId === event.eventId &&
+      existingEvent.eventCapturedAtIso === event.eventCapturedAtIso &&
+      existingEvent.activeWatchMs === event.activeWatchMs &&
+      existingEvent.completionRatio === event.completionRatio;
+
+    if (sameSnapshot || !isTelemetryUpdateNewer(event, existingEvent)) {
       dedupedEvents += 1;
       continue;
     }
-    dedupeSet.add(dedupeKey);
+
+    retainedBySession.set(event.sessionId, event);
     acceptedEvents.push(event);
   }
 
   const retentionMs = consent.retentionDays * 24 * 60 * 60 * 1000;
   const windowEnd = Date.now();
   const windowStart = windowEnd - retentionMs;
-  const retainedEvents = [...existingEvents, ...acceptedEvents].filter((event) => {
+  const retainedEvents = [...retainedBySession.values()].filter((event) => {
     const timestamp = new Date(event.eventCapturedAtIso || event.sessionEndedAtIso || 0).getTime();
     return Number.isFinite(timestamp) && timestamp >= windowStart;
   }).sort((a, b) => new Date(a.eventCapturedAtIso).getTime() - new Date(b.eventCapturedAtIso).getTime());
@@ -5676,8 +5705,10 @@ export const __testing = {
   createNewGameSession,
   createCheckpointRecord,
   findGameSessionForResume,
+  ingestYouTubeWatchTelemetry,
   persistCheckpoint,
   resumeGameSession,
+  runIngestionForUser,
   restoreGameSessionFromCheckpoint,
   resetState() {
     state.profiles.clear();

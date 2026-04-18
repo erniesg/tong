@@ -106,6 +106,13 @@ body {
   accent-color: #3b82f6;
 }
 
+.helper-text {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #9ca3af;
+}
+
 .language-info {
   background: #374151;
   border-radius: 8px;

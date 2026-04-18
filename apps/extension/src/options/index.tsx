@@ -83,6 +83,14 @@ function Options() {
     });
   };
 
+  const updateTopLevelPreference = (field: keyof UserPreferences, value: unknown) => {
+    if (!preferences) return;
+    setPreferences({
+      ...preferences,
+      [field]: value,
+    });
+  };
+
   if (loading) {
     return (
       <div className="options">
@@ -200,6 +208,23 @@ function Options() {
               />
               Enable karaoke-style highlighting
             </label>
+          </div>
+
+          <div className="form-group checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={preferences?.youtubeWatchTelemetryOptIn ?? false}
+                onChange={(e) =>
+                  updateTopLevelPreference('youtubeWatchTelemetryOptIn', (e.target as HTMLInputElement).checked)
+                }
+              />
+              Share privacy-bounded YouTube watch telemetry
+            </label>
+            <p>
+              Records active watch minutes and frequency only after opt-in so Tong can personalize reviews without
+              importing your watch history directly.
+            </p>
           </div>
 
           <div className="form-group">

@@ -111,6 +111,28 @@ function Popup() {
     }
   };
 
+  const toggleTelemetryOptIn = async () => {
+    if (!preferences) return;
+
+    const updates = {
+      youtubeWatchTelemetryOptIn: !preferences.youtubeWatchTelemetryOptIn,
+    };
+
+    const response = await chrome.runtime.sendMessage({
+      type: 'SET_PREFERENCES',
+      payload: updates,
+    });
+
+    if (response.success) {
+      setPreferences({ ...preferences, ...updates });
+
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id) {
+        await chrome.tabs.sendMessage(tab.id, { type: 'UPDATE_PREFERENCES' });
+      }
+    }
+  };
+
   const changeLearningLanguage = async (lang: string) => {
     if (!preferences) return;
 
@@ -260,6 +282,21 @@ function Popup() {
               Karaoke Mode
             </label>
           </div>
+
+          <div className="toggle-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={preferences?.youtubeWatchTelemetryOptIn ?? false}
+                onChange={toggleTelemetryOptIn}
+              />
+              Share watch telemetry
+            </label>
+          </div>
+          <p className="helper-text">
+            When enabled, Tong records privacy-bounded YouTube watch sessions so personalization can use
+            active watch minutes and frequency. Playback while paused or hidden is excluded.
+          </p>
         </section>
 
         <section className="language-info">
