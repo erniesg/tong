@@ -106,6 +106,12 @@ const CITY_EXPLAIN_ROWS: { cityId: CityId; label: string; target: string }[] = [
   { cityId: 'seoul', label: 'Seoul', target: 'Korean' },
 ];
 
+const CITY_TO_LANG: Record<CityId, keyof UserProficiency> = {
+  seoul: 'ko',
+  tokyo: 'ja',
+  shanghai: 'zh',
+};
+
 const CITY_NAMES: Record<CityId, { en: string; local: string }> = {
   seoul: { en: 'Seoul', local: '서울' },
   tokyo: { en: 'Tokyo', local: '東京' },
@@ -395,6 +401,11 @@ export default function GamePage() {
 
   /* proficiency sliders (0-6 each, maps directly to GAME_LEVELS) */
   const [sliders, setSliders] = useState<[number, number, number]>([0, 0, 0]);
+  const [selectedTargetLanguages, setSelectedTargetLanguages] = useState<Record<keyof UserProficiency, boolean>>({
+    ko: true,
+    ja: true,
+    zh: true,
+  });
 
   /* hangout state */
   const [loading, setLoading] = useState(false);
@@ -512,6 +523,20 @@ export default function GamePage() {
     });
   }
 
+  const selectedLanguageCount = LANG_KEYS.filter((langKey) => selectedTargetLanguages[langKey]).length;
+
+  function handleToggleTargetLanguage(langKey: keyof UserProficiency) {
+    setSelectedTargetLanguages((prev) => {
+      const currentlySelected = prev[langKey];
+      const activeCount = LANG_KEYS.filter((key) => prev[key]).length;
+      if (currentlySelected && activeCount <= 1) return prev;
+      return {
+        ...prev,
+        [langKey]: !currentlySelected,
+      };
+    });
+  }
+
   /** Build introduction context if in introduction mode */
   function getIntroCtx() {
     if (!isIntroHangout) return undefined;
@@ -577,6 +602,8 @@ export default function GamePage() {
 
     const weakIdx = getWeakestLangIndex(sliders);
     const primaryLang = LANG_KEYS[weakIdx] as 'ko' | 'ja' | 'zh';
+    const targetLanguages = LANG_KEYS.filter((langKey) => selectedTargetLanguages[langKey]);
+    const safeTargetLanguages = targetLanguages.length > 0 ? targetLanguages : (['ko'] as (keyof UserProficiency)[]);
 
     const weakLevel = sliders[weakIdx];
     const preferredCity = (LANG_TO_CITY[primaryLang] ?? 'seoul') as CityId;
@@ -676,7 +703,7 @@ export default function GamePage() {
         city: primaryCity,
         profile: {
           nativeLanguage: 'en',
-          targetLanguages: ['ko', 'ja', 'zh'],
+          targetLanguages: safeTargetLanguages,
           proficiency: {
             ko: SLIDER_TO_LEVEL[sliders[2]] ?? 'none',
             ja: SLIDER_TO_LEVEL[sliders[1]] ?? 'none',
@@ -1855,10 +1882,49 @@ export default function GamePage() {
               <div className="tg-trainee-profile">
                 <div className="tg-tong-intro-subtitle" style={{ position: 'relative', bottom: 'auto', padding: 0, background: 'none' }}>
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
-                  <p className="dialogue-text">How familiar are you with these?</p>
+                  <p className="dialogue-text">Choose what you want to learn first.</p>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <p className="proficiency-desc" style={{ marginBottom: 8 }}>
+                    Pick your target language(s). You can learn one language or mix multiple.
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {LANG_LABELS.map((lang) => {
+                      const checked = selectedTargetLanguages[lang.key];
+                      const disableUncheck = checked && selectedLanguageCount <= 1;
+                      return (
+                        <label
+                          key={lang.key}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            borderRadius: 999,
+                            border: '1px solid rgba(255,255,255,0.25)',
+                            background: checked ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)',
+                            padding: '8px 12px',
+                            fontSize: 14,
+                            opacity: disableUncheck ? 0.75 : 1,
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={disableUncheck}
+                            onChange={() => handleToggleTargetLanguage(lang.key)}
+                          />
+                          <span>{lang.flag} {lang.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="proficiency-panel" style={{ marginTop: 12 }}>
+                  <p className="proficiency-desc" style={{ marginBottom: 8 }}>
+                    How much do you already know in each selected language?
+                  </p>
                   {LANG_LABELS.map((lang, idx) => {
+                    if (!selectedTargetLanguages[lang.key]) return null;
                     const val = sliders[idx];
                     const gameLvl = GAME_LEVELS[val];
                     return (
@@ -1886,8 +1952,11 @@ export default function GamePage() {
                   })}
                 </div>
                 <div className="explain-in-section" style={{ marginTop: 16 }}>
-                  <span className="explain-in-heading">Learn each language in:</span>
-                  {CITY_EXPLAIN_ROWS.map((row) => (
+                  <span className="explain-in-heading">Tong explains in:</span>
+                  <p className="proficiency-desc" style={{ margin: '6px 0 10px' }}>
+                    Choose the language Tong uses for grammar and vocabulary tips.
+                  </p>
+                  {CITY_EXPLAIN_ROWS.filter((row) => selectedTargetLanguages[CITY_TO_LANG[row.cityId]]).map((row) => (
                     <div key={row.cityId} className="explain-in-row">
                       <span className="explain-in-label">{row.target}</span>
                       <select
