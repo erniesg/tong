@@ -63,7 +63,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm ci
+          if [ -f package-lock.json ]; then
+            npm ci
+          fi
           npm --prefix apps/client ci
           npm --prefix apps/server ci
 
