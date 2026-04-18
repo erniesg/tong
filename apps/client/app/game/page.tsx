@@ -263,11 +263,13 @@ function buildContextBlock(
   return `[HANGOUT_CONTEXT]${ctx}[/HANGOUT_CONTEXT] `;
 }
 
-/** Find the weakest language (lowest slider value), breaking ties left-to-right. */
-function getWeakestLangIndex(sliders: [number, number, number]): number {
-  let minIdx = 0;
-  for (let i = 1; i < sliders.length; i++) {
-    if (sliders[i] < sliders[minIdx]) minIdx = i;
+/** Find the weakest selected language (lowest slider value), breaking ties left-to-right. */
+function getWeakestLangIndex(sliders: [number, number, number], selectedIndexes: number[]): number {
+  const safeIndexes = selectedIndexes.length > 0 ? selectedIndexes : [0];
+  let minIdx = safeIndexes[0];
+  for (let i = 1; i < safeIndexes.length; i++) {
+    const idx = safeIndexes[i];
+    if (sliders[idx] < sliders[minIdx]) minIdx = idx;
   }
   return minIdx;
 }
@@ -395,6 +397,11 @@ export default function GamePage() {
 
   /* proficiency sliders (0-6 each, maps directly to GAME_LEVELS) */
   const [sliders, setSliders] = useState<[number, number, number]>([0, 0, 0]);
+  const [selectedLangs, setSelectedLangs] = useState<Record<keyof UserProficiency, boolean>>({
+    zh: true,
+    ja: true,
+    ko: true,
+  });
 
   /* hangout state */
   const [loading, setLoading] = useState(false);
@@ -512,6 +519,10 @@ export default function GamePage() {
     });
   }
 
+  function toggleLearningLanguage(lang: keyof UserProficiency) {
+    setSelectedLangs((prev) => ({ ...prev, [lang]: !prev[lang] }));
+  }
+
   /** Build introduction context if in introduction mode */
   function getIntroCtx() {
     if (!isIntroHangout) return undefined;
@@ -575,7 +586,10 @@ export default function GamePage() {
     setError('');
     setLoading(true);
 
-    const weakIdx = getWeakestLangIndex(sliders);
+    const selectedIndexes = LANG_LABELS
+      .map((lang, idx) => (selectedLangs[lang.key] ? idx : -1))
+      .filter((idx) => idx >= 0);
+    const weakIdx = getWeakestLangIndex(sliders, selectedIndexes);
     const primaryLang = LANG_KEYS[weakIdx] as 'ko' | 'ja' | 'zh';
 
     const weakLevel = sliders[weakIdx];
@@ -671,12 +685,16 @@ export default function GamePage() {
     }
 
     try {
+      const selectedTargetLanguages = LANG_LABELS
+        .filter((lang) => selectedLangs[lang.key])
+        .map((lang) => lang.key as 'ko' | 'ja' | 'zh');
+
       const bootstrap = (await startOrResumeGame({
         userId: 'local',
         city: primaryCity,
         profile: {
           nativeLanguage: 'en',
-          targetLanguages: ['ko', 'ja', 'zh'],
+          targetLanguages: selectedTargetLanguages.length > 0 ? selectedTargetLanguages : ['ko'],
           proficiency: {
             ko: SLIDER_TO_LEVEL[sliders[2]] ?? 'none',
             ja: SLIDER_TO_LEVEL[sliders[1]] ?? 'none',
@@ -1751,8 +1769,14 @@ export default function GamePage() {
     };
 
     const handleLanguageNext = () => {
+      const selectedCount = LANG_LABELS.filter((lang) => selectedLangs[lang.key]).length;
+      if (selectedCount === 0) {
+        setError('Pick at least one language to start your first city.');
+        return;
+      }
+      setError('');
       changeTongExpression('excited');
-      dropLinesRef.current[0] = `Let's head to Seoul, ${profileInput.englishName.trim() || 'trainee'}! I know someone you should meet...`;
+      dropLinesRef.current[0] = `Great picks. Let's head to your first city, ${profileInput.englishName.trim() || 'trainee'}! I know someone you should meet...`;
       setDropLineIdx(0);
       setDropCharIdx(0);
       setDropDone(false);
@@ -1855,20 +1879,27 @@ export default function GamePage() {
               <div className="tg-trainee-profile">
                 <div className="tg-tong-intro-subtitle" style={{ position: 'relative', bottom: 'auto', padding: 0, background: 'none' }}>
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
-                  <p className="dialogue-text">How familiar are you with these?</p>
+                  <p className="dialogue-text">Pick the languages you want to learn, then set your starting level for each one.</p>
                 </div>
                 <div className="proficiency-panel" style={{ marginTop: 12 }}>
                   {LANG_LABELS.map((lang, idx) => {
                     const val = sliders[idx];
                     const gameLvl = GAME_LEVELS[val];
+                    const isSelected = selectedLangs[lang.key];
                     return (
                       <div key={lang.key} className="proficiency-lang">
                         <div className="proficiency-lang-header">
-                          <span className="proficiency-lang-name">
-                            {lang.flag} {lang.name}
-                          </span>
+                          <label className="proficiency-lang-name" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleLearningLanguage(lang.key)}
+                              aria-label={`Learn ${lang.name}`}
+                            />
+                            <span>{lang.flag} {lang.name}</span>
+                          </label>
                           <span className="proficiency-lang-level">
-                            {gameLvl.name}
+                            {isSelected ? gameLvl.name : 'Not selected'}
                           </span>
                         </div>
                         <input
@@ -1879,17 +1910,24 @@ export default function GamePage() {
                           value={val}
                           onChange={(e) => handleSlider(idx, Number(e.target.value))}
                           className="proficiency-slider"
+                          disabled={!isSelected}
                         />
-                        <p className="proficiency-desc">Lv.{gameLvl.level} — {gameLvl.desc}</p>
+                        <p className="proficiency-desc">
+                          {isSelected ? `Lv.${gameLvl.level} — ${gameLvl.desc}` : 'Enable this language to include it in your path.'}
+                        </p>
                       </div>
                     );
                   })}
                 </div>
                 <div className="explain-in-section" style={{ marginTop: 16 }}>
-                  <span className="explain-in-heading">Learn each language in:</span>
-                  {CITY_EXPLAIN_ROWS.map((row) => (
+                  <span className="explain-in-heading">Instruction language for each selected target language:</span>
+                  {CITY_EXPLAIN_ROWS.filter((row) => {
+                    const languageKey = (Object.keys(LANG_TO_CITY) as (keyof UserProficiency)[])
+                      .find((key) => LANG_TO_CITY[key] === row.cityId);
+                    return languageKey ? selectedLangs[languageKey] : false;
+                  }).map((row) => (
                     <div key={row.cityId} className="explain-in-row">
-                      <span className="explain-in-label">{row.target}</span>
+                      <span className="explain-in-label">{row.target} lessons explained in</span>
                       <select
                         className="explain-in-select"
                         value={gameState.explainIn[row.cityId] ?? 'en'}
@@ -1902,6 +1940,7 @@ export default function GamePage() {
                     </div>
                   ))}
                 </div>
+                {error && <p className="dialogue-translation" style={{ marginTop: 8, color: '#ff8585' }}>{error}</p>}
                 <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
                   <button
                     className="tg-menu-btn-primary"
