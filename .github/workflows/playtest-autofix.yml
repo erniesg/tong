@@ -137,6 +137,15 @@ jobs:
 
       - name: Build QA validation bundle
         id: qa
+        env:
+          RESULT_PATH: ${{ steps.autofix.outputs.result_path }}
+          AUTOFIX_STATE: ${{ steps.status.outputs.state }}
+          AUTOFIX_VERDICT: ${{ steps.status.outputs.verdict }}
+          AUTOFIX_REPRO_STATUS: ${{ steps.status.outputs.repro_status }}
+          AUTOFIX_FIX_STATUS: ${{ steps.status.outputs.fix_status }}
+          AUTOFIX_CONFIDENCE: ${{ steps.status.outputs.confidence }}
+          ISSUE_REF: ${{ inputs.issue_ref }}
+          RECORDING_URL: ${{ inputs.recording_url }}
         run: |
           run_dir="$(python .agents/skills/_functional-qa/scripts/qa_runtime.py init-run validate-issue --target '${{ inputs.issue_ref }}')"
           echo "run_dir=$run_dir" >> "$GITHUB_OUTPUT"
@@ -151,6 +160,51 @@ jobs:
             --fix-status "${{ steps.status.outputs.fix_status }}" \
             --issue-accuracy accurate \
             --confidence "${{ steps.status.outputs.confidence }}"
+
+          RUN_DIR="$run_dir" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          run_dir = Path(os.environ["RUN_DIR"])
+          result = json.loads(Path(os.environ["RESULT_PATH"]).read_text(encoding="utf-8"))
+
+          findings = []
+          if result.get("error"):
+            findings.append(f"- Autofix runner returned `{result['error']}`.")
+          elif result.get("skipped"):
+            reason = result.get("fix", {}).get("reason") or "No code change was proposed."
+            findings.append(f"- Autofix runner skipped applying a fix: {reason}")
+          elif result.get("ok"):
+            changed_files = result.get("changedFiles") or []
+            if changed_files:
+              findings.append("- Autofix runner applied and validated changes in:")
+              findings.extend(f"  - `{path}`" for path in changed_files)
+            else:
+              findings.append("- Autofix runner completed without file changes.")
+          else:
+            findings.append("- Autofix runner completed with a non-passing validation result.")
+
+          summary = "\n".join([
+            "# Summary",
+            "",
+            f"- Issue: `{os.environ['ISSUE_REF']}`",
+            f"- Autofix state: `{os.environ['AUTOFIX_STATE']}`",
+            f"- Verdict: `{os.environ['AUTOFIX_VERDICT']}`",
+            f"- Repro status: `{os.environ['AUTOFIX_REPRO_STATUS']}`",
+            f"- Fix status: `{os.environ['AUTOFIX_FIX_STATUS']}`",
+            f"- Confidence: `{os.environ['AUTOFIX_CONFIDENCE']}`",
+            "",
+            "## Findings",
+            *findings,
+            "",
+            "## Evidence",
+            "- Raw autofix output: `logs/autofix-result.json`",
+            f"- Recording URL input: `{os.environ.get('RECORDING_URL', '')}`",
+          ]) + "\n"
+
+          (run_dir / "summary.md").write_text(summary, encoding="utf-8")
+          PY
 
       - name: Upload reviewer evidence bundle
         run: |
