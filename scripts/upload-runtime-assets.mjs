@@ -2,6 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { relativeToRepo, resolveRepoRoot } from "./lib/qa_evidence.mjs";
 
@@ -16,6 +17,8 @@ const DEFAULT_PUBLIC_VERIFY_TIMEOUT_MS = 15000;
 const CLIENT_PUBLIC_ASSETS_DIR = "apps/client/public/assets";
 const RUNTIME_MANIFEST_PATH = "assets/manifest/runtime-asset-manifest.json";
 const CANONICAL_MANIFEST_PATH = "assets/manifest/canonical-asset-manifest.json";
+const DEFAULT_CACHE_PATH = ".r2-upload-cache.json";
+const DEFAULT_CONCURRENCY = 6;
 
 function parseArgs(argv) {
   const args = {
@@ -28,6 +31,9 @@ function parseArgs(argv) {
     publicVerifyTimeoutMs: DEFAULT_PUBLIC_VERIFY_TIMEOUT_MS,
     runtimeManifestKey: process.env.TONG_RUNTIME_ASSET_MANIFEST_KEY || DEFAULT_RUNTIME_MANIFEST_KEY,
     skipPublicVerification: false,
+    cachePath: DEFAULT_CACHE_PATH,
+    skipCache: false,
+    concurrency: DEFAULT_CONCURRENCY,
     wranglerConfig: "apps/client/wrangler.toml",
   };
 
@@ -53,6 +59,12 @@ function parseArgs(argv) {
       args.dryRun = true;
     } else if (arg === "--skip-public-verification") {
       args.skipPublicVerification = true;
+    } else if (arg === "--cache-path") {
+      args.cachePath = argv[++i];
+    } else if (arg === "--skip-cache") {
+      args.skipCache = true;
+    } else if (arg === "--concurrency") {
+      args.concurrency = Number(argv[++i]);
     } else if (arg === "--help" || arg === "-h") {
       printHelp();
       process.exit(0);
@@ -79,6 +91,9 @@ function parseArgs(argv) {
   if (!Number.isFinite(args.publicVerifyTimeoutMs) || args.publicVerifyTimeoutMs < 1) {
     throw new Error("`--public-verify-timeout-ms` must be a positive number.");
   }
+  if (!Number.isFinite(args.concurrency) || args.concurrency < 1 || !Number.isInteger(args.concurrency)) {
+    throw new Error("`--concurrency` must be a positive integer.");
+  }
 
   return args;
 }
@@ -99,6 +114,9 @@ Options:
   --public-verify-delay-ms <n>   Delay between public URL checks (default: ${DEFAULT_PUBLIC_VERIFY_DELAY_MS})
   --public-verify-timeout-ms <n> Timeout per public URL check (default: ${DEFAULT_PUBLIC_VERIFY_TIMEOUT_MS})
   --skip-public-verification     Skip GET-based public URL checks after upload
+  --cache-path <path>            Cache file path for md5 diff uploads (default: ${DEFAULT_CACHE_PATH})
+  --skip-cache                   Ignore md5 cache and upload every file
+  --concurrency <n>              Max parallel wrangler uploads (default: ${DEFAULT_CONCURRENCY})
   --dry-run                      Print the planned upload set without uploading
 `);
 }
@@ -117,6 +135,12 @@ function runCommand(command, commandArgs, options = {}) {
   }
 
   return (result.stdout || "").trim();
+}
+
+function fileMd5(filePath) {
+  const hash = crypto.createHash("md5");
+  hash.update(fs.readFileSync(filePath));
+  return hash.digest("hex");
 }
 
 function contentTypeFor(filePath) {
@@ -215,6 +239,36 @@ function buildAssetUploadSet(repoRoot, options) {
   return uploads;
 }
 
+function readUploadCache(cachePath) {
+  if (!fs.existsSync(cachePath)) return {};
+  try {
+    const parsed = JSON.parse(fs.readFileSync(cachePath, "utf8"));
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeUploadCache(cachePath, entries) {
+  const ordered = Object.fromEntries(Object.entries(entries).sort((a, b) => a[0].localeCompare(b[0])));
+  fs.writeFileSync(cachePath, `${JSON.stringify(ordered, null, 2)}\n`, "utf8");
+}
+
+function applyUploadDiff(uploads, previousCache, skipCache) {
+  let unchangedCount = 0;
+  for (const upload of uploads) {
+    upload.md5 = fileMd5(upload.absolutePath);
+    upload.cacheKey = upload.bucketKey;
+    upload.changed = skipCache || previousCache[upload.cacheKey] !== upload.md5;
+    if (!upload.changed) unchangedCount += 1;
+  }
+
+  return {
+    unchangedCount,
+    changedUploads: uploads.filter((upload) => upload.changed),
+  };
+}
+
 function wranglerArgs(configPath, objectPath, filePath, contentType) {
   return [
     "--config",
@@ -243,6 +297,19 @@ function uploadFile(configPath, bucket, upload, dryRun) {
     "--",
     ...wranglerArgs(configPath, `${bucket}/${upload.bucketKey}`, upload.absolutePath, upload.contentType),
   ]);
+}
+
+async function uploadFiles(uploads, options) {
+  if (options.dryRun) return;
+  const queue = [...uploads];
+  const workers = Array.from({ length: Math.min(options.concurrency, queue.length) }, async () => {
+    while (queue.length > 0) {
+      const nextUpload = queue.shift();
+      if (!nextUpload) return;
+      uploadFile(options.wranglerConfigPath, options.bucket, nextUpload, false);
+    }
+  });
+  await Promise.all(workers);
 }
 
 function sleep(ms) {
@@ -315,18 +382,33 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const repoRoot = resolveRepoRoot();
   const wranglerConfigPath = path.resolve(repoRoot, options.wranglerConfig);
+  const cachePath = path.resolve(repoRoot, options.cachePath);
   const uploads = buildAssetUploadSet(repoRoot, options);
+  const previousCache = options.skipCache ? {} : readUploadCache(cachePath);
+  const { unchangedCount, changedUploads } = applyUploadDiff(uploads, previousCache, options.skipCache);
+  options.wranglerConfigPath = wranglerConfigPath;
 
-  for (const upload of uploads) {
-    uploadFile(wranglerConfigPath, options.bucket, upload, options.dryRun);
+  await uploadFiles(changedUploads, options);
+  await verifyUploads(changedUploads, options);
+
+  if (!options.dryRun) {
+    const nextCache = options.skipCache ? {} : { ...previousCache };
+    for (const upload of changedUploads) {
+      nextCache[upload.cacheKey] = upload.md5;
+    }
+    if (!options.skipCache) {
+      writeUploadCache(cachePath, nextCache);
+    }
   }
-
-  await verifyUploads(uploads, options);
 
   console.log(`Bucket: ${options.bucket}`);
   console.log(`Public base URL: ${options.publicBaseUrl}`);
   console.log(`Wrangler config: ${relativeToRepo(repoRoot, wranglerConfigPath)}`);
   console.log(`Files prepared: ${uploads.length}`);
+  console.log(`Files changed: ${changedUploads.length}`);
+  console.log(`Files skipped (unchanged): ${unchangedCount}`);
+  console.log(`Concurrency: ${options.concurrency}`);
+  console.log(`Cache: ${options.skipCache ? "disabled" : relativeToRepo(repoRoot, cachePath)}`);
   console.log(`Dry run: ${options.dryRun ? "yes" : "no"}`);
 }
 
