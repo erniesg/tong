@@ -133,6 +133,15 @@ const WEBTOON_STRIP_CSS = `
   align-items: center;
 }
 
+.wt-block--with-bubble {
+  z-index: 1;
+  isolation: isolate;
+}
+
+.wt-block--with-bubble:has(.wt-bubble[data-expanded='true']) {
+  z-index: 24;
+}
+
 .wt-gap {
   width: 100%;
   display: block;
@@ -147,11 +156,15 @@ const WEBTOON_STRIP_CSS = `
   isolation: isolate;
 }
 
+.wt-panel--lifted {
+  margin-top: calc(-1 * var(--wt-panel-lift, 0px));
+}
+
 .wt-panel--bubble-outside {
   overflow: visible;
 }
 
-.wt-panel:has(.wt-bubble.is-open) {
+.wt-panel:has(.wt-bubble[data-expanded='true']) {
   overflow: visible;
   z-index: 8;
 }
@@ -183,6 +196,12 @@ const WEBTOON_STRIP_CSS = `
   .wt-panel--inset { width: 70%; }
 }
 
+@media (max-width: 680px) {
+  .wt-panel--lifted {
+    margin-top: 0 !important;
+  }
+}
+
 .wt-panel__img {
   display: block;
   width: 100%;
@@ -197,7 +216,10 @@ const WEBTOON_STRIP_CSS = `
 
 .wt-bubble {
   --wt-bubble-fill: #fffdf9;
-  --wt-bubble-border: #1d3a6b;
+  --wt-speaker-border: #2453a6;
+  --wt-speaker-border-open: #7db1ff;
+  --wt-speaker-label: #d8e5ff;
+  --wt-bubble-border: var(--wt-speaker-border);
   --wt-bubble-shadow: 0 18px 38px rgba(10, 15, 30, 0.2), 0 3px 8px rgba(10, 15, 30, 0.08);
   --wt-tail-size: clamp(18px, 3.6vw, 24px);
   --wt-tail-offset: 50%;
@@ -235,6 +257,11 @@ const WEBTOON_STRIP_CSS = `
     background 220ms ease,
     border-color 220ms ease,
     border-radius 220ms ease;
+}
+
+.wt-bubble[data-expanded='true'] {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .wt-bubble::before,
@@ -296,37 +323,43 @@ const WEBTOON_STRIP_CSS = `
   cursor: default;
 }
 
-.wt-block:has(.wt-bubble.is-open) {
-  z-index: 12;
-}
-
-.wt-block:has(.wt-bubble.is-open) + .wt-block .wt-panel {
-  margin-top: 0 !important;
-}
-
-.wt-bubble.is-open {
+.wt-bubble--overlay {
   --wt-bubble-fill: #0e1524;
-  --wt-bubble-border: rgba(244, 210, 172, 0.55);
+  --wt-bubble-border: var(--wt-speaker-border-open);
   --wt-bubble-shadow: 0 18px 44px rgba(5, 8, 18, 0.5), 0 4px 10px rgba(5, 8, 18, 0.28);
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  width: max-content;
   display: flex;
   align-items: flex-start;
   min-width: min(14rem, 72vw);
   min-height: 0;
   height: fit-content;
   padding: 16px 18px 18px;
-  max-width: var(--wt-bubble-max-width, min(88vw, 30rem));
+  max-width: min(calc(100vw - 24px), var(--wt-bubble-max-width, 30rem));
   border-radius: clamp(26px, 6vw, 36px);
   color: #fff8ee;
   text-align: left;
-}
-
-.wt-bubble.is-open .wt-bubble__text {
-  color: #fff8ee;
+  z-index: 60;
+  animation: wtHelpFade 220ms ease-out both;
 }
 
 .wt-bubble--top { top: 6%; }
 .wt-bubble--bottom { bottom: 7%; }
 .wt-bubble--center-bottom { bottom: 16%; }
+
+.wt-bubble--overlay,
+.wt-bubble--overlay:hover,
+.wt-bubble--overlay:active {
+  transform: none !important;
+}
+
+.wt-bubble--overlay.wt-bubble--top,
+.wt-bubble--overlay.wt-bubble--bottom,
+.wt-bubble--overlay.wt-bubble--center-bottom {
+  bottom: auto !important;
+}
 
 @keyframes wtBubbleRise {
   from {
@@ -339,20 +372,36 @@ const WEBTOON_STRIP_CSS = `
   }
 }
 
-.wt-bubble--shoucheng { --wt-bubble-border: #1d3a6b; }
-.wt-bubble--dingman { --wt-bubble-border: #9c3a2a; }
-.wt-bubble--ayi { --wt-bubble-border: #b5792a; }
-.wt-bubble--narrator { --wt-bubble-border: #555862; --wt-bubble-fill: #faf7f2; }
+.wt-bubble--shoucheng {
+  --wt-speaker-border: #2453a6;
+  --wt-speaker-border-open: #7db1ff;
+  --wt-speaker-label: #d8e5ff;
+}
 
-.wt-bubble.is-open.wt-bubble--shoucheng { --wt-bubble-border: rgba(120, 160, 220, 0.6); }
-.wt-bubble.is-open.wt-bubble--dingman { --wt-bubble-border: rgba(236, 140, 120, 0.6); }
-.wt-bubble.is-open.wt-bubble--ayi { --wt-bubble-border: rgba(244, 210, 172, 0.6); }
+.wt-bubble--dingman {
+  --wt-speaker-border: #a94c3e;
+  --wt-speaker-border-open: #f0ab99;
+  --wt-speaker-label: #ffd7ce;
+}
+
+.wt-bubble--ayi {
+  --wt-speaker-border: #9d671d;
+  --wt-speaker-border-open: #f0c97f;
+  --wt-speaker-label: #ffe0ab;
+}
+
+.wt-bubble--narrator {
+  --wt-speaker-border: #626d7d;
+  --wt-speaker-border-open: #c0c8d4;
+  --wt-speaker-label: #edf2f8;
+  --wt-bubble-fill: #faf7f2;
+}
 
 .wt-bubble__speaker {
   font-size: clamp(0.74rem, 0.3vw + 0.68rem, 0.86rem);
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: rgba(244, 210, 172, 0.75);
+  color: var(--wt-speaker-label);
   display: block;
 }
 
@@ -380,6 +429,11 @@ const WEBTOON_STRIP_CSS = `
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes wtHelpFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .wt-bubble__ruby {
   font-size: clamp(1.08rem, 1.35vw + 0.92rem, 2rem);
   line-height: 1.72;
@@ -399,7 +453,7 @@ const WEBTOON_STRIP_CSS = `
   line-height: 1;
   font-style: italic;
   font-weight: 500;
-  color: #f4d2ac;
+  color: color-mix(in srgb, var(--wt-speaker-border-open) 62%, #fff1d7 38%);
   letter-spacing: 0.02em;
 }
 
@@ -449,7 +503,7 @@ function frameStyle(frame: WebtoonPanelFrame | undefined, theme: WebtoonTheme): 
 function panelLayoutStyle(layout: WebtoonPanelLayout | undefined): CSSProperties {
   if (!layout) return {};
   return {
-    marginTop: layout.liftPx ? `${layout.liftPx * -1}px` : undefined,
+    ['--wt-panel-lift' as string]: layout.liftPx ? `${layout.liftPx}px` : undefined,
     width: layout.widthPct ? `${layout.widthPct}%` : undefined,
     aspectRatio: layout.cropAspectRatio,
   };
@@ -485,11 +539,11 @@ function imageStyle(layout: WebtoonPanelLayout | undefined): CSSProperties {
 function bubbleReserveStyle(panel: WebtoonPanelSpec): CSSProperties {
   const bubbleLayout = panel.bubble?.layout;
   if (!bubbleLayout?.outside) return {};
-  const reserve = bubbleLayout.reserveSpacePx ?? 96;
+  const reserve = `${bubbleLayout.reserveSpacePx ?? 96}px`;
   if (panel.bubble?.position === 'top') {
-    return { paddingTop: `${reserve}px` };
+    return { paddingTop: `var(--wt-bubble-reserve-top, ${reserve})` };
   }
-  return { paddingBottom: `${reserve}px` };
+  return { paddingBottom: `var(--wt-bubble-reserve-bottom, ${reserve})` };
 }
 
 export function WebtoonStrip({
@@ -594,7 +648,7 @@ export function WebtoonStrip({
       {panels.map((panel, index) => (
         <div
           key={panel.id}
-          className="wt-block"
+          className={`wt-block${panel.bubble ? ' wt-block--with-bubble' : ''}`}
           style={{ ...blockStyle(panel.layout, theme), ...bubbleReserveStyle(panel) }}
         >
           <div className="wt-gap" aria-hidden="true" style={gapStyle(panel.gapBefore, theme, surface)} />
@@ -603,7 +657,7 @@ export function WebtoonStrip({
               panelRefs.current[index] = el;
             }}
             data-panel-index={index}
-            className={`wt-panel wt-panel--${panel.widthType}${panel.frame ? ` wt-panel--framed wt-panel--frame-${panel.frame.edges}` : ''}${panel.bubble?.layout?.outside ? ' wt-panel--bubble-outside' : ''}${panel.isThumbStop ? ' is-thumb-stop' : ''}`}
+            className={`wt-panel wt-panel--${panel.widthType}${panel.layout?.liftPx ? ' wt-panel--lifted' : ''}${panel.frame ? ` wt-panel--framed wt-panel--frame-${panel.frame.edges}` : ''}${panel.bubble?.layout?.outside ? ' wt-panel--bubble-outside' : ''}${panel.isThumbStop ? ' is-thumb-stop' : ''}`}
             style={{ ...frameStyle(panel.frame, theme), ...panelLayoutStyle(panel.layout) }}
             aria-label={`${panel.shotType} panel ${index + 1} of ${panels.length}`}
           >
