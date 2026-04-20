@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 type HeroVideoSource = 'static' | 'hevc' | 'webm';
 
-const STATIC_FALLBACK = '/assets/characters/tong/tong_neutral.png';
+const STATIC_FALLBACK = '/assets/characters/tong/tong_neutral.webp';
 const HEVC_SOURCE = '/assets/tong_intro_alpha.mov';
 const WEBM_SOURCE = '/assets/tong_intro.webm';
 
