@@ -36,3 +36,5 @@ test-results/
 
 # Presets — dev/backup originals, not deployed
 assets/presets/
+
+.r2-upload-cache.json
