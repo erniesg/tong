@@ -7,7 +7,9 @@ import { fileURLToPath } from 'node:url';
 
 import {
   attachFindingRefs,
+  extractAnalysisFindings,
   listUnroutedFindings,
+  normalizeFindingListLimit,
   reopenFinding,
   retryFinding,
   setFindingManualOverride,
@@ -234,4 +236,29 @@ test('returns null when lifecycle updates target a missing finding', async () =>
   assert.equal(await retryFinding(sql, 'missing'), null);
   assert.equal(await reopenFinding(sql, 'missing', {}), null);
   assert.equal(await setFindingManualOverride(sql, 'missing', { active: true, status: 'skip' }), null);
+});
+
+test('extractAnalysisFindings prefers the first populated candidate array', () => {
+  const findings = extractAnalysisFindings({
+    findings: [],
+    result: {
+      issues: [
+        {
+          category: 'navigation',
+          description: 'The overlay does not advance after the clip ends.',
+        },
+      ],
+    },
+  });
+
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0]?.description, 'The overlay does not advance after the clip ends.');
+});
+
+test('normalizeFindingListLimit clamps invalid or out-of-range list limits', () => {
+  assert.equal(normalizeFindingListLimit(null), 50);
+  assert.equal(normalizeFindingListLimit('foo'), 50);
+  assert.equal(normalizeFindingListLimit('-2'), 1);
+  assert.equal(normalizeFindingListLimit('9.8'), 9);
+  assert.equal(normalizeFindingListLimit('999'), 200);
 });

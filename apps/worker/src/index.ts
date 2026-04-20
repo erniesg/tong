@@ -12,6 +12,7 @@ import {
   attachFindingRefs,
   isValidRouteStatus,
   listUnroutedFindings,
+  normalizeFindingListLimit,
   reopenFinding,
   retryFinding,
   setFindingManualOverride,
@@ -2772,7 +2773,7 @@ async function handleRequest(request: Request): Promise<Response> {
     if (pathname === '/api/v1/playtest/findings/unrouted' && request.method === 'GET') {
       const env = (globalThis as any).__env;
       if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
-      const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit') || 50)));
+      const limit = normalizeFindingListLimit(url.searchParams.get('limit'));
       const findings = await listUnroutedFindings(createSqlExecutor(env.DB), limit);
       return jsonResponse(200, { ok: true, count: findings.length, findings });
     }

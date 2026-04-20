@@ -334,10 +334,22 @@ export function extractAnalysisFindings(analysisData: Record<string, any>): Reco
   ];
   for (const candidate of candidates) {
     if (Array.isArray(candidate)) {
-      return candidate.filter((value) => isObject(value)) as Record<string, any>[];
+      const normalized = candidate.filter((value) => isObject(value)) as Record<string, any>[];
+      if (normalized.length > 0) {
+        return normalized;
+      }
     }
   }
   return [];
+}
+
+export function normalizeFindingListLimit(rawValue: string | null, fallback = 50, max = 200): number {
+  if (rawValue === null || rawValue.trim() === '') {
+    return fallback;
+  }
+  const numeric = Number(rawValue);
+  const safeValue = Number.isFinite(numeric) ? numeric : fallback;
+  return Math.min(max, Math.max(1, Math.trunc(safeValue)));
 }
 
 function normalizeIncomingFinding(args: {
