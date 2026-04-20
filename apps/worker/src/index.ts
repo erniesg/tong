@@ -648,6 +648,106 @@ function generatePlaytestId(length = 12): string {
   return Array.from(bytes, (b) => PLAYTEST_ID_ALPHABET[b % PLAYTEST_ID_ALPHABET.length]).join('');
 }
 
+type PlaytestIssuePromotionDraft = {
+  title: string;
+  body: string;
+  issueRef: string;
+  links: {
+    session: string;
+    annotations?: string;
+    recording?: string;
+    filmstrip?: string;
+    stateLog?: string;
+    analysis?: string;
+  };
+};
+
+function truncateText(value: string | undefined, max = 180): string {
+  if (!value) return '';
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
+
+function buildPlaytestIssueDraft(input: {
+  owner: string;
+  repo: string;
+  sessionId: string;
+  sessionRow?: Record<string, unknown> | null;
+  annotations: any[];
+  focusAnnotation?: any;
+  publicBase: string;
+  analysisUrl?: string;
+}): PlaytestIssuePromotionDraft {
+  const {
+    owner, repo, sessionId, sessionRow, annotations, focusAnnotation, publicBase, analysisUrl,
+  } = input;
+  const city = String(sessionRow?.city || 'unknown');
+  const sceneType = String(sessionRow?.scene_type || 'unknown');
+  const language = String(sessionRow?.language || 'unknown');
+  const locationId = String(sessionRow?.location_id || 'unknown');
+  const hangoutId = String(sessionRow?.hangout_id || 'n/a');
+  const issueRef = `${owner}/${repo}`;
+
+  const selectedComment = focusAnnotation?.text
+    ? String(focusAnnotation.text)
+    : String((annotations.find((annotation) => annotation?.type === 'comment') || {}).text || '');
+  const summary = truncateText(selectedComment, 90) || `Playtest issue from session ${sessionId}`;
+  const title = `playtest: ${summary}`;
+
+  const annotationRows = annotations
+    .filter((annotation) => annotation?.type === 'comment')
+    .slice(0, 8)
+    .map((annotation) => {
+      const ts = annotation.timestamp ?? '?';
+      const text = truncateText(String(annotation.text || ''));
+      return `- [${ts}s] ${text}`;
+    });
+
+  const links = {
+    session: `${publicBase}/playtest/${sessionId}`,
+    annotations: `${publicBase}/playtest/${sessionId}/annotations.json`,
+    recording: `${publicBase}/playtest/${sessionId}/recording.webm`,
+    filmstrip: `${publicBase}/playtest/${sessionId}/filmstrip/manifest.json`,
+    stateLog: `${publicBase}/playtest/${sessionId}/state-log.json`,
+    analysis: analysisUrl,
+  };
+
+  const body = [
+    `## Summary`,
+    summary,
+    '',
+    `## Playtest session`,
+    `- Session ID: \`${sessionId}\``,
+    `- City: \`${city}\``,
+    `- Scene type: \`${sceneType}\``,
+    `- Language: \`${language}\``,
+    `- Location: \`${locationId}\``,
+    `- Hangout: \`${hangoutId}\``,
+    '',
+    `## Annotation highlights`,
+    annotationRows.length ? annotationRows.join('\n') : '- No comment annotations found.',
+    '',
+    `## Reviewer-openable artifacts`,
+    `- Session root: ${links.session}`,
+    `- Annotations JSON: ${links.annotations}`,
+    `- Recording: ${links.recording}`,
+    `- Filmstrip manifest: ${links.filmstrip}`,
+    `- State log: ${links.stateLog}`,
+    links.analysis ? `- Analysis: ${links.analysis}` : '',
+    '',
+    `## Expected vs actual`,
+    `- Expected: behavior and UX match the in-scene prompt and interaction affordances.`,
+    `- Actual: see annotation highlights and linked artifacts for exact mismatches.`,
+    '',
+    `## Suggested acceptance checks`,
+    `- Reproduce from session artifacts above and confirm issue behavior.`,
+    `- Verify fix against the same session moment(s) and annotation timestamps.`,
+    '',
+    `Generated from playtest session ${sessionId}.`,
+  ].filter(Boolean).join('\n');
+
+  return { title, body, issueRef, links };
+}
+
 function getLang(search: URLSearchParams): Lang {
   const lang = (search.get('lang') || 'ko') as Lang;
   if (lang === 'ko' || lang === 'ja' || lang === 'zh') return lang;
@@ -2575,6 +2675,103 @@ async function handleRequest(request: Request): Promise<Response> {
       return new Response(data, {
         status: 200,
         headers: { 'Content-Type': 'application/json; charset=utf-8', ...CORS_HEADERS },
+      });
+    }
+
+    // Create a GitHub-issue-ready draft (or issue) from a playtest session
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/promote$/) && request.method === 'POST') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      const body = await readJsonBody(request);
+      const owner = String(body.owner || env?.GITHUB_REPO_OWNER || 'erniesg');
+      const repo = String(body.repo || env?.GITHUB_REPO_NAME || 'tong');
+      const createIssue = Boolean(body.createIssue);
+      const labels = Array.isArray(body.labels) ? body.labels.map((label: unknown) => String(label)) : [];
+      const annotationId = body.annotationId ? String(body.annotationId) : null;
+      const publicBase = env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai';
+
+      let sessionRow: Record<string, unknown> | null = null;
+      if (env?.DB) {
+        sessionRow = await env.DB.prepare(
+          `SELECT * FROM playtest_sessions WHERE session_id = ?`
+        ).bind(sessionId).first() as Record<string, unknown> | null;
+      }
+
+      const annotationsObj = env?.TONG_RUNS_BUCKET
+        ? await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/annotations.json`)
+        : null;
+      const annotationsText = annotationsObj ? await annotationsObj.text() : '[]';
+      let annotationsRaw: any = [];
+      try {
+        const parsed = JSON.parse(annotationsText);
+        annotationsRaw = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.annotations) ? parsed.annotations : []);
+      } catch {
+        annotationsRaw = [];
+      }
+      const focusAnnotation = annotationId
+        ? annotationsRaw.find((annotation: any) => String(annotation?.id) === annotationId)
+        : undefined;
+
+      const analysisUrl = `${publicBase}/playtest/${sessionId}/analysis.json`;
+      const draft = buildPlaytestIssueDraft({
+        owner,
+        repo,
+        sessionId,
+        sessionRow,
+        annotations: annotationsRaw,
+        focusAnnotation,
+        publicBase,
+        analysisUrl,
+      });
+
+      if (!createIssue) {
+        return jsonResponse(200, { ok: true, mode: 'draft', draft });
+      }
+
+      if (!env?.GITHUB_TOKEN) {
+        return jsonResponse(400, {
+          ok: false,
+          error: 'missing_github_token',
+          message: 'Set GITHUB_TOKEN to create issues; returning draft only.',
+          draft,
+        });
+      }
+
+      const githubResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'tong-playtest-promoter',
+        },
+        body: JSON.stringify({
+          title: draft.title,
+          body: draft.body,
+          labels,
+        }),
+      });
+
+      if (!githubResponse.ok) {
+        const githubError = await githubResponse.text();
+        return jsonResponse(502, {
+          ok: false,
+          error: 'github_issue_create_failed',
+          status: githubResponse.status,
+          githubError,
+          draft,
+        });
+      }
+
+      const created = await githubResponse.json() as { html_url?: string; number?: number };
+      return jsonResponse(201, {
+        ok: true,
+        mode: 'created',
+        draft,
+        issue: {
+          number: created.number,
+          htmlUrl: created.html_url,
+        },
       });
     }
 
