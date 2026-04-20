@@ -1183,3 +1183,37 @@ export interface VolcTTSSynthesizeResponse {
   encoding: string;
   durationMs?: number;
 }
+
+export interface PlaytestClarificationContext {
+  sceneContext?: string;
+  screenshotUrl?: string;
+  stateLogExcerpt?: string;
+  city?: string;
+  sceneType?: string;
+  language?: AppLanguage;
+  locationId?: string;
+}
+
+export interface PlaytestClarifyRequest {
+  comment: string;
+  timestamp?: number;
+  sessionId?: string;
+  context?: PlaytestClarificationContext;
+}
+
+export interface PlaytestClarifyFollowUp {
+  question: string;
+  options: string[];
+  allowOther: true;
+}
+
+export type PlaytestClarifyResponse =
+  | {
+      status: 'CLEAR';
+      reason: string;
+    }
+  | {
+      status: 'FOLLOW_UP';
+      reason: string;
+      followUp: PlaytestClarifyFollowUp;
+    };

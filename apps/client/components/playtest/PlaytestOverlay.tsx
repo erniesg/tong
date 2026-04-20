@@ -20,7 +20,18 @@ export interface Annotation {
   screenshot?: string;
   x?: number;
   y?: number;
+  clarification?: {
+    question: string;
+    selectedOption?: string;
+    otherText?: string;
+  };
 }
+
+type ClarificationRequest = {
+  question: string;
+  options: string[];
+  allowOther: boolean;
+};
 
 interface Props {
   targetRef: React.RefObject<HTMLElement | null>;
@@ -32,7 +43,7 @@ interface Props {
     stateLog: unknown;
     filmstrip: { ts: number; blob: Blob }[];
   }) => void;
-  onRequestClarification?: (comment: Annotation) => Promise<string | null>;
+  onRequestClarification?: (comment: Annotation) => Promise<ClarificationRequest | null>;
 }
 
 type Tool = 'none' | 'draw' | 'comment';
@@ -61,6 +72,8 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [aiReply, setAiReply] = useState<string | null>(null);
+  const [clarifyOptions, setClarifyOptions] = useState<string[]>([]);
+  const [selectedClarifyOption, setSelectedClarifyOption] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInputText, setAiInputText] = useState('');
 
@@ -551,8 +564,10 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       try {
         const reply = await onRequestClarification(annotation);
         if (reply) {
-          setAiReply(reply);
+          setAiReply(reply.question);
+          setClarifyOptions(reply.options || []);
           setAiInputText('');
+          setSelectedClarifyOption(null);
           setPanelView('ai-reply');
           return;
         }
@@ -568,17 +583,31 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       const updated = [...prev];
       const last = updated[updated.length - 1];
       if (last?.type === 'comment') {
-        const text = aiInputText.trim()
-          ? `${last.text}\n---\nAI: ${aiReply}\nUser: ${aiInputText.trim()}`
+        const freeform = aiInputText.trim();
+        const selected = selectedClarifyOption?.trim();
+        const clarifySummary = [selected, freeform].filter(Boolean).join(' | ');
+        const text = clarifySummary
+          ? `${last.text}\n---\nClarification: ${clarifySummary}`
           : last.text;
-        updated[updated.length - 1] = { ...last, text, clarified: true };
+        updated[updated.length - 1] = {
+          ...last,
+          text,
+          clarified: true,
+          clarification: {
+            question: aiReply || 'Follow-up clarification',
+            selectedOption: selected || undefined,
+            otherText: freeform || undefined,
+          },
+        };
       }
       return updated;
     });
     setAiReply(null);
     setAiInputText('');
+    setClarifyOptions([]);
+    setSelectedClarifyOption(null);
     setPanelView('tools');
-  }, [aiReply, aiInputText]);
+  }, [aiReply, aiInputText, selectedClarifyOption]);
 
   /* ── Edit/delete ────────────────────────────────────────────────── */
 
@@ -927,10 +956,24 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
             {panelView === 'ai-reply' && aiReply && (
               <div className="playtest-pill-comment">
                 <p className="playtest-ai-text">{aiReply}</p>
+                {clarifyOptions.length > 0 && (
+                  <div className="playtest-pill-row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                    {clarifyOptions.slice(0, 3).map((option) => (
+                      <button
+                        key={option}
+                        className={`playtest-btn-small ${selectedClarifyOption === option ? '' : 'playtest-btn-muted'}`}
+                        onClick={() => setSelectedClarifyOption(option)}
+                        type="button"
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <input
                   className="playtest-comment-input"
                   style={{ minHeight: 'auto', padding: '8px' }}
-                  placeholder="Reply to AI (optional)..."
+                  placeholder="Other (optional)..."
                   value={aiInputText}
                   onChange={(e) => setAiInputText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleAiResponse(); }}

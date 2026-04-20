@@ -11,6 +11,7 @@ const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787
  */
 export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionContext, setSessionContext] = useState<Record<string, unknown> | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -20,7 +21,10 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
       const raw = sessionStorage.getItem('tong_playtest_session');
       if (raw) {
         const data = JSON.parse(raw);
-        if (data.sessionId) setSessionId(data.sessionId);
+        if (data.sessionId) {
+          setSessionId(data.sessionId);
+          setSessionContext(data);
+        }
       }
     } catch {
       // Not a playtest session
@@ -71,7 +75,7 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
   );
 
   const handleClarification = useCallback(
-    async (comment: Annotation): Promise<string | null> => {
+    async (comment: Annotation): Promise<{ question: string; options: string[]; allowOther: boolean } | null> => {
       try {
         const res = await fetch('/api/ai/playtest-clarify', {
           method: 'POST',
@@ -80,44 +84,33 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
             comment: comment.text,
             timestamp: comment.timestamp,
             sessionId,
+            context: {
+              sceneContext: typeof sessionContext?.sceneContext === 'string' ? sessionContext.sceneContext : undefined,
+              city: typeof sessionContext?.city === 'string' ? sessionContext.city : undefined,
+              sceneType: typeof sessionContext?.sceneType === 'string' ? sessionContext.sceneType : undefined,
+              language: typeof sessionContext?.language === 'string' ? sessionContext.language : undefined,
+              locationId: typeof sessionContext?.locationId === 'string' ? sessionContext.locationId : undefined,
+              screenshotUrl: comment.id ? `${API_BASE}/api/v1/playtest/sessions/${sessionId}/screenshots/${comment.id}.png` : undefined,
+            },
           }),
         });
 
         if (!res.ok) return null;
-
-        // Read the streaming response as text
-        const reader = res.body?.getReader();
-        if (!reader) return null;
-
-        let text = '';
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          text += decoder.decode(value, { stream: true });
-        }
-
-        // Parse Vercel AI SDK data stream format — extract text chunks
-        const lines = text.split('\n').filter(Boolean);
-        let reply = '';
-        for (const line of lines) {
-          // Vercel AI SDK streams as "0:text\n" format
-          if (line.startsWith('0:')) {
-            try {
-              reply += JSON.parse(line.slice(2));
-            } catch {
-              reply += line.slice(2);
-            }
-          }
-        }
-
-        if (!reply || reply.trim() === 'CLEAR') return null;
-        return reply.trim();
+        const payload = await res.json() as {
+          status?: 'CLEAR' | 'FOLLOW_UP';
+          followUp?: { question?: string; options?: string[]; allowOther?: boolean };
+        };
+        if (payload.status !== 'FOLLOW_UP' || !payload.followUp?.question) return null;
+        return {
+          question: payload.followUp.question,
+          options: (payload.followUp.options || []).slice(0, 3),
+          allowOther: payload.followUp.allowOther !== false,
+        };
       } catch {
         return null;
       }
     },
-    [sessionId],
+    [sessionContext, sessionId],
   );
 
   const isActive = Boolean(sessionId) && !submitted && !uploading;

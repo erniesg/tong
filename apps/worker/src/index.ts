@@ -2578,6 +2578,100 @@ async function handleRequest(request: Request): Promise<Response> {
       });
     }
 
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/promote-issue$/) && request.method === 'POST') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+
+      const session = await env.DB.prepare(
+        `SELECT * FROM playtest_sessions WHERE session_id = ?`
+      ).bind(sessionId).first();
+      if (!session) return jsonResponse(404, { error: 'session_not_found', sessionId });
+
+      const body = await readJsonBody(request);
+      const publicBase = env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai';
+      const annotationsObj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/annotations.json`);
+      const analysisObj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/analysis.json`);
+
+      let annotationSummary = '- No annotations captured.';
+      if (annotationsObj) {
+        try {
+          const parsed = JSON.parse(await annotationsObj.text());
+          const annotations = Array.isArray(parsed) ? parsed : parsed?.annotations || [];
+          const commentRows = annotations
+            .filter((ann: Record<string, unknown>) => ann?.type === 'comment')
+            .slice(0, 8)
+            .map((ann: Record<string, unknown>) => {
+              const rawText = typeof ann.text === 'string' ? ann.text.replace(/\n/g, ' ') : '(no text)';
+              const ts = ann.timestamp ?? 'n/a';
+              const shot = ann.id ? `${publicBase}/playtest/${sessionId}/screenshots/${ann.id}.png` : '';
+              return `- [t=${ts}s] ${rawText}${shot ? ` ([screenshot](${shot}))` : ''}`;
+            });
+          if (commentRows.length > 0) annotationSummary = commentRows.join('\n');
+        } catch {
+          annotationSummary = '- Annotation payload exists but could not be parsed.';
+        }
+      }
+
+      let analysisSummary = '- No analysis artifact found.';
+      if (analysisObj) {
+        try {
+          const analysis = JSON.parse(await analysisObj.text());
+          const top = Array.isArray(analysis?.topIssues) ? analysis.topIssues.slice(0, 3) : [];
+          if (top.length > 0) {
+            analysisSummary = top.map((item: Record<string, unknown>) => `- ${item.title || item.summary || 'Issue'} (${item.severity || 'unknown severity'})`).join('\n');
+          } else {
+            analysisSummary = '- Analysis artifact present (no topIssues list).';
+          }
+        } catch {
+          analysisSummary = '- Analysis artifact exists but could not be parsed.';
+        }
+      }
+
+      const issueTitle = body?.title || `Playtest follow-up: ${session.scene_type || 'session'} (${sessionId})`;
+      const issueBody = [
+        '## Summary',
+        body?.summary || 'Promoted from playtest artifacts for triage.',
+        '',
+        '## Session Context',
+        `- Session ID: \`${sessionId}\``,
+        `- City: ${session.city || 'unknown'}`,
+        `- Scene Type: ${session.scene_type || 'unknown'}`,
+        `- Language: ${session.language || 'unknown'}`,
+        `- Location: ${session.location_id || 'unknown'}`,
+        '',
+        '## Artifact Links',
+        `- Recording: ${publicBase}/playtest/${sessionId}/recording.webm`,
+        `- Filmstrip manifest: ${publicBase}/playtest/${sessionId}/filmstrip/manifest.json`,
+        `- State log: ${publicBase}/playtest/${sessionId}/state-log.json`,
+        `- Annotations: ${publicBase}/playtest/${sessionId}/annotations.json`,
+        '',
+        '## Annotated Feedback',
+        annotationSummary,
+        '',
+        '## Analysis Summary',
+        analysisSummary,
+        '',
+        '## Suggested Acceptance Checks',
+        '- Reproduce using the same session artifacts and timestamped notes.',
+        '- Verify expected vs actual behavior in the targeted scene.',
+        '- Confirm any selected clarification option and freeform "Other" note are reflected.',
+      ].join('\n');
+
+      return jsonResponse(200, {
+        ok: true,
+        mode: 'draft',
+        issueDraft: {
+          title: issueTitle,
+          body: issueBody,
+          labels: Array.isArray(body?.labels) ? body.labels : ['playtest'],
+          owner: body?.owner || 'erniesg',
+          repo: body?.repo || 'tong',
+        },
+      });
+    }
+
     return jsonResponse(404, { error: 'not_found', pathname });
   } catch (error) {
     return jsonResponse(500, {
