@@ -11,6 +11,7 @@ import mockMediaWindow from '../../server/data/mock-media-window.json';
 import {
   attachFindingRefs,
   isValidRouteStatus,
+  listQueuedFindings,
   listUnroutedFindings,
   normalizeFindingListLimit,
   reopenFinding,
@@ -2775,6 +2776,24 @@ async function handleRequest(request: Request): Promise<Response> {
       if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
       const limit = normalizeFindingListLimit(url.searchParams.get('limit'));
       const findings = await listUnroutedFindings(createSqlExecutor(env.DB), limit);
+      return jsonResponse(200, { ok: true, count: findings.length, findings });
+    }
+
+    if (pathname === '/api/v1/playtest/findings/queue' && request.method === 'GET') {
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const limit = normalizeFindingListLimit(url.searchParams.get('limit'));
+      const findingId = url.searchParams.get('findingId') || '';
+      const statuses = (url.searchParams.get('status') || '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .filter((value) => isValidRouteStatus(value));
+      const findings = await listQueuedFindings(createSqlExecutor(env.DB), {
+        findingId,
+        limit,
+        routeStatuses: statuses,
+      });
       return jsonResponse(200, { ok: true, count: findings.length, findings });
     }
 

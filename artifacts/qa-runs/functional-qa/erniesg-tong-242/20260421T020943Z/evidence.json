@@ -1,0 +1,73 @@
+{
+  "summary": "Validated the #242 queue visibility and human override surface locally by unit-testing the queue scripts, seeding a live Worker ledger, applying a real hold action, and rendering the resulting digest in dry-run mode.",
+  "screenshots": [],
+  "comparison_panels": [],
+  "comparison_focus_crops": [],
+  "temporal_capture": [],
+  "console_logs": [
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-242/20260421T020943Z/logs/worker-test.txt",
+      "label": "worker-tests",
+      "description": "Worker unit tests covering queue listing and ledger lifecycle behavior."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-242/20260421T020943Z/logs/queue-script-tests.txt",
+      "label": "queue-script-tests",
+      "description": "Script test transcript covering trusted queue commands, digest rendering, and override-aware routing."
+    }
+  ],
+  "network_traces": [
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-242/20260421T020943Z/logs/seed-and-route.json",
+      "label": "seed-and-route",
+      "description": "HTTP seed and route output for the local Worker findings ledger."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-242/20260421T020943Z/logs/hold-action.json",
+      "label": "hold-action",
+      "description": "Response from the real local queue hold action on the protected workflow finding."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-242/20260421T020943Z/logs/queue-response.json",
+      "label": "queue-response",
+      "description": "Current queue payload showing the blocked human-review finding and the in-progress direct PR finding."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-242/20260421T020943Z/logs/playtest-queue-dry-run.json",
+      "label": "queue-dry-run",
+      "description": "Structured dry-run output from the queue digest renderer."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-242/20260421T020943Z/logs/orchestrator-dry-run-after-override.json",
+      "label": "orchestrator-dry-run-after-override",
+      "description": "Dry-run orchestrator output confirming no unrouted findings remain after the hold action."
+    }
+  ],
+  "contract_assertions": [
+    {
+      "path": "apps/worker/src/playtest-findings.ts",
+      "assertion": "The Worker can list recent findings across statuses so GitHub queue tooling can render pending, blocked, in-progress, and completed state without scraping raw artifacts."
+    },
+    {
+      "path": "scripts/lib/playtest-queue.mjs",
+      "assertion": "Trusted queue commands persist durable override state, generate reusable manual prompts, and render a deterministic digest comment."
+    },
+    {
+      "path": ".github/workflows/playtest-queue.yml",
+      "assertion": "Maintainer issue comments and workflow dispatches can refresh the queue digest or apply trusted queue actions without introducing PR validator behavior."
+    }
+  ],
+  "perf_profiles": [],
+  "cross_env_matrix": [
+    {
+      "environment": "local Worker queue run on http://127.0.0.1:8789",
+      "result": "passed",
+      "notes": "Validated queue read surface, hold action, digest rendering, and override persistence without posting live issue comments."
+    }
+  ],
+  "open_questions": [],
+  "notes": [
+    "The GitHub digest comment update was validated in dry-run only to avoid mutating the live queue issue during local verification.",
+    "Protected-path control remains human-reviewed because the new workflow lives under .github/workflows/."
+  ]
+}

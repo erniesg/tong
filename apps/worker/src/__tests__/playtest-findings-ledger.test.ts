@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import {
   attachFindingRefs,
   extractAnalysisFindings,
+  listQueuedFindings,
   listUnroutedFindings,
   normalizeFindingListLimit,
   reopenFinding,
@@ -261,4 +262,79 @@ test('normalizeFindingListLimit clamps invalid or out-of-range list limits', () 
   assert.equal(normalizeFindingListLimit('-2'), 1);
   assert.equal(normalizeFindingListLimit('9.8'), 9);
   assert.equal(normalizeFindingListLimit('999'), 200);
+});
+
+test('listQueuedFindings returns recent findings across statuses and supports filters', async () => {
+  const sql = createSqlExecutor();
+  const first = await upsertFindingLedgerEntries(sql, {
+    analysisData: {
+      analysisId: 'analysis-242-a',
+      result: {
+        issues: [
+          {
+            affectedComponent: 'apps/client/components/scene/ContinueButton',
+            category: 'navigation',
+            description: 'The continue CTA is hard to see.',
+            severity: 4,
+            timestamp: '00:12',
+          },
+        ],
+      },
+    },
+    analysisId: 'analysis-242-a',
+    publicBase: 'https://runs.tong.berlayar.ai',
+    sessionId: 'queue-session',
+  });
+  const second = await upsertFindingLedgerEntries(sql, {
+    analysisData: {
+      analysisId: 'analysis-242-b',
+      result: {
+        issues: [
+          {
+            affectedComponent: '.github/workflows/qa-publish.yml',
+            category: 'automation',
+            description: 'Protected workflow needs a manual decision.',
+            severity: 3,
+            timestamp: '00:24',
+          },
+        ],
+      },
+    },
+    analysisId: 'analysis-242-b',
+    publicBase: 'https://runs.tong.berlayar.ai',
+    sessionId: 'queue-session',
+  });
+
+  await updateFindingRoute(sql, first!.findingIds[0], {
+    actor: 'playtest-orchestrator',
+    confidence: 0.9,
+    reason: 'single_lane_non_protected_scope',
+    status: 'direct_pr',
+  });
+  await setFindingManualOverride(sql, second!.findingIds[0], {
+    active: true,
+    actor: 'qa-reviewer',
+    confidence: 0.98,
+    note: 'Wait for human approval.',
+    reason: 'protected_path_scope',
+    status: 'human_review',
+  });
+
+  const allFindings = await listQueuedFindings(sql, { limit: 10 });
+  assert.equal(allFindings.length, 2);
+  assert.deepEqual(
+    allFindings.map((finding) => finding.findingId).sort(),
+    [first!.findingIds[0], second!.findingIds[0]].sort(),
+  );
+
+  const humanReview = await listQueuedFindings(sql, {
+    routeStatuses: ['human_review'],
+  });
+  assert.deepEqual(humanReview.map((finding) => finding.findingId), [second!.findingIds[0]]);
+
+  const directPr = await listQueuedFindings(sql, {
+    findingId: first!.findingIds[0],
+    routeStatuses: ['direct_pr'],
+  });
+  assert.deepEqual(directPr.map((finding) => finding.findingId), [first!.findingIds[0]]);
 });

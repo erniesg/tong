@@ -1,0 +1,178 @@
+{
+  "artifact": {
+    "ok": true,
+    "key": "playtest/verify-242-queue/analysis.json",
+    "ledger": {
+      "deduped": 0,
+      "findingIds": [
+        "finding_90e97942-5b93-4d6b-bc18-08418880038e",
+        "finding_7abbd89b-d1ad-4e10-ad81-d3a1aa28e13d"
+      ],
+      "inserted": 2
+    },
+    "url": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/analysis.json"
+  },
+  "directPrFindingId": "finding_90e97942-5b93-4d6b-bc18-08418880038e",
+  "protectedFindingId": "finding_7abbd89b-d1ad-4e10-ad81-d3a1aa28e13d",
+  "refs": {
+    "ok": true,
+    "finding": {
+      "findingId": "finding_90e97942-5b93-4d6b-bc18-08418880038e",
+      "fingerprint": "ptf_bff4b6c4",
+      "sessionId": "verify-242-queue",
+      "analysisId": "analysis-242-verify",
+      "observedAtText": "00:12",
+      "observedAtMs": 12000,
+      "observedAtIso": null,
+      "category": "navigation",
+      "severity": "high",
+      "summary": "Continue CTA is hard to see after dialogue ends.",
+      "description": "Continue CTA is hard to see after dialogue ends.",
+      "suggestedFix": "Add stronger contrast and spacing.",
+      "expectedBehavior": null,
+      "actualBehavior": null,
+      "artifactLinks": [
+        {
+          "href": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/recording.webm",
+          "label": "artifact",
+          "source": "analysis"
+        },
+        {
+          "href": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/annotations.json",
+          "label": "annotations",
+          "source": "playtest-session"
+        },
+        {
+          "href": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/analysis.json",
+          "label": "analysis",
+          "source": "playtest-session"
+        }
+      ],
+      "inferredComponent": "apps/client/components/scene/ContinueButton.tsx",
+      "routeState": {
+        "status": "direct_pr",
+        "reason": "single_lane_non_protected_scope",
+        "confidence": 0.9
+      },
+      "linkedRefs": {
+        "issueRefs": [
+          "erniesg/tong#242"
+        ],
+        "prRefs": [
+          "erniesg/tong#248"
+        ]
+      },
+      "manualOverride": null,
+      "history": [
+        {
+          "type": "ingested",
+          "at": "2026-04-20T18:04:19.254Z",
+          "actor": null,
+          "data": {
+            "analysisId": "analysis-242-verify",
+            "summary": "Continue CTA is hard to see after dialogue ends."
+          }
+        },
+        {
+          "type": "route_updated",
+          "at": "2026-04-20T18:04:19.263Z",
+          "actor": "playtest-orchestrator",
+          "data": {
+            "confidence": 0.9,
+            "reason": "single_lane_non_protected_scope",
+            "status": "direct_pr"
+          }
+        },
+        {
+          "type": "refs_attached",
+          "at": "2026-04-20T18:04:19.267Z",
+          "actor": "playtest-orchestrator",
+          "data": {
+            "issueRefs": [
+              "erniesg/tong#242"
+            ],
+            "prRefs": [
+              "erniesg/tong#248"
+            ]
+          }
+        }
+      ],
+      "firstSeenAt": "2026-04-20T18:04:19.254Z",
+      "lastSeenAt": "2026-04-20T18:04:19.254Z",
+      "createdAt": "2026-04-20T18:04:19.254Z",
+      "updatedAt": "2026-04-20T18:04:19.267Z"
+    }
+  },
+  "route": {
+    "ok": true,
+    "finding": {
+      "findingId": "finding_90e97942-5b93-4d6b-bc18-08418880038e",
+      "fingerprint": "ptf_bff4b6c4",
+      "sessionId": "verify-242-queue",
+      "analysisId": "analysis-242-verify",
+      "observedAtText": "00:12",
+      "observedAtMs": 12000,
+      "observedAtIso": null,
+      "category": "navigation",
+      "severity": "high",
+      "summary": "Continue CTA is hard to see after dialogue ends.",
+      "description": "Continue CTA is hard to see after dialogue ends.",
+      "suggestedFix": "Add stronger contrast and spacing.",
+      "expectedBehavior": null,
+      "actualBehavior": null,
+      "artifactLinks": [
+        {
+          "href": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/recording.webm",
+          "label": "artifact",
+          "source": "analysis"
+        },
+        {
+          "href": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/annotations.json",
+          "label": "annotations",
+          "source": "playtest-session"
+        },
+        {
+          "href": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/analysis.json",
+          "label": "analysis",
+          "source": "playtest-session"
+        }
+      ],
+      "inferredComponent": "apps/client/components/scene/ContinueButton.tsx",
+      "routeState": {
+        "status": "direct_pr",
+        "reason": "single_lane_non_protected_scope",
+        "confidence": 0.9
+      },
+      "linkedRefs": {
+        "issueRefs": [],
+        "prRefs": []
+      },
+      "manualOverride": null,
+      "history": [
+        {
+          "type": "ingested",
+          "at": "2026-04-20T18:04:19.254Z",
+          "actor": null,
+          "data": {
+            "analysisId": "analysis-242-verify",
+            "summary": "Continue CTA is hard to see after dialogue ends."
+          }
+        },
+        {
+          "type": "route_updated",
+          "at": "2026-04-20T18:04:19.263Z",
+          "actor": "playtest-orchestrator",
+          "data": {
+            "confidence": 0.9,
+            "reason": "single_lane_non_protected_scope",
+            "status": "direct_pr"
+          }
+        }
+      ],
+      "firstSeenAt": "2026-04-20T18:04:19.254Z",
+      "lastSeenAt": "2026-04-20T18:04:19.254Z",
+      "createdAt": "2026-04-20T18:04:19.254Z",
+      "updatedAt": "2026-04-20T18:04:19.263Z"
+    }
+  }
+}

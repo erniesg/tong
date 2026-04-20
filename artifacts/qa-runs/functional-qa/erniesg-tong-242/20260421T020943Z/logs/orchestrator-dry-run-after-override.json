@@ -1,0 +1,8 @@
+{
+  "apiBase": "http://127.0.0.1:8789",
+  "dryRun": true,
+  "findingsInspected": 0,
+  "repository": "erniesg/tong",
+  "routes": [],
+  "summary": {}
+}

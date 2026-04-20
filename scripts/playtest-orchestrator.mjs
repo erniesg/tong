@@ -144,7 +144,7 @@ async function routeFinding({
     return result;
   }
 
-  if (decision.status === "skip" || decision.status === "human_review") {
+  if (decision.status === "skip" || decision.status === "human_review" || decision.status === "done") {
     await workerRequest({
       apiBase,
       apiToken,
