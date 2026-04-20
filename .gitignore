@@ -26,6 +26,7 @@ artifacts/thumbnails/
 artifacts/scenes/
 test-results/
 .xhs-cookie
+.r2-upload-cache.json
 
 # Large binary assets — store externally, not in git
 *.mp4

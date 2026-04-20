@@ -2,6 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { relativeToRepo, resolveRepoRoot } from "./lib/qa_evidence.mjs";
 
@@ -12,6 +13,9 @@ const DEFAULT_CANONICAL_MANIFEST_KEY = "runtime-assets/canonical-asset-manifest.
 const DEFAULT_PUBLIC_VERIFY_ATTEMPTS = 4;
 const DEFAULT_PUBLIC_VERIFY_DELAY_MS = 1500;
 const DEFAULT_PUBLIC_VERIFY_TIMEOUT_MS = 15000;
+const DEFAULT_UPLOAD_CONCURRENCY = 6;
+const DEFAULT_CACHE_PATH = ".r2-upload-cache.json";
+const DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 const CLIENT_PUBLIC_ASSETS_DIR = "apps/client/public/assets";
 const RUNTIME_MANIFEST_PATH = "assets/manifest/runtime-asset-manifest.json";
@@ -28,6 +32,9 @@ function parseArgs(argv) {
     publicVerifyTimeoutMs: DEFAULT_PUBLIC_VERIFY_TIMEOUT_MS,
     runtimeManifestKey: process.env.TONG_RUNTIME_ASSET_MANIFEST_KEY || DEFAULT_RUNTIME_MANIFEST_KEY,
     skipPublicVerification: false,
+    uploadConcurrency: DEFAULT_UPLOAD_CONCURRENCY,
+    cachePath: DEFAULT_CACHE_PATH,
+    maxUploadBytes: DEFAULT_MAX_UPLOAD_BYTES,
     wranglerConfig: "apps/client/wrangler.toml",
   };
 
@@ -49,6 +56,12 @@ function parseArgs(argv) {
       args.publicVerifyDelayMs = Number(argv[++i]);
     } else if (arg === "--public-verify-timeout-ms") {
       args.publicVerifyTimeoutMs = Number(argv[++i]);
+    } else if (arg === "--upload-concurrency") {
+      args.uploadConcurrency = Number(argv[++i]);
+    } else if (arg === "--cache-path") {
+      args.cachePath = argv[++i];
+    } else if (arg === "--max-upload-mb") {
+      args.maxUploadBytes = Math.round(Number(argv[++i]) * 1024 * 1024);
     } else if (arg === "--dry-run") {
       args.dryRun = true;
     } else if (arg === "--skip-public-verification") {
@@ -79,6 +92,15 @@ function parseArgs(argv) {
   if (!Number.isFinite(args.publicVerifyTimeoutMs) || args.publicVerifyTimeoutMs < 1) {
     throw new Error("`--public-verify-timeout-ms` must be a positive number.");
   }
+  if (!Number.isFinite(args.uploadConcurrency) || args.uploadConcurrency < 1) {
+    throw new Error("`--upload-concurrency` must be a positive number.");
+  }
+  if (!args.cachePath) {
+    throw new Error("`--cache-path` must not be empty.");
+  }
+  if (!Number.isFinite(args.maxUploadBytes) || args.maxUploadBytes < 1) {
+    throw new Error("`--max-upload-mb` must be a positive number.");
+  }
 
   return args;
 }
@@ -98,6 +120,9 @@ Options:
   --public-verify-attempts <n>   Retry count for public URL checks (default: ${DEFAULT_PUBLIC_VERIFY_ATTEMPTS})
   --public-verify-delay-ms <n>   Delay between public URL checks (default: ${DEFAULT_PUBLIC_VERIFY_DELAY_MS})
   --public-verify-timeout-ms <n> Timeout per public URL check (default: ${DEFAULT_PUBLIC_VERIFY_TIMEOUT_MS})
+  --upload-concurrency <n>       Concurrent upload workers (default: ${DEFAULT_UPLOAD_CONCURRENCY})
+  --cache-path <path>            Cache file for object checksums (default: ${DEFAULT_CACHE_PATH})
+  --max-upload-mb <n>            Skip single assets larger than this size (default: ${Math.round(DEFAULT_MAX_UPLOAD_BYTES / 1024 / 1024)})
   --skip-public-verification     Skip GET-based public URL checks after upload
   --dry-run                      Print the planned upload set without uploading
 `);
@@ -164,6 +189,12 @@ function walkFiles(dirPath, files = []) {
   return files;
 }
 
+function md5ForFile(filePath) {
+  const hash = crypto.createHash("md5");
+  hash.update(fs.readFileSync(filePath));
+  return hash.digest("hex");
+}
+
 function toPublicUrl(publicBaseUrl, key) {
   const normalizedBase = publicBaseUrl.replace(/\/+$/, "");
   const encodedKey = key
@@ -194,6 +225,8 @@ function buildAssetUploadSet(repoRoot, options) {
     absolutePath,
     bucketKey: path.posix.join("assets", path.relative(clientAssetsRoot, absolutePath).split(path.sep).join("/")),
     contentType: contentTypeFor(absolutePath),
+    fileSizeBytes: fs.statSync(absolutePath).size,
+    checksum: md5ForFile(absolutePath),
   }));
 
   uploads.push({
@@ -202,6 +235,8 @@ function buildAssetUploadSet(repoRoot, options) {
     absolutePath: runtimeManifestPath,
     bucketKey: options.runtimeManifestKey,
     contentType: "application/json; charset=utf-8",
+    fileSizeBytes: fs.statSync(runtimeManifestPath).size,
+    checksum: md5ForFile(runtimeManifestPath),
   });
 
   uploads.push({
@@ -210,9 +245,60 @@ function buildAssetUploadSet(repoRoot, options) {
     absolutePath: canonicalManifestPath,
     bucketKey: options.canonicalManifestKey,
     contentType: "application/json; charset=utf-8",
+    fileSizeBytes: fs.statSync(canonicalManifestPath).size,
+    checksum: md5ForFile(canonicalManifestPath),
   });
 
   return uploads;
+}
+
+function loadUploadCache(cachePath) {
+  if (!fs.existsSync(cachePath)) return {};
+  try {
+    const parsed = JSON.parse(fs.readFileSync(cachePath, "utf8"));
+    if (parsed && typeof parsed === "object") {
+      return parsed;
+    }
+  } catch {
+    // Ignore malformed cache and rebuild it.
+  }
+  return {};
+}
+
+function saveUploadCache(cachePath, cache) {
+  fs.writeFileSync(cachePath, `${JSON.stringify(cache, null, 2)}\n`, "utf8");
+}
+
+function shouldSkipByPath(bucketKey) {
+  return bucketKey.includes("/test-assets/") || bucketKey.includes("/__tests__/");
+}
+
+function partitionUploads(uploads, cache, options) {
+  const toUpload = [];
+  const skippedUnchanged = [];
+  const skippedFiltered = [];
+  const skippedOversize = [];
+
+  for (const upload of uploads) {
+    if (upload.kind === "asset" && shouldSkipByPath(upload.bucketKey)) {
+      skippedFiltered.push(upload);
+      continue;
+    }
+    if (upload.kind === "asset" && upload.fileSizeBytes > options.maxUploadBytes) {
+      skippedOversize.push(upload);
+      continue;
+    }
+
+    const cachedChecksum = cache[upload.bucketKey];
+    if (cachedChecksum && cachedChecksum === upload.checksum) {
+      skippedUnchanged.push(upload);
+      continue;
+    }
+
+    toUpload.push(upload);
+  }
+
+  return { toUpload, skippedUnchanged, skippedFiltered, skippedOversize };
 }
 
 function wranglerArgs(configPath, objectPath, filePath, contentType) {
@@ -234,7 +320,10 @@ function wranglerArgs(configPath, objectPath, filePath, contentType) {
 }
 
 function uploadFile(configPath, bucket, upload, dryRun) {
-  if (dryRun) return;
+  if (dryRun) {
+    console.log(`DRY RUN upload: ${upload.bucketKey}`);
+    return;
+  }
   runCommand("npm", [
     "--prefix",
     "apps/client",
@@ -243,6 +332,22 @@ function uploadFile(configPath, bucket, upload, dryRun) {
     "--",
     ...wranglerArgs(configPath, `${bucket}/${upload.bucketKey}`, upload.absolutePath, upload.contentType),
   ]);
+  console.log(`Uploaded: ${upload.bucketKey}`);
+}
+
+async function uploadFilesParallel(configPath, bucket, uploads, options) {
+  if (uploads.length === 0) return;
+
+  let index = 0;
+  const workers = new Array(Math.min(options.uploadConcurrency, uploads.length)).fill(null).map(async () => {
+    while (index < uploads.length) {
+      const currentIndex = index;
+      index += 1;
+      uploadFile(configPath, bucket, uploads[currentIndex], options.dryRun);
+    }
+  });
+
+  await Promise.all(workers);
 }
 
 function sleep(ms) {
@@ -315,25 +420,41 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const repoRoot = resolveRepoRoot();
   const wranglerConfigPath = path.resolve(repoRoot, options.wranglerConfig);
+  const cachePath = path.resolve(repoRoot, options.cachePath);
+  const cache = loadUploadCache(cachePath);
   const uploads = buildAssetUploadSet(repoRoot, options);
+  const { toUpload, skippedUnchanged, skippedFiltered, skippedOversize } = partitionUploads(uploads, cache, options);
+  const nextCache = { ...cache };
 
-  for (const upload of uploads) {
-    uploadFile(wranglerConfigPath, options.bucket, upload, options.dryRun);
+  await uploadFilesParallel(wranglerConfigPath, options.bucket, toUpload, options);
+  for (const upload of toUpload) {
+    nextCache[upload.bucketKey] = upload.checksum;
   }
+  if (!options.dryRun) saveUploadCache(cachePath, nextCache);
 
-  await verifyUploads(uploads, options);
+  await verifyUploads(toUpload, options);
 
   console.log(`Bucket: ${options.bucket}`);
   console.log(`Public base URL: ${options.publicBaseUrl}`);
   console.log(`Wrangler config: ${relativeToRepo(repoRoot, wranglerConfigPath)}`);
   console.log(`Files prepared: ${uploads.length}`);
+  console.log(`Files uploaded: ${toUpload.length}`);
+  console.log(`Files skipped (unchanged): ${skippedUnchanged.length}`);
+  console.log(`Files skipped (filtered): ${skippedFiltered.length}`);
+  console.log(`Files skipped (oversize): ${skippedOversize.length}`);
+  console.log(`Upload concurrency: ${options.uploadConcurrency}`);
+  console.log(`Cache file: ${relativeToRepo(repoRoot, cachePath)}`);
   console.log(`Dry run: ${options.dryRun ? "yes" : "no"}`);
 }
 
-try {
-  await main();
-  process.exit(0);
-} catch (error) {
-  console.error(String(error.message || error));
-  process.exit(1);
+if (import.meta.url === `file://${process.argv[1]}`) {
+  try {
+    await main();
+    process.exit(0);
+  } catch (error) {
+    console.error(String(error.message || error));
+    process.exit(1);
+  }
 }
+
+export { buildAssetUploadSet, loadUploadCache, md5ForFile, partitionUploads, saveUploadCache, shouldSkipByPath };
