@@ -89,7 +89,7 @@ export function WebtoonBubble({
 }: WebtoonBubbleProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [closedTopPx, setClosedTopPx] = useState<number | null>(null);
-  const bubbleRef = useRef<HTMLButtonElement>(null);
+  const bubbleRef = useRef<HTMLDivElement>(null);
   const measuredTopRef = useRef<number | null>(null);
   const bubble = { zh, py, en, speaker, position, layout };
   const speakerLabel = SPEAKER_LABELS[speaker] ?? speaker;
@@ -119,8 +119,9 @@ export function WebtoonBubble({
           : '. Help unlocks with Game Pass.';
 
   return (
-    <button
-      type="button"
+    <div
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive && !showHelp ? 0 : undefined}
       className={`wt-bubble wt-bubble--${position} wt-bubble--${speaker}${expanded ? ' is-open' : ''}`}
       aria-label={`${speakerLabel}: ${zh}${helpSuffix}`}
       aria-expanded={interactive ? expanded : undefined}
@@ -129,6 +130,12 @@ export function WebtoonBubble({
       ref={bubbleRef}
       onClick={() => {
         if (!interactive || showHelp) return;
+        setIsOpen((prev) => !prev);
+      }}
+      onKeyDown={(event) => {
+        if (!interactive || showHelp) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
         setIsOpen((prev) => !prev);
       }}
     >
@@ -154,6 +161,6 @@ export function WebtoonBubble({
           {en && <span className="wt-bubble__en">{en}</span>}
         </span>
       )}
-    </button>
+    </div>
   );
 }

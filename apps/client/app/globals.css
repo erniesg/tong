@@ -10352,6 +10352,7 @@ body:has(.playtest-pill-expanded) {
   font-family: inherit;
   text-align: center;
   isolation: isolate;
+  overflow: visible;
 
   animation: wtBubbleRise 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   transition:
@@ -10431,13 +10432,17 @@ body:has(.playtest-pill-expanded) {
   display: flex;
   align-items: flex-start;
   min-width: min(14rem, 72vw);
-  min-height: auto;
-  height: auto;
+  min-height: 0;
+  height: fit-content;
   padding: 16px 18px 18px;
   max-width: var(--wt-bubble-max-width, min(88vw, 30rem));
   border-radius: clamp(26px, 6vw, 36px);
   color: #fff8ee;
   text-align: left;
+}
+
+.wt-bubble.is-open .wt-bubble__text {
+  color: #fff8ee;
 }
 
 .wt-bubble--top {
