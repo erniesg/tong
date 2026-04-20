@@ -168,8 +168,8 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     aspectRatio: '9:16',
     shotType: 'medium-closeup',
     gapBefore: {
-      px: 150,
-      gradient: [PARCHMENT, SUNSET_SOFT],
+      px: 220,
+      gradient: [PARCHMENT, SUNSET_FIELD],
       dark: { gradient: [DARK_ROOM, DARK_DEEP] },
     },
     frame: {
@@ -179,7 +179,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
       dark: { color: INK_BORDER_DARK },
     },
     layout: {
-      align: 'left',
+      align: 'right',
       flipX: true,
       cropAspectRatio: '3 / 4',
       cropPosition: 'center 42%',
@@ -215,7 +215,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
       dark: { color: INK_BORDER_DARK },
     },
     layout: {
-      align: 'right',
+      align: 'left',
       liftPx: 160,
       cropAspectRatio: '3 / 4',
       backdropColor: SUNSET_FIELD,
