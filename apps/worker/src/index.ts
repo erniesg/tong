@@ -7,6 +7,7 @@ import objectivesNextFixture from '../../../packages/contracts/fixtures/objectiv
 import learnSessionsFixture from '../../../packages/contracts/fixtures/learn.sessions.sample.json';
 import mediaProfileFixture from '../../../packages/contracts/fixtures/player.media-profile.sample.json';
 import objectiveIdentityMap from '../../../packages/contracts/objective-identity-map.sample.json';
+import runtimeAssetManifest from '../../../assets/manifest/runtime-asset-manifest.json';
 import mockMediaWindow from '../../server/data/mock-media-window.json';
 
 type Lang = 'ko' | 'ja' | 'zh';
@@ -151,6 +152,9 @@ const CORS_HEADERS = {
 };
 
 const DEFAULT_USER_ID = 'demo-user-1';
+const ASSET_PROXY_PREFIX = '/api/v1/assets/';
+const ASSET_PROXY_CACHE_CONTROL = 'private, max-age=86400';
+const ASSET_SIGNED_URL_TTL_SECONDS = 15 * 60;
 const PROFICIENCY_RANK: Record<string, number> = {
   none: 0,
   beginner: 1,
@@ -158,6 +162,19 @@ const PROFICIENCY_RANK: Record<string, number> = {
   advanced: 3,
   native: 4,
 };
+
+type RuntimeAssetManifestEntry = {
+  key: string;
+  uri: string;
+};
+
+const RUNTIME_ASSET_ENTRIES = (
+  ((runtimeAssetManifest as { assets?: RuntimeAssetManifestEntry[] }).assets || []) as RuntimeAssetManifestEntry[]
+).filter((entry) => typeof entry?.key === 'string' && typeof entry?.uri === 'string');
+
+const RUNTIME_ASSET_PATHS = new Set(
+  RUNTIME_ASSET_ENTRIES.map((entry) => normalizeRuntimeAssetPath(entry.uri)).filter(Boolean),
+);
 
 const CLUSTER_CITY_MAP: Record<string, 'seoul' | 'tokyo' | 'shanghai'> = {
   'food-ordering': 'seoul',
@@ -676,6 +693,76 @@ function getLocationId(search: URLSearchParams): LocationId {
 
 function getUserIdFromSearch(searchParams: URLSearchParams): string {
   return searchParams.get('userId') || DEFAULT_USER_ID;
+}
+
+function envFlagEnabled(raw: unknown, fallback = false): boolean {
+  if (raw === undefined || raw === null) return fallback;
+  const normalized = String(raw).trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+function normalizeRuntimeAssetPath(value: string): string {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('/assets/')) return trimmed.slice(1);
+  if (trimmed.startsWith('assets/')) return trimmed;
+  return '';
+}
+
+function runtimeAssetPathFromProxyPath(pathname: string): string | null {
+  if (!pathname.startsWith(ASSET_PROXY_PREFIX)) return null;
+  const trailing = pathname.slice(ASSET_PROXY_PREFIX.length);
+  if (!trailing || trailing.includes('..')) return null;
+  return `assets/${trailing.replace(/^\/+/, '')}`;
+}
+
+function extractBearerToken(request: Request): string | null {
+  const authorization = request.headers.get('Authorization') || '';
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : null;
+}
+
+function isAssetAuthValid(request: Request, env: Record<string, any>): boolean {
+  const expectedToken = String(env.TONG_ASSET_AUTH_TOKEN || env.TONG_DEV_AUTH_TOKEN || '').trim();
+  if (!expectedToken) return false;
+  const providedToken = extractBearerToken(request);
+  return Boolean(providedToken && providedToken === expectedToken);
+}
+
+function resolveAssetContentType(path: string): string {
+  const lower = path.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  if (lower.endsWith('.svg')) return 'image/svg+xml';
+  if (lower.endsWith('.mp4')) return 'video/mp4';
+  if (lower.endsWith('.webm')) return 'video/webm';
+  if (lower.endsWith('.mov')) return 'video/quicktime';
+  if (lower.endsWith('.json')) return 'application/json';
+  return 'application/octet-stream';
+}
+
+async function maybeBuildSignedAssetUrl(
+  bucket: any,
+  assetPath: string,
+): Promise<string | null> {
+  if (!bucket) return null;
+  const expiresIn = ASSET_SIGNED_URL_TTL_SECONDS;
+
+  if (typeof bucket.createPresignedUrl === 'function') {
+    const maybeUrl = await bucket.createPresignedUrl(assetPath, { expiresIn });
+    if (typeof maybeUrl === 'string' && maybeUrl) return maybeUrl;
+    if (maybeUrl && typeof maybeUrl.url === 'string') return maybeUrl.url;
+  }
+
+  if (typeof bucket.createSignedUrl === 'function') {
+    const maybeUrl = await bucket.createSignedUrl(assetPath, { expiresIn });
+    if (typeof maybeUrl === 'string' && maybeUrl) return maybeUrl;
+    if (maybeUrl && typeof maybeUrl.url === 'string') return maybeUrl.url;
+  }
+
+  return null;
 }
 
 function getCaptionsForVideo(videoId = 'karina-variety-demo') {
@@ -1742,6 +1829,58 @@ async function handleRequest(request: Request): Promise<Response> {
     if (pathname === '/health') {
       const env = (globalThis as any).__env;
       return jsonResponse(200, { ok: true, service: 'tong-api', hasResend: !!env?.RESEND_API_KEY, hasDB: !!env?.DB });
+    }
+
+    if (pathname.startsWith(ASSET_PROXY_PREFIX) && request.method === 'GET') {
+      const env = (globalThis as any).__env || {};
+      if (!isAssetAuthValid(request, env)) {
+        return jsonResponse(401, { error: 'unauthorized' });
+      }
+
+      const assetPath = runtimeAssetPathFromProxyPath(pathname);
+      if (!assetPath || !RUNTIME_ASSET_PATHS.has(assetPath)) {
+        return jsonResponse(404, { error: 'asset_not_found' });
+      }
+
+      const assetsBucket = env.TONG_ASSETS_BUCKET;
+      if (!assetsBucket) {
+        return jsonResponse(502, { error: 'asset_fetch_failed', reason: 'assets_bucket_not_configured' });
+      }
+
+      const useSignedUrls = envFlagEnabled(env.TONG_ASSET_AUTH_PROXY_ENABLED, false)
+        && envFlagEnabled(env.TONG_ASSET_AUTH_SIGNED_URLS, false);
+      if (useSignedUrls) {
+        const signedUrl = await maybeBuildSignedAssetUrl(assetsBucket, assetPath);
+        if (signedUrl) {
+          return new Response(null, {
+            status: 302,
+            headers: {
+              Location: signedUrl,
+              'Cache-Control': ASSET_PROXY_CACHE_CONTROL,
+              ...CORS_HEADERS,
+            },
+          });
+        }
+      }
+
+      try {
+        const obj = await assetsBucket.get(assetPath);
+        if (!obj || !obj.body) {
+          return jsonResponse(502, { error: 'asset_fetch_failed', reason: 'missing_r2_object' });
+        }
+
+        const contentType = obj.httpMetadata?.contentType || resolveAssetContentType(assetPath);
+        return new Response(obj.body, {
+          status: 200,
+          headers: {
+            'Content-Type': contentType,
+            'Cache-Control': ASSET_PROXY_CACHE_CONTROL,
+            ...CORS_HEADERS,
+          },
+        });
+      } catch {
+        return jsonResponse(502, { error: 'asset_fetch_failed' });
+      }
     }
 
     if (pathname === '/api/v1/captions/enriched' && request.method === 'GET') {

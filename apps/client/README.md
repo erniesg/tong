@@ -14,6 +14,7 @@ Set API base (recommended):
 ```bash
 NEXT_PUBLIC_TONG_API_BASE=http://localhost:8787
 NEXT_PUBLIC_TONG_ASSETS_BASE_URL=https://assets.tong.berlayar.ai
+NEXT_PUBLIC_TONG_ASSET_AUTH_PROXY_ENABLED=false
 ```
 
 Cloud worker:
@@ -21,6 +22,7 @@ Cloud worker:
 ```bash
 NEXT_PUBLIC_TONG_API_BASE=https://tong-api.<subdomain>.workers.dev
 NEXT_PUBLIC_TONG_ASSETS_BASE_URL=https://assets.tong.berlayar.ai
+NEXT_PUBLIC_TONG_ASSET_AUTH_PROXY_ENABLED=true
 ```
 
 If the remote app is missing map or character media, publish the runtime assets:
