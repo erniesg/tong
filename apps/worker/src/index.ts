@@ -672,6 +672,179 @@ function generatePlaytestId(length = 12): string {
   return Array.from(bytes, (b) => PLAYTEST_ID_ALPHABET[b % PLAYTEST_ID_ALPHABET.length]).join('');
 }
 
+const FINDING_ROUTE_STATUSES = ['unrouted', 'queued', 'in_review', 'routed', 'blocked', 'resolved'] as const;
+const FINDING_SEVERITIES = ['low', 'medium', 'high', 'critical'] as const;
+
+function normalizeIsoDate(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
+
+function normalizeRefList(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+  return [...new Set(values
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean))];
+}
+
+function normalizeArtifactLinks(values: unknown): string[] {
+  return normalizeRefList(values).filter((value) => value.startsWith('http://') || value.startsWith('https://'));
+}
+
+function normalizeSeverity(value: unknown): string {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return (FINDING_SEVERITIES as readonly string[]).includes(normalized) ? normalized : 'medium';
+}
+
+function normalizeRouteStatus(value: unknown): string {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return (FINDING_ROUTE_STATUSES as readonly string[]).includes(normalized) ? normalized : 'unrouted';
+}
+
+function fnv1aHash(input: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function findingFingerprint(input: {
+  sessionId: string;
+  findingTimestampMs: number | null;
+  category: string;
+  severity: string;
+  summary: string;
+  inferredComponent: string;
+}): string {
+  const canonical = [
+    input.sessionId,
+    input.findingTimestampMs ?? '',
+    input.category,
+    input.severity,
+    input.summary.toLowerCase(),
+    input.inferredComponent,
+  ].join('|');
+  return `ptf_${fnv1aHash(canonical)}`;
+}
+
+function parseMaybeJsonObject(text: string | null | undefined, fallback: Record<string, unknown>): Record<string, unknown> {
+  if (!text) return fallback;
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function parseMaybeJsonArray(text: string | null | undefined): string[] {
+  if (!text) return [];
+  try {
+    const parsed = JSON.parse(text);
+    return normalizeRefList(parsed);
+  } catch {
+    return [];
+  }
+}
+
+async function upsertFindingLedgerEntry(args: {
+  env: Record<string, any>;
+  sessionId: string;
+  analysisId: string | null;
+  finding: Record<string, any>;
+  fallbackArtifactLinks: string[];
+}): Promise<{ findingId: string; fingerprint: string; created: boolean }> {
+  const findingTimestampMs = Number.isFinite(Number(args.finding.timestampMs))
+    ? Number(args.finding.timestampMs)
+    : (Number.isFinite(Number(args.finding.startMs)) ? Number(args.finding.startMs) : null);
+  const findingTimestampIso = normalizeIsoDate(args.finding.timestampIso)
+    || normalizeIsoDate(args.finding.detectedAt)
+    || null;
+  const category = typeof args.finding.category === 'string'
+    ? args.finding.category.trim().toLowerCase()
+    : (typeof args.finding.type === 'string' ? args.finding.type.trim().toLowerCase() : 'uncategorized');
+  const severity = normalizeSeverity(args.finding.severity || args.finding.priority);
+  const summary = String(args.finding.summary || args.finding.title || args.finding.description || 'Unnamed finding').trim().slice(0, 500);
+  const inferredComponent = String(args.finding.inferredComponent || args.finding.component || '').trim().slice(0, 120);
+  const artifactLinks = normalizeArtifactLinks([...(Array.isArray(args.finding.artifactLinks) ? args.finding.artifactLinks : []), ...args.fallbackArtifactLinks]);
+  const fingerprint = findingFingerprint({
+    sessionId: args.sessionId,
+    findingTimestampMs,
+    category,
+    severity,
+    summary,
+    inferredComponent,
+  });
+  const findingId = String(args.finding.findingId || args.finding.id || fingerprint).trim();
+
+  const existing = await args.env.DB.prepare(
+    `SELECT finding_id FROM playtest_findings_ledger WHERE fingerprint = ?`
+  ).bind(fingerprint).first();
+  const nowIso = new Date().toISOString();
+
+  if (existing) {
+    await args.env.DB.prepare(
+      `UPDATE playtest_findings_ledger
+       SET session_id = ?,
+           analysis_id = COALESCE(?, analysis_id),
+           finding_timestamp_ms = COALESCE(?, finding_timestamp_ms),
+           finding_timestamp_iso = COALESCE(?, finding_timestamp_iso),
+           category = ?,
+           severity = ?,
+           summary = ?,
+           artifact_links = ?,
+           inferred_component = ?,
+           last_seen_at = datetime('now'),
+           updated_at = datetime('now')
+       WHERE fingerprint = ?`
+    ).bind(
+      args.sessionId,
+      args.analysisId,
+      findingTimestampMs,
+      findingTimestampIso,
+      category,
+      severity,
+      summary,
+      JSON.stringify(artifactLinks),
+      inferredComponent || null,
+      fingerprint,
+    ).run();
+    return { findingId: (existing as any).finding_id, fingerprint, created: false };
+  }
+
+  await args.env.DB.prepare(
+    `INSERT INTO playtest_findings_ledger (
+      finding_id, fingerprint, session_id, analysis_id, finding_timestamp_ms, finding_timestamp_iso,
+      category, severity, summary, artifact_links, inferred_component,
+      route_status, route_reason, route_confidence, route_updated_at,
+      linked_issue_refs, linked_pr_refs, human_override_state,
+      route_attempt_count, reopen_count, first_seen_at, last_seen_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unrouted', NULL, NULL, NULL, '[]', '[]', '{"active":false}', 0, 0, datetime('now'), datetime('now'), ?, ?)`
+  ).bind(
+    findingId,
+    fingerprint,
+    args.sessionId,
+    args.analysisId,
+    findingTimestampMs,
+    findingTimestampIso,
+    category,
+    severity,
+    summary,
+    JSON.stringify(artifactLinks),
+    inferredComponent || null,
+    nowIso,
+    nowIso,
+  ).run();
+  return { findingId, fingerprint, created: true };
+}
+
 function getLang(search: URLSearchParams): Lang {
   const lang = (search.get('lang') || 'ko') as Lang;
   if (lang === 'ko' || lang === 'ja' || lang === 'zh') return lang;
@@ -2705,16 +2878,45 @@ async function handleRequest(request: Request): Promise<Response> {
       await env.TONG_RUNS_BUCKET.put(r2Key, JSON.stringify(body.data, null, 2), {
         httpMetadata: { contentType: 'application/json' },
       });
+      let ledger: { inserted: number; deduped: number; findingIds: string[] } | null = null;
       // Update D1 with artifact key
       if (env?.DB) {
         if (body.type === 'analysis') {
           await env.DB.prepare(
             `UPDATE playtest_sessions SET analysis_id = ?, updated_at = datetime('now') WHERE session_id = ?`
           ).bind(body.data?.analysisId || r2Key, sessionId).run();
+
+          const publicBase = env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai';
+          const findings = Array.isArray(body.data?.findings)
+            ? body.data.findings
+            : (Array.isArray(body.data?.issues) ? body.data.issues : []);
+          if (findings.length > 0) {
+            let inserted = 0;
+            let deduped = 0;
+            const findingIds: string[] = [];
+            const fallbackArtifactLinks = [
+              `${publicBase}/playtest/${sessionId}/recording.webm`,
+              `${publicBase}/playtest/${sessionId}/annotations.json`,
+              `${publicBase}/${r2Key}`,
+            ];
+            for (const finding of findings) {
+              const result = await upsertFindingLedgerEntry({
+                env,
+                sessionId,
+                analysisId: String(body.data?.analysisId || r2Key),
+                finding: finding || {},
+                fallbackArtifactLinks,
+              });
+              findingIds.push(result.findingId);
+              if (result.created) inserted += 1;
+              else deduped += 1;
+            }
+            ledger = { inserted, deduped, findingIds };
+          }
         }
       }
       const publicBase = env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai';
-      return jsonResponse(200, { ok: true, key: r2Key, url: `${publicBase}/${r2Key}` });
+      return jsonResponse(200, { ok: true, key: r2Key, url: `${publicBase}/${r2Key}`, ledger });
     }
 
     if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/artifacts\/[^/]+$/) && request.method === 'GET') {
@@ -2731,6 +2933,153 @@ async function handleRequest(request: Request): Promise<Response> {
         status: 200,
         headers: { 'Content-Type': 'application/json; charset=utf-8', ...CORS_HEADERS },
       });
+    }
+
+    if (pathname === '/api/v1/playtest/findings/unrouted' && request.method === 'GET') {
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit') || 50)));
+      const { results } = await env.DB.prepare(
+        `SELECT * FROM playtest_findings_ledger
+         WHERE route_status IN ('unrouted', 'queued', 'blocked')
+         ORDER BY updated_at DESC
+         LIMIT ?`
+      ).bind(limit).all();
+      const findings = (results || []).map((row: any) => ({
+        findingId: row.finding_id,
+        fingerprint: row.fingerprint,
+        sessionId: row.session_id,
+        analysisId: row.analysis_id,
+        timestampMs: row.finding_timestamp_ms,
+        timestampIso: row.finding_timestamp_iso,
+        category: row.category,
+        severity: row.severity,
+        summary: row.summary,
+        artifactLinks: parseMaybeJsonArray(row.artifact_links),
+        inferredComponent: row.inferred_component,
+        routeState: {
+          status: row.route_status,
+          reason: row.route_reason,
+          confidence: row.route_confidence,
+          updatedAt: row.route_updated_at,
+          attemptCount: row.route_attempt_count,
+          reopenCount: row.reopen_count,
+        },
+        linkedIssueRefs: parseMaybeJsonArray(row.linked_issue_refs),
+        linkedPrRefs: parseMaybeJsonArray(row.linked_pr_refs),
+        humanOverrideState: parseMaybeJsonObject(row.human_override_state, { active: false }),
+        firstSeenAt: row.first_seen_at,
+        lastSeenAt: row.last_seen_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+      return jsonResponse(200, { findings });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/route$/) && request.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(request);
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const status = normalizeRouteStatus(body.status);
+      const reason = typeof body.reason === 'string' ? body.reason.trim().slice(0, 280) : null;
+      const confidence = Number.isFinite(Number(body.confidence))
+        ? Math.max(0, Math.min(1, Number(body.confidence)))
+        : null;
+      const updateResult = await env.DB.prepare(
+        `UPDATE playtest_findings_ledger
+         SET route_status = ?,
+             route_reason = ?,
+             route_confidence = ?,
+             route_updated_at = ?,
+             route_attempt_count = route_attempt_count + 1,
+             updated_at = datetime('now')
+         WHERE finding_id = ?`
+      ).bind(status, reason, confidence, new Date().toISOString(), findingId).run();
+      return jsonResponse(200, { ok: true, findingId, routeState: { status, reason, confidence }, changes: (updateResult as any).changes ?? 0 });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/links$/) && request.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(request);
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const row = await env.DB.prepare(
+        `SELECT linked_issue_refs, linked_pr_refs FROM playtest_findings_ledger WHERE finding_id = ?`
+      ).bind(findingId).first();
+      if (!row) return jsonResponse(404, { error: 'finding_not_found', findingId });
+      const issueRefs = [...new Set([
+        ...parseMaybeJsonArray((row as any).linked_issue_refs),
+        ...normalizeRefList(body.issueRefs),
+      ])];
+      const prRefs = [...new Set([
+        ...parseMaybeJsonArray((row as any).linked_pr_refs),
+        ...normalizeRefList(body.prRefs),
+      ])];
+      await env.DB.prepare(
+        `UPDATE playtest_findings_ledger
+         SET linked_issue_refs = ?, linked_pr_refs = ?, updated_at = datetime('now')
+         WHERE finding_id = ?`
+      ).bind(JSON.stringify(issueRefs), JSON.stringify(prRefs), findingId).run();
+      return jsonResponse(200, { ok: true, findingId, linkedIssueRefs: issueRefs, linkedPrRefs: prRefs });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/retry$/) && request.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      await env.DB.prepare(
+        `UPDATE playtest_findings_ledger
+         SET route_status = 'queued',
+             route_reason = 'retry_requested',
+             route_confidence = NULL,
+             route_updated_at = ?,
+             route_attempt_count = route_attempt_count + 1,
+             updated_at = datetime('now')
+         WHERE finding_id = ?`
+      ).bind(new Date().toISOString(), findingId).run();
+      return jsonResponse(200, { ok: true, findingId, status: 'queued' });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/reopen$/) && request.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(request);
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const reason = typeof body.reason === 'string' && body.reason.trim()
+        ? body.reason.trim().slice(0, 280)
+        : 'reopened_for_followup';
+      await env.DB.prepare(
+        `UPDATE playtest_findings_ledger
+         SET route_status = 'unrouted',
+             route_reason = ?,
+             route_confidence = NULL,
+             route_updated_at = ?,
+             reopen_count = reopen_count + 1,
+             updated_at = datetime('now')
+         WHERE finding_id = ?`
+      ).bind(reason, new Date().toISOString(), findingId).run();
+      return jsonResponse(200, { ok: true, findingId, status: 'unrouted', reason });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/override$/) && request.method === 'PUT') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(request);
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const overrideState = {
+        active: Boolean(body.active),
+        decision: typeof body.decision === 'string' ? body.decision.trim().slice(0, 80) : null,
+        reason: typeof body.reason === 'string' ? body.reason.trim().slice(0, 280) : null,
+        by: typeof body.by === 'string' ? body.by.trim().slice(0, 80) : null,
+        updatedAt: new Date().toISOString(),
+      };
+      await env.DB.prepare(
+        `UPDATE playtest_findings_ledger
+         SET human_override_state = ?, updated_at = datetime('now')
+         WHERE finding_id = ?`
+      ).bind(JSON.stringify(overrideState), findingId).run();
+      return jsonResponse(200, { ok: true, findingId, humanOverrideState: overrideState });
     }
 
     return jsonResponse(404, { error: 'not_found', pathname });

@@ -895,3 +895,91 @@ Response:
   "openAiApiKeyConfigured": false
 }
 ```
+
+## Playtest findings ledger endpoints
+
+These endpoints store the per-finding routing ledger between analyzed playtest artifacts and GitHub work items.
+
+### GET `/api/v1/playtest/findings/unrouted`
+List findings that still require routing (`unrouted`, `queued`, or `blocked`).
+
+Response:
+```json
+{
+  "findings": [
+    {
+      "findingId": "ptf_3b4a909e",
+      "fingerprint": "ptf_3b4a909e",
+      "sessionId": "abc123",
+      "analysisId": "analysis-1",
+      "timestampMs": 45200,
+      "timestampIso": null,
+      "category": "ux_friction",
+      "severity": "high",
+      "summary": "User could not find continue affordance after dialogue",
+      "artifactLinks": ["https://runs.tong.berlayar.ai/playtest/abc123/recording.webm"],
+      "inferredComponent": "apps/client/components/scene",
+      "routeState": {
+        "status": "unrouted",
+        "reason": null,
+        "confidence": null,
+        "updatedAt": null,
+        "attemptCount": 0,
+        "reopenCount": 0
+      },
+      "linkedIssueRefs": [],
+      "linkedPrRefs": [],
+      "humanOverrideState": { "active": false }
+    }
+  ]
+}
+```
+
+### POST `/api/v1/playtest/findings/:findingId/route`
+Upsert route decision state for a single finding (idempotent across reruns via stable fingerprint dedupe).
+
+Request:
+```json
+{
+  "status": "routed",
+  "reason": "maps_to_existing_issue",
+  "confidence": 0.92
+}
+```
+
+### POST `/api/v1/playtest/findings/:findingId/links`
+Attach GitHub issue/PR references.
+
+Request:
+```json
+{
+  "issueRefs": ["erniesg/tong#240"],
+  "prRefs": ["erniesg/tong#241"]
+}
+```
+
+### POST `/api/v1/playtest/findings/:findingId/retry`
+Queue a finding for route retry.
+
+### POST `/api/v1/playtest/findings/:findingId/reopen`
+Reopen a routed finding.
+
+Request (optional):
+```json
+{
+  "reason": "regression_still_reproduces"
+}
+```
+
+### PUT `/api/v1/playtest/findings/:findingId/override`
+Persist human override metadata on top of automated route state.
+
+Request:
+```json
+{
+  "active": true,
+  "decision": "manual_route",
+  "reason": "belongs to server-api lane",
+  "by": "qa-reviewer"
+}
+```
