@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tong Design System</title>
-<!-- Generated: 2026-04-20T16:32:47.291Z | 113 variables, 992 classes, 54 keyframes -->
+<!-- Generated: 2026-04-20T17:00:48.919Z | 113 variables, 992 classes, 54 keyframes -->
 <style>
 /* ══════════════════════════════════════════════════════════════
    BLOCK 1: globals.css — verbatim embed (single source of truth)
@@ -10265,6 +10265,7 @@ body:has(.playtest-pill-expanded) {
 }
 
 .wt-block {
+  position: relative;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -10287,6 +10288,11 @@ body:has(.playtest-pill-expanded) {
 
 .wt-panel--bubble-outside {
   overflow: visible;
+}
+
+.wt-panel:has(.wt-bubble.is-open) {
+  overflow: visible;
+  z-index: 8;
 }
 
 .wt-panel--framed::after {
@@ -10351,6 +10357,7 @@ body:has(.playtest-pill-expanded) {
 
   padding: clamp(13px, 1.4vw + 8px, 20px) clamp(20px, 3.6vw, 34px) clamp(15px, 1.6vw + 8px, 22px);
   min-height: clamp(4.25rem, 13vw, 6rem);
+  height: fit-content;
   background: var(--wt-bubble-fill);
   color: #12161f;
   border: 2px solid var(--wt-bubble-border);
@@ -10431,6 +10438,14 @@ body:has(.playtest-pill-expanded) {
 
 .wt-bubble[aria-disabled='true'] {
   cursor: default;
+}
+
+.wt-block:has(.wt-bubble.is-open) {
+  z-index: 12;
+}
+
+.wt-block:has(.wt-bubble.is-open) + .wt-block .wt-panel {
+  margin-top: 0 !important;
 }
 
 /* Expanded state: bubble flips to a dark translucent card so the help
