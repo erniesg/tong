@@ -33,3 +33,10 @@ npm --prefix apps/worker run deploy
 - `POST /api/v1/scenes/hangout/respond`
 - `GET /api/v1/learn/sessions`
 - `POST /api/v1/learn/sessions`
+- `GET /api/v1/assets/*` (authenticated runtime-asset proxy)
+
+## Runtime asset auth proxy flags
+
+- `TONG_ASSET_AUTH_TOKEN` (or `TONG_DEV_AUTH_TOKEN` fallback): required bearer token value for `Authorization: Bearer <token>`.
+- `TONG_ASSET_AUTH_PROXY_ENABLED` (default false): enables client routing to `/api/v1/assets/*` when paired with the client public flag.
+- `TONG_ASSET_AUTH_SIGNED_URLS` (default false): when true, attempts 15-minute signed URL redirects (`302`) via R2 binding signing support; if unavailable in the current runtime binding, the endpoint falls back to byte proxy streaming.
