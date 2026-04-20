@@ -147,7 +147,7 @@ type IngestionResult = {
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie, x-demo-password',
 };
 
@@ -670,6 +670,105 @@ function generatePlaytestId(length = 12): string {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (b) => PLAYTEST_ID_ALPHABET[b % PLAYTEST_ID_ALPHABET.length]).join('');
+}
+
+function normalizeLedgerString(value: unknown): string {
+  if (value == null) return '';
+  return String(value).trim();
+}
+
+function safeLower(value: unknown): string {
+  return normalizeLedgerString(value).toLowerCase();
+}
+
+function normalizeTimestamp(value: unknown): string | null {
+  const raw = normalizeLedgerString(value);
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
+function normalizeArtifactLinks(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => normalizeLedgerString(entry))
+    .filter((entry) => /^https?:\/\//i.test(entry));
+}
+
+function normalizeRefs(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const refs = value
+    .map((entry) => normalizeLedgerString(entry))
+    .filter(Boolean);
+  return [...new Set(refs)];
+}
+
+function normalizeRouteStatus(value: unknown): string {
+  const status = safeLower(value);
+  if (status === 'routed' || status === 'unrouted' || status === 'ignored' || status === 'needs-human') {
+    return status;
+  }
+  return 'unrouted';
+}
+
+function normalizeFindingSeverity(value: unknown): string {
+  const severity = safeLower(value);
+  if (severity === 'critical' || severity === 'high' || severity === 'medium' || severity === 'low') {
+    return severity;
+  }
+  return 'medium';
+}
+
+function normalizeRouteReason(value: unknown): string {
+  const reason = normalizeLedgerString(value);
+  return reason.slice(0, 500);
+}
+
+function normalizeRouteConfidence(value: unknown): number | null {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  if (n < 0) return 0;
+  if (n > 1) return 1;
+  return n;
+}
+
+function coerceBoolean(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return normalized === '1' || normalized === 'true' || normalized === 'yes';
+  }
+  return false;
+}
+
+function deriveInferredComponent(pathname: string, explicit: unknown): string {
+  const provided = normalizeLedgerString(explicit);
+  if (provided) return provided;
+  if (pathname.startsWith('/game')) return 'client-runtime';
+  if (pathname.startsWith('/overlay')) return 'client-overlay';
+  if (pathname.startsWith('/insights')) return 'server-ingestion';
+  if (pathname.startsWith('/api/')) return 'server-api';
+  return 'unknown';
+}
+
+function computeFindingFingerprint(input: Record<string, unknown>): string {
+  const parts = [
+    safeLower(input.sessionId),
+    safeLower(input.category),
+    safeLower(input.severity),
+    safeLower(input.title),
+    safeLower(input.snippet),
+    safeLower(input.locationPathname),
+    safeLower(input.artifactAnchor),
+  ];
+  let hash = 2166136261;
+  const fingerprintBase = parts.join('|');
+  for (let i = 0; i < fingerprintBase.length; i += 1) {
+    hash ^= fingerprintBase.charCodeAt(i);
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+  }
+  return `finding_${(hash >>> 0).toString(16).padStart(8, '0')}`;
 }
 
 function getLang(search: URLSearchParams): Lang {
@@ -2731,6 +2830,228 @@ async function handleRequest(request: Request): Promise<Response> {
         status: 200,
         headers: { 'Content-Type': 'application/json; charset=utf-8', ...CORS_HEADERS },
       });
+    }
+
+    const mapFindingRouteRow = (row: any) => ({
+      findingId: row.finding_id,
+      fingerprint: row.fingerprint,
+      sessionId: row.session_id,
+      analysisId: row.analysis_id,
+      findingTimestamp: row.finding_timestamp,
+      findingCategory: row.finding_category,
+      severity: row.severity,
+      title: row.title,
+      snippet: row.snippet,
+      locationPathname: row.location_pathname,
+      artifactAnchor: row.artifact_anchor,
+      artifactLinks: row.artifact_links ? JSON.parse(row.artifact_links) : [],
+      inferredComponent: row.inferred_component,
+      routeStatus: row.route_status,
+      routeReason: row.route_reason,
+      routeConfidence: row.route_confidence,
+      issueRefs: row.issue_refs ? JSON.parse(row.issue_refs) : [],
+      prRefs: row.pr_refs ? JSON.parse(row.pr_refs) : [],
+      humanOverrideState: row.human_override_state ? JSON.parse(row.human_override_state) : null,
+      retryCount: Number(row.retry_count || 0),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      routedAt: row.routed_at,
+      reopenedAt: row.reopened_at,
+      lastRetryAt: row.last_retry_at,
+    });
+
+    // Upsert finding route record (idempotent by stable fingerprint)
+    if (pathname === '/api/v1/playtest/findings/ledger' && request.method === 'PUT') {
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const body = await readJsonBody(request);
+      const sessionId = normalizeLedgerString(body.sessionId);
+      if (!sessionId) return jsonResponse(400, { error: 'session_id_required' });
+
+      const title = normalizeLedgerString(body.title);
+      const snippet = normalizeLedgerString(body.snippet);
+      const findingCategory = normalizeLedgerString(body.findingCategory || body.category || 'uncategorized');
+      const severity = normalizeFindingSeverity(body.severity);
+      const locationPathname = normalizeLedgerString(body.locationPathname || body.pathname);
+      const artifactAnchor = normalizeLedgerString(body.artifactAnchor);
+      const inferredComponent = deriveInferredComponent(locationPathname, body.inferredComponent);
+      const findingTimestamp = normalizeTimestamp(body.findingTimestamp || body.timestamp) || new Date().toISOString();
+
+      const fingerprint =
+        normalizeLedgerString(body.fingerprint) ||
+        computeFindingFingerprint({
+          sessionId,
+          category: findingCategory,
+          severity,
+          title,
+          snippet,
+          locationPathname,
+          artifactAnchor,
+        });
+
+      await env.DB.prepare(
+        `INSERT INTO playtest_finding_routes (
+          finding_id, fingerprint, session_id, analysis_id, finding_timestamp, finding_category, severity,
+          title, snippet, location_pathname, artifact_anchor, artifact_links, inferred_component,
+          route_status, route_reason, route_confidence, issue_refs, pr_refs, human_override_state
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(fingerprint) DO UPDATE SET
+          session_id = excluded.session_id,
+          analysis_id = COALESCE(excluded.analysis_id, playtest_finding_routes.analysis_id),
+          finding_timestamp = excluded.finding_timestamp,
+          finding_category = excluded.finding_category,
+          severity = excluded.severity,
+          title = excluded.title,
+          snippet = excluded.snippet,
+          location_pathname = excluded.location_pathname,
+          artifact_anchor = excluded.artifact_anchor,
+          artifact_links = excluded.artifact_links,
+          inferred_component = excluded.inferred_component,
+          updated_at = datetime('now')`
+      ).bind(
+        crypto.randomUUID(),
+        fingerprint,
+        sessionId,
+        normalizeLedgerString(body.analysisId) || null,
+        findingTimestamp,
+        findingCategory,
+        severity,
+        title || null,
+        snippet || null,
+        locationPathname || null,
+        artifactAnchor || null,
+        JSON.stringify(normalizeArtifactLinks(body.artifactLinks)),
+        inferredComponent,
+        normalizeRouteStatus(body.routeStatus),
+        normalizeRouteReason(body.routeReason) || null,
+        normalizeRouteConfidence(body.routeConfidence),
+        JSON.stringify(normalizeRefs(body.issueRefs)),
+        JSON.stringify(normalizeRefs(body.prRefs)),
+        body.humanOverrideState ? JSON.stringify(body.humanOverrideState) : null,
+      ).run();
+
+      const row = await env.DB.prepare(
+        `SELECT * FROM playtest_finding_routes WHERE fingerprint = ?`
+      ).bind(fingerprint).first();
+      return jsonResponse(200, { ok: true, finding: row ? mapFindingRouteRow(row) : null });
+    }
+
+    // List unrouted findings
+    if (pathname === '/api/v1/playtest/findings/unrouted' && request.method === 'GET') {
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(200, { findings: [] });
+      const sessionId = normalizeLedgerString(searchParams.get('sessionId'));
+      const severity = safeLower(searchParams.get('severity'));
+      const component = normalizeLedgerString(searchParams.get('component'));
+      const limit = Math.min(Math.max(Number(searchParams.get('limit') || 50), 1), 200);
+      const clauses = ["route_status = 'unrouted'"];
+      const binds: any[] = [];
+      if (sessionId) {
+        clauses.push('session_id = ?');
+        binds.push(sessionId);
+      }
+      if (severity) {
+        clauses.push('severity = ?');
+        binds.push(severity);
+      }
+      if (component) {
+        clauses.push('inferred_component = ?');
+        binds.push(component);
+      }
+      binds.push(limit);
+      const result = await env.DB.prepare(
+        `SELECT * FROM playtest_finding_routes
+         WHERE ${clauses.join(' AND ')}
+         ORDER BY finding_timestamp DESC, created_at DESC
+         LIMIT ?`
+      ).bind(...binds).all();
+      const findings = (result.results || []).map(mapFindingRouteRow);
+      return jsonResponse(200, { findings, count: findings.length });
+    }
+
+    // Mark route decision (idempotent updates)
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/route$/) && request.method === 'POST') {
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const fingerprint = pathname.split('/')[5];
+      const body = await readJsonBody(request);
+      const routeStatus = normalizeRouteStatus(body.routeStatus);
+      const routeReason = normalizeRouteReason(body.routeReason);
+      const routeConfidence = normalizeRouteConfidence(body.routeConfidence);
+      await env.DB.prepare(
+        `UPDATE playtest_finding_routes
+         SET route_status = ?,
+             route_reason = ?,
+             route_confidence = ?,
+             routed_at = CASE WHEN ? = 'unrouted' THEN routed_at ELSE datetime('now') END,
+             updated_at = datetime('now')
+         WHERE fingerprint = ?`
+      ).bind(routeStatus, routeReason || null, routeConfidence, routeStatus, fingerprint).run();
+      const row = await env.DB.prepare(`SELECT * FROM playtest_finding_routes WHERE fingerprint = ?`).bind(fingerprint).first();
+      if (!row) return jsonResponse(404, { error: 'finding_not_found', fingerprint });
+      return jsonResponse(200, { ok: true, finding: mapFindingRouteRow(row) });
+    }
+
+    // Attach or replace linked issue/PR refs
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/refs$/) && request.method === 'POST') {
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const fingerprint = pathname.split('/')[5];
+      const body = await readJsonBody(request);
+      const issueRefs = normalizeRefs(body.issueRefs);
+      const prRefs = normalizeRefs(body.prRefs);
+      await env.DB.prepare(
+        `UPDATE playtest_finding_routes
+         SET issue_refs = ?, pr_refs = ?, updated_at = datetime('now')
+         WHERE fingerprint = ?`
+      ).bind(JSON.stringify(issueRefs), JSON.stringify(prRefs), fingerprint).run();
+      const row = await env.DB.prepare(`SELECT * FROM playtest_finding_routes WHERE fingerprint = ?`).bind(fingerprint).first();
+      if (!row) return jsonResponse(404, { error: 'finding_not_found', fingerprint });
+      return jsonResponse(200, { ok: true, finding: mapFindingRouteRow(row) });
+    }
+
+    // Retry/reopen route flow
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/reopen$/) && request.method === 'POST') {
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const fingerprint = pathname.split('/')[5];
+      await env.DB.prepare(
+        `UPDATE playtest_finding_routes
+         SET route_status = 'unrouted',
+             route_reason = NULL,
+             route_confidence = NULL,
+             reopened_at = datetime('now'),
+             last_retry_at = datetime('now'),
+             retry_count = COALESCE(retry_count, 0) + 1,
+             updated_at = datetime('now')
+         WHERE fingerprint = ?`
+      ).bind(fingerprint).run();
+      const row = await env.DB.prepare(`SELECT * FROM playtest_finding_routes WHERE fingerprint = ?`).bind(fingerprint).first();
+      if (!row) return jsonResponse(404, { error: 'finding_not_found', fingerprint });
+      return jsonResponse(200, { ok: true, finding: mapFindingRouteRow(row) });
+    }
+
+    // Store human override state
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/override$/) && request.method === 'POST') {
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const fingerprint = pathname.split('/')[5];
+      const body = await readJsonBody(request);
+      const overrideState = {
+        applied: coerceBoolean(body.applied ?? true),
+        reason: normalizeRouteReason(body.reason),
+        by: normalizeLedgerString(body.by || body.reviewer || 'human'),
+        at: normalizeTimestamp(body.at) || new Date().toISOString(),
+      };
+      await env.DB.prepare(
+        `UPDATE playtest_finding_routes
+         SET human_override_state = ?,
+             updated_at = datetime('now')
+         WHERE fingerprint = ?`
+      ).bind(JSON.stringify(overrideState), fingerprint).run();
+      const row = await env.DB.prepare(`SELECT * FROM playtest_finding_routes WHERE fingerprint = ?`).bind(fingerprint).first();
+      if (!row) return jsonResponse(404, { error: 'finding_not_found', fingerprint });
+      return jsonResponse(200, { ok: true, finding: mapFindingRouteRow(row) });
     }
 
     return jsonResponse(404, { error: 'not_found', pathname });
