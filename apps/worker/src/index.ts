@@ -2578,6 +2578,133 @@ async function handleRequest(request: Request): Promise<Response> {
       });
     }
 
+    // Build (and optionally create) a GitHub issue draft from playtest evidence.
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/promote-issue-draft$/) && request.method === 'POST') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+
+      const sessionRow = await env.DB.prepare(
+        `SELECT * FROM playtest_sessions WHERE session_id = ?`
+      ).bind(sessionId).first();
+      if (!sessionRow) return jsonResponse(404, { error: 'session_not_found', sessionId });
+
+      const body = await readJsonBody(request);
+      const owner = body.owner || 'erniesg';
+      const repo = body.repo || 'tong';
+      const createIssue = Boolean(body.createIssue);
+      const issueTitle = body.title || `playtest: ${sessionId} feedback needs triage`;
+      const publicBase = env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai';
+
+      const [annotationsObj, stateLogObj, analysisObj] = await Promise.all([
+        env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/annotations.json`),
+        env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/state-log.json`),
+        env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/analysis.json`),
+      ]);
+
+      const annotationsRaw = annotationsObj ? await annotationsObj.text() : '[]';
+      let annotations: any[] = [];
+      try {
+        const parsed = JSON.parse(annotationsRaw);
+        annotations = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.annotations) ? parsed.annotations : []);
+      } catch {
+        annotations = [];
+      }
+      const commentAnnotations = annotations.filter((ann) => ann?.type === 'comment');
+      const topComments = commentAnnotations.slice(0, 6);
+      const stateLogUrl = stateLogObj ? `${publicBase}/playtest/${sessionId}/state-log.json` : null;
+      const analysisUrl = analysisObj ? `${publicBase}/playtest/${sessionId}/analysis.json` : null;
+
+      const bodyLines = [
+        '## Summary',
+        body.summary || `Promoted from playtest session \`${sessionId}\`.`,
+        '',
+        '## Session Context',
+        `- Session ID: \`${sessionId}\``,
+        `- City: \`${(sessionRow as any).city || 'unknown'}\``,
+        `- Scene type: \`${(sessionRow as any).scene_type || 'unknown'}\``,
+        `- Language: \`${(sessionRow as any).language || 'unknown'}\``,
+        `- Location: \`${(sessionRow as any).location_id || 'unknown'}\``,
+        '',
+        '## Artifacts',
+        `- Recording: ${publicBase}/playtest/${sessionId}/recording.webm`,
+        `- Annotations: ${publicBase}/playtest/${sessionId}/annotations.json`,
+        `- Screenshot base: ${publicBase}/playtest/${sessionId}/screenshots/`,
+        stateLogUrl ? `- State log: ${stateLogUrl}` : '- State log: not uploaded',
+        `- Filmstrip manifest: ${publicBase}/playtest/${sessionId}/filmstrip/manifest.json`,
+        analysisUrl ? `- Analysis: ${analysisUrl}` : '- Analysis: not uploaded',
+        '',
+        '## Key annotations',
+        ...(topComments.length > 0
+          ? topComments.map((ann) => {
+              const shot = ann.screenshotUrl || `${publicBase}/playtest/${sessionId}/screenshots/${ann.id}.png`;
+              const clarification = ann.clarification
+                ? ` | clarification: ${ann.clarification.selectedOptionLabel || ann.clarification.selectedOptionId || 'other'}${ann.clarification.otherText ? ` (${ann.clarification.otherText})` : ''}`
+                : '';
+              return `- [t=${ann.timestamp ?? '?'}s] ${ann.text || '(no comment text)'}${clarification} | screenshot: ${shot}`;
+            })
+          : ['- No comment annotations uploaded.']),
+        '',
+        '## Expected vs actual',
+        `- Expected: ${body.expected || 'Behavior remains understandable/actionable from player perspective.'}`,
+        `- Actual: ${body.actual || 'Playtest annotation(s) indicate confusion or mismatch that needs follow-up.'}`,
+        '',
+        '## Suggested acceptance checks',
+        '- [ ] Reproduce with the linked playtest artifacts.',
+        '- [ ] Verify contract/assertion paths for the affected endpoint(s).',
+        '- [ ] Confirm the issue is resolved with the same session evidence.',
+      ];
+      const issueBody = bodyLines.join('\n');
+
+      let createdIssueUrl: string | null = null;
+      if (createIssue && env.GITHUB_TOKEN) {
+        const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+            Accept: 'application/vnd.github+json',
+            'User-Agent': 'tong-playtest-promoter',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: issueTitle,
+            body: issueBody,
+          }),
+        });
+        if (!resp.ok) {
+          const errorText = await resp.text();
+          return jsonResponse(502, { error: 'github_issue_create_failed', status: resp.status, details: errorText });
+        }
+        const payload = await resp.json<any>();
+        createdIssueUrl = payload.html_url || null;
+      }
+
+      const draft = {
+        generatedAt: new Date().toISOString(),
+        sessionId,
+        repository: `${owner}/${repo}`,
+        title: issueTitle,
+        body: issueBody,
+        createdIssueUrl,
+      };
+      const draftKey = `playtest/${sessionId}/issue-draft.json`;
+      await env.TONG_RUNS_BUCKET.put(draftKey, JSON.stringify(draft, null, 2), {
+        httpMetadata: { contentType: 'application/json' },
+      });
+
+      return jsonResponse(200, {
+        ok: true,
+        sessionId,
+        title: issueTitle,
+        repository: `${owner}/${repo}`,
+        draftKey,
+        draftUrl: `${publicBase}/${draftKey}`,
+        issueBody,
+        createdIssueUrl,
+      });
+    }
+
     return jsonResponse(404, { error: 'not_found', pathname });
   } catch (error) {
     return jsonResponse(500, {

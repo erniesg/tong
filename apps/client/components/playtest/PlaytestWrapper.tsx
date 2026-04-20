@@ -2,8 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PlaytestOverlay, type Annotation } from './PlaytestOverlay';
+import { sessionLogger } from '@/lib/debug/session-logger';
 
 const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+
+type ClarifyResponse =
+  | { status: 'CLEAR'; confidence?: number; rationale?: string }
+  | {
+      status: 'FOLLOW_UP';
+      confidence?: number;
+      rationale?: string;
+      followUp: {
+        question: string;
+        options: Array<{ id: string; label: string }>;
+        allowOther: boolean;
+      };
+    };
 
 /**
  * Wraps game content and conditionally mounts the PlaytestOverlay
@@ -13,6 +27,7 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [sessionConfig, setSessionConfig] = useState<Record<string, unknown> | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,7 +35,10 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
       const raw = sessionStorage.getItem('tong_playtest_session');
       if (raw) {
         const data = JSON.parse(raw);
-        if (data.sessionId) setSessionId(data.sessionId);
+        if (data.sessionId) {
+          setSessionId(data.sessionId);
+          setSessionConfig(data);
+        }
       }
     } catch {
       // Not a playtest session
@@ -71,8 +89,10 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
   );
 
   const handleClarification = useCallback(
-    async (comment: Annotation): Promise<string | null> => {
+    async (comment: Annotation) => {
       try {
+        const stateLog = sessionLogger.getCurrent();
+        const tail = stateLog?.entries?.slice(-6) ?? [];
         const res = await fetch('/api/ai/playtest-clarify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -80,44 +100,32 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
             comment: comment.text,
             timestamp: comment.timestamp,
             sessionId,
+            sessionMetadata: sessionConfig
+              ? {
+                  city: sessionConfig.city,
+                  sceneType: sessionConfig.sceneType,
+                  language: sessionConfig.language,
+                  locationId: sessionConfig.locationId,
+                  hangoutId: sessionConfig.hangoutId,
+                }
+              : undefined,
+            sceneContext: sessionConfig
+              ? `${sessionConfig.city || 'unknown-city'} / ${sessionConfig.sceneType || 'unknown-scene'}`
+              : undefined,
+            screenshotUrl: comment.screenshotUrl,
+            stateLogExcerpt: tail,
           }),
         });
 
         if (!res.ok) return null;
-
-        // Read the streaming response as text
-        const reader = res.body?.getReader();
-        if (!reader) return null;
-
-        let text = '';
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          text += decoder.decode(value, { stream: true });
-        }
-
-        // Parse Vercel AI SDK data stream format — extract text chunks
-        const lines = text.split('\n').filter(Boolean);
-        let reply = '';
-        for (const line of lines) {
-          // Vercel AI SDK streams as "0:text\n" format
-          if (line.startsWith('0:')) {
-            try {
-              reply += JSON.parse(line.slice(2));
-            } catch {
-              reply += line.slice(2);
-            }
-          }
-        }
-
-        if (!reply || reply.trim() === 'CLEAR') return null;
-        return reply.trim();
+        const payload = (await res.json()) as ClarifyResponse;
+        if (payload.status !== 'FOLLOW_UP') return null;
+        return payload.followUp;
       } catch {
         return null;
       }
     },
-    [sessionId],
+    [sessionConfig, sessionId],
   );
 
   const isActive = Boolean(sessionId) && !submitted && !uploading;
