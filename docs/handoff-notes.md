@@ -1,4 +1,12 @@
 
+## 2026-04-21 (Issue 241 playtest orchestrator intent)
+- Date: 2026-04-21
+- Branch/worktree: `codex/issue-241-playtest-orchestrator` + `/Users/erniesg/code/erniesg/tong-241-pr` (qa-platform + infra-deploy protected-path follow-on stacked on issue `#240`)
+- Intent:
+  - Add the GitHub-side playtest orchestrator that consumes the `#240` Worker findings ledger and chooses `skip | update_issue | new_issue | direct_pr | human_review`.
+  - Keep the route heuristics conservative: direct PR only for single-lane, non-protected, remotely provable findings.
+  - Reuse the existing `codex-headless-pr.yml` PR engine and persist route reason/confidence back into the ledger.
+
 ## 2026-04-21 (Issue 240 Worker ledger intent)
 - Date: 2026-04-21
 - Branch/worktree: `codex/issue-240-worker-findings-ledger` + `/Users/erniesg/code/erniesg/tong-240-pr` (server-api implementation crossing into `apps/worker/**` and additive `packages/contracts/fixtures/**`)

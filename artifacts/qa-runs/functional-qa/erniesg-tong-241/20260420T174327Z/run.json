@@ -1,0 +1,107 @@
+{
+  "schema_version": "1",
+  "run_id": "functional-qa-validate-issue-20260420T174327Z-erniesg-tong-241",
+  "suite": "functional-qa",
+  "mode": "validate-issue",
+  "target": {
+    "raw": "erniesg/tong#241",
+    "slug": "erniesg-tong-241"
+  },
+  "issue_ref": "erniesg/tong#241",
+  "project_fields": {},
+  "classification": {
+    "issue_class": "data-contract-api",
+    "signals": [
+      "api"
+    ],
+    "reason": "Matched 1 keyword signal(s) at priority 110."
+  },
+  "evidence_plan": {
+    "required": [
+      "contract-assertions",
+      "network-trace"
+    ],
+    "optional": [],
+    "requires_ui_capture": false
+  },
+  "validation_policy": {
+    "issue_class": "data-contract-api",
+    "execution_mode": "safe-unattended",
+    "fix_allowed": true,
+    "requires_direct_issue_evidence": false,
+    "direct_evidence": [],
+    "ui_acceptance_required": false,
+    "ui_acceptance_checks": [],
+    "required_runtime_modes_for_fixed": [],
+    "requires_live_model_for_fixed": false,
+    "human_review_required": false,
+    "stop_conditions": []
+  },
+  "portability_preflight": {
+    "status": "portable",
+    "portable": true,
+    "blocking": false,
+    "summary": "Portable from repo state plus documented setup.",
+    "blockers": [],
+    "warnings": [],
+    "project_portable_context": null,
+    "detected_local_paths": [],
+    "detected_private_references": [],
+    "detected_local_only_keywords": [],
+    "game_issue": false,
+    "route_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "proof_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "remote_dependencies_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "checkpoint_context": {
+      "present": true,
+      "source": "inferred",
+      "value": "not required"
+    }
+  },
+  "functional": {
+    "verdict": "fixed",
+    "repro_status": "not-reproduced",
+    "fix_status": "fixed",
+    "issue_accuracy": "accurate"
+  },
+  "confidence": 0.76,
+  "environment": {
+    "generated_at": "2026-04-20T17:43:27.411013+00:00",
+    "repo_root": "/Users/erniesg/code/erniesg/tong-241-pr",
+    "repo_name_with_owner": "erniesg/tong",
+    "branch": "codex/issue-241-playtest-orchestrator",
+    "commit": "85addce4fc54dd09a8424d432675d758b7ba22cb",
+    "default_branch": "main",
+    "smoke_commands": [
+      {
+        "label": "demo-smoke",
+        "command": "npm run demo:smoke",
+        "notes": "Validates core fixture and contract integrity before UI-specific validation."
+      }
+    ]
+  },
+  "artifacts": {
+    "run_json": "artifacts/qa-runs/functional-qa/erniesg-tong-241/20260420T174327Z/run.json",
+    "summary_md": "artifacts/qa-runs/functional-qa/erniesg-tong-241/20260420T174327Z/summary.md",
+    "steps_md": "artifacts/qa-runs/functional-qa/erniesg-tong-241/20260420T174327Z/steps.md",
+    "evidence_json": "artifacts/qa-runs/functional-qa/erniesg-tong-241/20260420T174327Z/evidence.json",
+    "publish_md": "artifacts/qa-runs/functional-qa/erniesg-tong-241/20260420T174327Z/publish.md",
+    "screenshots_dir": "artifacts/qa-runs/functional-qa/erniesg-tong-241/20260420T174327Z/screenshots",
+    "logs_dir": "artifacts/qa-runs/functional-qa/erniesg-tong-241/20260420T174327Z/logs"
+  },
+  "published_comment_url": null,
+  "previous_run_id": null,
+  "repo_notes": []
+}
