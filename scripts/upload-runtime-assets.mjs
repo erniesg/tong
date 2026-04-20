@@ -2,6 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { relativeToRepo, resolveRepoRoot } from "./lib/qa_evidence.mjs";
 
@@ -12,6 +13,8 @@ const DEFAULT_CANONICAL_MANIFEST_KEY = "runtime-assets/canonical-asset-manifest.
 const DEFAULT_PUBLIC_VERIFY_ATTEMPTS = 4;
 const DEFAULT_PUBLIC_VERIFY_DELAY_MS = 1500;
 const DEFAULT_PUBLIC_VERIFY_TIMEOUT_MS = 15000;
+const DEFAULT_CACHE_FILE = ".r2-upload-cache.json";
+const DEFAULT_UPLOAD_CONCURRENCY = 6;
 
 const CLIENT_PUBLIC_ASSETS_DIR = "apps/client/public/assets";
 const RUNTIME_MANIFEST_PATH = "assets/manifest/runtime-asset-manifest.json";
@@ -29,6 +32,8 @@ function parseArgs(argv) {
     runtimeManifestKey: process.env.TONG_RUNTIME_ASSET_MANIFEST_KEY || DEFAULT_RUNTIME_MANIFEST_KEY,
     skipPublicVerification: false,
     wranglerConfig: "apps/client/wrangler.toml",
+    cacheFile: DEFAULT_CACHE_FILE,
+    uploadConcurrency: DEFAULT_UPLOAD_CONCURRENCY,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -53,6 +58,10 @@ function parseArgs(argv) {
       args.dryRun = true;
     } else if (arg === "--skip-public-verification") {
       args.skipPublicVerification = true;
+    } else if (arg === "--cache-file") {
+      args.cacheFile = argv[++i];
+    } else if (arg === "--upload-concurrency") {
+      args.uploadConcurrency = Number(argv[++i]);
     } else if (arg === "--help" || arg === "-h") {
       printHelp();
       process.exit(0);
@@ -79,6 +88,9 @@ function parseArgs(argv) {
   if (!Number.isFinite(args.publicVerifyTimeoutMs) || args.publicVerifyTimeoutMs < 1) {
     throw new Error("`--public-verify-timeout-ms` must be a positive number.");
   }
+  if (!Number.isFinite(args.uploadConcurrency) || args.uploadConcurrency < 1) {
+    throw new Error("`--upload-concurrency` must be a positive number.");
+  }
 
   return args;
 }
@@ -98,6 +110,8 @@ Options:
   --public-verify-attempts <n>   Retry count for public URL checks (default: ${DEFAULT_PUBLIC_VERIFY_ATTEMPTS})
   --public-verify-delay-ms <n>   Delay between public URL checks (default: ${DEFAULT_PUBLIC_VERIFY_DELAY_MS})
   --public-verify-timeout-ms <n> Timeout per public URL check (default: ${DEFAULT_PUBLIC_VERIFY_TIMEOUT_MS})
+  --cache-file <path>            JSON cache with uploaded file hashes (default: ${DEFAULT_CACHE_FILE})
+  --upload-concurrency <n>       Number of parallel uploads (default: ${DEFAULT_UPLOAD_CONCURRENCY})
   --skip-public-verification     Skip GET-based public URL checks after upload
   --dry-run                      Print the planned upload set without uploading
 `);
@@ -164,6 +178,34 @@ function walkFiles(dirPath, files = []) {
   return files;
 }
 
+function md5ForFile(filePath) {
+  const hash = crypto.createHash("md5");
+  hash.update(fs.readFileSync(filePath));
+  return hash.digest("hex");
+}
+
+function loadUploadCache(cachePath) {
+  if (!fs.existsSync(cachePath)) {
+    return { version: 1, hashes: {} };
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(cachePath, "utf8"));
+    if (parsed && typeof parsed === "object" && parsed.hashes && typeof parsed.hashes === "object") {
+      return { version: 1, hashes: parsed.hashes };
+    }
+  } catch {
+    // Ignore malformed cache and start fresh.
+  }
+
+  return { version: 1, hashes: {} };
+}
+
+function saveUploadCache(cachePath, cache) {
+  const output = JSON.stringify(cache, null, 2);
+  fs.writeFileSync(cachePath, `${output}\n`, "utf8");
+}
+
 function toPublicUrl(publicBaseUrl, key) {
   const normalizedBase = publicBaseUrl.replace(/\/+$/, "");
   const encodedKey = key
@@ -194,6 +236,7 @@ function buildAssetUploadSet(repoRoot, options) {
     absolutePath,
     bucketKey: path.posix.join("assets", path.relative(clientAssetsRoot, absolutePath).split(path.sep).join("/")),
     contentType: contentTypeFor(absolutePath),
+    hash: md5ForFile(absolutePath),
   }));
 
   uploads.push({
@@ -202,6 +245,7 @@ function buildAssetUploadSet(repoRoot, options) {
     absolutePath: runtimeManifestPath,
     bucketKey: options.runtimeManifestKey,
     contentType: "application/json; charset=utf-8",
+    hash: md5ForFile(runtimeManifestPath),
   });
 
   uploads.push({
@@ -210,9 +254,26 @@ function buildAssetUploadSet(repoRoot, options) {
     absolutePath: canonicalManifestPath,
     bucketKey: options.canonicalManifestKey,
     contentType: "application/json; charset=utf-8",
+    hash: md5ForFile(canonicalManifestPath),
   });
 
   return uploads;
+}
+
+function selectUploads(uploads, cache) {
+  const selected = [];
+  const skipped = [];
+
+  for (const upload of uploads) {
+    const previousHash = cache.hashes[upload.bucketKey];
+    if (previousHash && previousHash === upload.hash) {
+      skipped.push(upload);
+      continue;
+    }
+    selected.push(upload);
+  }
+
+  return { selected, skipped };
 }
 
 function wranglerArgs(configPath, objectPath, filePath, contentType) {
@@ -233,8 +294,7 @@ function wranglerArgs(configPath, objectPath, filePath, contentType) {
   ];
 }
 
-function uploadFile(configPath, bucket, upload, dryRun) {
-  if (dryRun) return;
+function uploadFile(configPath, bucket, upload) {
   runCommand("npm", [
     "--prefix",
     "apps/client",
@@ -243,6 +303,23 @@ function uploadFile(configPath, bucket, upload, dryRun) {
     "--",
     ...wranglerArgs(configPath, `${bucket}/${upload.bucketKey}`, upload.absolutePath, upload.contentType),
   ]);
+}
+
+async function uploadFiles(configPath, bucket, uploads, concurrency, dryRun) {
+  if (dryRun || uploads.length === 0) return;
+
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < uploads.length) {
+      const upload = uploads[cursor];
+      cursor += 1;
+      uploadFile(configPath, bucket, upload);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, uploads.length) }, () => worker());
+  await Promise.all(workers);
 }
 
 function sleep(ms) {
@@ -315,18 +392,38 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const repoRoot = resolveRepoRoot();
   const wranglerConfigPath = path.resolve(repoRoot, options.wranglerConfig);
+  const cachePath = path.resolve(repoRoot, options.cacheFile);
+  const cache = loadUploadCache(cachePath);
   const uploads = buildAssetUploadSet(repoRoot, options);
+  const { selected, skipped } = selectUploads(uploads, cache);
 
-  for (const upload of uploads) {
-    uploadFile(wranglerConfigPath, options.bucket, upload, options.dryRun);
+  if (options.dryRun) {
+    for (const upload of selected) {
+      console.log(`UPLOAD ${upload.bucketKey} (${upload.hash})`);
+    }
+    for (const upload of skipped) {
+      console.log(`SKIP   ${upload.bucketKey} (${upload.hash})`);
+    }
   }
 
-  await verifyUploads(uploads, options);
+  await uploadFiles(wranglerConfigPath, options.bucket, selected, options.uploadConcurrency, options.dryRun);
+  await verifyUploads(selected, options);
+
+  if (!options.dryRun) {
+    for (const upload of selected) {
+      cache.hashes[upload.bucketKey] = upload.hash;
+    }
+    saveUploadCache(cachePath, cache);
+  }
 
   console.log(`Bucket: ${options.bucket}`);
   console.log(`Public base URL: ${options.publicBaseUrl}`);
   console.log(`Wrangler config: ${relativeToRepo(repoRoot, wranglerConfigPath)}`);
   console.log(`Files prepared: ${uploads.length}`);
+  console.log(`Files uploaded: ${selected.length}`);
+  console.log(`Files skipped (hash match): ${skipped.length}`);
+  console.log(`Upload cache: ${relativeToRepo(repoRoot, cachePath)}`);
+  console.log(`Upload concurrency: ${options.uploadConcurrency}`);
   console.log(`Dry run: ${options.dryRun ? "yes" : "no"}`);
 }
 
