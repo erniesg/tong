@@ -11,7 +11,7 @@
     "ds:audit": "node scripts/build-design-system.mjs --audit",
     "ds:push": "node scripts/build-design-system.mjs --push",
     "cf:build": "npx opennextjs-cloudflare build",
-    "cf:deploy": "npx opennextjs-cloudflare build && npx wrangler deploy --keep-vars --domain tong.berlayar.ai"
+    "cf:deploy": "npx opennextjs-cloudflare build && node scripts/prune-open-next-assets.mjs && npx wrangler deploy --keep-vars --domain tong.berlayar.ai"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.24",
