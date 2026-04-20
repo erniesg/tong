@@ -53,5 +53,91 @@
   "notes": [
     "This validation intentionally avoided posting a real validator comment or dispatching a real retry against the live repository.",
     "Final merge and production approval remain human-gated even when the validator workflow passes."
-  ]
+  ],
+  "reviewer_proof": {
+    "classification": "not-evaluated",
+    "status": "not-evaluated",
+    "surface": "",
+    "route": "",
+    "scenario_seed": "",
+    "proof_moment": "",
+    "deterministic_setup": {
+      "used": false,
+      "description": ""
+    },
+    "artifacts": {
+      "proof_video": "",
+      "gif_preview": ""
+    },
+    "ordered_frames": {
+      "pre_action": "",
+      "ready_state": "",
+      "immediate_post_input": "",
+      "later_transition": "",
+      "stable_post_action": ""
+    },
+    "cue_timestamps_ms": {},
+    "checks": {
+      "real_route": false,
+      "semantically_coherent": false,
+      "ready_state_legible": false,
+      "input_visible": false,
+      "pre_action_hold": false,
+      "stable_post_action": false,
+      "reviewer_visible_media": false
+    },
+    "notes": [],
+    "missing_requirements": []
+  },
+  "portability": {
+    "status": "portable",
+    "portable": true,
+    "blocking": false,
+    "summary": "Portable from repo state plus documented setup.",
+    "blockers": [],
+    "warnings": [],
+    "project_portable_context": null,
+    "detected_local_paths": [],
+    "detected_private_references": [],
+    "detected_local_only_keywords": [],
+    "game_issue": false,
+    "route_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "proof_context": {
+      "present": true,
+      "source": "issue body",
+      "value": "reviewer-visible"
+    },
+    "remote_dependencies_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "checkpoint_context": {
+      "present": true,
+      "source": "inferred",
+      "value": "not required"
+    },
+    "notes": [
+      "The validation pass stayed read-only against the live repository and did not post or retry on the target PR."
+    ]
+  },
+  "validation": {
+    "direct_issue_evidence_complete": true,
+    "ui_acceptance_complete": true,
+    "runtime_modes_exercised": [
+      "node-tests",
+      "github-readonly",
+      "validator-dry-run"
+    ],
+    "live_model_confirmed": true,
+    "human_review_completed": true,
+    "missing_requirements": [],
+    "notes": [
+      "Live validation used the GitHub API in read-only mode and confirmed the validator surfaces a human-review-required outcome."
+    ]
+  }
 }

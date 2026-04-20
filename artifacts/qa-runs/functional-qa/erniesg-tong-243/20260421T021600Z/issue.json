@@ -1,0 +1,14 @@
+{
+  "repo": "erniesg/tong",
+  "number": 243,
+  "issue_ref": "erniesg/tong#243",
+  "title": "PR validator/reviewer loop with human final approval gate",
+  "body": "Part of: #165\nDepends on: #239, #241\nRelated workflows: `.github/workflows/qa-publish.yml`, `.github/workflows/codex-headless-pr.yml`\n\n## Summary\nAgent-created PRs need a consistent validator/reviewer loop before they are treated as fixed, merged, or promoted.\n\nWe already have the underlying validation and proof-publish pieces, but not a dedicated PR-triggered control-plane issue that ties them together with explicit human final approval.\n\n## Red\n- PRs created by agents are not yet guaranteed to run a consistent `validate -> verify-fix -> publish proof -> review summary` loop.\n- Human final approval for merge/production is described, but not tracked as a first-class delivery issue.\n- There is no clear retry cap/escalation rule when machine or human review blocks a PR.\n\n## Green\nEvery agent-created PR gets validation, reviewer-visible proof, structured machine review output, and an explicit human final approval gate before merge or production promotion.\n\n## Scope\n- Add a PR-triggered validator workflow for agent-created PRs\n- Re-run the relevant validation/`--verify-fix` path using issue/finding metadata\n- Publish reviewer-visible evidence using the trusted QA publish flow when applicable\n- Leave a structured PR summary with:\n  - verdict\n  - confidence\n  - unresolved risks\n  - proof links\n- Optionally run a second-model review pass, or document the fallback if human-only review remains the gate\n- Define retry/escalation policy:\n  - max automated rework cycles\n  - when to stop and route to a human\n- Keep merge/prod approval human-gated even when validator passes\n\n## Acceptance Criteria\n- [ ] Agent-created PRs automatically run validation and attach or link reviewer-visible evidence\n- [ ] The PR gets a structured validator/reviewer summary with verdict and confidence\n- [ ] Blocking machine or human feedback can requeue implementation only within an explicit retry cap\n- [ ] Ambiguous/non-portable PRs are routed to a human instead of looping indefinitely\n- [ ] Merge to `main` and promotion to production still require explicit human approval\n- [ ] The final approval boundary is documented in repo-visible workflow/docs, not just implied by convention\n\n## Suggested Lane\n`qa-platform` with `infra-deploy` review\n\n## Suggested Execution Mode\n`safe-unattended` for validation; human approval required for merge and production promotion\n",
+  "html_url": "https://github.com/erniesg/tong/issues/243",
+  "labels": [
+    "enhancement"
+  ],
+  "created_at": "2026-04-20T13:16:10Z",
+  "updated_at": "2026-04-20T13:16:58Z",
+  "project_fields": {}
+}
