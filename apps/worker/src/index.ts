@@ -150,6 +150,29 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type, x-demo-password',
 };
 
+const TRANSLATE_LANG_CODES: Record<string, string> = {
+  en: 'en',
+  zh: 'zh-CN',
+  ja: 'ja',
+  ko: 'ko',
+};
+
+async function translateViaGoogle(text: string, from: string, to: string): Promise<string> {
+  const sl = TRANSLATE_LANG_CODES[from] ?? from;
+  const tl = TRANSLATE_LANG_CODES[to] ?? to;
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Google Translate returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  const segments = data?.[0] as Array<[string, ...unknown[]]> | undefined;
+  if (!segments) return text;
+  return segments.map((segment) => segment[0]).join('');
+}
+
 const DEFAULT_USER_ID = 'demo-user-1';
 const PROFICIENCY_RANK: Record<string, number> = {
   none: 0,
@@ -1742,6 +1765,35 @@ async function handleRequest(request: Request): Promise<Response> {
     if (pathname === '/health') {
       const env = (globalThis as any).__env;
       return jsonResponse(200, { ok: true, service: 'tong-api', hasResend: !!env?.RESEND_API_KEY, hasDB: !!env?.DB });
+    }
+
+    if (pathname === '/api/ai/translate' && request.method === 'POST') {
+      const body = await readJsonBody(request);
+      const words = Array.isArray(body.words) ? body.words : [];
+      const from = typeof body.from === 'string' ? body.from : '';
+      const to = typeof body.to === 'string' ? body.to : '';
+
+      if (!words.length || !from || !to) {
+        return jsonResponse(400, { error: 'Missing words, from, or to' });
+      }
+
+      const batch = words.slice(0, 30).map((word) => String(word));
+
+      try {
+        const joined = batch.join('\n');
+        const translated = await translateViaGoogle(joined, from, to);
+        const parts = translated.split('\n');
+
+        const translations: Record<string, string> = {};
+        for (let i = 0; i < batch.length; i++) {
+          translations[batch[i]] = (parts[i] ?? '').trim();
+        }
+
+        return jsonResponse(200, { translations });
+      } catch (error) {
+        console.error('[worker:translate] error', error);
+        return jsonResponse(200, { translations: {} });
+      }
     }
 
     if (pathname === '/api/v1/captions/enriched' && request.method === 'GET') {
