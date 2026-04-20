@@ -10,19 +10,41 @@ interface WebtoonBubbleProps extends WebtoonBubbleSpec {
 const SPEAKER_LABELS: Record<string, string> = {
   ayi: '方阿姨',
   dingman: '丁漫',
-  shoucheng: '守成',
+  shoucheng: '瞿守成',
   narrator: '旁白',
 };
+
+const CJK_RE = /[\u3400-\u9fff]/;
+
+interface RubySegment {
+  char: string;
+  py?: string;
+}
+
+function buildSegments(zh: string, py?: string[]): RubySegment[] {
+  const segments: RubySegment[] = [];
+  let pyIndex = 0;
+  for (const ch of zh) {
+    if (CJK_RE.test(ch) && py?.[pyIndex]) {
+      segments.push({ char: ch, py: py[pyIndex] });
+      pyIndex++;
+    } else {
+      segments.push({ char: ch });
+    }
+  }
+  return segments;
+}
 
 export function WebtoonBubble({ zh, py, en, speaker, position, reveal = { kind: 'free' } }: WebtoonBubbleProps) {
   const [open, setOpen] = useState(false);
   const [unlocked, setUnlocked] = useState(reveal.kind === 'free');
   const speakerLabel = SPEAKER_LABELS[speaker] ?? speaker;
-  const hasTooltip = Boolean(py || en);
+  const hasHelp = Boolean((py && py.length) || en);
+  const segments = buildSegments(zh, py);
 
-  const handleClick = (event: React.MouseEvent) => {
+  const handleTap = (event: React.MouseEvent) => {
     event.stopPropagation();
-    if (!hasTooltip) return;
+    if (!hasHelp) return;
     if (!unlocked) {
       setUnlocked(true);
       setOpen(true);
@@ -32,34 +54,48 @@ export function WebtoonBubble({ zh, py, en, speaker, position, reveal = { kind: 
   };
 
   return (
-    <div
-      className={`webtoon-bubble webtoon-bubble--${position}`}
-      role="note"
-      aria-label={`${speakerLabel}: ${zh}`}
-      onClick={(event) => event.stopPropagation()}
+    <button
+      type="button"
+      className={`wt-bubble wt-bubble--${position} wt-bubble--${speaker}${open ? ' is-open' : ''}`}
+      aria-label={`${speakerLabel}: ${zh}${hasHelp ? '. Tap for help.' : ''}`}
+      aria-expanded={hasHelp ? open : undefined}
+      onClick={handleTap}
     >
-      <button
-        type="button"
-        className="webtoon-bubble__button"
-        aria-expanded={hasTooltip ? open : undefined}
-        onClick={handleClick}
-      >
-        <span className="webtoon-bubble__speaker">{speakerLabel}</span>
-        <span className="webtoon-bubble__text">{zh}</span>
-        {!unlocked && reveal.kind === 'credits' && (
-          <span className="webtoon-bubble__lock">🔒 {reveal.cost} credits</span>
-        )}
-        {!unlocked && reveal.kind === 'gamePass' && (
-          <span className="webtoon-bubble__lock">🔒 Game Pass</span>
-        )}
-      </button>
-
-      {hasTooltip && unlocked && open && (
-        <div className="webtoon-bubble__tooltip" role="dialog">
-          {py ? <p className="webtoon-bubble__tooltip-line webtoon-bubble__tooltip-line--py">{py}</p> : null}
-          {en ? <p className="webtoon-bubble__tooltip-line webtoon-bubble__tooltip-line--en">{en}</p> : null}
-        </div>
+      {/* Closed state — just the line, no speaker label. Identity lives in
+          the border-color accent. Help hint is a subtle pill. */}
+      {!open && (
+        <>
+          <span className="wt-bubble__text">{zh}</span>
+          {hasHelp && (
+            <span className="wt-bubble__hint" aria-hidden="true">
+              {!unlocked && reveal.kind === 'credits' && `Tap · ${reveal.cost} credits`}
+              {!unlocked && reveal.kind === 'gamePass' && 'Tap · Game Pass'}
+              {unlocked && 'Tap for help'}
+            </span>
+          )}
+        </>
       )}
-    </div>
+
+      {/* Expanded — speaker name appears, plus ruby-aligned pinyin + english. */}
+      {open && unlocked && (
+        <span className="wt-bubble__help">
+          <span className="wt-bubble__speaker">{speakerLabel}</span>
+          <span className="wt-bubble__ruby">
+            {segments.map((seg, i) => (
+              seg.py ? (
+                <ruby key={i} className="wt-ruby">
+                  {seg.char}
+                  <rt>{seg.py}</rt>
+                </ruby>
+              ) : (
+                <span key={i} className="wt-ruby-plain">{seg.char}</span>
+              )
+            ))}
+          </span>
+          {en && <span className="wt-bubble__en">{en}</span>}
+          <span className="wt-bubble__hint wt-bubble__hint--open" aria-hidden="true">Tap to hide</span>
+        </span>
+      )}
+    </button>
   );
 }

@@ -65,19 +65,33 @@ export type WebtoonSpec = {
 export type WebtoonPanel = {
   id: string;
   imageUrl: string;
-  widthType: "full-bleed" | "full-width" | "inset-wide" | "inset-narrow" | "floating";
+  // Three width tiers. No "inset-narrow"/"floating" anymore — those were
+  // fake cards. A real inset sits on the theme-surface, not on a black void.
+  widthType: "full-bleed" | "full-width" | "inset";
   heightClass: "short" | "standard" | "tall" | "ultra-tall";
   aspectRatio: string;
   shotType: string;
-  gapBefore: { px: number; color: string };
+  // Gap before this panel. Either a solid color OR a vertical linear gradient
+  // carrying mood from the previous panel into this one.
+  gapBefore: WebtoonGap;
   isThumbStop?: boolean;
   bubble?: WebtoonBubble;
   transition: "fade" | "cut" | "darken";
 };
 
+export type WebtoonGap = {
+  px: number;
+  color?: string;
+  /** [fromColor, toColor] vertical gradient — fades across the gap. */
+  gradient?: [string, string];
+};
+
 export type WebtoonBubble = {
+  /** Original Chinese with punctuation. */
   zh: string;
-  py?: string;
+  /** Pinyin as one syllable per non-punctuation character, for ruby alignment. */
+  py?: string[];
+  /** English translation shown below the ruby-annotated hanzi when the bubble is expanded. */
   en?: string;
   speaker: string;
   position: "top" | "bottom" | "center-bottom";
