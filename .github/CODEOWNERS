@@ -1,0 +1,19 @@
+# Human review boundary for GitHub control-plane, deploy, and shared-contract changes.
+
+.github/workflows/ @erniesg
+.github/CODEOWNERS @erniesg
+.github/ISSUE_TEMPLATE/ @erniesg
+.agents/skills/ @erniesg
+docs/github-agent-bootstrap.md @erniesg
+docs/agent-native-project-setup.md @erniesg
+docs/codex-cloud-issue-runbook.md @erniesg
+docs/deployment-track.md @erniesg
+docs/qa-evidence-uploads.md @erniesg
+scripts/deploy*.sh @erniesg
+scripts/release*.sh @erniesg
+scripts/healthcheck*.sh @erniesg
+.env.example @erniesg
+apps/client/.env.example @erniesg
+apps/client/wrangler.toml @erniesg
+apps/worker/wrangler.toml @erniesg
+packages/contracts/ @erniesg

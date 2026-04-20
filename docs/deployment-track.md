@@ -6,6 +6,17 @@ Keep deployment independent from demo implementation so the same client can run:
 2. local server,
 3. remote server.
 
+## GitHub control-plane boundary (`#239`)
+
+Use `docs/github-agent-bootstrap.md` as the source of truth for the GitHub-side deployment gate.
+
+1. `staging` and `production` are the required GitHub environments for automated deploy and promotion work.
+2. Any production promotion job must target `environment: production` and wait for a human reviewer before it starts.
+3. Personal Codex or Claude subscriptions are never deployment credentials. Unattended deploy or publish jobs must use GitHub secrets or environment-scoped service credentials.
+4. Unattended agents may prepare deploy PRs or staging proposals, but they must not self-merge protected deploy-path changes or self-promote production.
+5. Keep the shared production app hostname on `tong.berlayar.ai`.
+6. Keep the shared staging app hostname on `tong-stg.berlayar.ai`.
+
 ## Frontend hosting
 1. Fastest path: Vercel for Next.js web build.
 2. Parallel path: Cloudflare Pages/Workers using equivalent client build output.

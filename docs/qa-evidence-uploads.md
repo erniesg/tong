@@ -2,6 +2,8 @@
 
 Use two layers for QA evidence:
 
+Use `docs/github-agent-bootstrap.md` as the source of truth for the unattended GitHub credential boundary, workflow permissions, and human approval points around trusted publish jobs.
+
 1. `artifacts/qa-runs/`
    - Local workspace staging area for run manifests, summaries, browser playbooks, logs, screenshots, and intermediate media.
    - Gitignored by design.

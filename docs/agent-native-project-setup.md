@@ -1,10 +1,14 @@
 # Agent-Native Project Setup
 
 Use one Tong GitHub Project as the control plane for humans and agents.
+Use [github-agent-bootstrap.md](github-agent-bootstrap.md) as the source of truth for the GitHub-side bootstrap contract: environments, unattended credentials, workflow permissions, protected paths, and human approval gates.
 
 Keep GitHub's built-in `Status` field as the coarse board state (`Todo`, `In Progress`, `Done`) and use `Workflow Status` for the richer execution states below.
 
 See `docs/project-roadmap.md` for the actual unlock order and dependency-driven sequencing.
+
+Issue `#239` establishes the GitHub-side contract that makes this Project metadata operational for autonomous routing.
+Follow-on issues `#240`-`#243` should reference that bootstrap doc instead of restating environment or approval assumptions.
 
 ## Project fields
 
@@ -82,6 +86,38 @@ Do not require:
 2. Unpublished laptop-only media.
 3. Private repo snippets without copied summary/context.
 4. Acceptance criteria that depend on implied visual knowledge.
+
+## Minimum queue contract
+
+An issue is not ready for unattended routing until these Project fields are populated:
+
+1. `Workflow Status`
+2. `Priority`
+3. `Type`
+4. `Initiative`
+5. `Lane`
+6. `Execution Mode`
+7. `Portable Context`
+8. `Proof Required`
+9. `Scenario Seed`
+10. `Checkpoint Needed`
+11. `Remote Dependencies`
+12. `Agent Ready`
+13. `Blocked By`
+
+This is the minimum Project and queue-field contract referenced by `#239`.
+
+## Manual GitHub Project setup
+
+These steps happen in the GitHub UI, not in the repo:
+
+1. Open the Tong control-plane Project (`erniesg` Project `#3`).
+2. Create or confirm every field listed in `Project fields` above, using the exact field names and option values documented here.
+3. Add the minimum queue-contract fields to the default table or board views that humans and agents will use for triage.
+4. Populate the minimum queue contract on an issue before sending it to unattended planning or cloud execution.
+5. For control-plane or protected-path work, set `Execution Mode = validate-and-propose-only` unless a human explicitly approves supervised implementation.
+
+If these fields do not exist or are left empty, queue planners fall back to repo heuristics instead of the intended GitHub control-plane state. Do not treat that fallback as a bootstrapped autonomous-routing setup.
 
 ## Deterministic fallbacks
 

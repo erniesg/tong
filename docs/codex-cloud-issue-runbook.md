@@ -3,7 +3,10 @@
 Use this runbook when you want Codex cloud tasks to work Tong issues through the Codex environment UI and create PRs from task results instead of local worktrees.
 
 Use `docs/agent-native-project-setup.md` as the source of truth for Project fields, lane ownership, and issue portability rules.
+Use `docs/github-agent-bootstrap.md` as the source of truth for GitHub environments, unattended credentials, workflow permissions, protected paths, and human approval boundaries.
 Use `docs/qa-evidence-uploads.md` as the source of truth for the boundary between local QA bundles and published reviewer-visible proof.
+
+Issue `#239` is the bootstrap prerequisite for the autonomous orchestration follow-ons `#240`-`#243`.
 
 ## What Codex cloud can and cannot see
 
@@ -21,15 +24,17 @@ Practical rule:
 
 ## Prerequisites outside the repo
 
-1. The Codex GitHub integration must be installed for this repository.
-2. The Codex cloud environment should run the Tong setup commands:
+1. Complete the manual operator checklist in `docs/github-agent-bootstrap.md`.
+2. The Codex GitHub integration must be installed for this repository.
+3. Interactive Codex or Claude subscriptions are for manual/cloud-task use only. Any unattended GitHub Actions run must use GitHub secrets such as `OPENAI_API_KEY` instead of a maintainer's personal login state.
+4. The Codex cloud environment should run the Tong setup commands:
    - `npm --prefix apps/server install`
    - `npm --prefix apps/client install`
    - `npm run demo:smoke`
    - `npm run ingest:mock`
-3. The shell that will publish reviewer-visible QA evidence should pass:
+5. The shell that will publish reviewer-visible QA evidence should pass:
    - `npm run qa:preflight-reviewer-proof`
-4. If cloud tasks need large or private assets later, move them to shared storage first. Until then, leave asset-dependent issues as local-only.
+6. If cloud tasks need large or private assets later, move them to shared storage first. Until then, leave asset-dependent issues as local-only.
 
 ## Repo entry points
 

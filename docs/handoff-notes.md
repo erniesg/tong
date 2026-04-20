@@ -1,4 +1,17 @@
 
+## 2026-04-20 (Issue 239 GitHub control-plane bootstrap intent)
+- Date: 2026-04-20
+- Branch/worktree: `work` (shared root workspace crossing into `docs/**` and `.github/**` owned by `qa-platform` and `infra-deploy`)
+- Intent:
+  - Add the canonical repo-visible GitHub control-plane bootstrap contract for autonomous agent orchestration without implementing the orchestrator itself.
+  - Wire the existing project-setup, cloud-runbook, and deployment docs to that single contract so follow-on issues `#240`-`#243` can reference one source of truth.
+  - Codify protected-path ownership in repo-visible metadata so branch protection can enforce the human approval boundary on control-plane changes.
+- Follow-on dispatch guidance:
+  - `#240` is the first implementation follow-on and owns the server-side findings ledger contract.
+  - `#241` starts only after `#240` lands because it consumes that ledger and crosses into protected GitHub workflow/control-plane paths.
+  - `#242` and `#243` both stay human-reviewed even when developed in Codex cloud because they are `qa-platform` control-plane work touching protected workflow/approval surfaces.
+  - Generate cloud handoff prompts for `#240`-`#243` now, but do not treat them as a fully parallel unattended batch; the safe launch order is `#240 -> #241 -> (#242, #243)` with human judgment on any same-lane overlap.
+
 ## 2026-03-21 (Issues 63/64 combined Tokyo+Shanghai starter-pack intent)
 - Date: 2026-03-21
 - Branch/worktree: `work` (combined city-pack run crossing creative-assets/runtime-assets/server-api shared files)
