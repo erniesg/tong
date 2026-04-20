@@ -18,9 +18,23 @@ export interface Annotation {
   category?: string;
   severity?: number;
   screenshot?: string;
+  screenshotUrl?: string;
   x?: number;
   y?: number;
+  clarification?: {
+    question: string;
+    selectedOptionId?: string;
+    selectedOptionLabel?: string;
+    otherText?: string;
+    allowOther?: boolean;
+  };
 }
+
+type ClarificationFollowUp = {
+  question: string;
+  options: Array<{ id: string; label: string }>;
+  allowOther: boolean;
+};
 
 interface Props {
   targetRef: React.RefObject<HTMLElement | null>;
@@ -32,7 +46,7 @@ interface Props {
     stateLog: unknown;
     filmstrip: { ts: number; blob: Blob }[];
   }) => void;
-  onRequestClarification?: (comment: Annotation) => Promise<string | null>;
+  onRequestClarification?: (comment: Annotation) => Promise<ClarificationFollowUp | null>;
 }
 
 type Tool = 'none' | 'draw' | 'comment';
@@ -60,7 +74,8 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const [panelView, setPanelView] = useState<PanelView>('tools');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-  const [aiReply, setAiReply] = useState<string | null>(null);
+  const [aiFollowUp, setAiFollowUp] = useState<ClarificationFollowUp | null>(null);
+  const [aiSelectedOptionId, setAiSelectedOptionId] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInputText, setAiInputText] = useState('');
 
@@ -551,7 +566,8 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       try {
         const reply = await onRequestClarification(annotation);
         if (reply) {
-          setAiReply(reply);
+          setAiFollowUp(reply);
+          setAiSelectedOptionId(null);
           setAiInputText('');
           setPanelView('ai-reply');
           return;
@@ -566,19 +582,33 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const handleAiResponse = useCallback(() => {
     setAnnotations((prev) => {
       const updated = [...prev];
-      const last = updated[updated.length - 1];
+      const lastIndex = updated.length - 1;
+      const last = updated[lastIndex];
       if (last?.type === 'comment') {
-        const text = aiInputText.trim()
-          ? `${last.text}\n---\nAI: ${aiReply}\nUser: ${aiInputText.trim()}`
+        const selectedOption = aiFollowUp?.options.find((opt) => opt.id === aiSelectedOptionId);
+        const text = aiSelectedOptionId || aiInputText.trim()
+          ? `${last.text}\n---\nClarification: ${aiFollowUp?.question || 'follow-up'}\nSelected: ${selectedOption?.label || 'Other'}${aiInputText.trim() ? `\nOther: ${aiInputText.trim()}` : ''}`
           : last.text;
-        updated[updated.length - 1] = { ...last, text, clarified: true };
+        updated[lastIndex] = {
+          ...last,
+          text,
+          clarified: true,
+          clarification: {
+            question: aiFollowUp?.question || '',
+            selectedOptionId: aiSelectedOptionId ?? undefined,
+            selectedOptionLabel: selectedOption?.label,
+            otherText: aiInputText.trim() || undefined,
+            allowOther: aiFollowUp?.allowOther,
+          },
+        };
       }
       return updated;
     });
-    setAiReply(null);
+    setAiFollowUp(null);
+    setAiSelectedOptionId(null);
     setAiInputText('');
     setPanelView('tools');
-  }, [aiReply, aiInputText]);
+  }, [aiFollowUp, aiInputText, aiSelectedOptionId]);
 
   /* ── Edit/delete ────────────────────────────────────────────────── */
 
@@ -813,7 +843,13 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
               {panelView !== 'tools' && (
                 <button
                   className="playtest-pill-back"
-                  onClick={() => { setPanelView('tools'); setAiReply(null); setCommentText(''); }}
+                  onClick={() => {
+                    setPanelView('tools');
+                    setAiFollowUp(null);
+                    setAiSelectedOptionId(null);
+                    setAiInputText('');
+                    setCommentText('');
+                  }}
                   aria-label="Back"
                 >
                   &#8249;
@@ -924,20 +960,43 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
             )}
 
             {/* ── AI reply view ────────────────────────────────────── */}
-            {panelView === 'ai-reply' && aiReply && (
+            {panelView === 'ai-reply' && aiFollowUp && (
               <div className="playtest-pill-comment">
-                <p className="playtest-ai-text">{aiReply}</p>
-                <input
-                  className="playtest-comment-input"
-                  style={{ minHeight: 'auto', padding: '8px' }}
-                  placeholder="Reply to AI (optional)..."
-                  value={aiInputText}
-                  onChange={(e) => setAiInputText(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAiResponse(); }}
-                  autoFocus
-                />
+                <p className="playtest-ai-text">{aiFollowUp.question}</p>
+                <div className="playtest-pill-row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                  {aiFollowUp.options.map((opt) => (
+                    <button
+                      key={opt.id}
+                      className={`playtest-btn-small ${aiSelectedOptionId === opt.id ? '' : 'playtest-btn-muted'}`}
+                      onClick={() => setAiSelectedOptionId(opt.id)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {aiFollowUp.allowOther && (
+                  <input
+                    className="playtest-comment-input"
+                    style={{ minHeight: 'auto', padding: '8px' }}
+                    placeholder="Other (optional)..."
+                    value={aiInputText}
+                    onChange={(e) => setAiInputText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleAiResponse(); }}
+                    autoFocus
+                  />
+                )}
                 <div className="playtest-pill-row" style={{ justifyContent: 'flex-end' }}>
-                  <button className="playtest-btn-small playtest-btn-muted" onClick={handleAiResponse}>Skip</button>
+                  <button
+                    className="playtest-btn-small playtest-btn-muted"
+                    onClick={() => {
+                      setAiFollowUp(null);
+                      setAiSelectedOptionId(null);
+                      setAiInputText('');
+                      setPanelView('tools');
+                    }}
+                  >
+                    Skip
+                  </button>
                   <button className="playtest-btn-small" onClick={handleAiResponse}>Save</button>
                 </div>
               </div>
