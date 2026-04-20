@@ -69,5 +69,91 @@
   "notes": [
     "The GitHub digest comment update was validated in dry-run only to avoid mutating the live queue issue during local verification.",
     "Protected-path control remains human-reviewed because the new workflow lives under .github/workflows/."
-  ]
+  ],
+  "reviewer_proof": {
+    "classification": "not-evaluated",
+    "status": "not-evaluated",
+    "surface": "",
+    "route": "",
+    "scenario_seed": "",
+    "proof_moment": "",
+    "deterministic_setup": {
+      "used": false,
+      "description": ""
+    },
+    "artifacts": {
+      "proof_video": "",
+      "gif_preview": ""
+    },
+    "ordered_frames": {
+      "pre_action": "",
+      "ready_state": "",
+      "immediate_post_input": "",
+      "later_transition": "",
+      "stable_post_action": ""
+    },
+    "cue_timestamps_ms": {},
+    "checks": {
+      "real_route": false,
+      "semantically_coherent": false,
+      "ready_state_legible": false,
+      "input_visible": false,
+      "pre_action_hold": false,
+      "stable_post_action": false,
+      "reviewer_visible_media": false
+    },
+    "notes": [],
+    "missing_requirements": []
+  },
+  "portability": {
+    "status": "portable",
+    "portable": true,
+    "blocking": false,
+    "summary": "Portable from repo state plus documented setup.",
+    "blockers": [],
+    "warnings": [],
+    "project_portable_context": null,
+    "detected_local_paths": [],
+    "detected_private_references": [],
+    "detected_local_only_keywords": [],
+    "game_issue": false,
+    "route_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "proof_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "remote_dependencies_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "checkpoint_context": {
+      "present": true,
+      "source": "inferred",
+      "value": "not required"
+    },
+    "notes": [
+      "No reviewer-facing UI proof was required because #242 is a queue/control-plane issue validated through Worker and script traces."
+    ]
+  },
+  "validation": {
+    "direct_issue_evidence_complete": true,
+    "ui_acceptance_complete": true,
+    "runtime_modes_exercised": [
+      "worker-local",
+      "http-contract",
+      "queue-dry-run"
+    ],
+    "live_model_confirmed": true,
+    "human_review_completed": true,
+    "missing_requirements": [],
+    "notes": [
+      "The queue digest stayed in dry-run while real hold actions were persisted to the local ledger."
+    ]
+  }
 }
