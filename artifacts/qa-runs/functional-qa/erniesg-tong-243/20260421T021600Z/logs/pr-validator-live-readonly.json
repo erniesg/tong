@@ -1,16 +1,16 @@
 {
   "action": "validate",
   "canRetry": false,
-  "confidence": 0.57,
+  "confidence": 0.9,
   "context": {
-    "inferredIssueRef": "erniesg/tong#242",
+    "inferredIssueRef": "erniesg/tong#243",
     "isAgentPr": true,
-    "issueRef": "erniesg/tong#242",
+    "issueRef": "erniesg/tong#243",
     "qaPublishRequest": {
-      "issue_ref": "erniesg/tong#242",
+      "issue_ref": "erniesg/tong#243",
       "qa_recipe": "",
       "route": "",
-      "run_dir": "",
+      "run_dir": "artifacts/qa-runs/functional-qa/erniesg-tong-243/20260421T021600Z",
       "scenario_seed": "",
       "checkpoint_id": "",
       "no_auto_evidence_upload": false
@@ -21,12 +21,11 @@
       "max_retries": 2
     }
   },
-  "prNumber": 249,
+  "prNumber": 250,
   "retryDispatched": false,
-  "summaryCommentUrl": "",
+  "summaryCommentUrl": "https://github.com/erniesg/tong/pull/250#issuecomment-4283251802",
   "unresolvedRisks": [
-    "Trusted QA Publish skipped because this PR does not expose CI-rerunnable QA metadata or publishable proof.",
     "Merge to main and production promotion still require explicit human approval."
   ],
-  "verdict": "human_review_required"
+  "verdict": "validated"
 }

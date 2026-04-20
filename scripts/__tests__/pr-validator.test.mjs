@@ -83,8 +83,9 @@ test("evaluates validated PRs from trusted QA publish state", () => {
       { name: "publish", status: "COMPLETED", conclusion: "SUCCESS", html_url: "https://github.com/erniesg/tong/actions/runs/1/job/2" },
     ],
     context,
-    issueComments: [
-      { body: "Added uploaded verification evidence for `erniesg/tong#243`.", html_url: "https://example.com/evidence", user: { login: "github-actions[bot]" } },
+    issueComments: [],
+    linkedIssueComments: [
+      { body: "# Functional QA Update\n\nEvidence ready.", html_url: "https://example.com/evidence", user: { login: "github-actions[bot]" } },
     ],
     pr,
     reviewComments: [],
@@ -94,6 +95,7 @@ test("evaluates validated PRs from trusted QA publish state", () => {
   assert.equal(evaluation.verdict, "validated");
   assert.equal(evaluation.canRetry, false);
   assert.equal(evaluation.evidenceLinks.length, 1);
+  assert.equal(evaluation.evidenceLinks[0].source, "issue");
 });
 
 test("retry prompt includes actionable feedback and retry budget", () => {

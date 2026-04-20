@@ -94,6 +94,7 @@ export async function fetchPrValidatorContext({ repo, prNumber, token, fetchImpl
     url: `https://api.github.com/repos/${repo}/pulls/${prNumber}`,
     fetchImpl,
   });
+  const context = resolvePrValidatorContext({ pr, repo });
   const issueComments = await githubRequest({
     token,
     url: `https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100`,
@@ -114,10 +115,23 @@ export async function fetchPrValidatorContext({ repo, prNumber, token, fetchImpl
     url: `https://api.github.com/repos/${repo}/commits/${pr.head.sha}/check-runs`,
     fetchImpl,
   });
+  let linkedIssueComments = [];
+  if (context.issueRef) {
+    const [issueRepo, issueNumber] = String(context.issueRef).split("#");
+    if (issueRepo && issueNumber && `${issueRepo}#${issueNumber}` !== `${repo}#${prNumber}`) {
+      const linkedComments = await githubRequest({
+        token,
+        url: `https://api.github.com/repos/${issueRepo}/issues/${issueNumber}/comments?per_page=100`,
+        fetchImpl,
+      });
+      linkedIssueComments = Array.isArray(linkedComments) ? linkedComments : [];
+    }
+  }
 
   return {
     checkRuns: Array.isArray(checks?.check_runs) ? checks.check_runs : [],
     issueComments: Array.isArray(issueComments) ? issueComments : [],
+    linkedIssueComments,
     pr,
     reviewComments: Array.isArray(reviewComments) ? reviewComments : [],
     reviews: Array.isArray(reviews) ? reviews : [],
@@ -181,19 +195,46 @@ export function collectActionableFeedback({ issueComments = [], reviewComments =
   return feedback.slice(0, 10);
 }
 
-function findEvidenceCommentLinks({ issueComments = [], repo, prNumber }) {
-  return issueComments
-    .filter((comment) => String(comment.body || "").includes("Added uploaded verification evidence"))
-    .map((comment) => ({
-      body: trimText(comment.body, 500),
-      url: comment.html_url || `https://github.com/${repo}/pull/${prNumber}#issuecomment-${comment.id}`,
-    }));
+function qaEvidenceCommentType(comment) {
+  const body = String(comment?.body || "");
+  if (body.includes("Added uploaded verification evidence")) {
+    return "uploaded-evidence";
+  }
+  if (body.includes("# Functional QA Update")) {
+    return "qa-update";
+  }
+  return "";
+}
+
+function findEvidenceCommentLinks({ issueComments = [], linkedIssueComments = [], repo, prNumber }) {
+  const sources = [
+    ...(issueComments || []).map((comment) => ({ comment, source: "pr" })),
+    ...(linkedIssueComments || []).map((comment) => ({ comment, source: "issue" })),
+  ];
+
+  return sources
+    .map(({ comment, source }) => {
+      const type = qaEvidenceCommentType(comment);
+      if (!type) {
+        return null;
+      }
+      return {
+        body: trimText(comment.body, 500),
+        source,
+        type,
+        url:
+          comment.html_url
+          || `https://github.com/${repo}/pull/${prNumber}#issuecomment-${comment.id}`,
+      };
+    })
+    .filter(Boolean);
 }
 
 export function evaluatePrValidatorState({
   checkRuns = [],
   context,
   issueComments = [],
+  linkedIssueComments = [],
   pr,
   reviewComments = [],
   reviews = [],
@@ -202,6 +243,7 @@ export function evaluatePrValidatorState({
   const publishCheck = latestCheckRun(checkRuns, "publish");
   const evidenceLinks = findEvidenceCommentLinks({
     issueComments,
+    linkedIssueComments,
     repo: pr.base.repo.full_name,
     prNumber: pr.number,
   });
@@ -230,7 +272,7 @@ export function evaluatePrValidatorState({
     verdict = "validated";
     confidence = evidenceLinks.length > 0 ? 0.9 : 0.82;
     if (evidenceLinks.length === 0) {
-      unresolvedRisks.push("Trusted QA Publish succeeded, but no reviewer-visible evidence comment was found on the PR yet.");
+      unresolvedRisks.push("Trusted QA Publish succeeded, but no reviewer-visible evidence comment was found on the PR or linked issue yet.");
     }
   } else if (
     publishCheck?.conclusion?.toUpperCase() === "SKIPPED"
@@ -311,7 +353,13 @@ export function renderPrValidatorSummary({
     ? `[${evaluation.publishCheck.name}](${evaluation.publishCheck.html_url || evaluation.publishCheck.details_url}) \`${evaluation.publishCheck.conclusion || evaluation.publishCheck.status}\``
     : "`missing`";
   const proofLines = evaluation.evidenceLinks.length > 0
-    ? evaluation.evidenceLinks.map((link) => `- [QA publish evidence](${link.url})`)
+    ? evaluation.evidenceLinks.map((link) => {
+      const label =
+        link.source === "issue"
+          ? (link.type === "uploaded-evidence" ? "Linked issue uploaded evidence" : "Linked issue QA update")
+          : (link.type === "uploaded-evidence" ? "PR uploaded evidence" : "PR QA update");
+      return `- [${label}](${link.url})`;
+    })
     : ["- No reviewer-visible QA publish comment found yet."];
 
   return [

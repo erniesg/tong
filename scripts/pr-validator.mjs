@@ -74,6 +74,7 @@ async function main() {
     checkRuns: fetched.checkRuns,
     context,
     issueComments: fetched.issueComments,
+    linkedIssueComments: fetched.linkedIssueComments,
     pr: fetched.pr,
     reviewComments: fetched.reviewComments,
     reviews: fetched.reviews,
