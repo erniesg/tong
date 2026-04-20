@@ -1,12 +1,12 @@
 import sharp from 'sharp';
 
 /**
- * Replicate API client — Image gen (Nano Banana 2) + Video gen (Veo 3.1 Fast) + Music gen (Lyria 2).
+ * Replicate API client — Image gen (Nano Banana 2) + Video gen (Seedance 2.0) + Music gen (Lyria 2).
  *
  * Services:
- *   1. Image gen (Nano Banana 2)  – google/nano-banana-2, sync via Prefer: wait
- *   2. Video gen (Veo 3.1 Fast)   – google/veo-3.1-fast, async with webhook
- *   3. Music gen (Lyria 2)        – google/lyria-2, sync via Prefer: wait
+ *   1. Image gen (Nano Banana 2)      – google/nano-banana-2, sync via Prefer: wait
+ *   2. Video gen (Seedance 2.0/fast)  – bytedance/seedance-2.0 or bytedance/seedance-2.0-fast, async with webhook
+ *   3. Music gen (Lyria 2)            – google/lyria-2, sync via Prefer: wait
  *
  * Webhook support:
  *   Set REPLICATE_WEBHOOK_BASE_URL to your public server URL (e.g. https://xyz.ngrok.io)
@@ -22,6 +22,11 @@ import sharp from 'sharp';
 const REPLICATE_API_BASE = 'https://api.replicate.com/v1';
 const REPLICATE_API_TOKEN = () => process.env.REPLICATE_API_TOKEN || '';
 const REPLICATE_WEBHOOK_BASE_URL = () => process.env.REPLICATE_WEBHOOK_BASE_URL || '';
+const DEFAULT_REPLICATE_VIDEO_MODEL = 'bytedance/seedance-2.0';
+const REPLICATE_VIDEO_MODELS = [
+  DEFAULT_REPLICATE_VIDEO_MODEL,
+  'bytedance/seedance-2.0-fast',
+];
 
 // In-memory prediction store for tracking
 const predictions = new Map();
@@ -193,18 +198,25 @@ export async function replicateGenerateImage(args) {
   };
 }
 
-// ── 2. Video Generation (Veo 3.1 Fast) ──────────────────────────────
+// ── 2. Video Generation (Seedance 2.0) ──────────────────────────────
 
 /**
- * Create a video using google/veo-3.1-fast via Replicate.
- * Async — returns prediction ID for polling (video takes ~60-120s).
+ * Create a video using ByteDance Seedance 2.0 via Replicate.
+ * Async — returns prediction ID for polling.
  *
  * @param {object} args
- * @param {string}  args.prompt        - Text description of the video
- * @param {string}  [args.image]       - Optional input image URL for img2vid
- * @param {number}  [args.duration]    - 4|6|8 seconds (default 8)
- * @param {string}  [args.resolution]  - '720p'|'1080p' (default '720p')
- * @param {string}  [args.aspect_ratio] - '16:9'|'9:16' (default '16:9')
+ * @param {string}  args.prompt            - Text description of the video. Put spoken dialogue in double quotes for synced voice output.
+ * @param {string}  [args.model]           - 'bytedance/seedance-2.0' (default) | 'bytedance/seedance-2.0-fast'
+ * @param {string}  [args.image]           - Optional first-frame image URL for image-to-video generation
+ * @param {string}  [args.last_frame_image] - Optional last-frame image URL. Requires `image` and cannot be combined with `reference_images`.
+ * @param {string[]} [args.reference_images] - Optional reference image URLs (up to 9). Cannot be combined with first/last-frame images.
+ * @param {string[]} [args.reference_videos] - Optional reference video URLs (up to 3, total duration max 15s)
+ * @param {string[]} [args.reference_audios] - Optional reference audio URLs (up to 3, total duration max 15s). Requires at least one reference image or video.
+ * @param {number}  [args.duration]        - -1..15 seconds (default 5). `-1` lets the model pick the duration.
+ * @param {string}  [args.resolution]      - '480p'|'720p' (default '720p')
+ * @param {string}  [args.aspect_ratio]    - '16:9'|'4:3'|'1:1'|'3:4'|'9:16'|'21:9'|'9:21'|'adaptive'
+ * @param {boolean} [args.generate_audio]  - Generate native synced audio (default true)
+ * @param {number}  [args.seed]            - Optional random seed for reproducibility
  * @returns {Promise<object>} Prediction object with id for polling
  */
 export async function replicateGenerateVideo(args) {
@@ -213,11 +225,23 @@ export async function replicateGenerateVideo(args) {
   };
 
   if (args.image) input.image = args.image;
+  if (args.last_frame_image) input.last_frame_image = args.last_frame_image;
+  if (Array.isArray(args.reference_images) && args.reference_images.length > 0) {
+    input.reference_images = args.reference_images;
+  }
+  if (Array.isArray(args.reference_videos) && args.reference_videos.length > 0) {
+    input.reference_videos = args.reference_videos;
+  }
+  if (Array.isArray(args.reference_audios) && args.reference_audios.length > 0) {
+    input.reference_audios = args.reference_audios;
+  }
   if (args.duration != null) input.duration = args.duration;
   if (args.resolution) input.resolution = args.resolution;
   if (args.aspect_ratio) input.aspect_ratio = args.aspect_ratio;
+  if (args.generate_audio != null) input.generate_audio = args.generate_audio;
+  if (args.seed != null) input.seed = args.seed;
 
-  return createPrediction({ model: 'google/veo-3.1-fast', input });
+  return createPrediction({ model: args.model || DEFAULT_REPLICATE_VIDEO_MODEL, input });
 }
 
 // ── 3. Music Generation (Lyria 2) ────────────────────────────────────
@@ -669,10 +693,12 @@ export function getCharacterPresets() {
 // ── Status ───────────────────────────────────────────────────────────
 
 /**
- * Check if Replicate API token is configured.
+ * Check if Replicate API token is configured and report the Seedance video defaults.
  */
 export function getReplicateStatus() {
   return {
     apiTokenConfigured: Boolean(REPLICATE_API_TOKEN()),
+    defaultVideoModel: DEFAULT_REPLICATE_VIDEO_MODEL,
+    supportedVideoModels: REPLICATE_VIDEO_MODELS,
   };
 }

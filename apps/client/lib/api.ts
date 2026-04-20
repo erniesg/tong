@@ -1049,10 +1049,17 @@ export function replicateImageGenerate(args: {
 
 export function replicateVideoCreate(args: {
   prompt: string;
+  model?: 'bytedance/seedance-2.0' | 'bytedance/seedance-2.0-fast';
   image?: string;
-  duration?: 4 | 6 | 8;
-  resolution?: '720p' | '1080p';
-  aspect_ratio?: '16:9' | '9:16';
+  last_frame_image?: string;
+  reference_images?: string[];
+  reference_videos?: string[];
+  reference_audios?: string[];
+  duration?: number;
+  resolution?: '480p' | '720p';
+  aspect_ratio?: '16:9' | '4:3' | '1:1' | '3:4' | '9:16' | '21:9' | '9:21' | 'adaptive';
+  generate_audio?: boolean;
+  seed?: number;
 }) {
   return invokeTool<ReplicatePrediction>('replicate.video.create', args);
 }
@@ -1107,7 +1114,11 @@ export function replicateCharacterPresets() {
 }
 
 export function replicateStatus() {
-  return invokeTool<{ apiTokenConfigured: boolean }>('replicate.status');
+  return invokeTool<{
+    apiTokenConfigured: boolean;
+    defaultVideoModel: 'bytedance/seedance-2.0';
+    supportedVideoModels: Array<'bytedance/seedance-2.0' | 'bytedance/seedance-2.0-fast'>;
+  }>('replicate.status');
 }
 
 export function volcStatus() {

@@ -728,7 +728,7 @@ const AGENT_TOOL_DEFINITIONS = [
   // ── Replicate tools ───────────────────────────────────────────
   {
     name: 'replicate.status',
-    description: 'Check if Replicate API token is configured.',
+    description: 'Check if Replicate API token is configured and report the default/supported Seedance video models.',
     method: 'POST',
     path: '/api/v1/tools/invoke',
     args: {},
@@ -749,15 +749,22 @@ const AGENT_TOOL_DEFINITIONS = [
   },
   {
     name: 'replicate.video.create',
-    description: 'Create a video using Google Veo 3.1 Fast via Replicate. Async (~60-120s) – returns prediction ID for polling.',
+    description: 'Create a video using ByteDance Seedance 2.0 via Replicate. Defaults to `bytedance/seedance-2.0`; set `model` to `bytedance/seedance-2.0-fast` for quicker iteration. Supports text-to-video, first-frame image-to-video, first+last frame control, multimodal image/video/audio references, and native synced audio. Put spoken dialogue in double quotes in the prompt. Async – returns prediction ID for polling.',
     method: 'POST',
     path: '/api/v1/tools/invoke',
     args: {
-      prompt: 'string (required) – description of the video to generate',
-      image: 'string (optional) – input image URL for img2vid',
-      duration: '4|6|8 (optional, default 8) – video length in seconds',
-      resolution: '720p|1080p (optional, default 720p)',
-      aspect_ratio: '16:9|9:16 (optional, default 16:9)',
+      prompt: 'string (required) – description of the video to generate. Put spoken dialogue in double quotes for synced voice output',
+      model: 'bytedance/seedance-2.0|bytedance/seedance-2.0-fast (optional, default bytedance/seedance-2.0)',
+      image: 'string (optional) – first-frame image URL for image-to-video generation',
+      last_frame_image: 'string (optional) – last-frame image URL. Requires `image` and cannot be combined with `reference_images`',
+      reference_images: 'string[] (optional) – up to 9 image URLs for character/style/scene references. Cannot be combined with first/last-frame images',
+      reference_videos: 'string[] (optional) – up to 3 video URLs for motion/style/editing reference (total ref duration max 15s)',
+      reference_audios: 'string[] (optional) – up to 3 audio URLs for rhythm/lip-sync reference (total ref duration max 15s). Requires at least one reference image or video',
+      duration: 'number -1..15 (optional, default 5) – video length in seconds. Use -1 for intelligent duration',
+      resolution: '480p|720p (optional, default 720p)',
+      aspect_ratio: '16:9|4:3|1:1|3:4|9:16|21:9|9:21|adaptive (optional, default 16:9)',
+      generate_audio: 'boolean (optional, default true) – generate synced dialogue/sfx/music natively with the video',
+      seed: 'number (optional) – for reproducibility',
     },
   },
   {

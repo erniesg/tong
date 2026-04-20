@@ -26,6 +26,13 @@ Unblock demo validation early while API/plumbing is still in progress.
 - Canonical key contract published at `assets/manifest/canonical-asset-manifest.json` with runtime projection at `assets/manifest/runtime-asset-manifest.json`.
 4. Compression and naming conventions for mobile-first loading.
 
+## Creative Video Tooling
+- Repo-native Replicate video generation should target ByteDance Seedance 2.0 by default via `replicate.video.create`, with `bytedance/seedance-2.0-fast` reserved for quicker iteration passes.
+- Supported Seedance inputs: prompt, first-frame `image`, optional `last_frame_image`, up to 9 `reference_images`, up to 3 `reference_videos`, and up to 3 `reference_audios`.
+- Supported Seedance output controls: `duration` 5s default or `-1..15`, `resolution` `480p|720p`, `aspect_ratio` `16:9|4:3|1:1|3:4|9:16|21:9|9:21|adaptive`, and native `generate_audio` enabled by default.
+- Prompting constraints: put spoken dialogue in double quotes for synced voice output; `reference_audios` require at least one image or video reference; first/last-frame mode cannot be combined with `reference_images`.
+- This contract follows Replicate’s official Seedance 2.0 model page: `https://replicate.com/bytedance/seedance-2.0`.
+
 ## Integration contract
 1. Mock UI must consume fixtures under `packages/contracts/fixtures`.
 2. Asset references should use stable IDs, not hardcoded file names.
