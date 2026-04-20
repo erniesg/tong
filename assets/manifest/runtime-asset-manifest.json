@@ -179,7 +179,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.seoul.food_street.jiho.portrait.default",
@@ -187,7 +187,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.seoul.cafe.sora.portrait.default",
@@ -195,7 +195,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.seoul.cafe.donghyun.portrait.default",
@@ -203,7 +203,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.seoul.convenience_store.eunji.portrait.default",
@@ -211,7 +211,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.seoul.convenience_store.hyunwoo.portrait.default",
@@ -219,7 +219,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.seoul.subway_hub.nari.portrait.default",
@@ -227,7 +227,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.seoul.subway_hub.taemin.portrait.default",
@@ -235,7 +235,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.seoul.practice_studio.yujin.portrait.default",
@@ -243,7 +243,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.seoul.practice_studio.seungwoo.portrait.default",
@@ -251,7 +251,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.ding-man.portrait.default",
@@ -259,7 +259,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/ding_man/ding_man.png"
+      "uri": "/assets/characters/ding_man/ding_man.webp"
     },
     {
       "key": "character.haeun.portrait.default",
@@ -267,7 +267,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.haeun.portrait.eye-front-casual",
@@ -275,7 +275,7 @@
       "usage": "runtime-sprite",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/haeun/eye_front_casual.png"
+      "uri": "/assets/characters/haeun/eye_front_casual.webp"
     },
     {
       "key": "character.haeun.scene.default",
@@ -283,7 +283,7 @@
       "usage": "scene-still",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/haeun/scene.png"
+      "uri": "/assets/characters/haeun/scene.webp"
     },
     {
       "key": "character.jin.portrait.default",
@@ -291,7 +291,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.jin.portrait.eye-front-casual",
@@ -299,7 +299,7 @@
       "usage": "runtime-sprite",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/jin/eye_front_casual.png"
+      "uri": "/assets/characters/jin/eye_front_casual.webp"
     },
     {
       "key": "character.jin.scene.default",
@@ -307,7 +307,7 @@
       "usage": "scene-still",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/jin/scene.png"
+      "uri": "/assets/characters/jin/scene.webp"
     },
     {
       "key": "character.tong.expression.neutral",
@@ -315,7 +315,7 @@
       "usage": "npc-expression",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/tong/tong_neutral.png"
+      "uri": "/assets/characters/tong/tong_neutral.webp"
     },
     {
       "key": "character.tong.expression.cheerful",
@@ -323,7 +323,7 @@
       "usage": "npc-expression",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/tong/tong_cheerful.png"
+      "uri": "/assets/characters/tong/tong_cheerful.webp"
     },
     {
       "key": "character.tong.expression.surprised",
@@ -331,7 +331,7 @@
       "usage": "npc-expression",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/tong/tong_surprised.png"
+      "uri": "/assets/characters/tong/tong_surprised.webp"
     },
     {
       "key": "character.tong.expression.proud",
@@ -339,7 +339,7 @@
       "usage": "npc-expression",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/tong/tong_proud.png"
+      "uri": "/assets/characters/tong/tong_proud.webp"
     },
     {
       "key": "character.tong.expression.love",
@@ -347,7 +347,7 @@
       "usage": "npc-expression",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/tong/tong_love.png"
+      "uri": "/assets/characters/tong/tong_love.webp"
     },
     {
       "key": "character.tong.expression.sad",
@@ -355,7 +355,7 @@
       "usage": "npc-expression",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/tong/tong_sad.png"
+      "uri": "/assets/characters/tong/tong_sad.webp"
     },
     {
       "key": "character.tong.expression.crying",
@@ -363,7 +363,7 @@
       "usage": "npc-expression",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/tong/tong_crying.png"
+      "uri": "/assets/characters/tong/tong_crying.webp"
     },
     {
       "key": "character.tong.expression.amazed",
@@ -371,7 +371,7 @@
       "usage": "npc-expression",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/tong/tong_amazed.png"
+      "uri": "/assets/characters/tong/tong_amazed.webp"
     },
     {
       "key": "character.tong.expression.excited",
@@ -379,7 +379,7 @@
       "usage": "npc-expression",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/tong/tong_excited.png"
+      "uri": "/assets/characters/tong/tong_excited.webp"
     },
     {
       "key": "character.tong.expression.thinking",
@@ -387,7 +387,7 @@
       "usage": "npc-expression",
       "source": "repo",
       "status": "ready",
-      "uri": "/assets/characters/tong/tong_thinking.png"
+      "uri": "/assets/characters/tong/tong_thinking.webp"
     },
     {
       "key": "cinematic.haeun.intro.3",
@@ -627,7 +627,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.tokyo.cafe.ren.portrait.default",
@@ -635,7 +635,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.tokyo.convenience_store.kaito.portrait.default",
@@ -643,7 +643,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.tokyo.convenience_store.yui.portrait.default",
@@ -651,7 +651,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.tokyo.food_street.daichi.portrait.default",
@@ -659,7 +659,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.tokyo.food_street.rin.portrait.default",
@@ -667,7 +667,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.tokyo.subway_hub.akira.portrait.default",
@@ -675,7 +675,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.tokyo.subway_hub.mei.portrait.default",
@@ -683,7 +683,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.shanghai.convenience_store.an.portrait.default",
@@ -691,7 +691,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.shanghai.convenience_store.yue.portrait.default",
@@ -699,7 +699,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.shanghai.food_street.ming.portrait.default",
@@ -707,7 +707,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.shanghai.food_street.qiao.portrait.default",
@@ -715,7 +715,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.shanghai.practice_studio.xinyi.portrait.default",
@@ -723,7 +723,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.shanghai.practice_studio.zhen.portrait.default",
@@ -731,7 +731,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "character.shanghai.subway_hub.lin.portrait.default",
@@ -739,7 +739,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/haeun/haeun.png"
+      "uri": "/assets/characters/haeun/haeun.webp"
     },
     {
       "key": "character.shanghai.subway_hub.wei.portrait.default",
@@ -747,7 +747,7 @@
       "usage": "dialogue-avatar",
       "source": "repo",
       "status": "placeholder",
-      "uri": "/assets/characters/jin/jin.png"
+      "uri": "/assets/characters/jin/jin.webp"
     },
     {
       "key": "reward.shanghai.milk_tea_shop.video_call",
