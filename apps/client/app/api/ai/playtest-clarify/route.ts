@@ -1,71 +1,122 @@
-import { streamText } from 'ai';
-import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-/**
- * Inline AI clarification for playtest annotations.
- *
- * When a user drops a comment during a playtest session, this endpoint
- * checks if the comment is clear enough to action, and if not, asks a
- * targeted follow-up question.
- *
- * Input: { comment, sceneContext, timestamp }
- * Output: streamed text — either a clarifying question or "CLEAR" if no follow-up needed.
- */
+const requestSchema = z.object({
+  comment: z.string().trim().min(1),
+  timestamp: z.number().optional(),
+  sessionId: z.string().optional(),
+  context: z.object({
+    sceneContext: z.string().optional(),
+    screenshotUrl: z.string().url().optional(),
+    stateLogExcerpt: z.string().optional(),
+    city: z.string().optional(),
+    sceneType: z.string().optional(),
+    language: z.string().optional(),
+    locationId: z.string().optional(),
+  }).optional(),
+});
 
-const SYSTEM_PROMPT = `You are a playtest facilitator for a language learning game called Tong.
-The user is playing through a scene and has dropped an annotation comment. Your job is to make sure the comment is actionable for the development team.
+type ClarifyResponse =
+  | { status: 'CLEAR'; reason: string }
+  | {
+      status: 'FOLLOW_UP';
+      reason: string;
+      followUp: {
+        question: string;
+        options: string[];
+        allowOther: true;
+      };
+    };
 
-Rules:
-- If the comment is already clear and specific, respond with exactly: CLEAR
-- If the comment is vague or could mean multiple things, ask ONE short, specific follow-up question
-- Never ask more than one question at a time
-- Keep your question under 30 words
-- Frame questions as concrete options when possible: "Was it the font size, the translation, or something else?"
-- Don't be annoying — if the user says "this is fine" or "skip", accept it
-- You are NOT teaching — you are gathering bug reports / UX feedback
+const VAGUE_MARKERS = [
+  'weird',
+  'confusing',
+  'bad',
+  'off',
+  'wrong',
+  'not good',
+  'doesnt work',
+  "doesn't work",
+  'broken',
+];
 
-Examples of vague comments that need follow-up:
-- "this is weird" → "Was it the layout, the text content, or how it responded to your tap?"
-- "confusing" → "Was the instruction unclear, or did the UI not behave as expected?"
-- "too hard" → "Was the vocabulary too advanced, or were the exercise controls unclear?"
+const SPECIFIC_MARKERS = [
+  'button',
+  'tap',
+  'tooltip',
+  'translation',
+  'font',
+  'layout',
+  'cut off',
+  'overflow',
+  'subtitles',
+  'audio',
+  'loading',
+  'crash',
+];
 
-Examples of clear comments that DON'T need follow-up:
-- "the Korean text is cut off on the right side" → CLEAR
-- "I expected tapping the character to show a translation tooltip" → CLEAR
-- "this exercise should have audio" → CLEAR`;
+function chooseOptions(comment: string, sceneHint: string): string[] {
+  const lower = comment.toLowerCase();
+  if (lower.includes('text') || lower.includes('translation') || lower.includes('subtitle')) {
+    return ['The text is hard to read', 'The translation meaning is wrong', 'The text appears in the wrong place'];
+  }
+  if (lower.includes('tap') || lower.includes('click') || lower.includes('button')) {
+    return ['Tap did not respond', 'Tap responded too slowly', 'The wrong action happened'];
+  }
+  if (sceneHint.includes('hangout')) {
+    return ['The dialogue felt unclear', 'I was unsure what action to take', 'The pacing felt off'];
+  }
+  return ['The UI layout is confusing', 'The behavior is not what I expected', 'I cannot tell what to do next'];
+}
 
-export async function POST(req: Request) {
-  const body = await req.json();
-  const { comment, sceneContext, timestamp, sessionId } = body;
+function getDecision(comment: string, context?: z.infer<typeof requestSchema>['context']): ClarifyResponse {
+  const trimmed = comment.trim();
+  const lower = trimmed.toLowerCase();
+  const hasSpecificMarker = SPECIFIC_MARKERS.some((marker) => lower.includes(marker));
+  const hasVagueMarker = VAGUE_MARKERS.some((marker) => lower.includes(marker));
+  const hasRichContext = Boolean(context?.screenshotUrl || context?.stateLogExcerpt || context?.sceneContext);
 
-  if (!comment) {
-    return new Response(JSON.stringify({ error: 'comment is required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  if ((hasSpecificMarker && trimmed.length >= 14) || (trimmed.length >= 28 && hasRichContext && !hasVagueMarker)) {
+    return {
+      status: 'CLEAR',
+      reason: hasRichContext ? 'comment-specific-with-context' : 'comment-specific',
+    };
   }
 
-  const userMessage = [
-    `Session: ${sessionId || 'unknown'}`,
-    `Timestamp: ${timestamp || 'unknown'}`,
-    sceneContext ? `Scene context: ${sceneContext}` : '',
-    `User comment: "${comment}"`,
-    '',
-    'Is this comment clear enough to action, or do you need to ask a follow-up question?',
-  ]
-    .filter(Boolean)
-    .join('\n');
+  if (!hasVagueMarker && trimmed.length >= 24) {
+    return {
+      status: 'CLEAR',
+      reason: 'long-enough-to-action',
+    };
+  }
 
-  const result = streamText({
-    model: openai('gpt-4o-mini'),
-    system: SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: userMessage }],
-    maxTokens: 100,
+  const sceneHint = [context?.sceneType, context?.sceneContext].filter(Boolean).join(' ').toLowerCase();
+  return {
+    status: 'FOLLOW_UP',
+    reason: hasVagueMarker ? 'ambiguous-feedback' : 'needs-scope',
+    followUp: {
+      question: 'Which part should we prioritize fixing first?',
+      options: chooseOptions(trimmed, sceneHint).slice(0, 3),
+      allowOther: true,
+    },
+  };
+}
+
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => null);
+  const parsed = requestSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({ error: 'invalid_payload', issues: parsed.error.issues }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const decision = getDecision(parsed.data.comment, parsed.data.context);
+  return new Response(JSON.stringify(decision), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
   });
-
-  return result.toDataStreamResponse();
 }
