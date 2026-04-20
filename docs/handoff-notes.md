@@ -1,4 +1,12 @@
 
+## 2026-04-21 (Issue 243 PR validator loop intent)
+- Date: 2026-04-21
+- Branch/worktree: `codex/issue-243-pr-validator-loop` + `/Users/erniesg/code/erniesg/tong-243-pr` (qa-platform + infra-deploy protected-path follow-on stacked on issue `#242`)
+- Intent:
+  - Add a PR-triggered validator/reviewer workflow for agent-created PRs that summarizes validation state, proof links, unresolved risks, and retry status directly on the PR.
+  - Reuse the existing trusted QA publish path for evidence generation instead of inventing a second evidence pipeline.
+  - Keep rework bounded behind an explicit retry cap and preserve human final approval as the merge and production gate.
+
 ## 2026-04-21 (Issue 242 queue visibility + override intent)
 - Date: 2026-04-21
 - Branch/worktree: `codex/issue-242-queue-override` + `/Users/erniesg/code/erniesg/tong-242-pr` (qa-platform follow-on stacked on issue `#241`, crossing into additive `apps/worker/**` read surfaces and protected `.github/workflows/**`)

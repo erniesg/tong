@@ -9,6 +9,10 @@ import {
   renderQaPublishRequestBlock,
   stripQaPublishRequestBlock,
 } from "./lib/qa_publish_request.mjs";
+import {
+  renderPrValidatorRequestBlock,
+  stripPrValidatorRequestBlock,
+} from "./lib/pr_validator_request.mjs";
 
 function fail(message) {
   console.error(message);
@@ -78,11 +82,16 @@ function main() {
   });
 
   const bodySections = [];
-  const trimmedBody = stripQaPublishRequestBlock(prBody).trim();
+  const trimmedBody = stripPrValidatorRequestBlock(stripQaPublishRequestBlock(prBody)).trim();
   if (trimmedBody) {
     bodySections.push(trimmedBody, "");
   }
   bodySections.push(renderQaPublishRequestBlock(resolved));
+  bodySections.push("", renderPrValidatorRequestBlock({
+    enabled: true,
+    human_final_approval_required: true,
+    max_retries: 2,
+  }));
 
   fs.writeFileSync(args.bodyPath, `${bodySections.join("\n").trim()}\n`, "utf8");
 

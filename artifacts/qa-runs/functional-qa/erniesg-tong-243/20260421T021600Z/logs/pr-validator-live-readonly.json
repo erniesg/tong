@@ -1,0 +1,32 @@
+{
+  "action": "validate",
+  "canRetry": false,
+  "confidence": 0.57,
+  "context": {
+    "inferredIssueRef": "erniesg/tong#242",
+    "isAgentPr": true,
+    "issueRef": "erniesg/tong#242",
+    "qaPublishRequest": {
+      "issue_ref": "erniesg/tong#242",
+      "qa_recipe": "",
+      "route": "",
+      "run_dir": "",
+      "scenario_seed": "",
+      "checkpoint_id": "",
+      "no_auto_evidence_upload": false
+    },
+    "validatorRequest": {
+      "enabled": true,
+      "human_final_approval_required": true,
+      "max_retries": 2
+    }
+  },
+  "prNumber": 249,
+  "retryDispatched": false,
+  "summaryCommentUrl": "",
+  "unresolvedRisks": [
+    "Trusted QA Publish skipped because this PR does not expose CI-rerunnable QA metadata or publishable proof.",
+    "Merge to main and production promotion still require explicit human approval."
+  ],
+  "verdict": "human_review_required"
+}
