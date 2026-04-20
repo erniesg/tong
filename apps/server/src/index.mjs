@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
+import { createHash, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { loadGeneratedSnapshot, runMockIngestion, writeGeneratedSnapshots } from './ingestion.mjs';
 import {
@@ -368,6 +369,7 @@ const state = {
   youtubeTelemetryByUser: new Map(),
   integrationsByUser: new Map(),
   playtestSessions: new Map(),
+  playtestFindingLedger: new Map(),
 };
 
 function ensureParentDir(filePath) {
@@ -464,6 +466,7 @@ function saveDurableState() {
     youtubeTelemetryByUser: cloneMapEntries(state.youtubeTelemetryByUser),
     integrationsByUser: cloneMapEntries(state.integrationsByUser),
     playtestSessions: cloneMapEntries(state.playtestSessions),
+    playtestFindingLedger: cloneMapEntries(state.playtestFindingLedger),
   };
   const tempPath = `${STATE_FILE_PATH}.tmp`;
   fs.writeFileSync(tempPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
@@ -488,6 +491,7 @@ function loadDurableState() {
   state.youtubeTelemetryByUser = restoreMap(parsed.youtubeTelemetryByUser || []);
   state.integrationsByUser = restoreMap(parsed.integrationsByUser || []);
   state.playtestSessions = restoreMap(parsed.playtestSessions || []);
+  state.playtestFindingLedger = restoreMap(parsed.playtestFindingLedger || []);
 
   for (const [sessionId, gameSession] of state.sessions.entries()) {
     normalizeGameSessionState(gameSession);
@@ -498,6 +502,291 @@ function loadDurableState() {
     normalizeCheckpointState(checkpoint, state.sessions.get(checkpoint.gameSessionId) || null);
     state.checkpoints.set(checkpointId, checkpoint);
   }
+}
+
+const FINDING_CATEGORY_DEFAULT = 'general';
+const FINDING_SEVERITIES = new Set(['critical', 'high', 'medium', 'low', 'info']);
+const ROUTE_STATUSES = new Set(['unrouted', 'queued', 'routed', 'suppressed']);
+const ROUTE_REASONS = new Set(['duplicate', 'not_actionable', 'known_issue', 'needs_triage', 'implemented', 'manual_override']);
+const ROUTE_DECISION_SOURCES = new Set(['system', 'human']);
+
+function sanitizeString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeIso(value, fallbackIso = null) {
+  const parsed = Date.parse(value || '');
+  if (Number.isNaN(parsed)) {
+    return fallbackIso;
+  }
+  return new Date(parsed).toISOString();
+}
+
+function inferComponentFromFinding(finding = {}) {
+  const raw =
+    sanitizeString(finding.component)
+    || sanitizeString(finding.surface)
+    || sanitizeString(finding.route)
+    || sanitizeString(finding.path)
+    || sanitizeString(finding.location);
+  if (!raw) {
+    return 'unknown';
+  }
+  return raw
+    .replace(/[^\w/.-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase()
+    || 'unknown';
+}
+
+function normalizeSeverity(value) {
+  const candidate = sanitizeString(value).toLowerCase();
+  return FINDING_SEVERITIES.has(candidate) ? candidate : 'medium';
+}
+
+function normalizeCategory(value) {
+  const candidate = sanitizeString(value).toLowerCase();
+  return candidate || FINDING_CATEGORY_DEFAULT;
+}
+
+function getFindingSummary(finding = {}) {
+  return sanitizeString(finding.summary) || sanitizeString(finding.title) || sanitizeString(finding.issue) || 'Untitled finding';
+}
+
+function buildFindingFingerprint({ sessionId, finding = {}, category, severity }) {
+  const fingerprintInput = {
+    sessionId: sanitizeString(sessionId) || 'unknown-session',
+    category,
+    severity,
+    summary: getFindingSummary(finding).toLowerCase(),
+    component: inferComponentFromFinding(finding),
+    timestampIso: normalizeIso(finding.timestampIso || finding.timestamp || finding.observedAtIso || finding.observedAt, ''),
+  };
+  return createHash('sha256')
+    .update(JSON.stringify(fingerprintInput))
+    .digest('hex')
+    .slice(0, 24);
+}
+
+function normalizeArtifactLinks(links = []) {
+  if (!Array.isArray(links)) {
+    return [];
+  }
+  const seen = new Set();
+  const normalized = [];
+  for (const item of links) {
+    const href = sanitizeString(item?.href || item?.url);
+    if (!href || seen.has(href)) {
+      continue;
+    }
+    seen.add(href);
+    normalized.push({
+      label: sanitizeString(item?.label) || 'artifact',
+      href,
+      source: sanitizeString(item?.source) || 'analysis',
+    });
+  }
+  return normalized;
+}
+
+function normalizeRouteState(routeState = {}, previous = null) {
+  const status = ROUTE_STATUSES.has(routeState.status) ? routeState.status : previous?.status || 'unrouted';
+  const reason = ROUTE_REASONS.has(routeState.reason) ? routeState.reason : (routeState.reason ? sanitizeString(routeState.reason) : (previous?.reason || null));
+  const confidenceCandidate = Number(routeState.confidence);
+  const confidence = Number.isFinite(confidenceCandidate)
+    ? Math.max(0, Math.min(1, confidenceCandidate))
+    : (typeof previous?.confidence === 'number' ? previous.confidence : null);
+  return { status, reason, confidence };
+}
+
+function normalizeLinkedRefs(refs = {}, previous = null) {
+  const issueRefs = uniqueStringList([...(previous?.issueRefs || []), ...((refs.issueRefs || refs.issues || []))]);
+  const prRefs = uniqueStringList([...(previous?.prRefs || []), ...((refs.prRefs || refs.prs || []))]);
+  return { issueRefs, prRefs };
+}
+
+function buildFindingLedgerRecord({ sessionId, analyzedAtIso, finding, existingRecord = null }) {
+  const category = normalizeCategory(finding.category);
+  const severity = normalizeSeverity(finding.severity);
+  const fingerprint = sanitizeString(finding.fingerprint) || buildFindingFingerprint({ sessionId, finding, category, severity });
+  const nowIso = new Date().toISOString();
+  const observedAtIso = normalizeIso(
+    finding.timestampIso || finding.timestamp || finding.observedAtIso || finding.observedAt,
+    analyzedAtIso || nowIso,
+  );
+  const inferredComponent = inferComponentFromFinding(finding);
+  const artifactLinks = normalizeArtifactLinks(finding.artifactLinks || finding.artifacts || []);
+  const linkedRefs = normalizeLinkedRefs(finding.linkedRefs || {}, existingRecord?.linkedRefs);
+  const manualOverride = existingRecord?.manualOverride || null;
+  const routeState = normalizeRouteState(finding.routeState || {}, existingRecord?.routeState);
+  const history = Array.isArray(existingRecord?.history) ? [...existingRecord.history] : [];
+
+  if (!existingRecord) {
+    history.push({
+      atIso: nowIso,
+      type: 'ingested',
+      source: 'analysis',
+      details: { analyzedAtIso: analyzedAtIso || nowIso },
+    });
+  }
+
+  return {
+    findingId: existingRecord?.findingId || `finding_${randomUUID()}`,
+    fingerprint,
+    summary: getFindingSummary(finding),
+    sessionId: sanitizeString(sessionId) || existingRecord?.sessionId || 'unknown-session',
+    category,
+    severity,
+    inferredComponent,
+    observedAtIso,
+    analyzedAtIso: normalizeIso(analyzedAtIso, nowIso) || nowIso,
+    artifactLinks: artifactLinks.length > 0 ? artifactLinks : (existingRecord?.artifactLinks || []),
+    routeState,
+    linkedRefs,
+    manualOverride,
+    createdAtIso: existingRecord?.createdAtIso || nowIso,
+    updatedAtIso: nowIso,
+    history,
+  };
+}
+
+function upsertPlaytestFindings({ sessionId, analyzedAtIso, findings = [] }) {
+  const upserted = [];
+  for (const finding of findings) {
+    const normalizedFinding = buildFindingLedgerRecord({ sessionId, analyzedAtIso, finding });
+    const existing = state.playtestFindingLedger.get(normalizedFinding.fingerprint);
+    const merged = existing
+      ? buildFindingLedgerRecord({ sessionId, analyzedAtIso, finding, existingRecord: existing })
+      : normalizedFinding;
+    state.playtestFindingLedger.set(merged.fingerprint, merged);
+    upserted.push(merged);
+  }
+  saveDurableState();
+  return upserted;
+}
+
+function listUnroutedFindings() {
+  return [...state.playtestFindingLedger.values()]
+    .filter((finding) => finding.routeState?.status === 'unrouted')
+    .sort((a, b) => new Date(a.observedAtIso) - new Date(b.observedAtIso));
+}
+
+function getFindingRecordOrThrow(fingerprint) {
+  const normalizedFingerprint = sanitizeString(fingerprint);
+  const finding = state.playtestFindingLedger.get(normalizedFingerprint);
+  if (!finding) {
+    return null;
+  }
+  return finding;
+}
+
+function appendHistory(record, entry) {
+  const updated = cloneJson(record);
+  updated.history = Array.isArray(updated.history) ? updated.history : [];
+  updated.history.push(entry);
+  updated.updatedAtIso = new Date().toISOString();
+  return updated;
+}
+
+function markRouteDecision({ fingerprint, status, reason, confidence, source = 'system', actor = null }) {
+  const record = getFindingRecordOrThrow(fingerprint);
+  if (!record) {
+    return null;
+  }
+  const routeState = normalizeRouteState({ status, reason, confidence }, record.routeState);
+  const updated = appendHistory(record, {
+    atIso: new Date().toISOString(),
+    type: 'route_decision',
+    source: ROUTE_DECISION_SOURCES.has(source) ? source : 'system',
+    actor: sanitizeString(actor) || null,
+    details: routeState,
+  });
+  updated.routeState = routeState;
+  state.playtestFindingLedger.set(updated.fingerprint, updated);
+  saveDurableState();
+  return updated;
+}
+
+function attachFindingRefs({ fingerprint, issueRefs, prRefs, actor = null }) {
+  const record = getFindingRecordOrThrow(fingerprint);
+  if (!record) {
+    return null;
+  }
+  const linkedRefs = normalizeLinkedRefs({ issueRefs, prRefs }, record.linkedRefs);
+  const updated = appendHistory(record, {
+    atIso: new Date().toISOString(),
+    type: 'refs_attached',
+    source: 'human',
+    actor: sanitizeString(actor) || null,
+    details: linkedRefs,
+  });
+  updated.linkedRefs = linkedRefs;
+  state.playtestFindingLedger.set(updated.fingerprint, updated);
+  saveDurableState();
+  return updated;
+}
+
+function setManualOverride({ fingerprint, override, actor = null }) {
+  const record = getFindingRecordOrThrow(fingerprint);
+  if (!record) {
+    return null;
+  }
+  const nowIso = new Date().toISOString();
+  const manualOverride = override
+    ? {
+      status: ROUTE_STATUSES.has(override.status) ? override.status : record.routeState?.status || 'unrouted',
+      reason: sanitizeString(override.reason) || null,
+      confidence: Number.isFinite(Number(override.confidence))
+        ? Math.max(0, Math.min(1, Number(override.confidence)))
+        : null,
+      actor: sanitizeString(override.actor) || sanitizeString(actor) || null,
+      note: sanitizeString(override.note) || null,
+      setAtIso: nowIso,
+    }
+    : null;
+  const updated = appendHistory(record, {
+    atIso: nowIso,
+    type: manualOverride ? 'manual_override_set' : 'manual_override_cleared',
+    source: 'human',
+    actor: sanitizeString(actor) || null,
+    details: manualOverride,
+  });
+  updated.manualOverride = manualOverride;
+  if (manualOverride) {
+    updated.routeState = normalizeRouteState({
+      status: manualOverride.status,
+      reason: manualOverride.reason || 'manual_override',
+      confidence: manualOverride.confidence,
+    }, updated.routeState);
+  }
+  state.playtestFindingLedger.set(updated.fingerprint, updated);
+  saveDurableState();
+  return updated;
+}
+
+function retryOrReopenFinding({ fingerprint, action = 'retry', actor = null }) {
+  const record = getFindingRecordOrThrow(fingerprint);
+  if (!record) {
+    return null;
+  }
+  const nowIso = new Date().toISOString();
+  const normalizedAction = action === 'reopen' ? 'reopen' : 'retry';
+  const updated = appendHistory(record, {
+    atIso: nowIso,
+    type: normalizedAction === 'reopen' ? 'reopened' : 'retry_requested',
+    source: 'human',
+    actor: sanitizeString(actor) || null,
+    details: {},
+  });
+  updated.routeState = {
+    status: 'unrouted',
+    reason: normalizedAction === 'reopen' ? 'needs_triage' : updated.routeState?.reason || 'needs_triage',
+    confidence: null,
+  };
+  state.playtestFindingLedger.set(updated.fingerprint, updated);
+  saveDurableState();
+  return updated;
 }
 
 const AGENT_TOOL_DEFINITIONS = [
@@ -5288,6 +5577,145 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/api/v1/playtest/findings/ingest' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const sessionId = sanitizeString(body.sessionId);
+      const findings = Array.isArray(body.findings) ? body.findings : [];
+      if (!sessionId) {
+        jsonResponse(res, 400, { error: 'sessionId_required' });
+        return;
+      }
+      if (findings.length === 0) {
+        jsonResponse(res, 400, { error: 'findings_required' });
+        return;
+      }
+      const upserted = upsertPlaytestFindings({
+        sessionId,
+        analyzedAtIso: body.analyzedAtIso || new Date().toISOString(),
+        findings,
+      });
+      jsonResponse(res, 200, {
+        ok: true,
+        sessionId,
+        count: upserted.length,
+        findings: upserted,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/playtest/findings/unrouted' && req.method === 'GET') {
+      jsonResponse(res, 200, {
+        ok: true,
+        count: listUnroutedFindings().length,
+        findings: listUnroutedFindings(),
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/playtest/findings/route-decision' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const fingerprint = sanitizeString(body.fingerprint);
+      if (!fingerprint) {
+        jsonResponse(res, 400, { error: 'fingerprint_required' });
+        return;
+      }
+      const updated = markRouteDecision({
+        fingerprint,
+        status: body.status,
+        reason: body.reason,
+        confidence: body.confidence,
+        source: body.source,
+        actor: body.actor,
+      });
+      if (!updated) {
+        jsonResponse(res, 404, { error: 'finding_not_found', fingerprint });
+        return;
+      }
+      jsonResponse(res, 200, { ok: true, finding: updated });
+      return;
+    }
+
+    if (pathname === '/api/v1/playtest/findings/refs' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const fingerprint = sanitizeString(body.fingerprint);
+      if (!fingerprint) {
+        jsonResponse(res, 400, { error: 'fingerprint_required' });
+        return;
+      }
+      const updated = attachFindingRefs({
+        fingerprint,
+        issueRefs: body.issueRefs,
+        prRefs: body.prRefs,
+        actor: body.actor,
+      });
+      if (!updated) {
+        jsonResponse(res, 404, { error: 'finding_not_found', fingerprint });
+        return;
+      }
+      jsonResponse(res, 200, { ok: true, finding: updated });
+      return;
+    }
+
+    if (pathname === '/api/v1/playtest/findings/retry' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const fingerprint = sanitizeString(body.fingerprint);
+      if (!fingerprint) {
+        jsonResponse(res, 400, { error: 'fingerprint_required' });
+        return;
+      }
+      const updated = retryOrReopenFinding({
+        fingerprint,
+        action: 'retry',
+        actor: body.actor,
+      });
+      if (!updated) {
+        jsonResponse(res, 404, { error: 'finding_not_found', fingerprint });
+        return;
+      }
+      jsonResponse(res, 200, { ok: true, finding: updated });
+      return;
+    }
+
+    if (pathname === '/api/v1/playtest/findings/reopen' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const fingerprint = sanitizeString(body.fingerprint);
+      if (!fingerprint) {
+        jsonResponse(res, 400, { error: 'fingerprint_required' });
+        return;
+      }
+      const updated = retryOrReopenFinding({
+        fingerprint,
+        action: 'reopen',
+        actor: body.actor,
+      });
+      if (!updated) {
+        jsonResponse(res, 404, { error: 'finding_not_found', fingerprint });
+        return;
+      }
+      jsonResponse(res, 200, { ok: true, finding: updated });
+      return;
+    }
+
+    if (pathname === '/api/v1/playtest/findings/manual-override' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const fingerprint = sanitizeString(body.fingerprint);
+      if (!fingerprint) {
+        jsonResponse(res, 400, { error: 'fingerprint_required' });
+        return;
+      }
+      const updated = setManualOverride({
+        fingerprint,
+        override: body.override || null,
+        actor: body.actor,
+      });
+      if (!updated) {
+        jsonResponse(res, 404, { error: 'finding_not_found', fingerprint });
+        return;
+      }
+      jsonResponse(res, 200, { ok: true, finding: updated });
+      return;
+    }
+
     // ── Signals keyword + search routes (public) ─────────────────────
 
     if (pathname === '/api/v1/signals/keywords' && req.method === 'GET') {
@@ -5710,6 +6138,12 @@ export const __testing = {
   resumeGameSession,
   runIngestionForUser,
   restoreGameSessionFromCheckpoint,
+  upsertPlaytestFindings,
+  listUnroutedFindings,
+  markRouteDecision,
+  attachFindingRefs,
+  retryOrReopenFinding,
+  setManualOverride,
   resetState() {
     state.profiles.clear();
     state.sessions.clear();
@@ -5719,6 +6153,8 @@ export const __testing = {
     state.learnSessions = [...(FIXTURES.learnSessions.items || [])];
     state.ingestionByUser.clear();
     state.youtubeTelemetryByUser.clear();
+    state.playtestSessions.clear();
+    state.playtestFindingLedger.clear();
     ensureIngestionForUser(DEFAULT_USER_ID);
     saveDurableState();
   },

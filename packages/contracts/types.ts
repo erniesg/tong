@@ -1183,3 +1183,56 @@ export interface VolcTTSSynthesizeResponse {
   encoding: string;
   durationMs?: number;
 }
+
+export type PlaytestFindingSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
+export type PlaytestRouteStatus = 'unrouted' | 'queued' | 'routed' | 'suppressed';
+
+export interface PlaytestArtifactLink {
+  label: string;
+  href: string;
+  source?: string;
+}
+
+export interface PlaytestRouteState {
+  status: PlaytestRouteStatus;
+  reason?: string | null;
+  confidence?: number | null;
+}
+
+export interface PlaytestManualOverride {
+  status: PlaytestRouteStatus;
+  reason?: string | null;
+  confidence?: number | null;
+  actor?: string | null;
+  note?: string | null;
+  setAtIso: string;
+}
+
+export interface PlaytestFindingLinkedRefs {
+  issueRefs: string[];
+  prRefs: string[];
+}
+
+export interface PlaytestFindingLedgerItem {
+  findingId: string;
+  fingerprint: string;
+  summary: string;
+  sessionId: string;
+  category: string;
+  severity: PlaytestFindingSeverity;
+  inferredComponent: string;
+  observedAtIso: string;
+  analyzedAtIso: string;
+  artifactLinks: PlaytestArtifactLink[];
+  routeState: PlaytestRouteState;
+  linkedRefs: PlaytestFindingLinkedRefs;
+  manualOverride?: PlaytestManualOverride | null;
+  createdAtIso: string;
+  updatedAtIso: string;
+}
+
+export interface PlaytestUnroutedFindingsResponse {
+  ok: true;
+  count: number;
+  findings: PlaytestFindingLedgerItem[];
+}

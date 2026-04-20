@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "count": 1,
+  "findings": [
+    {
+      "findingId": "finding_7f7e7ce6-1cfd-4f4d-b8c5-f4f6f8bf3d65",
+      "fingerprint": "f6ac39eb6b7c5fb6a208d863",
+      "summary": "Dictionary popover obscures subtitle controls on mobile",
+      "sessionId": "playtest_abc123",
+      "category": "ui-overlap",
+      "severity": "high",
+      "inferredComponent": "client-overlay/subtitles",
+      "observedAtIso": "2026-04-20T15:02:11.000Z",
+      "analyzedAtIso": "2026-04-20T15:10:00.000Z",
+      "artifactLinks": [
+        {
+          "label": "proof clip",
+          "href": "https://tong-runs.example/run-123/clip.webm",
+          "source": "gemini"
+        }
+      ],
+      "routeState": {
+        "status": "unrouted",
+        "reason": "needs_triage",
+        "confidence": 0.42
+      },
+      "linkedRefs": {
+        "issueRefs": [],
+        "prRefs": []
+      },
+      "manualOverride": null,
+      "createdAtIso": "2026-04-20T15:10:01.000Z",
+      "updatedAtIso": "2026-04-20T15:10:01.000Z"
+    }
+  ]
+}
