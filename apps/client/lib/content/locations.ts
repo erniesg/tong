@@ -1,5 +1,6 @@
 import type { Location } from '../types/objectives';
 import { POJANGMACHA } from './pojangmacha';
+import { SHANGHAI_XIAOLONGBAO } from './shanghai/location';
 
 /**
  * Location registry mapping "cityId:locationId" → Location object.
@@ -187,27 +188,8 @@ const LOCATION_REGISTRY: Record<string, Location> = {
     grammarTargets: [],
   },
 
-  'shanghai:dumpling_shop': {
-    id: 'dumpling_shop',
-    cityId: 'shanghai',
-    name: { en: 'Dumpling Shop', zh: '小笼包店' },
-    domain: 'restaurant',
-    order: 4,
-    backgroundImageUrl: '',
-    ambientDescription: 'A busy xiaolongbao restaurant with bamboo steamers stacked high.',
-    levels: [
-      {
-        level: 0,
-        name: 'Dumpling Feast',
-        description: 'Order dumplings at a traditional restaurant',
-        objectives: [],
-        estimatedSessionMinutes: 10,
-        assessmentCriteria: { minAccuracy: 0.6, minItemsCompleted: 3, requiredObjectives: [] },
-      },
-    ],
-    vocabularyTargets: [],
-    grammarTargets: [],
-  },
+  'shanghai:dumpling_shop': SHANGHAI_XIAOLONGBAO,
+  'shanghai:xiaolongbao': SHANGHAI_XIAOLONGBAO,
 
   /* ── Tokyo stub locations ───────────────────────────────── */
   'tokyo:train_station': {
@@ -322,19 +304,24 @@ const LOCATION_REGISTRY: Record<string, Location> = {
 };
 
 /** Get a location by city and location ID. Returns null if not found. */
-export function getLocation(
-  cityId: string,
-  locationId: string,
-): Location | null {
-  return LOCATION_REGISTRY[`${cityId}:${locationId}`] ?? null;
+function resolveLocationKey(cityIdOrKey: string, locationId?: string): string {
+  return locationId ? `${cityIdOrKey}:${locationId}` : cityIdOrKey;
 }
 
-/** Get a location or fall back to POJANGMACHA. */
+/** Get a location by city and location ID, or by a single composite key. Returns null if not found. */
+export function getLocation(
+  cityIdOrKey: string,
+  locationId?: string,
+): Location | null {
+  return LOCATION_REGISTRY[resolveLocationKey(cityIdOrKey, locationId)] ?? null;
+}
+
+/** Get a location or fall back to POJANGMACHA. Supports city/location args or a composite key. */
 export function getLocationOrDefault(
-  cityId: string,
-  locationId: string,
+  cityIdOrKey: string,
+  locationId?: string,
 ): Location {
-  return LOCATION_REGISTRY[`${cityId}:${locationId}`] ?? POJANGMACHA;
+  return LOCATION_REGISTRY[resolveLocationKey(cityIdOrKey, locationId)] ?? POJANGMACHA;
 }
 
 /** Register a location in the registry. */
