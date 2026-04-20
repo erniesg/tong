@@ -12,6 +12,9 @@ declare global {
 
 const fallbackRuntimeAssetManifest = runtimeAssetManifestJson as RuntimeAssetManifest;
 const runtimeAssetBaseUrl = normalizeAssetBaseUrl(process.env.NEXT_PUBLIC_TONG_ASSETS_BASE_URL);
+const assetAuthProxyEnabled =
+  process.env.NEXT_PUBLIC_TONG_ASSET_AUTH_PROXY_ENABLED === 'true' ||
+  process.env.TONG_ASSET_AUTH_PROXY_ENABLED === 'true';
 
 let activeRuntimeAssetManifest = fallbackRuntimeAssetManifest;
 let activeRuntimeAssetsByKey = buildRuntimeAssetsByKey(fallbackRuntimeAssetManifest);
@@ -172,6 +175,12 @@ export function resolveCharacterAssetUrl(pathSegment?: string | null): string {
 export function runtimeAssetUrl(key: string, fallbackRef?: string): string {
   const manifestEntry = runtimeAssetsByKey().get(key);
   if (manifestEntry) {
+    if (assetAuthProxyEnabled) {
+      const assetPath = assetPathFromResolvedUrl(manifestEntry.uri);
+      if (assetPath) {
+        return `/api/v1/assets/${assetPath.replace(/^\/assets\//, '')}`;
+      }
+    }
     return resolveRuntimeAssetUrl(manifestEntry.uri);
   }
 

@@ -8,6 +8,7 @@ import learnSessionsFixture from '../../../packages/contracts/fixtures/learn.ses
 import mediaProfileFixture from '../../../packages/contracts/fixtures/player.media-profile.sample.json';
 import objectiveIdentityMap from '../../../packages/contracts/objective-identity-map.sample.json';
 import mockMediaWindow from '../../server/data/mock-media-window.json';
+import { guessContentTypeFromAssetPath, resolveRuntimeAssetForProxy } from './runtime-assets';
 
 type Lang = 'ko' | 'ja' | 'zh';
 type Mode = 'hangout' | 'learn';
@@ -147,7 +148,7 @@ type IngestionResult = {
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, x-demo-password',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie, x-demo-password',
 };
 
 const DEFAULT_USER_ID = 'demo-user-1';
@@ -676,6 +677,48 @@ function getLocationId(search: URLSearchParams): LocationId {
 
 function getUserIdFromSearch(searchParams: URLSearchParams): string {
   return searchParams.get('userId') || DEFAULT_USER_ID;
+}
+
+function parseBooleanFlag(value: unknown, fallback = false): boolean {
+  if (typeof value !== 'string') return fallback;
+  return value.trim().toLowerCase() === 'true';
+}
+
+function getBearerToken(request: Request): string | null {
+  const authorization = request.headers.get('authorization') || request.headers.get('Authorization');
+  if (!authorization) return null;
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+  const token = match[1]?.trim();
+  return token ? token : null;
+}
+
+function isAssetProxyAuthorized(request: Request, env: Record<string, any>): boolean {
+  const expectedToken = String(env?.TONG_ASSET_AUTH_TOKEN || '').trim();
+  if (!expectedToken) return false;
+  const providedToken = getBearerToken(request);
+  return providedToken === expectedToken;
+}
+
+async function tryCreateR2SignedReadUrl(
+  bucket: any,
+  key: string,
+  expiresInSeconds: number,
+): Promise<string | null> {
+  const signer = bucket?.createPresignedUrl;
+  if (typeof signer !== 'function') return null;
+
+  try {
+    const signed = await signer.call(bucket, key, { method: 'GET', expiresIn: expiresInSeconds });
+    if (typeof signed === 'string' && signed.trim()) return signed;
+    if (signed instanceof URL) return signed.toString();
+    const nestedUrl = (signed as any)?.url;
+    if (typeof nestedUrl === 'string' && nestedUrl.trim()) return nestedUrl;
+  } catch {
+    return null;
+  }
+
+  return null;
 }
 
 function getCaptionsForVideo(videoId = 'karina-variety-demo') {
@@ -1775,6 +1818,66 @@ async function handleRequest(request: Request): Promise<Response> {
       const userId = getUserIdFromSearch(url.searchParams);
       const ingestion = ensureIngestionForUser(userId);
       return jsonResponse(200, ingestion.mediaProfile || { ...(FIXTURES.mediaProfile as any), userId });
+    }
+
+    if (pathname.match(/^\/api\/v1\/assets\/.+$/) && request.method === 'GET') {
+      const env = (globalThis as any).__env;
+      if (!isAssetProxyAuthorized(request, env)) {
+        return jsonResponse(401, { error: 'unauthorized' });
+      }
+
+      const requestAssetPath = pathname.replace('/api/v1/assets/', '');
+      const resolvedAsset = resolveRuntimeAssetForProxy(requestAssetPath);
+      if (!resolvedAsset) {
+        return jsonResponse(404, { error: 'asset_not_found', path: requestAssetPath });
+      }
+
+      const bucket = env?.TONG_ASSETS_BUCKET;
+      if (!bucket) {
+        return jsonResponse(502, { error: 'r2_fetch_failed', reason: 'assets_bucket_not_configured' });
+      }
+
+      const signedUrlEnabled = parseBooleanFlag(env?.TONG_ASSET_AUTH_SIGNED_URLS, false);
+      if (signedUrlEnabled) {
+        const signedUrl = await tryCreateR2SignedReadUrl(bucket, resolvedAsset.r2ObjectKey, 15 * 60);
+        if (signedUrl) {
+          return new Response(null, {
+            status: 302,
+            headers: {
+              Location: signedUrl,
+              'Cache-Control': 'private, max-age=86400',
+              ...CORS_HEADERS,
+            },
+          });
+        }
+      }
+
+      let objectFromR2: any;
+      try {
+        objectFromR2 = await bucket.get(resolvedAsset.r2ObjectKey);
+      } catch {
+        return jsonResponse(502, { error: 'r2_fetch_failed', key: resolvedAsset.r2ObjectKey });
+      }
+
+      if (!objectFromR2) {
+        return jsonResponse(404, { error: 'asset_not_found', path: requestAssetPath });
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': objectFromR2.httpMetadata?.contentType || guessContentTypeFromAssetPath(resolvedAsset.assetPath),
+        'Cache-Control': 'private, max-age=86400',
+        ...CORS_HEADERS,
+      };
+      if (typeof objectFromR2.size === 'number') {
+        headers['Content-Length'] = String(objectFromR2.size);
+      }
+      if (typeof objectFromR2.httpEtag === 'string' && objectFromR2.httpEtag) {
+        headers.ETag = objectFromR2.httpEtag;
+      } else if (typeof objectFromR2.etag === 'string' && objectFromR2.etag) {
+        headers.ETag = objectFromR2.etag;
+      }
+
+      return new Response(objectFromR2.body, { headers });
     }
 
     if (pathname === '/api/v1/ingestion/run-mock' && request.method === 'POST') {
