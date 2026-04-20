@@ -1,213 +1,191 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { SHANGHAI_H1_NEGOTIATION_FIXTURE } from '@/lib/content/shanghai/fixtures';
+import { WEBTOON_FIXTURES, getWebtoonFixture } from '@/lib/content/shanghai/fixtures';
 import type { WebtoonPanel as WebtoonPanelSpec } from '@/lib/hangout/fixture-types';
-import { WebtoonPanel } from '@/components/scene/WebtoonPanel';
+import { WebtoonStrip } from '@/components/scene/WebtoonStrip';
 
-type PreviewMode = 'placeholders' | 'assets';
 type ViewportMode = 'mobile' | 'desktop';
+type SourceMode = 'fixture' | 'adhoc';
 
 const VIEWPORTS: Record<ViewportMode, { width: number; height: number; label: string }> = {
   mobile: { width: 390, height: 844, label: 'Mobile 390×844' },
   desktop: { width: 1024, height: 900, label: 'Desktop 1024×900' },
 };
 
-function buildPlaceholderUrl(panel: WebtoonPanelSpec): string {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200">
-      <defs>
-        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#2b211c" />
-          <stop offset="100%" stop-color="#564338" />
-        </linearGradient>
-      </defs>
-      <rect width="800" height="1200" fill="url(#bg)" />
-      <rect x="32" y="32" width="736" height="1136" rx="28" fill="rgba(255,248,238,0.08)" stroke="rgba(255,248,238,0.32)" stroke-width="4" />
-      <text x="64" y="118" fill="#fff8ee" font-family="Arial, sans-serif" font-size="30" font-weight="700">${panel.id}</text>
-      <text x="64" y="166" fill="#f4d2ac" font-family="Arial, sans-serif" font-size="24">${panel.shotType}</text>
-      <text x="64" y="212" fill="#d4c0ae" font-family="Arial, sans-serif" font-size="22">${panel.aspectRatio} · ${panel.widthType} · ${panel.heightClass}</text>
-      <text x="64" y="316" fill="#fff8ee" font-family="Arial, sans-serif" font-size="48" font-weight="700">${panel.isThumbStop ? 'THUMB-STOP' : 'PANEL'}</text>
-      <text x="64" y="386" fill="#d4c0ae" font-family="Arial, sans-serif" font-size="24">Gap before: ${panel.gapBefore.px}px ${panel.gapBefore.color}</text>
-      <text x="64" y="456" fill="#fff8ee" font-family="Arial, sans-serif" font-size="26">Replace with real art by adding:</text>
-      <text x="64" y="498" fill="#f4d2ac" font-family="Arial, sans-serif" font-size="22">${panel.imageUrl}</text>
-      <rect x="64" y="646" width="672" height="360" rx="32" fill="rgba(255,248,238,0.08)" stroke="rgba(255,248,238,0.18)" stroke-dasharray="14 10" />
-      <text x="400" y="820" text-anchor="middle" fill="#fff8ee" font-family="Arial, sans-serif" font-size="30">composition safe area</text>
-      <text x="400" y="862" text-anchor="middle" fill="#d4c0ae" font-family="Arial, sans-serif" font-size="22">center 80% readable zone</text>
-      ${panel.id === 'p3' ? `
-        <rect x="64" y="910" width="672" height="190" rx="28" fill="rgba(0,0,0,0.22)" />
-        <text x="400" y="1010" text-anchor="middle" fill="#fff8ee" font-family="Arial, sans-serif" font-size="28">leave lower 40% empty for bubble overlay</text>
-      ` : ''}
-    </svg>
-  `;
-
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
-
 export default function WebtoonLabPage() {
-  const [previewMode, setPreviewMode] = useState<PreviewMode>('placeholders');
   const [viewportMode, setViewportMode] = useState<ViewportMode>('mobile');
+  const [sourceMode, setSourceMode] = useState<SourceMode>('fixture');
+  const [fixtureId, setFixtureId] = useState<string>(WEBTOON_FIXTURES[0]?.id ?? '');
+  const [adhocJson, setAdhocJson] = useState<string>('');
+  const [adhocError, setAdhocError] = useState<string>('');
   const [runKey, setRunKey] = useState(0);
-  const [completed, setCompleted] = useState(false);
-  const liveFixtureHref = '/game?phase=hangout&city=shanghai&scene=h1&mode=fixture';
+
+  const fixture = useMemo(() => getWebtoonFixture(fixtureId), [fixtureId]);
+
+  const panels = useMemo<WebtoonPanelSpec[]>(() => {
+    if (sourceMode === 'fixture') {
+      return fixture?.spec.panels ?? [];
+    }
+    if (!adhocJson.trim()) return [];
+    try {
+      const parsed = JSON.parse(adhocJson);
+      const arr = Array.isArray(parsed) ? parsed : parsed?.panels;
+      if (!Array.isArray(arr)) {
+        setAdhocError('Expected an array or { panels: [...] }.');
+        return [];
+      }
+      setAdhocError('');
+      return arr as WebtoonPanelSpec[];
+    } catch (err) {
+      setAdhocError(err instanceof Error ? err.message : 'Invalid JSON');
+      return [];
+    }
+  }, [sourceMode, fixture, adhocJson]);
 
   const viewport = VIEWPORTS[viewportMode];
-  const fixturePanels = SHANGHAI_H1_NEGOTIATION_FIXTURE.cliffhanger?.webtoon.panels ?? [];
+  const inspectionUrl = `/backstage/webtoon-lab`;
 
-  const panels = useMemo(
-    () => fixturePanels.map((panel) => ({
-      ...panel,
-      imageUrl: previewMode === 'assets' ? panel.imageUrl : buildPlaceholderUrl(panel),
-    })),
-    [fixturePanels, previewMode],
-  );
-
-  const restart = () => {
-    setCompleted(false);
-    setRunKey((value) => value + 1);
-  };
+  const reset = () => setRunKey((n) => n + 1);
 
   return (
-    <div className="backstage webtoon-lab">
-      <header className="backstage-header">
-        <h1>Webtoon Lab</h1>
-        <span className="backstage-subtitle">Shanghai H1 panel layout harness</span>
+    <div className="webtoon-lab">
+      <header className="webtoon-lab__header">
+        <h1>Webtoon Lab v2</h1>
+        <p className="webtoon-lab__subtitle">
+          Continuous-scroll strip inspector. Any fixture or ad-hoc panels JSON.
+        </p>
       </header>
 
-      <div className="webtoon-lab-layout">
-        <section className="webtoon-lab-sidebar">
-          <div className="webtoon-lab-card">
-            <h2 className="webtoon-lab-card__title">Preview</h2>
-            <p className="webtoon-lab-card__text">
-              This is a backstage layout harness, not the player-facing review surface. Use it for panel sizing and bubble-safe-area checks only.
-            </p>
-            <p className="webtoon-lab-card__text">
-              For actual mobile feedback, use the live scene route:
-              {' '}
-              <a href={liveFixtureHref}>{liveFixtureHref}</a>
-              .
-            </p>
-            <p className="webtoon-lab-card__text">
-              Switch to real assets the moment you drop `p1.png`, `p2.png`, and `p3.png` into the final public paths.
-            </p>
-
-            <div className="webtoon-lab-toggle-group">
-              <span className="webtoon-lab-toggle-label">Asset mode</span>
-              <div className="webtoon-lab-toggle-row">
-                <button
-                  className={`webtoon-lab-toggle${previewMode === 'placeholders' ? ' is-active' : ''}`}
-                  onClick={() => {
-                    setPreviewMode('placeholders');
-                    restart();
-                  }}
-                >
-                  Placeholders
-                </button>
-                <button
-                  className={`webtoon-lab-toggle${previewMode === 'assets' ? ' is-active' : ''}`}
-                  onClick={() => {
-                    setPreviewMode('assets');
-                    restart();
-                  }}
-                >
-                  Real Assets
-                </button>
-              </div>
+      <div className="webtoon-lab__layout">
+        <aside className="webtoon-lab__sidebar">
+          <section className="webtoon-lab__card">
+            <h3>Source</h3>
+            <div className="webtoon-lab__toggle-row">
+              <button
+                type="button"
+                className={`webtoon-lab__toggle${sourceMode === 'fixture' ? ' is-active' : ''}`}
+                onClick={() => {
+                  setSourceMode('fixture');
+                  reset();
+                }}
+              >
+                Fixture
+              </button>
+              <button
+                type="button"
+                className={`webtoon-lab__toggle${sourceMode === 'adhoc' ? ' is-active' : ''}`}
+                onClick={() => {
+                  setSourceMode('adhoc');
+                  reset();
+                }}
+              >
+                Ad-hoc JSON
+              </button>
             </div>
 
-            <div className="webtoon-lab-toggle-group">
-              <span className="webtoon-lab-toggle-label">Viewport</span>
-              <div className="webtoon-lab-toggle-row">
-                <button
-                  className={`webtoon-lab-toggle${viewportMode === 'mobile' ? ' is-active' : ''}`}
-                  onClick={() => {
-                    setViewportMode('mobile');
-                    restart();
+            {sourceMode === 'fixture' ? (
+              <>
+                <label htmlFor="fixture-select">Fixture</label>
+                <select
+                  id="fixture-select"
+                  className="webtoon-lab__fixture-select"
+                  value={fixtureId}
+                  onChange={(e) => {
+                    setFixtureId(e.target.value);
+                    reset();
                   }}
                 >
-                  Mobile
-                </button>
-                <button
-                  className={`webtoon-lab-toggle${viewportMode === 'desktop' ? ' is-active' : ''}`}
-                  onClick={() => {
-                    setViewportMode('desktop');
-                    restart();
+                  {WEBTOON_FIXTURES.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.label}
+                    </option>
+                  ))}
+                </select>
+                {fixture && <p>{fixture.description}</p>}
+              </>
+            ) : (
+              <>
+                <label htmlFor="adhoc-json">Panels JSON</label>
+                <textarea
+                  id="adhoc-json"
+                  className="webtoon-lab__json-input"
+                  placeholder='{"panels":[{"id":"p1","imageUrl":"...","widthType":"full-width","heightClass":"standard","aspectRatio":"3:4","shotType":"medium","gapBefore":{"px":120,"color":"#f4f0e8"},"transition":"cut"}]}'
+                  value={adhocJson}
+                  onChange={(e) => {
+                    setAdhocJson(e.target.value);
+                    reset();
                   }}
-                >
-                  Desktop
-                </button>
-              </div>
+                />
+                {adhocError && <p className="webtoon-lab__error">{adhocError}</p>}
+              </>
+            )}
+          </section>
+
+          <section className="webtoon-lab__card">
+            <h3>Viewport</h3>
+            <div className="webtoon-lab__toggle-row">
+              <button
+                type="button"
+                className={`webtoon-lab__toggle${viewportMode === 'mobile' ? ' is-active' : ''}`}
+                onClick={() => setViewportMode('mobile')}
+              >
+                Mobile
+              </button>
+              <button
+                type="button"
+                className={`webtoon-lab__toggle${viewportMode === 'desktop' ? ' is-active' : ''}`}
+                onClick={() => setViewportMode('desktop')}
+              >
+                Desktop
+              </button>
             </div>
+            <p>{viewport.label}</p>
+          </section>
 
-            <button className="webtoon-lab-restart" onClick={restart}>
-              Restart Sequence
-            </button>
-          </div>
-
-          <div className="webtoon-lab-card">
-            <h2 className="webtoon-lab-card__title">Wire In Art</h2>
-            <p className="webtoon-lab-card__text">
-              Final fixture art plugs in at:
-            </p>
-            <code className="webtoon-lab-code">apps/client/public/assets/webtoon/shanghai/h1/p1.png</code>
-            <code className="webtoon-lab-code">apps/client/public/assets/webtoon/shanghai/h1/p2.png</code>
-            <code className="webtoon-lab-code">apps/client/public/assets/webtoon/shanghai/h1/p3.png</code>
-            <p className="webtoon-lab-card__text">
-              Once those files exist, switch this lab to <b>Real Assets</b>. No fixture-content change is required.
-            </p>
-          </div>
-
-          <div className="webtoon-lab-card">
-            <h2 className="webtoon-lab-card__title">Future Direction</h2>
-            <p className="webtoon-lab-card__text">
-              Yes, dynamic per-panel layout is relevant. The important boundary is to keep the renderer metadata-driven now, without forcing a full strip compositor into H1.
-            </p>
-            <p className="webtoon-lab-card__text">
-              The working references are this lab plus `docs/shanghai/webtoon-layout-system.md`.
-            </p>
-          </div>
-        </section>
-
-        <section className="webtoon-lab-preview">
-          <div className="webtoon-lab-preview__header">
-            <div>
-              <h2 className="webtoon-lab-preview__title">{viewport.label}</h2>
-              <p className="webtoon-lab-preview__subtitle">
-                {previewMode === 'assets' ? 'Using real asset paths from the H1 fixture.' : 'Using generated placeholder art for layout-only testing.'}
-              </p>
-            </div>
-            <div className="webtoon-lab-preview__meta">
-              {panels.map((panel) => (
-                <div key={panel.id} className="webtoon-lab-preview__meta-item">
-                  <span>{panel.id}</span>
-                  <small>{panel.widthType} · {panel.aspectRatio}</small>
+          <section className="webtoon-lab__card">
+            <h3>Panels ({panels.length})</h3>
+            <div className="webtoon-lab__meta-list">
+              {panels.map((panel, i) => (
+                <div key={panel.id ?? i} className="webtoon-lab__meta-item">
+                  <strong>{panel.id ?? `#${i + 1}`}</strong> · {panel.widthType} · {panel.heightClass}
+                  <small>
+                    {panel.shotType} · {panel.aspectRatio} · gap {panel.gapBefore.px}px {panel.gapBefore.color}
+                    {panel.isThumbStop && ' · ⭐ thumb-stop'}
+                  </small>
+                  {panel.bubble && (
+                    <small>
+                      💬 {panel.bubble.speaker}: {panel.bubble.zh}
+                    </small>
+                  )}
                 </div>
               ))}
             </div>
-          </div>
+          </section>
 
+          <section className="webtoon-lab__card">
+            <h3>Share</h3>
+            <p>
+              Send teammates: <code>{inspectionUrl}</code>
+            </p>
+            <p>Scrolling strip is standalone — no hangout context required.</p>
+          </section>
+        </aside>
+
+        <section className="webtoon-lab__stage-wrapper">
           <div
-            className={`webtoon-lab-stage webtoon-lab-stage--${viewportMode}`}
+            key={`${runKey}-${viewportMode}-${sourceMode}-${fixtureId}`}
+            className={`webtoon-lab__stage webtoon-lab__stage--${viewportMode}`}
             style={{
               width: `${viewport.width}px`,
               height: `${viewport.height}px`,
-              ['--viewport-h' as string]: `${viewport.height}px`,
             }}
           >
-            {!completed ? (
-              <WebtoonPanel
-                key={`${runKey}-${previewMode}-${viewportMode}`}
-                panels={panels}
-                autoAdvance={false}
-                onComplete={() => setCompleted(true)}
-              />
+            {panels.length > 0 ? (
+              <WebtoonStrip panels={panels} />
             ) : (
-              <div className="webtoon-lab-stage__complete">
-                <h3>Sequence Complete</h3>
-                <p>Restart to re-check panel pacing, gap behavior, and bubble placement.</p>
-                <button className="webtoon-lab-restart" onClick={restart}>
-                  Restart
-                </button>
+              <div style={{ padding: 24, color: 'rgba(255,255,255,0.55)' }}>
+                {sourceMode === 'adhoc' ? 'Paste panels JSON on the left.' : 'No panels in this fixture.'}
               </div>
             )}
           </div>
