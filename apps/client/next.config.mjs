@@ -25,13 +25,20 @@ const assetRemotePattern = buildAssetRemotePattern(
   process.env.NEXT_PUBLIC_TONG_ASSETS_BASE_URL || 'https://assets.tong.berlayar.ai',
 );
 
+const isStaticExportBuild = process.env.NEXT_BUILD_TARGET === 'static';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  output: isStaticExportBuild ? 'export' : 'standalone',
   reactStrictMode: true,
   experimental: {
     externalDir: true,
   },
+  ...(isStaticExportBuild
+    ? {
+        distDir: 'out',
+      }
+    : {}),
   images: assetRemotePattern
     ? {
         remotePatterns: [assetRemotePattern],
