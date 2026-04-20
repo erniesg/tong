@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import type { WebtoonBubble as WebtoonBubbleSpec } from '@/lib/hangout/fixture-types';
 
 interface WebtoonBubbleProps extends WebtoonBubbleSpec {
   reveal?: { kind: 'free' } | { kind: 'credits'; cost: number } | { kind: 'gamePass' };
+  showHelp?: boolean;
 }
 
 const SPEAKER_LABELS: Record<string, string> = {
@@ -35,49 +36,107 @@ function buildSegments(zh: string, py?: string[]): RubySegment[] {
   return segments;
 }
 
-export function WebtoonBubble({ zh, py, en, speaker, position, reveal = { kind: 'free' } }: WebtoonBubbleProps) {
-  const [open, setOpen] = useState(false);
-  const [unlocked, setUnlocked] = useState(reveal.kind === 'free');
+function bubbleStyle(bubble: WebtoonBubbleSpec, lockedTopPx: number | null): CSSProperties {
+  const layout = bubble.layout;
+  const align = layout?.align ?? 'center';
+  const left = align === 'left' ? '0%' : align === 'right' ? '100%' : '50%';
+  const shiftX = align === 'left' ? '0%' : align === 'right' ? '-100%' : '-50%';
+  const yOffset = layout?.offsetYPx ?? 0;
+
+  let top: string | undefined;
+  let bottom: string | undefined;
+
+  if (layout?.outside) {
+    const overlap = layout.outsideOverlapPx ?? 18;
+    if (bubble.position === 'top') {
+      bottom = `calc(100% - ${overlap}px + ${yOffset}px)`;
+    } else {
+      top = `calc(100% - ${overlap}px + ${yOffset}px)`;
+    }
+  } else if (bubble.position === 'top') {
+    top = `calc(6% + ${yOffset}px)`;
+  } else if (bubble.position === 'center-bottom') {
+    bottom = `calc(16% + ${yOffset}px)`;
+  } else {
+    bottom = `calc(7% + ${yOffset}px)`;
+  }
+
+  if (lockedTopPx !== null && !layout?.outside && bubble.position !== 'top') {
+    top = `${lockedTopPx}px`;
+    bottom = undefined;
+  }
+
+  return {
+    left,
+    top,
+    bottom,
+    ['--wt-bubble-shift-x' as string]: shiftX,
+    ['--wt-bubble-shift-nudge' as string]: `${layout?.offsetXPx ?? 0}px`,
+    ['--wt-tail-offset' as string]: layout?.tailOffsetPct ? `${layout.tailOffsetPct}%` : undefined,
+    ['--wt-bubble-max-width' as string]: layout?.maxWidth,
+  };
+}
+
+export function WebtoonBubble({
+  zh,
+  py,
+  en,
+  speaker,
+  position,
+  layout,
+  reveal = { kind: 'free' },
+  showHelp = false,
+}: WebtoonBubbleProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [closedTopPx, setClosedTopPx] = useState<number | null>(null);
+  const bubbleRef = useRef<HTMLButtonElement>(null);
+  const measuredTopRef = useRef<number | null>(null);
+  const bubble = { zh, py, en, speaker, position, layout };
   const speakerLabel = SPEAKER_LABELS[speaker] ?? speaker;
   const hasHelp = Boolean((py && py.length) || en);
+  const unlocked = reveal.kind === 'free';
+  const interactive = hasHelp && unlocked;
+  const expanded = interactive && (showHelp || isOpen);
   const segments = buildSegments(zh, py);
 
-  const handleTap = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (!hasHelp) return;
-    if (!unlocked) {
-      setUnlocked(true);
-      setOpen(true);
-      return;
-    }
-    setOpen((prev) => !prev);
-  };
+  useLayoutEffect(() => {
+    const el = bubbleRef.current;
+    if (!el || expanded) return;
+    const nextTop = el.offsetTop;
+    if (measuredTopRef.current === nextTop) return;
+    measuredTopRef.current = nextTop;
+    setClosedTopPx(nextTop);
+  });
+
+  const helpSuffix = !hasHelp
+    ? ''
+    : expanded
+      ? '. Translation help is open.'
+      : unlocked
+        ? '. Tap to reveal translation help.'
+        : reveal.kind === 'credits'
+          ? `. Help unlocks for ${reveal.cost} credits.`
+          : '. Help unlocks with Game Pass.';
 
   return (
     <button
       type="button"
-      className={`wt-bubble wt-bubble--${position} wt-bubble--${speaker}${open ? ' is-open' : ''}`}
-      aria-label={`${speakerLabel}: ${zh}${hasHelp ? '. Tap for help.' : ''}`}
-      aria-expanded={hasHelp ? open : undefined}
-      onClick={handleTap}
+      className={`wt-bubble wt-bubble--${position} wt-bubble--${speaker}${expanded ? ' is-open' : ''}`}
+      aria-label={`${speakerLabel}: ${zh}${helpSuffix}`}
+      aria-expanded={interactive ? expanded : undefined}
+      aria-disabled={!interactive}
+      style={bubbleStyle(bubble, expanded ? closedTopPx : null)}
+      ref={bubbleRef}
+      onClick={() => {
+        if (!interactive || showHelp) return;
+        setIsOpen((prev) => !prev);
+      }}
     >
-      {/* Closed state — just the line, no speaker label. Identity lives in
-          the border-color accent. Help hint is a subtle pill. */}
-      {!open && (
-        <>
-          <span className="wt-bubble__text">{zh}</span>
-          {hasHelp && (
-            <span className="wt-bubble__hint" aria-hidden="true">
-              {!unlocked && reveal.kind === 'credits' && `Tap · ${reveal.cost} credits`}
-              {!unlocked && reveal.kind === 'gamePass' && 'Tap · Game Pass'}
-              {unlocked && 'Tap for help'}
-            </span>
-          )}
-        </>
+      {!expanded && (
+        <span className="wt-bubble__text">{zh}</span>
       )}
 
-      {/* Expanded — speaker name appears, plus ruby-aligned pinyin + english. */}
-      {open && unlocked && (
+      {expanded && (
         <span className="wt-bubble__help">
           <span className="wt-bubble__speaker">{speakerLabel}</span>
           <span className="wt-bubble__ruby">
@@ -93,7 +152,6 @@ export function WebtoonBubble({ zh, py, en, speaker, position, reveal = { kind: 
             ))}
           </span>
           {en && <span className="wt-bubble__en">{en}</span>}
-          <span className="wt-bubble__hint wt-bubble__hint--open" aria-hidden="true">Tap to hide</span>
         </span>
       )}
     </button>

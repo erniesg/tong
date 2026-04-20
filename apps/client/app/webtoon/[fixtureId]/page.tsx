@@ -12,6 +12,7 @@ export default function WebtoonInspectPage() {
   const fixtureId = useMemo(() => (raw ? decodeURIComponent(raw) : ''), [raw]);
   const entry = useMemo(() => getWebtoonFixture(fixtureId), [fixtureId]);
   const [theme, setTheme] = useState<WebtoonTheme>('warm');
+  const [showHelp, setShowHelp] = useState(false);
 
   if (!entry) {
     return (
@@ -23,8 +24,8 @@ export default function WebtoonInspectPage() {
   }
 
   return (
-    <main style={{ position: 'fixed', inset: 0, background: theme === 'dark' ? '#0b0b10' : '#f4f0e8' }}>
-      <WebtoonStrip panels={entry.spec.panels} theme={theme} />
+    <main style={{ minHeight: '100dvh', background: theme === 'dark' ? '#0b0b10' : '#ffffff' }}>
+      <WebtoonStrip panels={entry.spec.panels} theme={theme} showHelp={showHelp} scrollRoot="page" />
 
       {/* Top chrome: back + theme toggle */}
       <div
@@ -59,47 +60,74 @@ export default function WebtoonInspectPage() {
         </Link>
 
         <div
-          role="group"
-          aria-label="Theme"
           style={{
             pointerEvents: 'auto',
             display: 'flex',
-            background: 'rgba(13,13,26,0.75)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 18,
-            overflow: 'hidden',
-            fontSize: '0.78rem',
+            alignItems: 'center',
+            gap: 8,
           }}
         >
           <button
             type="button"
-            onClick={() => setTheme('warm')}
+            onClick={() => setShowHelp((prev) => !prev)}
+            aria-pressed={showHelp}
             style={{
+              background: 'rgba(13,13,26,0.75)',
+              backdropFilter: 'blur(10px)',
+              color: showHelp ? '#fff8ee' : '#f4d2ac',
+              fontSize: '0.82rem',
               padding: '6px 12px',
-              border: 'none',
-              background: theme === 'warm' ? 'rgba(244,210,172,0.22)' : 'transparent',
-              color: theme === 'warm' ? '#fff8ee' : 'rgba(255,255,255,0.6)',
+              borderRadius: 18,
+              border: '1px solid rgba(255,255,255,0.12)',
               cursor: 'pointer',
               fontWeight: 600,
             }}
           >
-            ☀ Warm
+            ? Help
           </button>
-          <button
-            type="button"
-            onClick={() => setTheme('dark')}
+
+          <div
+            role="group"
+            aria-label="Theme"
             style={{
-              padding: '6px 12px',
-              border: 'none',
-              background: theme === 'dark' ? 'rgba(244,210,172,0.22)' : 'transparent',
-              color: theme === 'dark' ? '#fff8ee' : 'rgba(255,255,255,0.6)',
-              cursor: 'pointer',
-              fontWeight: 600,
+              display: 'flex',
+              background: 'rgba(13,13,26,0.75)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 18,
+            overflow: 'hidden',
+              fontSize: '0.78rem',
             }}
           >
-            ☾ Dark
-          </button>
+            <button
+              type="button"
+              onClick={() => setTheme('warm')}
+              style={{
+                padding: '6px 12px',
+                border: 'none',
+                background: theme === 'warm' ? 'rgba(244,210,172,0.22)' : 'transparent',
+                color: theme === 'warm' ? '#fff8ee' : 'rgba(255,255,255,0.6)',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              ☀ Warm
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme('dark')}
+              style={{
+                padding: '6px 12px',
+                border: 'none',
+                background: theme === 'dark' ? 'rgba(244,210,172,0.22)' : 'transparent',
+                color: theme === 'dark' ? '#fff8ee' : 'rgba(255,255,255,0.6)',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              ☾ Dark
+            </button>
+          </div>
         </div>
       </div>
     </main>

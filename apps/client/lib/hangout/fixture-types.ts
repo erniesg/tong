@@ -74,9 +74,39 @@ export type WebtoonPanel = {
   // Gap before this panel. Either a solid color OR a vertical linear gradient
   // carrying mood from the previous panel into this one.
   gapBefore: WebtoonGap;
+  /** Optional border treatment, typically used for inset panels. */
+  frame?: WebtoonPanelFrame;
+  /** Optional layout overrides for staggered inset compositions. */
+  layout?: WebtoonPanelLayout;
   isThumbStop?: boolean;
   bubble?: WebtoonBubble;
   transition: "fade" | "cut" | "darken";
+};
+
+export type WebtoonPanelFrame = {
+  /** `all` = full frame, `top-bottom` = manga/webtoon-style horizontal rules only. */
+  edges: "all" | "top-bottom";
+  color?: string;
+  widthPx?: number;
+  dark?: {
+    color?: string;
+  };
+};
+
+export type WebtoonPanelLayout = {
+  align?: "left" | "center" | "right";
+  /** Pull the panel upward to create a staggered overlap with the previous panel. */
+  liftPx?: number;
+  /** Override the rendered width when the default inset width is not enough. */
+  widthPct?: number;
+  flipX?: boolean;
+  /** Force a different visible crop ratio while keeping the source asset. */
+  cropAspectRatio?: string;
+  /** CSS object-position used when the panel is cropped. */
+  cropPosition?: string;
+  /** Optional local backdrop behind an inset panel so the surrounding surface blends better. */
+  backdropColor?: string;
+  darkBackdropColor?: string;
 };
 
 export type WebtoonGap = {
@@ -84,6 +114,11 @@ export type WebtoonGap = {
   color?: string;
   /** [fromColor, toColor] vertical gradient — fades across the gap. */
   gradient?: [string, string];
+  /** Optional overrides when the strip is rendered in dark theme. */
+  dark?: {
+    color?: string;
+    gradient?: [string, string];
+  };
 };
 
 export type WebtoonBubble = {
@@ -95,6 +130,19 @@ export type WebtoonBubble = {
   en?: string;
   speaker: string;
   position: "top" | "bottom" | "center-bottom";
+  layout?: WebtoonBubbleLayout;
+};
+
+export type WebtoonBubbleLayout = {
+  /** Render the balloon partly outside the panel instead of fully inside it. */
+  outside?: boolean;
+  align?: "left" | "center" | "right";
+  offsetXPx?: number;
+  offsetYPx?: number;
+  tailOffsetPct?: number;
+  outsideOverlapPx?: number;
+  reserveSpacePx?: number;
+  maxWidth?: string;
 };
 
 export type CreditGate = {
