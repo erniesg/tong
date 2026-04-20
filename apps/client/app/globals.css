@@ -10151,145 +10151,127 @@ body:has(.playtest-pill-expanded) {
 }
 
 /* =========================================================================
-   Webtoon Strip — continuous vertical-scroll renderer (#228)
+   Webtoon Strip v3 — real-webtoon conventions + speaker-aware help bubbles
+   — Three width tiers: full-bleed (100%), full-width (96% w/ parchment
+     margins that breathe), inset (~60% centered, sits on theme bg not a void).
+   — Gaps carry mood: solid color OR vertical gradient between panel palettes.
+   — Bubble expands IN PLACE on tap; pinyin is ruby-aligned above each hanzi.
    ========================================================================= */
 
-.webtoon-strip {
+.wt-strip {
   position: relative;
   width: 100%;
   height: 100%;
   max-height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
-  background: #0d0d1a;
+  background: var(--wt-surface, #f4f0e8);
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
-.webtoon-strip__panel-wrap {
+.wt-block {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.webtoon-strip__gap {
+.wt-gap {
   width: 100%;
-  height: var(--webtoon-gap-height, 0px);
-  background: var(--webtoon-gap-color, transparent);
-  flex-shrink: 0;
+  display: block;
 }
 
-.webtoon-strip__panel {
+.wt-panel {
   position: relative;
   margin: 0;
+  padding: 0;
   overflow: hidden;
-  background: #000;
-  flex-shrink: 0;
+  background: transparent;
 }
 
-.webtoon-strip__panel--full-bleed {
-  width: 100%;
+.wt-panel--full-bleed { width: 100%; }
+.wt-panel--full-width { width: 96%; }
+.wt-panel--inset      { width: 62%; }
+
+@media (max-width: 480px) {
+  .wt-panel--full-width { width: 100%; }
+  .wt-panel--inset      { width: 70%; }
 }
 
-.webtoon-strip__panel--full-width {
-  width: 96%;
-  border-radius: 4px;
-}
-
-.webtoon-strip__panel--inset-wide {
-  width: 76%;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-}
-
-.webtoon-strip__panel--inset-narrow {
-  width: 54%;
-  border-radius: 10px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-}
-
-.webtoon-strip__panel--floating {
-  width: 64%;
-  border-radius: 14px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-  margin-top: 24px;
-  margin-bottom: 24px;
-}
-
-.webtoon-strip__panel.is-thumb-stop {
-  scroll-snap-align: start;
-}
-
-.webtoon-strip__image {
+.wt-panel__img {
   display: block;
   width: 100%;
   height: auto;
-  object-fit: cover;
   user-select: none;
   pointer-events: none;
 }
 
-.webtoon-strip__progress {
-  position: fixed;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 20;
-  pointer-events: none;
+.wt-panel.is-thumb-stop {
+  scroll-snap-align: start;
 }
 
-.webtoon-strip__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
-  transition: background 180ms ease, transform 180ms ease;
-}
+/* ---------- Speech bubble (tappable, expands in place) ---------- */
 
-.webtoon-strip__dot.is-complete {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.webtoon-strip__dot.is-active {
-  background: #f4d2ac;
-  transform: scale(1.5);
-}
-
-/* ---------- Webtoon bubble (in-panel overlay) ---------- */
-
-.webtoon-bubble {
+.wt-bubble {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 86%;
+  width: min(440px, 86%);
   z-index: 4;
-  pointer-events: auto;
+
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  animation: webtoonBubbleEnter 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  align-items: flex-start;
+  gap: 10px;
+
+  padding: 14px 20px 16px;
+  background: #fff;
+  color: #12161f;
+  border: 2px solid #1d3a6b;
+  border-radius: 22px;
+  box-shadow: 0 14px 36px rgba(10, 15, 30, 0.22), 0 2px 6px rgba(10, 15, 30, 0.1);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+
+  animation: wtBubbleRise 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition:
+    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 220ms ease,
+    background 220ms ease,
+    border-color 220ms ease,
+    max-width 220ms ease;
 }
 
-.webtoon-bubble--top {
-  top: 5%;
+.wt-bubble:hover {
+  transform: translate(-50%, -2px);
+  box-shadow: 0 18px 44px rgba(10, 15, 30, 0.28), 0 4px 10px rgba(10, 15, 30, 0.14);
 }
 
-.webtoon-bubble--bottom {
-  bottom: 6%;
+.wt-bubble:active {
+  transform: translate(-50%, 0);
 }
 
-.webtoon-bubble--center-bottom {
-  bottom: 14%;
+/* Expanded state: bubble flips to a dark translucent card so the help
+   (pinyin + english) reads as a distinct "lens" over the scene, not a
+   detached card floating elsewhere. */
+.wt-bubble.is-open {
+  background: #0e1524;
+  border-color: rgba(244, 210, 172, 0.55);
+  color: #fff8ee;
+  box-shadow: 0 18px 44px rgba(5, 8, 18, 0.5), 0 4px 10px rgba(5, 8, 18, 0.28);
 }
 
-@keyframes webtoonBubbleEnter {
+.wt-bubble--top            { top: 6%; }
+.wt-bubble--bottom         { bottom: 7%; }
+.wt-bubble--center-bottom  { bottom: 16%; }
+
+@keyframes wtBubbleRise {
   from {
     opacity: 0;
-    transform: translate(-50%, 6px);
+    transform: translate(-50%, 10px);
   }
   to {
     opacity: 1;
@@ -10297,85 +10279,99 @@ body:has(.playtest-pill-expanded) {
   }
 }
 
-.webtoon-bubble__button {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 12px 16px 14px;
-  background: rgba(255, 248, 238, 0.96);
-  color: #1d1612;
-  border: none;
-  border-radius: 18px;
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
-  cursor: pointer;
-  font-family: inherit;
-  max-width: 100%;
-  text-align: left;
-  transition: transform 180ms ease, box-shadow 180ms ease;
+/* Speaker accents — border on closed, preserved on open for identity */
+.wt-bubble--shoucheng { border-color: #1d3a6b; }
+.wt-bubble--dingman   { border-color: #9c3a2a; }
+.wt-bubble--ayi       { border-color: #b5792a; }
+.wt-bubble--narrator  { border-color: #555862; background: #faf7f2; }
+
+.wt-bubble.is-open.wt-bubble--shoucheng { border-color: rgba(120, 160, 220, 0.6); }
+.wt-bubble.is-open.wt-bubble--dingman   { border-color: rgba(236, 140, 120, 0.6); }
+.wt-bubble.is-open.wt-bubble--ayi       { border-color: rgba(244, 210, 172, 0.6); }
+
+.wt-bubble__speaker {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(244, 210, 172, 0.75);
+  display: block;
 }
 
-.webtoon-bubble__button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.34);
-}
-
-.webtoon-bubble__button:active {
-  transform: translateY(0);
-}
-
-.webtoon-bubble__speaker {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(29, 22, 18, 0.55);
-}
-
-.webtoon-bubble__text {
-  font-size: 1.08rem;
-  line-height: 1.4;
-  font-weight: 600;
-  color: #1d1612;
-}
-
-.webtoon-bubble__lock {
+.wt-bubble__hint {
+  align-self: flex-start;
   font-size: 0.68rem;
   font-weight: 600;
-  color: #c26a24;
-  background: rgba(194, 106, 36, 0.12);
-  padding: 3px 8px;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
   border-radius: 8px;
+  background: rgba(29, 58, 107, 0.1);
+  color: rgba(29, 58, 107, 0.75);
+}
+
+.wt-bubble--dingman .wt-bubble__hint { background: rgba(156, 58, 42, 0.1); color: rgba(156, 58, 42, 0.78); }
+.wt-bubble--ayi .wt-bubble__hint     { background: rgba(181, 121, 42, 0.12); color: rgba(181, 121, 42, 0.8); }
+
+.wt-bubble__hint--open {
+  align-self: flex-end;
+  background: rgba(244, 210, 172, 0.15);
+  color: rgba(244, 210, 172, 0.78);
   margin-top: 4px;
 }
 
-.webtoon-bubble__tooltip {
-  background: rgba(13, 13, 26, 0.95);
-  color: #fff8ee;
-  padding: 10px 14px;
-  border-radius: 14px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
-  max-width: 100%;
+.wt-bubble__text {
+  font-size: 1.32rem;
+  line-height: 1.38;
+  font-weight: 700;
+  color: inherit;
+  word-break: keep-all;
+}
+
+/* ---------- Expanded help: ruby pinyin + english ---------- */
+
+.wt-bubble__help {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  animation: webtoonBubbleEnter 260ms ease-out both;
+  gap: 8px;
+  width: 100%;
+  animation: wtHelpReveal 280ms ease-out both;
 }
 
-.webtoon-bubble__tooltip-line {
-  margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.4;
+@keyframes wtHelpReveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.webtoon-bubble__tooltip-line--py {
-  color: #f4d2ac;
-  font-style: italic;
-}
-
-.webtoon-bubble__tooltip-line--en {
+.wt-bubble__ruby {
+  font-size: 1.32rem;
+  line-height: 1.7; /* allow rt to sit above without clipping */
+  font-weight: 700;
   color: #fff8ee;
+}
+
+.wt-ruby {
+  ruby-position: over;
+  ruby-align: center;
+  margin: 0 1px;
+}
+
+.wt-ruby rt {
+  font-size: 0.52em;
+  line-height: 1;
+  font-style: italic;
   font-weight: 500;
+  color: #f4d2ac;
+  letter-spacing: 0.02em;
+}
+
+.wt-ruby-plain {
+  /* punctuation / non-CJK chars — no ruby */
+}
+
+.wt-bubble__en {
+  font-size: 1.02rem;
+  line-height: 1.4;
+  font-weight: 500;
+  color: #fff8ee;
 }
 
 /* ---------- Webtoon Lab v2 ---------- */
