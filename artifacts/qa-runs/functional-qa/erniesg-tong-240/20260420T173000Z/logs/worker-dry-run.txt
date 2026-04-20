@@ -1,0 +1,14 @@
+
+> @tong/worker@0.1.0 deploy
+> wrangler deploy --dry-run
+
+
+ ⛅️ wrangler 4.69.0 (update available 4.84.0)
+─────────────────────────────────────────────
+Total Upload: 245.43 KiB / gzip: 36.05 KiB
+Your Worker has access to the following bindings:
+Binding                                  Resource         
+env.DB (tong-signups)                    D1 Database      
+env.TONG_RUNS_BUCKET (tong-runs)         R2 Bucket        
+
+--dry-run: exiting now.

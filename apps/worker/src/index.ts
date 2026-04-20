@@ -8,6 +8,16 @@ import learnSessionsFixture from '../../../packages/contracts/fixtures/learn.ses
 import mediaProfileFixture from '../../../packages/contracts/fixtures/player.media-profile.sample.json';
 import objectiveIdentityMap from '../../../packages/contracts/objective-identity-map.sample.json';
 import mockMediaWindow from '../../server/data/mock-media-window.json';
+import {
+  attachFindingRefs,
+  isValidRouteStatus,
+  listUnroutedFindings,
+  reopenFinding,
+  retryFinding,
+  setFindingManualOverride,
+  upsertFindingLedgerEntries,
+  updateFindingRoute,
+} from './playtest-findings';
 import { guessContentTypeFromAssetPath, resolveRuntimeAssetForProxy } from './runtime-assets';
 
 type Lang = 'ko' | 'ja' | 'zh';
@@ -663,6 +673,24 @@ async function readJsonBody(request: Request): Promise<Record<string, any>> {
   const text = await request.text();
   if (!text) return {};
   return JSON.parse(text);
+}
+
+function createSqlExecutor(db: any) {
+  return {
+    async all<T extends Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
+      const result = await db.prepare(sql).bind(...params).all();
+      return (result.results || []) as T[];
+    },
+    async get<T extends Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T | null> {
+      return ((await db.prepare(sql).bind(...params).first()) as T | null) ?? null;
+    },
+    async run(sql: string, params: unknown[] = []): Promise<{ changes: number }> {
+      const result = await db.prepare(sql).bind(...params).run();
+      return {
+        changes: Number((result as any)?.meta?.changes ?? (result as any)?.changes ?? 0),
+      };
+    },
+  };
 }
 
 const PLAYTEST_ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -2705,16 +2733,24 @@ async function handleRequest(request: Request): Promise<Response> {
       await env.TONG_RUNS_BUCKET.put(r2Key, JSON.stringify(body.data, null, 2), {
         httpMetadata: { contentType: 'application/json' },
       });
+      let ledger = null;
       // Update D1 with artifact key
       if (env?.DB) {
         if (body.type === 'analysis') {
           await env.DB.prepare(
             `UPDATE playtest_sessions SET analysis_id = ?, updated_at = datetime('now') WHERE session_id = ?`
           ).bind(body.data?.analysisId || r2Key, sessionId).run();
+
+          ledger = await upsertFindingLedgerEntries(createSqlExecutor(env.DB), {
+            analysisData: body.data || {},
+            analysisId: String(body.data?.analysisId || r2Key),
+            publicBase: env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai',
+            sessionId,
+          });
         }
       }
       const publicBase = env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai';
-      return jsonResponse(200, { ok: true, key: r2Key, url: `${publicBase}/${r2Key}` });
+      return jsonResponse(200, { ok: true, key: r2Key, ledger, url: `${publicBase}/${r2Key}` });
     }
 
     if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/artifacts\/[^/]+$/) && request.method === 'GET') {
@@ -2731,6 +2767,106 @@ async function handleRequest(request: Request): Promise<Response> {
         status: 200,
         headers: { 'Content-Type': 'application/json; charset=utf-8', ...CORS_HEADERS },
       });
+    }
+
+    if (pathname === '/api/v1/playtest/findings/unrouted' && request.method === 'GET') {
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit') || 50)));
+      const findings = await listUnroutedFindings(createSqlExecutor(env.DB), limit);
+      return jsonResponse(200, { ok: true, count: findings.length, findings });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/route$/) && request.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(request);
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      if (!isValidRouteStatus(body.status)) {
+        return jsonResponse(400, {
+          error: 'invalid_route_status',
+          valid: ['unrouted', 'skip', 'update_issue', 'new_issue', 'direct_pr', 'human_review', 'done'],
+        });
+      }
+      const finding = await updateFindingRoute(createSqlExecutor(env.DB), findingId, {
+        actor: body.actor,
+        confidence: body.confidence,
+        reason: body.reason,
+        status: body.status,
+      });
+      if (!finding) {
+        return jsonResponse(404, { error: 'finding_not_found', findingId });
+      }
+      return jsonResponse(200, { ok: true, finding });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/refs$/) && request.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(request);
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const finding = await attachFindingRefs(createSqlExecutor(env.DB), findingId, {
+        actor: body.actor,
+        issueRefs: Array.isArray(body.issueRefs) ? body.issueRefs : [],
+        prRefs: Array.isArray(body.prRefs) ? body.prRefs : [],
+      });
+      if (!finding) {
+        return jsonResponse(404, { error: 'finding_not_found', findingId });
+      }
+      return jsonResponse(200, { ok: true, finding });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/retry$/) && request.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(request);
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const finding = await retryFinding(createSqlExecutor(env.DB), findingId, body.actor);
+      if (!finding) {
+        return jsonResponse(404, { error: 'finding_not_found', findingId });
+      }
+      return jsonResponse(200, { ok: true, finding });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/reopen$/) && request.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(request);
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const finding = await reopenFinding(createSqlExecutor(env.DB), findingId, {
+        actor: body.actor,
+        reason: body.reason,
+      });
+      if (!finding) {
+        return jsonResponse(404, { error: 'finding_not_found', findingId });
+      }
+      return jsonResponse(200, { ok: true, finding });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/override$/) && request.method === 'PUT') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(request);
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      const overrideStatus = body.status ?? body.routeStatus ?? body.decision;
+      if (overrideStatus !== undefined && overrideStatus !== null && !isValidRouteStatus(overrideStatus)) {
+        return jsonResponse(400, {
+          error: 'invalid_route_status',
+          valid: ['unrouted', 'skip', 'update_issue', 'new_issue', 'direct_pr', 'human_review', 'done'],
+        });
+      }
+      const finding = await setFindingManualOverride(createSqlExecutor(env.DB), findingId, {
+        active: body.active,
+        actor: body.actor ?? body.by,
+        confidence: body.confidence ?? body.routeConfidence,
+        note: body.note,
+        reason: body.reason,
+        status: overrideStatus,
+      });
+      if (!finding) {
+        return jsonResponse(404, { error: 'finding_not_found', findingId });
+      }
+      return jsonResponse(200, { ok: true, finding });
     }
 
     return jsonResponse(404, { error: 'not_found', pathname });

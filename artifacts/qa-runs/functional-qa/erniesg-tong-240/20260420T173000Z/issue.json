@@ -1,0 +1,14 @@
+{
+  "repo": "erniesg/tong",
+  "number": 240,
+  "issue_ref": "erniesg/tong#240",
+  "title": "Playtest findings model and route-state ledger",
+  "body": "Part of: #165\nBuilds on: #216\n\n## Summary\n`#216` added the first repo-native playtest issue-promotion path, but routing is still too session-centric.\n\nA single playtest session can contain multiple distinct actionable problems. To avoid issue spam, duplicate work, and brittle retry behavior, we need a normalized findings ledger between raw session artifacts and GitHub work items.\n\n## Red\n- The system stores session artifacts and can draft/promote an issue, but there is no first-class per-finding queue.\n- We do not have stable fingerprints, route state, or issue/PR linkage per finding.\n- Re-running analysis or promotion risks duplicate GitHub work.\n- Human override decisions are not stored as first-class routing state.\n\n## Green\nEach actionable playtest finding has a stable identity, route status, audit trail, and GitHub linkage, so the orchestrator can decide `skip`, `update existing issue`, `create new issue`, `dispatch direct PR`, or `route to human` idempotently.\n\n## Scope\n- Add a per-finding data model, for example:\n  - `playtest_findings`\n  - optional `playtest_finding_links` / route history table if needed\n- Normalize `analysis.result.issues[]` into finding records\n- Store for each finding:\n  - stable fingerprint/dedupe key\n  - session id\n  - timestamps\n  - category/severity\n  - artifact links\n  - inferred component\n  - route status\n  - route reason / confidence\n  - linked GitHub issue and/or PR\n  - human override state\n- Add Worker endpoints for:\n  - listing unrouted findings\n  - marking route decisions\n  - attaching issue/PR refs\n  - retrying / reopening a finding\n  - storing manual overrides\n- Make the route state idempotent across reruns\n\n## Non-goals\n- Full autonomous fixing logic\n- Final GitHub review/approval logic\n\n## Acceptance Criteria\n- [ ] One analyzed session with `N` actionable findings produces `N` finding records\n- [ ] Re-running analysis does not duplicate equivalent findings\n- [ ] A finding can move through explicit route states such as `unrouted`, `skip`, `update_issue`, `new_issue`, `direct_pr`, `human_review`, `done`\n- [ ] Each finding can link to a GitHub issue and/or PR with a persistent audit trail\n- [ ] Manual override data is stored and readable by later orchestration runs\n- [ ] Worker APIs return reviewer-openable context links, not local-only paths\n\n## Suggested Lane\n`server-api` with `qa-platform` follow-on consumers\n",
+  "html_url": "https://github.com/erniesg/tong/issues/240",
+  "labels": [
+    "enhancement"
+  ],
+  "created_at": "2026-04-20T13:16:03Z",
+  "updated_at": "2026-04-20T13:16:03Z",
+  "project_fields": {}
+}

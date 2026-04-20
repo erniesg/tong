@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "wrangler dev --local --port 8788",
     "deploy": "wrangler deploy",
-    "tail": "wrangler tail"
+    "tail": "wrangler tail",
+    "test": "node --test --experimental-strip-types src/__tests__/*.test.ts"
   },
   "devDependencies": {
     "wrangler": "^4.45.0"

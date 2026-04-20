@@ -1,0 +1,4 @@
+
+> tong@0.1.0 demo:smoke
+> node scripts/demo_smoke_check.mjs
+

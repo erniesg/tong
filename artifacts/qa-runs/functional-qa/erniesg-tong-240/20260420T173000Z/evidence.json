@@ -1,0 +1,190 @@
+{
+  "summary": "Verified the #240 Worker ledger contract locally over HTTP from the rebased clean branch. The Worker now ingests current analysis findings, dedupes reruns safely, persists route state/reason/confidence plus linked refs and manual overrides, and returns 404 for missing lifecycle targets.",
+  "screenshots": [],
+  "comparison_panels": [],
+  "comparison_focus_crops": [],
+  "temporal_capture": [],
+  "console_logs": [
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-240/20260420T173000Z/logs/demo-smoke.txt",
+      "label": "demo-smoke",
+      "description": "Repo smoke output. Reports the unrelated missing runtime opening asset."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-240/20260420T173000Z/logs/worker-test.txt",
+      "label": "worker-tests",
+      "description": "Targeted Worker ledger unit test transcript."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-240/20260420T173000Z/logs/worker-dry-run.txt",
+      "label": "worker-dry-run",
+      "description": "Wrangler dry-run bundle output confirming the Worker packages successfully."
+    }
+  ],
+  "network_traces": [
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-240/20260420T173000Z/logs/network-upload-analysis.txt",
+      "label": "upload-analysis",
+      "description": "HTTP trace for analysis artifact upload on a fresh session."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-240/20260420T173000Z/logs/network-list-unrouted.txt",
+      "label": "list-unrouted",
+      "description": "HTTP trace showing the normalized unrouted finding payload."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-240/20260420T173000Z/logs/network-rerun-dedupe.txt",
+      "label": "rerun-dedupe",
+      "description": "HTTP trace proving rerun-safe dedupe reuses the same findingId."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-240/20260420T173000Z/logs/network-route.txt",
+      "label": "route-update",
+      "description": "HTTP trace for route status/reason/confidence persistence."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-240/20260420T173000Z/logs/network-refs.txt",
+      "label": "attach-refs",
+      "description": "HTTP trace for linked GitHub issue/PR ref persistence."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-240/20260420T173000Z/logs/network-retry.txt",
+      "label": "retry",
+      "description": "HTTP trace for rerun-safe retry lifecycle."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-240/20260420T173000Z/logs/network-reopen.txt",
+      "label": "reopen",
+      "description": "HTTP trace for reopen lifecycle."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-240/20260420T173000Z/logs/network-override.txt",
+      "label": "manual-override",
+      "description": "HTTP trace for manual override persistence."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-240/20260420T173000Z/logs/network-route-missing.txt",
+      "label": "missing-route-404",
+      "description": "HTTP trace confirming missing findings return finding_not_found."
+    }
+  ],
+  "contract_assertions": [
+    {
+      "path": "apps/worker/src/playtest-findings.ts",
+      "assertion": "Worker ingests current analysis.result.issues[] findings, normalizes MM:SS timestamps and numeric severities, generates internal finding IDs, and persists route state plus refs/overrides."
+    },
+    {
+      "path": "apps/worker/src/index.ts",
+      "assertion": "Worker routes expose unrouted listing plus route/refs/retry/reopen/override lifecycle endpoints and return 404 for missing findings without regressing upstream Worker features."
+    },
+    {
+      "path": "apps/worker/src/__tests__/playtest-findings-ledger.test.ts",
+      "assertion": "Targeted tests cover ingest normalization, dedupe, lifecycle transitions, and missing-finding behavior."
+    },
+    {
+      "path": "apps/worker/migrations/0005_playtest_findings_ledger.sql",
+      "assertion": "The durable per-finding ledger schema is additive and persists lifecycle and linkage fields."
+    }
+  ],
+  "perf_profiles": [],
+  "cross_env_matrix": [
+    {
+      "environment": "local Worker via wrangler dev on http://localhost:8788",
+      "result": "passed",
+      "notes": "Validated with local D1 and local R2 bindings after applying migrations in the clean branch worktree."
+    }
+  ],
+  "open_questions": [],
+  "notes": [
+    "This verify-fix run was captured from branch codex/issue-240-worker-findings-ledger on top of current origin/main.",
+    "demo:smoke still reports the unrelated missing runtime opening asset /assets/app/tong_opening.mp4.",
+    "No reviewer-facing UI proof was required because #240 is a data-contract API issue."
+  ],
+  "reviewer_proof": {
+    "classification": "not-evaluated",
+    "status": "not-evaluated",
+    "surface": "",
+    "route": "",
+    "scenario_seed": "",
+    "proof_moment": "",
+    "deterministic_setup": {
+      "used": false,
+      "description": ""
+    },
+    "artifacts": {
+      "proof_video": "",
+      "gif_preview": ""
+    },
+    "ordered_frames": {
+      "pre_action": "",
+      "ready_state": "",
+      "immediate_post_input": "",
+      "later_transition": "",
+      "stable_post_action": ""
+    },
+    "cue_timestamps_ms": {},
+    "checks": {
+      "real_route": false,
+      "semantically_coherent": false,
+      "ready_state_legible": false,
+      "input_visible": false,
+      "pre_action_hold": false,
+      "stable_post_action": false,
+      "reviewer_visible_media": false
+    },
+    "notes": [],
+    "missing_requirements": []
+  },
+  "portability": {
+    "status": "portable",
+    "portable": true,
+    "blocking": false,
+    "summary": "Portable from repo state plus documented setup.",
+    "blockers": [],
+    "warnings": [],
+    "project_portable_context": null,
+    "detected_local_paths": [],
+    "detected_private_references": [],
+    "detected_local_only_keywords": [],
+    "game_issue": false,
+    "route_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "proof_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "remote_dependencies_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "checkpoint_context": {
+      "present": true,
+      "source": "inferred",
+      "value": "not required"
+    },
+    "notes": [
+      "No reviewer-facing UI proof was required because #240 is a data-contract API issue."
+    ]
+  },
+  "validation": {
+    "direct_issue_evidence_complete": true,
+    "ui_acceptance_complete": true,
+    "runtime_modes_exercised": [
+      "worker-local",
+      "d1-local",
+      "r2-local",
+      "http-contract"
+    ],
+    "live_model_confirmed": true,
+    "human_review_completed": true,
+    "missing_requirements": [],
+    "notes": [
+      "Fresh session used for live verification: verify-240-clean-branch."
+    ]
+  }
+}

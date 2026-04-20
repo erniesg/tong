@@ -1,0 +1,75 @@
+{
+  "ok": true,
+  "finding": {
+    "findingId": "finding_8e4121d0-245e-4fc3-a23e-bab97256a0de",
+    "fingerprint": "ptf_7d13e8c4",
+    "sessionId": "playtest_demo_240",
+    "analysisId": "analysis-demo-240",
+    "observedAtText": "01:23",
+    "observedAtMs": 83000,
+    "observedAtIso": null,
+    "category": "navigation",
+    "severity": "critical",
+    "summary": "Continue affordance is unclear after dialogue ends.",
+    "description": "Continue affordance is unclear after dialogue ends.",
+    "suggestedFix": "Add a clearer continue CTA.",
+    "expectedBehavior": "A visible prompt to continue immediately.",
+    "actualBehavior": "User paused and hovered without advancing.",
+    "artifactLinks": [
+      {
+        "href": "https://runs.tong.berlayar.ai/playtest/playtest_demo_240/recording.webm",
+        "label": "recording",
+        "source": "playtest-session"
+      }
+    ],
+    "inferredComponent": "apps/client/components/scene/ContinueButton",
+    "routeState": {
+      "status": "human_review",
+      "reason": "design ambiguity",
+      "confidence": 0.88
+    },
+    "linkedRefs": {
+      "issueRefs": [
+        "erniesg/tong#240"
+      ],
+      "prRefs": [
+        "erniesg/tong#245"
+      ]
+    },
+    "manualOverride": {
+      "active": true,
+      "status": "human_review",
+      "reason": "design ambiguity",
+      "confidence": 0.88,
+      "actor": "qa-reviewer",
+      "note": "Needs explicit human review.",
+      "updatedAt": "2026-04-21T00:05:00.000Z"
+    },
+    "history": [
+      {
+        "type": "ingested",
+        "at": "2026-04-21T00:00:00.000Z",
+        "actor": null,
+        "data": {
+          "analysisId": "analysis-demo-240",
+          "summary": "Continue affordance is unclear after dialogue ends."
+        }
+      },
+      {
+        "type": "manual_override_updated",
+        "at": "2026-04-21T00:05:00.000Z",
+        "actor": "qa-reviewer",
+        "data": {
+          "active": true,
+          "status": "human_review",
+          "reason": "design ambiguity",
+          "confidence": 0.88
+        }
+      }
+    ],
+    "firstSeenAt": "2026-04-21T00:00:00.000Z",
+    "lastSeenAt": "2026-04-21T00:00:00.000Z",
+    "createdAt": "2026-04-21T00:00:00.000Z",
+    "updatedAt": "2026-04-21T00:05:00.000Z"
+  }
+}

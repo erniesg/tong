@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+Content-Length: 249
+Content-Type: application/json; charset=utf-8
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type, Authorization, Cookie, x-demo-password
+Access-Control-Allow-Methods: GET,POST,PUT,OPTIONS
+
+{"ok":true,"key":"playtest/verify-240-clean-branch/analysis.json","ledger":{"deduped":0,"findingIds":["finding_7c17a404-87bb-4efe-91d9-7177c4aea221"],"inserted":1},"url":"https://runs.tong.berlayar.ai/playtest/verify-240-clean-branch/analysis.json"}
