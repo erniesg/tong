@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PlaytestOverlay, type Annotation } from './PlaytestOverlay';
+import { PlaytestOverlay, type Annotation, type ClarificationPrompt } from './PlaytestOverlay';
+import { sessionLogger } from '@/lib/debug/session-logger';
 
 const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
 
@@ -11,6 +12,7 @@ const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787
  */
 export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionMeta, setSessionMeta] = useState<Record<string, unknown> | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -20,7 +22,10 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
       const raw = sessionStorage.getItem('tong_playtest_session');
       if (raw) {
         const data = JSON.parse(raw);
-        if (data.sessionId) setSessionId(data.sessionId);
+        if (data.sessionId) {
+          setSessionId(data.sessionId);
+          setSessionMeta(data);
+        }
       }
     } catch {
       // Not a playtest session
@@ -71,8 +76,14 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
   );
 
   const handleClarification = useCallback(
-    async (comment: Annotation): Promise<string | null> => {
+    async (comment: Annotation): Promise<ClarificationPrompt | null> => {
       try {
+        const currentSession = sessionLogger.getCurrent();
+        const stateLogExcerpt = currentSession?.entries
+          ?.filter((entry) => entry.kind === 'state_snapshot' || entry.kind === 'qa_trace')
+          .slice(-5)
+          .map((entry) => ({ ts: entry.ts, kind: entry.kind, data: entry.data })) || [];
+
         const res = await fetch('/api/ai/playtest-clarify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -80,44 +91,34 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
             comment: comment.text,
             timestamp: comment.timestamp,
             sessionId,
+            sceneContext: sessionMeta?.sceneType ? String(sessionMeta.sceneType) : undefined,
+            sessionMetadata: sessionMeta || undefined,
+            screenshotContext: {
+              hasScreenshot: Boolean(comment.screenshot),
+              x: comment.x,
+              y: comment.y,
+            },
+            stateLogExcerpt,
           }),
         });
 
         if (!res.ok) return null;
+        const payload = await res.json();
+        if (payload?.status !== 'FOLLOW_UP') return null;
 
-        // Read the streaming response as text
-        const reader = res.body?.getReader();
-        if (!reader) return null;
-
-        let text = '';
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          text += decoder.decode(value, { stream: true });
-        }
-
-        // Parse Vercel AI SDK data stream format — extract text chunks
-        const lines = text.split('\n').filter(Boolean);
-        let reply = '';
-        for (const line of lines) {
-          // Vercel AI SDK streams as "0:text\n" format
-          if (line.startsWith('0:')) {
-            try {
-              reply += JSON.parse(line.slice(2));
-            } catch {
-              reply += line.slice(2);
-            }
-          }
-        }
-
-        if (!reply || reply.trim() === 'CLEAR') return null;
-        return reply.trim();
+        return {
+          question: String(payload.question || ''),
+          options: Array.isArray(payload.options)
+            ? payload.options.slice(0, 3).map((option: unknown) => String(option))
+            : [],
+          allowOther: payload.allowOther !== false,
+          rationale: payload.rationale ? String(payload.rationale) : undefined,
+        };
       } catch {
         return null;
       }
     },
-    [sessionId],
+    [sessionId, sessionMeta],
   );
 
   const isActive = Boolean(sessionId) && !submitted && !uploading;
