@@ -2,20 +2,31 @@ import type { WebtoonPanel, WebtoonSpec } from '@/lib/hangout/fixture-types';
 
 const ASSET = (n: number) => `/assets/webtoon/shanghai/h1/${n}.png`;
 
-// Theme colors — chained so each gap fades from the prior panel's dominant
-// tone into the next. Gaps are intentionally large so gradients have room
-// to actually READ as gradients (not 30px slivers).
-const PARCHMENT = '#f4f0e8';
+// Warm daytime palette (parchment surface).
+const PARCHMENT = '#ffffff';
 const WARM_SOFT = '#ead9c2';
 const WARM_DEEP = '#c9b7a0';
 const TABLE_WOOD = '#c29867';
-const DUSK = '#6b5942';
-const DARK = '#0b0b10';
+const DARK_END = '#0b0b10';
+const INK_BORDER = '#16110d';
+const SUNSET_SOFT = '#f1d9bb';
+const SUNSET_DEEP = '#d69b5f';
+const SUNSET_FIELD = '#f3d6ae';
+const SUNSET_FIELD_DARK = '#2a1f1a';
 
-// Source dimensions (aspect drives the natural panel height):
+// Dark / night palette (near-black surface). The strip reads as the same
+// restaurant scene after hours — warm tones survive but are dimmed.
+const DARK_ROOM = '#141119';
+const DARK_WARM = '#2a1f1a';
+const DARK_DEEP = '#3a2c22';
+const DARK_WOOD = '#4a3728';
+const DARK_VOID = '#08080c';
+const INK_BORDER_DARK = 'rgba(255, 248, 238, 0.9)';
+
+// Source dimensions:
 //   0: 2562x1440 (16:9 landscape)   — establishing
 //   1: 1682x2193 (~3:4 portrait)     — opening beat
-//   2: 1440x2562 (9:16 portrait)     — retort  (rendered as INSET for beat compression)
+//   2: 1440x2562 (9:16 portrait)     — retort (rendered as INSET)
 //   3: 2562x1440 (16:9 landscape)    — prompt
 //   4: 1682x2193 (~3:4 portrait)     — deflection (food)
 //   5: 1440x2562 (9:16 portrait)     — pitch line (focus)
@@ -35,31 +46,55 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
   {
     id: 'p1',
     imageUrl: ASSET(1),
-    widthType: 'full-width',
+    widthType: 'inset',
     heightClass: 'standard',
     aspectRatio: '3:4',
     shotType: 'medium',
-    // Warm fade from the wood-tone base of p0 into parchment for p1.
-    gapBefore: { px: 220, gradient: [TABLE_WOOD, PARCHMENT] },
+    gapBefore: {
+      px: 220,
+      gradient: [TABLE_WOOD, PARCHMENT],
+      dark: { gradient: [DARK_WOOD, DARK_ROOM] },
+    },
+    frame: {
+      edges: 'top-bottom',
+      widthPx: 4,
+      color: INK_BORDER,
+      dark: { color: INK_BORDER_DARK },
+    },
     transition: 'cut',
     bubble: {
-      zh: '方案你看过了。',
+      zh: '方案你看过了？',
       py: ['Fāng', 'àn', 'nǐ', 'kàn', 'guò', 'le'],
-      en: 'You looked at the proposal.',
+      en: 'You read the proposal?',
       speaker: 'shoucheng',
       position: 'bottom',
+      layout: {
+        outside: true,
+        outsideOverlapPx: 18,
+        reserveSpacePx: 118,
+        tailOffsetPct: 50,
+        maxWidth: 'min(80vw, 19rem)',
+      },
     },
   },
   {
     id: 'p2',
-    // Proper inset — 60% width, sits on the parchment surface (not on a void).
-    // Compresses the beat: her answer is shorter than his question.
     imageUrl: ASSET(2),
     widthType: 'inset',
     heightClass: 'short',
     aspectRatio: '9:16',
     shotType: 'close-up',
-    gapBefore: { px: 140, color: PARCHMENT },
+    gapBefore: {
+      px: 140,
+      color: PARCHMENT,
+      dark: { color: DARK_ROOM },
+    },
+    frame: {
+      edges: 'top-bottom',
+      widthPx: 4,
+      color: INK_BORDER,
+      dark: { color: INK_BORDER_DARK },
+    },
     transition: 'cut',
     bubble: {
       zh: '看了。',
@@ -67,16 +102,32 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
       en: 'I did.',
       speaker: 'dingman',
       position: 'bottom',
+      layout: { tailOffsetPct: 50 },
     },
   },
   {
     id: 'p3',
     imageUrl: ASSET(3),
-    widthType: 'full-width',
+    widthType: 'inset',
     heightClass: 'standard',
     aspectRatio: '16:9',
     shotType: 'medium-ots',
-    gapBefore: { px: 200, gradient: [PARCHMENT, WARM_SOFT] },
+    gapBefore: {
+      px: 200,
+      color: PARCHMENT,
+      dark: { gradient: [DARK_ROOM, DARK_WARM] },
+    },
+    frame: {
+      edges: 'all',
+      widthPx: 4,
+      color: INK_BORDER,
+      dark: { color: INK_BORDER_DARK },
+    },
+    layout: {
+      widthPct: 90,
+      backdropColor: PARCHMENT,
+      darkBackdropColor: DARK_WARM,
+    },
     transition: 'cut',
     bubble: {
       zh: '想法？',
@@ -84,17 +135,21 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
       en: 'Thoughts?',
       speaker: 'shoucheng',
       position: 'bottom',
+      layout: { tailOffsetPct: 50 },
     },
   },
   {
     id: 'p4',
     imageUrl: ASSET(4),
-    widthType: 'full-width',
+    widthType: 'full-bleed',
     heightClass: 'tall',
     aspectRatio: '3:4',
     shotType: 'medium',
-    // Her deflection is the emotional focus — warm gradient holds the mood.
-    gapBefore: { px: 200, gradient: [WARM_SOFT, PARCHMENT] },
+    gapBefore: {
+      px: 120,
+      color: PARCHMENT,
+      dark: { gradient: [DARK_WARM, DARK_ROOM] },
+    },
     transition: 'cut',
     bubble: {
       zh: '小笼包不错。',
@@ -102,17 +157,35 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
       en: 'The xiaolongbao is good.',
       speaker: 'dingman',
       position: 'bottom',
+      layout: { tailOffsetPct: 50 },
     },
   },
   {
     id: 'p5',
     imageUrl: ASSET(5),
-    widthType: 'full-width',
+    widthType: 'inset',
     heightClass: 'tall',
     aspectRatio: '9:16',
     shotType: 'medium-closeup',
-    // Building tension — parchment starts cooling.
-    gapBefore: { px: 260, gradient: [PARCHMENT, WARM_DEEP] },
+    gapBefore: {
+      px: 150,
+      gradient: [PARCHMENT, SUNSET_SOFT],
+      dark: { gradient: [DARK_ROOM, DARK_DEEP] },
+    },
+    frame: {
+      edges: 'all',
+      widthPx: 4,
+      color: INK_BORDER,
+      dark: { color: INK_BORDER_DARK },
+    },
+    layout: {
+      align: 'left',
+      flipX: true,
+      cropAspectRatio: '3 / 4',
+      cropPosition: 'center 42%',
+      backdropColor: SUNSET_FIELD,
+      darkBackdropColor: SUNSET_FIELD_DARK,
+    },
     transition: 'cut',
     bubble: {
       zh: '这个节目跟其他的不一样。',
@@ -120,18 +193,34 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
       en: 'This show is different from the others.',
       speaker: 'shoucheng',
       position: 'bottom',
+      layout: { tailOffsetPct: 50 },
     },
   },
   {
     id: 'p6',
     imageUrl: ASSET(6),
-    widthType: 'full-bleed',
+    widthType: 'inset',
     heightClass: 'tall',
     aspectRatio: '3:4',
     shotType: 'close-up',
-    // Dramatic mood pivot: long gradient from warm-deep through dusk into
-    // near-black so the mic-drop lands in a genuinely different register.
-    gapBefore: { px: 520, gradient: [WARM_DEEP, DARK] },
+    gapBefore: {
+      px: 110,
+      color: SUNSET_FIELD,
+      dark: { color: DARK_ROOM },
+    },
+    frame: {
+      edges: 'all',
+      widthPx: 4,
+      color: INK_BORDER,
+      dark: { color: INK_BORDER_DARK },
+    },
+    layout: {
+      align: 'right',
+      liftPx: 160,
+      cropAspectRatio: '3 / 4',
+      backdropColor: SUNSET_FIELD,
+      darkBackdropColor: SUNSET_FIELD_DARK,
+    },
     transition: 'darken',
     isThumbStop: true,
     bubble: {
@@ -139,7 +228,8 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
       py: ['Měi', 'ge', 'jié', 'mù', 'dōu', 'shuō', 'zì', 'jǐ', 'bù', 'yí', 'yàng'],
       en: 'Every show says it is different.',
       speaker: 'dingman',
-      position: 'center-bottom',
+      position: 'bottom',
+      layout: { tailOffsetPct: 50 },
     },
   },
 ];

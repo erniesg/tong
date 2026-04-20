@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tong Design System</title>
-<!-- Generated: 2026-04-08T13:26:55.951Z | 97 variables, 939 classes, 52 keyframes -->
+<!-- Generated: 2026-04-20T14:59:01.775Z | 113 variables, 992 classes, 54 keyframes -->
 <style>
 /* ══════════════════════════════════════════════════════════════
    BLOCK 1: globals.css — verbatim embed (single source of truth)
@@ -10161,6 +10161,574 @@ body:has(.playtest-pill-expanded) {
   background: rgba(255,255,255,0.03);
 }
 
+/* =========================================================================
+   Webtoon Strip v3 — real-webtoon conventions + speaker-aware help bubbles
+   — Three width tiers: full-bleed (100%), full-width (96% w/ parchment
+     margins that breathe), inset (~60% centered, sits on theme bg not a void).
+   — Gaps carry mood: solid color OR vertical gradient between panel palettes.
+   — Bubble expands IN PLACE on tap; pinyin is ruby-aligned above each hanzi.
+   ========================================================================= */
+
+.wt-strip {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--wt-surface, #f4f0e8);
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.wt-strip--page-scroll {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.wt-strip--dark {
+  color: #fff8ee;
+}
+
+/* ---------- Progress rail (clickable, jumps to panel) ---------- */
+
+.wt-rail {
+  position: fixed;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 8px;
+  background: rgba(13, 13, 26, 0.32);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  touch-action: manipulation;
+}
+
+.wt-rail--dark {
+  background: rgba(255, 248, 238, 0.08);
+}
+
+.wt-rail__dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 200ms ease;
+}
+
+.wt-rail__dot::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transition:
+    transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.wt-rail__dot:hover::after {
+  transform: scale(1.25);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.wt-rail__dot.is-done::after {
+  background: rgba(244, 210, 172, 0.55);
+}
+
+.wt-rail__dot.is-active::after {
+  background: #f4d2ac;
+  transform: scale(1.6);
+  box-shadow: 0 0 0 3px rgba(244, 210, 172, 0.25);
+}
+
+.wt-rail__dot:focus-visible {
+  outline: 2px solid #f4d2ac;
+  outline-offset: 3px;
+}
+
+.wt-block {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.wt-gap {
+  width: 100%;
+  display: block;
+}
+
+.wt-panel {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  isolation: isolate;
+}
+
+.wt-panel--bubble-outside {
+  overflow: visible;
+}
+
+.wt-panel--framed::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.wt-panel--frame-all::after {
+  box-shadow: inset 0 0 0 var(--wt-frame-width, 2px) var(--wt-frame-color, rgba(49, 37, 24, 0.22));
+}
+
+.wt-panel--frame-top-bottom::after {
+  box-shadow:
+    inset 0 var(--wt-frame-width, 2px) 0 0 var(--wt-frame-color, rgba(49, 37, 24, 0.22)),
+    inset 0 calc(-1 * var(--wt-frame-width, 2px)) 0 0 var(--wt-frame-color, rgba(49, 37, 24, 0.22));
+}
+
+.wt-panel--full-bleed { width: 100%; }
+.wt-panel--full-width { width: 96%; }
+.wt-panel--inset      { width: 62%; }
+
+@media (max-width: 480px) {
+  .wt-panel--full-width { width: 100%; }
+  .wt-panel--inset      { width: 70%; }
+}
+
+.wt-panel__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+
+.wt-panel.is-thumb-stop {
+  scroll-snap-align: start;
+}
+
+/* ---------- Speech bubble (tappable, expands in place) ---------- */
+
+.wt-bubble {
+  --wt-bubble-fill: #fffdf9;
+  --wt-bubble-border: #1d3a6b;
+  --wt-bubble-shadow: 0 18px 38px rgba(10, 15, 30, 0.2), 0 3px 8px rgba(10, 15, 30, 0.08);
+  --wt-tail-size: clamp(18px, 3.6vw, 24px);
+  --wt-tail-offset: 50%;
+  position: absolute;
+  left: 50%;
+  transform: translate(calc(var(--wt-bubble-shift-x, -50%) + var(--wt-bubble-shift-nudge, 0px)), 0);
+  width: auto;
+  min-width: 7.5rem;
+  max-width: var(--wt-bubble-max-width, min(84vw, 34rem));
+  z-index: 4;
+
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 1.6vw, 12px);
+
+  padding: clamp(13px, 1.4vw + 8px, 20px) clamp(20px, 3.6vw, 34px) clamp(15px, 1.6vw + 8px, 22px);
+  min-height: clamp(4.25rem, 13vw, 6rem);
+  background: var(--wt-bubble-fill);
+  color: #12161f;
+  border: 2px solid var(--wt-bubble-border);
+  border-radius: 999px;
+  box-shadow: var(--wt-bubble-shadow);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  font-family: inherit;
+  text-align: center;
+  isolation: isolate;
+
+  animation: wtBubbleRise 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition:
+    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 220ms ease,
+    background 220ms ease,
+    border-color 220ms ease,
+    border-radius 220ms ease;
+}
+
+.wt-bubble::before,
+.wt-bubble::after {
+  content: '';
+  position: absolute;
+  left: var(--wt-tail-offset);
+  pointer-events: none;
+  width: var(--wt-tail-size);
+  height: var(--wt-tail-size);
+  background: var(--wt-bubble-fill);
+  z-index: -1;
+}
+
+.wt-bubble--bottom::before,
+.wt-bubble--center-bottom::before,
+.wt-bubble--bottom::after,
+.wt-bubble--center-bottom::after {
+  top: calc(var(--wt-tail-size) * -0.28);
+  transform: translateX(-50%) rotate(47deg);
+}
+
+.wt-bubble--bottom::before,
+.wt-bubble--center-bottom::before {
+  border-top: 2px solid var(--wt-bubble-border);
+  border-left: 2px solid var(--wt-bubble-border);
+}
+
+.wt-bubble--bottom::after,
+.wt-bubble--center-bottom::after {
+  top: calc(var(--wt-tail-size) * -0.18);
+}
+
+.wt-bubble--top::before,
+.wt-bubble--top::after {
+  bottom: calc(var(--wt-tail-size) * -0.28);
+  transform: translateX(-50%) rotate(43deg);
+}
+
+.wt-bubble--top::before {
+  border-right: 2px solid var(--wt-bubble-border);
+  border-bottom: 2px solid var(--wt-bubble-border);
+}
+
+.wt-bubble--top::after {
+  bottom: calc(var(--wt-tail-size) * -0.18);
+}
+
+.wt-bubble:hover {
+  transform: translate(calc(var(--wt-bubble-shift-x, -50%) + var(--wt-bubble-shift-nudge, 0px)), -2px);
+  box-shadow: 0 20px 44px rgba(10, 15, 30, 0.24), 0 4px 10px rgba(10, 15, 30, 0.12);
+}
+
+.wt-bubble:active {
+  transform: translate(calc(var(--wt-bubble-shift-x, -50%) + var(--wt-bubble-shift-nudge, 0px)), 0);
+}
+
+.wt-bubble[aria-disabled='true'] {
+  cursor: default;
+}
+
+/* Expanded state: bubble flips to a dark translucent card so the help
+   (pinyin + english) reads as a distinct "lens" over the scene, not a
+   detached card floating elsewhere. */
+.wt-bubble.is-open {
+  --wt-bubble-fill: #0e1524;
+  --wt-bubble-border: rgba(244, 210, 172, 0.55);
+  --wt-bubble-shadow: 0 18px 44px rgba(5, 8, 18, 0.5), 0 4px 10px rgba(5, 8, 18, 0.28);
+  display: flex;
+  align-items: flex-start;
+  min-width: min(14rem, 72vw);
+  min-height: auto;
+  height: auto;
+  padding: 16px 18px 18px;
+  max-width: var(--wt-bubble-max-width, min(88vw, 30rem));
+  border-radius: clamp(26px, 6vw, 36px);
+  color: #fff8ee;
+  text-align: left;
+}
+
+.wt-bubble--top {
+  top: 6%;
+}
+
+.wt-bubble--bottom {
+  bottom: 7%;
+}
+
+.wt-bubble--center-bottom {
+  bottom: 16%;
+}
+
+@keyframes wtBubbleRise {
+  from {
+    opacity: 0;
+    transform: translate(calc(var(--wt-bubble-shift-x, -50%) + var(--wt-bubble-shift-nudge, 0px)), 10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(calc(var(--wt-bubble-shift-x, -50%) + var(--wt-bubble-shift-nudge, 0px)), 0);
+  }
+}
+
+/* Speaker accents — border on closed, preserved on open for identity */
+.wt-bubble--shoucheng { --wt-bubble-border: #1d3a6b; }
+.wt-bubble--dingman   { --wt-bubble-border: #9c3a2a; }
+.wt-bubble--ayi       { --wt-bubble-border: #b5792a; }
+.wt-bubble--narrator  { --wt-bubble-border: #555862; --wt-bubble-fill: #faf7f2; }
+
+.wt-bubble.is-open.wt-bubble--shoucheng { --wt-bubble-border: rgba(120, 160, 220, 0.6); }
+.wt-bubble.is-open.wt-bubble--dingman   { --wt-bubble-border: rgba(236, 140, 120, 0.6); }
+.wt-bubble.is-open.wt-bubble--ayi       { --wt-bubble-border: rgba(244, 210, 172, 0.6); }
+
+.wt-bubble__speaker {
+  font-size: clamp(0.74rem, 0.3vw + 0.68rem, 0.86rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(244, 210, 172, 0.75);
+  display: block;
+}
+
+.wt-bubble__text {
+  font-size: clamp(1.18rem, 1.6vw + 0.95rem, 2.3rem);
+  line-height: 1.18;
+  font-weight: 700;
+  color: inherit;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+/* ---------- Expanded help: ruby pinyin + english ---------- */
+
+.wt-bubble__help {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.5vw, 12px);
+  width: 100%;
+  min-width: 0;
+  animation: wtHelpReveal 280ms ease-out both;
+}
+
+@keyframes wtHelpReveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.wt-bubble__ruby {
+  font-size: clamp(1.08rem, 1.35vw + 0.92rem, 2rem);
+  line-height: 1.72;
+  font-weight: 700;
+  color: #fff8ee;
+  overflow-wrap: anywhere;
+}
+
+.wt-ruby {
+  ruby-position: over;
+  ruby-align: center;
+  margin: 0 1px;
+}
+
+.wt-ruby rt {
+  font-size: 0.52em;
+  line-height: 1;
+  font-style: italic;
+  font-weight: 500;
+  color: #f4d2ac;
+  letter-spacing: 0.02em;
+}
+
+.wt-ruby-plain {
+  /* punctuation / non-CJK chars — no ruby */
+}
+
+.wt-bubble__en {
+  font-size: clamp(0.98rem, 0.55vw + 0.88rem, 1.18rem);
+  line-height: 1.45;
+  font-weight: 500;
+  color: #fff8ee;
+  text-wrap: pretty;
+}
+
+@media (max-width: 480px) {
+  .wt-bubble {
+    max-width: min(86vw, 24rem);
+  }
+
+  .wt-bubble--center-bottom {
+    bottom: 12%;
+  }
+}
+
+/* ---------- Webtoon Lab v2 ---------- */
+
+.webtoon-lab {
+  padding: 20px;
+}
+
+.webtoon-lab__header {
+  margin-bottom: 16px;
+}
+
+.webtoon-lab__header h1 {
+  margin: 0 0 4px 0;
+  font-size: 1.6rem;
+}
+
+.webtoon-lab__subtitle {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.88rem;
+}
+
+.webtoon-lab__layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .webtoon-lab__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.webtoon-lab__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.webtoon-lab__card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.webtoon-lab__card h3 {
+  margin: 0 0 8px 0;
+  font-size: 0.92rem;
+  color: #fff8ee;
+}
+
+.webtoon-lab__card p,
+.webtoon-lab__card label {
+  margin: 4px 0;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.45;
+}
+
+.webtoon-lab__fixture-select,
+.webtoon-lab__json-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff8ee;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+.webtoon-lab__json-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  min-height: 160px;
+  resize: vertical;
+}
+
+.webtoon-lab__toggle-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.webtoon-lab__toggle {
+  flex: 1;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.webtoon-lab__toggle.is-active {
+  background: rgba(244, 210, 172, 0.18);
+  border-color: #f4d2ac;
+  color: #fff8ee;
+}
+
+.webtoon-lab__toggle:hover:not(.is-active) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.webtoon-lab__meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.webtoon-lab__meta-item {
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+.webtoon-lab__meta-item strong {
+  color: #f4d2ac;
+}
+
+.webtoon-lab__meta-item small {
+  display: block;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 2px;
+  font-size: 0.72rem;
+}
+
+.webtoon-lab__stage-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.webtoon-lab__stage {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #0d0d1a;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.webtoon-lab__stage--mobile {
+  width: 390px;
+  height: 844px;
+}
+
+.webtoon-lab__stage--desktop {
+  width: 1024px;
+  height: 900px;
+  max-width: 100%;
+}
+
+.webtoon-lab__error {
+  color: #e8485c;
+  font-size: 0.8rem;
+  margin-top: 6px;
+}
+
 </style>
 <style>
 /* ══════════════════════════════════════════════════════════════
@@ -11093,6 +11661,170 @@ body:has(.playtest-pill-expanded) {
   </div>
 </div>
 
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.wt-bubble)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #fffdf9;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Fill</div>
+      <div class="ds-color-value">#fffdf9</div>
+      <div class="ds-color-token">--wt-bubble-fill</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #1d3a6b;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Border</div>
+      <div class="ds-color-value">#1d3a6b</div>
+      <div class="ds-color-token">--wt-bubble-border</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: 0 18px 38px rgba(10, 15, 30, 0.2), 0 3px 8px rgba(10, 15, 30, 0.08);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Shadow</div>
+      <div class="ds-color-value">0 18px 38px rgba(10, 15, 30, 0.2), 0 3px 8px rgba(10, 15, 30, 0.08)</div>
+      <div class="ds-color-token">--wt-bubble-shadow</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: clamp(18px, 3.6vw, 24px);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Tail Size</div>
+      <div class="ds-color-value">clamp(18px, 3.6vw, 24px)</div>
+      <div class="ds-color-token">--wt-tail-size</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: 50%;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Tail Offset</div>
+      <div class="ds-color-value">50%</div>
+      <div class="ds-color-token">--wt-tail-offset</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.wt-bubble.is-open)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #0e1524;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Fill</div>
+      <div class="ds-color-value">#0e1524</div>
+      <div class="ds-color-token">--wt-bubble-fill</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(244, 210, 172, 0.55);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Border</div>
+      <div class="ds-color-value">rgba(244, 210, 172, 0.55)</div>
+      <div class="ds-color-token">--wt-bubble-border</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: 0 18px 44px rgba(5, 8, 18, 0.5), 0 4px 10px rgba(5, 8, 18, 0.28);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Shadow</div>
+      <div class="ds-color-value">0 18px 44px rgba(5, 8, 18, 0.5), 0 4px 10px rgba(5, 8, 18, 0.28)</div>
+      <div class="ds-color-token">--wt-bubble-shadow</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.wt-bubble--shoucheng)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #1d3a6b;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Border</div>
+      <div class="ds-color-value">#1d3a6b</div>
+      <div class="ds-color-token">--wt-bubble-border</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.wt-bubble--dingman)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #9c3a2a;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Border</div>
+      <div class="ds-color-value">#9c3a2a</div>
+      <div class="ds-color-token">--wt-bubble-border</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.wt-bubble--ayi)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #b5792a;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Border</div>
+      <div class="ds-color-value">#b5792a</div>
+      <div class="ds-color-token">--wt-bubble-border</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.wt-bubble--narrator)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #555862;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Border</div>
+      <div class="ds-color-value">#555862</div>
+      <div class="ds-color-token">--wt-bubble-border</div>
+    </div>
+  </div>
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: #faf7f2;"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Fill</div>
+      <div class="ds-color-value">#faf7f2</div>
+      <div class="ds-color-token">--wt-bubble-fill</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.wt-bubble.is-open.wt-bubble--shoucheng)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(120, 160, 220, 0.6);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Border</div>
+      <div class="ds-color-value">rgba(120, 160, 220, 0.6)</div>
+      <div class="ds-color-token">--wt-bubble-border</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.wt-bubble.is-open.wt-bubble--dingman)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(236, 140, 120, 0.6);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Border</div>
+      <div class="ds-color-value">rgba(236, 140, 120, 0.6)</div>
+      <div class="ds-color-token">--wt-bubble-border</div>
+    </div>
+  </div>
+</div>
+
+<h3 style="font-size: 14px; font-weight: 600; margin: 24px 0 12px; color: var(--muted);">Dark Theme (.wt-bubble.is-open.wt-bubble--ayi)</h3>
+<div class="ds-colors">
+  <div class="ds-color-card">
+    <div class="ds-color-swatch" style="background: rgba(244, 210, 172, 0.6);"></div>
+    <div class="ds-color-info">
+      <div class="ds-color-name">Wt Bubble Border</div>
+      <div class="ds-color-value">rgba(244, 210, 172, 0.6)</div>
+      <div class="ds-color-token">--wt-bubble-border</div>
+    </div>
+  </div>
+</div>
+
   </section>
 
   <hr class="ds-divider">
@@ -11955,6 +12687,18 @@ body:has(.playtest-pill-expanded) {
     <div class="ds-component-label">spin</div>
     <div class="ds-anim-box" style="background: #e8485c; animation: spin 2s ease infinite;">
       spin
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">wtBubbleRise</div>
+    <div class="ds-anim-box" style="background: #f0c040; animation: wtBubbleRise 2s ease infinite;">
+      wtBubbleRise
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">wtHelpReveal</div>
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: wtHelpReveal 2s ease infinite;">
+      wtHelpReveal
     </div>
   </div>
 </div>
