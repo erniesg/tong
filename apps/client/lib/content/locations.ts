@@ -1,5 +1,6 @@
 import type { Location } from '../types/objectives';
 import { POJANGMACHA } from './pojangmacha';
+import { SHANGHAI_XIAOLONGBAO } from './shanghai/location';
 
 /**
  * Location registry mapping "cityId:locationId" → Location object.
@@ -97,6 +98,9 @@ const LOCATION_REGISTRY: Record<string, Location> = {
     vocabularyTargets: [],
     grammarTargets: [],
   },
+
+  /* ── Shanghai curated location ────────────────────────────── */
+  'shanghai:xiaolongbao': SHANGHAI_XIAOLONGBAO,
 
   /* ── Shanghai stub locations ──────────────────────────────── */
   'shanghai:metro_station': {
@@ -330,11 +334,14 @@ export function getLocation(
 }
 
 /** Get a location or fall back to POJANGMACHA. */
+export function getLocationOrDefault(cityLocationKey: string): Location;
+export function getLocationOrDefault(cityId: string, locationId: string): Location;
 export function getLocationOrDefault(
-  cityId: string,
-  locationId: string,
+  cityOrKey: string,
+  locationId?: string,
 ): Location {
-  return LOCATION_REGISTRY[`${cityId}:${locationId}`] ?? POJANGMACHA;
+  const registryKey = locationId ? `${cityOrKey}:${locationId}` : cityOrKey;
+  return LOCATION_REGISTRY[registryKey] ?? POJANGMACHA;
 }
 
 /** Register a location in the registry. */
