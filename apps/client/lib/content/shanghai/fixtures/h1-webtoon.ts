@@ -3,10 +3,13 @@ import type { WebtoonPanel, WebtoonSpec } from '@/lib/hangout/fixture-types';
 const ASSET = (n: number) => `/assets/webtoon/shanghai/h1/${n}.png`;
 
 // Theme colors — chained so each gap fades from the prior panel's dominant
-// tone into the next. Warm parchment dominates; the mic-drop pulls to near-black.
+// tone into the next. Gaps are intentionally large so gradients have room
+// to actually READ as gradients (not 30px slivers).
 const PARCHMENT = '#f4f0e8';
-const WARM_FADE = '#ead9c2';
+const WARM_SOFT = '#ead9c2';
+const WARM_DEEP = '#c9b7a0';
 const TABLE_WOOD = '#c29867';
+const DUSK = '#6b5942';
 const DARK = '#0b0b10';
 
 // Source dimensions (aspect drives the natural panel height):
@@ -37,7 +40,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     aspectRatio: '3:4',
     shotType: 'medium',
     // Warm fade from the wood-tone base of p0 into parchment for p1.
-    gapBefore: { px: 32, gradient: [TABLE_WOOD, PARCHMENT] },
+    gapBefore: { px: 220, gradient: [TABLE_WOOD, PARCHMENT] },
     transition: 'cut',
     bubble: {
       zh: '方案你看过了。',
@@ -56,7 +59,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     heightClass: 'short',
     aspectRatio: '9:16',
     shotType: 'close-up',
-    gapBefore: { px: 20 },
+    gapBefore: { px: 140, color: PARCHMENT },
     transition: 'cut',
     bubble: {
       zh: '看了。',
@@ -73,7 +76,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     heightClass: 'standard',
     aspectRatio: '16:9',
     shotType: 'medium-ots',
-    gapBefore: { px: 36, gradient: [PARCHMENT, WARM_FADE] },
+    gapBefore: { px: 200, gradient: [PARCHMENT, WARM_SOFT] },
     transition: 'cut',
     bubble: {
       zh: '想法？',
@@ -91,7 +94,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     aspectRatio: '3:4',
     shotType: 'medium',
     // Her deflection is the emotional focus — warm gradient holds the mood.
-    gapBefore: { px: 28, gradient: [WARM_FADE, PARCHMENT] },
+    gapBefore: { px: 200, gradient: [WARM_SOFT, PARCHMENT] },
     transition: 'cut',
     bubble: {
       zh: '小笼包不错。',
@@ -109,7 +112,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     aspectRatio: '9:16',
     shotType: 'medium-closeup',
     // Building tension — parchment starts cooling.
-    gapBefore: { px: 40, gradient: [PARCHMENT, '#c9b7a0'] },
+    gapBefore: { px: 260, gradient: [PARCHMENT, WARM_DEEP] },
     transition: 'cut',
     bubble: {
       zh: '这个节目跟其他的不一样。',
@@ -126,9 +129,9 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     heightClass: 'tall',
     aspectRatio: '3:4',
     shotType: 'close-up',
-    // Dramatic mood pivot: gradient fades the strip from parchment into near-black
-    // so the mic-drop lands in a different emotional register.
-    gapBefore: { px: 160, gradient: ['#c9b7a0', DARK] },
+    // Dramatic mood pivot: long gradient from warm-deep through dusk into
+    // near-black so the mic-drop lands in a genuinely different register.
+    gapBefore: { px: 520, gradient: [WARM_DEEP, DARK] },
     transition: 'darken',
     isThumbStop: true,
     bubble: {

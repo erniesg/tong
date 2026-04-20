@@ -10171,6 +10171,67 @@ body:has(.playtest-pill-expanded) {
   overscroll-behavior: contain;
 }
 
+.wt-strip--dark {
+  color: #fff8ee;
+}
+
+/* ---------- Progress rail (clickable, jumps to panel) ---------- */
+
+.wt-rail {
+  position: fixed;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 8px;
+  background: rgba(13, 13, 26, 0.32);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.wt-rail--dark {
+  background: rgba(255, 248, 238, 0.08);
+}
+
+.wt-rail__dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition:
+    transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.wt-rail__dot:hover {
+  transform: scale(1.25);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.wt-rail__dot.is-done {
+  background: rgba(244, 210, 172, 0.55);
+}
+
+.wt-rail__dot.is-active {
+  background: #f4d2ac;
+  transform: scale(1.6);
+  box-shadow: 0 0 0 3px rgba(244, 210, 172, 0.25);
+}
+
+.wt-rail__dot:focus-visible {
+  outline: 2px solid #f4d2ac;
+  outline-offset: 3px;
+}
+
 .wt-block {
   width: 100%;
   display: flex;
@@ -10218,19 +10279,21 @@ body:has(.playtest-pill-expanded) {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  width: min(440px, 86%);
+  /* Size to content. Cap so very long lines still wrap inside the panel. */
+  width: auto;
+  max-width: min(440px, 86%);
   z-index: 4;
 
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
 
-  padding: 14px 20px 16px;
+  padding: 12px 18px 14px;
   background: #fff;
   color: #12161f;
   border: 2px solid #1d3a6b;
-  border-radius: 22px;
+  border-radius: 20px;
   box-shadow: 0 14px 36px rgba(10, 15, 30, 0.22), 0 2px 6px rgba(10, 15, 30, 0.1);
   cursor: pointer;
   font-family: inherit;
@@ -10241,8 +10304,7 @@ body:has(.playtest-pill-expanded) {
     transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
     box-shadow 220ms ease,
     background 220ms ease,
-    border-color 220ms ease,
-    max-width 220ms ease;
+    border-color 220ms ease;
 }
 
 .wt-bubble:hover {

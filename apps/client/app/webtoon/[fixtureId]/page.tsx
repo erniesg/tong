@@ -2,15 +2,16 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { getWebtoonFixture } from '@/lib/content/shanghai/fixtures';
-import { WebtoonStrip } from '@/components/scene/WebtoonStrip';
+import { WebtoonStrip, type WebtoonTheme } from '@/components/scene/WebtoonStrip';
 
 export default function WebtoonInspectPage() {
   const params = useParams();
   const raw = Array.isArray(params.fixtureId) ? params.fixtureId[0] : params.fixtureId;
   const fixtureId = useMemo(() => (raw ? decodeURIComponent(raw) : ''), [raw]);
   const entry = useMemo(() => getWebtoonFixture(fixtureId), [fixtureId]);
+  const [theme, setTheme] = useState<WebtoonTheme>('warm');
 
   if (!entry) {
     return (
@@ -22,31 +23,84 @@ export default function WebtoonInspectPage() {
   }
 
   return (
-    <main style={{ position: 'fixed', inset: 0, background: '#0d0d1a' }}>
-      <WebtoonStrip panels={entry.spec.panels} />
+    <main style={{ position: 'fixed', inset: 0, background: theme === 'dark' ? '#0b0b10' : '#f4f0e8' }}>
+      <WebtoonStrip panels={entry.spec.panels} theme={theme} />
+
+      {/* Top chrome: back + theme toggle */}
       <div
         style={{
           position: 'fixed',
           top: 12,
           left: 12,
+          right: 12,
           zIndex: 50,
-          background: 'rgba(13,13,26,0.82)',
-          backdropFilter: 'blur(8px)',
-          padding: '6px 12px',
-          borderRadius: 18,
-          border: '1px solid rgba(255,255,255,0.12)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 8,
+          pointerEvents: 'none',
         }}
       >
         <Link
           href="/webtoon"
           style={{
+            pointerEvents: 'auto',
+            background: 'rgba(13,13,26,0.75)',
+            backdropFilter: 'blur(10px)',
             color: '#f4d2ac',
             fontSize: '0.82rem',
             textDecoration: 'none',
+            padding: '6px 14px',
+            borderRadius: 18,
+            border: '1px solid rgba(255,255,255,0.12)',
           }}
         >
           ← Gallery
         </Link>
+
+        <div
+          role="group"
+          aria-label="Theme"
+          style={{
+            pointerEvents: 'auto',
+            display: 'flex',
+            background: 'rgba(13,13,26,0.75)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 18,
+            overflow: 'hidden',
+            fontSize: '0.78rem',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setTheme('warm')}
+            style={{
+              padding: '6px 12px',
+              border: 'none',
+              background: theme === 'warm' ? 'rgba(244,210,172,0.22)' : 'transparent',
+              color: theme === 'warm' ? '#fff8ee' : 'rgba(255,255,255,0.6)',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            ☀ Warm
+          </button>
+          <button
+            type="button"
+            onClick={() => setTheme('dark')}
+            style={{
+              padding: '6px 12px',
+              border: 'none',
+              background: theme === 'dark' ? 'rgba(244,210,172,0.22)' : 'transparent',
+              color: theme === 'dark' ? '#fff8ee' : 'rgba(255,255,255,0.6)',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            ☾ Dark
+          </button>
+        </div>
       </div>
     </main>
   );
