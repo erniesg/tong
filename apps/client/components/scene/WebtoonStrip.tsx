@@ -126,6 +126,7 @@ const WEBTOON_STRIP_CSS = `
 }
 
 .wt-block {
+  position: relative;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -148,6 +149,11 @@ const WEBTOON_STRIP_CSS = `
 
 .wt-panel--bubble-outside {
   overflow: visible;
+}
+
+.wt-panel:has(.wt-bubble.is-open) {
+  overflow: visible;
+  z-index: 8;
 }
 
 .wt-panel--framed::after {
@@ -208,6 +214,7 @@ const WEBTOON_STRIP_CSS = `
   gap: clamp(8px, 1.6vw, 12px);
   padding: clamp(13px, 1.4vw + 8px, 20px) clamp(20px, 3.6vw, 34px) clamp(15px, 1.6vw + 8px, 22px);
   min-height: clamp(4.25rem, 13vw, 6rem);
+  height: fit-content;
   background: var(--wt-bubble-fill);
   color: #12161f;
   border: 2px solid var(--wt-bubble-border);
@@ -287,6 +294,14 @@ const WEBTOON_STRIP_CSS = `
 
 .wt-bubble[aria-disabled='true'] {
   cursor: default;
+}
+
+.wt-block:has(.wt-bubble.is-open) {
+  z-index: 12;
+}
+
+.wt-block:has(.wt-bubble.is-open) + .wt-block .wt-panel {
+  margin-top: 0 !important;
 }
 
 .wt-bubble.is-open {
