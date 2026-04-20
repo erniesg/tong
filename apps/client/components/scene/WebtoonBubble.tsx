@@ -1,6 +1,7 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
+import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import type { WebtoonBubble as WebtoonBubbleSpec } from '@/lib/hangout/fixture-types';
 
 interface WebtoonBubbleProps extends WebtoonBubbleSpec {
@@ -36,7 +37,7 @@ function buildSegments(zh: string, py?: string[]): RubySegment[] {
   return segments;
 }
 
-function bubbleStyle(bubble: WebtoonBubbleSpec, lockedTopPx: number | null): CSSProperties {
+function bubbleStyle(bubble: WebtoonBubbleSpec): CSSProperties {
   const layout = bubble.layout;
   const align = layout?.align ?? 'center';
   const left = align === 'left' ? '0%' : align === 'right' ? '100%' : '50%';
@@ -61,11 +62,6 @@ function bubbleStyle(bubble: WebtoonBubbleSpec, lockedTopPx: number | null): CSS
     bottom = `calc(7% + ${yOffset}px)`;
   }
 
-  if (lockedTopPx !== null && !layout?.outside && bubble.position !== 'top') {
-    top = `${lockedTopPx}px`;
-    bottom = undefined;
-  }
-
   return {
     left,
     top,
@@ -88,9 +84,9 @@ export function WebtoonBubble({
   showHelp = false,
 }: WebtoonBubbleProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [closedTopPx, setClosedTopPx] = useState<number | null>(null);
+  const [overlayStyle, setOverlayStyle] = useState<CSSProperties | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
-  const measuredTopRef = useRef<number | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const bubble = { zh, py, en, speaker, position, layout };
   const speakerLabel = SPEAKER_LABELS[speaker] ?? speaker;
   const hasHelp = Boolean((py && py.length) || en);
@@ -99,14 +95,89 @@ export function WebtoonBubble({
   const expanded = interactive && (showHelp || isOpen);
   const segments = buildSegments(zh, py);
 
-  useLayoutEffect(() => {
+  const syncOutsideReserve = useCallback(() => {
+    if (!layout?.outside) return;
     const el = bubbleRef.current;
-    if (!el || expanded) return;
-    const nextTop = el.offsetTop;
-    if (measuredTopRef.current === nextTop) return;
-    measuredTopRef.current = nextTop;
-    setClosedTopPx(nextTop);
-  });
+    const block = el?.closest('.wt-block') as HTMLElement | null;
+    if (!el || !block) return;
+
+    const reserveVar = position === 'top' ? '--wt-bubble-reserve-top' : '--wt-bubble-reserve-bottom';
+    const reserve = Math.ceil(
+      el.getBoundingClientRect().height
+      + (layout.outsideOverlapPx ?? 18)
+      + 28
+      + Math.max(0, Math.abs(layout.offsetYPx ?? 0)),
+    );
+    block.style.setProperty(reserveVar, `${reserve}px`);
+  }, [layout?.offsetYPx, layout?.outside, layout?.outsideOverlapPx, position]);
+
+  const syncOverlayPosition = useCallback(() => {
+    if (!expanded || typeof window === 'undefined') return;
+
+    const anchor = bubbleRef.current;
+    if (!anchor) return;
+
+    const anchorRect = anchor.getBoundingClientRect();
+    const overlay = overlayRef.current;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const margin = 12;
+    const overlayWidth = overlay?.offsetWidth ?? Math.max(anchorRect.width, 220);
+    const overlayHeight = overlay?.offsetHeight ?? anchorRect.height;
+    const align = layout?.align ?? 'center';
+
+    let left = anchorRect.left + (anchorRect.width - overlayWidth) / 2;
+    if (align === 'left') {
+      left = anchorRect.left;
+    } else if (align === 'right') {
+      left = anchorRect.right - overlayWidth;
+    }
+    left = Math.min(Math.max(left, margin), viewportWidth - overlayWidth - margin);
+
+    let top = anchorRect.top;
+    top = Math.min(Math.max(top, margin), viewportHeight - overlayHeight - margin);
+
+    setOverlayStyle({
+      top: `${Math.round(top)}px`,
+      left: `${Math.round(left)}px`,
+      minWidth: `${Math.ceil(anchorRect.width)}px`,
+      maxWidth: layout?.maxWidth
+        ? `min(calc(100vw - 24px), ${layout.maxWidth})`
+        : 'min(calc(100vw - 24px), 30rem)',
+    });
+  }, [expanded, layout?.align, layout?.maxWidth]);
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let frame = 0;
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        syncOutsideReserve();
+        syncOverlayPosition();
+      });
+    };
+
+    const observer = new ResizeObserver(schedule);
+    if (bubbleRef.current) observer.observe(bubbleRef.current);
+    if (overlayRef.current) observer.observe(overlayRef.current);
+
+    schedule();
+    window.addEventListener('resize', schedule);
+    window.addEventListener('scroll', schedule, true);
+    window.visualViewport?.addEventListener('resize', schedule);
+    window.visualViewport?.addEventListener('scroll', schedule);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('resize', schedule);
+      window.removeEventListener('scroll', schedule, true);
+      window.visualViewport?.removeEventListener('resize', schedule);
+      window.visualViewport?.removeEventListener('scroll', schedule);
+    };
+  }, [expanded, syncOutsideReserve, syncOverlayPosition]);
 
   const helpSuffix = !hasHelp
     ? ''
@@ -118,49 +189,75 @@ export function WebtoonBubble({
           ? `. Help unlocks for ${reveal.cost} credits.`
           : '. Help unlocks with Game Pass.';
 
-  return (
-    <div
-      role={interactive ? 'button' : undefined}
-      tabIndex={interactive && !showHelp ? 0 : undefined}
-      className={`wt-bubble wt-bubble--${position} wt-bubble--${speaker}${expanded ? ' is-open' : ''}`}
-      aria-label={`${speakerLabel}: ${zh}${helpSuffix}`}
-      aria-expanded={interactive ? expanded : undefined}
-      aria-disabled={!interactive}
-      style={bubbleStyle(bubble, expanded ? closedTopPx : null)}
-      ref={bubbleRef}
-      onClick={() => {
-        if (!interactive || showHelp) return;
-        setIsOpen((prev) => !prev);
-      }}
-      onKeyDown={(event) => {
-        if (!interactive || showHelp) return;
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        setIsOpen((prev) => !prev);
-      }}
-    >
-      {!expanded && (
-        <span className="wt-bubble__text">{zh}</span>
-      )}
-
-      {expanded && (
-        <span className="wt-bubble__help">
-          <span className="wt-bubble__speaker">{speakerLabel}</span>
-          <span className="wt-bubble__ruby">
-            {segments.map((seg, i) => (
-              seg.py ? (
-                <ruby key={i} className="wt-ruby">
-                  {seg.char}
-                  <rt>{seg.py}</rt>
-                </ruby>
-              ) : (
-                <span key={i} className="wt-ruby-plain">{seg.char}</span>
-              )
-            ))}
+  const overlay = expanded && typeof document !== 'undefined'
+    ? createPortal(
+        <div
+          ref={overlayRef}
+          role={interactive ? 'button' : undefined}
+          tabIndex={interactive && !showHelp ? 0 : undefined}
+          className={`wt-bubble wt-bubble--overlay wt-bubble--${position} wt-bubble--${speaker}`}
+          aria-label={`${speakerLabel}: ${zh}. Translation help is open.`}
+          aria-expanded
+          aria-disabled={!interactive}
+          style={overlayStyle ?? { visibility: 'hidden' }}
+          onClick={() => {
+            if (!interactive || showHelp) return;
+            setIsOpen(false);
+          }}
+          onKeyDown={(event) => {
+            if (!interactive || showHelp) return;
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            setIsOpen(false);
+          }}
+        >
+          <span className="wt-bubble__help">
+            <span className="wt-bubble__speaker">{speakerLabel}</span>
+            <span className="wt-bubble__ruby">
+              {segments.map((seg, i) => (
+                seg.py ? (
+                  <ruby key={i} className="wt-ruby">
+                    {seg.char}
+                    <rt>{seg.py}</rt>
+                  </ruby>
+                ) : (
+                  <span key={i} className="wt-ruby-plain">{seg.char}</span>
+                )
+              ))}
+            </span>
+            {en && <span className="wt-bubble__en">{en}</span>}
           </span>
-          {en && <span className="wt-bubble__en">{en}</span>}
-        </span>
-      )}
-    </div>
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <>
+      <div
+        role={interactive ? 'button' : undefined}
+        tabIndex={interactive && !showHelp ? 0 : undefined}
+        className={`wt-bubble wt-bubble--${position} wt-bubble--${speaker}`}
+        data-expanded={expanded ? 'true' : 'false'}
+        aria-label={`${speakerLabel}: ${zh}${helpSuffix}`}
+        aria-expanded={interactive ? expanded : undefined}
+        aria-disabled={!interactive}
+        style={bubbleStyle(bubble)}
+        ref={bubbleRef}
+        onClick={() => {
+          if (!interactive || showHelp) return;
+          setIsOpen((prev) => !prev);
+        }}
+        onKeyDown={(event) => {
+          if (!interactive || showHelp) return;
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          setIsOpen((prev) => !prev);
+        }}
+      >
+        <span className="wt-bubble__text">{zh}</span>
+      </div>
+      {overlay}
+    </>
   );
 }
