@@ -1,6 +1,11 @@
 import type { WebtoonPanel, WebtoonSpec } from '@/lib/hangout/fixture-types';
 
-const ASSET = (n: number) => `/assets/webtoon/shanghai/h1/${n}.png`;
+const PLACEHOLDER_ASSET = '/assets/webtoon/shanghai/h1/placeholder.svg';
+const ASSET = (n: number) => (
+  n <= 6
+    ? `/assets/webtoon/shanghai/h1/${n}.png`
+    : PLACEHOLDER_ASSET
+);
 
 // Warm daytime palette (parchment surface).
 const PARCHMENT = '#ffffff';
@@ -31,7 +36,7 @@ const INK_BORDER_DARK = 'rgba(255, 248, 238, 0.9)';
 //   4: 1682x2193 (~3:4 portrait)     — deflection (food)
 //   5: 1440x2562 (9:16 portrait)     — pitch line (focus)
 //   6: 1682x2193 (~3:4 portrait)     — mic drop setup (dark-gradient lead)
-//   7+: placeholder paths — art pending. Layouts pre-baked so the strip reads end-to-end today.
+//   7+: use a non-404 placeholder plate while final art is pending.
 //   7:  concede + reframe
 //   8:  pitch v2 "不装的人"
 //   9:  retort "你觉得我不装？"
