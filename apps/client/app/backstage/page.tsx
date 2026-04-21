@@ -10,6 +10,12 @@ const SECTIONS = [
     status: 'active',
   },
   {
+    href: '/backstage/webtoon-lab',
+    title: 'Webtoon Lab',
+    description: 'Panel layout harness for Shanghai H1. Test gaps, widths, bubbles, and placeholder vs real art.',
+    status: 'active',
+  },
+  {
     href: '/backstage/signals',
     title: 'Signals',
     description: 'Social media intelligence — trending formats, sounds, aesthetics from TikTok/IG/XHS.',
