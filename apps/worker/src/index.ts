@@ -690,6 +690,28 @@ function getCommerceEntitlements(userId: string): Record<string, unknown> {
   return fixture;
 }
 
+function toCommerceToken(value: string): string {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return normalized || 'item';
+}
+
+function buildGrantId(idempotencyKey: string): string {
+  return `grant_${toCommerceToken(idempotencyKey)}`;
+}
+
+function buildEntitlementId(userId: string, unlockKey: string): string {
+  return `ent_${toCommerceToken(userId)}_${toCommerceToken(unlockKey)}`;
+}
+
+function buildPurchaseEventRecordId(providerEventId: string): string {
+  const compactEventId = providerEventId.replace(/^evt_/, '');
+  return `pevt_${toCommerceToken(compactEventId)}`;
+}
+
 function buildCommerceUnlockGrant(body: Record<string, any>): Record<string, unknown> {
   const fixture = cloneJson(FIXTURES.commerceUnlockGrant) as Record<string, any>;
   const userId = typeof body.userId === 'string' && body.userId.trim().length > 0 ? body.userId.trim() : fixture.userId;
@@ -700,43 +722,68 @@ function buildCommerceUnlockGrant(body: Record<string, any>): Record<string, unk
   const purchaseEventId =
     typeof body.purchaseEventId === 'string' && body.purchaseEventId.trim().length > 0
       ? body.purchaseEventId.trim()
-      : fixture.purchaseEventId;
+      : grantSource === fixture.grantSource
+        ? fixture.purchaseEventId
+        : null;
   const idempotencyKey =
     typeof body.idempotencyKey === 'string' && body.idempotencyKey.trim().length > 0
       ? body.idempotencyKey.trim()
       : `${unlockKey}:${userId}`;
+  const keepFixtureGrantId =
+    userId === fixture.userId &&
+    unlockKey === fixture.unlockKey &&
+    grantSource === fixture.grantSource &&
+    idempotencyKey === fixture.idempotencyKey &&
+    (purchaseEventId || null) === (fixture.purchaseEventId || null);
+  const keepFixtureEntitlementId =
+    userId === fixture.userId &&
+    unlockKey === fixture.entitlement?.productKey;
+  const nextEntitlement = {
+    ...(fixture.entitlement || {}),
+    entitlementId: keepFixtureEntitlementId
+      ? fixture.entitlement?.entitlementId
+      : buildEntitlementId(userId, unlockKey),
+    productKey: unlockKey,
+    source: grantSource,
+    purchaseEventId: purchaseEventId || null,
+  } as Record<string, unknown>;
 
+  if (body.metadata && typeof body.metadata === 'object') {
+    nextEntitlement.metadata = body.metadata;
+  } else if (unlockKey !== fixture.unlockKey) {
+    delete nextEntitlement.metadata;
+  }
+
+  fixture.grantId = keepFixtureGrantId ? fixture.grantId : buildGrantId(idempotencyKey);
   fixture.userId = userId;
   fixture.unlockKey = unlockKey;
   fixture.grantSource = grantSource;
   fixture.purchaseEventId = purchaseEventId || null;
   fixture.idempotencyKey = idempotencyKey;
-  fixture.entitlement = {
-    ...(fixture.entitlement || {}),
-    productKey: unlockKey,
-    source: grantSource,
-    purchaseEventId: purchaseEventId || null,
-    ...(body.metadata ? { metadata: body.metadata } : {}),
-  };
+  fixture.entitlement = nextEntitlement;
 
   return fixture;
 }
 
 function buildCommercePurchaseEvent(body: Record<string, any>): Record<string, unknown> {
   const fixture = cloneJson(FIXTURES.commercePurchaseEvent) as Record<string, any>;
+  const fixtureProviderEventId = fixture.providerEventId;
+  const fixtureProvider = fixture.provider;
   const providerEventId =
     typeof body.providerEventId === 'string' && body.providerEventId.trim().length > 0
       ? body.providerEventId.trim()
-      : fixture.providerEventId;
+      : fixtureProviderEventId;
   const userId = typeof body.userId === 'string' && body.userId.trim().length > 0 ? body.userId.trim() : fixture.userId;
-  const provider = typeof body.provider === 'string' && body.provider.trim().length > 0 ? body.provider.trim() : fixture.provider;
+  const provider = typeof body.provider === 'string' && body.provider.trim().length > 0 ? body.provider.trim() : fixtureProvider;
   const eventType =
     typeof body.eventType === 'string' && body.eventType.trim().length > 0 ? body.eventType.trim() : fixture.eventType;
+  const keepFixtureRecordId = providerEventId === fixtureProviderEventId && provider === fixtureProvider;
 
   fixture.provider = provider;
   fixture.providerEventId = providerEventId;
   fixture.userId = userId;
   fixture.eventType = eventType;
+  fixture.recordId = keepFixtureRecordId ? fixture.recordId : buildPurchaseEventRecordId(providerEventId);
   fixture.occurredAtIso = typeof body.occurredAtIso === 'string' && body.occurredAtIso.trim().length > 0
     ? body.occurredAtIso.trim()
     : fixture.occurredAtIso;
