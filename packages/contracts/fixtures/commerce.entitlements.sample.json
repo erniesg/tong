@@ -1,0 +1,36 @@
+{
+  "userId": "demo-user-1",
+  "asOfIso": "2026-04-21T00:00:00.000Z",
+  "currencies": {
+    "xp": 110,
+    "sp": 45,
+    "rp": 12
+  },
+  "entitlements": [
+    {
+      "entitlementId": "entl_shanghai_auction_house_access",
+      "kind": "location_access",
+      "resourceId": "shanghai:auction_house",
+      "status": "active",
+      "source": "unlock_grant",
+      "grantedAtIso": "2026-04-20T23:00:00.000Z",
+      "expiresAtIso": null,
+      "metadata": {
+        "cityId": "shanghai",
+        "locationId": "practice_studio",
+        "unlockReason": "mission_reward"
+      }
+    }
+  ],
+  "unlockables": {
+    "locationIds": [
+      "practice_studio"
+    ],
+    "missionIds": [
+      "shanghai_advanced_texting"
+    ],
+    "rewardIds": [
+      "polaroid_memory_001"
+    ]
+  }
+}

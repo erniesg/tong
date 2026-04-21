@@ -200,6 +200,102 @@ Response:
 }
 ```
 
+
+## GET `/api/v1/commerce/entitlements`
+Query:
+```json
+{ "userId": "demo-user-1" }
+```
+
+Response:
+```json
+{
+  "userId": "demo-user-1",
+  "asOfIso": "2026-04-21T00:00:00.000Z",
+  "currencies": { "xp": 110, "sp": 45, "rp": 12 },
+  "entitlements": [
+    {
+      "entitlementId": "entl_shanghai_auction_house_access",
+      "kind": "location_access",
+      "resourceId": "shanghai:auction_house",
+      "status": "active",
+      "source": "unlock_grant",
+      "grantedAtIso": "2026-04-20T23:00:00.000Z",
+      "expiresAtIso": null,
+      "metadata": {
+        "cityId": "shanghai",
+        "locationId": "practice_studio",
+        "unlockReason": "mission_reward"
+      }
+    }
+  ],
+  "unlockables": {
+    "locationIds": ["practice_studio"],
+    "missionIds": ["shanghai_advanced_texting"],
+    "rewardIds": ["polaroid_memory_001"]
+  }
+}
+```
+
+## POST `/api/v1/commerce/unlocks/grant`
+Request:
+```json
+{
+  "userId": "demo-user-1",
+  "unlockType": "location_access",
+  "resourceId": "shanghai:auction_house",
+  "source": "mission_reward",
+  "referenceId": "mission_sh_texting_clear"
+}
+```
+
+Response:
+```json
+{
+  "grantId": "grant_demo_unlock_001",
+  "userId": "demo-user-1",
+  "unlockType": "location_access",
+  "resourceId": "shanghai:auction_house",
+  "status": "granted",
+  "source": "mission_reward",
+  "referenceId": "mission_sh_texting_clear",
+  "entitlementId": "entl_shanghai_auction_house_access",
+  "grantedAtIso": "2026-04-21T00:05:00.000Z",
+  "balanceDelta": { "xp": 0, "sp": -20, "rp": 3 }
+}
+```
+
+## POST `/api/v1/commerce/purchase-events`
+Request:
+```json
+{
+  "eventId": "evt_demo_checkout_001",
+  "provider": "stripe",
+  "eventType": "checkout.session.completed",
+  "userId": "demo-user-1",
+  "idempotencyKey": "stripe:evt_demo_checkout_001"
+}
+```
+
+Response:
+```json
+{
+  "recordId": "pevt_rec_demo_001",
+  "eventId": "evt_demo_checkout_001",
+  "provider": "stripe",
+  "eventType": "checkout.session.completed",
+  "userId": "demo-user-1",
+  "idempotencyKey": "stripe:evt_demo_checkout_001",
+  "status": "recorded",
+  "receivedAtIso": "2026-04-21T00:08:00.000Z",
+  "persistedAtIso": "2026-04-21T00:08:00.000Z",
+  "raw": {
+    "livemode": false,
+    "object": "event"
+  }
+}
+```
+
 ## POST `/api/v1/ingestion/run-mock`
 Request:
 ```json

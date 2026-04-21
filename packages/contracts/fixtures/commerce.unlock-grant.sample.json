@@ -1,0 +1,16 @@
+{
+  "grantId": "grant_demo_unlock_001",
+  "userId": "demo-user-1",
+  "unlockType": "location_access",
+  "resourceId": "shanghai:auction_house",
+  "status": "granted",
+  "source": "mission_reward",
+  "referenceId": "mission_sh_texting_clear",
+  "entitlementId": "entl_shanghai_auction_house_access",
+  "grantedAtIso": "2026-04-21T00:05:00.000Z",
+  "balanceDelta": {
+    "xp": 0,
+    "sp": -20,
+    "rp": 3
+  }
+}
