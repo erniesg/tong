@@ -16,6 +16,28 @@ export interface SessionMessage {
   exercise?: ExerciseData;
 }
 
+export type CinematicPresentationMode = 'cover' | 'panorama';
+export type CinematicOverlayAnchor = 'viewport' | 'world';
+
+export interface CinematicOverlayHotspot {
+  id: string;
+  anchor: CinematicOverlayAnchor;
+  label: string;
+  x: number;
+  y: number;
+}
+
+export interface CinematicPresentation {
+  videoUrl: string;
+  caption?: string;
+  captionTranslation?: string;
+  autoAdvance: boolean;
+  muted?: boolean;
+  mode?: CinematicPresentationMode;
+  initialPan?: number;
+  overlays?: CinematicOverlayHotspot[];
+}
+
 export interface DialogueChoice {
   id: string;
   text: string;

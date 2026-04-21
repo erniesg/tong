@@ -16,6 +16,12 @@ const SECTIONS = [
     status: 'active',
   },
   {
+    href: '/backstage/panorama-lab',
+    title: 'Panorama Lab',
+    description: 'Non-production cinematic harness for panorama panning and overlay anchor behavior.',
+    status: 'active',
+  },
+  {
     href: '/backstage/signals',
     title: 'Signals',
     description: 'Social media intelligence — trending formats, sounds, aesthetics from TikTok/IG/XHS.',
