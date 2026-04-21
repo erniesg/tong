@@ -1,6 +1,8 @@
 import type { WebtoonPanel, WebtoonSpec } from '@/lib/hangout/fixture-types';
 
-const ASSET = (n: number) => `/assets/webtoon/shanghai/h1/${n}.png`;
+const AVAILABLE_ASSET_PANELS = new Set([0, 1, 2, 3, 4, 5, 6]);
+const FALLBACK_ASSET_PANEL = 6;
+const ASSET = (n: number) => `/assets/webtoon/shanghai/h1/${AVAILABLE_ASSET_PANELS.has(n) ? n : FALLBACK_ASSET_PANEL}.png`;
 
 // Warm daytime palette (parchment surface).
 const PARCHMENT = '#ffffff';
@@ -31,7 +33,8 @@ const INK_BORDER_DARK = 'rgba(255, 248, 238, 0.9)';
 //   4: 1682x2193 (~3:4 portrait)     — deflection (food)
 //   5: 1440x2562 (9:16 portrait)     — pitch line (focus)
 //   6: 1682x2193 (~3:4 portrait)     — mic drop setup (dark-gradient lead)
-//   7+: placeholder paths — art pending. Layouts pre-baked so the strip reads end-to-end today.
+//   7+: art pending. Until placeholders land, these panels gracefully reuse panel 6's image
+//       so the strip remains readable without 404 asset requests.
 //   7:  concede + reframe
 //   8:  pitch v2 "不装的人"
 //   9:  retort "你觉得我不装？"
