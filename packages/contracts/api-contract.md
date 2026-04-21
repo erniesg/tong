@@ -934,6 +934,39 @@ Response:
 }
 ```
 
+## GET `/api/v1/shanghai/secret-location/status`
+Query:
+```json
+{ "userId": "demo-user-1", "locationId": "archive_alley" }
+```
+
+Response:
+Path: `packages/contracts/fixtures/shanghai.secret-location.status.sample.json`
+
+Contract notes:
+- `reveal.state` is the scene-facing state machine: `hidden` → `teased` → `revealed` → `entered`.
+- `concept.unlockKey`/`concept.productKey` use commerce naming so entitlement checks can be reused across mission and location unlocks.
+- `unlockFlagSnapshot` is a deterministic read-model snapshot for fixture-backed mocks; stateless demo workers must not mutate it between calls.
+
+## POST `/api/v1/shanghai/secret-location/redeem-invitation`
+Request:
+```json
+{
+  "userId": "demo-user-1",
+  "locationId": "archive_alley",
+  "invitationToken": "inv_shanghai_arc_1f6e9a",
+  "idempotencyKey": "unlock.shanghai.secret.archive_alley:demo-user-1:inv_archive_alley_001"
+}
+```
+
+Response:
+Path: `packages/contracts/fixtures/shanghai.secret-location.redeem.sample.json`
+
+Contract notes:
+- Redemption response mirrors commerce unlock grants (`unlockKey`, `grantSource`, `idempotencyKey`, and `entitlement`) for terminology alignment.
+- `grantSource` value for invitation claims is `invitation_token`.
+- `unlockFlagSnapshot.flags` must reflect post-redemption truth values without relying on mutable server state in this mock stage.
+
 ## GET `/api/v1/demo/secret-status`
 Notes:
 - Protected when `TONG_DEMO_PASSWORD` is configured.
