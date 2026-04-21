@@ -5,7 +5,16 @@ import { useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
 import type { ToolInvocation, UIMessage } from 'ai';
 import { startOrResumeGame, type CityId, type LocationId, type ProficiencyLevel, type ScoreState, type UserProficiency, type AppLang } from '@/lib/api';
-import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData, BlockCrushCharStep, BlockCrushExercise } from '@/lib/types/hangout';
+import type {
+  BlockCrushCharStep,
+  BlockCrushExercise,
+  CreditGateState,
+  ExerciseData,
+  SceneSummary,
+  SessionMessage,
+  ToolQueueItem,
+  WebtoonSequence,
+} from '@/lib/types/hangout';
 import type { CompletedSession } from '@/lib/store/session-store';
 import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
 import type { Character } from '@/lib/types/relationship';
@@ -34,6 +43,8 @@ import { GameHUD } from '@/components/hud/GameHUD';
 import { ExerciseModal } from '@/components/learn/ExerciseModal';
 import { resolveRuntimeAssetUrl, runtimeAssetUrl } from '@/lib/runtime-assets';
 import { buildResumePrompt, hydrateResumeState, type ResumeBootstrapPayload } from '@/lib/store/checkpoint-resume';
+import { getShanghaiFixture } from '@/lib/content/shanghai/fixtures';
+import { buildFixtureResolutionEvents, type CreditGateDecision } from '@/lib/hangout/fixture-runtime';
 
 /* ── scene constants ────────────────────────────────────── */
 
@@ -46,6 +57,9 @@ const SEOUL_FOOD_STREET_BACKDROP_URL = runtimeAssetUrl('city.seoul.location.food
 const NPC_SPRITES: Record<string, { name: string; nameLocal: string; nameZh: string; src: string; idleVideo?: string; color: string }> = {
   haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: runtimeAssetUrl('character.haeun.portrait.default'), idleVideo: '/assets/characters/haeun/haeun_idle_loop.mp4', color: '#e8485c' },
   jin: { name: 'Jin', nameLocal: '진', nameZh: '珍', src: runtimeAssetUrl('character.jin.portrait.default'), color: '#4a90d9' },
+  shoucheng: { name: 'Shoucheng', nameLocal: '守成', nameZh: '守成', src: '', color: '#7a8ee6' },
+  dingman: { name: 'Ding Man', nameLocal: '丁漫', nameZh: '丁漫', src: '', color: '#e88f5b' },
+  fangayi: { name: 'Aunt Fang', nameLocal: '方阿姨', nameZh: '方阿姨', src: '', color: '#d06d57' },
 };
 
 const NPC_POOL = ['haeun', 'jin'] as const;
@@ -196,6 +210,21 @@ function readBootstrapQueryIntent(searchParams: ReturnType<typeof useSearchParam
   };
 }
 
+function resolveHangoutFixtureId(searchParams: ReturnType<typeof useSearchParams>): string | null {
+  const explicitFixtureId = searchParams.get('fixtureId')?.trim();
+  if (explicitFixtureId) {
+    return explicitFixtureId;
+  }
+
+  const cityParam = searchParams.get('city');
+  const sceneParam = searchParams.get('scene');
+  if (cityParam === 'shanghai' && sceneParam === 'h1') {
+    return 'shanghai/h1-negotiation';
+  }
+
+  return null;
+}
+
 function buildStreamedNpcMessage(
   invocation: ToolInvocation,
   fallbackCharacterId: string,
@@ -284,6 +313,13 @@ export default function GamePage() {
   const fixtureParam = searchParams.get('fixture');
   const fixtureScene = Number(searchParams.get('scene') || '0');
   const fixtureLoadedRef = useRef(false);
+  const requestedMode = searchParams.get('mode');
+  const hangoutFixtureId = resolveHangoutFixtureId(searchParams);
+  const routeFixtureMode = requestedMode === 'fixture' && !!hangoutFixtureId;
+  const fixtureModeActive = Boolean(fixtureParam) || routeFixtureMode;
+  const hangoutApi = routeFixtureMode && hangoutFixtureId
+    ? `/api/ai/hangout?mode=fixture&fixtureId=${encodeURIComponent(hangoutFixtureId)}`
+    : '/api/ai/hangout';
 
   /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester, ?dev_intro=1 fresh intro hangout, ?fresh=1 replay from opening */
   const phaseParam = searchParams.get('phase');
@@ -426,9 +462,12 @@ export default function GamePage() {
   const [choices, setChoices] = useState<DialogueChoice[] | null>(null);
   const [choicePrompt, setChoicePrompt] = useState<string | null>(null);
   const [currentExercise, setCurrentExercise] = useState<ExerciseData | null>(null);
+  const [currentWebtoon, setCurrentWebtoon] = useState<WebtoonSequence | null>(null);
+  const [currentCreditGate, setCurrentCreditGate] = useState<CreditGateState | null>(null);
   const [sceneSummary, setSceneSummary] = useState<SceneSummary | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
   const [continuePending, setContinuePending] = useState(false);
+  const [fixtureSelectedPov, setFixtureSelectedPov] = useState<string | null>(null);
   const [sceneTurn, setSceneTurn] = useState<number>(1);
   const [hangoutCheckpointPhase, setHangoutCheckpointPhase] = useState<string | null>(null);
   const [hangoutResumeSource, setHangoutResumeSource] = useState<'checkpoint' | 'scenario_seed' | null>(null);
@@ -592,12 +631,15 @@ export default function GamePage() {
     setScore({ xp: 0, sp: 0, rp: 0 });
     setCurrentMessage(null);
     setCurrentExercise(null);
+    setCurrentWebtoon(null);
+    setCurrentCreditGate(null);
     setToolQueue([]);
     setChoices(null);
     setChoicePrompt(null);
     setTongTip(null);
     setSceneSummary(null);
     setSceneReady(false);
+    setFixtureSelectedPov(null);
     setHangoutResumeSource(null);
     setHangoutSceneSessionId(null);
     setHangoutCheckpointId(null);
@@ -715,6 +757,8 @@ export default function GamePage() {
               },
         );
         setCurrentExercise(resumed.exercise);
+        setCurrentWebtoon(null);
+        setCurrentCreditGate(null);
         if (resumed.exercise) {
           lastExerciseRef.current = resumed.exercise;
         }
@@ -723,6 +767,7 @@ export default function GamePage() {
         setChoicePrompt(null);
         setTongTip(null);
         setSceneSummary(null);
+        setFixtureSelectedPov(null);
         pendingResumePromptRef.current = buildResumePrompt({
           resumeSource: resumed.resumeSource,
           phase: resumed.phase,
@@ -755,7 +800,7 @@ export default function GamePage() {
   /* ── useChat integration ──────────────────────────────────── */
 
   const { append, messages, isLoading: chatLoading } = useChat({
-    api: '/api/ai/hangout',
+    api: hangoutApi,
     maxSteps: 1,
     onResponse: () => {
       pausedRef.current = false;
@@ -810,6 +855,8 @@ export default function GamePage() {
     else if (toolQueue.length > 0) nextBusySource = 'tool_queue';
     else if (currentMessage) nextBusySource = 'current_message';
     else if (currentExercise) nextBusySource = 'current_exercise';
+    else if (currentWebtoon) nextBusySource = 'current_webtoon';
+    else if (currentCreditGate) nextBusySource = 'current_credit_gate';
     else if (choices) nextBusySource = 'choices';
     else if (tongTip) nextBusySource = 'tong_tip';
     else if (sceneSummary) nextBusySource = 'scene_summary';
@@ -825,6 +872,8 @@ export default function GamePage() {
     toolQueue.length,
     currentMessage,
     currentExercise,
+    currentWebtoon,
+    currentCreditGate,
     choices,
     tongTip,
     sceneSummary,
@@ -854,13 +903,62 @@ export default function GamePage() {
 
   /* Auto-start scene when skipping to hangout */
   useEffect(() => {
-    if (skipToHangout && !sceneStartedRef.current) {
-      console.log('[FLOW] skipToHangout auto-start triggered');
+    if (!skipToHangout || sceneStartedRef.current) return;
+
+    if (routeFixtureMode && hangoutFixtureId === 'shanghai/h1-negotiation') {
+      console.log('[FLOW] shanghai fixture auto-start triggered');
       sceneStartedRef.current = true;
-      const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
-      void append({ role: 'user', content: `${ctx}Start the scene.` });
+      const bootstrapNpcId = 'shoucheng';
+      const bootstrapCity: CityId = 'shanghai';
+      const bootstrapLocation: LocationId = 'dumpling_shop';
+      const npcChar = CHARACTER_MAP[bootstrapNpcId] ?? HAEUN;
+
+      npcRef.current = npcChar;
+      setCity(bootstrapCity);
+      setLocation(bootstrapLocation);
+      setActiveNpc(bootstrapNpcId);
+      setPlayerLevel(0);
+      setToolQueue([]);
+      setCurrentMessage(null);
+      setTongTip(null);
+      setChoices(null);
+      setChoicePrompt(null);
+      setCurrentExercise(null);
+      setCurrentWebtoon(null);
+      setCurrentCreditGate(null);
+      setSceneSummary(null);
+      setSceneReady(false);
+      setNpcRevealed(false);
+      setDynamicBackdrop(null);
+      setCinematic(null);
+      setIsIntroHangout(false);
+      setIntroExerciseCount(0);
+      setIntroAct(1);
+      setFixtureSelectedPov(null);
+      processingRef.current = false;
+      pausedRef.current = false;
+      processedToolCallsRef.current.clear();
+
+      const startMsg = '[HANGOUT_CONTEXT]{"fixtureId":"shanghai/h1-negotiation","mode":"fixture"}[/HANGOUT_CONTEXT]Start the fixture scene.';
+      sessionLogger.start({
+        mode: 'hangout',
+        cityId: bootstrapCity,
+        locationId: bootstrapLocation,
+        surface: 'game',
+        qaRunId,
+        npcId: bootstrapNpcId,
+        playerLevel: 0,
+      });
+      sessionLogger.logAIRequest(startMsg);
+      void append({ role: 'user', content: startMsg });
+      return;
     }
-  }, [skipToHangout, append, playerLevel, activeNpc, city, location, gameState.explainIn]);
+
+    console.log('[FLOW] skipToHangout auto-start triggered');
+    sceneStartedRef.current = true;
+    const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
+    void append({ role: 'user', content: `${ctx}Start the scene.` });
+  }, [skipToHangout, routeFixtureMode, hangoutFixtureId, append, playerLevel, activeNpc, city, location, gameState.explainIn, qaRunId]);
 
   useEffect(() => {
     if (!seededBootstrapRequested || freshStart || devIntro || sceneStartedRef.current) return;
@@ -872,11 +970,14 @@ export default function GamePage() {
     setSceneReady(false);
     setCurrentMessage(null);
     setCurrentExercise(null);
+    setCurrentWebtoon(null);
+    setCurrentCreditGate(null);
     setToolQueue([]);
     setChoices(null);
     setChoicePrompt(null);
     setTongTip(null);
     setSceneSummary(null);
+    setFixtureSelectedPov(null);
 
     const bootstrapProfile = {
       nativeLanguage: 'en' as const,
@@ -1154,6 +1255,23 @@ export default function GamePage() {
         console.log('[VN] tong_whisper BLOCK — message:', JSON.stringify(args.message), 'translation:', args.translation ?? '(none)');
         return; // ALWAYS BLOCK — user must tap to dismiss before proceeding
       }
+      case 'show_webtoon': {
+        const args = item.args as {
+          panels: WebtoonSequence['panels'];
+          autoAdvance?: boolean;
+        };
+        setCurrentMessage(null);
+        setTongTip(null);
+        setChoices(null);
+        setChoicePrompt(null);
+        setCurrentWebtoon({
+          panels: args.panels,
+          autoAdvance: args.autoAdvance ?? false,
+        });
+        traceQA('tool_queue_show_webtoon', { toolCallId: item.toolCallId, panelCount: args.panels.length });
+        console.log('[VN] show_webtoon BLOCK:', args.panels.map((panel) => panel.id).join(', '));
+        return;
+      }
       case 'show_exercise': {
         const args = item.args as {
           exerciseType: string;
@@ -1311,6 +1429,9 @@ export default function GamePage() {
           xpEarned: number;
           affinityChanges: { characterId: string; delta: number }[];
           calibratedLevel?: number | null;
+          masteryUpdates?: SceneSummary['masteryUpdates'];
+          stateUpdates?: SceneSummary['stateUpdates'];
+          nextHook?: string | null;
         };
         setSceneSummary(args);
         setScore((prev) => ({ ...prev, xp: prev.xp + args.xpEarned }));
@@ -1328,6 +1449,17 @@ export default function GamePage() {
         if (args.calibratedLevel != null) {
           dispatch({ type: 'SET_CALIBRATED_LEVEL', level: args.calibratedLevel });
         }
+        for (const masteryUpdate of args.masteryUpdates ?? []) {
+          dispatch({
+            type: 'RECORD_ITEM_RESULT',
+            itemId: masteryUpdate.item,
+            category: 'vocabulary',
+            correct: true,
+          });
+        }
+        if (typeof args.stateUpdates?.hangoutSeat === 'string') {
+          setFixtureSelectedPov(args.stateUpdates.hangoutSeat);
+        }
         // Increment interaction count for active NPC
         dispatch({ type: 'INCREMENT_INTERACTION', characterId: activeNpc });
         break; // auto-advance
@@ -1337,14 +1469,27 @@ export default function GamePage() {
           backdropUrl: string;
           transition: 'fade' | 'cut';
           ambientDescription?: string | null;
+          pov?: string | null;
         };
         setDynamicBackdrop({
           url: args.backdropUrl,
           transition: args.transition,
           ambientDescription: args.ambientDescription ?? undefined,
         });
+        if (args.pov) {
+          setFixtureSelectedPov(args.pov);
+        }
         console.log('[VN] set_backdrop:', args.backdropUrl, args.transition);
         break; // auto-advance
+      }
+      case 'credit_gate': {
+        const args = item.args as unknown as CreditGateState;
+        setCurrentMessage(null);
+        setTongTip(null);
+        setCurrentCreditGate(args);
+        traceQA('tool_queue_credit_gate', { toolCallId: item.toolCallId, cost: args.cost });
+        console.log('[VN] credit_gate BLOCK:', args.cost);
+        return;
       }
       case 'play_cinematic': {
         const args = item.args as {
@@ -1419,7 +1564,7 @@ export default function GamePage() {
       processingRef.current = false;
 
       // If nothing left in queue after dequeuing, request next turn (skip in fixture mode)
-      if (remainingAfterDequeue === 0 && !chatLoading && !fixtureParam) {
+      if (remainingAfterDequeue === 0 && !chatLoading && !fixtureModeActive) {
         const msg = buildScenePrompt('Continue.');
         sessionLogger.logUserTap('continue');
         sessionLogger.logAIRequest(msg);
@@ -1445,7 +1590,7 @@ export default function GamePage() {
       // tongTip was auto-advanced (not blocking) — fall through to request next turn
     }
 
-    if (!currentExercise && !choices && toolQueue.length === 0) {
+    if (!currentExercise && !currentWebtoon && !currentCreditGate && !choices && toolQueue.length === 0 && !fixtureModeActive) {
       const msg = buildScenePrompt('Continue.');
       sessionLogger.logUserTap('continue');
       sessionLogger.logAIRequest(msg);
@@ -1456,10 +1601,12 @@ export default function GamePage() {
       traceQA('handle_continue_noop_waiting_state', {
         queueLength: toolQueue.length,
         hasExercise: !!currentExercise,
+        hasWebtoon: !!currentWebtoon,
+        hasCreditGate: !!currentCreditGate,
         hasChoices: !!choices,
       });
     }
-  }, [sceneSummary, chatLoading, tongTip, currentExercise, choices, toolQueue, append, buildScenePrompt, traceQA]);
+  }, [sceneSummary, chatLoading, tongTip, currentExercise, currentWebtoon, currentCreditGate, choices, toolQueue, append, buildScenePrompt, traceQA, fixtureModeActive]);
 
   // Store exercise result so handleContinue can advance after user taps
   const exerciseResultRef = useRef<{ exerciseId: string; correct: boolean } | null>(null);
@@ -1499,13 +1646,13 @@ export default function GamePage() {
     console.log('[VN] advanceAfterExercise:', result.exerciseId, result.correct, 'chatLoading:', chatLoading);
     traceQA('advance_after_exercise', { exerciseId: result.exerciseId, correct: result.correct, chatLoading });
     // In fixture mode, don't call AI — just let the queue continue
-    if (!fixtureParam) {
+    if (!fixtureModeActive) {
       const msg = buildScenePrompt(summarizeExercise(result.exerciseId, result.correct));
       sessionLogger.logAIRequest(msg);
       setContinuePending(true);
       void append({ role: 'user', content: msg });
     }
-  }, [append, buildScenePrompt, chatLoading, traceQA, fixtureParam]);
+  }, [append, buildScenePrompt, chatLoading, traceQA, fixtureModeActive]);
 
   const handleExerciseDismiss = useCallback(() => {
     if (exerciseResultRef.current) {
@@ -1531,13 +1678,13 @@ export default function GamePage() {
       console.log('[VN] Act 1 → Act 2 transition triggered by SUSPENSE_CHOICE (offer_choices response)');
     }
 
-    if (!fixtureParam) {
+    if (!fixtureModeActive) {
       const msg = buildScenePrompt(`Choice: ${choiceId}`);
       sessionLogger.logAIRequest(msg);
       setContinuePending(true);
       void append({ role: 'user', content: msg });
     }
-  }, [append, buildScenePrompt, isIntroHangout, introAct, fixtureParam]);
+  }, [append, buildScenePrompt, isIntroHangout, introAct, fixtureModeActive]);
 
   const handleCinematicEnd = useCallback(() => {
     setCinematic(null);
@@ -1550,7 +1697,7 @@ export default function GamePage() {
     processingRef.current = false;
 
     // If nothing left in queue after dequeuing, request next AI turn (skip in fixture mode)
-    if (remainingAfterDequeue === 0 && !chatLoading && !fixtureParam) {
+    if (remainingAfterDequeue === 0 && !chatLoading && !fixtureModeActive) {
       const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
       const msg = `${ctx}Continue.`;
       sessionLogger.logUserTap('cinematic_end');
@@ -1558,7 +1705,63 @@ export default function GamePage() {
       setContinuePending(true);
       void append({ role: 'user', content: msg });
     }
-  }, [isIntroHangout, npcRevealed, toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn, fixtureParam]);
+  }, [isIntroHangout, npcRevealed, toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn, fixtureModeActive]);
+
+  const handleWebtoonComplete = useCallback(() => {
+    setCurrentWebtoon(null);
+    const remainingAfterDequeue = toolQueue.length - 1;
+    setToolQueue((prev) => prev.slice(1));
+    processingRef.current = false;
+
+    if (remainingAfterDequeue === 0 && !chatLoading && !fixtureModeActive) {
+      const msg = buildScenePrompt('Continue.');
+      sessionLogger.logUserTap('webtoon_complete');
+      sessionLogger.logAIRequest(msg);
+      setContinuePending(true);
+      void append({ role: 'user', content: msg });
+    }
+  }, [toolQueue.length, chatLoading, fixtureModeActive, append, buildScenePrompt]);
+
+  const handleCreditGateDecision = useCallback((decision: CreditGateDecision) => {
+    if (!currentCreditGate) {
+      return;
+    }
+
+    if (decision === 'spend' && gameState.sp < currentCreditGate.cost) {
+      return;
+    }
+
+    if (decision === 'spend') {
+      dispatch({ type: 'ADD_SP', amount: -currentCreditGate.cost });
+    }
+
+    setCurrentCreditGate(null);
+
+    const followUpQueue = routeFixtureMode && hangoutFixtureId
+      ? (() => {
+          const fixture = getShanghaiFixture(hangoutFixtureId);
+          if (!fixture) return [];
+          return buildFixtureResolutionEvents(fixture, decision, fixtureSelectedPov)
+            .map((event) => ({
+              toolCallId: event.toolCallId,
+              toolName: event.toolName,
+              args: event.args as Record<string, unknown>,
+              pauses: event.pauses,
+            }));
+        })()
+      : [];
+
+    const remainingAfterDequeue = toolQueue.length - 1;
+    setToolQueue((prev) => [...followUpQueue, ...prev.slice(1)]);
+    processingRef.current = false;
+
+    if (!routeFixtureMode && remainingAfterDequeue === 0 && !chatLoading) {
+      const msg = buildScenePrompt(`Credit gate decision: ${decision}. Continue.`);
+      sessionLogger.logAIRequest(msg);
+      setContinuePending(true);
+      void append({ role: 'user', content: msg });
+    }
+  }, [currentCreditGate, gameState.sp, routeFixtureMode, hangoutFixtureId, fixtureSelectedPov, toolQueue.length, chatLoading, append, buildScenePrompt]);
 
   const handleDismissTong = useCallback(() => {
     traceQA('handle_dismiss_tong', { processing: processingRef.current, queueLength: toolQueue.length });
@@ -1571,7 +1774,7 @@ export default function GamePage() {
       processingRef.current = false;
 
       // If nothing left in queue, request next turn
-      if (remainingAfterDequeue === 0 && !chatLoading) {
+      if (remainingAfterDequeue === 0 && !chatLoading && !fixtureModeActive) {
         const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
         const msg = `${ctx}Continue.`;
         sessionLogger.logUserTap('continue');
@@ -1581,7 +1784,7 @@ export default function GamePage() {
         void append({ role: 'user', content: msg });
       }
     }
-  }, [toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct, traceQA]);
+  }, [toolQueue.length, chatLoading, append, playerLevel, activeNpc, city, location, gameState.explainIn, isIntroHangout, introExerciseCount, introAct, traceQA, fixtureModeActive]);
 
   const getQaState = useCallback(() => ({
     qaRunId,
@@ -1591,6 +1794,7 @@ export default function GamePage() {
     sceneReady,
     chatLoading,
     continuePending,
+    fixtureModeActive,
     processing: processingRef.current,
     toolQueue: toolQueue.map((item) => ({ toolCallId: item.toolCallId, toolName: item.toolName })),
     currentMessage: currentMessage ? { id: currentMessage.id, role: currentMessage.role, characterId: currentMessage.characterId, contentPreview: currentMessage.content.slice(0, 120) } : null,
@@ -1598,6 +1802,9 @@ export default function GamePage() {
     displayMessage: displayMessage ? { id: displayMessage.id, role: displayMessage.role, characterId: displayMessage.characterId, contentPreview: displayMessage.content.slice(0, 120) } : null,
     tongTip: tongTip ? { messagePreview: tongTip.message.slice(0, 120), hasTranslation: !!tongTip.translation } : null,
     currentExercise: currentExercise ? { id: currentExercise.id, type: currentExercise.type } : null,
+    currentWebtoon: currentWebtoon ? { panelIds: currentWebtoon.panels.map((panel) => panel.id), autoAdvance: currentWebtoon.autoAdvance } : null,
+    currentCreditGate: currentCreditGate ? { cost: currentCreditGate.cost } : null,
+    fixtureSelectedPov,
     hangoutResumeSource,
     hangoutCheckpointPhase,
     sceneTurn,
@@ -1611,7 +1818,7 @@ export default function GamePage() {
     introExerciseCount,
     introAct,
     npcRevealed,
-  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, continuePending, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, hangoutResumeSource, hangoutCheckpointPhase, sceneTurn, hangoutSceneSessionId, hangoutCheckpointId, availableScenarioSeedIds, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
+  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, continuePending, fixtureModeActive, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, currentWebtoon, currentCreditGate, fixtureSelectedPov, hangoutResumeSource, hangoutCheckpointPhase, sceneTurn, hangoutSceneSessionId, hangoutCheckpointId, availableScenarioSeedIds, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
 
   useEffect(() => {
     if (!qaTrace) return;
@@ -1625,11 +1832,13 @@ export default function GamePage() {
       currentMessageId: currentMessage?.id ?? null,
       displayMessageId: displayMessage?.id ?? null,
       currentExerciseId: currentExercise?.id ?? null,
+      currentWebtoonPanels: currentWebtoon?.panels.map((panel) => panel.id) ?? [],
+      currentCreditGateCost: currentCreditGate?.cost ?? null,
       choiceCount: choices?.length ?? 0,
       hasTongTip: !!tongTip,
       hasSceneSummary: !!sceneSummary,
     });
-  }, [qaTrace, traceQA, phase, chatLoading, continuePending, dialogueIsStreaming, toolQueue.length, currentMessage?.id, displayMessage?.id, currentExercise?.id, choices?.length, tongTip, sceneSummary]);
+  }, [qaTrace, traceQA, phase, chatLoading, continuePending, dialogueIsStreaming, toolQueue.length, currentMessage?.id, displayMessage?.id, currentExercise?.id, currentWebtoon, currentCreditGate, choices?.length, tongTip, sceneSummary]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !qaRunId) return;
@@ -2000,6 +2209,8 @@ export default function GamePage() {
     setChoices(null);
     setChoicePrompt(null);
     setCurrentExercise(null);
+    setCurrentWebtoon(null);
+    setCurrentCreditGate(null);
     setSceneSummary(null);
     setSceneReady(false);
     setNpcRevealed(false);
@@ -2008,6 +2219,7 @@ export default function GamePage() {
     setIsIntroHangout(false);
     setIntroExerciseCount(0);
     setIntroAct(1);
+    setFixtureSelectedPov(null);
     exitLineRef.current = '';
     exitLineTranslationRef.current = '';
     processingRef.current = false;
@@ -2206,14 +2418,20 @@ export default function GamePage() {
 
   /* Hangout phase — immersive VN scene */
   const cityInfo = CITY_NAMES[city] || CITY_NAMES.seoul;
-  const npc = NPC_SPRITES[activeNpc] || NPC_SPRITES.haeun;
+  const npcChar = CHARACTER_MAP[activeNpc];
+  const npc = NPC_SPRITES[activeNpc] || {
+    name: npcChar?.name.en ?? 'Speaker',
+    nameLocal: npcChar?.name.zh ?? npcChar?.name.ko ?? npcChar?.name.ja ?? npcChar?.name.en ?? 'Speaker',
+    nameZh: npcChar?.name.zh ?? npcChar?.name.en ?? 'Speaker',
+    src: '',
+    color: '#f0c040',
+  };
   const rel = gameState.relationships[activeNpc];
   const affinity = rel?.affinity ?? 10;
 
   // Derive targetLang from the NPC's home city, not the game's current city.
   // This ensures that talking to a Seoul NPC (Jin) always gives Korean tooltips,
   // even if the game routed to a different city during onboarding.
-  const npcChar = CHARACTER_MAP[activeNpc];
   const npcCity = (npcChar?.cityId ?? city) as CityId;
   const targetLang = getLanguageForCity(npcCity);
   const explainLang = (gameState.explainIn[npcCity] ?? 'en') as UILang;
@@ -2272,7 +2490,7 @@ export default function GamePage() {
     );
   }
   const continueLabel = t('tap_to_continue', explainLang as UILang);
-  const sceneBusy = chatLoading || continuePending || toolQueue.length > 0;
+  const sceneBusy = chatLoading || continuePending || toolQueue.length > 0 || !!currentWebtoon || !!currentCreditGate;
 
   // Heart meter progress: time-based charge over 2 minutes
   const heartProgress = chargePercent;
@@ -2293,6 +2511,9 @@ export default function GamePage() {
           npcIdleVideoUrl={isIntroHangout && !npcRevealed ? undefined : npc.idleVideo || undefined}
           currentMessage={displayMessage}
           currentExercise={currentExercise}
+          currentWebtoon={currentWebtoon}
+          currentCreditGate={currentCreditGate}
+          playerSp={gameState.sp}
           choices={choices}
           choicePrompt={choicePrompt}
           tongTip={tongTip}
@@ -2320,6 +2541,8 @@ export default function GamePage() {
           onExerciseResult={handleExerciseResult}
           onExerciseDismiss={handleExerciseDismiss}
           onDismissTong={handleDismissTong}
+          onWebtoonComplete={handleWebtoonComplete}
+          onCreditGateDecision={handleCreditGateDecision}
         />
         {/* Charge complete notification (auto-dismisses) */}
         {chargeNotifShown && (

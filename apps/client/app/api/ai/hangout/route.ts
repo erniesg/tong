@@ -1,4 +1,4 @@
-import { streamText, tool } from 'ai';
+import { createDataStreamResponse, formatDataStreamPart, streamText, tool, type DataStreamWriter } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 import {
@@ -12,6 +12,9 @@ import {
 import { CHARACTER_MAP, HAEUN, TUTORIAL_VIDEO_CONFIG } from '@/lib/content/characters';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import { runtimeAssetUrl } from '@/lib/runtime-assets';
+import { getShanghaiFixture } from '@/lib/content/shanghai/fixtures';
+import { runFixture, type HangoutEvent } from '@/lib/hangout/fixture-runtime';
+import { validateLine } from '@/lib/ai/validators/voice-rules';
 import type { Character, RelationshipStage, Relationship } from '@/lib/types/relationship';
 import type { MasterySnapshot } from '@/lib/types/mastery';
 
@@ -42,13 +45,29 @@ const hangoutTools = {
       ]).nullable().describe('NPC facial expression'),
       affinityDelta: z.number().nullable().describe('Affinity change -3 to +5, or null'),
     }),
-    execute: async (args) => args,
+    execute: async (args) => {
+      const validation = validateLine(args.characterId, args.text);
+      if (!validation.ok) {
+        console.warn('[hangout] Voice rule violation:', {
+          characterId: args.characterId,
+          text: args.text,
+          violations: validation.violations,
+        });
+      }
+      return args;
+    },
   }),
   tong_whisper: tool({
     description: 'Tong gives the player a tip, teaching, or encouragement. Tong is the SOLE teacher — all language explanations go through here. Brief, 1-2 sentences.',
     parameters: z.object({
       message: z.string().describe('The tip/teaching message. Keep Korean/CJK terms in native script, never bare romanization.'),
       translation: z.string().nullable().describe('Separate translation UI text if message contains Korean, or null'),
+      vocab: z.array(z.object({
+        zh: z.string(),
+        py: z.string(),
+        en: z.string(),
+      })).nullable().optional().describe('Optional vocab breakdown items for richer overlays.'),
+      free: z.boolean().optional().describe('Whether this Tong beat is free or part of a spend gate.'),
     }),
     execute: async (args) => args,
   }),
@@ -97,6 +116,13 @@ const hangoutTools = {
         delta: z.number(),
       })).describe('Affinity changes per character'),
       calibratedLevel: z.number().nullable().describe('Assessed player level, or null'),
+      masteryUpdates: z.array(z.object({
+        id: z.string(),
+        item: z.string(),
+        firstContact: z.boolean().optional(),
+      })).optional().describe('Mastery items to mark during scene resolution.'),
+      stateUpdates: z.record(z.unknown()).nullable().optional().describe('Additional game state updates to persist.'),
+      nextHook: z.string().nullable().optional().describe('Optional next-scene hook identifier.'),
     }),
     execute: async (args) => args,
   }),
@@ -106,6 +132,57 @@ const hangoutTools = {
       backdropUrl: z.string().describe('Resolved runtime asset URL for the backdrop image'),
       transition: z.enum(['fade', 'cut']).describe('Transition type: fade (smooth 0.5s) or cut (instant)'),
       ambientDescription: z.string().nullable().describe('Ambient text shown if image fails to load, or null'),
+      pov: z.string().nullable().optional().describe('Optional selected POV seat identifier.'),
+      offscreenVoice: z.string().nullable().optional().describe('Optional offscreen voice note for the selected POV.'),
+    }),
+    execute: async (args) => args,
+  }),
+  show_webtoon: tool({
+    description: 'Display a multi-panel webtoon sequence. Use for cliffhangers, memory reveals, or eavesdrop moments that need visual framing.',
+    parameters: z.object({
+      panels: z.array(z.object({
+        id: z.string(),
+        imageUrl: z.string(),
+        widthType: z.enum(['full-bleed', 'full-width', 'inset-wide', 'inset-narrow', 'floating']),
+        heightClass: z.enum(['short', 'standard', 'tall', 'ultra-tall']),
+        aspectRatio: z.string(),
+        shotType: z.string(),
+        gapBefore: z.object({
+          px: z.number(),
+          color: z.string(),
+        }),
+        isThumbStop: z.boolean().optional(),
+        bubble: z.object({
+          zh: z.string(),
+          py: z.string().optional(),
+          en: z.string().optional(),
+          speaker: z.string(),
+          position: z.enum(['top', 'bottom', 'center-bottom']),
+        }).optional(),
+        transition: z.enum(['fade', 'cut', 'darken']),
+      })),
+      autoAdvance: z.boolean().optional().default(false),
+    }),
+    execute: async (args) => args,
+  }),
+  credit_gate: tool({
+    description: 'Pause the scene and let the player decide whether to spend SP for an optional reveal.',
+    parameters: z.object({
+      cost: z.number(),
+      spendPayload: z.object({
+        additionalLines: z.array(z.object({
+          zh: z.string(),
+          py: z.string().optional(),
+          en: z.string().optional(),
+          expression: z.string().optional(),
+          clarity: z.enum(['full', 'fragment']).optional(),
+        })).optional(),
+        tongExplanation: z.string().optional(),
+        vocabUnlocks: z.array(z.string()).optional(),
+      }),
+      skipPayload: z.object({
+        tongFallback: z.string().optional(),
+      }),
     }),
     execute: async (args) => args,
   }),
@@ -150,6 +227,80 @@ function resolveUnresolvedTools(messages: any[]): any[] {
   return result;
 }
 
+type HangoutMode = 'dynamic' | 'fixture';
+
+function readHangoutConfig(req: Request, body?: Record<string, unknown>) {
+  const url = new URL(req.url);
+  const modeParam = url.searchParams.get('mode') ?? (typeof body?.mode === 'string' ? body.mode : null);
+  const mode: HangoutMode = modeParam === 'fixture' ? 'fixture' : 'dynamic';
+  const directFixtureId = url.searchParams.get('fixtureId') ?? (typeof body?.fixtureId === 'string' ? body.fixtureId : null);
+  const city = url.searchParams.get('city') ?? (typeof body?.city === 'string' ? body.city : null);
+  const scene = url.searchParams.get('scene') ?? (typeof body?.scene === 'string' ? body.scene : null);
+  const fixtureId = directFixtureId || (city === 'shanghai' && scene === 'h1' ? 'shanghai/h1-negotiation' : null);
+
+  return { mode, fixtureId };
+}
+
+function buildFixtureResponse(fixtureId: string) {
+  const fixture = getShanghaiFixture(fixtureId);
+  if (!fixture) {
+    return new Response(`Unknown fixtureId: ${fixtureId}`, { status: 404 });
+  }
+
+  return createDataStreamResponse({
+    execute: async (dataStream) => {
+      const messageId = `fixture-${fixture.id.replace(/[^a-zA-Z0-9_-]+/g, '-')}`;
+      dataStream.write(formatDataStreamPart('start_step', { messageId }));
+
+      for await (const event of runFixture(fixture)) {
+        writeFixtureEvent(dataStream, event);
+        if (event.toolName === 'credit_gate') {
+          break;
+        }
+      }
+
+      dataStream.write(formatDataStreamPart('finish_step', {
+        isContinued: false,
+        finishReason: 'stop',
+      }));
+      dataStream.write(formatDataStreamPart('finish_message', {
+        finishReason: 'stop',
+      }));
+    },
+    onError: (error) => {
+      console.error('[hangout] Fixture stream error:', error);
+      return error instanceof Error ? error.message : 'Fixture stream failed';
+    },
+  });
+}
+
+function writeFixtureEvent(
+  dataStream: DataStreamWriter,
+  event: HangoutEvent,
+) {
+  dataStream.write(formatDataStreamPart('tool_call', {
+    toolCallId: event.toolCallId,
+    toolName: event.toolName,
+    args: event.args,
+  }));
+  dataStream.write(formatDataStreamPart('tool_result', {
+    toolCallId: event.toolCallId,
+    result: event.args,
+  }));
+}
+
+export async function GET(req: Request) {
+  const { mode, fixtureId } = readHangoutConfig(req);
+  if (mode !== 'fixture') {
+    return new Response('GET is only supported for fixture mode.', { status: 405 });
+  }
+  if (!fixtureId) {
+    return new Response('fixtureId is required when mode=fixture.', { status: 400 });
+  }
+
+  return buildFixtureResponse(fixtureId);
+}
+
 export async function POST(req: Request) {
   let body: Record<string, unknown>;
   try {
@@ -158,6 +309,16 @@ export async function POST(req: Request) {
     console.error('[hangout] Failed to parse request body:', e);
     return new Response('Invalid JSON', { status: 400 });
   }
+
+  const { mode, fixtureId } = readHangoutConfig(req, body);
+  if (mode === 'fixture') {
+    if (!fixtureId) {
+      return new Response('fixtureId is required when mode=fixture.', { status: 400 });
+    }
+
+    return buildFixtureResponse(fixtureId);
+  }
+
   const rawMessages = body.messages ?? [];
   const messages = resolveUnresolvedTools(rawMessages as Record<string, unknown>[]);
 

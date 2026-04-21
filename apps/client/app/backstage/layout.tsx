@@ -12,6 +12,7 @@ import {
 const TABS = [
   { href: '/backstage', label: 'Overview', exact: true },
   { href: '/backstage/director', label: 'Director' },
+  { href: '/backstage/webtoon-lab', label: 'Webtoon Lab' },
   { href: '/backstage/signals', label: 'Signals' },
   { href: '/backstage/campaigns', label: 'Campaigns' },
   { href: '/backstage/studio', label: 'Studio' },
