@@ -577,31 +577,78 @@ romanceable: false
 
 ---
 
+## Issue 3.6 — Per-bubble reveal gating (free / credits / game pass) — GitHub #230
+
+**Status update (2026-04-21):** shipped for V1 onboarding demo.
+
+**Red:** Bubbles in the webtoon strip always reveal EN translation freely — no way to demo the SA / Game Pass paywall hook or gate a premium scene reveal.
+
+**Green:** Fixture bubbles carry an optional `gate` field. `WebtoonStrip` resolves each bubble's `reveal` prop from `gate` + runtime entitlement (game pass / SP balance / dev bypass). Pinyin ruby always stays free; the paywall sits only on EN translation and (for premium gates) the bubble opening itself.
+
+**Files:**
+- `apps/client/lib/hangout/fixture-types.ts` — `WebtoonBubbleGate` union + `WebtoonBubble.gate` field. ✅
+- `apps/client/components/scene/WebtoonStrip.tsx` — `WebtoonEntitlement` prop + `resolveBubbleReveal()`. ✅
+- `apps/client/lib/store/game-store.ts` — `GamePassEntitlement` + `SET_GAME_PASS` action + loadState backfill. ✅
+- `apps/client/app/webtoon/[fixtureId]/page.tsx` — URL-param entitlement override. ✅
+- `apps/client/app/onboarding/shanghai/page.tsx` — combines store entitlement with URL override. ✅
+- `apps/client/lib/content/shanghai/fixtures/h1-webtoon.ts` — gating policy applied: p1/p2 free, p3-p17 credits (1 SP), p18 Game Pass. ✅
+
+**Demo knobs:** `?dev_pass=1` bypass, `?game_pass=1` simulate pass, `?sp=5` preload credits.
+
+**Deferred to V1.1:** (1) bubble tap triggers a purchase sheet when gated and SP insufficient — right now the gated bubble is simply non-interactive and shows a lock affordance; (2) actual Stripe Checkout + webhook to flip `gamePass.active` server-side; (3) credit-spend micro-transactions (tapping a 1-credit bubble deducts SP rather than relying on pre-loaded balance).
+
+**Acceptance:**
+- ✅ `WebtoonBubble.gate` optional; omission means free.
+- ✅ Game Pass unlocks all gates. SP balance ≥ cost unlocks credit gates. `bypass` unlocks everything (dev/demo).
+- ✅ Lock affordance in `aria-label` ("Help unlocks for N credits" / "Help unlocks with Game Pass") so gated state is screen-reader friendly.
+- ⏳ Tapping a gated bubble opens a purchase sheet (V1.1).
+- ⏳ Spend flow deducts SP and sets `reveal: free` for that bubble's lifetime (V1.1).
+
+---
+
+## Issue 3.10 — Onboarding playtest route — NEW
+
+**Red:** No dedicated link for playing the onboarding hangout with completion side effects (mastery/affinity/xp dispatched into the game store).
+
+**Green:** `/onboarding/shanghai` — wraps the Shanghai H1 webtoon in a full-viewport scroll container, reads entitlement from game store + URL override, and on scene completion dispatches `RECORD_ITEM_RESULT` for the 5 surfaced vocab items, `UPDATE_AFFINITY` (`fangayi +3`), `INCREMENT_LOCATION_HANGOUT` (`shanghai:dumpling_shop`), `ADD_XP (+40)`. A completion chip offers "Return to map".
+
+**Files:**
+- `apps/client/app/onboarding/shanghai/page.tsx` ✅
+- `apps/client/app/webtoon/page.tsx` — gallery now surfaces the playable entry separately from raw fixtures.
+
+**Open follow-on:** first-hangout default routing (if player picks Chinese as priority language, drop into `/onboarding/shanghai` from the game flow instead of showing the map). Deferred pending a priority-language selection step in the game flow.
+
+---
+
 # Epic 4 — Dynamic prompt integration
 
 ## Issue 4.1 — Shanghai onboarding prompt
 
-**Red:** No AI prompt for Shanghai hangout that uses a fixture as scaffolding.
+**Status update (2026-04-21):** revised for webtoon-as-scene model.
 
-**Green:** Prompt template that takes HangoutOrchestratorVars + SceneFixture, produces tool-call output matching the fixture's beat structure with locked lines honored.
+**Red:** No AI prompt for Shanghai hangout that uses the H1 fixture as scaffolding. V1 ships fixture-verbatim at `/onboarding/shanghai`; this issue delivers the dynamic follow-on so the orchestrator can produce tool-calls under the same fixture constraints.
+
+**Green:** `buildShanghaiOnboardingH1Prompt({ fixture, playerName, seat, masterySnapshot, explainLang })` composer that emits a system prompt carrying: role framing (eavesdrop scene — only 方阿姨 addresses the player), three-character voice rules imported from `shanghai/characters.ts` via `voiceRulesBlock()`, the POV variant for the selected seat, the beat outline (locked vs variant), webtoon instructions (one `show_webtoon` at start, panels come from fixture, never invent art), validator compliance, and the resolution spec.
 
 **Files:**
-- `apps/client/lib/ai/prompts/shanghai-onboarding-h1.ts` (new)
-- `apps/client/app/api/ai/hangout/route.ts` (modify — route to shanghai prompt when city=shanghai and scene=h1)
+- `apps/client/lib/ai/prompts/shanghai-onboarding-h1.ts` — scaffold landed 2026-04-21 (commit `e6632db`).
+- `apps/client/app/api/ai/hangout/route.ts` — NOT yet wired to the new composer. Dynamic path still goes through generic orchestrator.
 
-**Content:** the prompt body is already drafted — paste from `docs/shanghai/h1-generation-prompts.md` section 6.
+**Content source:** prose guidelines in `docs/shanghai/h1-generation-prompts.md` §6; the TS composer imports voice rules + POV + beats directly from data so the prompt stays in sync with fixture edits.
 
-**Acceptance:**
-- Prompt accepts `{ fixture, player, tools }` input shape
-- Output is a series of tool calls in beat order
-- Locked lines respected on ≥ 95% of beats (spot check 10 runs)
-- Variants only emitted on beats marked variable
-- No `不一样的` on 守成 lines across 10 runs (voice rule violation → regenerate)
-- Opens with set_backdrop + opening tong whisper
-- Ends with end_scene with proper masteryUpdates/affinityChanges/stateUpdates
+**Acceptance (updated):**
+- ✅ Prompt accepts `{ fixture, playerName, seat, masterySnapshot, explainLang }` input shape (scaffold done).
+- ⏳ Wired into `/api/ai/hangout` when `city=shanghai`, `scene=h1`, `onboarded=false`.
+- ⏳ Output is a series of tool calls in beat order; opens with `show_webtoon` containing the full panel array, not with a traditional `set_backdrop`.
+- ⏳ Locked lines respected on ≥ 95% of beats (spot check 10 runs).
+- ⏳ No `不一样的` on 守成 lines across 10 runs (voice rule validator must regenerate).
+- ⏳ Every `npc_speak` passes the voice validator on attempt 1 or 2; attempt 3 falls back to `lockedLines[0]`.
+- ⏳ Seat defaults to `'dingman'` for onboarding (deterministic); `povVariants` randomization is H2-and-beyond.
+- ⏳ On credit_gate resolution: spend emits extended 方阿姨 lines + tong explanation; skip emits tong fallback only.
+- ⏳ Ends with `end_scene` carrying `masteryUpdates`, `affinityChanges` (`fangayi +3`), and `stateUpdates` from the fixture resolution.
 
-**Dependencies:** 2.2, 2.3
-**Estimate:** M (1-2 days)
+**Dependencies:** 2.2 (done), 2.3 (done), 4.2 (uncommitted — validator exists but not guaranteed on all paths).
+**Estimate:** M (1-2 days) — scaffold done; remaining work is route wiring + regression test harness.
 
 ---
 
