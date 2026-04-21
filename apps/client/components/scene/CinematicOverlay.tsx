@@ -15,18 +15,56 @@ interface CinematicOverlayProps {
   captionTranslation?: string;
   autoAdvance: boolean;
   muted?: boolean;
+  mediaFit?: 'cover' | 'panorama';
+  authoredDimensions?: { width: number; height: number };
+  onPanoramaDeltaChange?: (deltaX: number) => void;
   targetLang?: TargetLang;
   onEnd: () => void;
 }
 
-export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAdvance, muted = false, targetLang = 'ko', onEnd }: CinematicOverlayProps) {
+export function CinematicOverlay({
+  videoUrl,
+  caption,
+  captionTranslation,
+  autoAdvance,
+  muted = false,
+  mediaFit = 'cover',
+  authoredDimensions,
+  onPanoramaDeltaChange,
+  targetLang = 'ko',
+  onEnd,
+}: CinematicOverlayProps) {
   const lang = useUILang();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const [fadingOut, setFadingOut] = useState(false);
   const [captionVisible, setCaptionVisible] = useState(false);
   const [candidateIndex, setCandidateIndex] = useState(0);
+  const [intrinsicAspectRatio, setIntrinsicAspectRatio] = useState<number | null>(null);
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [dragOffsetX, setDragOffsetX] = useState(0);
+  const draggingRef = useRef(false);
+  const draggedDistanceRef = useRef(0);
+  const dragStartXRef = useRef(0);
+  const dragStartOffsetRef = useRef(0);
+  const hasInitializedPanRef = useRef(false);
   const videoCandidates = useMemo(() => fallbackRuntimeAssetCandidates(videoUrl), [videoUrl]);
   const activeVideoUrl = videoCandidates[candidateIndex] ?? '';
+  const useImageElement = /\.(png|jpe?g|webp|gif|avif)(\?.*)?$/i.test(activeVideoUrl);
+  const panoramaEnabled = mediaFit === 'panorama';
+  const mediaAspectRatio = useMemo(() => {
+    if (authoredDimensions && authoredDimensions.width > 0 && authoredDimensions.height > 0) {
+      return authoredDimensions.width / authoredDimensions.height;
+    }
+    if (intrinsicAspectRatio && intrinsicAspectRatio > 0) return intrinsicAspectRatio;
+    // Wide fallback gives deterministic horizontal overflow even when temporary media is 16:9.
+    return 21 / 9;
+  }, [authoredDimensions, intrinsicAspectRatio]);
+  const panoramaRenderWidth = useMemo(() => {
+    if (!panoramaEnabled || viewportSize.width <= 0 || viewportSize.height <= 0) return viewportSize.width;
+    return Math.max(viewportSize.width, viewportSize.height * mediaAspectRatio);
+  }, [mediaAspectRatio, panoramaEnabled, viewportSize.height, viewportSize.width]);
+  const panoramaOverflow = Math.max(0, panoramaRenderWidth - viewportSize.width);
 
   // Typewriter state for caption
   const [captionChars, setCaptionChars] = useState(0);
@@ -44,15 +82,53 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
   }, [autoAdvance, triggerEnd]);
 
   const handleTap = useCallback(() => {
+    if (panoramaEnabled) return;
     if (!autoAdvance) triggerEnd();
-  }, [autoAdvance, triggerEnd]);
+  }, [autoAdvance, panoramaEnabled, triggerEnd]);
 
   useEffect(() => {
     setCandidateIndex(0);
   }, [videoUrl]);
 
+  useEffect(() => {
+    setDragOffsetX(0);
+    hasInitializedPanRef.current = false;
+  }, [activeVideoUrl, panoramaEnabled]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || !panoramaEnabled) return;
+    const updateSize = () => {
+      setViewportSize({ width: viewport.clientWidth, height: viewport.clientHeight });
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [panoramaEnabled]);
+
+  useEffect(() => {
+    if (!panoramaEnabled) {
+      onPanoramaDeltaChange?.(0);
+      return;
+    }
+    setDragOffsetX((current) => {
+      if (panoramaOverflow <= 0) return 0;
+      if (!hasInitializedPanRef.current) {
+        hasInitializedPanRef.current = true;
+        return -panoramaOverflow / 2;
+      }
+      return Math.min(0, Math.max(-panoramaOverflow, current));
+    });
+  }, [onPanoramaDeltaChange, panoramaEnabled, panoramaOverflow]);
+
+  useEffect(() => {
+    onPanoramaDeltaChange?.(dragOffsetX);
+  }, [dragOffsetX, onPanoramaDeltaChange]);
+
   // Autoplay with unmute fallback + audio fade-in
   useEffect(() => {
+    if (useImageElement) return;
     const v = videoRef.current;
     if (!v) return;
     // Start at zero volume for fade-in
@@ -75,10 +151,11 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
       }, 40);
       return () => clearInterval(fadeIn);
     }
-  }, [activeVideoUrl, muted]);
+  }, [activeVideoUrl, muted, useImageElement]);
 
   // Fade out audio before video ends
   useEffect(() => {
+    if (useImageElement) return;
     const v = videoRef.current;
     if (!v || muted) return;
     const handleTimeUpdate = () => {
@@ -89,7 +166,7 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
     };
     v.addEventListener('timeupdate', handleTimeUpdate);
     return () => v.removeEventListener('timeupdate', handleTimeUpdate);
-  }, [activeVideoUrl, muted]);
+  }, [activeVideoUrl, muted, useImageElement]);
 
   // Fade in caption shortly after video starts playing, then start typewriter
   useEffect(() => {
@@ -124,8 +201,14 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
 
   return (
     <div
+      ref={viewportRef}
       className={`cinematic-overlay ${fadingOut ? 'cinematic-fade-out' : ''}`}
+      style={panoramaEnabled ? { overflow: 'hidden' } : undefined}
       onClick={(e) => {
+        if (panoramaEnabled && draggedDistanceRef.current > 4) {
+          draggedDistanceRef.current = 0;
+          return;
+        }
         const v = videoRef.current;
         if (v && v.muted && !muted) {
           // First tap unmutes if autoplay was forced muted
@@ -137,24 +220,120 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
       role={autoAdvance ? undefined : 'button'}
       tabIndex={autoAdvance ? undefined : 0}
     >
-      <video
-        ref={videoRef}
-        src={activeVideoUrl}
-        playsInline
-        muted={muted}
-        onEnded={handleEnded}
-        onError={() => {
-          if (candidateIndex + 1 < videoCandidates.length) {
-            setCandidateIndex(candidateIndex + 1);
-          } else {
-            triggerEnd();
-          }
-        }}
-        className="cinematic-video"
-        disablePictureInPicture
-        disableRemotePlayback
-        controlsList="nodownload noplaybackrate"
-      />
+      {useImageElement ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={activeVideoUrl}
+          alt=""
+          onLoad={(event) => {
+            const target = event.currentTarget;
+            if (target.naturalWidth > 0 && target.naturalHeight > 0) {
+              setIntrinsicAspectRatio(target.naturalWidth / target.naturalHeight);
+            }
+          }}
+          onError={() => {
+            if (candidateIndex + 1 < videoCandidates.length) {
+              setCandidateIndex(candidateIndex + 1);
+            } else {
+              triggerEnd();
+            }
+          }}
+          onPointerDown={(event) => {
+            if (!panoramaEnabled || panoramaOverflow <= 0) return;
+            draggingRef.current = true;
+            draggedDistanceRef.current = 0;
+            dragStartXRef.current = event.clientX;
+            dragStartOffsetRef.current = dragOffsetX;
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            if (!panoramaEnabled || !draggingRef.current) return;
+            const delta = event.clientX - dragStartXRef.current;
+            draggedDistanceRef.current = Math.max(draggedDistanceRef.current, Math.abs(delta));
+            const nextOffset = Math.min(0, Math.max(-panoramaOverflow, dragStartOffsetRef.current + delta));
+            setDragOffsetX(nextOffset);
+          }}
+          onPointerUp={(event) => {
+            if (!panoramaEnabled) return;
+            draggingRef.current = false;
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }}
+          onPointerCancel={(event) => {
+            if (!panoramaEnabled) return;
+            draggingRef.current = false;
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }}
+          className="cinematic-video"
+          style={panoramaEnabled ? {
+            width: `${panoramaRenderWidth}px`,
+            height: '100%',
+            maxWidth: 'none',
+            objectFit: 'fill',
+            transform: `translate3d(${dragOffsetX}px, 0, 0)`,
+            touchAction: 'none',
+            cursor: panoramaOverflow > 0 ? (draggingRef.current ? 'grabbing' : 'grab') : 'default',
+          } : undefined}
+        />
+      ) : (
+        <video
+          ref={videoRef}
+          src={activeVideoUrl}
+          playsInline
+          muted={muted}
+          onLoadedMetadata={(event) => {
+            const { videoWidth, videoHeight } = event.currentTarget;
+            if (videoWidth > 0 && videoHeight > 0) {
+              setIntrinsicAspectRatio(videoWidth / videoHeight);
+            }
+          }}
+          onEnded={handleEnded}
+          onError={() => {
+            if (candidateIndex + 1 < videoCandidates.length) {
+              setCandidateIndex(candidateIndex + 1);
+            } else {
+              triggerEnd();
+            }
+          }}
+          onPointerDown={(event) => {
+            if (!panoramaEnabled || panoramaOverflow <= 0) return;
+            draggingRef.current = true;
+            draggedDistanceRef.current = 0;
+            dragStartXRef.current = event.clientX;
+            dragStartOffsetRef.current = dragOffsetX;
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            if (!panoramaEnabled || !draggingRef.current) return;
+            const delta = event.clientX - dragStartXRef.current;
+            draggedDistanceRef.current = Math.max(draggedDistanceRef.current, Math.abs(delta));
+            const nextOffset = Math.min(0, Math.max(-panoramaOverflow, dragStartOffsetRef.current + delta));
+            setDragOffsetX(nextOffset);
+          }}
+          onPointerUp={(event) => {
+            if (!panoramaEnabled) return;
+            draggingRef.current = false;
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }}
+          onPointerCancel={(event) => {
+            if (!panoramaEnabled) return;
+            draggingRef.current = false;
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }}
+          className="cinematic-video"
+          style={panoramaEnabled ? {
+            width: `${panoramaRenderWidth}px`,
+            height: '100%',
+            maxWidth: 'none',
+            objectFit: 'fill',
+            transform: `translate3d(${dragOffsetX}px, 0, 0)`,
+            touchAction: 'none',
+            cursor: panoramaOverflow > 0 ? (draggingRef.current ? 'grabbing' : 'grab') : 'default',
+          } : undefined}
+          disablePictureInPicture
+          disableRemotePlayback
+          controlsList="nodownload noplaybackrate"
+        />
+      )}
       {caption && (
         <div
           className={`cinematic-subtitle-bar ${captionVisible ? 'cinematic-subtitle-visible' : ''}`}
