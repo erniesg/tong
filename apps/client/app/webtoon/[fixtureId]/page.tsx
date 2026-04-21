@@ -1,18 +1,27 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { getWebtoonFixture } from '@/lib/content/shanghai/fixtures';
-import { WebtoonStrip, type WebtoonTheme } from '@/components/scene/WebtoonStrip';
+import { WebtoonStrip, type WebtoonTheme, type WebtoonEntitlement } from '@/components/scene/WebtoonStrip';
 
 export default function WebtoonInspectPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const raw = Array.isArray(params.fixtureId) ? params.fixtureId[0] : params.fixtureId;
   const fixtureId = useMemo(() => (raw ? decodeURIComponent(raw) : ''), [raw]);
   const entry = useMemo(() => getWebtoonFixture(fixtureId), [fixtureId]);
   const [theme, setTheme] = useState<WebtoonTheme>('warm');
   const [showHelp, setShowHelp] = useState(false);
+  const entitlement: WebtoonEntitlement = useMemo(
+    () => ({
+      bypass: searchParams.get('dev_pass') === '1',
+      gamePass: searchParams.get('game_pass') === '1',
+      sp: Number(searchParams.get('sp')) || 0,
+    }),
+    [searchParams],
+  );
 
   if (!entry) {
     return (
@@ -25,7 +34,13 @@ export default function WebtoonInspectPage() {
 
   return (
     <main style={{ minHeight: '100dvh', background: theme === 'dark' ? '#0b0b10' : '#ffffff' }}>
-      <WebtoonStrip panels={entry.spec.panels} theme={theme} showHelp={showHelp} scrollRoot="page" />
+      <WebtoonStrip
+        panels={entry.spec.panels}
+        theme={theme}
+        showHelp={showHelp}
+        scrollRoot="page"
+        entitlement={entitlement}
+      />
 
       {/* Top chrome: back + theme toggle */}
       <div
