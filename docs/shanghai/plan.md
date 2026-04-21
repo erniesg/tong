@@ -474,12 +474,14 @@ romanceable: false
 **Spec:**
 - Props: `{ panels: WebtoonPanel[], autoAdvance?: boolean, onComplete: () => void }`
 - Renders one panel at a time, mobile-first (phone viewport 9:16)
+- Layout must stay metadata-driven per panel. Do not hardcode H1-specific CSS branches by panel id.
 - Panel layout respects:
   - widthType — full-bleed = edge-to-edge; full-width = ~95% with thin margin; inset-wide = ~75% centered; inset-narrow = ~50% centered; floating = positioned, surrounded by empty space
   - aspectRatio — CSS `aspect-ratio` property
   - heightClass — `height: calc(var(--viewport-h) * factor)`; short=0.5, standard=0.8, tall=1.2, ultra-tall=2.0
   - gapBefore — colored block rendered above the panel with height = gapBefore.px
   - transition — `fade` (opacity 0→1), `cut` (instant), `darken` (fade-to-black between panels, hold, fade-in)
+- Follow `docs/shanghai/webtoon-layout-system.md` for pacing and width/height decisions.
 - Speech bubbles:
   - `<WebtoonBubble zh py en speaker position>` — renders character + pinyin annotation + translation tooltip on tap
   - Positioning: absolute over the panel per `position` prop
@@ -489,6 +491,7 @@ romanceable: false
 
 **Acceptance:**
 - Storybook story with 3-panel sequence (Panel 1 / 2 / 3 from H1 fixture) renders correctly
+- Backstage or mock layout harness renders the same sequence with placeholder images so layout can be tested before art lands
 - Panel 3 thumb-stop with wide black gap pacing visibly different from 1→2 transition
 - Speech bubble on Panel 3 shows 瞿家的小儿子…… with pinyin tooltip on tap
 - Keyboard advance: Enter/Space/→ advances panel
@@ -557,12 +560,15 @@ romanceable: false
 3. Generate Panel 2 using Panel 1 as style reference
 4. Generate Panel 3 using refs + style consistency notes
 5. Save at 2x resolution (1600×2400 for 2:3, etc.) for retina; downscale on export
+6. Keep important composition inside the center-safe area from `docs/shanghai/webtoon-layout-system.md`
+7. Leave Panel 3 lower 40% empty for compositor bubble overlay
 
 **Acceptance:**
 - Each panel matches aspect ratio spec (2:3, 1:1, 4:7)
 - Characters spatially consistent across panels (same person, same outfit, same chair position continuity)
 - Style consistent hand-painted webtoon aesthetic
 - Panel 3 has empty lower 40% for speech bubble overlay (no text baked into image)
+- Art remains readable when dropped directly into the backstage webtoon lab without additional per-image CSS adjustments
 - Palette consistent with art direction
 - Manual review signoff from creative lead before merge
 

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tong Design System</title>
-<!-- Generated: 2026-04-08T13:26:55.951Z | 97 variables, 939 classes, 52 keyframes -->
+<!-- Generated: 2026-04-17T15:26:46.967Z | 97 variables, 1004 classes, 56 keyframes -->
 <style>
 /* ══════════════════════════════════════════════════════════════
    BLOCK 1: globals.css — verbatim embed (single source of truth)
@@ -2256,6 +2256,435 @@ button.nav-link:hover {
   color: rgba(255,255,255,0.75);
   line-height: 1.35;
   text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+}
+
+.webtoon-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 32;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top, rgba(255, 244, 230, 0.18), transparent 36%),
+    linear-gradient(180deg, rgba(25, 20, 16, 0.96), rgba(12, 10, 8, 0.98));
+  cursor: pointer;
+}
+
+.webtoon-shell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 900px;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 0 calc(18px + var(--safe-bottom, 0px));
+}
+
+.webtoon-transition {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.webtoon-transition--fade {
+  background: rgba(12, 10, 8, 0.18);
+  animation: webtoonTransitionFade 220ms ease-out forwards;
+}
+
+.webtoon-transition--darken {
+  background: #000;
+  animation: webtoonTransitionDarken 1.2s ease-in-out forwards;
+}
+
+.webtoon-panel-frame {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.webtoon-panel-frame--full-bleed {
+  width: 100vw;
+}
+
+.webtoon-panel-frame--full-width {
+  width: min(95vw, 760px);
+}
+
+.webtoon-panel-frame--inset-wide {
+  width: min(75vw, 620px);
+}
+
+.webtoon-panel-frame--inset-narrow {
+  width: min(50vw, 420px);
+}
+
+.webtoon-panel-frame--floating {
+  width: min(60vw, 500px);
+}
+
+.webtoon-panel-gap {
+  width: 100%;
+  height: var(--webtoon-gap-height, 0px);
+  background: var(--webtoon-gap-color, transparent);
+}
+
+.webtoon-panel-surface {
+  position: relative;
+  width: 100%;
+  height: var(--webtoon-panel-height, auto);
+  min-height: 260px;
+  aspect-ratio: var(--webtoon-panel-aspect, 1 / 1);
+  overflow: hidden;
+  border-radius: 24px;
+  background: rgba(255, 250, 243, 0.12);
+  box-shadow:
+    0 40px 80px rgba(0, 0, 0, 0.4),
+    0 2px 0 rgba(255, 255, 255, 0.08) inset;
+}
+
+.webtoon-panel-frame--full-bleed .webtoon-panel-surface {
+  border-radius: 0;
+}
+
+.webtoon-panel-surface.is-thumb-stop {
+  box-shadow:
+    0 50px 90px rgba(0, 0, 0, 0.55),
+    0 2px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.webtoon-panel-surface--fade {
+  animation: webtoonPanelReveal 260ms ease-out;
+}
+
+.webtoon-panel-surface--darken {
+  animation: webtoonPanelRevealDark 320ms ease-out;
+}
+
+.webtoon-panel-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  pointer-events: none;
+}
+
+.webtoon-panel-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.webtoon-panel-progress__dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: rgba(255, 248, 238, 0.2);
+  border: 1px solid rgba(255, 248, 238, 0.28);
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.webtoon-panel-progress__dot.is-complete {
+  background: rgba(255, 248, 238, 0.52);
+  border-color: rgba(255, 248, 238, 0.7);
+}
+
+.webtoon-panel-progress__dot.is-active {
+  background: #fff8ee;
+  border-color: #fff8ee;
+  transform: scale(1.12);
+}
+
+.webtoon-panel-hint {
+  color: rgba(255, 248, 238, 0.84);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.webtoon-panel-hint kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  padding: 0.08rem 0.28rem;
+  border: 1px solid rgba(255, 248, 238, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 248, 238, 0.1);
+  font: inherit;
+}
+
+.webtoon-bubble {
+  position: absolute;
+  width: min(78vw, 320px);
+  max-width: calc(100% - 24px);
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  pointer-events: none;
+}
+
+.webtoon-bubble.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  transition:
+    opacity 200ms ease,
+    transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.webtoon-bubble--top {
+  top: 16px;
+  left: 16px;
+}
+
+.webtoon-bubble--bottom {
+  bottom: 16px;
+  left: 16px;
+}
+
+.webtoon-bubble--center-bottom {
+  left: 50%;
+  bottom: 10%;
+  transform: translate(-50%, 8px) scale(0.98);
+}
+
+.webtoon-bubble--center-bottom.is-visible {
+  transform: translate(-50%, 0) scale(1);
+}
+
+.webtoon-bubble__button {
+  width: 100%;
+  border: 0;
+  padding: 14px 16px 15px;
+  border-radius: 24px;
+  background: #fff8ee;
+  color: #241c15;
+  text-align: left;
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.24),
+    0 1px 0 rgba(255, 255, 255, 0.72) inset;
+}
+
+.webtoon-bubble__speaker {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(36, 28, 21, 0.58);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.webtoon-bubble__text {
+  display: block;
+  font-size: 1.15rem;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.webtoon-bubble__tooltip {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(17, 14, 12, 0.88);
+  color: rgba(255, 248, 238, 0.92);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+}
+
+.webtoon-bubble__tooltip-line {
+  margin: 0;
+}
+
+.webtoon-bubble__tooltip-line + .webtoon-bubble__tooltip-line {
+  margin-top: 4px;
+}
+
+.webtoon-bubble__tooltip-line--py {
+  font-size: 0.84rem;
+  letter-spacing: 0.03em;
+  color: rgba(255, 238, 216, 0.84);
+}
+
+.webtoon-bubble__tooltip-line--en {
+  font-size: 0.9rem;
+}
+
+.credit-gate-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 34;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 18px 18px calc(18px + var(--safe-bottom, 0px));
+  background:
+    linear-gradient(180deg, rgba(7, 6, 5, 0.18), rgba(7, 6, 5, 0.7) 58%, rgba(7, 6, 5, 0.88));
+}
+
+.credit-gate-card {
+  width: min(100%, 420px);
+  padding: 18px 18px 16px;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 249, 242, 0.97), rgba(249, 238, 224, 0.94));
+  color: #251b14;
+  box-shadow:
+    0 36px 80px rgba(0, 0, 0, 0.44),
+    0 1px 0 rgba(255, 255, 255, 0.82) inset;
+}
+
+.credit-gate-kicker {
+  margin: 0 0 8px;
+  color: rgba(37, 27, 20, 0.54);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.credit-gate-title {
+  margin: 0;
+  font-size: 1.4rem;
+  line-height: 1.1;
+}
+
+.credit-gate-copy {
+  margin: 12px 0 0;
+  color: rgba(37, 27, 20, 0.74);
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.credit-gate-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.game-frame button.credit-gate-btn {
+  width: 100%;
+  min-height: 48px;
+  padding: 13px 16px;
+  border-radius: 16px;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.game-frame button.credit-gate-btn--primary {
+  background: linear-gradient(135deg, #e77a39, #c7541b);
+  color: #fff9f1;
+}
+
+.game-frame button.credit-gate-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ef8850, #d26127);
+  transform: translateY(-1px);
+}
+
+.game-frame button.credit-gate-btn--secondary {
+  border: 1px solid rgba(37, 27, 20, 0.12);
+  background: rgba(255, 255, 255, 0.65);
+  color: #251b14;
+}
+
+.game-frame button.credit-gate-btn--secondary:hover {
+  background: rgba(255, 255, 255, 0.82);
+  transform: translateY(-1px);
+}
+
+.credit-gate-balance {
+  margin: 12px 2px 0;
+  color: rgba(37, 27, 20, 0.56);
+  font-size: 0.84rem;
+}
+
+@keyframes webtoonTransitionFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes webtoonTransitionDarken {
+  0% { opacity: 0; }
+  66% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes webtoonPanelReveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes webtoonPanelRevealDark {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: brightness(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: brightness(1);
+  }
+}
+
+@media (min-width: 1024px) {
+  .webtoon-shell {
+    gap: 22px;
+    padding-top: 24px;
+  }
+
+  .webtoon-bubble {
+    width: min(32vw, 360px);
+  }
+
+  .webtoon-panel-hint {
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .webtoon-shell {
+    gap: 14px;
+  }
+
+  .webtoon-panel-frame--inset-narrow,
+  .webtoon-panel-frame--floating {
+    width: min(72vw, 360px);
+  }
+
+  .webtoon-bubble__button {
+    padding: 12px 14px 13px;
+  }
+
+  .webtoon-bubble__text {
+    font-size: 1.02rem;
+  }
+
+  .credit-gate-overlay {
+    padding-inline: 12px;
+  }
+
+  .credit-gate-card {
+    padding: 16px 16px 14px;
+    border-radius: 24px;
+  }
+
+  .credit-gate-title {
+    font-size: 1.24rem;
+  }
 }
 
 /* ── Korean tooltip (portal) ──────────────────────────────── */
@@ -9911,6 +10340,216 @@ body:has(.playtest-pill-expanded) {
   line-height: 1.45;
 }
 
+.webtoon-lab-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 24px;
+  padding: 8px 0 0;
+}
+
+.webtoon-lab-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.webtoon-lab-card {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12);
+}
+
+.webtoon-lab-card__title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.webtoon-lab-card__text {
+  margin: 0 0 12px;
+  font-size: 0.86rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.webtoon-lab-toggle-group + .webtoon-lab-toggle-group {
+  margin-top: 14px;
+}
+
+.webtoon-lab-toggle-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.webtoon-lab-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.webtoon-lab-toggle,
+.webtoon-lab-restart {
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.webtoon-lab-toggle {
+  padding: 8px 12px;
+  font-size: 0.82rem;
+}
+
+.webtoon-lab-toggle:hover,
+.webtoon-lab-restart:hover {
+  border-color: var(--accent);
+  background: rgba(255, 107, 44, 0.08);
+}
+
+.webtoon-lab-toggle.is-active {
+  border-color: var(--accent);
+  background: rgba(255, 107, 44, 0.14);
+}
+
+.webtoon-lab-restart {
+  margin-top: 14px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.webtoon-lab-code {
+  display: block;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--accent);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.webtoon-lab-inline-link {
+  color: var(--accent);
+}
+
+.webtoon-lab-preview {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)), var(--panel);
+}
+
+.webtoon-lab-preview__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.webtoon-lab-preview__title {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.webtoon-lab-preview__subtitle {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.webtoon-lab-preview__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.webtoon-lab-preview__meta-item {
+  min-width: 98px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line);
+}
+
+.webtoon-lab-preview__meta-item span {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.webtoon-lab-preview__meta-item small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.webtoon-lab-stage {
+  position: relative;
+  max-width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #120f0d;
+  box-shadow: 0 36px 80px rgba(0, 0, 0, 0.28);
+}
+
+.webtoon-lab-stage--desktop {
+  width: min(100%, 1024px) !important;
+}
+
+.webtoon-lab-stage__complete {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  background:
+    radial-gradient(circle at top, rgba(255, 244, 230, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(25, 20, 16, 0.96), rgba(12, 10, 8, 0.98));
+}
+
+.webtoon-lab-stage__complete h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #fff8ee;
+}
+
+.webtoon-lab-stage__complete p {
+  margin: 0;
+  max-width: 28rem;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.5;
+}
+
 /* ── Backstage section headers (shared by signals/campaigns) ──── */
 
 .backstage-section-header {
@@ -9979,6 +10618,34 @@ body:has(.playtest-pill-expanded) {
   .backstage-section-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .webtoon-lab-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .webtoon-lab-preview__header {
+    flex-direction: column;
+  }
+
+  .webtoon-lab-preview__meta {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .webtoon-lab-layout {
+    gap: 16px;
+  }
+
+  .webtoon-lab-card,
+  .webtoon-lab-preview {
+    padding: 16px;
+  }
+
+  .webtoon-lab-stage {
+    width: min(100%, 390px) !important;
+    height: 720px !important;
   }
 }
 
@@ -11760,200 +12427,224 @@ body:has(.playtest-pill-expanded) {
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">webtoonTransitionFade</div>
+    <div class="ds-anim-box" style="background: #e8485c; animation: webtoonTransitionFade 2s ease infinite;">
+      webtoonTransitionFade
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">webtoonTransitionDarken</div>
+    <div class="ds-anim-box" style="background: #f0c040; animation: webtoonTransitionDarken 2s ease infinite;">
+      webtoonTransitionDarken
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">webtoonPanelReveal</div>
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: webtoonPanelReveal 2s ease infinite;">
+      webtoonPanelReveal
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">webtoonPanelRevealDark</div>
+    <div class="ds-anim-box" style="background: #06b6d4; animation: webtoonPanelRevealDark 2s ease infinite;">
+      webtoonPanelRevealDark
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">slideUp</div>
-    <div class="ds-anim-box" style="background: #e8485c; animation: slideUp 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ec4899; animation: slideUp 2s ease infinite;">
       slideUp
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">slideDown</div>
-    <div class="ds-anim-box" style="background: #f0c040; animation: slideDown 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: slideDown 2s ease infinite;">
       slideDown
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">fadeOut</div>
-    <div class="ds-anim-box" style="background: #8b5cf6; animation: fadeOut 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #0f766e; animation: fadeOut 2s ease infinite;">
       fadeOut
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">typingBounce</div>
-    <div class="ds-anim-box" style="background: #06b6d4; animation: typingBounce 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #4a90d9; animation: typingBounce 2s ease infinite;">
       typingBounce
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">pinPulse</div>
-    <div class="ds-anim-box" style="background: #ec4899; animation: pinPulse 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #e8485c; animation: pinPulse 2s ease infinite;">
       pinPulse
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">drawerSlideUp</div>
-    <div class="ds-anim-box" style="background: #ff6b2c; animation: drawerSlideUp 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #f0c040; animation: drawerSlideUp 2s ease infinite;">
       drawerSlideUp
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">landingHeroReveal</div>
-    <div class="ds-anim-box" style="background: #0f766e; animation: landingHeroReveal 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: landingHeroReveal 2s ease infinite;">
       landingHeroReveal
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">toastFade</div>
-    <div class="ds-anim-box" style="background: #4a90d9; animation: toastFade 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #06b6d4; animation: toastFade 2s ease infinite;">
       toastFade
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">fadeSlideUp</div>
-    <div class="ds-anim-box" style="background: #e8485c; animation: fadeSlideUp 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ec4899; animation: fadeSlideUp 2s ease infinite;">
       fadeSlideUp
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">buildBounce</div>
-    <div class="ds-anim-box" style="background: #f0c040; animation: buildBounce 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: buildBounce 2s ease infinite;">
       buildBounce
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">burnGlow</div>
-    <div class="ds-anim-box" style="background: #8b5cf6; animation: burnGlow 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #0f766e; animation: burnGlow 2s ease infinite;">
       burnGlow
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">emojiPulse</div>
-    <div class="ds-anim-box" style="background: #06b6d4; animation: emojiPulse 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #4a90d9; animation: emojiPulse 2s ease infinite;">
       emojiPulse
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">stepSlideUp</div>
-    <div class="ds-anim-box" style="background: #ec4899; animation: stepSlideUp 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #e8485c; animation: stepSlideUp 2s ease infinite;">
       stepSlideUp
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-pieceSelect</div>
-    <div class="ds-anim-box" style="background: #ff6b2c; animation: bc-pieceSelect 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #f0c040; animation: bc-pieceSelect 2s ease infinite;">
       bc-pieceSelect
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-piecePlaced</div>
-    <div class="ds-anim-box" style="background: #0f766e; animation: bc-piecePlaced 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: bc-piecePlaced 2s ease infinite;">
       bc-piecePlaced
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-slotGlow</div>
-    <div class="ds-anim-box" style="background: #4a90d9; animation: bc-slotGlow 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #06b6d4; animation: bc-slotGlow 2s ease infinite;">
       bc-slotGlow
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-slotWrong</div>
-    <div class="ds-anim-box" style="background: #e8485c; animation: bc-slotWrong 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ec4899; animation: bc-slotWrong 2s ease infinite;">
       bc-slotWrong
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-successFlash</div>
-    <div class="ds-anim-box" style="background: #f0c040; animation: bc-successFlash 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: bc-successFlash 2s ease infinite;">
       bc-successFlash
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-overlayIn</div>
-    <div class="ds-anim-box" style="background: #8b5cf6; animation: bc-overlayIn 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #0f766e; animation: bc-overlayIn 2s ease infinite;">
       bc-overlayIn
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-toast-in</div>
-    <div class="ds-anim-box" style="background: #06b6d4; animation: bc-toast-in 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #4a90d9; animation: bc-toast-in 2s ease infinite;">
       bc-toast-in
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-toast-out</div>
-    <div class="ds-anim-box" style="background: #ec4899; animation: bc-toast-out 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #e8485c; animation: bc-toast-out 2s ease infinite;">
       bc-toast-out
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-shake</div>
-    <div class="ds-anim-box" style="background: #ff6b2c; animation: bc-shake 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #f0c040; animation: bc-shake 2s ease infinite;">
       bc-shake
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-overlay-in</div>
-    <div class="ds-anim-box" style="background: #0f766e; animation: bc-overlay-in 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: bc-overlay-in 2s ease infinite;">
       bc-overlay-in
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">charge-shimmer</div>
-    <div class="ds-anim-box" style="background: #4a90d9; animation: charge-shimmer 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #06b6d4; animation: charge-shimmer 2s ease infinite;">
       charge-shimmer
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">charge-pulse</div>
-    <div class="ds-anim-box" style="background: #e8485c; animation: charge-pulse 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ec4899; animation: charge-pulse 2s ease infinite;">
       charge-pulse
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">charge-notif-pop</div>
-    <div class="ds-anim-box" style="background: #f0c040; animation: charge-notif-pop 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: charge-notif-pop 2s ease infinite;">
       charge-notif-pop
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">playtest-pulse</div>
-    <div class="ds-anim-box" style="background: #8b5cf6; animation: playtest-pulse 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #0f766e; animation: playtest-pulse 2s ease infinite;">
       playtest-pulse
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">playtest-toast-in</div>
-    <div class="ds-anim-box" style="background: #06b6d4; animation: playtest-toast-in 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #4a90d9; animation: playtest-toast-in 2s ease infinite;">
       playtest-toast-in
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">playtest-toast-out</div>
-    <div class="ds-anim-box" style="background: #ec4899; animation: playtest-toast-out 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #e8485c; animation: playtest-toast-out 2s ease infinite;">
       playtest-toast-out
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">playtest-hint-pulse</div>
-    <div class="ds-anim-box" style="background: #ff6b2c; animation: playtest-hint-pulse 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #f0c040; animation: playtest-hint-pulse 2s ease infinite;">
       playtest-hint-pulse
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">playtest-marker-bounce</div>
-    <div class="ds-anim-box" style="background: #0f766e; animation: playtest-marker-bounce 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: playtest-marker-bounce 2s ease infinite;">
       playtest-marker-bounce
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">playtest-popover-in</div>
-    <div class="ds-anim-box" style="background: #4a90d9; animation: playtest-popover-in 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #06b6d4; animation: playtest-popover-in 2s ease infinite;">
       playtest-popover-in
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">spin</div>
-    <div class="ds-anim-box" style="background: #e8485c; animation: spin 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ec4899; animation: spin 2s ease infinite;">
       spin
     </div>
   </div>
