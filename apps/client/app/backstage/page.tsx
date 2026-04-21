@@ -33,6 +33,12 @@ const SECTIONS = [
     description: 'Playtest session analysis — Gemini video understanding, issue extraction, auto-fix pipeline.',
     status: 'active',
   },
+  {
+    href: '/backstage/panorama-runtime',
+    title: 'Panorama Runtime',
+    description: 'Non-production harness for Shanghai cinematic pan + overlay anchoring validation.',
+    status: 'active',
+  },
 ];
 
 export default function BackstageOverview() {
