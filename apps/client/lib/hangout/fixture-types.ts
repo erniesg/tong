@@ -131,7 +131,20 @@ export type WebtoonBubble = {
   speaker: string;
   position: "top" | "bottom" | "center-bottom";
   layout?: WebtoonBubbleLayout;
+  /**
+   * Optional entitlement gate on the translation help.
+   * - Omitted / `free`: tap to reveal ZH + pinyin + EN with no cost.
+   * - `credits`: costs `cost` SP to unlock EN help (pinyin still free).
+   * - `gamePass`: unlocks only with an active Game Pass entitlement.
+   * Renderer merges this with the player's entitlement at runtime to decide whether the bubble opens freely.
+   */
+  gate?: WebtoonBubbleGate;
 };
+
+export type WebtoonBubbleGate =
+  | { kind: "free" }
+  | { kind: "credits"; cost: number }
+  | { kind: "gamePass" };
 
 export type WebtoonBubbleLayout = {
   /** Render the balloon partly outside the panel instead of fully inside it. */

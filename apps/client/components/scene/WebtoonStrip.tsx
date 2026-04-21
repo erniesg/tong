@@ -6,10 +6,20 @@ import type {
   WebtoonGap,
   WebtoonPanelFrame,
   WebtoonPanelLayout,
+  WebtoonBubbleGate,
 } from '@/lib/hangout/fixture-types';
 import { WebtoonBubble } from './WebtoonBubble';
 
 export type WebtoonTheme = 'warm' | 'dark';
+
+export interface WebtoonEntitlement {
+  /** Player has an active Game Pass (unlocks everything). */
+  gamePass?: boolean;
+  /** Current SP (credits) balance. */
+  sp?: number;
+  /** Dev/demo bypass — treat every gate as free. */
+  bypass?: boolean;
+}
 
 interface WebtoonStripProps {
   panels: WebtoonPanelSpec[];
@@ -24,6 +34,25 @@ interface WebtoonStripProps {
   showHelp?: boolean;
   /** Where scrolling is owned: the strip itself or the page viewport. */
   scrollRoot?: 'self' | 'page';
+  /** Player's current entitlement — used to resolve each bubble's translation gate. */
+  entitlement?: WebtoonEntitlement;
+}
+
+function resolveBubbleReveal(
+  gate: WebtoonBubbleGate | undefined,
+  entitlement: WebtoonEntitlement | undefined,
+): { kind: 'free' } | { kind: 'credits'; cost: number } | { kind: 'gamePass' } {
+  if (!gate || gate.kind === 'free') return { kind: 'free' };
+  if (entitlement?.bypass) return { kind: 'free' };
+  if (gate.kind === 'gamePass') {
+    return entitlement?.gamePass ? { kind: 'free' } : { kind: 'gamePass' };
+  }
+  if (gate.kind === 'credits') {
+    if (entitlement?.gamePass) return { kind: 'free' };
+    if ((entitlement?.sp ?? 0) >= gate.cost) return { kind: 'free' };
+    return { kind: 'credits', cost: gate.cost };
+  }
+  return { kind: 'free' };
 }
 
 const THEME_SURFACE: Record<WebtoonTheme, string> = {
@@ -547,6 +576,7 @@ export function WebtoonStrip({
   showProgress = true,
   showHelp = false,
   scrollRoot = 'self',
+  entitlement,
 }: WebtoonStripProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [completed, setCompleted] = useState(false);
@@ -662,7 +692,13 @@ export function WebtoonStrip({
               loading={index < 2 ? 'eager' : 'lazy'}
               style={imageStyle(panel.layout)}
             />
-            {panel.bubble && <WebtoonBubble {...panel.bubble} showHelp={showHelp} />}
+            {panel.bubble && (
+              <WebtoonBubble
+                {...panel.bubble}
+                showHelp={showHelp}
+                reveal={resolveBubbleReveal(panel.bubble.gate, entitlement)}
+              />
+            )}
           </figure>
         </div>
       ))}

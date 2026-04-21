@@ -24,7 +24,7 @@ export const WEBTOON_FIXTURES: WebtoonFixtureEntry[] = [
   {
     id: 'shanghai-h1',
     label: 'Shanghai · H1 — 小笼包 Negotiation',
-    description: 'Seventeen-panel webtoon strip of the 守成/丁漫 dumpling-shop negotiation (onboarding).',
+    description: '19-panel webtoon strip of the 守成/丁漫 dumpling-shop negotiation — Shanghai onboarding. Panels p1/p2 are free; p3–p17 translation gated behind 1 credit; p18 premium reveal is Game Pass–gated.',
     spec: SHANGHAI_H1_WEBTOON,
   },
 ];
