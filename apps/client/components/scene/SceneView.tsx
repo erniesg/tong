@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
-import type { CreditGateState, ExerciseData, SessionMessage, WebtoonSequence } from '@/lib/types/hangout';
+import type { CinematicPayload, CreditGateState, ExerciseData, SessionMessage, WebtoonSequence } from '@/lib/types/hangout';
 import type { TargetLang } from '@/components/shared/KoreanText';
 import { CHARACTER_MAP } from '@/lib/content/characters';
 import { Background } from './Background';
@@ -17,7 +17,7 @@ interface SceneViewProps {
   backgroundUrl: string;
   backgroundTransition?: 'fade' | 'cut';
   ambientDescription?: string;
-  cinematic?: { videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null;
+  cinematic?: CinematicPayload | null;
   onCinematicEnd?: () => void;
   npcName?: string;
   npcColor?: string;
@@ -158,6 +158,8 @@ export function SceneView({
           captionTranslation={cinematic.captionTranslation}
           autoAdvance={cinematic.autoAdvance}
           muted={cinematic.muted ?? false}
+          presentationMode={cinematic.presentationMode}
+          worldOverlays={cinematic.worldOverlays}
           targetLang={targetLang}
           onEnd={handleCinematicEnd}
         />

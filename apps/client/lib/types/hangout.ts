@@ -35,6 +35,26 @@ export interface WebtoonSequence {
   autoAdvance: boolean;
 }
 
+export type CinematicPresentationMode = 'cover' | 'panorama';
+export type CinematicOverlayAnchor = 'viewport' | 'world';
+
+export interface CinematicWorldOverlay {
+  id: string;
+  x: number;
+  y: number;
+  content: string;
+}
+
+export interface CinematicPayload {
+  videoUrl: string;
+  caption?: string;
+  captionTranslation?: string;
+  autoAdvance: boolean;
+  muted?: boolean;
+  presentationMode?: CinematicPresentationMode;
+  worldOverlays?: CinematicWorldOverlay[];
+}
+
 export interface CreditGateState {
   cost: number;
   spendPayload: CreditGate['spendPayload'];
