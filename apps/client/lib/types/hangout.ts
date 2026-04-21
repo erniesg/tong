@@ -1,5 +1,7 @@
 /** Self-contained VN types for the hangout phase — no game-core dependency */
 
+import type { CreditGate, ResolutionSpec, WebtoonPanel } from '../hangout/fixture-types';
+
 export type Expression =
   | 'neutral' | 'happy' | 'surprised' | 'thinking'
   | 'embarrassed' | 'sad' | 'angry' | 'flirty';
@@ -28,11 +30,25 @@ export interface ToolQueueItem {
   pauses?: boolean;
 }
 
+export interface WebtoonSequence {
+  panels: WebtoonPanel[];
+  autoAdvance: boolean;
+}
+
+export interface CreditGateState {
+  cost: number;
+  spendPayload: CreditGate['spendPayload'];
+  skipPayload: CreditGate['skipPayload'];
+}
+
 export interface SceneSummary {
   summary: string;
   xpEarned: number;
   affinityChanges: { characterId: string; delta: number }[];
   calibratedLevel?: number | null;
+  masteryUpdates?: ResolutionSpec['masteryUpdates'];
+  stateUpdates?: Record<string, unknown> | null;
+  nextHook?: string | null;
 }
 
 /* ── Exercise types (self-contained) ──────────────────────── */

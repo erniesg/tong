@@ -1,8 +1,9 @@
 'use client';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
-import type { SessionMessage, ExerciseData } from '@/lib/types/hangout';
+import type { CreditGateState, ExerciseData, SessionMessage, WebtoonSequence } from '@/lib/types/hangout';
 import type { TargetLang } from '@/components/shared/KoreanText';
+import { CHARACTER_MAP } from '@/lib/content/characters';
 import { Background } from './Background';
 import { CharacterSprite } from './CharacterSprite';
 import { DialogueBox } from './DialogueBox';
@@ -10,6 +11,7 @@ import { ChoiceButtons, type DialogueChoice } from './ChoiceButtons';
 import { TongOverlay } from './TongOverlay';
 import { CinematicOverlay } from './CinematicOverlay';
 import { ExerciseRenderer } from '../exercises/ExerciseRenderer';
+import { WebtoonPanel } from './WebtoonPanel';
 
 interface SceneViewProps {
   backgroundUrl: string;
@@ -26,6 +28,9 @@ interface SceneViewProps {
   choices?: DialogueChoice[] | null;
   choicePrompt?: string | null;
   tongTip?: { message: string; translation?: string } | null;
+  currentWebtoon?: WebtoonSequence | null;
+  currentCreditGate?: CreditGateState | null;
+  playerSp?: number;
   isStreaming?: boolean;
   dialogueIsStreaming?: boolean;
   sceneBusy?: boolean;
@@ -37,6 +42,8 @@ interface SceneViewProps {
   onExerciseResult?: (exerciseId: string, correct: boolean) => void;
   onExerciseDismiss?: () => void;
   onDismissTong?: () => void;
+  onWebtoonComplete?: () => void;
+  onCreditGateDecision?: (decision: 'spend' | 'skip') => void;
   // Extended props used by GamePageClient VN mode
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
@@ -46,6 +53,9 @@ const SPEAKER_COLORS: Record<string, string> = {
   haeun: '#e8485c',
   jin: '#4a90d9',
   tong: '#f0c040',
+  shoucheng: '#7a8ee6',
+  dingman: '#e88f5b',
+  fangayi: '#d06d57',
 };
 
 export function SceneView({
@@ -63,6 +73,9 @@ export function SceneView({
   choices = null,
   choicePrompt,
   tongTip = null,
+  currentWebtoon = null,
+  currentCreditGate = null,
+  playerSp = 0,
   isStreaming = false,
   dialogueIsStreaming = false,
   sceneBusy = false,
@@ -75,6 +88,8 @@ export function SceneView({
   onExerciseResult = () => {},
   onExerciseDismiss,
   onDismissTong = () => {},
+  onWebtoonComplete = () => {},
+  onCreditGateDecision = () => {},
 }: SceneViewProps) {
   const [exerciseDone, setExerciseDone] = useState(false);
   const [exerciseHidden, setExerciseHidden] = useState(false);
@@ -103,10 +118,22 @@ export function SceneView({
   }, [onCinematicEnd]);
   const TONG_LABELS: Record<string, string> = { zh: '小通 Tong', ja: 'トン Tong', ko: '통 Tong' };
   const YOU_LABELS: Record<string, string> = { zh: '你', ja: 'あなた', ko: '나' };
+
+  const labelForCharacter = (characterId: string): string | undefined => {
+    const character = CHARACTER_MAP[characterId];
+    if (!character) return undefined;
+
+    if (targetLang === 'zh' && character.name.zh) return character.name.zh;
+    if (targetLang === 'ko' && character.name.ko) return character.name.ko;
+    if (targetLang === 'ja' && character.name.ja) return character.name.ja;
+    return character.name.en;
+  };
+
   const getSpeakerName = (msg: SessionMessage): string | undefined => {
     if (msg.role === 'narrator' || msg.role === 'system') return undefined;
     if (msg.role === 'tong') return TONG_LABELS[targetLang] ?? 'Tong';
     if (msg.role === 'user') return YOU_LABELS[targetLang] ?? 'You';
+    if (msg.characterId) return labelForCharacter(msg.characterId) ?? npcName;
     return npcName;
   };
 
@@ -155,8 +182,48 @@ export function SceneView({
         onDismiss={onDismissTong}
       />
 
+      {currentWebtoon && (
+        <WebtoonPanel
+          panels={currentWebtoon.panels}
+          autoAdvance={currentWebtoon.autoAdvance}
+          onComplete={onWebtoonComplete}
+        />
+      )}
+
+      {currentCreditGate && (
+        <div className="credit-gate-overlay">
+          <div className="credit-gate-card" onClick={(event) => event.stopPropagation()}>
+            <p className="credit-gate-kicker">Cliffhanger Unlock</p>
+            <h2 className="credit-gate-title">{currentCreditGate.cost} SP to hear the rest</h2>
+            <p className="credit-gate-copy">
+              Spend now to unlock Fang Ayi&apos;s full line and Tong&apos;s breakdown, or skip and keep the tease for later.
+            </p>
+            <div className="credit-gate-actions">
+              <button
+                type="button"
+                className="credit-gate-btn credit-gate-btn--primary"
+                disabled={playerSp < currentCreditGate.cost}
+                onClick={() => onCreditGateDecision('spend')}
+              >
+                Spend {currentCreditGate.cost} SP
+              </button>
+              <button
+                type="button"
+                className="credit-gate-btn credit-gate-btn--secondary"
+                onClick={() => onCreditGateDecision('skip')}
+              >
+                Skip for now
+              </button>
+            </div>
+            <p className="credit-gate-balance">
+              You have {playerSp} SP.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Layer 4a: Exercise — stays mounted when dismissed to preserve tracing state */}
-      {mountedExercise && (
+      {mountedExercise && !currentWebtoon && !currentCreditGate && (
         <div
           className={`exercise-float-wrapper${exerciseDone ? ' exercise-float-dismissing' : ''}`}
           style={exerciseHidden ? { display: 'none' } : undefined}
@@ -185,7 +252,7 @@ export function SceneView({
       )}
 
       {/* Layer 4b: Other interactive elements (show when exercise is hidden or absent) */}
-      {(exerciseHidden || !mountedExercise) && (choices ? (
+      {(exerciseHidden || !mountedExercise) && !currentWebtoon && !currentCreditGate && (choices ? (
         <ChoiceButtons choices={choices} prompt={choicePrompt} onSelect={onChoice} disabled={isStreaming} targetLang={targetLang} />
       ) : currentMessage ? (
         <DialogueBox
