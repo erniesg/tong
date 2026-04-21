@@ -32,7 +32,7 @@ const WEBTOON_PANELS = [
     isThumbStop: true,
     bubble: {
       zh: '瞿家的小儿子……',
-      py: 'Qú jiā de xiǎo érzi...',
+      py: ['Qú', 'jiā', 'de', 'xiǎo', 'ér', 'zi'],
       en: 'The Qu family’s younger son...',
       speaker: 'ayi',
       position: 'center-bottom',
