@@ -1,0 +1,14 @@
+{
+  "grantId": "grant_demo_001",
+  "userId": "demo-user-1",
+  "grantedAtIso": "2026-04-21T10:05:00.000Z",
+  "unlock": {
+    "kind": "location_mode",
+    "city": "shanghai",
+    "location": "practice_studio",
+    "mode": "hangout",
+    "tier": "advanced"
+  },
+  "reason": "mission_assessment_passed",
+  "idempotencyKey": "demo-grant-shanghai-practice-studio-advanced"
+}
