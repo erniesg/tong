@@ -9,6 +9,9 @@ import mediaProfileFixture from '../../../packages/contracts/fixtures/player.med
 import commerceEntitlementsFixture from '../../../packages/contracts/fixtures/commerce.entitlements.sample.json';
 import commerceUnlockGrantFixture from '../../../packages/contracts/fixtures/commerce.unlock-grant.sample.json';
 import commercePurchaseEventFixture from '../../../packages/contracts/fixtures/commerce.purchase-event.sample.json';
+import commerceShanghaiInvitationRedeemFixture from '../../../packages/contracts/fixtures/commerce.shanghai-invitation-redeem.sample.json';
+import commerceShanghaiSecretLocationStatusFixture from '../../../packages/contracts/fixtures/commerce.shanghai-secret-location-status.sample.json';
+import commerceUnlockFlagsSnapshotFixture from '../../../packages/contracts/fixtures/commerce.unlock-flags.snapshot.sample.json';
 import objectiveIdentityMap from '../../../packages/contracts/objective-identity-map.sample.json';
 import mockMediaWindow from '../../server/data/mock-media-window.json';
 
@@ -437,6 +440,9 @@ const FIXTURES = {
   commerceEntitlements: commerceEntitlementsFixture,
   commerceUnlockGrant: commerceUnlockGrantFixture,
   commercePurchaseEvent: commercePurchaseEventFixture,
+  commerceShanghaiInvitationRedeem: commerceShanghaiInvitationRedeemFixture,
+  commerceShanghaiSecretLocationStatus: commerceShanghaiSecretLocationStatusFixture,
+  commerceUnlockFlagsSnapshot: commerceUnlockFlagsSnapshotFixture,
 };
 
 const objectiveIdentityByCanonical = new Map<string, (typeof objectiveIdentityMap.objectives)[number]>();
@@ -1916,6 +1922,18 @@ async function handleRequest(request: Request): Promise<Response> {
     if (pathname === '/api/v1/commerce/purchase-events' && request.method === 'POST') {
       const body = await readJsonBody(request);
       return jsonResponse(200, buildCommercePurchaseEvent(body));
+    }
+
+    if (pathname === '/api/v1/commerce/invitations/redeem' && request.method === 'POST') {
+      return jsonResponse(200, FIXTURES.commerceShanghaiInvitationRedeem);
+    }
+
+    if (pathname === '/api/v1/commerce/locations/secret-status' && request.method === 'GET') {
+      return jsonResponse(200, FIXTURES.commerceShanghaiSecretLocationStatus);
+    }
+
+    if (pathname === '/api/v1/commerce/unlock-flags/snapshot' && request.method === 'GET') {
+      return jsonResponse(200, FIXTURES.commerceUnlockFlagsSnapshot);
     }
 
     if (pathname === '/api/v1/ingestion/run-mock' && request.method === 'POST') {

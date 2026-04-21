@@ -338,6 +338,49 @@ Contract notes:
 - Demo worker responses are fixture-backed and deterministic; they are intentionally stateless mocks and do not mutate entitlement state across calls.
 - Real Stripe webhook signature verification, replay protection storage, refund/reversal handling, and restore flows are out of scope for this mock contract stage.
 
+## POST `/api/v1/commerce/invitations/redeem`
+Request:
+```json
+{
+  "userId": "demo-user-1",
+  "city": "shanghai",
+  "invitationToken": "INVITE-ROOFTOP-9F2K",
+  "idempotencyKey": "invite_tok_sh_rooftop_001:demo-user-1"
+}
+```
+
+Response:
+Path: `packages/contracts/fixtures/commerce.shanghai-invitation-redeem.sample.json`
+
+## GET `/api/v1/commerce/locations/secret-status`
+Query:
+```json
+{
+  "userId": "demo-user-1",
+  "city": "shanghai",
+  "locationId": "night_market_rooftop"
+}
+```
+
+Response:
+Path: `packages/contracts/fixtures/commerce.shanghai-secret-location-status.sample.json`
+
+Contract note:
+- `revealState` is deterministic and monotonic for fixture scenarios: `hidden` -> `teased` -> `token_required` -> `token_redeemed`.
+- `unlockFlags` mirror entitlement-backed access gates and must stay aligned with `unlockKey`/`productKey` naming used by commerce unlocks.
+
+## GET `/api/v1/commerce/unlock-flags/snapshot`
+Query:
+```json
+{ "userId": "demo-user-1" }
+```
+
+Response:
+Path: `packages/contracts/fixtures/commerce.unlock-flags.snapshot.sample.json`
+
+Contract note:
+- Snapshot payloads are immutable point-in-time reads meant for reviewer verification and deterministic QA assertions.
+
 ## Canonical Media Events Fixture (Connector-Independent)
 Used by topic modeling/frequency workstreams so they can iterate without live Spotify/YouTube sync.
 
