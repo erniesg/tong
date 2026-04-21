@@ -18,6 +18,11 @@ interface SceneViewProps {
   backgroundTransition?: 'fade' | 'cut';
   ambientDescription?: string;
   cinematic?: { videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null;
+  cinematicMode?: 'cover' | 'panorama';
+  panoramaAuthoredWidth?: number;
+  panoramaAuthoredHeight?: number;
+  panoramaMinOverflowPx?: number;
+  onPanoramaTransformChange?: (deltaX: number) => void;
   onCinematicEnd?: () => void;
   npcName?: string;
   npcColor?: string;
@@ -63,6 +68,11 @@ export function SceneView({
   backgroundTransition,
   ambientDescription = '',
   cinematic = null,
+  cinematicMode = 'cover',
+  panoramaAuthoredWidth,
+  panoramaAuthoredHeight,
+  panoramaMinOverflowPx,
+  onPanoramaTransformChange,
   onCinematicEnd = () => {},
   npcName = '',
   npcColor = 'var(--color-primary)',
@@ -158,6 +168,11 @@ export function SceneView({
           captionTranslation={cinematic.captionTranslation}
           autoAdvance={cinematic.autoAdvance}
           muted={cinematic.muted ?? false}
+          mode={cinematicMode}
+          panoramaAuthoredWidth={panoramaAuthoredWidth}
+          panoramaAuthoredHeight={panoramaAuthoredHeight}
+          panoramaMinOverflowPx={panoramaMinOverflowPx}
+          onPanoramaTransformChange={onPanoramaTransformChange}
           targetLang={targetLang}
           onEnd={handleCinematicEnd}
         />
