@@ -334,9 +334,112 @@ Response:
 }
 ```
 
+## GET `/api/v1/commerce/shanghai-secret-status`
+Query:
+```json
+{ "userId": "demo-user-1", "city": "shanghai" }
+```
+
+Fixture:
+`packages/contracts/fixtures/commerce.shanghai-secret-status.sample.json`
+
+Response:
+```json
+{
+  "userId": "demo-user-1",
+  "city": "shanghai",
+  "asOfIso": "2026-04-21T09:12:00.000Z",
+  "secretLocation": {
+    "locationKey": "shanghai.secret.riverside_speakeasy",
+    "locationLabel": "Riverside Speakeasy",
+    "discoveryState": "teased",
+    "revealState": "alias_only",
+    "requiresInvitationToken": true
+  },
+  "invitationToken": {
+    "status": "eligible",
+    "tokenProductKey": "token.shanghai.secret.riverside_speakeasy.invite",
+    "tokenHint": "Found in advanced texting mission reward thread."
+  },
+  "unlockFlagsSnapshot": {
+    "snapshotId": "snap_unlock_flags_demo_user_1_20260421t091200z",
+    "generatedAtIso": "2026-04-21T09:12:00.000Z",
+    "flags": {
+      "unlock.shanghai.texting_mission": true,
+      "unlock.shanghai.secret.riverside_speakeasy": false,
+      "collectible.polaroid.shanghai_call": true
+    }
+  }
+}
+```
+
+## POST `/api/v1/commerce/shanghai-secret/redeem-invitation`
+Request:
+```json
+{
+  "userId": "demo-user-1",
+  "city": "shanghai",
+  "invitationTokenProductKey": "token.shanghai.secret.riverside_speakeasy.invite",
+  "invitationTokenCode": "INVITE-RIVER-0421",
+  "idempotencyKey": "redeem.shanghai.secret.riverside_speakeasy:demo-user-1:INVITE-RIVER-0421",
+  "metadata": {
+    "source": "mission_reward_message",
+    "threadId": "wechat_mission_thread_03"
+  }
+}
+```
+
+Fixture:
+`packages/contracts/fixtures/commerce.shanghai-secret-redeem.sample.json`
+
+Response:
+```json
+{
+  "redemptionId": "red_shanghai_secret_riverside_001",
+  "status": "redeemed",
+  "userId": "demo-user-1",
+  "city": "shanghai",
+  "idempotencyKey": "redeem.shanghai.secret.riverside_speakeasy:demo-user-1:INVITE-RIVER-0421",
+  "redeemedAtIso": "2026-04-21T09:14:00.000Z",
+  "invitationToken": {
+    "productKey": "token.shanghai.secret.riverside_speakeasy.invite",
+    "status": "consumed"
+  },
+  "grant": {
+    "grantId": "grant_unlock_shanghai_secret_riverside",
+    "unlockKey": "unlock.shanghai.secret.riverside_speakeasy",
+    "grantSource": "invitation_token_redemption"
+  },
+  "entitlement": {
+    "entitlementId": "ent_unlock_shanghai_secret_riverside",
+    "productKey": "unlock.shanghai.secret.riverside_speakeasy",
+    "type": "feature_access",
+    "status": "active",
+    "grantedAtIso": "2026-04-21T09:14:00.000Z",
+    "source": "invitation_token_redemption",
+    "purchaseEventId": null,
+    "metadata": {
+      "city": "shanghai",
+      "locationKey": "shanghai.secret.riverside_speakeasy",
+      "redeemTokenProductKey": "token.shanghai.secret.riverside_speakeasy.invite"
+    }
+  },
+  "unlockFlagsSnapshot": {
+    "snapshotId": "snap_unlock_flags_demo_user_1_20260421t091400z",
+    "generatedAtIso": "2026-04-21T09:14:00.000Z",
+    "flags": {
+      "unlock.shanghai.texting_mission": true,
+      "unlock.shanghai.secret.riverside_speakeasy": true,
+      "collectible.polaroid.shanghai_call": true
+    }
+  }
+}
+```
+
 Contract notes:
 - Demo worker responses are fixture-backed and deterministic; they are intentionally stateless mocks and do not mutate entitlement state across calls.
 - Real Stripe webhook signature verification, replay protection storage, refund/reversal handling, and restore flows are out of scope for this mock contract stage.
+- Secret Shanghai discovery uses commerce vocabulary: invitation token product keys, unlock keys, grant source, entitlement status, and unlock-flag snapshots.
 
 ## Canonical Media Events Fixture (Connector-Independent)
 Used by topic modeling/frequency workstreams so they can iterate without live Spotify/YouTube sync.
