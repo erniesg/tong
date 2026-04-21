@@ -135,7 +135,6 @@ const WEBTOON_STRIP_CSS = `
 
 .wt-block--with-bubble {
   z-index: 1;
-  isolation: isolate;
 }
 
 .wt-block--with-bubble:has(.wt-bubble[data-expanded='true']) {
@@ -153,11 +152,11 @@ const WEBTOON_STRIP_CSS = `
   padding: 0;
   overflow: hidden;
   background: transparent;
-  isolation: isolate;
 }
 
 .wt-panel--lifted {
   margin-top: calc(-1 * var(--wt-panel-lift, 0px));
+  z-index: 2;
 }
 
 .wt-panel--bubble-outside {
@@ -196,12 +195,6 @@ const WEBTOON_STRIP_CSS = `
   .wt-panel--inset { width: 70%; }
 }
 
-@media (max-width: 680px) {
-  .wt-panel--lifted {
-    margin-top: 0 !important;
-  }
-}
-
 .wt-panel__img {
   display: block;
   width: 100%;
@@ -229,7 +222,7 @@ const WEBTOON_STRIP_CSS = `
   width: auto;
   min-width: 7.5rem;
   max-width: var(--wt-bubble-max-width, min(84vw, 34rem));
-  z-index: 4;
+  z-index: 20;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
@@ -327,7 +320,7 @@ const WEBTOON_STRIP_CSS = `
   --wt-bubble-fill: #0e1524;
   --wt-bubble-border: var(--wt-speaker-border-open);
   --wt-bubble-shadow: 0 18px 44px rgba(5, 8, 18, 0.5), 0 4px 10px rgba(5, 8, 18, 0.28);
-  position: fixed;
+  position: absolute;
   left: 12px;
   top: 12px;
   width: max-content;

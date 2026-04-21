@@ -193,7 +193,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
       en: 'This show is different from the others.',
       speaker: 'shoucheng',
       position: 'bottom',
-      layout: { tailOffsetPct: 50 },
+      layout: { tailOffsetPct: 50, offsetYPx: 28 },
     },
   },
   {

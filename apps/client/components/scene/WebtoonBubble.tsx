@@ -73,6 +73,50 @@ function bubbleStyle(bubble: WebtoonBubbleSpec): CSSProperties {
   };
 }
 
+function resolveAnchorTopPx(
+  bubble: WebtoonBubbleSpec,
+  panelHeight: number,
+  bubbleHeight: number,
+): number {
+  const layout = bubble.layout;
+  const yOffset = layout?.offsetYPx ?? 0;
+
+  if (layout?.outside) {
+    const overlap = layout.outsideOverlapPx ?? 18;
+    if (bubble.position === 'top') {
+      return panelHeight - overlap + yOffset - bubbleHeight;
+    }
+    return panelHeight - overlap + yOffset;
+  }
+
+  if (bubble.position === 'top') {
+    return panelHeight * 0.06 + yOffset;
+  }
+
+  const bottomOffset = panelHeight * (bubble.position === 'center-bottom' ? 0.16 : 0.07) + yOffset;
+  return panelHeight - bottomOffset - bubbleHeight;
+}
+
+function resolveStablePanelHeight(panel: HTMLElement): number {
+  const width = panel.clientWidth;
+  if (!width) return panel.getBoundingClientRect().height;
+
+  const aspect = getComputedStyle(panel).aspectRatio;
+  const aspectMatch = aspect.match(/^\s*([0-9.]+)\s*\/\s*([0-9.]+)\s*$/);
+  if (aspectMatch) {
+    const [, w, h] = aspectMatch;
+    const ratio = Number(w) / Number(h);
+    if (ratio > 0) return width / ratio;
+  }
+
+  const image = panel.querySelector('.wt-panel__img');
+  if (image instanceof HTMLImageElement && image.naturalWidth > 0 && image.naturalHeight > 0) {
+    return width * (image.naturalHeight / image.naturalWidth);
+  }
+
+  return panel.getBoundingClientRect().height;
+}
+
 export function WebtoonBubble({
   zh,
   py,
@@ -84,6 +128,7 @@ export function WebtoonBubble({
   showHelp = false,
 }: WebtoonBubbleProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [anchorTopPx, setAnchorTopPx] = useState<number | null>(null);
   const [overlayStyle, setOverlayStyle] = useState<CSSProperties | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -94,6 +139,20 @@ export function WebtoonBubble({
   const interactive = hasHelp && unlocked;
   const expanded = interactive && (showHelp || isOpen);
   const segments = buildSegments(zh, py);
+  const baseStyle = bubbleStyle(bubble);
+
+  const syncAnchorTop = useCallback(() => {
+    const el = bubbleRef.current;
+    const panel = el?.offsetParent as HTMLElement | null;
+    if (!el || !panel) return;
+
+    const panelHeight = resolveStablePanelHeight(panel);
+    const bubbleHeight = el.getBoundingClientRect().height;
+    if (!panelHeight || !bubbleHeight) return;
+
+    const nextTop = resolveAnchorTopPx(bubble, panelHeight, bubbleHeight);
+    setAnchorTopPx((prev) => (prev !== null && Math.abs(prev - nextTop) < 0.5 ? prev : nextTop));
+  }, [bubble]);
 
   const syncOutsideReserve = useCallback(() => {
     if (!layout?.outside) return;
@@ -120,11 +179,11 @@ export function WebtoonBubble({
     const anchorRect = anchor.getBoundingClientRect();
     const overlay = overlayRef.current;
     const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
     const margin = 12;
     const overlayWidth = overlay?.offsetWidth ?? Math.max(anchorRect.width, 220);
-    const overlayHeight = overlay?.offsetHeight ?? anchorRect.height;
     const align = layout?.align ?? 'center';
+    const pageLeft = window.scrollX;
+    const pageTop = window.scrollY;
 
     let left = anchorRect.left + (anchorRect.width - overlayWidth) / 2;
     if (align === 'left') {
@@ -132,10 +191,9 @@ export function WebtoonBubble({
     } else if (align === 'right') {
       left = anchorRect.right - overlayWidth;
     }
-    left = Math.min(Math.max(left, margin), viewportWidth - overlayWidth - margin);
+    left = Math.min(Math.max(left + pageLeft, pageLeft + margin), pageLeft + viewportWidth - overlayWidth - margin);
 
-    let top = anchorRect.top;
-    top = Math.min(Math.max(top, margin), viewportHeight - overlayHeight - margin);
+    const top = pageTop + anchorRect.top;
 
     setOverlayStyle({
       top: `${Math.round(top)}px`,
@@ -154,6 +212,7 @@ export function WebtoonBubble({
     const schedule = () => {
       cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
+        syncAnchorTop();
         syncOutsideReserve();
         syncOverlayPosition();
       });
@@ -162,6 +221,8 @@ export function WebtoonBubble({
     const observer = new ResizeObserver(schedule);
     if (bubbleRef.current) observer.observe(bubbleRef.current);
     if (overlayRef.current) observer.observe(overlayRef.current);
+    const panel = bubbleRef.current?.offsetParent;
+    if (panel instanceof HTMLElement) observer.observe(panel);
 
     schedule();
     window.addEventListener('resize', schedule);
@@ -177,7 +238,7 @@ export function WebtoonBubble({
       window.visualViewport?.removeEventListener('resize', schedule);
       window.visualViewport?.removeEventListener('scroll', schedule);
     };
-  }, [expanded, syncOutsideReserve, syncOverlayPosition]);
+  }, [expanded, syncAnchorTop, syncOutsideReserve, syncOverlayPosition]);
 
   const helpSuffix = !hasHelp
     ? ''
@@ -242,7 +303,11 @@ export function WebtoonBubble({
         aria-label={`${speakerLabel}: ${zh}${helpSuffix}`}
         aria-expanded={interactive ? expanded : undefined}
         aria-disabled={!interactive}
-        style={bubbleStyle(bubble)}
+        style={{
+          ...baseStyle,
+          top: anchorTopPx !== null ? `${Math.round(anchorTopPx)}px` : baseStyle.top,
+          bottom: anchorTopPx !== null ? undefined : baseStyle.bottom,
+        }}
         ref={bubbleRef}
         onClick={() => {
           if (!interactive || showHelp) return;
