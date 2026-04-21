@@ -231,6 +231,155 @@ Response:
 }
 ```
 
+## GET `/api/v1/commerce/entitlements`
+Query:
+```json
+{ "userId": "demo-user-1" }
+```
+
+Response:
+```json
+{
+  "userId": "demo-user-1",
+  "asOfIso": "2026-04-21T09:00:00.000Z",
+  "balances": { "xp": 420, "sp": 160, "rp": 90 },
+  "entitlements": [
+    {
+      "entitlementId": "ent_shanghai_texting_pack",
+      "productKey": "unlock.shanghai.texting_mission",
+      "type": "mission_unlock",
+      "status": "active",
+      "grantedAtIso": "2026-04-18T02:00:00.000Z",
+      "source": "mission_reward",
+      "purchaseEventId": null
+    }
+  ]
+}
+```
+
+## POST `/api/v1/commerce/unlocks/grant`
+Request:
+```json
+{
+  "userId": "demo-user-1",
+  "unlockKey": "unlock.shanghai.auction.preview",
+  "grantSource": "purchase_event",
+  "idempotencyKey": "unlock.shanghai.auction.preview:demo-user-1",
+  "purchaseEventId": "pevt_demo_checkout_001",
+  "metadata": {
+    "priceId": "price_demo_auction_preview"
+  }
+}
+```
+
+Response:
+```json
+{
+  "grantId": "grant_unlock_shanghai_auction_pass",
+  "status": "granted",
+  "userId": "demo-user-1",
+  "unlockKey": "unlock.shanghai.auction.preview",
+  "grantSource": "purchase_event",
+  "grantedAtIso": "2026-04-21T09:10:00.000Z",
+  "idempotencyKey": "unlock.shanghai.auction.preview:demo-user-1",
+  "purchaseEventId": "pevt_demo_checkout_001",
+  "entitlement": {
+    "entitlementId": "ent_unlock_shanghai_auction_pass",
+    "productKey": "unlock.shanghai.auction.preview",
+    "type": "feature_access",
+    "status": "active",
+    "grantedAtIso": "2026-04-21T09:10:00.000Z",
+    "source": "purchase_event",
+    "purchaseEventId": "pevt_demo_checkout_001"
+  }
+}
+```
+
+## POST `/api/v1/commerce/purchase-events`
+Request:
+```json
+{
+  "provider": "stripe",
+  "providerEventId": "evt_demo_checkout_001",
+  "eventType": "checkout.session.completed",
+  "userId": "demo-user-1",
+  "occurredAtIso": "2026-04-21T09:08:00.000Z",
+  "amount": { "currency": "usd", "subtotal": 1299, "total": 1299 },
+  "metadata": {
+    "unlockKey": "unlock.shanghai.auction.preview",
+    "priceId": "price_demo_auction_preview"
+  },
+  "payloadHash": "sha256:demo_checkout_payload_hash"
+}
+```
+
+Response:
+```json
+{
+  "recordId": "pevt_demo_checkout_001",
+  "status": "recorded",
+  "provider": "stripe",
+  "providerEventId": "evt_demo_checkout_001",
+  "eventType": "checkout.session.completed",
+  "userId": "demo-user-1",
+  "occurredAtIso": "2026-04-21T09:08:00.000Z",
+  "recordedAtIso": "2026-04-21T09:08:05.000Z",
+  "dedupeKey": "stripe:evt_demo_checkout_001",
+  "amount": { "currency": "usd", "subtotal": 1299, "total": 1299 },
+  "metadata": {
+    "unlockKey": "unlock.shanghai.auction.preview",
+    "priceId": "price_demo_auction_preview"
+  },
+  "payloadHash": "sha256:demo_checkout_payload_hash"
+}
+```
+
+Contract notes:
+- Demo worker responses are fixture-backed and deterministic; they are intentionally stateless mocks and do not mutate entitlement state across calls.
+- Real Stripe webhook signature verification, replay protection storage, refund/reversal handling, and restore flows are out of scope for this mock contract stage.
+
+## POST `/api/v1/commerce/invitations/redeem`
+Request:
+```json
+{
+  "userId": "demo-user-1",
+  "city": "shanghai",
+  "invitationToken": "INVITE-ROOFTOP-9F2K",
+  "idempotencyKey": "invite_tok_sh_rooftop_001:demo-user-1"
+}
+```
+
+Response:
+Path: `packages/contracts/fixtures/commerce.shanghai-invitation-redeem.sample.json`
+
+## GET `/api/v1/commerce/locations/secret-status`
+Query:
+```json
+{
+  "userId": "demo-user-1",
+  "city": "shanghai",
+  "locationId": "night_market_rooftop"
+}
+```
+
+Response:
+Path: `packages/contracts/fixtures/commerce.shanghai-secret-location-status.sample.json`
+
+Contract note:
+- `revealState` is deterministic and monotonic for fixture scenarios: `hidden` -> `teased` -> `token_required` -> `token_redeemed`.
+- `unlockFlags` mirror entitlement-backed access gates and must stay aligned with `unlockKey`/`productKey` naming used by commerce unlocks.
+
+## GET `/api/v1/commerce/unlock-flags/snapshot`
+Query:
+```json
+{ "userId": "demo-user-1" }
+```
+
+Response:
+Path: `packages/contracts/fixtures/commerce.unlock-flags.snapshot.sample.json`
+
+Contract note:
+- Snapshot payloads are immutable point-in-time reads meant for reviewer verification and deterministic QA assertions.
 ## Canonical Media Events Fixture (Connector-Independent)
 Used by topic modeling/frequency workstreams so they can iterate without live Spotify/YouTube sync.
 

@@ -1,0 +1,26 @@
+{
+  "redeemEventId": "redeem_evt_shanghai_rooftop_001",
+  "status": "redeemed",
+  "userId": "demo-user-1",
+  "city": "shanghai",
+  "unlockKey": "unlock.shanghai.secret.night_market_rooftop",
+  "tokenId": "invite_tok_sh_rooftop_001",
+  "tokenFingerprint": "sha256:invite_tok_sh_rooftop_001",
+  "redeemedAtIso": "2026-04-21T09:18:00.000Z",
+  "idempotencyKey": "invite_tok_sh_rooftop_001:demo-user-1",
+  "entitlement": {
+    "entitlementId": "ent_unlock_shanghai_secret_night_market_rooftop",
+    "productKey": "unlock.shanghai.secret.night_market_rooftop",
+    "type": "feature_access",
+    "status": "active",
+    "grantedAtIso": "2026-04-21T09:18:00.000Z",
+    "source": "invitation_token",
+    "purchaseEventId": null,
+    "metadata": {
+      "city": "shanghai",
+      "locationId": "night_market_rooftop",
+      "unlockTier": "secret_location",
+      "redeemChannel": "npc_dm"
+    }
+  }
+}
