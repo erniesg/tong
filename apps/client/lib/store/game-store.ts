@@ -31,6 +31,16 @@ export interface GameState {
   locationHangoutCounts: Record<string, number>;   // key: "seoul:food_street"
   unlockedLocations: Record<string, boolean>;       // key: "seoul:cafe"
   explainIn: Record<CityId, AppLang>;                // per-city language Tong explains in
+  gamePass?: GamePassEntitlement;                    // optional premium entitlement
+}
+
+export interface GamePassEntitlement {
+  /** Whether the pass is currently active. Checked at every gated bubble/scene. */
+  active: boolean;
+  /** UNIX ms; pass is considered inactive after this instant. Omitted = no expiry. */
+  expiresAt?: number;
+  /** Source of the entitlement — useful for debugging / admin revocation. */
+  source?: 'stripe' | 'dev' | 'grant';
 }
 
 /* ── Actions ────────────────────────────────────────────── */
@@ -49,6 +59,7 @@ export type GameAction =
   | { type: 'SET_EXPLAIN_LANGUAGE'; cityId: CityId; lang: AppLang }
   | { type: 'SET_PLAYER_NAME'; name: string }
   | { type: 'SET_PLAYER_PROFILE'; profile: PlayerProfile }
+  | { type: 'SET_GAME_PASS'; pass: GamePassEntitlement | null }
   | { type: 'RESET' };
 
 /* ── Persistence ────────────────────────────────────────── */
@@ -218,6 +229,8 @@ function reduce(state: GameState, action: GameAction): GameState {
       return { ...state, playerName: action.name };
     case 'SET_PLAYER_PROFILE':
       return { ...state, playerProfile: action.profile, playerName: action.profile.englishName };
+    case 'SET_GAME_PASS':
+      return { ...state, gamePass: action.pass ?? undefined };
     case 'RESET':
       return createInitialState();
     default:
