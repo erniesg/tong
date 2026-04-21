@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
 import type { ToolInvocation, UIMessage } from 'ai';
 import { startOrResumeGame, type CityId, type LocationId, type ProficiencyLevel, type ScoreState, type UserProficiency, type AppLang } from '@/lib/api';
@@ -96,7 +96,7 @@ const GAME_LEVELS = [
 
 const SLIDER_TO_LEVEL: ProficiencyLevel[] = ['none', 'none', 'beginner', 'beginner', 'intermediate', 'advanced', 'advanced'];
 
-const LANG_KEYS: (keyof UserProficiency)[] = ['ko', 'ja', 'zh'];
+const LANG_KEYS: (keyof UserProficiency)[] = ['zh', 'ja', 'ko'];
 
 const LANG_LABELS: { key: keyof UserProficiency; name: string; native: string; flag: string }[] = [
   { key: 'zh', name: 'Chinese', native: '中文', flag: '🇨🇳' },
@@ -307,6 +307,7 @@ function getWeakestLangIndex(sliders: [number, number, number]): number {
 
 export default function GamePage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const gameState = useGameState();
 
   /* ── Fixture mode: ?fixture=name loads static test fixture ──── */
@@ -616,10 +617,10 @@ export default function GamePage() {
 
     const weakIdx = getWeakestLangIndex(sliders);
     const primaryLang = LANG_KEYS[weakIdx] as 'ko' | 'ja' | 'zh';
-
+    const validFreshNpc = Boolean(freshNpc && CHARACTER_MAP[freshNpc]);
     const weakLevel = sliders[weakIdx];
     const preferredCity = (LANG_TO_CITY[primaryLang] ?? 'seoul') as CityId;
-    const npcId = freshNpc && CHARACTER_MAP[freshNpc] ? freshNpc : pickNpcForCity(preferredCity);
+    const npcId = validFreshNpc ? freshNpc! : pickNpcForCity(preferredCity);
     const npcChar = CHARACTER_MAP[npcId] ?? HAEUN;
     // Use the NPC's actual city — if no NPC exists for the preferred city,
     // the fallback NPC's city determines the target language.
@@ -656,10 +657,28 @@ export default function GamePage() {
 
     // Store self-assessed level
     dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
+    const forceTutorial = searchParams.get('force_tutorial') === '1';
+
+    // Shanghai onboarding routing: if the player's priority language is Chinese and
+    // they haven't stepped into the dumpling shop yet, drop them into the webtoon
+    // onboarding scene instead of bootstrapping a generic hangout.
+    const shanghaiHangoutCount =
+      gameState.locationHangoutCounts['shanghai:dumpling_shop'] ?? 0;
+    const shanghaiOnboardingStatus = gameState.onboardingStatus['shanghai:h1'];
+    if (
+      primaryLang === 'zh'
+      && !validFreshNpc
+      && !forceTutorial
+      && !shanghaiOnboardingStatus
+      && shanghaiHangoutCount === 0
+    ) {
+      setLoading(false);
+      router.push('/onboarding/shanghai');
+      return;
+    }
 
     // Detect introduction (first encounter with this NPC, or forced via ?force_tutorial=1)
     const rel = getRelationship(npcId);
-    const forceTutorial = searchParams.get('force_tutorial') === '1';
     const isIntro = forceTutorial || rel.interactionCount === 0;
     setIsIntroHangout(isIntro);
     setIntroExerciseCount(0);
