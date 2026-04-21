@@ -17,7 +17,18 @@ interface SceneViewProps {
   backgroundUrl: string;
   backgroundTransition?: 'fade' | 'cut';
   ambientDescription?: string;
-  cinematic?: { videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null;
+  cinematic?: {
+    videoUrl: string;
+    caption?: string;
+    captionTranslation?: string;
+    autoAdvance: boolean;
+    muted?: boolean;
+    mode?: 'cover' | 'panorama';
+    panoramaImageUrl?: string;
+    panoramaWidth?: number;
+    panoramaHeight?: number;
+    onPanoramaTransformChange?: (transformX: number) => void;
+  } | null;
   onCinematicEnd?: () => void;
   npcName?: string;
   npcColor?: string;
@@ -158,6 +169,11 @@ export function SceneView({
           captionTranslation={cinematic.captionTranslation}
           autoAdvance={cinematic.autoAdvance}
           muted={cinematic.muted ?? false}
+          mode={cinematic.mode ?? 'cover'}
+          panoramaImageUrl={cinematic.panoramaImageUrl}
+          panoramaWidth={cinematic.panoramaWidth}
+          panoramaHeight={cinematic.panoramaHeight}
+          onPanoramaTransformChange={cinematic.onPanoramaTransformChange}
           targetLang={targetLang}
           onEnd={handleCinematicEnd}
         />
