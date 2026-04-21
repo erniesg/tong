@@ -153,11 +153,8 @@ export function WebtoonPanel({
               draggable={false}
             />
 
-            {currentPanel.bubble ? (
-              <WebtoonBubble
-                {...currentPanel.bubble}
-                visible={bubbleVisible}
-              />
+            {currentPanel.bubble && bubbleVisible ? (
+              <WebtoonBubble {...currentPanel.bubble} />
             ) : null}
           </figure>
         </div>
