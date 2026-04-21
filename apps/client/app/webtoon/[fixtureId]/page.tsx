@@ -2,11 +2,13 @@
 
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { getWebtoonFixture } from '@/lib/content/shanghai/fixtures';
-import { WebtoonStrip, type WebtoonTheme, type WebtoonEntitlement } from '@/components/scene/WebtoonStrip';
+import { WebtoonStrip, type WebtoonTheme } from '@/components/scene/WebtoonStrip';
+import { WebtoonPurchaseSheet } from '@/components/scene/WebtoonPurchaseSheet';
+import { useWebtoonUnlocks } from '@/lib/hooks/useWebtoonUnlocks';
 
-export default function WebtoonInspectPage() {
+function WebtoonInspectContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const raw = Array.isArray(params.fixtureId) ? params.fixtureId[0] : params.fixtureId;
@@ -14,14 +16,16 @@ export default function WebtoonInspectPage() {
   const entry = useMemo(() => getWebtoonFixture(fixtureId), [fixtureId]);
   const [theme, setTheme] = useState<WebtoonTheme>('warm');
   const [showHelp, setShowHelp] = useState(false);
-  const entitlement: WebtoonEntitlement = useMemo(
-    () => ({
-      bypass: searchParams.get('dev_pass') === '1',
-      gamePass: searchParams.get('game_pass') === '1',
-      sp: Number(searchParams.get('sp')) || 0,
-    }),
-    [searchParams],
-  );
+  const {
+    entitlement,
+    pendingUnlock,
+    autoOpenBubbleId,
+    spBalance,
+    requestUnlock,
+    closePurchaseSheet,
+    spendSp,
+    activateGamePass,
+  } = useWebtoonUnlocks(fixtureId || 'webtoon', searchParams);
 
   if (!entry) {
     return (
@@ -35,11 +39,21 @@ export default function WebtoonInspectPage() {
   return (
     <main style={{ minHeight: '100dvh', background: theme === 'dark' ? '#0b0b10' : '#ffffff' }}>
       <WebtoonStrip
+        sceneId={fixtureId}
         panels={entry.spec.panels}
         theme={theme}
         showHelp={showHelp}
         scrollRoot="page"
         entitlement={entitlement}
+        autoOpenBubbleKey={autoOpenBubbleId}
+        onUnlockRequest={requestUnlock}
+      />
+      <WebtoonPurchaseSheet
+        request={pendingUnlock}
+        spBalance={spBalance}
+        onClose={closePurchaseSheet}
+        onSpendSp={spendSp}
+        onActivateGamePass={activateGamePass}
       />
 
       {/* Top chrome: back + theme toggle */}
@@ -146,5 +160,13 @@ export default function WebtoonInspectPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function WebtoonInspectPage() {
+  return (
+    <Suspense fallback={<main style={{ minHeight: '100dvh', background: '#ffffff' }} />}>
+      <WebtoonInspectContent />
+    </Suspense>
   );
 }

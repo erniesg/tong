@@ -30,6 +30,8 @@ export interface GameState {
   locationLevels: Record<string, { level: number }>;
   locationHangoutCounts: Record<string, number>;   // key: "seoul:food_street"
   unlockedLocations: Record<string, boolean>;       // key: "seoul:cafe"
+  onboardingStatus: Record<string, 'dismissed' | 'completed'>;
+  revealedBubbleHelp: Record<string, Record<string, true>>;
   explainIn: Record<CityId, AppLang>;                // per-city language Tong explains in
   gamePass?: GamePassEntitlement;                    // optional premium entitlement
 }
@@ -50,6 +52,7 @@ export type GameAction =
   | { type: 'RECORD_ITEM_RESULT'; itemId: string; category: 'script' | 'vocabulary' | 'grammar'; correct: boolean }
   | { type: 'ADD_XP'; amount: number }
   | { type: 'ADD_SP'; amount: number }
+  | { type: 'SPEND_SP'; amount: number }
   | { type: 'SET_CALIBRATED_LEVEL'; level: number }
   | { type: 'SET_SELF_ASSESSED_LEVEL'; level: number }
   | { type: 'SET_RELATIONSHIP'; characterId: string; relationship: Relationship }
@@ -59,6 +62,8 @@ export type GameAction =
   | { type: 'SET_EXPLAIN_LANGUAGE'; cityId: CityId; lang: AppLang }
   | { type: 'SET_PLAYER_NAME'; name: string }
   | { type: 'SET_PLAYER_PROFILE'; profile: PlayerProfile }
+  | { type: 'SET_ONBOARDING_STATUS'; sceneId: string; status: 'dismissed' | 'completed' }
+  | { type: 'REVEAL_BUBBLE_HELP'; sceneId: string; bubbleId: string }
   | { type: 'SET_GAME_PASS'; pass: GamePassEntitlement | null }
   | { type: 'RESET' };
 
@@ -86,6 +91,8 @@ function loadState(): GameState {
         },
         locationHangoutCounts: parsed.locationHangoutCounts ?? defaults.locationHangoutCounts,
         unlockedLocations: parsed.unlockedLocations ?? defaults.unlockedLocations,
+        onboardingStatus: parsed.onboardingStatus ?? defaults.onboardingStatus,
+        revealedBubbleHelp: parsed.revealedBubbleHelp ?? defaults.revealedBubbleHelp,
         explainIn: (parsed.explainIn && typeof parsed.explainIn === 'object')
           ? { ...defaults.explainIn, ...parsed.explainIn }
           : defaults.explainIn,
@@ -126,6 +133,8 @@ function createInitialState(): GameState {
     locationLevels: {},
     locationHangoutCounts: {},
     unlockedLocations: { 'seoul:food_street': true, 'shanghai:dumpling_shop': true, 'tokyo:ramen_shop': true },
+    onboardingStatus: {},
+    revealedBubbleHelp: {},
     explainIn: { seoul: 'en', tokyo: 'en', shanghai: 'en' },
   };
 }
@@ -177,6 +186,8 @@ function reduce(state: GameState, action: GameAction): GameState {
       return { ...state, xp: state.xp + action.amount };
     case 'ADD_SP':
       return { ...state, sp: state.sp + action.amount };
+    case 'SPEND_SP':
+      return { ...state, sp: Math.max(0, state.sp - Math.max(0, action.amount)) };
     case 'SET_CALIBRATED_LEVEL':
       return { ...state, calibratedLevel: action.level };
     case 'SET_SELF_ASSESSED_LEVEL':
@@ -229,6 +240,25 @@ function reduce(state: GameState, action: GameAction): GameState {
       return { ...state, playerName: action.name };
     case 'SET_PLAYER_PROFILE':
       return { ...state, playerProfile: action.profile, playerName: action.profile.englishName };
+    case 'SET_ONBOARDING_STATUS':
+      return {
+        ...state,
+        onboardingStatus: {
+          ...state.onboardingStatus,
+          [action.sceneId]: action.status,
+        },
+      };
+    case 'REVEAL_BUBBLE_HELP':
+      return {
+        ...state,
+        revealedBubbleHelp: {
+          ...state.revealedBubbleHelp,
+          [action.sceneId]: {
+            ...(state.revealedBubbleHelp[action.sceneId] ?? {}),
+            [action.bubbleId]: true,
+          },
+        },
+      };
     case 'SET_GAME_PASS':
       return { ...state, gamePass: action.pass ?? undefined };
     case 'RESET':

@@ -7,6 +7,8 @@ import type { WebtoonBubble as WebtoonBubbleSpec } from '@/lib/hangout/fixture-t
 interface WebtoonBubbleProps extends WebtoonBubbleSpec {
   reveal?: { kind: 'free' } | { kind: 'credits'; cost: number } | { kind: 'gamePass' };
   showHelp?: boolean;
+  autoOpenKey?: string | null;
+  onLockedClick?: () => void;
 }
 
 const SPEAKER_LABELS: Record<string, string> = {
@@ -126,6 +128,8 @@ export function WebtoonBubble({
   layout,
   reveal = { kind: 'free' },
   showHelp = false,
+  autoOpenKey = null,
+  onLockedClick,
 }: WebtoonBubbleProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [anchorTopPx, setAnchorTopPx] = useState<number | null>(null);
@@ -136,10 +140,15 @@ export function WebtoonBubble({
   const speakerLabel = SPEAKER_LABELS[speaker] ?? speaker;
   const hasHelp = Boolean((py && py.length) || en);
   const unlocked = reveal.kind === 'free';
-  const interactive = hasHelp && unlocked;
-  const expanded = interactive && (showHelp || isOpen);
+  const interactive = hasHelp;
+  const expanded = hasHelp && unlocked && (showHelp || isOpen);
   const segments = buildSegments(zh, py);
   const baseStyle = bubbleStyle(bubble);
+
+  useLayoutEffect(() => {
+    if (!autoOpenKey || !hasHelp || !unlocked || showHelp) return;
+    setIsOpen(true);
+  }, [autoOpenKey, hasHelp, showHelp, unlocked]);
 
   const syncAnchorTop = useCallback(() => {
     const el = bubbleRef.current;
@@ -247,26 +256,26 @@ export function WebtoonBubble({
       : unlocked
         ? '. Tap to reveal translation help.'
         : reveal.kind === 'credits'
-          ? `. Help unlocks for ${reveal.cost} credits.`
+          ? `. Help unlocks for ${reveal.cost} SP.`
           : '. Help unlocks with Game Pass.';
 
   const overlay = expanded && typeof document !== 'undefined'
     ? createPortal(
         <div
           ref={overlayRef}
-          role={interactive ? 'button' : undefined}
-          tabIndex={interactive && !showHelp ? 0 : undefined}
+          role={unlocked ? 'button' : undefined}
+          tabIndex={unlocked && !showHelp ? 0 : undefined}
           className={`wt-bubble wt-bubble--overlay wt-bubble--${position} wt-bubble--${speaker}`}
           aria-label={`${speakerLabel}: ${zh}. Translation help is open.`}
           aria-expanded
-          aria-disabled={!interactive}
+          aria-disabled={!unlocked}
           style={overlayStyle ?? { visibility: 'hidden' }}
           onClick={() => {
-            if (!interactive || showHelp) return;
+            if (!unlocked || showHelp) return;
             setIsOpen(false);
           }}
           onKeyDown={(event) => {
-            if (!interactive || showHelp) return;
+            if (!unlocked || showHelp) return;
             if (event.key !== 'Enter' && event.key !== ' ') return;
             event.preventDefault();
             setIsOpen(false);
@@ -301,7 +310,7 @@ export function WebtoonBubble({
         className={`wt-bubble wt-bubble--${position} wt-bubble--${speaker}`}
         data-expanded={expanded ? 'true' : 'false'}
         aria-label={`${speakerLabel}: ${zh}${helpSuffix}`}
-        aria-expanded={interactive ? expanded : undefined}
+        aria-expanded={unlocked ? expanded : undefined}
         aria-disabled={!interactive}
         style={{
           ...baseStyle,
@@ -311,12 +320,20 @@ export function WebtoonBubble({
         ref={bubbleRef}
         onClick={() => {
           if (!interactive || showHelp) return;
+          if (!unlocked) {
+            onLockedClick?.();
+            return;
+          }
           setIsOpen((prev) => !prev);
         }}
         onKeyDown={(event) => {
           if (!interactive || showHelp) return;
           if (event.key !== 'Enter' && event.key !== ' ') return;
           event.preventDefault();
+          if (!unlocked) {
+            onLockedClick?.();
+            return;
+          }
           setIsOpen((prev) => !prev);
         }}
       >

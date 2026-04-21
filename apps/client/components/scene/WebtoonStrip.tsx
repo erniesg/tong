@@ -19,9 +19,20 @@ export interface WebtoonEntitlement {
   sp?: number;
   /** Dev/demo bypass — treat every gate as free. */
   bypass?: boolean;
+  /** Persisted per-bubble reveals for this scene. */
+  revealedBubbleIds?: Record<string, true>;
+}
+
+export interface WebtoonUnlockRequest {
+  sceneId: string;
+  bubbleId: string;
+  speaker: string;
+  zh: string;
+  reveal: { kind: 'credits'; cost: number } | { kind: 'gamePass' };
 }
 
 interface WebtoonStripProps {
+  sceneId?: string;
   panels: WebtoonPanelSpec[];
   onComplete?: () => void;
   /** Visual theme. `warm` = parchment daylight; `dark` = near-black night/mood. */
@@ -36,20 +47,25 @@ interface WebtoonStripProps {
   scrollRoot?: 'self' | 'page';
   /** Player's current entitlement — used to resolve each bubble's translation gate. */
   entitlement?: WebtoonEntitlement;
+  /** Called when a locked bubble is tapped so callers can present purchase UI. */
+  onUnlockRequest?: (request: WebtoonUnlockRequest) => void;
+  /** Bubble to auto-open after a successful unlock action. */
+  autoOpenBubbleKey?: string | null;
 }
 
 function resolveBubbleReveal(
+  bubbleId: string,
   gate: WebtoonBubbleGate | undefined,
   entitlement: WebtoonEntitlement | undefined,
 ): { kind: 'free' } | { kind: 'credits'; cost: number } | { kind: 'gamePass' } {
   if (!gate || gate.kind === 'free') return { kind: 'free' };
   if (entitlement?.bypass) return { kind: 'free' };
+  if (entitlement?.revealedBubbleIds?.[bubbleId]) return { kind: 'free' };
   if (gate.kind === 'gamePass') {
     return entitlement?.gamePass ? { kind: 'free' } : { kind: 'gamePass' };
   }
   if (gate.kind === 'credits') {
     if (entitlement?.gamePass) return { kind: 'free' };
-    if ((entitlement?.sp ?? 0) >= gate.cost) return { kind: 'free' };
     return { kind: 'credits', cost: gate.cost };
   }
   return { kind: 'free' };
@@ -569,6 +585,7 @@ function bubbleReserveStyle(panel: WebtoonPanelSpec): CSSProperties {
 }
 
 export function WebtoonStrip({
+  sceneId = 'webtoon',
   panels,
   onComplete,
   theme = 'warm',
@@ -577,6 +594,8 @@ export function WebtoonStrip({
   showHelp = false,
   scrollRoot = 'self',
   entitlement,
+  onUnlockRequest,
+  autoOpenBubbleKey = null,
 }: WebtoonStripProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [completed, setCompleted] = useState(false);
@@ -693,11 +712,28 @@ export function WebtoonStrip({
               style={imageStyle(panel.layout)}
             />
             {panel.bubble && (
-              <WebtoonBubble
-                {...panel.bubble}
-                showHelp={showHelp}
-                reveal={resolveBubbleReveal(panel.bubble.gate, entitlement)}
-              />
+              (() => {
+                const reveal = resolveBubbleReveal(panel.id, panel.bubble?.gate, entitlement);
+                return (
+                  <WebtoonBubble
+                    {...panel.bubble}
+                    showHelp={showHelp}
+                    autoOpenKey={autoOpenBubbleKey === panel.id ? autoOpenBubbleKey : null}
+                    reveal={reveal}
+                    onLockedClick={
+                      reveal.kind === 'free'
+                        ? undefined
+                        : () => onUnlockRequest?.({
+                            sceneId,
+                            bubbleId: panel.id,
+                            speaker: panel.bubble?.speaker ?? 'narrator',
+                            zh: panel.bubble?.zh ?? '',
+                            reveal,
+                          })
+                    }
+                  />
+                );
+              })()
             )}
           </figure>
         </div>
