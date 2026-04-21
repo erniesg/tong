@@ -3,7 +3,7 @@
 **Repo:** `erniesg/tong`
 **Feature branch:** `feat/shanghai-onboarding`
 **Issues filter:** https://github.com/erniesg/tong/issues?q=is%3Aopen+label%3Ashanghai
-**Feature docs:** `docs/shanghai/plan.md`, `docs/shanghai/h1-generation-prompts.md` (+ `.zh.md`)
+**Feature docs:** `docs/shanghai/plan.md`, `docs/shanghai/h1-generation-prompts.md` (+ `.zh.md`), `docs/shanghai/webtoon-layout-system.md`
 
 ## What this is
 
@@ -30,6 +30,12 @@ Art (#195) is the most obviously parallelizable — it only needs `docs/shanghai
 - **After #191 merges:** [#197](https://github.com/erniesg/tong/issues/197) voice rule validator
 - **After #187 + #191 merge:** [#192](https://github.com/erniesg/tong/issues/192) H1 fixture content
 - Full dep graph in `plan.md` → "Dependency graph"
+
+Webtoon note:
+
+- Layout testing does not need final art. Use the backstage webtoon lab with placeholders first.
+- Real fixture-art testing begins as soon as files exist at `apps/client/public/assets/webtoon/shanghai/h1/p{1,2,3}.png`.
+- Keep WebtoonPanel metadata-driven so future tool-driven panel layout can extend it instead of replacing it.
 
 ---
 
