@@ -1,0 +1,21 @@
+{
+  "recordId": "pevt_demo_checkout_001",
+  "status": "recorded",
+  "provider": "stripe",
+  "providerEventId": "evt_demo_checkout_001",
+  "eventType": "checkout.session.completed",
+  "userId": "demo-user-1",
+  "occurredAtIso": "2026-04-21T09:08:00.000Z",
+  "recordedAtIso": "2026-04-21T09:08:05.000Z",
+  "dedupeKey": "stripe:evt_demo_checkout_001",
+  "amount": {
+    "currency": "usd",
+    "subtotal": 1299,
+    "total": 1299
+  },
+  "metadata": {
+    "unlockKey": "unlock.shanghai.auction.preview",
+    "priceId": "price_demo_auction_preview"
+  },
+  "payloadHash": "sha256:demo_checkout_payload_hash"
+}

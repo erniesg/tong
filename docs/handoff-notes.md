@@ -7,6 +7,13 @@
   - Update shared manifests, creative-assets docs, and runtime/API validation so dashboard and graph flows resolve authored Tokyo/Shanghai packs by `mapLocationId` through the registry instead of stale slot-only assumptions.
   - Keep Tokyo free of any non-live `practice_studio` pack and preserve Shanghai `milk_tea_shop -> practice_studio` reward hooks.
 
+## 2026-04-22 (PR 260 commerce mock coherence fix intent)
+- Date: 2026-04-22
+- Branch/worktree: `codex/review-fix-260-coherent-commerce-mocks` + `/private/tmp/tong-review-260`
+- Intent:
+  - Tighten the fixture-backed commerce mock routes so request overrides produce coherent `grantId`, `entitlementId`, `recordId`, and `purchaseEventId` values instead of leaking static fixture ids into custom responses.
+  - Keep the scope limited to `apps/worker/src/index.ts` behavior and validation against the existing contract examples; do not broaden into real persistence, Stripe verification, or the full auction engine.
+
 ## 2026-03-21 (Issue 62 Seoul starter-pack cross-lane intent)
 - Date: 2026-03-21
 - Branch/worktree: `codex/issue-62-seoul-starter-pack` + `.worktrees/creative-assets`

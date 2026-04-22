@@ -1,0 +1,36 @@
+{
+  "userId": "demo-user-1",
+  "asOfIso": "2026-04-21T09:00:00.000Z",
+  "balances": {
+    "xp": 420,
+    "sp": 160,
+    "rp": 90
+  },
+  "entitlements": [
+    {
+      "entitlementId": "ent_shanghai_texting_pack",
+      "productKey": "unlock.shanghai.texting_mission",
+      "type": "mission_unlock",
+      "status": "active",
+      "grantedAtIso": "2026-04-18T02:00:00.000Z",
+      "source": "mission_reward",
+      "purchaseEventId": null,
+      "metadata": {
+        "city": "shanghai",
+        "location": "practice_studio"
+      }
+    },
+    {
+      "entitlementId": "ent_polaroid_shanghai_call",
+      "productKey": "collectible.polaroid.shanghai_call",
+      "type": "collectible",
+      "status": "active",
+      "grantedAtIso": "2026-04-19T03:15:00.000Z",
+      "source": "purchase_event",
+      "purchaseEventId": "pevt_demo_checkout_001",
+      "metadata": {
+        "reward": "video_call"
+      }
+    }
+  ]
+}
