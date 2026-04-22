@@ -12,7 +12,7 @@ import {
 import { CHARACTER_MAP, HAEUN, TUTORIAL_VIDEO_CONFIG } from '@/lib/content/characters';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import { runtimeAssetUrl } from '@/lib/runtime-assets';
-import { getShanghaiFixture } from '@/lib/content/shanghai/fixtures';
+import { loadSceneFixture, resolveFixtureId } from '@/lib/hangout/fixture-loader';
 import { runFixture, type HangoutEvent } from '@/lib/hangout/fixture-runtime';
 import { validateLine } from '@/lib/ai/validators/voice-rules';
 import type { Character, RelationshipStage, Relationship } from '@/lib/types/relationship';
@@ -236,13 +236,17 @@ function readHangoutConfig(req: Request, body?: Record<string, unknown>) {
   const directFixtureId = url.searchParams.get('fixtureId') ?? (typeof body?.fixtureId === 'string' ? body.fixtureId : null);
   const city = url.searchParams.get('city') ?? (typeof body?.city === 'string' ? body.city : null);
   const scene = url.searchParams.get('scene') ?? (typeof body?.scene === 'string' ? body.scene : null);
-  const fixtureId = directFixtureId || (city === 'shanghai' && scene === 'h1' ? 'shanghai/h1-negotiation' : null);
+  const fixtureId = resolveFixtureId({
+    fixtureId: directFixtureId,
+    city,
+    scene,
+  });
 
   return { mode, fixtureId };
 }
 
 function buildFixtureResponse(fixtureId: string) {
-  const fixture = getShanghaiFixture(fixtureId);
+  const fixture = loadSceneFixture(fixtureId);
   if (!fixture) {
     return new Response(`Unknown fixtureId: ${fixtureId}`, { status: 404 });
   }
