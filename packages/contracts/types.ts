@@ -163,6 +163,84 @@ export interface PlayerLanguageProfile {
   proficiency: Record<TargetLanguage, 'none' | 'beginner' | 'intermediate' | 'advanced'>;
 }
 
+export type CommerceEntitlementType = 'feature_access' | 'location_unlock' | 'mission_unlock' | 'collectible';
+export type CommerceEntitlementStatus = 'active' | 'revoked' | 'expired';
+export type CommerceGrantSource = 'purchase_event' | 'mission_reward' | 'admin_manual' | 'invitation_token';
+
+export interface CommerceEntitlement {
+  entitlementId: string;
+  productKey: string;
+  type: CommerceEntitlementType;
+  status: CommerceEntitlementStatus;
+  grantedAtIso: string;
+  source: CommerceGrantSource;
+  purchaseEventId?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CommerceEntitlementsResponse {
+  userId: string;
+  asOfIso: string;
+  balances: {
+    xp: number;
+    sp: number;
+    rp: number;
+  };
+  entitlements: CommerceEntitlement[];
+}
+
+export interface CommerceUnlockGrantRequest {
+  userId: string;
+  unlockKey: string;
+  grantSource: CommerceGrantSource;
+  idempotencyKey?: string;
+  purchaseEventId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CommerceUnlockGrantResponse {
+  grantId: string;
+  status: 'granted' | 'already_granted';
+  userId: string;
+  unlockKey: string;
+  grantSource: CommerceGrantSource;
+  grantedAtIso: string;
+  idempotencyKey: string;
+  purchaseEventId?: string | null;
+  entitlement: CommerceEntitlement;
+}
+
+export interface CommercePurchaseMoney {
+  currency: string;
+  subtotal: number;
+  total: number;
+}
+
+export interface CommercePurchaseEventRequest {
+  provider: 'stripe';
+  providerEventId: string;
+  eventType: string;
+  userId: string;
+  occurredAtIso: string;
+  amount: CommercePurchaseMoney;
+  metadata?: Record<string, unknown>;
+  payloadHash: string;
+}
+
+export interface CommercePurchaseEventResponse {
+  recordId: string;
+  status: 'recorded' | 'duplicate';
+  provider: 'stripe';
+  providerEventId: string;
+  eventType: string;
+  userId: string;
+  occurredAtIso: string;
+  recordedAtIso: string;
+  dedupeKey: string;
+  amount: CommercePurchaseMoney;
+  metadata?: Record<string, unknown>;
+  payloadHash: string;
+}
 export interface HangoutScore {
   xp: number;
   sp: number;
