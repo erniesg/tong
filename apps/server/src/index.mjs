@@ -156,6 +156,14 @@ import {
   getAutoFixStatus,
 } from './autofix.mjs';
 import {
+  ingestPlaytestFindings,
+  listPlaytestFindings,
+  updateFindingRoute,
+  linkFindingGithubRefs,
+  reopenFinding,
+  storeFindingOverride,
+} from './playtest-findings.mjs';
+import {
   apifyXhsSearch,
   apifyInstagramSearch,
   apifySearch,
@@ -366,6 +374,7 @@ const state = {
   ingestionByUser: new Map(),
   integrationsByUser: new Map(),
   playtestSessions: new Map(),
+  playtestFindings: new Map(),
 };
 
 function ensureParentDir(filePath) {
@@ -461,6 +470,7 @@ function saveDurableState() {
     ingestionByUser: cloneMapEntries(state.ingestionByUser),
     integrationsByUser: cloneMapEntries(state.integrationsByUser),
     playtestSessions: cloneMapEntries(state.playtestSessions),
+    playtestFindings: cloneMapEntries(state.playtestFindings),
   };
   const tempPath = `${STATE_FILE_PATH}.tmp`;
   fs.writeFileSync(tempPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
@@ -484,6 +494,7 @@ function loadDurableState() {
   state.ingestionByUser = restoreMap(parsed.ingestionByUser || []);
   state.integrationsByUser = restoreMap(parsed.integrationsByUser || []);
   state.playtestSessions = restoreMap(parsed.playtestSessions || []);
+  state.playtestFindings = restoreMap(parsed.playtestFindings || []);
 
   for (const [sessionId, gameSession] of state.sessions.entries()) {
     normalizeGameSessionState(gameSession);
@@ -5074,6 +5085,96 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/api/v1/playtest/findings' && req.method === 'GET') {
+      const routeStatus = url.searchParams.get('routeStatus');
+      const sessionId = url.searchParams.get('sessionId');
+      const findings = listPlaytestFindings({
+        findingsMap: state.playtestFindings,
+        routeStatus,
+        sessionId,
+      });
+      jsonResponse(res, 200, { findings, count: findings.length });
+      return;
+    }
+
+    if (pathname === '/api/v1/playtest/findings/ingest' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      let findings = Array.isArray(body.findings) ? body.findings : [];
+      const analysisId = typeof body.analysisId === 'string' ? body.analysisId.trim() : '';
+      if (analysisId && findings.length === 0) {
+        const analysis = getAnalysisResult(analysisId);
+        findings = Array.isArray(analysis?.result?.issues) ? analysis.result.issues : [];
+      }
+      const payload = ingestPlaytestFindings({
+        findingsMap: state.playtestFindings,
+        sessionId: body.sessionId,
+        findings,
+        analysisId: analysisId || null,
+      });
+      saveDurableState();
+      jsonResponse(res, 200, payload);
+      return;
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/route$/) && req.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(req);
+      const finding = updateFindingRoute({
+        findingsMap: state.playtestFindings,
+        findingId,
+        routeStatus: body.routeStatus,
+        reason: body.reason,
+        confidence: body.confidence,
+        actor: body.actor,
+      });
+      saveDurableState();
+      jsonResponse(res, 200, { finding });
+      return;
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/link$/) && req.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(req);
+      const finding = linkFindingGithubRefs({
+        findingsMap: state.playtestFindings,
+        findingId,
+        issueRef: body.issueRef,
+        prRef: body.prRef,
+        actor: body.actor,
+      });
+      saveDurableState();
+      jsonResponse(res, 200, { finding });
+      return;
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/override$/) && req.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(req);
+      const finding = storeFindingOverride({
+        findingsMap: state.playtestFindings,
+        findingId,
+        override: body.override,
+        actor: body.actor,
+      });
+      saveDurableState();
+      jsonResponse(res, 200, { finding });
+      return;
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/reopen$/) && req.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(req);
+      const finding = reopenFinding({
+        findingsMap: state.playtestFindings,
+        findingId,
+        reason: body.reason,
+        actor: body.actor,
+      });
+      saveDurableState();
+      jsonResponse(res, 200, { finding });
+      return;
+    }
+
     // ── Signals keyword + search routes (public) ─────────────────────
 
     if (pathname === '/api/v1/signals/keywords' && req.method === 'GET') {
@@ -5502,6 +5603,7 @@ export const __testing = {
     state.activeSessionByUser.clear();
     state.learnSessions = [...(FIXTURES.learnSessions.items || [])];
     state.ingestionByUser.clear();
+    state.playtestFindings.clear();
     ensureIngestionForUser(DEFAULT_USER_ID);
     saveDurableState();
   },
