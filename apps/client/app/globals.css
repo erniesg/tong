@@ -2396,6 +2396,8 @@ button.nav-link:hover {
   font-size: 0.82rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-align: center;
+  padding-inline: 12px;
 }
 
 .webtoon-panel-hint kbd {
@@ -2461,6 +2463,11 @@ button.nav-link:hover {
     0 1px 0 rgba(255, 255, 255, 0.72) inset;
 }
 
+.webtoon-bubble__button:focus-visible {
+  outline: 2px solid rgba(45, 124, 255, 0.72);
+  outline-offset: 2px;
+}
+
 .webtoon-bubble__speaker {
   display: block;
   margin-bottom: 6px;
@@ -2485,6 +2492,10 @@ button.nav-link:hover {
   background: rgba(17, 14, 12, 0.88);
   color: rgba(255, 248, 238, 0.92);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+}
+
+.webtoon-panel-surface.is-thumb-stop .webtoon-bubble__button {
+  background: #fff5ea;
 }
 
 .webtoon-bubble__tooltip-line {

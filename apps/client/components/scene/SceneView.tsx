@@ -141,6 +141,9 @@ export function SceneView({
     if (msg.characterId) return SPEAKER_COLORS[msg.characterId] ?? npcColor;
     return SPEAKER_COLORS[msg.role] ?? 'var(--color-primary)';
   };
+  const isWebtoonActive = Boolean(currentWebtoon);
+  const isCreditGateActive = Boolean(currentCreditGate);
+  const hideStandardSceneUi = isWebtoonActive || isCreditGateActive;
 
   return (
     <div className="absolute inset-0 overflow-hidden select-none">
@@ -177,12 +180,12 @@ export function SceneView({
       <TongOverlay
         message={tongTip?.message ?? ''}
         translation={tongTip?.translation}
-        visible={!!tongTip}
+        visible={!!tongTip && !isWebtoonActive}
         targetLang={targetLang}
         onDismiss={onDismissTong}
       />
 
-      {currentWebtoon && (
+      {isWebtoonActive && currentWebtoon && (
         <WebtoonPanel
           panels={currentWebtoon.panels}
           autoAdvance={currentWebtoon.autoAdvance}
@@ -190,7 +193,7 @@ export function SceneView({
         />
       )}
 
-      {currentCreditGate && (
+      {isCreditGateActive && currentCreditGate && (
         <div className="credit-gate-overlay">
           <div className="credit-gate-card" onClick={(event) => event.stopPropagation()}>
             <p className="credit-gate-kicker">Cliffhanger Unlock</p>
@@ -223,7 +226,7 @@ export function SceneView({
       )}
 
       {/* Layer 4a: Exercise — stays mounted when dismissed to preserve tracing state */}
-      {mountedExercise && !currentWebtoon && !currentCreditGate && (
+      {mountedExercise && !hideStandardSceneUi && (
         <div
           className={`exercise-float-wrapper${exerciseDone ? ' exercise-float-dismissing' : ''}`}
           style={exerciseHidden ? { display: 'none' } : undefined}
@@ -252,7 +255,7 @@ export function SceneView({
       )}
 
       {/* Layer 4b: Other interactive elements (show when exercise is hidden or absent) */}
-      {(exerciseHidden || !mountedExercise) && !currentWebtoon && !currentCreditGate && (choices ? (
+      {(exerciseHidden || !mountedExercise) && !hideStandardSceneUi && (choices ? (
         <ChoiceButtons choices={choices} prompt={choicePrompt} onSelect={onChoice} disabled={isStreaming} targetLang={targetLang} />
       ) : currentMessage ? (
         <DialogueBox
