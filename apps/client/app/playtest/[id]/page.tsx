@@ -62,6 +62,7 @@ async function markSessionActive(id: string): Promise<void> {
 
 function buildGameUrl(config: PlaytestConfig): string {
   const params = new URLSearchParams();
+  let pathname = '/game';
 
   switch (config.sceneType) {
     case 'hangout': {
@@ -96,7 +97,20 @@ function buildGameUrl(config: PlaytestConfig): string {
     }
     case 'onboarding':
     default: {
-      params.set('fresh', '1');
+      if (config.city === 'shanghai') {
+        pathname = '/onboarding/shanghai';
+        params.set('entry', 'panorama');
+
+        const returnParams = new URLSearchParams({
+          phase: 'city_map',
+          city: 'shanghai',
+          qa_run_id: config.sessionId,
+          qa_trace: '1',
+        });
+        params.set('return', `/game?${returnParams.toString()}`);
+      } else {
+        params.set('fresh', '1');
+      }
       break;
     }
   }
@@ -114,7 +128,7 @@ function buildGameUrl(config: PlaytestConfig): string {
   params.set('qa_run_id', config.sessionId);
   params.set('qa_trace', '1');
 
-  return `/game?${params.toString()}`;
+  return `${pathname}?${params.toString()}`;
 }
 
 /* ── Initialise game store state for the target city ─────── */

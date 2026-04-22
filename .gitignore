@@ -33,6 +33,7 @@ test-results/
 *.fbx
 *.glb
 *.stl
+!apps/client/public/assets/locations/shanghai-onboarding-panorama.mp4
 
 # Presets — dev/backup originals, not deployed
 assets/presets/

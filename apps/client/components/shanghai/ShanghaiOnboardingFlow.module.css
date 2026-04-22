@@ -1,0 +1,677 @@
+.shell {
+  --onb-bg: #090b11;
+  --onb-ink: #fff7ee;
+  --onb-muted: rgba(255, 247, 238, 0.72);
+  --onb-accent: #f3c78d;
+  --onb-accent-strong: #ffd6a2;
+  --onb-line: rgba(255, 255, 255, 0.12);
+  --onb-panel: rgba(10, 14, 22, 0.72);
+  --onb-panel-strong: rgba(9, 11, 17, 0.88);
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at top right, rgba(243, 199, 141, 0.12), transparent 30%),
+    linear-gradient(180deg, #0d1018 0%, #090b11 52%, #111319 100%);
+  color: var(--onb-ink);
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.briefing {
+  position: relative;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.heroVideo,
+.heroPoster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroPoster {
+  filter: saturate(0.82) brightness(0.58);
+}
+
+.heroVideo {
+  opacity: 0.46;
+  filter: saturate(0.78) brightness(0.52);
+}
+
+.heroWash {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(9, 11, 17, 0.14) 0%, rgba(9, 11, 17, 0.52) 38%, rgba(9, 11, 17, 0.92) 100%),
+    linear-gradient(90deg, rgba(9, 11, 17, 0.86) 0%, rgba(9, 11, 17, 0.18) 62%, rgba(9, 11, 17, 0.82) 100%);
+}
+
+.briefingContent {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 420px);
+  gap: 2rem;
+  padding: 2rem;
+  align-items: end;
+}
+
+.briefingCopy {
+  max-width: 40rem;
+  padding-bottom: 1rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.9rem;
+  color: var(--onb-accent);
+  font-size: 0.82rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: clamp(2.6rem, 6vw, 5.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  max-width: 9ch;
+}
+
+.body {
+  margin: 1.2rem 0 0;
+  font-size: clamp(1rem, 2vw, 1.24rem);
+  line-height: 1.7;
+  color: var(--onb-ink);
+  max-width: 35rem;
+}
+
+.kicker {
+  margin: 1rem 0 0;
+  max-width: 30rem;
+  color: var(--onb-muted);
+  line-height: 1.6;
+}
+
+.actions {
+  margin-top: 1.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  align-items: center;
+}
+
+.primaryButton,
+.secondaryButton,
+.ghostButton {
+  min-height: 48px;
+  border-radius: 999px;
+  padding: 0.8rem 1.3rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, opacity 180ms ease;
+}
+
+.primaryButton {
+  border: none;
+  background: var(--onb-accent);
+  color: #111319;
+}
+
+.primaryButton:hover,
+.secondaryButton:hover,
+.ghostButton:hover {
+  transform: translateY(-1px);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.secondaryButton {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--onb-ink);
+}
+
+.ghostButton {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--onb-muted);
+}
+
+.progressPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+
+.progressPill {
+  padding: 0.48rem 0.78rem;
+  border-radius: 999px;
+  border: 1px solid var(--onb-line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--onb-muted);
+  font-size: 0.82rem;
+}
+
+.progressPillActive {
+  border-color: rgba(243, 199, 141, 0.54);
+  background: rgba(243, 199, 141, 0.12);
+  color: var(--onb-ink);
+}
+
+.tongRail {
+  justify-self: end;
+  width: min(100%, 26rem);
+  padding: 1rem 1rem 1.2rem;
+  border-radius: 1.6rem;
+  background: var(--onb-panel);
+  border: 1px solid var(--onb-line);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.38);
+}
+
+.tongPortrait {
+  width: min(100%, 18rem);
+  margin: -3.5rem auto 0.2rem;
+  display: block;
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.3));
+}
+
+.tongName {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--onb-accent);
+}
+
+.tongQuote {
+  margin: 0.45rem 0 0;
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 1.28rem;
+  line-height: 1.35;
+}
+
+.tongMeta {
+  margin: 0.8rem 0 0;
+  color: var(--onb-muted);
+  line-height: 1.55;
+  font-size: 0.94rem;
+}
+
+.panoramaStage,
+.webtoonStage,
+.completeStage,
+.auctionShell {
+  min-height: 100dvh;
+}
+
+.stageHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  background: linear-gradient(180deg, rgba(9, 11, 17, 0.92), rgba(9, 11, 17, 0.7));
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--onb-line);
+}
+
+.stageTitleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.stageTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--onb-accent);
+}
+
+.stageSubtitle {
+  margin: 0;
+  color: var(--onb-muted);
+  font-size: 0.88rem;
+}
+
+.panoramaViewport {
+  position: relative;
+  height: calc(100dvh - 81px);
+  overflow: hidden;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.panoramaViewport:active {
+  cursor: grabbing;
+}
+
+.panoramaTrack {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  will-change: transform;
+}
+
+.panoramaImage {
+  display: block;
+  height: 100%;
+  width: auto;
+  object-fit: cover;
+  filter: saturate(0.82) brightness(0.62);
+  user-select: none;
+  pointer-events: none;
+}
+
+.panoramaOverlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(9, 11, 17, 0.08) 0%, rgba(9, 11, 17, 0.36) 60%, rgba(9, 11, 17, 0.82) 100%),
+    linear-gradient(90deg, rgba(9, 11, 17, 0.54) 0%, transparent 22%, transparent 78%, rgba(9, 11, 17, 0.54) 100%);
+}
+
+.hotspot {
+  position: absolute;
+  border: 1px solid rgba(255, 247, 238, 0.2);
+  background: rgba(243, 199, 141, 0.08);
+  border-radius: 1.4rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 0.7rem;
+  color: var(--onb-ink);
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.hotspot:hover {
+  transform: translateY(-2px);
+  border-color: rgba(243, 199, 141, 0.7);
+}
+
+.hotspotSeen {
+  background: rgba(243, 199, 141, 0.18);
+  border-color: rgba(243, 199, 141, 0.84);
+}
+
+.panoramaPanel {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 1.4rem;
+  border: 1px solid var(--onb-line);
+  background: var(--onb-panel-strong);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.panoramaCopy h2,
+.completeCard h2,
+.webtoonFooter h2,
+.auctionPanel h2 {
+  margin: 0;
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: clamp(1.5rem, 3vw, 2.35rem);
+  line-height: 1.05;
+}
+
+.panoramaCopy p,
+.completeCard p,
+.webtoonFooter p,
+.auctionPanel p {
+  color: var(--onb-muted);
+  line-height: 1.6;
+}
+
+.webtoonStage {
+  background:
+    linear-gradient(180deg, rgba(9, 11, 17, 0.96) 0%, rgba(17, 19, 25, 0.96) 100%),
+    #090b11;
+}
+
+.webtoonIntro {
+  padding: 1.2rem 1.2rem 0.2rem;
+  max-width: 48rem;
+}
+
+.webtoonPanels {
+  padding: 0 1rem 5rem;
+}
+
+.webtoonPanelWrap {
+  position: relative;
+  margin: 0 auto;
+  padding-top: 1px;
+}
+
+.webtoonPanelGap {
+  width: 100%;
+}
+
+.webtoonPanelFigure {
+  position: relative;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 1.4rem;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
+}
+
+.webtoonFullBleed {
+  width: 100%;
+}
+
+.webtoonFullWidth {
+  width: min(96%, 54rem);
+}
+
+.webtoonInsetWide {
+  width: min(78%, 42rem);
+}
+
+.webtoonInsetNarrow {
+  width: min(58%, 28rem);
+}
+
+.webtoonFloating {
+  width: min(58%, 28rem);
+}
+
+.webtoonPanelImage {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.webtoonFooter {
+  width: min(92%, 44rem);
+  margin: 1rem auto 0;
+  padding: 1.2rem 1.25rem 4rem;
+}
+
+.completeStage {
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.completeCard,
+.auctionPanel {
+  width: min(100%, 42rem);
+  padding: 1.4rem;
+  border-radius: 1.5rem;
+  border: 1px solid var(--onb-line);
+  background: var(--onb-panel);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+}
+
+.rewardStrip,
+.auctionStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 1.1rem;
+}
+
+.rewardStat,
+.auctionStat {
+  padding: 0.9rem;
+  border-radius: 1.1rem;
+  border: 1px solid var(--onb-line);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.rewardLabel,
+.auctionStatLabel {
+  display: block;
+  color: var(--onb-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.rewardValue,
+.auctionStatValue {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.auctionShell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 380px);
+  gap: 1.2rem;
+  padding: 1.2rem;
+}
+
+.auctionHero {
+  position: relative;
+  min-height: calc(100dvh - 2.4rem);
+  border-radius: 1.5rem;
+  overflow: hidden;
+  background: #111319;
+}
+
+.auctionHeroImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.78) brightness(0.55);
+}
+
+.auctionHeroWash {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(9, 11, 17, 0.08) 0%, rgba(9, 11, 17, 0.42) 48%, rgba(9, 11, 17, 0.94) 100%),
+    linear-gradient(90deg, rgba(9, 11, 17, 0.82) 0%, rgba(9, 11, 17, 0.12) 50%, rgba(9, 11, 17, 0.82) 100%);
+}
+
+.auctionHeroCopy {
+  position: absolute;
+  left: 1.4rem;
+  right: 1.4rem;
+  bottom: 1.4rem;
+  z-index: 1;
+}
+
+.auctionHeroEyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--onb-accent);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+.auctionHeroTitle {
+  margin: 0;
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: clamp(2.2rem, 5vw, 4.5rem);
+  line-height: 0.96;
+  max-width: 8ch;
+}
+
+.auctionHeroText {
+  max-width: 30rem;
+  color: var(--onb-muted);
+  line-height: 1.65;
+}
+
+.auctionSidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auctionActions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.auctionTopups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.auctionLog {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.auctionLogEntry {
+  padding: 0.8rem 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid var(--onb-line);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.auctionParticipants {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+}
+
+.participantRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.85rem 0.95rem;
+  border-radius: 1rem;
+  border: 1px solid var(--onb-line);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.participantLead {
+  border-color: rgba(243, 199, 141, 0.62);
+  background: rgba(243, 199, 141, 0.1);
+}
+
+.participantName {
+  display: block;
+  font-weight: 700;
+}
+
+.participantMeta {
+  display: block;
+  color: var(--onb-muted);
+  font-size: 0.82rem;
+}
+
+.adminRow {
+  display: flex;
+  gap: 0.7rem;
+  margin-top: 0.8rem;
+}
+
+.amountInput {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 999px;
+  border: 1px solid var(--onb-line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--onb-ink);
+  padding: 0 1rem;
+  font: inherit;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.78rem;
+  border-radius: 999px;
+  border: 1px solid var(--onb-line);
+  color: var(--onb-muted);
+  font-size: 0.82rem;
+}
+
+.statusOpen {
+  color: #fdf0da;
+  border-color: rgba(243, 199, 141, 0.72);
+  background: rgba(243, 199, 141, 0.12);
+}
+
+.statusClosed {
+  color: #ffd1b8;
+  border-color: rgba(255, 151, 111, 0.54);
+  background: rgba(255, 151, 111, 0.1);
+}
+
+.subtle {
+  color: var(--onb-muted);
+}
+
+@media (max-width: 980px) {
+  .briefingContent,
+  .auctionShell {
+    grid-template-columns: 1fr;
+  }
+
+  .tongRail {
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 720px) {
+  .briefingContent,
+  .shell,
+  .auctionShell {
+    padding: 1rem;
+  }
+
+  .panoramaPanel,
+  .auctionActions,
+  .rewardStrip,
+  .auctionStats {
+    grid-template-columns: 1fr;
+  }
+
+  .stageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .auctionHero {
+    min-height: 62dvh;
+  }
+
+  .auctionActions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
