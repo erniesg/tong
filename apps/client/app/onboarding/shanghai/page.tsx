@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getWebtoonFixture } from '@/lib/content/shanghai/fixtures';
 import { WebtoonStrip, type WebtoonTheme } from '@/components/scene/WebtoonStrip';
 import { WebtoonPurchaseSheet } from '@/components/scene/WebtoonPurchaseSheet';
-import { dispatch } from '@/lib/store/game-store';
+import { dispatch, useGameState } from '@/lib/store/game-store';
 import { useWebtoonUnlocks } from '@/lib/hooks/useWebtoonUnlocks';
 
 const FIXTURE_ID = 'shanghai-h1';
@@ -14,6 +14,7 @@ const CITY_ID = 'shanghai';
 const LOCATION_ID = 'dumpling_shop';
 const AYI_ID = 'fangayi';
 const ONBOARDING_SCENE_ID = 'shanghai:h1';
+const ONBOARDING_ENTRY_KEY = 'tong:shanghai:onboarding-entry';
 
 // Mastery items surfaced by the onboarding scene. Mirrors what the H1 fixture
 // resolution spec would apply in the dynamic path — replicated here so the
@@ -29,11 +30,18 @@ const MASTERY_ITEMS: { id: string; category: 'vocabulary' | 'grammar' }[] = [
 function ShanghaiOnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const gameState = useGameState();
+  const persistedStatus = gameState.onboardingStatus[ONBOARDING_SCENE_ID];
   const entry = useMemo(() => getWebtoonFixture(FIXTURE_ID), []);
-  const completedRef = useRef(false);
-  const [completed, setCompleted] = useState(false);
+  const completedRef = useRef(persistedStatus === 'completed');
+  const [completed, setCompleted] = useState(persistedStatus === 'completed');
   const [theme, setTheme] = useState<WebtoonTheme>('warm');
   const [showHelp, setShowHelp] = useState(false);
+  const queryEntry = searchParams.get('entry');
+  const [entryIntent, setEntryIntent] = useState<'cover' | 'panorama'>('cover');
+  const mapReturnHref = entryIntent === 'panorama'
+    ? '/game?phase=city_map&entry=panorama'
+    : '/game?phase=city_map';
   const {
     entitlement,
     pendingUnlock,
@@ -63,12 +71,29 @@ function ShanghaiOnboardingContent() {
     dispatch({ type: 'ADD_XP', amount: 40 });
   }, []);
 
+  useEffect(() => {
+    if (persistedStatus === 'completed') {
+      completedRef.current = true;
+      setCompleted(true);
+    }
+  }, [persistedStatus]);
+
+  useEffect(() => {
+    if (queryEntry === 'panorama' || queryEntry === 'cover') {
+      setEntryIntent(queryEntry);
+      localStorage.setItem(ONBOARDING_ENTRY_KEY, queryEntry);
+      return;
+    }
+    setEntryIntent('cover');
+    localStorage.removeItem(ONBOARDING_ENTRY_KEY);
+  }, [queryEntry]);
+
   const handleLeave = useCallback(() => {
     if (!completedRef.current) {
       dispatch({ type: 'SET_ONBOARDING_STATUS', sceneId: ONBOARDING_SCENE_ID, status: 'dismissed' });
     }
-    router.push('/game?phase=city_map');
-  }, [router]);
+    router.push(mapReturnHref);
+  }, [mapReturnHref, router]);
 
   if (!entry) {
     return (
@@ -201,7 +226,7 @@ function ShanghaiOnboardingContent() {
           <span style={{ opacity: 0.75 }}>+40 XP · 方阿姨 +3 · 5 vocab first-contact.</span>
           <button
             type="button"
-            onClick={() => router.push('/game?phase=city_map')}
+            onClick={() => router.push(mapReturnHref)}
             style={{
               background: '#f4d2ac',
               color: '#0d0d1a',
