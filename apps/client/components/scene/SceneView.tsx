@@ -170,7 +170,7 @@ export function SceneView({
         name={npcName}
         nameColor={npcColor}
         position="center"
-        active={true}
+        active={!currentWebtoon}
       />
 
       {/* Layer 3: Tong whisper */}
@@ -191,7 +191,7 @@ export function SceneView({
       )}
 
       {currentCreditGate && (
-        <div className="credit-gate-overlay">
+        <div className="credit-gate-overlay" role="dialog" aria-label="Cliffhanger unlock gate">
           <div className="credit-gate-card" onClick={(event) => event.stopPropagation()}>
             <p className="credit-gate-kicker">Cliffhanger Unlock</p>
             <h2 className="credit-gate-title">{currentCreditGate.cost} SP to hear the rest</h2>
