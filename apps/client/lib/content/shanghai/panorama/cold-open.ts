@@ -1,4 +1,4 @@
-import { runtimeAssetUrl } from '@/lib/runtime-assets';
+import { getShanghaiH1PanelAssetUrl } from '../h1-assets';
 import type { ShanghaiCharacterId } from '../characters';
 
 /**
@@ -52,7 +52,7 @@ export interface ShanghaiPanoramaColdOpenConfig {
 
 // Temporary media assumption (explicit): final Shanghai wide onboarding clip
 // is not checked into this repo yet, so we reuse a repo-visible 16:9 still.
-const TEMP_WIDE_MEDIA = runtimeAssetUrl('/assets/webtoon/shanghai/h1/0.png');
+const TEMP_WIDE_MEDIA = getShanghaiH1PanelAssetUrl(0);
 
 export const SHANGHAI_PANORAMA_COLD_OPEN: ShanghaiPanoramaColdOpenConfig = {
   id: 'shanghai-panorama-cold-open-v1',
@@ -63,7 +63,7 @@ export const SHANGHAI_PANORAMA_COLD_OPEN: ShanghaiPanoramaColdOpenConfig = {
     posterUrl: TEMP_WIDE_MEDIA,
     isTemporaryMedia: true,
     mediaAssumptionNote:
-      'Using /assets/webtoon/shanghai/h1/0.png as a temporary stand-in until the final wide onboarding clip lands in-repo.',
+      'Using the tracked Shanghai H1 establishing panel as a temporary stand-in until the final wide onboarding clip lands in-repo.',
   },
   hotspots: [
     {

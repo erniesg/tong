@@ -2,12 +2,13 @@
 
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
+import { runtimeAssetUrl } from '@/lib/runtime-assets';
 
 type HeroVideoSource = 'static' | 'hevc' | 'webm';
 
-const STATIC_FALLBACK = '/assets/characters/tong/tong_neutral.png';
-const HEVC_SOURCE = '/assets/tong_intro_alpha.mov';
-const WEBM_SOURCE = '/assets/tong_intro.webm';
+const STATIC_FALLBACK = runtimeAssetUrl('character.tong.expression.neutral');
+const HEVC_SOURCE = runtimeAssetUrl('app.tong.video.transparent.hevc');
+const WEBM_SOURCE = runtimeAssetUrl('app.tong.video.transparent');
 
 function isSafariFamily(ua: string) {
   return /Safari/i.test(ua) && !/(Chrome|CriOS|Edg|EdgiOS|Firefox|FxiOS|OPR|OPiOS|SamsungBrowser)/i.test(ua);

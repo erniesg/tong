@@ -6,6 +6,7 @@ import {
   type HangoutEvent,
 } from './fixture-runtime';
 import type { SceneFixture } from './fixture-types';
+import { getShanghaiH1PanelAssetUrl } from '../content/shanghai/h1-assets';
 
 function buildFixture(overrides: Partial<SceneFixture> = {}): SceneFixture {
   return {
@@ -212,7 +213,7 @@ test('cliffhanger webtoon emits show_webtoon with all panels', async () => {
         panels: [
           {
             id: 'p1',
-            imageUrl: '/assets/webtoon/shanghai/h1/p1.png',
+            imageUrl: getShanghaiH1PanelAssetUrl(1),
             widthType: 'full-width',
             heightClass: 'tall',
             aspectRatio: '2:3',
@@ -222,7 +223,7 @@ test('cliffhanger webtoon emits show_webtoon with all panels', async () => {
           },
           {
             id: 'p2',
-            imageUrl: '/assets/webtoon/shanghai/h1/p2.png',
+            imageUrl: getShanghaiH1PanelAssetUrl(2),
             widthType: 'full-width',
             heightClass: 'standard',
             aspectRatio: '1:1',
@@ -232,7 +233,7 @@ test('cliffhanger webtoon emits show_webtoon with all panels', async () => {
           },
           {
             id: 'p3',
-            imageUrl: '/assets/webtoon/shanghai/h1/p3.png',
+            imageUrl: getShanghaiH1PanelAssetUrl(3),
             widthType: 'full-bleed',
             heightClass: 'tall',
             aspectRatio: '4:7',
@@ -276,7 +277,7 @@ test('credit gate pauses until an external resolution arrives', async () => {
         panels: [
           {
             id: 'p1',
-            imageUrl: '/assets/webtoon/shanghai/h1/p1.png',
+            imageUrl: getShanghaiH1PanelAssetUrl(1),
             widthType: 'full-width',
             heightClass: 'tall',
             aspectRatio: '2:3',

@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { UILangProvider } from '@/lib/i18n/UILangContext';
 import { SceneView } from '@/components/scene/SceneView';
+import { runtimeAssetUrl } from '@/lib/runtime-assets';
+import { getShanghaiH1PanelAssetUrl } from '@/lib/content/shanghai/h1-assets';
 
 const DEMO_ACCESS_TOKEN = 'TONG-DEMO-ACCESS';
-const COVER_TEST_VIDEO = '/assets/cinematics/jin/intro_1.mp4';
-const PANORAMA_STANDIN = '/assets/webtoon/shanghai/h1/0.png';
+const COVER_TEST_VIDEO = runtimeAssetUrl('cinematic.jin.intro.1');
+const PANORAMA_STANDIN = getShanghaiH1PanelAssetUrl(0);
 
 export default function BackstagePanoramaRuntimePage() {
   const searchParams = useSearchParams();

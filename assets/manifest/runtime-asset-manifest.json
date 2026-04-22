@@ -286,6 +286,14 @@
       "uri": "/assets/characters/haeun/scene.png"
     },
     {
+      "key": "character.haeun.idle.loop",
+      "type": "video",
+      "usage": "npc-idle-loop",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/characters/haeun/haeun_idle_loop.mp4"
+    },
+    {
       "key": "character.jin.portrait.default",
       "type": "image",
       "usage": "dialogue-avatar",
@@ -436,6 +444,70 @@
       "source": "generated-placeholder",
       "status": "placeholder",
       "uri": "/assets/cinematics/jin/exit_1.mp4"
+    },
+    {
+      "key": "story.shanghai.h1.panel-0",
+      "type": "image",
+      "usage": "webtoon-panel",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/webtoon/shanghai/h1/0.png"
+    },
+    {
+      "key": "story.shanghai.h1.panel-1",
+      "type": "image",
+      "usage": "webtoon-panel",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/webtoon/shanghai/h1/1.png"
+    },
+    {
+      "key": "story.shanghai.h1.panel-2",
+      "type": "image",
+      "usage": "webtoon-panel",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/webtoon/shanghai/h1/2.png"
+    },
+    {
+      "key": "story.shanghai.h1.panel-3",
+      "type": "image",
+      "usage": "webtoon-panel",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/webtoon/shanghai/h1/3.png"
+    },
+    {
+      "key": "story.shanghai.h1.panel-4",
+      "type": "image",
+      "usage": "webtoon-panel",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/webtoon/shanghai/h1/4.png"
+    },
+    {
+      "key": "story.shanghai.h1.panel-5",
+      "type": "image",
+      "usage": "webtoon-panel",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/webtoon/shanghai/h1/5.png"
+    },
+    {
+      "key": "story.shanghai.h1.panel-6",
+      "type": "image",
+      "usage": "webtoon-panel",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/webtoon/shanghai/h1/6.png"
+    },
+    {
+      "key": "story.shanghai.h1.placeholder",
+      "type": "image",
+      "usage": "webtoon-placeholder",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/webtoon/shanghai/h1/placeholder.svg"
     },
     {
       "key": "reward.shanghai.video-call.placeholder.v1",

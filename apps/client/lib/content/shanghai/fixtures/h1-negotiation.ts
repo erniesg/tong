@@ -1,9 +1,10 @@
 import type { SceneFixture } from '@/lib/hangout/fixture-types';
+import { getShanghaiH1PanelAssetUrl } from '../h1-assets';
 
 const WEBTOON_PANELS = [
   {
     id: 'p1',
-    imageUrl: '/assets/webtoon/shanghai/h1/p1.png',
+    imageUrl: getShanghaiH1PanelAssetUrl(1),
     widthType: 'full-width',
     heightClass: 'tall',
     aspectRatio: '2:3',
@@ -13,7 +14,7 @@ const WEBTOON_PANELS = [
   },
   {
     id: 'p2',
-    imageUrl: '/assets/webtoon/shanghai/h1/p2.png',
+    imageUrl: getShanghaiH1PanelAssetUrl(2),
     widthType: 'full-width',
     heightClass: 'standard',
     aspectRatio: '1:1',
@@ -23,7 +24,7 @@ const WEBTOON_PANELS = [
   },
   {
     id: 'p3',
-    imageUrl: '/assets/webtoon/shanghai/h1/p3.png',
+    imageUrl: getShanghaiH1PanelAssetUrl(3),
     widthType: 'full-bleed',
     heightClass: 'tall',
     aspectRatio: '4:7',

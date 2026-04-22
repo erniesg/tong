@@ -283,3 +283,11 @@ Template:
   - Reuse the existing scripted messaging renderer from #124 for a new deterministic 9:16 mock capture route.
   - Extend `ScriptedMessagingPlayer` controls/additive API (no second renderer) so mock-ui can drive play/pause/restart/jump deterministically.
   - Keep global style churn minimal and document route/query fixtures in demo run-of-show.
+
+## 2026-04-22 (Shanghai integration portable-smoke intent)
+- Date: 2026-04-22
+- Branch/worktree: `codex/shanghai-portability-20260422-demo-smoke` (`/private/tmp/tong-shanghai-portability-20260422`)
+- Intent:
+  - Fix the fresh-worktree `npm run demo:smoke` portability failure on top of `origin/codex/shanghai-integration-20260422` without widening Shanghai product scope.
+  - Make the already-promised intro/Tong/Haeun media repo-portable in this disposable branch and finish the remaining runtime-asset resolution in the landing, backstage, and Shanghai fixture surfaces.
+  - Keep history disposable because the current local time is still before `6:00 PM SGT` on April 22, 2026.

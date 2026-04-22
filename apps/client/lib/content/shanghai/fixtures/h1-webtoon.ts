@@ -1,9 +1,13 @@
 import type { WebtoonPanel, WebtoonSpec } from '@/lib/hangout/fixture-types';
+import {
+  getShanghaiH1PanelAssetUrl,
+  getShanghaiH1PlaceholderAssetUrl,
+} from '../h1-assets';
 
-const PLACEHOLDER_ASSET = '/assets/webtoon/shanghai/h1/placeholder.svg';
+const PLACEHOLDER_ASSET = getShanghaiH1PlaceholderAssetUrl();
 const ASSET = (n: number) => (
   n <= 6
-    ? `/assets/webtoon/shanghai/h1/${n}.png`
+    ? getShanghaiH1PanelAssetUrl(n)
     : PLACEHOLDER_ASSET
 );
 
