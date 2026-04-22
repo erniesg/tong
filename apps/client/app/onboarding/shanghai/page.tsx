@@ -84,10 +84,8 @@ function ShanghaiOnboardingContent() {
       localStorage.setItem(ONBOARDING_ENTRY_KEY, queryEntry);
       return;
     }
-    const saved = localStorage.getItem(ONBOARDING_ENTRY_KEY);
-    if (saved === 'panorama' || saved === 'cover') {
-      setEntryIntent(saved);
-    }
+    setEntryIntent('cover');
+    localStorage.removeItem(ONBOARDING_ENTRY_KEY);
   }, [queryEntry]);
 
   const handleLeave = useCallback(() => {
