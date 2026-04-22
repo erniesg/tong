@@ -1,0 +1,27 @@
+{
+  "userId": "demo-user-1",
+  "snapshotAtIso": "2026-04-21T09:20:00.000Z",
+  "flags": [
+    {
+      "unlockKey": "unlock.shanghai.texting_mission",
+      "productKey": "unlock.shanghai.texting_mission",
+      "status": "active",
+      "source": "mission_reward",
+      "entitlementId": "ent_shanghai_texting_pack",
+      "updatedAtIso": "2026-04-18T02:00:00.000Z"
+    },
+    {
+      "unlockKey": "unlock.shanghai.secret.night_market_rooftop",
+      "productKey": "unlock.shanghai.secret.night_market_rooftop",
+      "status": "active",
+      "source": "invitation_token",
+      "entitlementId": "ent_unlock_shanghai_secret_night_market_rooftop",
+      "updatedAtIso": "2026-04-21T09:18:00.000Z",
+      "state": {
+        "revealState": "token_redeemed",
+        "mapVisibility": "visible",
+        "entryAccess": "allowed"
+      }
+    }
+  ]
+}
