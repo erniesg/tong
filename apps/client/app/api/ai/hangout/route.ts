@@ -140,6 +140,7 @@ const hangoutTools = {
   show_webtoon: tool({
     description: 'Display a multi-panel webtoon sequence. Use for cliffhangers, memory reveals, or eavesdrop moments that need visual framing.',
     parameters: z.object({
+      sceneType: z.literal('show_webtoon').optional().describe('Scene type marker for renderer routing.'),
       panels: z.array(z.object({
         id: z.string(),
         imageUrl: z.string(),
@@ -152,6 +153,7 @@ const hangoutTools = {
           color: z.string(),
         }),
         isThumbStop: z.boolean().optional(),
+        bubbleRevealDelayMs: z.number().int().min(0).max(8000).optional(),
         bubble: z.object({
           zh: z.string(),
           py: z.string().optional(),

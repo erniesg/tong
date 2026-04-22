@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { WebtoonBubble as WebtoonBubbleSpec } from '@/lib/hangout/fixture-types';
+import type { WebtoonBubble as WebtoonBubbleSpec } from '@/lib/types/hangout';
 
 interface WebtoonBubbleProps extends WebtoonBubbleSpec {
   visible?: boolean;

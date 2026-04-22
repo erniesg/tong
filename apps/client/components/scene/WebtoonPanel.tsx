@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { WebtoonPanel as WebtoonPanelSpec } from '@/lib/hangout/fixture-types';
+import type { WebtoonPanel as WebtoonPanelSpec } from '@/lib/types/hangout';
 import { WebtoonBubble } from './WebtoonBubble';
 
 interface WebtoonPanelProps {
@@ -18,6 +18,8 @@ const HEIGHT_FACTORS: Record<WebtoonPanelSpec['heightClass'], number> = {
 };
 
 const AUTO_ADVANCE_MS = 1800;
+const STANDARD_BUBBLE_DELAY_MS = 180;
+const THUMB_STOP_BUBBLE_DELAY_MS = 860;
 const FADE_TRANSITION_MS = 220;
 const DARKEN_TRANSITION_MS = 800;
 const DARKEN_HOLD_MS = 400;
@@ -90,7 +92,9 @@ export function WebtoonPanel({
     setBubbleVisible(false);
 
     if (currentPanel?.bubble) {
-      schedule(() => setBubbleVisible(true), 200);
+      const revealDelay = currentPanel.bubbleRevealDelayMs
+        ?? (currentPanel.isThumbStop ? THUMB_STOP_BUBBLE_DELAY_MS : STANDARD_BUBBLE_DELAY_MS);
+      schedule(() => setBubbleVisible(true), revealDelay);
     }
 
     if (autoAdvance) {
@@ -113,7 +117,8 @@ export function WebtoonPanel({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, panels.length]);
 
   useEffect(() => clearTimers, []);
 
@@ -133,6 +138,7 @@ export function WebtoonPanel({
       className="webtoon-overlay"
       role="region"
       aria-label="Webtoon sequence"
+      tabIndex={0}
       onClick={advance}
     >
       <div className={`webtoon-transition${transitionMode ? ` webtoon-transition--${transitionMode}` : ''}`} aria-hidden="true" />
@@ -162,7 +168,7 @@ export function WebtoonPanel({
           </figure>
         </div>
 
-        <div className="webtoon-panel-progress" aria-hidden="true">
+        <div className="webtoon-panel-progress" aria-label={`Panel ${currentIndex + 1} of ${panels.length}`}>
           {panels.map((panel, index) => (
             <span
               key={panel.id}
@@ -172,7 +178,7 @@ export function WebtoonPanel({
         </div>
 
         {!autoAdvance ? (
-          <div className="webtoon-panel-hint">
+          <div className="webtoon-panel-hint" aria-live="polite">
             Tap anywhere, or press Enter, Space, or <kbd>&rarr;</kbd>.
           </div>
         ) : null}
