@@ -1882,6 +1882,91 @@ button.nav-link:hover {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
+.shanghai-prelude-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.shanghai-prelude-viewport.is-unlocked {
+  cursor: grab;
+}
+
+.shanghai-prelude-viewport.is-unlocked.is-dragging {
+  cursor: grabbing;
+}
+
+.shanghai-prelude-panorama {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  transition: transform 220ms ease-out;
+}
+
+.shanghai-prelude-viewport.is-dragging .shanghai-prelude-panorama {
+  transition: none;
+}
+
+.shanghai-prelude-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center bottom;
+  user-select: none;
+  pointer-events: none;
+}
+
+.shanghai-prelude-guided-copy {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  z-index: 4;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: var(--game-text-sm);
+  line-height: 1.4;
+  color: #f6f3ed;
+  background: rgba(9, 13, 24, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+.shanghai-prelude-pair-tap {
+  position: absolute;
+  left: 30%;
+  top: 58%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 244, 228, 0.76);
+  background: rgba(10, 16, 28, 0.84);
+  color: #fff6ea;
+  box-shadow: 0 0 0 1px rgba(255, 210, 162, 0.22), 0 8px 20px rgba(0, 0, 0, 0.4);
+  animation: shanghai-pair-pulse 1.5s ease-in-out infinite;
+}
+
+.shanghai-prelude-pair-label {
+  font-size: var(--game-text-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.shanghai-prelude-pair-sub {
+  font-size: var(--game-text-xs);
+  color: rgba(255, 244, 228, 0.92);
+}
+
+@keyframes shanghai-pair-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.04); }
+}
+
 .dialogue-continue {
   margin-top: 0.5rem;
   text-align: center;

@@ -12,6 +12,7 @@ import { TongOverlay } from './TongOverlay';
 import { CinematicOverlay } from './CinematicOverlay';
 import { ExerciseRenderer } from '../exercises/ExerciseRenderer';
 import { WebtoonPanel } from './WebtoonPanel';
+import { ShanghaiPreludeViewport } from './ShanghaiPreludeViewport';
 
 interface SceneViewProps {
   backgroundUrl: string;
@@ -44,6 +45,12 @@ interface SceneViewProps {
   onDismissTong?: () => void;
   onWebtoonComplete?: () => void;
   onCreditGateDecision?: (decision: 'spend' | 'skip') => void;
+  shanghaiPrelude?: {
+    enabled: boolean;
+    panUnlocked: boolean;
+    pairTapped: boolean;
+    onPairTap: () => void;
+  };
   // Extended props used by GamePageClient VN mode
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
@@ -90,6 +97,7 @@ export function SceneView({
   onDismissTong = () => {},
   onWebtoonComplete = () => {},
   onCreditGateDecision = () => {},
+  shanghaiPrelude,
 }: SceneViewProps) {
   const [exerciseDone, setExerciseDone] = useState(false);
   const [exerciseHidden, setExerciseHidden] = useState(false);
@@ -148,7 +156,16 @@ export function SceneView({
       {hudContent}
 
       {/* Layer 1: Background */}
-      <Background imageUrl={backgroundUrl} ambientDescription={ambientDescription} fade={backdropTransition} />
+      {shanghaiPrelude?.enabled ? (
+        <ShanghaiPreludeViewport
+          imageUrl={backgroundUrl}
+          panUnlocked={shanghaiPrelude.panUnlocked}
+          pairTapped={shanghaiPrelude.pairTapped}
+          onPairTap={shanghaiPrelude.onPairTap}
+        />
+      ) : (
+        <Background imageUrl={backgroundUrl} ambientDescription={ambientDescription} fade={backdropTransition} />
+      )}
 
       {/* Cinematic overlay (above everything when playing) */}
       {cinematic && (
