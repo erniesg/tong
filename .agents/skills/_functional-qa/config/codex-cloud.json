@@ -1,5 +1,24 @@
 {
   "schema_version": "1",
+  "default_provider": "codex",
+  "providers": {
+    "codex": {
+      "label": "Codex",
+      "slug": "codex",
+      "environment_name": "tong",
+      "environment_label": "Codex environment",
+      "delivery_mode": "direct-task-pr",
+      "queue_root": "codex-cloud-queue"
+    },
+    "claude": {
+      "label": "Claude",
+      "slug": "claude",
+      "environment_name": "tong",
+      "environment_label": "Claude environment",
+      "delivery_mode": "direct-task-pr",
+      "queue_root": "remote-agent-queue"
+    }
+  },
   "docs": {
     "cloud_environments": "https://developers.openai.com/codex/cloud/environments",
     "github_integration": "https://developers.openai.com/codex/integrations/github",

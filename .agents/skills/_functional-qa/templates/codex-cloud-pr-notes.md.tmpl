@@ -27,7 +27,7 @@
 
 ## QA Publish Request
 
-Include a machine-readable block in the PR body so the trusted GitHub Actions publish workflow can resolve issue metadata without shell access to Codex-local notes.
+Include a machine-readable block in the PR body so the trusted GitHub Actions publish workflow can resolve issue metadata without shell access to {{agent_label}}-local notes.
 
 ```json
 {
@@ -45,7 +45,7 @@ Maintainers can then trigger the trusted publish step with either:
 - a PR comment: `/qa-publish`
 - the `Trusted QA Publish` workflow with `pr_number`
 
-If the run bundle will not be committed into the branch, set `qa_recipe` to a supported CI capture recipe so GitHub Actions can regenerate evidence from PR metadata instead of depending on a Codex-local `artifacts/qa-runs/...` bundle.
+If the run bundle will not be committed into the branch, set `qa_recipe` to a supported CI capture recipe so GitHub Actions can regenerate evidence from PR metadata instead of depending on an agent-local `artifacts/qa-runs/...` bundle.
 
 ## Readiness Note
 
