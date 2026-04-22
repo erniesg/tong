@@ -6,6 +6,9 @@ import gameStartFixture from '../../../packages/contracts/fixtures/game.start-or
 import objectivesNextFixture from '../../../packages/contracts/fixtures/objectives.next.sample.json';
 import learnSessionsFixture from '../../../packages/contracts/fixtures/learn.sessions.sample.json';
 import mediaProfileFixture from '../../../packages/contracts/fixtures/player.media-profile.sample.json';
+import commerceEntitlementsFixture from '../../../packages/contracts/fixtures/commerce.entitlements.sample.json';
+import commerceUnlockGrantFixture from '../../../packages/contracts/fixtures/commerce.unlock-grant.sample.json';
+import commercePurchaseEventFixture from '../../../packages/contracts/fixtures/commerce.purchase-event.sample.json';
 import objectiveIdentityMap from '../../../packages/contracts/objective-identity-map.sample.json';
 import mockMediaWindow from '../../server/data/mock-media-window.json';
 
@@ -431,6 +434,9 @@ const FIXTURES = {
   objectivesNext: objectivesNextFixture,
   learnSessions: learnSessionsFixture,
   mediaProfile: mediaProfileFixture,
+  commerceEntitlements: commerceEntitlementsFixture,
+  commerceUnlockGrant: commerceUnlockGrantFixture,
+  commercePurchaseEvent: commercePurchaseEventFixture,
 };
 
 const objectiveIdentityByCanonical = new Map<string, (typeof objectiveIdentityMap.objectives)[number]>();
@@ -1799,6 +1805,69 @@ async function handleRequest(request: Request): Promise<Response> {
           spotify: result.mediaProfile.sourceBreakdown.spotify.itemsConsumed,
         },
         topTerms: result.frequency.items.slice(0, 10),
+      });
+    }
+
+    if (pathname === '/api/v1/commerce/entitlements' && request.method === 'GET') {
+      const userId = getUserIdFromSearch(url.searchParams);
+      const fixture = cloneJson(FIXTURES.commerceEntitlements as Record<string, unknown>);
+      return jsonResponse(200, { ...fixture, userId });
+    }
+
+    if (pathname === '/api/v1/commerce/unlocks/grant' && request.method === 'POST') {
+      const body = await readJsonBody(request);
+      const fixture = cloneJson(FIXTURES.commerceUnlockGrant as Record<string, unknown>);
+      const userId =
+        typeof body.userId === 'string' && body.userId.trim().length > 0 ? body.userId.trim() : DEFAULT_USER_ID;
+      return jsonResponse(200, {
+        ...fixture,
+        userId,
+        unlock:
+          body.unlock && typeof body.unlock === 'object'
+            ? body.unlock
+            : (fixture.unlock as Record<string, unknown> | undefined),
+        reason:
+          typeof body.reason === 'string' && body.reason.trim().length > 0
+            ? body.reason
+            : (fixture.reason as string | undefined),
+        idempotencyKey:
+          typeof body.idempotencyKey === 'string' && body.idempotencyKey.trim().length > 0
+            ? body.idempotencyKey
+            : (fixture.idempotencyKey as string | undefined),
+      });
+    }
+
+    if (pathname === '/api/v1/commerce/purchase-events' && request.method === 'POST') {
+      const body = await readJsonBody(request);
+      const fixture = cloneJson(FIXTURES.commercePurchaseEvent as Record<string, unknown>);
+      const providerEventId =
+        typeof body.providerEventId === 'string' && body.providerEventId.trim().length > 0
+          ? body.providerEventId.trim()
+          : (fixture.providerEventId as string);
+      return jsonResponse(200, {
+        ...fixture,
+        provider:
+          typeof body.provider === 'string' && body.provider.trim().length > 0
+            ? body.provider.trim()
+            : (fixture.provider as string),
+        providerEventId,
+        eventType:
+          typeof body.eventType === 'string' && body.eventType.trim().length > 0
+            ? body.eventType.trim()
+            : (fixture.eventType as string),
+        occurredAtIso:
+          typeof body.occurredAtIso === 'string' && body.occurredAtIso.trim().length > 0
+            ? body.occurredAtIso
+            : (fixture.occurredAtIso as string),
+        userId:
+          typeof body.userId === 'string' && body.userId.trim().length > 0
+            ? body.userId.trim()
+            : (fixture.userId as string),
+        purchase:
+          body.purchase && typeof body.purchase === 'object'
+            ? body.purchase
+            : (fixture.purchase as Record<string, unknown> | undefined),
+        idempotencyKey: `stripe:${providerEventId}`,
       });
     }
 

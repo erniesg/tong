@@ -1,0 +1,23 @@
+{
+  "userId": "demo-user-1",
+  "snapshotAtIso": "2026-04-21T10:00:00.000Z",
+  "entitlements": {
+    "locations": [
+      {
+        "city": "shanghai",
+        "location": "practice_studio",
+        "tier": "advanced",
+        "source": "mission_unlock",
+        "grantedAtIso": "2026-04-20T12:30:00.000Z"
+      }
+    ],
+    "rewards": [
+      {
+        "rewardId": "polaroid_memory_shanghai_call_001",
+        "type": "polaroid_memory",
+        "source": "shanghai_advanced_texting_reward",
+        "grantedAtIso": "2026-04-20T12:35:00.000Z"
+      }
+    ]
+  }
+}

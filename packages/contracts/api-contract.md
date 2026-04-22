@@ -842,3 +842,114 @@ Response:
   "openAiApiKeyConfigured": false
 }
 ```
+
+## GET `/api/v1/commerce/entitlements`
+Query:
+```json
+{ "userId": "demo-user-1" }
+```
+
+Response:
+```json
+{
+  "userId": "demo-user-1",
+  "snapshotAtIso": "2026-04-21T10:00:00.000Z",
+  "entitlements": {
+    "locations": [
+      {
+        "city": "shanghai",
+        "location": "practice_studio",
+        "tier": "advanced",
+        "source": "mission_unlock",
+        "grantedAtIso": "2026-04-20T12:30:00.000Z"
+      }
+    ],
+    "rewards": [
+      {
+        "rewardId": "polaroid_memory_shanghai_call_001",
+        "type": "polaroid_memory",
+        "source": "shanghai_advanced_texting_reward",
+        "grantedAtIso": "2026-04-20T12:35:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+## POST `/api/v1/commerce/unlocks/grant`
+Request:
+```json
+{
+  "userId": "demo-user-1",
+  "unlock": {
+    "kind": "location_mode",
+    "city": "shanghai",
+    "location": "practice_studio",
+    "mode": "hangout",
+    "tier": "advanced"
+  },
+  "reason": "mission_assessment_passed",
+  "idempotencyKey": "demo-grant-shanghai-practice-studio-advanced"
+}
+```
+
+Response:
+```json
+{
+  "grantId": "grant_demo_001",
+  "userId": "demo-user-1",
+  "grantedAtIso": "2026-04-21T10:05:00.000Z",
+  "unlock": {
+    "kind": "location_mode",
+    "city": "shanghai",
+    "location": "practice_studio",
+    "mode": "hangout",
+    "tier": "advanced"
+  },
+  "reason": "mission_assessment_passed",
+  "idempotencyKey": "demo-grant-shanghai-practice-studio-advanced"
+}
+```
+
+## POST `/api/v1/commerce/purchase-events`
+Request:
+```json
+{
+  "provider": "stripe",
+  "providerEventId": "evt_demo_purchase_001",
+  "eventType": "checkout.session.completed",
+  "occurredAtIso": "2026-04-21T10:12:00.000Z",
+  "userId": "demo-user-1",
+  "purchase": {
+    "productId": "unlock_shanghai_auction_pass",
+    "quantity": 1,
+    "currency": "usd",
+    "amount": 1200
+  }
+}
+```
+
+Response:
+```json
+{
+  "recordId": "purchase_evt_demo_001",
+  "provider": "stripe",
+  "providerEventId": "evt_demo_purchase_001",
+  "eventType": "checkout.session.completed",
+  "occurredAtIso": "2026-04-21T10:12:00.000Z",
+  "receivedAtIso": "2026-04-21T10:12:01.000Z",
+  "userId": "demo-user-1",
+  "purchase": {
+    "productId": "unlock_shanghai_auction_pass",
+    "quantity": 1,
+    "currency": "usd",
+    "amount": 1200
+  },
+  "status": "persisted",
+  "idempotencyKey": "stripe:evt_demo_purchase_001"
+}
+```
+
+Contract notes:
+- These are deterministic mock contracts for local demo work and future client integration.
+- The unlock grant and purchase event payloads intentionally include `idempotencyKey` to support future replay-safe Stripe webhook handling.

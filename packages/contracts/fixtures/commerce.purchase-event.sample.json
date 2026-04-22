@@ -1,0 +1,17 @@
+{
+  "recordId": "purchase_evt_demo_001",
+  "provider": "stripe",
+  "providerEventId": "evt_demo_purchase_001",
+  "eventType": "checkout.session.completed",
+  "occurredAtIso": "2026-04-21T10:12:00.000Z",
+  "receivedAtIso": "2026-04-21T10:12:01.000Z",
+  "userId": "demo-user-1",
+  "purchase": {
+    "productId": "unlock_shanghai_auction_pass",
+    "quantity": 1,
+    "currency": "usd",
+    "amount": 1200
+  },
+  "status": "persisted",
+  "idempotencyKey": "stripe:evt_demo_purchase_001"
+}
