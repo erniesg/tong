@@ -317,6 +317,10 @@ export default function GamePage() {
   const hangoutFixtureId = resolveHangoutFixtureId(searchParams);
   const routeFixtureMode = requestedMode === 'fixture' && !!hangoutFixtureId;
   const fixtureModeActive = Boolean(fixtureParam) || routeFixtureMode;
+  const isShanghaiH1OnboardingRoute = routeFixtureMode
+    && hangoutFixtureId === 'shanghai/h1-negotiation'
+    && searchParams.get('city') === 'shanghai'
+    && searchParams.get('scene') === 'h1';
   const hangoutApi = routeFixtureMode && hangoutFixtureId
     ? `/api/ai/hangout?mode=fixture&fixtureId=${encodeURIComponent(hangoutFixtureId)}`
     : '/api/ai/hangout';
@@ -468,6 +472,9 @@ export default function GamePage() {
   const [sceneReady, setSceneReady] = useState(false);
   const [continuePending, setContinuePending] = useState(false);
   const [fixtureSelectedPov, setFixtureSelectedPov] = useState<string | null>(null);
+  const [shanghaiPreludePanUnlocked, setShanghaiPreludePanUnlocked] = useState(false);
+  const [shanghaiPreludePendingUnlock, setShanghaiPreludePendingUnlock] = useState(false);
+  const [shanghaiPreludePairTapped, setShanghaiPreludePairTapped] = useState(false);
   const [sceneTurn, setSceneTurn] = useState<number>(1);
   const [hangoutCheckpointPhase, setHangoutCheckpointPhase] = useState<string | null>(null);
   const [hangoutResumeSource, setHangoutResumeSource] = useState<'checkpoint' | 'scenario_seed' | null>(null);
@@ -505,6 +512,14 @@ export default function GamePage() {
   const [chargePercent, setChargePercent] = useState(0);
   const [chargeNotifShown, setChargeNotifShown] = useState(false);
   const chargeNotifFiredRef = useRef(false);
+
+  useEffect(() => {
+    if (!isShanghaiH1OnboardingRoute) {
+      setShanghaiPreludePanUnlocked(false);
+      setShanghaiPreludePendingUnlock(false);
+      setShanghaiPreludePairTapped(false);
+    }
+  }, [isShanghaiH1OnboardingRoute]);
 
   // Time-based charge bar: 0→100% over random duration
   useEffect(() => {
@@ -1386,6 +1401,9 @@ export default function GamePage() {
         setCurrentMessage(null);
         setTongTip(null);
         setCurrentExercise(exercise);
+        if (isShanghaiH1OnboardingRoute && !shanghaiPreludePanUnlocked) {
+          setShanghaiPreludePendingUnlock(true);
+        }
         traceQA('tool_queue_show_exercise', { toolCallId: item.toolCallId, exerciseId: exercise.id, exerciseType: exercise.type });
         lastExerciseRef.current = exercise;
         sessionLogger.logExerciseShown(args.exerciseType, exercise.id, { objectiveId: args.objectiveId, hintItems: args.hintItems });
@@ -1533,7 +1551,7 @@ export default function GamePage() {
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
     traceQA('tool_queue_auto_advance', { toolName: item.toolName, remainingQueueLength: Math.max(toolQueue.length - 1, 0) });
-  }, [toolQueue, activeNpc, isIntroHangout, introAct]);
+  }, [toolQueue, activeNpc, isIntroHangout, introAct, isShanghaiH1OnboardingRoute, shanghaiPreludePanUnlocked]);
 
   /* ── Hangout handlers ───────────────────────────────────── */
 
@@ -1628,7 +1646,20 @@ export default function GamePage() {
 
     // Store result — overlay dismiss or auto-advance will pick it up
     exerciseResultRef.current = { exerciseId, correct };
-  }, [isIntroHangout, introExerciseCount, introAct]);
+    if (isShanghaiH1OnboardingRoute && shanghaiPreludePendingUnlock && !shanghaiPreludePanUnlocked) {
+      setShanghaiPreludePanUnlocked(true);
+      setShanghaiPreludePendingUnlock(false);
+    }
+  }, [isIntroHangout, introExerciseCount, introAct, isShanghaiH1OnboardingRoute, shanghaiPreludePendingUnlock, shanghaiPreludePanUnlocked]);
+
+  const handleShanghaiPreludePairTap = useCallback(() => {
+    if (shanghaiPreludePairTapped) return;
+    setShanghaiPreludePairTapped(true);
+    if (tongTip) {
+      setTongTip(null);
+    }
+    handleContinue();
+  }, [shanghaiPreludePairTapped, tongTip, handleContinue]);
 
   const advanceAfterExercise = useCallback(() => {
     const result = exerciseResultRef.current;
@@ -2543,6 +2574,12 @@ export default function GamePage() {
           onDismissTong={handleDismissTong}
           onWebtoonComplete={handleWebtoonComplete}
           onCreditGateDecision={handleCreditGateDecision}
+          shanghaiPrelude={{
+            enabled: isShanghaiH1OnboardingRoute && phase === 'hangout' && !currentWebtoon,
+            panUnlocked: shanghaiPreludePanUnlocked,
+            pairTapped: shanghaiPreludePairTapped,
+            onPairTap: handleShanghaiPreludePairTap,
+          }}
         />
         {/* Charge complete notification (auto-dismisses) */}
         {chargeNotifShown && (
