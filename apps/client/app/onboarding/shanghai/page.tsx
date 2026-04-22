@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getWebtoonFixture } from '@/lib/content/shanghai/fixtures';
 import { WebtoonStrip, type WebtoonTheme } from '@/components/scene/WebtoonStrip';
 import { WebtoonPurchaseSheet } from '@/components/scene/WebtoonPurchaseSheet';
-import { dispatch } from '@/lib/store/game-store';
+import { dispatch, useGameState } from '@/lib/store/game-store';
 import { useWebtoonUnlocks } from '@/lib/hooks/useWebtoonUnlocks';
 
 const FIXTURE_ID = 'shanghai-h1';
@@ -14,6 +14,42 @@ const CITY_ID = 'shanghai';
 const LOCATION_ID = 'dumpling_shop';
 const AYI_ID = 'fangayi';
 const ONBOARDING_SCENE_ID = 'shanghai:h1';
+const SHANGHAI_ONBOARDING_STATE_KEY = 'tong:onboarding:shanghai:h1';
+
+type ShanghaiEntryIntent = 'cover' | 'panorama';
+
+type ShanghaiOnboardingState = {
+  completed?: boolean;
+  completedAt?: string;
+  lastEntryIntent?: ShanghaiEntryIntent;
+};
+
+function getEntryIntent(value: string | null): ShanghaiEntryIntent | null {
+  if (value === 'panorama' || value === 'cover') return value;
+  return null;
+}
+
+function loadShanghaiOnboardingState(): ShanghaiOnboardingState {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(SHANGHAI_ONBOARDING_STATE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as ShanghaiOnboardingState;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistShanghaiOnboardingState(patch: ShanghaiOnboardingState): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const existing = loadShanghaiOnboardingState();
+    localStorage.setItem(SHANGHAI_ONBOARDING_STATE_KEY, JSON.stringify({ ...existing, ...patch }));
+  } catch {
+    // no-op when storage is unavailable
+  }
+}
 
 // Mastery items surfaced by the onboarding scene. Mirrors what the H1 fixture
 // resolution spec would apply in the dynamic path — replicated here so the
@@ -29,9 +65,12 @@ const MASTERY_ITEMS: { id: string; category: 'vocabulary' | 'grammar' }[] = [
 function ShanghaiOnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const gameState = useGameState();
   const entry = useMemo(() => getWebtoonFixture(FIXTURE_ID), []);
+  const isAlreadyCompleted = gameState.onboardingStatus[ONBOARDING_SCENE_ID] === 'completed';
+  const [entryIntent, setEntryIntent] = useState<ShanghaiEntryIntent>('cover');
   const completedRef = useRef(false);
-  const [completed, setCompleted] = useState(false);
+  const [completed, setCompleted] = useState(isAlreadyCompleted);
   const [theme, setTheme] = useState<WebtoonTheme>('warm');
   const [showHelp, setShowHelp] = useState(false);
   const {
@@ -44,6 +83,25 @@ function ShanghaiOnboardingContent() {
     spendSp,
     activateGamePass,
   } = useWebtoonUnlocks(FIXTURE_ID, searchParams);
+
+  useEffect(() => {
+    const parsedFromSearch = getEntryIntent(searchParams.get('entry'));
+    const persisted = loadShanghaiOnboardingState();
+    const resolvedIntent = parsedFromSearch ?? persisted.lastEntryIntent ?? 'cover';
+    setEntryIntent(resolvedIntent);
+    persistShanghaiOnboardingState({ lastEntryIntent: resolvedIntent });
+  }, [searchParams]);
+
+  useEffect(() => {
+    const persisted = loadShanghaiOnboardingState();
+    const persistedCompleted = persisted.completed === true;
+    const resolvedCompleted = isAlreadyCompleted || persistedCompleted;
+    completedRef.current = resolvedCompleted;
+    setCompleted(resolvedCompleted);
+    if (resolvedCompleted && !isAlreadyCompleted) {
+      dispatch({ type: 'SET_ONBOARDING_STATUS', sceneId: ONBOARDING_SCENE_ID, status: 'completed' });
+    }
+  }, [isAlreadyCompleted]);
 
   const onComplete = useCallback(() => {
     if (completedRef.current) return;
@@ -61,14 +119,16 @@ function ShanghaiOnboardingContent() {
     dispatch({ type: 'SET_ONBOARDING_STATUS', sceneId: ONBOARDING_SCENE_ID, status: 'completed' });
     // Small XP payout for completing onboarding.
     dispatch({ type: 'ADD_XP', amount: 40 });
-  }, []);
+    persistShanghaiOnboardingState({ completed: true, completedAt: new Date().toISOString(), lastEntryIntent: entryIntent });
+  }, [entryIntent]);
 
   const handleLeave = useCallback(() => {
     if (!completedRef.current) {
       dispatch({ type: 'SET_ONBOARDING_STATUS', sceneId: ONBOARDING_SCENE_ID, status: 'dismissed' });
     }
+    persistShanghaiOnboardingState({ lastEntryIntent: entryIntent });
     router.push('/game?phase=city_map');
-  }, [router]);
+  }, [entryIntent, router]);
 
   if (!entry) {
     return (
