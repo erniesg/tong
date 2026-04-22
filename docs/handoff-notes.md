@@ -317,3 +317,7 @@ Template:
   - For fresh-agent continuity, the Shanghai run notes now live in:
     - `artifacts/qa-runs/shanghai-disposable-worklog.md`
     - `artifacts/qa-runs/shanghai-next-agent-handoff.md`
+  - Next-agent scope was expanded to cover:
+    - fresh browser validation of canonical Shanghai H1 in the current integrated context
+    - a concrete remaining-gap inventory for Shanghai hangout + SP/payment readiness
+    - discovery / design / possible first-slice implementation of a live SP bidding feature for a special Shanghai event hangout
