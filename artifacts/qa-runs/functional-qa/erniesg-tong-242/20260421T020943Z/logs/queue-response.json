@@ -1,0 +1,173 @@
+{
+  "ok": true,
+  "count": 2,
+  "findings": [
+    {
+      "findingId": "finding_7abbd89b-d1ad-4e10-ad81-d3a1aa28e13d",
+      "fingerprint": "ptf_6022f5e1",
+      "sessionId": "verify-242-queue",
+      "analysisId": "analysis-242-verify",
+      "observedAtText": "00:24",
+      "observedAtMs": 24000,
+      "observedAtIso": null,
+      "category": "automation",
+      "severity": "medium",
+      "summary": "Protected workflow needs a maintainer decision.",
+      "description": "Protected workflow needs a maintainer decision.",
+      "suggestedFix": "Review the publish workflow behavior manually.",
+      "expectedBehavior": null,
+      "actualBehavior": null,
+      "artifactLinks": [
+        {
+          "href": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/analysis.json",
+          "label": "artifact",
+          "source": "analysis"
+        },
+        {
+          "href": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/recording.webm",
+          "label": "recording",
+          "source": "playtest-session"
+        },
+        {
+          "href": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/annotations.json",
+          "label": "annotations",
+          "source": "playtest-session"
+        }
+      ],
+      "inferredComponent": ".github/workflows/qa-publish.yml",
+      "routeState": {
+        "status": "human_review",
+        "reason": "hold_requested",
+        "confidence": 1
+      },
+      "linkedRefs": {
+        "issueRefs": [],
+        "prRefs": []
+      },
+      "manualOverride": {
+        "active": true,
+        "actor": "playtest-queue",
+        "confidence": 1,
+        "note": "Needs a maintainer decision before any workflow change.",
+        "reason": "hold_requested",
+        "status": "human_review",
+        "updatedAt": "2026-04-20T18:04:31.115Z"
+      },
+      "history": [
+        {
+          "type": "ingested",
+          "at": "2026-04-20T18:04:19.256Z",
+          "actor": null,
+          "data": {
+            "analysisId": "analysis-242-verify",
+            "summary": "Protected workflow needs a maintainer decision."
+          }
+        },
+        {
+          "type": "manual_override_updated",
+          "at": "2026-04-20T18:04:31.115Z",
+          "actor": "playtest-queue",
+          "data": {
+            "active": true,
+            "actor": "playtest-queue",
+            "confidence": 1,
+            "note": "Needs a maintainer decision before any workflow change.",
+            "reason": "hold_requested",
+            "status": "human_review",
+            "updatedAt": "2026-04-20T18:04:31.115Z"
+          }
+        }
+      ],
+      "firstSeenAt": "2026-04-20T18:04:19.255Z",
+      "lastSeenAt": "2026-04-20T18:04:19.255Z",
+      "createdAt": "2026-04-20T18:04:19.255Z",
+      "updatedAt": "2026-04-20T18:04:31.115Z"
+    },
+    {
+      "findingId": "finding_90e97942-5b93-4d6b-bc18-08418880038e",
+      "fingerprint": "ptf_bff4b6c4",
+      "sessionId": "verify-242-queue",
+      "analysisId": "analysis-242-verify",
+      "observedAtText": "00:12",
+      "observedAtMs": 12000,
+      "observedAtIso": null,
+      "category": "navigation",
+      "severity": "high",
+      "summary": "Continue CTA is hard to see after dialogue ends.",
+      "description": "Continue CTA is hard to see after dialogue ends.",
+      "suggestedFix": "Add stronger contrast and spacing.",
+      "expectedBehavior": null,
+      "actualBehavior": null,
+      "artifactLinks": [
+        {
+          "href": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/recording.webm",
+          "label": "artifact",
+          "source": "analysis"
+        },
+        {
+          "href": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/annotations.json",
+          "label": "annotations",
+          "source": "playtest-session"
+        },
+        {
+          "href": "https://runs.tong.berlayar.ai/playtest/verify-242-queue/analysis.json",
+          "label": "analysis",
+          "source": "playtest-session"
+        }
+      ],
+      "inferredComponent": "apps/client/components/scene/ContinueButton.tsx",
+      "routeState": {
+        "status": "direct_pr",
+        "reason": "single_lane_non_protected_scope",
+        "confidence": 0.9
+      },
+      "linkedRefs": {
+        "issueRefs": [
+          "erniesg/tong#242"
+        ],
+        "prRefs": [
+          "erniesg/tong#248"
+        ]
+      },
+      "manualOverride": null,
+      "history": [
+        {
+          "type": "ingested",
+          "at": "2026-04-20T18:04:19.254Z",
+          "actor": null,
+          "data": {
+            "analysisId": "analysis-242-verify",
+            "summary": "Continue CTA is hard to see after dialogue ends."
+          }
+        },
+        {
+          "type": "route_updated",
+          "at": "2026-04-20T18:04:19.263Z",
+          "actor": "playtest-orchestrator",
+          "data": {
+            "confidence": 0.9,
+            "reason": "single_lane_non_protected_scope",
+            "status": "direct_pr"
+          }
+        },
+        {
+          "type": "refs_attached",
+          "at": "2026-04-20T18:04:19.267Z",
+          "actor": "playtest-orchestrator",
+          "data": {
+            "issueRefs": [
+              "erniesg/tong#242"
+            ],
+            "prRefs": [
+              "erniesg/tong#248"
+            ]
+          }
+        }
+      ],
+      "firstSeenAt": "2026-04-20T18:04:19.254Z",
+      "lastSeenAt": "2026-04-20T18:04:19.254Z",
+      "createdAt": "2026-04-20T18:04:19.254Z",
+      "updatedAt": "2026-04-20T18:04:19.267Z"
+    }
+  ]
+}

@@ -1,4 +1,12 @@
 
+## 2026-04-21 (Issue 242 queue visibility + override intent)
+- Date: 2026-04-21
+- Branch/worktree: `codex/issue-242-queue-override` + `/Users/erniesg/code/erniesg/tong-242-pr` (qa-platform follow-on stacked on issue `#241`, crossing into additive `apps/worker/**` read surfaces and protected `.github/workflows/**`)
+- Intent:
+  - Add a GitHub-native queue digest and trusted override controls so maintainers can see routed findings and intervene without opening raw run artifacts.
+  - Keep the data boundary narrow by adding only the Worker read surface needed for queue visibility while preserving the `#240` ledger as the source of truth.
+  - Make manual overrides durable by teaching the orchestrator to honor active operator decisions instead of re-routing the same finding on later passes.
+
 ## 2026-04-21 (Issue 241 playtest orchestrator intent)
 - Date: 2026-04-21
 - Branch/worktree: `codex/issue-241-playtest-orchestrator` + `/Users/erniesg/code/erniesg/tong-241-pr` (qa-platform + infra-deploy protected-path follow-on stacked on issue `#240`)

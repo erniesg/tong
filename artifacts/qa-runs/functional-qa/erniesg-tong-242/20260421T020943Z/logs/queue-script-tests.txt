@@ -1,0 +1,18 @@
+✔ detects protected paths and lane ownership (0.478292ms)
+✔ matches an existing issue by finding marker (0.139958ms)
+✔ routes protected or ambiguous scope to human review (0.197209ms)
+✔ routes single-lane non-protected high-signal findings to direct_pr (0.53975ms)
+✔ falls back to new_issue or skip for lower-signal findings (0.083125ms)
+✔ honors active manual overrides before applying heuristic routing (0.073667ms)
+✔ parsePlaytestQueueCommand reads action and flags (0.469083ms)
+✔ queueBucketForFinding and summarizeQueue group routed findings (0.413166ms)
+✔ renderQueueDigest includes trusted commands and reusable prompts (1.522083ms)
+✔ applyQueueAction sends the expected worker mutations (0.317333ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 43.460583

@@ -182,12 +182,27 @@ export function chooseRouteDecision({
   const category = trimText(finding?.category, 120).toLowerCase();
   const scope = summarizeScope(finding);
   const issueMatch = findIssueMatch(finding, issues);
+  const manualOverride = finding?.manualOverride && typeof finding.manualOverride === "object"
+    ? finding.manualOverride
+    : null;
 
   if (!summary) {
     return {
       status: "human_review",
       reason: "missing_summary",
       confidence: 0.55,
+      scope,
+      issueMatch: null,
+    };
+  }
+
+  if (manualOverride?.active && manualOverride?.status && manualOverride.status !== "unrouted") {
+    return {
+      status: manualOverride.status,
+      reason: manualOverride.reason ? `manual_override:${manualOverride.reason}` : "manual_override",
+      confidence: Number.isFinite(Number(manualOverride.confidence))
+        ? Math.max(0, Math.min(1, Number(manualOverride.confidence)))
+        : 1,
       scope,
       issueMatch: null,
     };

@@ -1,0 +1,14 @@
+{
+  "repo": "erniesg/tong",
+  "number": 242,
+  "issue_ref": "erniesg/tong#242",
+  "title": "Queue visibility and human override surface for agent orchestration",
+  "body": "Part of: #165\nDepends on: #239, #240, #241\n\n## Summary\nThe orchestrator is only useful if a human can understand and steer it.\n\nWe need a GitHub-native queue and override surface so maintainers can see what is pending/running/blocked, understand why a finding was routed a certain way, and intervene without digging through raw Actions logs or local artifacts.\n\n## Red\n- Queue state is fragmented across local artifacts, workflow logs, and issue comments.\n- There is no single operator surface for `hold`, `retry`, `approve`, `route-to-human`, or `force-manual` decisions.\n- It is not yet easy to hand the same queued item to a human using Codex/Claude interactively with their personal subscriptions.\n\n## Green\nA maintainer can open GitHub and answer:\n- what is queued\n- what is running\n- what is blocked\n- why each item was routed that way\n- what human action, if any, is needed next\n\nAnd they can intervene from GitHub without editing repo code.\n\n## Scope\n- Define a GitHub-native queue visibility surface:\n  - Project view, issue/PR comment digest, and/or generated dispatch ledger summaries\n- Expose per-item state such as:\n  - finding/issue ref\n  - current route\n  - owner/executor\n  - latest PR/issue link\n  - last validation result\n  - next action needed\n- Add operator controls via trusted comments and/or workflow dispatch inputs:\n  - hold\n  - retry\n  - approve\n  - reject\n  - route to human\n  - force manual Codex/Claude handoff\n- Generate manual task prompts so a maintainer can use personal Codex/Claude subscriptions interactively against the same queued item\n- Persist human feedback/override state so later orchestration passes do not forget it\n- Make final human approval state explicit before merge/prod promotion\n\n## Acceptance Criteria\n- [ ] A maintainer can view pending/in-progress/blocked/completed agent work from GitHub without opening raw run artifacts\n- [ ] Each routed item exposes its route reason, current links, and next action\n- [ ] A maintainer can hold/retry/approve/reject from GitHub using trusted controls\n- [ ] Manual Codex/Claude task prompts are generated from the same queue item for interactive use\n- [ ] Human feedback/override state persists and is visible to later orchestration passes\n- [ ] The queue separates unattended-safe work from work waiting on human judgment or approval\n\n## Suggested Lane\n`qa-platform`\n\n## Human Gate\nRequired\n",
+  "html_url": "https://github.com/erniesg/tong/issues/242",
+  "labels": [
+    "enhancement"
+  ],
+  "created_at": "2026-04-20T13:16:07Z",
+  "updated_at": "2026-04-20T13:16:56Z",
+  "project_fields": {}
+}

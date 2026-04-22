@@ -1,0 +1,174 @@
+name: Playtest Queue
+
+on:
+  schedule:
+    - cron: "47 3 * * *"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "refresh | hold | retry | approve | reject | route-to-human | force-manual"
+        required: false
+        default: "refresh"
+        type: string
+      api_base_url:
+        description: "Worker API base URL for the playtest findings ledger"
+        required: false
+        type: string
+      finding_id:
+        description: "Target finding id for operator actions"
+        required: false
+        type: string
+      limit:
+        description: "Maximum queue findings to show in the digest"
+        required: false
+        default: "20"
+        type: string
+      note:
+        description: "Optional operator note persisted with the action"
+        required: false
+        type: string
+      queue_issue_number:
+        description: "Issue number that hosts the queue digest comment"
+        required: false
+        default: "242"
+        type: string
+      dry_run:
+        description: "Plan the action without mutating GitHub or the queue state"
+        required: false
+        default: false
+        type: boolean
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  resolve:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/playtest-queue'))
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.resolve.outputs.should_run }}
+      reason: ${{ steps.resolve.outputs.reason }}
+      action: ${{ steps.resolve.outputs.action }}
+      dry_run: ${{ steps.resolve.outputs.dry_run }}
+      finding_id: ${{ steps.resolve.outputs.finding_id }}
+      limit: ${{ steps.resolve.outputs.limit }}
+      note: ${{ steps.resolve.outputs.note }}
+      queue_issue_number: ${{ steps.resolve.outputs.queue_issue_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: resolve
+        env:
+          PLAYTEST_QUEUE_ISSUE_NUMBER: ${{ inputs.queue_issue_number || vars.PLAYTEST_QUEUE_ISSUE_NUMBER || '242' }}
+        run: node scripts/resolve_playtest_queue_request.mjs
+
+      - name: Summary
+        run: |
+          {
+            echo "## Playtest Queue Resolution"
+            echo
+            echo "- should_run: \`${{ steps.resolve.outputs.should_run }}\`"
+            echo "- reason: ${{ steps.resolve.outputs.reason }}"
+            echo "- action: \`${{ steps.resolve.outputs.action }}\`"
+            echo "- finding_id: \`${{ steps.resolve.outputs.finding_id }}\`"
+            echo "- limit: \`${{ steps.resolve.outputs.limit }}\`"
+            echo "- queue_issue_number: \`${{ steps.resolve.outputs.queue_issue_number }}\`"
+            echo "- dry_run: \`${{ steps.resolve.outputs.dry_run }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment blocker
+        if: steps.resolve.outputs.should_run != 'true' && github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "$(cat <<'EOF'
+          Playtest queue action was blocked.
+
+          Reason: ${{ steps.resolve.outputs.reason }}
+
+          Supported usage:
+          - `/playtest-queue refresh`
+          - `/playtest-queue hold --finding-id <id> --note "reason"`
+          - `/playtest-queue retry --finding-id <id>`
+          EOF
+          )"
+
+  queue:
+    needs: resolve
+    if: needs.resolve.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      PLAYTEST_QUEUE_ISSUE_NUMBER: ${{ needs.resolve.outputs.queue_issue_number }}
+      TONG_REMOTE_API_BASE_URL: ${{ inputs.api_base_url || vars.TONG_REMOTE_API_BASE_URL || 'https://tong-api.erniesg.workers.dev' }}
+      TONG_PLAYTEST_READ_API_TOKEN: ${{ secrets.TONG_PLAYTEST_READ_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run playtest queue refresh
+        run: |
+          mkdir -p artifacts/playtest-queue
+          args=(
+            --action "${{ needs.resolve.outputs.action }}"
+            --api-base "$TONG_REMOTE_API_BASE_URL"
+            --limit "${{ needs.resolve.outputs.limit }}"
+            --output artifacts/playtest-queue/result.json
+            --queue-issue "${{ needs.resolve.outputs.queue_issue_number }}"
+            --repo "${{ github.repository }}"
+          )
+
+          if [ -n "${{ needs.resolve.outputs.finding_id }}" ]; then
+            args+=(--finding-id "${{ needs.resolve.outputs.finding_id }}")
+          fi
+
+          if [ -n "${{ needs.resolve.outputs.note }}" ]; then
+            args+=(--note "${{ needs.resolve.outputs.note }}")
+          fi
+
+          if [ "${{ needs.resolve.outputs.dry_run }}" = "true" ]; then
+            args+=(--dry-run)
+          fi
+
+          node scripts/playtest-queue.mjs "${args[@]}"
+
+      - name: Summarize queue
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('artifacts/playtest-queue/result.json', 'utf8'));
+          const lines = [
+            '## Playtest Queue',
+            '',
+            `- Action: \`${result.action}\``,
+            `- Dry run: \`${result.dryRun}\``,
+            `- Queue issue: \`${result.queueIssueNumber}\``,
+            `- Findings inspected: \`${result.findingsInspected}\``,
+            `- Digest comment: ${result.digestCommentUrl || 'not updated'}`,
+            '',
+            '### Queue summary',
+            `- Pending: \`${result.summary.pending}\``,
+            `- In progress: \`${result.summary.in_progress}\``,
+            `- Blocked: \`${result.summary.blocked}\``,
+            `- Completed: \`${result.summary.completed}\``,
+          ];
+
+          if (result.targetFinding) {
+            lines.push(
+              '',
+              '### Target finding',
+              `- Finding: \`${result.targetFinding.findingId}\``,
+              `- Route: \`${result.targetFinding.routeState.status}\` (${result.targetFinding.routeState.reason || 'no reason'})`,
+            );
+          }
+
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE

@@ -82,3 +82,21 @@ test("falls back to new_issue or skip for lower-signal findings", () => {
   assert.equal(skipDecision.status, "human_review");
   assert.equal(skipDecision.reason, "missing_remote_evidence");
 });
+
+test("honors active manual overrides before applying heuristic routing", () => {
+  const decision = chooseRouteDecision({
+    finding: makeFinding({
+      manualOverride: {
+        active: true,
+        status: "human_review",
+        reason: "hold_requested",
+        confidence: 0.99,
+      },
+    }),
+    issues: [],
+  });
+
+  assert.equal(decision.status, "human_review");
+  assert.equal(decision.reason, "manual_override:hold_requested");
+  assert.equal(decision.confidence, 0.99);
+});

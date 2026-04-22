@@ -103,6 +103,12 @@ type UpsertResult = {
   inserted: number;
 };
 
+type ListQueuedFindingsArgs = {
+  findingId?: unknown;
+  limit?: number;
+  routeStatuses?: unknown[];
+};
+
 function sanitizeString(value: unknown, maxLength = 500): string {
   if (typeof value !== 'string') {
     return '';
@@ -663,6 +669,38 @@ export async function listUnroutedFindings(sql: SqlExecutor, limit = 50): Promis
      ORDER BY updated_at DESC
      LIMIT ?`,
     [safeLimit],
+  );
+  return rows.map(hydrateFindingRecord);
+}
+
+export async function listQueuedFindings(
+  sql: SqlExecutor,
+  args: ListQueuedFindingsArgs = {},
+): Promise<FindingRecord[]> {
+  const safeLimit = Math.min(200, Math.max(1, Number.isFinite(args.limit) ? Number(args.limit) : 50));
+  const params: unknown[] = [];
+  const predicates: string[] = [];
+  const findingId = sanitizeString(args.findingId, 120);
+  const routeStatuses = uniqueStrings(Array.isArray(args.routeStatuses) ? args.routeStatuses : [])
+    .filter((status): status is PlaytestFindingRouteStatus => isValidRouteStatus(status));
+
+  if (findingId) {
+    predicates.push('finding_id = ?');
+    params.push(findingId);
+  }
+
+  if (routeStatuses.length > 0) {
+    predicates.push(`route_status IN (${routeStatuses.map(() => '?').join(', ')})`);
+    params.push(...routeStatuses);
+  }
+
+  const whereClause = predicates.length > 0 ? `WHERE ${predicates.join(' AND ')}` : '';
+  const rows = await sql.all<Record<string, unknown>>(
+    `SELECT * FROM playtest_findings_ledger
+     ${whereClause}
+     ORDER BY updated_at DESC
+     LIMIT ?`,
+    [...params, safeLimit],
   );
   return rows.map(hydrateFindingRecord);
 }
