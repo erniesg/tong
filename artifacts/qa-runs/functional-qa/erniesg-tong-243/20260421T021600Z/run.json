@@ -1,0 +1,109 @@
+{
+  "schema_version": "1",
+  "run_id": "functional-qa-validate-issue-20260421T021600Z-erniesg-tong-243",
+  "suite": "functional-qa",
+  "mode": "validate-issue",
+  "target": {
+    "raw": "erniesg/tong#243",
+    "slug": "erniesg-tong-243"
+  },
+  "issue_ref": "erniesg/tong#243",
+  "project_fields": {},
+  "classification": {
+    "issue_class": "compatibility-environment",
+    "signals": [
+      "production"
+    ],
+    "reason": "Matched 1 keyword signal(s) at priority 96."
+  },
+  "evidence_plan": {
+    "required": [
+      "cross-env-matrix"
+    ],
+    "optional": [
+      "screenshots",
+      "contract-assertions"
+    ],
+    "requires_ui_capture": false
+  },
+  "validation_policy": {
+    "issue_class": "compatibility-environment",
+    "execution_mode": "safe-unattended",
+    "fix_allowed": true,
+    "requires_direct_issue_evidence": false,
+    "direct_evidence": [],
+    "ui_acceptance_required": false,
+    "ui_acceptance_checks": [],
+    "required_runtime_modes_for_fixed": [],
+    "requires_live_model_for_fixed": false,
+    "human_review_required": false,
+    "stop_conditions": []
+  },
+  "portability_preflight": {
+    "status": "portable",
+    "portable": true,
+    "blocking": false,
+    "summary": "Portable from repo state plus documented setup.",
+    "blockers": [],
+    "warnings": [],
+    "project_portable_context": null,
+    "detected_local_paths": [],
+    "detected_private_references": [],
+    "detected_local_only_keywords": [],
+    "game_issue": false,
+    "route_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "proof_context": {
+      "present": true,
+      "source": "issue body",
+      "value": "reviewer-visible"
+    },
+    "remote_dependencies_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "checkpoint_context": {
+      "present": true,
+      "source": "inferred",
+      "value": "not required"
+    }
+  },
+  "functional": {
+    "verdict": "fixed",
+    "repro_status": "not-reproduced",
+    "fix_status": "fixed",
+    "issue_accuracy": "accurate"
+  },
+  "confidence": 0.78,
+  "environment": {
+    "generated_at": "2026-04-21T02:16:00.000000+08:00",
+    "repo_root": "/Users/erniesg/code/erniesg/tong-243-pr",
+    "repo_name_with_owner": "erniesg/tong",
+    "branch": "codex/issue-243-pr-validator-loop",
+    "commit": "4b275d82cb5d9ceb0f977c88ff696c96017c3d2b",
+    "default_branch": "main",
+    "smoke_commands": [
+      {
+        "label": "demo-smoke",
+        "command": "npm run demo:smoke",
+        "notes": "Validates core fixture and contract integrity before UI-specific validation."
+      }
+    ]
+  },
+  "artifacts": {
+    "run_json": "artifacts/qa-runs/functional-qa/erniesg-tong-243/20260421T021600Z/run.json",
+    "summary_md": "artifacts/qa-runs/functional-qa/erniesg-tong-243/20260421T021600Z/summary.md",
+    "steps_md": "artifacts/qa-runs/functional-qa/erniesg-tong-243/20260421T021600Z/steps.md",
+    "evidence_json": "artifacts/qa-runs/functional-qa/erniesg-tong-243/20260421T021600Z/evidence.json",
+    "publish_md": "artifacts/qa-runs/functional-qa/erniesg-tong-243/20260421T021600Z/publish.md",
+    "screenshots_dir": "artifacts/qa-runs/functional-qa/erniesg-tong-243/20260421T021600Z/screenshots",
+    "logs_dir": "artifacts/qa-runs/functional-qa/erniesg-tong-243/20260421T021600Z/logs"
+  },
+  "published_comment_url": null,
+  "previous_run_id": null,
+  "repo_notes": []
+}

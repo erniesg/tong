@@ -1,0 +1,114 @@
+name: Agent PR Validator
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_run:
+    workflows: ["Trusted QA Publish"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull request number to validate"
+        required: true
+        type: string
+      action:
+        description: "validate | retry"
+        required: false
+        default: "validate"
+        type: string
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  resolve:
+    if: github.event_name != 'issue_comment' || startsWith(github.event.comment.body, '/pr-validator')
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.resolve.outputs.should_run }}
+      reason: ${{ steps.resolve.outputs.reason }}
+      action: ${{ steps.resolve.outputs.action }}
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: resolve
+        run: node scripts/resolve_pr_validator_request.mjs
+
+      - name: Summary
+        run: |
+          {
+            echo "## Agent PR Validator Resolution"
+            echo
+            echo "- should_run: \`${{ steps.resolve.outputs.should_run }}\`"
+            echo "- reason: ${{ steps.resolve.outputs.reason }}"
+            echo "- action: \`${{ steps.resolve.outputs.action }}\`"
+            echo "- pr_number: \`${{ steps.resolve.outputs.pr_number }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment blocker
+        if: steps.resolve.outputs.should_run != 'true' && github.event_name == 'issue_comment' && github.event.issue.pull_request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "$(cat <<'EOF'
+          PR validator action was blocked.
+
+          Reason: ${{ steps.resolve.outputs.reason }}
+
+          Supported usage:
+          - `/pr-validator validate`
+          - `/pr-validator retry`
+          EOF
+          )"
+
+  validate:
+    needs: resolve
+    if: needs.resolve.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run PR validator
+        run: |
+          mkdir -p artifacts/pr-validator
+          node scripts/pr-validator.mjs \
+            --action "${{ needs.resolve.outputs.action }}" \
+            --pr-number "${{ needs.resolve.outputs.pr_number }}" \
+            --repo "${{ github.repository }}" \
+            --output artifacts/pr-validator/result.json
+
+      - name: Step summary
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('artifacts/pr-validator/result.json', 'utf8'));
+          const lines = [
+            '## Agent PR Validator',
+            '',
+            `- PR: \`#${result.prNumber}\``,
+            `- Action: \`${result.action}\``,
+            `- Verdict: \`${result.verdict}\``,
+            `- Confidence: \`${result.confidence.toFixed(2)}\``,
+            `- Retry available: \`${result.canRetry}\``,
+            `- Retry dispatched: \`${result.retryDispatched}\``,
+            `- Summary comment: ${result.summaryCommentUrl || 'not updated'}`,
+            '',
+            '### Risks',
+            ...(result.unresolvedRisks.length > 0 ? result.unresolvedRisks.map((risk) => `- ${risk}`) : ['- None.']),
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE

@@ -1,0 +1,13 @@
+✔ PR validator request block round-trips (1.159167ms)
+✔ detects agent-created PRs (0.11725ms)
+✔ resolves issue and validator metadata from the PR body (0.324125ms)
+✔ evaluates validated PRs from trusted QA publish state (0.36675ms)
+✔ retry prompt includes actionable feedback and retry budget (0.125416ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 38.054666
