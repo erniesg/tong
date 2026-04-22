@@ -105,7 +105,7 @@ Continue Shanghai integration work in `erniesg/tong` from `origin/codex/shanghai
 
 ### Paste-Ready Prompt For The Next Agent
 
-Continue work in `erniesg/tong` from local branch `codex/shanghai-portability-20260422-demo-smoke` at commit `a44ac2c` (`wip: expand shanghai next-agent scope`), which is on top of `origin/codex/shanghai-integration-20260422`.
+Continue work in `erniesg/tong` from the current local HEAD of branch `codex/shanghai-portability-20260422-demo-smoke`, which is on top of `origin/codex/shanghai-integration-20260422`.
 
 Read first:
 1. `AGENTS.md`
