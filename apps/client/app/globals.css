@@ -2261,6 +2261,12 @@ button.nav-link:hover {
   cursor: pointer;
 }
 
+
+.webtoon-overlay:focus-visible {
+  outline: 2px solid rgba(255, 248, 238, 0.86);
+  outline-offset: -2px;
+}
+
 .webtoon-shell {
   position: relative;
   z-index: 1;
@@ -2347,6 +2353,7 @@ button.nav-link:hover {
   box-shadow:
     0 50px 90px rgba(0, 0, 0, 0.55),
     0 2px 0 rgba(255, 255, 255, 0.04) inset;
+  animation: webtoonThumbStopBreath 2.2s ease-in-out infinite;
 }
 
 .webtoon-panel-surface--fade {
@@ -2603,6 +2610,18 @@ button.nav-link:hover {
   0% { opacity: 0; }
   66% { opacity: 1; }
   100% { opacity: 0; }
+}
+
+@keyframes webtoonThumbStopBreath {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.008);
+    filter: brightness(1.04);
+  }
 }
 
 @keyframes webtoonPanelReveal {

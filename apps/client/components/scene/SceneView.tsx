@@ -142,6 +142,8 @@ export function SceneView({
     return SPEAKER_COLORS[msg.role] ?? 'var(--color-primary)';
   };
 
+  const sceneOverlayActive = Boolean(currentWebtoon || currentCreditGate);
+
   return (
     <div className="absolute inset-0 overflow-hidden select-none">
       {/* Layer 0: HUD */}
@@ -223,7 +225,7 @@ export function SceneView({
       )}
 
       {/* Layer 4a: Exercise — stays mounted when dismissed to preserve tracing state */}
-      {mountedExercise && !currentWebtoon && !currentCreditGate && (
+      {mountedExercise && !sceneOverlayActive && (
         <div
           className={`exercise-float-wrapper${exerciseDone ? ' exercise-float-dismissing' : ''}`}
           style={exerciseHidden ? { display: 'none' } : undefined}
@@ -252,7 +254,7 @@ export function SceneView({
       )}
 
       {/* Layer 4b: Other interactive elements (show when exercise is hidden or absent) */}
-      {(exerciseHidden || !mountedExercise) && !currentWebtoon && !currentCreditGate && (choices ? (
+      {(exerciseHidden || !mountedExercise) && !sceneOverlayActive && (choices ? (
         <ChoiceButtons choices={choices} prompt={choicePrompt} onSelect={onChoice} disabled={isStreaming} targetLang={targetLang} />
       ) : currentMessage ? (
         <DialogueBox

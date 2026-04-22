@@ -1,6 +1,6 @@
 /** Self-contained VN types for the hangout phase — no game-core dependency */
 
-import type { CreditGate, ResolutionSpec, WebtoonPanel } from '../hangout/fixture-types';
+import type { CreditGate, ResolutionSpec } from '../hangout/fixture-types';
 
 export type Expression =
   | 'neutral' | 'happy' | 'surprised' | 'thinking'
@@ -21,6 +21,34 @@ export interface DialogueChoice {
   text: string;
   subtext?: string;
   affinityHint?: 'positive' | 'negative' | 'neutral';
+}
+
+
+export type WebtoonPanelWidth = 'full-bleed' | 'full-width' | 'inset-wide' | 'inset-narrow' | 'floating';
+export type WebtoonPanelHeight = 'short' | 'standard' | 'tall' | 'ultra-tall';
+export type WebtoonPanelTransition = 'fade' | 'cut' | 'darken';
+export type WebtoonBubblePosition = 'top' | 'bottom' | 'center-bottom';
+
+export interface WebtoonBubble {
+  zh: string;
+  py?: string;
+  en?: string;
+  speaker: string;
+  position: WebtoonBubblePosition;
+}
+
+export interface WebtoonPanel {
+  id: string;
+  imageUrl: string;
+  widthType: WebtoonPanelWidth;
+  heightClass: WebtoonPanelHeight;
+  aspectRatio: string;
+  shotType: string;
+  gapBefore: { px: number; color: string };
+  transition: WebtoonPanelTransition;
+  isThumbStop?: boolean;
+  bubbleRevealDelayMs?: number;
+  bubble?: WebtoonBubble;
 }
 
 export interface ToolQueueItem {
