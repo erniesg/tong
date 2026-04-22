@@ -1,0 +1,15 @@
+{
+  "recordId": "pevt_rec_demo_001",
+  "eventId": "evt_demo_checkout_001",
+  "provider": "stripe",
+  "eventType": "checkout.session.completed",
+  "userId": "demo-user-1",
+  "idempotencyKey": "stripe:evt_demo_checkout_001",
+  "status": "recorded",
+  "receivedAtIso": "2026-04-21T00:08:00.000Z",
+  "persistedAtIso": "2026-04-21T00:08:00.000Z",
+  "raw": {
+    "livemode": false,
+    "object": "event"
+  }
+}

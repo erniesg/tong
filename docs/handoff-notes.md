@@ -276,3 +276,10 @@ Template:
   - Reuse the existing scripted messaging renderer from #124 for a new deterministic 9:16 mock capture route.
   - Extend `ScriptedMessagingPlayer` controls/additive API (no second renderer) so mock-ui can drive play/pause/restart/jump deterministically.
   - Keep global style churn minimal and document route/query fixtures in demo run-of-show.
+
+## 2026-04-21 (Issue 253 commerce contract + mock API intent)
+- Date: 2026-04-21
+- Branch/worktree: `work` (server-api lane crossing shared `packages/contracts/**`)
+- Intent:
+  - Add additive commerce contract shapes and fixtures for entitlement snapshot, unlock grant, and purchase-event persistence so Stripe and Shanghai auction work can consume stable request/response contracts.
+  - Wire deterministic fixture-backed worker routes for the new commerce endpoints without introducing hidden mutable state or real payment integration.

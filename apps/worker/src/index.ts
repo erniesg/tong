@@ -6,6 +6,9 @@ import gameStartFixture from '../../../packages/contracts/fixtures/game.start-or
 import objectivesNextFixture from '../../../packages/contracts/fixtures/objectives.next.sample.json';
 import learnSessionsFixture from '../../../packages/contracts/fixtures/learn.sessions.sample.json';
 import mediaProfileFixture from '../../../packages/contracts/fixtures/player.media-profile.sample.json';
+import commerceEntitlementsFixture from '../../../packages/contracts/fixtures/commerce.entitlements.sample.json';
+import commerceUnlockGrantFixture from '../../../packages/contracts/fixtures/commerce.unlock-grant.sample.json';
+import commercePurchaseEventFixture from '../../../packages/contracts/fixtures/commerce.purchase-event.sample.json';
 import objectiveIdentityMap from '../../../packages/contracts/objective-identity-map.sample.json';
 import mockMediaWindow from '../../server/data/mock-media-window.json';
 
@@ -431,6 +434,9 @@ const FIXTURES = {
   objectivesNext: objectivesNextFixture,
   learnSessions: learnSessionsFixture,
   mediaProfile: mediaProfileFixture,
+  commerceEntitlements: commerceEntitlementsFixture,
+  commerceUnlockGrant: commerceUnlockGrantFixture,
+  commercePurchaseEvent: commercePurchaseEventFixture,
 };
 
 const objectiveIdentityByCanonical = new Map<string, (typeof objectiveIdentityMap.objectives)[number]>();
@@ -1830,6 +1836,42 @@ async function handleRequest(request: Request): Promise<Response> {
       const profile = upsertProfile(body.userId, body.profile ? { profile: body.profile } : body);
       const ingestion = ensureIngestionForUser(body.userId);
       return jsonResponse(200, { ok: true, profile, mediaProfile: ingestion.mediaProfile });
+    }
+
+
+    if (pathname === '/api/v1/commerce/entitlements' && request.method === 'GET') {
+      const userId = getUserIdFromSearch(url.searchParams);
+      return jsonResponse(200, {
+        ...(cloneJson(FIXTURES.commerceEntitlements) as Record<string, unknown>),
+        userId,
+      });
+    }
+
+    if (pathname === '/api/v1/commerce/unlocks/grant' && request.method === 'POST') {
+      const body = await readJsonBody(request);
+      const userId = body.userId || DEFAULT_USER_ID;
+      const fixture = cloneJson(FIXTURES.commerceUnlockGrant) as Record<string, unknown>;
+      return jsonResponse(200, {
+        ...fixture,
+        userId,
+        unlockType: body.unlockType || fixture.unlockType,
+        resourceId: body.resourceId || fixture.resourceId,
+        source: body.source || fixture.source,
+        referenceId: body.referenceId || fixture.referenceId,
+      });
+    }
+
+    if (pathname === '/api/v1/commerce/purchase-events' && request.method === 'POST') {
+      const body = await readJsonBody(request);
+      const fixture = cloneJson(FIXTURES.commercePurchaseEvent) as Record<string, unknown>;
+      return jsonResponse(200, {
+        ...fixture,
+        eventId: body.eventId || fixture.eventId,
+        provider: body.provider || fixture.provider,
+        eventType: body.eventType || fixture.eventType,
+        userId: body.userId || fixture.userId,
+        idempotencyKey: body.idempotencyKey || fixture.idempotencyKey,
+      });
     }
 
     if (pathname === '/api/v1/objectives/next' && request.method === 'GET') {
