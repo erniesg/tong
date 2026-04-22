@@ -152,6 +152,7 @@ const hangoutTools = {
           color: z.string(),
         }),
         isThumbStop: z.boolean().optional(),
+        bubbleRevealDelayMs: z.number().int().positive().optional().describe('Optional delay before bubble appears (useful for thumb-stop drama beats).'),
         bubble: z.object({
           zh: z.string(),
           py: z.string().optional(),

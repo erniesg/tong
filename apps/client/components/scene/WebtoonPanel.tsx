@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { WebtoonPanel as WebtoonPanelSpec } from '@/lib/hangout/fixture-types';
+import type { WebtoonPanelData as WebtoonPanelSpec } from '@/lib/types/hangout';
 import { WebtoonBubble } from './WebtoonBubble';
 
 interface WebtoonPanelProps {
@@ -22,6 +22,8 @@ const FADE_TRANSITION_MS = 220;
 const DARKEN_TRANSITION_MS = 800;
 const DARKEN_HOLD_MS = 400;
 const DARKEN_REVEAL_MS = 320;
+const DEFAULT_BUBBLE_REVEAL_MS = 180;
+const THUMB_STOP_BUBBLE_REVEAL_MS = 900;
 
 export function WebtoonPanel({
   panels,
@@ -90,20 +92,22 @@ export function WebtoonPanel({
     setBubbleVisible(false);
 
     if (currentPanel?.bubble) {
-      schedule(() => setBubbleVisible(true), 200);
+      const bubbleRevealDelayMs = currentPanel.bubbleRevealDelayMs
+        ?? (currentPanel.isThumbStop ? THUMB_STOP_BUBBLE_REVEAL_MS : DEFAULT_BUBBLE_REVEAL_MS);
+      schedule(() => setBubbleVisible(true), bubbleRevealDelayMs);
     }
 
-    if (autoAdvance) {
+    if (autoAdvance && !isLastPanel) {
       schedule(() => advance(), AUTO_ADVANCE_MS);
     }
 
     return clearTimers;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIndex, autoAdvance, currentPanel?.id]);
+  }, [currentIndex, autoAdvance, currentPanel?.id, isLastPanel]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Enter' && event.key !== ' ' && event.key !== 'ArrowRight') {
+      if (event.key !== 'Enter' && event.key !== ' ' && event.key !== 'Spacebar' && event.key !== 'ArrowRight') {
         return;
       }
 
@@ -113,7 +117,7 @@ export function WebtoonPanel({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  });
+  }, [currentIndex, isLastPanel, currentPanel]);
 
   useEffect(() => clearTimers, []);
 
@@ -175,7 +179,7 @@ export function WebtoonPanel({
           <div className="webtoon-panel-hint">
             Tap anywhere, or press Enter, Space, or <kbd>&rarr;</kbd>.
           </div>
-        ) : null}
+        ) : isLastPanel ? <div className="webtoon-panel-hint">Tap to continue.</div> : null}
       </div>
     </div>
   );
