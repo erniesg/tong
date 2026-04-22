@@ -7,6 +7,31 @@
   },
   "environment_name": "tong",
   "delivery_mode": "direct-task-pr",
+  "remote_agent": {
+    "default_provider": "codex",
+    "providers": {
+      "codex": {
+        "display_name": "Codex",
+        "launch_url": "chatgpt.com/codex",
+        "environment_label": "Codex environment",
+        "launch_heading": "Codex Launch Instructions",
+        "plan_heading": "Codex Cloud Issue Plan",
+        "task_pr_instruction": "launch a direct Codex task and create a PR from the task result",
+        "pr_creation_instruction_template": "Use Codex's built-in PR creation flow from the task result with title `{draft_pr_title}`.",
+        "recording_preview_note": "A Codex task-local \"Recording preview\" is not a reviewer-visible upload by itself. Use the repo uploader flow when public `tong-runs` links are required."
+      },
+      "claude": {
+        "display_name": "Claude",
+        "launch_url": "claude.ai",
+        "environment_label": "Claude environment",
+        "launch_heading": "Claude Launch Instructions",
+        "plan_heading": "Claude Remote Issue Plan",
+        "task_pr_instruction": "launch a direct Claude task and create a PR from the task result",
+        "pr_creation_instruction_template": "Use Claude's built-in PR creation flow from the task result with title `{draft_pr_title}`.",
+        "recording_preview_note": "A Claude task-local recording preview is not a reviewer-visible upload by itself. Use the repo uploader flow when public `tong-runs` links are required."
+      }
+    }
+  },
   "label_suggestions": [
     {
       "name": "cloud-ok",

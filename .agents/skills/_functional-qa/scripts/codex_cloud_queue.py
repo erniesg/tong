@@ -23,6 +23,20 @@ from qa_runtime import (
 
 CLOUD_CONFIG = load_json(CONFIG_ROOT / "codex-cloud.json")
 TEMPLATE_ROOT = CONFIG_ROOT.parent / "templates"
+REMOTE_AGENT_CONFIG = CLOUD_CONFIG.get("remote_agent", {})
+
+
+def provider_config_for(provider: str | None) -> dict[str, str]:
+    configured = REMOTE_AGENT_CONFIG.get("providers", {})
+    default_provider = REMOTE_AGENT_CONFIG.get("default_provider", "codex")
+    selected_provider = provider or default_provider
+    if selected_provider not in configured:
+        supported = ", ".join(sorted(configured))
+        raise ValueError(f"Unknown provider `{selected_provider}`. Supported values: {supported}")
+    return {
+        "provider_id": selected_provider,
+        **configured[selected_provider],
+    }
 
 
 def render_template(path: Path, replacements: dict[str, str]) -> str:
@@ -161,14 +175,14 @@ def is_dispatchable(issue: dict[str, Any]) -> bool:
     return issue["cloud_mode"] != "local-only" and issue["batch_id"] != "unassigned"
 
 
-def queue_action_for(issue: dict[str, Any]) -> str:
+def queue_action_for(issue: dict[str, Any], provider: dict[str, str]) -> str:
     if issue["cloud_mode"] == "local-only":
         return "skip cloud for now"
     if issue["batch_id"] == "unassigned":
         return "hold for manual batching or split before dispatch"
     if issue["depends_on"]:
         return "launch after listed dependencies merge or are rebased into the task branch"
-    return "launch a direct Codex task and create a PR from the task result"
+    return provider["task_pr_instruction"]
 
 
 def reviewer_evidence_expectation(issue_entry: dict[str, Any]) -> str:
@@ -263,8 +277,19 @@ def render_stop_conditions_for_issue(issue: dict[str, Any]) -> str:
     return "\n".join(f"- {item}" for item in stop_conditions)
 
 
-def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, Any]:
+def build_cloud_issue(
+    raw_issue: dict[str, Any],
+    queue_dir: Path,
+    provider: dict[str, str],
+    forced_issue_class: str | None = None,
+    forced_required_evidence: list[str] | None = None,
+) -> dict[str, Any]:
     issue_entry = build_issue_entry(raw_issue)
+    if forced_issue_class:
+        issue_entry["classification"]["issue_class"] = forced_issue_class
+        issue_entry["classification"]["reason"] = "Overridden from codex_cloud_queue.py plan arguments."
+    if forced_required_evidence:
+        issue_entry["evidence_plan"]["required"] = forced_required_evidence
     issue_ref = issue_entry.get("issue_ref")
     portability = issue_entry.get("portability_preflight", {})
     override = override_for(issue_ref)
@@ -302,6 +327,9 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
     replacements = {
         "{{repository}}": repo_name_with_owner(),
         "{{environment_name}}": CLOUD_CONFIG["environment_name"],
+        "{{provider_display_name}}": provider["display_name"],
+        "{{provider_environment_label}}": provider["environment_label"],
+        "{{provider_recording_preview_note}}": provider["recording_preview_note"],
         "{{issue_ref}}": issue_ref or issue_entry["title"],
         "{{issue_url}}": raw_issue.get("html_url") or raw_issue.get("url", ""),
         "{{batch_id}}": batch_id,
@@ -320,7 +348,8 @@ def build_cloud_issue(raw_issue: dict[str, Any], queue_dir: Path) -> dict[str, A
                 "cloud_mode": cloud_mode,
                 "batch_id": batch_id,
                 "depends_on": depends_on,
-            }
+            },
+            provider,
         ),
         "{{verification_instruction}}": verification_instruction_for(issue_entry),
         "{{completion_instruction}}": completion_instruction_for(issue_entry),
@@ -392,9 +421,9 @@ def build_batches(issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(by_id.values(), key=lambda item: batch_order_value(item["id"]))
 
 
-def render_markdown(plan: dict[str, Any]) -> str:
+def render_markdown(plan: dict[str, Any], provider: dict[str, str]) -> str:
     lines = [
-        "# Codex Cloud Issue Plan",
+        f"# {provider['plan_heading']}",
         "",
         f"- Repository: `{plan['repository']}`",
         f"- Environment: `{plan['environment_name']}`",
@@ -433,7 +462,7 @@ def render_markdown(plan: dict[str, Any]) -> str:
                 f"- Portability: `{issue['portability_preflight']['status']}`",
                 f"- Portability summary: {format_portability_summary(issue['portability_preflight'])}",
                 f"- Readiness: {issue['readiness_reason']}",
-                f"- Queue action: `{queue_action_for(issue)}`",
+                f"- Queue action: `{queue_action_for(issue, provider)}`",
                 f"- Task prompt: `{issue['generated_files']['task_prompt']}`",
                 f"- PR notes: `{issue['generated_files']['pr_notes']}`",
             ]
@@ -446,11 +475,11 @@ def render_markdown(plan: dict[str, Any]) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
-def build_launch_instructions(plan: dict[str, Any]) -> str:
+def build_launch_instructions(plan: dict[str, Any], provider: dict[str, str]) -> str:
     lines = [
-        "# Codex Launch Instructions",
+        f"# {provider['launch_heading']}",
         "",
-        f"Use the Codex environment `{plan['environment_name']}` for implementation tasks.",
+        f"Use the {provider['environment_label']} `{plan['environment_name']}` for implementation tasks.",
         "Start with the earliest batch only.",
         "",
     ]
@@ -462,7 +491,7 @@ def build_launch_instructions(plan: dict[str, Any]) -> str:
             lines.extend(
                 [
                     f"# {issue['issue_ref'] or issue['title']}",
-                    "1. Skip this issue in Codex cloud for now.",
+                    f"1. Skip this issue in {provider['display_name']} cloud for now.",
                     f"2. Reason: {reason}",
                     "",
                 ]
@@ -476,12 +505,12 @@ def build_launch_instructions(plan: dict[str, Any]) -> str:
         lines.extend(
             [
                 f"# {issue['issue_ref'] or issue['title']}",
-                "1. Open `chatgpt.com/codex` and choose the configured environment.",
+                f"1. Open `{provider['launch_url']}` and choose the configured environment.",
                 *( [dependency_note] if dependency_note else [] ),
                 f"{3 if dependency_note else 2}. Start a new task and paste `{issue['generated_files']['task_prompt']}`.",
                 f"{4 if dependency_note else 3}. Wait for the task to finish validation, code changes, and `--verify-fix`.",
-                f"{5 if dependency_note else 4}. Use Codex's built-in PR creation flow from the task result with title `{issue['draft_pr_title']}`.",
-                f"{6 if dependency_note else 5}. Copy any useful merge notes from `{issue['generated_files']['pr_notes']}` into the PR if Codex does not already summarize them well.",
+                f"{5 if dependency_note else 4}. {provider['pr_creation_instruction_template'].format(draft_pr_title=issue['draft_pr_title'])}",
+                f"{6 if dependency_note else 5}. Copy any useful merge notes from `{issue['generated_files']['pr_notes']}` into the PR if the task result does not already summarize them well.",
                 f"{7 if dependency_note else 6}. Review the resulting GitHub diff before moving on to the next issue in the batch.",
                 "",
             ]
@@ -490,12 +519,27 @@ def build_launch_instructions(plan: dict[str, Any]) -> str:
 
 
 def build_plan(args: argparse.Namespace) -> int:
+    provider = provider_config_for(args.provider)
+    required_evidence = (
+        [item.strip() for item in (args.required_evidence or "").split(",") if item.strip()]
+        if args.required_evidence
+        else None
+    )
     source, targets = resolve_targets(args.targets, args.limit)
     queue_timestamp = timestamp_slug()
     queue_dir = artifact_root() / "functional-qa" / "codex-cloud-queue" / queue_timestamp
     queue_dir.mkdir(parents=True, exist_ok=True)
 
-    issues = [build_cloud_issue(issue, queue_dir) for issue in targets]
+    issues = [
+        build_cloud_issue(
+            issue,
+            queue_dir,
+            provider,
+            forced_issue_class=args.issue_class,
+            forced_required_evidence=required_evidence,
+        )
+        for issue in targets
+    ]
     issues.sort(
         key=lambda item: (
             batch_order_value(item["batch_id"]),
@@ -514,15 +558,16 @@ def build_plan(args: argparse.Namespace) -> int:
         "source": source,
         "setup_commands": CLOUD_CONFIG["setup_commands"],
         "label_suggestions": CLOUD_CONFIG["label_suggestions"],
+        "provider": provider["provider_id"],
         "issues": issues,
         "batches": batches,
     }
 
     (queue_dir / "cloud-plan.json").write_text(json.dumps(plan, indent=2) + "\n", encoding="utf-8")
-    (queue_dir / "cloud-plan.md").write_text(render_markdown(plan), encoding="utf-8")
-    (queue_dir / "launch.md").write_text(build_launch_instructions(plan), encoding="utf-8")
+    (queue_dir / "cloud-plan.md").write_text(render_markdown(plan, provider), encoding="utf-8")
+    (queue_dir / "launch.md").write_text(build_launch_instructions(plan, provider), encoding="utf-8")
     (queue_dir / "commands.sh").write_text(
-        "# Deprecated: use launch.md and the generated task prompt files for direct Codex environment tasks.\n",
+        "# Deprecated: use launch.md and the generated task prompt files for direct remote-agent environment tasks.\n",
         encoding="utf-8",
     )
 
@@ -540,6 +585,16 @@ def build_parser() -> argparse.ArgumentParser:
     plan_parser = subparsers.add_parser("plan", help="Generate the Codex cloud issue queue plan.")
     plan_parser.add_argument("targets", nargs="*", help="Issue numbers or URLs. Defaults to the open GitHub issue queue.")
     plan_parser.add_argument("--limit", type=int, default=50, help="Open issue limit when no explicit targets are given.")
+    plan_parser.add_argument(
+        "--provider",
+        default=REMOTE_AGENT_CONFIG.get("default_provider", "codex"),
+        help="Remote agent provider to target (for example: codex, claude).",
+    )
+    plan_parser.add_argument("--issue-class", help="Force the issue class for generated prompts.")
+    plan_parser.add_argument(
+        "--required-evidence",
+        help="Comma-separated required evidence types override (for example: contract-assertions,network-trace).",
+    )
     plan_parser.add_argument("--json", action="store_true", help="Print the JSON plan to stdout.")
     plan_parser.set_defaults(func=build_plan)
     return parser
