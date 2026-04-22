@@ -10816,3 +10816,87 @@ body:has(.playtest-pill-expanded) {
   color: var(--muted, #888);
   background: rgba(255,255,255,0.03);
 }
+
+.shanghai-prelude {
+  pointer-events: none;
+}
+
+.shanghai-prelude-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: auto;
+  touch-action: none;
+  background: #0f1118;
+}
+
+.shanghai-prelude-image {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 190%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left center;
+  user-select: none;
+  -webkit-user-drag: none;
+  transition: transform 220ms ease-out;
+}
+
+.shanghai-prelude-viewport.is-guided .shanghai-prelude-image {
+  transition-duration: 420ms;
+}
+
+.shanghai-prelude-guidance {
+  position: absolute;
+  top: 16px;
+  left: 12px;
+  right: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(13, 18, 30, 0.9), rgba(25, 32, 48, 0.72));
+  color: #f4f7ff;
+  font-size: var(--game-text-sm);
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+}
+
+.shanghai-pair-hotspot {
+  position: absolute;
+  left: calc(32% * 1.9);
+  bottom: 30%;
+  transform: translate(-50%, 0);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(11, 22, 36, 0.82);
+  color: #f6f6f8;
+  font-size: var(--game-text-xs);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  animation: shanghai-hotspot-pulse 1400ms ease-in-out infinite;
+}
+
+.shanghai-pair-hotspot.is-locked {
+  opacity: 0.55;
+  animation: none;
+}
+
+.shanghai-pair-hotspot-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ffcb5b;
+  box-shadow: 0 0 0 6px rgba(255, 203, 91, 0.2);
+}
+
+@keyframes shanghai-hotspot-pulse {
+  0%, 100% {
+    transform: translate(-50%, 0) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -1px) scale(1.025);
+  }
+}
