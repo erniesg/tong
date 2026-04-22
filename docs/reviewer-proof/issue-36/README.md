@@ -1,4 +1,4 @@
-# Issue #36 reviewer proof
+# Reviewer proof: runtime asset manifest
 
 ## Full-frame comparison (same state)
 

@@ -2,23 +2,23 @@
 
 Use this map to keep parallel streams moving without stepping on the same files.
 
-## Primary write ownership by worktree
+## Primary write ownership by lane
 
-| Worktree | Branch | Primary write globs |
+| Lane | Branch slug | Primary write globs |
 | --- | --- | --- |
-| Client UI | `codex/client-ui` | `apps/client/app/**` (except `apps/client/app/api/**`, `apps/client/app/game/GamePageClient.tsx`, `apps/client/app/mock/**`), `apps/client/components/shell/**`, `apps/client/components/city-map/**`, `apps/client/components/hud/**`, `apps/client/components/learn/**`, `apps/client/lib/session/**`, `apps/client/lib/backend/**`, `apps/client/lib/theme/**` |
-| Client runtime | `codex/client-runtime` | `apps/client/app/api/**`, `apps/client/app/game/GamePageClient.tsx`, `apps/client/components/exercises/**`, `apps/client/components/scene/**`, `apps/client/lib/ai/**`, `apps/client/lib/debug/**`, `apps/client/lib/store/**`, `apps/client/lib/types/hangout.ts` |
-| Client overlay | `codex/client-overlay` | `apps/client/components/overlay/**`, `apps/client/components/dictionary/**`, `apps/client/lib/captions/**`, `apps/client/lib/dictionary/**`, `apps/client/lib/romanization/**` |
-| QA platform | `codex/qa-platform` | `.agents/skills/**`, `.agents/skills/_functional-qa/**`, `.github/ISSUE_TEMPLATE/**`, `docs/codex-cloud-issue-runbook.md`, `docs/qa/**`, `docs/agent-native-project-setup.md` |
-| Runtime assets | `codex/runtime-assets` | `assets/characters/**`, `assets/game/**`, `assets/generated/**`, `assets/manifest/**`, `docs/qa-evidence-uploads.md`, `apps/client/lib/content/characters.ts`, `apps/client/lib/content/tong-expressions.ts`, `apps/client/components/scene/CharacterSprite.tsx` |
-| Server API | `codex/server-api` | `apps/server/api/**`, `apps/server/routes/**`, `apps/server/controllers/**`, `apps/server/services/profile/**`, `apps/server/services/sessions/**`, `apps/server/services/bootstrap/**` |
-| Server ingestion | `codex/server-ingestion` | `apps/server/ingestion/**`, `apps/server/jobs/**`, `apps/server/services/vocab/**`, `apps/server/services/media-profile/**`, `apps/server/services/insights/**`, `scripts/ingestion/**` |
-| Game engine | `codex/game-engine` | `apps/server/game-engine/**`, `apps/server/services/game-loop/**`, `apps/server/services/scenes/**`, `apps/server/services/rewards/**` |
-| Infra deploy | `codex/infra-deploy` | `infra/**`, `scripts/deploy*.sh`, `scripts/release*.sh`, `scripts/healthcheck*.sh`, `.github/workflows/**`, `docs/deployment-track.md` |
-| Mock UI | `codex/mock-ui` | `apps/client/app/mock/**`, `apps/client/components/mock/**`, `apps/client/lib/mock/**`, `apps/client/public/mock/**`, `docs/demo-run-of-show.md` |
-| Creative assets | `codex/creative-assets` | `assets/presets/**`, `assets/content-packs/**`, `assets/rewards/**`, `assets/manifest/**`, `docs/mock-ui-and-assets-track.md` |
+| Client UI | `client-ui` | `apps/client/app/**` (except `apps/client/app/api/**`, `apps/client/app/game/GamePageClient.tsx`, `apps/client/app/mock/**`), `apps/client/components/shell/**`, `apps/client/components/city-map/**`, `apps/client/components/hud/**`, `apps/client/components/learn/**`, `apps/client/lib/session/**`, `apps/client/lib/backend/**`, `apps/client/lib/theme/**` |
+| Runtime | `client-runtime` | `apps/client/app/api/**`, `apps/client/app/game/GamePageClient.tsx`, `apps/client/components/exercises/**`, `apps/client/components/scene/**`, `apps/client/lib/ai/**`, `apps/client/lib/debug/**`, `apps/client/lib/store/**`, `apps/client/lib/types/hangout.ts` |
+| Overlay | `client-overlay` | `apps/client/components/overlay/**`, `apps/client/components/dictionary/**`, `apps/client/lib/captions/**`, `apps/client/lib/dictionary/**`, `apps/client/lib/romanization/**` |
+| QA | `qa-platform` | `.agents/skills/**`, `.agents/skills/_functional-qa/**`, `.github/ISSUE_TEMPLATE/**`, `docs/qa/**`, and the agent setup or reviewer-proof docs |
+| Assets | `runtime-assets` | `assets/characters/**`, `assets/game/**`, `assets/generated/**`, `assets/manifest/**`, `docs/qa-evidence-uploads.md`, `apps/client/lib/content/characters.ts`, `apps/client/lib/content/tong-expressions.ts`, `apps/client/components/scene/CharacterSprite.tsx` |
+| Server API | `server-api` | `apps/server/api/**`, `apps/server/routes/**`, `apps/server/controllers/**`, `apps/server/services/profile/**`, `apps/server/services/sessions/**`, `apps/server/services/bootstrap/**` |
+| Ingestion | `server-ingestion` | `apps/server/ingestion/**`, `apps/server/jobs/**`, `apps/server/services/vocab/**`, `apps/server/services/media-profile/**`, `apps/server/services/insights/**`, `scripts/ingestion/**` |
+| Game engine | `game-engine` | `apps/server/game-engine/**`, `apps/server/services/game-loop/**`, `apps/server/services/scenes/**`, `apps/server/services/rewards/**` |
+| Deploy | `infra-deploy` | `infra/**`, `scripts/deploy*.sh`, `scripts/release*.sh`, `scripts/healthcheck*.sh`, `.github/workflows/**`, `docs/deployment-track.md` |
+| Mock UI | `mock-ui` | `apps/client/app/mock/**`, `apps/client/components/mock/**`, `apps/client/lib/mock/**`, `apps/client/public/mock/**`, `docs/demo-run-of-show.md` |
+| Creative assets | `creative-assets` | `assets/presets/**`, `assets/content-packs/**`, `assets/rewards/**`, `assets/manifest/**`, `docs/mock-ui-and-assets-track.md` |
 
-## Shared zones (serialize edits)
+## Shared zones
 
 These files are cross-stream contract points and should be edited by one stream at a time:
 
@@ -38,19 +38,18 @@ These files are cross-stream contract points and should be edited by one stream 
 ## Crossing boundaries protocol
 
 1. Add a short intent note to `docs/handoff-notes.md` before touching a non-owned path.
-2. Contract/fixture changes go first, then dependent branch rebases.
+2. Contract and fixture changes go first, then dependent branch rebases.
 3. Keep one owner for each shared file per merge window.
-4. Rebase before merge windows (`13:00` and `21:00` local per execution board).
-5. If a task spans two worktrees, split into two PRs with a contracts-first PR merged first.
+4. Rebase before merge windows (`13:00` and `21:00` local).
+5. If a task spans two worktrees, split it into two PRs with a contracts-first PR merged first.
 
-## Current collision hot spots (from active diverged branches)
+## Current collision hot spots
 
-`codex/runtime-assets`, `codex/client-runtime`, and `codex/creative-assets` will overlap most often on:
+`assets`, `runtime`, and `creative-assets` will overlap most often on:
 
 1. `apps/client/components/scene/CharacterSprite.tsx`
 2. `assets/manifest/**`
 3. `docs/mock-ui-and-assets-track.md`
-4. `docs/codex-cloud-issue-runbook.md`
-5. `packages/contracts/**`
+4. `packages/contracts/**`
 
 Treat this set as locked to one active editor at a time until both branches are rebased.

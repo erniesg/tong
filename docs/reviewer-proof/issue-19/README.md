@@ -1,6 +1,6 @@
-# Issue 19 Reviewer Proof
+# Reviewer Proof: streamed dialogue timing
 
-This folder contains reviewer-openable proof for [issue #19](https://github.com/erniesg/tong/issues/19): dialogue is not truly streamed to the player, even though the transport is streamed.
+This folder contains reviewer-openable proof that dialogue is not truly streamed to the player, even though the transport is streamed.
 
 Capture path:
 
