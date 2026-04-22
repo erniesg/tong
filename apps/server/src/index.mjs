@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { loadGeneratedSnapshot, runMockIngestion, writeGeneratedSnapshots } from './ingestion.mjs';
 import {
@@ -366,6 +367,7 @@ const state = {
   ingestionByUser: new Map(),
   integrationsByUser: new Map(),
   playtestSessions: new Map(),
+  playtestFindings: new Map(),
 };
 
 function ensureParentDir(filePath) {
@@ -461,6 +463,7 @@ function saveDurableState() {
     ingestionByUser: cloneMapEntries(state.ingestionByUser),
     integrationsByUser: cloneMapEntries(state.integrationsByUser),
     playtestSessions: cloneMapEntries(state.playtestSessions),
+    playtestFindings: cloneMapEntries(state.playtestFindings),
   };
   const tempPath = `${STATE_FILE_PATH}.tmp`;
   fs.writeFileSync(tempPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
@@ -484,6 +487,7 @@ function loadDurableState() {
   state.ingestionByUser = restoreMap(parsed.ingestionByUser || []);
   state.integrationsByUser = restoreMap(parsed.integrationsByUser || []);
   state.playtestSessions = restoreMap(parsed.playtestSessions || []);
+  state.playtestFindings = restoreMap(parsed.playtestFindings || []);
 
   for (const [sessionId, gameSession] of state.sessions.entries()) {
     normalizeGameSessionState(gameSession);
@@ -1690,6 +1694,288 @@ function generateShortId(length = 10) {
 }
 
 const CITY_LANGUAGE_MAP = { seoul: 'ko', tokyo: 'ja', shanghai: 'zh' };
+const FINDING_ROUTE_STATUSES = new Set([
+  'unrouted',
+  'skip',
+  'update_issue',
+  'new_issue',
+  'direct_pr',
+  'human_review',
+  'done',
+]);
+
+function normalizePlaytestIssue(issue) {
+  if (!issue || typeof issue !== 'object') {
+    return null;
+  }
+
+  const summary = typeof issue.description === 'string'
+    ? issue.description.trim()
+    : typeof issue.title === 'string'
+      ? issue.title.trim()
+      : '';
+  if (!summary) {
+    return null;
+  }
+
+  const category = typeof issue.category === 'string' ? issue.category.trim().toLowerCase() : 'uncategorized';
+  const severity = typeof issue.severity === 'string' ? issue.severity.trim().toLowerCase() : 'medium';
+  const inferredComponent = typeof issue.affectedComponent === 'string' ? issue.affectedComponent.trim() : null;
+  const artifactLinks = uniqueStringList([
+    ...(Array.isArray(issue.artifactLinks) ? issue.artifactLinks : []),
+    ...(Array.isArray(issue.contextLinks) ? issue.contextLinks : []),
+  ]).filter((link) => /^https?:\/\//i.test(link));
+
+  return {
+    category,
+    severity,
+    summary,
+    inferredComponent,
+    artifactLinks,
+    raw: cloneJson(issue),
+  };
+}
+
+function buildFindingFingerprint(sessionId, finding) {
+  const payload = JSON.stringify({
+    sessionId,
+    category: finding.category,
+    severity: finding.severity,
+    summary: finding.summary.toLowerCase(),
+    inferredComponent: finding.inferredComponent ? finding.inferredComponent.toLowerCase() : null,
+  });
+  return crypto.createHash('sha256').update(payload).digest('hex').slice(0, 24);
+}
+
+function createPlaytestFindingRecord({ sessionId, analysisId = null, finding }) {
+  const findingId = `finding_${generateShortId(12)}`;
+  const nowIso = new Date().toISOString();
+  const fingerprint = buildFindingFingerprint(sessionId, finding);
+  return {
+    findingId,
+    sessionId,
+    analysisId: typeof analysisId === 'string' ? analysisId : null,
+    fingerprint,
+    dedupeKey: `${sessionId}:${fingerprint}`,
+    category: finding.category,
+    severity: finding.severity,
+    summary: finding.summary,
+    inferredComponent: finding.inferredComponent,
+    artifactLinks: finding.artifactLinks,
+    routeStatus: 'unrouted',
+    routeReason: null,
+    routeConfidence: null,
+    linkedIssue: null,
+    linkedPr: null,
+    humanOverride: null,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    firstSeenAt: nowIso,
+    lastSeenAt: nowIso,
+    occurrences: 1,
+    routeHistory: [{
+      at: nowIso,
+      action: 'ingested',
+      to: 'unrouted',
+      reason: 'analysis_normalized',
+    }],
+    issuePayload: finding.raw,
+  };
+}
+
+function upsertPlaytestFindings({ sessionId, analysisId = null, issues = [] }) {
+  const findings = issues.map(normalizePlaytestIssue).filter(Boolean);
+  let created = 0;
+  let updated = 0;
+  const records = [];
+
+  for (const finding of findings) {
+    const fingerprint = buildFindingFingerprint(sessionId, finding);
+    const existing = [...state.playtestFindings.values()].find(
+      (record) => record.sessionId === sessionId && record.fingerprint === fingerprint,
+    );
+    const nowIso = new Date().toISOString();
+
+    if (existing) {
+      existing.updatedAt = nowIso;
+      existing.lastSeenAt = nowIso;
+      existing.occurrences = Number(existing.occurrences || 0) + 1;
+      existing.analysisId = typeof analysisId === 'string' ? analysisId : existing.analysisId;
+      existing.artifactLinks = uniqueStringList([...(existing.artifactLinks || []), ...(finding.artifactLinks || [])]);
+      existing.issuePayload = finding.raw;
+      state.playtestFindings.set(existing.findingId, existing);
+      records.push(existing);
+      updated += 1;
+      continue;
+    }
+
+    const record = createPlaytestFindingRecord({ sessionId, analysisId, finding });
+    state.playtestFindings.set(record.findingId, record);
+    records.push(record);
+    created += 1;
+  }
+
+  if (created > 0 || updated > 0) {
+    saveDurableState();
+  }
+
+  return {
+    created,
+    updated,
+    findings: records,
+    totalFindingsForSession: [...state.playtestFindings.values()].filter((record) => record.sessionId === sessionId).length,
+  };
+}
+
+function listPlaytestFindings({ sessionId = null, routeStatus = null } = {}) {
+  return [...state.playtestFindings.values()]
+    .filter((finding) => (sessionId ? finding.sessionId === sessionId : true))
+    .filter((finding) => (routeStatus ? finding.routeStatus === routeStatus : true))
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+}
+
+function toReviewerContextLinks(finding) {
+  const toGithubLink = (ref, kind) => {
+    if (typeof ref !== 'string' || !ref.trim()) return null;
+    const value = ref.trim();
+    if (/^https?:\/\//i.test(value)) return value;
+    const fullMatch = value.match(/^([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)#(\d+)$/);
+    if (fullMatch) return `https://github.com/${fullMatch[1]}/${kind}/${fullMatch[2]}`;
+    const shortMatch = value.match(/^#?(\d+)$/);
+    if (shortMatch) return `https://github.com/erniesg/tong/${kind}/${shortMatch[1]}`;
+    return null;
+  };
+
+  const links = [
+    `/api/v1/playtest/sessions/${finding.sessionId}`,
+    ...((finding.artifactLinks || []).filter((link) => /^https?:\/\//i.test(link))),
+  ];
+
+  const linkedIssue = toGithubLink(finding.linkedIssue, 'issues');
+  const linkedPr = toGithubLink(finding.linkedPr, 'pull');
+  if (linkedIssue) links.push(linkedIssue);
+  if (linkedPr) links.push(linkedPr);
+  return uniqueStringList(links);
+}
+
+function formatPlaytestFinding(finding) {
+  return {
+    ...finding,
+    contextLinks: toReviewerContextLinks(finding),
+  };
+}
+
+function appendFindingRouteHistory(finding, event) {
+  finding.routeHistory = Array.isArray(finding.routeHistory) ? finding.routeHistory : [];
+  finding.routeHistory.push(event);
+}
+
+function updatePlaytestFindingRoute(findingId, body = {}) {
+  const finding = state.playtestFindings.get(findingId);
+  if (!finding) {
+    return { error: 'finding_not_found', statusCode: 404 };
+  }
+
+  if (!FINDING_ROUTE_STATUSES.has(body.routeStatus)) {
+    return { error: 'invalid_route_status', statusCode: 400 };
+  }
+
+  const nowIso = new Date().toISOString();
+  const from = finding.routeStatus;
+  finding.routeStatus = body.routeStatus;
+  finding.routeReason = typeof body.routeReason === 'string' ? body.routeReason.trim() || null : finding.routeReason;
+  finding.routeConfidence = Number.isFinite(Number(body.routeConfidence))
+    ? Math.max(0, Math.min(1, Number(body.routeConfidence)))
+    : finding.routeConfidence;
+  finding.updatedAt = nowIso;
+  appendFindingRouteHistory(finding, {
+    at: nowIso,
+    action: 'route_updated',
+    from,
+    to: finding.routeStatus,
+    reason: finding.routeReason,
+    confidence: finding.routeConfidence,
+  });
+  state.playtestFindings.set(findingId, finding);
+  saveDurableState();
+  return { finding, statusCode: 200 };
+}
+
+function updatePlaytestFindingLinks(findingId, body = {}) {
+  const finding = state.playtestFindings.get(findingId);
+  if (!finding) {
+    return { error: 'finding_not_found', statusCode: 404 };
+  }
+
+  const nowIso = new Date().toISOString();
+  const linkedIssue = typeof body.linkedIssue === 'string' ? body.linkedIssue.trim() : '';
+  const linkedPr = typeof body.linkedPr === 'string' ? body.linkedPr.trim() : '';
+  finding.linkedIssue = linkedIssue || finding.linkedIssue;
+  finding.linkedPr = linkedPr || finding.linkedPr;
+  finding.updatedAt = nowIso;
+  appendFindingRouteHistory(finding, {
+    at: nowIso,
+    action: 'links_attached',
+    linkedIssue: finding.linkedIssue,
+    linkedPr: finding.linkedPr,
+  });
+  state.playtestFindings.set(findingId, finding);
+  saveDurableState();
+  return { finding, statusCode: 200 };
+}
+
+function updatePlaytestFindingOverride(findingId, body = {}) {
+  const finding = state.playtestFindings.get(findingId);
+  if (!finding) {
+    return { error: 'finding_not_found', statusCode: 404 };
+  }
+
+  const decision = typeof body.decision === 'string' ? body.decision.trim() : '';
+  if (!decision) {
+    return { error: 'decision_required', statusCode: 400 };
+  }
+
+  const nowIso = new Date().toISOString();
+  finding.humanOverride = {
+    decision,
+    note: typeof body.note === 'string' ? body.note.trim() : null,
+    actor: typeof body.actor === 'string' ? body.actor.trim() : 'human-reviewer',
+    at: nowIso,
+  };
+  finding.updatedAt = nowIso;
+  appendFindingRouteHistory(finding, {
+    at: nowIso,
+    action: 'human_override',
+    decision: finding.humanOverride.decision,
+    actor: finding.humanOverride.actor,
+  });
+  state.playtestFindings.set(findingId, finding);
+  saveDurableState();
+  return { finding, statusCode: 200 };
+}
+
+function retryPlaytestFinding(findingId, body = {}) {
+  const finding = state.playtestFindings.get(findingId);
+  if (!finding) {
+    return { error: 'finding_not_found', statusCode: 404 };
+  }
+
+  const nowIso = new Date().toISOString();
+  const from = finding.routeStatus;
+  finding.routeStatus = 'unrouted';
+  finding.routeReason = typeof body.routeReason === 'string' ? body.routeReason.trim() : 'retry_requested';
+  finding.updatedAt = nowIso;
+  appendFindingRouteHistory(finding, {
+    at: nowIso,
+    action: 'retry_requested',
+    from,
+    to: 'unrouted',
+    reason: finding.routeReason,
+  });
+  state.playtestFindings.set(findingId, finding);
+  saveDurableState();
+  return { finding, statusCode: 200 };
+}
 
 function createPlaytestSession({ city, sceneType, language, locationId, hangoutId, exerciseTypes, seed }) {
   const validCities = ['seoul', 'tokyo', 'shanghai'];
@@ -5074,6 +5360,103 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/api/v1/playtest/findings' && req.method === 'GET') {
+      const sessionId = url.searchParams.get('sessionId');
+      const routeStatus = url.searchParams.get('routeStatus');
+      const findings = listPlaytestFindings({
+        sessionId: sessionId || null,
+        routeStatus: routeStatus || null,
+      }).map(formatPlaytestFinding);
+      jsonResponse(res, 200, {
+        findings,
+        count: findings.length,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/playtest/findings/ingest' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const sessionId = typeof body.sessionId === 'string' ? body.sessionId.trim() : '';
+      if (!sessionId) {
+        jsonResponse(res, 400, { error: 'sessionId_required' });
+        return;
+      }
+
+      const session = state.playtestSessions.get(sessionId);
+      if (!session) {
+        jsonResponse(res, 404, { error: 'session_not_found', sessionId });
+        return;
+      }
+
+      const explicitIssues = Array.isArray(body.issues) ? body.issues : null;
+      const analysisResult = body.analysis && typeof body.analysis === 'object' ? body.analysis : null;
+      const analysisIssues = Array.isArray(analysisResult?.issues) ? analysisResult.issues : null;
+      const issues = explicitIssues || analysisIssues || [];
+      const analysisId = typeof body.analysisId === 'string'
+        ? body.analysisId
+        : typeof analysisResult?.analysisId === 'string'
+          ? analysisResult.analysisId
+          : null;
+
+      const result = upsertPlaytestFindings({ sessionId, analysisId, issues });
+      jsonResponse(res, 200, {
+        ok: true,
+        sessionId,
+        analysisId,
+        ...result,
+        findings: result.findings.map(formatPlaytestFinding),
+      });
+      return;
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/route$/) && req.method === 'PATCH') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(req);
+      const result = updatePlaytestFindingRoute(findingId, body);
+      if (result.error) {
+        jsonResponse(res, result.statusCode, { error: result.error, findingId });
+        return;
+      }
+      jsonResponse(res, 200, { ok: true, finding: formatPlaytestFinding(result.finding) });
+      return;
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/links$/) && req.method === 'PATCH') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(req);
+      const result = updatePlaytestFindingLinks(findingId, body);
+      if (result.error) {
+        jsonResponse(res, result.statusCode, { error: result.error, findingId });
+        return;
+      }
+      jsonResponse(res, 200, { ok: true, finding: formatPlaytestFinding(result.finding) });
+      return;
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/retry$/) && req.method === 'POST') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(req);
+      const result = retryPlaytestFinding(findingId, body);
+      if (result.error) {
+        jsonResponse(res, result.statusCode, { error: result.error, findingId });
+        return;
+      }
+      jsonResponse(res, 200, { ok: true, finding: formatPlaytestFinding(result.finding) });
+      return;
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/findings\/[^/]+\/override$/) && req.method === 'PATCH') {
+      const findingId = pathname.split('/')[5];
+      const body = await readJsonBody(req);
+      const result = updatePlaytestFindingOverride(findingId, body);
+      if (result.error) {
+        jsonResponse(res, result.statusCode, { error: result.error, findingId });
+        return;
+      }
+      jsonResponse(res, 200, { ok: true, finding: formatPlaytestFinding(result.finding) });
+      return;
+    }
+
     // ── Signals keyword + search routes (public) ─────────────────────
 
     if (pathname === '/api/v1/signals/keywords' && req.method === 'GET') {
@@ -5488,12 +5871,19 @@ saveDurableState();
 export const __testing = {
   CHECKPOINT_BOUNDARIES,
   state,
+  createPlaytestSession,
   createNewGameSession,
   createCheckpointRecord,
   findGameSessionForResume,
   persistCheckpoint,
   resumeGameSession,
   restoreGameSessionFromCheckpoint,
+  upsertPlaytestFindings,
+  listPlaytestFindings,
+  updatePlaytestFindingRoute,
+  updatePlaytestFindingLinks,
+  updatePlaytestFindingOverride,
+  retryPlaytestFinding,
   resetState() {
     state.profiles.clear();
     state.sessions.clear();
@@ -5502,6 +5892,8 @@ export const __testing = {
     state.activeSessionByUser.clear();
     state.learnSessions = [...(FIXTURES.learnSessions.items || [])];
     state.ingestionByUser.clear();
+    state.playtestSessions.clear();
+    state.playtestFindings.clear();
     ensureIngestionForUser(DEFAULT_USER_ID);
     saveDurableState();
   },
