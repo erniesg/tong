@@ -45,6 +45,7 @@ import { resolveRuntimeAssetUrl, runtimeAssetUrl } from '@/lib/runtime-assets';
 import { buildResumePrompt, hydrateResumeState, type ResumeBootstrapPayload } from '@/lib/store/checkpoint-resume';
 import { getShanghaiFixture } from '@/lib/content/shanghai/fixtures';
 import { buildFixtureResolutionEvents, type CreditGateDecision } from '@/lib/hangout/fixture-runtime';
+import { useCommerceState } from '@/lib/hooks/useCommerceState';
 
 /* ── scene constants ────────────────────────────────────── */
 
@@ -316,12 +317,17 @@ export default function GamePage() {
     && requestedMode !== 'fixture'
     && directHangoutCityParam === 'shanghai'
     && directHangoutSceneParam === 'h1';
+  const shanghaiCommerce = useCommerceState({
+    sceneId: hangoutFixtureId || 'shanghai-h1',
+    enabled: directHangoutCityParam === 'shanghai' || hangoutFixtureId === 'shanghai/h1-negotiation',
+  });
   const fixtureModeActive = Boolean(fixtureParam) || routeFixtureMode;
   const hangoutApi = routeFixtureMode && hangoutFixtureId
     ? `/api/ai/hangout?mode=fixture&fixtureId=${encodeURIComponent(hangoutFixtureId)}${hangoutFixtureId === 'shanghai/h1-negotiation' ? `&seat=${encodeURIComponent(requestedShanghaiSeat)}` : ''}`
     : routeShanghaiDynamicOnboarding
       ? '/api/ai/hangout?city=shanghai&scene=h1'
       : '/api/ai/hangout';
+  const displaySp = shanghaiCommerce.snapshot ? shanghaiCommerce.spBalance : gameState.sp;
 
   /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester, ?dev_intro=1 fresh intro hangout, ?fresh=1 replay from opening */
   const devParam = searchParams.get('dev');
@@ -1830,17 +1836,40 @@ export default function GamePage() {
     }
   }, [toolQueue.length, chatLoading, fixtureModeActive, append, buildScenePrompt]);
 
-  const handleCreditGateDecision = useCallback((decision: CreditGateDecision) => {
+  const handleCreditGateDecision = useCallback(async (decision: CreditGateDecision) => {
     if (!currentCreditGate) {
       return;
     }
 
-    if (decision === 'spend' && gameState.sp < currentCreditGate.cost) {
+    if (decision === 'spend' && displaySp < currentCreditGate.cost) {
       return;
     }
 
     if (decision === 'spend') {
-      dispatch({ type: 'ADD_SP', amount: -currentCreditGate.cost });
+      const shanghaiSpendPath = directHangoutCityParam === 'shanghai' || hangoutFixtureId === 'shanghai/h1-negotiation';
+      if (shanghaiSpendPath) {
+        try {
+          await shanghaiCommerce.spendSp({
+            amountSp: currentCreditGate.cost,
+            reason: 'credit_gate',
+            idempotencyKey: `credit_gate:${hangoutSceneSessionId || qaRunId || hangoutFixtureId || 'shanghai-h1'}:${requestedShanghaiSeat}:${currentCreditGate.cost}`,
+            metadata: {
+              city: 'shanghai',
+              sceneId: hangoutFixtureId || 'shanghai-h1',
+              seat: requestedShanghaiSeat,
+              qaRunId: qaRunId ?? null,
+            },
+          });
+        } catch (error) {
+          traceQA('commerce_credit_gate_failed', {
+            cost: currentCreditGate.cost,
+            message: error instanceof Error ? error.message : 'credit_gate_spend_failed',
+          });
+          return;
+        }
+      } else {
+        dispatch({ type: 'ADD_SP', amount: -currentCreditGate.cost });
+      }
     }
 
     setCurrentCreditGate(null);
@@ -1850,12 +1879,24 @@ export default function GamePage() {
           const fixture = getShanghaiFixture(hangoutFixtureId);
           if (!fixture) return [];
           return buildFixtureResolutionEvents(fixture, decision, fixtureSelectedPov)
-            .map((event) => ({
-              toolCallId: event.toolCallId,
-              toolName: event.toolName,
-              args: event.args as Record<string, unknown>,
-              pauses: event.pauses,
-            }));
+            .map((event) => {
+              const args = event.args as Record<string, unknown>;
+              // Fixture credit-gate resolution bypasses useChat.onToolCall, so
+              // log injected follow-up tools here to keep QA exports in parity
+              // with the dynamic path.
+              sessionLogger.logToolCall(event.toolName, event.toolCallId, args);
+              traceQA('tool_call_received', {
+                toolName: event.toolName,
+                toolCallId: event.toolCallId,
+                source: 'fixture_credit_gate_resolution',
+              });
+              return {
+                toolCallId: event.toolCallId,
+                toolName: event.toolName,
+                args,
+                pauses: event.pauses,
+              };
+            });
         })()
       : [];
 
@@ -1869,7 +1910,7 @@ export default function GamePage() {
       setContinuePending(true);
       void append({ role: 'user', content: msg });
     }
-  }, [currentCreditGate, gameState.sp, routeFixtureMode, hangoutFixtureId, fixtureSelectedPov, toolQueue.length, chatLoading, append, buildScenePrompt]);
+  }, [append, buildScenePrompt, chatLoading, currentCreditGate, directHangoutCityParam, displaySp, fixtureSelectedPov, hangoutFixtureId, hangoutSceneSessionId, qaRunId, requestedShanghaiSeat, routeFixtureMode, shanghaiCommerce, toolQueue.length, traceQA]);
 
   const handleDismissTong = useCallback(() => {
     traceQA('handle_dismiss_tong', { processing: processingRef.current, queueLength: toolQueue.length });
@@ -2381,7 +2422,7 @@ export default function GamePage() {
           />
           <GameHUD
             xp={gameState.xp}
-            sp={gameState.sp}
+            sp={displaySp}
             cityId={mapCity}
             explainLang={(gameState.explainIn[mapCity] ?? 'en') as AppLang}
             locationLabel={<>{mapCityInfo.en} <span className="korean">{mapCityInfo.local}</span><span className="scene-hud-dot">&middot;</span>{t(mapLearnKey, mapUiLang)}</>}
@@ -2621,7 +2662,7 @@ export default function GamePage() {
           currentExercise={currentExercise}
           currentWebtoon={currentWebtoon}
           currentCreditGate={currentCreditGate}
-          playerSp={gameState.sp}
+          playerSp={displaySp}
           choices={choices}
           choicePrompt={choicePrompt}
           tongTip={tongTip}
@@ -2634,7 +2675,7 @@ export default function GamePage() {
           hudContent={
             <GameHUD
               xp={gameState.xp}
-              sp={gameState.sp}
+              sp={displaySp}
               rp={Math.round(affinity)}
               locationLabel={<>{cityInfo.en} <span className="korean">{cityInfo.local}</span><span className="scene-hud-dot">&middot;</span>{t(`loc_${location}`, explainLang)}</>}
               cityId={city}

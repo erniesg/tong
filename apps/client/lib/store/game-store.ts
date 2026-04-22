@@ -52,6 +52,7 @@ export type GameAction =
   | { type: 'RECORD_ITEM_RESULT'; itemId: string; category: 'script' | 'vocabulary' | 'grammar'; correct: boolean }
   | { type: 'ADD_XP'; amount: number }
   | { type: 'ADD_SP'; amount: number }
+  | { type: 'SET_SP'; amount: number }
   | { type: 'SPEND_SP'; amount: number }
   | { type: 'SET_CALIBRATED_LEVEL'; level: number }
   | { type: 'SET_SELF_ASSESSED_LEVEL'; level: number }
@@ -186,6 +187,8 @@ function reduce(state: GameState, action: GameAction): GameState {
       return { ...state, xp: state.xp + action.amount };
     case 'ADD_SP':
       return { ...state, sp: state.sp + action.amount };
+    case 'SET_SP':
+      return { ...state, sp: Math.max(0, action.amount) };
     case 'SPEND_SP':
       return { ...state, sp: Math.max(0, state.sp - Math.max(0, action.amount)) };
     case 'SET_CALIBRATED_LEVEL':

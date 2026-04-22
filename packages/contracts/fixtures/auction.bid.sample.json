@@ -1,0 +1,81 @@
+{
+  "accepted": true,
+  "bid": {
+    "bidId": "bid_006",
+    "participantId": "bidder_lotus_echo",
+    "displayName": "Lotus Echo",
+    "role": "bidder",
+    "amountSp": 50,
+    "previousAmountSp": 45,
+    "placedAtIso": "2026-04-22T10:05:11.000Z"
+  },
+  "snapshot": {
+    "eventId": "shoucheng-dingman",
+    "title": "Shoucheng / Dingman Special Auction",
+    "subtitle": "Bid SP to unlock the rooftop preview and claim the winner reveal.",
+    "status": "open",
+    "serverNowIso": "2026-04-22T10:05:11.000Z",
+    "createdAtIso": "2026-04-22T09:55:00.000Z",
+    "endsAtIso": "2026-04-22T10:12:00.000Z",
+    "minOpeningBidSp": 10,
+    "minIncrementSp": 5,
+    "participantCount": 4,
+    "media": {
+      "kind": "livestream",
+      "url": "https://example.com/shanghai-auction-stream",
+      "title": "Live preview feed"
+    },
+    "viewer": {
+      "participantId": "bidder_lotus_echo",
+      "displayName": "Lotus Echo",
+      "role": "bidder",
+      "spAvailable": 46,
+      "spCommitted": 50,
+      "startingSp": 96,
+      "joinedAtIso": "2026-04-22T10:00:00.000Z",
+      "isLeading": true
+    },
+    "leader": {
+      "participantId": "bidder_lotus_echo",
+      "displayName": "Lotus Echo",
+      "role": "bidder",
+      "spAvailable": 46,
+      "spCommitted": 50,
+      "startingSp": 96,
+      "joinedAtIso": "2026-04-22T10:00:00.000Z",
+      "isLeading": true
+    },
+    "participants": [
+      {
+        "participantId": "bidder_lotus_echo",
+        "displayName": "Lotus Echo",
+        "role": "bidder",
+        "spAvailable": 46,
+        "spCommitted": 50,
+        "startingSp": 96,
+        "joinedAtIso": "2026-04-22T10:00:00.000Z",
+        "isLeading": true
+      }
+    ],
+    "recentBids": [
+      {
+        "bidId": "bid_006",
+        "participantId": "bidder_lotus_echo",
+        "displayName": "Lotus Echo",
+        "role": "bidder",
+        "amountSp": 50,
+        "previousAmountSp": 45,
+        "placedAtIso": "2026-04-22T10:05:11.000Z"
+      }
+    ],
+    "unlock": {
+      "unlockKey": "unlock.shanghai.auction.preview",
+      "unlocked": false,
+      "winnerParticipantId": null,
+      "winnerDisplayName": null,
+      "winningBidSp": null,
+      "unlockedAtIso": null
+    },
+    "lastAnnouncement": "Lotus Echo jumps to 50 SP."
+  }
+}

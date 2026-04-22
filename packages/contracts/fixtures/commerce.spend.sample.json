@@ -1,0 +1,38 @@
+{
+  "accepted": true,
+  "spendId": "spend_webtoon_unlock_shanghai_h1_ayi_02_demo_user_1",
+  "userId": "demo-user-1",
+  "amountSp": 5,
+  "requestedAmountSp": 5,
+  "reason": "webtoon_unlock",
+  "balances": {
+    "xp": 420,
+    "sp": 155,
+    "rp": 90
+  },
+  "spentAtIso": "2026-04-22T07:55:00.000Z",
+  "idempotencyKey": "webtoon_unlock:unlock.webtoon.shanghai_h1.ayi_02:demo-user-1:5",
+  "unlockGrant": {
+    "grantId": "grant_unlock_webtoon_shanghai_h1_ayi_02_demo_user_1",
+    "status": "granted",
+    "userId": "demo-user-1",
+    "unlockKey": "unlock.webtoon.shanghai_h1.ayi_02",
+    "grantSource": "wallet_spend",
+    "grantedAtIso": "2026-04-22T07:55:00.000Z",
+    "idempotencyKey": "unlock.webtoon.shanghai_h1.ayi_02:demo-user-1",
+    "purchaseEventId": null,
+    "entitlement": {
+      "entitlementId": "ent_demo_user_1_unlock_webtoon_shanghai_h1_ayi_02",
+      "productKey": "unlock.webtoon.shanghai_h1.ayi_02",
+      "type": "feature_access",
+      "status": "active",
+      "grantedAtIso": "2026-04-22T07:55:00.000Z",
+      "source": "wallet_spend",
+      "purchaseEventId": null,
+      "metadata": {
+        "sceneId": "shanghai-h1",
+        "bubbleId": "ayi_02"
+      }
+    }
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "ok": true,
+  "snapshot": {
+    "eventId": "shoucheng-dingman",
+    "title": "Shoucheng / Dingman Special Auction",
+    "subtitle": "Bid SP to unlock the rooftop preview and claim the winner reveal.",
+    "status": "closed",
+    "serverNowIso": "2026-04-22T10:12:05.000Z",
+    "createdAtIso": "2026-04-22T09:55:00.000Z",
+    "endsAtIso": "2026-04-22T10:12:05.000Z",
+    "minOpeningBidSp": 10,
+    "minIncrementSp": 5,
+    "participantCount": 4,
+    "media": {
+      "kind": "uploaded_video",
+      "url": "https://assets.tong.berlayar.ai/events/shoucheng-dingman-winner.mp4",
+      "title": "Winner reveal clip"
+    },
+    "viewer": {
+      "participantId": "admin_stage_manager",
+      "displayName": "Stage Manager",
+      "role": "admin",
+      "spAvailable": 140,
+      "spCommitted": 0,
+      "startingSp": 140,
+      "joinedAtIso": "2026-04-22T09:55:00.000Z",
+      "isLeading": false
+    },
+    "leader": {
+      "participantId": "bidder_lotus_echo",
+      "displayName": "Lotus Echo",
+      "role": "bidder",
+      "spAvailable": 46,
+      "spCommitted": 50,
+      "startingSp": 96,
+      "joinedAtIso": "2026-04-22T10:00:00.000Z",
+      "isLeading": true
+    },
+    "participants": [
+      {
+        "participantId": "admin_stage_manager",
+        "displayName": "Stage Manager",
+        "role": "admin",
+        "spAvailable": 140,
+        "spCommitted": 0,
+        "startingSp": 140,
+        "joinedAtIso": "2026-04-22T09:55:00.000Z",
+        "isLeading": false
+      },
+      {
+        "participantId": "bidder_lotus_echo",
+        "displayName": "Lotus Echo",
+        "role": "bidder",
+        "spAvailable": 46,
+        "spCommitted": 50,
+        "startingSp": 96,
+        "joinedAtIso": "2026-04-22T10:00:00.000Z",
+        "isLeading": true
+      }
+    ],
+    "recentBids": [
+      {
+        "bidId": "bid_006",
+        "participantId": "bidder_lotus_echo",
+        "displayName": "Lotus Echo",
+        "role": "bidder",
+        "amountSp": 50,
+        "previousAmountSp": 45,
+        "placedAtIso": "2026-04-22T10:05:11.000Z"
+      }
+    ],
+    "unlock": {
+      "unlockKey": "unlock.shanghai.auction.preview",
+      "unlocked": true,
+      "winnerParticipantId": "bidder_lotus_echo",
+      "winnerDisplayName": "Lotus Echo",
+      "winningBidSp": 50,
+      "unlockedAtIso": "2026-04-22T10:12:05.000Z"
+    },
+    "lastAnnouncement": "Auction closed. Lotus Echo unlocked the rooftop preview."
+  }
+}

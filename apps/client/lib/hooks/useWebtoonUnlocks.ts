@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { WebtoonEntitlement, WebtoonUnlockRequest } from '@/components/scene/WebtoonStrip';
 import { dispatch, useGameState } from '@/lib/store/game-store';
+import { buildWebtoonBubbleUnlockKey, useCommerceState } from '@/lib/hooks/useCommerceState';
 
 interface SearchParamsLike {
   get(name: string): string | null;
@@ -10,30 +11,37 @@ interface SearchParamsLike {
 
 export function useWebtoonUnlocks(sceneId: string, searchParams: SearchParamsLike) {
   const gameState = useGameState();
-  const [previewSp, setPreviewSp] = useState(() => Number(searchParams.get('sp')) || 0);
   const [pendingUnlock, setPendingUnlock] = useState<WebtoonUnlockRequest | null>(null);
   const [autoOpenBubbleId, setAutoOpenBubbleId] = useState<string | null>(null);
+  const [purchaseBusy, setPurchaseBusy] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   const bypass = searchParams.get('dev_pass') === '1';
-  const gamePass = searchParams.get('game_pass') === '1' || gameState.gamePass?.active === true;
-  const spBalance = gameState.sp + previewSp;
+  const commerce = useCommerceState({ sceneId });
+  const gamePass = searchParams.get('game_pass') === '1' || commerce.gamePassActive || gameState.gamePass?.active === true;
+  const spBalance = commerce.snapshot ? commerce.spBalance : gameState.sp;
 
   const entitlement: WebtoonEntitlement = useMemo(
     () => ({
       bypass,
       gamePass,
       sp: spBalance,
-      revealedBubbleIds: gameState.revealedBubbleHelp[sceneId] ?? {},
+      revealedBubbleIds: {
+        ...(commerce.revealedBubbleIds || {}),
+        ...(gameState.revealedBubbleHelp[sceneId] ?? {}),
+      },
     }),
-    [bypass, gamePass, gameState.revealedBubbleHelp, sceneId, spBalance],
+    [bypass, commerce.revealedBubbleIds, gamePass, gameState.revealedBubbleHelp, sceneId, spBalance],
   );
 
   const closePurchaseSheet = useCallback(() => {
     setPendingUnlock(null);
+    setPurchaseError(null);
   }, []);
 
   const requestUnlock = useCallback((request: WebtoonUnlockRequest) => {
     setPendingUnlock(request);
+    setPurchaseError(null);
   }, []);
 
   const revealBubble = useCallback((bubbleId: string) => {
@@ -42,35 +50,56 @@ export function useWebtoonUnlocks(sceneId: string, searchParams: SearchParamsLik
     setPendingUnlock(null);
   }, [sceneId]);
 
-  const spendSp = useCallback(() => {
+  const spendSp = useCallback(async () => {
     if (!pendingUnlock || pendingUnlock.reveal.kind !== 'credits') return;
     if (spBalance < pendingUnlock.reveal.cost) return;
 
-    let remainingCost = pendingUnlock.reveal.cost;
-    if (previewSp > 0) {
-      const previewSpend = Math.min(previewSp, remainingCost);
-      remainingCost -= previewSpend;
-      setPreviewSp((prev) => prev - previewSpend);
+    setPurchaseBusy(true);
+    setPurchaseError(null);
+    try {
+      await commerce.spendSp({
+        amountSp: pendingUnlock.reveal.cost,
+        reason: 'webtoon_unlock',
+        idempotencyKey: `webtoon_unlock:${buildWebtoonBubbleUnlockKey(sceneId, pendingUnlock.bubbleId)}:demo-user-1:${pendingUnlock.reveal.cost}`,
+        unlockKey: buildWebtoonBubbleUnlockKey(sceneId, pendingUnlock.bubbleId),
+        unlockIdempotencyKey: `${buildWebtoonBubbleUnlockKey(sceneId, pendingUnlock.bubbleId)}:demo-user-1`,
+        metadata: {
+          sceneId,
+          bubbleId: pendingUnlock.bubbleId,
+        },
+      });
+      revealBubble(pendingUnlock.bubbleId);
+    } catch (error) {
+      setPurchaseError(error instanceof Error ? error.message : 'Unlock failed.');
+    } finally {
+      setPurchaseBusy(false);
     }
-    if (remainingCost > 0) {
-      dispatch({ type: 'SPEND_SP', amount: remainingCost });
-    }
+  }, [commerce, pendingUnlock, revealBubble, sceneId, spBalance]);
 
-    revealBubble(pendingUnlock.bubbleId);
-  }, [pendingUnlock, previewSp, revealBubble, spBalance]);
-
-  const activateGamePass = useCallback(() => {
+  const activateGamePass = useCallback(async () => {
     if (!pendingUnlock) return;
-    dispatch({ type: 'SET_GAME_PASS', pass: { active: true, source: 'grant' } });
-    setAutoOpenBubbleId(pendingUnlock.bubbleId);
-    setPendingUnlock(null);
-  }, [pendingUnlock]);
+    setPurchaseBusy(true);
+    setPurchaseError(null);
+    try {
+      await commerce.activateGamePass({
+        sceneId,
+        bubbleId: pendingUnlock.bubbleId,
+      });
+      revealBubble(pendingUnlock.bubbleId);
+    } catch (error) {
+      setPurchaseError(error instanceof Error ? error.message : 'Game Pass activation failed.');
+    } finally {
+      setPurchaseBusy(false);
+    }
+  }, [commerce, pendingUnlock, revealBubble, sceneId]);
 
   return {
     entitlement,
     pendingUnlock,
     autoOpenBubbleId,
     spBalance,
+    purchaseBusy,
+    purchaseError,
     requestUnlock,
     closePurchaseSheet,
     spendSp,

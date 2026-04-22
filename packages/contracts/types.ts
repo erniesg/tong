@@ -165,7 +165,7 @@ export interface PlayerLanguageProfile {
 
 export type CommerceEntitlementType = 'feature_access' | 'location_unlock' | 'mission_unlock' | 'collectible';
 export type CommerceEntitlementStatus = 'active' | 'revoked' | 'expired';
-export type CommerceGrantSource = 'purchase_event' | 'mission_reward' | 'admin_manual' | 'invitation_token';
+export type CommerceGrantSource = 'purchase_event' | 'mission_reward' | 'admin_manual' | 'invitation_token' | 'wallet_spend';
 
 export interface CommerceEntitlement {
   entitlementId: string;
@@ -240,6 +240,156 @@ export interface CommercePurchaseEventResponse {
   amount: CommercePurchaseMoney;
   metadata?: Record<string, unknown>;
   payloadHash: string;
+}
+
+export interface CommerceSpendRequest {
+  userId: string;
+  amountSp: number;
+  reason: 'credit_gate' | 'webtoon_unlock';
+  idempotencyKey?: string;
+  unlockKey?: string;
+  unlockIdempotencyKey?: string;
+  grantSource?: CommerceGrantSource;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CommerceSpendResponse {
+  accepted: boolean;
+  spendId?: string;
+  userId: string;
+  amountSp: number;
+  requestedAmountSp: number;
+  reason: 'credit_gate' | 'webtoon_unlock';
+  balances: {
+    xp: number;
+    sp: number;
+    rp: number;
+  };
+  spentAtIso: string | null;
+  idempotencyKey: string;
+  reasonCode?: 'invalid_amount' | 'insufficient_sp';
+  unlockGrant?: CommerceUnlockGrantResponse | null;
+}
+
+export type LiveAuctionRole = 'bidder' | 'admin';
+export type LiveAuctionStatus = 'pending' | 'open' | 'closed';
+export type LiveAuctionMediaKind = 'livestream' | 'uploaded_video' | 'generated_video';
+
+export interface LiveAuctionMedia {
+  kind: LiveAuctionMediaKind;
+  url?: string;
+  title?: string;
+}
+
+export interface LiveAuctionParticipantView {
+  participantId: string;
+  displayName: string;
+  role: LiveAuctionRole;
+  spAvailable: number;
+  spCommitted: number;
+  startingSp: number;
+  joinedAtIso: string;
+  isLeading: boolean;
+}
+
+export interface LiveAuctionBid {
+  bidId: string;
+  participantId: string;
+  displayName: string;
+  role: LiveAuctionRole;
+  amountSp: number;
+  previousAmountSp: number;
+  placedAtIso: string;
+}
+
+export interface LiveAuctionUnlockState {
+  unlockKey: string;
+  unlocked: boolean;
+  winnerParticipantId?: string | null;
+  winnerDisplayName?: string | null;
+  winningBidSp?: number | null;
+  unlockedAtIso?: string | null;
+}
+
+export interface LiveAuctionSnapshot {
+  eventId: string;
+  title: string;
+  subtitle?: string;
+  status: LiveAuctionStatus;
+  serverNowIso: string;
+  createdAtIso: string;
+  endsAtIso: string;
+  minOpeningBidSp: number;
+  minIncrementSp: number;
+  participantCount: number;
+  media: LiveAuctionMedia | null;
+  viewer: LiveAuctionParticipantView | null;
+  leader: LiveAuctionParticipantView | null;
+  participants: LiveAuctionParticipantView[];
+  recentBids: LiveAuctionBid[];
+  unlock: LiveAuctionUnlockState;
+  lastAnnouncement?: string | null;
+}
+
+export interface LiveAuctionJoinRequest {
+  eventId: string;
+  participantId?: string;
+  preferredName?: string;
+  asAdmin?: boolean;
+  adminKey?: string;
+}
+
+export interface LiveAuctionJoinResponse {
+  participant: LiveAuctionParticipantView;
+  snapshot: LiveAuctionSnapshot;
+}
+
+export interface LiveAuctionPlaceBidRequest {
+  eventId: string;
+  participantId: string;
+  amountSp: number;
+}
+
+export interface LiveAuctionPlaceBidResponse {
+  accepted: boolean;
+  reason?: 'auction_closed' | 'participant_not_found' | 'bid_too_low' | 'insufficient_sp' | 'invalid_amount';
+  bid?: LiveAuctionBid;
+  snapshot: LiveAuctionSnapshot;
+}
+
+export type LiveAuctionAdminAction =
+  | {
+    action: 'set_media';
+    media: LiveAuctionMedia;
+  }
+  | {
+    action: 'extend';
+    seconds: number;
+  }
+  | {
+    action: 'close_now';
+  }
+  | {
+    action: 'grant_sp';
+    amountSp: number;
+    targetParticipantId?: string;
+  }
+  | {
+    action: 'announce';
+    message: string;
+  }
+  | {
+    action: 'reset_demo';
+  };
+
+export type LiveAuctionAdminRequest = {
+  eventId: string;
+  participantId: string;
+} & LiveAuctionAdminAction;
+
+export interface LiveAuctionAdminResponse {
+  ok: true;
+  snapshot: LiveAuctionSnapshot;
 }
 export interface HangoutScore {
   xp: number;

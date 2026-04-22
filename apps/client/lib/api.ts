@@ -1,3 +1,20 @@
+import type {
+  CommerceEntitlementsResponse,
+  CommercePurchaseEventRequest,
+  CommercePurchaseEventResponse,
+  CommerceSpendRequest,
+  CommerceSpendResponse,
+  CommerceUnlockGrantRequest,
+  CommerceUnlockGrantResponse,
+  LiveAuctionAdminRequest,
+  LiveAuctionAdminResponse,
+  LiveAuctionJoinRequest,
+  LiveAuctionJoinResponse,
+  LiveAuctionPlaceBidRequest,
+  LiveAuctionPlaceBidResponse,
+  LiveAuctionSnapshot,
+} from '../../../packages/contracts';
+
 const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
 const DEMO_PASSWORD_STORAGE_KEY = 'tong.demo.password';
 const API_TIMEOUT_MS = 12000;
@@ -830,6 +847,58 @@ export function fetchMediaProfile() {
 
 export function fetchSecretStatus() {
   return apiFetch<SecretStatusResponse>('/api/v1/demo/secret-status');
+}
+
+export function fetchCommerceEntitlements(userId = 'demo-user-1') {
+  return apiFetch<CommerceEntitlementsResponse>(`/api/v1/commerce/entitlements?userId=${encodeURIComponent(userId)}`);
+}
+
+export function grantCommerceUnlock(body: CommerceUnlockGrantRequest) {
+  return apiFetch<CommerceUnlockGrantResponse>('/api/v1/commerce/unlocks/grant', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function recordCommercePurchaseEvent(body: CommercePurchaseEventRequest) {
+  return apiFetch<CommercePurchaseEventResponse>('/api/v1/commerce/purchase-events', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function spendCommerceSp(body: CommerceSpendRequest) {
+  return apiFetch<CommerceSpendResponse>('/api/v1/commerce/spend', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function joinLiveAuction(body: LiveAuctionJoinRequest) {
+  return apiFetch<LiveAuctionJoinResponse>('/api/v1/events/auction/join', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function fetchLiveAuctionState(params: { eventId: string; participantId?: string }) {
+  const search = new URLSearchParams({ eventId: params.eventId });
+  if (params.participantId) search.set('participantId', params.participantId);
+  return apiFetch<LiveAuctionSnapshot>(`/api/v1/events/auction/state?${search.toString()}`);
+}
+
+export function placeLiveAuctionBid(body: LiveAuctionPlaceBidRequest) {
+  return apiFetch<LiveAuctionPlaceBidResponse>('/api/v1/events/auction/bid', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function applyLiveAuctionAdminAction(body: LiveAuctionAdminRequest) {
+  return apiFetch<LiveAuctionAdminResponse>('/api/v1/events/auction/admin', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 interface FetchGraphDashboardParams {

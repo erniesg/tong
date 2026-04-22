@@ -5,6 +5,8 @@ import type { WebtoonUnlockRequest } from './WebtoonStrip';
 interface WebtoonPurchaseSheetProps {
   request: WebtoonUnlockRequest | null;
   spBalance: number;
+  busy?: boolean;
+  errorMessage?: string | null;
   onClose: () => void;
   onSpendSp: () => void;
   onActivateGamePass: () => void;
@@ -20,6 +22,8 @@ const SPEAKER_LABELS: Record<string, string> = {
 export function WebtoonPurchaseSheet({
   request,
   spBalance,
+  busy = false,
+  errorMessage = null,
   onClose,
   onSpendSp,
   onActivateGamePass,
@@ -90,8 +94,8 @@ export function WebtoonPurchaseSheet({
 
         <p style={{ margin: '10px 0 0', fontSize: '0.9rem', lineHeight: 1.45, color: 'rgba(255,248,238,0.8)' }}>
           {request.reveal.kind === 'credits'
-            ? `Spend ${request.reveal.cost} SP to permanently reveal this bubble's English help on this device, or activate Game Pass to unlock every premium help bubble in the scene.`
-            : 'Activate Game Pass locally on this device to unlock every premium help bubble in this scene. You can swap this handler to Stripe later.'}
+            ? `Spend ${request.reveal.cost} SP through the server wallet to reveal this bubble's English help, or activate Game Pass to unlock every premium help bubble in the scene.`
+            : 'Activate Game Pass through the server-owned demo checkout flow to unlock every premium help bubble in this scene.'}
         </p>
 
         <div
@@ -111,28 +115,45 @@ export function WebtoonPurchaseSheet({
           <strong style={{ color: '#f4d2ac' }}>{balanceLabel}</strong>
         </div>
 
+        {errorMessage ? (
+          <div
+            style={{
+              marginTop: 12,
+              padding: '10px 12px',
+              borderRadius: 14,
+              background: 'rgba(255, 120, 120, 0.1)',
+              border: '1px solid rgba(255, 120, 120, 0.24)',
+              color: '#ffd1d1',
+              fontSize: '0.84rem',
+            }}
+          >
+            {errorMessage}
+          </div>
+        ) : null}
+
         <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
           {request.reveal.kind === 'credits' ? (
             <button
               type="button"
-              disabled={!canAffordCredits}
+              disabled={!canAffordCredits || busy}
               onClick={onSpendSp}
               style={{
                 border: 'none',
                 borderRadius: 14,
                 padding: '12px 14px',
-                background: canAffordCredits ? '#f4d2ac' : 'rgba(244,210,172,0.18)',
-                color: canAffordCredits ? '#0d0d1a' : 'rgba(255,248,238,0.56)',
+                background: canAffordCredits && !busy ? '#f4d2ac' : 'rgba(244,210,172,0.18)',
+                color: canAffordCredits && !busy ? '#0d0d1a' : 'rgba(255,248,238,0.56)',
                 fontWeight: 700,
-                cursor: canAffordCredits ? 'pointer' : 'not-allowed',
+                cursor: canAffordCredits && !busy ? 'pointer' : 'not-allowed',
               }}
             >
-              Spend {request.reveal.cost} SP
+              {busy ? 'Processing...' : `Spend ${request.reveal.cost} SP`}
             </button>
           ) : null}
 
           <button
             type="button"
+            disabled={busy}
             onClick={onActivateGamePass}
             style={{
               borderRadius: 14,
@@ -141,14 +162,15 @@ export function WebtoonPurchaseSheet({
               background: 'rgba(255,255,255,0.04)',
               color: '#fff8ee',
               fontWeight: 700,
-              cursor: 'pointer',
+              cursor: busy ? 'not-allowed' : 'pointer',
+              opacity: busy ? 0.7 : 1,
             }}
           >
-            Purchase Game Pass
+            {busy ? 'Processing...' : 'Purchase Game Pass'}
           </button>
 
           <div style={{ fontSize: '0.78rem', lineHeight: 1.45, color: 'rgba(255,248,238,0.62)' }}>
-            Game Pass purchase is local-only for now. When you wire Stripe later, replace the Game Pass button handler with checkout.
+            Stripe settlement is still not live, but this button now round-trips through the server-owned demo purchase and entitlement path instead of toggling local client state directly.
           </div>
         </div>
       </div>

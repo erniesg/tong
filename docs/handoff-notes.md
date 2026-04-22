@@ -321,3 +321,39 @@ Template:
     - fresh browser validation of canonical Shanghai H1 in the current integrated context
     - a concrete remaining-gap inventory for Shanghai hangout + SP/payment readiness
     - discovery / design / possible first-slice implementation of a live SP bidding feature for a special Shanghai event hangout
+- Status update (`2026-04-22`, browser validation + auction slice):
+  - Fresh browser validation is now complete in the disposable worktree:
+    - dynamic `/game` H1 spend path reached summary
+    - fixture `/game` H1 spend path reached the same summary
+    - `/onboarding/shanghai?mode=dynamic` redirects into canonical `/game`
+  - The canonical H1 order stayed aligned locally, and the earlier fixture trace-parity gap is now fixed:
+    - dynamic QA logs include the post-credit spend tail `npc_speak -> tong_whisper -> end_scene`
+    - fixture credit-gate resolution now logs the injected follow-up events too, so fixture exports preserve the same spend-tail sequence
+  - Fresh public route check on `2026-04-22` still shows deploy/publish incompleteness:
+    - `https://tong.berlayar.ai/onboarding/shanghai` -> `404`
+    - `https://tong.berlayar.ai/game?phase=hangout&city=shanghai&scene=h1&mode=dynamic&seat=dingman&demo=TONG-DEMO-ACCESS` -> `200`
+    - `https://tong.berlayar.ai/webtoon/shanghai-h1` -> `404`
+    - `https://tong-api.erniesg.workers.dev/health` -> `200`
+    - `https://tong-api.erniesg.workers.dev/api/v1/commerce/locations/secret-status?userId=demo-user-1&city=shanghai&locationId=night_market_rooftop` -> `404`
+  - Local Shanghai SP/payment wiring changed in this disposable worktree:
+    - `/game` credit-gate spend now round-trips through a demo server-owned commerce ledger
+    - webtoon unlocks now spend SP through `/api/v1/commerce/spend`
+    - Game Pass activation now uses server-side purchase-event + unlock-grant calls instead of a local-only flag toggle
+  - Remaining SP/payment gap is now deploy + durability, not local client wiring:
+    - none of the new commerce changes have been deployed remotely yet
+    - the local/worker demo ledger is still in-memory only
+    - there is still no auth-owned wallet, reservation/settlement model, or real Stripe checkout/webhook path
+  - First live auction slice was added locally for a special Shanghai event hangout:
+    - shareable route at `/events/shoucheng-dingman?demo=TONG-DEMO-ACCESS`
+    - additive `LiveAuction*` contract types and fixtures
+    - local server endpoints for join/state/bid/admin
+    - client room with random bidder identity, random SP balance, countdown, live bid ticker, admin controls, media slot, and winner/unlock state
+    - current implementation is standalone, demo-only, and in-memory, so it is not yet a production payment/SP system or a Shanghai map-surface feature
+  - Validation completed after the commerce wiring pass:
+    - `npm run demo:smoke`
+    - `npm --prefix apps/server test`
+    - `npm --prefix apps/client run build`
+  - Fresh-agent continuity now depends on these files first:
+    - `artifacts/qa-runs/shanghai-disposable-worklog.md`
+    - `artifacts/qa-runs/shanghai-next-agent-handoff.md`
+    - `artifacts/qa-runs/functional-qa/shanghai-canonical-h1-end-to-end-validation-on-game-in-integrated-context/20260422T040613Z/summary.md`

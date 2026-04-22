@@ -1,0 +1,101 @@
+{
+  "participant": {
+    "participantId": "bidder_lotus_echo",
+    "displayName": "Lotus Echo",
+    "role": "bidder",
+    "spAvailable": 96,
+    "spCommitted": 0,
+    "startingSp": 96,
+    "joinedAtIso": "2026-04-22T10:00:00.000Z",
+    "isLeading": false
+  },
+  "snapshot": {
+    "eventId": "shoucheng-dingman",
+    "title": "Shoucheng / Dingman Special Auction",
+    "subtitle": "Bid SP to unlock the rooftop preview and claim the winner reveal.",
+    "status": "open",
+    "serverNowIso": "2026-04-22T10:00:00.000Z",
+    "createdAtIso": "2026-04-22T09:55:00.000Z",
+    "endsAtIso": "2026-04-22T10:12:00.000Z",
+    "minOpeningBidSp": 10,
+    "minIncrementSp": 5,
+    "participantCount": 3,
+    "media": {
+      "kind": "generated_video",
+      "url": "https://assets.tong.berlayar.ai/events/shoucheng-dingman-teaser.mp4",
+      "title": "Shanghai rooftop teaser"
+    },
+    "viewer": {
+      "participantId": "bidder_lotus_echo",
+      "displayName": "Lotus Echo",
+      "role": "bidder",
+      "spAvailable": 96,
+      "spCommitted": 0,
+      "startingSp": 96,
+      "joinedAtIso": "2026-04-22T10:00:00.000Z",
+      "isLeading": false
+    },
+    "leader": {
+      "participantId": "bidder_neon_bao",
+      "displayName": "Neon Bao",
+      "role": "bidder",
+      "spAvailable": 58,
+      "spCommitted": 35,
+      "startingSp": 93,
+      "joinedAtIso": "2026-04-22T09:58:00.000Z",
+      "isLeading": true
+    },
+    "participants": [
+      {
+        "participantId": "bidder_neon_bao",
+        "displayName": "Neon Bao",
+        "role": "bidder",
+        "spAvailable": 58,
+        "spCommitted": 35,
+        "startingSp": 93,
+        "joinedAtIso": "2026-04-22T09:58:00.000Z",
+        "isLeading": true
+      },
+      {
+        "participantId": "admin_stage_manager",
+        "displayName": "Stage Manager",
+        "role": "admin",
+        "spAvailable": 140,
+        "spCommitted": 0,
+        "startingSp": 140,
+        "joinedAtIso": "2026-04-22T09:55:00.000Z",
+        "isLeading": false
+      },
+      {
+        "participantId": "bidder_lotus_echo",
+        "displayName": "Lotus Echo",
+        "role": "bidder",
+        "spAvailable": 96,
+        "spCommitted": 0,
+        "startingSp": 96,
+        "joinedAtIso": "2026-04-22T10:00:00.000Z",
+        "isLeading": false
+      }
+    ],
+    "recentBids": [
+      {
+        "bidId": "bid_003",
+        "participantId": "bidder_neon_bao",
+        "displayName": "Neon Bao",
+        "role": "bidder",
+        "amountSp": 35,
+        "previousAmountSp": 30,
+        "placedAtIso": "2026-04-22T09:59:30.000Z"
+      }
+    ],
+    "unlock": {
+      "unlockKey": "unlock.shanghai.auction.preview",
+      "unlocked": false,
+      "winnerParticipantId": null,
+      "winnerDisplayName": null,
+      "winningBidSp": null,
+      "unlockedAtIso": null
+    },
+    "lastAnnouncement": "Auction room is live. Highest bidder unlocks the rooftop preview."
+  }
+}

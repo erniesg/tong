@@ -1,3 +1,4 @@
+import { createDemoCommerceApi } from '../../../packages/contracts/demo-commerce.mjs';
 import captionsFixture from '../../../packages/contracts/fixtures/captions.enriched.sample.json';
 import dictionaryFixture from '../../../packages/contracts/fixtures/dictionary.entry.sample.json';
 import frequencyFixture from '../../../packages/contracts/fixtures/vocab.frequency.sample.json';
@@ -11,6 +12,7 @@ import commerceUnlockGrantFixture from '../../../packages/contracts/fixtures/com
 import commercePurchaseEventFixture from '../../../packages/contracts/fixtures/commerce.purchase-event.sample.json';
 import commerceShanghaiInvitationRedeemFixture from '../../../packages/contracts/fixtures/commerce.shanghai-invitation-redeem.sample.json';
 import commerceShanghaiSecretLocationStatusFixture from '../../../packages/contracts/fixtures/commerce.shanghai-secret-location-status.sample.json';
+import commerceSpendFixture from '../../../packages/contracts/fixtures/commerce.spend.sample.json';
 import commerceUnlockFlagsSnapshotFixture from '../../../packages/contracts/fixtures/commerce.unlock-flags.snapshot.sample.json';
 import objectiveIdentityMap from '../../../packages/contracts/objective-identity-map.sample.json';
 import mockMediaWindow from '../../server/data/mock-media-window.json';
@@ -442,8 +444,15 @@ const FIXTURES = {
   commercePurchaseEvent: commercePurchaseEventFixture,
   commerceShanghaiInvitationRedeem: commerceShanghaiInvitationRedeemFixture,
   commerceShanghaiSecretLocationStatus: commerceShanghaiSecretLocationStatusFixture,
+  commerceSpend: commerceSpendFixture,
   commerceUnlockFlagsSnapshot: commerceUnlockFlagsSnapshotFixture,
 };
+const commerceApi = createDemoCommerceApi({
+  entitlements: FIXTURES.commerceEntitlements,
+  purchaseEvent: FIXTURES.commercePurchaseEvent,
+  spend: FIXTURES.commerceSpend,
+  unlockGrant: FIXTURES.commerceUnlockGrant,
+});
 
 const objectiveIdentityByCanonical = new Map<string, (typeof objectiveIdentityMap.objectives)[number]>();
 const canonicalObjectiveByAnyId = new Map<string, string>();
@@ -691,123 +700,19 @@ function getUserIdFromSearch(searchParams: URLSearchParams): string {
 }
 
 function getCommerceEntitlements(userId: string): Record<string, unknown> {
-  const fixture = cloneJson(FIXTURES.commerceEntitlements) as Record<string, unknown>;
-  fixture.userId = userId;
-  return fixture;
-}
-
-function toCommerceToken(value: string): string {
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-  return normalized || 'item';
-}
-
-function buildGrantId(idempotencyKey: string): string {
-  return `grant_${toCommerceToken(idempotencyKey)}`;
-}
-
-function buildEntitlementId(userId: string, unlockKey: string): string {
-  return `ent_${toCommerceToken(userId)}_${toCommerceToken(unlockKey)}`;
-}
-
-function buildPurchaseEventRecordId(providerEventId: string): string {
-  const compactEventId = providerEventId.replace(/^evt_/, '');
-  return `pevt_${toCommerceToken(compactEventId)}`;
+  return commerceApi.getEntitlements(userId);
 }
 
 function buildCommerceUnlockGrant(body: Record<string, any>): Record<string, unknown> {
-  const fixture = cloneJson(FIXTURES.commerceUnlockGrant) as Record<string, any>;
-  const userId = typeof body.userId === 'string' && body.userId.trim().length > 0 ? body.userId.trim() : fixture.userId;
-  const unlockKey =
-    typeof body.unlockKey === 'string' && body.unlockKey.trim().length > 0 ? body.unlockKey.trim() : fixture.unlockKey;
-  const grantSource =
-    typeof body.grantSource === 'string' && body.grantSource.trim().length > 0 ? body.grantSource.trim() : fixture.grantSource;
-  const purchaseEventId =
-    typeof body.purchaseEventId === 'string' && body.purchaseEventId.trim().length > 0
-      ? body.purchaseEventId.trim()
-      : grantSource === fixture.grantSource
-        ? fixture.purchaseEventId
-        : null;
-  const idempotencyKey =
-    typeof body.idempotencyKey === 'string' && body.idempotencyKey.trim().length > 0
-      ? body.idempotencyKey.trim()
-      : `${unlockKey}:${userId}`;
-  const keepFixtureGrantId =
-    userId === fixture.userId &&
-    unlockKey === fixture.unlockKey &&
-    grantSource === fixture.grantSource &&
-    idempotencyKey === fixture.idempotencyKey &&
-    (purchaseEventId || null) === (fixture.purchaseEventId || null);
-  const keepFixtureEntitlementId =
-    userId === fixture.userId &&
-    unlockKey === fixture.entitlement?.productKey;
-  const nextEntitlement = {
-    ...(fixture.entitlement || {}),
-    entitlementId: keepFixtureEntitlementId
-      ? fixture.entitlement?.entitlementId
-      : buildEntitlementId(userId, unlockKey),
-    productKey: unlockKey,
-    source: grantSource,
-    purchaseEventId: purchaseEventId || null,
-  } as Record<string, unknown>;
-
-  if (body.metadata && typeof body.metadata === 'object') {
-    nextEntitlement.metadata = body.metadata;
-  } else if (unlockKey !== fixture.unlockKey) {
-    delete nextEntitlement.metadata;
-  }
-
-  fixture.grantId = keepFixtureGrantId ? fixture.grantId : buildGrantId(idempotencyKey);
-  fixture.userId = userId;
-  fixture.unlockKey = unlockKey;
-  fixture.grantSource = grantSource;
-  fixture.purchaseEventId = purchaseEventId || null;
-  fixture.idempotencyKey = idempotencyKey;
-  fixture.entitlement = nextEntitlement;
-
-  return fixture;
+  return commerceApi.grantUnlock(body);
 }
 
 function buildCommercePurchaseEvent(body: Record<string, any>): Record<string, unknown> {
-  const fixture = cloneJson(FIXTURES.commercePurchaseEvent) as Record<string, any>;
-  const fixtureProviderEventId = fixture.providerEventId;
-  const fixtureProvider = fixture.provider;
-  const providerEventId =
-    typeof body.providerEventId === 'string' && body.providerEventId.trim().length > 0
-      ? body.providerEventId.trim()
-      : fixtureProviderEventId;
-  const userId = typeof body.userId === 'string' && body.userId.trim().length > 0 ? body.userId.trim() : fixture.userId;
-  const provider = typeof body.provider === 'string' && body.provider.trim().length > 0 ? body.provider.trim() : fixtureProvider;
-  const eventType =
-    typeof body.eventType === 'string' && body.eventType.trim().length > 0 ? body.eventType.trim() : fixture.eventType;
-  const keepFixtureRecordId = providerEventId === fixtureProviderEventId && provider === fixtureProvider;
+  return commerceApi.recordPurchaseEvent(body);
+}
 
-  fixture.provider = provider;
-  fixture.providerEventId = providerEventId;
-  fixture.userId = userId;
-  fixture.eventType = eventType;
-  fixture.recordId = keepFixtureRecordId ? fixture.recordId : buildPurchaseEventRecordId(providerEventId);
-  fixture.occurredAtIso = typeof body.occurredAtIso === 'string' && body.occurredAtIso.trim().length > 0
-    ? body.occurredAtIso.trim()
-    : fixture.occurredAtIso;
-  fixture.dedupeKey = `${provider}:${providerEventId}`;
-  fixture.payloadHash = typeof body.payloadHash === 'string' && body.payloadHash.trim().length > 0
-    ? body.payloadHash.trim()
-    : fixture.payloadHash;
-  if (body.amount && typeof body.amount === 'object') {
-    fixture.amount = {
-      ...(fixture.amount || {}),
-      ...body.amount,
-    };
-  }
-  if (body.metadata && typeof body.metadata === 'object') {
-    fixture.metadata = body.metadata;
-  }
-
-  return fixture;
+function buildCommerceSpend(body: Record<string, any>): Record<string, unknown> {
+  return commerceApi.spend(body);
 }
 function getCaptionsForVideo(videoId = 'karina-variety-demo') {
   const baseSegments = [
@@ -1921,6 +1826,11 @@ async function handleRequest(request: Request): Promise<Response> {
     if (pathname === '/api/v1/commerce/purchase-events' && request.method === 'POST') {
       const body = await readJsonBody(request);
       return jsonResponse(200, buildCommercePurchaseEvent(body));
+    }
+
+    if (pathname === '/api/v1/commerce/spend' && request.method === 'POST') {
+      const body = await readJsonBody(request);
+      return jsonResponse(200, buildCommerceSpend(body));
     }
 
     if (pathname === '/api/v1/commerce/invitations/redeem' && request.method === 'POST') {

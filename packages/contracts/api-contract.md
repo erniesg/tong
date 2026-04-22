@@ -334,9 +334,87 @@ Response:
 }
 ```
 
+## POST `/api/v1/commerce/spend`
+Request:
+```json
+{
+  "userId": "demo-user-1",
+  "amountSp": 5,
+  "reason": "webtoon_unlock",
+  "idempotencyKey": "webtoon_unlock:unlock.webtoon.shanghai_h1.ayi_02:demo-user-1:5",
+  "unlockKey": "unlock.webtoon.shanghai_h1.ayi_02",
+  "unlockIdempotencyKey": "unlock.webtoon.shanghai_h1.ayi_02:demo-user-1",
+  "grantSource": "wallet_spend",
+  "metadata": {
+    "sceneId": "shanghai-h1",
+    "bubbleId": "ayi_02"
+  }
+}
+```
+
+Response sample:
+Path: `packages/contracts/fixtures/commerce.spend.sample.json`
+
 Contract notes:
-- Demo worker responses are fixture-backed and deterministic; they are intentionally stateless mocks and do not mutate entitlement state across calls.
+- Demo commerce responses are fixture-seeded and deterministic, but the mock runtime now owns wallet/entitlement state in memory for the current server process so Shanghai spend/unlock flows can round-trip through server contracts instead of local client state.
 - Real Stripe webhook signature verification, replay protection storage, refund/reversal handling, and restore flows are out of scope for this mock contract stage.
+
+## POST `/api/v1/events/auction/join`
+Request:
+```json
+{
+  "eventId": "shoucheng-dingman",
+  "participantId": "bidder_lotus_echo",
+  "preferredName": "Lotus Echo",
+  "asAdmin": false
+}
+```
+
+Response sample:
+Path: `packages/contracts/fixtures/auction.join.sample.json`
+
+## GET `/api/v1/events/auction/state`
+Query:
+```json
+{
+  "eventId": "shoucheng-dingman",
+  "participantId": "bidder_lotus_echo"
+}
+```
+
+Response sample:
+Path: `packages/contracts/fixtures/auction.snapshot.sample.json`
+
+## POST `/api/v1/events/auction/bid`
+Request:
+```json
+{
+  "eventId": "shoucheng-dingman",
+  "participantId": "bidder_lotus_echo",
+  "amountSp": 50
+}
+```
+
+Response sample:
+Path: `packages/contracts/fixtures/auction.bid.sample.json`
+
+## POST `/api/v1/events/auction/admin`
+Request:
+```json
+{
+  "eventId": "shoucheng-dingman",
+  "participantId": "admin_stage_manager",
+  "action": "close_now"
+}
+```
+
+Response sample:
+Path: `packages/contracts/fixtures/auction.admin.sample.json`
+
+Contract notes:
+- The first slice is an API-led live-room contract: random bidder assignment and wallet seeding happen on join, but balances and bid holds are represented as durable fields so the room can later swap from demo memory to a real SP/payment ledger.
+- `amountSp` is the bidder's total committed bid, not a one-off increment burn. The current leader's bid remains reserved until close, and losing bids are released when outbid.
+- Admin controls are intentionally additive (`set_media`, `extend`, `close_now`, `grant_sp`, `announce`, `reset_demo`) so the eventual real-money or entitlement pipeline can keep the same room snapshot model.
 
 ## POST `/api/v1/commerce/invitations/redeem`
 Request:

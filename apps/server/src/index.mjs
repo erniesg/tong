@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createDemoCommerceApi } from '../../../packages/contracts/demo-commerce.mjs';
 import { loadGeneratedSnapshot, runMockIngestion, writeGeneratedSnapshots } from './ingestion.mjs';
 import {
   generateImage,
@@ -165,6 +166,12 @@ import {
   xhsSearch,
   getXhsStatus,
 } from './signal-xhs.mjs';
+import {
+  applyLiveAuctionAdminAction,
+  getLiveAuctionState,
+  joinLiveAuction,
+  placeLiveAuctionBid,
+} from './live-auction.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -183,6 +190,13 @@ function loadJson(relativePath) {
 
 const FIXTURES = {
   captions: loadJson('packages/contracts/fixtures/captions.enriched.sample.json'),
+  commerceEntitlements: loadJson('packages/contracts/fixtures/commerce.entitlements.sample.json'),
+  commercePurchaseEvent: loadJson('packages/contracts/fixtures/commerce.purchase-event.sample.json'),
+  commerceShanghaiInvitationRedeem: loadJson('packages/contracts/fixtures/commerce.shanghai-invitation-redeem.sample.json'),
+  commerceShanghaiSecretLocationStatus: loadJson('packages/contracts/fixtures/commerce.shanghai-secret-location-status.sample.json'),
+  commerceSpend: loadJson('packages/contracts/fixtures/commerce.spend.sample.json'),
+  commerceUnlockFlagsSnapshot: loadJson('packages/contracts/fixtures/commerce.unlock-flags.snapshot.sample.json'),
+  commerceUnlockGrant: loadJson('packages/contracts/fixtures/commerce.unlock-grant.sample.json'),
   dictionary: loadJson('packages/contracts/fixtures/dictionary.entry.sample.json'),
   frequency: loadJson('packages/contracts/fixtures/vocab.frequency.sample.json'),
   insights: loadJson('packages/contracts/fixtures/vocab.insights.sample.json'),
@@ -199,6 +213,12 @@ const FIXTURES = {
   youtubeStatus: loadJson('packages/contracts/fixtures/youtube.status.sample.json'),
 };
 const WORLD_MAP_REGISTRY = loadJson('packages/contracts/world-map-registry.sample.json');
+const commerceApi = createDemoCommerceApi({
+  entitlements: FIXTURES.commerceEntitlements,
+  purchaseEvent: FIXTURES.commercePurchaseEvent,
+  spend: FIXTURES.commerceSpend,
+  unlockGrant: FIXTURES.commerceUnlockGrant,
+});
 
 const mockMediaWindowPath = path.join(repoRoot, 'apps/server/data/mock-media-window.json');
 const DEFAULT_USER_ID = 'demo-user-1';
@@ -4824,6 +4844,76 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/v1/demo/secret-status' && req.method === 'GET') {
       jsonResponse(res, 200, getSecretStatus());
+      return;
+    }
+
+    if (pathname === '/api/v1/commerce/entitlements' && req.method === 'GET') {
+      jsonResponse(res, 200, commerceApi.getEntitlements(getUserIdFromQuery(url.searchParams)));
+      return;
+    }
+
+    if (pathname === '/api/v1/commerce/unlocks/grant' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      jsonResponse(res, 200, commerceApi.grantUnlock(body));
+      return;
+    }
+
+    if (pathname === '/api/v1/commerce/purchase-events' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      jsonResponse(res, 200, commerceApi.recordPurchaseEvent(body));
+      return;
+    }
+
+    if (pathname === '/api/v1/commerce/spend' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      jsonResponse(res, 200, commerceApi.spend(body));
+      return;
+    }
+
+    if (pathname === '/api/v1/commerce/invitations/redeem' && req.method === 'POST') {
+      jsonResponse(res, 200, FIXTURES.commerceShanghaiInvitationRedeem);
+      return;
+    }
+
+    if (pathname === '/api/v1/commerce/locations/secret-status' && req.method === 'GET') {
+      jsonResponse(res, 200, FIXTURES.commerceShanghaiSecretLocationStatus);
+      return;
+    }
+
+    if (pathname === '/api/v1/commerce/unlock-flags/snapshot' && req.method === 'GET') {
+      jsonResponse(res, 200, FIXTURES.commerceUnlockFlagsSnapshot);
+      return;
+    }
+
+    if (pathname === '/api/v1/events/auction/join' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const { statusCode, payload } = joinLiveAuction(body, {
+        adminSecret: String(process.env.TONG_AUCTION_ADMIN_KEY || DEMO_PASSWORD || '').trim(),
+      });
+      jsonResponse(res, statusCode, payload);
+      return;
+    }
+
+    if (pathname === '/api/v1/events/auction/state' && req.method === 'GET') {
+      const { statusCode, payload } = getLiveAuctionState({
+        eventId: url.searchParams.get('eventId'),
+        participantId: url.searchParams.get('participantId'),
+      });
+      jsonResponse(res, statusCode, payload);
+      return;
+    }
+
+    if (pathname === '/api/v1/events/auction/bid' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const { statusCode, payload } = placeLiveAuctionBid(body);
+      jsonResponse(res, statusCode, payload);
+      return;
+    }
+
+    if (pathname === '/api/v1/events/auction/admin' && req.method === 'POST') {
+      const body = await readJsonBody(req);
+      const { statusCode, payload } = applyLiveAuctionAdminAction(body);
+      jsonResponse(res, statusCode, payload);
       return;
     }
 

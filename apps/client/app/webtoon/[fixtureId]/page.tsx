@@ -21,6 +21,8 @@ function WebtoonInspectContent() {
     pendingUnlock,
     autoOpenBubbleId,
     spBalance,
+    purchaseBusy,
+    purchaseError,
     requestUnlock,
     closePurchaseSheet,
     spendSp,
@@ -51,6 +53,8 @@ function WebtoonInspectContent() {
       <WebtoonPurchaseSheet
         request={pendingUnlock}
         spBalance={spBalance}
+        busy={purchaseBusy}
+        errorMessage={purchaseError}
         onClose={closePurchaseSheet}
         onSpendSp={spendSp}
         onActivateGamePass={activateGamePass}
