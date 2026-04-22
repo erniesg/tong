@@ -96,7 +96,7 @@ Epic 6 (QA)
 
 ---
 
-## Issue card template (explanation)
+## Slice template (explanation)
 
 Every card uses this shape so any dev can pick it up cold:
 
@@ -113,7 +113,7 @@ Every card uses this shape so any dev can pick it up cold:
 
 Generic system that lets us define prebaked scenes that can run as fixture-verbatim or be used as AI scaffolding.
 
-## Issue 1.1 — Fixture types + schema
+## Slice 1.1 — Fixture types + schema
 
 **Red:** No type system for scene fixtures. Can't represent "beat with locked line + variants + style rules" anywhere.
 
@@ -232,7 +232,7 @@ export type ResolutionSpec = {
 
 ---
 
-## Issue 1.2 — Fixture runtime
+## Slice 1.2 — Fixture runtime
 
 **Red:** Given a SceneFixture, there's no code that replays it as hangout tool-call events.
 
@@ -266,7 +266,7 @@ export type ResolutionSpec = {
 
 ---
 
-## Issue 1.3 — Hangout route fixture mode
+## Slice 1.3 — Hangout route fixture mode
 
 **Red:** `/api/ai/hangout` only supports AI-generated scenes.
 
@@ -298,7 +298,7 @@ export type ResolutionSpec = {
 
 # Epic 2 — Shanghai content V1
 
-## Issue 2.1 — Shanghai location + vocabulary
+## Slice 2.1 — Shanghai location + vocabulary
 
 **Red:** No Shanghai city in content registry.
 
@@ -326,7 +326,7 @@ export type ResolutionSpec = {
 
 ---
 
-## Issue 2.2 — Shanghai character sheets
+## Slice 2.2 — Shanghai character sheets
 
 **Red:** No character sheets for 丁漫, 守成, 方阿姨 — dialogue generation has no voice rules to enforce.
 
@@ -410,7 +410,7 @@ romanceable: false
 
 ---
 
-## Issue 2.3 — H1 fixture content
+## Slice 2.3 — H1 fixture content
 
 **Red:** No `shanghai/h1-negotiation` fixture exists.
 
@@ -460,7 +460,7 @@ romanceable: false
 
 # Epic 3 — Webtoon scene type
 
-## Issue 3.1 — WebtoonPanel component
+## Slice 3.1 — WebtoonPanel component
 
 **Red:** No way to render a multi-panel visual sequence.
 
@@ -500,7 +500,7 @@ romanceable: false
 
 ---
 
-## Issue 3.2 — show_webtoon tool
+## Slice 3.2 — show_webtoon tool
 
 **Red:** Hangout orchestrator has no tool call for triggering a webtoon.
 
@@ -539,7 +539,7 @@ romanceable: false
 
 ---
 
-## Issue 3.3 — H1 webtoon panel assets
+## Slice 3.3 — H1 webtoon panel assets
 
 **Red:** H1 fixture references 3 panel image paths that don't exist.
 
@@ -573,7 +573,7 @@ romanceable: false
 
 # Epic 4 — Dynamic prompt integration
 
-## Issue 4.1 — Shanghai onboarding prompt
+## Slice 4.1 — Shanghai onboarding prompt
 
 **Red:** No AI prompt for Shanghai hangout that uses a fixture as scaffolding.
 
@@ -599,7 +599,7 @@ romanceable: false
 
 ---
 
-## Issue 4.2 — Voice rule validator
+## Slice 4.2 — Voice rule validator
 
 **Red:** AI can still generate lines that violate character forbidden moves (meta-tags, invented backstory).
 
@@ -636,7 +636,7 @@ type ValidationResult =
 
 ---
 
-## Issue 4.3 — POV seat state
+## Slice 4.3 — POV seat state
 
 **Red:** No game-state field for which NPC the player faced — H2 branch has nothing to read.
 
@@ -662,23 +662,23 @@ type ValidationResult =
 
 Not implemented in V1. Cards listed for later pickup.
 
-## Issue 5.1 — H2 shoucheng-alone fixture
+## Slice 5.1 — H2 shoucheng-alone fixture
 Skeleton fixture that runs when `hangoutSeat["shanghai/h1-negotiation"] === "shoucheng"`. Content beats per prior conversation: notebook, 2017 footage phone call, dad call (`我在处理。你跟爸说我在处理`), 阿姨 brings tea unrequested.
 
-## Issue 5.2 — H2 dingman-alone fixture
+## Slice 5.2 — H2 dingman-alone fixture
 Content beats: one steamer instead of two, earlier arrival, scrolling survival-show clips, asks 阿姨 about 守成's folder `给我看看` / `我拿回去看`, 阿姨 says `迟早的事`.
 
-## Issue 5.3 — Show venue scene (replaces H4)
+## Slice 5.3 — Show venue scene (replaces H4)
 After H2 completes, next game entry drops player into the show venue, not back to the 小笼包店. 丁漫 in a different outfit, hair done, posture different. 守成 in a proper suit, on phone, not eating. Tong: "Wait — isn't that the person from the 小笼包店?"
 
-## Issue 5.4 — Cross-scene recognition flags
+## Slice 5.4 — Cross-scene recognition flags
 If player faced 丁漫 in H1 and she was facing you, a half-second of almost-recognition in the show scene. If they faced 守成, he doesn't register.
 
 ---
 
 # Epic 6 — QA + iteration loop
 
-## Issue 6.1 — Fixture dev toggle
+## Slice 6.1 — Fixture dev toggle
 
 **Red:** No way to force fixture mode while developing.
 
@@ -697,7 +697,7 @@ If player faced 丁漫 in H1 and she was facing you, a half-second of almost-rec
 
 ---
 
-## Issue 6.2 — Voice rule regression tests
+## Slice 6.2 — Voice rule regression tests
 
 **Red:** No automated way to detect dialogue quality regressions.
 
@@ -730,7 +730,7 @@ test("H1 dynamic output honors voice rules (10 runs)", async () => {
 
 ---
 
-## Issue 6.3 — Playtest script
+## Slice 6.3 — Playtest script
 
 **Red:** No human QA script for H1.
 
@@ -840,6 +840,6 @@ Decisions approved by user (locked for V1):
 
 Deferred decisions (not blocking V1):
 - Whether to add Zod runtime validation for fixtures
-- Credit-gate SSE resolution mechanism (POST continuation vs WebSocket) — decide during Issue 1.3
+- Credit-gate SSE resolution mechanism (POST continuation vs WebSocket) — decide during Slice 1.3
 - Whether voice rule validator uses LLM-as-judge or string/regex only (V2 consideration)
 - Whether to generate webtoon panels via API pipeline (V2) or commission statically (V1)

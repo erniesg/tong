@@ -26,7 +26,7 @@ export default function ScriptedMessagingBackstagePage() {
 
   return (
     <main style={{ maxWidth: 780, margin: '0 auto', padding: 16, display: 'grid', gap: 12 }}>
-      <h1 style={{ margin: 0 }}>Scripted Messaging Player (Issue #124)</h1>
+      <h1 style={{ margin: 0 }}>Scripted Messaging Player</h1>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {(['seoul', 'tokyo', 'shanghai'] as GraphCityId[]).map((value) => (

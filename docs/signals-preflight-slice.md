@@ -1,6 +1,6 @@
-# Signals preflight/mock slice for issue #129
+# Signals preflight and mock slice
 
-This document describes the narrow, cloud-portable server-side slice for `erniesg/tong#129`.
+This document describes the narrow, cloud-portable server-side slice for the signals preflight and mock path.
 
 ## What this slice makes portable
 

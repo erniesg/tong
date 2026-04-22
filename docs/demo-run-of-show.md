@@ -44,7 +44,7 @@
 - Keep server-backed and mocked paths functionally identical.
 - If remote API is unavailable, run in local-mock mode with same UI.
 
-## Deterministic messaging promo capture route (Issue #125)
+## Deterministic messaging promo capture route
 
 Use `/mock/messaging-promo` for 9:16 scripted messaging capture.
 

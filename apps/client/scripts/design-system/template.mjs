@@ -253,7 +253,7 @@ export function generateHTML(parsed, sections) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tong Design System</title>
-<!-- Generated: ${now} | ${varCount} variables, ${classCount} classes, ${kfCount} keyframes -->
+<!-- Design system snapshot | ${varCount} variables, ${classCount} classes, ${kfCount} keyframes -->
 <style>
 /* ══════════════════════════════════════════════════════════════
    BLOCK 1: globals.css — verbatim embed (single source of truth)

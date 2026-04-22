@@ -1,6 +1,6 @@
-# Issue #18 reviewer evidence checklist (Block Crush review dismissal)
+# Reviewer evidence checklist: Block Crush review dismissal
 
-Use this checklist to capture the correct proof for `erniesg/tong#18`.
+Use this checklist to capture the correct proof for the Block Crush review dismissal path.
 
 ## Proof moment to capture
 
@@ -25,9 +25,9 @@ Use the real hangout route, not the isolated dev exercise tester:
 
 ## Notes
 
-- Do not use `?dev=exercise` for this issue. That bypasses the real parent exercise dismissal path.
+- Do not use `?dev=exercise` for this path. That bypasses the real parent exercise dismissal path.
 - A local artifact path by itself is not reviewer-visible proof. Link or attach the recording or ordered frames in the PR body, task result, or issue comment.
-- For this issue class, a single still image is not sufficient evidence.
+- For this class of problem, a single still image is not sufficient evidence.
 - If deterministic fast-forward or state injection is used to skip the full playthrough, the captured review state must still make sense to a reviewer. Do not post a clip whose visible objective or HUD implies a different target than the review state being dismissed.
 
 ## Reviewer-proof pack
