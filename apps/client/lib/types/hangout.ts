@@ -41,6 +41,29 @@ export interface CreditGateState {
   skipPayload: CreditGate['skipPayload'];
 }
 
+export type CinematicPresentationMode = 'cover' | 'panorama';
+
+export type CinematicOverlayAnchor = 'viewport' | 'world';
+
+export interface CinematicWorldOverlayItem {
+  id: string;
+  anchor: CinematicOverlayAnchor;
+  x: number;
+  y: number;
+  label: string;
+}
+
+export interface CinematicPresentation {
+  mode?: CinematicPresentationMode;
+  /**
+   * Authored media dimensions used to map world overlays and pan bounds.
+   * When omitted, runtime video metadata is used.
+   */
+  mediaWidth?: number;
+  mediaHeight?: number;
+  overlays?: CinematicWorldOverlayItem[];
+}
+
 export interface SceneSummary {
   summary: string;
   xpEarned: number;

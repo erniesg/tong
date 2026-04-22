@@ -1,7 +1,13 @@
 'use client';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
-import type { CreditGateState, ExerciseData, SessionMessage, WebtoonSequence } from '@/lib/types/hangout';
+import type {
+  CinematicPresentation,
+  CreditGateState,
+  ExerciseData,
+  SessionMessage,
+  WebtoonSequence,
+} from '@/lib/types/hangout';
 import type { TargetLang } from '@/components/shared/KoreanText';
 import { CHARACTER_MAP } from '@/lib/content/characters';
 import { Background } from './Background';
@@ -17,7 +23,14 @@ interface SceneViewProps {
   backgroundUrl: string;
   backgroundTransition?: 'fade' | 'cut';
   ambientDescription?: string;
-  cinematic?: { videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null;
+  cinematic?: {
+    videoUrl: string;
+    caption?: string;
+    captionTranslation?: string;
+    autoAdvance: boolean;
+    muted?: boolean;
+    presentation?: CinematicPresentation;
+  } | null;
   onCinematicEnd?: () => void;
   npcName?: string;
   npcColor?: string;
@@ -158,6 +171,7 @@ export function SceneView({
           captionTranslation={cinematic.captionTranslation}
           autoAdvance={cinematic.autoAdvance}
           muted={cinematic.muted ?? false}
+          presentation={cinematic.presentation}
           targetLang={targetLang}
           onEnd={handleCinematicEnd}
         />
