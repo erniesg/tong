@@ -138,7 +138,7 @@ const hangoutTools = {
     execute: async (args) => args,
   }),
   show_webtoon: tool({
-    description: 'Display a multi-panel webtoon sequence. Use for cliffhangers, memory reveals, or eavesdrop moments that need visual framing.',
+    description: 'Display a multi-panel webtoon sequence. Use for cliffhangers, memory reveals, or eavesdrop moments that need visual framing. In Shanghai H1, panel 3 is a thumb-stop with bubble text 瞿家的小儿子…… before credit gating.',
     parameters: z.object({
       panels: z.array(z.object({
         id: z.string(),
@@ -152,6 +152,7 @@ const hangoutTools = {
           color: z.string(),
         }),
         isThumbStop: z.boolean().optional(),
+        bubbleRevealDelayMs: z.number().int().positive().max(6000).optional(),
         bubble: z.object({
           zh: z.string(),
           py: z.string().optional(),

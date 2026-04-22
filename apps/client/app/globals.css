@@ -2261,6 +2261,18 @@ button.nav-link:hover {
   cursor: pointer;
 }
 
+.webtoon-panel-sr-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .webtoon-shell {
   position: relative;
   z-index: 1;
@@ -2647,11 +2659,16 @@ button.nav-link:hover {
 @media (max-width: 480px) {
   .webtoon-shell {
     gap: 14px;
+    padding-inline: 10px;
   }
 
   .webtoon-panel-frame--inset-narrow,
   .webtoon-panel-frame--floating {
-    width: min(72vw, 360px);
+    width: min(74vw, 360px);
+  }
+
+  .webtoon-panel-frame--full-width {
+    width: min(96vw, 760px);
   }
 
   .webtoon-bubble__button {
