@@ -35,6 +35,7 @@ import { getRelationshipStage } from '@/lib/types/relationship';
 import { CityMap, CITY_ORDER } from '@/components/city-map/CityMap';
 import { KoreanText } from '@/components/shared/KoreanText';
 import { LearnPanel } from '@/components/learn/LearnPanel';
+import { ShanghaiPreludeViewport } from '@/components/scene/ShanghaiPreludeViewport';
 import { sessionLogger } from '@/lib/debug/session-logger';
 import { UILangProvider } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
@@ -476,6 +477,9 @@ export default function GamePage() {
   const [availableScenarioSeedIds, setAvailableScenarioSeedIds] = useState<string[]>([]);
   const [dynamicBackdrop, setDynamicBackdrop] = useState<{ url: string; transition: 'fade' | 'cut'; ambientDescription?: string } | null>(null);
   const [cinematic, setCinematic] = useState<{ videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null>(null);
+  const [shanghaiPanUnlocked, setShanghaiPanUnlocked] = useState(false);
+  const [shanghaiPairRevealed, setShanghaiPairRevealed] = useState(false);
+  const [shanghaiPairTapped, setShanghaiPairTapped] = useState(false);
 
   const traceQA = useCallback((event: string, data: Record<string, unknown> = {}) => {
     if (!qaTrace) return;
@@ -900,6 +904,22 @@ export default function GamePage() {
     && chatLoading
     && (latestNpcSpeakInvocation.state === 'partial-call' || latestNpcSpeakInvocation.state === 'call')
   );
+  const isShanghaiH1OnboardingRoute =
+    phase === 'hangout'
+    && searchParams.get('city') === 'shanghai'
+    && searchParams.get('scene') === 'h1';
+  const shouldBlockContinueForShanghaiTap =
+    isShanghaiH1OnboardingRoute
+    && shanghaiPanUnlocked
+    && shanghaiPairRevealed
+    && !shanghaiPairTapped;
+
+  useEffect(() => {
+    if (isShanghaiH1OnboardingRoute) return;
+    setShanghaiPanUnlocked(false);
+    setShanghaiPairRevealed(false);
+    setShanghaiPairTapped(false);
+  }, [isShanghaiH1OnboardingRoute]);
 
   /* Auto-start scene when skipping to hangout */
   useEffect(() => {
@@ -1232,6 +1252,9 @@ export default function GamePage() {
           setIntroAct(2);
           console.log('[VN] Act 1 → Act 2 transition triggered by npc_speak');
         }
+        if (isShanghaiH1OnboardingRoute && !shanghaiPanUnlocked) {
+          setShanghaiPanUnlocked(true);
+        }
         if (isIntroHangout && !npcRevealed) setNpcRevealed(true);
         traceQA('tool_queue_blocking_message', { toolName: item.toolName, toolCallId: item.toolCallId });
         setCurrentMessage({
@@ -1533,7 +1556,7 @@ export default function GamePage() {
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
     traceQA('tool_queue_auto_advance', { toolName: item.toolName, remainingQueueLength: Math.max(toolQueue.length - 1, 0) });
-  }, [toolQueue, activeNpc, isIntroHangout, introAct]);
+  }, [toolQueue, activeNpc, isIntroHangout, introAct, isShanghaiH1OnboardingRoute, shanghaiPanUnlocked]);
 
   /* ── Hangout handlers ───────────────────────────────────── */
 
@@ -1579,6 +1602,13 @@ export default function GamePage() {
       traceQA('handle_continue_noop_scene_summary');
       return;
     }
+    if (shouldBlockContinueForShanghaiTap) {
+      setTongTip({
+        message: 'Tap Shoucheng and Dingman before we move in closer.',
+      });
+      traceQA('handle_continue_blocked_shanghai_tap_gate');
+      return;
+    }
     if (chatLoading) {
       traceQA('handle_continue_noop_chat_loading', { queueLength: toolQueue.length });
       return;
@@ -1606,7 +1636,7 @@ export default function GamePage() {
         hasChoices: !!choices,
       });
     }
-  }, [sceneSummary, chatLoading, tongTip, currentExercise, currentWebtoon, currentCreditGate, choices, toolQueue, append, buildScenePrompt, traceQA, fixtureModeActive]);
+  }, [sceneSummary, chatLoading, tongTip, currentExercise, currentWebtoon, currentCreditGate, choices, toolQueue, append, buildScenePrompt, traceQA, fixtureModeActive, shouldBlockContinueForShanghaiTap]);
 
   // Store exercise result so handleContinue can advance after user taps
   const exerciseResultRef = useRef<{ exerciseId: string; correct: boolean } | null>(null);
@@ -2501,6 +2531,20 @@ export default function GamePage() {
       <div className="game-frame">
         <SceneView
           backgroundUrl={resolvedDynamicBackdropUrl || SEOUL_FOOD_STREET_BACKDROP_URL}
+          backgroundLayer={isShanghaiH1OnboardingRoute ? (
+            <ShanghaiPreludeViewport
+              imageUrl={resolvedDynamicBackdropUrl || SEOUL_FOOD_STREET_BACKDROP_URL}
+              panUnlocked={shanghaiPanUnlocked}
+              tappedPair={shanghaiPairTapped}
+              onPairReveal={setShanghaiPairRevealed}
+              onPairTap={() => {
+                if (shanghaiPairTapped) return;
+                setShanghaiPairTapped(true);
+                setTongTip({ message: 'There they are. Keep your voice down and listen.' });
+                traceQA('shanghai_pair_tapped');
+              }}
+            />
+          ) : undefined}
           backgroundTransition={dynamicBackdrop?.transition}
           ambientDescription={dynamicBackdrop?.ambientDescription ?? 'A warm pojangmacha (street food tent) on a Seoul side street'}
           cinematic={cinematic}

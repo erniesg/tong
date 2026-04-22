@@ -15,6 +15,7 @@ import { WebtoonPanel } from './WebtoonPanel';
 
 interface SceneViewProps {
   backgroundUrl: string;
+  backgroundLayer?: React.ReactNode;
   backgroundTransition?: 'fade' | 'cut';
   ambientDescription?: string;
   cinematic?: { videoUrl: string; caption?: string; captionTranslation?: string; autoAdvance: boolean; muted?: boolean } | null;
@@ -60,6 +61,7 @@ const SPEAKER_COLORS: Record<string, string> = {
 
 export function SceneView({
   backgroundUrl,
+  backgroundLayer,
   backgroundTransition,
   ambientDescription = '',
   cinematic = null,
@@ -148,7 +150,9 @@ export function SceneView({
       {hudContent}
 
       {/* Layer 1: Background */}
-      <Background imageUrl={backgroundUrl} ambientDescription={ambientDescription} fade={backdropTransition} />
+      {backgroundLayer ?? (
+        <Background imageUrl={backgroundUrl} ambientDescription={ambientDescription} fade={backdropTransition} />
+      )}
 
       {/* Cinematic overlay (above everything when playing) */}
       {cinematic && (
