@@ -72,15 +72,12 @@ Required review surface:
 - `uploaded-comment.md` should point at public `tong-runs` URLs
 - do not treat `artifacts/qa-runs/...` as reviewer-visible proof
 
-## Codex cloud handoff
+## Hosted task handoff
 
-Before sending a portable issue to Codex cloud:
+Before sending a portable task to the hosted environment:
 
-```bash
-npm run codex:cloud-plan
-```
-
-Use the generated task prompt and PR notes for the issue. If the issue needs timing-sensitive proof, keep the evidence requirement explicit in the task prompt and require public links in the final PR body or comment.
+Run the queue planner under `.agents/skills/_functional-qa/scripts/` and use the generated task prompt plus PR notes for the remote handoff.
+If the task needs timing-sensitive proof, keep the evidence requirement explicit in the prompt and require public links in the final PR body or comment.
 
 ## Current acceptance boundary
 

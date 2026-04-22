@@ -69,7 +69,7 @@ Define and land the prerequisite contract for the world map registry so every wo
 - Related child issues: #69, #62, #63, #64
 ```
 
-Created on 2026-03-21 as GitHub issue `#114` in `erniesg/tong`.
+Created as the canonical tracking record for the Seoul starter-pack map pins in `erniesg/tong`.
 
 ## Closeout expectations by issue
 

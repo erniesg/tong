@@ -3,7 +3,7 @@
 ## Purpose
 Unblock demo validation early while API/plumbing is still in progress.
 
-## `codex/mock-ui` deliverables
+## Mock UI deliverables
 1. Clickable high-fidelity demo flow for all run-of-show segments.
 2. Deterministic happy-path toggles:
 - `demo_fast_path=true`
@@ -14,7 +14,7 @@ Unblock demo validation early while API/plumbing is still in progress.
 - Shanghai texting reward chain.
 4. UI review checklist and stakeholder signoff snapshots.
 
-## `codex/creative-assets` deliverables
+## Creative assets deliverables
 1. Initial city/location art pack:
 - Seoul/Tokyo/Shanghai,
 - shared 5 locations per city.
@@ -51,7 +51,7 @@ Unblock demo validation early while API/plumbing is still in progress.
    Pack data should use contract IDs such as `food_street`; reserve hyphenated slugs such as `food-street` for asset keys and file naming.
    - `assets/content-packs/starter-cast-roster.spec.md`
    - `assets/manifest/starter-cast-registry.json`
-   Issue `#69` makes these the approved starter-cast and per-character asset-bundle source of truth for downstream city-pack work.
+   These files are the approved starter-cast and per-character asset-bundle source of truth for downstream city-pack work.
    Tokyo intentionally has no live `practice_studio` pin, while Shanghai's live `milk_tea_shop` pin resolves to `dagLocationSlot: practice_studio` and keeps the advanced reward hooks on that starter pack.
 5. Scripted messaging promo scenes should live under each relevant starter pack as `scriptedMessagingScenes` and follow `packages/contracts` `ScriptedMessagingScene` shape (`sceneId`, `cityId`, `objectiveId`, `title`, `hookText`, `speakers`, `rows`).
 6. `sceneId` values should stay stable and manifest-friendly with a city/platform/location prefix (example: `promo.seoul.kakao.food_street.*`).

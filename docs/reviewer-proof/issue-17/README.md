@@ -1,6 +1,6 @@
-# Issue 17 Reviewer Proof
+# Reviewer Proof: continue-to-whisper transition
 
-This folder contains reviewer-openable proof for [issue #17](https://github.com/erniesg/tong/issues/17) on the fix branch used by [PR #89](https://github.com/erniesg/tong/pull/89).
+This folder contains reviewer-openable proof for the continue-to-whisper transition on the fix branch used for review.
 
 Capture path:
 
@@ -33,4 +33,4 @@ Key proof points from the QA state snapshots:
 Scope note:
 
 - This proof pack makes the PR reviewable from GitHub and shows the fixed route moving through the expected continue -> Tong whisper -> next beat flow.
-- The original wasted-tap symptom was intermittent and timing-sensitive in human play, so final accept/reject for issue closure should still use a human browser pass on the same `/game?dev_intro=1&qa_trace=1` route.
+- The original wasted-tap symptom was intermittent and timing-sensitive in human play, so final accept or reject should still use a human browser pass on the same `/game?dev_intro=1&qa_trace=1` route.
