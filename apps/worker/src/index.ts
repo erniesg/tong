@@ -6,6 +6,9 @@ import gameStartFixture from '../../../packages/contracts/fixtures/game.start-or
 import objectivesNextFixture from '../../../packages/contracts/fixtures/objectives.next.sample.json';
 import learnSessionsFixture from '../../../packages/contracts/fixtures/learn.sessions.sample.json';
 import mediaProfileFixture from '../../../packages/contracts/fixtures/player.media-profile.sample.json';
+import commerceEntitlementsFixture from '../../../packages/contracts/fixtures/commerce.entitlements.sample.json';
+import commerceUnlockGrantFixture from '../../../packages/contracts/fixtures/commerce.unlock-grant.sample.json';
+import commercePurchaseEventFixture from '../../../packages/contracts/fixtures/commerce.purchase-event.sample.json';
 import objectiveIdentityMap from '../../../packages/contracts/objective-identity-map.sample.json';
 import mockMediaWindow from '../../server/data/mock-media-window.json';
 
@@ -431,6 +434,9 @@ const FIXTURES = {
   objectivesNext: objectivesNextFixture,
   learnSessions: learnSessionsFixture,
   mediaProfile: mediaProfileFixture,
+  commerceEntitlements: commerceEntitlementsFixture,
+  commerceUnlockGrant: commerceUnlockGrantFixture,
+  commercePurchaseEvent: commercePurchaseEventFixture,
 };
 
 const objectiveIdentityByCanonical = new Map<string, (typeof objectiveIdentityMap.objectives)[number]>();
@@ -676,6 +682,79 @@ function getLocationId(search: URLSearchParams): LocationId {
 
 function getUserIdFromSearch(searchParams: URLSearchParams): string {
   return searchParams.get('userId') || DEFAULT_USER_ID;
+}
+
+function getCommerceEntitlements(userId: string): Record<string, unknown> {
+  const fixture = cloneJson(FIXTURES.commerceEntitlements) as Record<string, unknown>;
+  fixture.userId = userId;
+  return fixture;
+}
+
+function buildCommerceUnlockGrant(body: Record<string, any>): Record<string, unknown> {
+  const fixture = cloneJson(FIXTURES.commerceUnlockGrant) as Record<string, any>;
+  const userId = typeof body.userId === 'string' && body.userId.trim().length > 0 ? body.userId.trim() : fixture.userId;
+  const unlockKey =
+    typeof body.unlockKey === 'string' && body.unlockKey.trim().length > 0 ? body.unlockKey.trim() : fixture.unlockKey;
+  const grantSource =
+    typeof body.grantSource === 'string' && body.grantSource.trim().length > 0 ? body.grantSource.trim() : fixture.grantSource;
+  const purchaseEventId =
+    typeof body.purchaseEventId === 'string' && body.purchaseEventId.trim().length > 0
+      ? body.purchaseEventId.trim()
+      : fixture.purchaseEventId;
+  const idempotencyKey =
+    typeof body.idempotencyKey === 'string' && body.idempotencyKey.trim().length > 0
+      ? body.idempotencyKey.trim()
+      : `${unlockKey}:${userId}`;
+
+  fixture.userId = userId;
+  fixture.unlockKey = unlockKey;
+  fixture.grantSource = grantSource;
+  fixture.purchaseEventId = purchaseEventId || null;
+  fixture.idempotencyKey = idempotencyKey;
+  fixture.entitlement = {
+    ...(fixture.entitlement || {}),
+    productKey: unlockKey,
+    source: grantSource,
+    purchaseEventId: purchaseEventId || null,
+    ...(body.metadata ? { metadata: body.metadata } : {}),
+  };
+
+  return fixture;
+}
+
+function buildCommercePurchaseEvent(body: Record<string, any>): Record<string, unknown> {
+  const fixture = cloneJson(FIXTURES.commercePurchaseEvent) as Record<string, any>;
+  const providerEventId =
+    typeof body.providerEventId === 'string' && body.providerEventId.trim().length > 0
+      ? body.providerEventId.trim()
+      : fixture.providerEventId;
+  const userId = typeof body.userId === 'string' && body.userId.trim().length > 0 ? body.userId.trim() : fixture.userId;
+  const provider = typeof body.provider === 'string' && body.provider.trim().length > 0 ? body.provider.trim() : fixture.provider;
+  const eventType =
+    typeof body.eventType === 'string' && body.eventType.trim().length > 0 ? body.eventType.trim() : fixture.eventType;
+
+  fixture.provider = provider;
+  fixture.providerEventId = providerEventId;
+  fixture.userId = userId;
+  fixture.eventType = eventType;
+  fixture.occurredAtIso = typeof body.occurredAtIso === 'string' && body.occurredAtIso.trim().length > 0
+    ? body.occurredAtIso.trim()
+    : fixture.occurredAtIso;
+  fixture.dedupeKey = `${provider}:${providerEventId}`;
+  fixture.payloadHash = typeof body.payloadHash === 'string' && body.payloadHash.trim().length > 0
+    ? body.payloadHash.trim()
+    : fixture.payloadHash;
+  if (body.amount && typeof body.amount === 'object') {
+    fixture.amount = {
+      ...(fixture.amount || {}),
+      ...body.amount,
+    };
+  }
+  if (body.metadata && typeof body.metadata === 'object') {
+    fixture.metadata = body.metadata;
+  }
+
+  return fixture;
 }
 
 function getCaptionsForVideo(videoId = 'karina-variety-demo') {
@@ -1775,6 +1854,21 @@ async function handleRequest(request: Request): Promise<Response> {
       const userId = getUserIdFromSearch(url.searchParams);
       const ingestion = ensureIngestionForUser(userId);
       return jsonResponse(200, ingestion.mediaProfile || { ...(FIXTURES.mediaProfile as any), userId });
+    }
+
+    if (pathname === '/api/v1/commerce/entitlements' && request.method === 'GET') {
+      const userId = getUserIdFromSearch(url.searchParams);
+      return jsonResponse(200, getCommerceEntitlements(userId));
+    }
+
+    if (pathname === '/api/v1/commerce/unlocks/grant' && request.method === 'POST') {
+      const body = await readJsonBody(request);
+      return jsonResponse(200, buildCommerceUnlockGrant(body));
+    }
+
+    if (pathname === '/api/v1/commerce/purchase-events' && request.method === 'POST') {
+      const body = await readJsonBody(request);
+      return jsonResponse(200, buildCommercePurchaseEvent(body));
     }
 
     if (pathname === '/api/v1/ingestion/run-mock' && request.method === 'POST') {

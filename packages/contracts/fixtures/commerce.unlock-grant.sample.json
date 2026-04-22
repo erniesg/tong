@@ -1,0 +1,23 @@
+{
+  "grantId": "grant_unlock_shanghai_auction_pass",
+  "status": "granted",
+  "userId": "demo-user-1",
+  "unlockKey": "unlock.shanghai.auction.preview",
+  "grantSource": "purchase_event",
+  "grantedAtIso": "2026-04-21T09:10:00.000Z",
+  "idempotencyKey": "unlock.shanghai.auction.preview:demo-user-1",
+  "purchaseEventId": "pevt_demo_checkout_001",
+  "entitlement": {
+    "entitlementId": "ent_unlock_shanghai_auction_pass",
+    "productKey": "unlock.shanghai.auction.preview",
+    "type": "feature_access",
+    "status": "active",
+    "grantedAtIso": "2026-04-21T09:10:00.000Z",
+    "source": "purchase_event",
+    "purchaseEventId": "pevt_demo_checkout_001",
+    "metadata": {
+      "preview": true,
+      "city": "shanghai"
+    }
+  }
+}
