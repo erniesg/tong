@@ -2261,6 +2261,11 @@ button.nav-link:hover {
   cursor: pointer;
 }
 
+
+.webtoon-overlay:focus-visible {
+  outline: 2px solid rgba(255, 248, 238, 0.7);
+  outline-offset: -2px;
+}
 .webtoon-shell {
   position: relative;
   z-index: 1;
@@ -2349,6 +2354,15 @@ button.nav-link:hover {
     0 2px 0 rgba(255, 255, 255, 0.04) inset;
 }
 
+.webtoon-panel-surface.is-thumb-stop::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 32%;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(3, 2, 1, 0.42));
+}
+
 .webtoon-panel-surface--fade {
   animation: webtoonPanelReveal 260ms ease-out;
 }
@@ -2396,6 +2410,7 @@ button.nav-link:hover {
   font-size: 0.82rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-align: center;
 }
 
 .webtoon-panel-hint kbd {

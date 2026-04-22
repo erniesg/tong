@@ -150,8 +150,9 @@ const hangoutTools = {
         gapBefore: z.object({
           px: z.number(),
           color: z.string(),
-        }),
+        }).optional().default({ px: 0, color: 'transparent' }),
         isThumbStop: z.boolean().optional(),
+        bubbleRevealDelayMs: z.number().int().nonnegative().optional(),
         bubble: z.object({
           zh: z.string(),
           py: z.string().optional(),

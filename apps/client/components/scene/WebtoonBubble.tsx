@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { WebtoonBubble as WebtoonBubbleSpec } from '@/lib/hangout/fixture-types';
+import type { WebtoonBubbleSpec } from '@/lib/types/hangout';
 
 interface WebtoonBubbleProps extends WebtoonBubbleSpec {
   visible?: boolean;
@@ -37,6 +37,7 @@ export function WebtoonBubble({
         type="button"
         className="webtoon-bubble__button"
         aria-expanded={hasTooltip ? tooltipOpen : undefined}
+        aria-haspopup={hasTooltip ? 'dialog' : undefined}
         aria-label={hasTooltip ? `${speakerLabel}: ${zh}. Tap to toggle pinyin and translation.` : `${speakerLabel}: ${zh}`}
         onClick={() => {
           if (!hasTooltip) return;
