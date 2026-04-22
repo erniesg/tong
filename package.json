@@ -32,6 +32,7 @@
     "qa:upload-evidence": "node scripts/upload-qa-evidence.mjs",
     "runtime-assets:upload": "node scripts/upload-runtime-assets.mjs",
     "qa:render-comment": "node scripts/render-qa-comment.mjs",
+    "test:playtest-orchestrator": "node --test scripts/__tests__/playtest-orchestrator.test.mjs",
     "secrets:sync:cf": "./scripts/sync-cf-secrets-from-env.sh",
     "build:client:cf": "npm --prefix apps/client run cf:build",
     "deploy:client:cf": "./scripts/deploy-client-cloudflare.sh",

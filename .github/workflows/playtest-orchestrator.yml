@@ -1,0 +1,125 @@
+name: Playtest Orchestrator
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "Worker API base URL for the playtest findings ledger"
+        required: false
+        type: string
+      finding_id:
+        description: "Optional single finding id to route"
+        required: false
+        type: string
+      limit:
+        description: "Maximum unrouted findings to inspect"
+        required: false
+        default: "20"
+        type: string
+      confidence_threshold:
+        description: "Minimum confidence for direct PR routing"
+        required: false
+        default: "0.82"
+        type: string
+      dry_run:
+        description: "Plan routes without mutating GitHub or the ledger"
+        required: false
+        default: true
+        type: boolean
+      dispatch_direct_pr:
+        description: "Allow safe unattended findings to dispatch the Codex PR engine"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: playtest-orchestrator-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      TONG_REMOTE_API_BASE_URL: ${{ inputs.api_base_url || vars.TONG_REMOTE_API_BASE_URL || 'https://tong-api.erniesg.workers.dev' }}
+      TONG_PLAYTEST_READ_API_TOKEN: ${{ secrets.TONG_PLAYTEST_READ_API_TOKEN }}
+      ORCHESTRATOR_LIMIT: ${{ inputs.limit || '20' }}
+      ORCHESTRATOR_FINDING_ID: ${{ inputs.finding_id }}
+      ORCHESTRATOR_CONFIDENCE_THRESHOLD: ${{ inputs.confidence_threshold || '0.82' }}
+      ORCHESTRATOR_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+      ORCHESTRATOR_DIRECT_PR: ${{ github.event_name == 'workflow_dispatch' && inputs.dispatch_direct_pr || true }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run playtest orchestrator
+        run: |
+          mkdir -p artifacts/playtest-orchestrator
+          args=(
+            --api-base "$TONG_REMOTE_API_BASE_URL"
+            --repo "${{ github.repository }}"
+            --limit "$ORCHESTRATOR_LIMIT"
+            --confidence-threshold "$ORCHESTRATOR_CONFIDENCE_THRESHOLD"
+            --output artifacts/playtest-orchestrator/result.json
+          )
+
+          if [ -n "$ORCHESTRATOR_FINDING_ID" ]; then
+            args+=(--finding-id "$ORCHESTRATOR_FINDING_ID")
+          fi
+
+          if [ "$ORCHESTRATOR_DRY_RUN" = "true" ]; then
+            args+=(--dry-run)
+          fi
+
+          if [ "$ORCHESTRATOR_DIRECT_PR" != "true" ]; then
+            args+=(--no-direct-pr)
+          fi
+
+          node scripts/playtest-orchestrator.mjs "${args[@]}"
+
+      - name: Summarize routed findings
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync('artifacts/playtest-orchestrator/result.json', 'utf8'));
+          const lines = [
+            '## Playtest Orchestrator',
+            '',
+            `- Dry run: \`${result.dryRun}\``,
+            `- API base: \`${result.apiBase}\``,
+            `- Findings inspected: \`${result.findingsInspected}\``,
+            '',
+            '### Route summary',
+          ];
+
+          const summaryEntries = Object.entries(result.summary || {});
+          if (summaryEntries.length === 0) {
+            lines.push('- No unrouted findings were available.');
+          } else {
+            for (const [action, count] of summaryEntries) {
+              lines.push(`- \`${action}\`: ${count}`);
+            }
+          }
+
+          if (Array.isArray(result.routes) && result.routes.length > 0) {
+            lines.push('', '### Decisions');
+            for (const route of result.routes) {
+              const refs = [route.issueRef, route.prRef].filter(Boolean).join(', ') || 'none';
+              lines.push(`- \`${route.findingId}\` -> \`${route.action}\` (${route.reason}, confidence ${route.confidence}) lane=\`${route.lane || 'unknown'}\` refs=${refs}${route.branch ? ` branch=\`${route.branch}\`` : ''}`);
+            }
+          }
+
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE

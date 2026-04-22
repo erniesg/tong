@@ -1,0 +1,144 @@
+{
+  "summary": "Validated the #241 playtest orchestrator locally by unit-testing the route heuristics and running the new CLI in dry-run mode against the live stacked #240 Worker ledger.",
+  "screenshots": [],
+  "comparison_panels": [],
+  "comparison_focus_crops": [],
+  "temporal_capture": [],
+  "console_logs": [
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-241/20260420T174327Z/logs/playtest-orchestrator-test.txt",
+      "label": "playtest-orchestrator-tests",
+      "description": "Unit test transcript for the route-decision library."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-241/20260420T174327Z/logs/orchestrator-dry-run.stdout.txt",
+      "label": "orchestrator-dry-run-stdout",
+      "description": "CLI dry-run output against the local Worker findings ledger."
+    }
+  ],
+  "network_traces": [
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-241/20260420T174327Z/logs/network-seed-findings.txt",
+      "label": "seed-findings",
+      "description": "HTTP trace for seeding test findings into the local #240 Worker ledger."
+    },
+    {
+      "path": "artifacts/qa-runs/functional-qa/erniesg-tong-241/20260420T174327Z/logs/orchestrator-dry-run.json",
+      "label": "route-plan",
+      "description": "Structured route decisions emitted by the local dry-run orchestrator."
+    }
+  ],
+  "contract_assertions": [
+    {
+      "path": "scripts/lib/playtest-orchestrator.mjs",
+      "assertion": "The orchestrator chooses conservative route actions and blocks protected-path findings from unattended direct PR dispatch."
+    },
+    {
+      "path": "scripts/playtest-orchestrator.mjs",
+      "assertion": "The CLI fetches unrouted findings, inspects open GitHub issues, and can dry-run or persist route actions through the #240 ledger."
+    },
+    {
+      "path": ".github/workflows/playtest-orchestrator.yml",
+      "assertion": "The GitHub workflow supports schedule and workflow_dispatch entrypoints and reuses the existing Codex PR engine."
+    }
+  ],
+  "perf_profiles": [],
+  "cross_env_matrix": [
+    {
+      "environment": "local CLI dry-run with live Worker ledger on http://localhost:8788",
+      "result": "passed",
+      "notes": "Validated conservative route decisions without creating GitHub issues or dispatching PRs."
+    }
+  ],
+  "open_questions": [],
+  "notes": [
+    "This run validates the orchestrator logic locally on top of the stacked #240 branch.",
+    "It does not prove a remote GitHub Actions run against main because main does not yet include the #240 Worker ledger endpoints."
+  ],
+  "reviewer_proof": {
+    "classification": "not-evaluated",
+    "status": "not-evaluated",
+    "surface": "",
+    "route": "",
+    "scenario_seed": "",
+    "proof_moment": "",
+    "deterministic_setup": {
+      "used": false,
+      "description": ""
+    },
+    "artifacts": {
+      "proof_video": "",
+      "gif_preview": ""
+    },
+    "ordered_frames": {
+      "pre_action": "",
+      "ready_state": "",
+      "immediate_post_input": "",
+      "later_transition": "",
+      "stable_post_action": ""
+    },
+    "cue_timestamps_ms": {},
+    "checks": {
+      "real_route": false,
+      "semantically_coherent": false,
+      "ready_state_legible": false,
+      "input_visible": false,
+      "pre_action_hold": false,
+      "stable_post_action": false,
+      "reviewer_visible_media": false
+    },
+    "notes": [],
+    "missing_requirements": []
+  },
+  "portability": {
+    "status": "portable",
+    "portable": true,
+    "blocking": false,
+    "summary": "Portable from repo state plus documented setup.",
+    "blockers": [],
+    "warnings": [],
+    "project_portable_context": null,
+    "detected_local_paths": [],
+    "detected_private_references": [],
+    "detected_local_only_keywords": [],
+    "game_issue": false,
+    "route_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "proof_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "remote_dependencies_context": {
+      "present": false,
+      "source": null,
+      "value": null
+    },
+    "checkpoint_context": {
+      "present": true,
+      "source": "inferred",
+      "value": "not required"
+    },
+    "notes": [
+      "No reviewer-facing UI proof was required because #241 is a control-plane API/workflow issue."
+    ]
+  },
+  "validation": {
+    "direct_issue_evidence_complete": true,
+    "ui_acceptance_complete": true,
+    "runtime_modes_exercised": [
+      "worker-local",
+      "http-contract",
+      "orchestrator-dry-run"
+    ],
+    "live_model_confirmed": true,
+    "human_review_completed": true,
+    "missing_requirements": [],
+    "notes": [
+      "Dry-run inspected two seeded findings and correctly separated direct-pr from human-review scope."
+    ]
+  }
+}

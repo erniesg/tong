@@ -1,0 +1,17 @@
+
+> tong@0.1.0 test:playtest-orchestrator
+> node --test scripts/__tests__/playtest-orchestrator.test.mjs
+
+✔ detects protected paths and lane ownership (0.511042ms)
+✔ matches an existing issue by finding marker (0.144167ms)
+✔ routes protected or ambiguous scope to human review (0.177291ms)
+✔ routes single-lane non-protected high-signal findings to direct_pr (0.169708ms)
+✔ falls back to new_issue or skip for lower-signal findings (0.179291ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 44.97375
