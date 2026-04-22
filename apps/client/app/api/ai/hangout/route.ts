@@ -9,6 +9,7 @@ import {
   buildIntroductionHangoutPrompt,
   type IntroductionHangoutVars,
 } from '@/lib/ai/prompts/introduction-hangout';
+import { buildShanghaiOnboardingH1Prompt } from '@/lib/ai/prompts/shanghai-onboarding-h1';
 import { CHARACTER_MAP, HAEUN, TUTORIAL_VIDEO_CONFIG } from '@/lib/content/characters';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import { runtimeAssetUrl } from '@/lib/runtime-assets';
@@ -20,6 +21,78 @@ import type { MasterySnapshot } from '@/lib/types/mastery';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
+
+const webtoonBubbleGateSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('free') }),
+  z.object({ kind: z.literal('credits'), cost: z.number() }),
+  z.object({ kind: z.literal('gamePass') }),
+]);
+
+const webtoonBubbleLayoutSchema = z.object({
+  outside: z.boolean().optional(),
+  align: z.enum(['left', 'center', 'right']).optional(),
+  offsetXPx: z.number().optional(),
+  offsetYPx: z.number().optional(),
+  tailOffsetPct: z.number().optional(),
+  outsideOverlapPx: z.number().optional(),
+  reserveSpacePx: z.number().optional(),
+  maxWidth: z.string().optional(),
+});
+
+const webtoonBubbleSchema = z.object({
+  zh: z.string(),
+  py: z.array(z.string()).optional(),
+  en: z.string().optional(),
+  speaker: z.string(),
+  position: z.enum(['top', 'bottom', 'center-bottom']),
+  layout: webtoonBubbleLayoutSchema.optional(),
+  gate: webtoonBubbleGateSchema.optional(),
+});
+
+const webtoonGapSchema = z.object({
+  px: z.number(),
+  color: z.string().optional(),
+  gradient: z.tuple([z.string(), z.string()]).optional(),
+  dark: z.object({
+    color: z.string().optional(),
+    gradient: z.tuple([z.string(), z.string()]).optional(),
+  }).optional(),
+});
+
+const webtoonPanelFrameSchema = z.object({
+  edges: z.enum(['all', 'top-bottom']),
+  color: z.string().optional(),
+  widthPx: z.number().optional(),
+  dark: z.object({
+    color: z.string().optional(),
+  }).optional(),
+});
+
+const webtoonPanelLayoutSchema = z.object({
+  align: z.enum(['left', 'center', 'right']).optional(),
+  liftPx: z.number().optional(),
+  widthPct: z.number().optional(),
+  flipX: z.boolean().optional(),
+  cropAspectRatio: z.string().optional(),
+  cropPosition: z.string().optional(),
+  backdropColor: z.string().optional(),
+  darkBackdropColor: z.string().optional(),
+});
+
+const webtoonPanelSchema = z.object({
+  id: z.string(),
+  imageUrl: z.string(),
+  widthType: z.enum(['full-bleed', 'full-width', 'inset']),
+  heightClass: z.enum(['short', 'standard', 'tall', 'ultra-tall']),
+  aspectRatio: z.string(),
+  shotType: z.string(),
+  gapBefore: webtoonGapSchema,
+  frame: webtoonPanelFrameSchema.optional(),
+  layout: webtoonPanelLayoutSchema.optional(),
+  isThumbStop: z.boolean().optional(),
+  bubble: webtoonBubbleSchema.optional(),
+  transition: z.enum(['fade', 'cut', 'darken']),
+});
 
 /**
  * Streaming hangout API — drives the VN scene via tool calls.
@@ -140,27 +213,7 @@ const hangoutTools = {
   show_webtoon: tool({
     description: 'Display a multi-panel webtoon sequence. Use for cliffhangers, memory reveals, or eavesdrop moments that need visual framing.',
     parameters: z.object({
-      panels: z.array(z.object({
-        id: z.string(),
-        imageUrl: z.string(),
-        widthType: z.enum(['full-bleed', 'full-width', 'inset-wide', 'inset-narrow', 'floating']),
-        heightClass: z.enum(['short', 'standard', 'tall', 'ultra-tall']),
-        aspectRatio: z.string(),
-        shotType: z.string(),
-        gapBefore: z.object({
-          px: z.number(),
-          color: z.string(),
-        }),
-        isThumbStop: z.boolean().optional(),
-        bubble: z.object({
-          zh: z.string(),
-          py: z.string().optional(),
-          en: z.string().optional(),
-          speaker: z.string(),
-          position: z.enum(['top', 'bottom', 'center-bottom']),
-        }).optional(),
-        transition: z.enum(['fade', 'cut', 'darken']),
-      })),
+      panels: z.array(webtoonPanelSchema),
       autoAdvance: z.boolean().optional().default(false),
     }),
     execute: async (args) => args,
@@ -238,7 +291,7 @@ function readHangoutConfig(req: Request, body?: Record<string, unknown>) {
   const scene = url.searchParams.get('scene') ?? (typeof body?.scene === 'string' ? body.scene : null);
   const fixtureId = directFixtureId || (city === 'shanghai' && scene === 'h1' ? 'shanghai/h1-negotiation' : null);
 
-  return { mode, fixtureId };
+  return { mode, fixtureId, city, scene };
 }
 
 function buildFixtureResponse(fixtureId: string) {
@@ -289,6 +342,249 @@ function writeFixtureEvent(
   }));
 }
 
+type FallbackToolCall = {
+  toolName: string;
+  args: Record<string, unknown>;
+  pauses?: boolean;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isShanghaiH1DynamicRequest(
+  mode: HangoutMode,
+  city: string | null,
+  scene: string | null,
+  parsedContext: Record<string, unknown> | null,
+): boolean {
+  if (mode !== 'dynamic') return false;
+  if (city === 'shanghai' && scene === 'h1') return true;
+  return parsedContext?.city === 'shanghai' && parsedContext?.scene === 'h1';
+}
+
+function buildShanghaiH1SystemPrompt(parsedContext: Record<string, unknown> | null): string {
+  const fixture = getShanghaiFixture('shanghai/h1-negotiation');
+  if (!fixture) {
+    throw new Error('Shanghai H1 fixture missing');
+  }
+
+  const playerProfile = isRecord(parsedContext?.playerProfile) ? parsedContext.playerProfile : null;
+  const englishName = typeof playerProfile?.englishName === 'string' && playerProfile.englishName.trim().length > 0
+    ? playerProfile.englishName.trim()
+    : typeof parsedContext?.playerName === 'string' && parsedContext.playerName.trim().length > 0
+      ? parsedContext.playerName.trim()
+      : 'Player';
+  const chineseName = typeof playerProfile?.chineseName === 'string' && playerProfile.chineseName.trim().length > 0
+    ? playerProfile.chineseName.trim()
+    : undefined;
+  const explainLang = parsedContext?.explainIn === 'zh' ? 'zh' : 'en';
+
+  return buildShanghaiOnboardingH1Prompt({
+    fixture,
+    playerName: englishName,
+    playerChineseName: chineseName,
+    seat: 'dingman',
+    masterySnapshot: parsedContext?.mastery as MasterySnapshot | undefined,
+    explainLang,
+  });
+}
+
+function buildFallbackStreamResponse(toolCalls: FallbackToolCall[]) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      for (let i = 0; i < toolCalls.length; i += 1) {
+        const tc = toolCalls[i];
+        const toolCallId = `fallback-${Date.now()}-${i}`;
+
+        controller.enqueue(encoder.encode(`9:${JSON.stringify({
+          toolCallId,
+          toolName: tc.toolName,
+          args: tc.args,
+        })}\n`));
+
+        if (!tc.pauses) {
+          controller.enqueue(encoder.encode(`a:${JSON.stringify({
+            toolCallId,
+            result: tc.args,
+          })}\n`));
+        }
+      }
+
+      controller.enqueue(encoder.encode(`d:${JSON.stringify({
+        finishReason: 'stop',
+        usage: { promptTokens: 0, completionTokens: 0 },
+      })}\n`));
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'X-Vercel-AI-Data-Stream': 'v1',
+    },
+  });
+}
+
+function buildShanghaiH1FallbackResponse(
+  messages: Array<Record<string, unknown>>,
+  parsedContext: Record<string, unknown> | null,
+) {
+  const fixture = getShanghaiFixture('shanghai/h1-negotiation');
+  const webtoonPanels = fixture?.cliffhanger?.webtoon?.panels ?? [];
+  const creditGate = fixture?.cliffhanger?.creditGate;
+  if (!fixture || webtoonPanels.length === 0 || !creditGate) {
+    return buildFallbackResponse('shoucheng', true, messages);
+  }
+
+  const userMsgs = messages.filter(
+    (msg): msg is Record<string, unknown> & { role: 'user'; content: string } =>
+      msg.role === 'user' && typeof msg.content === 'string',
+  );
+  const lastContent = userMsgs[userMsgs.length - 1]?.content ?? '';
+  const exerciseCount = userMsgs.filter((msg) => msg.content.includes('Exercise result:')).length;
+  const lastWasCorrect = lastContent.includes('Exercise result:')
+    && lastContent.includes('correct')
+    && !lastContent.includes('incorrect');
+  const toolCalls: FallbackToolCall[] = [];
+
+  if (userMsgs.length <= 1) {
+    toolCalls.push({
+      toolName: 'show_webtoon',
+      args: {
+        panels: webtoonPanels,
+        autoAdvance: false,
+      },
+      pauses: true,
+    });
+    return buildFallbackStreamResponse(toolCalls);
+  }
+
+  if (lastContent.includes('Credit gate decision:')) {
+    const spent = lastContent.includes('Credit gate decision: spend');
+    const bonusLine = creditGate.spendPayload.additionalLines?.[0];
+
+    if (spent && bonusLine) {
+      toolCalls.push({
+        toolName: 'npc_speak',
+        args: {
+          characterId: 'fangayi',
+          text: bonusLine.zh,
+          translation: bonusLine.en ?? null,
+          expression: bonusLine.expression ?? 'thinking',
+          affinityDelta: null,
+        },
+      });
+      if (creditGate.spendPayload.tongExplanation) {
+        toolCalls.push({
+          toolName: 'tong_whisper',
+          args: {
+            message: creditGate.spendPayload.tongExplanation,
+            translation: null,
+            vocab: [
+              { zh: '犟', py: 'jiang', en: 'stubborn in a proud, hard way' },
+              { zh: '本事', py: 'benshi', en: 'real capability' },
+            ],
+          },
+        });
+      }
+    } else {
+      toolCalls.push({
+        toolName: 'tong_whisper',
+        args: {
+          message: creditGate.skipPayload.tongFallback ?? 'Leave the family reveal hanging for now and move on.',
+          translation: null,
+        },
+      });
+    }
+
+    toolCalls.push({
+      toolName: 'end_scene',
+      args: {
+        summary: spent
+          ? 'You tracked the Shanghai H1 negotiation through the family reveal and left with Tong’s read on what the room was really testing.'
+          : 'You followed the Shanghai H1 negotiation to the reveal hook and left the family history partially unresolved for later.',
+        xpEarned: 40 + (spent ? 10 : 0),
+        affinityChanges: fixture.resolution.affinityChanges,
+        calibratedLevel: 0,
+        masteryUpdates: fixture.resolution.masteryUpdates,
+        stateUpdates: {
+          hangoutSeat: 'dingman',
+          onboardingSceneId: 'shanghai:h1',
+          onboardingStatus: 'completed',
+        },
+        nextHook: fixture.resolution.nextHook ?? null,
+      },
+    });
+
+    return buildFallbackStreamResponse(toolCalls);
+  }
+
+  if (exerciseCount === 0) {
+    const explainInZh = parsedContext?.explainIn === 'zh';
+    toolCalls.push({
+      toolName: 'tong_whisper',
+      args: {
+        message: explainInZh
+          ? '先抓住 方案. 守成要的是判断，不是寒暄。'
+          : 'Start with 方案. Shoucheng is asking for judgment, not small talk.',
+        translation: null,
+        vocab: [{ zh: '方案', py: 'fangan', en: 'proposal' }],
+      },
+    });
+    toolCalls.push({
+      toolName: 'show_exercise',
+      args: {
+        exerciseType: 'pronunciation_select',
+        objectiveId: 'zh-shanghai-h1-fangan',
+        exerciseData: null,
+        context: 'Shanghai H1 onboarding — catch the key negotiation word before the room moves on.',
+        hintItems: ['方案'],
+        hintCount: 1,
+        hintSubType: null,
+      },
+      pauses: true,
+    });
+    return buildFallbackStreamResponse(toolCalls);
+  }
+
+  if (exerciseCount === 1) {
+    toolCalls.push({
+      toolName: 'tong_whisper',
+      args: {
+        message: lastWasCorrect
+          ? 'Good. Now watch the pressure word under the pitch: 愿意. It is about willingness, not surface charm.'
+          : 'Run it again in your head: 方案 is the proposal. The scene keeps turning on willingness and refusal.',
+        translation: null,
+        vocab: [{ zh: '愿意', py: 'yuanyi', en: 'be willing to' }],
+      },
+    });
+    toolCalls.push({
+      toolName: 'show_exercise',
+      args: {
+        exerciseType: 'multiple_choice',
+        objectiveId: 'zh-shanghai-h1-yuanyi',
+        exerciseData: null,
+        context: 'Shanghai H1 onboarding — Tong reframes the negotiation around willingness.',
+        hintItems: ['愿意', '不一样', '装'],
+        hintCount: 3,
+        hintSubType: null,
+      },
+      pauses: true,
+    });
+    return buildFallbackStreamResponse(toolCalls);
+  }
+
+  toolCalls.push({
+    toolName: 'credit_gate',
+    args: creditGate,
+    pauses: true,
+  });
+  return buildFallbackStreamResponse(toolCalls);
+}
+
 export async function GET(req: Request) {
   const { mode, fixtureId } = readHangoutConfig(req);
   if (mode !== 'fixture') {
@@ -310,7 +606,7 @@ export async function POST(req: Request) {
     return new Response('Invalid JSON', { status: 400 });
   }
 
-  const { mode, fixtureId } = readHangoutConfig(req, body);
+  const { mode, fixtureId, city, scene } = readHangoutConfig(req, body);
   if (mode === 'fixture') {
     if (!fixtureId) {
       return new Response('fixtureId is required when mode=fixture.', { status: 400 });
@@ -329,6 +625,7 @@ export async function POST(req: Request) {
 
   let hangoutVars: HangoutOrchestratorVars | null = null;
   let characterId = 'haeun';
+  let parsedContext: Record<string, unknown> | null = null;
 
   try {
     // Try new HANGOUT_CONTEXT format first, fall back to old CONTEXT format
@@ -338,6 +635,7 @@ export async function POST(req: Request) {
 
     if (ctxMatch) {
       const ctx = JSON.parse(ctxMatch[1]);
+      parsedContext = isRecord(ctx) ? ctx : null;
       characterId = ctx.characterId ?? 'haeun';
       const char: Character = CHARACTER_MAP[characterId] ?? HAEUN;
       const stage: RelationshipStage = ctx.stage ?? 'strangers';
@@ -376,9 +674,27 @@ export async function POST(req: Request) {
     }
   } catch { /* ignore parse errors */ }
 
+  const isShanghaiH1Dynamic = isShanghaiH1DynamicRequest(mode, city, scene, parsedContext);
+  if (isShanghaiH1Dynamic && !parsedContext) {
+    parsedContext = {
+      city: 'shanghai',
+      scene: 'h1',
+      explainIn: 'en',
+      playerName: 'Player',
+      characterId: 'shoucheng',
+    };
+  }
+
+  if (isShanghaiH1Dynamic) {
+    characterId = 'shoucheng';
+  }
+
   const hasApiKey = !!process.env.OPENAI_API_KEY;
 
   if (!hasApiKey) {
+    if (isShanghaiH1Dynamic) {
+      return buildShanghaiH1FallbackResponse(messages as Record<string, unknown>[], parsedContext);
+    }
     return buildFallbackResponse(characterId, hangoutVars?.isFirstEncounter ?? true, messages);
   }
 
@@ -402,7 +718,10 @@ export async function POST(req: Request) {
 
   let systemPrompt: string;
 
-  if (isIntroduction) {
+  if (isShanghaiH1Dynamic) {
+    systemPrompt = buildShanghaiH1SystemPrompt(parsedContext);
+    console.log('[hangout] Shanghai H1 dynamic mode');
+  } else if (isIntroduction) {
     const videoConfig = TUTORIAL_VIDEO_CONFIG[characterId];
     const playerLevel = (introCtx.playerLevel as number) ?? 0;
     // Korean % scales with level: 5, 10, 20, 35, 50, 70, 90
@@ -479,7 +798,7 @@ export async function POST(req: Request) {
       tools: hangoutTools,
       toolCallStreaming: true,
       maxSteps: 2,
-      temperature: 0.8,
+      temperature: isShanghaiH1Dynamic ? 0.4 : 0.8,
       abortSignal: abortController.signal,
       onError: (error) => {
         console.error('[hangout] Stream error:', error);
@@ -753,45 +1072,5 @@ function buildFallbackResponse(characterId: string, isFirstEncounter: boolean, m
     });
   }
 
-  // Build AI SDK data stream
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    start(controller) {
-      for (let i = 0; i < toolCalls.length; i++) {
-        const tc = toolCalls[i];
-        const toolCallId = `fallback-${Date.now()}-${i}`;
-
-        const toolCallData = JSON.stringify({
-          toolCallId,
-          toolName: tc.toolName,
-          args: tc.args,
-        });
-        controller.enqueue(encoder.encode(`9:${toolCallData}\n`));
-
-        // Only emit tool result for non-pausing tools
-        if (!tc.pauses) {
-          const toolResultData = JSON.stringify({
-            toolCallId,
-            result: tc.args,
-          });
-          controller.enqueue(encoder.encode(`a:${toolResultData}\n`));
-        }
-      }
-
-      const finishData = JSON.stringify({
-        finishReason: 'stop',
-        usage: { promptTokens: 0, completionTokens: 0 },
-      });
-      controller.enqueue(encoder.encode(`d:${finishData}\n`));
-
-      controller.close();
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'X-Vercel-AI-Data-Stream': 'v1',
-    },
-  });
+  return buildFallbackStreamResponse(toolCalls);
 }

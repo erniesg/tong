@@ -35,6 +35,12 @@ const WEBTOON_GUIDANCE = `The entire scene is presented as a vertically scrollin
 
 Never write new webtoon panels; the art is pregenerated and ships with the fixture.`;
 
+const TURN_GUARDRAILS = `Conversation-state rules:
+- If the conversation does NOT already contain show_webtoon, your first response must be show_webtoon only.
+- If show_webtoon has already happened, do NOT emit it again.
+- After the strip completes, use Tong overlays, exercises, and the credit gate to continue the onboarding flow.
+- After a credit gate decision arrives from the user, resolve the aftermath and emit end_scene.`;
+
 const VALIDATOR_NOTE = `Every npc_speak is post-validated against the character's voice rules. If the validator reports a violation, you will be asked to regenerate. On second regeneration, fall back to the beat's lockedLines[0]. Do not argue with the validator — comply.`;
 
 function masteryBlock(snapshot?: MasterySnapshot): string {
@@ -72,9 +78,23 @@ function voiceRulesFor(ids: ShanghaiCharacterId[]): string {
   return ids.map((id) => voiceRulesBlock(id)).join('\n\n');
 }
 
+function webtoonPayloadBlock(fixture: SceneFixture): string {
+  const payload = fixture.cliffhanger?.webtoon ?? { panels: [], autoAdvance: false };
+  return [
+    '=== Webtoon payload (emit via show_webtoon exactly as structured here) ===',
+    JSON.stringify(payload, null, 2),
+  ].join('\n');
+}
+
 export function buildShanghaiOnboardingH1Prompt(vars: ShanghaiOnboardingH1Vars): string {
   const { fixture, playerName, playerChineseName, seat, masterySnapshot, explainLang = 'en' } = vars;
   const voiceRules = voiceRulesFor(['shoucheng', 'dingman', 'fangayi']);
+  const endStateUpdates = {
+    ...(fixture.resolution.stateUpdates ?? {}),
+    hangoutSeat: seat,
+    onboardingSceneId: 'shanghai:h1',
+    onboardingStatus: 'completed',
+  };
 
   return [
     ROLE_FRAMING,
@@ -95,6 +115,10 @@ export function buildShanghaiOnboardingH1Prompt(vars: ShanghaiOnboardingH1Vars):
     '=== Webtoon ===',
     WEBTOON_GUIDANCE,
     '',
+    TURN_GUARDRAILS,
+    '',
+    webtoonPayloadBlock(fixture),
+    '',
     '=== Validator ===',
     VALIDATOR_NOTE,
     '',
@@ -103,7 +127,7 @@ export function buildShanghaiOnboardingH1Prompt(vars: ShanghaiOnboardingH1Vars):
       : '',
     '',
     '=== End ===',
-    `When the scene resolves, emit end_scene with:\n  masteryUpdates: ${JSON.stringify(fixture.resolution.masteryUpdates)}\n  affinityChanges: ${JSON.stringify(fixture.resolution.affinityChanges)}\n  stateUpdates: ${JSON.stringify(fixture.resolution.stateUpdates ?? {})}${fixture.resolution.nextHook ? `\n  nextHook: ${fixture.resolution.nextHook}` : ''}`,
+    `When the scene resolves, emit end_scene with:\n  masteryUpdates: ${JSON.stringify(fixture.resolution.masteryUpdates)}\n  affinityChanges: ${JSON.stringify(fixture.resolution.affinityChanges)}\n  stateUpdates: ${JSON.stringify(endStateUpdates)}${fixture.resolution.nextHook ? `\n  nextHook: ${fixture.resolution.nextHook}` : ''}`,
   ]
     .filter(Boolean)
     .join('\n');

@@ -249,18 +249,7 @@ function buildContextBlock(
   locationId: LocationId,
   npcChar: Character,
   explainIn: AppLang = 'en',
-  introCtx?: {
-    isIntroduction: boolean;
-    playerName: string;
-    videoStatus: 'generating' | 'ready' | 'failed';
-    exitVideoUrl: string | null;
-    exitLine: string;
-    exercisesDone: number;
-    introAct?: 1 | 2;
-    backdropUrl?: string;
-    chargePercent?: number;
-    chargeComplete?: boolean;
-  },
+  extraCtx?: Record<string, unknown>,
 ): string {
   // explainIn is resolved per-city by the caller
   const loc = getLocationOrDefault(cityId, locationId);
@@ -287,7 +276,7 @@ function buildContextBlock(
     locationLevel: locLevel,
     objectives,
     explainIn,
-    ...(introCtx ?? {}),
+    ...(extraCtx ?? {}),
   });
   return `[HANGOUT_CONTEXT]${ctx}[/HANGOUT_CONTEXT] `;
 }
@@ -309,21 +298,31 @@ export default function GamePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const gameState = useGameState();
+  const phaseParam = searchParams.get('phase');
 
   /* ── Fixture mode: ?fixture=name loads static test fixture ──── */
   const fixtureParam = searchParams.get('fixture');
   const fixtureScene = Number(searchParams.get('scene') || '0');
   const fixtureLoadedRef = useRef(false);
   const requestedMode = searchParams.get('mode');
+  const directHangoutCityParam = searchParams.get('city');
+  const directHangoutSceneParam = searchParams.get('scene');
+  const directEntryIntent = searchParams.get('entry');
   const hangoutFixtureId = resolveHangoutFixtureId(searchParams);
   const routeFixtureMode = requestedMode === 'fixture' && !!hangoutFixtureId;
+  const routeShanghaiDynamicOnboarding =
+    phaseParam === 'hangout'
+    && requestedMode !== 'fixture'
+    && directHangoutCityParam === 'shanghai'
+    && directHangoutSceneParam === 'h1';
   const fixtureModeActive = Boolean(fixtureParam) || routeFixtureMode;
   const hangoutApi = routeFixtureMode && hangoutFixtureId
     ? `/api/ai/hangout?mode=fixture&fixtureId=${encodeURIComponent(hangoutFixtureId)}`
+    : routeShanghaiDynamicOnboarding
+      ? '/api/ai/hangout?city=shanghai&scene=h1'
     : '/api/ai/hangout';
 
   /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester, ?dev_intro=1 fresh intro hangout, ?fresh=1 replay from opening */
-  const phaseParam = searchParams.get('phase');
   const devParam = searchParams.get('dev');
   const devIntro = searchParams.get('dev_intro') === '1';
   const freshStart = searchParams.get('fresh') === '1';
@@ -924,6 +923,73 @@ export default function GamePage() {
   useEffect(() => {
     if (!skipToHangout || sceneStartedRef.current) return;
 
+    if (routeShanghaiDynamicOnboarding) {
+      console.log('[FLOW] shanghai dynamic onboarding auto-start triggered');
+      sceneStartedRef.current = true;
+      const bootstrapNpcId = 'shoucheng';
+      const bootstrapCity: CityId = 'shanghai';
+      const bootstrapLocation: LocationId = 'dumpling_shop';
+      const npcChar = CHARACTER_MAP[bootstrapNpcId] ?? HAEUN;
+
+      npcRef.current = npcChar;
+      setCity(bootstrapCity);
+      setLocation(bootstrapLocation);
+      setActiveNpc(bootstrapNpcId);
+      setPlayerLevel(0);
+      setToolQueue([]);
+      setCurrentMessage(null);
+      setTongTip(null);
+      setChoices(null);
+      setChoicePrompt(null);
+      setCurrentExercise(null);
+      setCurrentWebtoon(null);
+      setCurrentCreditGate(null);
+      setSceneSummary(null);
+      setSceneReady(false);
+      setNpcRevealed(false);
+      setDynamicBackdrop({
+        url: runtimeAssetUrl('city.shanghai.map.static.default'),
+        transition: 'cut',
+        ambientDescription: 'Steam lifts between bamboo baskets while two voices keep the room clipped and tense.',
+      });
+      setCinematic(null);
+      setIsIntroHangout(false);
+      setIntroExerciseCount(0);
+      setIntroAct(1);
+      setFixtureSelectedPov('dingman');
+      processingRef.current = false;
+      pausedRef.current = false;
+      processedToolCallsRef.current.clear();
+
+      const startMsg = `${buildContextBlock(
+        0,
+        bootstrapNpcId,
+        bootstrapCity,
+        bootstrapLocation,
+        npcChar,
+        gameState.explainIn[bootstrapCity] ?? 'en',
+        {
+          scene: 'h1',
+          onboardingSceneId: 'shanghai:h1',
+          onboardingVariant: 'dynamic',
+          entryIntent: directEntryIntent ?? 'cover',
+          seat: 'dingman',
+        },
+      )}Start the Shanghai H1 onboarding scene.`;
+      sessionLogger.start({
+        mode: 'hangout',
+        cityId: bootstrapCity,
+        locationId: bootstrapLocation,
+        surface: 'game',
+        qaRunId,
+        npcId: bootstrapNpcId,
+        playerLevel: 0,
+      });
+      sessionLogger.logAIRequest(startMsg);
+      void append({ role: 'user', content: startMsg });
+      return;
+    }
+
     if (routeFixtureMode && hangoutFixtureId === 'shanghai/h1-negotiation') {
       console.log('[FLOW] shanghai fixture auto-start triggered');
       sceneStartedRef.current = true;
@@ -977,7 +1043,7 @@ export default function GamePage() {
     sceneStartedRef.current = true;
     const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
     void append({ role: 'user', content: `${ctx}Start the scene.` });
-  }, [skipToHangout, routeFixtureMode, hangoutFixtureId, append, playerLevel, activeNpc, city, location, gameState.explainIn, qaRunId]);
+  }, [skipToHangout, routeShanghaiDynamicOnboarding, routeFixtureMode, hangoutFixtureId, append, playerLevel, activeNpc, city, location, gameState.explainIn, qaRunId, directEntryIntent]);
 
   useEffect(() => {
     if (!seededBootstrapRequested || freshStart || devIntro || sceneStartedRef.current) return;
@@ -1478,6 +1544,16 @@ export default function GamePage() {
         }
         if (typeof args.stateUpdates?.hangoutSeat === 'string') {
           setFixtureSelectedPov(args.stateUpdates.hangoutSeat);
+        }
+        if (
+          typeof args.stateUpdates?.onboardingSceneId === 'string'
+          && (args.stateUpdates?.onboardingStatus === 'completed' || args.stateUpdates?.onboardingStatus === 'dismissed')
+        ) {
+          dispatch({
+            type: 'SET_ONBOARDING_STATUS',
+            sceneId: args.stateUpdates.onboardingSceneId,
+            status: args.stateUpdates.onboardingStatus,
+          });
         }
         // Increment interaction count for active NPC
         dispatch({ type: 'INCREMENT_INTERACTION', characterId: activeNpc });

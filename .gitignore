@@ -21,6 +21,8 @@ apps/server/data/compositions/
 apps/server/data/logs/
 artifacts/qa-runs/*
 !artifacts/qa-runs/.gitkeep
+!artifacts/qa-runs/shanghai-disposable-worklog.md
+!artifacts/qa-runs/shanghai-next-agent-handoff.md
 artifacts/signals-cache/
 artifacts/thumbnails/
 artifacts/scenes/
