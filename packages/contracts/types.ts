@@ -165,7 +165,7 @@ export interface PlayerLanguageProfile {
 
 export type CommerceEntitlementType = 'feature_access' | 'location_unlock' | 'mission_unlock' | 'collectible';
 export type CommerceEntitlementStatus = 'active' | 'revoked' | 'expired';
-export type CommerceGrantSource = 'purchase_event' | 'mission_reward' | 'admin_manual';
+export type CommerceGrantSource = 'purchase_event' | 'mission_reward' | 'admin_manual' | 'invitation_token';
 
 export interface CommerceEntitlement {
   entitlementId: string;
