@@ -308,6 +308,7 @@ export default function GamePage() {
   const directHangoutCityParam = searchParams.get('city');
   const directHangoutSceneParam = searchParams.get('scene');
   const directEntryIntent = searchParams.get('entry');
+  const requestedShanghaiSeat = searchParams.get('seat') === 'shoucheng' ? 'shoucheng' : 'dingman';
   const hangoutFixtureId = resolveHangoutFixtureId(searchParams);
   const routeFixtureMode = requestedMode === 'fixture' && !!hangoutFixtureId;
   const routeShanghaiDynamicOnboarding =
@@ -317,10 +318,10 @@ export default function GamePage() {
     && directHangoutSceneParam === 'h1';
   const fixtureModeActive = Boolean(fixtureParam) || routeFixtureMode;
   const hangoutApi = routeFixtureMode && hangoutFixtureId
-    ? `/api/ai/hangout?mode=fixture&fixtureId=${encodeURIComponent(hangoutFixtureId)}`
+    ? `/api/ai/hangout?mode=fixture&fixtureId=${encodeURIComponent(hangoutFixtureId)}${hangoutFixtureId === 'shanghai/h1-negotiation' ? `&seat=${encodeURIComponent(requestedShanghaiSeat)}` : ''}`
     : routeShanghaiDynamicOnboarding
       ? '/api/ai/hangout?city=shanghai&scene=h1'
-    : '/api/ai/hangout';
+      : '/api/ai/hangout';
 
   /* phase state — ?phase=hangout|city_map skips straight there, ?dev=exercise opens dev tester, ?dev_intro=1 fresh intro hangout, ?fresh=1 replay from opening */
   const devParam = searchParams.get('dev');
@@ -956,7 +957,7 @@ export default function GamePage() {
       setIsIntroHangout(false);
       setIntroExerciseCount(0);
       setIntroAct(1);
-      setFixtureSelectedPov('dingman');
+      setFixtureSelectedPov(requestedShanghaiSeat);
       processingRef.current = false;
       pausedRef.current = false;
       processedToolCallsRef.current.clear();
@@ -973,7 +974,7 @@ export default function GamePage() {
           onboardingSceneId: 'shanghai:h1',
           onboardingVariant: 'dynamic',
           entryIntent: directEntryIntent ?? 'cover',
-          seat: 'dingman',
+          seat: requestedShanghaiSeat,
         },
       )}Start the Shanghai H1 onboarding scene.`;
       sessionLogger.start({
@@ -1019,7 +1020,7 @@ export default function GamePage() {
       setIsIntroHangout(false);
       setIntroExerciseCount(0);
       setIntroAct(1);
-      setFixtureSelectedPov(null);
+      setFixtureSelectedPov(requestedShanghaiSeat);
       processingRef.current = false;
       pausedRef.current = false;
       processedToolCallsRef.current.clear();
@@ -1043,7 +1044,7 @@ export default function GamePage() {
     sceneStartedRef.current = true;
     const ctx = buildContextBlock(playerLevel, activeNpc, city, location, npcRef.current, gameState.explainIn[city] ?? 'en', getIntroCtx());
     void append({ role: 'user', content: `${ctx}Start the scene.` });
-  }, [skipToHangout, routeShanghaiDynamicOnboarding, routeFixtureMode, hangoutFixtureId, append, playerLevel, activeNpc, city, location, gameState.explainIn, qaRunId, directEntryIntent]);
+  }, [skipToHangout, routeShanghaiDynamicOnboarding, routeFixtureMode, hangoutFixtureId, append, playerLevel, activeNpc, city, location, gameState.explainIn, qaRunId, directEntryIntent, requestedShanghaiSeat]);
 
   useEffect(() => {
     if (!seededBootstrapRequested || freshStart || devIntro || sceneStartedRef.current) return;
@@ -1339,6 +1340,18 @@ export default function GamePage() {
         traceQA('tool_queue_tong_whisper', { toolCallId: item.toolCallId });
         console.log('[VN] tong_whisper BLOCK — message:', JSON.stringify(args.message), 'translation:', args.translation ?? '(none)');
         return; // ALWAYS BLOCK — user must tap to dismiss before proceeding
+      }
+      case 'set_atmosphere': {
+        const args = item.args as { description: string };
+        setTongTip(null);
+        traceQA('tool_queue_blocking_message', { toolName: item.toolName, toolCallId: item.toolCallId });
+        setCurrentMessage({
+          id: item.toolCallId,
+          role: 'narrator',
+          content: args.description,
+        });
+        console.log('[VN] set_atmosphere BLOCK:', args.description.slice(0, 60));
+        return; // BLOCK — wait for tap
       }
       case 'show_webtoon': {
         const args = item.args as {

@@ -333,4 +333,5 @@ test('credit gate pauses until an external resolution arrives', async () => {
 
   const finalEvent = await iterator.next();
   assert.equal(finalEvent.value?.toolName, 'end_scene');
+  assert.equal(finalEvent.value?.args.xpEarned, 40);
 });

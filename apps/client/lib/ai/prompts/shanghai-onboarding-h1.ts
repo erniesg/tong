@@ -1,11 +1,10 @@
 /**
  * Shanghai H1 onboarding — dynamic orchestration prompt.
  *
- * Status: V1 ships the fixture-verbatim path at /onboarding/shanghai. This
- * module is the scaffold for the dynamic follow-on (Issue #196). When routed
- * through this prompt, the LLM is expected to emit hangout tool-calls matching
- * the fixture beat structure while honoring each character's voice rules and
- * yielding to the locked lines the fixture specifies.
+ * Status: V1 shares one canonical H1 fixture across fixture and dynamic
+ * runtimes. This prompt is the dynamic orchestrator that must stay aligned
+ * with the fixture order rather than inventing a second Shanghai onboarding
+ * flow.
  *
  * Source of prose guidelines: docs/shanghai/h1-generation-prompts.md §6.
  * Source of voice rules: apps/client/lib/content/shanghai/characters.ts.
@@ -20,7 +19,7 @@ export interface ShanghaiOnboardingH1Vars {
   fixture: SceneFixture;
   playerName: string;
   playerChineseName?: string;
-  /** Which NPC the player is facing. Onboarding is deterministic: 'dingman'. */
+  /** Which NPC the player is facing for this run. */
   seat: 'dingman' | 'shoucheng';
   masterySnapshot?: MasterySnapshot;
   /** Language Tong explains in. Default 'en'. */
@@ -31,15 +30,27 @@ const ROLE_FRAMING = `You orchestrate Shanghai H1 — the player's first hangout
 
 Output is a stream of hangout tool-calls in beat order. The fixture supplies the skeleton: every beat marked with lockedLines MUST emit that line verbatim via npc_speak. Beats with only variantExamples may paraphrase within the styleRules. Do not invent beats that are not in the fixture.`;
 
-const WEBTOON_GUIDANCE = `The entire scene is presented as a vertically scrolling webtoon. Call show_webtoon ONCE at the start with the full panel array from the fixture. Subsequent tool calls (tong_whisper, show_exercise, credit_gate, end_scene) are overlays fired as the player scrolls.
-
-Never write new webtoon panels; the art is pregenerated and ships with the fixture.`;
+const TOOL_RULES = `Tool mapping:
+- Start the scene with set_backdrop using the selected POV seatDescription as ambientDescription.
+- Then emit Tong's opening tong_whisper from fixture.entryNarration before any NPC beat.
+- speaker in {dingman, shoucheng, ayi} -> npc_speak
+- speaker = ambient -> set_atmosphere
+- beat.tongBeat trigger="before" -> tong_whisper before the parent beat
+- beat.tongBeat trigger="after" -> tong_whisper after the parent beat
+- beat.exerciseHook -> show_exercise after the parent beat's Tong whisper
+- Cliffhanger panels -> show_webtoon exactly once, near the end, after all dialogue beats are complete
+- After the webtoon, emit the cliffhanger Tong beat, then credit_gate, then the spend/skip aftermath, then end_scene
+- Never emit offer_choices for this scene`;
 
 const TURN_GUARDRAILS = `Conversation-state rules:
-- If the conversation does NOT already contain show_webtoon, your first response must be show_webtoon only.
-- If show_webtoon has already happened, do NOT emit it again.
-- After the strip completes, use Tong overlays, exercises, and the credit gate to continue the onboarding flow.
-- After a credit gate decision arrives from the user, resolve the aftermath and emit end_scene.`;
+- Turn 1 (before any Exercise result): emit set_backdrop, Tong's opening tong_whisper, beats b1a -> b1d, Tong's 方案 explanation, then the first show_exercise. Stop there.
+- Turn 2 (after one Exercise result, before a second): emit beats b2a -> b2f from the same chosen pair, Tong's 装 / 愿意 explanation, then the second show_exercise. Stop there.
+- Turn 3 (after two Exercise results, before any Credit gate decision): emit beats ex1 -> ex8, then show_webtoon, then the cliffhanger Tong beat, then credit_gate. Stop there.
+- Turn 4 (after a Credit gate decision arrives): emit only the spend/skip aftermath and end_scene.
+- If set_backdrop has already happened, do NOT emit it again.
+- If the opening Tong whisper has already happened, do NOT emit it again.
+- Do NOT emit show_webtoon until all dialogue beats through ex8 are complete.
+- If show_webtoon has already happened, do NOT emit it again.`;
 
 const VALIDATOR_NOTE = `Every npc_speak is post-validated against the character's voice rules. If the validator reports a violation, you will be asked to regenerate. On second regeneration, fall back to the beat's lockedLines[0]. Do not argue with the validator — comply.`;
 
@@ -78,11 +89,10 @@ function voiceRulesFor(ids: ShanghaiCharacterId[]): string {
   return ids.map((id) => voiceRulesBlock(id)).join('\n\n');
 }
 
-function webtoonPayloadBlock(fixture: SceneFixture): string {
-  const payload = fixture.cliffhanger?.webtoon ?? { panels: [], autoAdvance: false };
+function fixtureJsonBlock(fixture: SceneFixture): string {
   return [
-    '=== Webtoon payload (emit via show_webtoon exactly as structured here) ===',
-    JSON.stringify(payload, null, 2),
+    '=== Fixture JSON ===',
+    JSON.stringify(fixture, null, 2),
   ].join('\n');
 }
 
@@ -112,15 +122,18 @@ export function buildShanghaiOnboardingH1Prompt(vars: ShanghaiOnboardingH1Vars):
     '=== Beat structure ===',
     beatOutline(fixture),
     '',
-    '=== Webtoon ===',
-    WEBTOON_GUIDANCE,
+    '=== Tool rules ===',
+    TOOL_RULES,
     '',
     TURN_GUARDRAILS,
     '',
-    webtoonPayloadBlock(fixture),
+    fixtureJsonBlock(fixture),
     '',
     '=== Validator ===',
     VALIDATOR_NOTE,
+    '',
+    '=== Pair selection ===',
+    'Default to the primary 装 pair (b2-pair-A) unless the conversation history explicitly commits to the alternate pair. Once chosen, stay in that pair family consistently.',
     '',
     fixture.cliffhanger?.creditGate
       ? `=== Cliffhanger gate ===\nAfter the final webtoon panel, emit credit_gate with cost=${fixture.cliffhanger.creditGate.cost}. If the client returns spend=true, emit the spendPayload; if spend=false, emit the skipPayload's tong fallback.`

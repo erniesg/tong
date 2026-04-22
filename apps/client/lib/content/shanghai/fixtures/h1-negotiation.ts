@@ -351,6 +351,10 @@ export const SHANGHAI_H1_NEGOTIATION_FIXTURE: SceneFixture = {
       { id: 'zh-vocab-shanghai-negotiation', item: '不一样', firstContact: true },
     ],
     affinityChanges: [{ characterId: 'fangayi', delta: 3, note: 'Player catches the family reveal through Fang Ayi.' }],
+    stateUpdates: {
+      onboardingSceneId: 'shanghai:h1',
+      onboardingStatus: 'completed',
+    },
     nextHook: 'shanghai:h2-show-transition',
   },
 };

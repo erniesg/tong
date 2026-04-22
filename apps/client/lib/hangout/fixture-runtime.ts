@@ -15,6 +15,14 @@ import type {
 type NpcSpeakerId = 'dingman' | 'shoucheng' | 'fangayi';
 export type CreditGateDecision = 'spend' | 'skip';
 
+const CLIFFHANGER_VOCAB_BY_FIXTURE: Record<string, Record<string, { zh: string; py: string; en: string }>> = {
+  'shanghai/h1-negotiation': {
+    小儿子: { zh: '小儿子', py: 'xiao erzi', en: 'younger son' },
+    犟: { zh: '犟', py: 'jiang', en: 'stubborn in a proud, hard way' },
+    本事: { zh: '本事', py: 'benshi', en: 'real capability' },
+  },
+};
+
 type BaseHangoutEvent<TToolName extends string, TArgs extends Record<string, unknown>> = {
   toolCallId: string;
   toolName: TToolName;
@@ -173,6 +181,7 @@ export function runFixture(
 
   return (async function* generateEvents(): AsyncGenerator<HangoutEvent> {
     let eventIndex = 0;
+    let creditGateDecision: CreditGateDecision | null = null;
     const nextEventId = () => makeToolCallId(fixture.id, ++eventIndex);
 
     const location = resolveFixtureLocation(fixture.location);
@@ -240,15 +249,17 @@ export function runFixture(
         };
 
         const decision = await creditGateController.waitForResolution();
+        creditGateDecision = decision;
         yield* emitCreditGateFollowUp(
           nextEventId,
+          fixture.id,
           fixture.cliffhanger.creditGate,
           decision,
         );
       }
     }
 
-    yield buildEndSceneEvent(nextEventId(), fixture, selectedPov.key);
+    yield buildEndSceneEvent(nextEventId(), fixture, selectedPov.key, creditGateDecision);
   })();
 }
 
@@ -272,11 +283,7 @@ export function buildFixtureResolutionEvents(
         events.push(buildTongWhisperEvent(nextEventId(), {
           text: creditGate.spendPayload.tongExplanation,
           free: true,
-          vocab: (creditGate.spendPayload.vocabUnlocks ?? []).map((item) => ({
-            zh: item,
-            py: '',
-            en: '',
-          })),
+          vocab: buildUnlockedVocabEntries(fixture.id, creditGate.spendPayload.vocabUnlocks),
         }));
       }
     } else if (creditGate.skipPayload.tongFallback) {
@@ -287,7 +294,7 @@ export function buildFixtureResolutionEvents(
     }
   }
 
-  events.push(buildEndSceneEvent(nextEventId(), fixture, selectedPov));
+  events.push(buildEndSceneEvent(nextEventId(), fixture, selectedPov, decision));
   return events;
 }
 
@@ -386,6 +393,7 @@ function buildCliffhangerEvent(
 
 async function* emitCreditGateFollowUp(
   nextEventId: () => string,
+  fixtureId: string,
   creditGate: CreditGate,
   decision: CreditGateDecision,
 ): AsyncGenerator<HangoutEvent> {
@@ -398,11 +406,7 @@ async function* emitCreditGateFollowUp(
       yield buildTongWhisperEvent(nextEventId(), {
         text: creditGate.spendPayload.tongExplanation,
         free: true,
-        vocab: (creditGate.spendPayload.vocabUnlocks ?? []).map((item) => ({
-          zh: item,
-          py: '',
-          en: '',
-        })),
+        vocab: buildUnlockedVocabEntries(fixtureId, creditGate.spendPayload.vocabUnlocks),
       });
     }
 
@@ -440,25 +444,58 @@ function buildEndSceneEvent(
   toolCallId: string,
   fixture: SceneFixture,
   selectedPov: string | null,
+  decision: CreditGateDecision | null = null,
 ): EndSceneEvent {
+  return {
+    toolCallId,
+    toolName: 'end_scene',
+    args: buildEndSceneArgs(fixture, selectedPov, decision),
+  };
+}
+
+function buildEndSceneArgs(
+  fixture: SceneFixture,
+  selectedPov: string | null,
+  decision: CreditGateDecision | null,
+): EndSceneEvent['args'] {
   const stateUpdates = {
     ...(fixture.resolution.stateUpdates ?? {}),
     ...(selectedPov ? { hangoutSeat: selectedPov } : {}),
   };
 
-  return {
-    toolCallId,
-    toolName: 'end_scene',
-    args: {
-      summary: `Completed fixture ${fixture.id}`,
-      xpEarned: 0,
+  if (fixture.id === 'shanghai/h1-negotiation') {
+    const spent = decision === 'spend';
+    return {
+      summary: spent
+        ? 'You tracked the Shanghai H1 negotiation through the family reveal and left with Tong’s read on what the room was really testing.'
+        : 'You followed the Shanghai H1 negotiation to the reveal hook and left the family history partially unresolved for later.',
+      xpEarned: spent ? 50 : 40,
       affinityChanges: fixture.resolution.affinityChanges,
-      calibratedLevel: null,
+      calibratedLevel: 0,
       masteryUpdates: fixture.resolution.masteryUpdates,
       stateUpdates: Object.keys(stateUpdates).length > 0 ? stateUpdates : null,
       nextHook: fixture.resolution.nextHook ?? null,
-    },
+    };
+  }
+
+  return {
+    summary: `Completed fixture ${fixture.id}`,
+    xpEarned: 0,
+    affinityChanges: fixture.resolution.affinityChanges,
+    calibratedLevel: null,
+    masteryUpdates: fixture.resolution.masteryUpdates,
+    stateUpdates: Object.keys(stateUpdates).length > 0 ? stateUpdates : null,
+    nextHook: fixture.resolution.nextHook ?? null,
   };
+}
+
+function buildUnlockedVocabEntries(
+  fixtureId: string,
+  vocabUnlocks: string[] | undefined,
+): TongBeat['vocab'] {
+  const fixtureMap = CLIFFHANGER_VOCAB_BY_FIXTURE[fixtureId] ?? {};
+  const entries = (vocabUnlocks ?? []).map((item) => fixtureMap[item] ?? { zh: item, py: '', en: '' });
+  return entries.length > 0 ? entries : undefined;
 }
 
 function pickBeatText(beat: Beat): string | null {

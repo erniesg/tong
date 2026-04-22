@@ -291,23 +291,24 @@ Template:
   - Fix the fresh-worktree `npm run demo:smoke` portability failure on top of `origin/codex/shanghai-integration-20260422` without widening Shanghai product scope.
   - Make the already-promised intro/Tong/Haeun media repo-portable in this disposable branch and finish the remaining runtime-asset resolution in the landing, backstage, and Shanghai fixture surfaces.
   - Keep history disposable because the current local time is still before `6:00 PM SGT` on April 22, 2026.
-- Status update (`2026-04-22 10:59 SGT`):
+- Status update (`2026-04-22`, canonical-flow correction):
   - Portability fix is already landed locally at `fc9bb93` (`wip: make shanghai demo smoke portable`).
-  - Dynamic Shanghai onboarding is now wired locally on top of that portability commit without changing the fixed `/onboarding/shanghai` path.
-  - New dynamic entry paths:
+  - Shanghai onboarding now routes through one canonical H1 runtime path in both fixture and dynamic modes; `/onboarding/shanghai` is now only a wrapper.
+  - Dynamic entry paths:
     - `/onboarding/shanghai?mode=dynamic`
     - `/onboarding/shanghai?mode=dynamic&entry=panorama`
-    - `/game?phase=hangout&city=shanghai&scene=h1&mode=dynamic`
+    - `/game?phase=hangout&city=shanghai&scene=h1&mode=dynamic&seat=dingman`
   - Fixed comparison paths still work:
     - `/onboarding/shanghai`
     - `/onboarding/shanghai?entry=panorama`
-    - `/game?phase=hangout&mode=fixture&city=shanghai&scene=h1`
+    - `/game?phase=hangout&mode=fixture&city=shanghai&scene=h1&seat=dingman`
+  - Standalone webtoon/gallery remains available separately at `/webtoon/shanghai-h1`.
   - Validation completed in this worktree:
     - `npm run demo:smoke`
     - `npm --prefix apps/client run build`
     - `npm --prefix apps/server test`
-    - Headless Chrome on `http://localhost:3005/onboarding/shanghai?mode=dynamic&qa_run_id=shanghai-dyn-001&qa_trace=1` reached the live `/game` runtime and rendered the Shanghai H1 webtoon overlay.
-    - Live local API fallback on `POST /api/ai/hangout?city=shanghai&scene=h1` produced the expected turn order: `show_webtoon -> show_exercise(方案) -> show_exercise(愿意) -> credit_gate -> npc_speak/tong_whisper/end_scene`.
+    - Live local API fallback on `POST /api/ai/hangout?city=shanghai&scene=h1` now follows the canonical turn order:
+      `set_backdrop -> opening tong_whisper -> opening negotiation beats -> show_exercise(方案) -> second negotiation bundle -> show_exercise(愿意) -> ambient/exit beats -> show_webtoon -> post-webtoon tong_whisper -> credit_gate -> resolution/end_scene`.
   - Remaining blocker is still remote publish/deploy readiness, not local onboarding logic:
     - `https://tong.berlayar.ai/onboarding/shanghai` returns `404`
     - `https://tong.berlayar.ai/onboarding/shanghai?entry=panorama` returns `404`

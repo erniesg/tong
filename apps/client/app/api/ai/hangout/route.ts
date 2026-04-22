@@ -14,8 +14,9 @@ import { CHARACTER_MAP, HAEUN, TUTORIAL_VIDEO_CONFIG } from '@/lib/content/chara
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import { runtimeAssetUrl } from '@/lib/runtime-assets';
 import { getShanghaiFixture } from '@/lib/content/shanghai/fixtures';
-import { runFixture, type HangoutEvent } from '@/lib/hangout/fixture-runtime';
+import { buildFixtureResolutionEvents, runFixture, type HangoutEvent } from '@/lib/hangout/fixture-runtime';
 import { validateLine } from '@/lib/ai/validators/voice-rules';
+import type { SceneFixture } from '@/lib/hangout/fixture-types';
 import type { Character, RelationshipStage, Relationship } from '@/lib/types/relationship';
 import type { MasterySnapshot } from '@/lib/types/mastery';
 
@@ -141,6 +142,13 @@ const hangoutTools = {
         en: z.string(),
       })).nullable().optional().describe('Optional vocab breakdown items for richer overlays.'),
       free: z.boolean().optional().describe('Whether this Tong beat is free or part of a spend gate.'),
+    }),
+    execute: async (args) => args,
+  }),
+  set_atmosphere: tool({
+    description: 'Describe an ambient beat or scene action without direct dialogue. Use for rings, table movement, exits, or other room-state shifts the player notices.',
+    parameters: z.object({
+      description: z.string().describe('A short narrator-style atmosphere line.'),
     }),
     execute: async (args) => args,
   }),
@@ -289,12 +297,14 @@ function readHangoutConfig(req: Request, body?: Record<string, unknown>) {
   const directFixtureId = url.searchParams.get('fixtureId') ?? (typeof body?.fixtureId === 'string' ? body.fixtureId : null);
   const city = url.searchParams.get('city') ?? (typeof body?.city === 'string' ? body.city : null);
   const scene = url.searchParams.get('scene') ?? (typeof body?.scene === 'string' ? body.scene : null);
+  const seatParam = url.searchParams.get('seat') ?? (typeof body?.seat === 'string' ? body.seat : null);
+  const seat: ShanghaiSeat | null = seatParam === 'shoucheng' ? 'shoucheng' : seatParam === 'dingman' ? 'dingman' : null;
   const fixtureId = directFixtureId || (city === 'shanghai' && scene === 'h1' ? 'shanghai/h1-negotiation' : null);
 
-  return { mode, fixtureId, city, scene };
+  return { mode, fixtureId, city, scene, seat };
 }
 
-function buildFixtureResponse(fixtureId: string) {
+function buildFixtureResponse(fixtureId: string, seat: ShanghaiSeat | null = null) {
   const fixture = getShanghaiFixture(fixtureId);
   if (!fixture) {
     return new Response(`Unknown fixtureId: ${fixtureId}`, { status: 404 });
@@ -305,7 +315,7 @@ function buildFixtureResponse(fixtureId: string) {
       const messageId = `fixture-${fixture.id.replace(/[^a-zA-Z0-9_-]+/g, '-')}`;
       dataStream.write(formatDataStreamPart('start_step', { messageId }));
 
-      for await (const event of runFixture(fixture)) {
+      for await (const event of runFixture(fixture, seat ? { povOverride: seat } : undefined)) {
         writeFixtureEvent(dataStream, event);
         if (event.toolName === 'credit_gate') {
           break;
@@ -348,8 +358,17 @@ type FallbackToolCall = {
   pauses?: boolean;
 };
 
+type ShanghaiSeat = 'dingman' | 'shoucheng';
+
+const SHANGHAI_PRIMARY_PAIR_SEED = 0;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function resolveShanghaiSeat(parsedContext: Record<string, unknown> | null): ShanghaiSeat {
+  const seat = parsedContext?.seat;
+  return seat === 'shoucheng' ? 'shoucheng' : 'dingman';
 }
 
 function isShanghaiH1DynamicRequest(
@@ -379,12 +398,13 @@ function buildShanghaiH1SystemPrompt(parsedContext: Record<string, unknown> | nu
     ? playerProfile.chineseName.trim()
     : undefined;
   const explainLang = parsedContext?.explainIn === 'zh' ? 'zh' : 'en';
+  const seat = resolveShanghaiSeat(parsedContext);
 
   return buildShanghaiOnboardingH1Prompt({
     fixture,
     playerName: englishName,
     playerChineseName: chineseName,
-    seat: 'dingman',
+    seat,
     masterySnapshot: parsedContext?.mastery as MasterySnapshot | undefined,
     explainLang,
   });
@@ -428,165 +448,100 @@ function buildFallbackStreamResponse(toolCalls: FallbackToolCall[]) {
   });
 }
 
-function buildShanghaiH1FallbackResponse(
+function mapHangoutEventsToFallbackToolCalls(events: HangoutEvent[]): FallbackToolCall[] {
+  return events.map((event) => ({
+    toolName: event.toolName,
+    args: event.args as Record<string, unknown>,
+    pauses: event.pauses,
+  }));
+}
+
+function splitShanghaiH1Turns(events: HangoutEvent[]): HangoutEvent[][] {
+  const turns: HangoutEvent[][] = [];
+  let currentTurn: HangoutEvent[] = [];
+
+  for (const event of events) {
+    currentTurn.push(event);
+    if (
+      event.toolName === 'show_exercise'
+      || event.toolName === 'credit_gate'
+      || event.toolName === 'end_scene'
+    ) {
+      turns.push(currentTurn);
+      currentTurn = [];
+    }
+  }
+
+  if (currentTurn.length > 0) {
+    turns.push(currentTurn);
+  }
+
+  return turns;
+}
+
+async function collectShanghaiH1PreludeEvents(
+  fixture: SceneFixture,
+  seat: ShanghaiSeat,
+): Promise<HangoutEvent[]> {
+  const events: HangoutEvent[] = [];
+
+  for await (const event of runFixture(fixture, {
+    seed: SHANGHAI_PRIMARY_PAIR_SEED,
+    povOverride: seat,
+  })) {
+    events.push(event);
+    if (event.toolName === 'credit_gate') {
+      break;
+    }
+  }
+
+  return events;
+}
+
+function buildShanghaiH1ResolutionToolCalls(
+  fixture: SceneFixture,
+  seat: ShanghaiSeat,
+  spent: boolean,
+): FallbackToolCall[] {
+  return mapHangoutEventsToFallbackToolCalls(
+    buildFixtureResolutionEvents(fixture, spent ? 'spend' : 'skip', seat),
+  );
+}
+
+async function buildShanghaiH1FallbackResponse(
   messages: Array<Record<string, unknown>>,
   parsedContext: Record<string, unknown> | null,
 ) {
   const fixture = getShanghaiFixture('shanghai/h1-negotiation');
-  const webtoonPanels = fixture?.cliffhanger?.webtoon?.panels ?? [];
-  const creditGate = fixture?.cliffhanger?.creditGate;
-  if (!fixture || webtoonPanels.length === 0 || !creditGate) {
+  if (!fixture) {
     return buildFallbackResponse('shoucheng', true, messages);
   }
 
+  const seat = resolveShanghaiSeat(parsedContext);
   const userMsgs = messages.filter(
     (msg): msg is Record<string, unknown> & { role: 'user'; content: string } =>
       msg.role === 'user' && typeof msg.content === 'string',
   );
   const lastContent = userMsgs[userMsgs.length - 1]?.content ?? '';
   const exerciseCount = userMsgs.filter((msg) => msg.content.includes('Exercise result:')).length;
-  const lastWasCorrect = lastContent.includes('Exercise result:')
-    && lastContent.includes('correct')
-    && !lastContent.includes('incorrect');
-  const toolCalls: FallbackToolCall[] = [];
-
-  if (userMsgs.length <= 1) {
-    toolCalls.push({
-      toolName: 'show_webtoon',
-      args: {
-        panels: webtoonPanels,
-        autoAdvance: false,
-      },
-      pauses: true,
-    });
-    return buildFallbackStreamResponse(toolCalls);
-  }
 
   if (lastContent.includes('Credit gate decision:')) {
     const spent = lastContent.includes('Credit gate decision: spend');
-    const bonusLine = creditGate.spendPayload.additionalLines?.[0];
-
-    if (spent && bonusLine) {
-      toolCalls.push({
-        toolName: 'npc_speak',
-        args: {
-          characterId: 'fangayi',
-          text: bonusLine.zh,
-          translation: bonusLine.en ?? null,
-          expression: bonusLine.expression ?? 'thinking',
-          affinityDelta: null,
-        },
-      });
-      if (creditGate.spendPayload.tongExplanation) {
-        toolCalls.push({
-          toolName: 'tong_whisper',
-          args: {
-            message: creditGate.spendPayload.tongExplanation,
-            translation: null,
-            vocab: [
-              { zh: '犟', py: 'jiang', en: 'stubborn in a proud, hard way' },
-              { zh: '本事', py: 'benshi', en: 'real capability' },
-            ],
-          },
-        });
-      }
-    } else {
-      toolCalls.push({
-        toolName: 'tong_whisper',
-        args: {
-          message: creditGate.skipPayload.tongFallback ?? 'Leave the family reveal hanging for now and move on.',
-          translation: null,
-        },
-      });
-    }
-
-    toolCalls.push({
-      toolName: 'end_scene',
-      args: {
-        summary: spent
-          ? 'You tracked the Shanghai H1 negotiation through the family reveal and left with Tong’s read on what the room was really testing.'
-          : 'You followed the Shanghai H1 negotiation to the reveal hook and left the family history partially unresolved for later.',
-        xpEarned: 40 + (spent ? 10 : 0),
-        affinityChanges: fixture.resolution.affinityChanges,
-        calibratedLevel: 0,
-        masteryUpdates: fixture.resolution.masteryUpdates,
-        stateUpdates: {
-          hangoutSeat: 'dingman',
-          onboardingSceneId: 'shanghai:h1',
-          onboardingStatus: 'completed',
-        },
-        nextHook: fixture.resolution.nextHook ?? null,
-      },
-    });
-
-    return buildFallbackStreamResponse(toolCalls);
+    return buildFallbackStreamResponse(buildShanghaiH1ResolutionToolCalls(fixture, seat, spent));
   }
 
-  if (exerciseCount === 0) {
-    const explainInZh = parsedContext?.explainIn === 'zh';
-    toolCalls.push({
-      toolName: 'tong_whisper',
-      args: {
-        message: explainInZh
-          ? '先抓住 方案. 守成要的是判断，不是寒暄。'
-          : 'Start with 方案. Shoucheng is asking for judgment, not small talk.',
-        translation: null,
-        vocab: [{ zh: '方案', py: 'fangan', en: 'proposal' }],
-      },
-    });
-    toolCalls.push({
-      toolName: 'show_exercise',
-      args: {
-        exerciseType: 'pronunciation_select',
-        objectiveId: 'zh-shanghai-h1-fangan',
-        exerciseData: null,
-        context: 'Shanghai H1 onboarding — catch the key negotiation word before the room moves on.',
-        hintItems: ['方案'],
-        hintCount: 1,
-        hintSubType: null,
-      },
-      pauses: true,
-    });
-    return buildFallbackStreamResponse(toolCalls);
+  const preludeEvents = await collectShanghaiH1PreludeEvents(fixture, seat);
+  const turns = splitShanghaiH1Turns(preludeEvents);
+  const turn = turns[Math.min(exerciseCount, turns.length - 1)];
+  if (!turn || turn.length === 0) {
+    return buildFallbackResponse('shoucheng', true, messages);
   }
 
-  if (exerciseCount === 1) {
-    toolCalls.push({
-      toolName: 'tong_whisper',
-      args: {
-        message: lastWasCorrect
-          ? 'Good. Now watch the pressure word under the pitch: 愿意. It is about willingness, not surface charm.'
-          : 'Run it again in your head: 方案 is the proposal. The scene keeps turning on willingness and refusal.',
-        translation: null,
-        vocab: [{ zh: '愿意', py: 'yuanyi', en: 'be willing to' }],
-      },
-    });
-    toolCalls.push({
-      toolName: 'show_exercise',
-      args: {
-        exerciseType: 'multiple_choice',
-        objectiveId: 'zh-shanghai-h1-yuanyi',
-        exerciseData: null,
-        context: 'Shanghai H1 onboarding — Tong reframes the negotiation around willingness.',
-        hintItems: ['愿意', '不一样', '装'],
-        hintCount: 3,
-        hintSubType: null,
-      },
-      pauses: true,
-    });
-    return buildFallbackStreamResponse(toolCalls);
-  }
-
-  toolCalls.push({
-    toolName: 'credit_gate',
-    args: creditGate,
-    pauses: true,
-  });
-  return buildFallbackStreamResponse(toolCalls);
+  return buildFallbackStreamResponse(mapHangoutEventsToFallbackToolCalls(turn));
 }
 
 export async function GET(req: Request) {
-  const { mode, fixtureId } = readHangoutConfig(req);
+  const { mode, fixtureId, seat } = readHangoutConfig(req);
   if (mode !== 'fixture') {
     return new Response('GET is only supported for fixture mode.', { status: 405 });
   }
@@ -594,7 +549,7 @@ export async function GET(req: Request) {
     return new Response('fixtureId is required when mode=fixture.', { status: 400 });
   }
 
-  return buildFixtureResponse(fixtureId);
+  return buildFixtureResponse(fixtureId, seat);
 }
 
 export async function POST(req: Request) {
@@ -606,13 +561,13 @@ export async function POST(req: Request) {
     return new Response('Invalid JSON', { status: 400 });
   }
 
-  const { mode, fixtureId, city, scene } = readHangoutConfig(req, body);
+  const { mode, fixtureId, city, scene, seat } = readHangoutConfig(req, body);
   if (mode === 'fixture') {
     if (!fixtureId) {
       return new Response('fixtureId is required when mode=fixture.', { status: 400 });
     }
 
-    return buildFixtureResponse(fixtureId);
+    return buildFixtureResponse(fixtureId, seat);
   }
 
   const rawMessages = body.messages ?? [];
@@ -819,6 +774,9 @@ export async function POST(req: Request) {
     return result.toDataStreamResponse();
   } catch (err) {
     console.error('[hangout] AI error, falling back:', err);
+    if (isShanghaiH1Dynamic) {
+      return buildShanghaiH1FallbackResponse(messages as Record<string, unknown>[], parsedContext);
+    }
     return buildFallbackResponse(characterId, hangoutVars?.isFirstEncounter ?? true, messages);
   }
 }

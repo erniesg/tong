@@ -11,7 +11,7 @@
 
 - Shanghai winner stack is already integrated from `origin/codex/shanghai-integration-20260422`.
 - Fresh-worktree portability blocker in `npm run demo:smoke` was fixed earlier in this branch at `fc9bb93` (`wip: make shanghai demo smoke portable`).
-- Dynamic Shanghai onboarding is now up locally on top of that portability work.
+- Shanghai onboarding now routes through the canonical `/game` H1 runtime in both fixture and dynamic modes.
 - Remote Shanghai playtest URLs are still unpublished and return `404`, so deploy/publish remains the only real blocker for a shareable public URL.
 
 ## Local routes
@@ -21,40 +21,39 @@
 - Dynamic onboarding entry with panorama return:
   - `http://localhost:3005/onboarding/shanghai?mode=dynamic&entry=panorama`
 - Direct dynamic runtime route:
-  - `http://localhost:3005/game?phase=hangout&city=shanghai&scene=h1&mode=dynamic`
+  - `http://localhost:3005/game?phase=hangout&city=shanghai&scene=h1&mode=dynamic&seat=dingman`
 - Dynamic runtime route with QA tracing:
-  - `http://localhost:3005/game?phase=hangout&city=shanghai&scene=h1&mode=dynamic&qa_run_id=shanghai-dyn-001&qa_trace=1`
+  - `http://localhost:3005/game?phase=hangout&city=shanghai&scene=h1&mode=dynamic&seat=dingman&qa_run_id=shanghai-dyn-001&qa_trace=1`
 - Fixed onboarding comparison route:
   - `http://localhost:3005/onboarding/shanghai`
 - Fixed fixture comparison route:
-  - `http://localhost:3005/game?phase=hangout&mode=fixture&city=shanghai&scene=h1&qa_run_id=shanghai-fix-001&qa_trace=1`
+  - `http://localhost:3005/game?phase=hangout&mode=fixture&city=shanghai&scene=h1&seat=dingman&qa_run_id=shanghai-fix-001&qa_trace=1`
+- Standalone webtoon/gallery route (non-canonical onboarding surface):
+  - `http://localhost:3005/webtoon/shanghai-h1`
 
 ## What changed
 
 - `apps/client/app/onboarding/shanghai/page.tsx`
-  - Added `mode=dynamic` entry handling and redirect into `/game`.
+  - Converted Shanghai onboarding into a pure wrapper that redirects into the canonical `/game` H1 runtime in either `mode=fixture` or `mode=dynamic`.
 - `apps/client/app/game/page.tsx`
-  - Added direct Shanghai H1 dynamic auto-start routing and persisted onboarding completion state.
+  - Added Shanghai seat passthrough for wrapper redirects and narrator handling for `set_atmosphere` beats.
 - `apps/client/app/api/ai/hangout/route.ts`
-  - Added Shanghai H1 dynamic routing, prompt selection, and deterministic no-key fallback flow.
-  - Expanded `show_webtoon` schema so the real Shanghai H1 panel payload validates in dynamic mode.
+  - Added `set_atmosphere`, seat-aware fixture mode, and fixture-backed Shanghai fallback/resolution flow.
 - `apps/client/lib/ai/prompts/shanghai-onboarding-h1.ts`
-  - Added explicit first-turn webtoon guardrails, embedded fixture payload guidance, and onboarding completion state updates.
+  - Re-aligned the dynamic prompt to the canonical Tong-first H1 beat order instead of the old webtoon-first shortcut.
+- `apps/client/lib/hangout/fixture-runtime.ts`
+  - Standardized Shanghai H1 fixture resolution so fixture mode and dynamic fallback now share the same post-credit outcome payloads.
 
 ## Live validation already completed
 
 - `npm run demo:smoke`
 - `npm --prefix apps/client run build`
 - `npm --prefix apps/server test`
-- Headless Chrome check:
-  - `http://localhost:3005/onboarding/shanghai?mode=dynamic&qa_run_id=shanghai-dyn-001&qa_trace=1`
-  - Result: page entered the live `/game` runtime and rendered the Shanghai H1 webtoon overlay.
 - Live local API sequence check against `POST /api/ai/hangout?city=shanghai&scene=h1`
-  - Turn 1: `show_webtoon`
-  - Turn 2: `tong_whisper` + `show_exercise` for `方案`
-  - Turn 3: `tong_whisper` + `show_exercise` for `愿意`
-  - Turn 4: `credit_gate`
-  - Turn 5: `npc_speak` + `tong_whisper` + `end_scene`
+  - Turn 1: `set_backdrop` -> opening `tong_whisper` -> `b1a/b1b/b1c/b1d` -> Tong `方案` beat -> `show_exercise`
+  - Turn 2: `b2a` through the primary `装` pair -> Tong `装/愿意` beat -> `show_exercise`
+  - Turn 3: `set_atmosphere` / exit beats -> `show_webtoon` -> post-webtoon Tong beat -> `credit_gate`
+  - Turn 4 spend path: `npc_speak` -> `tong_whisper` -> `end_scene`
 
 ## QA log capture
 
