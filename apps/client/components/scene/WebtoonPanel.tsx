@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { WebtoonPanel as WebtoonPanelSpec } from '@/lib/hangout/fixture-types';
+import type { SceneWebtoonPanel } from '@/lib/types/hangout';
 import { WebtoonBubble } from './WebtoonBubble';
 
 interface WebtoonPanelProps {
-  panels: WebtoonPanelSpec[];
+  panels: SceneWebtoonPanel[];
   autoAdvance?: boolean;
   onComplete: () => void;
 }
 
-const HEIGHT_FACTORS: Record<WebtoonPanelSpec['heightClass'], number> = {
+const HEIGHT_FACTORS: Record<SceneWebtoonPanel['heightClass'], number> = {
   short: 0.5,
   standard: 0.8,
   tall: 1.2,
@@ -18,6 +18,8 @@ const HEIGHT_FACTORS: Record<WebtoonPanelSpec['heightClass'], number> = {
 };
 
 const AUTO_ADVANCE_MS = 1800;
+const DEFAULT_BUBBLE_DELAY_MS = 200;
+const THUMB_STOP_BUBBLE_DELAY_MS = 850;
 const FADE_TRANSITION_MS = 220;
 const DARKEN_TRANSITION_MS = 800;
 const DARKEN_HOLD_MS = 400;
@@ -90,7 +92,9 @@ export function WebtoonPanel({
     setBubbleVisible(false);
 
     if (currentPanel?.bubble) {
-      schedule(() => setBubbleVisible(true), 200);
+      const delayMs = currentPanel.bubbleRevealDelayMs
+        ?? (currentPanel.isThumbStop ? THUMB_STOP_BUBBLE_DELAY_MS : DEFAULT_BUBBLE_DELAY_MS);
+      schedule(() => setBubbleVisible(true), delayMs);
     }
 
     if (autoAdvance) {
@@ -133,8 +137,13 @@ export function WebtoonPanel({
       className="webtoon-overlay"
       role="region"
       aria-label="Webtoon sequence"
+      aria-roledescription="interactive comic scene"
+      tabIndex={0}
       onClick={advance}
     >
+      <p className="webtoon-panel-sr-status" aria-live="polite">
+        Panel {currentIndex + 1} of {panels.length}
+      </p>
       <div className={`webtoon-transition${transitionMode ? ` webtoon-transition--${transitionMode}` : ''}`} aria-hidden="true" />
 
       <div className="webtoon-shell">

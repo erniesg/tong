@@ -142,6 +142,8 @@ export function SceneView({
     return SPEAKER_COLORS[msg.role] ?? 'var(--color-primary)';
   };
 
+  const webtoonActive = Boolean(currentWebtoon);
+
   return (
     <div className="absolute inset-0 overflow-hidden select-none">
       {/* Layer 0: HUD */}
@@ -170,7 +172,7 @@ export function SceneView({
         name={npcName}
         nameColor={npcColor}
         position="center"
-        active={true}
+        active={!webtoonActive}
       />
 
       {/* Layer 3: Tong whisper */}
@@ -191,7 +193,7 @@ export function SceneView({
       )}
 
       {currentCreditGate && (
-        <div className="credit-gate-overlay">
+        <div className="credit-gate-overlay" role="dialog" aria-modal="true" aria-label="Cliffhanger unlock gate">
           <div className="credit-gate-card" onClick={(event) => event.stopPropagation()}>
             <p className="credit-gate-kicker">Cliffhanger Unlock</p>
             <h2 className="credit-gate-title">{currentCreditGate.cost} SP to hear the rest</h2>
