@@ -23,3 +23,9 @@ Current note:
 - Contract touch points: `.github/workflows/issue-queue-orchestrator.yml`, `.agents/skills/_functional-qa/scripts/**`, `apps/worker/src/index.ts`, worker secrets/env wiring
 - Integration risks: worker callback route and GitHub dispatch token handling need one owner while the Discord path is landing
 - Next owner: infra-deploy / qa-platform integration pass
+
+- Area: Remote orchestration deploy promotion
+- Scope: GitHub deploy workflows, Cloudflare client deploy script, Discord route-human wiring, and the shared `package.json` script entry
+- Contract touch points: `.github/workflows/**`, `scripts/deploy-client-cloudflare.sh`, `apps/worker/src/index.ts`, `package.json`, `docs/deployment-track.md`
+- Integration risks: `package.json` and workflow entrypoints should not drift from the provider-neutral queue control plane landing in `#293`
+- Next owner: infra-deploy until the promotion workflow PR lands
