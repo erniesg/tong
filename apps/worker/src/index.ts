@@ -641,6 +641,489 @@ async function readJsonBody(request: Request): Promise<Record<string, any>> {
   return JSON.parse(text);
 }
 
+const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
+const GITHUB_API_BASE_URL = 'https://api.github.com';
+const GITHUB_ROUTE_HUMAN_USER_AGENT = 'tong-route-human/1.0 (+https://github.com/erniesg/tong)';
+const DISCORD_EPHEMERAL_FLAG = 1 << 6;
+const ROUTE_HUMAN_NOTE_INPUT_ID = 'route_human_note';
+
+type ParsedIssueRef = {
+  repository: string;
+  issueNumber: number;
+  url: string;
+};
+
+type DiscordActor = {
+  id: string;
+  username: string;
+  roleIds: string[];
+};
+
+type RouteHumanInteraction = {
+  action: string;
+  issueRef: string;
+  permissionTag: string;
+};
+
+function parseIssueRef(raw: string | undefined | null): ParsedIssueRef | null {
+  const trimmed = String(raw || '').trim();
+  const match = /^([^#]+)#(\d+)$/.exec(trimmed);
+  if (!match) return null;
+  return {
+    repository: match[1],
+    issueNumber: Number(match[2]),
+    url: `https://github.com/${match[1]}/issues/${match[2]}`,
+  };
+}
+
+function hexToBytes(raw: string): ArrayBuffer {
+  const value = raw.trim();
+  if (!value || value.length % 2 !== 0) {
+    throw new Error('invalid_hex');
+  }
+
+  const bytes = new Uint8Array(value.length / 2);
+  for (let index = 0; index < bytes.length; index += 1) {
+    const pair = value.slice(index * 2, index * 2 + 2);
+    const parsed = Number.parseInt(pair, 16);
+    if (Number.isNaN(parsed)) {
+      throw new Error('invalid_hex');
+    }
+    bytes[index] = parsed;
+  }
+  return bytes.buffer.slice(0);
+}
+
+async function verifyDiscordRequest(bodyText: string, signature: string, timestamp: string, publicKey: string): Promise<boolean> {
+  const key = await crypto.subtle.importKey('raw', hexToBytes(publicKey), { name: 'Ed25519' }, false, ['verify']);
+  return crypto.subtle.verify({ name: 'Ed25519' }, key, hexToBytes(signature), new TextEncoder().encode(`${timestamp}${bodyText}`));
+}
+
+function interactionResponse(type: number, data?: Record<string, unknown>): Response {
+  return jsonResponse(200, data ? { type, data } : { type });
+}
+
+function ephemeralInteractionMessage(content: string): Response {
+  return interactionResponse(4, {
+    content,
+    flags: DISCORD_EPHEMERAL_FLAG,
+  });
+}
+
+function hasRecordedRouteHumanDecision(content: string | undefined | null): boolean {
+  return String(content || '').includes('Decision recorded:');
+}
+
+function buildRecordedRouteHumanSummary(action: string, actor: DiscordActor): string {
+  return `Decision recorded: \`${action}\` by ${actor.username}.`;
+}
+
+function disableRouteHumanActionComponents(components: Array<Record<string, any>> | undefined): Array<Record<string, any>> {
+  return (components || []).map((row) => {
+    if (!Array.isArray(row?.components)) {
+      return row;
+    }
+
+    return {
+      ...row,
+      components: row.components.map((component: Record<string, any>) => {
+        if (component?.type === 2 && typeof component?.custom_id === 'string') {
+          return {
+            ...component,
+            disabled: true,
+          };
+        }
+
+        return component;
+      }),
+    };
+  });
+}
+
+function updateRecordedRouteHumanMessage(interaction: Record<string, any>, action: string, actor: DiscordActor): Response {
+  const existingContent = String(interaction?.message?.content || '').trim();
+  const updatedContent = [existingContent, '', buildRecordedRouteHumanSummary(action, actor)].filter(Boolean).join('\n');
+
+  return interactionResponse(7, {
+    content: updatedContent,
+    allowed_mentions: { parse: [] },
+    components: disableRouteHumanActionComponents(interaction?.message?.components),
+  });
+}
+
+function parseDiscordPermissionTag(mention: string | undefined | null): string {
+  const trimmed = String(mention || '').trim();
+  const userMatch = /^<@!?(\d+)>$/.exec(trimmed);
+  if (userMatch) return `u:${userMatch[1]}`;
+  const roleMatch = /^<@&(\d+)>$/.exec(trimmed);
+  if (roleMatch) return `r:${roleMatch[1]}`;
+  return '*';
+}
+
+function buildDiscordAllowedMentions(mention: string | undefined | null): Record<string, unknown> {
+  const trimmed = String(mention || '').trim();
+  const userMatch = /^<@!?(\d+)>$/.exec(trimmed);
+  if (userMatch) {
+    return {
+      parse: [],
+      users: [userMatch[1]],
+    };
+  }
+
+  const roleMatch = /^<@&(\d+)>$/.exec(trimmed);
+  if (roleMatch) {
+    return {
+      parse: [],
+      roles: [roleMatch[1]],
+    };
+  }
+
+  return { parse: [] };
+}
+
+function buildRouteHumanCustomId(action: string, issueRef: string, permissionTag: string): string {
+  return ['rh', action, issueRef, permissionTag || '*'].join('|');
+}
+
+function parseRouteHumanCustomId(raw: string | undefined | null): RouteHumanInteraction | null {
+  const parts = String(raw || '').split('|');
+  if (parts.length !== 4 || parts[0] !== 'rh') {
+    return null;
+  }
+
+  const [, action, issueRef, permissionTag] = parts;
+  if (!action || !issueRef) {
+    return null;
+  }
+
+  return {
+    action,
+    issueRef,
+    permissionTag: permissionTag || '*',
+  };
+}
+
+function getDiscordActor(interaction: Record<string, any>): DiscordActor {
+  const user = interaction?.member?.user || interaction?.user || {};
+  return {
+    id: String(user?.id || ''),
+    username: String(user?.global_name || user?.username || 'Discord user'),
+    roleIds: Array.isArray(interaction?.member?.roles) ? interaction.member.roles.map((value: unknown) => String(value)) : [],
+  };
+}
+
+function isDiscordActorAllowed(actor: DiscordActor, permissionTag: string): boolean {
+  if (!permissionTag || permissionTag === '*') return true;
+  if (permissionTag.startsWith('u:')) return actor.id === permissionTag.slice(2);
+  if (permissionTag.startsWith('r:')) return actor.roleIds.includes(permissionTag.slice(2));
+  return false;
+}
+
+function collectComponentTextValue(components: Array<Record<string, any>> | undefined, targetId: string): string {
+  for (const component of components || []) {
+    if (component?.custom_id === targetId && typeof component?.value === 'string') {
+      return component.value.trim();
+    }
+
+    if (Array.isArray(component?.components)) {
+      const nested = collectComponentTextValue(component.components, targetId);
+      if (nested) return nested;
+    }
+
+    if (component?.component && typeof component.component === 'object') {
+      const nested = collectComponentTextValue([component.component], targetId);
+      if (nested) return nested;
+    }
+  }
+
+  return '';
+}
+
+async function postDiscordChannelMessage(payload: Record<string, unknown>, env: Record<string, any>): Promise<Record<string, any>> {
+  const channelId = String(env?.DISCORD_ROUTE_HUMAN_CHANNEL_ID || '').trim();
+  const token = String(env?.DISCORD_BOT_TOKEN || '').trim();
+  if (!channelId || !token) {
+    throw new Error('discord_route_human_not_configured');
+  }
+
+  const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bot ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`discord_message_failed:${response.status}:${await response.text()}`);
+  }
+
+  return (await response.json()) as Record<string, any>;
+}
+
+async function postGitHubIssueComment(issueRef: string, body: string, env: Record<string, any>): Promise<Record<string, any>> {
+  const parsed = parseIssueRef(issueRef);
+  if (!parsed) {
+    throw new Error('invalid_issue_ref');
+  }
+
+  const token = String(env?.GITHUB_ROUTE_HUMAN_TOKEN || '').trim();
+  if (!token) {
+    throw new Error('github_route_human_not_configured');
+  }
+
+  const response = await fetch(`${GITHUB_API_BASE_URL}/repos/${parsed.repository}/issues/${parsed.issueNumber}/comments`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'User-Agent': GITHUB_ROUTE_HUMAN_USER_AGENT,
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+    body: JSON.stringify({ body }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`github_comment_failed:${response.status}:${await response.text()}`);
+  }
+
+  return (await response.json()) as Record<string, any>;
+}
+
+function formatDiscordDecisionComment(action: string, issueRef: string, actor: DiscordActor): string {
+  const sourceLine = `Human review decision from Discord by ${actor.username} (${actor.id}).`;
+
+  if (action === 'need-context') {
+    return [`/tong hold ${issueRef}`, '', 'Need more context before continuing.', sourceLine].join('\n').trim();
+  }
+
+  if (action === 'run' || action === 'retry' || action === 'hold') {
+    return [`/tong ${action} ${issueRef}`, '', sourceLine].join('\n').trim();
+  }
+
+  throw new Error(`unsupported_action:${action}`);
+}
+
+function formatDiscordNoteComment(note: string, actor: DiscordActor): string {
+  return [
+    `Human review note from Discord by ${actor.username} (${actor.id}):`,
+    '',
+    note.trim(),
+  ].join('\n').trim();
+}
+
+async function handleDiscordRouteHumanRequest(request: Request, env: Record<string, any>): Promise<Response> {
+  const expectedSecret = String(env?.ROUTE_HUMAN_WEBHOOK_SECRET || '').trim();
+  if (!expectedSecret) {
+    return jsonResponse(503, { error: 'route_human_webhook_not_configured' });
+  }
+
+  const authorization = request.headers.get('Authorization') || '';
+  if (authorization !== `Bearer ${expectedSecret}`) {
+    return jsonResponse(401, { error: 'unauthorized' });
+  }
+
+  const body = await readJsonBody(request);
+  const issueRef = String(body.issueRef || body.issue_ref || '').trim();
+  const parsedIssue = parseIssueRef(issueRef);
+  if (!parsedIssue) {
+    return jsonResponse(400, { error: 'invalid_issue_ref' });
+  }
+
+  const mention = String(body.mention || '').trim();
+  const permissionTag = parseDiscordPermissionTag(mention);
+  const notes = Array.isArray(body.notes)
+    ? body.notes.map((value: unknown) => String(value).trim()).filter((value: string) => value.length > 0).slice(0, 5)
+    : [];
+  const sourceUrl = String(body.sourceUrl || body.source_url || '').trim();
+  const action = String(body.action || 'route-human').trim() || 'route-human';
+
+  const contentLines = [
+    mention,
+    `Human review requested for \`${issueRef}\``,
+    '',
+    `Repository: \`${parsedIssue.repository}\``,
+    `Issue: ${parsedIssue.url}`,
+    `Action: \`${action}\``,
+  ].filter(Boolean);
+
+  if (notes.length > 0) {
+    contentLines.push('', 'Current notes:');
+    for (const note of notes) {
+      contentLines.push(`- ${note}`);
+    }
+  }
+
+  contentLines.push('', 'Choose one below, or tap `Add note` for free-form context.');
+
+  const linkButtons: Array<Record<string, unknown>> = [
+    {
+      type: 2,
+      style: 5,
+      label: 'Open issue',
+      url: parsedIssue.url,
+    },
+  ];
+
+  if (sourceUrl && sourceUrl !== parsedIssue.url) {
+    linkButtons.push({
+      type: 2,
+      style: 5,
+      label: 'Open source',
+      url: sourceUrl,
+    });
+  }
+
+  const discordPayload = {
+    content: contentLines.join('\n').trim(),
+    allowed_mentions: buildDiscordAllowedMentions(mention),
+    components: [
+      {
+        type: 1,
+        components: [
+          {
+            type: 2,
+            style: 3,
+            label: 'Run now',
+            custom_id: buildRouteHumanCustomId('run', issueRef, permissionTag),
+          },
+          {
+            type: 2,
+            style: 1,
+            label: 'Retry',
+            custom_id: buildRouteHumanCustomId('retry', issueRef, permissionTag),
+          },
+          {
+            type: 2,
+            style: 4,
+            label: 'Hold',
+            custom_id: buildRouteHumanCustomId('hold', issueRef, permissionTag),
+          },
+          {
+            type: 2,
+            style: 2,
+            label: 'Need context',
+            custom_id: buildRouteHumanCustomId('need-context', issueRef, permissionTag),
+          },
+          {
+            type: 2,
+            style: 2,
+            label: 'Add note',
+            custom_id: buildRouteHumanCustomId('note', issueRef, permissionTag),
+          },
+        ],
+      },
+      {
+        type: 1,
+        components: linkButtons,
+      },
+    ],
+  };
+
+  const message = await postDiscordChannelMessage(discordPayload, env);
+  return jsonResponse(200, {
+    ok: true,
+    issueRef,
+    discordMessageId: String(message?.id || ''),
+  });
+}
+
+async function handleDiscordInteractionRequest(request: Request, env: Record<string, any>): Promise<Response> {
+  const publicKey = String(env?.DISCORD_PUBLIC_KEY || '').trim();
+  if (!publicKey) {
+    return jsonResponse(503, { error: 'discord_public_key_not_configured' });
+  }
+
+  const signature = request.headers.get('X-Signature-Ed25519') || request.headers.get('x-signature-ed25519') || '';
+  const timestamp = request.headers.get('X-Signature-Timestamp') || request.headers.get('x-signature-timestamp') || '';
+  const bodyText = await request.text();
+  if (!signature || !timestamp) {
+    return jsonResponse(401, { error: 'missing_signature_headers' });
+  }
+
+  const verified = await verifyDiscordRequest(bodyText, signature, timestamp, publicKey);
+  if (!verified) {
+    return new Response('invalid request signature', { status: 401 });
+  }
+
+  const interaction = bodyText ? JSON.parse(bodyText) : {};
+  if (interaction?.type === 1) {
+    return interactionResponse(1);
+  }
+
+  const actor = getDiscordActor(interaction);
+
+  if (interaction?.type === 3) {
+    const parsed = parseRouteHumanCustomId(interaction?.data?.custom_id);
+    if (!parsed) {
+      return ephemeralInteractionMessage('This review card is not configured for Tong route-human actions.');
+    }
+    if (!isDiscordActorAllowed(actor, parsed.permissionTag)) {
+      return ephemeralInteractionMessage('This review card is assigned to another reviewer.');
+    }
+    if (hasRecordedRouteHumanDecision(interaction?.message?.content)) {
+      return ephemeralInteractionMessage('This review card already recorded a decision.');
+    }
+
+    if (parsed.action === 'note') {
+      return interactionResponse(9, {
+        custom_id: buildRouteHumanCustomId('note-submit', parsed.issueRef, parsed.permissionTag),
+        title: 'Route-human note',
+        components: [
+          {
+            type: 18,
+            label: 'What should happen next?',
+            description: 'Add blockers, clarification, or the decision you want captured.',
+            component: {
+              type: 4,
+              custom_id: ROUTE_HUMAN_NOTE_INPUT_ID,
+              style: 2,
+              max_length: 1000,
+              required: true,
+              placeholder: 'Add context for the issue queue.',
+            },
+          },
+        ],
+      });
+    }
+
+    try {
+      await postGitHubIssueComment(parsed.issueRef, formatDiscordDecisionComment(parsed.action, parsed.issueRef, actor), env);
+    } catch (error) {
+      return ephemeralInteractionMessage(error instanceof Error ? error.message : 'Failed to write back to GitHub.');
+    }
+
+    return updateRecordedRouteHumanMessage(interaction, parsed.action, actor);
+  }
+
+  if (interaction?.type === 5) {
+    const parsed = parseRouteHumanCustomId(interaction?.data?.custom_id);
+    if (!parsed || parsed.action !== 'note-submit') {
+      return ephemeralInteractionMessage('Unsupported modal submission.');
+    }
+    if (!isDiscordActorAllowed(actor, parsed.permissionTag)) {
+      return ephemeralInteractionMessage('This review card is assigned to another reviewer.');
+    }
+
+    const note = collectComponentTextValue(interaction?.data?.components, ROUTE_HUMAN_NOTE_INPUT_ID);
+    if (!note) {
+      return ephemeralInteractionMessage('The note was empty.');
+    }
+
+    try {
+      await postGitHubIssueComment(parsed.issueRef, formatDiscordNoteComment(note, actor), env);
+    } catch (error) {
+      return ephemeralInteractionMessage(error instanceof Error ? error.message : 'Failed to save the note to GitHub.');
+    }
+
+    return ephemeralInteractionMessage(`Saved your note to GitHub for \`${parsed.issueRef}\`.`);
+  }
+
+  return ephemeralInteractionMessage('Unsupported Discord interaction.');
+}
+
 const PLAYTEST_ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 function generatePlaytestId(length = 12): string {
   const bytes = new Uint8Array(length);
@@ -1736,11 +2219,19 @@ async function handleRequest(request: Request): Promise<Response> {
       return noContent();
     }
 
+    const env = (globalThis as any).__env || {};
     const url = new URL(request.url);
     const pathname = url.pathname;
 
+    if (pathname === '/api/v1/discord/interactions' && request.method === 'POST') {
+      return handleDiscordInteractionRequest(request, env);
+    }
+
+    if (pathname === '/api/v1/discord/route-human' && request.method === 'POST') {
+      return handleDiscordRouteHumanRequest(request, env);
+    }
+
     if (pathname === '/health') {
-      const env = (globalThis as any).__env;
       return jsonResponse(200, { ok: true, service: 'tong-api', hasResend: !!env?.RESEND_API_KEY, hasDB: !!env?.DB });
     }
 
