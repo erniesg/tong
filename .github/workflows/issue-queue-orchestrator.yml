@@ -1,0 +1,253 @@
+name: Issue Queue Orchestrator
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "queue | run | retry | hold | route-human"
+        required: false
+        type: string
+        default: "queue"
+      issue_ref:
+        description: "Optional issue ref, e.g. erniesg/tong#123"
+        required: false
+        type: string
+      dry_run:
+        description: "Preview without dispatching provider workflows"
+        required: false
+        type: boolean
+        default: true
+      max_dispatches:
+        description: "Maximum issues to dispatch in one run"
+        required: false
+        type: string
+        default: "2"
+      provider:
+        description: "Provider override: auto | codex | claude"
+        required: false
+        type: string
+        default: "auto"
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: issue-queue-orchestrator-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'issue_comment'
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.resolve.outputs.should_run }}
+      requested: ${{ steps.resolve.outputs.requested }}
+      reason: ${{ steps.resolve.outputs.reason }}
+      action: ${{ steps.resolve.outputs.action }}
+      issue_ref: ${{ steps.resolve.outputs.issue_ref }}
+      dry_run: ${{ steps.resolve.outputs.dry_run }}
+      max_dispatches: ${{ steps.resolve.outputs.max_dispatches }}
+      provider: ${{ steps.resolve.outputs.provider }}
+      source_issue_number: ${{ steps.resolve.outputs.source_issue_number }}
+      source_is_pr: ${{ steps.resolve.outputs.source_is_pr }}
+      command_text: ${{ steps.resolve.outputs.command_text }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - id: resolve
+        env:
+          ISSUE_QUEUE_TRUSTED_LOGINS: ${{ vars.ISSUE_QUEUE_TRUSTED_LOGINS }}
+        run: python3 .agents/skills/_functional-qa/scripts/resolve_issue_queue_request.py
+
+      - name: Comment blocker
+        if: github.event_name == 'issue_comment' && steps.resolve.outputs.requested == 'true' && steps.resolve.outputs.should_run != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat <<'EOF' > "$RUNNER_TEMP/orchestrator-blocked.md"
+          Repo orchestration did not start.
+
+          Reason: ${{ steps.resolve.outputs.reason }}
+
+          Supported commands:
+          - `/tong queue`
+          - `/tong run #123`
+          - `/tong retry #123`
+          - `/tong hold #123`
+          - `/tong route-human #123`
+
+          Legacy compatibility: `/codex ...` still works for the queue orchestrator.
+          Raw `@codex ...` remains reserved for direct Codex cloud tasks and reviews, not the repo queue orchestrator.
+          EOF
+
+          if [ "${{ steps.resolve.outputs.source_is_pr }}" = "true" ]; then
+            gh pr comment "${{ steps.resolve.outputs.source_issue_number }}" --repo "${{ github.repository }}" --body-file "$RUNNER_TEMP/orchestrator-blocked.md"
+          else
+            gh issue comment "${{ steps.resolve.outputs.source_issue_number }}" --repo "${{ github.repository }}" --body-file "$RUNNER_TEMP/orchestrator-blocked.md"
+          fi
+
+  plan_and_dispatch:
+    needs: resolve
+    if: needs.resolve.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      DISCORD_ROUTE_HUMAN_ENDPOINT: ${{ vars.DISCORD_ROUTE_HUMAN_ENDPOINT }}
+      DISCORD_ROUTE_HUMAN_MENTION: ${{ vars.DISCORD_ROUTE_HUMAN_MENTION }}
+      ROUTE_HUMAN_WEBHOOK_SECRET: ${{ secrets.ROUTE_HUMAN_WEBHOOK_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - id: plan
+        run: |
+          set -euo pipefail
+          args=(python3 .agents/skills/_functional-qa/scripts/remote_agent_queue.py plan
+            --provider "${{ needs.resolve.outputs.provider }}")
+          if [ -n "${{ needs.resolve.outputs.issue_ref }}" ]; then
+            args+=("${{ needs.resolve.outputs.issue_ref }}")
+          fi
+          queue_dir="$("${args[@]}")"
+          echo "queue_dir=$queue_dir" >> "$GITHUB_OUTPUT"
+
+      - id: dispatch
+        run: |
+          set -euo pipefail
+          args=(python3 .agents/skills/_functional-qa/scripts/dispatch_issue_queue.py
+            --queue-dir "${{ steps.plan.outputs.queue_dir }}"
+            --action "${{ needs.resolve.outputs.action }}"
+            --max-dispatches "${{ needs.resolve.outputs.max_dispatches }}"
+            --json)
+          if [ -n "${{ needs.resolve.outputs.issue_ref }}" ]; then
+            args+=(--issue-ref "${{ needs.resolve.outputs.issue_ref }}")
+          fi
+          if [ "${{ needs.resolve.outputs.dry_run }}" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          "${args[@]}" > "$RUNNER_TEMP/dispatch-summary.json"
+
+      - name: Step summary
+        run: cat "${{ steps.plan.outputs.queue_dir }}/dispatch-summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Acknowledge source thread
+        if: github.event_name == 'issue_comment' && needs.resolve.outputs.source_issue_number != ''
+        env:
+          SOURCE_ISSUE_NUMBER: ${{ needs.resolve.outputs.source_issue_number }}
+          SOURCE_IS_PR: ${{ needs.resolve.outputs.source_is_pr }}
+          ACTION_NAME: ${{ needs.resolve.outputs.action }}
+          DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
+        run: |
+          python3 - <<'PY' > "$RUNNER_TEMP/orchestrator-ack.md"
+          import json
+          import os
+          from pathlib import Path
+
+          summary = json.loads(Path(os.environ["RUNNER_TEMP"]) .joinpath("dispatch-summary.json").read_text(encoding="utf-8"))
+          lines = [
+              "Repo orchestration processed the request.",
+              "",
+              f"- Action: `{os.environ['ACTION_NAME']}`",
+              f"- Dry run: `{os.environ['DRY_RUN']}`",
+              f"- Requested provider: `{summary.get('provider_policy', {}).get('requested_provider', 'auto')}`",
+              f"- Default provider: `{summary.get('provider_policy', {}).get('default_provider', 'codex')}`",
+              f"- Dispatched: `{summary['counts']['dispatched']}`",
+              f"- Skipped: `{summary['counts']['skipped']}`",
+              "",
+          ]
+          if summary["launched"]:
+              lines.append("Launched:")
+              for item in summary["launched"][:5]:
+                  lines.append(f"- `{item['issue_ref']}` -> `{item['provider']}` / `{item['branch_name']}` ({item['result']})")
+              lines.append("")
+          if summary["skipped"]:
+              lines.append("Skipped:")
+              for item in summary["skipped"][:5]:
+                  provider = item.get("provider")
+                  provider_text = f" [{provider}]" if provider else ""
+                  lines.append(f"- `{item['issue_ref']}`{provider_text}: {item['reason']}")
+          print("\n".join(lines).strip())
+          PY
+
+          if [ "$SOURCE_IS_PR" = "true" ]; then
+            gh pr comment "$SOURCE_ISSUE_NUMBER" --repo "${{ github.repository }}" --body-file "$RUNNER_TEMP/orchestrator-ack.md"
+          else
+            gh issue comment "$SOURCE_ISSUE_NUMBER" --repo "${{ github.repository }}" --body-file "$RUNNER_TEMP/orchestrator-ack.md"
+          fi
+
+      - name: Notify Discord app on route-human
+        if: needs.resolve.outputs.action == 'route-human' && env.DISCORD_ROUTE_HUMAN_ENDPOINT != '' && env.ROUTE_HUMAN_WEBHOOK_SECRET != ''
+        continue-on-error: true
+        env:
+          ACTION_NAME: ${{ needs.resolve.outputs.action }}
+          ISSUE_REF: ${{ needs.resolve.outputs.issue_ref }}
+          SOURCE_ISSUE_NUMBER: ${{ needs.resolve.outputs.source_issue_number }}
+          SOURCE_IS_PR: ${{ needs.resolve.outputs.source_is_pr }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+          from pathlib import Path
+
+          summary_path = Path(os.environ["RUNNER_TEMP"]) / "dispatch-summary.json"
+          summary = json.loads(summary_path.read_text(encoding="utf-8"))
+          issue_ref = os.environ.get("ISSUE_REF", "").strip()
+          mention = os.environ.get("DISCORD_ROUTE_HUMAN_MENTION", "").strip()
+          notes = []
+          for item in summary.get("skipped", []):
+              if issue_ref and item.get("issue_ref") != issue_ref:
+                  continue
+              reason = str(item.get("reason") or "").strip()
+              if reason:
+                  notes.append(reason)
+          if not notes:
+              for item in summary.get("skipped", [])[:3]:
+                  reason = str(item.get("reason") or "").strip()
+                  if reason:
+                      notes.append(reason)
+
+          payload = {
+              "repository": os.environ["GITHUB_REPOSITORY"],
+              "issueRef": issue_ref,
+              "action": os.environ["ACTION_NAME"],
+              "mention": mention,
+              "notes": notes,
+              "provider": summary.get("provider_policy", {}).get("default_provider", "codex"),
+          }
+          for item in summary.get("launched", []) + summary.get("skipped", []):
+              if issue_ref and item.get("issue_ref") == issue_ref and item.get("provider"):
+                  payload["provider"] = item["provider"]
+                  break
+          source_issue_number = os.environ.get("SOURCE_ISSUE_NUMBER", "").strip()
+          if source_issue_number:
+              source_kind = "pull" if os.environ.get("SOURCE_IS_PR") == "true" else "issues"
+              payload["sourceUrl"] = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/{source_kind}/{source_issue_number}"
+
+          request = urllib.request.Request(
+              os.environ["DISCORD_ROUTE_HUMAN_ENDPOINT"],
+              data=json.dumps(payload).encode("utf-8"),
+              headers={
+                  "Authorization": f"Bearer {os.environ['ROUTE_HUMAN_WEBHOOK_SECRET']}",
+                  "Content-Type": "application/json",
+              },
+              method="POST",
+          )
+          with urllib.request.urlopen(request) as response:
+              if response.status >= 300:
+                  raise SystemExit(f"Discord route-human endpoint returned {response.status}")
+          PY

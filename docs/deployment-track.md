@@ -9,6 +9,7 @@ Keep deployment independent from demo implementation so the same client can run:
 ## Frontend hosting
 1. Fastest path: Vercel for Next.js web build.
 2. Parallel path: Cloudflare Pages/Workers using equivalent client build output.
+3. Shared promotion path: explicit GitHub Environment-backed staging and production workflows.
 
 ## Backend hosting
 1. Local: run in development for integration testing.
@@ -64,6 +65,15 @@ This uploads the runtime asset files to `tong-assets`, publishes the runtime man
 
 `npm run deploy:client:cf` now runs this publish step before the Cloudflare worker deploy so the client build does not point at a stale asset host.
 
+Environment-specific shortcuts:
+
+```bash
+npm run deploy:client:cf:staging
+npm run deploy:client:cf:production
+```
+
+The deploy script accepts `--environment staging|production` and can emit a machine-readable JSON summary with `--summary-file`.
+
 ### Boundary rule
 
 1. Runtime app requests for character, scene, and world content must resolve from `tong-assets`.
@@ -90,6 +100,59 @@ Notes:
 
 ## Demo safety rule
 If remote host fails, switch to `local-mock` and continue the same run-of-show.
+
+## Promotion workflows (`#291`)
+
+Use explicit GitHub Environment-backed promotion workflows instead of ad hoc shell runs:
+
+1. `.github/workflows/deploy-staging.yml`
+2. `.github/workflows/deploy-production.yml`
+
+### Promotion entry points
+
+1. Staging deploys are promoted manually from a validated PR, merge commit, or known-good ref.
+2. Production deploys are promoted manually from an approved source ref only.
+3. Production must stay behind GitHub Environment approval on the `production` environment.
+
+### Environment boundaries
+
+Configure the following as GitHub Environment-scoped variables and secrets on both `staging` and `production`:
+
+1. `CLOUDFLARE_API_TOKEN`
+2. `CLOUDFLARE_ACCOUNT_ID`
+3. `NEXT_PUBLIC_TONG_PUBLIC_DOMAIN`
+4. `NEXT_PUBLIC_TONG_API_BASE`
+5. `NEXT_PUBLIC_TONG_ASSETS_BASE_URL`
+6. `NEXT_PUBLIC_TONG_EXTENSION_ZIP_URL`
+7. `NEXT_PUBLIC_TONG_YOUTUBE_DEMO_URL`
+8. `NEXT_PUBLIC_TONG_DEMO_PASSWORD_HINT`
+9. `TONG_ASSETS_R2_BUCKET`
+10. `TONG_RUNTIME_ASSET_MANIFEST_KEY`
+11. `TONG_CLIENT_WORKER_NAME`
+12. `TONG_CLIENT_WORKERS_URL` (optional override when the Workers URL does not follow the worker name)
+
+Optional human-routing config for deploy failures:
+
+1. `DISCORD_ROUTE_HUMAN_ENDPOINT`
+2. `DISCORD_ROUTE_HUMAN_MENTION`
+3. `ROUTE_HUMAN_WEBHOOK_SECRET`
+
+### Deployment summaries
+
+Both promotion workflows should publish a deployment summary back into GitHub with:
+
+1. environment
+2. source ref
+3. linked PR or issue, when supplied
+4. public URL and Workers URL
+5. success or failure
+6. rollback or next action
+
+### Failure handling
+
+1. If a promoted deploy fails and an `issue_ref` is attached, route the blocker back to the human-review surface.
+2. Do not let failed promotions disappear into raw logs.
+3. Keep production approval separate from merge approval.
 
 ## Current worker path
 1. Worker source: `apps/worker/src/index.ts`

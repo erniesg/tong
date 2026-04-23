@@ -38,6 +38,8 @@
     "secrets:sync:cf": "./scripts/sync-cf-secrets-from-env.sh",
     "build:client:cf": "npm --prefix apps/client run cf:build",
     "deploy:client:cf": "./scripts/deploy-client-cloudflare.sh",
+    "deploy:client:cf:staging": "./scripts/deploy-client-cloudflare.sh --environment staging",
+    "deploy:client:cf:production": "./scripts/deploy-client-cloudflare.sh --environment production",
     "setup:worktrees": "./scripts/setup-worktrees.sh",
     "codex:cloud-plan": "python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py plan",
     "remote:agent-plan": "python .agents/skills/_functional-qa/scripts/remote_agent_queue.py plan",
