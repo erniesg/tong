@@ -25,6 +25,7 @@ The shared scripts are:
 ```bash
 python .agents/skills/_functional-qa/scripts/issue_router.py
 python .agents/skills/_functional-qa/scripts/qa_runtime.py
+python .agents/skills/_functional-qa/scripts/remote_agent_queue.py
 python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py
 ```
 
@@ -91,9 +92,10 @@ python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py
 7. If the user explicitly wants Codex cloud or GitHub PR execution, generate the cloud queue plan too:
 
    ```bash
-   python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py plan $ARGUMENTS
+   python .agents/skills/_functional-qa/scripts/remote_agent_queue.py plan $ARGUMENTS
    ```
 
+   `codex_cloud_queue.py` remains a Codex compatibility wrapper around the provider-neutral planner.
    Use the generated task prompt files and PR notes as the execution handoff for direct Codex environment tasks.
    Prefer the direct Codex environment flow: launch a task, let Codex return a diff, then create a PR from the task result.
    Do not assume shell-level `git push` or `gh` is available inside the cloud task.
