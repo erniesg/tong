@@ -1,0 +1,48 @@
+{
+  "sessionId": "hK29sdL2pQ",
+  "analysisId": "analysis-4c66f2a",
+  "created": 2,
+  "updated": 0,
+  "total": 2,
+  "findings": [
+    {
+      "findingId": "pf_5fe1f6ad2bdff3ab",
+      "dedupeKey": "5fe1f6ad2bdff3ab2cd89f6f37a1f5847f0f8fb6bf4e6a80afb7bcf348bde755",
+      "sessionId": "hK29sdL2pQ",
+      "createdAt": "2026-04-20T10:30:00.000Z",
+      "updatedAt": "2026-04-20T10:30:00.000Z",
+      "firstSeenAt": "2026-04-20T10:30:00.000Z",
+      "lastSeenAt": "2026-04-20T10:30:00.000Z",
+      "category": "translation",
+      "severity": "high",
+      "description": "Dictionary tooltip omits hanja for key noun.",
+      "whatUserExpected": "Hanja appears next to hangul in tooltip.",
+      "whatActuallyHappened": "Tooltip only shows hangul and English gloss.",
+      "suggestedFix": "Include hanja lane in tooltip renderer.",
+      "inferredComponent": "client-overlay",
+      "artifactLinks": [
+        {
+          "href": "https://tong-runs.example/review/run-001/frame-14.png",
+          "label": "tooltip state",
+          "type": "screenshot"
+        }
+      ],
+      "routeStatus": "unrouted",
+      "routeReason": null,
+      "routeConfidence": 0.88,
+      "githubIssueRef": null,
+      "githubPrRef": null,
+      "humanOverride": null,
+      "occurrenceCount": 1,
+      "analysisIds": ["analysis-4c66f2a"],
+      "auditTrail": [
+        {
+          "at": "2026-04-20T10:30:00.000Z",
+          "type": "finding.created",
+          "sessionId": "hK29sdL2pQ",
+          "dedupeKey": "5fe1f6ad2bdff3ab2cd89f6f37a1f5847f0f8fb6bf4e6a80afb7bcf348bde755"
+        }
+      ]
+    }
+  ]
+}
