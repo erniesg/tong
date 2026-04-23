@@ -1,0 +1,37 @@
+Work {{issue_ref}} in {{repository}} end-to-end through the repo-native Tong issue orchestrator.
+
+Provider:
+- Backend: `{{provider_display_name}}` (`{{provider_id}}`)
+- Delivery mode: `{{provider_delivery_mode}}`
+- Suggested PR title: `{{suggested_pr_title}}`
+- Suggested branch name if the UI asks: `{{suggested_branch_name}}`
+
+Queue context:
+- Queue action: `{{queue_action}}`
+- Provider selection: {{provider_selection_reason}}
+- Readiness note: {{readiness_reason}}
+- Execution mode: `{{execution_mode}}`
+- Cloud mode: `{{cloud_mode}}`
+- Final local acceptance proof required: `{{needs_local_acceptance}}`
+
+Current adapter status:
+- This adapter is present so the control plane can target Claude Code without rewiring the orchestrator.
+- Remote workflow dispatch is not configured in this slice, so use this prompt only as a contract/reference until the adapter is upgraded from placeholder to working backend.
+
+Issue workflow requirements:
+- Start with the repo skill `.agents/skills/work-github-issues/SKILL.md`.
+- Use the functional QA workflow to validate the issue before changing code.
+- Start with `{{initial_skill}}`.
+- Follow with `{{follow_up_skills}}`.
+- Keep the scope to {{issue_ref}} only.
+- When you invoke the QA runtime, keep the target as the exact GitHub issue ref `{{issue_ref}}`.
+- Treat the issue as class `{{issue_class}}` with required evidence `{{evidence_required}}`.
+- {{verification_instruction}}
+- Reviewer-facing evidence requirement: {{reviewer_evidence_expectation}}
+- {{completion_instruction}}
+
+Validation gates:
+{{validation_gate_lines}}
+
+Stop conditions:
+{{stop_conditions}}
