@@ -1,0 +1,226 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Approved commit SHA, branch, or tag to promote to production"
+        required: true
+        type: string
+        default: "main"
+      pr_number:
+        description: "Optional PR number for GitHub writeback"
+        required: false
+        type: string
+      issue_ref:
+        description: "Optional issue ref for writeback and route-human, e.g. erniesg/tong#291"
+        required: false
+        type: string
+      note:
+        description: "Optional approval note, release note, or rollback hint"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: deploy-production-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.summary.outputs.public_url }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      NEXT_PUBLIC_TONG_PUBLIC_DOMAIN: ${{ vars.NEXT_PUBLIC_TONG_PUBLIC_DOMAIN }}
+      NEXT_PUBLIC_TONG_API_BASE: ${{ vars.NEXT_PUBLIC_TONG_API_BASE }}
+      NEXT_PUBLIC_TONG_ASSETS_BASE_URL: ${{ vars.NEXT_PUBLIC_TONG_ASSETS_BASE_URL }}
+      NEXT_PUBLIC_TONG_EXTENSION_ZIP_URL: ${{ vars.NEXT_PUBLIC_TONG_EXTENSION_ZIP_URL }}
+      NEXT_PUBLIC_TONG_YOUTUBE_DEMO_URL: ${{ vars.NEXT_PUBLIC_TONG_YOUTUBE_DEMO_URL }}
+      NEXT_PUBLIC_TONG_DEMO_PASSWORD_HINT: ${{ vars.NEXT_PUBLIC_TONG_DEMO_PASSWORD_HINT }}
+      TONG_ASSETS_R2_BUCKET: ${{ vars.TONG_ASSETS_R2_BUCKET }}
+      TONG_RUNTIME_ASSET_MANIFEST_KEY: ${{ vars.TONG_RUNTIME_ASSET_MANIFEST_KEY }}
+      TONG_CLIENT_WORKER_NAME: ${{ vars.TONG_CLIENT_WORKER_NAME }}
+      TONG_CLIENT_WORKERS_URL: ${{ vars.TONG_CLIENT_WORKERS_URL }}
+      DISCORD_ROUTE_HUMAN_ENDPOINT: ${{ vars.DISCORD_ROUTE_HUMAN_ENDPOINT }}
+      DISCORD_ROUTE_HUMAN_MENTION: ${{ vars.DISCORD_ROUTE_HUMAN_MENTION }}
+      ROUTE_HUMAN_WEBHOOK_SECRET: ${{ secrets.ROUTE_HUMAN_WEBHOOK_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/client/package-lock.json
+
+      - id: deploy
+        continue-on-error: true
+        env:
+          TONG_DEPLOY_ENV: production
+          TONG_DEPLOY_REF: ${{ inputs.ref }}
+          TONG_DEPLOY_PR_NUMBER: ${{ inputs.pr_number }}
+          TONG_DEPLOY_ISSUE_REF: ${{ inputs.issue_ref }}
+          TONG_DEPLOY_NOTE: ${{ inputs.note }}
+          TONG_DEPLOY_SUMMARY_PATH: ${{ runner.temp }}/deployment-summary.json
+        run: ./scripts/deploy-client-cloudflare.sh --environment production --summary-file "$TONG_DEPLOY_SUMMARY_PATH"
+
+      - id: summary
+        if: steps.deploy.outcome == 'success'
+        env:
+          DEPLOY_SUMMARY_PATH: ${{ runner.temp }}/deployment-summary.json
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary = json.loads(Path(os.environ["DEPLOY_SUMMARY_PATH"]).read_text(encoding="utf-8"))
+          lines = [
+              "Production deployment completed.",
+              "",
+              f"- Environment: `{summary['environment']}`",
+              f"- Ref: `{summary.get('ref') or 'unknown'}`",
+              f"- PR: `{summary.get('pr_number') or 'none'}`",
+              f"- Issue: `{summary.get('issue_ref') or 'none'}`",
+              f"- Public URL: {summary['public_url']}",
+              f"- Workers URL: {summary['workers_url']}",
+              f"- API base: `{summary['api_base']}`",
+              f"- Assets base: `{summary['assets_base_url']}`",
+              f"- Assets bucket: `{summary['assets_bucket']}`",
+              "- Next action: monitor the live deployment; if rollback is required, rerun `Deploy Production` with the previous known-good ref.",
+          ]
+          if summary.get("note"):
+              lines.insert(8, f"- Note: {summary['note']}")
+
+          Path(os.environ["RUNNER_TEMP"]).joinpath("deployment-report.md").write_text(
+              "\n".join(lines).strip() + "\n",
+              encoding="utf-8",
+          )
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          with output_path.open("a", encoding="utf-8") as handle:
+              handle.write(f"public_url<<__CODEX__\n{summary['public_url']}\n__CODEX__\n")
+          PY
+
+      - name: Step summary
+        if: steps.deploy.outcome == 'success'
+        run: cat "$RUNNER_TEMP/deployment-report.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment PR
+        if: steps.deploy.outcome == 'success' && inputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment "${{ inputs.pr_number }}" --repo "${{ github.repository }}" --body-file "$RUNNER_TEMP/deployment-report.md"
+
+      - name: Comment issue
+        if: steps.deploy.outcome == 'success' && inputs.pr_number == '' && inputs.issue_ref != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_ref }}
+        run: gh issue comment "${ISSUE_NUMBER##*#}" --repo "${{ github.repository }}" --body-file "$RUNNER_TEMP/deployment-report.md"
+
+      - name: Build failure report
+        if: steps.deploy.outcome != 'success'
+        env:
+          DEPLOY_REF: ${{ inputs.ref }}
+          ISSUE_REF: ${{ inputs.issue_ref }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          NOTE: ${{ inputs.note }}
+          SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          lines = [
+              "Production deployment failed.",
+              "",
+              "- Environment: `production`",
+              f"- Ref: `{os.environ.get('DEPLOY_REF') or 'unknown'}`",
+              f"- PR: `{os.environ.get('PR_NUMBER') or 'none'}`",
+              f"- Issue: `{os.environ.get('ISSUE_REF') or 'none'}`",
+              f"- Workflow run: {os.environ['SOURCE_URL']}",
+              "- Next action: inspect the failing deploy job, confirm rollback or fix path with a human approver, then rerun production with an approved ref.",
+          ]
+          if os.environ.get("NOTE"):
+              lines.insert(6, f"- Note: {os.environ['NOTE']}")
+          Path(os.environ["RUNNER_TEMP"]).joinpath("deployment-failure.md").write_text(
+              "\n".join(lines).strip() + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Failure summary
+        if: steps.deploy.outcome != 'success'
+        run: cat "$RUNNER_TEMP/deployment-failure.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment PR failure
+        if: steps.deploy.outcome != 'success' && inputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment "${{ inputs.pr_number }}" --repo "${{ github.repository }}" --body-file "$RUNNER_TEMP/deployment-failure.md"
+
+      - name: Comment issue failure
+        if: steps.deploy.outcome != 'success' && inputs.pr_number == '' && inputs.issue_ref != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_ref }}
+        run: gh issue comment "${ISSUE_NUMBER##*#}" --repo "${{ github.repository }}" --body-file "$RUNNER_TEMP/deployment-failure.md"
+
+      - name: Route failure to human review
+        if: steps.deploy.outcome != 'success' && inputs.issue_ref != '' && env.DISCORD_ROUTE_HUMAN_ENDPOINT != '' && env.ROUTE_HUMAN_WEBHOOK_SECRET != ''
+        continue-on-error: true
+        env:
+          ISSUE_REF: ${{ inputs.issue_ref }}
+          DEPLOY_REF: ${{ inputs.ref }}
+          NOTE: ${{ inputs.note }}
+          SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          notes = [
+              f"Production deploy failed for ref {os.environ.get('DEPLOY_REF') or os.environ.get('ISSUE_REF')}.",
+              "Open the workflow run and deployment summary for the exact blocker context.",
+          ]
+          if os.environ.get("NOTE"):
+              notes.append(os.environ["NOTE"])
+
+          payload = {
+              "repository": os.environ["GITHUB_REPOSITORY"],
+              "issueRef": os.environ["ISSUE_REF"],
+              "action": "deploy-production-failed",
+              "mention": os.environ.get("DISCORD_ROUTE_HUMAN_MENTION", ""),
+              "notes": notes,
+              "sourceUrl": os.environ["SOURCE_URL"],
+          }
+
+          request = urllib.request.Request(
+              os.environ["DISCORD_ROUTE_HUMAN_ENDPOINT"],
+              data=json.dumps(payload).encode("utf-8"),
+              headers={
+                  "Authorization": f"Bearer {os.environ['ROUTE_HUMAN_WEBHOOK_SECRET']}",
+                  "Content-Type": "application/json",
+              },
+              method="POST",
+          )
+          with urllib.request.urlopen(request) as response:
+              if response.status >= 300:
+                  raise SystemExit(f"route-human endpoint returned {response.status}")
+          PY
+
+      - name: Fail job when deploy step failed
+        if: steps.deploy.outcome != 'success'
+        run: exit 1
