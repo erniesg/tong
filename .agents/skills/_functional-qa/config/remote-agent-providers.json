@@ -1,0 +1,37 @@
+{
+  "schema_version": "1",
+  "provider_policy": {
+    "default_provider": "codex",
+    "lane_overrides": {},
+    "execution_mode_overrides": {},
+    "issue_overrides": []
+  },
+  "providers": {
+    "codex": {
+      "display_name": "Codex",
+      "prompt_template": "codex-cloud-task.md.tmpl",
+      "pr_notes_template": "codex-cloud-pr-notes.md.tmpl",
+      "dispatch_workflow": "codex-headless-pr.yml",
+      "capabilities": {
+        "unattended_safe": true,
+        "pr_creation": true,
+        "validation_handoff": true,
+        "parallel_workers": true
+      }
+    },
+    "claude": {
+      "display_name": "Claude Code",
+      "delivery_mode": "manual-placeholder",
+      "branch_pattern": "claude/issue-{number}-{slug}",
+      "prompt_template": "claude-task.md.tmpl",
+      "pr_notes_template": "claude-pr-notes.md.tmpl",
+      "placeholder_reason": "Claude adapter contract is wired, but remote workflow dispatch is not configured yet.",
+      "capabilities": {
+        "unattended_safe": false,
+        "pr_creation": false,
+        "validation_handoff": true,
+        "parallel_workers": false
+      }
+    }
+  }
+}
