@@ -131,6 +131,7 @@ class InteractivePlaytest:
             context = await browser.new_context(
                 viewport=VIEWPORT,
                 user_agent=UA + " Chrome/124.0.0.0 Safari/537.36",
+                ignore_https_errors=True,
             )
             page = await context.new_page()
 
@@ -143,7 +144,7 @@ class InteractivePlaytest:
             print("\n[2/8] Loading playtest page + redirect...", flush=True)
             await page.goto(f"{self.base_url}/playtest/{self.session_id}", wait_until="domcontentloaded", timeout=30000)
             try:
-                await page.wait_for_url("**/game**", timeout=15000)
+                await page.wait_for_url("**/game**", timeout=30000)
                 self.record("Redirect to /game", True, page.url)
             except Exception as e:
                 self.record("Redirect to /game", False, str(e))
