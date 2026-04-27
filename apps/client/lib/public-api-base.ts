@@ -3,6 +3,10 @@ export function getPublicApiBase(): string {
     return process.env.NEXT_PUBLIC_TONG_API_BASE;
   }
 
+  if (typeof window !== 'undefined' && window.location.hostname === 'tong.berlayar.ai') {
+    return 'https://tong-api.erniesg.workers.dev';
+  }
+
   if (typeof window === 'undefined') {
     return 'http://localhost:8787';
   }

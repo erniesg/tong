@@ -43,14 +43,24 @@ def write_json(path: Path, payload: Any) -> None:
 
 
 def http_request(url: str, method: str = "GET", data: bytes | None = None,
-                 content_type: str | None = None, timeout: int = 10) -> Any:
+                 content_type: str | None = None, timeout: int = 30,
+                 retries: int = 3) -> Any:
     import urllib.request
     headers: dict[str, str] = {"User-Agent": UA}
     if content_type:
         headers["Content-Type"] = content_type
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.read(), resp.headers
+    for attempt in range(retries):
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.read(), resp.headers
+        except urllib.error.HTTPError as e:
+            if e.code in (502, 503, 504) and attempt < retries - 1:
+                wait = 2 ** (attempt + 1)
+                print(f"  ⟳ {e.code} on {method} {url}, retrying in {wait}s...", flush=True)
+                time.sleep(wait)
+                continue
+            raise
 
 
 class InteractivePlaytest:
@@ -131,6 +141,7 @@ class InteractivePlaytest:
             context = await browser.new_context(
                 viewport=VIEWPORT,
                 user_agent=UA + " Chrome/124.0.0.0 Safari/537.36",
+                ignore_https_errors=True,
             )
             page = await context.new_page()
 
