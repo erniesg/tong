@@ -279,9 +279,14 @@ export default function PlaytestViewerPage() {
     fetchSessions().then(async (list) => {
       setSessions(list);
       setLoading(false);
-      const metas = await Promise.allSettled(
-        list.map((s) => fetchDeviceMeta(s.sessionId)),
-      );
+      const BATCH = 5;
+      const metas: PromiseSettledResult<DeviceMeta | null>[] = [];
+      for (let i = 0; i < list.length; i += BATCH) {
+        const batch = await Promise.allSettled(
+          list.slice(i, i + BATCH).map((s) => fetchDeviceMeta(s.sessionId)),
+        );
+        metas.push(...batch);
+      }
       setSessions((prev) =>
         prev.map((s, i) => ({
           ...s,
