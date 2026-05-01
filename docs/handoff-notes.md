@@ -16,3 +16,10 @@ Current note:
 - Contract touch points: `packages/contracts/**`, `apps/client/app/globals.css`, `apps/client/components/scene/**`, `apps/client/lib/content/shanghai/**`
 - Integration risks: shared scene files and contract fixtures can drift if edited in parallel
 - Next owner: whoever takes the next cross-stream integration pass
+
+Current note:
+- Area: Discord human-review routing
+- Scope: Queue orchestration notifications and Discord interaction callbacks for `route-human`
+- Contract touch points: `.github/workflows/issue-queue-orchestrator.yml`, `.agents/skills/_functional-qa/scripts/**`, `apps/worker/src/index.ts`, worker secrets/env wiring
+- Integration risks: worker callback route and GitHub dispatch token handling need one owner while the Discord path is landing
+- Next owner: infra-deploy / qa-platform integration pass

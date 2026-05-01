@@ -483,6 +483,23 @@ def project_fields_for_issue(issue_ref: str | None) -> dict[str, str]:
     return fetch_project_overrides().get(issue_ref, {})
 
 
+def issue_ref_matches(issue_ref: str | None, pattern: str | None) -> bool:
+    if not issue_ref or not pattern:
+        return False
+
+    issue_ref = str(issue_ref).strip()
+    pattern = str(pattern).strip()
+    if issue_ref == pattern:
+        return True
+
+    issue_number = re.search(r"#(?P<number>\d+)$", issue_ref)
+    pattern_number = re.fullmatch(r"#(?P<number>\d+)", pattern)
+    if issue_number and pattern_number:
+        return issue_number.group("number") == pattern_number.group("number")
+
+    return False
+
+
 def project_execution_mode(project_fields: dict[str, str]) -> str | None:
     cfg = project_control_plane()
     if not cfg:
@@ -499,7 +516,7 @@ def collect_issue_notes(issue_ref: str | None) -> list[str]:
         return []
     notes: list[str] = []
     for item in REPO_ADAPTER.get("issue_notes", []):
-        if item["match"] in issue_ref:
+        if issue_ref_matches(issue_ref, item.get("match")):
             notes.extend(item["notes"])
     return notes
 
@@ -508,7 +525,7 @@ def issue_playbook(issue_ref: str | None) -> dict[str, Any] | None:
     if not issue_ref:
         return None
     for item in REPO_ADAPTER.get("issue_playbooks", []):
-        if item["match"] in issue_ref:
+        if issue_ref_matches(issue_ref, item.get("match")):
             return item
     return None
 
@@ -517,7 +534,7 @@ def classification_override(issue_ref: str | None) -> str | None:
     if not issue_ref:
         return None
     for item in REPO_ADAPTER.get("issue_notes", []):
-        if item["match"] in issue_ref:
+        if issue_ref_matches(issue_ref, item.get("match")):
             return item.get("issue_class_override")
     return None
 

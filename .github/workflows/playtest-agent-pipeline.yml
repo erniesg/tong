@@ -1,0 +1,193 @@
+name: Playtest Agent Pipeline
+
+on:
+  repository_dispatch:
+    types: [playtest-submitted]
+  workflow_dispatch:
+    inputs:
+      session_id:
+        description: "Playtest session id to analyze"
+        required: true
+        type: string
+      preset:
+        description: "Gemini analysis preset"
+        required: false
+        type: string
+        default: "ux_friction"
+      mode:
+        description: "Analysis mode: video, screenshots, or auto"
+        required: false
+        type: choice
+        default: "auto"
+        options:
+          - auto
+          - video
+          - screenshots
+      min_severity:
+        description: "Minimum issue severity to create"
+        required: false
+        type: string
+        default: "2"
+      provider:
+        description: "Remote agent provider"
+        required: false
+        type: choice
+        default: "auto"
+        options:
+          - auto
+          - codex
+          - claude
+      create_issues:
+        description: "Create GitHub issues from analysis"
+        required: false
+        type: boolean
+        default: true
+      dry_run:
+        description: "Analyze and render plans without creating issues or sending Discord"
+        required: false
+        type: boolean
+        default: false
+      dispatch_codex:
+        description: "Dispatch generated Codex tasks after creating issues"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+  pull-requests: write
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_GEMINI_API_KEY: ${{ secrets.GOOGLE_GEMINI_API_KEY }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      TONG_RUNS_PUBLIC_BASE_URL: ${{ vars.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai' }}
+      TONG_PLAYTEST_API_BASE: ${{ vars.TONG_PLAYTEST_API_BASE || 'https://tong-api.erniesg.workers.dev' }}
+      SESSION_ID: ${{ inputs.session_id || github.event.client_payload.session_id }}
+      ANALYSIS_PRESET: ${{ inputs.preset || github.event.client_payload.preset || 'ux_friction' }}
+      ANALYSIS_MODE: ${{ inputs.mode || github.event.client_payload.mode || 'auto' }}
+      MIN_SEVERITY: ${{ inputs.min_severity || github.event.client_payload.min_severity || '2' }}
+      REMOTE_PROVIDER: ${{ inputs.provider || github.event.client_payload.provider || 'auto' }}
+      WORKFLOW_CREATE_ISSUES: ${{ inputs.create_issues }}
+      PAYLOAD_CREATE_ISSUES: ${{ github.event.client_payload.create_issues }}
+      WORKFLOW_DRY_RUN: ${{ inputs.dry_run }}
+      PAYLOAD_DRY_RUN: ${{ github.event.client_payload.dry_run }}
+      WORKFLOW_DISPATCH_CODEX: ${{ inputs.dispatch_codex }}
+      PAYLOAD_DISPATCH_CODEX: ${{ github.event.client_payload.dispatch_codex }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install app dependencies
+        run: |
+          npm --prefix apps/server ci
+
+      - name: Resolve pipeline options
+        run: |
+          if [ -z "$SESSION_ID" ]; then
+            echo "Missing session id. Provide workflow_dispatch input session_id or repository_dispatch client_payload.session_id." >&2
+            exit 1
+          fi
+          create_issues="${WORKFLOW_CREATE_ISSUES:-${PAYLOAD_CREATE_ISSUES:-true}}"
+          dry_run="${WORKFLOW_DRY_RUN:-${PAYLOAD_DRY_RUN:-false}}"
+          dispatch_codex="${WORKFLOW_DISPATCH_CODEX:-${PAYLOAD_DISPATCH_CODEX:-false}}"
+          echo "CREATE_ISSUES=$create_issues" >> "$GITHUB_ENV"
+          echo "DRY_RUN=$dry_run" >> "$GITHUB_ENV"
+          echo "DISPATCH_CODEX=$dispatch_codex" >> "$GITHUB_ENV"
+
+      - name: Analyze playtest session
+        run: |
+          mkdir -p "$RUNNER_TEMP/tong-playtest-agent"
+          node scripts/analyze-playtest-session.mjs \
+            --session-id "$SESSION_ID" \
+            --preset "$ANALYSIS_PRESET" \
+            --mode "$ANALYSIS_MODE" \
+            --api-base "$TONG_PLAYTEST_API_BASE" \
+            --r2-base "$TONG_RUNS_PUBLIC_BASE_URL" \
+            --output "$RUNNER_TEMP/tong-playtest-agent/analysis.json" \
+            --update-session
+
+      - name: Create GitHub issues
+        id: issues
+        run: |
+          args=(
+            node scripts/playtest-analysis-to-issues.mjs
+            --analysis "$RUNNER_TEMP/tong-playtest-agent/analysis.json"
+            --session-id "$SESSION_ID"
+            --repo "${{ github.repository }}"
+            --r2-base "$TONG_RUNS_PUBLIC_BASE_URL"
+            --route "/game"
+            --remote-dependencies "repo-only"
+            --min-severity "$MIN_SEVERITY"
+            --output "$RUNNER_TEMP/tong-playtest-agent/issues.json"
+          )
+          if [ "$CREATE_ISSUES" != "true" ] || [ "$DRY_RUN" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          "${args[@]}"
+          issue_refs="$(node -e "const data=require(process.argv[1]); console.log((data.issues||[]).map(i=>i.number?'#'+i.number:'').filter(Boolean).join(' '))" "$RUNNER_TEMP/tong-playtest-agent/issues.json")"
+          echo "issue_refs=$issue_refs" >> "$GITHUB_OUTPUT"
+
+      - name: Generate remote queue
+        id: queue
+        run: |
+          if [ -n "${{ steps.issues.outputs.issue_refs }}" ]; then
+            queue_dir="$(python .agents/skills/_functional-qa/scripts/remote_agent_queue.py plan ${{ steps.issues.outputs.issue_refs }} --provider "$REMOTE_PROVIDER")"
+          else
+            queue_dir="$(python .agents/skills/_functional-qa/scripts/remote_agent_queue.py plan --limit 0 --provider "$REMOTE_PROVIDER")"
+          fi
+          echo "queue_dir=$queue_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch Codex tasks
+        if: env.DISPATCH_CODEX == 'true'
+        run: |
+          args=(
+            node scripts/dispatch-remote-agent-queue.mjs
+            --plan "${{ steps.queue.outputs.queue_dir }}/remote-plan.json"
+            --repo "${{ github.repository }}"
+            --include-unassigned
+            --output "$RUNNER_TEMP/tong-playtest-agent/dispatch.json"
+          )
+          if [ "$DRY_RUN" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          "${args[@]}"
+
+      - name: Write empty dispatch result
+        if: env.DISPATCH_CODEX != 'true'
+        run: |
+          printf '%s\n' '{"ok":true,"dryRun":false,"selectedCount":0,"dispatchedCount":0,"unsupportedCount":0,"dispatches":[]}' > "$RUNNER_TEMP/tong-playtest-agent/dispatch.json"
+
+      - name: Notify Discord
+        if: env.DRY_RUN != 'true' && env.DISCORD_WEBHOOK_URL != ''
+        run: |
+          node scripts/discord-notify.mjs \
+            --issues "$RUNNER_TEMP/tong-playtest-agent/issues.json" \
+            --queue "${{ steps.queue.outputs.queue_dir }}/remote-plan.json" \
+            --dispatch "$RUNNER_TEMP/tong-playtest-agent/dispatch.json" \
+            --session-id "$SESSION_ID" \
+            --url "$TONG_RUNS_PUBLIC_BASE_URL/playtest/$SESSION_ID/analysis.json" \
+            --title "Tong playtest agent pipeline"
+
+      - name: Upload pipeline artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playtest-agent-pipeline-${{ env.SESSION_ID }}
+          path: |
+            ${{ runner.temp }}/tong-playtest-agent/analysis.json
+            ${{ runner.temp }}/tong-playtest-agent/issues.json
+            ${{ runner.temp }}/tong-playtest-agent/dispatch.json
+            ${{ steps.queue.outputs.queue_dir }}/remote-plan.json
+            ${{ steps.queue.outputs.queue_dir }}/remote-plan.md

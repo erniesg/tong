@@ -1,0 +1,30 @@
+{
+  "schema_version": "1",
+  "default_provider": "codex",
+  "providers": {
+    "codex": {
+      "status": "working",
+      "display_name": "Codex",
+      "queue_generator": "codex_cloud_queue.py",
+      "delivery_mode": "direct-task-pr",
+      "dispatch_workflow": "codex-headless-pr.yml",
+      "notes": "Primary hosted implementation path. Generated task prompts are designed for the Codex environment named in codex-cloud.json."
+    },
+    "claude": {
+      "status": "placeholder",
+      "display_name": "Claude Code",
+      "queue_generator": "codex_cloud_queue.py",
+      "delivery_mode": "prompt-pr-notes",
+      "dispatch_workflow": "",
+      "notes": "Provider contract only. Use generated prompts and PR notes manually until a trusted Claude dispatch workflow is added."
+    }
+  },
+  "execution_mode_provider": {
+    "safe-unattended": "codex",
+    "requires-live-model": "codex",
+    "validate-and-propose-only": "codex",
+    "needs-human-design-review": "codex"
+  },
+  "lane_provider": {},
+  "issue_provider": {}
+}

@@ -4,6 +4,9 @@ Use this runbook when you want hosted tasks to work portable Tong tasks through 
 
 Use `docs/agent-native-project-setup.md` as the source of truth for project fields, lane ownership, and portability rules.
 Use `docs/qa-evidence-uploads.md` as the source of truth for the boundary between local QA bundles and published reviewer-visible proof.
+Use `docs/remote-agent-control-plane.md` for the provider-neutral control-plane contract.
+
+The orchestrator is repo-native. Providers such as Codex or Claude are pluggable execution backends selected by policy or workflow input.
 
 ## What remote tasks can and cannot see
 
@@ -27,9 +30,12 @@ Practical rule:
 1. Functional QA front door:
    - `.agents/skills/work-github-issues/SKILL.md`
 2. Queue generator:
-   - the queue planner under `.agents/skills/_functional-qa/scripts/`
+   - primary: `python .agents/skills/_functional-qa/scripts/remote_agent_queue.py plan`
+   - compatibility wrapper for Codex-specific launches: `python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py plan`
 3. Output bundle:
    - `artifacts/qa-runs/functional-qa/`
+
+For annotated playtest sessions, use `docs/playtest-agent-pipeline.md` for the analysis-to-issue and Discord notification path before launching implementation tasks.
 
 Treat the generated plan as local staging, not the reviewer-visible evidence host.
 
@@ -53,6 +59,8 @@ The authoritative execution gates should still live on the project fields for wo
 ## Standard remote flow
 
 1. Generate the current queue plan and read the portability notes.
+   - provider policy defaults come from `.agents/skills/_functional-qa/config/remote-agent-providers.json`
+   - workflow dispatch can override with `auto`, `codex`, or `claude`
 2. Open the hosted task UI and start from the generated prompt.
 3. Let the remote task return a diff.
 4. Review the diff, create the PR, and request a review pass if needed.
