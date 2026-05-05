@@ -1,6 +1,6 @@
 # Playtest Agent Pipeline
 
-This is the remote-first path from annotated playtest evidence to GitHub issues, remote-agent queue planning, and Discord notification.
+This is the remote-first path from annotated playtest evidence to GitHub issues, PM scoring, remote-agent queue planning, and Discord notification.
 
 ## Flow
 
@@ -8,9 +8,12 @@ This is the remote-first path from annotated playtest evidence to GitHub issues,
 2. The Worker optionally dispatches the `Playtest Agent Pipeline` GitHub workflow when `GITHUB_PIPELINE_DISPATCH_TOKEN` is configured.
 3. The workflow runs Gemini analysis via `scripts/analyze-playtest-session.mjs`.
 4. `scripts/playtest-analysis-to-issues.mjs` converts selected findings into portable GitHub issues.
-5. `remote_agent_queue.py plan` generates provider metadata and task prompts.
-6. If `dispatch_codex=true`, `scripts/dispatch-remote-agent-queue.mjs` launches supported Codex tasks through `codex-headless-pr.yml`.
-7. `scripts/discord-notify.mjs` sends the issue, queue, and dispatch summary to Discord.
+5. `scripts/pm/ensure-labels.mjs` ensures the PM, lane, provider, and self-heal labels exist.
+6. `scripts/pm/score-issue.mjs` synchronously scores each created issue.
+7. `remote_agent_queue.py plan` generates provider metadata and task prompts for the scored-ready issues only.
+8. If `dispatch_codex=true`, `scripts/pm/orchestrate-queue.mjs --issue-numbers <created-ready-issues>` launches supported provider tasks while still respecting lane caps, provider caps, and provider availability.
+9. `scripts/discord-notify.mjs` sends the issue, queue, and dispatch summary to Discord.
+10. When a dispatched PR reaches `Trusted QA Publish`, `.github/workflows/qa-publish.yml` posts the GitHub proof comment and sends a Discord completion notification with the PR and uploaded evidence manifest.
 
 ## Required Secrets And Vars
 
@@ -53,7 +56,7 @@ Generate a provider-neutral queue plan:
 npm run remote:agent-plan -- '#123' '#124' --provider auto
 ```
 
-Dispatch supported Codex tasks from a queue plan:
+Dispatch supported provider tasks from a queue plan:
 
 ```bash
 npm run remote:dispatch -- \
@@ -72,4 +75,8 @@ npm run notify:discord -- \
 
 ## Current Boundary
 
-This can create issues, generate queue prompts, and launch Codex tasks when `dispatch_codex=true`. Claude remains a provider contract until a trusted dispatch workflow is added.
+This can create issues, score them with the PM gatekeeper, generate queue prompts, and launch Codex or Claude tasks when `dispatch_codex=true`. The flag name is kept for backwards compatibility with the existing Worker payload, but dispatch now routes through the PM scheduler rather than directly bypassing PM caps.
+
+Keep Worker-side live dispatch off until the readiness smoke in `docs/autonomous-overnight-operations.md` passes on the default branch.
+
+For Shanghai-specific slice dispatch and proof routing, use `docs/shanghai/remote-agent-onboarding.md`.

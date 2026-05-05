@@ -8,22 +8,44 @@
       "queue_generator": "codex_cloud_queue.py",
       "delivery_mode": "direct-task-pr",
       "dispatch_workflow": "codex-headless-pr.yml",
+      "availability": {
+        "status": "available",
+        "unavailable_until": "",
+        "reset_hint": "Set status=paused or unavailable_until=<ISO timestamp> when subscription capacity is exhausted."
+      },
+      "strengths": [
+        "repo-native implementation",
+        "multi-file code edits",
+        "test/lint failure repair",
+        "existing Codex cloud task prompts"
+      ],
       "notes": "Primary hosted implementation path. Generated task prompts are designed for the Codex environment named in codex-cloud.json."
     },
     "claude": {
-      "status": "placeholder",
+      "status": "working",
       "display_name": "Claude Code",
       "queue_generator": "codex_cloud_queue.py",
-      "delivery_mode": "prompt-pr-notes",
-      "dispatch_workflow": "",
-      "notes": "Provider contract only. Use generated prompts and PR notes manually until a trusted Claude dispatch workflow is added."
+      "delivery_mode": "direct-task-pr",
+      "dispatch_workflow": "claude-headless-pr.yml",
+      "availability": {
+        "status": "available",
+        "unavailable_until": "",
+        "reset_hint": "Set status=paused or unavailable_until=<ISO timestamp> when subscription capacity is exhausted."
+      },
+      "strengths": [
+        "requirements review",
+        "proposal-only tasks",
+        "persona reviewer workflows",
+        "docs and architecture critique"
+      ],
+      "notes": "Trusted Claude headless dispatch via anthropics/claude-code-action. Auth via CLAUDE_CODE_OAUTH_TOKEN only — ANTHROPIC_API_KEY fallback is intentionally disabled to avoid pay-per-token API billing. Branches under claude/*."
     }
   },
   "execution_mode_provider": {
     "safe-unattended": "codex",
     "requires-live-model": "codex",
-    "validate-and-propose-only": "codex",
-    "needs-human-design-review": "codex"
+    "validate-and-propose-only": "claude",
+    "needs-human-design-review": "claude"
   },
   "lane_provider": {},
   "issue_provider": {}

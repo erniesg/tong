@@ -24,6 +24,8 @@ Requirements:
 - A Codex task-local "Recording preview" is not a reviewer-visible upload by itself. Use the repo uploader flow when public `tong-runs` links are required.
 - If you cannot make the media reviewer-visible from the cloud task, do not claim correctness; report that a final local/browser-backed recording is still required.
 - If the surface depends on runtime media, verify the public asset host before capture. When the current repo assets are missing from `assets.tong.berlayar.ai`, run `npm run runtime-assets:upload` before treating the remote UI as representative.
+- Checkpoint discipline: work in small coherent slices, and create a small local checkpoint commit after each complete slice when the execution environment supports commits without interfering with PR creation. Keep commit messages issue-scoped. Never rewrite, squash, or revert unrelated changes.
+- If this environment cannot safely create local commits, keep each slice coherent in the worktree and include a checkpoint log in the final task output and PR body.
 - Do not rely on `gh` CLI or shell-level `git push`.
 - Do not cite gitignored artifacts as committed GitHub blobs unless those files were actually checked in.
 - {{completion_instruction}}

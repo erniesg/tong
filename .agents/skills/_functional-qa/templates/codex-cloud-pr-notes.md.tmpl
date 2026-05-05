@@ -18,8 +18,13 @@
 3. Code changes limited to the confirmed issue scope
 4. `--verify-fix` outcome
 5. Evidence summary inline in the PR body or task summary
-6. Issue closure plan: use a closing keyword only if this PR fully resolves the issue; otherwise keep it open and say why
-7. Reviewer-visible media link or attachment for UI timing fixes; do not rely on a gitignored local artifact path alone
+6. Checkpoint log or local commit summary for each coherent implementation slice
+7. Issue closure plan: use a closing keyword only if this PR fully resolves the issue; otherwise keep it open and say why
+8. Reviewer-visible media link or attachment for UI timing fixes; do not rely on a gitignored local artifact path alone
+
+## Checkpoint Discipline
+
+Use small local checkpoint commits when the execution environment supports them without interfering with the PR creation flow. Do not push manually. If local commits are not safe in the current environment, keep coherent worktree slices and summarize the checkpoint log in the task output and PR body.
 
 ## Reviewer-Facing Evidence
 

@@ -493,7 +493,11 @@ def build_launch_instructions(plan: dict[str, Any]) -> str:
 def build_plan(args: argparse.Namespace) -> int:
     source, targets = resolve_targets(args.targets, args.limit)
     queue_timestamp = timestamp_slug()
-    queue_dir = artifact_root() / "functional-qa" / "codex-cloud-queue" / queue_timestamp
+    queue_dir = (
+        Path(args.out_dir).resolve()
+        if args.out_dir
+        else artifact_root() / "functional-qa" / "codex-cloud-queue" / queue_timestamp
+    )
     queue_dir.mkdir(parents=True, exist_ok=True)
 
     issues = [build_cloud_issue(issue, queue_dir) for issue in targets]
@@ -541,6 +545,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan_parser = subparsers.add_parser("plan", help="Generate the Codex cloud issue queue plan.")
     plan_parser.add_argument("targets", nargs="*", help="Issue numbers or URLs. Defaults to the open GitHub issue queue.")
     plan_parser.add_argument("--limit", type=int, default=50, help="Open issue limit when no explicit targets are given.")
+    plan_parser.add_argument("--out-dir", help="Write generated queue files to this directory instead of artifacts/qa-runs.")
     plan_parser.add_argument("--json", action="store_true", help="Print the JSON plan to stdout.")
     plan_parser.set_defaults(func=build_plan)
     return parser

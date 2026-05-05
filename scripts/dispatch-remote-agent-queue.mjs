@@ -2,9 +2,9 @@
 /**
  * Dispatch supported remote-agent queue items to their provider workflow.
  *
- * Today this can launch Codex via .github/workflows/codex-headless-pr.yml.
- * Claude items are reported as unsupported until a trusted Claude workflow is
- * added.
+ * Codex items launch via .github/workflows/codex-headless-pr.yml.
+ * Claude items launch via .github/workflows/claude-headless-pr.yml.
+ * Other providers fall through with action='unsupported-provider'.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -32,25 +32,51 @@ function readPrompt(queueDir, issue) {
   return readFileSync(resolve(queueDir, promptPath), 'utf8');
 }
 
-function dispatchCodex({ repo, queueDir, issue, dryRun }) {
+const PROVIDER_CONFIG = {
+  codex: {
+    workflow: 'codex-headless-pr.yml',
+    branchPrefix: 'codex/',
+  },
+  claude: {
+    workflow: 'claude-headless-pr.yml',
+    branchPrefix: 'claude/',
+  },
+};
+
+function dispatchProvider({ provider, repo, queueDir, issue, dryRun }) {
+  const config = PROVIDER_CONFIG[provider];
+  if (!config) {
+    return {
+      ok: false,
+      provider,
+      issueRef: issue.issue_ref,
+      action: 'unsupported-provider',
+      reason: `No trusted dispatch workflow is configured for ${provider}.`,
+    };
+  }
+
   const prompt = readPrompt(queueDir, issue);
   if (!prompt) {
     return {
       ok: false,
-      provider: 'codex',
+      provider,
       issueRef: issue.issue_ref,
       action: 'skipped',
       reason: 'missing task prompt',
     };
   }
 
-  const branch = issue.branch_name || `codex/issue-${issue.number || 'adhoc'}`;
+  const fallbackBranch = `${config.branchPrefix}issue-${issue.number || 'adhoc'}`;
+  let branch = issue.branch_name || fallbackBranch;
+  if (!branch.startsWith(config.branchPrefix)) {
+    branch = `${config.branchPrefix}${branch.replace(/^[\w-]+\//, '')}`;
+  }
   const title = issue.draft_pr_title || `fix: ${issue.issue_ref || issue.title}`;
   const result = runGh(
     [
       'workflow',
       'run',
-      'codex-headless-pr.yml',
+      config.workflow,
       '--repo',
       repo,
       '-f',
@@ -67,19 +93,30 @@ function dispatchCodex({ repo, queueDir, issue, dryRun }) {
       'route=/game',
       '-f',
       'auto_qa_publish=true',
+      '-f',
+      'enable_self_heal=true',
     ],
     { dryRun },
   );
 
   return {
     ok: true,
-    provider: 'codex',
+    provider,
     issueRef: issue.issue_ref,
     action: dryRun ? 'dry-run' : 'workflow-dispatched',
+    workflow: config.workflow,
     branch,
     title,
     ...result,
   };
+}
+
+function dispatchCodex(args) {
+  return dispatchProvider({ ...args, provider: 'codex' });
+}
+
+function dispatchClaude(args) {
+  return dispatchProvider({ ...args, provider: 'claude' });
 }
 
 function printHelp() {
@@ -130,16 +167,7 @@ const selected = (plan.issues || [])
 
 const dispatches = selected.map((issue) => {
   const provider = issue.provider?.id || 'codex';
-  if (provider === 'codex') {
-    return dispatchCodex({ repo: args.repo, queueDir, issue, dryRun: args['dry-run'] });
-  }
-  return {
-    ok: false,
-    provider,
-    issueRef: issue.issue_ref,
-    action: 'unsupported-provider',
-    reason: `No trusted dispatch workflow is configured for ${provider}.`,
-  };
+  return dispatchProvider({ provider, repo: args.repo, queueDir, issue, dryRun: args['dry-run'] });
 });
 
 const output = {

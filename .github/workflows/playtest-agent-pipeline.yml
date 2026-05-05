@@ -48,7 +48,7 @@ on:
         type: boolean
         default: false
       dispatch_codex:
-        description: "Dispatch generated Codex tasks after creating issues"
+        description: "Dispatch PM-scored remote-agent tasks after creating issues"
         required: false
         type: boolean
         default: false
@@ -118,6 +118,11 @@ jobs:
             --output "$RUNNER_TEMP/tong-playtest-agent/analysis.json" \
             --update-session
 
+      - name: Ensure control-plane labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/pm/ensure-labels.mjs --repo "${{ github.repository }}"
+
       - name: Create GitHub issues
         id: issues
         run: |
@@ -137,35 +142,64 @@ jobs:
           fi
           "${args[@]}"
           issue_refs="$(node -e "const data=require(process.argv[1]); console.log((data.issues||[]).map(i=>i.number?'#'+i.number:'').filter(Boolean).join(' '))" "$RUNNER_TEMP/tong-playtest-agent/issues.json")"
+          issue_numbers="$(node -e "const data=require(process.argv[1]); console.log((data.issues||[]).map(i=>i.number).filter(Boolean).join(' '))" "$RUNNER_TEMP/tong-playtest-agent/issues.json")"
           echo "issue_refs=$issue_refs" >> "$GITHUB_OUTPUT"
+          echo "issue_numbers=$issue_numbers" >> "$GITHUB_OUTPUT"
+
+      - name: Score created issues with PM gatekeeper
+        id: pm_gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/tong-playtest-agent/pm-scores"
+          issue_numbers="${{ steps.issues.outputs.issue_numbers }}"
+          ready_numbers=""
+          if [ -n "$issue_numbers" ] && [ "$CREATE_ISSUES" = "true" ] && [ "$DRY_RUN" != "true" ]; then
+            for n in $issue_numbers; do
+              node scripts/pm/score-issue.mjs \
+                --repo "${{ github.repository }}" \
+                --number "$n" \
+                --output "$RUNNER_TEMP/tong-playtest-agent/pm-scores/$n.json"
+            done
+            ready_numbers="$(node -e "const fs=require('fs'); const dir=process.argv[1]; const nums=fs.readdirSync(dir).filter(f=>f.endsWith('.json')).map(f=>JSON.parse(fs.readFileSync(dir+'/'+f,'utf8'))).filter(d=>d.isComplete).map(d=>d.number).sort((a,b)=>a-b); console.log(nums.join(' '));" "$RUNNER_TEMP/tong-playtest-agent/pm-scores")"
+          fi
+          ready_refs="$(node -e "const raw=process.argv[1] || ''; console.log(raw.split(/\\s+/).filter(Boolean).map(n=>'#'+n).join(' '));" "$ready_numbers")"
+          echo "ready_issue_numbers=$ready_numbers" >> "$GITHUB_OUTPUT"
+          echo "ready_issue_refs=$ready_refs" >> "$GITHUB_OUTPUT"
 
       - name: Generate remote queue
         id: queue
         run: |
-          if [ -n "${{ steps.issues.outputs.issue_refs }}" ]; then
-            queue_dir="$(python .agents/skills/_functional-qa/scripts/remote_agent_queue.py plan ${{ steps.issues.outputs.issue_refs }} --provider "$REMOTE_PROVIDER")"
+          if [ -n "${{ steps.pm_gate.outputs.ready_issue_refs }}" ]; then
+            queue_dir="$(python .agents/skills/_functional-qa/scripts/remote_agent_queue.py plan ${{ steps.pm_gate.outputs.ready_issue_refs }} --provider "$REMOTE_PROVIDER")"
           else
             queue_dir="$(python .agents/skills/_functional-qa/scripts/remote_agent_queue.py plan --limit 0 --provider "$REMOTE_PROVIDER")"
           fi
           echo "queue_dir=$queue_dir" >> "$GITHUB_OUTPUT"
 
-      - name: Dispatch Codex tasks
-        if: env.DISPATCH_CODEX == 'true'
+      - name: Dispatch PM-scored remote agent tasks
+        if: env.DISPATCH_CODEX == 'true' && steps.pm_gate.outputs.ready_issue_numbers != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           args=(
-            node scripts/dispatch-remote-agent-queue.mjs
-            --plan "${{ steps.queue.outputs.queue_dir }}/remote-plan.json"
+            node scripts/pm/orchestrate-queue.mjs
             --repo "${{ github.repository }}"
-            --include-unassigned
-            --output "$RUNNER_TEMP/tong-playtest-agent/dispatch.json"
+            --issue-numbers "${{ steps.pm_gate.outputs.ready_issue_numbers }}"
+            --provider "$REMOTE_PROVIDER"
+            --output "$RUNNER_TEMP/tong-playtest-agent/pm-dispatch.json"
           )
           if [ "$DRY_RUN" = "true" ]; then
             args+=(--dry-run)
           fi
           "${args[@]}"
+          node -e "const fs=require('fs'); const d=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); const dispatch=d.dispatch || {ok:true,dryRun:d.dryRun,selectedCount:d.selectedCount||0,dispatchedCount:0,unsupportedCount:0,dispatches:[]}; fs.writeFileSync(process.argv[2], JSON.stringify(dispatch, null, 2)+'\n');" \
+            "$RUNNER_TEMP/tong-playtest-agent/pm-dispatch.json" \
+            "$RUNNER_TEMP/tong-playtest-agent/dispatch.json"
 
       - name: Write empty dispatch result
-        if: env.DISPATCH_CODEX != 'true'
+        if: env.DISPATCH_CODEX != 'true' || steps.pm_gate.outputs.ready_issue_numbers == ''
         run: |
           printf '%s\n' '{"ok":true,"dryRun":false,"selectedCount":0,"dispatchedCount":0,"unsupportedCount":0,"dispatches":[]}' > "$RUNNER_TEMP/tong-playtest-agent/dispatch.json"
 
@@ -188,6 +222,8 @@ jobs:
           path: |
             ${{ runner.temp }}/tong-playtest-agent/analysis.json
             ${{ runner.temp }}/tong-playtest-agent/issues.json
+            ${{ runner.temp }}/tong-playtest-agent/pm-scores/*.json
+            ${{ runner.temp }}/tong-playtest-agent/pm-dispatch.json
             ${{ runner.temp }}/tong-playtest-agent/dispatch.json
             ${{ steps.queue.outputs.queue_dir }}/remote-plan.json
             ${{ steps.queue.outputs.queue_dir }}/remote-plan.md

@@ -1,0 +1,231 @@
+name: PM Orchestrator
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled, reopened]
+  schedule:
+    - cron: "0 */2 * * *"
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Which operation to run"
+        required: true
+        type: choice
+        default: "orchestrate-queue"
+        options:
+          - score-issue
+          - orchestrate-queue
+          - lane-health
+      issue_number:
+        description: "Issue number (required for score-issue)"
+        required: false
+        type: string
+      max_dispatches:
+        description: "Override max dispatches per run (orchestrate-queue only)"
+        required: false
+        type: string
+      dry_run:
+        description: "Dry-run (orchestrate-queue): plan only, no dispatch"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: pm-orchestrator-${{ github.event_name }}-${{ github.event.issue.number || github.event.schedule || inputs.operation }}
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      operation: ${{ steps.resolve.outputs.operation }}
+      issue_number: ${{ steps.resolve.outputs.issue_number }}
+      max_dispatches: ${{ steps.resolve.outputs.max_dispatches }}
+      dry_run: ${{ steps.resolve.outputs.dry_run }}
+    steps:
+      - id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_OPERATION: ${{ inputs.operation }}
+          INPUT_ISSUE: ${{ inputs.issue_number }}
+          INPUT_MAX: ${{ inputs.max_dispatches }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          ISSUE_FROM_EVENT: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          op="$INPUT_OPERATION"
+          issue=""
+          max="$INPUT_MAX"
+          dry_run="$INPUT_DRY_RUN"
+          case "$EVENT_NAME" in
+            issues)
+              op="score-issue"
+              issue="$ISSUE_FROM_EVENT"
+              ;;
+            schedule)
+              # Two cron ticks alternate orchestrate-queue and lane-health.
+              hour=$(date -u +%H)
+              if [ $((10#$hour % 4)) -eq 0 ]; then
+                op="lane-health"
+              else
+                op="orchestrate-queue"
+              fi
+              ;;
+            workflow_dispatch)
+              if [ "$op" = "score-issue" ]; then
+                issue="$INPUT_ISSUE"
+              fi
+              ;;
+            *)
+              echo "Unsupported event: $EVENT_NAME" >&2
+              exit 1
+              ;;
+          esac
+          {
+            echo "operation=$op"
+            echo "issue_number=$issue"
+            echo "max_dispatches=$max"
+            echo "dry_run=$dry_run"
+          } >> "$GITHUB_OUTPUT"
+
+  score-issue:
+    needs: resolve
+    if: needs.resolve.outputs.operation == 'score-issue' && needs.resolve.outputs.issue_number != ''
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Ensure control-plane labels
+        run: node scripts/pm/ensure-labels.mjs --repo "${{ github.repository }}"
+      - name: Score issue
+        run: |
+          node scripts/pm/score-issue.mjs \
+            --repo "${{ github.repository }}" \
+            --number "${{ needs.resolve.outputs.issue_number }}" \
+            --output "$RUNNER_TEMP/pm-decision.json"
+      - name: Step summary
+        if: always()
+        run: |
+          {
+            echo "## PM gatekeeper"
+            echo
+            if [ -f "$RUNNER_TEMP/pm-decision.json" ]; then
+              echo '```json'
+              cat "$RUNNER_TEMP/pm-decision.json"
+              echo
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  orchestrate-queue:
+    needs: resolve
+    if: needs.resolve.outputs.operation == 'orchestrate-queue'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Ensure control-plane labels
+        run: node scripts/pm/ensure-labels.mjs --repo "${{ github.repository }}"
+      - name: Orchestrate queue
+        env:
+          MAX_DISPATCHES: ${{ needs.resolve.outputs.max_dispatches }}
+          DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
+        run: |
+          set -euo pipefail
+          args=(node scripts/pm/orchestrate-queue.mjs --repo "${{ github.repository }}" --output "$RUNNER_TEMP/pm-orchestrate.json")
+          if [ -n "${MAX_DISPATCHES:-}" ]; then
+            args+=(--max-dispatches "$MAX_DISPATCHES")
+          fi
+          if [ "${DRY_RUN:-}" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          "${args[@]}"
+      - name: Notify Discord
+        if: env.DISCORD_WEBHOOK_URL != ''
+        run: |
+          set -euo pipefail
+          if [ ! -f "$RUNNER_TEMP/pm-orchestrate.json" ]; then exit 0; fi
+          selected=$(node -e "const d=require('$RUNNER_TEMP/pm-orchestrate.json');console.log(d.selectedCount||0);")
+          if [ "${selected:-0}" = "0" ]; then exit 0; fi
+          node scripts/discord-notify.mjs \
+            --title "Tong PM dispatched" \
+            --message "PM cron dispatched $selected agent-ready issue(s)." \
+            --color "5865F2"
+      - name: Step summary
+        if: always()
+        run: |
+          {
+            echo "## PM orchestrate-queue"
+            echo
+            if [ -f "$RUNNER_TEMP/pm-orchestrate.json" ]; then
+              echo '```json'
+              head -c 8000 "$RUNNER_TEMP/pm-orchestrate.json"
+              echo
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  lane-health:
+    needs: resolve
+    if: needs.resolve.outputs.operation == 'lane-health'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Ensure control-plane labels
+        run: node scripts/pm/ensure-labels.mjs --repo "${{ github.repository }}"
+      - name: Lane health
+        run: |
+          node scripts/pm/lane-health.mjs \
+            --repo "${{ github.repository }}" \
+            --output "$RUNNER_TEMP/pm-lane-health.json"
+      - name: Notify Discord on findings
+        if: env.DISCORD_WEBHOOK_URL != ''
+        run: |
+          set -euo pipefail
+          if [ ! -f "$RUNNER_TEMP/pm-lane-health.json" ]; then exit 0; fi
+          has=$(node -e "const r=require('$RUNNER_TEMP/pm-lane-health.json');console.log(r.hasFindings?'yes':'no');")
+          if [ "$has" != "yes" ]; then exit 0; fi
+          stuck_issues=$(node -e "const r=require('$RUNNER_TEMP/pm-lane-health.json');console.log(r.stuckIssues.length);")
+          stuck_prs=$(node -e "const r=require('$RUNNER_TEMP/pm-lane-health.json');console.log(r.stuckPrs.length);")
+          exhausted=$(node -e "const r=require('$RUNNER_TEMP/pm-lane-health.json');console.log(r.exhaustedNeedingReview.length);")
+          node scripts/discord-notify.mjs \
+            --title "Tong PM lane health" \
+            --message "Stuck issues: $stuck_issues. Stuck PRs: $stuck_prs. Exhausted awaiting review: $exhausted." \
+            --color "FEE75C"
+      - name: Step summary
+        if: always()
+        run: |
+          {
+            echo "## PM lane-health"
+            echo
+            if [ -f "$RUNNER_TEMP/pm-lane-health.json" ]; then
+              echo '```json'
+              head -c 8000 "$RUNNER_TEMP/pm-lane-health.json"
+              echo
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

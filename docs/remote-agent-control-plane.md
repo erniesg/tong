@@ -12,8 +12,8 @@ The orchestrator owns:
 
 Providers are pluggable backends.
 
-- `codex` is the current working backend
-- `claude` is wired as a placeholder contract in this slice
+- `codex` is the primary implementation backend
+- `claude` is wired through `claude-headless-pr.yml` for review-heavy, proposal-only, and persona-style work
 - future runners should plug in through the same adapter boundary instead of reshaping the queue model
 
 ## Repo-native actions
@@ -66,5 +66,5 @@ Phase 1 makes the control plane provider-agnostic without breaking the current C
 
 - queue plans emit provider metadata per work item
 - dispatch goes through provider adapters
-- `codex` dispatch remains working through its adapter
-- `claude` has a prompt and PR-note contract plus placeholder dispatch wiring
+- `codex` dispatch goes through `codex-headless-pr.yml`
+- `claude` dispatch goes through `claude-headless-pr.yml`

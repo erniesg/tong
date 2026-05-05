@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -20,26 +21,67 @@ from qa_runtime import CONFIG_ROOT, REPO_ROOT, load_json
 PROVIDER_CONFIG = load_json(CONFIG_ROOT / "remote-agent-providers.json")
 
 
+def parse_iso(value: str) -> datetime | None:
+    if not value:
+        return None
+    try:
+        normalized = value.replace("Z", "+00:00")
+        parsed = datetime.fromisoformat(normalized)
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def provider_is_available(provider_id: str) -> bool:
+    provider = PROVIDER_CONFIG.get("providers", {}).get(provider_id, {})
+    availability = provider.get("availability", {})
+    status = str(availability.get("status") or "available").lower()
+    if status not in {"available", "working"}:
+        return False
+    unavailable_until = parse_iso(str(availability.get("unavailable_until") or ""))
+    if unavailable_until and unavailable_until > datetime.now(timezone.utc):
+        return False
+    return provider.get("status", "working") == "working"
+
+
+def first_available(candidates: list[str]) -> str:
+    providers = PROVIDER_CONFIG.get("providers", {})
+    seen: set[str] = set()
+    ordered = []
+    for candidate in candidates + [PROVIDER_CONFIG.get("default_provider", "codex"), *providers.keys()]:
+        if not candidate or candidate in seen:
+            continue
+        seen.add(candidate)
+        ordered.append(candidate)
+    for candidate in ordered:
+        if candidate in providers and provider_is_available(candidate):
+            return candidate
+    return ordered[0] if ordered else PROVIDER_CONFIG.get("default_provider", "codex")
+
+
 def choose_provider(issue: dict[str, Any], requested: str) -> str:
     if requested != "auto":
         return requested
 
+    candidates: list[str] = []
     issue_ref = issue.get("issue_ref")
     issue_overrides = PROVIDER_CONFIG.get("issue_provider", {})
     if issue_ref and issue_ref in issue_overrides:
-        return issue_overrides[issue_ref]
+        candidates.append(issue_overrides[issue_ref])
 
     lane = issue.get("recommended_worktree", {}).get("id")
     lane_overrides = PROVIDER_CONFIG.get("lane_provider", {})
     if lane and lane in lane_overrides:
-        return lane_overrides[lane]
+        candidates.append(lane_overrides[lane])
 
     execution_mode = issue.get("validation_policy", {}).get("execution_mode")
     execution_overrides = PROVIDER_CONFIG.get("execution_mode_provider", {})
     if execution_mode and execution_mode in execution_overrides:
-        return execution_overrides[execution_mode]
+        candidates.append(execution_overrides[execution_mode])
 
-    return PROVIDER_CONFIG.get("default_provider", "codex")
+    return first_available(candidates)
 
 
 def provider_meta(provider_id: str) -> dict[str, Any]:
@@ -48,6 +90,13 @@ def provider_meta(provider_id: str) -> dict[str, Any]:
     if not provider:
         raise ValueError(f"Unknown provider `{provider_id}`")
     return {"id": provider_id, **provider}
+
+
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 
 def render_markdown(plan: dict[str, Any]) -> str:
@@ -94,6 +143,8 @@ def run_codex_generator(args: argparse.Namespace) -> Path:
         "--limit",
         str(args.limit),
     ]
+    if args.out_dir:
+        command.extend(["--out-dir", args.out_dir])
     if args.json:
         command.append("--json")
 
@@ -107,6 +158,9 @@ def run_codex_generator(args: argparse.Namespace) -> Path:
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip())
 
+    if args.out_dir:
+        return Path(args.out_dir).resolve()
+
     if args.json:
         payload = json.loads(result.stdout)
         generated_at = payload["generated_at"]
@@ -119,7 +173,11 @@ def empty_plan(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
     from qa_runtime import artifact_root, repo_name_with_owner, timestamp_slug
 
     generated_at = timestamp_slug()
-    queue_dir = artifact_root() / "functional-qa" / "remote-agent-queue" / generated_at
+    queue_dir = (
+        Path(args.out_dir).resolve()
+        if args.out_dir
+        else artifact_root() / "functional-qa" / "remote-agent-queue" / generated_at
+    )
     queue_dir.mkdir(parents=True, exist_ok=True)
     plan = {
       "schema_version": "1",
@@ -152,7 +210,7 @@ def build_plan(args: argparse.Namespace) -> int:
         issue["provider"] = provider_meta(selected)
 
     plan["schema_version"] = "1"
-    plan["source_queue_dir"] = str(queue_dir.relative_to(REPO_ROOT))
+    plan["source_queue_dir"] = display_path(queue_dir)
     plan["requested_provider"] = args.provider
     plan["provider_policy"] = {
         "default_provider": PROVIDER_CONFIG.get("default_provider", "codex"),
@@ -177,6 +235,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan_parser.add_argument("targets", nargs="*", help="Issue numbers or URLs. Defaults to open issues.")
     plan_parser.add_argument("--limit", type=int, default=50)
     plan_parser.add_argument("--provider", choices=["auto", *PROVIDER_CONFIG.get("providers", {}).keys()], default="auto")
+    plan_parser.add_argument("--out-dir", help="Write generated queue files to this directory instead of artifacts/qa-runs.")
     plan_parser.add_argument("--json", action="store_true")
     plan_parser.set_defaults(func=build_plan)
     return parser
