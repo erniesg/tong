@@ -120,11 +120,11 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
     },
   ],
   introTongLines: [
-    'Shanghai starts quietly. Steam on the glass, tables half full, rain against the window.',
-    'You are early. Nobody is talking to you yet.',
-    'At the far table, two people are already in the middle of something.',
+    'Shanghai starts quietly. Steam on glass, low voices, rain at the window.',
+    'Two people at the far table. One is eating. One is not.',
+    'That is enough to know where to look.',
     'Before you listen, take one word with you: 方案. A plan.',
-    'You do not need every sentence yet. Just notice when 方案 changes the room.',
+    'You do not need every sentence yet. Watch what happens when 方案 lands.',
   ],
   anchorExercise: {
     type: 'multiple_choice',
@@ -147,6 +147,6 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
   ],
   panPrompt: 'Drag left to listen in.',
   completionTongLine:
-    'Good read. 方案 was the plan on the table. Food was the dodge. You did not meet them yet; next time, one of them may notice you.',
+    'Good read. 方案 was the plan on the table. Food was the dodge. Shanghai will bring them back one at a time.',
   webtoonFixtureId: 'shanghai-h1',
 };

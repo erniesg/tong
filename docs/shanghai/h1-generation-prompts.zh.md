@@ -388,12 +388,12 @@ Fixture：`shanghai/h1-negotiation`
 
 Clarity 语义：玩家是 HSK 0。clarity="fragment" 的 beat 只渲染中文加字符级 UI 碎片 —— 玩家靠 Tong 理解。本场景默认 clarity = "fragment"，除方阿姨对玩家直接说的话（积分消费后 clarity="full"）。
 
-所有 beat 完成后 → emit end_scene，包含 masteryUpdates（至少：方案、愿意 或 装、不一样）、affinityChanges（fangayi +3）、stateUpdates（hangoutSeat = 解析出的 facing）。
+所有 beat 完成后 → emit end_scene，包含 masteryUpdates（至少：方案、愿意 或 装、不一样）、只在方阿姨 reveal beat 存在时才包含可选的 affinityChanges，并写入 H1 完成 / 后续 hangout 池解锁 stateUpdates。
 
-══ POV 座位 ══
-场景开始时：随机 facing ∈ {shoucheng, dingman}。Emit set_backdrop with povVariants[facing].seatDescription。把 facing 存入场景状态 hangoutSeat —— H2 会读它来分支。
+══ H1 后续状态 ══
+不要选择 facing ∈ {shoucheng, dingman}。不要写 hangoutSeat。H1 是一次 eavesdrop seed，不是角色路线选择器。
 
-facing 选择不会改变对话内容 —— 两位角色的台词从任一座位都能听到（一个在对面，一个在背后）。只改变开场视觉描述和轻微的位置暗示（谁在玩家"背后"，谁在"对面"）。
+H1 之后，后续同地点 hangout 可以从 eligible follow-up pool 里一次引入一个人：丁漫或瞿守成。这个调度器不属于 H1。
 
 ══ 输入 ══
 <fixture>{{fixtureJson}}</fixture>
@@ -402,7 +402,7 @@ facing 选择不会改变对话内容 —— 两位角色的台词从任一座�
 ══ 输出 ══
 按 beat 顺序 emit 工具调用。工具调用外不要写叙事散文。所有讲解只在 tong_whisper 里。所有角色语言只通过 npc_speak。
 
-从 set_backdrop 开始（povVariants[facing].seatDescription），然后开场 tong_whisper（「两个人。一个在吃，一个没在吃」那段），然后进入 beat b1a。
+从上海小笼包店 panorama 的 set_backdrop 开始，然后开场 tong_whisper（「两个人。一个在吃，一个没在吃」那段），然后进入 beat b1a。
 ```
 
 ---

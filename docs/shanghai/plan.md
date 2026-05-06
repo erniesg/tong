@@ -55,7 +55,7 @@ Tong's first job is context-setting: this is a shop, the player is an observer, 
 ┌─────────────────────────────────────────────┐
 │ Scene Fixture (shanghai/h1-negotiation)     │
 │   - beats (locked lines + variants + rules) │
-│   - POV variants                            │
+│   - entry/pan progression state             │
 │   - webtoon cliffhanger                     │
 │   - exercise hooks                          │
 │   - tong interjections                      │
@@ -112,7 +112,7 @@ Epic 3 (Webtoon)                 │
 Epic 4 (Dynamic integration)     │
  ├─ 4.1 prompt ───────────── (uses 2.3)
  ├─ 4.2 voice rules validator ─ (uses 2.2)
- └─ 4.3 POV seat state ──────── (uses 1.2)
+ └─ 4.3 eavesdrop state ─────── (uses 1.2)
 
 Epic 6 (QA)
  ├─ 6.1 dev toggle
@@ -157,8 +157,7 @@ export type SceneFixture = {
   id: string;                    // "shanghai/h1-negotiation"
   location: string;              // "shanghai:xiaolongbao"
   entryNarration?: string;
-  povVariants?: Record<string, POVVariant>;
-  seatingRandomized?: boolean;
+  entryState?: Record<string, unknown>;
   beats: Beat[];
   cliffhanger?: CliffhangerSpec;
   resolution: ResolutionSpec;
@@ -178,11 +177,6 @@ export type Beat = {
   exerciseHook?: ExerciseHook;
   pairGroup?: string;             // "b2-pair-A" — beats with same pairGroup must stay together
   followUp?: string;              // free-text stage direction
-};
-
-export type POVVariant = {
-  seatDescription: string;
-  offscreenVoice?: string;
 };
 
 export type TongBeat = {
@@ -272,9 +266,9 @@ export type ResolutionSpec = {
 - `apps/client/lib/hangout/fixture-runtime.test.ts` (new)
 
 **Implementation notes:**
-- Input: `{ fixture: SceneFixture, seed?: number, povOverride?: string }`
+- Input: `{ fixture: SceneFixture, seed?: number, variantOverrides?: Record<string, string> }`
 - Output: `AsyncIterable<HangoutEvent>` where `HangoutEvent` is a discriminated union matching the existing SSE event shape in `app/api/ai/hangout/route.ts`
-- POV randomization: if `seed` provided use deterministic PRNG, otherwise `Math.random()`
+- Variant selection: if `seed` provided use deterministic PRNG, otherwise `Math.random()`
 - For beats with multiple `lockedLines`, pick the first one (V1) — selection strategy can be extended later
 - Respect pairGroup: pick one pair at scene start, stay in it
 - Tong interjections fire at trigger points (before/after parent beat)
@@ -443,7 +437,7 @@ romanceable: false
 
 **Red:** No `shanghai/h1-negotiation` fixture exists.
 
-**Green:** Fixture file contains all beats, POV variants, cliffhanger, exercise hooks per the locked design in `docs/shanghai/h1-generation-prompts.md` and the prior plan conversation.
+**Green:** Fixture file contains all beats, allowed variants, cliffhanger, exercise hooks, and eavesdrop progression state per the locked design in `docs/shanghai/h1-generation-prompts.md` and the prior plan conversation.
 
 **Files:**
 - `apps/client/lib/content/shanghai/fixtures/h1-negotiation.ts` (new)
@@ -700,7 +694,7 @@ Content beats: one steamer instead of two, earlier arrival, scrolling survival-s
 After H2 completes, next game entry drops player into the show venue, not back to the 小笼包店. 丁漫 in a different outfit, hair done, posture different. 守成 in a proper suit, on phone, not eating. Tong: "Wait — isn't that the person from the 小笼包店?"
 
 ## Slice 5.4 — Cross-scene recognition flags
-If player faced 丁漫 in H1 and she was facing you, a half-second of almost-recognition in the show scene. If they faced 守成, he doesn't register.
+If a later same-location hangout has already introduced 丁漫 or 守成 individually, the show scene may include a half-second of almost-recognition for that character. H1 alone does not create this flag.
 
 ---
 
@@ -768,7 +762,8 @@ test("H1 dynamic output honors voice rules (10 runs)", async () => {
 - `docs/shanghai/playtest-h1.md` (new)
 
 **Must cover:**
-- Happy path both POVs
+- Happy path through fixture and dynamic H1
+- Follow-up pool unlock for later one-at-a-time 丁漫/守成 hangouts
 - Credit spend at cliffhanger
 - Credit skip at cliffhanger
 - Exercise hook success
