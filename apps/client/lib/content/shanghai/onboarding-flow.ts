@@ -132,8 +132,8 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
   introTongLines: [
     'Shanghai starts quietly. Steam on glass, low voices, rain at the window.',
     'Two people at the far table. One is eating. One is not.',
-    'Before you listen in, take the shape of the conversation first.',
-    'You only need a few anchors. Then the scene can move.',
+    'Before we slide closer, catch two scraps from the table.',
+    '方案 is the plan in front of them. 看过了 means someone already looked it over.',
   ],
   preListeningExercises: [
     {
@@ -141,7 +141,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       id: 'shanghai-h1-prelisten-phrases',
       objectiveId: 'zh-vocab-shanghai-negotiation',
       difficulty: 1,
-      prompt: 'Match the words you are about to overhear.',
+      prompt: 'Pair what is on the table with what it means.',
       pairs: [
         { left: '方案', right: 'plan' },
         { left: '看过了', right: 'looked it over' },
@@ -154,7 +154,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       id: 'shanghai-h1-prelisten-fangan-sound',
       objectiveId: 'zh-pronunciation-tone-pairs',
       difficulty: 1,
-      prompt: 'Listen for 方案 before the webtoon starts.',
+      prompt: 'Tap the sound that says 方案.',
       targetText: '方案',
       audioOptions: [
         { id: 'fangan', label: '方案', romanization: 'fang an', meaning: 'plan' },
@@ -162,17 +162,17 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
         { id: 'buyiyang', label: '不一样', romanization: 'bu yi yang', meaning: 'different' },
       ],
       correctOptionId: 'fangan',
-      explanation: '方案 is only one anchor. The scene decides what matters next.',
+      explanation: '方案 is the plan on the table. Keep one ear on it.',
     },
   ],
   postExerciseTongLines: [
-    'Good. Now you have enough to overhear without freezing on every word.',
-    'Listen for what the scene gives you next. It may be 方案, 看过了, 想法, or something sharper.',
+    'Good. You do not need every word. You need the ones that make the room shift.',
+    'Next, listen for the moment the talk stops being polite.',
     'Now slide left. Do not answer them. Just listen.',
   ],
   panPrompt: 'Drag left to listen in.',
   completionTongLine:
-    'Good read. Food was the dodge. The useful words came from what they actually said.',
+    'Good read. Food was the dodge. The important pieces were already in the room.',
   webtoonFixtureId: 'shanghai-h1',
   webtoonSteps: [
     {
@@ -181,7 +181,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       panelIds: ['p0', 'p1', 'p2', 'p3', 'p4'],
       afterTongLines: [
         'She did answer. She answered with food.',
-        'Pull out the short pressure chain: 看过了, then 想法.',
+        'Two small pieces carried the pressure: 看过了, then 想法.',
       ],
       afterExercises: [
         {
@@ -189,7 +189,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
           id: 'shanghai-h1-after-a-kanguole',
           objectiveId: 'zh-gram-shanghai-le-aspect',
           difficulty: 1,
-          prompt: 'Complete the overheard line.',
+          prompt: 'Put the missing words back.',
           sentence: '方案你___。',
           blankIndex: 0,
           options: [
@@ -210,7 +210,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       panelIds: ['p5', 'p6', 'p7', 'p8', 'p9', 'p10', 'p11'],
       afterTongLines: [
         'Now the line gets sharper. 不一样 was the pitch. 装不下去 was the read.',
-        'This is not just vocabulary. It is what he thinks she cannot keep doing.',
+        'He is not translating her. He is reading her.',
       ],
       afterExercises: [
         {
@@ -218,7 +218,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
           id: 'shanghai-h1-after-b-zhuang',
           objectiveId: 'zh-gram-shanghai-buxiaqu',
           difficulty: 2,
-          prompt: 'Rebuild the line that changed the scene.',
+          prompt: 'Put his sentence back together.',
           wordTiles: ['我', '觉得', '你', '装不下去'],
           correctOrder: ['我', '觉得', '你', '装不下去'],
           distractors: ['不重要', '想法'],
@@ -232,8 +232,8 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       label: 'Eavesdrop C — departure',
       panelIds: ['p12', 'p13', 'p14', 'p15', 'p16', 'p17', 'p18', 'p19', 'p20'],
       afterTongLines: [
-        'That interruption gave you the useful words: 接 and 重要.',
-        '小瞿 is not random. 方阿姨 knows him well enough to call him that.',
+        'Three rings, and he still said 不重要.',
+        'Then 方阿姨 called him 小瞿. She has known him longer than tonight.',
       ],
       afterExercises: [
         {
@@ -241,7 +241,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
           id: 'shanghai-h1-after-c-zhongyao',
           objectiveId: 'zh-vocab-shanghai-interruption-reveal',
           difficulty: 1,
-          prompt: 'Complete 丁漫’s phone line.',
+          prompt: 'Put the missing word back.',
           sentence: '响三次了。很___。',
           blankIndex: 0,
           options: [

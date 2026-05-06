@@ -64,6 +64,9 @@ LANGUAGE RULES:
 - Do not write pinyin inline in dialogue. Put pinyin only in webtoon bubble metadata or exercise metadata.
 - No parenthetical translations inside bubbles.
 - No admin terms: no "city map", no "fixture", no "webtoon reveal", no "proposal framing", no "QA".
+- PLAYER-FACING COPY must stay in-world. In tong_whisper messages, exercise prompts, summaries, and bubble text, do NOT say:
+  "anchor", "gate", "segment", "beat", "webtoon", "fixture", "dynamic", "scene can move", "words you are about to overhear", "orchestrator", "validator".
+- Internal planning can use gates and segments. The player must only see Tong thinking with them inside the room.
 
 ROLE RULES:
 - Tong is the only teacher.
