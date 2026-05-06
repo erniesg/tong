@@ -31,17 +31,17 @@ const LOCKED_BEATS = [
   {
     id: 'arrival-1',
     speaker: 'tong',
-    text: 'Shanghai starts quietly. Steam on glass, low voices, rain at the window.',
+    text: 'Shanghai starts quietly. Steam on the glass, tables half full, rain against the window.',
   },
   {
     id: 'arrival-2',
     speaker: 'tong',
-    text: 'Two people at the far table. One is eating. One is not.',
+    text: 'You are early. Nobody is talking to you yet.',
   },
   {
     id: 'arrival-3',
     speaker: 'tong',
-    text: 'That is enough to know where to look.',
+    text: 'At the far table, two people are already in the middle of something.',
   },
   {
     id: 'anchor-setup-1',
@@ -51,7 +51,7 @@ const LOCKED_BEATS = [
   {
     id: 'anchor-setup-2',
     speaker: 'tong',
-    text: 'You do not need every sentence yet. Watch what happens when 方案 lands.',
+    text: 'You do not need every sentence yet. Just notice when 方案 changes the room.',
   },
   {
     id: 'pan-unlock-1',
@@ -102,12 +102,12 @@ const LOCKED_BEATS = [
   {
     id: 'exit-1',
     speaker: 'tong',
-    text: 'Good read. 方案 was the plan on the table. Food was the dodge.',
+    text: 'Good read. 方案 was the real object. Food was the dodge.',
   },
   {
     id: 'exit-2',
     speaker: 'tong',
-    text: 'Shanghai will bring them back one at a time.',
+    text: 'You did not meet them yet. But next time, one of them may notice you.',
   },
 ];
 
@@ -219,7 +219,6 @@ NON-NEGOTIABLE SCENE CONTRACT
 - 丁漫 and 瞿守成 do not address the player in H1.
 - ${guideName} teaches and interprets. Characters never teach language concepts.
 - Start with the world: steam, glass, rain, half-full tables, the far table already in motion.
-- The opening observation is: two people at the far table, one eating and one not. This is scene direction, not a lecture.
 - Do not start with business logic. Do not frame the first moment as a proposal explanation.
 - In English UI, the guide is "Tong". Never localize Tong to 小通 just because the target language is Chinese.
 - Use "plan" as the on-screen English gloss for 方案 in H1. "Proposal" is allowed only in dictionary/deep detail, not in Tong's opening framing.
@@ -228,9 +227,6 @@ NON-NEGOTIABLE SCENE CONTRACT
 - Never expose admin/debug/meta panels during the active scene.
 - Do not use hover/tap token behavior inside Tong onboarding narration unless the player explicitly opens a vocabulary surface.
 - No narrative prose outside tool calls.
-- Do not create a "facing Dingman" or "facing Shoucheng" branch in H1.
-- Do not write hangoutSeat or imply H1 chooses a future character route.
-- Future same-location hangouts may introduce 丁漫 and 瞿守成 individually, one at a time, using random or scheduled seeding after H1.
 
 LANGUAGE:
 - Keep Chinese in native script. Do not replace 方案, 看过了, 想法, 小笼包, or 不一样 with romanization in the main sentence.
@@ -283,7 +279,6 @@ Gate: curiosity is created without pretending the player has met the characters.
 - Award XP for anchors.
 - Do not grant direct RP for 丁漫 or 瞿守成 in H1.
 - State updates: shanghai_h1_overheard, shanghai_h1_anchor_fangan, shanghai_h1_webtoon_complete, shanghai_next_hangout_pool_unlocked.
-- Explicitly do not write hangoutSeat. Character-specific follow-up selection belongs to a later Shanghai encounter scheduler, not H1.
 
 ═══════════════════════════════════════════════════════════════
 LOCKED BEATS

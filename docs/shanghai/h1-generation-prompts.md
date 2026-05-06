@@ -219,7 +219,7 @@ Used as the static SceneView backdrop during beats 1–2 (before webtoon takes o
 
 ### Panel 1 — Establishing / Exhale
 
-**Narrative function:** 守成 has just left. This is the reader's exhale. This is not a player-facing POV branch; the reader is simply positioned behind both characters looking toward the door.
+**Narrative function:** 守成 has just left. This is the reader's exhale. Works from both POVs because the reader is positioned behind both characters looking toward the door.
 
 **Prompt:**
 ```
@@ -389,12 +389,12 @@ Per beat:
 
 Clarity semantics: player is HSK 0. Beats with clarity="fragment" render Chinese only with character-level UI fragments — player relies on Tong. Default clarity for this scene = "fragment" except 方阿姨's direct-to-player lines (clarity="full" after credit spend).
 
-After all beats → emit end_scene with masteryUpdates (at least: 方案, 愿意 or 装, 不一样), optional affinityChanges for 方阿姨 only if her reveal beat is present, and stateUpdates for H1 completion/unlocked follow-up pool.
+After all beats → emit end_scene with masteryUpdates (at least: 方案, 愿意 or 装, 不一样), affinityChanges (fangayi +3), stateUpdates (hangoutSeat = resolved facing).
 
-══ H1 FOLLOW-UP STATE ══
-Do not choose facing ∈ {shoucheng, dingman}. Do not write hangoutSeat. H1 is an eavesdrop seed, not a character-route selector.
+══ POV SEAT ══
+At scene start: randomly pick facing ∈ {shoucheng, dingman}. Emit set_backdrop with povVariants[facing].seatDescription. Store facing in scene state as hangoutSeat — this is read by H2 to branch.
 
-After H1, later same-location hangouts may introduce 丁漫 and 瞿守成 individually, one at a time, from an eligible follow-up pool. That scheduler is outside H1.
+The facing choice does NOT alter dialogue content — both characters' lines are heard from either seat (one across, one from behind). It only changes the opening visual description and subtle blocking cues (who is "behind" the player, who is "across").
 
 ══ INPUT ══
 <fixture>{{fixtureJson}}</fixture>
@@ -403,7 +403,7 @@ After H1, later same-location hangouts may introduce 丁漫 and 瞿守成 indivi
 ══ OUTPUT ══
 Emit tool calls in beat order. No narrative prose outside tool calls. Exposition only inside tong_whisper. Character speech only via npc_speak.
 
-Begin with set_backdrop for the Shanghai shop panorama, then opening tong_whisper (the "two people, one's eating" line), then beat b1a.
+Begin with set_backdrop (povVariants[facing].seatDescription), then opening tong_whisper (the "two people, one's eating" line), then beat b1a.
 ```
 
 ---

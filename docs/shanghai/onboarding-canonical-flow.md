@@ -2,11 +2,11 @@
 
 ## Product Intent
 
-Shanghai H1 is the first Mandarin onboarding hangout. It is not a city-map explainer, not a business lesson, and not a generic vocabulary tutorial. The route drops the player into a lived-in 小笼包 shop; the scene teaches them to read the room before direct character hangouts begin.
+Shanghai H1 is the first Mandarin onboarding hangout. It is not a city-map explainer, not a business lesson, and not a generic vocabulary tutorial. The player is dropped into a lived-in 小笼包 shop and learns by reading the room before they are important enough for anyone in the room to address them.
 
 The first aha moment is: "I understood the social pressure in a scene before I could understand every Chinese sentence."
 
-The player is an observer in H1. They do not meet 丁漫 or 瞿守成 yet. Later Shanghai hangouts at the same location should seed them one at a time, either randomly from an eligible pool or by a scheduled progression rule. H1 only creates curiosity, world texture, and the first Mandarin anchors.
+The player is an observer in H1. They do not meet 丁漫 or 瞿守成 yet. Later Shanghai hangouts can put one of them in direct contact with the player and start RP. H1 only creates curiosity, world texture, and the first Mandarin anchors.
 
 ## Non-Negotiable Rules
 
@@ -16,8 +16,6 @@ The player is an observer in H1. They do not meet 丁漫 or 瞿守成 yet. Later
 - Tong teaches and interprets. Characters never teach the player.
 - 丁漫 and 瞿守成 speak to each other, not the player.
 - H1 starts with world and mood, then one anchor exercise, then eavesdrop. Do not open with "This is not the city map."
-- H1 has no "facing Dingman" or "facing Shoucheng" branch, no `hangoutSeat`, and no character tap target.
-- H1 unlocks a future Shanghai hangout pool; it does not decide which lead the player meets next.
 - Do not display admin/debug/meta panels in the active scene.
 - Do not make Tong narrate UI mechanics as prose. Use visible interaction cues for pan/scroll/click actions in QA proof.
 - Hover/tap language tooltips are disabled inside Tong onboarding narration unless the user is explicitly interacting with a vocabulary token surface.
@@ -33,7 +31,6 @@ The player is an observer in H1. They do not meet 丁漫 or 瞿守成 yet. Later
   - `shanghai_h1_anchor_fangan=true`
   - `shanghai_h1_webtoon_complete=true`
   - `shanghai_next_hangout_pool_unlocked=true`
-- Explicitly not written: `hangoutSeat`.
 - Relationship changes: no direct RP for 丁漫 or 瞿守成 in H1. Optional `fangayi +1` only if the implementation includes her closing acknowledgement.
 - Learning rewards: XP for anchor comprehension. SP unlock remains separate from H1 unless a later credit gate is implemented.
 
@@ -45,9 +42,9 @@ Visual: panorama video loops in the phone frame. The camera is held on the right
 
 Tong lines:
 
-1. `Shanghai starts quietly. Steam on glass, low voices, rain at the window.`
-2. `Two people at the far table. One is eating. One is not.`
-3. `That is enough to know where to look.`
+1. `Shanghai starts quietly. Steam on the glass, tables half full, rain against the window.`
+2. `You are early. Nobody is talking to you yet.`
+3. `At the far table, two people are already in the middle of something.`
 
 Implementation rule: these are Tong whispers in the standard overlay. The speaker name is `Tong` for English UI.
 
@@ -56,7 +53,7 @@ Implementation rule: these are Tong whispers in the standard overlay. The speake
 Tong lines:
 
 1. `Before you listen, take one word with you: 方案. A plan.`
-2. `You do not need every sentence yet. Watch what happens when 方案 lands.`
+2. `You do not need every sentence yet. Just notice when 方案 changes the room.`
 
 Exercise 1:
 
@@ -229,8 +226,8 @@ Exercise 5:
 
 Tong lines:
 
-1. `Good read. 方案 was the plan on the table. Food was the dodge.`
-2. `Shanghai will bring them back one at a time.`
+1. `Good read. 方案 was the real object. Food was the dodge.`
+2. `You did not meet them yet. But next time, one of them may notice you.`
 
 End scene:
 
