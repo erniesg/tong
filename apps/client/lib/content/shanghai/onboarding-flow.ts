@@ -110,7 +110,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       py: 'zhuang bu xia qu',
       en: 'cannot keep pretending',
       role: 'primary',
-      note: 'The character-read payoff for the next beat: the scene turns from proposal to person.',
+      note: 'The character-read payoff for the next beat: the scene turns from plan to person.',
     },
     {
       id: 'jie-zhongyao',
@@ -132,7 +132,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
   introTongLines: [
     'Shanghai starts quietly. Steam on glass, low voices, rain at the window.',
     'Two people at the far table. One is eating. One is not.',
-    'That folder beside the steamer matters.',
+    'Start with the room: food in front of her, silence in front of him.',
     '方案 is the plan in front of them. 看过了 means someone already looked it over.',
   ],
   preListeningExercises: [
