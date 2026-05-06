@@ -10,6 +10,7 @@ interface DialogueBoxProps {
   translation?: string;
   isStreaming?: boolean;
   targetLang?: TargetLang;
+  interactiveText?: boolean;
   continueLabel?: string;
   onContinue?: () => void;
 }
@@ -24,6 +25,7 @@ export function DialogueBox({
   translation,
   isStreaming,
   targetLang = 'ko',
+  interactiveText = true,
   continueLabel = 'Tap to continue',
   onContinue,
 }: DialogueBoxProps) {
@@ -111,7 +113,7 @@ export function DialogueBox({
 
       <div className="dialogue-text text-ko">
         {typewriterDone ? (
-          <KoreanText text={content} targetLang={targetLang} />
+          <KoreanText text={content} targetLang={targetLang} interactive={interactiveText} />
         ) : (
           <>
             {visibleText}

@@ -520,11 +520,12 @@ function getTooltipInfo(word: string, targetLang: TargetLang, explainLang: strin
 interface KoreanTextProps {
   text: string;
   targetLang?: TargetLang;
+  interactive?: boolean;
   /** Called when a word is tapped (in addition to showing tooltip). */
   onWordTap?: () => void;
 }
 
-export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextProps) {
+export function KoreanText({ text, targetLang = 'ko', interactive = true, onWordTap }: KoreanTextProps) {
   const explainLang = useUILang();
   const [activeWord, setActiveWord] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number; bottom: number } | null>(null);
@@ -551,13 +552,14 @@ export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextPro
   }, []);
 
   const showTooltip = useCallback((word: string, target: HTMLElement) => {
+    if (!interactive) return;
     const info = getTooltipInfo(word.trim(), targetLang, explainLang);
     if (!info) return;
     const rect = target.getBoundingClientRect();
     setActiveWord(word);
     setTooltipInfo(info);
     setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top, bottom: rect.bottom });
-  }, [targetLang, explainLang]);
+  }, [interactive, targetLang, explainLang]);
 
   const hideTooltip = useCallback(() => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -585,6 +587,9 @@ export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextPro
       <span className="relative inline">
         {segments.map((seg, i) => {
           if (!seg.isTarget) {
+            return <span key={i}>{seg.text}</span>;
+          }
+          if (!interactive) {
             return <span key={i}>{seg.text}</span>;
           }
           return (

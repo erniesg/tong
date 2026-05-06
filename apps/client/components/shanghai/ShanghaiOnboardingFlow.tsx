@@ -13,7 +13,7 @@ import type { ExerciseData } from '@/lib/types/hangout';
 import { dispatch } from '@/lib/store/game-store';
 
 type OnboardingPhase = 'panorama' | 'webtoon' | 'complete';
-type SetupStep = 'intro' | 'anchor-exercise' | 'post-exercise' | 'pan';
+type SetupStep = 'intro' | 'prelisten-exercise' | 'post-exercise' | 'pan';
 
 interface PanoramaMetrics {
   width: number;
@@ -26,6 +26,7 @@ interface StoredCheckpoint {
   phase: OnboardingPhase;
   setupStep?: SetupStep;
   introIndex?: number;
+  preListeningIndex?: number;
   postExerciseIndex?: number;
   pan?: number;
   webtoonComplete?: boolean;
@@ -60,6 +61,7 @@ export function ShanghaiOnboardingFlow() {
   const [phase, setPhase] = useState<OnboardingPhase>('panorama');
   const [setupStep, setSetupStep] = useState<SetupStep>('intro');
   const [introIndex, setIntroIndex] = useState(0);
+  const [preListeningIndex, setPreListeningIndex] = useState(0);
   const [postExerciseIndex, setPostExerciseIndex] = useState(0);
   const [tongVisible, setTongVisible] = useState(true);
   const [currentExercise, setCurrentExercise] = useState<ExerciseData | null>(null);
@@ -100,6 +102,7 @@ export function ShanghaiOnboardingFlow() {
       setPhase(startInWebtoon ? 'webtoon' : 'panorama');
       setSetupStep(startInWebtoon ? 'pan' : 'intro');
       setIntroIndex(0);
+      setPreListeningIndex(0);
       setPostExerciseIndex(0);
       setTongVisible(!startInWebtoon);
       setCurrentExercise(null);
@@ -113,13 +116,20 @@ export function ShanghaiOnboardingFlow() {
       if (!raw) return;
       const parsed = JSON.parse(raw) as unknown;
       if (!isStoredCheckpoint(parsed)) return;
-      setPhase(parsed.phase === 'complete' ? 'webtoon' : parsed.phase);
+      setPhase(parsed.phase);
       setSetupStep(parsed.setupStep ?? (parsed.phase === 'panorama' ? 'intro' : 'pan'));
       setIntroIndex(parsed.introIndex ?? 0);
+      const restoredPreListeningIndex = parsed.preListeningIndex ?? 0;
+      setPreListeningIndex(restoredPreListeningIndex);
       setPostExerciseIndex(parsed.postExerciseIndex ?? 0);
       setPan(typeof parsed.pan === 'number' ? parsed.pan : SHANGHAI_ONBOARDING_PANORAMA.presentation.initialFocus);
       setWebtoonComplete(parsed.webtoonComplete ?? parsed.phase === 'complete');
       setTongVisible(parsed.phase === 'panorama' && (parsed.setupStep === 'intro' || parsed.setupStep === 'post-exercise'));
+      setCurrentExercise(
+        parsed.phase === 'panorama' && parsed.setupStep === 'prelisten-exercise'
+          ? SHANGHAI_ONBOARDING_PANORAMA.preListeningExercises[restoredPreListeningIndex] ?? null
+          : null,
+      );
     } catch {
       window.localStorage.removeItem(CHECKPOINT_KEY);
     }
@@ -194,9 +204,10 @@ export function ShanghaiOnboardingFlow() {
     }
     if (setupStep === 'intro') {
       setTongVisible(false);
-      setSetupStep('anchor-exercise');
-      setCurrentExercise(SHANGHAI_ONBOARDING_PANORAMA.anchorExercise);
-      writeCheckpoint({ phase: 'panorama', setupStep: 'anchor-exercise', introIndex, pan });
+      setSetupStep('prelisten-exercise');
+      setPreListeningIndex(0);
+      setCurrentExercise(SHANGHAI_ONBOARDING_PANORAMA.preListeningExercises[0] ?? null);
+      writeCheckpoint({ phase: 'panorama', setupStep: 'prelisten-exercise', introIndex, preListeningIndex: 0, pan });
       return;
     }
 
@@ -216,13 +227,35 @@ export function ShanghaiOnboardingFlow() {
   }, [introIndex, pan, postExerciseIndex, setupStep, writeCheckpoint]);
 
   const handleExerciseResult = useCallback((_exerciseId: string, correct: boolean) => {
-    dispatch({ type: 'RECORD_ITEM_RESULT', itemId: '方案', category: 'vocabulary', correct });
+    const practicedItems = preListeningIndex === 0
+      ? ['方案', '看过了', '想法', '不一样']
+      : ['方案'];
+    for (const itemId of practicedItems) {
+      dispatch({ type: 'RECORD_ITEM_RESULT', itemId, category: 'vocabulary', correct });
+    }
+
+    const nextPreListeningIndex = preListeningIndex + 1;
+    const nextExercise = SHANGHAI_ONBOARDING_PANORAMA.preListeningExercises[nextPreListeningIndex];
+    if (nextExercise) {
+      setPreListeningIndex(nextPreListeningIndex);
+      setCurrentExercise(nextExercise);
+      writeCheckpoint({
+        phase: 'panorama',
+        setupStep: 'prelisten-exercise',
+        introIndex,
+        preListeningIndex: nextPreListeningIndex,
+        postExerciseIndex,
+        pan,
+      });
+      return;
+    }
+
     setCurrentExercise(null);
     setSetupStep('post-exercise');
     setPostExerciseIndex(0);
     setTongVisible(true);
-    writeCheckpoint({ phase: 'panorama', setupStep: 'post-exercise', introIndex, postExerciseIndex: 0, pan });
-  }, [introIndex, pan, writeCheckpoint]);
+    writeCheckpoint({ phase: 'panorama', setupStep: 'post-exercise', introIndex, preListeningIndex, postExerciseIndex: 0, pan });
+  }, [introIndex, pan, postExerciseIndex, preListeningIndex, writeCheckpoint]);
 
   useEffect(() => {
     if (!panUnlocked || phase !== 'panorama' || pan > WEBTOON_ENTRY_PAN) return;
@@ -234,6 +267,7 @@ export function ShanghaiOnboardingFlow() {
   const completeWebtoon = useCallback(() => {
     if (webtoonComplete) return;
     setWebtoonComplete(true);
+    setPhase('complete');
     dispatch({ type: 'ADD_XP', amount: 80 });
     writeCheckpoint({ phase: 'complete', setupStep: 'pan', introIndex, postExerciseIndex, pan, webtoonComplete: true });
   }, [introIndex, pan, postExerciseIndex, webtoonComplete, writeCheckpoint]);
@@ -252,16 +286,6 @@ export function ShanghaiOnboardingFlow() {
           <div className="shanghai-onboarding shanghai-onboarding--webtoon">
             <WebtoonStrip panels={fixture.spec.panels} theme="warm" showHelp={false} scrollRoot="self" onComplete={completeWebtoon} />
           </div>
-          {webtoonComplete && (
-            <DialogueBox
-              speakerName="Tong"
-              speakerColor="var(--color-accent-gold)"
-              content={SHANGHAI_ONBOARDING_PANORAMA.completionTongLine}
-              targetLang="zh"
-              continueLabel="Exit"
-              onContinue={() => router.push('/game?phase=city_map&city=shanghai')}
-            />
-          )}
         </div>
       </main>
     );
@@ -280,6 +304,7 @@ export function ShanghaiOnboardingFlow() {
               speakerColor="var(--color-accent-gold)"
               content={SHANGHAI_ONBOARDING_PANORAMA.completionTongLine}
               targetLang="zh"
+              interactiveText={false}
               continueLabel="Exit"
               onContinue={() => router.push('/game?phase=city_map&city=shanghai')}
             />
@@ -322,6 +347,8 @@ export function ShanghaiOnboardingFlow() {
             message={introLine}
             visible={tongVisible}
             targetLang="zh"
+            speakerName="Tong"
+            interactiveText={false}
             onDismiss={dismissTong}
           />
 

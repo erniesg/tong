@@ -33,7 +33,7 @@ export interface ShanghaiOnboardingPanorama {
   };
   learningAnchors: ShanghaiLearningAnchor[];
   introTongLines: string[];
-  anchorExercise: ExerciseData;
+  preListeningExercises: ExerciseData[];
   postExerciseTongLines: string[];
   panPrompt: string;
   completionTongLine: string;
@@ -74,9 +74,9 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       id: 'fangan',
       zh: '方案',
       py: 'fang an',
-      en: 'proposal / plan',
+      en: 'plan',
       role: 'primary',
-      note: 'The object of the negotiation, not a random business noun.',
+      note: 'The object of the conversation, not a random business noun.',
     },
     {
       id: 'kanguole-xiangfa',
@@ -120,32 +120,48 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
     },
   ],
   introTongLines: [
-    'This is not the city map. We are inside a 小笼包店 in Shanghai.',
-    'Two people are at the far table. One is pitching. One is eating.',
-    'Tonight is not about ordering food. Catch the few words that tell you what the room is really doing.',
-    'First anchor: 方案. That is the proposal he needs her to answer.',
+    'Shanghai starts quietly. Steam on glass, low voices, rain at the window.',
+    'Two people at the far table. One is eating. One is not.',
+    'Before you listen in, take the shape of the conversation first.',
+    'You only need a few anchors. Then the scene can move.',
   ],
-  anchorExercise: {
-    type: 'multiple_choice',
-    id: 'shanghai-h1-anchor-fangan',
-    objectiveId: 'zh-vocab-shanghai-negotiation',
-    difficulty: 1,
-    prompt: 'When you hear 方案, what should you track?',
-    options: [
-      { id: 'proposal', text: 'The proposal he needs Dingman to answer' },
-      { id: 'food', text: 'The soup dumplings on the table' },
-      { id: 'phone', text: 'The phone call outside the scene' },
-    ],
-    correctOptionId: 'proposal',
-    explanation: '方案 is the negotiation object. The food is camouflage.',
-  },
+  preListeningExercises: [
+    {
+      type: 'matching',
+      id: 'shanghai-h1-prelisten-phrases',
+      objectiveId: 'zh-vocab-shanghai-negotiation',
+      difficulty: 1,
+      prompt: 'Match the words you are about to overhear.',
+      pairs: [
+        { left: '方案', right: 'plan' },
+        { left: '看过了', right: 'looked it over' },
+        { left: '想法', right: 'thoughts' },
+        { left: '不一样', right: 'different' },
+      ],
+    },
+    {
+      type: 'pronunciation_select',
+      id: 'shanghai-h1-prelisten-fangan-sound',
+      objectiveId: 'zh-pronunciation-tone-pairs',
+      difficulty: 1,
+      prompt: 'Listen for 方案 before the webtoon starts.',
+      targetText: '方案',
+      audioOptions: [
+        { id: 'fangan', label: '方案', romanization: 'fang an', meaning: 'plan' },
+        { id: 'xiangfa', label: '想法', romanization: 'xiang fa', meaning: 'thoughts' },
+        { id: 'buyiyang', label: '不一样', romanization: 'bu yi yang', meaning: 'different' },
+      ],
+      correctOptionId: 'fangan',
+      explanation: '方案 is only one anchor. The scene decides what matters next.',
+    },
+  ],
   postExerciseTongLines: [
-    'Good. 方案 is the thing on the table even when nobody points at it.',
-    'Next listen for two short chunks: 看过了, then 想法？ That is already pressure.',
-    'Now slide left. Do not talk. Just listen.',
+    'Good. Now you have enough to overhear without freezing on every word.',
+    'Listen for what the scene gives you next. It may be 方案, 看过了, 想法, or something sharper.',
+    'Now slide left. Do not answer them. Just listen.',
   ],
   panPrompt: 'Drag left to listen in.',
   completionTongLine:
-    'Good read. 方案 was the real object. Food was the dodge.',
+    'Good read. Food was the dodge. The useful words came from what they actually said.',
   webtoonFixtureId: 'shanghai-h1',
 };
