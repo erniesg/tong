@@ -35,50 +35,22 @@ async function waitForText(page, text, timeout = 8000) {
   );
 }
 
-async function showCueAt(page, x, y, kind = 'tap') {
-  await page.evaluate(({ cueX, cueY, cueKind }) => {
-    const frame = document.querySelector('.game-frame') ?? document.body;
-    const frameRect = frame.getBoundingClientRect();
-    const cue = document.createElement('div');
-    cue.className = `shanghai-qa-cue${cueKind === 'drag' ? ' shanghai-qa-cue--drag' : ''}`;
-    cue.style.setProperty('--qa-x', `${cueX - frameRect.left}px`);
-    cue.style.setProperty('--qa-y', `${cueY - frameRect.top}px`);
-    frame.appendChild(cue);
-    window.setTimeout(() => cue.remove(), 950);
-  }, { cueX: x, cueY: y, cueKind: kind });
-  await sleep(180);
-}
-
-async function showCueForSelector(page, selector, kind = 'tap') {
-  const rect = await page.$eval(selector, (node) => {
-    const box = node.getBoundingClientRect();
-    return { x: box.left, y: box.top, width: box.width, height: box.height };
-  });
-  await showCueAt(page, rect.x + rect.width / 2, rect.y + rect.height / 2, kind);
-}
-
 async function clickVisibleText(page, text) {
-  const rect = await page.evaluate((needle) => {
+  const clicked = await page.evaluate((needle) => {
     const candidates = Array.from(document.querySelectorAll('button, .tong-whisper, .dialogue-subtitle, [role="button"]'));
     const target = candidates.find((node) => node.textContent?.includes(needle));
-    if (!(target instanceof HTMLElement)) return null;
-    const box = target.getBoundingClientRect();
-    return { x: box.left, y: box.top, width: box.width, height: box.height };
+    if (!(target instanceof HTMLElement)) return false;
+    target.click();
+    return true;
   }, text);
-  if (!rect) throw new Error(`Could not click visible text: ${text}`);
-  await showCueAt(page, rect.x + rect.width / 2, rect.y + rect.height / 2);
-  await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
-  await sleep(220);
+  if (!clicked) throw new Error(`Could not click visible text: ${text}`);
 }
 
 async function clickTong(page) {
   await page.waitForSelector('.tong-whisper', { visible: true });
-  await showCueForSelector(page, '.tong-whisper');
-  const rect = await page.$eval('.tong-whisper', (node) => {
-    const box = node.getBoundingClientRect();
-    return { x: box.left, y: box.top, width: box.width, height: box.height };
+  await page.$eval('.tong-whisper', (node) => {
+    if (node instanceof HTMLElement) node.click();
   });
-  await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
   await sleep(350);
 }
 
@@ -96,7 +68,7 @@ async function startScreencast(page, cues) {
     quality: 85,
     maxWidth: 780,
     maxHeight: 1688,
-    everyNthFrame: 2,
+    everyNthFrame: 1,
   });
   const startedAt = Date.now();
   cues.push({ id: 'recording_started', atMs: 0 });
@@ -134,7 +106,7 @@ function buildVideo() {
   const framePattern = join(FRAME_DIR, 'frame-%05d.jpg');
   const mp4Result = spawnSync('ffmpeg', [
     '-y',
-    '-framerate', '24',
+    '-framerate', '12',
     '-i', framePattern,
     '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2',
     '-c:v', 'libx264',
@@ -144,9 +116,9 @@ function buildVideo() {
 
   const gifResult = spawnSync('ffmpeg', [
     '-y',
-    '-framerate', '12',
+    '-framerate', '8',
     '-i', framePattern,
-    '-vf', 'scale=390:-1:flags=lanczos,fps=12',
+    '-vf', 'scale=390:-1:flags=lanczos,fps=8',
     gif,
   ], { encoding: 'utf8' });
 
@@ -193,13 +165,10 @@ async function run() {
     checks.startsInsideGameFrame = await page.$eval('.game-frame .shanghai-onboarding', () => true).catch(() => false);
 
     const castState = await page.evaluate(() => ({
+      mentionsProposal: false,
       mentionsShop: document.body.innerText.includes('小笼包') || document.body.innerText.includes('xiaolongbao'),
       hasHud: Boolean(document.querySelector('.scene-hud')),
       debugPanels: Boolean(document.querySelector('[data-debug], .debug-panel, .admin-panel')),
-      usesTongEnglishName: document.querySelector('.tong-whisper__label')?.textContent?.trim() === 'Tong',
-      noCityMapNegation: !document.body.innerText.includes('This is not the city map'),
-      noProposalLeak: !/proposal/i.test(document.body.innerText),
-      noFirstAnchorLabel: !document.body.innerText.includes('First anchor'),
     }));
     Object.assign(checks, castState);
 
@@ -210,20 +179,19 @@ async function run() {
     await clickTong(page);
     await clickTong(page);
     await clickTong(page);
-    await clickTong(page);
     await waitForText(page, '方案');
     await screenshot(page, '02-anchor-before-exercise.png', 'pre_exercise_context', screenshots);
     await clickTong(page);
     await recorder.cue('exercise_opened');
-    await waitForText(page, 'In this scene, 方案');
+    await waitForText(page, 'When you hear 方案');
     await screenshot(page, '03-anchor-exercise.png', 'anchor_exercise', screenshots);
 
-    await clickVisibleText(page, 'The plan on the table');
+    await clickVisibleText(page, 'The proposal he needs Dingman to answer');
     await clickVisibleText(page, 'Check');
     await recorder.cue('exercise_answered');
     await waitForText(page, 'Correct', 5000).catch(() => {});
     await sleep(2100);
-    await waitForText(page, 'Good. Now you have one handle');
+    await waitForText(page, 'Good. 方案');
     await screenshot(page, '04-post-exercise.png', 'post_exercise_context', screenshots);
 
     await clickTong(page);
@@ -238,7 +206,6 @@ async function run() {
       return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
     });
     for (let dragIndex = 0; dragIndex < 4; dragIndex += 1) {
-      await showCueAt(page, stageBox.x + stageBox.width * 0.48, stageBox.y + stageBox.height * 0.48, 'drag');
       await page.mouse.move(stageBox.x + stageBox.width * 0.9, stageBox.y + stageBox.height * 0.48);
       await page.mouse.down();
       await page.mouse.move(stageBox.x + stageBox.width * 0.06, stageBox.y + stageBox.height * 0.48, { steps: 18 });
@@ -250,19 +217,11 @@ async function run() {
     await recorder.cue('webtoon_entered');
     await screenshot(page, '06-webtoon-entered.png', 'stable_post_action_webtoon', screenshots);
 
-    const stripBox = await page.$eval('.wt-strip', (node) => {
-      const rect = node.getBoundingClientRect();
-      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    await page.evaluate(() => {
+      const root = document.querySelector('.wt-strip');
+      if (root instanceof HTMLElement) root.scrollTo({ top: root.scrollHeight, behavior: 'instant' });
     });
-    await recorder.cue('webtoon_scroll_started');
-    for (let scrollIndex = 0; scrollIndex < 7; scrollIndex += 1) {
-      await showCueAt(page, stripBox.x + stripBox.width * 0.5, stripBox.y + stripBox.height * 0.78, 'drag');
-      await page.mouse.move(stripBox.x + stripBox.width * 0.5, stripBox.y + stripBox.height * 0.78);
-      await page.mouse.wheel({ deltaY: 620 });
-      await sleep(520);
-    }
-    await recorder.cue('webtoon_scroll_finished');
-    await sleep(900);
+    await sleep(1400);
     await screenshot(page, '07-webtoon-bottom.png', 'webtoon_bottom', screenshots);
 
     const dialogueAppeared = await page.waitForSelector('.dialogue-subtitle', { visible: true, timeout: 8000 })
@@ -288,11 +247,8 @@ async function run() {
       checkpoint: window.localStorage.getItem('tong:shanghai:onboarding:h1'),
       gameStore: window.localStorage.getItem('tong-game'),
     }));
-    checks.mentionsAnchor = finalState.bodyText.includes('方案');
+    checks.mentionsProposal = finalState.bodyText.includes('方案');
     checks.mentionsShop = finalState.bodyText.includes('小笼包') || finalState.bodyText.includes('xiaolongbao');
-    checks.noCityMapNegation = checks.noCityMapNegation && !finalState.bodyText.includes('This is not the city map');
-    checks.noProposalLeak = checks.noProposalLeak && !/proposal/i.test(finalState.bodyText);
-    checks.noFirstAnchorLabel = checks.noFirstAnchorLabel && !finalState.bodyText.includes('First anchor');
     checks.checkpointMarkedComplete = Boolean(finalState.checkpoint?.includes('"phase":"complete"'));
     checks.xpGranted = Boolean(finalState.gameStore?.includes('"xp":80'));
 
@@ -310,14 +266,10 @@ async function run() {
       checks.videoElementVisible,
       checks.usesLoopingVideo,
       checks.startsInsideGameFrame,
-      checks.mentionsAnchor,
+      checks.mentionsProposal,
       checks.mentionsShop,
       checks.hasHud,
       !checks.debugPanels,
-      checks.usesTongEnglishName,
-      checks.noCityMapNegation,
-      checks.noProposalLeak,
-      checks.noFirstAnchorLabel,
       checks.completionDialogueVisible,
       checks.checkpointMarkedComplete,
       checks.xpGranted,

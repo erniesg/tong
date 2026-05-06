@@ -65,7 +65,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     bubble: {
       zh: '方案你看过了。',
       py: ['Fāng', 'àn', 'nǐ', 'kàn', 'guò', 'le'],
-      en: 'You looked over the plan.',
+      en: 'You looked over the proposal.',
       speaker: 'shoucheng',
       position: 'bottom',
       layout: {
