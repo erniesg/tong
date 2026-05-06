@@ -4,6 +4,8 @@
 
 H1 of the Shanghai onboarding hangout. The player enters a 小笼包店 through the wide onboarding panorama when they prioritize learning Chinese, starts on the right edge while Tong introduces the room and the first negotiation-learning hook, completes the anchored 方案 exercise, pans/scrolls left to eavesdrop, enters the webtoon strip automatically, scrolls to the end, and exits after Tong closes the scene. There is no Dingman/Shoucheng tap target in V1; panning is attention, not a camera or seat switch. The same fixture should support both a deterministic rehearsal path and the AI-orchestrated path.
 
+Canonical player-facing flow, dialogue, exercises, and QA acceptance now live in `docs/shanghai/onboarding-canonical-flow.md`. Treat that file as the source of truth before editing Shanghai H1 copy or dispatching an agent.
+
 Canonical media for the hangout is `apps/client/public/assets/locations/shanghai-onboarding.mp4`, copied from `~/Downloads/shanghai.mp4`, with poster fallback `apps/client/public/assets/locations/shanghai-onboarding-poster.jpg`. Runtime keys are `city.shanghai.location.dumpling-shop.panorama.video.default` and `city.shanghai.location.dumpling-shop.panorama.poster.default`; the content contract lives in `apps/client/lib/content/shanghai/onboarding-flow.ts`. Do not use `apps/client/public/assets/locations/shanghai.mp4` for this; that is the city-map loop.
 
 Shanghai must reuse the same onboarding hangout shell as Seoul: `scene-root`, `game-frame`, `GameHUD`, `TongOverlay`, `DialogueBox`, existing exercise overlays, and webtoon takeover inside the phone frame. The panorama is scene media, not a separate page style.

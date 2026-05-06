@@ -258,6 +258,7 @@ export function ShanghaiOnboardingFlow() {
               speakerColor="var(--color-accent-gold)"
               content={SHANGHAI_ONBOARDING_PANORAMA.completionTongLine}
               targetLang="zh"
+              interactiveText={false}
               continueLabel="Exit"
               onContinue={() => router.push('/game?phase=city_map&city=shanghai')}
             />
@@ -280,6 +281,7 @@ export function ShanghaiOnboardingFlow() {
               speakerColor="var(--color-accent-gold)"
               content={SHANGHAI_ONBOARDING_PANORAMA.completionTongLine}
               targetLang="zh"
+              interactiveText={false}
               continueLabel="Exit"
               onContinue={() => router.push('/game?phase=city_map&city=shanghai')}
             />
@@ -322,6 +324,8 @@ export function ShanghaiOnboardingFlow() {
             message={introLine}
             visible={tongVisible}
             targetLang="zh"
+            speakerName="Tong"
+            interactiveText={false}
             onDismiss={dismissTong}
           />
 

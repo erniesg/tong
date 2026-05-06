@@ -10823,8 +10823,48 @@ body:has(.playtest-pill-expanded) {
   overflow: hidden;
 }
 
+.shanghai-onboarding .tong-whisper {
+  overflow: hidden;
+}
+
+.shanghai-onboarding .tong-whisper__body {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
 .shanghai-onboarding--webtoon {
   background: #fff;
+}
+
+.shanghai-qa-cue {
+  position: absolute;
+  z-index: 80;
+  left: var(--qa-x, 50%);
+  top: var(--qa-y, 50%);
+  width: 64px;
+  height: 64px;
+  border: 3px solid rgba(255, 219, 129, 0.95);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  box-shadow:
+    0 0 0 8px rgba(255, 219, 129, 0.22),
+    0 0 28px rgba(255, 219, 129, 0.62);
+  animation: qaCuePulse 900ms ease-out both;
+}
+
+.shanghai-qa-cue--drag {
+  width: 138px;
+  height: 42px;
+  border-radius: 999px;
+}
+
+@keyframes qaCuePulse {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.72); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(1.18); }
 }
 
 .shanghai-onboarding--webtoon ~ .dialogue-subtitle {
@@ -10838,6 +10878,11 @@ body:has(.playtest-pill-expanded) {
     rgba(0, 0, 0, 0.28) 70%,
     transparent 100%
   );
+}
+
+.shanghai-onboarding--webtoon ~ .dialogue-subtitle .dialogue-speaker {
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .shanghai-onboarding--complete {

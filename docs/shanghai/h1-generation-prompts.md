@@ -329,6 +329,8 @@ Translation tooltip: "The Qu family's younger son..."
 
 ## 6. Dialogue generation prompt (dynamic mode)
 
+Current canonical player-facing flow and prompt rules live in `docs/shanghai/onboarding-canonical-flow.md` and `apps/client/lib/ai/prompts/shanghai-onboarding-h1.ts`. Use those as source of truth for runtime copy. In particular: English UI calls the guide `Tong`, the first `方案` gloss should read as `plan` on-screen, and H1 must start with world immersion before any business framing.
+
 Used when running H1 in dynamic mode. The fixture is injected as `<fixture>` context; the prompt enforces beat order, locked lines, and voice rules.
 
 **File (intended destination):** `apps/client/lib/ai/prompts/shanghai-onboarding-h1.ts`
