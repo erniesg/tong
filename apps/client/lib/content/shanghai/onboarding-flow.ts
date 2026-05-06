@@ -132,7 +132,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
   introTongLines: [
     'Shanghai starts quietly. Steam on glass, low voices, rain at the window.',
     'Two people at the far table. One is eating. One is not.',
-    'Before we slide closer, catch two scraps from the table.',
+    'That folder beside the steamer matters.',
     '方案 is the plan in front of them. 看过了 means someone already looked it over.',
   ],
   preListeningExercises: [
@@ -141,7 +141,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       id: 'shanghai-h1-prelisten-phrases',
       objectiveId: 'zh-vocab-shanghai-negotiation',
       difficulty: 1,
-      prompt: 'Pair what is on the table with what it means.',
+      prompt: 'Match the table words.',
       pairs: [
         { left: '方案', right: 'plan' },
         { left: '看过了', right: 'looked it over' },
@@ -166,13 +166,13 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
     },
   ],
   postExerciseTongLines: [
-    'Good. You do not need every word. You need the ones that make the room shift.',
-    'Next, listen for the moment the talk stops being polite.',
-    'Now slide left. Do not answer them. Just listen.',
+    'Good. You do not need every word. You need the ones that change the air.',
+    'Next, listen for when polite stops working.',
+    'Slide left. Do not answer them. Just listen.',
   ],
-  panPrompt: 'Drag left to listen in.',
+  panPrompt: 'Slide left to listen in.',
   completionTongLine:
-    'Good read. Food was the dodge. The important pieces were already in the room.',
+    'Good. She used food to dodge him. He left too fast. 方阿姨 knew too much.',
   webtoonFixtureId: 'shanghai-h1',
   webtoonSteps: [
     {
@@ -180,8 +180,8 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       label: 'Eavesdrop A — table pressure',
       panelIds: ['p0', 'p1', 'p2', 'p3', 'p4'],
       afterTongLines: [
-        'She did answer. She answered with food.',
-        'Two small pieces carried the pressure: 看过了, then 想法.',
+        'She answered without answering.',
+        '看过了 landed first. Then he asked for 想法.',
       ],
       afterExercises: [
         {
@@ -199,7 +199,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
           ],
           correctOptionId: 'kanguole',
           grammarNote: '了 marks the action as completed: she has already looked it over.',
-          explanation: '看过了 is the clipped confirmation before 丁漫 dodges into food.',
+          explanation: '看过了 = looked it over already.',
         },
       ],
       masteryItems: ['看过了', '想法'],
@@ -209,8 +209,8 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       label: 'Eavesdrop B — character read',
       panelIds: ['p5', 'p6', 'p7', 'p8', 'p9', 'p10', 'p11'],
       afterTongLines: [
-        'Now the line gets sharper. 不一样 was the pitch. 装不下去 was the read.',
-        'He is not translating her. He is reading her.',
+        'The room just got colder.',
+        'He said 装不下去 like he had been watching her for longer than this meal.',
       ],
       afterExercises: [
         {
@@ -233,7 +233,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       panelIds: ['p12', 'p13', 'p14', 'p15', 'p16', 'p17', 'p18', 'p19', 'p20'],
       afterTongLines: [
         'Three rings, and he still said 不重要.',
-        'Then 方阿姨 called him 小瞿. She has known him longer than tonight.',
+        'Then 方阿姨 called after him: 小瞿. That is not how a stranger talks.',
       ],
       afterExercises: [
         {
