@@ -614,6 +614,22 @@
       "uri": "/assets/locations/shanghai-static.png"
     },
     {
+      "key": "city.shanghai.location.dumpling-shop.panorama.poster.default",
+      "type": "image",
+      "usage": "hangout-panorama-poster",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/locations/shanghai-onboarding-poster.jpg"
+    },
+    {
+      "key": "city.shanghai.location.dumpling-shop.panorama.video.default",
+      "type": "video",
+      "usage": "hangout-panorama",
+      "source": "repo",
+      "status": "ready",
+      "uri": "/assets/locations/shanghai-onboarding.mp4"
+    },
+    {
       "key": "city.shanghai.location.dumpling-shop.pack.starter",
       "type": "content-pack",
       "usage": "scene-authoring",

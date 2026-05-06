@@ -533,12 +533,40 @@ button.nav-link:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
 }
 
 .proficiency-lang-name {
   font-size: 15px;
   font-weight: 600;
   color: rgba(240, 244, 255, 0.92);
+}
+
+.proficiency-lang-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.proficiency-priority-btn {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(240, 192, 64, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(238, 244, 255, 0.76);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.proficiency-priority-btn.is-selected {
+  background: var(--color-accent-gold);
+  color: #0a0a14;
+  border-color: var(--color-accent-gold);
 }
 
 .proficiency-lang-level {
@@ -1853,6 +1881,7 @@ button.nav-link:hover {
     rgba(0, 0, 0, 0.25) 70%,
     transparent 100%
   );
+  z-index: 50;
 }
 
 .dialogue-speaker {
@@ -10779,4 +10808,92 @@ body:has(.playtest-pill-expanded) {
   color: #e8485c;
   font-size: 0.8rem;
   margin-top: 6px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Shanghai Onboarding Panorama
+   ══════════════════════════════════════════════════════════════ */
+
+.shanghai-onboarding {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  background: #0d0d1a;
+  color: #eee;
+  overflow: hidden;
+}
+
+.shanghai-onboarding--webtoon {
+  background: #fff;
+}
+
+.shanghai-onboarding--webtoon ~ .dialogue-subtitle {
+  top: 0;
+  bottom: auto;
+  padding-top: calc(0.75rem + var(--safe-top));
+  padding-bottom: 0.75rem;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.58) 0%,
+    rgba(0, 0, 0, 0.28) 70%,
+    transparent 100%
+  );
+}
+
+.shanghai-onboarding--complete {
+  background: #0d0d1a;
+}
+
+.shanghai-onboarding__stage {
+  touch-action: none;
+  cursor: default;
+  user-select: none;
+}
+
+.shanghai-onboarding__stage--pan {
+  cursor: grab;
+}
+
+.shanghai-onboarding__stage--pan:active {
+  cursor: grabbing;
+}
+
+.shanghai-onboarding__world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: left top;
+  will-change: transform;
+}
+
+.shanghai-onboarding__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.shanghai-onboarding__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), transparent 42%, rgba(0, 0, 0, 0.62)),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.16), transparent 26%, rgba(0, 0, 0, 0.08));
+}
+
+.shanghai-onboarding__complete-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shanghai-onboarding__world {
+    transition: none;
+  }
 }

@@ -29,6 +29,7 @@ test-results/
 
 # Large binary assets — store externally, not in git
 *.mp4
+!apps/client/public/assets/locations/shanghai-onboarding.mp4
 *.mov
 *.fbx
 *.glb
