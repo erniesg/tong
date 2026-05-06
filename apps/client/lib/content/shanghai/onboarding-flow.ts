@@ -38,6 +38,16 @@ export interface ShanghaiOnboardingPanorama {
   panPrompt: string;
   completionTongLine: string;
   webtoonFixtureId: string;
+  webtoonSteps: ShanghaiOnboardingWebtoonStep[];
+}
+
+export interface ShanghaiOnboardingWebtoonStep {
+  id: string;
+  label: string;
+  panelIds: string[];
+  afterTongLines?: string[];
+  afterExercises?: ExerciseData[];
+  masteryItems?: string[];
 }
 
 export const SHANGHAI_ONBOARDING_PANORAMA_VIDEO_KEY =
@@ -164,4 +174,87 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
   completionTongLine:
     'Good read. Food was the dodge. The useful words came from what they actually said.',
   webtoonFixtureId: 'shanghai-h1',
+  webtoonSteps: [
+    {
+      id: 'segment-a-table-pressure',
+      label: 'Eavesdrop A — table pressure',
+      panelIds: ['p0', 'p1', 'p2', 'p3', 'p4'],
+      afterTongLines: [
+        'She did answer. She answered with food.',
+        'Pull out the short pressure chain: 看过了, then 想法.',
+      ],
+      afterExercises: [
+        {
+          type: 'fill_blank',
+          id: 'shanghai-h1-after-a-kanguole',
+          objectiveId: 'zh-gram-shanghai-le-aspect',
+          difficulty: 1,
+          prompt: 'Complete the overheard line.',
+          sentence: '方案你___。',
+          blankIndex: 0,
+          options: [
+            { id: 'kanguole', text: '看过了' },
+            { id: 'bu-zhongyao', text: '不重要' },
+            { id: 'xianzou', text: '先走' },
+          ],
+          correctOptionId: 'kanguole',
+          grammarNote: '了 marks the action as completed: she has already looked it over.',
+          explanation: '看过了 is the clipped confirmation before 丁漫 dodges into food.',
+        },
+      ],
+      masteryItems: ['看过了', '想法'],
+    },
+    {
+      id: 'segment-b-character-read',
+      label: 'Eavesdrop B — character read',
+      panelIds: ['p5', 'p6', 'p7', 'p8', 'p9', 'p10', 'p11'],
+      afterTongLines: [
+        'Now the line gets sharper. 不一样 was the pitch. 装不下去 was the read.',
+        'This is not just vocabulary. It is what he thinks she cannot keep doing.',
+      ],
+      afterExercises: [
+        {
+          type: 'sentence_builder',
+          id: 'shanghai-h1-after-b-zhuang',
+          objectiveId: 'zh-gram-shanghai-buxiaqu',
+          difficulty: 2,
+          prompt: 'Rebuild the line that changed the scene.',
+          wordTiles: ['我', '觉得', '你', '装不下去'],
+          correctOrder: ['我', '觉得', '你', '装不下去'],
+          distractors: ['不重要', '想法'],
+          explanation: '我觉得你装不下去。= I think you cannot keep pretending.',
+        },
+      ],
+      masteryItems: ['不一样', '装', '装不下去'],
+    },
+    {
+      id: 'segment-c-departure',
+      label: 'Eavesdrop C — departure',
+      panelIds: ['p12', 'p13', 'p14', 'p15', 'p16', 'p17', 'p18', 'p19', 'p20'],
+      afterTongLines: [
+        'That interruption gave you the useful words: 接 and 重要.',
+        '小瞿 is not random. 方阿姨 knows him well enough to call him that.',
+      ],
+      afterExercises: [
+        {
+          type: 'fill_blank',
+          id: 'shanghai-h1-after-c-zhongyao',
+          objectiveId: 'zh-vocab-shanghai-interruption-reveal',
+          difficulty: 1,
+          prompt: 'Complete 丁漫’s phone line.',
+          sentence: '响三次了。很___。',
+          blankIndex: 0,
+          options: [
+            { id: 'zhongyao', text: '重要' },
+            { id: 'buyiyang', text: '不一样' },
+            { id: 'fangan', text: '方案' },
+          ],
+          correctOptionId: 'zhongyao',
+          grammarNote: '重要 means important. 丁漫 reads the pressure before he admits it.',
+          explanation: '响三次了。很重要。= It has rung three times. It is important.',
+        },
+      ],
+      masteryItems: ['接', '重要', '小瞿'],
+    },
+  ],
 };

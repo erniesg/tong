@@ -1892,6 +1892,7 @@ button.nav-link:hover {
     rgba(0, 0, 0, 0.25) 70%,
     transparent 100%
   );
+  z-index: 50;
 }
 
 .dialogue-speaker {
@@ -10835,6 +10836,19 @@ body:has(.playtest-pill-expanded) {
 
 .shanghai-onboarding--webtoon {
   background: #fff;
+}
+
+.shanghai-onboarding--webtoon ~ .dialogue-subtitle {
+  top: 0;
+  bottom: auto;
+  padding-top: calc(0.75rem + var(--safe-top));
+  padding-bottom: 0.75rem;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.58) 0%,
+    rgba(0, 0, 0, 0.28) 70%,
+    transparent 100%
+  );
 }
 
 .shanghai-onboarding--complete {

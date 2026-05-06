@@ -10,9 +10,10 @@ import { TongOverlay } from '@/components/scene/TongOverlay';
 import { DialogueBox } from '@/components/scene/DialogueBox';
 import { ExerciseModal } from '@/components/learn/ExerciseModal';
 import type { ExerciseData } from '@/lib/types/hangout';
+import type { WebtoonPanel } from '@/lib/hangout/fixture-types';
 import { dispatch } from '@/lib/store/game-store';
 
-type OnboardingPhase = 'panorama' | 'webtoon' | 'complete';
+type OnboardingPhase = 'panorama' | 'webtoon' | 'webtoon-interlude' | 'complete';
 type SetupStep = 'intro' | 'prelisten-exercise' | 'post-exercise' | 'pan';
 
 interface PanoramaMetrics {
@@ -28,6 +29,9 @@ interface StoredCheckpoint {
   introIndex?: number;
   preListeningIndex?: number;
   postExerciseIndex?: number;
+  webtoonStepIndex?: number;
+  webtoonInterludeLineIndex?: number;
+  webtoonInterludeExerciseIndex?: number;
   pan?: number;
   webtoonComplete?: boolean;
 }
@@ -42,7 +46,7 @@ function clamp(value: number, min = 0, max = 1) {
 function isStoredCheckpoint(value: unknown): value is StoredCheckpoint {
   if (!value || typeof value !== 'object') return false;
   const phase = (value as { phase?: unknown }).phase;
-  return phase === 'panorama' || phase === 'webtoon' || phase === 'complete';
+  return phase === 'panorama' || phase === 'webtoon' || phase === 'webtoon-interlude' || phase === 'complete';
 }
 
 export function ShanghaiOnboardingFlow() {
@@ -63,6 +67,9 @@ export function ShanghaiOnboardingFlow() {
   const [introIndex, setIntroIndex] = useState(0);
   const [preListeningIndex, setPreListeningIndex] = useState(0);
   const [postExerciseIndex, setPostExerciseIndex] = useState(0);
+  const [webtoonStepIndex, setWebtoonStepIndex] = useState(0);
+  const [webtoonInterludeLineIndex, setWebtoonInterludeLineIndex] = useState(0);
+  const [webtoonInterludeExerciseIndex, setWebtoonInterludeExerciseIndex] = useState(0);
   const [tongVisible, setTongVisible] = useState(true);
   const [currentExercise, setCurrentExercise] = useState<ExerciseData | null>(null);
   const [webtoonComplete, setWebtoonComplete] = useState(false);
@@ -75,6 +82,22 @@ export function ShanghaiOnboardingFlow() {
   const activeTongIndex = setupStep === 'post-exercise' ? postExerciseIndex : introIndex;
   const introLine = activeTongLines[Math.min(activeTongIndex, activeTongLines.length - 1)];
   const panUnlocked = setupStep === 'pan' && phase === 'panorama';
+  const webtoonSteps = SHANGHAI_ONBOARDING_PANORAMA.webtoonSteps;
+  const activeWebtoonStep = webtoonSteps[webtoonStepIndex] ?? webtoonSteps[0];
+  const panelById = useMemo(
+    () => new Map((fixture?.spec.panels ?? []).map((panel) => [panel.id, panel])),
+    [fixture],
+  );
+  const activeWebtoonPanels = useMemo(() => {
+    if (!fixture) return [];
+    if (!activeWebtoonStep) return fixture.spec.panels;
+    const panels = activeWebtoonStep.panelIds
+      .map((id) => panelById.get(id))
+      .filter((panel): panel is WebtoonPanel => Boolean(panel));
+    return panels.length > 0 ? panels : fixture.spec.panels;
+  }, [activeWebtoonStep, fixture, panelById]);
+  const activeInterludeLines = activeWebtoonStep?.afterTongLines ?? [];
+  const activeInterludeLine = activeInterludeLines[Math.min(webtoonInterludeLineIndex, activeInterludeLines.length - 1)];
 
   const hud = (
     <GameHUD
@@ -104,6 +127,9 @@ export function ShanghaiOnboardingFlow() {
       setIntroIndex(0);
       setPreListeningIndex(0);
       setPostExerciseIndex(0);
+      setWebtoonStepIndex(0);
+      setWebtoonInterludeLineIndex(0);
+      setWebtoonInterludeExerciseIndex(0);
       setTongVisible(!startInWebtoon);
       setCurrentExercise(null);
       setWebtoonComplete(false);
@@ -122,12 +148,22 @@ export function ShanghaiOnboardingFlow() {
       const restoredPreListeningIndex = parsed.preListeningIndex ?? 0;
       setPreListeningIndex(restoredPreListeningIndex);
       setPostExerciseIndex(parsed.postExerciseIndex ?? 0);
+      const restoredWebtoonStepIndex = parsed.webtoonStepIndex ?? 0;
+      const restoredInterludeLineIndex = parsed.webtoonInterludeLineIndex ?? 0;
+      const restoredInterludeExerciseIndex = parsed.webtoonInterludeExerciseIndex ?? 0;
+      setWebtoonStepIndex(restoredWebtoonStepIndex);
+      setWebtoonInterludeLineIndex(restoredInterludeLineIndex);
+      setWebtoonInterludeExerciseIndex(restoredInterludeExerciseIndex);
       setPan(typeof parsed.pan === 'number' ? parsed.pan : SHANGHAI_ONBOARDING_PANORAMA.presentation.initialFocus);
       setWebtoonComplete(parsed.webtoonComplete ?? parsed.phase === 'complete');
       setTongVisible(parsed.phase === 'panorama' && (parsed.setupStep === 'intro' || parsed.setupStep === 'post-exercise'));
+      const restoredWebtoonStep = SHANGHAI_ONBOARDING_PANORAMA.webtoonSteps[restoredWebtoonStepIndex];
+      const interludeLinesDone = restoredInterludeLineIndex >= (restoredWebtoonStep?.afterTongLines?.length ?? 0);
       setCurrentExercise(
         parsed.phase === 'panorama' && parsed.setupStep === 'prelisten-exercise'
           ? SHANGHAI_ONBOARDING_PANORAMA.preListeningExercises[restoredPreListeningIndex] ?? null
+          : parsed.phase === 'webtoon-interlude' && interludeLinesDone
+            ? restoredWebtoonStep?.afterExercises?.[restoredInterludeExerciseIndex] ?? null
           : null,
       );
     } catch {
@@ -226,7 +262,160 @@ export function ShanghaiOnboardingFlow() {
     setTongVisible(false);
   }, [introIndex, pan, postExerciseIndex, setupStep, writeCheckpoint]);
 
+  const finishOnboarding = useCallback(() => {
+    if (webtoonComplete || phase === 'complete') return;
+    setWebtoonComplete(true);
+    setPhase('complete');
+    setCurrentExercise(null);
+    dispatch({ type: 'ADD_XP', amount: 80 });
+    writeCheckpoint({
+      phase: 'complete',
+      setupStep: 'pan',
+      introIndex,
+      postExerciseIndex,
+      webtoonStepIndex,
+      pan,
+      webtoonComplete: true,
+    });
+  }, [introIndex, pan, phase, postExerciseIndex, webtoonComplete, webtoonStepIndex, writeCheckpoint]);
+
+  const advanceToNextWebtoonStep = useCallback(() => {
+    const nextStepIndex = webtoonStepIndex + 1;
+    setCurrentExercise(null);
+    setWebtoonInterludeLineIndex(0);
+    setWebtoonInterludeExerciseIndex(0);
+
+    if (nextStepIndex < webtoonSteps.length) {
+      setPhase('webtoon');
+      setWebtoonStepIndex(nextStepIndex);
+      writeCheckpoint({
+        phase: 'webtoon',
+        setupStep: 'pan',
+        introIndex,
+        postExerciseIndex,
+        webtoonStepIndex: nextStepIndex,
+        pan,
+        webtoonComplete: false,
+      });
+      return;
+    }
+
+    finishOnboarding();
+  }, [finishOnboarding, introIndex, pan, postExerciseIndex, webtoonStepIndex, webtoonSteps.length, writeCheckpoint]);
+
+  const startWebtoonInterlude = useCallback(() => {
+    const lines = activeWebtoonStep?.afterTongLines ?? [];
+    const exercises = activeWebtoonStep?.afterExercises ?? [];
+    const lineIndex = lines.length > 0 ? 0 : lines.length;
+    setPhase('webtoon-interlude');
+    setWebtoonInterludeLineIndex(lineIndex);
+    setWebtoonInterludeExerciseIndex(0);
+    setCurrentExercise(lines.length === 0 ? exercises[0] ?? null : null);
+    writeCheckpoint({
+      phase: 'webtoon-interlude',
+      setupStep: 'pan',
+      introIndex,
+      postExerciseIndex,
+      webtoonStepIndex,
+      webtoonInterludeLineIndex: lineIndex,
+      webtoonInterludeExerciseIndex: 0,
+      pan,
+      webtoonComplete: false,
+    });
+  }, [activeWebtoonStep, introIndex, pan, postExerciseIndex, webtoonStepIndex, writeCheckpoint]);
+
+  const completeWebtoonSegment = useCallback(() => {
+    const hasInterlude = Boolean(
+      activeWebtoonStep?.afterTongLines?.length
+      || activeWebtoonStep?.afterExercises?.length,
+    );
+    if (hasInterlude) {
+      startWebtoonInterlude();
+      return;
+    }
+    advanceToNextWebtoonStep();
+  }, [activeWebtoonStep, advanceToNextWebtoonStep, startWebtoonInterlude]);
+
+  const handleInterludeContinue = useCallback(() => {
+    const lines = activeWebtoonStep?.afterTongLines ?? [];
+    const exercises = activeWebtoonStep?.afterExercises ?? [];
+    const nextLineIndex = webtoonInterludeLineIndex + 1;
+
+    if (nextLineIndex < lines.length) {
+      setWebtoonInterludeLineIndex(nextLineIndex);
+      writeCheckpoint({
+        phase: 'webtoon-interlude',
+        setupStep: 'pan',
+        introIndex,
+        postExerciseIndex,
+        webtoonStepIndex,
+        webtoonInterludeLineIndex: nextLineIndex,
+        webtoonInterludeExerciseIndex,
+        pan,
+        webtoonComplete: false,
+      });
+      return;
+    }
+
+    if (exercises.length > 0) {
+      setWebtoonInterludeLineIndex(lines.length);
+      setWebtoonInterludeExerciseIndex(0);
+      setCurrentExercise(exercises[0] ?? null);
+      writeCheckpoint({
+        phase: 'webtoon-interlude',
+        setupStep: 'pan',
+        introIndex,
+        postExerciseIndex,
+        webtoonStepIndex,
+        webtoonInterludeLineIndex: lines.length,
+        webtoonInterludeExerciseIndex: 0,
+        pan,
+        webtoonComplete: false,
+      });
+      return;
+    }
+
+    advanceToNextWebtoonStep();
+  }, [
+    activeWebtoonStep,
+    advanceToNextWebtoonStep,
+    introIndex,
+    pan,
+    postExerciseIndex,
+    webtoonInterludeExerciseIndex,
+    webtoonInterludeLineIndex,
+    webtoonStepIndex,
+    writeCheckpoint,
+  ]);
+
   const handleExerciseResult = useCallback((_exerciseId: string, correct: boolean) => {
+    if (phase === 'webtoon-interlude') {
+      for (const itemId of activeWebtoonStep?.masteryItems ?? []) {
+        dispatch({ type: 'RECORD_ITEM_RESULT', itemId, category: 'vocabulary', correct });
+      }
+      const nextExerciseIndex = webtoonInterludeExerciseIndex + 1;
+      const nextExercise = activeWebtoonStep?.afterExercises?.[nextExerciseIndex];
+      if (nextExercise) {
+        setWebtoonInterludeExerciseIndex(nextExerciseIndex);
+        setCurrentExercise(nextExercise);
+        writeCheckpoint({
+          phase: 'webtoon-interlude',
+          setupStep: 'pan',
+          introIndex,
+          postExerciseIndex,
+          webtoonStepIndex,
+          webtoonInterludeLineIndex,
+          webtoonInterludeExerciseIndex: nextExerciseIndex,
+          pan,
+          webtoonComplete: false,
+        });
+        return;
+      }
+
+      advanceToNextWebtoonStep();
+      return;
+    }
+
     const practicedItems = preListeningIndex === 0
       ? ['方案', '看过了', '想法', '不一样']
       : ['方案'];
@@ -255,22 +444,29 @@ export function ShanghaiOnboardingFlow() {
     setPostExerciseIndex(0);
     setTongVisible(true);
     writeCheckpoint({ phase: 'panorama', setupStep: 'post-exercise', introIndex, preListeningIndex, postExerciseIndex: 0, pan });
-  }, [introIndex, pan, postExerciseIndex, preListeningIndex, writeCheckpoint]);
+  }, [
+    activeWebtoonStep,
+    advanceToNextWebtoonStep,
+    introIndex,
+    pan,
+    phase,
+    postExerciseIndex,
+    preListeningIndex,
+    webtoonInterludeExerciseIndex,
+    webtoonInterludeLineIndex,
+    webtoonStepIndex,
+    writeCheckpoint,
+  ]);
 
   useEffect(() => {
     if (!panUnlocked || phase !== 'panorama' || pan > WEBTOON_ENTRY_PAN) return;
     setPhase('webtoon');
+    setWebtoonStepIndex(0);
+    setWebtoonInterludeLineIndex(0);
+    setWebtoonInterludeExerciseIndex(0);
     setWebtoonComplete(false);
-    writeCheckpoint({ phase: 'webtoon', setupStep: 'pan', introIndex, postExerciseIndex, pan });
+    writeCheckpoint({ phase: 'webtoon', setupStep: 'pan', introIndex, postExerciseIndex, webtoonStepIndex: 0, pan });
   }, [introIndex, pan, panUnlocked, phase, postExerciseIndex, writeCheckpoint]);
-
-  const completeWebtoon = useCallback(() => {
-    if (webtoonComplete) return;
-    setWebtoonComplete(true);
-    setPhase('complete');
-    dispatch({ type: 'ADD_XP', amount: 80 });
-    writeCheckpoint({ phase: 'complete', setupStep: 'pan', introIndex, postExerciseIndex, pan, webtoonComplete: true });
-  }, [introIndex, pan, postExerciseIndex, webtoonComplete, writeCheckpoint]);
 
   const worldStyle: CSSProperties = {
     width: `${metrics.width}px`,
@@ -284,7 +480,45 @@ export function ShanghaiOnboardingFlow() {
         <div className="game-frame">
           {hud}
           <div className="shanghai-onboarding shanghai-onboarding--webtoon">
-            <WebtoonStrip panels={fixture.spec.panels} theme="warm" showHelp={false} scrollRoot="self" onComplete={completeWebtoon} />
+            <WebtoonStrip
+              key={activeWebtoonStep?.id ?? `webtoon-step-${webtoonStepIndex}`}
+              panels={activeWebtoonPanels}
+              theme={webtoonStepIndex >= 2 ? 'dark' : 'warm'}
+              showHelp={false}
+              scrollRoot="self"
+              onComplete={completeWebtoonSegment}
+            />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (phase === 'webtoon-interlude') {
+    return (
+      <main className="scene-root">
+        <div className="game-frame">
+          <div className="shanghai-onboarding shanghai-onboarding--complete">
+            {hud}
+            <img className="shanghai-onboarding__complete-bg" src={SHANGHAI_ONBOARDING_PANORAMA.posterUrl} alt="" />
+            <div className="shanghai-onboarding__scrim" aria-hidden="true" />
+            {activeInterludeLine && !currentExercise && (
+              <DialogueBox
+                speakerName="Tong"
+                speakerColor="var(--color-accent-gold)"
+                content={activeInterludeLine}
+                targetLang="zh"
+                interactiveText={false}
+                continueLabel="Continue"
+                onContinue={handleInterludeContinue}
+              />
+            )}
+            {currentExercise && (
+              <ExerciseModal
+                exercise={currentExercise}
+                onResult={handleExerciseResult}
+              />
+            )}
           </div>
         </div>
       </main>
