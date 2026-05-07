@@ -91,6 +91,20 @@ async function answerPronunciationFirstOption(page) {
   await sleep(2200);
 }
 
+async function answerPronunciationOption(page, optionId) {
+  await page.waitForSelector(`[data-option-id="${optionId}"]`, { visible: true });
+  await page.$eval(`[data-option-id="${optionId}"]`, (node) => {
+    if (node instanceof HTMLElement) node.click();
+  });
+  await clickExerciseCheck(page);
+  await waitForText(page, 'Correct', 5000).catch(() => {});
+  await page.evaluate(() => {
+    const target = Array.from(document.querySelectorAll('.exercise-card div')).find((node) => node.textContent?.includes('Correct'));
+    if (target instanceof HTMLElement) target.click();
+  });
+  await sleep(2200);
+}
+
 async function answerFillBlank(page, optionText) {
   await clickExerciseOption(page, optionText);
   await clickExerciseCheck(page);
@@ -324,17 +338,15 @@ async function run() {
     await recorder.cue('intro_chunk_tapped');
     await screenshot(page, '02-intro-chunk-tooltip.png', 'intro_chunk_tooltip', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Match each shop-sign character to its sound shape.');
+    await waitForText(page, 'Listen for 小. Which xiao has the dipping third tone?');
     await screenshot(page, '03-anchor-before-exercise.png', 'pre_exercise_context', screenshots);
     await recorder.cue('exercise_opened');
     await screenshot(page, '04-anchor-exercise.png', 'anchor_exercise', screenshots);
+    checks.prelistenToneOptionsPresent = await page.evaluate(() => (
+      ['xiao1', 'xiao2', 'xiao3', 'xiao4'].every((id) => Boolean(document.querySelector(`[data-option-id="${id}"]`)))
+    ));
 
-    await answerMatching(page, [
-      { left: '包', right: 'bāo: first tone, high and level' },
-      { left: '笼', right: 'lóng: second tone, rising' },
-      { left: '小', right: 'xiǎo: third tone, dipping' },
-      { left: '店', right: 'diàn: fourth tone, falling' },
-    ]);
+    await answerPronunciationOption(page, 'xiao3');
     await recorder.cue('exercise_answered');
     await waitForText(page, 'Good. The sign is not decoration now');
     await screenshot(page, '05-post-exercise.png', 'post_exercise_context', screenshots);
@@ -515,14 +527,9 @@ async function run() {
     await clickTong(page);
     await waitForText(page, 'Try the shape across a few verbs');
     await clickTong(page);
-    await waitForText(page, 'Match each V不下去 phrase with its meaning.');
+    await waitForText(page, 'Choose the ending that means “cannot keep going.”');
     await screenshot(page, '20-beat-2-exercise.png', 'beat_2_exercise', screenshots);
-    await answerMatching(page, [
-      { left: '装不下去', right: 'cannot keep pretending' },
-      { left: '演不下去', right: 'cannot keep performing' },
-      { left: '说不下去', right: 'cannot keep saying it' },
-      { left: '吃不下去', right: 'cannot keep eating' },
-    ]);
+    await answerFillBlank(page, '不下去');
 
     await page.waitForSelector('.shanghai-onboarding--webtoon', { visible: true, timeout: 8000 });
     await recorder.cue('exit_webtoon_entered');
@@ -583,8 +590,12 @@ async function run() {
     await waitForText(page, '瞿家 is the Qu family');
     await screenshot(page, '32-family-register-language.png', 'family_register_language_gate', screenshots);
     await clickTong(page);
+    await waitForText(page, 'That is enough for this first room');
+    checks.tongSceneCloseVisible = await page.evaluate(() => document.body.innerText.includes('That is enough for this first room'));
+    await screenshot(page, '33-scene-close-language.png', 'scene_close_language', screenshots);
+    await clickTong(page);
     await waitForText(page, 'Today’s listening handles');
-    await screenshot(page, '33-tong-wrap.png', 'tong_wrap', screenshots);
+    await screenshot(page, '34-tong-wrap.png', 'tong_wrap', screenshots);
     await clickTong(page);
 
     checks.summaryScreenVisible = await page.waitForSelector('.summary-screen', { visible: true, timeout: 8000 })
@@ -596,7 +607,7 @@ async function run() {
     checks.finalQuizRemoved = await page.evaluate(() => !document.body.innerText.includes('Put 方阿姨'));
     await recorder.cue('summary_screen_visible');
     await sleep(1200);
-    await screenshot(page, '34-summary-screen.png', 'summary_screen', screenshots);
+    await screenshot(page, '35-summary-screen.png', 'summary_screen', screenshots);
 
     const finalState = await page.evaluate(() => ({
       url: window.location.href,
@@ -622,7 +633,7 @@ async function run() {
     await desktop.setViewport(VIEWPORTS.desktop);
     await desktop.goto(route, { waitUntil: 'networkidle0', timeout: 30000 });
     await desktop.waitForSelector('.shanghai-onboarding__video', { visible: true });
-    await screenshot(desktop, '35-desktop-intro.png', 'desktop_intro', screenshots);
+    await screenshot(desktop, '36-desktop-intro.png', 'desktop_intro', screenshots);
     await desktop.close();
 
     const screencast = await recorder.stop();
@@ -636,6 +647,7 @@ async function run() {
       checks.mentionsShop,
       checks.introChunkTapped,
       checks.introChunkTooltipVisible,
+      checks.prelistenToneOptionsPresent,
       checks.panReachedWebtoonWithoutShortcut,
       checks.chineseBubbleTokensInteractive,
       checks.chineseTooltipVisible,
@@ -665,6 +677,7 @@ async function run() {
       checks.fangAyiOverpayVisible,
       checks.registerRevealVisible,
       checks.exitContinueVisible,
+      checks.tongSceneCloseVisible,
       checks.noNarratorPhoneCopy,
       checks.hasHud,
       !checks.debugPanels,

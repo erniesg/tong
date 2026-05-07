@@ -733,9 +733,9 @@ export const SHANGHAI_H1_WEBTOON: WebtoonSpec = {
         'Try the shape across a few verbs so it is not trapped in one line.',
       ],
       exerciseHook: {
-        type: 'matching',
+        type: 'fill_blank',
         objectiveId: 'zh-gram-shanghai-buxiaqu',
-        reason: 'The line ends on 装不下去, so the exercise generalizes V不下去.',
+        reason: 'The line ends on 装不下去, so the exercise lets the player choose 不下去 as the continuation-ending cue.',
       },
     },
     {
@@ -744,6 +744,7 @@ export const SHANGHAI_H1_WEBTOON: WebtoonSpec = {
       afterTongLines: [
         'She said 小瞿, not 瞿先生. That is familiar address from someone older.',
         '瞿家 is the Qu family. 小儿子 is younger son.',
+        'That is enough for this first room. Keep the handles, not every sentence.',
         'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',
       ],
     },
@@ -752,6 +753,7 @@ export const SHANGHAI_H1_WEBTOON: WebtoonSpec = {
     tongLines: [
       'She said 小瞿, not 瞿先生. That is familiar address from someone older.',
       '瞿家 is the Qu family. 小儿子 is younger son.',
+      'That is enough for this first room. Keep the handles, not every sentence.',
       'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',
     ],
     completionLine: 'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',

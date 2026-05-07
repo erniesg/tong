@@ -91,6 +91,7 @@ const EN_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'beat-3-exit-register': [
       'She said 小瞿, not 瞿先生. That is familiar address from someone older.',
       '瞿家 is the Qu family. 小儿子 is younger son.',
+      'That is enough for this first room. Keep the handles, not every sentence.',
       'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',
     ],
   },
@@ -121,6 +122,7 @@ const KO_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'beat-3-exit-register': [
       '方阿姨가 小瞿라고 했지, 瞿先生이 아니었어. 어른이 어린 사람을 부르는 익숙한 호칭이야.',
       '瞿家는 Qu family, 小儿子는 작은아들 또는 둘째 아들이라는 말이야.',
+      '이 첫 방에서는 여기까지면 충분해. 모든 문장이 아니라 손잡이만 잡고 가자.',
       '오늘 잡은 듣기 손잡이: 小, 不一样, 装不下去, 小瞿.',
     ],
   },
@@ -151,6 +153,7 @@ const JA_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'beat-3-exit-register': [
       '方阿姨 は 小瞿 と言った。瞿先生 じゃない。年上から若い人への親しい呼び方だよ。',
       '瞿家 は Qu家。小儿子 は下の息子。',
+      'この最初の部屋はここまでで十分。全部の文ではなく、手がかりを持って出よう。',
       '今日つかんだ聞き取りの手がかり: 小, 不一样, 装不下去, 小瞿.',
     ],
   },
@@ -181,6 +184,7 @@ const ZH_ADVANCED_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'beat-3-exit-register': [
       '方阿姨说的是 小瞿，不是 瞿先生。这是长辈对晚辈的熟人称呼。',
       '瞿家 是 Qu family。小儿子 是 younger son。',
+      '第一间屋子到这里就够了。先带走抓手，不用带走每一句。',
       '今天抓到的听力抓手：小, 不一样, 装不下去, 小瞿.',
     ],
   },
@@ -284,17 +288,20 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
   ],
   preListeningExercises: [
     {
-      type: 'matching',
-      id: 'shanghai-h1-prelisten-shop-sign-tones',
-      objectiveId: 'zh-script-shanghai-food-signage',
+      type: 'pronunciation_select',
+      id: 'shanghai-h1-prelisten-xiao-tone',
+      objectiveId: 'zh-pronunciation-tone-pairs',
       difficulty: 1,
-      prompt: 'Match each shop-sign character to its sound shape.',
-      pairs: [
-        { left: '包', right: 'bāo: first tone, high and level' },
-        { left: '笼', right: 'lóng: second tone, rising' },
-        { left: '小', right: 'xiǎo: third tone, dipping' },
-        { left: '店', right: 'diàn: fourth tone, falling' },
+      prompt: 'Listen for 小. Which xiao has the dipping third tone?',
+      targetText: '小',
+      audioOptions: [
+        { id: 'xiao1', label: '消', ttsText: '消', romanization: 'xiāo', meaning: 'first tone' },
+        { id: 'xiao2', label: '淆', ttsText: '淆', romanization: 'xiáo', meaning: 'second tone' },
+        { id: 'xiao3', label: '小', ttsText: '小', romanization: 'xiǎo', meaning: 'third tone; small' },
+        { id: 'xiao4', label: '笑', ttsText: '笑', romanization: 'xiào', meaning: 'fourth tone' },
       ],
+      correctOptionId: 'xiao3',
+      explanation: '小 is xiǎo: the third tone dips before it comes back up.',
     },
   ],
   postExerciseTongLines: [
@@ -332,17 +339,22 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       afterTongLines: EN_TONG_COPY.webtoonStepTongLines['beat-2-authenticity-contrast'],
       afterExercises: [
         {
-          type: 'matching',
+          type: 'fill_blank',
           id: 'shanghai-h1-after-b-buxiaqu-pattern',
           objectiveId: 'zh-gram-shanghai-buxiaqu',
           difficulty: 2,
-          prompt: 'Match each V不下去 phrase with its meaning.',
-          pairs: [
-            { left: '装不下去', right: 'cannot keep pretending' },
-            { left: '演不下去', right: 'cannot keep performing' },
-            { left: '说不下去', right: 'cannot keep saying it' },
-            { left: '吃不下去', right: 'cannot keep eating' },
+          prompt: 'Choose the ending that means “cannot keep going.”',
+          sentence: '演 ___ 。',
+          blankIndex: 1,
+          options: [
+            { id: 'buxiaqu', text: '不下去' },
+            { id: 'xiaqu', text: '下去' },
+            { id: 'buzhuang', text: '不装' },
+            { id: 'buyiyang', text: '不一样' },
           ],
+          correctOptionId: 'buxiaqu',
+          grammarNote: 'verb + 不下去 means the action cannot continue.',
+          explanation: '演不下去 = cannot keep performing.',
         },
       ],
       masteryItems: ['不一样', '装', '装不下去'],

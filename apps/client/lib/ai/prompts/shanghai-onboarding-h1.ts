@@ -64,7 +64,7 @@ TOOLS YOU MAY CALL:
      zh-pronunciation-tone-pairs, zh-gram-shanghai-le-aspect, zh-gram-shanghai-buxiaqu, zh-gram-shanghai-buhui-buyuanyi, zh-gram-shanghai-ni-register.
      Also supported for Shanghai H1 setup/interlude generation:
      zh-script-shanghai-food-signage, zh-script-shanghai-contrast-forms.
-   - For pronunciation_select, set hintItems to the target chunk, e.g. ["想法"], and hintSubType="sound_quiz".
+   - For pronunciation_select, set hintItems to the target chunk, e.g. ["小"] or ["想法"], and hintSubType="tone_quiz" or "sound_quiz".
    - Listening exercise audio MUST speak native Chinese text, not pinyin or English. In exerciseData.audioOptions, label and ttsText must be Chinese script; romanization is display-only tone-marked pinyin, with neutral syllables left unmarked where natural.
 4. wait_for_player_pan(targetDirection, affordanceText, completion)
    - Use after the first exercise.
@@ -181,9 +181,9 @@ GATE 2 - FIRST LISTENING / CHUNK EXERCISE
 Goal: One small listening/chunk exercise before the player moves toward the voices.
 Use tong_whisper, then show_exercise.
 Tong should make the need explicit: give the player one visible setting handle they can realistically catch before moving closer.
-Good targets: 小 from 小笼包店, or another visible sign/menu character; include a tiny four-tone frame through setting words.
-Preferred type in the current fixture: matching character -> tone/sound shape.
-Use stroke_tracing/block_crush only if this run intentionally includes script onboarding, and keep it reusable for other cities/languages.
+Good targets: 小 from 小笼包店, or another visible sign/menu character; include a tiny four-tone frame through hearing, not a pinyin glossary.
+Preferred type in the current fixture: pronunciation_select, where the player hears 消 / 淆 / 小 / 笑 and picks the third-tone 小.
+Use stroke_tracing when the goal is first contact with a character shape. Use block_crush only after components have been taught. Keep both reusable for other cities/languages.
 
 GATE 3 - PLAYER ENGAGEMENT / PAN
 Goal: Player actively moves toward the eavesdrop.
@@ -266,7 +266,7 @@ GATE 7 - LANGUAGE APPLICATION 2
 Goal: Teach the selected contrast/form and run one real exercise.
 Selected contrast hooks:
 - 不 + verb as plain negation
-- V不下去 as cannot keep doing it
+- verb + 不下去 as cannot keep doing it
 - 不会 vs 不愿意 as cannot vs will not
 - 不会说假话 vs 不愿意说假话 if the beat used the lie/willingness form
 Organic transition example:
@@ -274,9 +274,10 @@ Organic transition example:
 - "Try the shape across a few verbs so it is not trapped in one line."
 Exercise examples:
 - matching: 装不下去 -> cannot keep pretending; 演不下去 -> cannot keep performing; 说不下去 -> cannot keep saying it; 吃不下去 -> cannot keep eating
+- fill_blank: 演 ___ 。 -> 不下去, to practice the reusable continuation ending without showing a clunky grammar-code prompt
 - matching: 不会 -> cannot; 不愿意 -> will not
 - matching: 不会说假话 -> cannot lie; 不愿意说假话 -> will not lie
-- fill_blank: 我觉得你___。 -> 装不下去, only after Tong has taught V不下去
+- fill_blank: 演 ___ 。 -> 不下去, only after Tong has taught verb + 不下去
 - fill_blank: 我觉得你不___。 -> 愿意, only after Tong has taught willingness
 - sentence_builder is acceptable only for the reusable pattern, not as a memory test of the exact overheard line
 
@@ -316,6 +317,7 @@ Required register hooks:
 - 小瞿 is not 瞿先生.
 - 瞿家 = the Qu family.
 - 小儿子 = younger son.
+- Tong must close this language moment before the completion screen. A good close is short and handle-based, e.g. "That is enough for this first room. Keep the handles, not every sentence."
 Optional depth line if the run includes credit/depth:
 - 方阿姨: 跟他爸一个脾气，犟。但是他爸犟是因为有本事。他犟是因为要证明自己也有本事。
 Optional exercises:

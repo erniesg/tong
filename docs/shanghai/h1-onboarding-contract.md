@@ -54,14 +54,14 @@ Tong:
 - “Pinyin marks sound with tones. 小笼包店 gives you all four shapes: 小, 笼, 包, 店. Tap 小 once and listen.”
 
 Exercise:
-- Type: `matching` or another reusable script/listening exercise.
-- Purpose: make the shop sign useful before the eavesdrop by connecting visible characters to sound/tone shapes.
-- Current fixture pairs:
-  - `包` -> `bāo`: first tone, high and level
-  - `笼` -> `lóng`: second tone, rising
-  - `小` -> `xiǎo`: third tone, dipping
-  - `店` -> `diàn`: fourth tone, falling
-- Dynamic runs can choose another visible setting word, but the setup must still teach character composability and the four tone idea without turning into a full script lecture.
+- Current fixture type: `pronunciation_select`.
+- Purpose: make the shop sign useful before the eavesdrop by making the player hear the tone of `小`, not by matching pinyin prose.
+- Current fixture audio choices use real Mandarin characters for the four xiao tones:
+  - `消` / `xiāo`
+  - `淆` / `xiáo`
+  - `小` / `xiǎo`
+  - `笑` / `xiào`
+- Dynamic runs can choose another visible setting word, but the setup must still teach character composability and the four tone idea through hearing. If the goal is shape, use reusable `stroke_tracing`; if the goal is sound, use `pronunciation_select`.
 
 Tong:
 - “Good. The sign is not decoration now: 小 is a character, xiǎo is its sound shape.”
@@ -98,15 +98,15 @@ Strip Packet 2, placeholders until approved art exists:
 - 守成: `我觉得你装不下去。`
 
 Tong after Packet 2:
-- Teach the reusable form, not the plot: `V不下去` means an action cannot keep going.
+- Teach the reusable form, not the plot: verb + `不下去` means an action cannot keep going.
 - Example transition: “That 不下去 is the useful part. It says an action cannot keep going.” Then: “Try the shape across a few verbs so it is not trapped in one line.”
 
 Exercise after Packet 2:
-- Preferred: generalized matching:
-  - `装不下去` -> cannot keep pretending
-  - `演不下去` -> cannot keep performing
-  - `说不下去` -> cannot keep saying it
-  - `吃不下去` -> cannot keep eating
+- Current fixture: `fill_blank`.
+  - Prompt: “Choose the ending that means ‘cannot keep going.’”
+  - Sentence: `演 ___ 。`
+  - Correct: `不下去`
+- Alternative generalized matching is allowed only when the layout can stay readable and the prompt does not expose grammar-code labels.
 - Alternative if using the ability/willingness variant: match `不会` with “cannot,” `不愿意` with “will not,” `不会说假话` with “cannot lie,” and `不愿意说假话` with “will not lie.”
 
 Exit Strip Packet, placeholders until art exists:
@@ -133,6 +133,7 @@ Current placeholder panel sequence:
 
 Tong after Exit:
 - Teach register lightly: `小瞿`, not `瞿先生`; `小 + surname` can be familiar address from an older person; `瞿家` is the Qu family.
+- Close the scene before the completion screen with a short language-handle line. Do not let the strip jump straight to the recap.
 - Optional depth line only if included in the run:
   - 方阿姨: `跟他爸一个脾气，犟。但是他爸犟是因为有本事。他犟是因为要证明自己也有本事。`
 

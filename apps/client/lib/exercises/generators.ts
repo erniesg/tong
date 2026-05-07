@@ -156,6 +156,10 @@ const CHINESE_RADICALS: VocabItem[] = [
 ];
 
 const SHANGHAI_H1_CHUNKS: VocabItem[] = [
+  { word: '小', translation: 'small', romanization: 'xiǎo' },
+  { word: '消', translation: 'disappear; first-tone xiao', romanization: 'xiāo' },
+  { word: '淆', translation: 'mix; second-tone xiao', romanization: 'xiáo' },
+  { word: '笑', translation: 'laugh; fourth-tone xiao', romanization: 'xiào' },
   { word: '方案', translation: 'proposal', romanization: "fāng'àn" },
   { word: '看过了', translation: 'looked it over already', romanization: 'kàn guo le' },
   { word: '吃过了', translation: 'already ate', romanization: 'chī guo le' },
@@ -212,6 +216,25 @@ function shanghaiTargetFromHints(
   if (objectiveId.includes('register') || objectiveId.includes('ni-register')) return shanghaiChunk('小瞿');
   if (objectiveId.includes('le-aspect')) return shanghaiChunk('看过了');
   return shanghaiChunk('想法');
+}
+
+function buildXiaoTonePronunciationSelect(objectiveId: string): PronunciationSelectExercise {
+  return {
+    type: 'pronunciation_select',
+    id: stableId('ps', objectiveId, ['小', 'tone']),
+    objectiveId,
+    difficulty: 1,
+    prompt: 'Listen for 小. Which xiao has the dipping third tone?',
+    targetText: '小',
+    audioOptions: [
+      { id: 'xiao1', label: '消', ttsText: '消', romanization: 'xiāo', meaning: 'first tone' },
+      { id: 'xiao2', label: '淆', ttsText: '淆', romanization: 'xiáo', meaning: 'second tone' },
+      { id: 'xiao3', label: '小', ttsText: '小', romanization: 'xiǎo', meaning: 'third tone; small' },
+      { id: 'xiao4', label: '笑', ttsText: '笑', romanization: 'xiào', meaning: 'fourth tone' },
+    ],
+    correctOptionId: 'xiao3',
+    explanation: '小 is xiǎo: the third tone dips before it comes back up.',
+  };
 }
 
 /* ── Vocab pools derived from location content ────────────── */
@@ -871,7 +894,7 @@ function generateShanghaiMatching(
     objectiveId,
     difficulty: objectiveId.includes('buxiaqu') || objectiveId.includes('buhui') ? 2 : 1,
     prompt: objectiveId.includes('buxiaqu')
-      ? 'Match each V不下去 phrase with its meaning.'
+      ? 'Match each 不下去 phrase with its meaning.'
       : objectiveId.includes('le-aspect')
         ? 'Match each 过了 phrase with its meaning.'
         : objectiveId.includes('register') || objectiveId.includes('ni-register')
@@ -885,6 +908,10 @@ function generateShanghaiPronunciationSelect(
   objectiveId: string,
   hintItems?: string[],
 ): PronunciationSelectExercise {
+  if (objectiveId.includes('tone-pairs') || hintItems?.includes('小')) {
+    return buildXiaoTonePronunciationSelect(objectiveId);
+  }
+
   const target = shanghaiTargetFromHints(objectiveId, hintItems);
   const distractorsByTarget: Record<string, string[]> = {
     '想法': ['方案', '小笼包'],
@@ -936,11 +963,11 @@ function generateShanghaiFillBlank(
 
   if (objectiveId.includes('buxiaqu')) {
     pattern = {
-      prompt: 'Choose the keep-going pattern.',
-      sentence: '我觉得你 ___ 。',
-      correct: '装不下去',
-      distractors: ['不装', '装', '不一样'],
-      grammarNote: 'V不下去 means the action cannot keep going.',
+      prompt: 'Choose the ending that means “cannot keep going.”',
+      sentence: '演 ___ 。',
+      correct: '不下去',
+      distractors: ['下去', '不装', '不一样'],
+      grammarNote: 'verb + 不下去 means the action cannot continue.',
       difficulty: 2,
     };
   } else if (objectiveId.includes('buhui') || objectiveId.includes('buyuanyi')) {
@@ -995,7 +1022,7 @@ function generateShanghaiSentenceBuilder(
       order: ['我', '觉得', '你', '装不下去'],
       distractors: ['不装', '不一样'],
       gloss: 'I think you cannot keep pretending.',
-      note: 'Practice the V不下去 keep-going pattern, not line recall.',
+      note: 'Practice verb + 不下去 as a keep-going pattern, not line recall.',
     };
 
   return {

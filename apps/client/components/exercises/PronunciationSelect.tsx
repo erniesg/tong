@@ -120,6 +120,7 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
           return (
             <button
               key={opt.id}
+              data-option-id={opt.id}
               onClick={() => {
                 playSound(opt.label, opt.ttsText, opt.id);
                 if (!submitted) setSelected(opt.id);

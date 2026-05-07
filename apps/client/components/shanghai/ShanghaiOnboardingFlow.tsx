@@ -471,7 +471,7 @@ export function ShanghaiOnboardingFlow() {
       return;
     }
 
-    const practicedItems = ['小', '笼', '包', '店'];
+    const practicedItems = ['小'];
     for (const itemId of practicedItems) {
       dispatch({ type: 'RECORD_ITEM_RESULT', itemId, category: 'vocabulary', correct });
     }
