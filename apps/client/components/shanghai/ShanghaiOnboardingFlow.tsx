@@ -14,7 +14,7 @@ import type { WebtoonPanel } from '@/lib/hangout/fixture-types';
 import { dispatch, useGameState } from '@/lib/store/game-store';
 
 type OnboardingPhase = 'panorama' | 'webtoon' | 'webtoon-interlude' | 'complete';
-type SetupStep = 'intro' | 'prelisten-exercise' | 'post-exercise' | 'pan';
+type SetupStep = 'intro' | 'prelisten-exercise' | 'prelisten-transition' | 'post-exercise' | 'pan';
 
 interface PanoramaMetrics {
   width: number;
@@ -28,6 +28,7 @@ interface StoredCheckpoint {
   setupStep?: SetupStep;
   introIndex?: number;
   preListeningIndex?: number;
+  preListeningTransitionIndex?: number;
   postExerciseIndex?: number;
   webtoonStepIndex?: number;
   webtoonInterludeLineIndex?: number;
@@ -74,6 +75,7 @@ export function ShanghaiOnboardingFlow() {
   const [setupStep, setSetupStep] = useState<SetupStep>('intro');
   const [introIndex, setIntroIndex] = useState(0);
   const [preListeningIndex, setPreListeningIndex] = useState(0);
+  const [preListeningTransitionIndex, setPreListeningTransitionIndex] = useState(0);
   const [postExerciseIndex, setPostExerciseIndex] = useState(0);
   const [webtoonStepIndex, setWebtoonStepIndex] = useState(0);
   const [webtoonInterludeLineIndex, setWebtoonInterludeLineIndex] = useState(0);
@@ -88,9 +90,15 @@ export function ShanghaiOnboardingFlow() {
 
   const activeTongLines = setupStep === 'post-exercise'
     ? tongCopy.postExerciseTongLines
-    : tongCopy.introTongLines;
-  const activeTongIndex = setupStep === 'post-exercise' ? postExerciseIndex : introIndex;
-  const introLine = activeTongLines[Math.min(activeTongIndex, activeTongLines.length - 1)];
+    : setupStep === 'prelisten-transition'
+      ? tongCopy.preListeningTransitionTongLines[preListeningIndex] ?? []
+      : tongCopy.introTongLines;
+  const activeTongIndex = setupStep === 'post-exercise'
+    ? postExerciseIndex
+    : setupStep === 'prelisten-transition'
+      ? preListeningTransitionIndex
+      : introIndex;
+  const activeTongLine = activeTongLines[Math.min(activeTongIndex, Math.max(activeTongLines.length - 1, 0))];
   const panUnlocked = setupStep === 'pan' && phase === 'panorama';
   const webtoonSteps = SHANGHAI_ONBOARDING_PANORAMA.webtoonSteps;
   const activeWebtoonStep = webtoonSteps[webtoonStepIndex] ?? webtoonSteps[0];
@@ -151,6 +159,7 @@ export function ShanghaiOnboardingFlow() {
       setSetupStep(startInWebtoon ? 'pan' : 'intro');
       setIntroIndex(0);
       setPreListeningIndex(0);
+      setPreListeningTransitionIndex(0);
       setPostExerciseIndex(0);
       setWebtoonStepIndex(0);
       setWebtoonInterludeLineIndex(0);
@@ -174,6 +183,7 @@ export function ShanghaiOnboardingFlow() {
       setIntroIndex(parsed.introIndex ?? 0);
       const restoredPreListeningIndex = parsed.preListeningIndex ?? 0;
       setPreListeningIndex(restoredPreListeningIndex);
+      setPreListeningTransitionIndex(parsed.preListeningTransitionIndex ?? 0);
       setPostExerciseIndex(parsed.postExerciseIndex ?? 0);
       const restoredWebtoonStepIndex = parsed.webtoonStepIndex ?? 0;
       const restoredInterludeLineIndex = parsed.webtoonInterludeLineIndex ?? 0;
@@ -185,7 +195,11 @@ export function ShanghaiOnboardingFlow() {
       setWebtoonReadyToContinue(false);
       setPan(typeof parsed.pan === 'number' ? parsed.pan : SHANGHAI_ONBOARDING_PANORAMA.presentation.initialFocus);
       setWebtoonComplete(parsed.webtoonComplete ?? parsed.phase === 'complete');
-      setTongVisible(parsed.phase === 'panorama' && (parsed.setupStep === 'intro' || parsed.setupStep === 'post-exercise'));
+      setTongVisible(parsed.phase === 'panorama' && (
+        parsed.setupStep === 'intro'
+        || parsed.setupStep === 'prelisten-transition'
+        || parsed.setupStep === 'post-exercise'
+      ));
       const restoredWebtoonStep = SHANGHAI_ONBOARDING_PANORAMA.webtoonSteps[restoredWebtoonStepIndex];
       const interludeLinesDone = restoredInterludeLineIndex >= getStepTongLines(restoredWebtoonStep).length;
       setCurrentExercise(
@@ -271,8 +285,30 @@ export function ShanghaiOnboardingFlow() {
       setTongVisible(false);
       setSetupStep('prelisten-exercise');
       setPreListeningIndex(0);
+      setPreListeningTransitionIndex(0);
       setCurrentExercise(SHANGHAI_ONBOARDING_PANORAMA.preListeningExercises[0] ?? null);
-      writeCheckpoint({ phase: 'panorama', setupStep: 'prelisten-exercise', introIndex, preListeningIndex: 0, pan });
+      writeCheckpoint({ phase: 'panorama', setupStep: 'prelisten-exercise', introIndex, preListeningIndex: 0, preListeningTransitionIndex: 0, pan });
+      return;
+    }
+
+    if (setupStep === 'prelisten-transition') {
+      const transitionLines = tongCopy.preListeningTransitionTongLines[preListeningIndex] ?? [];
+      if (preListeningTransitionIndex < transitionLines.length - 1) {
+        setPreListeningTransitionIndex((current) => current + 1);
+        return;
+      }
+      setTongVisible(false);
+      setSetupStep('prelisten-exercise');
+      setCurrentExercise(SHANGHAI_ONBOARDING_PANORAMA.preListeningExercises[preListeningIndex] ?? null);
+      writeCheckpoint({
+        phase: 'panorama',
+        setupStep: 'prelisten-exercise',
+        introIndex,
+        preListeningIndex,
+        preListeningTransitionIndex,
+        postExerciseIndex,
+        pan,
+      });
       return;
     }
 
@@ -289,7 +325,18 @@ export function ShanghaiOnboardingFlow() {
     }
 
     setTongVisible(false);
-  }, [introIndex, pan, postExerciseIndex, setupStep, tongCopy.introTongLines.length, tongCopy.postExerciseTongLines.length, writeCheckpoint]);
+  }, [
+    introIndex,
+    pan,
+    postExerciseIndex,
+    preListeningIndex,
+    preListeningTransitionIndex,
+    setupStep,
+    tongCopy.introTongLines.length,
+    tongCopy.postExerciseTongLines.length,
+    tongCopy.preListeningTransitionTongLines,
+    writeCheckpoint,
+  ]);
 
   const finishOnboarding = useCallback(() => {
     if (webtoonComplete || phase === 'complete') return;
@@ -480,12 +527,30 @@ export function ShanghaiOnboardingFlow() {
     const nextExercise = SHANGHAI_ONBOARDING_PANORAMA.preListeningExercises[nextPreListeningIndex];
     if (nextExercise) {
       setPreListeningIndex(nextPreListeningIndex);
+      setPreListeningTransitionIndex(0);
+      const transitionLines = tongCopy.preListeningTransitionTongLines[nextPreListeningIndex] ?? [];
+      if (transitionLines.length > 0) {
+        setCurrentExercise(null);
+        setSetupStep('prelisten-transition');
+        setTongVisible(true);
+        writeCheckpoint({
+          phase: 'panorama',
+          setupStep: 'prelisten-transition',
+          introIndex,
+          preListeningIndex: nextPreListeningIndex,
+          preListeningTransitionIndex: 0,
+          postExerciseIndex,
+          pan,
+        });
+        return;
+      }
       setCurrentExercise(nextExercise);
       writeCheckpoint({
         phase: 'panorama',
         setupStep: 'prelisten-exercise',
         introIndex,
         preListeningIndex: nextPreListeningIndex,
+        preListeningTransitionIndex: 0,
         postExerciseIndex,
         pan,
       });
@@ -496,7 +561,7 @@ export function ShanghaiOnboardingFlow() {
     setSetupStep('post-exercise');
     setPostExerciseIndex(0);
     setTongVisible(true);
-    writeCheckpoint({ phase: 'panorama', setupStep: 'post-exercise', introIndex, preListeningIndex, postExerciseIndex: 0, pan });
+    writeCheckpoint({ phase: 'panorama', setupStep: 'post-exercise', introIndex, preListeningIndex, preListeningTransitionIndex, postExerciseIndex: 0, pan });
   }, [
     activeWebtoonStep,
     advanceToNextWebtoonStep,
@@ -505,6 +570,8 @@ export function ShanghaiOnboardingFlow() {
     phase,
     postExerciseIndex,
     preListeningIndex,
+    preListeningTransitionIndex,
+    tongCopy.preListeningTransitionTongLines,
     webtoonInterludeExerciseIndex,
     webtoonInterludeLineIndex,
     webtoonStepIndex,
@@ -671,8 +738,8 @@ export function ShanghaiOnboardingFlow() {
           <div className="shanghai-onboarding__scrim" aria-hidden="true" />
 
           <TongOverlay
-            message={introLine}
-            visible={tongVisible}
+            message={activeTongLine ?? ''}
+            visible={tongVisible && Boolean(activeTongLine)}
             targetLang="zh"
             speakerName={tongCopy.tongName}
             interactiveText

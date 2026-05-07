@@ -54,6 +54,7 @@ export interface ShanghaiOnboardingWebtoonStep {
 export interface ShanghaiOnboardingTongCopy {
   tongName: string;
   introTongLines: string[];
+  preListeningTransitionTongLines: Record<number, string[]>;
   postExerciseTongLines: string[];
   panPrompt: string;
   completionTongLine: string;
@@ -69,12 +70,18 @@ export const SHANGHAI_ONBOARDING_PANORAMA_POSTER_KEY =
 const EN_TONG_COPY: ShanghaiOnboardingTongCopy = {
   tongName: 'Tong',
   introTongLines: [
-    'You are in a Shanghai 小笼包店: steamers at the counter, rain on glass, tables close enough to overhear.',
-    'Mandarin is built from characters, and characters reuse pieces. The shop sign already gives you a handle: 小.',
-    'Pinyin marks sound with tones. 小笼包店 gives you all four shapes: 小, 笼, 包, 店. Tap 小 once and listen.',
+    'You are in a Shanghai 小笼包店: steamers at the counter, window table, bowls and voices close enough to overhear.',
+    'Start with 小. It is a whole character, and it can also work as a reusable component or radical piece.',
+    'Tap 小 once to hear it, then trace the shape so your eye can catch it on the sign.',
   ],
+  preListeningTransitionTongLines: {
+    1: [
+      'Good. Now attach sound to that shape: 小 is xiǎo.',
+      'Mandarin changes meaning with tone. Hear a few xiao shapes and pick the one that matches 小.',
+    ],
+  },
   postExerciseTongLines: [
-    'Good. The sign is not decoration now: 小 is a character, xiǎo is its sound shape.',
+    'Good. The sign is not decoration now: 小 is a shape you can spot and a sound you can hear.',
     'That table by the window is cutting through the room noise. Slide that way slowly.',
   ],
   panPrompt: 'Slide toward the window table.',
@@ -100,12 +107,18 @@ const EN_TONG_COPY: ShanghaiOnboardingTongCopy = {
 const KO_TONG_COPY: ShanghaiOnboardingTongCopy = {
   tongName: '통',
   introTongLines: [
-    '여기는 상하이 小笼包店이야. 찜통, 창문에 닿는 비, 가까운 테이블 소리가 한꺼번에 들어와.',
-    '만다린은 글자로 이루어지고, 글자는 작은 조각을 다시 써. 가게 간판에서 먼저 小를 잡아 보자.',
-    '병음은 소리에 성조를 붙여. 小笼包店 안에 네 가지 성조가 다 있어: 小, 笼, 包, 店. 小를 한 번 눌러서 들어 봐.',
+    '여기는 상하이 小笼包店이야. 찜통, 창가 테이블, 그릇 소리와 가까운 말소리가 한꺼번에 들어와.',
+    '먼저 小를 보자. 小는 글자 하나이면서, 다른 글자 안에서 다시 쓰이는 부품이나 부수처럼도 움직여.',
+    '小를 한 번 눌러 소리를 듣고, 모양을 따라 써 보자. 그래야 간판에서 바로 잡혀.',
   ],
+  preListeningTransitionTongLines: {
+    1: [
+      '좋아. 이제 그 모양에 소리를 붙이자. 小는 xiǎo야.',
+      '만다린은 성조가 바뀌면 뜻도 달라져. xiao 소리를 몇 개 듣고 小에 맞는 걸 골라 봐.',
+    ],
+  },
   postExerciseTongLines: [
-    '좋아. 이제 간판은 장식이 아니야. 小는 글자고, xiǎo는 그 소리 모양이야.',
+    '좋아. 이제 간판은 장식이 아니야. 小는 눈으로 잡는 모양이고 귀로 잡는 소리야.',
     '창가 테이블 소리가 방 안 소음을 뚫고 들어와. 그쪽으로 천천히 밀어 봐.',
   ],
   panPrompt: '창가 테이블 쪽으로 밀기.',
@@ -131,12 +144,18 @@ const KO_TONG_COPY: ShanghaiOnboardingTongCopy = {
 const JA_TONG_COPY: ShanghaiOnboardingTongCopy = {
   tongName: 'トン',
   introTongLines: [
-    'ここは上海の 小笼包店。蒸し器、窓の雨、近いテーブルの音まで聞こえてくる。',
-    '中国語は漢字でできていて、漢字は小さな部品を使い回す。店の名前からまず 小 を拾おう。',
-    'ピンインは音に声調をつける。小笼包店 には四つの声調が全部ある: 小, 笼, 包, 店。小 を一度タップして聞いて。',
+    'ここは上海の 小笼包店。蒸し器、窓ぎわのテーブル、器の音と近い声が聞こえてくる。',
+    'まず 小 を見よう。小 は一つの漢字で、ほかの字の中で部品や部首のようにも働く。',
+    '小 を一度タップして音を聞いてから、形をなぞろう。看板の中で拾えるようにする。',
   ],
+  preListeningTransitionTongLines: {
+    1: [
+      'いいね。次はその形に音をつける。小 は xiǎo。',
+      '中国語は声調で意味が変わる。いくつかの xiao を聞いて、小 に合う音を選ぼう。',
+    ],
+  },
   postExerciseTongLines: [
-    'いいね。看板はただの背景じゃない。小 は文字で、xiǎo はその音の形だ。',
+    'いいね。看板はただの背景じゃない。小 は目で拾える形で、耳で拾える音だ。',
     '窓際のテーブルの声が、店の音を抜けて聞こえる。そっちへゆっくり寄せて。',
   ],
   panPrompt: '窓際のテーブルへスライド。',
@@ -162,12 +181,18 @@ const JA_TONG_COPY: ShanghaiOnboardingTongCopy = {
 const ZH_ADVANCED_TONG_COPY: ShanghaiOnboardingTongCopy = {
   tongName: '小通',
   introTongLines: [
-    '你在上海的 小笼包店里：柜台上是蒸笼，窗外有雨，旁边的桌子近到能听见人说话。',
-    '普通话靠汉字承载，汉字会复用部件。先从店名里的 小 抓起。',
-    '拼音用声调标声音。小笼包店 里四个声调都有：小, 笼, 包, 店。点一下 小 听一遍。',
+    '你在上海的 小笼包店里：柜台上是蒸笼，窗边有桌子，碗筷声和旁边说话声都很近。',
+    '先看 小。小 本身是一个字，也可以像部件、部首一样在别的字里复用。',
+    '点一下 小 听一遍，然后描一遍字形。先让眼睛能在招牌里抓住它。',
   ],
+  preListeningTransitionTongLines: {
+    1: [
+      '好。现在把声音接上：小 是 xiǎo。',
+      '普通话的声调会改变意思。听几个 xiao，选出跟 小 对上的那个。',
+    ],
+  },
   postExerciseTongLines: [
-    '好。招牌现在不是背景了：小 是字，xiǎo 是它的声音形状。',
+    '好。招牌现在不是背景了：小 是你能看见的形，也是你能听出来的音。',
     '窗边那桌的声音从店里的杂音里透出来了。慢慢把视角移过去。',
   ],
   panPrompt: '滑向窗边那桌。',
@@ -287,6 +312,24 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
     ...EN_TONG_COPY.introTongLines,
   ],
   preListeningExercises: [
+    {
+      type: 'stroke_tracing',
+      id: 'shanghai-h1-prelisten-xiao-stroke',
+      objectiveId: 'zh-script-shanghai-xiao-character',
+      difficulty: 1,
+      prompt: 'Trace 小 once. It means small and can work as a character piece.',
+      targetChar: '小',
+      ghostOverlay: true,
+      explanation: '小 is a whole character here, and it also appears as a reusable component or radical piece.',
+      romanization: 'xiǎo',
+      meaning: 'small',
+      sound: '小',
+      language: 'zh',
+      exampleWords: [
+        { word: '小笼包', romanization: 'xiǎo lóng bāo', meaning: 'soup dumpling' },
+        { word: '小瞿', romanization: 'xiǎo qú', meaning: 'familiar address for Qu' },
+      ],
+    },
     {
       type: 'pronunciation_select',
       id: 'shanghai-h1-prelisten-xiao-tone',

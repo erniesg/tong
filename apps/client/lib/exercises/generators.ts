@@ -1140,15 +1140,24 @@ function generateStrokeTracing(
     id: stableId('st', objectiveId, [target]),
     objectiveId,
     difficulty: 1,
-    prompt: tFmt('stroke_prompt', explainIn, target),
+    prompt: lang === 'zh' && target === '小'
+      ? 'Trace 小 once. It means small and can work as a character piece.'
+      : tFmt('stroke_prompt', explainIn, target),
     targetChar: target,
     ghostOverlay: true,
-    explanation: tFmt('stroke_explain', explainIn, target),
+    explanation: lang === 'zh' && target === '小'
+      ? '小 is a whole character here, and it also appears as a reusable component or radical piece.'
+      : tFmt('stroke_explain', explainIn, target),
     romanization: targetItem?.romanization,
     meaning: targetItem?.translation,
     sound: targetItem?.word ?? target,
     language: lang,
-    exampleWords: exampleWords.length > 0 ? exampleWords : undefined,
+    exampleWords: lang === 'zh' && target === '小'
+      ? [
+        { word: '小笼包', romanization: 'xiǎo lóng bāo', meaning: 'soup dumpling' },
+        { word: '小瞿', romanization: 'xiǎo qú', meaning: 'familiar address for Qu' },
+      ]
+      : exampleWords.length > 0 ? exampleWords : undefined,
     reps: hintSubType === 'drill' ? 8 : undefined,
   };
 }

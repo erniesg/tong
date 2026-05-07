@@ -112,6 +112,36 @@ async function answerFillBlank(page, optionText) {
   await sleep(2200);
 }
 
+async function answerStrokeTracing(page) {
+  await page.waitForSelector('.exercise-card canvas', { visible: true });
+  const box = await page.$eval('.exercise-card canvas', (node) => {
+    const rect = node.getBoundingClientRect();
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+  });
+  const left = box.x + box.width * 0.08;
+  const right = box.x + box.width * 0.92;
+  const top = box.y + box.height * 0.08;
+  const bottom = box.y + box.height * 0.92;
+
+  for (let i = 0; i <= 12; i += 1) {
+    const y = top + ((bottom - top) * i) / 12;
+    await page.mouse.move(left, y);
+    await page.mouse.down();
+    await page.mouse.move(right, y, { steps: 12 });
+    await page.mouse.up();
+  }
+  for (let i = 0; i <= 8; i += 1) {
+    const x = left + ((right - left) * i) / 8;
+    await page.mouse.move(x, top);
+    await page.mouse.down();
+    await page.mouse.move(x, bottom, { steps: 10 });
+    await page.mouse.up();
+  }
+
+  await clickVisibleText(page, 'Done');
+  await sleep(2200);
+}
+
 async function answerSentenceBuilder(page, tiles) {
   for (const tile of tiles) {
     await clickExerciseOption(page, tile);
@@ -314,6 +344,7 @@ async function run() {
       mentionsShop: document.body.innerText.includes('小笼包') || document.body.innerText.toLowerCase().includes('xiaolongbao'),
       hasHud: Boolean(document.querySelector('.scene-hud')),
       debugPanels: Boolean(document.querySelector('[data-debug], .debug-panel, .admin-panel')),
+      noFalseRainCopy: !document.body.innerText.toLowerCase().includes('rain'),
     }));
     Object.assign(checks, castState);
 
@@ -323,7 +354,7 @@ async function run() {
 
     await clickTong(page);
     await clickTong(page);
-    await waitForText(page, 'Tap 小 once and listen');
+    await waitForText(page, 'Tap 小 once to hear it');
     const tappedIntroChunk = await page.evaluate(() => {
       const target = Array.from(document.querySelectorAll('.tong-whisper [data-korean]'))
         .find((node) => node.textContent?.trim() === '小');
@@ -338,10 +369,24 @@ async function run() {
     await recorder.cue('intro_chunk_tapped');
     await screenshot(page, '02-intro-chunk-tooltip.png', 'intro_chunk_tooltip', screenshots);
     await clickTong(page);
+    await waitForText(page, 'Trace 小 once');
+    await screenshot(page, '03-xiao-stroke-exercise.png', 'xiao_stroke_exercise', screenshots);
+    checks.strokeTracingVisible = await page.evaluate(() => (
+      document.body.innerText.includes('Trace 小 once') && Boolean(document.querySelector('.exercise-card canvas'))
+    ));
+    await answerStrokeTracing(page);
+    await recorder.cue('stroke_trace_answered');
+    await waitForText(page, 'Good. Now attach sound');
+    checks.strokeTraceCompleted = true;
+    await screenshot(page, '04-xiao-tone-transition-1.png', 'xiao_tone_transition_1', screenshots);
+    await clickTong(page);
+    await waitForText(page, 'Hear a few xiao shapes');
+    await screenshot(page, '05-xiao-tone-transition-2.png', 'xiao_tone_transition_2', screenshots);
+    await clickTong(page);
     await waitForText(page, 'Listen for 小. Which xiao has the falling-rising third tone?');
-    await screenshot(page, '03-anchor-before-exercise.png', 'pre_exercise_context', screenshots);
+    await screenshot(page, '06-anchor-before-exercise.png', 'pre_exercise_context', screenshots);
     await recorder.cue('exercise_opened');
-    await screenshot(page, '04-anchor-exercise.png', 'anchor_exercise', screenshots);
+    await screenshot(page, '07-anchor-exercise.png', 'anchor_exercise', screenshots);
     checks.prelistenToneOptionsPresent = await page.evaluate(() => (
       ['xiao1', 'xiao2', 'xiao3', 'xiao4'].every((id) => Boolean(document.querySelector(`[data-option-id="${id}"]`)))
     ));
@@ -349,13 +394,13 @@ async function run() {
     await answerPronunciationOption(page, 'xiao3');
     await recorder.cue('exercise_answered');
     await waitForText(page, 'Good. The sign is not decoration now');
-    await screenshot(page, '05-post-exercise.png', 'post_exercise_context', screenshots);
+    await screenshot(page, '08-post-exercise.png', 'post_exercise_context', screenshots);
 
     await clickTong(page);
     await clickTong(page);
     await recorder.cue('pan_prompt_visible');
     await waitForText(page, 'Slide toward the window table.');
-    await screenshot(page, '06-pan-prompt.png', 'pre_action_pan_prompt', screenshots);
+    await screenshot(page, '09-pan-prompt.png', 'pre_action_pan_prompt', screenshots);
     await page.waitForFunction(() => {
       const stage = document.querySelector('.shanghai-onboarding__stage');
       const world = document.querySelector('.shanghai-onboarding__world');

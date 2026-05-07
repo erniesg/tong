@@ -49,22 +49,32 @@ Rejected:
 Screen 1: Shanghai 小笼包店 panorama.
 
 Tong:
-- “You are in a Shanghai 小笼包店: steamers, rain on glass, tables close enough to overhear.”
-- “Mandarin is built from characters, and characters reuse pieces. The shop sign already gives you a handle: 小.”
-- “Pinyin marks sound with tones. 小笼包店 gives you all four shapes: 小, 笼, 包, 店. Tap 小 once and listen.”
+- “You are in a Shanghai 小笼包店: steamers at the counter, window table, bowls and voices close enough to overhear.”
+- “Start with 小. It is a whole character, and it can also work as a reusable component or radical piece.”
+- “Tap 小 once to hear it, then trace the shape so your eye can catch it on the sign.”
 
 Exercise:
-- Current fixture type: `pronunciation_select`.
-- Purpose: make the shop sign useful before the eavesdrop by making the player hear the tone of `小`, not by matching pinyin prose.
+- Current fixture starts with reusable `stroke_tracing`.
+- Purpose: make the shop sign useful before the eavesdrop by making the player handle the shape of `小`, not by treating characters as decorative text.
+- Current fixture trace target:
+  - `小` / `xiǎo` / small
+  - Explain it as a whole character that can also work as a reusable component or radical piece.
+- After the trace, Tong must transition organically into sound:
+  - “Good. Now attach sound to that shape: 小 is xiǎo.”
+  - “Mandarin changes meaning with tone. Hear a few xiao shapes and pick the one that matches 小.”
+
+Exercise:
+- Current fixture then uses `pronunciation_select`.
+- Purpose: attach sound/tone to the traced character by making the player hear the tone of `小`, not by matching pinyin prose.
 - Current fixture audio choices use real Mandarin characters for the four xiao tones:
   - `消` / `xiāo`
   - `淆` / `xiáo`
   - `小` / `xiǎo`
   - `笑` / `xiào`
-- Dynamic runs can choose another visible setting word, but the setup must still teach character composability and the four tone idea through hearing. If the goal is shape, use reusable `stroke_tracing`; if the goal is sound, use `pronunciation_select`.
+- Dynamic runs can choose another visible setting word, but the setup must still teach character composability with reusable `stroke_tracing`, then sound/tone with `pronunciation_select`. Use `block_crush` only after the component pieces have been explicitly prepared.
 
 Tong:
-- “Good. The sign is not decoration now: 小 is a character, xiǎo is its sound shape.”
+- “Good. The sign is not decoration now: 小 is a shape you can spot and a sound you can hear.”
 - “That table by the window is cutting through the room noise. Slide that way slowly.”
 
 Pan prompt:
