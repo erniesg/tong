@@ -1,5 +1,6 @@
 import { runtimeAssetUrl } from '@/lib/runtime-assets';
 import type { ExerciseData } from '@/lib/types/hangout';
+import type { AppLang } from '@/lib/api';
 
 export interface ShanghaiLearningAnchor {
   id: string;
@@ -50,11 +51,160 @@ export interface ShanghaiOnboardingWebtoonStep {
   masteryItems?: string[];
 }
 
+export interface ShanghaiOnboardingTongCopy {
+  tongName: string;
+  introTongLines: string[];
+  postExerciseTongLines: string[];
+  panPrompt: string;
+  completionTongLine: string;
+  webtoonStepTongLines: Record<string, string[]>;
+}
+
 export const SHANGHAI_ONBOARDING_PANORAMA_VIDEO_KEY =
   'city.shanghai.location.dumpling-shop.panorama.video.default';
 
 export const SHANGHAI_ONBOARDING_PANORAMA_POSTER_KEY =
   'city.shanghai.location.dumpling-shop.panorama.poster.default';
+
+const EN_TONG_COPY: ShanghaiOnboardingTongCopy = {
+  tongName: 'Tong',
+  introTongLines: [
+    'You are in a Shanghai 小笼包店: steamers at the counter, rain on glass, tables close enough to overhear.',
+    'Mandarin in this room moves fast. Do not chase every word. Catch compact chunks, repeated 不 phrases, and names.',
+    'Start with 想法. Tap 想法 once and listen. It is a short way to ask for someone’s take.',
+  ],
+  postExerciseTongLines: [
+    'Good. 想法 has a shape in your ear now.',
+    'That table by the window is cutting through the room noise. Slide that way slowly.',
+  ],
+  panPrompt: 'Slide toward the window table.',
+  completionTongLine: 'Today’s listening handles: 想法, 看过了, 装不下去, 小瞿.',
+  webtoonStepTongLines: {
+    'beat-1-proposal-question': [
+      'You heard 看过了. Verb + 过了 gives the action an already-done feel.',
+      'Try that shape once before the conversation tightens.',
+    ],
+    'beat-2-authenticity-contrast': [
+      'That 不下去 is the useful part. It says an action cannot keep going.',
+      'Try the shape across a few verbs so it is not trapped in one line.',
+    ],
+    'beat-3-exit-register': [
+      'She said 小瞿, not 瞿先生. That is familiar address from someone older.',
+      '瞿家 is the Qu family. 小儿子 is younger son.',
+      'Today’s listening handles: 想法, 看过了, 装不下去, 小瞿.',
+    ],
+  },
+};
+
+const KO_TONG_COPY: ShanghaiOnboardingTongCopy = {
+  tongName: '통',
+  introTongLines: [
+    '여기는 상하이 小笼包店이야. 찜통, 창문에 닿는 비, 가까운 테이블 소리가 한꺼번에 들어와.',
+    '이 방의 만다린은 빠르고 짧아. 전부 잡으려 하지 말고, 작은 덩어리와 반복되는 不, 이름을 잡아.',
+    '먼저 想法부터. 想法을 한 번 눌러서 들어 봐. 누군가의 생각을 묻는 짧은 덩어리야.',
+  ],
+  postExerciseTongLines: [
+    '좋아. 이제 想法의 소리 모양이 귀에 남았어.',
+    '창가 테이블 소리가 방 안 소음을 뚫고 들어와. 그쪽으로 천천히 밀어 봐.',
+  ],
+  panPrompt: '창가 테이블 쪽으로 밀기.',
+  completionTongLine: '오늘 잡은 듣기 손잡이: 想法, 看过了, 装不下去, 小瞿.',
+  webtoonStepTongLines: {
+    'beat-1-proposal-question': [
+      '방금 看过了가 지나갔어. 동사 + 过了는 이미 끝난 행동 느낌을 줄 수 있어.',
+      '대화가 더 조여지기 전에 그 모양을 한 번 연습해 보자.',
+    ],
+    'beat-2-authenticity-contrast': [
+      '여기서는 不下去가 핵심이야. 어떤 행동을 계속할 수 없다는 느낌이 나.',
+      '한 줄에만 묶이지 않게 몇 가지 동사로 같은 모양을 연습해 보자.',
+    ],
+    'beat-3-exit-register': [
+      '方阿姨가 小瞿라고 했지, 瞿先生이 아니었어. 어른이 어린 사람을 부르는 익숙한 호칭이야.',
+      '瞿家는 Qu family, 小儿子는 작은아들 또는 둘째 아들이라는 말이야.',
+      '오늘 잡은 듣기 손잡이: 想法, 看过了, 装不下去, 小瞿.',
+    ],
+  },
+};
+
+const JA_TONG_COPY: ShanghaiOnboardingTongCopy = {
+  tongName: 'トン',
+  introTongLines: [
+    'ここは上海の 小笼包店。蒸し器、窓の雨、近いテーブルの音まで聞こえてくる。',
+    'この部屋の中国語は速くて短い。全部を追わずに、小さなかたまり、くり返す 不、名前を拾って。',
+    'まずは 想法。想法 を一度タップして聞いて。相手の考えを聞く短いかたまりだよ。',
+  ],
+  postExerciseTongLines: [
+    'いいね。想法 の音の形が耳に残った。',
+    '窓際のテーブルの声が、店の音を抜けて聞こえる。そっちへゆっくり寄せて。',
+  ],
+  panPrompt: '窓際のテーブルへスライド。',
+  completionTongLine: '今日つかんだ聞き取りの手がかり: 想法, 看过了, 装不下去, 小瞿.',
+  webtoonStepTongLines: {
+    'beat-1-proposal-question': [
+      '今、看过了 が聞こえたね。動詞 + 过了 は、もう済んだ動きの感じを出せる。',
+      '会話が詰まる前に、その形を一度だけ練習しよう。',
+    ],
+    'beat-2-authenticity-contrast': [
+      'ここで使えるのは 不下去。動作を続けられない、という感じが出る。',
+      'その一文だけで終わらせず、いくつかの動詞で形を試そう。',
+    ],
+    'beat-3-exit-register': [
+      '方阿姨 は 小瞿 と言った。瞿先生 じゃない。年上から若い人への親しい呼び方だよ。',
+      '瞿家 は Qu家。小儿子 は下の息子。',
+      '今日つかんだ聞き取りの手がかり: 想法, 看过了, 装不下去, 小瞿.',
+    ],
+  },
+};
+
+const ZH_ADVANCED_TONG_COPY: ShanghaiOnboardingTongCopy = {
+  tongName: '小通',
+  introTongLines: [
+    '你在上海的 小笼包店里：柜台上是蒸笼，窗外有雨，旁边的桌子近到能听见人说话。',
+    '这里的普通话很快，也很短。不要追每个字，先抓小块、重复的 不、还有称呼。',
+    '先抓 想法。点一下 想法 听一遍，这是问别人看法的短块。',
+  ],
+  postExerciseTongLines: [
+    '好，想法 这个声音已经有轮廓了。',
+    '窗边那桌的声音从店里的杂音里透出来了。慢慢把视角移过去。',
+  ],
+  panPrompt: '滑向窗边那桌。',
+  completionTongLine: '今天抓到的听力抓手：想法, 看过了, 装不下去, 小瞿.',
+  webtoonStepTongLines: {
+    'beat-1-proposal-question': [
+      '你刚听到 看过了。动词 + 过了 会带出“已经做过”的感觉。',
+      '趁对话还没更紧，先把这个形状练一次。',
+    ],
+    'beat-2-authenticity-contrast': [
+      '这里有用的是 不下去。它表示一个动作没法继续撑下去。',
+      '换几个动词练一下，别让它只留在这一句里。',
+    ],
+    'beat-3-exit-register': [
+      '方阿姨说的是 小瞿，不是 瞿先生。这是长辈对晚辈的熟人称呼。',
+      '瞿家 是 Qu family。小儿子 是 younger son。',
+      '今天抓到的听力抓手：想法, 看过了, 装不下去, 小瞿.',
+    ],
+  },
+};
+
+const BEGINNER_COPY_BY_EXPLAIN_LANG: Record<AppLang, ShanghaiOnboardingTongCopy> = {
+  en: EN_TONG_COPY,
+  ko: KO_TONG_COPY,
+  ja: JA_TONG_COPY,
+  // A Mandarin beginner should not receive full Chinese helper text even if the
+  // stored explain-language preference is zh. Keep Tong's beginner H1 teaching
+  // in English with small tappable Chinese chunks.
+  zh: EN_TONG_COPY,
+};
+
+export function getShanghaiOnboardingTongCopy(
+  explainIn: AppLang = 'en',
+  selfAssessedLevel: number | null = null,
+): ShanghaiOnboardingTongCopy {
+  if (explainIn === 'zh' && selfAssessedLevel !== null && selfAssessedLevel >= 4) {
+    return ZH_ADVANCED_TONG_COPY;
+  }
+  return BEGINNER_COPY_BY_EXPLAIN_LANG[explainIn] ?? EN_TONG_COPY;
+}
 
 export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
   id: 'shanghai-h1-panorama-entry',
@@ -84,9 +234,9 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       id: 'fangan',
       zh: '方案',
       py: 'fang an',
-      en: 'plan',
+      en: 'proposal',
       role: 'primary',
-      note: 'The object of the conversation, not a random business noun.',
+      note: 'A useful proposal/show chunk, not the whole spine of the lesson.',
     },
     {
       id: 'kanguole-xiangfa',
@@ -94,7 +244,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       py: 'kan guo le / xiang fa',
       en: 'looked it over / thoughts?',
       role: 'primary',
-      note: 'The compressed opening pressure: he asks whether she read it, then asks for a response.',
+      note: 'Beginner listening handles: completed action plus a compact question.',
     },
     {
       id: 'buyiyang',
@@ -102,7 +252,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       py: 'bu yi yang',
       en: 'different',
       role: 'primary',
-      note: 'A pitch claim that Dingman immediately treats as a cliche.',
+      note: 'A repeated pitch word that sets up a 不 contrast without becoming plot commentary.',
     },
     {
       id: 'zhuangbuxiaqu',
@@ -110,7 +260,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       py: 'zhuang bu xia qu',
       en: 'cannot keep pretending',
       role: 'primary',
-      note: 'The character-read payoff for the next beat: the scene turns from plan to person.',
+      note: 'Grammar hook: a verb plus 不下去 as the keep-going feel.',
     },
     {
       id: 'jie-zhongyao',
@@ -118,7 +268,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       py: 'jie / zhong yao',
       en: 'answer / important',
       role: 'context',
-      note: 'The phone beat exposes pressure outside the room.',
+      note: 'Exit-beat listening handles from the repeated phone interruption.',
     },
     {
       id: 'xiaoqu-xiaoerzi',
@@ -126,135 +276,85 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       py: 'xiao Qu / xiao er zi',
       en: 'little Qu / younger son',
       role: 'reveal',
-      note: 'Fang Ayi’s familiar wording proves she knows the family history.',
+      note: 'Register hook: familiar address and family wording, not plot explanation.',
     },
   ],
   introTongLines: [
-    'Shanghai starts quietly. Steam on glass, low voices, rain at the window.',
-    'Two people at the far table. One is eating. One is not.',
-    'Start with the room: food in front of her, silence in front of him.',
-    '方案 is the plan in front of them. 看过了 means someone already looked it over.',
+    ...EN_TONG_COPY.introTongLines,
   ],
   preListeningExercises: [
     {
-      type: 'matching',
-      id: 'shanghai-h1-prelisten-phrases',
-      objectiveId: 'zh-vocab-shanghai-negotiation',
-      difficulty: 1,
-      prompt: 'Match the table words.',
-      pairs: [
-        { left: '方案', right: 'plan' },
-        { left: '看过了', right: 'looked it over' },
-        { left: '想法', right: 'thoughts' },
-        { left: '不一样', right: 'different' },
-      ],
-    },
-    {
       type: 'pronunciation_select',
-      id: 'shanghai-h1-prelisten-fangan-sound',
+      id: 'shanghai-h1-prelisten-xiangfa-sound',
       objectiveId: 'zh-pronunciation-tone-pairs',
       difficulty: 1,
-      prompt: 'Tap the sound that says 方案.',
-      targetText: '方案',
+      prompt: 'Which sound is the short question for someone’s take?',
+      targetText: '想法',
       audioOptions: [
-        { id: 'fangan', label: '方案', romanization: 'fang an', meaning: 'plan' },
-        { id: 'xiangfa', label: '想法', romanization: 'xiang fa', meaning: 'thoughts' },
-        { id: 'buyiyang', label: '不一样', romanization: 'bu yi yang', meaning: 'different' },
+        { id: 'xiangfa', label: '想法', ttsText: '想法', romanization: 'xiǎng fǎ', meaning: 'thoughts; take' },
+        { id: 'fangan', label: '方案', ttsText: '方案', romanization: "fāng'àn", meaning: 'plan' },
+        { id: 'xiaolongbao', label: '小笼包', ttsText: '小笼包', romanization: 'xiǎo lóng bāo', meaning: 'soup dumpling' },
       ],
-      correctOptionId: 'fangan',
-      explanation: '方案 is the plan on the table. Keep one ear on it.',
+      correctOptionId: 'xiangfa',
+      explanation: '想法 can stand alone as a compact question: thoughts? your take?',
     },
   ],
   postExerciseTongLines: [
-    'Good. You do not need every word. You need the ones that change the air.',
-    'Next, listen for when polite stops working.',
-    'Slide left. Do not answer them. Just listen.',
+    ...EN_TONG_COPY.postExerciseTongLines,
   ],
-  panPrompt: 'Slide left to listen in.',
-  completionTongLine:
-    'Good. She used food to dodge him. He left too fast. 方阿姨 knew too much.',
+  panPrompt: EN_TONG_COPY.panPrompt,
+  completionTongLine: EN_TONG_COPY.completionTongLine,
   webtoonFixtureId: 'shanghai-h1',
   webtoonSteps: [
     {
-      id: 'segment-a-table-pressure',
-      label: 'Eavesdrop A — table pressure',
+      id: 'beat-1-proposal-question',
+      label: 'Beat 1 — proposal question',
       panelIds: ['p0', 'p1', 'p2', 'p3', 'p4'],
-      afterTongLines: [
-        'She answered without answering.',
-        '看过了 landed first. Then he asked for 想法.',
-      ],
+      afterTongLines: EN_TONG_COPY.webtoonStepTongLines['beat-1-proposal-question'],
       afterExercises: [
         {
-          type: 'fill_blank',
-          id: 'shanghai-h1-after-a-kanguole',
+          type: 'matching',
+          id: 'shanghai-h1-after-a-guole-pattern',
           objectiveId: 'zh-gram-shanghai-le-aspect',
           difficulty: 1,
-          prompt: 'Put the missing words back.',
-          sentence: '方案你___。',
-          blankIndex: 0,
-          options: [
-            { id: 'kanguole', text: '看过了' },
-            { id: 'bu-zhongyao', text: '不重要' },
-            { id: 'xianzou', text: '先走' },
+          prompt: 'Match each 过了 phrase with its meaning.',
+          pairs: [
+            { left: '看过了', right: 'looked it over already' },
+            { left: '吃过了', right: 'already ate' },
+            { left: '听过了', right: 'already heard it' },
           ],
-          correctOptionId: 'kanguole',
-          grammarNote: '了 marks the action as completed: she has already looked it over.',
-          explanation: '看过了 = looked it over already.',
         },
       ],
       masteryItems: ['看过了', '想法'],
     },
     {
-      id: 'segment-b-character-read',
-      label: 'Eavesdrop B — character read',
+      id: 'beat-2-authenticity-contrast',
+      label: 'Beat 2 — authenticity contrast',
       panelIds: ['p5', 'p6', 'p7', 'p8', 'p9', 'p10', 'p11'],
-      afterTongLines: [
-        'The room just got colder.',
-        'He said 装不下去 like he had been watching her for longer than this meal.',
-      ],
+      afterTongLines: EN_TONG_COPY.webtoonStepTongLines['beat-2-authenticity-contrast'],
       afterExercises: [
         {
-          type: 'sentence_builder',
-          id: 'shanghai-h1-after-b-zhuang',
+          type: 'matching',
+          id: 'shanghai-h1-after-b-buxiaqu-pattern',
           objectiveId: 'zh-gram-shanghai-buxiaqu',
           difficulty: 2,
-          prompt: 'Put his sentence back together.',
-          wordTiles: ['我', '觉得', '你', '装不下去'],
-          correctOrder: ['我', '觉得', '你', '装不下去'],
-          distractors: ['不重要', '想法'],
-          explanation: '我觉得你装不下去。= I think you cannot keep pretending.',
+          prompt: 'Match each V不下去 phrase with its meaning.',
+          pairs: [
+            { left: '装不下去', right: 'cannot keep pretending' },
+            { left: '演不下去', right: 'cannot keep performing' },
+            { left: '说不下去', right: 'cannot keep saying it' },
+            { left: '吃不下去', right: 'cannot keep eating' },
+          ],
         },
       ],
       masteryItems: ['不一样', '装', '装不下去'],
     },
     {
-      id: 'segment-c-departure',
-      label: 'Eavesdrop C — departure',
+      id: 'beat-3-exit-register',
+      label: 'Beat 3 — exit register',
       panelIds: ['p12', 'p13', 'p14', 'p15', 'p16', 'p17', 'p18', 'p19', 'p20'],
-      afterTongLines: [
-        'Three rings, and he still said 不重要.',
-        'Then 方阿姨 called after him: 小瞿. That is not how a stranger talks.',
-      ],
-      afterExercises: [
-        {
-          type: 'fill_blank',
-          id: 'shanghai-h1-after-c-zhongyao',
-          objectiveId: 'zh-vocab-shanghai-interruption-reveal',
-          difficulty: 1,
-          prompt: 'Put the missing word back.',
-          sentence: '响三次了。很___。',
-          blankIndex: 0,
-          options: [
-            { id: 'zhongyao', text: '重要' },
-            { id: 'buyiyang', text: '不一样' },
-            { id: 'fangan', text: '方案' },
-          ],
-          correctOptionId: 'zhongyao',
-          grammarNote: '重要 means important. 丁漫 reads the pressure before he admits it.',
-          explanation: '响三次了。很重要。= It has rung three times. It is important.',
-        },
-      ],
-      masteryItems: ['接', '重要', '小瞿'],
+      afterTongLines: EN_TONG_COPY.webtoonStepTongLines['beat-3-exit-register'],
+      masteryItems: ['接', '重要', '小瞿', '瞿家', '小儿子'],
     },
   ],
 };

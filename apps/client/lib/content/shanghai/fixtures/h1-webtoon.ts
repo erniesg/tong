@@ -31,8 +31,8 @@ const INK_BORDER_DARK = 'rgba(255, 248, 238, 0.9)';
 //   4: 1682x2193 (~3:4 portrait)     — deflection (food)
 //   5: 1440x2562 (9:16 portrait)     — pitch line (focus)
 //   6: 1682x2193 (~3:4 portrait)     — mic drop (after dark gradient lead)
-// Panels after p6 reuse the current asset set with different crops/spacing so
-// the full H1 story can be QA-tested before final bespoke art lands.
+// Panels after p6 have no approved artwork yet. Keep their layout, bubbles,
+// action beats, and SFX deterministic while rendering placeholder art blocks.
 
 export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
   {
@@ -236,7 +236,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
   },
   {
     id: 'p7',
-    imageUrl: ASSET(5),
+    placeholder: { tone: 'warm' },
     widthType: 'inset',
     heightClass: 'standard',
     aspectRatio: '9:16',
@@ -261,9 +261,9 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     },
     transition: 'cut',
     bubble: {
-      zh: '...你说得对。',
-      py: ['nǐ', 'shuō', 'de', 'duì'],
-      en: 'You are right.',
+      zh: '那我换个说法。',
+      py: ['Nà', 'wǒ', 'huàn', 'ge', 'shuō', 'fǎ'],
+      en: 'Then I will say it another way.',
       speaker: 'shoucheng',
       position: 'bottom',
       layout: { tailOffsetPct: 50 },
@@ -271,7 +271,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
   },
   {
     id: 'p8',
-    imageUrl: ASSET(3),
+    placeholder: { tone: 'warm' },
     widthType: 'full-width',
     heightClass: 'standard',
     aspectRatio: '16:9',
@@ -289,17 +289,17 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     },
     transition: 'cut',
     bubble: {
-      zh: '那我换个说法。',
-      py: ['Nà', 'wǒ', 'huàn', 'ge', 'shuō', 'fǎ'],
-      en: 'Then I will say it another way.',
+      zh: '这个节目需要一个不装的人。',
+      py: ['Zhè', 'ge', 'jié', 'mù', 'xū', 'yào', 'yí', 'ge', 'bù', 'zhuāng', 'de', 'rén'],
+      en: 'This show needs someone who does not pretend.',
       speaker: 'shoucheng',
       position: 'bottom',
-      layout: { tailOffsetPct: 46, maxWidth: 'min(82vw, 21rem)' },
+      layout: { tailOffsetPct: 46, maxWidth: 'min(86vw, 26rem)' },
     },
   },
   {
     id: 'p9',
-    imageUrl: ASSET(5),
+    placeholder: { tone: 'warm' },
     widthType: 'inset',
     heightClass: 'tall',
     aspectRatio: '9:16',
@@ -325,17 +325,17 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     },
     transition: 'cut',
     bubble: {
-      zh: '这个节目需要一个不装的人。',
-      py: ['Zhè', 'ge', 'jié', 'mù', 'xū', 'yào', 'yí', 'ge', 'bù', 'zhuāng', 'de', 'rén'],
-      en: 'This show needs someone who does not perform a lie.',
-      speaker: 'shoucheng',
+      zh: '...你觉得我不装？',
+      py: ['nǐ', 'jué', 'de', 'wǒ', 'bù', 'zhuāng'],
+      en: 'You think I do not pretend?',
+      speaker: 'dingman',
       position: 'bottom',
-      layout: { tailOffsetPct: 50, offsetYPx: 22, maxWidth: 'min(86vw, 26rem)' },
+      layout: { tailOffsetPct: 50, offsetYPx: 22, maxWidth: 'min(80vw, 22rem)' },
     },
   },
   {
     id: 'p10',
-    imageUrl: ASSET(6),
+    placeholder: { tone: 'warm' },
     widthType: 'inset',
     heightClass: 'standard',
     aspectRatio: '3:4',
@@ -359,18 +359,13 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
       darkBackdropColor: DARK_WARM,
     },
     transition: 'cut',
-    bubble: {
-      zh: '...你觉得我不装？',
-      py: ['nǐ', 'jué', 'de', 'wǒ', 'bù', 'zhuāng'],
-      en: 'You think I do not pretend?',
-      speaker: 'dingman',
-      position: 'bottom',
-      layout: { tailOffsetPct: 48, maxWidth: 'min(80vw, 22rem)' },
+    action: {
+      description: 'A small pause hangs between 丁漫’s probe and 守成’s answer.',
     },
   },
   {
     id: 'p11',
-    imageUrl: ASSET(5),
+    placeholder: { tone: 'dark' },
     widthType: 'full-width',
     heightClass: 'tall',
     aspectRatio: '9:16',
@@ -406,7 +401,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
   },
   {
     id: 'p12',
-    imageUrl: ASSET(0),
+    placeholder: { tone: 'dark' },
     widthType: 'full-bleed',
     heightClass: 'short',
     aspectRatio: '16:9',
@@ -417,17 +412,27 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
       dark: { gradient: [DARK_VOID, DARK_ROOM] },
     },
     transition: 'darken',
-    bubble: {
-      zh: '——',
-      en: 'The phone rings.',
-      speaker: 'narrator',
-      position: 'center-bottom',
-      layout: { tailOffsetPct: 50, maxWidth: 'min(44vw, 10rem)' },
+    action: {
+      description: 'A phone vibrates on the table, goes quiet, then starts again before either person moves.',
     },
+    sfx: [
+      {
+        text: '嗡——',
+        position: 'center-right',
+        tone: 'phone',
+        ariaLabel: 'Phone vibrating',
+      },
+      {
+        text: '嗡',
+        position: 'bottom-left',
+        tone: 'phone',
+        ariaLabel: 'Phone vibrating again',
+      },
+    ],
   },
   {
     id: 'p13',
-    imageUrl: ASSET(4),
+    placeholder: { tone: 'dark' },
     widthType: 'inset',
     heightClass: 'standard',
     aspectRatio: '3:4',
@@ -462,7 +467,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
   },
   {
     id: 'p14',
-    imageUrl: ASSET(5),
+    placeholder: { tone: 'dark' },
     widthType: 'inset',
     heightClass: 'standard',
     aspectRatio: '9:16',
@@ -497,7 +502,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
   },
   {
     id: 'p15',
-    imageUrl: ASSET(6),
+    placeholder: { tone: 'dark' },
     widthType: 'full-width',
     heightClass: 'standard',
     aspectRatio: '3:4',
@@ -522,9 +527,9 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     },
     transition: 'cut',
     bubble: {
-      zh: '响三次了。很重要。',
-      py: ['Xiǎng', 'sān', 'cì', 'le', 'hěn', 'zhòng', 'yào'],
-      en: 'It has rung three times. It is important.',
+      zh: '都响三次了，还说不重要？',
+      py: ['Dōu', 'xiǎng', 'sān', 'cì', 'le', 'hái', 'shuō', 'bù', 'zhòng', 'yào'],
+      en: 'It has rung three times and you still say it is not important?',
       speaker: 'dingman',
       position: 'bottom',
       layout: { tailOffsetPct: 50, maxWidth: 'min(84vw, 24rem)' },
@@ -532,7 +537,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
   },
   {
     id: 'p16',
-    imageUrl: ASSET(5),
+    placeholder: { tone: 'dark' },
     widthType: 'inset',
     heightClass: 'standard',
     aspectRatio: '9:16',
@@ -567,7 +572,7 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
   },
   {
     id: 'p17',
-    imageUrl: ASSET(3),
+    placeholder: { tone: 'dark' },
     widthType: 'full-bleed',
     heightClass: 'standard',
     aspectRatio: '16:9',
@@ -579,21 +584,21 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     },
     transition: 'cut',
     bubble: {
-      zh: '我先走。',
-      py: ['Wǒ', 'xiān', 'zǒu'],
-      en: 'I will go first.',
+      zh: '我先走一步，你好好想想。',
+      py: ['Wǒ', 'xiān', 'zǒu', 'yí', 'bù', 'nǐ', 'hǎo', 'hāo', 'xiǎng', 'xiang'],
+      en: 'I will go first. Think it over.',
       speaker: 'shoucheng',
       position: 'bottom',
-      layout: { tailOffsetPct: 52 },
+      layout: { tailOffsetPct: 52, maxWidth: 'min(86vw, 27rem)' },
     },
   },
   {
     id: 'p18',
-    imageUrl: ASSET(1),
+    placeholder: { tone: 'dark' },
     widthType: 'inset',
     heightClass: 'short',
     aspectRatio: '3:4',
-    shotType: 'cash-left',
+    shotType: 'qr-payment-overpay',
     gapBefore: {
       px: 120,
       color: DARK_WARM,
@@ -613,10 +618,27 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
       darkBackdropColor: DARK_WARM,
     },
     transition: 'cut',
+    action: {
+      description: 'Shoucheng pays by QR code and enters too much before leaving.',
+    },
+    sfx: [
+      {
+        text: '滴',
+        position: 'center-right',
+        tone: 'payment',
+        ariaLabel: 'QR payment chime',
+      },
+      {
+        text: '已付款',
+        position: 'bottom-right',
+        tone: 'payment',
+        ariaLabel: 'Payment completed',
+      },
+    ],
   },
   {
     id: 'p19',
-    imageUrl: ASSET(0),
+    placeholder: { tone: 'dark' },
     widthType: 'full-width',
     heightClass: 'standard',
     aspectRatio: '16:9',
@@ -651,11 +673,11 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
   },
   {
     id: 'p20',
-    imageUrl: ASSET(2),
+    placeholder: { tone: 'dark' },
     widthType: 'inset',
     heightClass: 'tall',
     aspectRatio: '9:16',
-    shotType: 'empty-seat-after',
+    shotType: 'family-register-reveal',
     gapBefore: {
       px: 260,
       gradient: [SUNSET_FIELD_DARK, DARK_VOID],
@@ -676,6 +698,14 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
     },
     transition: 'darken',
     isThumbStop: true,
+    bubble: {
+      zh: '瞿家的小儿子……',
+      py: ['Qú', 'jiā', 'de', 'xiǎo', 'ér', 'zi'],
+      en: 'The younger son of the Qu family...',
+      speaker: 'ayi',
+      position: 'bottom',
+      layout: { tailOffsetPct: 50, maxWidth: 'min(82vw, 23rem)' },
+    },
   },
 ];
 

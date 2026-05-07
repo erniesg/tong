@@ -23,6 +23,10 @@ function detectTtsLang(text: string): string {
   return 'ko-KR';
 }
 
+function hasTargetScript(text: string): boolean {
+  return /[\uAC00-\uD7AF\u3131-\u318E\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]/.test(text);
+}
+
 interface Props {
   exercise: PronunciationSelectExercise;
   onResult: (correct: boolean, summary?: string) => void;
@@ -37,13 +41,20 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
   // Guard: if AI didn't provide audioOptions, auto-generate from targetText
   if (!exercise.audioOptions || exercise.audioOptions.length === 0) {
     const target = exercise.targetText || '하';
+    const isChineseTarget = /[\u4E00-\u9FFF]/.test(target);
     exercise = {
       ...exercise,
-      audioOptions: [
-        { id: 'correct', label: target, romanization: '', meaning: '' },
-        { id: 'wrong1', label: target === '하' ? '가' : '하', romanization: '', meaning: '' },
-        { id: 'wrong2', label: target === '은' ? '운' : '은', romanization: '', meaning: '' },
-      ].sort(() => Math.random() - 0.5),
+      audioOptions: isChineseTarget
+        ? [
+          { id: 'correct', label: target, ttsText: target, romanization: '', meaning: '' },
+          { id: 'wrong1', label: target === '想法' ? '方案' : '想法', ttsText: target === '想法' ? '方案' : '想法', romanization: '', meaning: '' },
+          { id: 'wrong2', label: target === '小笼包' ? '不一样' : '小笼包', ttsText: target === '小笼包' ? '不一样' : '小笼包', romanization: '', meaning: '' },
+        ].sort(() => Math.random() - 0.5)
+        : [
+          { id: 'correct', label: target, romanization: '', meaning: '' },
+          { id: 'wrong1', label: target === '하' ? '가' : '하', romanization: '', meaning: '' },
+          { id: 'wrong2', label: target === '은' ? '운' : '은', romanization: '', meaning: '' },
+        ].sort(() => Math.random() - 0.5),
       correctOptionId: 'correct',
     };
   }
@@ -55,7 +66,7 @@ export function PronunciationSelect({ exercise, onResult }: Props) {
     const utterText = ttsText || JAMO_TO_TTS[text] || text;
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       const utter = new SpeechSynthesisUtterance(utterText);
-      utter.lang = detectTtsLang(utterText);
+      utter.lang = hasTargetScript(text) ? detectTtsLang(text) : detectTtsLang(utterText);
       utter.rate = 0.8;
       if (optId) setPlaying(optId);
       utter.onend = () => setPlaying(null);

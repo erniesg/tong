@@ -91,6 +91,13 @@ const PINYIN_MAP: Record<string, string> = {
   '手': 'shǒu', '脚': 'jiǎo', '眼': 'yǎn', '耳': 'ěr', '嘴': 'zuǐ',
   '脸': 'liǎn', '心': 'xīn',
   '练': 'liàn', '习': 'xí',
+  // Shanghai H1 onboarding
+  '方': 'fāng', '案': 'àn', '法': 'fǎ', '节': 'jié', '目': 'mù',
+  '自': 'zì', '己': 'jǐ', '需': 'xū', '配': 'pèi', '合': 'hé',
+  '演': 'yǎn', '愿': 'yuàn', '假': 'jiǎ', '话': 'huà', '接': 'jiē', '重': 'zhòng',
+  '瞿': 'Qú', '响': 'xiǎng', '次': 'cì',
+  '付': 'fù', '款': 'kuǎn', '证': 'zhèng',
+  '犟': 'jiàng', '事': 'shì',
 };
 
 /**
@@ -219,6 +226,35 @@ const DICTIONARY: Record<string, DictionaryEntry> = {
   '小笼包': { romanization: 'xiǎo-lóng bāo', translation: 'soup dumplings' },
   '地铁': { romanization: 'dì-tiě', translation: 'subway / metro' },
   '烧烤': { romanization: 'shāo-kǎo', translation: 'BBQ / grill' },
+  '方案': { romanization: 'fāng-àn', translation: 'proposal / plan' },
+  '看过了': { romanization: 'kàn guò le', translation: 'have looked it over already' },
+  '吃过了': { romanization: 'chī guò le', translation: 'already ate' },
+  '听过了': { romanization: 'tīng guò le', translation: 'already heard it' },
+  '想法': { romanization: 'xiǎng-fǎ', translation: 'thoughts / take' },
+  '节目': { romanization: 'jié-mù', translation: 'show / program' },
+  '每个': { romanization: 'měi ge', translation: 'every' },
+  '自己': { romanization: 'zì jǐ', translation: 'self' },
+  '不一样': { romanization: 'bù yí yàng', translation: 'different' },
+  '不装': { romanization: 'bù zhuāng', translation: 'does not put on an act' },
+  '装不下去': { romanization: 'zhuāng bu xià qù', translation: 'cannot keep pretending' },
+  '演不下去': { romanization: 'yǎn bu xià qù', translation: 'cannot keep performing' },
+  '说不下去': { romanization: 'shuō bu xià qù', translation: 'cannot keep saying it' },
+  '吃不下去': { romanization: 'chī bu xià qù', translation: 'cannot keep eating' },
+  '不会': { romanization: 'bù huì', translation: 'cannot' },
+  '不愿意': { romanization: 'bù yuàn yì', translation: 'will not / is unwilling' },
+  '说假话': { romanization: 'shuō jiǎ huà', translation: 'tell lies' },
+  '不会说假话': { romanization: 'bù huì shuō jiǎ huà', translation: 'cannot lie' },
+  '不愿意说假话': { romanization: 'bù yuàn yì shuō jiǎ huà', translation: 'will not lie' },
+  '你接吧': { romanization: 'nǐ jiē ba', translation: 'answer it' },
+  '不重要': { romanization: 'bù zhòng yào', translation: 'not important' },
+  '我知道了': { romanization: 'wǒ zhī dào le', translation: 'I know / got it' },
+  '小瞿': { romanization: 'xiǎo Qú', translation: 'Little Qu; familiar address' },
+  '瞿先生': { romanization: 'Qú xiān sheng', translation: 'Mr. Qu' },
+  '瞿家': { romanization: 'Qú jiā', translation: 'the Qu family' },
+  '小儿子': { romanization: 'xiǎo ér zi', translation: 'younger son' },
+  '犟': { romanization: 'jiàng', translation: 'stubborn in a hard, proud way' },
+  '本事': { romanization: 'běn shi', translation: 'real ability' },
+  '证明': { romanization: 'zhèng míng', translation: 'prove' },
   '我是谁': { romanization: 'wǒ shì shéi', translation: 'who am I' },
   '在哪': { romanization: 'zài nǎ', translation: 'where' },
   '这里': { romanization: 'zhè-lǐ', translation: 'here' },
@@ -335,9 +371,54 @@ function isTargetChar(char: string, targetLang: TargetLang): boolean {
 
 /* ── Text segmentation ─────────────────────────────────────── */
 
+function segmentChineseRun(run: string): { text: string; isTarget: boolean }[] {
+  const segments: { text: string; isTarget: boolean }[] = [];
+  let index = 0;
+  while (index < run.length) {
+    let matched = '';
+    const maxLen = Math.min(6, run.length - index);
+    for (let len = maxLen; len > 1; len -= 1) {
+      const candidate = run.slice(index, index + len);
+      if (DICTIONARY[candidate]) {
+        matched = candidate;
+        break;
+      }
+    }
+    if (matched) {
+      segments.push({ text: matched, isTarget: true });
+      index += matched.length;
+    } else {
+      segments.push({ text: run[index], isTarget: true });
+      index += 1;
+    }
+  }
+  return segments;
+}
+
 function segmentText(text: string, targetLang: TargetLang): { text: string; isTarget: boolean }[] {
   if (!text) return [];
   const segments: { text: string; isTarget: boolean }[] = [];
+
+  if (targetLang === 'zh') {
+    let index = 0;
+    while (index < text.length) {
+      const char = text[index];
+      if (isTargetChar(char, targetLang)) {
+        let end = index + 1;
+        while (end < text.length && isTargetChar(text[end], targetLang)) end += 1;
+        segments.push(...segmentChineseRun(text.slice(index, end)));
+        index = end;
+        continue;
+      }
+
+      let end = index + 1;
+      while (end < text.length && !isTargetChar(text[end], targetLang)) end += 1;
+      segments.push({ text: text.slice(index, end), isTarget: false });
+      index = end;
+    }
+    return segments;
+  }
+
   let current = '';
   let currentIsTarget = false;
 

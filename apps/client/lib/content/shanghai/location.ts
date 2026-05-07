@@ -108,8 +108,8 @@ const LEVEL_2_OBJECTIVES: LearningObjective[] = [
     id: 'zh-vocab-shanghai-food-deflection',
     levelNumber: 2,
     category: 'vocabulary',
-    title: 'Recognize food as deflection',
-    description: 'Treat 小笼包 and 蟹壳黄 as what Dingman uses to dodge the proposal, not as the main lesson.',
+    title: 'Recognize the shop food words',
+    description: 'Use 小笼包 and 蟹壳黄 as food/shop anchors in the lunch scene, not as the main lesson.',
     targetItems: ['小笼包', '蟹壳黄'],
     targetCount: 2,
     assessmentThreshold: 0.8,
@@ -307,7 +307,7 @@ export const SHANGHAI_XIAOLONGBAO: Location = {
     {
       level: 3,
       name: 'GRAMMAR',
-      description: 'Can I unpack the grammar that makes the subtext land?',
+      description: 'Can I unpack the grammar that makes compact speech readable?',
       objectives: LEVEL_3_OBJECTIVES,
       estimatedSessionMinutes: 18,
       assessmentCriteria: {

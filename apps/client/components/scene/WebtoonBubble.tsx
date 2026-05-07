@@ -3,6 +3,7 @@
 import { createPortal } from 'react-dom';
 import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import type { WebtoonBubble as WebtoonBubbleSpec } from '@/lib/hangout/fixture-types';
+import { KoreanText } from '@/components/shared/KoreanText';
 
 interface WebtoonBubbleProps extends WebtoonBubbleSpec {
   reveal?: { kind: 'free' } | { kind: 'credits'; cost: number } | { kind: 'gamePass' };
@@ -134,10 +135,8 @@ export function WebtoonBubble({
   const overlayRef = useRef<HTMLDivElement>(null);
   const bubble = { zh, py, en, speaker, position, layout };
   const speakerLabel = SPEAKER_LABELS[speaker] ?? speaker;
-  const hasHelp = Boolean((py && py.length) || en);
-  const unlocked = reveal.kind === 'free';
-  const interactive = hasHelp && unlocked;
-  const expanded = interactive && (showHelp || isOpen);
+  const interactive = false;
+  const expanded = false;
   const segments = buildSegments(zh, py);
   const baseStyle = bubbleStyle(bubble);
 
@@ -240,15 +239,11 @@ export function WebtoonBubble({
     };
   }, [expanded, syncAnchorTop, syncOutsideReserve, syncOverlayPosition]);
 
-  const helpSuffix = !hasHelp
-    ? ''
-    : expanded
-      ? '. Translation help is open.'
-      : unlocked
-        ? '. Tap to reveal translation help.'
-        : reveal.kind === 'credits'
-          ? `. Help unlocks for ${reveal.cost} credits.`
-          : '. Help unlocks with Game Pass.';
+  const helpSuffix = reveal.kind === 'free'
+    ? '. Tap Chinese text for sound and word help.'
+    : reveal.kind === 'credits'
+      ? `. Word help unlocks for ${reveal.cost} credits.`
+      : '. Word help unlocks with Game Pass.';
 
   const overlay = expanded && typeof document !== 'undefined'
     ? createPortal(
@@ -320,7 +315,9 @@ export function WebtoonBubble({
           setIsOpen((prev) => !prev);
         }}
       >
-        <span className="wt-bubble__text">{zh}</span>
+        <span className="wt-bubble__text">
+          <KoreanText text={zh} targetLang="zh" interactive />
+        </span>
       </div>
       {overlay}
     </>

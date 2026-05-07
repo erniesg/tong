@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils/cn';
 import type { MatchingExercise } from '@/lib/types/hangout';
 import { useUILang } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
+import { KoreanText, type TargetLang } from '@/components/shared/KoreanText';
 
 /** Map bare jamo to their full names for TTS — more distinguishable. */
 const JAMO_TO_TTS: Record<string, string> = {
@@ -20,6 +21,18 @@ function detectTtsLang(text: string): string {
   if (/[\u4E00-\u9FFF]/.test(text)) return 'zh-CN';
   if (/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) return 'ja-JP';
   return 'ko-KR';
+}
+
+function inferTargetLang(objectiveId: string, text: string): TargetLang {
+  if (objectiveId.includes('zh') || objectiveId.includes('shanghai')) return 'zh';
+  if (objectiveId.includes('ja') || objectiveId.includes('tokyo')) return 'ja';
+  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) return 'ja';
+  if (/[\u4E00-\u9FFF]/.test(text) && !/[\uAC00-\uD7AF\u3131-\u318E]/.test(text)) return 'zh';
+  return 'ko';
+}
+
+function hasTargetScript(text: string): boolean {
+  return /[\uAC00-\uD7AF\u3131-\u318E\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]/.test(text);
 }
 
 interface Props {
@@ -67,7 +80,7 @@ export function Matching({ exercise, onResult }: Props) {
     const ttsText = JAMO_TO_TTS[text] || text;
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(ttsText);
-    utter.lang = detectTtsLang(ttsText);
+    utter.lang = detectTtsLang(hasTargetScript(text) ? text : ttsText);
     utter.rate = 0.8;
     setPlaying(idx);
     utter.onend = () => setPlaying(null);
@@ -210,7 +223,11 @@ export function Matching({ exercise, onResult }: Props) {
               )}
             >
               <span className="text-ko text-[length:var(--game-text-base)] text-white font-medium min-w-[80px]">
-                {pair.left}
+                <KoreanText
+                  text={pair.left}
+                  targetLang={inferTargetLang(exercise.objectiveId, pair.left)}
+                  interactive
+                />
               </span>
               <div className={cn(
                 'flex-1 rounded border border-dashed px-3 py-2 text-center min-h-[36px] flex items-center justify-center',

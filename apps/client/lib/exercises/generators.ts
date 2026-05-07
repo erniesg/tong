@@ -61,6 +61,10 @@ function stableId(type: string, objectiveId: string, items: string[]): string {
   return `ex-${type}-${(hash >>> 0).toString(36)}`;
 }
 
+function hasChineseScript(text: string): boolean {
+  return /[\u4E00-\u9FFF]/.test(text);
+}
+
 /* ── Generic item type used across all data pools ─────────── */
 
 interface VocabItem {
@@ -150,6 +154,65 @@ const CHINESE_RADICALS: VocabItem[] = [
   { word: '金', translation: 'gold/metal', romanization: 'jīn' },
   { word: '雨', translation: 'rain', romanization: 'yǔ' },
 ];
+
+const SHANGHAI_H1_CHUNKS: VocabItem[] = [
+  { word: '方案', translation: 'proposal', romanization: "fāng'àn" },
+  { word: '看过了', translation: 'looked it over already', romanization: 'kàn guo le' },
+  { word: '吃过了', translation: 'already ate', romanization: 'chī guo le' },
+  { word: '听过了', translation: 'already heard it', romanization: 'tīng guo le' },
+  { word: '想法', translation: 'thoughts; take', romanization: 'xiǎng fǎ' },
+  { word: '小笼包', translation: 'soup dumpling', romanization: 'xiǎo lóng bāo' },
+  { word: '不一样', translation: 'different', romanization: 'bù yíyàng' },
+  { word: '不装', translation: 'does not pretend', romanization: 'bù zhuāng' },
+  { word: '装不下去', translation: 'cannot keep pretending', romanization: 'zhuāng bu xiàqu' },
+  { word: '演不下去', translation: 'cannot keep performing', romanization: 'yǎn bu xiàqu' },
+  { word: '说不下去', translation: 'cannot keep saying it', romanization: 'shuō bu xiàqu' },
+  { word: '吃不下去', translation: 'cannot keep eating', romanization: 'chī bu xiàqu' },
+  { word: '不会', translation: 'cannot', romanization: 'bú huì' },
+  { word: '不愿意', translation: 'will not; is unwilling', romanization: 'bú yuànyì' },
+  { word: '不会说假话', translation: 'cannot lie', romanization: 'bú huì shuō jiǎhuà' },
+  { word: '不愿意说假话', translation: 'will not lie', romanization: 'bú yuànyì shuō jiǎhuà' },
+  { word: '你接吧', translation: 'you should answer it', romanization: 'nǐ jiē ba' },
+  { word: '不重要', translation: 'not important', romanization: 'bú zhòngyào' },
+  { word: '我知道了', translation: 'I know; understood', romanization: 'wǒ zhīdào le' },
+  { word: '小瞿', translation: 'little Qu; familiar address', romanization: 'xiǎo qú' },
+  { word: '瞿先生', translation: 'Mr. Qu', romanization: 'qú xiānsheng' },
+  { word: '瞿家', translation: 'the Qu family', romanization: 'qú jiā' },
+  { word: '小儿子', translation: 'younger son', romanization: 'xiǎo érzi' },
+  { word: '犟', translation: 'stubborn in a hard, proud way', romanization: 'jiàng' },
+  { word: '本事', translation: 'real ability', romanization: 'běnshi' },
+  { word: '证明', translation: 'prove', romanization: 'zhèngmíng' },
+];
+
+function isShanghaiObjective(objectiveId: string, language: 'ko' | 'zh' | 'ja'): boolean {
+  return language === 'zh' && (objectiveId.includes('shanghai') || objectiveId === 'zh-pronunciation-tone-pairs');
+}
+
+function shanghaiChunk(word: string): VocabItem {
+  return SHANGHAI_H1_CHUNKS.find((item) => item.word === word)
+    ?? { word, translation: word, romanization: word };
+}
+
+function shanghaiChunkOptions(target: string, distractors: string[], count = 3): VocabItem[] {
+  const targetItem = shanghaiChunk(target);
+  const rest = distractors
+    .filter((word) => word !== target)
+    .map(shanghaiChunk);
+  return shuffle([targetItem, ...rest]).slice(0, count);
+}
+
+function shanghaiTargetFromHints(
+  objectiveId: string,
+  hintItems?: string[],
+): VocabItem {
+  const hinted = hintItems?.map(shanghaiChunk).find((item) => item.word && item.translation !== item.word);
+  if (hinted) return hinted;
+  if (objectiveId.includes('buxiaqu')) return shanghaiChunk('装不下去');
+  if (objectiveId.includes('buhui') || objectiveId.includes('buyuanyi')) return shanghaiChunk('不愿意');
+  if (objectiveId.includes('register') || objectiveId.includes('ni-register')) return shanghaiChunk('小瞿');
+  if (objectiveId.includes('le-aspect')) return shanghaiChunk('看过了');
+  return shanghaiChunk('想法');
+}
 
 /* ── Vocab pools derived from location content ────────────── */
 
@@ -677,6 +740,30 @@ function generatePronunciationSelect(
   // Check if hintItems contain multi-character words (name/word mode)
   const wordHint = hintItems?.find((h) => h.length > 1);
 
+  if (wordHint && hasChineseScript(wordHint)) {
+    const target = shanghaiChunk(wordHint);
+    const fallbackDistractors = ['想法', '方案', '小笼包', '不一样', '装不下去', '小瞿'];
+    const options = shanghaiChunkOptions(target.word, fallbackDistractors, 3);
+
+    return {
+      type: 'pronunciation_select',
+      id: stableId('ps', objectiveId, [target.word]),
+      objectiveId,
+      difficulty: 1,
+      prompt: 'Listen and pick the matching Mandarin chunk.',
+      targetText: target.word,
+      audioOptions: options.map((item) => ({
+        id: item.word,
+        label: item.word,
+        ttsText: item.word,
+        romanization: item.romanization,
+        meaning: item.translation,
+      })),
+      correctOptionId: target.word,
+      explanation: `${target.word} = ${target.translation}`,
+    };
+  }
+
   if (wordHint) {
     // Word/name mode: show the word, play 3 different pronunciations
     const distractorWords = generateWordDistractors(wordHint, 2);
@@ -732,6 +819,195 @@ function generatePronunciationSelect(
     audioOptions: allOptions,
     correctOptionId: 'correct',
     explanation: `${target.char} (${target.romanization}) = "${target.sound}"`,
+  };
+}
+
+function generateShanghaiMatching(
+  objectiveId: string,
+  count: number,
+  hintItems?: string[],
+): MatchingExercise {
+  let pairs: MatchingExercise['pairs'];
+
+  if (objectiveId.includes('le-aspect')) {
+    pairs = [
+      { left: '看过了', right: 'looked it over already' },
+      { left: '吃过了', right: 'already ate' },
+      { left: '听过了', right: 'already heard it' },
+    ];
+  } else if (objectiveId.includes('buxiaqu')) {
+    pairs = [
+      { left: '装不下去', right: 'cannot keep pretending' },
+      { left: '演不下去', right: 'cannot keep performing' },
+      { left: '说不下去', right: 'cannot keep saying it' },
+      { left: '吃不下去', right: 'cannot keep eating' },
+    ];
+  } else if (objectiveId.includes('buhui') || objectiveId.includes('buyuanyi')) {
+    pairs = [
+      { left: '不会', right: 'cannot' },
+      { left: '不愿意', right: 'will not' },
+      { left: '不会说假话', right: 'cannot lie' },
+      { left: '不愿意说假话', right: 'will not lie' },
+    ];
+  } else if (objectiveId.includes('register') || objectiveId.includes('ni-register')) {
+    pairs = [
+      { left: '小瞿', right: 'familiar address for Qu' },
+      { left: '瞿先生', right: 'Mr. Qu' },
+      { left: '瞿家', right: 'the Qu family' },
+      { left: '小儿子', right: 'younger son' },
+    ];
+  } else {
+    const hinted = hintItems?.length
+      ? hintItems.map(shanghaiChunk)
+      : ['想法', '方案', '小笼包', '不一样'].map(shanghaiChunk);
+    pairs = hinted.map((item) => ({ left: item.word, right: item.translation }));
+  }
+
+  const sliced = pairs.slice(0, Math.min(count, pairs.length));
+
+  return {
+    type: 'matching',
+    id: stableId('matching', objectiveId, sliced.map((pair) => pair.left)),
+    objectiveId,
+    difficulty: objectiveId.includes('buxiaqu') || objectiveId.includes('buhui') ? 2 : 1,
+    prompt: objectiveId.includes('buxiaqu')
+      ? 'Match each V不下去 phrase with its meaning.'
+      : objectiveId.includes('le-aspect')
+        ? 'Match each 过了 phrase with its meaning.'
+        : objectiveId.includes('register') || objectiveId.includes('ni-register')
+          ? 'Match each address cue with its meaning.'
+          : 'Match each Mandarin chunk with its meaning.',
+    pairs: sliced,
+  };
+}
+
+function generateShanghaiPronunciationSelect(
+  objectiveId: string,
+  hintItems?: string[],
+): PronunciationSelectExercise {
+  const target = shanghaiTargetFromHints(objectiveId, hintItems);
+  const distractorsByTarget: Record<string, string[]> = {
+    '想法': ['方案', '小笼包'],
+    '方案': ['想法', '小笼包'],
+    '装不下去': ['不装', '演不下去'],
+    '不愿意': ['不会', '不会说假话'],
+    '不会说假话': ['不愿意说假话', '不会'],
+    '小瞿': ['瞿先生', '小儿子'],
+  };
+  const fallbackDistractors = ['想法', '方案', '小笼包', '不一样', '装不下去', '小瞿'];
+  const options = shanghaiChunkOptions(
+    target.word,
+    distractorsByTarget[target.word] ?? fallbackDistractors,
+    3,
+  );
+
+  return {
+    type: 'pronunciation_select',
+    id: stableId('ps', objectiveId, [target.word]),
+    objectiveId,
+    difficulty: 1,
+    prompt: target.word === '想法'
+      ? 'Which sound is the short question for someone’s take?'
+      : 'Listen and pick the matching Mandarin chunk.',
+    targetText: target.word,
+    audioOptions: options.map((item) => ({
+      id: item.word,
+      label: item.word,
+      ttsText: item.word,
+      romanization: item.romanization,
+      meaning: item.translation,
+    })),
+    correctOptionId: target.word,
+    explanation: `${target.word} = ${target.translation}`,
+  };
+}
+
+function generateShanghaiFillBlank(
+  objectiveId: string,
+): FillBlankExercise {
+  let pattern = {
+    prompt: 'Choose the chunk that fits.',
+    sentence: '你 ___ 。',
+    correct: '看过了',
+    distractors: ['看了', '看', '方案'],
+    grammarNote: '过了 gives the action an already-done feel.',
+    difficulty: 1,
+  };
+
+  if (objectiveId.includes('buxiaqu')) {
+    pattern = {
+      prompt: 'Choose the keep-going pattern.',
+      sentence: '我觉得你 ___ 。',
+      correct: '装不下去',
+      distractors: ['不装', '装', '不一样'],
+      grammarNote: 'V不下去 means the action cannot keep going.',
+      difficulty: 2,
+    };
+  } else if (objectiveId.includes('buhui') || objectiveId.includes('buyuanyi')) {
+    pattern = {
+      prompt: 'Choose the willingness phrase.',
+      sentence: '我觉得你不 ___ 。',
+      correct: '愿意',
+      distractors: ['会', '一样', '下去'],
+      grammarNote: '不愿意 points to willingness, not ability.',
+      difficulty: 2,
+    };
+  } else if (objectiveId.includes('register') || objectiveId.includes('ni-register')) {
+    pattern = {
+      prompt: 'Put 方阿姨’s familiar address back.',
+      sentence: '___ 你又多给了！',
+      correct: '小瞿',
+      distractors: ['瞿先生', '方案', '小儿子'],
+      grammarNote: '小 + surname can be familiar address from someone older.',
+      difficulty: 1,
+    };
+  }
+
+  return {
+    type: 'fill_blank',
+    id: stableId('fb', objectiveId, [pattern.sentence, pattern.correct]),
+    objectiveId,
+    difficulty: pattern.difficulty,
+    prompt: pattern.prompt,
+    sentence: pattern.sentence,
+    blankIndex: 1,
+    options: shuffle([
+      { id: 'correct', text: pattern.correct },
+      ...pattern.distractors.map((text, index) => ({ id: `d${index}`, text })),
+    ]),
+    correctOptionId: 'correct',
+    grammarNote: pattern.grammarNote,
+    explanation: pattern.sentence.replace('___', pattern.correct),
+  };
+}
+
+function generateShanghaiSentenceBuilder(
+  objectiveId: string,
+): SentenceBuilderExercise {
+  const pattern = objectiveId.includes('buhui') || objectiveId.includes('buyuanyi')
+    ? {
+      order: ['我', '觉得', '你', '不愿意'],
+      distractors: ['不会', '不一样'],
+      gloss: 'I think you are unwilling.',
+      note: 'Practice the willingness pattern, not line recall.',
+    }
+    : {
+      order: ['我', '觉得', '你', '装不下去'],
+      distractors: ['不装', '不一样'],
+      gloss: 'I think you cannot keep pretending.',
+      note: 'Practice the V不下去 keep-going pattern, not line recall.',
+    };
+
+  return {
+    type: 'sentence_builder',
+    id: stableId('sb', objectiveId, pattern.order),
+    objectiveId,
+    difficulty: 2,
+    prompt: `Build the Mandarin pattern: ${pattern.gloss}`,
+    wordTiles: shuffle([...pattern.order, ...pattern.distractors]),
+    correctOrder: pattern.order,
+    distractors: pattern.distractors,
+    explanation: pattern.note,
   };
 }
 
@@ -1005,6 +1281,21 @@ export function generateExercise(exerciseType: string, hints?: ExerciseHints): E
   // Language-aware pool selection
   const pool = getPoolForLocation(language, hints?.cityId, hints?.locationId, objectiveId);
 
+  if (isShanghaiObjective(objectiveId, language)) {
+    switch (exerciseType) {
+      case 'matching':
+        return generateShanghaiMatching(objectiveId, count ?? 4, hintItems);
+      case 'pronunciation_select':
+        return generateShanghaiPronunciationSelect(objectiveId, hintItems);
+      case 'fill_blank':
+        return generateShanghaiFillBlank(objectiveId);
+      case 'sentence_builder':
+        return generateShanghaiSentenceBuilder(objectiveId);
+      default:
+        break;
+    }
+  }
+
   switch (exerciseType) {
     case 'matching':
       return generateMatching(pool, objectiveId, count ?? 5, hintItems, hintSubType, mastery, explainIn);
@@ -1017,6 +1308,7 @@ export function generateExercise(exerciseType: string, hints?: ExerciseHints): E
     case 'fill_blank':
       return generateFillBlank(pool, objectiveId, hintItems, explainIn);
     case 'pronunciation_select':
+      if (language === 'zh') return generateShanghaiPronunciationSelect(objectiveId, hintItems);
       return generatePronunciationSelect(pool, objectiveId, hintItems, explainIn);
     case 'pattern_recognition':
       return generatePatternRecognition(objectiveId, language, explainIn);

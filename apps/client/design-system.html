@@ -1937,11 +1937,13 @@ button.nav-link:hover {
 
 /* ── Exercise card ────────────────────────────────────────── */
 .exercise-card {
-  background: rgb(22, 33, 62);
+  background: linear-gradient(180deg, rgba(22, 33, 62, 0.98), rgba(14, 23, 46, 0.98));
+  border: 1px solid rgba(240, 192, 64, 0.18);
   border-radius: 16px;
   color: var(--color-text);
   font-size: var(--game-text-base);
   line-height: 1.5;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
   touch-action: none;
   overscroll-behavior: contain;
 }
@@ -1967,12 +1969,17 @@ button.nav-link:hover {
 
 /* ── Tong whisper overlay ─────────────────────────────────── */
 .tong-whisper {
+  left: 12px;
+  right: 12px;
+  max-width: calc(100% - 24px);
+  box-sizing: border-box;
   background: rgba(15, 20, 40, 0.88);
   border: 1px solid rgba(240, 192, 64, 0.4);
   border-radius: 14px;
   backdrop-filter: blur(16px);
   cursor: pointer;
   color: #eef2ff;
+  overflow: hidden;
 }
 
 .tong-whisper__label {
@@ -1981,6 +1988,8 @@ button.nav-link:hover {
 
 .tong-whisper__body {
   color: rgba(240, 244, 255, 0.92);
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
 }
 
 .tong-whisper__translation {
@@ -3091,8 +3100,8 @@ button.nav-link:hover {
   background: transparent;
   border-radius: 0;
   padding: 0;
-  width: 100%;
-  max-width: none;
+  width: min(calc(100% - 24px), 430px);
+  max-width: 430px;
   max-height: 85vh;
   overflow-y: auto;
   animation: slideUp 0.3s ease-out;
@@ -3280,7 +3289,8 @@ button.nav-link:hover {
   gap: 6px;
   min-height: 44px;
   padding: 8px;
-  border: 2px dashed rgba(0, 0, 0, 0.15);
+  border: 2px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 12px;
   margin-bottom: 10px;
 }
@@ -3303,8 +3313,9 @@ button.nav-link:hover {
 }
 
 .sentence-builder__tile--answer {
-  background: rgba(0, 0, 0, 0.08);
-  color: var(--msg-npc-text, #1a1a1a);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(240, 192, 64, 0.34);
+  color: #fff8ee;
 }
 
 /* ── Fill-blank exercise ────────────────────────────────────── */
@@ -3335,9 +3346,9 @@ button.nav-link:hover {
   margin-top: 10px;
   padding: 8px;
   border-radius: 8px;
-  background: var(--msg-teaching-bg, #fff9e6);
+  background: rgba(240, 192, 64, 0.12);
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.7);
+  color: rgba(255, 248, 238, 0.82);
 }
 
 /* ── Pronunciation select exercise ──────────────────────────── */
@@ -3360,8 +3371,9 @@ button.nav-link:hover {
   gap: 10px;
   padding: 10px 14px;
   border-radius: 12px;
-  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
   background: transparent;
+  color: var(--color-text);
   cursor: pointer;
   transition: all 0.15s;
   font-size: 14px;
