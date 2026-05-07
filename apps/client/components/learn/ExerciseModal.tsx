@@ -9,9 +9,10 @@ interface ExerciseModalProps {
   exercise: ExerciseData;
   onResult: (exerciseId: string, correct: boolean, summary?: string) => void;
   readOnly?: boolean;
+  onClose?: () => void;
 }
 
-export function ExerciseModal({ exercise, onResult, readOnly }: ExerciseModalProps) {
+export function ExerciseModal({ exercise, onResult, readOnly, onClose }: ExerciseModalProps) {
   const [dismissing, setDismissing] = useState(false);
   const [resultDone, setResultDone] = useState(false);
 
@@ -30,6 +31,12 @@ export function ExerciseModal({ exercise, onResult, readOnly }: ExerciseModalPro
     [exercise.id, onResult, readOnly, resultDone],
   );
 
+  const handleClose = useCallback(() => {
+    if (!onClose || resultDone || dismissing) return;
+    setDismissing(true);
+    setTimeout(onClose, 240);
+  }, [dismissing, onClose, resultDone]);
+
   // Prevent body scroll while modal is open
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -45,6 +52,19 @@ export function ExerciseModal({ exercise, onResult, readOnly }: ExerciseModalPro
       <div
         className={`exercise-modal-content ${dismissing ? 'exercise-modal-content--dismissing' : ''}`}
       >
+        {onClose && !resultDone && (
+          <button
+            className="exercise-dismiss-btn"
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              handleClose();
+            }}
+            aria-label="Minimize exercise"
+          >
+            &#x25BE;
+          </button>
+        )}
         <ExerciseRenderer
           exercise={exercise}
           onResult={readOnly ? () => {} : handleResult}

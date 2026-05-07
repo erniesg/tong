@@ -116,7 +116,7 @@ async function answerMatching(page, pairs) {
       if (!(card instanceof HTMLElement)) throw new Error('Could not find exercise card');
 
       const buttons = Array.from(card.querySelectorAll('button'));
-      const wordButton = buttons.find((node) => node.textContent?.includes(right) && !node.textContent?.includes('Check'));
+      const wordButton = buttons.find((node) => node.textContent?.trim() === right);
       if (!(wordButton instanceof HTMLElement)) throw new Error(`Could not find matching option: ${right}`);
       wordButton.click();
     }, pair);
@@ -125,8 +125,11 @@ async function answerMatching(page, pairs) {
       const card = document.querySelector('.exercise-card');
       if (!(card instanceof HTMLElement)) throw new Error('Could not find exercise card');
 
-      const leftLabel = Array.from(card.querySelectorAll('span')).find((node) => node.textContent?.trim() === left);
-      const slot = leftLabel?.closest('div[class*="rounded-lg"][class*="border"]');
+      const rows = Array.from(card.querySelectorAll('div[class*="cursor-pointer"]'));
+      const slot = rows.find((node) => {
+        const label = node.querySelector('.text-ko');
+        return label?.textContent?.trim() === left;
+      });
       if (!(slot instanceof HTMLElement)) throw new Error(`Could not find matching slot: ${left}`);
       slot.click();
     }, pair);
@@ -306,29 +309,34 @@ async function run() {
 
     await clickTong(page);
     await clickTong(page);
-    await waitForText(page, 'Tap 想法 once and listen');
+    await waitForText(page, 'Tap 小 once and listen');
     const tappedIntroChunk = await page.evaluate(() => {
       const target = Array.from(document.querySelectorAll('.tong-whisper [data-korean]'))
-        .find((node) => node.textContent?.trim() === '想法');
+        .find((node) => node.textContent?.trim() === '小');
       if (!(target instanceof HTMLElement)) return null;
       target.click();
       return target.textContent;
     });
-    checks.introChunkTapped = tappedIntroChunk === '想法';
+    checks.introChunkTapped = tappedIntroChunk === '小';
     checks.introChunkTooltipVisible = Boolean(tappedIntroChunk) && await page.waitForSelector('.korean-tooltip', { visible: true, timeout: 5000 })
       .then(() => true)
       .catch(() => false);
     await recorder.cue('intro_chunk_tapped');
     await screenshot(page, '02-intro-chunk-tooltip.png', 'intro_chunk_tooltip', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Which sound is the short question');
+    await waitForText(page, 'Match each shop-sign character to its sound shape.');
     await screenshot(page, '03-anchor-before-exercise.png', 'pre_exercise_context', screenshots);
     await recorder.cue('exercise_opened');
     await screenshot(page, '04-anchor-exercise.png', 'anchor_exercise', screenshots);
 
-    await answerPronunciationFirstOption(page);
+    await answerMatching(page, [
+      { left: '包', right: 'bāo: first tone, high and level' },
+      { left: '笼', right: 'lóng: second tone, rising' },
+      { left: '小', right: 'xiǎo: third tone, dipping' },
+      { left: '店', right: 'diàn: fourth tone, falling' },
+    ]);
     await recorder.cue('exercise_answered');
-    await waitForText(page, 'Good. 想法 has a shape');
+    await waitForText(page, 'Good. The sign is not decoration now');
     await screenshot(page, '05-post-exercise.png', 'post_exercise_context', screenshots);
 
     await clickTong(page);
@@ -407,22 +415,32 @@ async function run() {
     await screenshot(page, '09-beat-1-bottom.png', 'beat_1_bottom', screenshots);
     checks.beat1ProposalLine = checks.beat1ProposalLine || await page.evaluate(() => document.body.innerText.includes('方案你看过了。'));
     checks.beat1FoodRedirect = checks.beat1FoodRedirect || await page.evaluate(() => document.body.innerText.includes('小笼包不错。'));
+    checks.beat1GenericCallout = await page.evaluate(() => document.body.innerText.includes('每个节目都说自己不一样。'));
+    checks.beat1ContinueVisible = await page.waitForFunction(
+      () => document.body.innerText.includes('Tap to continue') && !Boolean(document.querySelector('.tong-whisper')),
+      { timeout: 8000 },
+    )
+      .then(() => true)
+      .catch(() => false);
+    await recorder.cue('beat_1_continue_visible');
+    await screenshot(page, '10-beat-1-continue.png', 'beat_1_continue_gate', screenshots);
+    await clickVisibleText(page, 'Tap to continue');
 
     await recorder.cue('beat_1_language_gate');
-    await waitForText(page, 'You heard 看过了');
-    checks.webtoonVisibleDuringLanguageGate = await page.evaluate(() => Boolean(document.querySelector('.wt-strip')) && document.body.innerText.includes('小笼包不错。'));
+    await waitForText(page, 'You heard 不一样 twice');
+    checks.webtoonVisibleDuringLanguageGate = await page.evaluate(() => Boolean(document.querySelector('.wt-strip')) && document.body.innerText.includes('每个节目都说自己不一样。'));
     checks.noPosterSnapDuringLanguageGate = await page.evaluate(() => !document.querySelector('.shanghai-onboarding__video') && !document.querySelector('.summary-screen'));
-    await screenshot(page, '10-beat-1-language.png', 'beat_1_language_gate', screenshots);
+    await screenshot(page, '11-beat-1-language.png', 'beat_1_language_gate', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Try that shape once');
+    await waitForText(page, 'Try the pieces once');
     await clickTong(page);
-    await waitForText(page, 'Match each 过了 phrase with its meaning.');
-    checks.webtoonVisibleDuringExercise = await page.evaluate(() => Boolean(document.querySelector('.wt-strip')) && document.body.innerText.includes('小笼包不错。'));
+    await waitForText(page, 'Match the pieces behind 不一样.');
+    checks.webtoonVisibleDuringExercise = await page.evaluate(() => Boolean(document.querySelector('.wt-strip')) && document.body.innerText.includes('每个节目都说自己不一样。'));
     checks.noPosterSnapDuringExercise = await page.evaluate(() => !document.querySelector('.shanghai-onboarding__video') && !document.querySelector('.summary-screen'));
     checks.matchingChineseTokensInteractive = await page.evaluate(() => document.querySelectorAll('.exercise-card [data-korean]').length > 0);
     const tappedMatchingToken = await page.evaluate(() => {
       const target = Array.from(document.querySelectorAll('.exercise-card [data-korean]'))
-        .find((node) => node.textContent?.trim() === '看过了');
+        .find((node) => node.textContent?.trim() === '不一样');
       if (!(target instanceof HTMLElement)) return null;
       target.click();
       return target.textContent;
@@ -433,21 +451,40 @@ async function run() {
     if (tappedMatchingToken) {
       await page.evaluate(() => {
         const target = Array.from(document.querySelectorAll('.exercise-card [data-korean]'))
-          .find((node) => node.textContent?.trim() === '看过了');
+          .find((node) => node.textContent?.trim() === '不一样');
         if (target instanceof HTMLElement) target.click();
       });
       await sleep(250);
     }
-    await screenshot(page, '11-beat-1-exercise.png', 'beat_1_exercise', screenshots);
+    await screenshot(page, '12-beat-1-exercise.png', 'beat_1_exercise', screenshots);
+    const exerciseDismissed = await page.evaluate(() => {
+      const target = document.querySelector('.exercise-dismiss-btn');
+      if (!(target instanceof HTMLElement)) return false;
+      target.click();
+      return true;
+    });
+    await page.waitForSelector('.exercise-modal-backdrop', { hidden: true, timeout: 5000 });
+    await sleep(500);
+    checks.exerciseDismissedAndWebtoonVisible = exerciseDismissed && await page.evaluate(() => (
+      Boolean(document.querySelector('.wt-strip')) && document.body.innerText.includes('每个节目都说自己不一样。')
+    ));
+    await screenshot(page, '13-beat-1-exercise-dismissed.png', 'beat_1_exercise_dismissed', screenshots);
+    await waitForText(page, 'Tap to resume exercise');
+    await clickVisibleText(page, 'Tap to resume exercise');
+    await waitForText(page, 'Match the pieces behind 不一样.');
+    checks.exerciseDismissedAndResumed = checks.exerciseDismissedAndWebtoonVisible && await page.waitForSelector('.exercise-modal-backdrop', { visible: true, timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    await screenshot(page, '14-beat-1-exercise-resumed.png', 'beat_1_exercise_resumed', screenshots);
     await answerMatching(page, [
-      { left: '看过了', right: 'looked it over already' },
-      { left: '吃过了', right: 'already ate' },
-      { left: '听过了', right: 'already heard it' },
+      { left: '不', right: 'not' },
+      { left: '一样', right: 'same' },
+      { left: '不一样', right: 'not the same; different' },
     ]);
 
     await page.waitForSelector('.shanghai-onboarding--webtoon', { visible: true, timeout: 8000 });
     await recorder.cue('beat_2_webtoon_entered');
-    await screenshot(page, '12-beat-2-entered.png', 'beat_2_entered', screenshots);
+    await screenshot(page, '15-beat-2-entered.png', 'beat_2_entered', screenshots);
     checks.beat2NoActLine = await page.evaluate(() => document.body.innerText.includes('这个节目需要一个不装的人。'));
     checks.beat2KeepPretendingLine = await page.evaluate(() => document.body.innerText.includes('我觉得你装不下去。'));
     checks.placeholderArtAfterP6 = await page.evaluate(() => document.querySelectorAll('.wt-placeholder').length >= 1);
@@ -456,21 +493,30 @@ async function run() {
       const visiblePlaceholder = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2)?.closest('.wt-placeholder');
       return Boolean(visiblePlaceholder) || document.body.innerText.includes('WEBTOON ART PENDING');
     });
-    await screenshot(page, '13-beat-2-placeholder-after-p6.png', 'beat_2_placeholder_after_p6', screenshots);
+    await screenshot(page, '16-beat-2-placeholder-after-p6.png', 'beat_2_placeholder_after_p6', screenshots);
     await scrollWebtoonToEnd(page);
-    await screenshot(page, '14-beat-2-bottom.png', 'beat_2_bottom', screenshots);
+    await screenshot(page, '17-beat-2-bottom.png', 'beat_2_bottom', screenshots);
     checks.beat2NoActLine = checks.beat2NoActLine || await page.evaluate(() => document.body.innerText.includes('这个节目需要一个不装的人。'));
     checks.beat2KeepPretendingLine = checks.beat2KeepPretendingLine || await page.evaluate(() => document.body.innerText.includes('我觉得你装不下去。'));
     checks.placeholderArtAfterP6 = checks.placeholderArtAfterP6 || await page.evaluate(() => document.querySelectorAll('.wt-placeholder').length >= 1);
+    checks.beat2ContinueVisible = await page.waitForFunction(
+      () => document.body.innerText.includes('Tap to continue') && !Boolean(document.querySelector('.tong-whisper')),
+      { timeout: 8000 },
+    )
+      .then(() => true)
+      .catch(() => false);
+    await recorder.cue('beat_2_continue_visible');
+    await screenshot(page, '18-beat-2-continue.png', 'beat_2_continue_gate', screenshots);
+    await clickVisibleText(page, 'Tap to continue');
 
     await recorder.cue('beat_2_language_gate');
     await waitForText(page, 'That 不下去 is the useful part');
-    await screenshot(page, '15-beat-2-language.png', 'beat_2_language_gate', screenshots);
+    await screenshot(page, '19-beat-2-language.png', 'beat_2_language_gate', screenshots);
     await clickTong(page);
     await waitForText(page, 'Try the shape across a few verbs');
     await clickTong(page);
     await waitForText(page, 'Match each V不下去 phrase with its meaning.');
-    await screenshot(page, '16-beat-2-exercise.png', 'beat_2_exercise', screenshots);
+    await screenshot(page, '20-beat-2-exercise.png', 'beat_2_exercise', screenshots);
     await answerMatching(page, [
       { left: '装不下去', right: 'cannot keep pretending' },
       { left: '演不下去', right: 'cannot keep performing' },
@@ -480,27 +526,65 @@ async function run() {
 
     await page.waitForSelector('.shanghai-onboarding--webtoon', { visible: true, timeout: 8000 });
     await recorder.cue('exit_webtoon_entered');
-    await screenshot(page, '17-exit-entered.png', 'exit_entered', screenshots);
+    await screenshot(page, '21-exit-entered.png', 'exit_entered', screenshots);
     checks.phoneSfxVisible = await page.evaluate(() => document.body.innerText.includes('嗡'));
+    await scrollWebtoonToPanel(page, 12);
+    await screenshot(page, '22-exit-phone-sfx.png', 'exit_phone_sfx', screenshots);
+    checks.phoneSfxVisible = checks.phoneSfxVisible || await page.evaluate(() => document.body.innerText.includes('嗡'));
+    await scrollWebtoonToPanel(page, 13);
+    checks.dingmanAnswerCallVisible = await page.evaluate(() => document.body.innerText.includes('你接吧。'));
+    await scrollWebtoonToPanel(page, 14);
+    checks.shouchengNotImportantVisible = await page.evaluate(() => document.body.innerText.includes('不重要。'));
+    await screenshot(page, '23-exit-answer-not-important.png', 'exit_answer_not_important', screenshots);
+    await scrollWebtoonToPanel(page, 15);
+    checks.thirdRingLineVisible = await page.evaluate(() => document.body.innerText.includes('都响三次了，还说不重要？'));
+    await screenshot(page, '24-exit-third-ring-line.png', 'exit_third_ring_line', screenshots);
+    await scrollWebtoonToPanel(page, 16);
+    checks.shouchengConcedeVisible = await page.evaluate(() => document.body.innerText.includes('...我知道了。'));
+    await scrollWebtoonToPanel(page, 17);
+    checks.shouchengLeavesVisible = await page.evaluate(() => document.body.innerText.includes('我先走一步，你好好想想。'));
+    await screenshot(page, '25-exit-concede-leave.png', 'exit_concede_leave', screenshots);
+    await scrollWebtoonToPanel(page, 18);
     checks.paymentSfxVisible = await page.evaluate(() => document.body.innerText.includes('已付款'));
+    await screenshot(page, '26-exit-payment.png', 'exit_payment', screenshots);
+    await scrollWebtoonToPanel(page, 19);
+    checks.fangAyiOverpayVisible = await page.evaluate(() => document.body.innerText.includes('小瞿你又多给了！'));
+    await screenshot(page, '27-exit-fang-ayi.png', 'exit_fang_ayi', screenshots);
+    await scrollWebtoonToPanel(page, 20);
     checks.registerRevealVisible = await page.evaluate(() => document.body.innerText.includes('瞿家的小儿子'));
-    checks.noNarratorPhoneCopy = await page.evaluate(() => !document.body.innerText.includes('The phone rings') && !document.body.innerText.includes('旁白'));
+    await screenshot(page, '28-exit-register-reveal.png', 'exit_register_reveal', screenshots);
+    checks.noNarratorPhoneCopy = await page.evaluate(() => {
+      const text = document.body.innerText;
+      return !text.includes('The phone rings') && !text.includes('旁白') && !text.includes('ambient:') && !text.includes('He pays via QR code');
+    });
     await scrollWebtoonToEnd(page);
-    await screenshot(page, '18-exit-bottom.png', 'exit_bottom', screenshots);
+    await screenshot(page, '29-exit-bottom.png', 'exit_bottom', screenshots);
     checks.phoneSfxVisible = checks.phoneSfxVisible || await page.evaluate(() => document.body.innerText.includes('嗡'));
     checks.paymentSfxVisible = checks.paymentSfxVisible || await page.evaluate(() => document.body.innerText.includes('已付款'));
     checks.registerRevealVisible = checks.registerRevealVisible || await page.evaluate(() => document.body.innerText.includes('瞿家的小儿子'));
-    checks.noNarratorPhoneCopy = checks.noNarratorPhoneCopy && await page.evaluate(() => !document.body.innerText.includes('The phone rings') && !document.body.innerText.includes('旁白'));
+    checks.noNarratorPhoneCopy = checks.noNarratorPhoneCopy && await page.evaluate(() => {
+      const text = document.body.innerText;
+      return !text.includes('The phone rings') && !text.includes('旁白') && !text.includes('ambient:') && !text.includes('He pays via QR code');
+    });
+    checks.exitContinueVisible = await page.waitForFunction(
+      () => document.body.innerText.includes('Tap to continue') && !Boolean(document.querySelector('.tong-whisper')),
+      { timeout: 8000 },
+    )
+      .then(() => true)
+      .catch(() => false);
+    await recorder.cue('exit_continue_visible');
+    await screenshot(page, '30-exit-continue.png', 'exit_continue_gate', screenshots);
+    await clickVisibleText(page, 'Tap to continue');
 
     await recorder.cue('register_language_gate');
     await waitForText(page, 'She said 小瞿');
-    await screenshot(page, '19-register-language.png', 'register_language_gate', screenshots);
+    await screenshot(page, '31-register-language.png', 'register_language_gate', screenshots);
     await clickTong(page);
     await waitForText(page, '瞿家 is the Qu family');
-    await screenshot(page, '20-family-register-language.png', 'family_register_language_gate', screenshots);
+    await screenshot(page, '32-family-register-language.png', 'family_register_language_gate', screenshots);
     await clickTong(page);
     await waitForText(page, 'Today’s listening handles');
-    await screenshot(page, '21-tong-wrap.png', 'tong_wrap', screenshots);
+    await screenshot(page, '33-tong-wrap.png', 'tong_wrap', screenshots);
     await clickTong(page);
 
     checks.summaryScreenVisible = await page.waitForSelector('.summary-screen', { visible: true, timeout: 8000 })
@@ -512,7 +596,7 @@ async function run() {
     checks.finalQuizRemoved = await page.evaluate(() => !document.body.innerText.includes('Put 方阿姨'));
     await recorder.cue('summary_screen_visible');
     await sleep(1200);
-    await screenshot(page, '22-summary-screen.png', 'summary_screen', screenshots);
+    await screenshot(page, '34-summary-screen.png', 'summary_screen', screenshots);
 
     const finalState = await page.evaluate(() => ({
       url: window.location.href,
@@ -538,7 +622,7 @@ async function run() {
     await desktop.setViewport(VIEWPORTS.desktop);
     await desktop.goto(route, { waitUntil: 'networkidle0', timeout: 30000 });
     await desktop.waitForSelector('.shanghai-onboarding__video', { visible: true });
-    await screenshot(desktop, '23-desktop-intro.png', 'desktop_intro', screenshots);
+    await screenshot(desktop, '35-desktop-intro.png', 'desktop_intro', screenshots);
     await desktop.close();
 
     const screencast = await recorder.stop();
@@ -563,12 +647,24 @@ async function run() {
       checks.noPosterSnapDuringExercise,
       checks.beat1ProposalLine,
       checks.beat1FoodRedirect,
+      checks.beat1GenericCallout,
+      checks.beat1ContinueVisible,
+      checks.exerciseDismissedAndWebtoonVisible,
+      checks.exerciseDismissedAndResumed,
       checks.placeholderArtAfterP6,
+      checks.beat2ContinueVisible,
       checks.beat2NoActLine,
       checks.beat2KeepPretendingLine,
       checks.phoneSfxVisible,
+      checks.dingmanAnswerCallVisible,
+      checks.shouchengNotImportantVisible,
+      checks.thirdRingLineVisible,
+      checks.shouchengConcedeVisible,
+      checks.shouchengLeavesVisible,
       checks.paymentSfxVisible,
+      checks.fangAyiOverpayVisible,
       checks.registerRevealVisible,
+      checks.exitContinueVisible,
       checks.noNarratorPhoneCopy,
       checks.hasHud,
       !checks.debugPanels,

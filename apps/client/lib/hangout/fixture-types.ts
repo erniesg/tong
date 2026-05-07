@@ -60,6 +60,24 @@ export type CliffhangerSpec = {
 export type WebtoonSpec = {
   panels: WebtoonPanel[];
   autoAdvance?: boolean;
+  packets?: WebtoonPacketSpec[];
+  wrap?: WebtoonWrapSpec;
+};
+
+export type WebtoonPacketSpec = {
+  id: string;
+  panelIds: string[];
+  afterTongLines?: string[];
+  exerciseHook?: {
+    type: string;
+    objectiveId: string;
+    reason: string;
+  };
+};
+
+export type WebtoonWrapSpec = {
+  tongLines: string[];
+  completionLine: string;
 };
 
 export type WebtoonPanel = {

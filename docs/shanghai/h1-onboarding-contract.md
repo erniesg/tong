@@ -12,11 +12,12 @@ The NPCs are characters, not teachers. 守成 and 丁漫 should sound like peopl
 
 ## Non-Negotiables
 
-- Flow shape: panorama -> prelisten exercise -> pan/scroll -> continuous webtoon strip packet -> Tong/exercise -> next strip packet -> Tong/exercise -> exit strip packet -> Tong wrap -> ending screen.
+- Flow shape: panorama -> prelisten exercise -> pan/scroll -> continuous webtoon strip packet -> player taps to continue -> Tong/exercise -> next strip packet -> player taps to continue -> Tong/exercise -> exit strip packet -> player taps to continue -> Tong wrap -> ending screen.
 - Tong speaks in the player's explain language, scaled by Mandarin level. A Mandarin beginner gets explain-language teaching with only small tappable/hearable Chinese chunks, not full Chinese helper paragraphs.
-- Tong is silent during webtoon strip packets. The player scrolls to the end of the current packet before Tong or an exercise appears.
+- Tong is silent during webtoon strip packets. The player scrolls to the end of the current packet and then taps a Seoul-style continue affordance before Tong or an exercise appears.
 - Once the eavesdrop enters webtoon form, Tong and exercises stay over the webtoon surface. Do not snap back to the panorama video or poster between packets.
 - Packets append into one continuous eavesdrop strip: after an exercise resolves, the next panels continue below the completed packet.
+- Interlude exercises can be minimized. If the player closes one to inspect the strip, the same webtoon stays underneath and a short continue affordance resumes the exercise.
 - Chinese text inside webtoon bubbles must be tappable native-script text using the same interaction principle as Seoul.
 - Chinese text inside exercises, especially matching prompts/tiles, must also use the same tappable word-help/audio convention as Seoul.
 - Tong UI must use the Seoul-consistent Tong surface for interludes, not a separate subtitle card style.
@@ -30,8 +31,8 @@ The NPCs are characters, not teachers. 守成 and 丁漫 should sound like peopl
 
 Salvageable:
 - The panorama + pan/scroll + webtoon eavesdrop shape.
-- The existing approved art through `每个节目都说自己不一样。`.
-- The core anchors `想法`, `看过了`, `不一样`, `装不下去`, `小瞿`, `瞿家`, `小儿子`.
+- The existing approved art through `每个节目都说自己不一样。`, now used as the end of the first packet.
+- The core anchors `小`, `小笼包店`, the four pinyin tone shapes, `想法`, `看过了`, `不一样`, `装不下去`, `小瞿`, `瞿家`, `小儿子`.
 - The exit shape: phone interruption, QR overpayment, familiar address, family-register texture.
 
 Rejected:
@@ -49,43 +50,47 @@ Screen 1: Shanghai 小笼包店 panorama.
 
 Tong:
 - “You are in a Shanghai 小笼包店: steamers, rain on glass, tables close enough to overhear.”
-- “Mandarin in this room is fast and compact. Do not chase every word.”
-- “Start with 想法. Tap 想法 once and listen. It is a short way to ask for someone’s take.”
+- “Mandarin is built from characters, and characters reuse pieces. The shop sign already gives you a handle: 小.”
+- “Pinyin marks sound with tones. 小笼包店 gives you all four shapes: 小, 笼, 包, 店. Tap 小 once and listen.”
 
 Exercise:
-- Type: `pronunciation_select`
-- Purpose: recognize `想法` as a compact “thoughts? / your take?” chunk.
-- Distractors can include `方案` and `小笼包`.
+- Type: `matching` or another reusable script/listening exercise.
+- Purpose: make the shop sign useful before the eavesdrop by connecting visible characters to sound/tone shapes.
+- Current fixture pairs:
+  - `包` -> `bāo`: first tone, high and level
+  - `笼` -> `lóng`: second tone, rising
+  - `小` -> `xiǎo`: third tone, dipping
+  - `店` -> `diàn`: fourth tone, falling
+- Dynamic runs can choose another visible setting word, but the setup must still teach character composability and the four tone idea without turning into a full script lecture.
 
 Tong:
-- “Good. 想法 has a shape in your ear now.”
+- “Good. The sign is not decoration now: 小 is a character, xiǎo is its sound shape.”
 - “That table by the window is cutting through the room noise. Slide that way slowly.”
 
 Pan prompt:
 - “Slide toward the window table.”
 
-Strip Packet 1, pregenerated art:
+Strip Packet 1, pregenerated art through the first thumb stop:
 - 守成: `方案你看过了。`
 - 丁漫: `看了。`
 - 守成: `想法？`
 - 丁漫: `小笼包不错。`
+- 守成: `这个节目跟其他的不一样。`
+- 丁漫: `每个节目都说自己不一样。`
 
 Tong after Packet 1:
-- Teach one small cue from the strip, usually `过了` as already-done action or `想法` as compact question, and transition into the exercise by saying why it helps with the next stretch of listening.
-- Example: “You heard 看过了. Verb + 过了 gives the action an already-done feel.” Then: “Try that shape once before the conversation tightens.”
+- Teach one small cue from the strip, currently the repeated `不一样`, and transition into the exercise by saying why it helps with the next stretch of listening.
+- Example: “You heard 不一样 twice. 不 is the high-value piece: it flips a word or phrase negative.” Then: “Try the pieces once so the next 不 phrase lands as language, not noise.”
 - Do not interpret 丁漫’s food reply as character motive.
 
 Exercise after Packet 1:
-- Preferred: matching generalized `过了` chunks:
-  - `看过了` -> looked it over already
-  - `吃过了` -> already ate
-  - `听过了` -> already heard it
-- Alternative: match `想法` -> thoughts / take / opinion.
-- Use a line-level fill blank only if the player needs a closer check.
+- Current fixture: matching the pieces behind `不一样`:
+  - `不` -> not
+  - `一样` -> same
+  - `不一样` -> not the same; different
+- Alternative dynamic choices can use `看过了` or `想法` only if the actual generated first packet gives those cues and the next packet makes that practice useful.
 
-Strip Packet 2, art exists through the first two lines and placeholders after:
-- 守成: `这个节目跟其他的不一样。`
-- 丁漫: `每个节目都说自己不一样。`
+Strip Packet 2, placeholders until approved art exists:
 - 守成: `那我换个说法。`
 - 守成: `这个节目需要一个不装的人。`
 - 丁漫: `...你觉得我不装？`
@@ -115,6 +120,17 @@ Exit Strip Packet, placeholders until art exists:
 - 方阿姨: `小瞿你又多给了！`
 - Final texture: `瞿家的小儿子……`
 
+Current placeholder panel sequence:
+- `p12`: phone vibration SFX/action, no `ambient:` label.
+- `p13`: 丁漫 `你接吧。`
+- `p14`: 守成 `不重要。`
+- `p15`: 丁漫 `都响三次了，还说不重要？`
+- `p16`: 守成 `...我知道了。`
+- `p17`: 守成 `我先走一步，你好好想想。`
+- `p18`: QR payment/overpayment visual SFX/action, no narrator text.
+- `p19`: 方阿姨 `小瞿你又多给了！`
+- `p20`: `瞿家的小儿子……`
+
 Tong after Exit:
 - Teach register lightly: `小瞿`, not `瞿先生`; `小 + surname` can be familiar address from an older person; `瞿家` is the Qu family.
 - Optional depth line only if included in the run:
@@ -122,7 +138,7 @@ Tong after Exit:
 
 Wrap:
 - Close on language handles, not plot recap.
-- Example: “Today’s listening handles: 想法, 看过了, 装不下去, 小瞿.”
+- Example: “Today’s listening handles: 小, 不一样, 装不下去, 小瞿.”
 - Then show the same kind of hangout completion/ending screen Seoul uses for XP/SP/RP progress.
 
 ## Beat 2 Dynamic Variants
@@ -170,6 +186,7 @@ The orchestration prompt must give the AI these tools:
 - `show_exercise`: one real exercise at a time, after Tong has taught why it matters.
 - `wait_for_player_pan`: require the player to pan toward the window-table eavesdrop after the first listening exercise.
 - `show_webtoon_strip_packet`: a continuous scroll packet containing multiple panels and bubbles, with `completion="wait_for_player_scroll_end"`.
+- `wait_for_player_continue`: a Seoul-style tap after the player reaches the strip packet end. Tong still stays silent until this tap.
 - `assess_result`.
 - `end_scene`.
 
@@ -177,14 +194,18 @@ The prompt must not offer a single-panel “show_webtoon_segment” gate as the 
 The prompt must also specify that, after the first webtoon packet starts, all Tong/exercise gates keep the webtoon strip underneath and append the next packet below the existing strip. The AI must not route the player back to a panorama, poster, or video surface between eavesdrop packets.
 
 The AI must choose exercises by teaching value:
+- Setting sign/tone handles: `小`, `笼`, `包`, `店`
 - Compact questions: `想法？`
 - Already-done chunks: `看过了`, `吃过了`, `听过了`
+- Same/different pieces: `不`, `一样`, `不一样`
 - Negation and continuation: `不装`, `装不下去`, `演不下去`
 - Ability/willingness when that variant appears: `不会`, `不愿意`, `不会说假话`, `不愿意说假话`
 - Register: `小瞿`, `瞿家`, `小儿子`
 
 Reusable Shanghai H1 exercise generation must support these objective IDs when `exerciseData` is not supplied:
 - `zh-pronunciation-tone-pairs`
+- `zh-script-shanghai-food-signage`
+- `zh-script-shanghai-contrast-forms`
 - `zh-gram-shanghai-le-aspect`
 - `zh-gram-shanghai-buxiaqu`
 - `zh-gram-shanghai-buhui-buyuanyi`

@@ -688,6 +688,11 @@ export function WebtoonStrip({
     const container = containerRef.current;
     if (!container) return;
     const usePageScroll = scrollRoot === 'page';
+    const markComplete = () => {
+      if (completed) return;
+      setCompleted(true);
+      onComplete?.();
+    };
 
     const updateActiveIndex = () => {
       const rootRect = usePageScroll ? null : container.getBoundingClientRect();
@@ -717,6 +722,13 @@ export function WebtoonStrip({
       } else if (nextCandidate !== -1) {
         setActiveIndex(nextCandidate);
       }
+
+      const atEnd = usePageScroll
+        ? window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 24
+        : container.scrollTop + container.clientHeight >= container.scrollHeight - 24;
+      if (atEnd) {
+        markComplete();
+      }
     };
 
     const observer = new IntersectionObserver(
@@ -725,8 +737,7 @@ export function WebtoonStrip({
           const index = Number((entry.target as HTMLElement).dataset.panelIndex);
           if (Number.isNaN(index)) continue;
           if (index === panels.length - 1 && entry.intersectionRatio > 0.8 && !completed) {
-            setCompleted(true);
-            onComplete?.();
+            markComplete();
           }
         }
       },

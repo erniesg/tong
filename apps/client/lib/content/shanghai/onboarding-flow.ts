@@ -70,19 +70,19 @@ const EN_TONG_COPY: ShanghaiOnboardingTongCopy = {
   tongName: 'Tong',
   introTongLines: [
     'You are in a Shanghai 小笼包店: steamers at the counter, rain on glass, tables close enough to overhear.',
-    'Mandarin in this room moves fast. Do not chase every word. Catch compact chunks, repeated 不 phrases, and names.',
-    'Start with 想法. Tap 想法 once and listen. It is a short way to ask for someone’s take.',
+    'Mandarin is built from characters, and characters reuse pieces. The shop sign already gives you a handle: 小.',
+    'Pinyin marks sound with tones. 小笼包店 gives you all four shapes: 小, 笼, 包, 店. Tap 小 once and listen.',
   ],
   postExerciseTongLines: [
-    'Good. 想法 has a shape in your ear now.',
+    'Good. The sign is not decoration now: 小 is a character, xiǎo is its sound shape.',
     'That table by the window is cutting through the room noise. Slide that way slowly.',
   ],
   panPrompt: 'Slide toward the window table.',
-  completionTongLine: 'Today’s listening handles: 想法, 看过了, 装不下去, 小瞿.',
+  completionTongLine: 'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',
   webtoonStepTongLines: {
     'beat-1-proposal-question': [
-      'You heard 看过了. Verb + 过了 gives the action an already-done feel.',
-      'Try that shape once before the conversation tightens.',
+      'You heard 不一样 twice. 不 is the high-value piece: it flips a word or phrase negative.',
+      'Try the pieces once so the next 不 phrase lands as language, not noise.',
     ],
     'beat-2-authenticity-contrast': [
       'That 不下去 is the useful part. It says an action cannot keep going.',
@@ -91,7 +91,7 @@ const EN_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'beat-3-exit-register': [
       'She said 小瞿, not 瞿先生. That is familiar address from someone older.',
       '瞿家 is the Qu family. 小儿子 is younger son.',
-      'Today’s listening handles: 想法, 看过了, 装不下去, 小瞿.',
+      'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',
     ],
   },
 };
@@ -100,19 +100,19 @@ const KO_TONG_COPY: ShanghaiOnboardingTongCopy = {
   tongName: '통',
   introTongLines: [
     '여기는 상하이 小笼包店이야. 찜통, 창문에 닿는 비, 가까운 테이블 소리가 한꺼번에 들어와.',
-    '이 방의 만다린은 빠르고 짧아. 전부 잡으려 하지 말고, 작은 덩어리와 반복되는 不, 이름을 잡아.',
-    '먼저 想法부터. 想法을 한 번 눌러서 들어 봐. 누군가의 생각을 묻는 짧은 덩어리야.',
+    '만다린은 글자로 이루어지고, 글자는 작은 조각을 다시 써. 가게 간판에서 먼저 小를 잡아 보자.',
+    '병음은 소리에 성조를 붙여. 小笼包店 안에 네 가지 성조가 다 있어: 小, 笼, 包, 店. 小를 한 번 눌러서 들어 봐.',
   ],
   postExerciseTongLines: [
-    '좋아. 이제 想法의 소리 모양이 귀에 남았어.',
+    '좋아. 이제 간판은 장식이 아니야. 小는 글자고, xiǎo는 그 소리 모양이야.',
     '창가 테이블 소리가 방 안 소음을 뚫고 들어와. 그쪽으로 천천히 밀어 봐.',
   ],
   panPrompt: '창가 테이블 쪽으로 밀기.',
-  completionTongLine: '오늘 잡은 듣기 손잡이: 想法, 看过了, 装不下去, 小瞿.',
+  completionTongLine: '오늘 잡은 듣기 손잡이: 小, 不一样, 装不下去, 小瞿.',
   webtoonStepTongLines: {
     'beat-1-proposal-question': [
-      '방금 看过了가 지나갔어. 동사 + 过了는 이미 끝난 행동 느낌을 줄 수 있어.',
-      '대화가 더 조여지기 전에 그 모양을 한 번 연습해 보자.',
+      '방금 不一样이 두 번 나왔어. 不가 중요한 조각이야. 단어나 구를 부정 쪽으로 돌려.',
+      '다음 不 표현이 그냥 소음으로 지나가지 않게, 그 조각을 한 번 연습해 보자.',
     ],
     'beat-2-authenticity-contrast': [
       '여기서는 不下去가 핵심이야. 어떤 행동을 계속할 수 없다는 느낌이 나.',
@@ -121,7 +121,7 @@ const KO_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'beat-3-exit-register': [
       '方阿姨가 小瞿라고 했지, 瞿先生이 아니었어. 어른이 어린 사람을 부르는 익숙한 호칭이야.',
       '瞿家는 Qu family, 小儿子는 작은아들 또는 둘째 아들이라는 말이야.',
-      '오늘 잡은 듣기 손잡이: 想法, 看过了, 装不下去, 小瞿.',
+      '오늘 잡은 듣기 손잡이: 小, 不一样, 装不下去, 小瞿.',
     ],
   },
 };
@@ -130,19 +130,19 @@ const JA_TONG_COPY: ShanghaiOnboardingTongCopy = {
   tongName: 'トン',
   introTongLines: [
     'ここは上海の 小笼包店。蒸し器、窓の雨、近いテーブルの音まで聞こえてくる。',
-    'この部屋の中国語は速くて短い。全部を追わずに、小さなかたまり、くり返す 不、名前を拾って。',
-    'まずは 想法。想法 を一度タップして聞いて。相手の考えを聞く短いかたまりだよ。',
+    '中国語は漢字でできていて、漢字は小さな部品を使い回す。店の名前からまず 小 を拾おう。',
+    'ピンインは音に声調をつける。小笼包店 には四つの声調が全部ある: 小, 笼, 包, 店。小 を一度タップして聞いて。',
   ],
   postExerciseTongLines: [
-    'いいね。想法 の音の形が耳に残った。',
+    'いいね。看板はただの背景じゃない。小 は文字で、xiǎo はその音の形だ。',
     '窓際のテーブルの声が、店の音を抜けて聞こえる。そっちへゆっくり寄せて。',
   ],
   panPrompt: '窓際のテーブルへスライド。',
-  completionTongLine: '今日つかんだ聞き取りの手がかり: 想法, 看过了, 装不下去, 小瞿.',
+  completionTongLine: '今日つかんだ聞き取りの手がかり: 小, 不一样, 装不下去, 小瞿.',
   webtoonStepTongLines: {
     'beat-1-proposal-question': [
-      '今、看过了 が聞こえたね。動詞 + 过了 は、もう済んだ動きの感じを出せる。',
-      '会話が詰まる前に、その形を一度だけ練習しよう。',
+      '今、 不一样 が二回聞こえた。使える部品は 不。語やフレーズを否定側にひっくり返す。',
+      '次の 不 の形がただの音で流れないように、一度だけ部品で練習しよう。',
     ],
     'beat-2-authenticity-contrast': [
       'ここで使えるのは 不下去。動作を続けられない、という感じが出る。',
@@ -151,7 +151,7 @@ const JA_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'beat-3-exit-register': [
       '方阿姨 は 小瞿 と言った。瞿先生 じゃない。年上から若い人への親しい呼び方だよ。',
       '瞿家 は Qu家。小儿子 は下の息子。',
-      '今日つかんだ聞き取りの手がかり: 想法, 看过了, 装不下去, 小瞿.',
+      '今日つかんだ聞き取りの手がかり: 小, 不一样, 装不下去, 小瞿.',
     ],
   },
 };
@@ -160,19 +160,19 @@ const ZH_ADVANCED_TONG_COPY: ShanghaiOnboardingTongCopy = {
   tongName: '小通',
   introTongLines: [
     '你在上海的 小笼包店里：柜台上是蒸笼，窗外有雨，旁边的桌子近到能听见人说话。',
-    '这里的普通话很快，也很短。不要追每个字，先抓小块、重复的 不、还有称呼。',
-    '先抓 想法。点一下 想法 听一遍，这是问别人看法的短块。',
+    '普通话靠汉字承载，汉字会复用部件。先从店名里的 小 抓起。',
+    '拼音用声调标声音。小笼包店 里四个声调都有：小, 笼, 包, 店。点一下 小 听一遍。',
   ],
   postExerciseTongLines: [
-    '好，想法 这个声音已经有轮廓了。',
+    '好。招牌现在不是背景了：小 是字，xiǎo 是它的声音形状。',
     '窗边那桌的声音从店里的杂音里透出来了。慢慢把视角移过去。',
   ],
   panPrompt: '滑向窗边那桌。',
-  completionTongLine: '今天抓到的听力抓手：想法, 看过了, 装不下去, 小瞿.',
+  completionTongLine: '今天抓到的听力抓手：小, 不一样, 装不下去, 小瞿.',
   webtoonStepTongLines: {
     'beat-1-proposal-question': [
-      '你刚听到 看过了。动词 + 过了 会带出“已经做过”的感觉。',
-      '趁对话还没更紧，先把这个形状练一次。',
+      '你刚听到两次 不一样。有用的是 不：它把词或短语翻到否定方向。',
+      '先练一次这个部件，下一段里的 不 才不会变成噪音。',
     ],
     'beat-2-authenticity-contrast': [
       '这里有用的是 不下去。它表示一个动作没法继续撑下去。',
@@ -181,7 +181,7 @@ const ZH_ADVANCED_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'beat-3-exit-register': [
       '方阿姨说的是 小瞿，不是 瞿先生。这是长辈对晚辈的熟人称呼。',
       '瞿家 是 Qu family。小儿子 是 younger son。',
-      '今天抓到的听力抓手：想法, 看过了, 装不下去, 小瞿.',
+      '今天抓到的听力抓手：小, 不一样, 装不下去, 小瞿.',
     ],
   },
 };
@@ -284,19 +284,17 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
   ],
   preListeningExercises: [
     {
-      type: 'pronunciation_select',
-      id: 'shanghai-h1-prelisten-xiangfa-sound',
-      objectiveId: 'zh-pronunciation-tone-pairs',
+      type: 'matching',
+      id: 'shanghai-h1-prelisten-shop-sign-tones',
+      objectiveId: 'zh-script-shanghai-food-signage',
       difficulty: 1,
-      prompt: 'Which sound is the short question for someone’s take?',
-      targetText: '想法',
-      audioOptions: [
-        { id: 'xiangfa', label: '想法', ttsText: '想法', romanization: 'xiǎng fǎ', meaning: 'thoughts; take' },
-        { id: 'fangan', label: '方案', ttsText: '方案', romanization: "fāng'àn", meaning: 'plan' },
-        { id: 'xiaolongbao', label: '小笼包', ttsText: '小笼包', romanization: 'xiǎo lóng bāo', meaning: 'soup dumpling' },
+      prompt: 'Match each shop-sign character to its sound shape.',
+      pairs: [
+        { left: '包', right: 'bāo: first tone, high and level' },
+        { left: '笼', right: 'lóng: second tone, rising' },
+        { left: '小', right: 'xiǎo: third tone, dipping' },
+        { left: '店', right: 'diàn: fourth tone, falling' },
       ],
-      correctOptionId: 'xiangfa',
-      explanation: '想法 can stand alone as a compact question: thoughts? your take?',
     },
   ],
   postExerciseTongLines: [
@@ -308,29 +306,29 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
   webtoonSteps: [
     {
       id: 'beat-1-proposal-question',
-      label: 'Beat 1 — proposal question',
-      panelIds: ['p0', 'p1', 'p2', 'p3', 'p4'],
+      label: 'Beat 1 — proposal, food redirect, generic pitch',
+      panelIds: ['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6'],
       afterTongLines: EN_TONG_COPY.webtoonStepTongLines['beat-1-proposal-question'],
       afterExercises: [
         {
           type: 'matching',
-          id: 'shanghai-h1-after-a-guole-pattern',
-          objectiveId: 'zh-gram-shanghai-le-aspect',
+          id: 'shanghai-h1-after-a-bu-buyiyang-pattern',
+          objectiveId: 'zh-script-shanghai-contrast-forms',
           difficulty: 1,
-          prompt: 'Match each 过了 phrase with its meaning.',
+          prompt: 'Match the pieces behind 不一样.',
           pairs: [
-            { left: '看过了', right: 'looked it over already' },
-            { left: '吃过了', right: 'already ate' },
-            { left: '听过了', right: 'already heard it' },
+            { left: '不', right: 'not' },
+            { left: '一样', right: 'same' },
+            { left: '不一样', right: 'not the same; different' },
           ],
         },
       ],
-      masteryItems: ['看过了', '想法'],
+      masteryItems: ['小', '包', '笼', '店', '不', '一样', '不一样'],
     },
     {
       id: 'beat-2-authenticity-contrast',
       label: 'Beat 2 — authenticity contrast',
-      panelIds: ['p5', 'p6', 'p7', 'p8', 'p9', 'p10', 'p11'],
+      panelIds: ['p7', 'p8', 'p9', 'p10', 'p11'],
       afterTongLines: EN_TONG_COPY.webtoonStepTongLines['beat-2-authenticity-contrast'],
       afterExercises: [
         {

@@ -711,4 +711,49 @@ export const SHANGHAI_H1_WEBTOON_PANELS: WebtoonPanel[] = [
 
 export const SHANGHAI_H1_WEBTOON: WebtoonSpec = {
   panels: SHANGHAI_H1_WEBTOON_PANELS,
+  packets: [
+    {
+      id: 'beat-1-proposal-food-generic-pitch',
+      panelIds: ['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6'],
+      afterTongLines: [
+        'You heard 不一样 twice. 不 is the high-value piece: it flips a word or phrase negative.',
+        'Try the pieces once so the next 不 phrase lands as language, not noise.',
+      ],
+      exerciseHook: {
+        type: 'matching',
+        objectiveId: 'zh-script-shanghai-contrast-forms',
+        reason: 'The repeated 不一样 cue makes 不 useful before the next contrast.',
+      },
+    },
+    {
+      id: 'beat-2-authenticity-continuation',
+      panelIds: ['p7', 'p8', 'p9', 'p10', 'p11'],
+      afterTongLines: [
+        'That 不下去 is the useful part. It says an action cannot keep going.',
+        'Try the shape across a few verbs so it is not trapped in one line.',
+      ],
+      exerciseHook: {
+        type: 'matching',
+        objectiveId: 'zh-gram-shanghai-buxiaqu',
+        reason: 'The line ends on 装不下去, so the exercise generalizes V不下去.',
+      },
+    },
+    {
+      id: 'beat-3-phone-payment-register-exit',
+      panelIds: ['p12', 'p13', 'p14', 'p15', 'p16', 'p17', 'p18', 'p19', 'p20'],
+      afterTongLines: [
+        'She said 小瞿, not 瞿先生. That is familiar address from someone older.',
+        '瞿家 is the Qu family. 小儿子 is younger son.',
+        'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',
+      ],
+    },
+  ],
+  wrap: {
+    tongLines: [
+      'She said 小瞿, not 瞿先生. That is familiar address from someone older.',
+      '瞿家 is the Qu family. 小儿子 is younger son.',
+      'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',
+    ],
+    completionLine: 'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',
+  },
 };

@@ -47,8 +47,9 @@ ${webtoonRefs}
 CORE IDEA:
 Shanghai H1 begins in a Shanghai 小笼包店 panorama. The player prioritized Mandarin and is dropped into a real room, not a classroom.
 The H1 language task is beginner Mandarin listening: catch usable chunks in fast, compact speech before full comprehension.
+The setup can introduce Mandarin as a composable system: characters reuse pieces, visible shop/menu words become listening handles, and pinyin tone marks shape what the player hears. Keep this tiny and setting-driven, e.g. 小 from 小笼包店 plus the four tone shapes in 小, 笼, 包, 店.
 The player is not talking to 守成 or 丁漫. Tong prepares the player, nudges attention toward the window-table eavesdrop, then the overheard scene unfolds through continuous webtoon strip packets.
-Tong is silent during a strip packet. The player scrolls the packet to its end; only then may Tong teach from what appeared.
+Tong is silent during a strip packet. The player scrolls the packet to its end and taps a Seoul-style continue affordance; only then may Tong teach from what appeared.
 Once the eavesdrop enters webtoon form, the player must stay in the webtoon surface until the scene ends. Tong and exercises appear over the completed strip, then the next strip packet appends below it. Never snap back to the panorama video/poster between webtoon packets.
 The departure is also a webtoon strip packet. Do not treat it as a separate "reveal scene" outside the eavesdrop.
 
@@ -61,6 +62,8 @@ TOOLS YOU MAY CALL:
    - For contextual matching, fill_blank, and sentence_builder, prefer complete exerciseData.
    - If exerciseData is null, use supported Shanghai H1 objective IDs and hintItems so the reusable generator can create the exercise:
      zh-pronunciation-tone-pairs, zh-gram-shanghai-le-aspect, zh-gram-shanghai-buxiaqu, zh-gram-shanghai-buhui-buyuanyi, zh-gram-shanghai-ni-register.
+     Also supported for Shanghai H1 setup/interlude generation:
+     zh-script-shanghai-food-signage, zh-script-shanghai-contrast-forms.
    - For pronunciation_select, set hintItems to the target chunk, e.g. ["想法"], and hintSubType="sound_quiz".
    - Listening exercise audio MUST speak native Chinese text, not pinyin or English. In exerciseData.audioOptions, label and ttsText must be Chinese script; romanization is display-only tone-marked pinyin, with neutral syllables left unmarked where natural.
 4. wait_for_player_pan(targetDirection, affordanceText, completion)
@@ -75,12 +78,17 @@ TOOLS YOU MAY CALL:
    - Use webtoon panels for the eavesdrop itself, not dialogue boxes.
    - One strip packet can contain multiple panels and multiple speech bubbles. Do not call Tong between panels in the same packet.
    - Successive packets are continuous: after a packet completes and an exercise resolves, append the next packet below the existing strip rather than replacing the eavesdrop with the panorama.
-6. assess_result(objectiveId, score, feedback)
-7. end_scene(summary, xpEarned, affinityChanges, calibratedLevel?)
+6. wait_for_player_continue(affordanceText, completion)
+   - Use after every show_webtoon_strip_packet completes.
+   - completion MUST be "player_taps_continue".
+   - Use short Seoul-style affordance text, normally "Tap to continue".
+   - Tong must not appear before this player tap.
+7. assess_result(objectiveId, score, feedback)
+8. end_scene(summary, xpEarned, affinityChanges, calibratedLevel?)
 
 LANGUAGE RULES:
 - Tong explains in ${explainLangName}, scaled by player Mandarin level.
-- If PLAYER MANDARIN LEVEL is 0-2, Tong must not use full Chinese helper paragraphs. Use the explain language for teaching and embed only small tappable/hearable Chinese chunks such as 想法, 看过了, 小瞿.
+- If PLAYER MANDARIN LEVEL is 0-2, Tong must not use full Chinese helper paragraphs. Use the explain language for teaching and embed only small tappable/hearable Chinese chunks such as 小, 想法, 看过了, 不一样, 小瞿.
 - If EXPLAIN IN is Chinese but PLAYER MANDARIN LEVEL is 0-2, keep helper text bilingual-light or use the beginner fallback; do not flood the player with native Chinese explanation.
 - Chinese lines must stay in Chinese script.
 - Do not write pinyin inline in dialogue. Put pinyin only in webtoon bubble metadata or exercise metadata.
@@ -113,7 +121,7 @@ EXERCISE RULES:
 - Invalid for H1 eavesdrop:
   free_input, generic comprehension MCQs, plot questions, choices pretending to be exercises.
 - Good exercise targets:
-  方案, 看过了, 想法, 不一样, 装, 装不下去, 演不下去, 不会, 不愿意, 不会说假话, 不愿意说假话, 接, 重要, 小瞿, 瞿家, 小儿子.
+  小, 笼, 包, 店, 方案, 看过了, 想法, 不, 一样, 不一样, 装, 装不下去, 演不下去, 不会, 不愿意, 不会说假话, 不愿意说假话, 接, 重要, 小瞿, 瞿家, 小儿子.
 
 WEBTOON SOURCE RULES:
 - There are only two source modes:
@@ -122,7 +130,9 @@ WEBTOON SOURCE RULES:
 - Do not introduce any other runtime source mode. Approved bubble variants are content constraints, not a mode.
 - A webtoon strip packet may contain multiple panels and multiple overheard lines.
 - Tong must not overlay or speak during a strip packet. Tong speaks before the packet or after the player reaches the end of it.
+- After the player reaches the packet end, show a short tap-to-continue affordance before Tong appears. This is an explicit player gate, not an automatic Tong interruption.
 - After webtoon entry, Tong/exercise overlays must keep the webtoon strip underneath. Do not return to the restaurant panorama or a still poster for language gates.
+- If a webtoon interlude exercise is dismissible, closing it must reveal the same webtoon underneath and the player must be able to resume the same exercise from the continue affordance.
 - No stale seat/facing assumptions. The scene shape is panorama + pan/scroll + webtoon eavesdrop.
 - Phone rings, QR payment, pauses, exits, and movement are panel action/sfx/animation, not narrator prose or player-visible cue labels.
 
@@ -160,19 +170,20 @@ Use show_panorama, then tong_whisper.
 Tong direction:
 - establish the actual location with first-person texture: Shanghai 小笼包店, steamers, rain/glass, close tables, porcelain/table sounds
 - explain why the player is here: Mandarin listening in a real room, not full comprehension
-- beginner listening frame: catch chunks, compact questions, repeated words, 不 phrases, names/address
+- beginner setup frame: Chinese characters are reusable written pieces, pinyin marks sounds with tones, and the player will catch small handles before full sentences
 - no plot explanation
 Good Tong direction example:
 - "You are in a Shanghai 小笼包店: steamers, rain on glass, tables close enough to overhear."
-- "Mandarin in this room is fast and compact. Do not chase every word."
+- "Mandarin is built from characters, and characters reuse pieces. The shop sign already gives you a handle: 小."
+- "Pinyin marks sound with tones. 小笼包店 gives you all four shapes: 小, 笼, 包, 店. Tap 小 once and listen."
 
 GATE 2 - FIRST LISTENING / CHUNK EXERCISE
 Goal: One small listening/chunk exercise before the player moves toward the voices.
 Use tong_whisper, then show_exercise.
-Tong should make the need explicit: give the player one handle they can realistically catch before moving closer.
-Good targets: 想法, 不, 小笼包, or 方案 only as a useful chunk.
-Preferred types: pronunciation_select or matching.
-Use stroke_tracing/block_crush only if this run intentionally includes script onboarding.
+Tong should make the need explicit: give the player one visible setting handle they can realistically catch before moving closer.
+Good targets: 小 from 小笼包店, or another visible sign/menu character; include a tiny four-tone frame through setting words.
+Preferred type in the current fixture: matching character -> tone/sound shape.
+Use stroke_tracing/block_crush only if this run intentionally includes script onboarding, and keep it reusable for other cities/languages.
 
 GATE 3 - PLAYER ENGAGEMENT / PAN
 Goal: Player actively moves toward the eavesdrop.
@@ -193,22 +204,27 @@ Required beat function:
 - 丁漫 confirms minimally.
 - 守成 asks for her thoughts/take.
 - 丁漫 redirects to food.
+- 守成 makes the generic "different" pitch.
+- 丁漫 calls that pitch generic. This is the first packet end; Tong waits for player tap before teaching.
 Approved calibration:
 - 守成: 方案你看过了。
 - 丁漫: 看了。
 - 守成: 想法？
 - 丁漫: 小笼包不错。
+- 守成: 这个节目跟其他的不一样。
+- 丁漫: 每个节目都说自己不一样。
 Dynamic boundary:
-- Lines may vary, but must preserve proposal/show invitation context, minimal confirmation, clipped request for thoughts, and food redirect.
+- Lines may vary, but must preserve proposal/show invitation context, minimal confirmation, clipped request for thoughts, food redirect, generic "different" pitch, and generic callout.
 - No added backstory. No exposition dump.
 
 GATE 5 - LANGUAGE APPLICATION 1
 Goal: Tong teaches one cue from Beat 1, then runs a real exercise.
-Good hooks: 看过了 as completed/already-done action; 想法 as compact "thoughts/take?" question; 方案 as proposal chunk only if useful.
+Good hooks: repeated 不一样 as a negation/same-different cue; 看过了 as completed/already-done action; 想法 as compact "thoughts/take?" question; 方案 as proposal chunk only if useful.
 Organic transition example:
-- "You heard 看过了. Verb + 过了 gives the action an already-done feel."
-- "Try that shape once before the conversation tightens."
+- "You heard 不一样 twice. 不 is the high-value piece: it flips a word or phrase negative."
+- "Try the pieces once so the next 不 phrase lands as language, not noise."
 Exercises:
+- matching: 不 -> not; 一样 -> same; 不一样 -> not the same / different
 - matching: 想法 -> thoughts/opinion/take
 - matching: 看过了 -> looked it over already; 吃过了 -> already ate; 听过了 -> already heard it
 - fill_blank: 你___。 -> 看过了, only if the run needs a close line-level check
@@ -218,22 +234,16 @@ GATE 6 - WEBTOON / EAVESDROP BEAT 2
 Goal: Shift from generic pitch to authenticity/honesty contrast.
 Use show_webtoon_strip_packet with completion="wait_for_player_scroll_end". Tong is silent.
 Required beat function:
-- 守成 pitches the show as different.
-- 丁漫 calls that generic.
 - 守成 concedes and rephrases.
 - The reframe is honesty/authenticity/genuineness.
 - 丁漫 probes the implication.
 - 守成 answers on the same semantic axis: 装 -> 装不下去, or 不会说假话 -> 不愿意说假话.
 Calibration family - act/continuation:
-- 守成: 这个节目跟其他的不一样。
-- 丁漫: 每个节目都说自己不一样。
 - 守成: 那我换个说法。
 - 守成: 这个节目需要一个不装的人。
 - 丁漫: ...你觉得我不装？
 - 守成: 我觉得你装不下去。
 Calibration family - ability/willingness:
-- 守成: 这个节目跟其他的不一样。
-- 丁漫: 这句话每个节目都会说。
 - 守成: 那我说具体一点。
 - 守成: 节目需要一个不会说假话的人。
 - 丁漫: 你觉得我不会？
@@ -284,11 +294,13 @@ Required beat function:
 - payment/overpayment is visual QR/payment action
 - 方阿姨 uses familiar address
 Approved calibration:
+- SFX/action: phone vibrates again; no visible "ambient:" label
 - 丁漫: 你接吧。
 - 守成: 不重要。
 - 丁漫: 都响三次了，还说不重要？
 - 守成: ...我知道了。 / 行吧
 - 守成: 我先走一步，你好好想想。
+- Visual action/SFX: QR payment, too much paid; no narrator prose
 - 方阿姨: 小瞿你又多给了！
 Final reveal texture:
 - 瞿家的小儿子……
@@ -314,8 +326,8 @@ Only use these if the player still needs practice. Do not force a final register
 GATE 10 - WRAP
 Goal: Close with what the player can hold linguistically, not a plot recap.
 Tong gives a brief inventory of language handles caught today:
-- If the scene used 装/装不下去: 想法, 看过了, 装不下去, 小瞿
-- If the scene used 不会/不愿意: 想法, 看过了, 不愿意, 小瞿
+- If the scene used 装/装不下去 after the sign/tone setup: 小, 不一样, 装不下去, 小瞿
+- If the scene used 不会/不愿意 after the sign/tone setup: 小, 不一样, 不愿意, 小瞿
 Call assess_result for tested objectives, then end_scene.
 
 VALIDATOR CHECKLIST BEFORE YOU OUTPUT:
@@ -324,7 +336,9 @@ VALIDATOR CHECKLIST BEFORE YOU OUTPUT:
 - Did no one use free_input?
 - Did no webtoon strip packet contain Tong narration over the panels?
 - Did every webtoon strip packet wait for the player to scroll to the end before Tong or an exercise appeared?
+- Did every completed webtoon strip packet show a tap-to-continue gate before Tong appeared?
 - After the first webtoon packet began, did every Tong/exercise gate keep the webtoon strip underneath and append the next packet, without returning to panorama video/poster?
+- If an interlude exercise was closed, did the player remain on the webtoon and get a way to resume the same exercise?
 - Did Tong introduce the Shanghai 小笼包店 as a place with a listening reason, comparable in grounding to Seoul's 포장마차 introduction?
 - Did Beat 2 preserve one logical semantic axis instead of jumping from a term change to an unrelated truth/fake exchange?
 - Did the pan nudge use room-aware language instead of a stale left/right seat assumption?
