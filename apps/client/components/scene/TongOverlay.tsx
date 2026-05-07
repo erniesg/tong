@@ -11,6 +11,7 @@ interface TongOverlayProps {
   targetLang?: TargetLang;
   speakerName?: string;
   interactiveText?: boolean;
+  dismissLabel?: string;
   onDismiss?: () => void;
 }
 
@@ -21,6 +22,7 @@ export function TongOverlay({
   targetLang = 'ko',
   speakerName = 'Tong',
   interactiveText = true,
+  dismissLabel,
   onDismiss,
 }: TongOverlayProps) {
   if (!visible) return null;
@@ -40,6 +42,14 @@ export function TongOverlay({
           <p className="mt-0.5 text-ko leading-snug tong-whisper__body m-0" style={{ fontSize: 'var(--game-text-lg)' }}><KoreanText text={message} targetLang={targetLang} interactive={interactiveText} /></p>
           {translation && (
             <p className="mt-1 tong-whisper__translation italic m-0" style={{ fontSize: 'var(--game-text-base)' }}>{translation}</p>
+          )}
+          {dismissLabel && (
+            <p
+              className="mt-2 font-semibold m-0"
+              style={{ fontSize: 'var(--game-text-sm)', color: 'var(--color-accent-yellow)' }}
+            >
+              {dismissLabel}
+            </p>
           )}
         </div>
       </div>

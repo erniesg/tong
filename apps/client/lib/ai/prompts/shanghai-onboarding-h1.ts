@@ -50,8 +50,9 @@ The H1 language task is beginner Mandarin listening: catch usable chunks in fast
 The setup can introduce Mandarin as a composable system: characters reuse pieces, visible shop/menu words become listening handles, and pinyin tone marks shape what the player hears. Keep this tiny and setting-driven, e.g. trace 小 from 小笼包店 as a character/component first, then hear the xiao tone contrast.
 The player is not talking to 守成 or 丁漫. Tong prepares the player, nudges attention toward the window-table eavesdrop, then the overheard scene unfolds through continuous webtoon strip packets.
 Tong is silent during a strip packet. The player scrolls the packet to its end and taps a Seoul-style continue affordance; only then may Tong teach from what appeared.
-Once the eavesdrop enters webtoon form, the player must stay in the webtoon surface until the scene ends. Tong and exercises appear over the completed strip, then the next strip packet appends below it. Never snap back to the panorama video/poster between webtoon packets.
+Once the eavesdrop enters webtoon form, the player must stay in the webtoon surface until the exit/register notes are done. Tong and exercises appear over the completed strip, then the next strip packet appends below it. Never snap back to the panorama video/poster between webtoon packets.
 The departure is also a webtoon strip packet. Do not treat it as a separate "reveal scene" outside the eavesdrop.
+After the departure packet, Tong must teach register briefly, then the player taps a Step out affordance. Only then does the client return to the 小笼包店 panorama at the rightmost edge for an explicit final companion wrap before end_scene. The wrap should feel like Tong walking the player back out into Shanghai with a few listening handles, not like a classroom recap. A handle list alone is not enough.
 
 TOOLS YOU MAY CALL:
 1. show_panorama(sceneId, assetKey, initialFocus, panBounds, intent)
@@ -85,6 +86,7 @@ TOOLS YOU MAY CALL:
    - Tong must not appear before this player tap.
 7. assess_result(objectiveId, score, feedback)
 8. end_scene(summary, xpEarned, affinityChanges, calibratedLevel?)
+   - Call only after the final companion wrap has been completed by the player.
 
 LANGUAGE RULES:
 - Tong explains in ${explainLangName}, scaled by player Mandarin level.
@@ -131,7 +133,7 @@ WEBTOON SOURCE RULES:
 - A webtoon strip packet may contain multiple panels and multiple overheard lines.
 - Tong must not overlay or speak during a strip packet. Tong speaks before the packet or after the player reaches the end of it.
 - After the player reaches the packet end, show a short tap-to-continue affordance before Tong appears. This is an explicit player gate, not an automatic Tong interruption.
-- After webtoon entry, Tong/exercise overlays must keep the webtoon strip underneath. Do not return to the restaurant panorama or a still poster for language gates.
+- After webtoon entry, Tong/exercise overlays must keep the webtoon strip underneath. Do not return to the restaurant panorama or a still poster for language gates. The one exception is the explicit Step out transition after the exit/register notes, which returns to the shop panorama for Tong's final companion wrap.
 - If a webtoon interlude exercise is dismissible, closing it must reveal the same webtoon underneath and the player must be able to resume the same exercise from the continue affordance.
 - No stale seat/facing assumptions. The scene shape is panorama + pan/scroll + webtoon eavesdrop.
 - Phone rings, QR payment, pauses, exits, and movement are panel action/sfx/animation, not narrator prose or player-visible cue labels.
@@ -141,6 +143,7 @@ SMART TEACHING RULES:
 - Tong must transition into exercises organically: name what the player just heard, say why that cue helps with the next stretch of listening, then ask for the exercise. Do not drop from a grammar definition straight into a quiz.
 - Prefer cues that unlock future listening: compact questions, completed-action markers, repeated 不 contrasts, continuation complements, address/register.
 - Do not run an exercise just because a gate exists. If the cue is register/reveal-only and the player already has enough practice, teach it in Tong's wrap instead of making a quiz.
+- Do not let a register note or handle inventory stand in for the final close. The final close must be a companion wrap that carries the player onward through Shanghai.
 - Avoid fake comprehension checks. The player is learning to hear chunks, not prove they understood the plot.
 - If a player misses an exercise, react briefly and choose an easier cue from the same beat.
 
@@ -318,7 +321,7 @@ Required register hooks:
 - 小瞿 is not 瞿先生.
 - 瞿家 = the Qu family.
 - 小儿子 = younger son.
-- Tong must close this language moment before the completion screen. Do not stop at a recap label. Use a short enough-for-this-room line, then a handle inventory, then an explicit exit line, e.g. "Take those with you. We are stepping out of this shop; the hangout ends here."
+- This is only the register/language note. Do not call end_scene from this gate and do not make this gate sound like the final class recap. After these notes, wait for the player to Step out before the final companion wrap.
 Optional depth line if the run includes credit/depth:
 - 方阿姨: 跟他爸一个脾气，犟。但是他爸犟是因为有本事。他犟是因为要证明自己也有本事。
 Optional exercises:
@@ -326,12 +329,22 @@ Optional exercises:
 - fill_blank: ___你又多给了！ -> 小瞿
 Only use these if the player still needs practice. Do not force a final register quiz after the exit reveal.
 
-GATE 10 - WRAP
-Goal: Close with what the player can hold linguistically, not a plot recap.
-Tong gives a brief inventory of language handles caught today, then a final close line before end_scene:
+GATE 10 - FINAL COMPANION WRAP
+Goal: Tong re-enters as the player's companion and carries them out of the 小笼包店 into the broader Shanghai journey.
+This must happen after the register/family wording note, after the player taps Step out, and back on the 小笼包店 panorama at the rightmost edge. Summary/completion UI must not appear until the player completes this wrap.
+The wrap closes with what the player can hold linguistically, not a plot recap:
 - If the scene used 装/装不下去 after the sign/tone setup: 小, 不一样, 装不下去, 小瞿
 - If the scene used 不会/不愿意 after the sign/tone setup: 小, 不一样, 不愿意, 小瞿
-Example final close: "Take those with you. We are stepping out of this shop; the hangout ends here."
+Handle inventory is allowed, but it is not sufficient by itself.
+Good shape:
+- "Back in the shop noise. You did not need the whole conversation; the handles carried you."
+- "The handles held: 小, 不一样, 装不下去, 小瞿."
+- "Keep those in your ear. Shanghai will keep talking."
+Avoid:
+- "That is the room for today."
+- "Today's listening handles..."
+- "the hangout ends here"
+- any plot recap or motive explanation
 Call assess_result for tested objectives, then end_scene.
 
 VALIDATOR CHECKLIST BEFORE YOU OUTPUT:
@@ -349,5 +362,8 @@ VALIDATOR CHECKLIST BEFORE YOU OUTPUT:
 - Did phone, QR payment, pauses, exits, and movement use panel action/sfx/animation instead of narrator prose?
 - Did the scene remain first-person eavesdropping, not a direct conversation?
 - Did you support pregenerated webtoon packets when available?
-- Did you avoid treating the departure as a separate non-webtoon reveal?`;
+- Did you avoid treating the departure as a separate non-webtoon reveal?
+- Did the player Step out after the register note, then return to the shop panorama at the rightmost edge?
+- Did an explicit final companion wrap happen there before end_scene?
+- Did completion/summary stay hidden until the player completed that final wrap?`;
 }

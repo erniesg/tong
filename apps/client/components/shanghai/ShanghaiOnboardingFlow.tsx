@@ -13,7 +13,7 @@ import type { ExerciseData } from '@/lib/types/hangout';
 import type { WebtoonPanel } from '@/lib/hangout/fixture-types';
 import { dispatch, useGameState } from '@/lib/store/game-store';
 
-type OnboardingPhase = 'panorama' | 'webtoon' | 'webtoon-interlude' | 'complete';
+type OnboardingPhase = 'panorama' | 'webtoon' | 'webtoon-interlude' | 'step-out' | 'final-wrap' | 'complete';
 type SetupStep = 'intro' | 'prelisten-exercise' | 'prelisten-transition' | 'post-exercise' | 'pan';
 
 interface PanoramaMetrics {
@@ -33,6 +33,7 @@ interface StoredCheckpoint {
   webtoonStepIndex?: number;
   webtoonInterludeLineIndex?: number;
   webtoonInterludeExerciseIndex?: number;
+  finalWrapLineIndex?: number;
   pan?: number;
   webtoonComplete?: boolean;
 }
@@ -49,7 +50,7 @@ function clamp(value: number, min = 0, max = 1) {
 function isStoredCheckpoint(value: unknown): value is StoredCheckpoint {
   if (!value || typeof value !== 'object') return false;
   const phase = (value as { phase?: unknown }).phase;
-  return phase === 'panorama' || phase === 'webtoon' || phase === 'webtoon-interlude' || phase === 'complete';
+  return phase === 'panorama' || phase === 'webtoon' || phase === 'webtoon-interlude' || phase === 'step-out' || phase === 'final-wrap' || phase === 'complete';
 }
 
 export function ShanghaiOnboardingFlow() {
@@ -80,6 +81,7 @@ export function ShanghaiOnboardingFlow() {
   const [webtoonStepIndex, setWebtoonStepIndex] = useState(0);
   const [webtoonInterludeLineIndex, setWebtoonInterludeLineIndex] = useState(0);
   const [webtoonInterludeExerciseIndex, setWebtoonInterludeExerciseIndex] = useState(0);
+  const [finalWrapLineIndex, setFinalWrapLineIndex] = useState(0);
   const [tongVisible, setTongVisible] = useState(true);
   const [currentExercise, setCurrentExercise] = useState<ExerciseData | null>(null);
   const [suspendedExercise, setSuspendedExercise] = useState<ExerciseData | null>(null);
@@ -131,6 +133,11 @@ export function ShanghaiOnboardingFlow() {
   const activeInterludeLine = webtoonInterludeLineIndex < activeInterludeLines.length
     ? activeInterludeLines[webtoonInterludeLineIndex]
     : undefined;
+  const activeFinalWrapLine = tongCopy.finalWrapTongLines[
+    Math.min(finalWrapLineIndex, Math.max(tongCopy.finalWrapTongLines.length - 1, 0))
+  ];
+  const finalWrapIsLastLine = finalWrapLineIndex >= tongCopy.finalWrapTongLines.length - 1;
+  const isShopFinalWrap = phase === 'final-wrap';
 
   const hud = (
     <GameHUD
@@ -164,6 +171,7 @@ export function ShanghaiOnboardingFlow() {
       setWebtoonStepIndex(0);
       setWebtoonInterludeLineIndex(0);
       setWebtoonInterludeExerciseIndex(0);
+      setFinalWrapLineIndex(0);
       setTongVisible(!startInWebtoon);
       setCurrentExercise(null);
       setSuspendedExercise(null);
@@ -191,6 +199,7 @@ export function ShanghaiOnboardingFlow() {
       setWebtoonStepIndex(restoredWebtoonStepIndex);
       setWebtoonInterludeLineIndex(restoredInterludeLineIndex);
       setWebtoonInterludeExerciseIndex(restoredInterludeExerciseIndex);
+      setFinalWrapLineIndex(parsed.finalWrapLineIndex ?? 0);
       setSuspendedExercise(null);
       setWebtoonReadyToContinue(false);
       setPan(typeof parsed.pan === 'number' ? parsed.pan : SHANGHAI_ONBOARDING_PANORAMA.presentation.initialFocus);
@@ -243,7 +252,7 @@ export function ShanghaiOnboardingFlow() {
 
   const handlePointerDown = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
-    if (target.closest('.tong-whisper,.scene-hud,.scene-hud-pull-tab,.dialogue-subtitle,a')) return;
+    if (target.closest('.tong-whisper,.scene-hud,.scene-hud-pull-tab,.dialogue-subtitle,a,button')) return;
     if (!panUnlocked) return;
     dragRef.current = { active: true, moved: false, startX: event.clientX, startPan: pan };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -382,8 +391,36 @@ export function ShanghaiOnboardingFlow() {
       return;
     }
 
-    finishOnboarding();
-  }, [finishOnboarding, introIndex, pan, postExerciseIndex, webtoonStepIndex, webtoonSteps.length, writeCheckpoint]);
+    setPhase('step-out');
+    writeCheckpoint({
+      phase: 'step-out',
+      setupStep: 'pan',
+      introIndex,
+      postExerciseIndex,
+      webtoonStepIndex,
+      pan,
+      webtoonComplete: false,
+    });
+  }, [introIndex, pan, postExerciseIndex, webtoonStepIndex, webtoonSteps.length, writeCheckpoint]);
+
+  const stepOutToShopWrap = useCallback(() => {
+    setCurrentExercise(null);
+    setSuspendedExercise(null);
+    setWebtoonReadyToContinue(false);
+    setFinalWrapLineIndex(0);
+    setPan(SHANGHAI_ONBOARDING_PANORAMA.presentation.initialFocus);
+    setPhase('final-wrap');
+    writeCheckpoint({
+      phase: 'final-wrap',
+      setupStep: 'pan',
+      introIndex,
+      postExerciseIndex,
+      webtoonStepIndex,
+      finalWrapLineIndex: 0,
+      pan: SHANGHAI_ONBOARDING_PANORAMA.presentation.initialFocus,
+      webtoonComplete: false,
+    });
+  }, [introIndex, postExerciseIndex, webtoonStepIndex, writeCheckpoint]);
 
   const startWebtoonInterlude = useCallback(() => {
     const lines = getStepTongLines(activeWebtoonStep);
@@ -485,6 +522,35 @@ export function ShanghaiOnboardingFlow() {
     postExerciseIndex,
     webtoonInterludeExerciseIndex,
     webtoonInterludeLineIndex,
+    webtoonStepIndex,
+    writeCheckpoint,
+  ]);
+
+  const handleFinalWrapContinue = useCallback(() => {
+    if (!finalWrapIsLastLine) {
+      const nextLineIndex = finalWrapLineIndex + 1;
+      setFinalWrapLineIndex(nextLineIndex);
+      writeCheckpoint({
+        phase: 'final-wrap',
+        setupStep: 'pan',
+        introIndex,
+        postExerciseIndex,
+        webtoonStepIndex,
+        finalWrapLineIndex: nextLineIndex,
+        pan,
+        webtoonComplete: false,
+      });
+      return;
+    }
+
+    finishOnboarding();
+  }, [
+    finalWrapIsLastLine,
+    finalWrapLineIndex,
+    finishOnboarding,
+    introIndex,
+    pan,
+    postExerciseIndex,
     webtoonStepIndex,
     writeCheckpoint,
   ]);
@@ -596,7 +662,7 @@ export function ShanghaiOnboardingFlow() {
     transform: `translate3d(${-pan * metrics.maxOffsetX}px, ${metrics.y}px, 0)`,
   };
 
-  if ((phase === 'webtoon' || phase === 'webtoon-interlude') && fixture) {
+  if ((phase === 'webtoon' || phase === 'webtoon-interlude' || phase === 'step-out') && fixture) {
     return (
       <main className="scene-root">
         <div className="game-frame">
@@ -668,6 +734,27 @@ export function ShanghaiOnboardingFlow() {
                 onClose={handleExerciseClose}
               />
             )}
+            {phase === 'step-out' && !currentExercise && (
+              <div
+                className="absolute left-0 right-0 z-30"
+                style={{ top: '42%', padding: '0 20px', pointerEvents: 'none' }}
+              >
+                <button
+                  className="scene-continue-label animate-pulse"
+                  type="button"
+                  onClick={stepOutToShopWrap}
+                  style={{
+                    width: '100%',
+                    border: 0,
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    pointerEvents: 'auto',
+                  }}
+                >
+                  {tongCopy.stepOutLabel}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -738,12 +825,13 @@ export function ShanghaiOnboardingFlow() {
           <div className="shanghai-onboarding__scrim" aria-hidden="true" />
 
           <TongOverlay
-            message={activeTongLine ?? ''}
-            visible={tongVisible && Boolean(activeTongLine)}
+            message={isShopFinalWrap ? activeFinalWrapLine ?? '' : activeTongLine ?? ''}
+            visible={isShopFinalWrap ? Boolean(activeFinalWrapLine) : tongVisible && Boolean(activeTongLine)}
             targetLang="zh"
             speakerName={tongCopy.tongName}
             interactiveText
-            onDismiss={dismissTong}
+            dismissLabel={isShopFinalWrap ? (finalWrapIsLastLine ? tongCopy.finalWrapCompleteLabel : tongCopy.finalWrapContinueLabel) : undefined}
+            onDismiss={isShopFinalWrap ? handleFinalWrapContinue : dismissTong}
           />
 
           {panUnlocked && (

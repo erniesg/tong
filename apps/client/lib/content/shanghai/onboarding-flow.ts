@@ -37,7 +37,11 @@ export interface ShanghaiOnboardingPanorama {
   preListeningExercises: ExerciseData[];
   postExerciseTongLines: string[];
   panPrompt: string;
+  stepOutLabel: string;
   completionTongLine: string;
+  finalWrapTongLines: string[];
+  finalWrapContinueLabel: string;
+  finalWrapCompleteLabel: string;
   webtoonFixtureId: string;
   webtoonSteps: ShanghaiOnboardingWebtoonStep[];
 }
@@ -57,7 +61,11 @@ export interface ShanghaiOnboardingTongCopy {
   preListeningTransitionTongLines: Record<number, string[]>;
   postExerciseTongLines: string[];
   panPrompt: string;
+  stepOutLabel: string;
   completionTongLine: string;
+  finalWrapTongLines: string[];
+  finalWrapContinueLabel: string;
+  finalWrapCompleteLabel: string;
   webtoonStepTongLines: Record<string, string[]>;
 }
 
@@ -85,7 +93,15 @@ const EN_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'That table by the window is cutting through the room noise. Slide that way slowly.',
   ],
   panPrompt: 'Slide toward the window table.',
+  stepOutLabel: 'Step out',
   completionTongLine: 'Saved listening handles: 小, 不一样, 装不下去, 小瞿.',
+  finalWrapTongLines: [
+    'Back in the shop noise. You did not need the whole conversation; the handles carried you.',
+    'The handles held: 小, 不一样, 装不下去, 小瞿.',
+    'Keep those in your ear. Shanghai will keep talking.',
+  ],
+  finalWrapContinueLabel: 'Continue',
+  finalWrapCompleteLabel: 'Continue',
   webtoonStepTongLines: {
     'beat-1-proposal-question': [
       'You heard 不一样 twice. 不 is the high-value piece: it flips a word or phrase negative.',
@@ -98,9 +114,6 @@ const EN_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'beat-3-exit-register': [
       'She said 小瞿, not 瞿先生. That is familiar address from someone older.',
       '瞿家 is the Qu family. 小儿子 is younger son.',
-      'That is enough for this first room. Keep the handles, not every sentence.',
-      'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',
-      'Take those with you. We are stepping out of this shop; the hangout ends here.',
     ],
   },
 };
@@ -123,7 +136,15 @@ const KO_TONG_COPY: ShanghaiOnboardingTongCopy = {
     '창가 테이블 소리가 방 안 소음을 뚫고 들어와. 그쪽으로 천천히 밀어 봐.',
   ],
   panPrompt: '창가 테이블 쪽으로 밀기.',
+  stepOutLabel: '나가기',
   completionTongLine: '저장된 듣기 손잡이: 小, 不一样, 装不下去, 小瞿.',
+  finalWrapTongLines: [
+    '다시 가게 소리 안이야. 대화 전체가 아니라 손잡이가 너를 여기까지 데려왔어.',
+    '손잡이는 잡혔어: 小, 不一样, 装不下去, 小瞿.',
+    '귀에 남겨 둬. 상하이는 계속 말을 걸 거야.',
+  ],
+  finalWrapContinueLabel: '계속',
+  finalWrapCompleteLabel: '계속',
   webtoonStepTongLines: {
     'beat-1-proposal-question': [
       '방금 不一样이 두 번 나왔어. 不가 중요한 조각이야. 단어나 구를 부정 쪽으로 돌려.',
@@ -136,9 +157,6 @@ const KO_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'beat-3-exit-register': [
       '方阿姨가 小瞿라고 했지, 瞿先生이 아니었어. 어른이 어린 사람을 부르는 익숙한 호칭이야.',
       '瞿家는 Qu family, 小儿子는 작은아들 또는 둘째 아들이라는 말이야.',
-      '이 첫 방에서는 여기까지면 충분해. 모든 문장이 아니라 손잡이만 잡고 가자.',
-      '오늘 잡은 듣기 손잡이: 小, 不一样, 装不下去, 小瞿.',
-      '그 손잡이만 가지고 나가자. 이제 이 가게에서의 hangout은 여기서 끝이야.',
     ],
   },
 };
@@ -161,7 +179,15 @@ const JA_TONG_COPY: ShanghaiOnboardingTongCopy = {
     '窓際のテーブルの声が、店の音を抜けて聞こえる。そっちへゆっくり寄せて。',
   ],
   panPrompt: '窓際のテーブルへスライド。',
+  stepOutLabel: '店を出る',
   completionTongLine: '保存した聞き取りの手がかり: 小, 不一样, 装不下去, 小瞿.',
+  finalWrapTongLines: [
+    '店の音の中に戻ってきた。全部の会話はいらない。手がかりでここまでついてこられた。',
+    '手がかりは残った: 小, 不一样, 装不下去, 小瞿.',
+    '耳に置いておこう。上海はまだ話し続ける。',
+  ],
+  finalWrapContinueLabel: '続ける',
+  finalWrapCompleteLabel: '続ける',
   webtoonStepTongLines: {
     'beat-1-proposal-question': [
       '今、 不一样 が二回聞こえた。使える部品は 不。語やフレーズを否定側にひっくり返す。',
@@ -174,9 +200,6 @@ const JA_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'beat-3-exit-register': [
       '方阿姨 は 小瞿 と言った。瞿先生 じゃない。年上から若い人への親しい呼び方だよ。',
       '瞿家 は Qu家。小儿子 は下の息子。',
-      'この最初の部屋はここまでで十分。全部の文ではなく、手がかりを持って出よう。',
-      '今日つかんだ聞き取りの手がかり: 小, 不一样, 装不下去, 小瞿.',
-      'その手がかりを持って出よう。この店での hangout はここで終わり。',
     ],
   },
 };
@@ -199,7 +222,15 @@ const ZH_ADVANCED_TONG_COPY: ShanghaiOnboardingTongCopy = {
     '窗边那桌的声音从店里的杂音里透出来了。慢慢把视角移过去。',
   ],
   panPrompt: '滑向窗边那桌。',
+  stepOutLabel: '走出店里',
   completionTongLine: '已保存的听力抓手：小, 不一样, 装不下去, 小瞿.',
+  finalWrapTongLines: [
+    '回到店里的声音里了。你不需要整段都听懂，是这些抓手把你带住了。',
+    '抓手留下了：小, 不一样, 装不下去, 小瞿。',
+    '先把它们留在耳朵里。上海还会继续说话。',
+  ],
+  finalWrapContinueLabel: '继续',
+  finalWrapCompleteLabel: '继续',
   webtoonStepTongLines: {
     'beat-1-proposal-question': [
       '你刚听到两次 不一样。有用的是 不：它把词或短语翻到否定方向。',
@@ -212,9 +243,6 @@ const ZH_ADVANCED_TONG_COPY: ShanghaiOnboardingTongCopy = {
     'beat-3-exit-register': [
       '方阿姨说的是 小瞿，不是 瞿先生。这是长辈对晚辈的熟人称呼。',
       '瞿家 是 Qu family。小儿子 是 younger son。',
-      '第一间屋子到这里就够了。先带走抓手，不用带走每一句。',
-      '今天抓到的听力抓手：小, 不一样, 装不下去, 小瞿.',
-      '带着这些抓手出去。这个店里的 hangout 到这里结束。',
     ],
   },
 };
@@ -355,7 +383,11 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
     ...EN_TONG_COPY.postExerciseTongLines,
   ],
   panPrompt: EN_TONG_COPY.panPrompt,
+  stepOutLabel: EN_TONG_COPY.stepOutLabel,
   completionTongLine: EN_TONG_COPY.completionTongLine,
+  finalWrapTongLines: EN_TONG_COPY.finalWrapTongLines,
+  finalWrapContinueLabel: EN_TONG_COPY.finalWrapContinueLabel,
+  finalWrapCompleteLabel: EN_TONG_COPY.finalWrapCompleteLabel,
   webtoonFixtureId: 'shanghai-h1',
   webtoonSteps: [
     {

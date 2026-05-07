@@ -203,6 +203,16 @@ async function clickTong(page) {
 
 async function screenshot(page, name, label, shots) {
   const file = join(OUT_DIR, name);
+  const hasTongOverlay = await page.$('.tong-whisper');
+  if (hasTongOverlay) {
+    await page.waitForFunction(() => {
+      const overlay = document.querySelector('.tong-whisper');
+      if (!(overlay instanceof HTMLElement)) return true;
+      const opacity = Number.parseFloat(window.getComputedStyle(overlay).opacity || '1');
+      return opacity >= 0.95;
+    }, { timeout: 1500 }).catch(() => {});
+    await sleep(120);
+  }
   await page.screenshot({ path: file, fullPage: false });
   shots.push({ label, path: file });
 }
@@ -630,22 +640,71 @@ async function run() {
 
     await recorder.cue('register_language_gate');
     await waitForText(page, 'She said 小瞿');
-    await screenshot(page, '31-register-language.png', 'register_language_gate', screenshots);
+    checks.registerNoteVisible = await page.evaluate(() => (
+      document.body.innerText.includes('She said 小瞿')
+      && !document.querySelector('.summary-screen')
+    ));
+    await screenshot(page, '31-register-note.png', 'register_note', screenshots);
     await clickTong(page);
     await waitForText(page, '瞿家 is the Qu family');
-    await screenshot(page, '32-family-register-language.png', 'family_register_language_gate', screenshots);
+    checks.familyWordingNoteVisible = await page.evaluate(() => (
+      document.body.innerText.includes('瞿家 is the Qu family')
+      && document.body.innerText.includes('小儿子 is younger son')
+      && !document.querySelector('.summary-screen')
+    ));
+    await screenshot(page, '32-family-wording-note.png', 'family_wording_note', screenshots);
     await clickTong(page);
-    await waitForText(page, 'That is enough for this first room');
-    checks.tongSceneCloseVisible = await page.evaluate(() => document.body.innerText.includes('That is enough for this first room'));
-    await screenshot(page, '33-scene-close-language.png', 'scene_close_language', screenshots);
+    await waitForText(page, 'Step out');
+    checks.stepOutGateVisible = await page.evaluate(() => (
+      Boolean(document.querySelector('.shanghai-onboarding--webtoon'))
+      && document.body.innerText.includes('Step out')
+      && !Boolean(document.querySelector('.tong-whisper'))
+      && !document.querySelector('.summary-screen')
+    ));
+    await screenshot(page, '33-step-out-gate.png', 'step_out_gate', screenshots);
+    await clickVisibleText(page, 'Step out');
+    await waitForText(page, 'Back in the shop noise');
+    checks.finalCompanionWrapStarted = await page.evaluate(() => (
+      Boolean(document.querySelector('.shanghai-onboarding__stage'))
+      && Boolean(document.querySelector('.shanghai-onboarding__video'))
+      && !Boolean(document.querySelector('.wt-strip'))
+      && document.body.innerText.includes('Back in the shop noise')
+      && !document.querySelector('.summary-screen')
+    ));
+    checks.finalWrapAtRightmostShopEdge = await page.evaluate(() => {
+      const stage = document.querySelector('.shanghai-onboarding__stage');
+      const world = document.querySelector('.shanghai-onboarding__world');
+      if (!(stage instanceof HTMLElement) || !(world instanceof HTMLElement)) return false;
+      const matrix = new DOMMatrixReadOnly(window.getComputedStyle(world).transform);
+      const maxOffsetX = Math.max(0, world.getBoundingClientRect().width - stage.getBoundingClientRect().width);
+      return maxOffsetX <= 2 || Math.abs(matrix.m41) >= maxOffsetX - 4;
+    });
+    checks.summaryHiddenDuringFinalWrap = checks.finalCompanionWrapStarted;
+    await recorder.cue('returned_to_shop_final_wrap');
+    await screenshot(page, '34-final-wrap-shop-start.png', 'final_companion_wrap_shop_start', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Today’s listening handles');
-    await screenshot(page, '34-tong-wrap.png', 'tong_wrap', screenshots);
+    await waitForText(page, 'The handles held');
+    checks.finalHandleInventoryVisible = await page.evaluate(() => (
+      document.body.innerText.includes('The handles held: 小, 不一样, 装不下去, 小瞿')
+      && Boolean(document.querySelector('.shanghai-onboarding__video'))
+      && !Boolean(document.querySelector('.wt-strip'))
+      && !document.querySelector('.summary-screen')
+    ));
+    checks.summaryHiddenDuringFinalWrap = checks.summaryHiddenDuringFinalWrap && checks.finalHandleInventoryVisible;
     await clickTong(page);
-    await waitForText(page, 'the hangout ends here');
-    checks.tongHangoutCloseVisible = await page.evaluate(() => document.body.innerText.includes('the hangout ends here'));
-    await screenshot(page, '35-hangout-close.png', 'hangout_close', screenshots);
-    await clickTong(page);
+    await waitForText(page, 'Shanghai will keep talking');
+    checks.finalCompanionWrapVisible = await page.evaluate(() => (
+      Boolean(document.querySelector('.shanghai-onboarding__stage'))
+      && Boolean(document.querySelector('.shanghai-onboarding__video'))
+      && !Boolean(document.querySelector('.wt-strip'))
+      && document.body.innerText.includes('Keep those in your ear. Shanghai will keep talking.')
+      && document.body.innerText.includes('Continue')
+      && !document.querySelector('.summary-screen')
+    ));
+    checks.summaryHiddenDuringFinalWrap = checks.summaryHiddenDuringFinalWrap && checks.finalCompanionWrapVisible;
+    await recorder.cue('final_companion_wrap_visible');
+    await screenshot(page, '35-final-companion-wrap.png', 'final_companion_wrap', screenshots);
+    await clickVisibleText(page, 'Continue');
 
     checks.summaryScreenVisible = await page.waitForSelector('.summary-screen', { visible: true, timeout: 8000 })
       .then(() => true)
@@ -726,7 +785,14 @@ async function run() {
       checks.fangAyiOverpayVisible,
       checks.registerRevealVisible,
       checks.exitContinueVisible,
-      checks.tongSceneCloseVisible,
+      checks.registerNoteVisible,
+      checks.familyWordingNoteVisible,
+      checks.stepOutGateVisible,
+      checks.finalCompanionWrapStarted,
+      checks.finalWrapAtRightmostShopEdge,
+      checks.finalHandleInventoryVisible,
+      checks.finalCompanionWrapVisible,
+      checks.summaryHiddenDuringFinalWrap,
       checks.noNarratorPhoneCopy,
       checks.hasHud,
       !checks.debugPanels,

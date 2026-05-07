@@ -12,15 +12,17 @@ The NPCs are characters, not teachers. 守成 and 丁漫 should sound like peopl
 
 ## Non-Negotiables
 
-- Flow shape: panorama -> prelisten exercise -> pan/scroll -> continuous webtoon strip packet -> player taps to continue -> Tong/exercise -> next strip packet -> player taps to continue -> Tong/exercise -> exit strip packet -> player taps to continue -> Tong wrap -> ending screen.
+- Flow shape: panorama -> prelisten exercise -> pan/scroll -> continuous webtoon strip packet -> player taps to continue -> Tong/exercise -> next strip packet -> player taps to continue -> Tong/exercise -> exit strip packet -> player taps to continue -> register note -> family wording note -> player taps Step out -> return to the 小笼包店 panorama at the rightmost edge -> explicit final companion wrap -> player completes wrap -> ending screen.
 - Tong speaks in the player's explain language, scaled by Mandarin level. A Mandarin beginner gets explain-language teaching with only small tappable/hearable Chinese chunks, not full Chinese helper paragraphs.
 - Tong is silent during webtoon strip packets. The player scrolls to the end of the current packet and then taps a Seoul-style continue affordance before Tong or an exercise appears.
-- Once the eavesdrop enters webtoon form, Tong and exercises stay over the webtoon surface. Do not snap back to the panorama video or poster between packets.
+- Once the eavesdrop enters webtoon form, Tong and exercises stay over the webtoon surface until the exit/register notes are complete. Do not snap back to the panorama video or poster between packets. The only allowed return to panorama is the explicit Step out transition into Tong's final companion wrap.
 - Packets append into one continuous eavesdrop strip: after an exercise resolves, the next panels continue below the completed packet.
 - Interlude exercises can be minimized. If the player closes one to inspect the strip, the same webtoon stays underneath and a short continue affordance resumes the exercise.
 - Chinese text inside webtoon bubbles must be tappable native-script text using the same interaction principle as Seoul.
 - Chinese text inside exercises, especially matching prompts/tiles, must also use the same tappable word-help/audio convention as Seoul.
 - Tong UI must use the Seoul-consistent Tong surface for interludes, not a separate subtitle card style.
+- The final companion wrap is an explicit player-advanced gate before `end_scene`; handle inventory alone is not enough. It happens back in the shop panorama, not over the final webtoon panel.
+- Summary/completion UI must not appear while the final companion wrap is visible. The player must complete the wrap first.
 - Phone rings, QR payment, pauses, exits, and movement are panel action, SFX, or animation. They are not visible staging labels like `ambient:`.
 - There are exactly two webtoon source modes:
   - `pregenerated_webtoon`: panels/bubbles are provided; Tong, exercises, pacing, and teaching choices are still dynamic.
@@ -143,15 +145,20 @@ Current placeholder panel sequence:
 
 Tong after Exit:
 - Teach register lightly: `小瞿`, not `瞿先生`; `小 + surname` can be familiar address from an older person; `瞿家` is the Qu family.
-- Close the hangout before the completion screen. This is a real Tong wrap, not just a recap label.
-- Required shape: register note -> family wording note -> enough-for-this-room line -> handle inventory -> explicit leave/close line, e.g. “Take those with you. We are stepping out of this shop; the hangout ends here.”
+- This register note is not the final emotional close. After the register and family wording notes, show an explicit Step out affordance, return to the shop panorama at the rightmost edge, then let Tong close from there.
 - Optional depth line only if included in the run:
   - 方阿姨: `跟他爸一个脾气，犟。但是他爸犟是因为有本事。他犟是因为要证明自己也有本事。`
 
 Wrap:
-- Close on language handles, not plot recap.
-- Example: “Today’s listening handles: 小, 不一样, 装不下去, 小瞿.”
-- Then Tong gives one final exit line before showing the same kind of hangout completion/ending screen Seoul uses for XP/SP/RP progress.
+- Close as Tong walking out of the 小笼包店 with the player, not as a teacher ending class.
+- The wrap must connect what the player caught in the first shop to the broader Shanghai journey.
+- Handle inventory is allowed only inside that companion movement. It cannot be the whole close.
+- Good direction:
+  - “Back in the shop noise. You did not need the whole conversation; the handles carried you.”
+  - “The handles held: 小, 不一样, 装不下去, 小瞿.”
+  - “Keep those in your ear. Shanghai will keep talking.”
+- Avoid “today’s lesson,” “room,” “hangout ends here,” plot recap, or any admin/staging language.
+- Only after the player completes this wrap should the same kind of hangout completion/ending screen Seoul uses for XP/SP/RP progress appear.
 
 ## Beat 2 Dynamic Variants
 
@@ -204,6 +211,7 @@ The orchestration prompt must give the AI these tools:
 
 The prompt must not offer a single-panel “show_webtoon_segment” gate as the primary unit. The primary unit is a strip packet.
 The prompt must also specify that, after the first webtoon packet starts, all Tong/exercise gates keep the webtoon strip underneath and append the next packet below the existing strip. The AI must not route the player back to a panorama, poster, or video surface between eavesdrop packets.
+The prompt must require a Step out transition after the exit/register notes, then a final companion wrap gate before `end_scene`. The final wrap must happen back in the 小笼包店 panorama at the rightmost edge and feel like Tong guiding the player onward through Shanghai, not closing a classroom. A list of handles by itself does not satisfy this gate, and completion/summary UI must not appear until the player explicitly completes the wrap.
 
 The AI must choose exercises by teaching value:
 - Setting sign/tone handles: `小`, `笼`, `包`, `店`
