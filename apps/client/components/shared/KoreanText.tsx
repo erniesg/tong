@@ -692,7 +692,8 @@ export function KoreanText({ text, targetLang = 'ko', interactive = true, onWord
     const availableRight = Math.min(frameRect.right, window.innerWidth) - margin;
     const availableTop = Math.max(frameRect.top, 0) + margin;
     const availableBottom = Math.min(frameRect.bottom, window.innerHeight) - margin;
-    const width = Math.min(rect.width || 160, Math.max(140, availableRight - availableLeft));
+    const availableWidth = Math.max(80, availableRight - availableLeft);
+    const width = Math.min(rect.width || 160, availableWidth, 260);
     const height = rect.height || 76;
     const centeredLeft = tooltipAnchor.x - width / 2;
     const left = clamp(centeredLeft, availableLeft, Math.max(availableLeft, availableRight - width));
@@ -745,6 +746,7 @@ export function KoreanText({ text, targetLang = 'ko', interactive = true, onWord
               zIndex: 99999,
               maxWidth: 'min(260px, calc(100vw - 16px))',
               maxHeight: 'calc(100vh - 16px)',
+              overflowY: 'auto',
               opacity: tooltipPos ? 1 : 0,
             }}
           >

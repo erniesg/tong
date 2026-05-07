@@ -3081,6 +3081,14 @@ button.nav-link:hover {
   animation: fadeIn 0.2s ease-out;
 }
 
+.exercise-modal-backdrop:has(.stroke-intro-card--mandarin),
+.exercise-modal-backdrop:has(.stroke-tracing-card--mandarin) {
+  align-items: flex-start;
+  box-sizing: border-box;
+  padding-top: clamp(64px, 11vh, 112px);
+  padding-bottom: 24px;
+}
+
 .exercise-modal-backdrop--dismissing {
   animation: fadeOut 0.3s ease-out forwards;
 }
@@ -3332,6 +3340,29 @@ button.nav-link:hover {
   gap: 8px;
 }
 
+.fill-blank__option-content {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+
+.fill-blank__option-detail {
+  display: grid;
+  gap: 1px;
+  font-size: var(--game-text-xs);
+  line-height: 1.2;
+}
+
+.fill-blank__option-pinyin {
+  color: rgba(240, 192, 64, 0.86);
+  font-weight: 700;
+}
+
+.fill-blank__option-gloss {
+  color: rgba(255, 255, 255, 0.68);
+  font-weight: 650;
+}
+
 .fill-blank__grammar-note {
   margin-top: 10px;
   padding: 8px;
@@ -3382,6 +3413,9 @@ button.nav-link:hover {
 
 .stroke-tracing-card {
   box-sizing: border-box;
+}
+
+.stroke-tracing-card--mandarin {
   display: grid;
   gap: 12px;
 }
@@ -3408,10 +3442,16 @@ button.nav-link:hover {
 .stroke-intro-card {
   min-height: min(82vh, 720px);
   display: grid;
-  grid-template-rows: auto minmax(250px, 1fr) auto auto;
+  grid-template-rows: auto minmax(190px, 1fr) auto auto auto;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
   box-sizing: border-box;
+}
+
+.stroke-intro-card--mandarin {
+  min-height: auto;
+  grid-template-rows: auto auto auto;
+  gap: 14px;
 }
 
 .stroke-intro-card__title,
@@ -3425,15 +3465,81 @@ button.nav-link:hover {
 }
 
 .stroke-intro-card__character {
-  width: min(72vw, 280px);
-  height: min(72vw, 280px);
+  width: min(64vw, 240px);
+  height: min(64vw, 240px);
   display: grid;
   place-items: center;
   justify-self: center;
-  border-radius: 20px;
-  background: rgba(0, 0, 0, 0.16);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.2);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   color: var(--color-accent-gold, #f0c040);
+}
+
+.stroke-intro-card--mandarin .stroke-intro-card__character {
+  width: min(62vw, 240px);
+  height: min(62vw, 240px);
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.stroke-intro-card__sound {
+  display: flex;
+  justify-content: center;
+  margin-top: -4px;
+}
+
+.stroke-intro-card__meta {
+  text-align: center;
+}
+
+.stroke-intro-card__pinyin {
+  color: rgba(240, 192, 64, 0.9);
+  font-size: var(--game-text-lg);
+  font-weight: 700;
+}
+
+.stroke-intro-card__meaning {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: var(--game-text-base);
+}
+
+.stroke-intro-card__strokes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.stroke-intro-card__stroke {
+  min-height: 74px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  text-align: center;
+  padding: 8px 6px;
+}
+
+.stroke-intro-card__stroke-index {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.stroke-intro-card__stroke-label {
+  color: #fff8ee;
+  font-size: var(--game-text-base);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.stroke-intro-card__stroke-desc {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: var(--game-text-xs);
+  line-height: 1.2;
 }
 
 .stroke-live-cue {
@@ -3445,14 +3551,14 @@ button.nav-link:hover {
 }
 
 .stroke-live-cue__label {
-  display: inline-flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
   color: rgba(240, 192, 64, 0.95);
   font-size: var(--game-text-base);
   font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
   animation: strokeCueText 0.45s ease both;
 }
 
@@ -3548,10 +3654,93 @@ button.nav-link:hover {
   color: rgba(255, 248, 238, 0.78);
 }
 
+.stroke-cue-list {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stroke-cue-list__item {
+  min-height: 76px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.075);
+  text-align: center;
+  opacity: 0.66;
+  transition: background 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.stroke-cue-list__item--active {
+  background: rgba(240, 192, 64, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(240, 192, 64, 0.34);
+  opacity: 1;
+}
+
+.stroke-cue-list__index {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.stroke-cue-list__label {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  line-height: 1.15;
+}
+
+.stroke-cue-list__label .hanzi-stroke-label__name {
+  color: #fff8ee;
+  font-size: var(--game-text-sm);
+}
+
+.stroke-cue-list__item--active .hanzi-stroke-label__name {
+  color: var(--color-accent-gold, #f0c040);
+}
+
+.stroke-cue-list__label .hanzi-stroke-label__pinyin,
+.stroke-cue-list__label .hanzi-stroke-label__meaning {
+  font-size: var(--game-text-xs);
+}
+
 .stroke-write-surface {
   width: min(68vw, 300px);
   justify-self: center;
   margin-top: 2px;
+}
+
+.stroke-write-single {
+  width: min(100%, 320px);
+  justify-self: center;
+}
+
+.stroke-write-rep-grid {
+  width: min(100%, 560px);
+  display: grid;
+  gap: 10px;
+  justify-self: center;
+}
+
+.stroke-write-rep-grid--three {
+  max-width: 360px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stroke-write-rep-grid--three .stroke-write-rep-grid__cell:last-child {
+  width: calc(50% - 5px);
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+.stroke-write-rep-grid__cell {
+  min-width: 0;
 }
 
 .stroke-write-progress {
@@ -3624,13 +3813,27 @@ button.nav-link:hover {
 @media (max-height: 740px) {
   .stroke-intro-card {
     min-height: min(82vh, 640px);
-    grid-template-rows: auto minmax(210px, 1fr) auto auto;
-    gap: 12px;
+    gap: 10px;
+  }
+
+  .stroke-intro-card--mandarin {
+    grid-template-rows: auto auto auto;
+    gap: 10px;
   }
 
   .stroke-intro-card__character {
-    width: min(64vw, 230px);
-    height: min(64vw, 230px);
+    width: min(52vw, 190px);
+    height: min(52vw, 190px);
+  }
+
+  .stroke-intro-card--mandarin .stroke-intro-card__character {
+    width: min(56vw, 200px);
+    height: min(56vw, 200px);
+  }
+
+  .stroke-intro-card__stroke {
+    min-height: 62px;
+    padding-block: 6px;
   }
 
   .stroke-write-header__char {
@@ -3639,6 +3842,19 @@ button.nav-link:hover {
 
   .stroke-write-surface {
     width: min(62vw, 240px);
+  }
+
+  .stroke-cue-list {
+    gap: 6px;
+  }
+
+  .stroke-cue-list__item {
+    min-height: 68px;
+    padding: 6px 4px;
+  }
+
+  .stroke-cue-list__label .hanzi-stroke-label__name {
+    font-size: var(--game-text-xs);
   }
 }
 

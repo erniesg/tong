@@ -166,11 +166,13 @@ Wrap:
 - A phrase inventory alone is not enough, and Tong should not call the phrases “handles” in the final emotional close.
 - Good direction:
   - “Take one last look before we leave the shop.”
-  - “小 started on 小笼包, then came back as 小瞿.”
+  - “At the start, 小 was just part of 小笼包.”
   - “小瞿 feels familiar. 瞿先生 would keep distance. 瞿家 makes it bigger than one person.”
-  - “When 不 shows up, look for what it turns negative: 一样, 下去, 重要.”
+  - “不 also stayed useful: 不一样, 装不下去, 不重要.”
+  - “That is enough for this stop. Shanghai will give us more next time.”
 - Avoid “today’s lesson,” “room,” “hangout ends here,” plot recap, or any admin/staging language.
 - Only after the player completes this wrap should the same kind of hangout completion/ending screen Seoul uses for XP/SP/RP progress appear.
+- The completion summary must be a real sentence, not a raw vocabulary inventory. It should say what the player can now hear after this stop, for example: “You left the shop hearing how small pieces shift the scene: 小 on the sign, 不 in the turns, and 小瞿 / 瞿家 at the register.”
 
 ## Beat 2 Dynamic Variants
 
