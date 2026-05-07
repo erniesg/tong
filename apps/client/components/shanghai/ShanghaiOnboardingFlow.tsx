@@ -778,8 +778,25 @@ export function ShanghaiOnboardingFlow() {
   if (phase === 'complete') {
     return (
       <main className="scene-root">
-        <div className="game-frame summary-screen">
-          <img className="summary-scene-bg" src={SHANGHAI_ONBOARDING_PANORAMA.posterUrl} alt="" />
+        <div className="game-frame summary-screen summary-screen--shanghai">
+          <section
+            ref={stageRef}
+            className="shanghai-onboarding shanghai-onboarding__stage shanghai-onboarding__stage--summary"
+            aria-hidden="true"
+          >
+            <div className="shanghai-onboarding__world" style={worldStyle}>
+              <video
+                className="shanghai-onboarding__video"
+                src={SHANGHAI_ONBOARDING_PANORAMA.videoUrl}
+                poster={SHANGHAI_ONBOARDING_PANORAMA.posterUrl}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+              />
+            </div>
+          </section>
           <div className="summary-overlay" />
           <div className="summary-content">
             <h2 className="summary-title">{t('scene_complete', explainLang)}</h2>

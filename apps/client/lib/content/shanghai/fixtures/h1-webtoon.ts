@@ -757,7 +757,6 @@ export const SHANGHAI_H1_WEBTOON: WebtoonSpec = {
       '小 started on 小笼包, then came back as 小瞿.',
       '小瞿 feels familiar. 瞿先生 would keep distance. 瞿家 makes it bigger than one person.',
       'When 不 shows up, look for what it turns negative: 一样, 下去, 重要.',
-      'Good. That is enough to walk into the next Shanghai scene.',
     ],
     completionLine: '小笼包 · 小瞿 · 瞿家 · 不一样 · 装不下去 · 不重要',
   },

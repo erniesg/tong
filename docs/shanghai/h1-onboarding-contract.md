@@ -62,8 +62,9 @@ Exercise:
 - Purpose: make `小` useful before the eavesdrop by making the player handle the shape and stroke order, not by introducing later register vocabulary too early.
 - Current fixture trace target:
   - `小` / `xiǎo` / small
-  - Stroke order: center down, left dot, right dot.
-  - Player sees a replayable animation first, then taps into the writing surface.
+  - Stroke order: `竖钩 shù gōu center hook`, `撇 piě left fall`, `点 diǎn right dot`.
+  - Player sees a replayable animation first, by itself, then taps into the writing surface.
+  - During the animation and practice, the UI should show plain stroke labels with Chinese name + hanyu pinyin + English. Do not show a duplicate mini character or extra boxed/grid cue below the animation.
   - Player writes `小` three times.
   - Example words must not introduce `小瞿` here. Use shop/world examples such as `小笼包` and `小吃`.
   - After completion, replay the `小` character animation and play `xiǎo` plus the player-language meaning.
@@ -168,7 +169,6 @@ Wrap:
   - “小 started on 小笼包, then came back as 小瞿.”
   - “小瞿 feels familiar. 瞿先生 would keep distance. 瞿家 makes it bigger than one person.”
   - “When 不 shows up, look for what it turns negative: 一样, 下去, 重要.”
-  - “Good. That is enough to walk into the next Shanghai scene.”
 - Avoid “today’s lesson,” “room,” “hangout ends here,” plot recap, or any admin/staging language.
 - Only after the player completes this wrap should the same kind of hangout completion/ending screen Seoul uses for XP/SP/RP progress appear.
 

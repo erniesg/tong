@@ -117,28 +117,84 @@ async function answerFillBlank(page, optionText) {
 }
 
 async function drawBroadTraceOnCanvas(page, canvasIndex = 0) {
-  const box = await page.$$eval('.exercise-card canvas', (nodes, index) => {
-    const visible = nodes
-      .filter((node) => node instanceof HTMLElement)
-      .map((node) => {
-        const rect = node.getBoundingClientRect();
-        const style = window.getComputedStyle(node);
-        return { node, rect, style };
-      })
-      .filter(({ rect, style }) => rect.width > 20 && rect.height > 20 && style.visibility !== 'hidden' && style.display !== 'none');
-    const target = visible[index];
-    if (!target) throw new Error(`Could not find visible tracing canvas ${index}`);
-    return {
-      x: target.rect.x,
-      y: target.rect.y,
-      width: target.rect.width,
-      height: target.rect.height,
-    };
-  }, canvasIndex);
+  let box = null;
+  for (let attempt = 0; attempt < 20 && !box; attempt += 1) {
+    let handle = await page.$('[data-stroke-write-surface]');
+    if (!handle) {
+      const canvasHandles = await page.$$('.exercise-card canvas');
+      handle = canvasHandles[canvasIndex] ?? canvasHandles[0] ?? null;
+    }
+    box = handle ? await handle.boundingBox() : null;
+    if (!box) await sleep(100);
+  }
+  if (!box) {
+    const card = await page.$('.exercise-card');
+    const cardBox = card ? await card.boundingBox() : null;
+    if (cardBox) {
+      box = {
+        x: cardBox.x + cardBox.width * 0.13,
+        y: cardBox.y + cardBox.height * 0.48,
+        width: cardBox.width * 0.74,
+        height: cardBox.height * 0.38,
+      };
+    } else {
+      const viewport = page.viewport() ?? { width: 390, height: 844 };
+      box = {
+        x: viewport.width * 0.16,
+        y: viewport.height * 0.48,
+        width: viewport.width * 0.68,
+        height: viewport.width * 0.68,
+      };
+    }
+  }
+  if (!box || box.width <= 20 || box.height <= 20) {
+    throw new Error(`Tracing surface ${canvasIndex} has no drawable box`);
+  }
   const left = box.x + box.width * 0.08;
   const right = box.x + box.width * 0.92;
   const top = box.y + box.height * 0.08;
   const bottom = box.y + box.height * 0.92;
+
+  const dispatched = await page.evaluate(({ left, right, top, bottom }) => {
+    const centerX = (left + right) / 2;
+    const centerY = (top + bottom) / 2;
+    const hit = document.elementFromPoint(centerX, centerY);
+    const target = hit instanceof HTMLCanvasElement
+      ? hit
+      : document.querySelector('[data-stroke-write-surface] canvas, .exercise-card canvas');
+    if (!(target instanceof HTMLCanvasElement)) return false;
+    const fire = (type, x, y, buttons = 1) => {
+      target.dispatchEvent(new MouseEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        clientX: x,
+        clientY: y,
+        buttons,
+      }));
+    };
+    for (let i = 0; i <= 12; i += 1) {
+      const y = top + ((bottom - top) * i) / 12;
+      fire('mousedown', left, y);
+      for (let step = 1; step <= 12; step += 1) {
+        fire('mousemove', left + ((right - left) * step) / 12, y);
+      }
+      fire('mouseup', right, y, 0);
+    }
+    for (let i = 0; i <= 8; i += 1) {
+      const x = left + ((right - left) * i) / 8;
+      fire('mousedown', x, top);
+      for (let step = 1; step <= 10; step += 1) {
+        fire('mousemove', x, top + ((bottom - top) * step) / 10);
+      }
+      fire('mouseup', x, bottom, 0);
+    }
+    return true;
+  }, { left, right, top, bottom });
+
+  if (dispatched) {
+    await sleep(120);
+    return;
+  }
 
   for (let i = 0; i <= 12; i += 1) {
     const y = top + ((bottom - top) * i) / 12;
@@ -161,28 +217,36 @@ async function answerStrokeTracing(page) {
   if (introVisible) {
     await clickVisibleText(page, 'Replay').catch(() => {});
     await sleep(450);
-    await clickVisibleText(page, 'Write it');
+    await clickVisibleText(page, 'Trace it').catch(async () => {
+      await clickVisibleText(page, 'Write it');
+    });
   }
 
-  await page.waitForSelector('.exercise-card canvas', { visible: true });
+  await page.waitForSelector('[data-stroke-write-surface], .exercise-card canvas', { visible: true });
 
   const drillTotal = await page.evaluate(() => {
-    const match = document.body.innerText.match(/\b0\/(\d+)\b/);
-    return match ? Number.parseInt(match[1], 10) : 0;
+    const match = document.body.innerText.match(/\b(\d+)\/(\d+)\b/);
+    return match ? Number.parseInt(match[2], 10) : 0;
   });
 
   if (drillTotal > 1) {
     for (let i = 0; i < drillTotal; i += 1) {
       let passed = false;
       for (let attempt = 0; attempt < 3 && !passed; attempt += 1) {
-        await drawBroadTraceOnCanvas(page, i);
-        passed = await page.waitForFunction(
-          ({ done, total }) => document.body.innerText.includes(`${done}/${total}`),
-          { timeout: 1600 },
-          { done: i + 1, total: drillTotal },
-        )
-          .then(() => true)
-          .catch(() => false);
+        await drawBroadTraceOnCanvas(page, 0);
+        if (i < drillTotal - 1) {
+          passed = await page.waitForFunction(
+            ({ next, total }) => document.body.innerText.includes(`${next}/${total}`),
+            { timeout: 1600 },
+            { next: i + 2, total: drillTotal },
+          )
+            .then(() => true)
+            .catch(() => false);
+        } else {
+          passed = await page.waitForSelector('[data-stroke-drill-complete]', { visible: true, timeout: 2000 })
+            .then(() => true)
+            .catch(() => false);
+        }
       }
       if (!passed) throw new Error(`Stroke drill cell ${i + 1}/${drillTotal} did not complete.`);
     }
@@ -452,31 +516,41 @@ async function run() {
     await recorder.cue('intro_chunk_tapped');
     await screenshot(page, '02-intro-chunk-tooltip.png', 'intro_chunk_tooltip', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Watch how 小 is written.');
+    await waitForText(page, 'Watch 小 written once.');
     await page.waitForSelector('[data-stroke-intro]', { visible: true });
     checks.xiaoStrokeIntroVisible = await page.evaluate(() => (
       Boolean(document.querySelector('[data-stroke-intro]'))
       && Boolean(document.querySelector('[data-stroke-animation]'))
       && Boolean(document.querySelector('[data-stroke-order]'))
       && document.body.innerText.includes('Replay')
-      && document.body.innerText.includes('Write it')
-      && document.body.innerText.includes('xiǎo')
-      && document.body.innerText.includes('small')
+      && document.body.innerText.includes('Trace it')
+      && document.body.innerText.includes('竖钩')
+      && document.body.innerText.includes('shù gōu')
+      && document.body.innerText.includes('center hook')
+      && !Boolean(document.querySelector('[data-hanzi-stroke-cue]'))
       && !document.body.innerText.includes('小瞿')
     ));
     await recorder.cue('xiao_stroke_animation_visible');
     await screenshot(page, '03-xiao-stroke-animation.png', 'xiao_stroke_animation', screenshots);
     await clickVisibleText(page, 'Replay');
     await sleep(650);
-    await clickVisibleText(page, 'Write it');
+    await clickVisibleText(page, 'Trace it');
     await waitForText(page, 'Trace 小 in stroke order');
     await screenshot(page, '03b-xiao-stroke-exercise.png', 'xiao_stroke_exercise', screenshots);
     checks.strokeTracingVisible = await page.evaluate(() => (
       document.body.innerText.includes('Trace 小 in stroke order')
-      && document.querySelectorAll('.exercise-card canvas').length >= 3
-      && Boolean(document.querySelector('[data-stroke-animation]'))
+      && document.querySelectorAll('.exercise-card canvas').length === 1
+      && !Boolean(document.querySelector('[data-stroke-animation]'))
       && Boolean(document.querySelector('[data-stroke-order]'))
-      && document.body.innerText.includes('0/3')
+      && !Boolean(document.querySelector('[data-hanzi-stroke-cue]'))
+      && document.body.innerText.includes('1/3')
+      && document.body.innerText.includes('竖钩')
+      && document.body.innerText.includes('shù gōu')
+      && document.body.innerText.includes('center hook')
+      && document.body.innerText.includes('piě')
+      && document.body.innerText.includes('left fall')
+      && document.body.innerText.includes('diǎn')
+      && document.body.innerText.includes('right dot')
       && !document.body.innerText.includes('小瞿')
     ));
     checks.strokeTraceReplayVisible = await answerStrokeTracing(page);
@@ -757,13 +831,15 @@ async function run() {
     ));
     await screenshot(page, '32d-bu-fourth-tone.png', 'bu_fourth_tone', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Watch how 不 is written.');
+    await waitForText(page, 'Watch 不 written once.');
     checks.buStrokeIntroVisible = await page.evaluate(() => (
       Boolean(document.querySelector('[data-stroke-intro]'))
       && Boolean(document.querySelector('[data-stroke-animation]'))
       && Boolean(document.querySelector('[data-stroke-order]'))
-      && document.body.innerText.includes('bù')
-      && document.body.innerText.includes('not')
+      && !Boolean(document.querySelector('[data-hanzi-stroke-cue]'))
+      && document.body.innerText.includes('横')
+      && document.body.innerText.includes('héng')
+      && document.body.innerText.includes('top line')
     ));
     checks.buStrokeTracingVisible = checks.buStrokeIntroVisible;
     await screenshot(page, '32e-bu-stroke-animation.png', 'bu_stroke_animation', screenshots);
@@ -816,13 +892,12 @@ async function run() {
     checks.summaryHiddenDuringFinalWrap = checks.summaryHiddenDuringFinalWrap && checks.finalRegisterWrapVisible;
     await clickTong(page);
     await waitForText(page, 'When 不 shows up');
-    await clickTong(page);
-    await waitForText(page, 'Good. That is enough to walk into the next Shanghai scene.');
     checks.finalCompanionWrapVisible = await page.evaluate(() => (
       Boolean(document.querySelector('.shanghai-onboarding__stage'))
       && Boolean(document.querySelector('.shanghai-onboarding__video'))
       && !Boolean(document.querySelector('.wt-strip'))
-      && document.body.innerText.includes('Good. That is enough to walk into the next Shanghai scene.')
+      && document.body.innerText.includes('When 不 shows up')
+      && !document.body.innerText.includes('Good. That is enough to walk into the next Shanghai scene.')
       && document.body.innerText.includes('Continue')
       && !document.querySelector('.summary-screen')
     ));
@@ -842,6 +917,15 @@ async function run() {
     ));
     checks.summaryXpVisible = await page.evaluate(() => document.body.innerText.includes('+80') && document.body.innerText.includes('XP earned'));
     checks.summarySpVisible = await page.evaluate(() => document.body.innerText.includes('+40') && document.body.innerText.includes('SP earned'));
+    checks.summaryAtRightmostShopEdge = await page.evaluate(() => {
+      const stage = document.querySelector('.summary-screen .shanghai-onboarding__stage');
+      const world = document.querySelector('.summary-screen .shanghai-onboarding__world');
+      const video = document.querySelector('.summary-screen .shanghai-onboarding__video');
+      if (!(stage instanceof HTMLElement) || !(world instanceof HTMLElement) || !(video instanceof HTMLVideoElement)) return false;
+      const matrix = new DOMMatrixReadOnly(window.getComputedStyle(world).transform);
+      const maxOffsetX = Math.max(0, world.getBoundingClientRect().width - stage.getBoundingClientRect().width);
+      return maxOffsetX <= 2 || Math.abs(matrix.m41) >= maxOffsetX - 4;
+    });
     checks.finalQuizRemoved = await page.evaluate(() => !document.body.innerText.includes('Put 方阿姨'));
     await recorder.cue('summary_screen_visible');
     await sleep(1200);
@@ -941,6 +1025,7 @@ async function run() {
       checks.summaryTextVisible,
       checks.summaryXpVisible,
       checks.summarySpVisible,
+      checks.summaryAtRightmostShopEdge,
       checks.finalQuizRemoved,
       checks.checkpointMarkedComplete,
       checks.xpGranted,

@@ -188,7 +188,7 @@ Goal: One small listening/chunk exercise before the player moves toward the voic
 Use tong_whisper, then show_exercise.
 Tong should make the need explicit: give the player one visible setting handle they can realistically catch before moving closer.
 Current fixture uses two motivated mini-steps:
-1. stroke_tracing for 小. This is first contact with the character as shape/component/radical piece. It must open on a replayable stroke-order animation before the writing canvas; then the player writes 小 three times and sees/hears the completed character again with xiǎo + meaning.
+1. stroke_tracing for 小. This is first contact with the character as shape/component/radical piece. It must open on a replayable stroke-order animation by itself before the writing canvas; then the player writes 小 three times and sees/hears the completed character again with xiǎo + meaning. Stroke cues should be plain Chinese stroke name + hanyu pinyin + English, e.g. "竖钩 shù gōu center hook", "撇 piě left fall", and "点 diǎn right dot". Do not show a duplicate mini character or extra boxed/grid cue below the animation.
 2. Tong introduces the four main tones, then transitions into pronunciation_select. The player hears 消 / 淆 / 小 / 笑 and picks the falling-rising third-tone 小.
 Dynamic runs may choose another visible sign/menu character, but keep the same pedagogy: reusable stroke_tracing for shape/stroke order first, then pronunciation_select for sound/tone. Use block_crush only after components have been taught. Keep both reusable for other cities/languages.
 
@@ -344,7 +344,6 @@ Good shape:
 - "小 started on 小笼包, then came back as 小瞿."
 - "小瞿 feels familiar. 瞿先生 would keep distance. 瞿家 makes it bigger than one person."
 - "When 不 shows up, look for what it turns negative: 一样, 下去, 重要."
-- "Good. That is enough to walk into the next Shanghai scene."
 Avoid:
 - "That is the room for today."
 - "Today's listening handles..."

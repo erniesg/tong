@@ -1,11 +1,12 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils/cn';
 import type { StrokeTracingExercise } from '@/lib/types/hangout';
 import { useUILang } from '@/lib/i18n/UILangContext';
 import { t } from '@/lib/i18n/ui-strings';
 import { getMeaning } from '@/lib/content/block-crush-data';
+import { HanziStrokeLabel } from './HanziStrokeLabel';
 import { StrokeOrderAnimation } from './StrokeOrderAnimation';
 
 interface Props {
@@ -274,6 +275,22 @@ interface CellState {
   score: number;
 }
 
+interface StrokeGuide {
+  glyph: string;
+  label: string;
+  pinyin?: string;
+  description: string;
+}
+
+function fallbackStrokeGlyph(label: string, description: string, index: number) {
+  const text = `${label} ${description}`.toLowerCase();
+  if (text.includes('dot')) return '丶';
+  if (text.includes('line') || text.includes('横')) return '一';
+  if (text.includes('fall') || text.includes('撇')) return '丿';
+  if (text.includes('down') || text.includes('竖')) return index === 0 ? '亅' : '丨';
+  return '—';
+}
+
 interface CellCanvasProps {
   targetChar: string;
   ghostOpacity: number;
@@ -539,7 +556,7 @@ function CellCanvas({ targetChar, ghostOpacity, cellIndex, active, cellState, le
     // Auto-submit on pen-up if user has drawn
     if (hasDrawn && active && !cellState.done) {
       const metrics = computeScore();
-      if (isPassingCoverage(metrics) || (lenient && metrics.overallCoverage >= 0.34)) {
+      if (isPassingCoverage(metrics) || lenient) {
         onPass(Math.max(metrics.score, lenient ? 0.82 : metrics.score));
       } else if (metrics.overallCoverage > 0.15) {
         // Some effort but not enough — let them keep going
@@ -618,6 +635,14 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   const isDrill = totalReps > 1;
   const ttsLang = exercise.language ?? 'ko';
   const hasStrokeOrder = Boolean(exercise.strokeOrder?.length);
+  const strokeGuides = useMemo<StrokeGuide[]>(() => (
+    (exercise.strokeOrder ?? []).map((stroke, index) => ({
+      glyph: stroke.glyph ?? fallbackStrokeGlyph(stroke.label, stroke.description, index),
+      label: stroke.label,
+      pinyin: stroke.pinyin,
+      description: stroke.description,
+    }))
+  ), [exercise.strokeOrder]);
 
   // Single-trace mode refs (only used when totalReps === 1)
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -639,6 +664,8 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   const [replayKey, setReplayKey] = useState(0);
   const [showStrokeIntro, setShowStrokeIntro] = useState(hasStrokeOrder);
   const [introReplayKey, setIntroReplayKey] = useState(0);
+  const [introStrokeIndex, setIntroStrokeIndex] = useState<number | null>(strokeGuides.length > 0 ? 0 : null);
+  const [practiceStrokeIndex, setPracticeStrokeIndex] = useState(0);
 
   // Drill mode state
   const [cellStates, setCellStates] = useState<CellState[]>(
@@ -647,7 +674,15 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   const [activeCell, setActiveCell] = useState(0);
   const allDone = isDrill && cellStates.every((c) => c.done);
   const drillCompletedRef = useRef(false);
-  const hasExampleWords = (exercise.exampleWords?.length ?? 0) > 0;
+
+  useEffect(() => {
+    if (showStrokeIntro || !hasStrokeOrder || allDone || strokeGuides.length <= 1) return;
+    setPracticeStrokeIndex(0);
+    const timer = window.setInterval(() => {
+      setPracticeStrokeIndex((current) => (current + 1) % strokeGuides.length);
+    }, 900);
+    return () => window.clearInterval(timer);
+  }, [allDone, hasStrokeOrder, showStrokeIntro, strokeGuides.length]);
 
   /** Ghost opacity per cell in drill mode — always keeps a faint guide visible. */
   const cellGhostOpacity = useCallback((idx: number) => {
@@ -930,8 +965,6 @@ export function StrokeTracing({ exercise, onResult }: Props) {
 
   /* ── Render ───────────────────────────────────────────────── */
 
-  // Determine grid columns based on total reps
-  const cols = totalReps <= 4 ? totalReps : totalReps <= 9 ? 3 : 4;
   const playExerciseSound = useCallback((interrupt = true) => {
     const c = JAMO_TO_SYLLABLE[exercise.targetChar] ? exercise.targetChar : (exercise.sound ?? exercise.targetChar);
     playTTS(c, ttsLang, undefined, undefined, { interrupt });
@@ -954,11 +987,12 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   );
 
   if (showStrokeIntro && hasStrokeOrder) {
+    const activeIntroGuide = introStrokeIndex === null
+      ? strokeGuides[strokeGuides.length - 1]
+      : strokeGuides[introStrokeIndex] ?? strokeGuides[0];
     return (
       <div className="exercise-card stroke-intro-card p-5" data-stroke-intro>
-        <p className="text-[length:var(--game-text-lg)] font-medium text-center text-ko m-0">
-          Watch how {exercise.targetChar} is written.
-        </p>
+        <p className="stroke-intro-card__title text-ko">Watch {exercise.targetChar} written once.</p>
         <div className="stroke-intro-card__character" data-stroke-animation>
           <StrokeOrderAnimation
             key={introReplayKey}
@@ -966,26 +1000,19 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             duration={1900}
             onComplete={() => {}}
             size={210}
+            totalStrokes={strokeGuides.length}
+            onStrokeChange={setIntroStrokeIndex}
           />
         </div>
-        <div className="stroke-intro-card__sound">
-          {soundButton}
-        </div>
-        <div className="stroke-intro-card__meta">
-          {exercise.romanization && <div className="stroke-intro-card__pinyin">{exercise.romanization}</div>}
-          {exercise.meaning && (
-            <div className="stroke-intro-card__meaning">{getMeaning(exercise.meaning, lang, exercise.targetChar)}</div>
-          )}
-        </div>
-        {exercise.strokeOrder && (
-          <div className="stroke-intro-card__strokes" data-stroke-order>
-            {exercise.strokeOrder.map((stroke, index) => (
-              <div key={`${stroke.label}-${index}`} className="stroke-intro-card__stroke">
-                <div className="stroke-intro-card__stroke-index">{index + 1}</div>
-                <div className="stroke-intro-card__stroke-label text-ko">{stroke.label}</div>
-                <div className="stroke-intro-card__stroke-desc">{stroke.description}</div>
-              </div>
-            ))}
+        {activeIntroGuide && (
+          <div className="stroke-live-cue" data-stroke-order>
+            <HanziStrokeLabel
+              key={`intro-label-${introStrokeIndex ?? 'done'}`}
+              className="stroke-live-cue__label"
+              label={activeIntroGuide.label}
+              pinyin={activeIntroGuide.pinyin}
+              description={activeIntroGuide.description}
+            />
           </div>
         )}
         <div className="stroke-intro-card__actions">
@@ -1001,7 +1028,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
             type="button"
             onClick={() => setShowStrokeIntro(false)}
           >
-            Write it
+            Trace it
           </button>
         </div>
       </div>
@@ -1010,92 +1037,64 @@ export function StrokeTracing({ exercise, onResult }: Props) {
 
   return (
     <div className="exercise-card stroke-tracing-card p-4">
-      <p className="text-[length:var(--game-text-lg)] font-medium mb-3 text-ko m-0">{exercise.prompt}</p>
+      <p className="stroke-tracing-card__prompt text-ko">{exercise.prompt}</p>
 
       {/* Target character + romanization + sound */}
-      <div style={{ textAlign: 'center', marginBottom: isDrill ? 8 : 12 }}>
-        <div style={{ display: 'grid', justifyItems: 'center', gap: 6 }}>
-          {exercise.strokeOrder?.length ? (
-            <div data-stroke-animation>
-              <StrokeOrderAnimation
-                character={exercise.targetChar}
-                duration={1700}
-                onComplete={() => {}}
-                size={isDrill ? 86 : 118}
-              />
-            </div>
-          ) : (
-            <span style={{ fontSize: isDrill ? 36 : 48, opacity: 0.6 }} className="text-ko">
-              {exercise.targetChar}
-            </span>
-          )}
+      <div className="stroke-write-header">
+        <span className="stroke-write-header__char text-ko">
+          {exercise.targetChar}
+        </span>
+        <div className="stroke-write-header__sound">
           {soundButton}
         </div>
         {exercise.romanization && (
-          <div style={{ fontSize: 'var(--game-text-base)', opacity: 0.5, marginTop: 2 }}>
+          <div className="stroke-write-header__pinyin">
             {exercise.romanization}
           </div>
         )}
         {exercise.meaning && exercise.meaning !== exercise.romanization && (
-          <div style={{ fontSize: 'var(--game-text-sm)', opacity: 0.4, marginTop: 1 }}>
+          <div className="stroke-write-header__meaning">
             {getMeaning(exercise.meaning, lang, exercise.targetChar)}
           </div>
         )}
       </div>
 
-      {exercise.strokeOrder && exercise.strokeOrder.length > 0 && (
-        <div
-          className="mb-3 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2"
-          data-stroke-order
-        >
-          <div className="mb-2 text-[length:var(--game-text-sm)] font-semibold text-[var(--color-accent-gold)]">
-            Stroke order
-          </div>
-          <div
-            className="grid gap-2"
-            style={{ gridTemplateColumns: `repeat(${Math.min(exercise.strokeOrder.length, 4)}, minmax(0, 1fr))` }}
-          >
-            {exercise.strokeOrder.map((stroke, index) => (
-              <div key={`${stroke.label}-${index}`} className="rounded-md bg-black/15 px-2 py-2 text-center">
-                <div className="text-[length:var(--game-text-xs)] opacity-50">{index + 1}</div>
-                <div className="text-[length:var(--game-text-base)] font-semibold text-ko">{stroke.label}</div>
-                <div className="text-[length:var(--game-text-xs)] opacity-60">{stroke.description}</div>
-              </div>
-            ))}
-          </div>
+      {strokeGuides.length > 0 && (
+        <div className="stroke-write-guide" data-stroke-order>
+          {strokeGuides.map((stroke, index) => (
+            <span
+              key={`${stroke.glyph}-${stroke.description}-${index}`}
+              className={cn('stroke-write-guide__item', practiceStrokeIndex === index && !allDone && 'stroke-write-guide__item--active')}
+            >
+              <HanziStrokeLabel
+                className="stroke-write-guide__label"
+                label={stroke.label}
+                pinyin={stroke.pinyin}
+                description={stroke.description}
+              />
+            </span>
+          ))}
         </div>
       )}
 
       {isDrill ? (
         /* ── Drill mode: grid of mini canvases ────────────────── */
         <>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              gap: 10,
-              width: '100%',
-              flex: hasExampleWords ? '0 1 auto' : 1,
-              alignContent: hasExampleWords ? 'flex-start' : 'center',
-              padding: '0 8px',
-            }}
-          >
-            {cellStates.map((cell, i) => (
-              <div key={i} style={{ width: `calc(${100 / cols}% - ${10 * (cols - 1) / cols}px)` }}>
-                <CellCanvas
-                  targetChar={exercise.targetChar}
-                  ghostOpacity={cellGhostOpacity(i)}
-                  cellIndex={i}
-                  active={i === activeCell}
-                  cellState={cell}
-                  lenient={hasStrokeOrder}
-                  onPass={(score) => handleCellPass(i, score)}
-                  onFail={() => {}}
-                />
-              </div>
-            ))}
-          </div>
+          {!allDone && (
+            <div className="stroke-write-surface" data-stroke-write-surface>
+              <CellCanvas
+                key={activeCell}
+                targetChar={exercise.targetChar}
+                ghostOpacity={cellGhostOpacity(activeCell)}
+                cellIndex={activeCell}
+                active
+                cellState={cellStates[activeCell] ?? { done: false, score: 0 }}
+                lenient={hasStrokeOrder}
+                onPass={(score) => handleCellPass(activeCell, score)}
+                onFail={() => {}}
+              />
+            </div>
+          )}
 
           {/* Freehand hint */}
           {cellGhostOpacity(activeCell) <= 0.01 && !allDone && (
@@ -1105,9 +1104,11 @@ export function StrokeTracing({ exercise, onResult }: Props) {
           )}
 
           {/* Drill progress */}
-          <div style={{ textAlign: 'center', fontSize: 'var(--game-text-xs)', opacity: 0.3, marginTop: 8 }}>
-            {cellStates.filter((c) => c.done).length}/{totalReps}
-          </div>
+          {!allDone && (
+            <div className="stroke-write-progress">
+              {Math.min(cellStates.filter((c) => c.done).length + 1, totalReps)}/{totalReps}
+            </div>
+          )}
 
           {allDone && (
             <div
@@ -1276,7 +1277,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
       )}
 
       {/* Example words using this character */}
-      {exercise.exampleWords && exercise.exampleWords.length > 0 && (
+      {(!isDrill || allDone) && exercise.exampleWords && exercise.exampleWords.length > 0 && (
         <div style={{ marginTop: 16 }}>
           <div style={{ fontSize: 'var(--game-text-sm)', opacity: 0.5, marginBottom: 8 }}>
             {t('stroke_examples', lang)}

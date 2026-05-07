@@ -109,7 +109,6 @@ const EN_TONG_COPY: ShanghaiOnboardingTongCopy = {
     '小 started on 小笼包, then came back as 小瞿.',
     '小瞿 feels familiar. 瞿先生 would keep distance. 瞿家 makes it bigger than one person.',
     'When 不 shows up, look for what it turns negative: 一样, 下去, 重要.',
-    'Good. That is enough to walk into the next Shanghai scene.',
   ],
   finalWrapContinueLabel: 'Continue',
   finalWrapCompleteLabel: 'Continue',
@@ -379,9 +378,9 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       sound: '小',
       language: 'zh',
       strokeOrder: [
-        { label: '竖钩', description: 'center down' },
-        { label: '左点', description: 'left dot' },
-        { label: '右点', description: 'right dot' },
+        { label: '竖钩', pinyin: 'shù gōu', glyph: '亅', description: 'center hook' },
+        { label: '撇', pinyin: 'piě', glyph: '丿', description: 'left fall' },
+        { label: '点', pinyin: 'diǎn', glyph: '丶', description: 'right dot' },
       ],
       reps: 3,
       exampleWords: [
@@ -493,10 +492,10 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
           sound: '不',
           language: 'zh',
           strokeOrder: [
-            { label: '横', description: 'top line' },
-            { label: '撇', description: 'left fall' },
-            { label: '竖', description: 'center down' },
-            { label: '点', description: 'right dot' },
+            { label: '横', pinyin: 'héng', glyph: '一', description: 'top line' },
+            { label: '撇', pinyin: 'piě', glyph: '丿', description: 'left fall' },
+            { label: '竖', pinyin: 'shù', glyph: '丨', description: 'center down' },
+            { label: '点', pinyin: 'diǎn', glyph: '丶', description: 'right dot' },
           ],
           exampleWords: [
             { word: '不一样', romanization: 'bù yí yàng', meaning: 'not the same' },

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tong Design System</title>
-<!-- Design system snapshot | 121 variables, 1031 classes, 56 keyframes -->
+<!-- Design system snapshot | 121 variables, 1042 classes, 57 keyframes -->
 <style>
 /* ══════════════════════════════════════════════════════════════
    BLOCK 1: globals.css — verbatim embed (single source of truth)
@@ -3393,6 +3393,8 @@ button.nav-link:hover {
 
 .stroke-tracing-card {
   box-sizing: border-box;
+  display: grid;
+  gap: 12px;
 }
 
 .stroke-sound-button {
@@ -3417,81 +3419,168 @@ button.nav-link:hover {
 .stroke-intro-card {
   min-height: min(82vh, 720px);
   display: grid;
-  grid-template-rows: auto minmax(190px, 1fr) auto auto auto;
+  grid-template-rows: auto minmax(250px, 1fr) auto auto;
   align-items: center;
-  gap: 14px;
+  gap: 18px;
   box-sizing: border-box;
 }
 
+.stroke-intro-card__title,
+.stroke-tracing-card__prompt {
+  margin: 0;
+  color: #fff8ee;
+  font-size: var(--game-text-lg);
+  font-weight: 750;
+  line-height: 1.25;
+  text-align: center;
+}
+
 .stroke-intro-card__character {
-  width: min(64vw, 240px);
-  height: min(64vw, 240px);
+  width: min(72vw, 280px);
+  height: min(72vw, 280px);
   display: grid;
   place-items: center;
   justify-self: center;
-  border-radius: 18px;
-  background: rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.16);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   color: var(--color-accent-gold, #f0c040);
 }
 
-.stroke-intro-card__sound {
-  display: flex;
-  justify-content: center;
-  margin-top: -4px;
+.stroke-live-cue {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  padding: 0;
 }
 
-.stroke-intro-card__meta {
+.stroke-live-cue__label {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: rgba(240, 192, 64, 0.95);
+  font-size: var(--game-text-base);
+  font-weight: 800;
+  animation: strokeCueText 0.45s ease both;
+}
+
+.stroke-write-header {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
   text-align: center;
 }
 
-.stroke-intro-card__pinyin {
+.stroke-write-header__char {
+  font-size: 52px;
+  font-weight: 850;
+  line-height: 0.95;
+  color: rgba(255, 248, 238, 0.9);
+}
+
+.stroke-write-header__sound {
+  display: flex;
+  justify-content: center;
+}
+
+.stroke-write-header__pinyin {
   color: rgba(240, 192, 64, 0.9);
-  font-size: var(--game-text-lg);
+  font-size: var(--game-text-base);
   font-weight: 700;
 }
 
-.stroke-intro-card__meaning {
+.stroke-write-header__meaning {
   color: rgba(255, 255, 255, 0.68);
-  font-size: var(--game-text-base);
+  font-size: var(--game-text-sm);
 }
 
-.stroke-intro-card__strokes {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+.stroke-write-guide {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
   width: 100%;
 }
 
-.stroke-intro-card__stroke {
-  min-height: 74px;
-  display: grid;
-  align-content: center;
-  gap: 2px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.055);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
-  text-align: center;
-  padding: 8px 6px;
+.stroke-write-guide__item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  opacity: 0.5;
+  transition: color 0.18s ease, opacity 0.18s ease;
 }
 
-.stroke-intro-card__stroke-index {
-  color: rgba(255, 255, 255, 0.42);
-  font-size: 11px;
-  line-height: 1;
+.stroke-write-guide__item--active {
+  opacity: 1;
+  color: rgba(240, 192, 64, 0.95);
 }
 
-.stroke-intro-card__stroke-label {
-  color: #fff8ee;
-  font-size: var(--game-text-base);
-  font-weight: 800;
-  line-height: 1.1;
+.stroke-write-guide__item--active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
 }
 
-.stroke-intro-card__stroke-desc {
-  color: rgba(255, 255, 255, 0.58);
+.stroke-write-guide__label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: currentColor;
   font-size: var(--game-text-xs);
-  line-height: 1.2;
+  font-weight: 760;
+  line-height: 1.15;
+}
+
+.hanzi-stroke-label__name {
+  font-weight: 850;
+}
+
+.hanzi-stroke-label__pinyin {
+  color: rgba(255, 255, 255, 0.74);
+  font-weight: 760;
+}
+
+.hanzi-stroke-label__meaning {
+  color: rgba(255, 255, 255, 0.56);
+  font-weight: 700;
+}
+
+.stroke-live-cue__label .hanzi-stroke-label__pinyin,
+.stroke-live-cue__label .hanzi-stroke-label__meaning {
+  color: rgba(255, 248, 238, 0.78);
+}
+
+.stroke-write-surface {
+  width: min(68vw, 300px);
+  justify-self: center;
+  margin-top: 2px;
+}
+
+.stroke-write-progress {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: var(--game-text-xs);
+  font-weight: 700;
+  text-align: center;
+}
+
+@keyframes strokeCueText {
+  0% {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .stroke-intro-card__actions {
@@ -3546,17 +3635,21 @@ button.nav-link:hover {
 @media (max-height: 740px) {
   .stroke-intro-card {
     min-height: min(82vh, 640px);
-    gap: 10px;
+    grid-template-rows: auto minmax(210px, 1fr) auto auto;
+    gap: 12px;
   }
 
   .stroke-intro-card__character {
-    width: min(52vw, 190px);
-    height: min(52vw, 190px);
+    width: min(64vw, 230px);
+    height: min(64vw, 230px);
   }
 
-  .stroke-intro-card__stroke {
-    min-height: 62px;
-    padding-block: 6px;
+  .stroke-write-header__char {
+    font-size: 44px;
+  }
+
+  .stroke-write-surface {
+    width: min(62vw, 240px);
   }
 }
 
@@ -6594,6 +6687,11 @@ button.nav-link:hover {
   height: 100%;
   object-fit: cover;
   z-index: 0;
+}
+
+.summary-screen--shanghai .shanghai-onboarding__stage--summary {
+  z-index: 0;
+  pointer-events: none;
 }
 
 .summary-overlay {
@@ -12987,200 +13085,206 @@ body:has(.playtest-pill-expanded) {
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
+    <div class="ds-component-label">strokeCueText</div>
+    <div class="ds-anim-box" style="background: #ec4899; animation: strokeCueText 2s ease infinite;">
+      strokeCueText
+    </div>
+  </div>
+  <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">pinPulse</div>
-    <div class="ds-anim-box" style="background: #ec4899; animation: pinPulse 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: pinPulse 2s ease infinite;">
       pinPulse
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">drawerSlideUp</div>
-    <div class="ds-anim-box" style="background: #ff6b2c; animation: drawerSlideUp 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #0f766e; animation: drawerSlideUp 2s ease infinite;">
       drawerSlideUp
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">landingHeroReveal</div>
-    <div class="ds-anim-box" style="background: #0f766e; animation: landingHeroReveal 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #4a90d9; animation: landingHeroReveal 2s ease infinite;">
       landingHeroReveal
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">toastFade</div>
-    <div class="ds-anim-box" style="background: #4a90d9; animation: toastFade 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #e8485c; animation: toastFade 2s ease infinite;">
       toastFade
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">fadeSlideUp</div>
-    <div class="ds-anim-box" style="background: #e8485c; animation: fadeSlideUp 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #f0c040; animation: fadeSlideUp 2s ease infinite;">
       fadeSlideUp
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">buildBounce</div>
-    <div class="ds-anim-box" style="background: #f0c040; animation: buildBounce 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: buildBounce 2s ease infinite;">
       buildBounce
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">burnGlow</div>
-    <div class="ds-anim-box" style="background: #8b5cf6; animation: burnGlow 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #06b6d4; animation: burnGlow 2s ease infinite;">
       burnGlow
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">emojiPulse</div>
-    <div class="ds-anim-box" style="background: #06b6d4; animation: emojiPulse 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ec4899; animation: emojiPulse 2s ease infinite;">
       emojiPulse
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">stepSlideUp</div>
-    <div class="ds-anim-box" style="background: #ec4899; animation: stepSlideUp 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: stepSlideUp 2s ease infinite;">
       stepSlideUp
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-pieceSelect</div>
-    <div class="ds-anim-box" style="background: #ff6b2c; animation: bc-pieceSelect 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #0f766e; animation: bc-pieceSelect 2s ease infinite;">
       bc-pieceSelect
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-piecePlaced</div>
-    <div class="ds-anim-box" style="background: #0f766e; animation: bc-piecePlaced 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #4a90d9; animation: bc-piecePlaced 2s ease infinite;">
       bc-piecePlaced
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-slotGlow</div>
-    <div class="ds-anim-box" style="background: #4a90d9; animation: bc-slotGlow 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #e8485c; animation: bc-slotGlow 2s ease infinite;">
       bc-slotGlow
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-slotWrong</div>
-    <div class="ds-anim-box" style="background: #e8485c; animation: bc-slotWrong 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #f0c040; animation: bc-slotWrong 2s ease infinite;">
       bc-slotWrong
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-successFlash</div>
-    <div class="ds-anim-box" style="background: #f0c040; animation: bc-successFlash 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: bc-successFlash 2s ease infinite;">
       bc-successFlash
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-overlayIn</div>
-    <div class="ds-anim-box" style="background: #8b5cf6; animation: bc-overlayIn 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #06b6d4; animation: bc-overlayIn 2s ease infinite;">
       bc-overlayIn
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-toast-in</div>
-    <div class="ds-anim-box" style="background: #06b6d4; animation: bc-toast-in 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ec4899; animation: bc-toast-in 2s ease infinite;">
       bc-toast-in
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-toast-out</div>
-    <div class="ds-anim-box" style="background: #ec4899; animation: bc-toast-out 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: bc-toast-out 2s ease infinite;">
       bc-toast-out
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-shake</div>
-    <div class="ds-anim-box" style="background: #ff6b2c; animation: bc-shake 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #0f766e; animation: bc-shake 2s ease infinite;">
       bc-shake
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">bc-overlay-in</div>
-    <div class="ds-anim-box" style="background: #0f766e; animation: bc-overlay-in 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #4a90d9; animation: bc-overlay-in 2s ease infinite;">
       bc-overlay-in
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">charge-shimmer</div>
-    <div class="ds-anim-box" style="background: #4a90d9; animation: charge-shimmer 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #e8485c; animation: charge-shimmer 2s ease infinite;">
       charge-shimmer
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">charge-pulse</div>
-    <div class="ds-anim-box" style="background: #e8485c; animation: charge-pulse 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #f0c040; animation: charge-pulse 2s ease infinite;">
       charge-pulse
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">charge-notif-pop</div>
-    <div class="ds-anim-box" style="background: #f0c040; animation: charge-notif-pop 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: charge-notif-pop 2s ease infinite;">
       charge-notif-pop
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">strokeReplayPop</div>
-    <div class="ds-anim-box" style="background: #8b5cf6; animation: strokeReplayPop 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #06b6d4; animation: strokeReplayPop 2s ease infinite;">
       strokeReplayPop
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">playtest-pulse</div>
-    <div class="ds-anim-box" style="background: #06b6d4; animation: playtest-pulse 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ec4899; animation: playtest-pulse 2s ease infinite;">
       playtest-pulse
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">playtest-toast-in</div>
-    <div class="ds-anim-box" style="background: #ec4899; animation: playtest-toast-in 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: playtest-toast-in 2s ease infinite;">
       playtest-toast-in
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">playtest-toast-out</div>
-    <div class="ds-anim-box" style="background: #ff6b2c; animation: playtest-toast-out 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #0f766e; animation: playtest-toast-out 2s ease infinite;">
       playtest-toast-out
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">playtest-hint-pulse</div>
-    <div class="ds-anim-box" style="background: #0f766e; animation: playtest-hint-pulse 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #4a90d9; animation: playtest-hint-pulse 2s ease infinite;">
       playtest-hint-pulse
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">playtest-marker-bounce</div>
-    <div class="ds-anim-box" style="background: #4a90d9; animation: playtest-marker-bounce 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #e8485c; animation: playtest-marker-bounce 2s ease infinite;">
       playtest-marker-bounce
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">playtest-popover-in</div>
-    <div class="ds-anim-box" style="background: #e8485c; animation: playtest-popover-in 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #f0c040; animation: playtest-popover-in 2s ease infinite;">
       playtest-popover-in
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">spin</div>
-    <div class="ds-anim-box" style="background: #f0c040; animation: spin 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #8b5cf6; animation: spin 2s ease infinite;">
       spin
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">wtBubbleRise</div>
-    <div class="ds-anim-box" style="background: #8b5cf6; animation: wtBubbleRise 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #06b6d4; animation: wtBubbleRise 2s ease infinite;">
       wtBubbleRise
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">wtHelpReveal</div>
-    <div class="ds-anim-box" style="background: #06b6d4; animation: wtHelpReveal 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ec4899; animation: wtHelpReveal 2s ease infinite;">
       wtHelpReveal
     </div>
   </div>
   <div class="ds-component-card" style="padding: 16px;">
     <div class="ds-component-label">wtHelpFade</div>
-    <div class="ds-anim-box" style="background: #ec4899; animation: wtHelpFade 2s ease infinite;">
+    <div class="ds-anim-box" style="background: #ff6b2c; animation: wtHelpFade 2s ease infinite;">
       wtHelpFade
     </div>
   </div>
