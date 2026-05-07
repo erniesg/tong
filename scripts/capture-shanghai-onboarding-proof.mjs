@@ -338,7 +338,7 @@ async function run() {
     await recorder.cue('intro_chunk_tapped');
     await screenshot(page, '02-intro-chunk-tooltip.png', 'intro_chunk_tooltip', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Listen for 小. Which xiao has the dipping third tone?');
+    await waitForText(page, 'Listen for 小. Which xiao has the falling-rising third tone?');
     await screenshot(page, '03-anchor-before-exercise.png', 'pre_exercise_context', screenshots);
     await recorder.cue('exercise_opened');
     await screenshot(page, '04-anchor-exercise.png', 'anchor_exercise', screenshots);

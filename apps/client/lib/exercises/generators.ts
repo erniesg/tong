@@ -224,16 +224,16 @@ function buildXiaoTonePronunciationSelect(objectiveId: string): PronunciationSel
     id: stableId('ps', objectiveId, ['小', 'tone']),
     objectiveId,
     difficulty: 1,
-    prompt: 'Listen for 小. Which xiao has the dipping third tone?',
+    prompt: 'Listen for 小. Which xiao has the falling-rising third tone?',
     targetText: '小',
     audioOptions: [
       { id: 'xiao1', label: '消', ttsText: '消', romanization: 'xiāo', meaning: 'first tone' },
       { id: 'xiao2', label: '淆', ttsText: '淆', romanization: 'xiáo', meaning: 'second tone' },
-      { id: 'xiao3', label: '小', ttsText: '小', romanization: 'xiǎo', meaning: 'third tone; small' },
+      { id: 'xiao3', label: '小', ttsText: '小', romanization: 'xiǎo', meaning: 'third tone, falling-rising; small' },
       { id: 'xiao4', label: '笑', ttsText: '笑', romanization: 'xiào', meaning: 'fourth tone' },
     ],
     correctOptionId: 'xiao3',
-    explanation: '小 is xiǎo: the third tone dips before it comes back up.',
+    explanation: '小 is xiǎo: the third tone falls low, then rises.',
   };
 }
 
