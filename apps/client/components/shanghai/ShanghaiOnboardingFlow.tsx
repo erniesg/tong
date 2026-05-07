@@ -13,7 +13,7 @@ import type { ExerciseData } from '@/lib/types/hangout';
 import type { WebtoonPanel } from '@/lib/hangout/fixture-types';
 import { dispatch, useGameState } from '@/lib/store/game-store';
 
-type OnboardingPhase = 'panorama' | 'webtoon' | 'webtoon-interlude' | 'step-out' | 'final-wrap' | 'complete';
+type OnboardingPhase = 'panorama' | 'overhear-ready' | 'webtoon' | 'webtoon-interlude' | 'step-out' | 'final-wrap' | 'complete';
 type SetupStep = 'intro' | 'prelisten-exercise' | 'prelisten-transition' | 'post-exercise' | 'pan';
 
 interface PanoramaMetrics {
@@ -50,7 +50,7 @@ function clamp(value: number, min = 0, max = 1) {
 function isStoredCheckpoint(value: unknown): value is StoredCheckpoint {
   if (!value || typeof value !== 'object') return false;
   const phase = (value as { phase?: unknown }).phase;
-  return phase === 'panorama' || phase === 'webtoon' || phase === 'webtoon-interlude' || phase === 'step-out' || phase === 'final-wrap' || phase === 'complete';
+  return phase === 'panorama' || phase === 'overhear-ready' || phase === 'webtoon' || phase === 'webtoon-interlude' || phase === 'step-out' || phase === 'final-wrap' || phase === 'complete';
 }
 
 export function ShanghaiOnboardingFlow() {
@@ -208,7 +208,7 @@ export function ShanghaiOnboardingFlow() {
         parsed.setupStep === 'intro'
         || parsed.setupStep === 'prelisten-transition'
         || parsed.setupStep === 'post-exercise'
-      ));
+      ) || parsed.phase === 'overhear-ready');
       const restoredWebtoonStep = SHANGHAI_ONBOARDING_PANORAMA.webtoonSteps[restoredWebtoonStepIndex];
       const interludeLinesDone = restoredInterludeLineIndex >= getStepTongLines(restoredWebtoonStep).length;
       setCurrentExercise(
@@ -367,6 +367,18 @@ export function ShanghaiOnboardingFlow() {
       webtoonComplete: true,
     });
   }, [introIndex, pan, phase, postExerciseIndex, webtoonComplete, webtoonStepIndex, writeCheckpoint]);
+
+  const startWebtoonFromOverhear = useCallback(() => {
+    setTongVisible(false);
+    setPhase('webtoon');
+    setWebtoonStepIndex(0);
+    setWebtoonInterludeLineIndex(0);
+    setWebtoonInterludeExerciseIndex(0);
+    setSuspendedExercise(null);
+    setWebtoonReadyToContinue(false);
+    setWebtoonComplete(false);
+    writeCheckpoint({ phase: 'webtoon', setupStep: 'pan', introIndex, postExerciseIndex, webtoonStepIndex: 0, pan });
+  }, [introIndex, pan, postExerciseIndex, writeCheckpoint]);
 
   const advanceToNextWebtoonStep = useCallback(() => {
     const nextStepIndex = webtoonStepIndex + 1;
@@ -646,14 +658,15 @@ export function ShanghaiOnboardingFlow() {
 
   useEffect(() => {
     if (!panUnlocked || phase !== 'panorama' || pan > WEBTOON_ENTRY_PAN) return;
-    setPhase('webtoon');
+    setPhase('overhear-ready');
     setWebtoonStepIndex(0);
     setWebtoonInterludeLineIndex(0);
     setWebtoonInterludeExerciseIndex(0);
     setSuspendedExercise(null);
     setWebtoonReadyToContinue(false);
     setWebtoonComplete(false);
-    writeCheckpoint({ phase: 'webtoon', setupStep: 'pan', introIndex, postExerciseIndex, webtoonStepIndex: 0, pan });
+    setTongVisible(true);
+    writeCheckpoint({ phase: 'overhear-ready', setupStep: 'pan', introIndex, postExerciseIndex, webtoonStepIndex: 0, pan });
   }, [introIndex, pan, panUnlocked, phase, postExerciseIndex, writeCheckpoint]);
 
   const worldStyle: CSSProperties = {
@@ -768,7 +781,7 @@ export function ShanghaiOnboardingFlow() {
           <img className="summary-scene-bg" src={SHANGHAI_ONBOARDING_PANORAMA.posterUrl} alt="" />
           <div className="summary-overlay" />
           <div className="summary-content">
-            <h2 className="summary-title">Hangout complete</h2>
+            <h2 className="summary-title">Scene complete</h2>
             <p className="summary-text">
               <KoreanText text={tongCopy.completionTongLine} targetLang="zh" />
             </p>
@@ -787,7 +800,7 @@ export function ShanghaiOnboardingFlow() {
               type="button"
               onClick={() => router.push('/game?phase=city_map&city=shanghai')}
             >
-              Done
+              Back to Shanghai
             </button>
           </div>
         </div>
@@ -825,13 +838,13 @@ export function ShanghaiOnboardingFlow() {
           <div className="shanghai-onboarding__scrim" aria-hidden="true" />
 
           <TongOverlay
-            message={isShopFinalWrap ? activeFinalWrapLine ?? '' : activeTongLine ?? ''}
-            visible={isShopFinalWrap ? Boolean(activeFinalWrapLine) : tongVisible && Boolean(activeTongLine)}
+            message={isShopFinalWrap ? activeFinalWrapLine ?? '' : phase === 'overhear-ready' ? tongCopy.overhearTongLine : activeTongLine ?? ''}
+            visible={isShopFinalWrap ? Boolean(activeFinalWrapLine) : phase === 'overhear-ready' ? tongVisible : tongVisible && Boolean(activeTongLine)}
             targetLang="zh"
             speakerName={tongCopy.tongName}
             interactiveText
-            dismissLabel={isShopFinalWrap ? (finalWrapIsLastLine ? tongCopy.finalWrapCompleteLabel : tongCopy.finalWrapContinueLabel) : undefined}
-            onDismiss={isShopFinalWrap ? handleFinalWrapContinue : dismissTong}
+            dismissLabel={isShopFinalWrap ? (finalWrapIsLastLine ? tongCopy.finalWrapCompleteLabel : tongCopy.finalWrapContinueLabel) : phase === 'overhear-ready' ? tongCopy.overhearLabel : undefined}
+            onDismiss={isShopFinalWrap ? handleFinalWrapContinue : phase === 'overhear-ready' ? startWebtoonFromOverhear : dismissTong}
           />
 
           {panUnlocked && (

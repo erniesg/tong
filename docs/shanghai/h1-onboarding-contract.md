@@ -51,16 +51,18 @@ Rejected:
 Screen 1: Shanghai 小笼包店 panorama.
 
 Tong:
-- “You are in a Shanghai 小笼包店: steamers at the counter, window table, bowls and voices close enough to overhear.”
-- “Start with 小. It is a whole character, and it can also work as a reusable component or radical piece.”
-- “Tap 小 once to hear it, then trace the shape so your eye can catch it on the sign.”
+- “You are in a Shanghai 小笼包店: steam, bowls, close tables, and voices moving faster than a classroom ever would.”
+- “Start with 小. Three strokes: center down, left dot, right dot. Small shape, useful sound.”
+- “Tap 小 to hear it, then trace those strokes in order.”
 
 Exercise:
 - Current fixture starts with reusable `stroke_tracing`.
-- Purpose: make the shop sign useful before the eavesdrop by making the player handle the shape of `小`, not by treating characters as decorative text.
+- Purpose: make `小` useful before the eavesdrop by making the player handle the shape and stroke order, not by introducing later register vocabulary too early.
 - Current fixture trace target:
   - `小` / `xiǎo` / small
-  - Explain it as a whole character that can also work as a reusable component or radical piece.
+  - Stroke order: center down, left dot, right dot.
+  - Example words must not introduce `小瞿` here. Use shop/world examples such as `小笼包` and `小吃`.
+  - After completion, replay the `小` character animation and play `xiǎo` plus the player-language meaning.
 - After the trace, Tong must transition organically into sound:
   - “Good. Now attach sound to that shape: 小 is xiǎo.”
   - “Mandarin changes meaning with tone. Hear a few xiao shapes and pick the one that matches 小.”
@@ -76,11 +78,15 @@ Exercise:
 - Dynamic runs can choose another visible setting word, but the setup must still teach character composability with reusable `stroke_tracing`, then sound/tone with `pronunciation_select`. Use `block_crush` only after the component pieces have been explicitly prepared.
 
 Tong:
-- “Good. The sign is not decoration now: 小 is a shape you can spot and a sound you can hear.”
-- “That table by the window is cutting through the room noise. Slide that way slowly.”
+- “Good. 小 is not just a mark now: your hand knows the shape, and your ear knows xiǎo.”
+- “Now listen left. The shop noise thins there; a table is talking just loudly enough to catch.”
 
 Pan prompt:
-- “Slide toward the window table.”
+- “Slide left toward the voices.”
+
+Overhear gate:
+- Reaching the pan threshold must not auto-start the webtoon. Tong must give a short cue, then the player explicitly taps to overhear.
+- Example: “That is close enough. Tap to lean in and overhear them.”
 
 Strip Packet 1, pregenerated art through the first thumb stop:
 - 守成: `方案你看过了。`
@@ -92,14 +98,13 @@ Strip Packet 1, pregenerated art through the first thumb stop:
 
 Tong after Packet 1:
 - Teach one small cue from the strip, currently the repeated `不一样`, and transition into the exercise by saying why it helps with the next stretch of listening.
-- Example: “You heard 不一样 twice. 不 is the high-value piece: it flips a word or phrase negative.” Then: “Try the pieces once so the next 不 phrase lands as language, not noise.”
+- Example: “You heard 不一样 twice. 不 is the turn: it flips 一样, ‘same,’ into ‘not the same.’” Then: “Put it back into the line once, then we keep listening.”
 - Do not interpret 丁漫’s food reply as character motive.
 
 Exercise after Packet 1:
-- Current fixture: matching the pieces behind `不一样`:
-  - `不` -> not
-  - `一样` -> same
-  - `不一样` -> not the same; different
+- Current fixture: contextual fill-blank for the line pattern:
+  - `这个节目跟其他的 ___ 。`
+  - Correct: `不一样`
 - Alternative dynamic choices can use `看过了` or `想法` only if the actual generated first packet gives those cues and the next packet makes that practice useful.
 
 Strip Packet 2, placeholders until approved art exists:
@@ -152,11 +157,11 @@ Tong after Exit:
 Wrap:
 - Close as Tong walking out of the 小笼包店 with the player, not as a teacher ending class.
 - The wrap must connect what the player caught in the first shop to the broader Shanghai journey.
-- Handle inventory is allowed only inside that companion movement. It cannot be the whole close.
+- A phrase inventory alone is not enough, and Tong should not call the phrases “handles” in the final emotional close.
 - Good direction:
-  - “Back in the shop noise. You did not need the whole conversation; the handles carried you.”
-  - “The handles held: 小, 不一样, 装不下去, 小瞿.”
-  - “Keep those in your ear. Shanghai will keep talking.”
+  - “Back in the shop. You followed enough of that table to know where the scene changed.”
+  - “小 came back in 小瞿. 不一样 and 装不下去 were the fast pieces that turned the conversation.”
+  - “That is a first pass through Shanghai. Not a worksheet; a way in.”
 - Avoid “today’s lesson,” “room,” “hangout ends here,” plot recap, or any admin/staging language.
 - Only after the player completes this wrap should the same kind of hangout completion/ending screen Seoul uses for XP/SP/RP progress appear.
 

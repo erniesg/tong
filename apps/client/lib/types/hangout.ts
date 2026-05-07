@@ -135,6 +135,7 @@ export interface StrokeTracingExercise {
   sound?: string;
   language?: 'ko' | 'ja' | 'zh';
   exampleWords?: { word: string; romanization: string; meaning: string }[];
+  strokeOrder?: { label: string; description: string }[];
   /** Number of reps for drill mode (习字 style). Omit or 1 = single trace. */
   reps?: number;
 }

@@ -716,13 +716,13 @@ export const SHANGHAI_H1_WEBTOON: WebtoonSpec = {
       id: 'beat-1-proposal-food-generic-pitch',
       panelIds: ['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6'],
       afterTongLines: [
-        'You heard 不一样 twice. 不 is the high-value piece: it flips a word or phrase negative.',
-        'Try the pieces once so the next 不 phrase lands as language, not noise.',
+        'You heard 不一样 twice. 不 is the turn: it flips 一样, “same,” into “not the same.”',
+        'Put it back into the line once, then we keep listening.',
       ],
       exerciseHook: {
-        type: 'matching',
+        type: 'fill_blank',
         objectiveId: 'zh-script-shanghai-contrast-forms',
-        reason: 'The repeated 不一样 cue makes 不 useful before the next contrast.',
+        reason: 'The repeated 不一样 cue is useful inside the line pattern before the next contrast.',
       },
     },
     {
@@ -751,10 +751,10 @@ export const SHANGHAI_H1_WEBTOON: WebtoonSpec = {
     tongLines: [
       'She said 小瞿, not 瞿先生. That is familiar address from someone older.',
       '瞿家 is the Qu family. 小儿子 is younger son.',
-      'Back in the shop noise. You did not need the whole conversation; the handles carried you.',
-      'The handles held: 小, 不一样, 装不下去, 小瞿.',
-      'Keep those in your ear. Shanghai will keep talking.',
+      'Back in the shop. You followed enough of that table to know where the scene changed.',
+      '小 came back in 小瞿. 不一样 and 装不下去 were the fast pieces that turned the conversation.',
+      'That is a first pass through Shanghai. Not a worksheet; a way in.',
     ],
-    completionLine: 'Saved listening handles: 小, 不一样, 装不下去, 小瞿.',
+    completionLine: 'First pass through the shop: 小, 不一样, 装不下去, 小瞿.',
   },
 };

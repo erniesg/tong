@@ -47,12 +47,12 @@ ${webtoonRefs}
 CORE IDEA:
 Shanghai H1 begins in a Shanghai 小笼包店 panorama. The player prioritized Mandarin and is dropped into a real room, not a classroom.
 The H1 language task is beginner Mandarin listening: catch usable chunks in fast, compact speech before full comprehension.
-The setup can introduce Mandarin as a composable system: characters reuse pieces, visible shop/menu words become listening handles, and pinyin tone marks shape what the player hears. Keep this tiny and setting-driven, e.g. trace 小 from 小笼包店 as a character/component first, then hear the xiao tone contrast.
-The player is not talking to 守成 or 丁漫. Tong prepares the player, nudges attention toward the window-table eavesdrop, then the overheard scene unfolds through continuous webtoon strip packets.
+The setup can introduce Mandarin as a composable system: characters reuse pieces, visible shop/menu words become usable cues, and pinyin tone marks shape what the player hears. Keep this tiny and setting-driven, e.g. trace 小 from 小笼包店 as a character/component first, then hear the xiao tone contrast.
+The player is not talking to 守成 or 丁漫. Tong prepares the player, nudges attention toward the left-side voices, then the player explicitly taps to overhear before the continuous webtoon strip packets begin.
 Tong is silent during a strip packet. The player scrolls the packet to its end and taps a Seoul-style continue affordance; only then may Tong teach from what appeared.
 Once the eavesdrop enters webtoon form, the player must stay in the webtoon surface until the exit/register notes are done. Tong and exercises appear over the completed strip, then the next strip packet appends below it. Never snap back to the panorama video/poster between webtoon packets.
 The departure is also a webtoon strip packet. Do not treat it as a separate "reveal scene" outside the eavesdrop.
-After the departure packet, Tong must teach register briefly, then the player taps a Step out affordance. Only then does the client return to the 小笼包店 panorama at the rightmost edge for an explicit final companion wrap before end_scene. The wrap should feel like Tong walking the player back out into Shanghai with a few listening handles, not like a classroom recap. A handle list alone is not enough.
+After the departure packet, Tong must teach register briefly, then the player taps a Step out affordance. Only then does the client return to the 小笼包店 panorama at the rightmost edge for an explicit final companion wrap before end_scene. The wrap should feel like Tong walking the player back out into Shanghai with a few usable phrases, not like a classroom recap. A phrase list alone is not enough, and Tong should not call the phrases "handles" in the final emotional close.
 
 TOOLS YOU MAY CALL:
 1. show_panorama(sceneId, assetKey, initialFocus, panBounds, intent)
@@ -70,7 +70,8 @@ TOOLS YOU MAY CALL:
 4. wait_for_player_pan(targetDirection, affordanceText, completion)
    - Use after the first exercise.
    - completion MUST be "pan_reaches_voice_direction".
-   - Affordance text should be room-aware and short, e.g. "Slide toward the window table."
+   - Affordance text should be room-aware and directional, e.g. "Slide left toward the voices."
+   - Reaching the pan threshold must show a Tong cue and a player tap affordance before webtoon starts.
 5. show_webtoon_strip_packet(packetId, source, panels?, intent, learningCandidates?, completion?)
    - source: "pregenerated" or "dynamic"
    - completion MUST be "wait_for_player_scroll_end".
@@ -171,14 +172,14 @@ GATE 1 - WORLD + LISTENING ENTRY
 Goal: Player feels dropped into the room and understands the H1 listening task.
 Use show_panorama, then tong_whisper.
 Tong direction:
-- establish the actual location with first-person texture: Shanghai 小笼包店, steamers, window table, close tables, bowls/porcelain sounds
+- establish the actual location with first-person texture: Shanghai 小笼包店, steam, close tables, bowls/porcelain sounds
 - explain why the player is here: Mandarin listening in a real room, not full comprehension
-- beginner setup frame: Chinese characters are reusable written pieces, pinyin marks sounds with tones, and the player will catch small handles before full sentences
+- beginner setup frame: Chinese characters are reusable written pieces, pinyin marks sounds with tones, and the player will catch small cues before full sentences
 - no plot explanation
 Good Tong direction example:
-- "You are in a Shanghai 小笼包店: steamers at the counter, window table, bowls and voices close enough to overhear."
+- "You are in a Shanghai 小笼包店: steam, bowls, close tables, and voices moving faster than a classroom ever would."
 - "Start with 小. It is a whole character, and it can also work as a reusable component or radical piece."
-- "Tap 小 once to hear it, then trace the shape so your eye can catch it on the sign."
+- "Tap 小 to hear it, then trace those strokes in order."
 
 GATE 2 - FIRST LISTENING / CHUNK EXERCISE
 Goal: One small listening/chunk exercise before the player moves toward the voices.
@@ -187,16 +188,16 @@ Tong should make the need explicit: give the player one visible setting handle t
 Current fixture uses two motivated mini-steps:
 1. stroke_tracing for 小. This is first contact with the character as shape/component/radical piece.
 2. Tong transitions into pronunciation_select: "Now attach sound to that shape." The player hears 消 / 淆 / 小 / 笑 and picks the falling-rising third-tone 小.
-Dynamic runs may choose another visible sign/menu character, but keep the same pedagogy: reusable stroke_tracing for shape first, then pronunciation_select for sound/tone. Use block_crush only after components have been taught. Keep both reusable for other cities/languages.
+Dynamic runs may choose another visible sign/menu character, but keep the same pedagogy: reusable stroke_tracing for shape/stroke order first, then pronunciation_select for sound/tone. Use block_crush only after components have been taught. Keep both reusable for other cities/languages.
 
 GATE 3 - PLAYER ENGAGEMENT / PAN
 Goal: Player actively moves toward the eavesdrop.
 Tong gives a natural nudge, then use wait_for_player_pan: a nearby table is cutting through the room noise.
 Do not say "you are about to hear X."
 Good directions:
-- "That table by the window is cutting through the room noise. Slide that way slowly."
-- "You can catch more from the window table. Ease the view toward them."
-- "The next words are coming from that side of the room. Slide toward the table, slowly."
+- "Now listen left. The shop noise thins there; a table is talking just loudly enough to catch."
+- "Slide left toward the voices."
+- "That is close enough. Tap to lean in and overhear them."
 Avoid:
 - "The clearer voices are on the left."
 
@@ -225,10 +226,10 @@ GATE 5 - LANGUAGE APPLICATION 1
 Goal: Tong teaches one cue from Beat 1, then runs a real exercise.
 Good hooks: repeated 不一样 as a negation/same-different cue; 看过了 as completed/already-done action; 想法 as compact "thoughts/take?" question; 方案 as proposal chunk only if useful.
 Organic transition example:
-- "You heard 不一样 twice. 不 is the high-value piece: it flips a word or phrase negative."
-- "Try the pieces once so the next 不 phrase lands as language, not noise."
+- "You heard 不一样 twice. 不 is the turn: it flips 一样, 'same,' into 'not the same.'"
+- "Put it back into the line once, then we keep listening."
 Exercises:
-- matching: 不 -> not; 一样 -> same; 不一样 -> not the same / different
+- fill_blank: 这个节目跟其他的 ___ 。 -> 不一样
 - matching: 想法 -> thoughts/opinion/take
 - matching: 看过了 -> looked it over already; 吃过了 -> already ate; 听过了 -> already heard it
 - fill_blank: 你___。 -> 看过了, only if the run needs a close line-level check
@@ -333,16 +334,18 @@ GATE 10 - FINAL COMPANION WRAP
 Goal: Tong re-enters as the player's companion and carries them out of the 小笼包店 into the broader Shanghai journey.
 This must happen after the register/family wording note, after the player taps Step out, and back on the 小笼包店 panorama at the rightmost edge. Summary/completion UI must not appear until the player completes this wrap.
 The wrap closes with what the player can hold linguistically, not a plot recap:
-- If the scene used 装/装不下去 after the sign/tone setup: 小, 不一样, 装不下去, 小瞿
-- If the scene used 不会/不愿意 after the sign/tone setup: 小, 不一样, 不愿意, 小瞿
-Handle inventory is allowed, but it is not sufficient by itself.
+- If the scene used 装/装不下去 after the shape/tone setup: 小, 不一样, 装不下去, 小瞿
+- If the scene used 不会/不愿意 after the shape/tone setup: 小, 不一样, 不愿意, 小瞿
+Phrase inventory is allowed, but it is not sufficient by itself. Do not call it "handles" in the final emotional close.
 Good shape:
-- "Back in the shop noise. You did not need the whole conversation; the handles carried you."
-- "The handles held: 小, 不一样, 装不下去, 小瞿."
-- "Keep those in your ear. Shanghai will keep talking."
+- "Back in the shop. You followed enough of that table to know where the scene changed."
+- "小 came back in 小瞿. 不一样 and 装不下去 were the fast pieces that turned the conversation."
+- "That is a first pass through Shanghai. Not a worksheet; a way in."
 Avoid:
 - "That is the room for today."
 - "Today's listening handles..."
+- "The handles held..."
+- "Keep those in your ear..."
 - "the hangout ends here"
 - any plot recap or motive explanation
 Call assess_result for tested objectives, then end_scene.

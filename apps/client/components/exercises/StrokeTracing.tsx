@@ -633,6 +633,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   const [hasDrawn, setHasDrawn] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<{ correct: boolean; score: number } | null>(null);
+  const [replayKey, setReplayKey] = useState(0);
 
   // Drill mode state
   const [cellStates, setCellStates] = useState<CellState[]>(
@@ -886,16 +887,24 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     if (!hasDrawn || submitted) return;
     setSubmitted(true);
     const metrics = computeScore_single();
-    const correct = isPassingCoverage(metrics);
+    const correct = isPassingCoverage(metrics) || (Boolean(exercise.strokeOrder?.length) && metrics.overallCoverage >= 0.42);
     const ttsChar = JAMO_TO_SYLLABLE[exercise.targetChar] ? exercise.targetChar : (exercise.sound ?? exercise.targetChar);
-    if (correct && exercise.meaning) {
+    if ((correct || exercise.strokeOrder?.length) && exercise.meaning) {
       const localMeaning = getMeaning(exercise.meaning, lang, exercise.targetChar);
       playTTS(ttsChar, ttsLang, localMeaning, lang);
-    } else if (correct) {
+    } else if (correct || exercise.strokeOrder?.length) {
       playTTS(ttsChar, ttsLang);
     }
+    if (correct || exercise.strokeOrder?.length) {
+      setReplayKey((current) => current + 1);
+    }
+    const summary = `${Math.round(metrics.score * 100)}% score`;
     setResult({ correct, score: metrics.score });
-    onResult(correct, `${Math.round(metrics.score * 100)}% score`);
+    if (exercise.strokeOrder?.length) {
+      window.setTimeout(() => onResult(correct, summary), 1700);
+      return;
+    }
+    onResult(correct, summary);
   }, [hasDrawn, submitted, computeScore_single, onResult, exercise, ttsLang, lang]);
 
   const handleClear_single = useCallback(() => {
@@ -964,6 +973,26 @@ export function StrokeTracing({ exercise, onResult }: Props) {
           </div>
         )}
       </div>
+
+      {exercise.strokeOrder && exercise.strokeOrder.length > 0 && (
+        <div
+          className="mb-3 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2"
+          data-stroke-order
+        >
+          <div className="mb-2 text-[length:var(--game-text-sm)] font-semibold text-[var(--color-accent-gold)]">
+            Stroke order
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {exercise.strokeOrder.map((stroke, index) => (
+              <div key={`${stroke.label}-${index}`} className="rounded-md bg-black/15 px-2 py-2 text-center">
+                <div className="text-[length:var(--game-text-xs)] opacity-50">{index + 1}</div>
+                <div className="text-[length:var(--game-text-base)] font-semibold text-ko">{stroke.label}</div>
+                <div className="text-[length:var(--game-text-xs)] opacity-60">{stroke.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isDrill ? (
         /* ── Drill mode: grid of mini canvases ────────────────── */
@@ -1089,9 +1118,32 @@ export function StrokeTracing({ exercise, onResult }: Props) {
                   : 'bg-red-500/20 text-red-400',
               )}
             >
+              {exercise.strokeOrder?.length ? (
+                <div
+                  key={replayKey}
+                  className="mx-auto mb-2 grid place-items-center text-ko"
+                  data-stroke-replay
+                  style={{
+                    width: 86,
+                    height: 86,
+                    borderRadius: 12,
+                    background: 'rgba(0,0,0,0.18)',
+                    color: 'var(--color-accent-gold, #f0c040)',
+                    fontSize: 64,
+                    animation: 'strokeReplayPop 1.25s ease both',
+                  }}
+                >
+                  {exercise.targetChar}
+                </div>
+              ) : null}
               {result.correct ? (
                 <>
                   {t('stroke_done', lang)}
+                  {exercise.romanization && (
+                    <div className="mt-1 text-[length:var(--game-text-base)] font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
+                      {exercise.romanization}
+                    </div>
+                  )}
                   {exercise.meaning && (
                     <div className="mt-1 text-[length:var(--game-text-base)] font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
                       {exercise.targetChar} = {getMeaning(exercise.meaning, lang, exercise.targetChar)}
@@ -1104,6 +1156,16 @@ export function StrokeTracing({ exercise, onResult }: Props) {
               ) : (
                 <>
                   {t('stroke_try_again', lang)}
+                  {exercise.romanization && (
+                    <div className="mt-1 text-[length:var(--game-text-base)] font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
+                      {exercise.romanization}
+                    </div>
+                  )}
+                  {exercise.meaning && (
+                    <div className="mt-1 text-[length:var(--game-text-base)] font-semibold" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>
+                      {exercise.targetChar} = {getMeaning(exercise.meaning, lang, exercise.targetChar)}
+                    </div>
+                  )}
                   <div className="mt-1 text-[length:var(--game-text-sm)] opacity-70">
                     {t('stroke_score', lang)}: {Math.round(result.score * 100)}%
                   </div>

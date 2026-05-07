@@ -139,7 +139,11 @@ async function answerStrokeTracing(page) {
   }
 
   await clickVisibleText(page, 'Done');
+  const replayVisible = await page.waitForSelector('[data-stroke-replay]', { visible: true, timeout: 2000 })
+    .then(() => true)
+    .catch(() => false);
   await sleep(2200);
+  return replayVisible;
 }
 
 async function answerSentenceBuilder(page, tiles) {
@@ -364,7 +368,7 @@ async function run() {
 
     await clickTong(page);
     await clickTong(page);
-    await waitForText(page, 'Tap 小 once to hear it');
+    await waitForText(page, 'Tap 小 to hear it');
     const tappedIntroChunk = await page.evaluate(() => {
       const target = Array.from(document.querySelectorAll('.tong-whisper [data-korean]'))
         .find((node) => node.textContent?.trim() === '小');
@@ -376,15 +380,24 @@ async function run() {
     checks.introChunkTooltipVisible = Boolean(tappedIntroChunk) && await page.waitForSelector('.korean-tooltip', { visible: true, timeout: 5000 })
       .then(() => true)
       .catch(() => false);
+    checks.introChunkTooltipFullyVisible = checks.introChunkTooltipVisible && await page.evaluate(() => {
+      const node = document.querySelector('.korean-tooltip');
+      if (!(node instanceof HTMLElement)) return false;
+      const rect = node.getBoundingClientRect();
+      return rect.top >= 0 && rect.left >= 0 && rect.right <= window.innerWidth && rect.bottom <= window.innerHeight;
+    });
     await recorder.cue('intro_chunk_tapped');
     await screenshot(page, '02-intro-chunk-tooltip.png', 'intro_chunk_tooltip', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Trace 小 once');
+    await waitForText(page, 'Trace 小 in order');
     await screenshot(page, '03-xiao-stroke-exercise.png', 'xiao_stroke_exercise', screenshots);
     checks.strokeTracingVisible = await page.evaluate(() => (
-      document.body.innerText.includes('Trace 小 once') && Boolean(document.querySelector('.exercise-card canvas'))
+      document.body.innerText.includes('Trace 小 in order')
+      && Boolean(document.querySelector('.exercise-card canvas'))
+      && Boolean(document.querySelector('[data-stroke-order]'))
+      && !document.body.innerText.includes('小瞿')
     ));
-    await answerStrokeTracing(page);
+    checks.strokeTraceReplayVisible = await answerStrokeTracing(page);
     await recorder.cue('stroke_trace_answered');
     await waitForText(page, 'Good. Now attach sound');
     checks.strokeTraceCompleted = true;
@@ -403,13 +416,13 @@ async function run() {
 
     await answerPronunciationOption(page, 'xiao3');
     await recorder.cue('exercise_answered');
-    await waitForText(page, 'Good. The sign is not decoration now');
+    await waitForText(page, 'Good. 小 is not just a mark now');
     await screenshot(page, '08-post-exercise.png', 'post_exercise_context', screenshots);
 
     await clickTong(page);
     await clickTong(page);
     await recorder.cue('pan_prompt_visible');
-    await waitForText(page, 'Slide toward the window table.');
+    await waitForText(page, 'Slide left toward the voices.');
     await screenshot(page, '09-pan-prompt.png', 'pre_action_pan_prompt', screenshots);
     await page.waitForFunction(() => {
       const stage = document.querySelector('.shanghai-onboarding__stage');
@@ -445,15 +458,17 @@ async function run() {
       }
     });
     await recorder.cue('pan_input_finished');
-    checks.panReachedWebtoonWithoutShortcut = await page.waitForFunction(
-      () => Boolean(document.querySelector('.shanghai-onboarding--webtoon')),
+    checks.panReachedOverhearGateWithoutShortcut = await page.waitForFunction(
+      () => document.body.innerText.includes('Tap to lean in and overhear them') && !Boolean(document.querySelector('.shanghai-onboarding--webtoon')),
       { timeout: 6000 },
     )
       .then(() => true)
       .catch(() => false);
-    if (!checks.panReachedWebtoonWithoutShortcut) {
-      throw new Error('Pan input did not enter the webtoon eavesdrop.');
+    if (!checks.panReachedOverhearGateWithoutShortcut) {
+      throw new Error('Pan input did not reach the overhear gate.');
     }
+    await screenshot(page, '10-overhear-gate.png', 'overhear_gate', screenshots);
+    await clickVisibleText(page, 'Tap to overhear');
     await waitForWebtoonAfterPan(page);
     await recorder.cue('webtoon_entered');
     await screenshot(page, '07-webtoon-entered.png', 'stable_post_action_webtoon', screenshots);
@@ -499,30 +514,16 @@ async function run() {
     checks.noPosterSnapDuringLanguageGate = await page.evaluate(() => !document.querySelector('.shanghai-onboarding__video') && !document.querySelector('.summary-screen'));
     await screenshot(page, '11-beat-1-language.png', 'beat_1_language_gate', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Try the pieces once');
+    await waitForText(page, 'Put it back into the line once');
     await clickTong(page);
-    await waitForText(page, 'Match the pieces behind 不一样.');
+    await waitForText(page, 'Choose the phrase that means “not the same.”');
     checks.webtoonVisibleDuringExercise = await page.evaluate(() => Boolean(document.querySelector('.wt-strip')) && document.body.innerText.includes('每个节目都说自己不一样。'));
     checks.noPosterSnapDuringExercise = await page.evaluate(() => !document.querySelector('.shanghai-onboarding__video') && !document.querySelector('.summary-screen'));
-    checks.matchingChineseTokensInteractive = await page.evaluate(() => document.querySelectorAll('.exercise-card [data-korean]').length > 0);
-    const tappedMatchingToken = await page.evaluate(() => {
-      const target = Array.from(document.querySelectorAll('.exercise-card [data-korean]'))
-        .find((node) => node.textContent?.trim() === '不一样');
-      if (!(target instanceof HTMLElement)) return null;
-      target.click();
-      return target.textContent;
-    });
-    checks.matchingChineseTooltipVisible = Boolean(tappedMatchingToken) && await page.waitForSelector('.korean-tooltip', { visible: true, timeout: 5000 })
-      .then(() => true)
-      .catch(() => false);
-    if (tappedMatchingToken) {
-      await page.evaluate(() => {
-        const target = Array.from(document.querySelectorAll('.exercise-card [data-korean]'))
-          .find((node) => node.textContent?.trim() === '不一样');
-        if (target instanceof HTMLElement) target.click();
-      });
-      await sleep(250);
-    }
+    checks.buyiyangFillBlankVisible = await page.evaluate(() => (
+      document.body.innerText.includes('这个节目跟其他的')
+      && document.body.innerText.includes('不一样')
+      && !document.body.innerText.includes('Match the pieces')
+    ));
     await screenshot(page, '12-beat-1-exercise.png', 'beat_1_exercise', screenshots);
     const exerciseDismissed = await page.evaluate(() => {
       const target = document.querySelector('.exercise-dismiss-btn');
@@ -538,16 +539,12 @@ async function run() {
     await screenshot(page, '13-beat-1-exercise-dismissed.png', 'beat_1_exercise_dismissed', screenshots);
     await waitForText(page, 'Tap to resume exercise');
     await clickVisibleText(page, 'Tap to resume exercise');
-    await waitForText(page, 'Match the pieces behind 不一样.');
+    await waitForText(page, 'Choose the phrase that means “not the same.”');
     checks.exerciseDismissedAndResumed = checks.exerciseDismissedAndWebtoonVisible && await page.waitForSelector('.exercise-modal-backdrop', { visible: true, timeout: 5000 })
       .then(() => true)
       .catch(() => false);
     await screenshot(page, '14-beat-1-exercise-resumed.png', 'beat_1_exercise_resumed', screenshots);
-    await answerMatching(page, [
-      { left: '不', right: 'not' },
-      { left: '一样', right: 'same' },
-      { left: '不一样', right: 'not the same; different' },
-    ]);
+    await answerFillBlank(page, '不一样');
 
     await page.waitForSelector('.shanghai-onboarding--webtoon', { visible: true, timeout: 8000 });
     await recorder.cue('beat_2_webtoon_entered');
@@ -663,12 +660,12 @@ async function run() {
     ));
     await screenshot(page, '33-step-out-gate.png', 'step_out_gate', screenshots);
     await clickVisibleText(page, 'Step out');
-    await waitForText(page, 'Back in the shop noise');
+    await waitForText(page, 'Back in the shop.');
     checks.finalCompanionWrapStarted = await page.evaluate(() => (
       Boolean(document.querySelector('.shanghai-onboarding__stage'))
       && Boolean(document.querySelector('.shanghai-onboarding__video'))
       && !Boolean(document.querySelector('.wt-strip'))
-      && document.body.innerText.includes('Back in the shop noise')
+      && document.body.innerText.includes('Back in the shop.')
       && !document.querySelector('.summary-screen')
     ));
     checks.finalWrapAtRightmostShopEdge = await page.evaluate(() => {
@@ -683,21 +680,21 @@ async function run() {
     await recorder.cue('returned_to_shop_final_wrap');
     await screenshot(page, '34-final-wrap-shop-start.png', 'final_companion_wrap_shop_start', screenshots);
     await clickTong(page);
-    await waitForText(page, 'The handles held');
-    checks.finalHandleInventoryVisible = await page.evaluate(() => (
-      document.body.innerText.includes('The handles held: 小, 不一样, 装不下去, 小瞿')
+    await waitForText(page, '小 came back in 小瞿');
+    checks.finalLanguageCarryVisible = await page.evaluate(() => (
+      document.body.innerText.includes('小 came back in 小瞿')
       && Boolean(document.querySelector('.shanghai-onboarding__video'))
       && !Boolean(document.querySelector('.wt-strip'))
       && !document.querySelector('.summary-screen')
     ));
-    checks.summaryHiddenDuringFinalWrap = checks.summaryHiddenDuringFinalWrap && checks.finalHandleInventoryVisible;
+    checks.summaryHiddenDuringFinalWrap = checks.summaryHiddenDuringFinalWrap && checks.finalLanguageCarryVisible;
     await clickTong(page);
-    await waitForText(page, 'Shanghai will keep talking');
+    await waitForText(page, 'Not a worksheet; a way in.');
     checks.finalCompanionWrapVisible = await page.evaluate(() => (
       Boolean(document.querySelector('.shanghai-onboarding__stage'))
       && Boolean(document.querySelector('.shanghai-onboarding__video'))
       && !Boolean(document.querySelector('.wt-strip'))
-      && document.body.innerText.includes('Keep those in your ear. Shanghai will keep talking.')
+      && document.body.innerText.includes('That is a first pass through Shanghai. Not a worksheet; a way in.')
       && document.body.innerText.includes('Continue')
       && !document.querySelector('.summary-screen')
     ));
@@ -709,7 +706,11 @@ async function run() {
     checks.summaryScreenVisible = await page.waitForSelector('.summary-screen', { visible: true, timeout: 8000 })
       .then(() => true)
       .catch(() => false);
-    checks.summaryTextVisible = await page.evaluate(() => document.body.innerText.includes('Saved listening handles'));
+    checks.summaryTextVisible = await page.evaluate(() => (
+      document.body.innerText.includes('Scene complete')
+      && document.body.innerText.includes('First pass through the shop')
+      && !document.body.innerText.includes('Saved listening handles')
+    ));
     checks.summaryXpVisible = await page.evaluate(() => document.body.innerText.includes('+80') && document.body.innerText.includes('XP earned'));
     checks.summarySpVisible = await page.evaluate(() => document.body.innerText.includes('+40') && document.body.innerText.includes('SP earned'));
     checks.finalQuizRemoved = await page.evaluate(() => !document.body.innerText.includes('Put 方阿姨'));
@@ -756,11 +757,12 @@ async function run() {
       checks.introChunkTapped,
       checks.introChunkTooltipVisible,
       checks.prelistenToneOptionsPresent,
-      checks.panReachedWebtoonWithoutShortcut,
+      checks.panReachedOverhearGateWithoutShortcut,
       checks.chineseBubbleTokensInteractive,
       checks.chineseTooltipVisible,
-      checks.matchingChineseTokensInteractive,
-      checks.matchingChineseTooltipVisible,
+      checks.introChunkTooltipFullyVisible,
+      checks.strokeTraceReplayVisible,
+      checks.buyiyangFillBlankVisible,
       checks.webtoonVisibleDuringLanguageGate,
       checks.noPosterSnapDuringLanguageGate,
       checks.webtoonVisibleDuringExercise,
@@ -790,7 +792,7 @@ async function run() {
       checks.stepOutGateVisible,
       checks.finalCompanionWrapStarted,
       checks.finalWrapAtRightmostShopEdge,
-      checks.finalHandleInventoryVisible,
+      checks.finalLanguageCarryVisible,
       checks.finalCompanionWrapVisible,
       checks.summaryHiddenDuringFinalWrap,
       checks.noNarratorPhoneCopy,

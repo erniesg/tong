@@ -37,6 +37,8 @@ export interface ShanghaiOnboardingPanorama {
   preListeningExercises: ExerciseData[];
   postExerciseTongLines: string[];
   panPrompt: string;
+  overhearTongLine: string;
+  overhearLabel: string;
   stepOutLabel: string;
   completionTongLine: string;
   finalWrapTongLines: string[];
@@ -61,6 +63,8 @@ export interface ShanghaiOnboardingTongCopy {
   preListeningTransitionTongLines: Record<number, string[]>;
   postExerciseTongLines: string[];
   panPrompt: string;
+  overhearTongLine: string;
+  overhearLabel: string;
   stepOutLabel: string;
   completionTongLine: string;
   finalWrapTongLines: string[];
@@ -78,9 +82,9 @@ export const SHANGHAI_ONBOARDING_PANORAMA_POSTER_KEY =
 const EN_TONG_COPY: ShanghaiOnboardingTongCopy = {
   tongName: 'Tong',
   introTongLines: [
-    'You are in a Shanghai 小笼包店: steamers at the counter, window table, bowls and voices close enough to overhear.',
-    'Start with 小. It is a whole character, and it can also work as a reusable component or radical piece.',
-    'Tap 小 once to hear it, then trace the shape so your eye can catch it on the sign.',
+    'You are in a Shanghai 小笼包店: steam, bowls, close tables, and voices moving faster than a classroom ever would.',
+    'Start with 小. Three strokes: center down, left dot, right dot. Small shape, useful sound.',
+    'Tap 小 to hear it, then trace those strokes in order.',
   ],
   preListeningTransitionTongLines: {
     1: [
@@ -89,23 +93,25 @@ const EN_TONG_COPY: ShanghaiOnboardingTongCopy = {
     ],
   },
   postExerciseTongLines: [
-    'Good. The sign is not decoration now: 小 is a shape you can spot and a sound you can hear.',
-    'That table by the window is cutting through the room noise. Slide that way slowly.',
+    'Good. 小 is not just a mark now: your hand knows the shape, and your ear knows xiǎo.',
+    'Now listen left. The shop noise thins there; a table is talking just loudly enough to catch.',
   ],
-  panPrompt: 'Slide toward the window table.',
+  panPrompt: 'Slide left toward the voices.',
+  overhearTongLine: 'That is close enough. Tap to lean in and overhear them.',
+  overhearLabel: 'Tap to overhear',
   stepOutLabel: 'Step out',
-  completionTongLine: 'Saved listening handles: 小, 不一样, 装不下去, 小瞿.',
+  completionTongLine: 'First pass through the shop: 小, 不一样, 装不下去, 小瞿.',
   finalWrapTongLines: [
-    'Back in the shop noise. You did not need the whole conversation; the handles carried you.',
-    'The handles held: 小, 不一样, 装不下去, 小瞿.',
-    'Keep those in your ear. Shanghai will keep talking.',
+    'Back in the shop. You followed enough of that table to know where the scene changed.',
+    '小 came back in 小瞿. 不一样 and 装不下去 were the fast pieces that turned the conversation.',
+    'That is a first pass through Shanghai. Not a worksheet; a way in.',
   ],
   finalWrapContinueLabel: 'Continue',
   finalWrapCompleteLabel: 'Continue',
   webtoonStepTongLines: {
     'beat-1-proposal-question': [
-      'You heard 不一样 twice. 不 is the high-value piece: it flips a word or phrase negative.',
-      'Try the pieces once so the next 不 phrase lands as language, not noise.',
+      'You heard 不一样 twice. 不 is the turn: it flips 一样, “same,” into “not the same.”',
+      'Put it back into the line once, then we keep listening.',
     ],
     'beat-2-authenticity-contrast': [
       'That 不下去 is the useful part. It says an action cannot keep going.',
@@ -136,6 +142,8 @@ const KO_TONG_COPY: ShanghaiOnboardingTongCopy = {
     '창가 테이블 소리가 방 안 소음을 뚫고 들어와. 그쪽으로 천천히 밀어 봐.',
   ],
   panPrompt: '창가 테이블 쪽으로 밀기.',
+  overhearTongLine: '이 정도면 가까워. 눌러서 대화를 엿들어 보자.',
+  overhearLabel: '엿듣기',
   stepOutLabel: '나가기',
   completionTongLine: '저장된 듣기 손잡이: 小, 不一样, 装不下去, 小瞿.',
   finalWrapTongLines: [
@@ -179,6 +187,8 @@ const JA_TONG_COPY: ShanghaiOnboardingTongCopy = {
     '窓際のテーブルの声が、店の音を抜けて聞こえる。そっちへゆっくり寄せて。',
   ],
   panPrompt: '窓際のテーブルへスライド。',
+  overhearTongLine: 'ここまで寄れば十分。タップして聞きに入ろう。',
+  overhearLabel: '聞き入る',
   stepOutLabel: '店を出る',
   completionTongLine: '保存した聞き取りの手がかり: 小, 不一样, 装不下去, 小瞿.',
   finalWrapTongLines: [
@@ -222,6 +232,8 @@ const ZH_ADVANCED_TONG_COPY: ShanghaiOnboardingTongCopy = {
     '窗边那桌的声音从店里的杂音里透出来了。慢慢把视角移过去。',
   ],
   panPrompt: '滑向窗边那桌。',
+  overhearTongLine: '靠得够近了。点一下，听他们说。',
+  overhearLabel: '听一听',
   stepOutLabel: '走出店里',
   completionTongLine: '已保存的听力抓手：小, 不一样, 装不下去, 小瞿.',
   finalWrapTongLines: [
@@ -349,17 +361,22 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       id: 'shanghai-h1-prelisten-xiao-stroke',
       objectiveId: 'zh-script-shanghai-xiao-character',
       difficulty: 1,
-      prompt: 'Trace 小 once. It means small and can work as a character piece.',
+      prompt: 'Trace 小 in order: center down, left dot, right dot.',
       targetChar: '小',
       ghostOverlay: true,
-      explanation: '小 is a whole character here, and it also appears as a reusable component or radical piece.',
+      explanation: '小 is xiǎo, “small.” Its three-stroke shape shows up inside words around the shop.',
       romanization: 'xiǎo',
       meaning: 'small',
       sound: '小',
       language: 'zh',
+      strokeOrder: [
+        { label: '竖钩', description: 'center down' },
+        { label: '左点', description: 'left dot' },
+        { label: '右点', description: 'right dot' },
+      ],
       exampleWords: [
         { word: '小笼包', romanization: 'xiǎo lóng bāo', meaning: 'soup dumpling' },
-        { word: '小瞿', romanization: 'xiǎo qú', meaning: 'familiar address for Qu' },
+        { word: '小吃', romanization: 'xiǎo chī', meaning: 'snacks / street food' },
       ],
     },
     {
@@ -383,6 +400,8 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
     ...EN_TONG_COPY.postExerciseTongLines,
   ],
   panPrompt: EN_TONG_COPY.panPrompt,
+  overhearTongLine: EN_TONG_COPY.overhearTongLine,
+  overhearLabel: EN_TONG_COPY.overhearLabel,
   stepOutLabel: EN_TONG_COPY.stepOutLabel,
   completionTongLine: EN_TONG_COPY.completionTongLine,
   finalWrapTongLines: EN_TONG_COPY.finalWrapTongLines,
@@ -397,16 +416,22 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
       afterTongLines: EN_TONG_COPY.webtoonStepTongLines['beat-1-proposal-question'],
       afterExercises: [
         {
-          type: 'matching',
-          id: 'shanghai-h1-after-a-bu-buyiyang-pattern',
+          type: 'fill_blank',
+          id: 'shanghai-h1-after-a-buyiyang-line',
           objectiveId: 'zh-script-shanghai-contrast-forms',
           difficulty: 1,
-          prompt: 'Match the pieces behind 不一样.',
-          pairs: [
-            { left: '不', right: 'not' },
-            { left: '一样', right: 'same' },
-            { left: '不一样', right: 'not the same; different' },
+          prompt: 'Choose the phrase that means “not the same.”',
+          sentence: '这个节目跟其他的 ___ 。',
+          blankIndex: 1,
+          options: [
+            { id: 'buyiyang', text: '不一样' },
+            { id: 'yiyang', text: '一样' },
+            { id: 'buxiaqu', text: '不下去' },
+            { id: 'buzhongyao', text: '不重要' },
           ],
+          correctOptionId: 'buyiyang',
+          grammarNote: '不 turns 一样, “same,” into 不一样, “not the same.”',
+          explanation: '不一样 = different / not the same.',
         },
       ],
       masteryItems: ['小', '包', '笼', '店', '不', '一样', '不一样'],
