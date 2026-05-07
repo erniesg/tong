@@ -746,6 +746,7 @@ export const SHANGHAI_H1_WEBTOON: WebtoonSpec = {
         '瞿家 is the Qu family. 小儿子 is younger son.',
         'That is enough for this first room. Keep the handles, not every sentence.',
         'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',
+        'Take those with you. We are stepping out of this shop; the hangout ends here.',
       ],
     },
   ],
@@ -755,7 +756,8 @@ export const SHANGHAI_H1_WEBTOON: WebtoonSpec = {
       '瞿家 is the Qu family. 小儿子 is younger son.',
       'That is enough for this first room. Keep the handles, not every sentence.',
       'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',
+      'Take those with you. We are stepping out of this shop; the hangout ends here.',
     ],
-    completionLine: 'Today’s listening handles: 小, 不一样, 装不下去, 小瞿.',
+    completionLine: 'Saved listening handles: 小, 不一样, 装不下去, 小瞿.',
   },
 };

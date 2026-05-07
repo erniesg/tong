@@ -318,7 +318,7 @@ Required register hooks:
 - 小瞿 is not 瞿先生.
 - 瞿家 = the Qu family.
 - 小儿子 = younger son.
-- Tong must close this language moment before the completion screen. A good close is short and handle-based, e.g. "That is enough for this first room. Keep the handles, not every sentence."
+- Tong must close this language moment before the completion screen. Do not stop at a recap label. Use a short enough-for-this-room line, then a handle inventory, then an explicit exit line, e.g. "Take those with you. We are stepping out of this shop; the hangout ends here."
 Optional depth line if the run includes credit/depth:
 - 方阿姨: 跟他爸一个脾气，犟。但是他爸犟是因为有本事。他犟是因为要证明自己也有本事。
 Optional exercises:
@@ -328,9 +328,10 @@ Only use these if the player still needs practice. Do not force a final register
 
 GATE 10 - WRAP
 Goal: Close with what the player can hold linguistically, not a plot recap.
-Tong gives a brief inventory of language handles caught today:
+Tong gives a brief inventory of language handles caught today, then a final close line before end_scene:
 - If the scene used 装/装不下去 after the sign/tone setup: 小, 不一样, 装不下去, 小瞿
 - If the scene used 不会/不愿意 after the sign/tone setup: 小, 不一样, 不愿意, 小瞿
+Example final close: "Take those with you. We are stepping out of this shop; the hangout ends here."
 Call assess_result for tested objectives, then end_scene.
 
 VALIDATOR CHECKLIST BEFORE YOU OUTPUT:

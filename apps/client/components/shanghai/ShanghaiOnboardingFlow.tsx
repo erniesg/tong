@@ -681,7 +681,7 @@ export function ShanghaiOnboardingFlow() {
           <img className="summary-scene-bg" src={SHANGHAI_ONBOARDING_PANORAMA.posterUrl} alt="" />
           <div className="summary-overlay" />
           <div className="summary-content">
-            <h2 className="summary-title">Scene complete</h2>
+            <h2 className="summary-title">Hangout complete</h2>
             <p className="summary-text">
               <KoreanText text={tongCopy.completionTongLine} targetLang="zh" />
             </p>

@@ -642,17 +642,21 @@ async function run() {
     await waitForText(page, 'Today’s listening handles');
     await screenshot(page, '34-tong-wrap.png', 'tong_wrap', screenshots);
     await clickTong(page);
+    await waitForText(page, 'the hangout ends here');
+    checks.tongHangoutCloseVisible = await page.evaluate(() => document.body.innerText.includes('the hangout ends here'));
+    await screenshot(page, '35-hangout-close.png', 'hangout_close', screenshots);
+    await clickTong(page);
 
     checks.summaryScreenVisible = await page.waitForSelector('.summary-screen', { visible: true, timeout: 8000 })
       .then(() => true)
       .catch(() => false);
-    checks.summaryTextVisible = await page.evaluate(() => document.body.innerText.includes('Today’s listening handles'));
+    checks.summaryTextVisible = await page.evaluate(() => document.body.innerText.includes('Saved listening handles'));
     checks.summaryXpVisible = await page.evaluate(() => document.body.innerText.includes('+80') && document.body.innerText.includes('XP earned'));
     checks.summarySpVisible = await page.evaluate(() => document.body.innerText.includes('+40') && document.body.innerText.includes('SP earned'));
     checks.finalQuizRemoved = await page.evaluate(() => !document.body.innerText.includes('Put 方阿姨'));
     await recorder.cue('summary_screen_visible');
     await sleep(1200);
-    await screenshot(page, '35-summary-screen.png', 'summary_screen', screenshots);
+    await screenshot(page, '36-summary-screen.png', 'summary_screen', screenshots);
 
     const finalState = await page.evaluate(() => ({
       url: window.location.href,
@@ -678,7 +682,7 @@ async function run() {
     await desktop.setViewport(VIEWPORTS.desktop);
     await desktop.goto(route, { waitUntil: 'networkidle0', timeout: 30000 });
     await desktop.waitForSelector('.shanghai-onboarding__video', { visible: true });
-    await screenshot(desktop, '36-desktop-intro.png', 'desktop_intro', screenshots);
+    await screenshot(desktop, '37-desktop-intro.png', 'desktop_intro', screenshots);
     await desktop.close();
 
     const screencast = await recorder.stop();

@@ -143,14 +143,15 @@ Current placeholder panel sequence:
 
 Tong after Exit:
 - Teach register lightly: `小瞿`, not `瞿先生`; `小 + surname` can be familiar address from an older person; `瞿家` is the Qu family.
-- Close the scene before the completion screen with a short language-handle line. Do not let the strip jump straight to the recap.
+- Close the hangout before the completion screen. This is a real Tong wrap, not just a recap label.
+- Required shape: register note -> family wording note -> enough-for-this-room line -> handle inventory -> explicit leave/close line, e.g. “Take those with you. We are stepping out of this shop; the hangout ends here.”
 - Optional depth line only if included in the run:
   - 方阿姨: `跟他爸一个脾气，犟。但是他爸犟是因为有本事。他犟是因为要证明自己也有本事。`
 
 Wrap:
 - Close on language handles, not plot recap.
 - Example: “Today’s listening handles: 小, 不一样, 装不下去, 小瞿.”
-- Then show the same kind of hangout completion/ending screen Seoul uses for XP/SP/RP progress.
+- Then Tong gives one final exit line before showing the same kind of hangout completion/ending screen Seoul uses for XP/SP/RP progress.
 
 ## Beat 2 Dynamic Variants
 
