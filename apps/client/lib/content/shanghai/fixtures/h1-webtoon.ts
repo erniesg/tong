@@ -716,8 +716,8 @@ export const SHANGHAI_H1_WEBTOON: WebtoonSpec = {
       id: 'beat-1-proposal-food-generic-pitch',
       panelIds: ['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6'],
       afterTongLines: [
-        'You heard 不一样 twice. 不 is the turn: it flips 一样, “same,” into “not the same.”',
-        'Put it back into the line once, then we keep listening.',
+        '不一样 came up twice.',
+        '一样 is “same.” 不一样 is “not the same.”',
       ],
       exerciseHook: {
         type: 'fill_blank',
@@ -729,8 +729,8 @@ export const SHANGHAI_H1_WEBTOON: WebtoonSpec = {
       id: 'beat-2-authenticity-continuation',
       panelIds: ['p7', 'p8', 'p9', 'p10', 'p11'],
       afterTongLines: [
-        'That 不下去 is the useful part. It says an action cannot keep going.',
-        'Try the shape across a few verbs so it is not trapped in one line.',
+        '装不下去 is the phrase to keep.',
+        'It means the pretending cannot continue.',
       ],
       exerciseHook: {
         type: 'fill_blank',
@@ -742,19 +742,23 @@ export const SHANGHAI_H1_WEBTOON: WebtoonSpec = {
       id: 'beat-3-phone-payment-register-exit',
       panelIds: ['p12', 'p13', 'p14', 'p15', 'p16', 'p17', 'p18', 'p19', 'p20'],
       afterTongLines: [
-        'She said 小瞿, not 瞿先生. That is familiar address from someone older.',
-        '瞿家 is the Qu family. 小儿子 is younger son.',
+        '方阿姨 calls him 小瞿.',
+        'That is familiar address from someone older.',
+        '小儿子 means younger son.',
+        'One quick 不 before we step out.',
+        'You heard it in 不一样, 装不下去, and 不重要.',
+        '不 is bù: fourth tone, falling.',
       ],
     },
   ],
   wrap: {
     tongLines: [
-      'She said 小瞿, not 瞿先生. That is familiar address from someone older.',
-      '瞿家 is the Qu family. 小儿子 is younger son.',
-      'Back in the shop. You followed enough of that table to know where the scene changed.',
-      '小 came back in 小瞿. 不一样 and 装不下去 were the fast pieces that turned the conversation.',
-      'That is a first pass through Shanghai. Not a worksheet; a way in.',
+      'Take one last look before we leave the shop.',
+      '小 started on 小笼包, then came back as 小瞿.',
+      '小瞿 feels familiar. 瞿先生 would keep distance. 瞿家 makes it bigger than one person.',
+      'When 不 shows up, look for what it turns negative: 一样, 下去, 重要.',
+      'Good. That is enough to walk into the next Shanghai scene.',
     ],
-    completionLine: 'First pass through the shop: 小, 不一样, 装不下去, 小瞿.',
+    completionLine: '小笼包 · 小瞿 · 瞿家 · 不一样 · 装不下去 · 不重要',
   },
 };

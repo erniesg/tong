@@ -91,7 +91,7 @@ export interface FillBlankExercise {
   prompt: string;
   sentence: string;
   blankIndex: number;
-  options: { id: string; text: string }[];
+  options: { id: string; text: string; romanization?: string; meaning?: string }[];
   correctOptionId: string;
   grammarNote?: string;
   explanation?: string;

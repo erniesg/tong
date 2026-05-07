@@ -3341,6 +3341,214 @@ button.nav-link:hover {
   color: rgba(255, 248, 238, 0.82);
 }
 
+.fill-blank__meaning-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.fill-blank__meaning-row {
+  display: grid;
+  grid-template-columns: minmax(52px, auto) minmax(58px, auto) 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.14);
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+}
+
+.fill-blank__meaning-row--correct {
+  border-color: rgba(78, 205, 196, 0.42);
+  background: rgba(78, 205, 196, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.fill-blank__meaning-word {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff8ee;
+}
+
+.fill-blank__meaning-pinyin {
+  color: rgba(240, 192, 64, 0.85);
+}
+
+.fill-blank__meaning-gloss {
+  text-align: right;
+}
+
+.stroke-tracing-card {
+  box-sizing: border-box;
+}
+
+.stroke-sound-button {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.stroke-sound-button:hover,
+.stroke-sound-button:active {
+  background: rgba(240, 192, 64, 0.16);
+  color: var(--color-accent-gold, #f0c040);
+}
+
+.stroke-intro-card {
+  min-height: min(82vh, 720px);
+  display: grid;
+  grid-template-rows: auto minmax(190px, 1fr) auto auto auto;
+  align-items: center;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+.stroke-intro-card__character {
+  width: min(64vw, 240px);
+  height: min(64vw, 240px);
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  color: var(--color-accent-gold, #f0c040);
+}
+
+.stroke-intro-card__sound {
+  display: flex;
+  justify-content: center;
+  margin-top: -4px;
+}
+
+.stroke-intro-card__meta {
+  text-align: center;
+}
+
+.stroke-intro-card__pinyin {
+  color: rgba(240, 192, 64, 0.9);
+  font-size: var(--game-text-lg);
+  font-weight: 700;
+}
+
+.stroke-intro-card__meaning {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: var(--game-text-base);
+}
+
+.stroke-intro-card__strokes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.stroke-intro-card__stroke {
+  min-height: 74px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  text-align: center;
+  padding: 8px 6px;
+}
+
+.stroke-intro-card__stroke-index {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.stroke-intro-card__stroke-label {
+  color: #fff8ee;
+  font-size: var(--game-text-base);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.stroke-intro-card__stroke-desc {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: var(--game-text-xs);
+  line-height: 1.2;
+}
+
+.stroke-intro-card__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.stroke-intro-card__replay,
+.stroke-intro-card__write {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  font-size: var(--game-text-base);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.stroke-intro-card__replay {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.stroke-intro-card__write {
+  background: var(--color-accent-gold, #f0c040);
+  color: #171423;
+}
+
+.stroke-drill-complete {
+  display: grid;
+  justify-items: center;
+}
+
+.stroke-drill-complete__replay {
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--color-accent-gold, #f0c040);
+  animation: strokeReplayPop 1.25s ease both;
+}
+
+.stroke-drill-complete__title {
+  color: var(--color-accent-green, #4caf50);
+  font-weight: 800;
+}
+
+@media (max-height: 740px) {
+  .stroke-intro-card {
+    min-height: min(82vh, 640px);
+    gap: 10px;
+  }
+
+  .stroke-intro-card__character {
+    width: min(52vw, 190px);
+    height: min(52vw, 190px);
+  }
+
+  .stroke-intro-card__stroke {
+    min-height: 62px;
+    padding-block: 6px;
+  }
+}
+
 /* ── Pronunciation select exercise ──────────────────────────── */
 .pron-select__target {
   text-align: center;

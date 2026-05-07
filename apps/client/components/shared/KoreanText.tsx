@@ -648,6 +648,7 @@ export function KoreanText({ text, targetLang = 'ko', interactive = true, onWord
     const info = getTooltipInfo(word.trim(), targetLang, explainLang);
     if (!info) return;
     const rect = target.getBoundingClientRect();
+    setTooltipPos(null);
     setActiveWord(word);
     setTooltipInfo(info);
     setTooltipAnchor({ x: rect.left + rect.width / 2, y: rect.top, bottom: rect.bottom });
@@ -743,6 +744,8 @@ export function KoreanText({ text, targetLang = 'ko', interactive = true, onWord
               transform: 'none',
               zIndex: 99999,
               maxWidth: 'min(260px, calc(100vw - 16px))',
+              maxHeight: 'calc(100vh - 16px)',
+              opacity: tooltipPos ? 1 : 0,
             }}
           >
             {/* Arrow on top when flipped below */}

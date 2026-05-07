@@ -51,21 +51,26 @@ Rejected:
 Screen 1: Shanghai 小笼包店 panorama.
 
 Tong:
-- “You are in a Shanghai 小笼包店: steam, bowls, close tables, and voices moving faster than a classroom ever would.”
-- “Start with 小. Three strokes: center down, left dot, right dot. Small shape, useful sound.”
-- “Tap 小 to hear it, then trace those strokes in order.”
+- “Steamers at the counter. Vinegar on the tables. The sign says 小笼包店.”
+- “Shanghai is already giving you Mandarin before anyone slows down for you.”
+- “Stay with what the shop gives us first: one character you can see, then one sound you can hear.”
+- “Start with 小. You see it in 小笼包. Later, you will hear it in a name.”
+- “Watch how 小 is written. Tap 小 to hear it, then trace it in stroke order.”
 
 Exercise:
-- Current fixture starts with reusable `stroke_tracing`.
+- Current fixture starts with reusable `stroke_tracing`, but the exercise must open on a full-screen stroke-order animation before any writing canvas appears.
 - Purpose: make `小` useful before the eavesdrop by making the player handle the shape and stroke order, not by introducing later register vocabulary too early.
 - Current fixture trace target:
   - `小` / `xiǎo` / small
   - Stroke order: center down, left dot, right dot.
+  - Player sees a replayable animation first, then taps into the writing surface.
+  - Player writes `小` three times.
   - Example words must not introduce `小瞿` here. Use shop/world examples such as `小笼包` and `小吃`.
   - After completion, replay the `小` character animation and play `xiǎo` plus the player-language meaning.
 - After the trace, Tong must transition organically into sound:
-  - “Good. Now attach sound to that shape: 小 is xiǎo.”
-  - “Mandarin changes meaning with tone. Hear a few xiao shapes and pick the one that matches 小.”
+  - “Now listen to the tone.”
+  - “Mandarin has four main tones: high, rising, dipping, falling.”
+  - “小 is third tone: xiǎo. It dips low, then comes back up.”
 
 Exercise:
 - Current fixture then uses `pronunciation_select`.
@@ -78,15 +83,15 @@ Exercise:
 - Dynamic runs can choose another visible setting word, but the setup must still teach character composability with reusable `stroke_tracing`, then sound/tone with `pronunciation_select`. Use `block_crush` only after the component pieces have been explicitly prepared.
 
 Tong:
-- “Good. 小 is not just a mark now: your hand knows the shape, and your ear knows xiǎo.”
-- “Now listen left. The shop noise thins there; a table is talking just loudly enough to catch.”
+- “Good. You have 小 in your eyes and xiǎo in your ear.”
+- “The voices on the left are close enough now. Slide that way.”
 
 Pan prompt:
 - “Slide left toward the voices.”
 
 Overhear gate:
 - Reaching the pan threshold must not auto-start the webtoon. Tong must give a short cue, then the player explicitly taps to overhear.
-- Example: “That is close enough. Tap to lean in and overhear them.”
+- Example: “There. Tap to listen in.”
 
 Strip Packet 1, pregenerated art through the first thumb stop:
 - 守成: `方案你看过了。`
@@ -159,9 +164,11 @@ Wrap:
 - The wrap must connect what the player caught in the first shop to the broader Shanghai journey.
 - A phrase inventory alone is not enough, and Tong should not call the phrases “handles” in the final emotional close.
 - Good direction:
-  - “Back in the shop. You followed enough of that table to know where the scene changed.”
-  - “小 came back in 小瞿. 不一样 and 装不下去 were the fast pieces that turned the conversation.”
-  - “That is a first pass through Shanghai. Not a worksheet; a way in.”
+  - “Take one last look before we leave the shop.”
+  - “小 started on 小笼包, then came back as 小瞿.”
+  - “小瞿 feels familiar. 瞿先生 would keep distance. 瞿家 makes it bigger than one person.”
+  - “When 不 shows up, look for what it turns negative: 一样, 下去, 重要.”
+  - “Good. That is enough to walk into the next Shanghai scene.”
 - Avoid “today’s lesson,” “room,” “hangout ends here,” plot recap, or any admin/staging language.
 - Only after the player completes this wrap should the same kind of hangout completion/ending screen Seoul uses for XP/SP/RP progress appear.
 
@@ -216,7 +223,7 @@ The orchestration prompt must give the AI these tools:
 
 The prompt must not offer a single-panel “show_webtoon_segment” gate as the primary unit. The primary unit is a strip packet.
 The prompt must also specify that, after the first webtoon packet starts, all Tong/exercise gates keep the webtoon strip underneath and append the next packet below the existing strip. The AI must not route the player back to a panorama, poster, or video surface between eavesdrop packets.
-The prompt must require a Step out transition after the exit/register notes, then a final companion wrap gate before `end_scene`. The final wrap must happen back in the 小笼包店 panorama at the rightmost edge and feel like Tong guiding the player onward through Shanghai, not closing a classroom. A list of handles by itself does not satisfy this gate, and completion/summary UI must not appear until the player explicitly completes the wrap.
+The prompt must require a Step out transition after the exit/register notes, then a final companion wrap gate before `end_scene`. The final wrap must happen back in the 小笼包店 panorama at the rightmost edge and feel like Tong guiding the player onward through Shanghai, not closing a classroom. A phrase list by itself does not satisfy this gate, and completion/summary UI must not appear until the player explicitly completes the wrap.
 
 The AI must choose exercises by teaching value:
 - Setting sign/tone handles: `小`, `笼`, `包`, `店`

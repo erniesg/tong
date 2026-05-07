@@ -20,6 +20,7 @@ export function FillBlank({ exercise, onResult }: Props) {
   const words = exercise.sentence.split('___');
   const correctText = exercise.options.find((o) => o.id === exercise.correctOptionId)?.text ?? '';
   const selectedText = exercise.options.find((o) => o.id === selected)?.text ?? '';
+  const showMeaningRows = submitted && exercise.options.some((opt) => opt.meaning || opt.romanization);
 
   const handleSubmit = () => {
     if (!selected || submitted) return;
@@ -69,6 +70,24 @@ export function FillBlank({ exercise, onResult }: Props) {
 
       {submitted && exercise.grammarNote && (
         <div className="fill-blank__grammar-note">{exercise.grammarNote}</div>
+      )}
+
+      {showMeaningRows && (
+        <div className="fill-blank__meaning-list" data-fill-blank-meanings>
+          {exercise.options.map((opt) => {
+            const isCorrectOpt = opt.id === exercise.correctOptionId;
+            return (
+              <div
+                key={opt.id}
+                className={cn('fill-blank__meaning-row', isCorrectOpt && 'fill-blank__meaning-row--correct')}
+              >
+                <span className="fill-blank__meaning-word text-ko">{opt.text}</span>
+                {opt.romanization && <span className="fill-blank__meaning-pinyin">{opt.romanization}</span>}
+                {opt.meaning && <span className="fill-blank__meaning-gloss">{opt.meaning}</span>}
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {!submitted && (

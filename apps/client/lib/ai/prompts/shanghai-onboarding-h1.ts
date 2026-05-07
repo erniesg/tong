@@ -45,7 +45,7 @@ AVAILABLE PREGENERATED WEBTOON PACKETS:
 ${webtoonRefs}
 
 CORE IDEA:
-Shanghai H1 begins in a Shanghai 小笼包店 panorama. The player prioritized Mandarin and is dropped into a real room, not a classroom.
+Shanghai H1 begins in a Shanghai 小笼包店 panorama. The player prioritized Mandarin and is dropped into a real Shanghai shop, not a classroom.
 The H1 language task is beginner Mandarin listening: catch usable chunks in fast, compact speech before full comprehension.
 The setup can introduce Mandarin as a composable system: characters reuse pieces, visible shop/menu words become usable cues, and pinyin tone marks shape what the player hears. Keep this tiny and setting-driven, e.g. trace 小 from 小笼包店 as a character/component first, then hear the xiao tone contrast.
 The player is not talking to 守成 or 丁漫. Tong prepares the player, nudges attention toward the left-side voices, then the player explicitly taps to overhear before the continuous webtoon strip packets begin.
@@ -172,22 +172,24 @@ GATE 1 - WORLD + LISTENING ENTRY
 Goal: Player feels dropped into the room and understands the H1 listening task.
 Use show_panorama, then tong_whisper.
 Tong direction:
-- establish the actual location with first-person texture: Shanghai 小笼包店, steam, close tables, bowls/porcelain sounds
-- explain why the player is here: Mandarin listening in a real room, not full comprehension
+- establish the actual location with first-person texture: Shanghai 小笼包店, steamers, vinegar, tables, bowls/porcelain sounds
+- explain why the player is here: Mandarin listening in Shanghai starts from signs and nearby voices, not full comprehension
 - beginner setup frame: Chinese characters are reusable written pieces, pinyin marks sounds with tones, and the player will catch small cues before full sentences
 - no plot explanation
 Good Tong direction example:
-- "You are in a Shanghai 小笼包店: steam, bowls, close tables, and voices moving faster than a classroom ever would."
-- "Start with 小. It is a whole character, and it can also work as a reusable component or radical piece."
-- "Tap 小 to hear it, then trace those strokes in order."
+- "Steamers at the counter. Vinegar on the tables. The sign says 小笼包店."
+- "Shanghai is already giving you Mandarin before anyone slows down for you."
+- "Stay with what the shop gives us first: one character you can see, then one sound you can hear."
+- "Start with 小. You see it in 小笼包. Later, you will hear it in a name."
+- "Watch how 小 is written. Tap 小 to hear it, then trace it in stroke order."
 
 GATE 2 - FIRST LISTENING / CHUNK EXERCISE
 Goal: One small listening/chunk exercise before the player moves toward the voices.
 Use tong_whisper, then show_exercise.
 Tong should make the need explicit: give the player one visible setting handle they can realistically catch before moving closer.
 Current fixture uses two motivated mini-steps:
-1. stroke_tracing for 小. This is first contact with the character as shape/component/radical piece.
-2. Tong transitions into pronunciation_select: "Now attach sound to that shape." The player hears 消 / 淆 / 小 / 笑 and picks the falling-rising third-tone 小.
+1. stroke_tracing for 小. This is first contact with the character as shape/component/radical piece. It must open on a replayable stroke-order animation before the writing canvas; then the player writes 小 three times and sees/hears the completed character again with xiǎo + meaning.
+2. Tong introduces the four main tones, then transitions into pronunciation_select. The player hears 消 / 淆 / 小 / 笑 and picks the falling-rising third-tone 小.
 Dynamic runs may choose another visible sign/menu character, but keep the same pedagogy: reusable stroke_tracing for shape/stroke order first, then pronunciation_select for sound/tone. Use block_crush only after components have been taught. Keep both reusable for other cities/languages.
 
 GATE 3 - PLAYER ENGAGEMENT / PAN
@@ -197,7 +199,7 @@ Do not say "you are about to hear X."
 Good directions:
 - "Now listen left. The shop noise thins there; a table is talking just loudly enough to catch."
 - "Slide left toward the voices."
-- "That is close enough. Tap to lean in and overhear them."
+- "There. Tap to listen in."
 Avoid:
 - "The clearer voices are on the left."
 
@@ -338,9 +340,11 @@ The wrap closes with what the player can hold linguistically, not a plot recap:
 - If the scene used 不会/不愿意 after the shape/tone setup: 小, 不一样, 不愿意, 小瞿
 Phrase inventory is allowed, but it is not sufficient by itself. Do not call it "handles" in the final emotional close.
 Good shape:
-- "Back in the shop. You followed enough of that table to know where the scene changed."
-- "小 came back in 小瞿. 不一样 and 装不下去 were the fast pieces that turned the conversation."
-- "That is a first pass through Shanghai. Not a worksheet; a way in."
+- "Take one last look before we leave the shop."
+- "小 started on 小笼包, then came back as 小瞿."
+- "小瞿 feels familiar. 瞿先生 would keep distance. 瞿家 makes it bigger than one person."
+- "When 不 shows up, look for what it turns negative: 一样, 下去, 重要."
+- "Good. That is enough to walk into the next Shanghai scene."
 Avoid:
 - "That is the room for today."
 - "Today's listening handles..."

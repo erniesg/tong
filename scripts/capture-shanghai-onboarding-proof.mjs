@@ -109,15 +109,32 @@ async function answerFillBlank(page, optionText) {
   await clickExerciseOption(page, optionText);
   await clickExerciseCheck(page);
   await waitForText(page, 'Correct', 5000).catch(() => {});
-  await sleep(2200);
+  const meaningsVisible = await page.waitForSelector('[data-fill-blank-meanings]', { visible: true, timeout: 1500 })
+    .then(() => true)
+    .catch(() => false);
+  await sleep(meaningsVisible ? 2800 : 2200);
+  return meaningsVisible;
 }
 
-async function answerStrokeTracing(page) {
-  await page.waitForSelector('.exercise-card canvas', { visible: true });
-  const box = await page.$eval('.exercise-card canvas', (node) => {
-    const rect = node.getBoundingClientRect();
-    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-  });
+async function drawBroadTraceOnCanvas(page, canvasIndex = 0) {
+  const box = await page.$$eval('.exercise-card canvas', (nodes, index) => {
+    const visible = nodes
+      .filter((node) => node instanceof HTMLElement)
+      .map((node) => {
+        const rect = node.getBoundingClientRect();
+        const style = window.getComputedStyle(node);
+        return { node, rect, style };
+      })
+      .filter(({ rect, style }) => rect.width > 20 && rect.height > 20 && style.visibility !== 'hidden' && style.display !== 'none');
+    const target = visible[index];
+    if (!target) throw new Error(`Could not find visible tracing canvas ${index}`);
+    return {
+      x: target.rect.x,
+      y: target.rect.y,
+      width: target.rect.width,
+      height: target.rect.height,
+    };
+  }, canvasIndex);
   const left = box.x + box.width * 0.08;
   const right = box.x + box.width * 0.92;
   const top = box.y + box.height * 0.08;
@@ -137,7 +154,51 @@ async function answerStrokeTracing(page) {
     await page.mouse.move(x, bottom, { steps: 10 });
     await page.mouse.up();
   }
+}
 
+async function answerStrokeTracing(page) {
+  const introVisible = await page.$('[data-stroke-intro]');
+  if (introVisible) {
+    await clickVisibleText(page, 'Replay').catch(() => {});
+    await sleep(450);
+    await clickVisibleText(page, 'Write it');
+  }
+
+  await page.waitForSelector('.exercise-card canvas', { visible: true });
+
+  const drillTotal = await page.evaluate(() => {
+    const match = document.body.innerText.match(/\b0\/(\d+)\b/);
+    return match ? Number.parseInt(match[1], 10) : 0;
+  });
+
+  if (drillTotal > 1) {
+    for (let i = 0; i < drillTotal; i += 1) {
+      let passed = false;
+      for (let attempt = 0; attempt < 3 && !passed; attempt += 1) {
+        await drawBroadTraceOnCanvas(page, i);
+        passed = await page.waitForFunction(
+          ({ done, total }) => document.body.innerText.includes(`${done}/${total}`),
+          { timeout: 1600 },
+          { done: i + 1, total: drillTotal },
+        )
+          .then(() => true)
+          .catch(() => false);
+      }
+      if (!passed) throw new Error(`Stroke drill cell ${i + 1}/${drillTotal} did not complete.`);
+    }
+
+    const replayVisible = await page.waitForSelector('[data-stroke-replay]', { visible: true, timeout: 3000 })
+      .then(() => true)
+      .catch(() => false);
+    await sleep(1600);
+    await page.$eval('[data-stroke-drill-complete]', (node) => {
+      if (node instanceof HTMLElement) node.click();
+    });
+    await sleep(1200);
+    return replayVisible;
+  }
+
+  await drawBroadTraceOnCanvas(page, 0);
   await clickVisibleText(page, 'Done');
   const replayVisible = await page.waitForSelector('[data-stroke-replay]', { visible: true, timeout: 2000 })
     .then(() => true)
@@ -368,7 +429,9 @@ async function run() {
 
     await clickTong(page);
     await clickTong(page);
-    await waitForText(page, 'Tap 小 to hear it');
+    await clickTong(page);
+    await clickTong(page);
+    await waitForText(page, 'Watch how 小 is written');
     const tappedIntroChunk = await page.evaluate(() => {
       const target = Array.from(document.querySelectorAll('.tong-whisper [data-korean]'))
         .find((node) => node.textContent?.trim() === '小');
@@ -389,24 +452,45 @@ async function run() {
     await recorder.cue('intro_chunk_tapped');
     await screenshot(page, '02-intro-chunk-tooltip.png', 'intro_chunk_tooltip', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Trace 小 in order');
-    await screenshot(page, '03-xiao-stroke-exercise.png', 'xiao_stroke_exercise', screenshots);
-    checks.strokeTracingVisible = await page.evaluate(() => (
-      document.body.innerText.includes('Trace 小 in order')
-      && Boolean(document.querySelector('.exercise-card canvas'))
+    await waitForText(page, 'Watch how 小 is written.');
+    await page.waitForSelector('[data-stroke-intro]', { visible: true });
+    checks.xiaoStrokeIntroVisible = await page.evaluate(() => (
+      Boolean(document.querySelector('[data-stroke-intro]'))
+      && Boolean(document.querySelector('[data-stroke-animation]'))
       && Boolean(document.querySelector('[data-stroke-order]'))
+      && document.body.innerText.includes('Replay')
+      && document.body.innerText.includes('Write it')
+      && document.body.innerText.includes('xiǎo')
+      && document.body.innerText.includes('small')
+      && !document.body.innerText.includes('小瞿')
+    ));
+    await recorder.cue('xiao_stroke_animation_visible');
+    await screenshot(page, '03-xiao-stroke-animation.png', 'xiao_stroke_animation', screenshots);
+    await clickVisibleText(page, 'Replay');
+    await sleep(650);
+    await clickVisibleText(page, 'Write it');
+    await waitForText(page, 'Trace 小 in stroke order');
+    await screenshot(page, '03b-xiao-stroke-exercise.png', 'xiao_stroke_exercise', screenshots);
+    checks.strokeTracingVisible = await page.evaluate(() => (
+      document.body.innerText.includes('Trace 小 in stroke order')
+      && document.querySelectorAll('.exercise-card canvas').length >= 3
+      && Boolean(document.querySelector('[data-stroke-animation]'))
+      && Boolean(document.querySelector('[data-stroke-order]'))
+      && document.body.innerText.includes('0/3')
       && !document.body.innerText.includes('小瞿')
     ));
     checks.strokeTraceReplayVisible = await answerStrokeTracing(page);
     await recorder.cue('stroke_trace_answered');
-    await waitForText(page, 'Good. Now attach sound');
+    await waitForText(page, 'Now listen to the tone');
     checks.strokeTraceCompleted = true;
     await screenshot(page, '04-xiao-tone-transition-1.png', 'xiao_tone_transition_1', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Hear a few xiao shapes');
+    await waitForText(page, 'Mandarin has four main tones');
     await screenshot(page, '05-xiao-tone-transition-2.png', 'xiao_tone_transition_2', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Listen for 小. Which xiao has the falling-rising third tone?');
+    await waitForText(page, '小 is third tone');
+    await clickTong(page);
+    await waitForText(page, 'Which one is 小, xiǎo?');
     await screenshot(page, '06-anchor-before-exercise.png', 'pre_exercise_context', screenshots);
     await recorder.cue('exercise_opened');
     await screenshot(page, '07-anchor-exercise.png', 'anchor_exercise', screenshots);
@@ -416,7 +500,7 @@ async function run() {
 
     await answerPronunciationOption(page, 'xiao3');
     await recorder.cue('exercise_answered');
-    await waitForText(page, 'Good. 小 is not just a mark now');
+    await waitForText(page, 'Good. You have 小 in your eyes');
     await screenshot(page, '08-post-exercise.png', 'post_exercise_context', screenshots);
 
     await clickTong(page);
@@ -459,7 +543,7 @@ async function run() {
     });
     await recorder.cue('pan_input_finished');
     checks.panReachedOverhearGateWithoutShortcut = await page.waitForFunction(
-      () => document.body.innerText.includes('Tap to lean in and overhear them') && !Boolean(document.querySelector('.shanghai-onboarding--webtoon')),
+      () => document.body.innerText.includes('There. Tap to listen in.') && !Boolean(document.querySelector('.shanghai-onboarding--webtoon')),
       { timeout: 6000 },
     )
       .then(() => true)
@@ -509,12 +593,12 @@ async function run() {
     await clickVisibleText(page, 'Tap to continue');
 
     await recorder.cue('beat_1_language_gate');
-    await waitForText(page, 'You heard 不一样 twice');
+    await waitForText(page, '不一样 came up twice');
     checks.webtoonVisibleDuringLanguageGate = await page.evaluate(() => Boolean(document.querySelector('.wt-strip')) && document.body.innerText.includes('每个节目都说自己不一样。'));
     checks.noPosterSnapDuringLanguageGate = await page.evaluate(() => !document.querySelector('.shanghai-onboarding__video') && !document.querySelector('.summary-screen'));
     await screenshot(page, '11-beat-1-language.png', 'beat_1_language_gate', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Put it back into the line once');
+    await waitForText(page, '一样 is “same.” 不一样 is “not the same.”');
     await clickTong(page);
     await waitForText(page, 'Choose the phrase that means “not the same.”');
     checks.webtoonVisibleDuringExercise = await page.evaluate(() => Boolean(document.querySelector('.wt-strip')) && document.body.innerText.includes('每个节目都说自己不一样。'));
@@ -544,7 +628,7 @@ async function run() {
       .then(() => true)
       .catch(() => false);
     await screenshot(page, '14-beat-1-exercise-resumed.png', 'beat_1_exercise_resumed', screenshots);
-    await answerFillBlank(page, '不一样');
+    checks.beat1FillBlankMeaningsVisible = await answerFillBlank(page, '不一样');
 
     await page.waitForSelector('.shanghai-onboarding--webtoon', { visible: true, timeout: 8000 });
     await recorder.cue('beat_2_webtoon_entered');
@@ -574,14 +658,14 @@ async function run() {
     await clickVisibleText(page, 'Tap to continue');
 
     await recorder.cue('beat_2_language_gate');
-    await waitForText(page, 'That 不下去 is the useful part');
+    await waitForText(page, '装不下去 is the phrase to keep');
     await screenshot(page, '19-beat-2-language.png', 'beat_2_language_gate', screenshots);
     await clickTong(page);
-    await waitForText(page, 'Try the shape across a few verbs');
+    await waitForText(page, 'It means the pretending cannot continue');
     await clickTong(page);
     await waitForText(page, 'Choose the ending that means “cannot keep going.”');
     await screenshot(page, '20-beat-2-exercise.png', 'beat_2_exercise', screenshots);
-    await answerFillBlank(page, '不下去');
+    checks.beat2FillBlankMeaningsVisible = await answerFillBlank(page, '不下去');
 
     await page.waitForSelector('.shanghai-onboarding--webtoon', { visible: true, timeout: 8000 });
     await recorder.cue('exit_webtoon_entered');
@@ -636,21 +720,54 @@ async function run() {
     await clickVisibleText(page, 'Tap to continue');
 
     await recorder.cue('register_language_gate');
-    await waitForText(page, 'She said 小瞿');
+    await waitForText(page, '方阿姨 calls him 小瞿');
     checks.registerNoteVisible = await page.evaluate(() => (
-      document.body.innerText.includes('She said 小瞿')
+      document.body.innerText.includes('方阿姨 calls him 小瞿')
       && !document.querySelector('.summary-screen')
     ));
     await screenshot(page, '31-register-note.png', 'register_note', screenshots);
     await clickTong(page);
-    await waitForText(page, '瞿家 is the Qu family');
+    await waitForText(page, 'That is familiar address');
     checks.familyWordingNoteVisible = await page.evaluate(() => (
-      document.body.innerText.includes('瞿家 is the Qu family')
-      && document.body.innerText.includes('小儿子 is younger son')
+      document.body.innerText.includes('That is familiar address from someone older')
       && !document.querySelector('.summary-screen')
     ));
     await screenshot(page, '32-family-wording-note.png', 'family_wording_note', screenshots);
     await clickTong(page);
+    await waitForText(page, '小儿子 means younger son');
+    checks.youngerSonNoteVisible = await page.evaluate(() => (
+      document.body.innerText.includes('小儿子 means younger son')
+      && !document.querySelector('.summary-screen')
+    ));
+    await screenshot(page, '32b-younger-son-note.png', 'younger_son_note', screenshots);
+    await clickTong(page);
+    await waitForText(page, 'One quick 不 before we step out');
+    checks.buReinforcementIntroVisible = await page.evaluate(() => (
+      document.body.innerText.includes('One quick 不 before we step out')
+      && !document.querySelector('.summary-screen')
+    ));
+    await screenshot(page, '32c-bu-reinforcement-intro.png', 'bu_reinforcement_intro', screenshots);
+    await clickTong(page);
+    await waitForText(page, 'You heard it in 不一样');
+    await clickTong(page);
+    await waitForText(page, '不 is bù: fourth tone, falling.');
+    checks.buFourthToneVisible = await page.evaluate(() => (
+      document.body.innerText.includes('不 is bù: fourth tone, falling.')
+      && !document.querySelector('.summary-screen')
+    ));
+    await screenshot(page, '32d-bu-fourth-tone.png', 'bu_fourth_tone', screenshots);
+    await clickTong(page);
+    await waitForText(page, 'Watch how 不 is written.');
+    checks.buStrokeIntroVisible = await page.evaluate(() => (
+      Boolean(document.querySelector('[data-stroke-intro]'))
+      && Boolean(document.querySelector('[data-stroke-animation]'))
+      && Boolean(document.querySelector('[data-stroke-order]'))
+      && document.body.innerText.includes('bù')
+      && document.body.innerText.includes('not')
+    ));
+    checks.buStrokeTracingVisible = checks.buStrokeIntroVisible;
+    await screenshot(page, '32e-bu-stroke-animation.png', 'bu_stroke_animation', screenshots);
+    checks.buStrokeReplayVisible = await answerStrokeTracing(page);
     await waitForText(page, 'Step out');
     checks.stepOutGateVisible = await page.evaluate(() => (
       Boolean(document.querySelector('.shanghai-onboarding--webtoon'))
@@ -660,12 +777,12 @@ async function run() {
     ));
     await screenshot(page, '33-step-out-gate.png', 'step_out_gate', screenshots);
     await clickVisibleText(page, 'Step out');
-    await waitForText(page, 'Back in the shop.');
+    await waitForText(page, 'Take one last look before we leave the shop');
     checks.finalCompanionWrapStarted = await page.evaluate(() => (
       Boolean(document.querySelector('.shanghai-onboarding__stage'))
       && Boolean(document.querySelector('.shanghai-onboarding__video'))
       && !Boolean(document.querySelector('.wt-strip'))
-      && document.body.innerText.includes('Back in the shop.')
+      && document.body.innerText.includes('Take one last look before we leave the shop')
       && !document.querySelector('.summary-screen')
     ));
     checks.finalWrapAtRightmostShopEdge = await page.evaluate(() => {
@@ -680,21 +797,32 @@ async function run() {
     await recorder.cue('returned_to_shop_final_wrap');
     await screenshot(page, '34-final-wrap-shop-start.png', 'final_companion_wrap_shop_start', screenshots);
     await clickTong(page);
-    await waitForText(page, '小 came back in 小瞿');
+    await waitForText(page, '小 started on 小笼包');
     checks.finalLanguageCarryVisible = await page.evaluate(() => (
-      document.body.innerText.includes('小 came back in 小瞿')
+      document.body.innerText.includes('小 started on 小笼包')
       && Boolean(document.querySelector('.shanghai-onboarding__video'))
       && !Boolean(document.querySelector('.wt-strip'))
       && !document.querySelector('.summary-screen')
     ));
     checks.summaryHiddenDuringFinalWrap = checks.summaryHiddenDuringFinalWrap && checks.finalLanguageCarryVisible;
     await clickTong(page);
-    await waitForText(page, 'Not a worksheet; a way in.');
+    await waitForText(page, '小瞿 feels familiar');
+    checks.finalRegisterWrapVisible = await page.evaluate(() => (
+      document.body.innerText.includes('小瞿 feels familiar. 瞿先生 would keep distance. 瞿家 makes it bigger than one person.')
+      && Boolean(document.querySelector('.shanghai-onboarding__video'))
+      && !Boolean(document.querySelector('.wt-strip'))
+      && !document.querySelector('.summary-screen')
+    ));
+    checks.summaryHiddenDuringFinalWrap = checks.summaryHiddenDuringFinalWrap && checks.finalRegisterWrapVisible;
+    await clickTong(page);
+    await waitForText(page, 'When 不 shows up');
+    await clickTong(page);
+    await waitForText(page, 'Good. That is enough to walk into the next Shanghai scene.');
     checks.finalCompanionWrapVisible = await page.evaluate(() => (
       Boolean(document.querySelector('.shanghai-onboarding__stage'))
       && Boolean(document.querySelector('.shanghai-onboarding__video'))
       && !Boolean(document.querySelector('.wt-strip'))
-      && document.body.innerText.includes('That is a first pass through Shanghai. Not a worksheet; a way in.')
+      && document.body.innerText.includes('Good. That is enough to walk into the next Shanghai scene.')
       && document.body.innerText.includes('Continue')
       && !document.querySelector('.summary-screen')
     ));
@@ -707,8 +835,9 @@ async function run() {
       .then(() => true)
       .catch(() => false);
     checks.summaryTextVisible = await page.evaluate(() => (
-      document.body.innerText.includes('Scene complete')
-      && document.body.innerText.includes('First pass through the shop')
+      document.body.innerText.includes('Scene Complete')
+      && document.body.innerText.includes('小笼包')
+      && document.body.innerText.includes('不重要')
       && !document.body.innerText.includes('Saved listening handles')
     ));
     checks.summaryXpVisible = await page.evaluate(() => document.body.innerText.includes('+80') && document.body.innerText.includes('XP earned'));
@@ -756,6 +885,7 @@ async function run() {
       checks.mentionsShop,
       checks.introChunkTapped,
       checks.introChunkTooltipVisible,
+      checks.xiaoStrokeIntroVisible,
       checks.prelistenToneOptionsPresent,
       checks.panReachedOverhearGateWithoutShortcut,
       checks.chineseBubbleTokensInteractive,
@@ -763,6 +893,7 @@ async function run() {
       checks.introChunkTooltipFullyVisible,
       checks.strokeTraceReplayVisible,
       checks.buyiyangFillBlankVisible,
+      checks.beat1FillBlankMeaningsVisible,
       checks.webtoonVisibleDuringLanguageGate,
       checks.noPosterSnapDuringLanguageGate,
       checks.webtoonVisibleDuringExercise,
@@ -777,6 +908,7 @@ async function run() {
       checks.beat2ContinueVisible,
       checks.beat2NoActLine,
       checks.beat2KeepPretendingLine,
+      checks.beat2FillBlankMeaningsVisible,
       checks.phoneSfxVisible,
       checks.dingmanAnswerCallVisible,
       checks.shouchengNotImportantVisible,
@@ -789,10 +921,17 @@ async function run() {
       checks.exitContinueVisible,
       checks.registerNoteVisible,
       checks.familyWordingNoteVisible,
+      checks.youngerSonNoteVisible,
+      checks.buReinforcementIntroVisible,
+      checks.buFourthToneVisible,
+      checks.buStrokeIntroVisible,
+      checks.buStrokeTracingVisible,
+      checks.buStrokeReplayVisible,
       checks.stepOutGateVisible,
       checks.finalCompanionWrapStarted,
       checks.finalWrapAtRightmostShopEdge,
       checks.finalLanguageCarryVisible,
+      checks.finalRegisterWrapVisible,
       checks.finalCompanionWrapVisible,
       checks.summaryHiddenDuringFinalWrap,
       checks.noNarratorPhoneCopy,
