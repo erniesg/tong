@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getPublicApiBase } from '@/lib/public-api-base';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -85,7 +86,7 @@ type ViewerTab = 'filmstrip' | 'annotations' | 'gallery' | 'analysis' | 'statelo
 
 /* ── API ──────────────────────────────────────────────────────────── */
 
-const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const API_BASE = getPublicApiBase();
 const RUNS_BASE = 'https://runs.tong.berlayar.ai';
 
 async function fetchSessions(): Promise<PlaytestSession[]> {
