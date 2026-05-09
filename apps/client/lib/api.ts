@@ -1,4 +1,6 @@
-const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+import { getPublicApiBase } from './public-api-base';
+
+const API_BASE = getPublicApiBase();
 const DEMO_PASSWORD_STORAGE_KEY = 'tong.demo.password';
 const API_TIMEOUT_MS = 12000;
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { getPublicApiBase } from '@/lib/public-api-base';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -47,7 +48,7 @@ interface TriagedIssue extends AnalysisIssue {
 
 /* ── API helpers ──────────────────────────────────────────────────── */
 
-const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
+const API_BASE = getPublicApiBase();
 
 async function fetchSessions(): Promise<PlaytestSession[]> {
   const res = await fetch(`${API_BASE}/api/v1/playtest/sessions`, {
