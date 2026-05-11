@@ -7,6 +7,11 @@ export function getPublicApiBase(): string {
     return 'http://localhost:8787';
   }
 
+  const hostname = window.location.hostname;
+  if (hostname === 'tong.berlayar.ai') {
+    return 'https://tong-api.erniesg.workers.dev';
+  }
+
   const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-  return `${protocol}//${window.location.hostname}:8787`;
+  return `${protocol}//${hostname}:8787`;
 }
