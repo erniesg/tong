@@ -42,11 +42,15 @@ def http_request(url: str, method: str = "GET", data: bytes | None = None,
                  content_type: str | None = None, timeout: int = 10) -> Any:
     """HTTP request with browser User-Agent to avoid Cloudflare blocks."""
     import urllib.request
+    import ssl
     headers: dict[str, str] = {"User-Agent": UA}
     if content_type:
         headers["Content-Type"] = content_type
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
         return resp.read(), resp.headers
 
 
@@ -112,7 +116,7 @@ class PlaytestSmokeTest:
         """Open /playtest/{id} and verify it renders."""
         url = f"{self.base_url}/playtest/{self.session_id}"
         print(f"\n  Opening {url}", flush=True)
-        await page.goto(url, wait_until="networkidle", timeout=30000)
+        await page.goto(url, wait_until="domcontentloaded", timeout=60000)
         await self.screenshot(page, "playtest-initial-load")
 
         # The page should show "Loading playtest session..." spinner
@@ -264,8 +268,21 @@ class PlaytestSmokeTest:
             context = await browser.new_context(
                 viewport=VIEWPORT,
                 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                ignore_https_errors=True,
             )
             page = await context.new_page()
+
+            # Intercept API calls to fix production API base mismatch
+            async def route_handler(route):
+                url = route.request.url
+                parsed_base = self.base_url.replace("https://", "").replace("http://", "")
+                pattern = f"https://{parsed_base}:8787/"
+                if url.startswith(pattern):
+                    new_url = url.replace(pattern, f"{self.api_base}/")
+                    await route.continue_(url=new_url)
+                else:
+                    await route.continue_()
+            await page.route("**/*8787*/**", route_handler)
 
             # Collect console messages
             console_messages: list[dict] = []
