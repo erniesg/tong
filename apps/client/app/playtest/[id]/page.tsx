@@ -106,8 +106,7 @@ function buildGameUrl(config: PlaytestConfig): string {
     params.set('lang', config.language);
   }
 
-  // Propagate deterministic seed when present (no built-in game support yet — pass as extra param for future use)
-  if (config.seed !== undefined) {
+  if (config.seed != null) {
     params.set('seed', String(config.seed));
   }
 
