@@ -3089,6 +3089,11 @@ button.nav-link:hover {
   padding-bottom: 24px;
 }
 
+.exercise-modal-content:has(.stroke-intro-card--mandarin) .exercise-dismiss-btn,
+.exercise-modal-content:has(.stroke-tracing-card--mandarin) .exercise-dismiss-btn {
+  display: none;
+}
+
 .exercise-modal-backdrop--dismissing {
   animation: fadeOut 0.3s ease-out forwards;
 }
@@ -3550,6 +3555,14 @@ button.nav-link:hover {
   padding: 0;
 }
 
+.stroke-live-cue--mandarin {
+  min-height: 76px;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: 4px 0;
+}
+
 .stroke-live-cue__label {
   display: grid;
   justify-items: center;
@@ -3560,6 +3573,20 @@ button.nav-link:hover {
   line-height: 1.2;
   text-align: center;
   animation: strokeCueText 0.45s ease both;
+}
+
+.stroke-live-cue--mandarin .stroke-live-cue__label {
+  animation: strokeCueFlash 1.05s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.stroke-live-cue--mandarin .hanzi-stroke-label__name {
+  color: var(--color-accent-gold, #f0c040);
+  font-size: var(--game-text-lg);
+}
+
+.stroke-live-cue--mandarin .hanzi-stroke-label__pinyin,
+.stroke-live-cue--mandarin .hanzi-stroke-label__meaning {
+  font-size: var(--game-text-base);
 }
 
 .stroke-write-header {
@@ -3761,6 +3788,22 @@ button.nav-link:hover {
   }
 }
 
+@keyframes strokeCueFlash {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  16%,
+  72% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
 .stroke-intro-card__actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3786,6 +3829,12 @@ button.nav-link:hover {
 .stroke-intro-card__write {
   background: var(--color-accent-gold, #f0c040);
   color: #171423;
+}
+
+.stroke-intro-card__write:disabled {
+  cursor: wait;
+  filter: grayscale(0.25);
+  opacity: 0.46;
 }
 
 .stroke-drill-complete {

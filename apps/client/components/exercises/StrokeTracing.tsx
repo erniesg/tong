@@ -666,6 +666,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   const [showStrokeIntro, setShowStrokeIntro] = useState(hasStrokeOrder);
   const [introReplayKey, setIntroReplayKey] = useState(0);
   const [introStrokeIndex, setIntroStrokeIndex] = useState<number | null>(strokeGuides.length > 0 ? 0 : null);
+  const [introAnimationDone, setIntroAnimationDone] = useState(false);
 
   // Drill mode state
   const [cellStates, setCellStates] = useState<CellState[]>(
@@ -995,50 +996,53 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   );
 
   if (showStrokeIntro && isMandarinStrokeOrder) {
-    const activeIntroIndex = introStrokeIndex === null ? strokeGuides.length - 1 : introStrokeIndex;
+    const activeIntroGuide = introStrokeIndex === null ? null : strokeGuides[introStrokeIndex] ?? null;
     return (
       <div className="exercise-card stroke-intro-card stroke-intro-card--mandarin p-5" data-stroke-intro>
         <div className="stroke-intro-card__character" data-stroke-animation>
           <StrokeOrderAnimation
             key={introReplayKey}
             character={exercise.targetChar}
-            duration={1900}
-            onComplete={() => {}}
+            duration={2400}
+            onComplete={() => setIntroAnimationDone(true)}
             size={210}
             totalStrokes={strokeGuides.length}
             onStrokeChange={setIntroStrokeIndex}
           />
         </div>
         {strokeGuides.length > 0 && (
-          <div className="stroke-cue-list" data-stroke-order>
-            {strokeGuides.map((stroke, index) => (
-              <div
-                key={`${stroke.label}-${stroke.description}-${index}`}
-                className={cn('stroke-cue-list__item', index === activeIntroIndex && 'stroke-cue-list__item--active')}
-              >
-                <div className="stroke-cue-list__index">{index + 1}</div>
-                <HanziStrokeLabel
-                  className="stroke-cue-list__label"
-                  label={stroke.label}
-                  pinyin={stroke.pinyin}
-                  description={stroke.description}
-                />
-              </div>
-            ))}
+          <div className="stroke-live-cue stroke-live-cue--mandarin" data-stroke-order>
+            {activeIntroGuide && (
+              <HanziStrokeLabel
+                key={`intro-label-${introStrokeIndex}`}
+                className="stroke-live-cue__label"
+                label={activeIntroGuide.label}
+                pinyin={activeIntroGuide.pinyin}
+                description={activeIntroGuide.description}
+              />
+            )}
           </div>
         )}
         <div className="stroke-intro-card__actions">
           <button
             className="stroke-intro-card__replay"
             type="button"
-            onClick={() => setIntroReplayKey((current) => current + 1)}
+            onClick={() => {
+              setIntroAnimationDone(false);
+              setIntroStrokeIndex(strokeGuides.length > 0 ? 0 : null);
+              setIntroReplayKey((current) => current + 1);
+            }}
           >
             Replay
           </button>
           <button
             className="stroke-intro-card__write"
             type="button"
-            onClick={() => setShowStrokeIntro(false)}
+            disabled={!introAnimationDone}
+            onClick={() => {
+              if (!introAnimationDone) return;
+              setShowStrokeIntro(false);
+            }}
           >
             Trace it
           </button>

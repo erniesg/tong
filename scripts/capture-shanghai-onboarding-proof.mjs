@@ -73,6 +73,18 @@ async function clickVisibleText(page, text) {
   if (!clicked) throw new Error(`Could not click visible text: ${text}`);
 }
 
+async function waitForEnabledButton(page, text, timeout = 8000) {
+  await page.waitForFunction(
+    (needle) => {
+      const target = Array.from(document.querySelectorAll('button'))
+        .find((node) => node.textContent?.includes(needle));
+      return target instanceof HTMLButtonElement && !target.disabled;
+    },
+    { timeout },
+    text,
+  );
+}
+
 async function clickExerciseCheck(page) {
   await page.evaluate(() => {
     const buttons = Array.from(document.querySelectorAll('button'));
@@ -246,8 +258,9 @@ async function answerStrokeTracing(page, options = {}) {
   const introVisible = await page.$('[data-stroke-intro]');
   if (introVisible) {
     await clickVisibleText(page, 'Replay').catch(() => {});
-    await sleep(450);
+    await waitForEnabledButton(page, 'Trace it');
     await clickVisibleText(page, 'Trace it').catch(async () => {
+      await waitForEnabledButton(page, 'Write it');
       await clickVisibleText(page, 'Write it');
     });
   }
@@ -573,6 +586,7 @@ async function run() {
     await screenshot(page, '02-intro-chunk-tooltip.png', 'intro_chunk_tooltip', screenshots);
     await clickTong(page);
     await page.waitForSelector('[data-stroke-intro]', { visible: true });
+    await waitForText(page, '竖钩');
     checks.xiaoStrokeIntroVisible = await page.evaluate(() => (
       Boolean(document.querySelector('[data-stroke-intro]'))
       && Boolean(document.querySelector('[data-stroke-animation]'))
@@ -582,33 +596,52 @@ async function run() {
       && document.body.innerText.includes('竖钩')
       && document.body.innerText.includes('shù gōu')
       && document.body.innerText.includes('center hook')
-      && document.body.innerText.includes('撇')
-      && document.body.innerText.includes('piě')
-      && document.body.innerText.includes('left fall')
-      && document.body.innerText.includes('点')
-      && document.body.innerText.includes('diǎn')
-      && document.body.innerText.includes('right dot')
-      && document.querySelectorAll('.stroke-cue-list__item').length === 3
+      && !document.body.innerText.includes('left fall')
+      && !document.body.innerText.includes('right dot')
+      && document.querySelectorAll('.stroke-live-cue--mandarin .hanzi-stroke-label__name').length === 1
+      && document.querySelectorAll('.stroke-cue-list__item').length === 0
       && !Boolean(document.querySelector('[data-hanzi-stroke-cue]'))
       && !Boolean(document.querySelector('.stroke-intro-card__title'))
       && !document.body.innerText.includes('xiǎo')
       && !document.body.innerText.includes('small')
       && !document.body.innerText.includes('小瞿')
     ));
-    checks.xiaoStrokeCueStacked = await page.evaluate(() => {
-      const label = document.querySelector('.stroke-cue-list__label');
+    checks.xiaoStrokeCueLiveSingle = await page.evaluate(() => {
+      const label = document.querySelector('.stroke-live-cue--mandarin .stroke-live-cue__label');
+      const traceButton = Array.from(document.querySelectorAll('button'))
+        .find((node) => node.textContent?.includes('Trace it'));
       if (!(label instanceof HTMLElement)) return false;
       const style = window.getComputedStyle(label);
       return style.display === 'grid'
-        && document.querySelectorAll('.stroke-cue-list__item').length === 3
+        && traceButton instanceof HTMLButtonElement
+        && traceButton.disabled
+        && document.querySelectorAll('.stroke-live-cue--mandarin .hanzi-stroke-label__name').length === 1
+        && document.querySelectorAll('.stroke-cue-list__item').length === 0
         && document.body.innerText.includes('竖钩')
         && document.body.innerText.includes('shù gōu')
         && document.body.innerText.includes('center hook');
     });
     await recorder.cue('xiao_stroke_animation_visible');
     await screenshot(page, '03-xiao-stroke-animation.png', 'xiao_stroke_animation', screenshots);
+    await waitForText(page, 'left fall', 12000);
+    checks.xiaoStrokeCueAdvances = await page.evaluate(() => (
+      document.body.innerText.includes('撇')
+      && document.body.innerText.includes('piě')
+      && document.body.innerText.includes('left fall')
+      && !document.body.innerText.includes('center hook')
+      && document.querySelectorAll('.stroke-live-cue--mandarin .hanzi-stroke-label__name').length === 1
+    ));
+    await screenshot(page, '03a-xiao-stroke-cue-advance.png', 'xiao_stroke_cue_advance', screenshots);
+    await waitForText(page, 'right dot', 12000);
+    checks.xiaoStrokeCueCompletes = await page.evaluate(() => (
+      document.body.innerText.includes('点')
+      && document.body.innerText.includes('diǎn')
+      && document.body.innerText.includes('right dot')
+      && !document.body.innerText.includes('left fall')
+      && document.querySelectorAll('.stroke-live-cue--mandarin .hanzi-stroke-label__name').length === 1
+    ));
     await clickVisibleText(page, 'Replay');
-    await sleep(650);
+    await waitForEnabledButton(page, 'Trace it');
     await clickVisibleText(page, 'Trace it');
     await waitForText(page, 'Trace 小 in stroke order');
     await screenshot(page, '03b-xiao-stroke-exercise.png', 'xiao_stroke_exercise', screenshots);
@@ -665,6 +698,15 @@ async function run() {
     await screenshot(page, '08-post-exercise.png', 'post_exercise_context', screenshots);
 
     await clickTong(page);
+    await waitForText(page, 'Now it is ready to travel');
+    checks.xiaoBridgeBeforePanVisible = await page.evaluate(() => (
+      document.body.innerText.includes('Now it is ready to travel: from 小笼包 on the sign to 小瞿 when someone says his name.')
+      && !document.body.innerText.includes('Slide left toward the voices.')
+    ));
+    await screenshot(page, '08b-xiao-bridge-before-pan.png', 'xiao_bridge_before_pan', screenshots);
+    await clickTong(page);
+    await waitForText(page, 'The voices on the left are close enough now');
+    await screenshot(page, '08c-before-pan-nudge.png', 'before_pan_nudge', screenshots);
     await clickTong(page);
     await recorder.cue('pan_prompt_visible');
     await waitForText(page, 'Slide left toward the voices.');
@@ -926,6 +968,7 @@ async function run() {
     await screenshot(page, '32e-bu-tone-shift.png', 'bu_tone_shift', screenshots);
     await clickTong(page);
     await page.waitForSelector('[data-stroke-intro]', { visible: true });
+    await waitForText(page, '横');
     checks.buStrokeIntroVisible = await page.evaluate(() => (
       Boolean(document.querySelector('[data-stroke-intro]'))
       && Boolean(document.querySelector('[data-stroke-animation]'))
@@ -935,17 +978,33 @@ async function run() {
       && document.body.innerText.includes('横')
       && document.body.innerText.includes('héng')
       && document.body.innerText.includes('top line')
+      && !document.body.innerText.includes('left fall')
+      && !document.body.innerText.includes('center down')
+      && !document.body.innerText.includes('right dot')
+      && document.querySelectorAll('.stroke-live-cue--mandarin .hanzi-stroke-label__name').length === 1
+      && document.querySelectorAll('.stroke-cue-list__item').length === 0
     ));
     await screenshot(page, '32f-bu-stroke-animation.png', 'bu_stroke_animation', screenshots);
+    await waitForText(page, 'right dot', 12000);
+    checks.buStrokeCueCompletes = await page.evaluate(() => (
+      document.body.innerText.includes('点')
+      && document.body.innerText.includes('diǎn')
+      && document.body.innerText.includes('right dot')
+      && !document.body.innerText.includes('top line')
+      && document.querySelectorAll('.stroke-live-cue--mandarin .hanzi-stroke-label__name').length === 1
+    ));
+    await screenshot(page, '32fa-bu-stroke-cue-complete.png', 'bu_stroke_cue_complete', screenshots);
     checks.buStrokeReplayVisible = await answerStrokeTracing(page, {
       onTraceReady: async () => {
         checks.buStrokeTracingVisible = await page.evaluate(() => (
-          document.body.innerText.includes('Trace 不.')
-          && document.querySelectorAll('.exercise-card canvas').length === 1
+          document.body.innerText.includes('Trace 不 in stroke order.')
+          && document.querySelectorAll('.exercise-card canvas').length === 3
+          && document.querySelectorAll('.stroke-write-rep-grid__cell').length === 3
           && Boolean(document.querySelector('[data-stroke-write-surface]'))
           && !Boolean(document.querySelector('[data-stroke-animation]'))
           && !Boolean(document.querySelector('.stroke-write-header'))
           && !Boolean(document.querySelector('[data-stroke-order]'))
+          && document.body.innerText.includes('1/3')
           && !document.body.innerText.includes('Clear')
           && !document.body.innerText.includes('Done')
           && !document.body.innerText.includes('top line')
@@ -1098,7 +1157,7 @@ async function run() {
     await seoulStroke.setViewport(VIEWPORTS.mobile);
     const seoulRoute = `${BASE_URL}/game?fixture=stroke-trace-korean-basic&scene=6&demo=TONG-DEMO-ACCESS&qa_run_id=${encodeURIComponent(RUN_ID)}&qa_trace=1`;
     await seoulStroke.goto(seoulRoute, { waitUntil: 'networkidle0', timeout: 30000 });
-    await waitForText(seoulStroke, 'Trace: ㅎ', 8000);
+    await waitForText(seoulStroke, 'Trace: ㅎ', 15000);
     checks.seoulKoreanStrokeLayoutPreserved = await seoulStroke.evaluate(() => (
       document.body.innerText.includes('Trace: ㅎ')
       && document.querySelectorAll('.exercise-card canvas').length === 3
@@ -1134,6 +1193,7 @@ async function run() {
       checks.videoElementVisible,
       checks.usesLoopingVideo,
       checks.startsInsideGameFrame,
+      checks.styledGameFrame,
       checks.mentionsProposal,
       checks.mentionsShop,
       checks.introChunkTapped,
@@ -1144,9 +1204,12 @@ async function run() {
       checks.chineseBubbleTokensInteractive,
       checks.chineseTooltipVisible,
       checks.introChunkTooltipFullyVisible,
-      checks.xiaoStrokeCueStacked,
+      checks.xiaoStrokeCueLiveSingle,
+      checks.xiaoStrokeCueAdvances,
+      checks.xiaoStrokeCueCompletes,
       checks.strokeTraceReplayVisible,
       checks.xiaoTraceCompletionClean,
+      checks.xiaoBridgeBeforePanVisible,
       checks.buyiyangFillBlankVisible,
       checks.beat1FillBlankInlineMeaningVisible,
       checks.webtoonVisibleDuringLanguageGate,
@@ -1181,6 +1244,7 @@ async function run() {
       checks.buFourthToneVisible,
       checks.buToneShiftVisible,
       checks.buStrokeIntroVisible,
+      checks.buStrokeCueCompletes,
       checks.buStrokeTracingVisible,
       checks.buStrokeReplayVisible,
       checks.buTraceCompletionClean,

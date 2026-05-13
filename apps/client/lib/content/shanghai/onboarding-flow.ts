@@ -97,6 +97,7 @@ const EN_TONG_COPY: ShanghaiOnboardingTongCopy = {
   },
   postExerciseTongLines: [
     'Good. You have 小 in your eyes and xiǎo in your ear.',
+    'Now it is ready to travel: from 小笼包 on the sign to 小瞿 when someone says his name.',
     'The voices on the left are close enough now. Slide that way.',
   ],
   panPrompt: 'Slide left toward the voices.',
@@ -149,6 +150,7 @@ const KO_TONG_COPY: ShanghaiOnboardingTongCopy = {
   },
   postExerciseTongLines: [
     '좋아. 이제 간판은 장식이 아니야. 小는 눈으로 잡는 모양이고 귀로 잡는 소리야.',
+    '이제 小는 이동할 수 있어. 간판의 小笼包에서, 누군가 부르는 小瞿까지.',
     '창가 테이블 소리가 방 안 소음을 뚫고 들어와. 그쪽으로 천천히 밀어 봐.',
   ],
   panPrompt: '창가 테이블 쪽으로 밀기.',
@@ -200,6 +202,7 @@ const JA_TONG_COPY: ShanghaiOnboardingTongCopy = {
   },
   postExerciseTongLines: [
     'いいね。看板はただの背景じゃない。小 は目で拾える形で、耳で拾える音だ。',
+    'これで 小 は動ける。看板の 小笼包 から、誰かが呼ぶ 小瞿 まで。',
     '窓際のテーブルの声が、店の音を抜けて聞こえる。そっちへゆっくり寄せて。',
   ],
   panPrompt: '窓際のテーブルへスライド。',
@@ -251,6 +254,7 @@ const ZH_ADVANCED_TONG_COPY: ShanghaiOnboardingTongCopy = {
   },
   postExerciseTongLines: [
     '好。招牌现在不是背景了：小 是你能看见的形，也是你能听出来的音。',
+    '现在 小 可以移动了：从招牌上的 小笼包，到别人嘴里的 小瞿。',
     '窗边那桌的声音从店里的杂音里透出来了。慢慢把视角移过去。',
   ],
   panPrompt: '滑向窗边那桌。',
@@ -503,7 +507,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
           id: 'shanghai-h1-after-c-bu-stroke',
           objectiveId: 'zh-script-shanghai-bu-character',
           difficulty: 1,
-          prompt: 'Trace 不.',
+          prompt: 'Trace 不 in stroke order.',
           targetChar: '不',
           ghostOverlay: true,
           explanation: '不 is bù, “not.”',
@@ -511,6 +515,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
           meaning: 'not',
           sound: '不',
           language: 'zh',
+          reps: 3,
           strokeOrder: [
             { label: '横', pinyin: 'héng', glyph: '一', description: 'top line' },
             { label: '撇', pinyin: 'piě', glyph: '丿', description: 'left fall' },

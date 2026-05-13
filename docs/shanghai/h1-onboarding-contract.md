@@ -64,14 +64,16 @@ Exercise:
   - `小` / `xiǎo` / small
   - Stroke order: `竖钩 shù gōu center hook`, `撇 piě left fall`, `点 diǎn right dot`.
   - Player sees a replayable animation first, by itself, then taps into the writing surface.
-  - During the animation and practice, the UI should show plain stroke labels with Chinese name + hanyu pinyin + English. Do not show a duplicate mini character or extra boxed/grid cue below the animation.
+  - During the animation, the UI should show one live stroke label at a time, fading with the active stroke: Chinese name + hanyu pinyin + English. Do not show all numbered stroke labels at once, a duplicate mini character, or an extra boxed/grid cue below the animation.
   - Player writes `小` three times.
+  - Later `不` reinforcement uses the same Mandarin stroke UI pattern and also asks for three traces.
   - Example words must not introduce `小瞿` here. Use shop/world examples such as `小笼包` and `小吃`.
   - After completion, replay the `小` character animation and play `xiǎo` plus the player-language meaning.
 - After the trace, Tong must transition organically into sound:
   - “Now listen to the tone.”
   - “Mandarin has four main tones: high, rising, dipping, falling.”
   - “小 is third tone: xiǎo. It dips low, then comes back up.”
+- After the tone exercise, Tong must bridge from `小` as signage to `小瞿` as something the player can hear before asking them to slide toward the voices.
 
 Exercise:
 - Current fixture then uses `pronunciation_select`.
