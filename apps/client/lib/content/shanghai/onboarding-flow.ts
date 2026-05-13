@@ -459,7 +459,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
           options: [
             { id: 'buyiyang', text: '不一样', romanization: 'bù yí yàng', meaning: 'not the same' },
             { id: 'yiyang', text: '一样', romanization: 'yí yàng', meaning: 'same' },
-            { id: 'buxiaqu', text: '不下去', romanization: 'bu xià qù', meaning: 'cannot keep going' },
+            { id: 'buxiaqu', text: '不下去', romanization: 'bú xià qù', meaning: 'cannot keep going' },
             { id: 'buzhongyao', text: '不重要', romanization: 'bú zhòng yào', meaning: 'not important' },
           ],
           correctOptionId: 'buyiyang',
@@ -484,7 +484,7 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
           sentence: '演 ___ 。',
           blankIndex: 1,
           options: [
-            { id: 'buxiaqu', text: '不下去', romanization: 'bu xià qù', meaning: 'cannot keep going' },
+            { id: 'buxiaqu', text: '不下去', romanization: 'bú xià qù', meaning: 'cannot keep going' },
             { id: 'xiaqu', text: '下去', romanization: 'xià qù', meaning: 'continue; go down' },
             { id: 'buzhuang', text: '不装', romanization: 'bù zhuāng', meaning: 'not pretending' },
             { id: 'buyiyang', text: '不一样', romanization: 'bù yí yàng', meaning: 'not the same' },
