@@ -1405,6 +1405,11 @@ export default function GamePage() {
         // For exit videos, show the exit line as subtitle overlay
         const exitCaption = isExitVideo && exitLineRef.current ? exitLineRef.current : (args.caption ?? undefined);
         const exitCaptionTranslation = isExitVideo && exitLineTranslationRef.current ? exitLineTranslationRef.current : undefined;
+        setCurrentMessage(null);
+        setTongTip(null);
+        setChoices(null);
+        setChoicePrompt(null);
+        setCurrentExercise(null);
         setCinematic({
           videoUrl: args.videoUrl,
           autoAdvance: args.autoAdvance,
@@ -1633,6 +1638,7 @@ export default function GamePage() {
     displayMessage: displayMessage ? { id: displayMessage.id, role: displayMessage.role, characterId: displayMessage.characterId, contentPreview: displayMessage.content.slice(0, 120) } : null,
     tongTip: tongTip ? { messagePreview: tongTip.message.slice(0, 120), hasTranslation: !!tongTip.translation } : null,
     currentExercise: currentExercise ? { id: currentExercise.id, type: currentExercise.type } : null,
+    cinematic: cinematic ? { videoUrl: cinematic.videoUrl, autoAdvance: cinematic.autoAdvance, muted: cinematic.muted ?? false, hasCaption: !!cinematic.caption } : null,
     hangoutResumeSource,
     hangoutCheckpointPhase,
     sceneTurn,
@@ -1646,7 +1652,85 @@ export default function GamePage() {
     introExerciseCount,
     introAct,
     npcRevealed,
-  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, continuePending, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, hangoutResumeSource, hangoutCheckpointPhase, sceneTurn, hangoutSceneSessionId, hangoutCheckpointId, availableScenarioSeedIds, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
+  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, continuePending, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, cinematic, hangoutResumeSource, hangoutCheckpointPhase, sceneTurn, hangoutSceneSessionId, hangoutCheckpointId, availableScenarioSeedIds, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
+
+  const runPresentationCommand = useCallback((action: string, detail: { correct?: boolean } = {}) => {
+    traceQA('presentation_command', {
+      action,
+      hasExercise: !!currentExercise,
+      choiceCount: choices?.length ?? 0,
+      hasCinematic: !!cinematic,
+    });
+
+    if (action === 'complete_exercise') {
+      if (!currentExercise) return { ok: false, action, reason: 'no_current_exercise' };
+      handleExerciseResult(currentExercise.id, detail.correct !== false);
+      window.setTimeout(() => advanceAfterExercise(), 0);
+      return { ok: true, action, exerciseId: currentExercise.id };
+    }
+
+    if (action === 'choose_first') {
+      const firstChoice = choices?.[0];
+      if (!firstChoice) return { ok: false, action, reason: 'no_choices' };
+      handleChoice(firstChoice.id);
+      return { ok: true, action, choiceId: firstChoice.id };
+    }
+
+    if (action === 'end_cinematic') {
+      if (!cinematic) return { ok: false, action, reason: 'no_cinematic' };
+      setCinematic(null);
+      cinematicCaptionRef.current = null;
+      if (isIntroHangout && !npcRevealed) setNpcRevealed(true);
+      setCurrentMessage(null);
+      setTongTip(null);
+      setChoices(null);
+      setChoicePrompt(null);
+      setCurrentExercise(null);
+      setToolQueue([]);
+      processingRef.current = false;
+      return { ok: true, action, stoppedAfterIntroCinematic: true };
+    }
+
+    if (action === 'continue') {
+      if (tongTip) handleDismissTong();
+      else handleContinue();
+      return { ok: true, action };
+    }
+
+    return { ok: false, action, reason: 'unknown_action' };
+  }, [
+    advanceAfterExercise,
+    choices,
+    cinematic,
+    currentExercise,
+    handleChoice,
+    handleContinue,
+    handleDismissTong,
+    handleExerciseResult,
+    isIntroHangout,
+    npcRevealed,
+    tongTip,
+    traceQA,
+  ]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !qaTrace) return;
+    const handlePresentationMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || data.source !== 'ernie-presentation' || data.type !== 'tong-presentation-action') return;
+      const result = runPresentationCommand(String(data.action || ''), data.detail || {});
+      if (event.source && 'postMessage' in event.source) {
+        (event.source as Window).postMessage({
+          source: 'tong',
+          type: 'tong-presentation-result',
+          action: data.action,
+          result,
+        }, event.origin && event.origin !== 'null' ? event.origin : '*');
+      }
+    };
+    window.addEventListener('message', handlePresentationMessage);
+    return () => window.removeEventListener('message', handlePresentationMessage);
+  }, [qaTrace, runPresentationCommand]);
 
   useEffect(() => {
     if (!qaTrace) return;
@@ -1695,13 +1779,14 @@ export default function GamePage() {
         downloadJson(`tong-qa-logs-${qaRunId}.json`, logs);
       },
       clearLogs: () => sessionLogger.clear(),
+      presentationCommand: runPresentationCommand,
     };
 
     return () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((window as any).__TONG_QA__) delete (window as any).__TONG_QA__;
     };
-  }, [qaRunId, getQaState]);
+  }, [qaRunId, getQaState, runPresentationCommand]);
 
   /* ── renders ──────────────────────────────────────────── */
 
