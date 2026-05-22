@@ -616,10 +616,19 @@ export default function GamePage() {
 
     if (primaryLang === 'ko' && searchParams.get('skip_seoul_onboarding') !== '1') {
       const name = profileInput.englishName.trim() || 'Player';
+      const lang = gameState.explainIn.seoul ?? 'en';
+      const onboardingParams = new URLSearchParams({
+        dev_intro: '1',
+        npc: 'jin',
+        name,
+        lang,
+      });
+      const chineseName = profileInput.chineseName.trim();
+      if (chineseName) onboardingParams.set('cn_name', chineseName);
       dispatch({ type: 'SET_PLAYER_PROFILE', profile: { ...profileInput, englishName: name } });
       dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
       setLoading(false);
-      router.push('/onboarding/seoul?entry=korean-priority&npc=jin&reset=1');
+      window.location.assign(`/game?${onboardingParams.toString()}`);
       return;
     }
 
