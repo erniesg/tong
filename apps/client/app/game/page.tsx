@@ -603,15 +603,23 @@ export default function GamePage() {
     const weakLevel = sliders[primaryIdx];
     const preferredCity = (LANG_TO_CITY[primaryLang] ?? 'seoul') as CityId;
 
-    // Chinese-priority onboarding has its own observer-first Shanghai hangout.
-    // Seoul's introduction prompt teaches a character name; Shanghai teaches
-    // how to read an overheard negotiation before the player ever talks.
+    // City-priority onboarding routes own their first companion reveal before
+    // returning to the shared map/hangout runtime.
     if (primaryLang === 'zh' && searchParams.get('skip_shanghai_onboarding') !== '1') {
       const name = profileInput.englishName.trim() || 'Player';
       dispatch({ type: 'SET_PLAYER_PROFILE', profile: { ...profileInput, englishName: name } });
       dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
       setLoading(false);
       router.push('/onboarding/shanghai?entry=chinese-priority&reset=1');
+      return;
+    }
+
+    if (primaryLang === 'ko' && searchParams.get('skip_seoul_onboarding') !== '1') {
+      const name = profileInput.englishName.trim() || 'Player';
+      dispatch({ type: 'SET_PLAYER_PROFILE', profile: { ...profileInput, englishName: name } });
+      dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
+      setLoading(false);
+      router.push('/onboarding/seoul?entry=korean-priority&npc=jin&reset=1');
       return;
     }
 

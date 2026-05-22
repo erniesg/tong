@@ -11413,6 +11413,46 @@ body:has(.playtest-pill-expanded) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   Seoul Jin Onboarding
+   ══════════════════════════════════════════════════════════════ */
+
+.seoul-onboarding {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  background: #0b1020;
+  color: #eef2ff;
+  overflow: hidden;
+}
+
+.seoul-onboarding__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.58;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.seoul-onboarding__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(74, 144, 217, 0.24), transparent 34%),
+    linear-gradient(180deg, rgba(3, 7, 18, 0.16), rgba(3, 7, 18, 0.28) 45%, rgba(3, 7, 18, 0.76)),
+    linear-gradient(90deg, rgba(3, 7, 18, 0.46), transparent 48%, rgba(3, 7, 18, 0.34));
+}
+
+.summary-screen--seoul .summary-overlay {
+  background:
+    linear-gradient(180deg, rgba(4, 8, 18, 0.26), rgba(4, 8, 18, 0.88)),
+    radial-gradient(circle at 50% 28%, rgba(74, 144, 217, 0.22), transparent 38%);
+}
+
+/* ══════════════════════════════════════════════════════════════
    Shanghai Onboarding Panorama
    ══════════════════════════════════════════════════════════════ */
 

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tong Design System</title>
-<!-- Design system snapshot | 121 variables, 1067 classes, 58 keyframes -->
+<!-- Design system snapshot | 121 variables, 1071 classes, 58 keyframes -->
 <style>
 /* ══════════════════════════════════════════════════════════════
    BLOCK 1: globals.css — verbatim embed (single source of truth)
@@ -11421,6 +11421,46 @@ body:has(.playtest-pill-expanded) {
   color: #e8485c;
   font-size: 0.8rem;
   margin-top: 6px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Seoul Jin Onboarding
+   ══════════════════════════════════════════════════════════════ */
+
+.seoul-onboarding {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  background: #0b1020;
+  color: #eef2ff;
+  overflow: hidden;
+}
+
+.seoul-onboarding__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.58;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.seoul-onboarding__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(74, 144, 217, 0.24), transparent 34%),
+    linear-gradient(180deg, rgba(3, 7, 18, 0.16), rgba(3, 7, 18, 0.28) 45%, rgba(3, 7, 18, 0.76)),
+    linear-gradient(90deg, rgba(3, 7, 18, 0.46), transparent 48%, rgba(3, 7, 18, 0.34));
+}
+
+.summary-screen--seoul .summary-overlay {
+  background:
+    linear-gradient(180deg, rgba(4, 8, 18, 0.26), rgba(4, 8, 18, 0.88)),
+    radial-gradient(circle at 50% 28%, rgba(74, 144, 217, 0.22), transparent 38%);
 }
 
 /* ══════════════════════════════════════════════════════════════
