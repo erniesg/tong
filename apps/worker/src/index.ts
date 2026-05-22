@@ -146,7 +146,7 @@ type IngestionResult = {
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, x-demo-password',
 };
 
