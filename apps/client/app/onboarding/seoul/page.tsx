@@ -8,9 +8,19 @@ function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
+const SEOUL_ONBOARDING_NPCS = ['haeun', 'jin'] as const;
+
+function resolveNpc(value: string | undefined): string {
+  if (value && SEOUL_ONBOARDING_NPCS.includes(value as (typeof SEOUL_ONBOARDING_NPCS)[number])) {
+    return value;
+  }
+
+  return SEOUL_ONBOARDING_NPCS[Math.floor(Math.random() * SEOUL_ONBOARDING_NPCS.length)];
+}
+
 export default function SeoulOnboardingPage({ searchParams }: SeoulOnboardingPageProps) {
   const params = new URLSearchParams();
-  const npc = firstParam(searchParams?.npc) || 'jin';
+  const npc = resolveNpc(firstParam(searchParams?.npc));
   const name = firstParam(searchParams?.name) || firstParam(searchParams?.playerName) || 'Player';
   const chineseName = firstParam(searchParams?.cn_name);
   const lang = firstParam(searchParams?.lang) || 'en';

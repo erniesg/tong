@@ -619,7 +619,7 @@ export default function GamePage() {
       const lang = gameState.explainIn.seoul ?? 'en';
       const onboardingParams = new URLSearchParams({
         dev_intro: '1',
-        npc: 'jin',
+        npc: pickNpcForCity('seoul'),
         name,
         lang,
       });

@@ -7,7 +7,8 @@ Corrected implementation shape:
 - Jin uses the same dynamic hangout runtime: `/game?dev_intro=1&npc=jin&name=Mina&lang=en&dev_act=2&qa_trace=1`.
 - Final proof route: `/game?dev_intro=1&dev_act=2&npc=jin&name=Mina&lang=en&qa_trace=1&qa_run_id=seoul-jin-dynamic-proof-final3`.
 - `/onboarding/seoul` is now only an alias into `/game?dev_intro=1`, not a separate UI shell.
-- Korean-priority profile onboarding performs a full navigation into `/game?dev_intro=1&npc=jin...` so the dynamic hangout remounts cleanly.
+- `/onboarding/seoul` defaults to a random Seoul companion (`haeun` or `jin`) unless `npc=haeun` or `npc=jin` is supplied.
+- Korean-priority profile onboarding performs a full navigation into `/game?dev_intro=1` with a random Seoul companion so the dynamic hangout remounts cleanly.
 
 What the stills prove:
 - Vertical mobile capture at `390x844`.
@@ -18,6 +19,7 @@ What the stills prove:
 - Hydrated runtime proof: QA hook exposed dynamic state and `/api/ai/hangout` returned `200` for the captured route.
 
 Files:
+- `seoul-jin-onboarding-proof.mp4`
 - `seoul-jin-onboarding-proof.webm`
 - `01-dynamic-cinematic-reveal.jpg`
 - `02-dynamic-jin-chat-pojangmacha.jpg`
