@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tong Design System</title>
-<!-- Design system snapshot | 121 variables, 1067 classes, 58 keyframes -->
+<!-- Design system snapshot | 121 variables, 1069 classes, 58 keyframes -->
 <style>
 /* ══════════════════════════════════════════════════════════════
    BLOCK 1: globals.css — verbatim embed (single source of truth)
@@ -2235,6 +2235,20 @@ button.nav-link:hover {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.cinematic-placeholder-media {
+  filter: saturate(1.03) contrast(1.02);
+  transform: scale(1.01);
+}
+
+.cinematic-placeholder-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.18)),
+    radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.08), transparent 42%);
 }
 .cinematic-video::-webkit-media-controls {
   display: none !important;
