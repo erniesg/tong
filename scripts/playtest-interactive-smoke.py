@@ -86,21 +86,20 @@ class InteractivePlaytest:
         return path
 
     async def get_annotation_count(self, page: Page) -> int:
-        """Read the annotation count from the pill toolbar."""
-        # Try expanded pill notes first
+        """Read the annotation count from the pill toolbar or JS state."""
+        # Try reading directly from React state via JS
+        try:
+            count = await page.evaluate("() => { const badge = document.querySelector('.playtest-pill-badge'); return badge ? parseInt(badge.textContent, 10) || 0 : 0; }")
+            if count > 0:
+                return count
+        except Exception:
+            pass
+        # Try expanded pill notes
         el = page.locator(".playtest-pill-notes")
         if await el.count() > 0:
             text = await el.text_content()
             try:
                 return int(text.split()[0])
-            except (ValueError, IndexError):
-                pass
-        # Try collapsed pill badge
-        badge = page.locator(".playtest-pill-badge")
-        if await badge.count() > 0:
-            text = await badge.text_content()
-            try:
-                return int(text.strip())
             except (ValueError, IndexError):
                 pass
         return 0
@@ -131,6 +130,7 @@ class InteractivePlaytest:
             context = await browser.new_context(
                 viewport=VIEWPORT,
                 user_agent=UA + " Chrome/124.0.0.0 Safari/537.36",
+                ignore_https_errors=True,
             )
             page = await context.new_page()
 
@@ -174,9 +174,9 @@ class InteractivePlaytest:
             count_before = await self.get_annotation_count(page)
             self.record("Initial annotation count is 0", count_before == 0, f"count={count_before}")
 
-            # 3. Use PEN tool — draw a circle on the game
-            print("\n[3/8] Drawing with pen tool...", flush=True)
-            pen_btn = page.locator(".playtest-tool[title='Pen']")
+            # 3. Use DRAW tool — draw a circle on the game
+            print("\n[3/8] Drawing with draw tool...", flush=True)
+            pen_btn = page.locator(".playtest-tool[title='Draw']")
             await pen_btn.evaluate("el => el.click()")
             await asyncio.sleep(0.3)
 
@@ -215,20 +215,19 @@ class InteractivePlaytest:
             await pen_btn.evaluate("el => el.click()")
             await asyncio.sleep(0.2)
 
-            # 4. Use HIGHLIGHT tool
-            print("\n[4/8] Highlighting area...", flush=True)
-            highlight_btn = page.locator(".playtest-tool[title='Highlight']")
-            await highlight_btn.evaluate("el => el.click()")
-            await asyncio.sleep(0.3)
-
-            highlight_active = await highlight_btn.evaluate("el => el.classList.contains('playtest-tool-active')")
-            self.record("Highlight tool activated", highlight_active)
+            # 4. Draw a second stroke (horizontal line)
+            print("\n[4/8] Drawing second stroke...", flush=True)
+            # Re-activate draw tool if not already active
+            pen_btn2 = page.locator(".playtest-tool[title='Draw']")
+            is_active = await pen_btn2.evaluate("el => el.classList.contains('playtest-tool-active')")
+            if not is_active:
+                await pen_btn2.evaluate("el => el.click()")
+                await asyncio.sleep(0.3)
 
             canvas = page.locator(".playtest-canvas")
             if await canvas.count() > 0:
                 box = await canvas.bounding_box()
                 if box:
-                    # Draw a horizontal highlight stroke
                     start_x = box["x"] + box["width"] * 0.2
                     end_x = box["x"] + box["width"] * 0.8
                     y = box["y"] + box["height"] * 0.4
@@ -239,69 +238,80 @@ class InteractivePlaytest:
                     await page.mouse.up()
                     await asyncio.sleep(0.3)
 
-                    count_after_hl = await self.get_annotation_count(page)
-                    self.record("Highlight created annotation", count_after_hl == 2, f"count={count_after_hl}")
-                    await self.screenshot(page, "after-highlight")
+                    count_after_stroke2 = await self.get_annotation_count(page)
+                    self.record("Second draw stroke created annotation", count_after_stroke2 == 2, f"count={count_after_stroke2}")
+                    await self.screenshot(page, "after-second-stroke")
 
-            await highlight_btn.evaluate("el => el.click()")
+            await pen_btn2.evaluate("el => el.click()")
             await asyncio.sleep(0.2)
 
             # 5. Use COMMENT tool — pin a comment
             print("\n[5/8] Pinning a comment...", flush=True)
-            comment_btn = page.locator(".playtest-tool[title='Comment']")
+            comment_btn = page.locator(".playtest-tool[title='Comment — tap screen to place']")
             await comment_btn.evaluate("el => el.click()")
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(0.5)
 
-            comment_active = await comment_btn.evaluate("el => el.classList.contains('playtest-tool-active')")
-            self.record("Comment tool activated", comment_active)
+            # After clicking Comment, pill collapses and place overlay appears
+            place_overlay = page.locator(".playtest-place-overlay")
+            overlay_visible = await place_overlay.count() > 0
+            self.record("Comment place overlay appeared", overlay_visible)
 
-            # Click on the game area to place comment pin
-            canvas = page.locator(".playtest-canvas")
-            if await canvas.count() > 0:
-                box = await canvas.bounding_box()
-                if box:
-                    await page.mouse.click(box["x"] + box["width"] * 0.6, box["y"] + box["height"] * 0.5)
+            if overlay_visible:
+                # Tap on the overlay to place a comment pin
+                vp = page.viewport_size
+                tap_x = int(vp["width"] * 0.6)
+                tap_y = int(vp["height"] * 0.5)
+                await page.mouse.click(tap_x, tap_y)
+                await asyncio.sleep(0.5)
+
+                # Comment textarea should appear in expanded pill
+                textarea = page.locator(".playtest-comment-input")
+                textarea_visible = await textarea.count() > 0
+                self.record("Comment textarea appeared", textarea_visible)
+
+                if textarea_visible:
+                    await textarea.fill("The Tong mascot animation is cute but the Skip button is hard to see")
+                    await asyncio.sleep(0.3)
+                    await self.screenshot(page, "comment-typed")
+
+                    # Click "Pin" to submit
+                    pin_btn = page.locator(".playtest-btn-small", has_text="Pin")
+                    await pin_btn.evaluate("el => el.click()")
                     await asyncio.sleep(0.5)
 
-                    # Comment popover should appear
-                    popover = page.locator(".playtest-comment-popover")
-                    popover_visible = await popover.count() > 0
-                    self.record("Comment popover appeared", popover_visible)
+                    count_after_comment = await self.get_annotation_count(page)
+                    self.record("Comment created annotation", count_after_comment == 3, f"count={count_after_comment}")
 
-                    if popover_visible:
-                        # Type a comment
-                        textarea = page.locator(".playtest-comment-input")
-                        await textarea.fill("The Tong mascot animation is cute but the Skip button is hard to see")
-                        await asyncio.sleep(0.3)
-                        await self.screenshot(page, "comment-typed")
+                    # Check marker dot appeared
+                    markers = page.locator(".playtest-marker")
+                    marker_count = await markers.count()
+                    self.record("Comment marker visible", marker_count > 0, f"markers={marker_count}")
 
-                        # Click "Pin" to submit
-                        pin_btn = page.locator(".playtest-btn-small", has_text="Pin")
-                        await pin_btn.evaluate("el => el.click()")
-                        await asyncio.sleep(0.5)
-
-                        count_after_comment = await self.get_annotation_count(page)
-                        self.record("Comment created annotation", count_after_comment == 3, f"count={count_after_comment}")
-
-                        # Check pin dot appeared
-                        pins = page.locator(".playtest-pin")
-                        pin_count = await pins.count()
-                        self.record("Comment pin dot visible", pin_count > 0, f"pins={pin_count}")
-
-                        await self.screenshot(page, "after-comment-pin")
+                    await self.screenshot(page, "after-comment-pin")
 
             # 6. Add second comment
             print("\n[6/8] Adding second comment...", flush=True)
-            canvas = page.locator(".playtest-canvas")
-            if await canvas.count() > 0:
-                box = await canvas.bounding_box()
-                if box:
-                    await page.mouse.click(box["x"] + box["width"] * 0.3, box["y"] + box["height"] * 0.7)
+            # Need to re-expand pill and click Comment again
+            pill_toggle = page.locator(".playtest-pill-toggle")
+            if await pill_toggle.count() > 0:
+                await pill_toggle.evaluate("el => el.click()")
+                await asyncio.sleep(0.3)
+
+            comment_btn2 = page.locator(".playtest-tool[title='Comment — tap screen to place']")
+            if await comment_btn2.count() > 0:
+                await comment_btn2.evaluate("el => el.click()")
+                await asyncio.sleep(0.5)
+
+                place_overlay = page.locator(".playtest-place-overlay")
+                if await place_overlay.count() > 0:
+                    vp = page.viewport_size
+                    tap_x = int(vp["width"] * 0.3)
+                    tap_y = int(vp["height"] * 0.7)
+                    await page.mouse.click(tap_x, tap_y)
                     await asyncio.sleep(0.5)
 
-                    popover = page.locator(".playtest-comment-popover")
-                    if await popover.count() > 0:
-                        textarea = page.locator(".playtest-comment-input")
+                    textarea = page.locator(".playtest-comment-input")
+                    if await textarea.count() > 0:
                         await textarea.fill("Expected tapping the character to show a translation tooltip")
                         pin_btn = page.locator(".playtest-btn-small", has_text="Pin")
                         await pin_btn.evaluate("el => el.click()")
@@ -317,9 +327,9 @@ class InteractivePlaytest:
             final_count = await self.get_annotation_count(page)
             self.record("Final annotation count >= 3", final_count >= 3, f"count={final_count}")
 
-            # Check all pin dots
-            total_pins = await page.locator(".playtest-pin").count()
-            self.record("Multiple comment pins visible", total_pins >= 2, f"pins={total_pins}")
+            # Check all marker dots
+            total_markers = await page.locator(".playtest-marker").count()
+            self.record("Multiple comment markers visible", total_markers >= 2, f"markers={total_markers}")
 
             # Save console logs
             write_json(self.logs_dir / "console-messages.json", console_messages)
