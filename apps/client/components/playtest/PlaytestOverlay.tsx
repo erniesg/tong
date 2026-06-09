@@ -88,6 +88,33 @@ const freezeAnimationsInClone = (clonedDoc: Document) => {
   });
 };
 
+/* The game loads cross-origin images (assets.tong.berlayar.ai) as plain
+   <img>, so the browser caches them without CORS approval; html2canvas's
+   crossOrigin re-fetch then hits that cache entry and fails, dropping the
+   image from captures. In the clone: add a query param so fetches bypass
+   the poisoned entry (R2 ignores query strings), AND mark the clone img
+   crossorigin — otherwise the clone iframe's own plain load poisons the
+   busted URL before html2canvas's CORS loader gets to it. */
+const bustCrossOriginImagesInClone = (clonedDoc: Document) => {
+  clonedDoc.querySelectorAll('img').forEach((img) => {
+    const src = img.getAttribute('src') || '';
+    if (!src || src.startsWith('data:') || src.startsWith('blob:')) return;
+    try {
+      const u = new URL(src, window.location.href);
+      if (u.origin !== window.location.origin) {
+        u.searchParams.set('playtest-cors', '1');
+        img.setAttribute('crossorigin', 'anonymous');
+        img.setAttribute('src', u.toString());
+      }
+    } catch { /* relative or malformed — leave as-is */ }
+  });
+};
+
+const prepareClone = (clonedDoc: Document) => {
+  freezeAnimationsInClone(clonedDoc);
+  bustCrossOriginImagesInClone(clonedDoc);
+};
+
 const snapshotOptions = (scale: number) => ({
   backgroundColor: '#0d0d1a',
   scale,
@@ -99,9 +126,13 @@ const snapshotOptions = (scale: number) => ({
   scrollY: 0,
   logging: false,
   useCORS: true,
-  allowTaint: true,
+  // allowTaint must stay false: one tainted snapshot painted onto the
+  // recording canvas permanently kills its captureStream (no frames, no
+  // error). Non-CORS images are skipped instead — game asset hosts must
+  // serve CORS headers (tong-assets R2 bucket has a CORS rule for this).
+  allowTaint: false,
   ignoreElements: ignorePlaytestElements,
-  onclone: freezeAnimationsInClone,
+  onclone: prepareClone,
 });
 
 /* Capture the visible page with animation state preserved */
