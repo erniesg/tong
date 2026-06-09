@@ -138,6 +138,7 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
       tabIndex={autoAdvance ? undefined : 0}
     >
       <video
+        crossOrigin="anonymous"
         ref={videoRef}
         src={activeVideoUrl}
         playsInline

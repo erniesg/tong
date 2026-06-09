@@ -1100,6 +1100,7 @@ export default function GamePageClient({
           {entryPhase === 'opening' && (
             <div className="tg-opening-video-wrap">
               <video
+                crossOrigin="anonymous"
                 ref={openingVideoRef}
                 className="tg-opening-video"
                 src={OPENING_ANIMATION_PATH}
@@ -1152,6 +1153,7 @@ export default function GamePageClient({
           {entryPhase === 'tong-intro' && (
             <div className="tg-tong-intro">
               <video
+                crossOrigin="anonymous"
                 className="tg-tong-intro-video"
                 autoPlay
                 muted

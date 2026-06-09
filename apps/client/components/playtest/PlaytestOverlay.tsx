@@ -110,9 +110,60 @@ const bustCrossOriginImagesInClone = (clonedDoc: Document) => {
   });
 };
 
+/* html2canvas cannot render <video> elements — cinematic scenes captured as
+   black boxes. Before cloning, grab each playing video's current frame as a
+   data URL (taint-tested on a scratch canvas so a non-CORS video can never
+   poison the recording canvas); in the clone, swap the video for an <img>
+   with the same box. Game videos carry crossorigin="anonymous" so the grab
+   stays origin-clean. */
+const VIDEO_FRAME_ATTR = 'data-playtest-video-frame';
+
+const tagVideoFrames = (): Element[] => {
+  const tagged: Element[] = [];
+  document.querySelectorAll('video').forEach((v) => {
+    if (v.readyState < 2 || v.videoWidth === 0) return;
+    const rect = v.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    try {
+      const scratch = document.createElement('canvas');
+      const scale = Math.min(1, 640 / v.videoWidth);
+      scratch.width = Math.max(2, Math.round(v.videoWidth * scale));
+      scratch.height = Math.max(2, Math.round(v.videoHeight * scale));
+      const ctx = scratch.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(v, 0, 0, scratch.width, scratch.height);
+      // PNG keeps alpha for transparent overlay videos; JPEG otherwise
+      const corner = ctx.getImageData(0, 0, 1, 1).data; // throws if tainted
+      const hasAlpha = corner[3] < 255;
+      const url = scratch.toDataURL(hasAlpha ? 'image/png' : 'image/jpeg', 0.7);
+      v.setAttribute(VIDEO_FRAME_ATTR, url);
+      tagged.push(v);
+    } catch { /* tainted or unreadable — leave as-is (renders blank) */ }
+  });
+  return tagged;
+};
+
+const swapVideosInClone = (clonedDoc: Document) => {
+  clonedDoc.querySelectorAll(`video[${VIDEO_FRAME_ATTR}]`).forEach((v) => {
+    const frame = v.getAttribute(VIDEO_FRAME_ATTR);
+    if (!frame) return;
+    const img = clonedDoc.createElement('img');
+    img.src = frame;
+    img.className = v.className;
+    img.setAttribute('style', v.getAttribute('style') || '');
+    const view = clonedDoc.defaultView || window;
+    const cs = view.getComputedStyle(v);
+    img.style.width = cs.width;
+    img.style.height = cs.height;
+    img.style.objectFit = cs.objectFit || 'cover';
+    v.replaceWith(img);
+  });
+};
+
 const prepareClone = (clonedDoc: Document) => {
   freezeAnimationsInClone(clonedDoc);
   bustCrossOriginImagesInClone(clonedDoc);
+  swapVideosInClone(clonedDoc);
 };
 
 const snapshotOptions = (scale: number) => ({
@@ -135,13 +186,15 @@ const snapshotOptions = (scale: number) => ({
   onclone: prepareClone,
 });
 
-/* Capture the visible page with animation state preserved */
+/* Capture the visible page with animation and video state preserved */
 const captureDom = async (scale: number): Promise<HTMLCanvasElement> => {
   const tagged = tagAnimatedElements();
+  const taggedVideos = tagVideoFrames();
   try {
     return await html2canvas(document.documentElement, snapshotOptions(scale));
   } finally {
     tagged.forEach((el) => el.removeAttribute(FREEZE_ATTR));
+    taggedVideos.forEach((el) => el.removeAttribute(VIDEO_FRAME_ATTR));
   }
 };
 

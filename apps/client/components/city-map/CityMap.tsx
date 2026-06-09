@@ -258,6 +258,7 @@ export function CityMap({
       {meta.hasVideo && videoSrc ? (
         <>
           <video
+            crossOrigin="anonymous"
             ref={videoARef}
             key={`${city}-A`}
             className="city-map__bg city-map__bg--dissolve"
@@ -278,6 +279,7 @@ export function CityMap({
             <source src={videoSrc} type="video/mp4" />
           </video>
           <video
+            crossOrigin="anonymous"
             ref={videoBRef}
             key={`${city}-B`}
             className="city-map__bg city-map__bg--dissolve"
