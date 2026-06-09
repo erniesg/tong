@@ -146,7 +146,7 @@ type IngestionResult = {
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, x-demo-password',
 };
 
@@ -2827,10 +2827,11 @@ async function handleRequest(request: Request): Promise<Response> {
       if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
       const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/recording.webm`);
       if (!obj) return jsonResponse(404, { error: 'no_recording' });
+      const recordingType = obj.httpMetadata?.contentType || 'video/webm';
       if (request.method === 'HEAD') {
         return new Response(null, {
           headers: {
-            'Content-Type': 'video/webm',
+            'Content-Type': recordingType,
             'Content-Length': String(obj.size),
             'Access-Control-Allow-Origin': '*',
           },
@@ -2838,7 +2839,7 @@ async function handleRequest(request: Request): Promise<Response> {
       }
       return new Response(obj.body, {
         headers: {
-          'Content-Type': 'video/webm',
+          'Content-Type': recordingType,
           'Access-Control-Allow-Origin': '*',
           'Cache-Control': 'max-age=300',
         },
@@ -2935,8 +2936,10 @@ async function handleRequest(request: Request): Promise<Response> {
         const annotations = formData.get('annotations');
 
         if (recording && recording instanceof File) {
+          // Key stays recording.webm (analyzer + GET proxy depend on it), but
+          // store the real container type (Safari records video/mp4)
           await env.TONG_RUNS_BUCKET.put(r2RecordingKey, recording.stream(), {
-            httpMetadata: { contentType: 'video/webm' },
+            httpMetadata: { contentType: recording.type || 'video/webm' },
           });
         }
 

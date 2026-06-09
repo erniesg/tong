@@ -36,7 +36,8 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
       const formData = new FormData();
       // Only include recording if it has actual content (not the empty fallback blob)
       if (data.recording.size > 0) {
-        formData.append('recording', data.recording, `${sessionId}.webm`);
+        const ext = data.recording.type.includes('mp4') ? 'mp4' : 'webm';
+        formData.append('recording', data.recording, `${sessionId}.${ext}`);
       }
       formData.append('annotations', JSON.stringify(data.annotations));
       if (data.stateLog) {
