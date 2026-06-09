@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { sessionLogger } from '@/lib/debug/session-logger';
 import { getPublicApiBase } from '@/lib/public-api-base';
+import { takeDisplayStream } from '@/lib/playtest/display-stream';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -165,6 +166,12 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   // Filmstrip: periodic full-DOM screenshots for playback on mobile
   const filmstripRef = useRef<{ ts: number; blob: Blob }[]>([]);
 
+  // Continuous upload: stream recorder chunks to the server during the
+  // session so abandoned sessions (tab closed, no Submit) still have video
+  const uploadedChunkCountRef = useRef(0);
+  const chunkSeqRef = useRef(0);
+  const chunkFlushBusyRef = useRef(false);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
   const currentPath = useRef<string[]>([]);
@@ -254,7 +261,9 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     }
   }, []);
 
-  /* ── Recording: snapshot canvas captureStream → screenshots-only ── */
+  /* ── Recording: HD display stream → snapshot canvas → screenshots-only ── */
+
+  const displayStreamRef = useRef<MediaStream | null>(null);
 
   const startRecordingFromStream = useCallback((stream: MediaStream) => {
     const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
@@ -278,10 +287,23 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       setRecordingTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }, 1000);
 
-    // Note: getDisplayMedia is deliberately not used here — it requires a
-    // user gesture (recording auto-starts) and is unsupported on mobile.
+    // Tier 1: HD screen share handed over from the /playtest entry page,
+    // where the user gesture happened (getDisplayMedia can't be called here —
+    // recording auto-starts with no gesture, and mobile doesn't support it).
+    const shared = takeDisplayStream();
+    if (shared) {
+      displayStreamRef.current = shared;
+      shared.getVideoTracks()[0]?.addEventListener('ended', () => {
+        // User stopped sharing via browser UI — keep what we recorded
+        const rec = mediaRecorderRef.current;
+        if (rec && rec.state !== 'inactive') rec.stop();
+        displayStreamRef.current = null;
+      });
+      startRecordingFromStream(shared);
+      return;
+    }
 
-    // Tier 1: record the snapshot canvas — works on any DOM-rendered scene
+    // Tier 2: record the snapshot canvas — works on any DOM-rendered scene
     try {
       const fc = ensureFrameCaptureCanvas();
       if (typeof fc.captureStream === 'function') {
@@ -291,7 +313,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       }
     } catch { /* fall through */ }
 
-    // Tier 2: screenshots only — no video recording
+    // Tier 3: screenshots only — no video recording
     setIsRecording(true);
   }, [ensureFrameCaptureCanvas, startRecordingFromStream]);
 
@@ -363,6 +385,43 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     }, SNAPSHOT_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [captureSnapshot]);
+
+  /* ── Continuous chunk upload ────────────────────────────────────── */
+
+  // Send recorder chunks accumulated since the last flush. Chunks from one
+  // MediaRecorder session concatenate into a playable file server-side, so
+  // even sessions that never hit Submit leave a recording behind.
+  const flushChunks = useCallback(async (keepalive = false) => {
+    if (chunkFlushBusyRef.current) return;
+    const pending = chunksRef.current.slice(uploadedChunkCountRef.current);
+    if (pending.length === 0) return;
+    chunkFlushBusyRef.current = true;
+    const seq = chunkSeqRef.current;
+    const body = new Blob(pending, { type: recordingMimeRef.current });
+    // keepalive bodies are capped (~64KB); a few seconds of low-fps video
+    // fits, but skip rather than fail loudly if this flush is too large
+    if (keepalive && body.size > 60_000) {
+      chunkFlushBusyRef.current = false;
+      return;
+    }
+    try {
+      const res = await fetch(
+        `${getPublicApiBase()}/api/v1/playtest/sessions/${sessionId}/recording-chunks?seq=${seq}`,
+        { method: 'POST', body, keepalive },
+      );
+      if (res.ok) {
+        uploadedChunkCountRef.current += pending.length;
+        chunkSeqRef.current = seq + 1;
+      }
+    } catch { /* retry on next flush */ } finally {
+      chunkFlushBusyRef.current = false;
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    const interval = setInterval(() => { void flushChunks(); }, 10_000);
+    return () => clearInterval(interval);
+  }, [flushChunks]);
 
   /* ── Draggable pill ─────────────────────────────────────────────── */
 
@@ -642,25 +701,24 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const uploadUrl = `${getPublicApiBase()}/api/v1/playtest/sessions/${sessionId}/upload`;
 
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (annotations.length > 0 || chunksRef.current.length > 0) {
+    // partial=1: save artifacts without finalizing the session — hiding the
+    // tab or navigating away must not mark it submitted or trigger analysis
+    const savePartial = () => {
+      void flushChunks(true);
+      if (annotations.length > 0) {
         const formData = new FormData();
         formData.append('annotations', JSON.stringify(annotations));
-        navigator.sendBeacon?.(uploadUrl, formData);
+        navigator.sendBeacon?.(`${uploadUrl}?partial=1`, formData);
+      }
+    };
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (annotations.length > 0 || chunksRef.current.length > 0) {
+        savePartial();
         e.preventDefault();
       }
     };
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && annotations.length > 0) {
-        const formData = new FormData();
-        formData.append('annotations', JSON.stringify(annotations));
-        if (chunksRef.current.length > 0) {
-          const mime = recordingMimeRef.current;
-          const ext = mime.includes('mp4') ? 'mp4' : 'webm';
-          formData.append('recording', new Blob(chunksRef.current, { type: mime }), `${sessionId}.${ext}`);
-        }
-        navigator.sendBeacon?.(uploadUrl, formData);
-      }
+      if (document.visibilityState === 'hidden') savePartial();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -668,7 +726,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [annotations, sessionId, uploadUrl]);
+  }, [annotations, sessionId, uploadUrl, flushChunks]);
 
   /* ── Cleanup ────────────────────────────────────────────────────── */
 
@@ -677,6 +735,10 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       if (timerRef.current) clearInterval(timerRef.current);
       if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
       if (frameCaptureRef.current) { frameCaptureRef.current.remove(); frameCaptureRef.current = null; }
+      if (displayStreamRef.current) {
+        displayStreamRef.current.getTracks().forEach((t) => t.stop());
+        displayStreamRef.current = null;
+      }
       drawHistory.current = [];
       // Revoke all thumbnail URLs
       thumbnails.forEach((url) => URL.revokeObjectURL(url));
