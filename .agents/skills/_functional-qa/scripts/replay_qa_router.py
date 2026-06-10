@@ -25,6 +25,7 @@ PROTECTED_PATH_PREFIXES = (
     "scripts/deploy",
     "scripts/release",
 )
+DEFAULT_CODEX_WORKFLOW = "codex-headless-pr.yml"
 
 
 def utc_iso() -> str:
@@ -269,6 +270,60 @@ def render_issue_body(finding: dict[str, Any], decision: dict[str, Any]) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
+def direct_pr_branch(args: argparse.Namespace, finding: dict[str, Any]) -> str:
+    explicit = clean_text(getattr(args, "codex_branch", ""))
+    if explicit:
+        if not explicit.startswith("codex/"):
+            raise ValueError("direct PR branch must start with `codex/`")
+        return explicit
+    suffix = finding["dedupe_key"].removeprefix("rrweb-")
+    return f"codex/replay-qa-{suffix}"
+
+
+def direct_pr_title(args: argparse.Namespace, finding: dict[str, Any]) -> str:
+    explicit = clean_text(getattr(args, "codex_pr_title", ""))
+    if explicit:
+        return explicit
+    return f"fix: {finding['title']}"[:120]
+
+
+def render_direct_pr_prompt(finding: dict[str, Any], decision: dict[str, Any]) -> str:
+    proof = finding.get("proof") or {}
+    checks = "\n".join(f"- {check}" for check in acceptance_checks(finding))
+    proof_lines = "\n".join(f"- {key}: {value}" for key, value in proof.items()) or "- none"
+    return (
+        "Fix this replay-reviewed UX finding from Tong QA.\n\n"
+        f"Dedupe key: {finding['dedupe_key']}\n"
+        f"Session: {finding['session_id']}\n"
+        f"Replay timestamp: {finding['replay_timestamp']}\n"
+        f"Surface: {finding['surface']}\n"
+        f"Route: {finding['route']}\n"
+        f"Severity: {finding['severity_label']} ({finding['severity']}/5)\n"
+        f"Component hint: {finding['component_hint']}\n\n"
+        f"Finding:\n{finding['description']}\n\n"
+        f"Reviewer-visible proof:\n{proof_lines}\n\n"
+        "Acceptance checks for the fix:\n"
+        f"{checks}\n\n"
+        "Use the same rrweb replay/render path for verification evidence. Do not run branch app/test code with write tokens in the environment. "
+        "If the finding turns out to be subjective or unsafe for unattended work, stop and report `human_review` with the reason.\n"
+        f"Routing reason: {decision['reason']} (confidence {decision['confidence']:.2f}).\n"
+    )
+
+
+def build_codex_dispatch(args: argparse.Namespace, finding: dict[str, Any], decision: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "workflow": DEFAULT_CODEX_WORKFLOW,
+        "base_branch": clean_text(getattr(args, "base_branch", "main") or "main"),
+        "branch": direct_pr_branch(args, finding),
+        "pr_title": direct_pr_title(args, finding),
+        "pr_body": render_issue_body(finding, decision),
+        "issue_ref": clean_text(getattr(args, "issue_ref", "")),
+        "route": finding["route"],
+        "auto_qa_publish": bool(getattr(args, "auto_qa_publish", True)),
+        "prompt": render_direct_pr_prompt(finding, decision),
+    }
+
+
 def choose_decision(args: argparse.Namespace, finding: dict[str, Any], existing_issue: dict[str, Any] | None) -> dict[str, Any]:
     if not public_proof_available(finding):
         return {"decision": "skip", "reason": "missing reviewer-visible proof URL", "confidence": 0.35}
@@ -308,11 +363,45 @@ def apply_github_mutation(args: argparse.Namespace, finding: dict[str, Any], dec
             capture_output=True,
             check=False,
         )
+    elif decision["decision"] == "direct_pr":
+        dispatch = build_codex_dispatch(args, finding, decision)
+        result = subprocess.run(
+            [
+                "gh",
+                "workflow",
+                "run",
+                dispatch["workflow"],
+                "--repo",
+                repo,
+                "-f",
+                f"prompt={dispatch['prompt']}",
+                "-f",
+                f"base_branch={dispatch['base_branch']}",
+                "-f",
+                f"branch={dispatch['branch']}",
+                "-f",
+                f"pr_title={dispatch['pr_title']}",
+                "-f",
+                f"pr_body={dispatch['pr_body']}",
+                "-f",
+                f"issue_ref={dispatch['issue_ref']}",
+                "-f",
+                f"route={dispatch['route']}",
+                "-f",
+                f"auto_qa_publish={str(dispatch['auto_qa_publish']).lower()}",
+            ],
+            cwd=str(REPO_ROOT),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
     else:
         return {"applied": False, "reason": f"decision `{decision['decision']}` has no GitHub mutation"}
 
     if result.returncode != 0:
         return {"applied": False, "error": result.stderr.strip() or result.stdout.strip()}
+    if decision["decision"] == "direct_pr":
+        return {"applied": True, "workflow": DEFAULT_CODEX_WORKFLOW}
     return {"applied": True, "url": result.stdout.strip()}
 
 
@@ -338,6 +427,8 @@ def build_routing_summary(args: argparse.Namespace, finding: dict[str, Any], led
             "checks": acceptance_checks(finding),
         },
     }
+    if decision["decision"] == "direct_pr":
+        summary["codex_dispatch"] = build_codex_dispatch(args, finding, decision)
     if args.apply:
         summary["github_mutation"] = apply_github_mutation(args, finding, decision)
     return summary
@@ -411,6 +502,11 @@ def build_parser() -> argparse.ArgumentParser:
     route.add_argument("--lane-count", type=int, default=1)
     route.add_argument("--touched-path", action="append", default=[])
     route.add_argument("--design-ambiguous", action="store_true")
+    route.add_argument("--base-branch", default="main", help="Base branch for direct Codex PR dispatch.")
+    route.add_argument("--codex-branch", default="", help="Optional codex/* branch for direct PR dispatch.")
+    route.add_argument("--codex-pr-title", default="", help="Optional PR title for direct Codex dispatch.")
+    route.add_argument("--issue-ref", default="", help="Optional issue ref to pass through direct Codex dispatch.")
+    route.add_argument("--auto-qa-publish", action=argparse.BooleanOptionalAction, default=True)
     route.set_defaults(func=command_route)
     return parser
 

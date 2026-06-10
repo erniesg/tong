@@ -118,6 +118,39 @@ class ReplayQaRouterTests(unittest.TestCase):
         self.assertEqual(summary["routing"]["decision"], "human_review")
         self.assertIn("protected paths", summary["routing"]["reason"])
 
+    @patch("replay_qa_router.find_existing_issue", return_value=None)
+    @patch("replay_qa_router.subprocess.run")
+    def test_apply_direct_pr_dispatches_codex_workflow(self, mock_run, _mock_find):
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = ""
+        mock_run.return_value.stderr = ""
+        finding = router.normalize_finding(sample_raw())
+        args = Namespace(
+            repo="erniesg/tong",
+            apply=True,
+            prefer_direct_pr=True,
+            safe_unattended=True,
+            portable_context=True,
+            lane_count=1,
+            touched_path=[],
+            design_ambiguous=False,
+            base_branch="main",
+            codex_branch="",
+            codex_pr_title="",
+            issue_ref="",
+            auto_qa_publish=False,
+        )
+
+        summary = router.build_routing_summary(args, finding, {"schema_version": "1", "findings": []})
+
+        self.assertEqual(summary["routing"]["decision"], "direct_pr")
+        self.assertEqual(summary["github_mutation"], {"applied": True, "workflow": "codex-headless-pr.yml"})
+        command = mock_run.call_args.args[0]
+        self.assertEqual(command[:5], ["gh", "workflow", "run", "codex-headless-pr.yml", "--repo"])
+        self.assertTrue(any(part.startswith("branch=codex/replay-qa-") for part in command))
+        self.assertIn("base_branch=main", command)
+        self.assertTrue(any(part.startswith("prompt=Fix this replay-reviewed UX finding") for part in command))
+
     def test_issue_body_contains_replay_verification_path(self):
         finding = router.normalize_finding(sample_raw())
         body = router.render_issue_body(

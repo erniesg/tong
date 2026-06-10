@@ -54,6 +54,20 @@ Use `--prefer-direct-pr` only when the finding is safe for unattended implementa
 - no protected path edits
 - no design ambiguity
 
+Dry-run summaries include the generated `codex-headless-pr.yml` dispatch payload for `direct_pr` decisions. In apply mode, the router triggers that workflow from the trusted shell:
+
+```bash
+npm run qa:route-replay-finding -- route \
+  --finding /path/to/finding.json \
+  --prefer-direct-pr \
+  --safe-unattended \
+  --portable-context \
+  --base-branch main \
+  --apply
+```
+
+Do not run the router with write-token environment variables while executing untrusted branch code. The apply step should be a short trusted control-plane action only.
+
 ## Verification
 
 The dispatch summary includes reviewer-proof instructions that reuse the same rrweb session and timestamp. The expected verification path is to rerender or cite the same rrweb replay evidence, then post reviewer-visible proof links to the issue or PR.
