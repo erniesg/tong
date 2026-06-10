@@ -2877,6 +2877,109 @@ async function handleRequest(request: Request): Promise<Response> {
       return jsonResponse(200, { ok: true, seq });
     }
 
+    // Receive an rrweb event batch during an active session. Mirrors the
+    // recording-chunks contract: stores the batch, never flips status or
+    // dispatches anything. ?gz=1 marks a CompressionStream-gzipped body.
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/rrweb-events$/) && request.method === 'POST') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const row = await env.DB.prepare(
+        `SELECT session_id FROM playtest_sessions WHERE session_id = ?`
+      ).bind(sessionId).first();
+      if (!row) return jsonResponse(404, { error: 'session_not_found', sessionId });
+      const seq = parseInt(url.searchParams.get('seq') || '', 10);
+      if (!Number.isFinite(seq) || seq < 0 || seq > 99999) {
+        return jsonResponse(400, { error: 'invalid_seq' });
+      }
+      const gzipped = url.searchParams.get('gz') === '1';
+      const key = `playtest/${sessionId}/rrweb/batch-${String(seq).padStart(5, '0')}.json`;
+      await env.TONG_RUNS_BUCKET.put(key, request.body, {
+        httpMetadata: {
+          contentType: 'application/json',
+          ...(gzipped ? { contentEncoding: 'gzip' } : {}),
+        },
+      });
+      return jsonResponse(200, { ok: true, seq });
+    }
+
+    // rrweb batch manifest — the replayer fetches batches individually
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/rrweb-events$/) && request.method === 'GET') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const listing = await env.TONG_RUNS_BUCKET.list({ prefix: `playtest/${sessionId}/rrweb/` });
+      if (!listing.objects.length) return jsonResponse(404, { error: 'no_rrweb_events' });
+      const batches = listing.objects
+        .map((o: { key: string; size: number }) => ({
+          name: o.key.split('/').pop()!,
+          size: o.size,
+        }))
+        .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name));
+      return jsonResponse(200, { sessionId, count: batches.length, batches });
+    }
+
+    // Serve a single rrweb batch, decompressed (stored gzip-encoded batches
+    // are piped through DecompressionStream so consumers always see JSON)
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/rrweb-events\/batch-\d{5}\.json$/) && request.method === 'GET') {
+      const parts = pathname.split('/');
+      const sessionId = parts[5];
+      const filename = parts[7];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/rrweb/${filename}`);
+      if (!obj) return jsonResponse(404, { error: 'not_found' });
+      const body = obj.httpMetadata?.contentEncoding === 'gzip'
+        ? obj.body.pipeThrough(new DecompressionStream('gzip'))
+        : obj.body;
+      return new Response(body, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'max-age=300',
+        },
+      });
+    }
+
+    // Store the headless rrweb render (Phase 3 of the rrweb pipeline)
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/rrweb-render$/) && request.method === 'PUT') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const key = `playtest/${sessionId}/rrweb-render.webm`;
+      await env.TONG_RUNS_BUCKET.put(key, request.body, {
+        httpMetadata: { contentType: request.headers.get('content-type') || 'video/webm' },
+      });
+      const publicBase = env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai';
+      return jsonResponse(200, { ok: true, key, url: `${publicBase}/${key}` });
+    }
+
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/rrweb-render$/) && (request.method === 'GET' || request.method === 'HEAD')) {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/rrweb-render.webm`);
+      if (!obj) return jsonResponse(404, { error: 'no_rrweb_render' });
+      const renderType = obj.httpMetadata?.contentType || 'video/webm';
+      if (request.method === 'HEAD') {
+        return new Response(null, {
+          headers: {
+            'Content-Type': renderType,
+            'Content-Length': String(obj.size),
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      }
+      return new Response(obj.body, {
+        headers: {
+          'Content-Type': renderType,
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'max-age=300',
+        },
+      });
+    }
+
     // Proxy recording from R2 (avoids CORS on direct R2 access)
     if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/recording$/) && (request.method === 'GET' || request.method === 'HEAD')) {
       const sessionId = pathname.split('/')[5];

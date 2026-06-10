@@ -5,6 +5,7 @@ import html2canvas from 'html2canvas';
 import { sessionLogger } from '@/lib/debug/session-logger';
 import { getPublicApiBase } from '@/lib/public-api-base';
 import { takeDisplayStream } from '@/lib/playtest/display-stream';
+import { startRrwebRecording, type RrwebRecorderHandle } from '@/lib/playtest/rrweb-recorder';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -256,6 +257,10 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const chunkSeqRef = useRef(0);
   const chunkFlushBusyRef = useRef(false);
 
+  // rrweb DOM event recording — the canonical capture; the snapshot/
+  // MediaRecorder pipeline above stays as fallback
+  const rrwebRef = useRef<RrwebRecorderHandle | null>(null);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
   const currentPath = useRef<string[]>([]);
@@ -283,6 +288,9 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       fc.width = Math.max(2, Math.floor(window.innerWidth / 2) & ~1);
       fc.height = Math.max(2, Math.floor(window.innerHeight / 2) & ~1);
       fc.style.display = 'none';
+      // rr-block: keep rrweb from recording this canvas — every 2.5s paint
+      // would otherwise land in the event stream as a ~1.4MB canvas mutation
+      fc.className = 'rr-block';
       document.body.appendChild(fc);
       const ctx = fc.getContext('2d');
       if (ctx) {
@@ -403,6 +411,9 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
 
   const stopAndSubmit = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    // Final rrweb flush — async, doesn't gate the snapshot upload
+    void rrwebRef.current?.stop();
+    rrwebRef.current = null;
     // Snapshot final state before submitting
     if (typeof window !== 'undefined' && // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__TONG_QA__) {
@@ -444,7 +455,20 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     });
 
     const timer = setTimeout(() => startRecording(), 1500);
-    return () => clearTimeout(timer);
+
+    // rrweb starts immediately — its full snapshot captures the initial DOM
+    let cancelled = false;
+    void startRrwebRecording(sessionId).then((handle) => {
+      if (cancelled) { void handle?.stop(); return; }
+      rrwebRef.current = handle;
+    });
+
+    return () => {
+      clearTimeout(timer);
+      cancelled = true;
+      void rrwebRef.current?.stop();
+      rrwebRef.current = null;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startRecording]);
 
@@ -789,6 +813,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     // tab or navigating away must not mark it submitted or trigger analysis
     const savePartial = () => {
       void flushChunks(true);
+      void rrwebRef.current?.flush(true);
       if (annotations.length > 0) {
         const formData = new FormData();
         formData.append('annotations', JSON.stringify(annotations));
