@@ -603,8 +603,11 @@ export async function analyzePlaytestSession(args) {
     contextParts.push(`User comments (with AI clarifications):\n${args.commentsJson}`);
   }
 
-  // If we have a video file, upload it first
+  // If we have a video file, upload it first. The sniffed container type
+  // must travel with the fileUri — Gemini 400s when the declared mime
+  // (analyzeVideo defaults to video/mp4) mismatches the uploaded bytes.
   let fileUri = args.fileUri;
+  let mimeType = args.mimeType;
   if (!fileUri && args.videoPath) {
     const uploaded = await uploadVideo({
       filePath: args.videoPath,
@@ -612,6 +615,7 @@ export async function analyzePlaytestSession(args) {
       mimeType: args.videoPath.endsWith('.mp4') ? 'video/mp4' : 'video/webm',
     });
     fileUri = uploaded.fileUri;
+    mimeType = uploaded.mimeType;
   }
   if (!fileUri && args.videoUrl) {
     const uploaded = await uploadVideo({
@@ -620,6 +624,7 @@ export async function analyzePlaytestSession(args) {
       mimeType: args.videoUrl.endsWith('.mp4') ? 'video/mp4' : 'video/webm',
     });
     fileUri = uploaded.fileUri;
+    mimeType = uploaded.mimeType;
   }
 
   if (!fileUri) {
@@ -628,6 +633,7 @@ export async function analyzePlaytestSession(args) {
 
   return analyzeVideo({
     fileUri,
+    mimeType,
     prompt,
     model: args.model || (preset === ANALYSIS_PRESETS.ux_friction ? 'pro' : 'flash'),
     mediaResolution: args.mediaResolution || 'low',

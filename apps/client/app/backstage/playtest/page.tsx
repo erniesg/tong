@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { RrwebReplay, type RrwebEventJson } from '@/components/playtest/RrwebReplay';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -81,7 +82,7 @@ interface StateLog {
   entries: StateLogEntry[];
 }
 
-type ViewerTab = 'filmstrip' | 'annotations' | 'gallery' | 'analysis' | 'statelog' | 'trace';
+type ViewerTab = 'replay' | 'filmstrip' | 'annotations' | 'gallery' | 'analysis' | 'statelog' | 'trace';
 
 /* ── API ──────────────────────────────────────────────────────────── */
 
@@ -185,6 +186,27 @@ async function fetchAgentTrace(sessionId: string): Promise<Record<string, unknow
   } catch { return null; }
 }
 
+// rrweb events stream in numbered batches; the manifest lists them in order
+async function fetchRrwebEvents(sessionId: string): Promise<RrwebEventJson[] | null> {
+  try {
+    const base = `${API_BASE}/api/v1/playtest/sessions/${sessionId}/rrweb-events`;
+    const res = await fetch(base);
+    if (!res.ok) return null;
+    const manifest = await res.json();
+    const batches: RrwebEventJson[][] = await Promise.all(
+      (manifest.batches || []).map((b: { name: string }) =>
+        fetch(`${base}/${b.name}`)
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => []),
+      ),
+    );
+    const events = batches.flat();
+    return events.length >= 2 ? events : null;
+  } catch {
+    return null;
+  }
+}
+
 /* ── Helpers ──────────────────────────────────────────────────────── */
 
 const fmt = (s: number) =>
@@ -259,6 +281,7 @@ export default function PlaytestViewerPage() {
   const [filmstrip, setFilmstrip] = useState<{ ts: number; url: string }[]>([]);
   const [filmstripIdx, setFilmstripIdx] = useState(0);
   const [filmstripPlaying, setFilmstripPlaying] = useState(false);
+  const [rrwebEvents, setRrwebEvents] = useState<RrwebEventJson[] | null>(null);
   const [activeTab, setActiveTab] = useState<ViewerTab>('filmstrip');
   const [activeAnnotation, setActiveAnnotation] = useState<string | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
@@ -299,11 +322,12 @@ export default function PlaytestViewerPage() {
     setStateLog(null);
     setAnalysis(null);
     setAgentTrace(null);
+    setRrwebEvents(null);
     setExpandedLogEntries(new Set());
     setActiveTab('filmstrip');
     setLoadingData(true);
 
-    const [anns, log, anal, trace, filmstripData] = await Promise.all([
+    const [anns, log, anal, trace, filmstripData, rrweb] = await Promise.all([
       fetchAnnotations(sessionId),
       fetchStateLog(sessionId),
       fetchAnalysis(sessionId),
@@ -311,6 +335,7 @@ export default function PlaytestViewerPage() {
       fetch(`${API_BASE}/api/v1/playtest/sessions/${sessionId}/filmstrip`)
         .then((r) => r.ok ? r.json() : [])
         .catch(() => []) as Promise<{ ts: number; url: string }[]>,
+      fetchRrwebEvents(sessionId),
     ]);
     setAnnotations(anns.sort((a, b) => a.timestamp - b.timestamp));
     setStateLog(log);
@@ -320,12 +345,16 @@ export default function PlaytestViewerPage() {
       ts: f.ts,
       url: `${API_BASE}/api/v1/playtest/sessions/${sessionId}/filmstrip/frame-${f.ts}.jpg`,
     })));
+    setRrwebEvents(rrweb);
     setFilmstripIdx(0);
     setFilmstripPlaying(false);
     setLoadingData(false);
 
-    // Default to annotations if no filmstrip
-    if ((!filmstripData || filmstripData.length === 0) && anns.length > 0) {
+    // rrweb replay is the canonical view when events exist;
+    // fall back to filmstrip, then annotations (old sessions)
+    if (rrweb) {
+      setActiveTab('replay');
+    } else if ((!filmstripData || filmstripData.length === 0) && anns.length > 0) {
       setActiveTab('annotations');
     }
   }, []);
@@ -538,6 +567,7 @@ export default function PlaytestViewerPage() {
               {/* Tab bar */}
               <div className="pv-tabs">
                 {([
+                  ['replay', `Replay${rrwebEvents ? '' : ' (none)'}`],
                   ['filmstrip', `Filmstrip${filmstrip.length ? ` (${filmstrip.length})` : ''}`],
                   ['annotations', `Annotations (${annotations.length})`],
                   ['gallery', `Screenshots (${screenshotAnnotations.length})`],
@@ -556,6 +586,20 @@ export default function PlaytestViewerPage() {
               </div>
 
               {loadingData && <p className="triage-muted" style={{ padding: 24 }}>Loading session data...</p>}
+
+              {/* ── Replay tab (rrweb) ───────────────────────── */}
+              {!loadingData && activeTab === 'replay' && (
+                <div>
+                  {rrwebEvents ? (
+                    <RrwebReplay events={rrwebEvents} />
+                  ) : (
+                    <div className="pv-empty-tab">
+                      No rrweb events for this session. Older sessions only have
+                      the snapshot filmstrip and recording.
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* ── Filmstrip tab ────────────────────────────── */}
               {!loadingData && activeTab === 'filmstrip' && (

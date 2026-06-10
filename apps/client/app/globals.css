@@ -9495,6 +9495,29 @@ body:has(.playtest-pill-expanded) {
   justify-content: center;
 }
 
+/* rrweb replay — Replayer iframe scaled into a phone-shaped stage */
+.pv-rrweb-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+}
+
+.pv-rrweb-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #000;
+}
+
+.pv-rrweb-stage iframe {
+  border: none;
+  background: #fff;
+  pointer-events: none;
+}
+
 /* Filmstrip — compact, phone-shaped */
 .pv-filmstrip {
   border-radius: 8px;

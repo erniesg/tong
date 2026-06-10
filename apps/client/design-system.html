@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tong Design System</title>
-<!-- Design system snapshot | 121 variables, 994 classes, 55 keyframes -->
+<!-- Design system snapshot | 121 variables, 996 classes, 55 keyframes -->
 <style>
 /* ══════════════════════════════════════════════════════════════
    BLOCK 1: globals.css — verbatim embed (single source of truth)
@@ -9504,6 +9504,29 @@ body:has(.playtest-pill-expanded) {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* rrweb replay — Replayer iframe scaled into a phone-shaped stage */
+.pv-rrweb-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+}
+
+.pv-rrweb-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #000;
+}
+
+.pv-rrweb-stage iframe {
+  border: none;
+  background: #fff;
+  pointer-events: none;
 }
 
 /* Filmstrip — compact, phone-shaped */

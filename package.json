@@ -46,6 +46,10 @@
     "launch:agents": "./scripts/launch-parallel-agents.sh",
     "test:kg-contract-schema": "node scripts/kg_contract_schema_check.mjs",
     "dev:remotion": "npm --prefix packages/remotion run preview",
-    "dev:sam2": "SAM2_MOCK=1 python3 -m uvicorn server:app --port 8100 --app-dir packages/sam2"
+    "dev:sam2": "SAM2_MOCK=1 python3 -m uvicorn server:app --port 8100 --app-dir packages/sam2",
+    "render:rrweb": "node scripts/render-rrweb-video.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
   }
 }
