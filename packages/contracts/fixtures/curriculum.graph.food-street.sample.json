@@ -400,8 +400,8 @@
       { "id": "ㄷ받침", "label": "ㄷ받침", "transliteration": "t", "notes": "Final consonant rule", "level": 1 }
     ],
     "vocabularyTargets": [
-      { "id": "오뎅", "word": "오뎅", "romanization": "odeng", "translation": "fish cake", "category": "food_item", "level": 0, "sceneContext": "written on the menu board in big letters", "visualCue": "bubbling pot of fish cake skewers on the counter" },
-      { "id": "떡볶이", "word": "떡볶이", "romanization": "tteokbokki", "translation": "spicy rice cakes", "category": "food_item", "level": 0, "sceneContext": "top item on the handwritten menu", "visualCue": "bright red sauce with cylindrical rice cakes in a flat pan" },
+      { "id": "오뎅", "word": "오뎅", "romanization": "odeng", "translation": "fish cake", "category": "food_item", "level": 0, "sceneContext": "written on the menu board in big letters", "visualCue": "bubbling pot of fish cake skewers on the counter", "standardAlignments": null },
+      { "id": "떡볶이", "word": "떡볶이", "romanization": "tteokbokki", "translation": "spicy rice cakes", "category": "food_item", "level": 0, "sceneContext": "top item on the handwritten menu", "visualCue": "bright red sauce with cylindrical rice cakes in a flat pan", "standardAlignments": [{ "system": "TOPIK", "level": "I-1", "lang": "ko", "skill": "vocabulary", "confidence": 0.8, "source": "curated", "tags": ["food", "menu"] }] },
       { "id": "라면", "word": "라면", "romanization": "ramyeon", "translation": "instant noodles", "category": "food_item", "level": 0, "sceneContext": "written on the menu board", "visualCue": "stack of instant noodle packets behind the counter" },
       { "id": "순대", "word": "순대", "romanization": "sundae", "translation": "blood sausage", "category": "food_item", "level": 0, "sceneContext": "on the menu board next to 떡볶이", "visualCue": "dark sausage slices on a plate with salt" },
       { "id": "김밥", "word": "김밥", "romanization": "gimbap", "translation": "seaweed rice roll", "category": "food_item", "level": 2, "sceneContext": "sliced rolls displayed in the glass case at the front", "visualCue": "colorful cross-sections of seaweed-wrapped rice rolls" },

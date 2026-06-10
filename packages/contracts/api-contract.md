@@ -130,6 +130,7 @@ Response:
 
 Contract note:
 - Retrieval-backed insight payloads should carry both `provenance` and `placementHints` so downstream objective selection can explain why a term surfaced and where it should be infused.
+- Objective links may carry optional `standardAlignments` metadata. Missing, `null`, or empty arrays all mean the objective or target is intentionally unmapped for external standards and must not block normal Tong progression.
 
 ## GET `/api/v1/player/media-profile`
 Query:
@@ -500,6 +501,21 @@ Contract notes:
 
 Canonical identity note: `objectiveId` now carries the canonical graph objective id. `legacyObjectiveId` and `objectiveAliasIds` remain additive compatibility fields during migration.
 
+Optional standards note: `standardAlignments` is additive metadata on objectives and target items. Supported seeded systems include `HSK`, `JLPT`, `TOPIK`, and `CEFR`; clients must treat the string as forward-compatible for future standards. Tong `level` remains the progression backbone.
+
+Alignment shape:
+```json
+{
+  "system": "HSK",
+  "level": "2",
+  "lang": "zh",
+  "skill": "vocabulary",
+  "confidence": 0.82,
+  "source": "curated",
+  "tags": ["food", "ordering"]
+}
+```
+
 Query:
 ```json
 {
@@ -518,6 +534,17 @@ Response:
   "level": 2,
   "mode": "hangout",
   "lang": "ko",
+  "standardAlignments": [
+    {
+      "system": "TOPIK",
+      "level": "I-1",
+      "lang": "ko",
+      "skill": "vocabulary",
+      "confidence": 0.78,
+      "source": "curated",
+      "tags": ["food", "ordering"]
+    }
+  ],
   "objectiveGraph": {
     "objectiveNodeId": "objective:ko-vocab-food-items",
     "cityId": "seoul",
@@ -536,12 +563,14 @@ Response:
     {
       "lemma": "무대",
       "source": "youtube",
-      "linkedNodeIds": ["overlay:youtube:performance-energy", "target:무대"]
+      "linkedNodeIds": ["overlay:youtube:performance-energy", "target:무대"],
+      "standardAlignments": null
     },
     {
       "lemma": "연습",
       "source": "spotify",
-      "linkedNodeIds": ["overlay:spotify:practice-studio", "target:연습"]
+      "linkedNodeIds": ["overlay:spotify:practice-studio", "target:연습"],
+      "standardAlignments": []
     }
   ],
   "completionCriteria": {
@@ -555,6 +584,7 @@ Response:
 
 Contract note:
 - KG-backed objective responses require `lang`, `objectiveGraph`, and per-item `linkedNodeIds` in `personalizedTargets`.
+- `standardAlignments` is never required for completion criteria. Existing clients can ignore it.
 
 ## POST `/api/v1/scenes/hangout/start`
 Request:

@@ -26,5 +26,6 @@ Naming note:
 - The shared contract uses `learnerId` as the stable user-specific identifier.
 - The mock dashboard runtime also accepts `personaId` as an alias because the first milestone is driven by persona fixtures.
 - Objective payloads now carry canonical graph `objectiveId` values plus additive `legacyObjectiveId` / `objectiveAliasIds` compatibility fields while consumers migrate.
+- Objective, graph node, target, and objective-link payloads may carry optional `standardAlignments` metadata for HSK/JLPT/TOPIK/CEFR-style goals. Missing, `null`, or empty alignments are valid and Tong's internal `level` remains the progression backbone.
 
 - `fixtures/learn.scripted-scenes.sample.json` demonstrates deterministic scripted learn-mode messaging scenes for Seoul, Tokyo, and Shanghai.
