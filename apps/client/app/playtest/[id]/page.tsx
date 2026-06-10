@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { dispatch } from '@/lib/store/game-store';
 import type { CityId, AppLang } from '@/lib/api';
 import { getPublicApiBase } from '@/lib/public-api-base';
+import { setDisplayStream } from '@/lib/playtest/display-stream';
 
 /* ── Types ────────────────────────────────────────────────── */
 
@@ -137,6 +138,15 @@ function primeGameStoreForSession(config: PlaytestConfig) {
 
 type LoadState = 'loading' | 'ready' | 'error';
 
+/* Desktop browsers can contribute a pixel-perfect recording via screen
+   share. getDisplayMedia needs a user gesture, so it must happen here on
+   the entry page — the stream is handed to the overlay via module state. */
+function canOfferHdRecording(): boolean {
+  return typeof navigator !== 'undefined'
+    && Boolean(navigator.mediaDevices?.getDisplayMedia)
+    && window.matchMedia('(pointer: fine)').matches;
+}
+
 export default function PlaytestPage() {
   const params = useParams();
   const router = useRouter();
@@ -145,6 +155,7 @@ export default function PlaytestPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const [gameUrl, setGameUrl] = useState('');
+  const [offerHd, setOfferHd] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) {
@@ -171,6 +182,7 @@ export default function PlaytestPage() {
       markSessionActive(id).catch(() => { /* non-critical */ });
 
       setGameUrl(buildGameUrl(config));
+      setOfferHd(canOfferHdRecording());
       setLoadState('ready');
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to load playtest session');
@@ -183,12 +195,28 @@ export default function PlaytestPage() {
   }, [load]);
 
   // Once we have the game URL, navigate using Next.js router (no full page reload,
-  // preserves React tree, sessionStorage, and game store state)
+  // preserves React tree, sessionStorage, and game store state). Desktop
+  // holds at the ready screen so the user can opt into HD screen recording.
   useEffect(() => {
-    if (loadState === 'ready' && gameUrl) {
+    if (loadState === 'ready' && gameUrl && !offerHd) {
       router.push(gameUrl);
     }
-  }, [loadState, gameUrl, router]);
+  }, [loadState, gameUrl, offerHd, router]);
+
+  const startWithHd = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: 'browser' } as MediaTrackConstraints,
+        audio: false,
+      });
+      setDisplayStream(stream);
+    } catch { /* denied — fall through to standard recording */ }
+    router.push(gameUrl);
+  }, [gameUrl, router]);
+
+  const startWithoutHd = useCallback(() => {
+    router.push(gameUrl);
+  }, [gameUrl, router]);
 
   /* ── Loading ──────────────────────────────────────────────── */
   if (loadState === 'loading') {
@@ -243,7 +271,45 @@ export default function PlaytestPage() {
     );
   }
 
-  /* ── Ready — brief redirect state while router.push navigates ── */
+  /* ── Ready — desktop offers HD screen recording; mobile auto-starts ── */
+  if (offerHd) {
+    return (
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d1a', minHeight: '100dvh' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, maxWidth: 380, textAlign: 'center', padding: '0 24px' }}>
+          <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 17, margin: 0, fontFamily: 'var(--font-game, sans-serif)', fontWeight: 600 }}>
+            Ready to playtest
+          </p>
+          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, margin: 0, fontFamily: 'var(--font-game, sans-serif)' }}>
+            Share this tab to capture a full-quality recording of exactly what you see. You can also continue without it.
+          </p>
+          <button
+            type="button"
+            onClick={() => void startWithHd()}
+            style={{
+              background: '#e8b93e', color: '#1a1408', border: 'none', borderRadius: 24,
+              padding: '12px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              fontFamily: 'var(--font-game, sans-serif)',
+            }}
+          >
+            Start &amp; share screen (HD)
+          </button>
+          <button
+            type="button"
+            onClick={startWithoutHd}
+            style={{
+              background: 'transparent', color: 'rgba(255,255,255,0.55)',
+              border: '1px solid rgba(255,255,255,0.2)', borderRadius: 24,
+              padding: '10px 24px', fontSize: 13, cursor: 'pointer',
+              fontFamily: 'var(--font-game, sans-serif)',
+            }}
+          >
+            Continue without
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d1a', minHeight: '100dvh' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>

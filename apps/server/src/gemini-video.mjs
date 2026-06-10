@@ -60,6 +60,18 @@ function uuid() {
   });
 }
 
+function sniffVideoMime(bytes, fallback) {
+  // WebM/Matroska: EBML magic 0x1A45DFA3
+  if (bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) {
+    return 'video/webm';
+  }
+  // MP4/QuickTime: "ftyp" box at offset 4
+  if (bytes.length >= 8 && bytes.toString('ascii', 4, 8) === 'ftyp') {
+    return 'video/mp4';
+  }
+  return fallback;
+}
+
 // ── 1. File Upload (Files API) ──────────────────────────────────────
 
 /**
@@ -77,7 +89,6 @@ export async function uploadVideo(args) {
   const key = apiKey();
   if (!key) throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
 
-  const mimeType = args.mimeType || 'video/webm';
   const displayName = args.displayName || `playtest-${Date.now()}`;
 
   // Check cache
@@ -100,6 +111,10 @@ export async function uploadVideo(args) {
   } else {
     throw new Error('filePath, buffer, or url is required');
   }
+
+  // Sniff the real container — the R2 key is always recording.webm, but
+  // Safari MediaRecorder produces video/mp4
+  const mimeType = sniffVideoMime(bytes, args.mimeType || 'video/webm');
 
   // Step 1: Start resumable upload
   const startRes = await fetch(

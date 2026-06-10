@@ -146,7 +146,7 @@ type IngestionResult = {
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, x-demo-password',
 };
 
@@ -639,6 +639,39 @@ async function readJsonBody(request: Request): Promise<Record<string, any>> {
   const text = await request.text();
   if (!text) return {};
   return JSON.parse(text);
+}
+
+// Assemble recording.webm from incrementally uploaded MediaRecorder chunks.
+// Chunks from one recorder session are byte-appendable (chunk 0 carries the
+// container header), so plain concatenation yields a playable file. Returns
+// true if a recording was assembled and stored.
+async function assembleRecordingFromChunks(env: Record<string, any>, sessionId: string): Promise<boolean> {
+  const prefix = `playtest/${sessionId}/recording-chunks/`;
+  const listing = await env.TONG_RUNS_BUCKET.list({ prefix });
+  if (!listing.objects.length) return false;
+  const keys = listing.objects.map((o: { key: string }) => o.key).sort();
+  const parts: Uint8Array[] = [];
+  let total = 0;
+  let contentType = 'video/webm';
+  for (const key of keys) {
+    const obj = await env.TONG_RUNS_BUCKET.get(key);
+    if (!obj) continue;
+    if (key === keys[0] && obj.httpMetadata?.contentType) contentType = obj.httpMetadata.contentType;
+    const buf = new Uint8Array(await obj.arrayBuffer());
+    parts.push(buf);
+    total += buf.length;
+  }
+  if (total === 0) return false;
+  const combined = new Uint8Array(total);
+  let offset = 0;
+  for (const part of parts) {
+    combined.set(part, offset);
+    offset += part.length;
+  }
+  await env.TONG_RUNS_BUCKET.put(`playtest/${sessionId}/recording.webm`, combined, {
+    httpMetadata: { contentType },
+  });
+  return true;
 }
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
@@ -2820,17 +2853,47 @@ async function handleRequest(request: Request): Promise<Response> {
       });
     }
 
+    // Receive an incremental recording chunk during an active session.
+    // Deliberately does NOT flip status or dispatch the agent pipeline —
+    // this runs every few seconds while the tester plays, and covers
+    // sessions abandoned without ever tapping Submit.
+    if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/recording-chunks$/) && request.method === 'POST') {
+      const sessionId = pathname.split('/')[5];
+      const env = (globalThis as any).__env;
+      if (!env?.DB) return jsonResponse(500, { error: 'db_not_configured' });
+      if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
+      const row = await env.DB.prepare(
+        `SELECT session_id FROM playtest_sessions WHERE session_id = ?`
+      ).bind(sessionId).first();
+      if (!row) return jsonResponse(404, { error: 'session_not_found', sessionId });
+      const seq = parseInt(url.searchParams.get('seq') || '', 10);
+      if (!Number.isFinite(seq) || seq < 0 || seq > 99999) {
+        return jsonResponse(400, { error: 'invalid_seq' });
+      }
+      const key = `playtest/${sessionId}/recording-chunks/chunk-${String(seq).padStart(5, '0')}`;
+      await env.TONG_RUNS_BUCKET.put(key, request.body, {
+        httpMetadata: { contentType: request.headers.get('content-type') || 'video/webm' },
+      });
+      return jsonResponse(200, { ok: true, seq });
+    }
+
     // Proxy recording from R2 (avoids CORS on direct R2 access)
     if (pathname.match(/^\/api\/v1\/playtest\/sessions\/[^/]+\/recording$/) && (request.method === 'GET' || request.method === 'HEAD')) {
       const sessionId = pathname.split('/')[5];
       const env = (globalThis as any).__env;
       if (!env?.TONG_RUNS_BUCKET) return jsonResponse(500, { error: 'r2_not_configured' });
-      const obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/recording.webm`);
+      let obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/recording.webm`);
+      if (!obj) {
+        // Abandoned session: assemble from streamed chunks on first access
+        const assembled = await assembleRecordingFromChunks(env, sessionId);
+        if (assembled) obj = await env.TONG_RUNS_BUCKET.get(`playtest/${sessionId}/recording.webm`);
+      }
       if (!obj) return jsonResponse(404, { error: 'no_recording' });
+      const recordingType = obj.httpMetadata?.contentType || 'video/webm';
       if (request.method === 'HEAD') {
         return new Response(null, {
           headers: {
-            'Content-Type': 'video/webm',
+            'Content-Type': recordingType,
             'Content-Length': String(obj.size),
             'Access-Control-Allow-Origin': '*',
           },
@@ -2838,7 +2901,7 @@ async function handleRequest(request: Request): Promise<Response> {
       }
       return new Response(obj.body, {
         headers: {
-          'Content-Type': 'video/webm',
+          'Content-Type': recordingType,
           'Access-Control-Allow-Origin': '*',
           'Cache-Control': 'max-age=300',
         },
@@ -2927,6 +2990,9 @@ async function handleRequest(request: Request): Promise<Response> {
       const publicBase = env?.TONG_RUNS_PUBLIC_BASE_URL || 'https://runs.tong.berlayar.ai';
       const r2RecordingKey = `playtest/${sessionId}/recording.webm`;
       const r2AnnotationsKey = `playtest/${sessionId}/annotations.json`;
+      // partial=1: mid-session save (tab hidden / unload) — store artifacts
+      // but don't mark the session submitted or dispatch the agent pipeline
+      const partial = url.searchParams.get('partial') === '1';
 
       if (contentType.includes('multipart/form-data')) {
         // Parse multipart — Workers support FormData natively
@@ -2935,9 +3001,15 @@ async function handleRequest(request: Request): Promise<Response> {
         const annotations = formData.get('annotations');
 
         if (recording && recording instanceof File) {
+          // Key stays recording.webm (analyzer + GET proxy depend on it), but
+          // store the real container type (Safari records video/mp4)
           await env.TONG_RUNS_BUCKET.put(r2RecordingKey, recording.stream(), {
-            httpMetadata: { contentType: 'video/webm' },
+            httpMetadata: { contentType: recording.type || 'video/webm' },
           });
+        } else {
+          // No final blob in the form — fall back to streamed chunks so the
+          // agent pipeline's direct R2 fetch finds recording.webm
+          await assembleRecordingFromChunks(env, sessionId);
         }
 
         // Upload screenshots (keyed as screenshot:{annotationId})
@@ -3011,15 +3083,18 @@ async function handleRequest(request: Request): Promise<Response> {
         });
       }
 
-      // Update session in D1
+      // Update session in D1 (partial saves keep the session active)
       const screenshotCount = (await env.TONG_RUNS_BUCKET.list({ prefix: `playtest/${sessionId}/screenshots/` })).objects.length;
-      await env.DB.prepare(
-        `UPDATE playtest_sessions SET status = 'submitted', r2_recording_key = ?, r2_annotations_key = ?, updated_at = datetime('now') WHERE session_id = ?`
-      ).bind(r2RecordingKey, r2AnnotationsKey, sessionId).run();
+      if (!partial) {
+        await env.DB.prepare(
+          `UPDATE playtest_sessions SET status = 'submitted', r2_recording_key = ?, r2_annotations_key = ?, updated_at = datetime('now') WHERE session_id = ?`
+        ).bind(r2RecordingKey, r2AnnotationsKey, sessionId).run();
+      }
 
       return jsonResponse(200, {
         ok: true,
         sessionId,
+        partial,
         screenshotCount,
         recordingUrl: `${publicBase}/${r2RecordingKey}`,
         annotationsUrl: `${publicBase}/${r2AnnotationsKey}`,

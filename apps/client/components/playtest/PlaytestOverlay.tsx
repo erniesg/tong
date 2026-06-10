@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { sessionLogger } from '@/lib/debug/session-logger';
 import { getPublicApiBase } from '@/lib/public-api-base';
+import { takeDisplayStream } from '@/lib/playtest/display-stream';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -39,6 +40,169 @@ interface Props {
 type Tool = 'none' | 'draw' | 'comment';
 type PanelView = 'tools' | 'notes' | 'comment' | 'ai-reply';
 
+/* Shared html2canvas options — exclude playtest UI from captures */
+const ignorePlaytestElements = (el: Element) => {
+  const cls = el.className || '';
+  return typeof cls === 'string' && (
+    cls.includes('playtest-pill') ||
+    cls.includes('playtest-canvas') ||
+    cls.includes('playtest-place') ||
+    cls.includes('playtest-marker') ||
+    cls.includes('playtest-submitted')
+  );
+};
+
+/* html2canvas clones the DOM into an iframe where CSS animations restart at
+   keyframe 0 — animated elements (fade-ins etc.) render at opacity 0 and
+   captures come out near-black. Before cloning, tag each animated element
+   with its live computed state; in the clone, freeze it at that state.
+   (Matching by attribute, not index — the clone drops script tags.) */
+const FREEZE_ATTR = 'data-playtest-freeze';
+
+const tagAnimatedElements = (): Element[] => {
+  const tagged: Element[] = [];
+  document.documentElement.querySelectorAll('*').forEach((el) => {
+    const cs = window.getComputedStyle(el);
+    if (cs.animationName !== 'none') {
+      el.setAttribute(FREEZE_ATTR, JSON.stringify({
+        o: cs.opacity, t: cs.transform, f: cs.filter,
+      }));
+      tagged.push(el);
+    }
+  });
+  return tagged;
+};
+
+const freezeAnimationsInClone = (clonedDoc: Document) => {
+  clonedDoc.querySelectorAll(`[${FREEZE_ATTR}]`).forEach((el) => {
+    const dst = el as HTMLElement;
+    if (!dst.style) return;
+    try {
+      const s = JSON.parse(dst.getAttribute(FREEZE_ATTR) || '{}');
+      dst.style.animation = 'none';
+      dst.style.transition = 'none';
+      if (s.o) dst.style.opacity = s.o;
+      if (s.t && s.t !== 'none') dst.style.transform = s.t;
+      if (s.f && s.f !== 'none') dst.style.filter = s.f;
+    } catch { /* skip */ }
+  });
+};
+
+/* The game loads cross-origin images (assets.tong.berlayar.ai) as plain
+   <img>, so the browser caches them without CORS approval; html2canvas's
+   crossOrigin re-fetch then hits that cache entry and fails, dropping the
+   image from captures. In the clone: add a query param so fetches bypass
+   the poisoned entry (R2 ignores query strings), AND mark the clone img
+   crossorigin — otherwise the clone iframe's own plain load poisons the
+   busted URL before html2canvas's CORS loader gets to it. */
+const bustCrossOriginImagesInClone = (clonedDoc: Document) => {
+  clonedDoc.querySelectorAll('img').forEach((img) => {
+    const src = img.getAttribute('src') || '';
+    if (!src || src.startsWith('data:') || src.startsWith('blob:')) return;
+    try {
+      const u = new URL(src, window.location.href);
+      if (u.origin !== window.location.origin) {
+        u.searchParams.set('playtest-cors', '1');
+        img.setAttribute('crossorigin', 'anonymous');
+        img.setAttribute('src', u.toString());
+      }
+    } catch { /* relative or malformed — leave as-is */ }
+  });
+};
+
+/* html2canvas cannot render <video> elements — cinematic scenes captured as
+   black boxes. Before cloning, grab each playing video's current frame as a
+   data URL (taint-tested on a scratch canvas so a non-CORS video can never
+   poison the recording canvas); in the clone, swap the video for an <img>
+   with the same box. Game videos carry crossorigin="anonymous" so the grab
+   stays origin-clean. */
+const VIDEO_FRAME_ATTR = 'data-playtest-video-frame';
+
+const tagVideoFrames = (): Element[] => {
+  const tagged: Element[] = [];
+  document.querySelectorAll('video').forEach((v) => {
+    if (v.readyState < 2 || v.videoWidth === 0) return;
+    const rect = v.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    try {
+      const scratch = document.createElement('canvas');
+      const scale = Math.min(1, 640 / v.videoWidth);
+      scratch.width = Math.max(2, Math.round(v.videoWidth * scale));
+      scratch.height = Math.max(2, Math.round(v.videoHeight * scale));
+      const ctx = scratch.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(v, 0, 0, scratch.width, scratch.height);
+      // PNG keeps alpha for transparent overlay videos; JPEG otherwise
+      const corner = ctx.getImageData(0, 0, 1, 1).data; // throws if tainted
+      const hasAlpha = corner[3] < 255;
+      const url = scratch.toDataURL(hasAlpha ? 'image/png' : 'image/jpeg', 0.7);
+      v.setAttribute(VIDEO_FRAME_ATTR, url);
+      tagged.push(v);
+    } catch { /* tainted or unreadable — leave as-is (renders blank) */ }
+  });
+  return tagged;
+};
+
+const swapVideosInClone = (clonedDoc: Document) => {
+  clonedDoc.querySelectorAll(`video[${VIDEO_FRAME_ATTR}]`).forEach((v) => {
+    const frame = v.getAttribute(VIDEO_FRAME_ATTR);
+    if (!frame) return;
+    const img = clonedDoc.createElement('img');
+    img.src = frame;
+    img.className = v.className;
+    img.setAttribute('style', v.getAttribute('style') || '');
+    const view = clonedDoc.defaultView || window;
+    const cs = view.getComputedStyle(v);
+    img.style.width = cs.width;
+    img.style.height = cs.height;
+    img.style.objectFit = cs.objectFit || 'cover';
+    v.replaceWith(img);
+  });
+};
+
+const prepareClone = (clonedDoc: Document) => {
+  freezeAnimationsInClone(clonedDoc);
+  bustCrossOriginImagesInClone(clonedDoc);
+  swapVideosInClone(clonedDoc);
+};
+
+const snapshotOptions = (scale: number) => ({
+  backgroundColor: '#0d0d1a',
+  scale,
+  width: window.innerWidth,
+  height: window.innerHeight,
+  windowWidth: window.innerWidth,
+  windowHeight: window.innerHeight,
+  scrollX: 0,
+  scrollY: 0,
+  logging: false,
+  useCORS: true,
+  // allowTaint must stay false: one tainted snapshot painted onto the
+  // recording canvas permanently kills its captureStream (no frames, no
+  // error). Non-CORS images are skipped instead — game asset hosts must
+  // serve CORS headers (tong-assets R2 bucket has a CORS rule for this).
+  allowTaint: false,
+  ignoreElements: ignorePlaytestElements,
+  onclone: prepareClone,
+});
+
+/* Capture the visible page with animation and video state preserved */
+const captureDom = async (scale: number): Promise<HTMLCanvasElement> => {
+  const tagged = tagAnimatedElements();
+  const taggedVideos = tagVideoFrames();
+  try {
+    return await html2canvas(document.documentElement, snapshotOptions(scale));
+  } finally {
+    tagged.forEach((el) => el.removeAttribute(FREEZE_ATTR));
+    taggedVideos.forEach((el) => el.removeAttribute(VIDEO_FRAME_ATTR));
+  }
+};
+
+/* Snapshot cadence: every tick feeds the video recorder; every 2nd tick
+   (5s) is kept as a filmstrip frame for the replay page. */
+const SNAPSHOT_INTERVAL_MS = 2500;
+const FILMSTRIP_EVERY_NTH = 2;
+
 /* ── Component ────────────────────────────────────────────────────── */
 
 export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClarification }: Props) {
@@ -50,7 +214,8 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const timerRef = useRef<ReturnType<typeof setInterval>>();
 
   const frameCaptureRef = useRef<HTMLCanvasElement | null>(null);
-  const frameLoopRef = useRef<number>(0);
+  const snapshotCountRef = useRef(0);
+  const snapshotBusyRef = useRef(false);
 
   const [activeTool, setActiveTool] = useState<Tool>('none');
   const [penColor, setPenColor] = useState('#ff6b2c');
@@ -85,6 +250,12 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   // Filmstrip: periodic full-DOM screenshots for playback on mobile
   const filmstripRef = useRef<{ ts: number; blob: Blob }[]>([]);
 
+  // Continuous upload: stream recorder chunks to the server during the
+  // session so abandoned sessions (tab closed, no Submit) still have video
+  const uploadedChunkCountRef = useRef(0);
+  const chunkSeqRef = useRef(0);
+  const chunkFlushBusyRef = useRef(false);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
   const currentPath = useRef<string[]>([]);
@@ -100,71 +271,61 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
 
   /* ── Frame capture ──────────────────────────────────────────────── */
 
-  const startFrameCapture = useCallback(() => {
-    const target = targetRef.current;
-    if (!target) return;
+  // Hidden canvas that MediaRecorder records via captureStream(). The game is
+  // DOM-rendered (no canvas elements), so frames come from periodic
+  // html2canvas snapshots painted into this canvas — each paint emits a
+  // video frame, producing a low-fps but real recording on every platform.
+  const ensureFrameCaptureCanvas = useCallback((): HTMLCanvasElement => {
     let fc = frameCaptureRef.current;
     if (!fc) {
       fc = document.createElement('canvas');
+      // Match the 0.5-scale snapshots; even dimensions for the video encoder
+      fc.width = Math.max(2, Math.floor(window.innerWidth / 2) & ~1);
+      fc.height = Math.max(2, Math.floor(window.innerHeight / 2) & ~1);
       fc.style.display = 'none';
       document.body.appendChild(fc);
+      const ctx = fc.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#0d0d1a';
+        ctx.fillRect(0, 0, fc.width, fc.height);
+      }
       frameCaptureRef.current = fc;
     }
-    const captureFrame = () => {
-      if (!target) return;
-      const rect = target.getBoundingClientRect();
-      if (fc!.width !== rect.width || fc!.height !== rect.height) {
-        fc!.width = rect.width;
-        fc!.height = rect.height;
-      }
-      const gameCanvases = target.querySelectorAll('canvas');
-      const ctx = fc!.getContext('2d');
-      if (ctx && gameCanvases.length > 0) {
-        ctx.clearRect(0, 0, fc!.width, fc!.height);
-        ctx.fillStyle = '#0d0d1a';
-        ctx.fillRect(0, 0, fc!.width, fc!.height);
-        for (const gc of gameCanvases) {
-          try {
-            const gcRect = gc.getBoundingClientRect();
-            ctx.drawImage(gc, gcRect.left - rect.left, gcRect.top - rect.top, gcRect.width, gcRect.height);
-          } catch { /* tainted */ }
+    return fc;
+  }, []);
+
+  const captureSnapshot = useCallback(async () => {
+    if (snapshotBusyRef.current) return; // html2canvas can be slow; don't overlap
+    snapshotBusyRef.current = true;
+    try {
+      const canvas = await captureDom(0.5);
+      // 1. Paint into the recording canvas → emits a frame on the capture stream
+      const fc = frameCaptureRef.current;
+      const ctx = fc?.getContext('2d');
+      if (fc && ctx) ctx.drawImage(canvas, 0, 0, fc.width, fc.height);
+      // 2. Keep every Nth snapshot as a filmstrip frame for replay
+      if (snapshotCountRef.current % FILMSTRIP_EVERY_NTH === 0) {
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, 'image/jpeg', 0.7),
+        );
+        if (blob && startTimeRef.current) {
+          const ts = Math.floor((Date.now() - startTimeRef.current) / 1000);
+          filmstripRef.current.push({ ts, blob });
+          // Cap at 120 frames (10 min at 5s intervals) to limit memory
+          if (filmstripRef.current.length > 120) filmstripRef.current.shift();
         }
       }
-      frameLoopRef.current = requestAnimationFrame(captureFrame);
-    };
-    frameLoopRef.current = requestAnimationFrame(captureFrame);
-  }, [targetRef]);
+      snapshotCountRef.current++;
+    } catch { /* best-effort */ } finally {
+      snapshotBusyRef.current = false;
+    }
+  }, []);
 
   /* ── Screenshot capture (html2canvas — full DOM) ─────────────── */
 
   const captureScreenshot = useCallback(async (annotationId: string): Promise<void> => {
-    // Capture the full visible page — use documentElement for true full-screen
-    const target = document.documentElement;
     try {
-      const canvas = await html2canvas(target, {
-        backgroundColor: '#0d0d1a',
-        scale: window.devicePixelRatio > 1 ? 1 : 1, // 1x for speed
-        width: window.innerWidth,
-        height: window.innerHeight,
-        windowWidth: window.innerWidth,
-        windowHeight: window.innerHeight,
-        scrollX: 0,
-        scrollY: 0,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        // Ignore the playtest overlay elements so they don't appear in screenshots
-        ignoreElements: (el) => {
-          const cls = el.className || '';
-          return typeof cls === 'string' && (
-            cls.includes('playtest-pill') ||
-            cls.includes('playtest-canvas') ||
-            cls.includes('playtest-place') ||
-            cls.includes('playtest-marker') ||
-            cls.includes('playtest-submitted')
-          );
-        },
-      });
+      const canvas = await captureDom(1);
 
       // Composite drawing overlay on top if active
       const drawingCanvas = canvasRef.current;
@@ -184,7 +345,7 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     }
   }, []);
 
-  /* ── Recording: getDisplayMedia → captureStream → screenshots-only ── */
+  /* ── Recording: HD display stream → snapshot canvas → screenshots-only ── */
 
   const displayStreamRef = useRef<MediaStream | null>(null);
 
@@ -204,44 +365,41 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     setIsRecording(true);
   }, []);
 
-  const startRecording = useCallback(async () => {
+  const startRecording = useCallback(() => {
     startTimeRef.current = Date.now();
     timerRef.current = setInterval(() => {
       setRecordingTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }, 1000);
 
-    // Tier 1: getDisplayMedia — full screen capture (desktop only, needs permission)
-    if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: { displaySurface: 'browser' } as MediaTrackConstraints,
-          audio: false,
-        });
-        displayStreamRef.current = stream;
-        // If user stops sharing via browser UI, clean up
-        stream.getVideoTracks()[0]?.addEventListener('ended', () => {
-          displayStreamRef.current = null;
-        });
-        startRecordingFromStream(stream);
-        return;
-      } catch {
-        // User denied or not supported — fall through to Tier 2
-      }
+    // Tier 1: HD screen share handed over from the /playtest entry page,
+    // where the user gesture happened (getDisplayMedia can't be called here —
+    // recording auto-starts with no gesture, and mobile doesn't support it).
+    const shared = takeDisplayStream();
+    if (shared) {
+      displayStreamRef.current = shared;
+      shared.getVideoTracks()[0]?.addEventListener('ended', () => {
+        // User stopped sharing via browser UI — keep what we recorded
+        const rec = mediaRecorderRef.current;
+        if (rec && rec.state !== 'inactive') rec.stop();
+        displayStreamRef.current = null;
+      });
+      startRecordingFromStream(shared);
+      return;
     }
 
-    // Tier 2: canvas.captureStream — captures game canvases only
-    const fc = frameCaptureRef.current;
-    if (fc && typeof fc.captureStream === 'function') {
-      try {
+    // Tier 2: record the snapshot canvas — works on any DOM-rendered scene
+    try {
+      const fc = ensureFrameCaptureCanvas();
+      if (typeof fc.captureStream === 'function') {
         const stream = fc.captureStream(15);
         startRecordingFromStream(stream);
         return;
-      } catch { /* fall through */ }
-    }
+      }
+    } catch { /* fall through */ }
 
     // Tier 3: screenshots only — no video recording
     setIsRecording(true);
-  }, [startRecordingFromStream]);
+  }, [ensureFrameCaptureCanvas, startRecordingFromStream]);
 
   const stopAndSubmit = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -285,13 +443,10 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
         : null,
     });
 
-    const timer = setTimeout(() => {
-      startFrameCapture();
-      setTimeout(() => startRecording(), 500);
-    }, 1000);
+    const timer = setTimeout(() => startRecording(), 1500);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startFrameCapture, startRecording]);
+  }, [startRecording]);
 
   // Periodic state snapshots every 10s for replay reconstruction
   useEffect(() => {
@@ -306,47 +461,51 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
     return () => clearInterval(interval);
   }, []);
 
-  // Filmstrip: capture full-screen screenshot every 5s for mobile playback
+  // Snapshot loop: feeds the video recorder every tick + filmstrip every Nth
   useEffect(() => {
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
       if (!startTimeRef.current) return; // not recording yet
-      try {
-        const canvas = await html2canvas(document.documentElement, {
-          backgroundColor: '#0d0d1a',
-          scale: 0.5, // half resolution for speed + size
-          width: window.innerWidth,
-          height: window.innerHeight,
-          windowWidth: window.innerWidth,
-          windowHeight: window.innerHeight,
-          scrollX: 0,
-          scrollY: 0,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          ignoreElements: (el) => {
-            const cls = el.className || '';
-            return typeof cls === 'string' && (
-              cls.includes('playtest-pill') ||
-              cls.includes('playtest-canvas') ||
-              cls.includes('playtest-place') ||
-              cls.includes('playtest-marker') ||
-              cls.includes('playtest-submitted')
-            );
-          },
-        });
-        const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, 'image/jpeg', 0.7), // JPEG for smaller size
-        );
-        if (blob) {
-          const ts = Math.floor((Date.now() - startTimeRef.current) / 1000);
-          filmstripRef.current.push({ ts, blob });
-          // Cap at 120 frames (10 min at 5s intervals) to limit memory
-          if (filmstripRef.current.length > 120) filmstripRef.current.shift();
-        }
-      } catch { /* best-effort */ }
-    }, 5000);
+      void captureSnapshot();
+    }, SNAPSHOT_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, []);
+  }, [captureSnapshot]);
+
+  /* ── Continuous chunk upload ────────────────────────────────────── */
+
+  // Send recorder chunks accumulated since the last flush. Chunks from one
+  // MediaRecorder session concatenate into a playable file server-side, so
+  // even sessions that never hit Submit leave a recording behind.
+  const flushChunks = useCallback(async (keepalive = false) => {
+    if (chunkFlushBusyRef.current) return;
+    const pending = chunksRef.current.slice(uploadedChunkCountRef.current);
+    if (pending.length === 0) return;
+    chunkFlushBusyRef.current = true;
+    const seq = chunkSeqRef.current;
+    const body = new Blob(pending, { type: recordingMimeRef.current });
+    // keepalive bodies are capped (~64KB); a few seconds of low-fps video
+    // fits, but skip rather than fail loudly if this flush is too large
+    if (keepalive && body.size > 60_000) {
+      chunkFlushBusyRef.current = false;
+      return;
+    }
+    try {
+      const res = await fetch(
+        `${getPublicApiBase()}/api/v1/playtest/sessions/${sessionId}/recording-chunks?seq=${seq}`,
+        { method: 'POST', body, keepalive },
+      );
+      if (res.ok) {
+        uploadedChunkCountRef.current += pending.length;
+        chunkSeqRef.current = seq + 1;
+      }
+    } catch { /* retry on next flush */ } finally {
+      chunkFlushBusyRef.current = false;
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    const interval = setInterval(() => { void flushChunks(); }, 10_000);
+    return () => clearInterval(interval);
+  }, [flushChunks]);
 
   /* ── Draggable pill ─────────────────────────────────────────────── */
 
@@ -626,23 +785,24 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
   const uploadUrl = `${getPublicApiBase()}/api/v1/playtest/sessions/${sessionId}/upload`;
 
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (annotations.length > 0 || chunksRef.current.length > 0) {
+    // partial=1: save artifacts without finalizing the session — hiding the
+    // tab or navigating away must not mark it submitted or trigger analysis
+    const savePartial = () => {
+      void flushChunks(true);
+      if (annotations.length > 0) {
         const formData = new FormData();
         formData.append('annotations', JSON.stringify(annotations));
-        navigator.sendBeacon?.(uploadUrl, formData);
+        navigator.sendBeacon?.(`${uploadUrl}?partial=1`, formData);
+      }
+    };
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (annotations.length > 0 || chunksRef.current.length > 0) {
+        savePartial();
         e.preventDefault();
       }
     };
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && annotations.length > 0) {
-        const formData = new FormData();
-        formData.append('annotations', JSON.stringify(annotations));
-        if (chunksRef.current.length > 0) {
-          formData.append('recording', new Blob(chunksRef.current, { type: 'video/webm' }), `${sessionId}.webm`);
-        }
-        navigator.sendBeacon?.(uploadUrl, formData);
-      }
+      if (document.visibilityState === 'hidden') savePartial();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -650,14 +810,13 @@ export function PlaytestOverlay({ targetRef, sessionId, onSubmit, onRequestClari
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [annotations, sessionId, uploadUrl]);
+  }, [annotations, sessionId, uploadUrl, flushChunks]);
 
   /* ── Cleanup ────────────────────────────────────────────────────── */
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
-      if (frameLoopRef.current) cancelAnimationFrame(frameLoopRef.current);
       if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
       if (frameCaptureRef.current) { frameCaptureRef.current.remove(); frameCaptureRef.current = null; }
       if (displayStreamRef.current) {

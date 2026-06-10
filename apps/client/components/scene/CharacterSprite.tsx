@@ -81,6 +81,7 @@ export function CharacterSprite({
     >
       {videoAvailable ? (
         <video
+          crossOrigin="anonymous"
           ref={videoRef}
           src={activeIdleVideoUrl}
           preload="auto"

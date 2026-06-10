@@ -1679,6 +1679,7 @@ export default function GamePage() {
         <div className="game-frame">
           <div className="tg-opening-wrap">
             <video
+              crossOrigin="anonymous"
               ref={openingVideoRef}
               className="tg-opening-vid"
               src={GAME_INTRO_VIDEO_URL}
@@ -1769,6 +1770,7 @@ export default function GamePage() {
             {introStep === 0 && (
               <>
                 <video
+                  crossOrigin="anonymous"
                   className="tg-tong-intro-video"
                 autoPlay
                 muted
