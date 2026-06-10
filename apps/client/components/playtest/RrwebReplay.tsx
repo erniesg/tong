@@ -38,6 +38,7 @@ interface Props {
   events: RrwebEventJson[];
   maxWidth?: number;
   maxHeight?: number;
+  onPin?: (timestampMs: number) => void;
 }
 
 /**
@@ -45,7 +46,7 @@ interface Props {
  * browser engine, so cross-origin art and videos render natively — no
  * html2canvas approximation.
  */
-export function RrwebReplay({ events, maxWidth = 480, maxHeight = 600 }: Props) {
+export function RrwebReplay({ events, maxWidth = 480, maxHeight = 600, onPin }: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const replayerRef = useRef<ReplayerLike | null>(null);
   const rafRef = useRef<number>();
@@ -159,6 +160,11 @@ export function RrwebReplay({ events, maxWidth = 480, maxHeight = 600 }: Props) 
         <button onClick={cycleSpeed} disabled={!ready} title="Playback speed">
           {speed}x
         </button>
+        {onPin && (
+          <button onClick={() => onPin(currentMs)} disabled={!ready} title="Pin replay timestamp">
+            Pin
+          </button>
+        )}
       </div>
     </div>
   );

@@ -84,6 +84,24 @@ interface StateLog {
 
 type ViewerTab = 'replay' | 'filmstrip' | 'annotations' | 'gallery' | 'analysis' | 'statelog' | 'trace';
 
+interface ReplayFindingExport {
+  schema_version: '1';
+  sourceKind: 'backstage-rrweb-pin';
+  sessionId: string;
+  replayTimestampMs: number;
+  replayTimestamp: string;
+  surface: string;
+  route: string;
+  proofUrl: string;
+  renderUrl: string;
+  frameUrl?: string;
+  severity: number;
+  componentHint: string;
+  title: string;
+  description: string;
+  createdAt: string;
+}
+
 /* ── API ──────────────────────────────────────────────────────────── */
 
 const API_BASE = process.env.NEXT_PUBLIC_TONG_API_BASE || 'http://localhost:8787';
@@ -212,6 +230,8 @@ async function fetchRrwebEvents(sessionId: string): Promise<RrwebEventJson[] | n
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
+const fmtMs = (ms: number) => `${(Math.max(0, ms) / 1000).toFixed(3)}s`;
+
 function parseDevice(meta: DeviceMeta | undefined): string {
   if (!meta) return '';
   const parts: string[] = [];
@@ -282,6 +302,7 @@ export default function PlaytestViewerPage() {
   const [filmstripIdx, setFilmstripIdx] = useState(0);
   const [filmstripPlaying, setFilmstripPlaying] = useState(false);
   const [rrwebEvents, setRrwebEvents] = useState<RrwebEventJson[] | null>(null);
+  const [replayFinding, setReplayFinding] = useState<ReplayFindingExport | null>(null);
   const [activeTab, setActiveTab] = useState<ViewerTab>('filmstrip');
   const [activeAnnotation, setActiveAnnotation] = useState<string | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
@@ -323,6 +344,7 @@ export default function PlaytestViewerPage() {
     setAnalysis(null);
     setAgentTrace(null);
     setRrwebEvents(null);
+    setReplayFinding(null);
     setExpandedLogEntries(new Set());
     setActiveTab('filmstrip');
     setLoadingData(true);
@@ -439,6 +461,30 @@ export default function PlaytestViewerPage() {
   const activeCount = sessions.filter((s) => s.status === 'active').length;
   const screenshotAnnotations = annotations.filter((a) => a.screenshotUrl || a.screenshot);
   const checkedInView = [...checked].filter((id) => filteredIds.has(id)).length;
+
+  const pinReplayFinding = useCallback((timestampMs: number) => {
+    if (!selected) return;
+    const session = sessions.find((s) => s.sessionId === selected);
+    const route = session?.sceneType ? `/playtest/${selected} -> ${session.sceneType}` : `/playtest/${selected}`;
+    setReplayFinding({
+      schema_version: '1',
+      sourceKind: 'backstage-rrweb-pin',
+      sessionId: selected,
+      replayTimestampMs: Math.round(timestampMs),
+      replayTimestamp: fmtMs(timestampMs),
+      surface: session?.sceneType || 'playtest-replay',
+      route,
+      proofUrl: `${RUNS_BASE}/playtest/${selected}/rrweb-render.webm`,
+      renderUrl: `${RUNS_BASE}/playtest/${selected}/rrweb-render.webm`,
+      severity: 3,
+      componentHint: 'unknown',
+      title: `Replay finding at ${fmtMs(timestampMs)}`,
+      description: 'Describe the visible failure at this replay timestamp before routing.',
+      createdAt: new Date().toISOString(),
+    });
+  }, [selected, sessions]);
+
+  const replayFindingJson = replayFinding ? JSON.stringify(replayFinding, null, 2) : '';
 
   return (
     <div>
@@ -591,7 +637,33 @@ export default function PlaytestViewerPage() {
               {!loadingData && activeTab === 'replay' && (
                 <div>
                   {rrwebEvents ? (
-                    <RrwebReplay events={rrwebEvents} />
+                    <>
+                      <RrwebReplay events={rrwebEvents} onPin={pinReplayFinding} />
+                      {replayFinding && (
+                        <div className="triage-issue" style={{ marginTop: 16 }}>
+                          <div className="triage-issue-header">
+                            <span className="triage-auto-badge">rrweb pin</span>
+                            <span className="triage-issue-time">{replayFinding.replayTimestamp}</span>
+                          </div>
+                          <textarea
+                            className="playtest-note-edit-input"
+                            value={replayFindingJson}
+                            readOnly
+                            rows={12}
+                          />
+                          <div className="playtest-marker-edit-actions" style={{ marginTop: 8 }}>
+                            <button
+                              onClick={() => {
+                                void navigator.clipboard?.writeText(replayFindingJson);
+                              }}
+                            >
+                              Copy finding JSON
+                            </button>
+                            <button onClick={() => setReplayFinding(null)}>Clear</button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="pv-empty-tab">
                       No rrweb events for this session. Older sessions only have
