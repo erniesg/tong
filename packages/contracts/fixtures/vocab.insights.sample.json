@@ -84,6 +84,20 @@
           "legacyObjectiveId": "zh_stage_l3_002",
           "objectiveAliasIds": [
             "zh_stage_l3_002"
+          ],
+          "standardAlignments": [
+            {
+              "system": "HSK",
+              "level": "2",
+              "lang": "zh",
+              "skill": "conversation",
+              "confidence": 0.69,
+              "source": "curated",
+              "tags": [
+                "texting",
+                "social"
+              ]
+            }
           ]
         }
       ]
@@ -302,6 +316,20 @@
           "legacyObjectiveId": "ko_food_l2_001",
           "objectiveAliasIds": [
             "ko_food_l2_001"
+          ],
+          "standardAlignments": [
+            {
+              "system": "TOPIK",
+              "level": "I-1",
+              "lang": "ko",
+              "skill": "vocabulary",
+              "confidence": 0.78,
+              "source": "curated",
+              "tags": [
+                "food",
+                "ordering"
+              ]
+            }
           ]
         }
       ]
@@ -817,6 +845,20 @@
           "legacyObjectiveId": "ja_subway_l1_001",
           "objectiveAliasIds": [
             "ja_subway_l1_001"
+          ],
+          "standardAlignments": [
+            {
+              "system": "JLPT",
+              "level": "N5",
+              "lang": "ja",
+              "skill": "vocabulary",
+              "confidence": 0.74,
+              "source": "curated",
+              "tags": [
+                "transit",
+                "directions"
+              ]
+            }
           ]
         }
       ]

@@ -3,6 +3,32 @@
   "level": 2,
   "mode": "hangout",
   "lang": "ko",
+  "standardAlignments": [
+    {
+      "system": "TOPIK",
+      "level": "I-1",
+      "lang": "ko",
+      "skill": "vocabulary",
+      "confidence": 0.78,
+      "source": "curated",
+      "tags": [
+        "food",
+        "ordering"
+      ]
+    },
+    {
+      "system": "CEFR",
+      "level": "A1",
+      "lang": "ko",
+      "skill": "conversation",
+      "confidence": 0.64,
+      "source": "curated",
+      "tags": [
+        "survival",
+        "transactional"
+      ]
+    }
+  ],
   "objectiveGraph": {
     "objectiveNodeId": "objective:ko-vocab-food-items",
     "cityId": "seoul",
@@ -42,7 +68,8 @@
       "linkedNodeIds": [
         "overlay:youtube:performance-energy",
         "target:\ubb34\ub300"
-      ]
+      ],
+      "standardAlignments": null
     },
     {
       "lemma": "\uc5f0\uc2b5",
@@ -50,7 +77,8 @@
       "linkedNodeIds": [
         "overlay:spotify:practice-studio",
         "target:\uc5f0\uc2b5"
-      ]
+      ],
+      "standardAlignments": []
     }
   ],
   "recentMediaRationale": {

@@ -107,6 +107,7 @@
             "food",
             "menu"
           ],
+          "standardAlignments": null,
           "targetItemIds": [
             "\uc624\ub385",
             "\ub5a1\ubcf6\uc774",
@@ -147,6 +148,20 @@
             "vocabulary",
             "food"
           ],
+          "standardAlignments": [
+            {
+              "system": "TOPIK",
+              "level": "I-1",
+              "lang": "ko",
+              "skill": "vocabulary",
+              "confidence": 0.78,
+              "source": "curated",
+              "tags": [
+                "food",
+                "ordering"
+              ]
+            }
+          ],
           "targetCount": 20,
           "assessmentThreshold": 0.8,
           "objectiveCategory": "vocabulary"
@@ -164,6 +179,7 @@
             "vocabulary",
             "courtesy"
           ],
+          "standardAlignments": [],
           "targetCount": 5,
           "assessmentThreshold": 0.9,
           "objectiveCategory": "vocabulary"
@@ -327,7 +343,8 @@
             "hangul",
             "reading",
             "menu"
-          ]
+          ],
+          "standardAlignments": null
         },
         "state": {
           "learnerId": "persona_kpop_prompting",
@@ -379,6 +396,20 @@
           "tags": [
             "vocabulary",
             "food"
+          ],
+          "standardAlignments": [
+            {
+              "system": "TOPIK",
+              "level": "I-1",
+              "lang": "ko",
+              "skill": "vocabulary",
+              "confidence": 0.78,
+              "source": "curated",
+              "tags": [
+                "food",
+                "ordering"
+              ]
+            }
           ]
         },
         "state": {
@@ -406,7 +437,8 @@
           "tags": [
             "vocabulary",
             "courtesy"
-          ]
+          ],
+          "standardAlignments": []
         },
         "state": {
           "learnerId": "persona_kpop_prompting",

@@ -7,6 +7,7 @@
       "objectiveId": "ko-script-menu-reading",
       "level": 0,
       "mode": "learn",
+      "standardAlignments": null,
       "coreTargets": {
         "vocabulary": [
           "떡볶이",
@@ -34,6 +35,32 @@
       "objectiveId": "ko-vocab-food-items",
       "level": 2,
       "mode": "hangout",
+      "standardAlignments": [
+        {
+          "system": "TOPIK",
+          "level": "I-1",
+          "lang": "ko",
+          "skill": "vocabulary",
+          "confidence": 0.78,
+          "source": "curated",
+          "tags": [
+            "food",
+            "ordering"
+          ]
+        },
+        {
+          "system": "CEFR",
+          "level": "A1",
+          "lang": "ko",
+          "skill": "conversation",
+          "confidence": 0.64,
+          "source": "curated",
+          "tags": [
+            "survival",
+            "transactional"
+          ]
+        }
+      ],
       "coreTargets": {
         "vocabulary": [
           "주문",

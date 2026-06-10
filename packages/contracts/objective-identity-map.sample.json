@@ -12,7 +12,8 @@
       "locationId": "food_street",
       "objectiveCategory": "script",
       "mapLocationId": "food_street",
-      "dagLocationSlot": "food_street"
+      "dagLocationSlot": "food_street",
+      "standardAlignments": null
     },
     {
       "canonicalObjectiveId": "ko-pron-food-words",
@@ -36,7 +37,21 @@
       "locationId": "food_street",
       "objectiveCategory": "vocabulary",
       "mapLocationId": "food_street",
-      "dagLocationSlot": "food_street"
+      "dagLocationSlot": "food_street",
+      "standardAlignments": [
+        {
+          "system": "TOPIK",
+          "level": "I-1",
+          "lang": "ko",
+          "skill": "vocabulary",
+          "confidence": 0.78,
+          "source": "curated",
+          "tags": [
+            "food",
+            "ordering"
+          ]
+        }
+      ]
     },
     {
       "canonicalObjectiveId": "ja-vocab-subway-transfers",
@@ -48,7 +63,21 @@
       "locationId": "subway_hub",
       "objectiveCategory": "vocabulary",
       "mapLocationId": "train_station",
-      "dagLocationSlot": "subway_hub"
+      "dagLocationSlot": "subway_hub",
+      "standardAlignments": [
+        {
+          "system": "JLPT",
+          "level": "N5",
+          "lang": "ja",
+          "skill": "vocabulary",
+          "confidence": 0.74,
+          "source": "curated",
+          "tags": [
+            "transit",
+            "directions"
+          ]
+        }
+      ]
     },
     {
       "canonicalObjectiveId": "zh-mission-stage-texting",
@@ -60,7 +89,33 @@
       "locationId": "practice_studio",
       "objectiveCategory": "conversation",
       "mapLocationId": "milk_tea_shop",
-      "dagLocationSlot": "practice_studio"
+      "dagLocationSlot": "practice_studio",
+      "standardAlignments": [
+        {
+          "system": "HSK",
+          "level": "2",
+          "lang": "zh",
+          "skill": "conversation",
+          "confidence": 0.69,
+          "source": "curated",
+          "tags": [
+            "texting",
+            "social"
+          ]
+        },
+        {
+          "system": "CEFR",
+          "level": "A2",
+          "lang": "zh",
+          "skill": "writing",
+          "confidence": 0.58,
+          "source": "curated",
+          "tags": [
+            "informal",
+            "messaging"
+          ]
+        }
+      ]
     },
     {
       "canonicalObjectiveId": "ko-vocab-city-social",
@@ -72,7 +127,8 @@
       "locationId": "subway_hub",
       "objectiveCategory": "conversation",
       "mapLocationId": "subway_hub",
-      "dagLocationSlot": "subway_hub"
+      "dagLocationSlot": "subway_hub",
+      "standardAlignments": []
     }
   ]
 }
