@@ -183,9 +183,25 @@ console.error(`[analyze] Mode: ${mode}${mode === 'screenshots' ? ` (${screenshot
 
 // ── Build video source (for video mode) ─────────────────────────────
 
-const videoUrl = args['video-path']
+// Prefer the headless rrweb render (full-fidelity, smooth) over the
+// low-fps html2canvas recording when one has been produced for the session
+let videoUrl = args['video-path']
   ? undefined
   : `${r2Base}/playtest/${sessionId}/recording.webm`;
+
+if (mode === 'video' && !args['video-path']) {
+  const rrwebRenderUrl = `${r2Base}/playtest/${sessionId}/rrweb-render.webm`;
+  try {
+    const head = await fetch(rrwebRenderUrl, {
+      method: 'HEAD',
+      headers: { 'User-Agent': 'Mozilla/5.0 (tong-pipeline)' },
+    });
+    if (head.ok) {
+      videoUrl = rrwebRenderUrl;
+      console.error('[analyze] Using rrweb render as video source');
+    }
+  } catch { /* fall back to recording.webm */ }
+}
 
 const videoPath = args['video-path'] || undefined;
 

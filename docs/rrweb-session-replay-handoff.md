@@ -181,3 +181,34 @@ production 2026-06-10 (client `tong.berlayar.ai` via OpenNext, worker
   like the filmstrip cap) and note the cap in the session state log.
 - WebAudio/TTS audio is not captured by rrweb — out of scope; note it.
 - The HD `getDisplayMedia` path stays as-is (it's already true pixels).
+
+## Implementation notes (built 2026-06-10, branch `feat/rrweb-session-replay`)
+
+All four phases shipped. Gotchas discovered while building:
+
+1. **`rrweb-player` 2.0.1 has a broken published dist** — its compiled
+   Player component never constructs a Replayer (no `new Replayer` in any
+   dist format), so it mounts an empty white frame, silently. Both the
+   backstage replay (`components/playtest/RrwebReplay.tsx`) and the render
+   script drive `rrweb`'s `Replayer` class directly instead, with our own
+   minimal controls.
+2. **rrweb records the snapshot fallback's own machinery.** The hidden
+   recording canvas gets `class="rr-block"`, and `blockSelector:
+   'iframe.html2canvas-container'` blocks the html2canvas clone iframe —
+   but rrweb's iframe-load hook attaches to a *blocked* iframe's
+   contentDocument anyway (upstream bug), emitting ~280KB of clone-document
+   events per 2.5s capture. `rrweb-recorder.ts` carries a filter that drops
+   attach events for blocked html2canvas iframes plus later events whose
+   target ids fall inside the dropped documents. Steady-state wire cost
+   after filtering: <1KB gzipped per 10s batch (vs ~320KB before).
+3. **Batches are stored with `contentEncoding: gzip` R2 metadata**; the
+   worker GET pipes them through `DecompressionStream`, so consumers always
+   see plain JSON.
+4. `.github/workflows/playtest-agent-pipeline.yml` does not exist on this
+   branch's lineage (it lives on unmerged branches) — the render step is
+   CLI-only for now: `node scripts/render-rrweb-video.mjs --session-id <id>
+   --upload` (needs root `npm install` + `npx playwright install chromium`).
+   Wire it into the pipeline when that workflow lands.
+5. The analyzer (`scripts/analyze-playtest-session.mjs`) HEADs
+   `playtest/{id}/rrweb-render.webm` on the public R2 base and prefers it
+   over `recording.webm` when present.
