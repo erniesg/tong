@@ -74,7 +74,9 @@ export function CharacterSprite({
       className={cn(
         'absolute inset-0',
         'transition-all duration-500 ease-out',
-        active && showVideo ? 'opacity-100 scale-100' : active && !idleVideoUrl ? 'opacity-100 scale-100' : !active ? 'opacity-40 scale-90 brightness-50' : 'opacity-0',
+        // !videoAvailable (not !idleVideoUrl): when every video candidate
+        // errors the static sprite takes over — it must not stay hidden
+        active && showVideo ? 'opacity-100 scale-100' : active && !videoAvailable ? 'opacity-100 scale-100' : !active ? 'opacity-40 scale-90 brightness-50' : 'opacity-0',
         position === 'left' && 'slide-in-left',
         position === 'right' && 'slide-in-right',
       )}
