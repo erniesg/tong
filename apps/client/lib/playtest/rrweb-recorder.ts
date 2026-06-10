@@ -140,7 +140,7 @@ export async function startRrwebRecording(sessionId: string): Promise<RrwebRecor
   const endpoint = (gz: boolean) =>
     `${getPublicApiBase()}/api/v1/playtest/sessions/${sessionId}/rrweb-events?seq=${seq}${gz ? '&gz=1' : ''}`;
 
-  const postBatch = async (events: RrwebEvent[], keepalive: boolean): Promise<boolean> => {
+  const postBatch = async (events: RrwebEvent[], keepalive: boolean): Promise<RrwebEvent[]> => {
     const json = JSON.stringify(events);
     const gzBody = await gzip(json);
     const body: BodyInit = gzBody ?? json;
@@ -148,11 +148,13 @@ export async function startRrwebRecording(sessionId: string): Promise<RrwebRecor
     if (keepalive && size > KEEPALIVE_BODY_CAP) {
       // Too big for the keepalive budget — split and send halves separately;
       // a single oversized event is dropped (next checkout re-snapshots).
-      if (events.length < 2) return false;
+      if (events.length < 2) return [];
       const mid = Math.ceil(events.length / 2);
-      const first = await postBatch(events.slice(0, mid), keepalive);
-      if (!first) return false;
-      return postBatch(events.slice(mid), keepalive);
+      const firstHalf = events.slice(0, mid);
+      const secondHalf = events.slice(mid);
+      const firstUnsent = await postBatch(firstHalf, keepalive);
+      if (firstUnsent.length > 0) return [...firstUnsent, ...secondHalf];
+      return postBatch(secondHalf, keepalive);
     }
     try {
       const res = await fetch(endpoint(Boolean(gzBody)), {
@@ -163,11 +165,11 @@ export async function startRrwebRecording(sessionId: string): Promise<RrwebRecor
       });
       if (res.ok) {
         seq += 1;
-        return true;
+        return [];
       }
-      return false;
+      return events;
     } catch {
-      return false;
+      return events;
     }
   };
 
@@ -176,8 +178,8 @@ export async function startRrwebRecording(sessionId: string): Promise<RrwebRecor
     flushBusy = true;
     const pending = buffer.splice(0, buffer.length);
     try {
-      const ok = await postBatch(pending, keepalive);
-      if (!ok) buffer.unshift(...pending); // retry on the next flush
+      const unsent = await postBatch(pending, keepalive);
+      if (unsent.length > 0) buffer.unshift(...unsent); // retry on the next flush
     } finally {
       flushBusy = false;
     }
