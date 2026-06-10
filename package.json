@@ -29,6 +29,7 @@
     "qa:new-recipe": "node scripts/create_qa_recipe_scaffold.mjs",
     "qa:resolve-publish-request": "node scripts/resolve_qa_publish_request.mjs",
     "qa:resolve-codex-pr-request": "node scripts/resolve_codex_create_pr_request.mjs",
+    "qa:route-replay-finding": "python3 .agents/skills/_functional-qa/scripts/replay_qa_router.py",
     "qa:upload-evidence": "node scripts/upload-qa-evidence.mjs",
     "runtime-assets:upload": "node scripts/upload-runtime-assets.mjs",
     "qa:render-comment": "node scripts/render-qa-comment.mjs",
