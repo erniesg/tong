@@ -18,7 +18,7 @@ interface PlaytestConfig {
   locationId?: string;
   hangoutId?: string;
   exerciseTypes?: string[];
-  seed?: number;
+  seed?: number | null;
   npc?: string;
   playerName?: string;
   chineseName?: string;
@@ -107,7 +107,7 @@ function buildGameUrl(config: PlaytestConfig): string {
   }
 
   // Propagate deterministic seed when present (no built-in game support yet — pass as extra param for future use)
-  if (config.seed !== undefined) {
+  if (config.seed != null) {
     params.set('seed', String(config.seed));
   }
 

@@ -122,8 +122,15 @@ class PlaytestSmokeTest:
 
     async def test_redirect_to_game(self, page: Page) -> None:
         """Verify the playtest page redirects to /game with correct params."""
-        # Wait for redirect — page uses router.push (client-side) or window.location.href
-        # Workers cold start can be slow, allow 30s
+        # Handle the "Ready to playtest" interstitial if present
+        try:
+            continue_btn = page.locator("button", has_text="Continue without")
+            await continue_btn.wait_for(state="visible", timeout=5000)
+            print("  → Clicking 'Continue without' on interstitial...", flush=True)
+            await continue_btn.first.click()
+            await asyncio.sleep(2)
+        except Exception:
+            pass
         try:
             await page.wait_for_url("**/game**", timeout=30000)
             current_url = page.url
@@ -264,6 +271,7 @@ class PlaytestSmokeTest:
             context = await browser.new_context(
                 viewport=VIEWPORT,
                 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                ignore_https_errors=True,
             )
             page = await context.new_page()
 
