@@ -85,6 +85,13 @@ class ProviderAdapter:
         return dict(self.config.get("capabilities") or {})
 
     def dispatch_eligibility(self, issue: dict[str, Any]) -> tuple[bool, str]:
+        validation_policy = issue.get("validation_policy") or {}
+        if validation_policy.get("fix_allowed") is False:
+            execution_mode = validation_policy.get("execution_mode", "validation-only")
+            return (
+                False,
+                f"validation policy '{execution_mode}' blocks remote dispatch until the human gate is resolved",
+            )
         if self.supports_dispatch():
             return (True, "")
         reason = self.placeholder_reason() or f"provider `{self.provider_id}` does not have a configured dispatch workflow yet"

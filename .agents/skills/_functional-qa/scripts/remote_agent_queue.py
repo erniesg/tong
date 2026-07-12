@@ -162,6 +162,8 @@ def queue_action_for(issue: dict[str, Any]) -> str:
     if issue["depends_on"]:
         return "launch after listed dependencies merge or are rebased into the task branch"
     if not issue["provider_dispatch_supported"]:
+        if issue.get("provider_dispatch_reason"):
+            return f"hold: {issue['provider_dispatch_reason']}"
         return f"hold until the `{provider_name}` adapter is configured for remote dispatch"
     return f"launch a direct {provider_name} task and create a PR from the task result"
 
@@ -285,6 +287,7 @@ def build_queue_issue(raw_issue: dict[str, Any], queue_dir: Path, *, requested_p
 
     selection = select_provider_for_issue(issue_entry, requested_provider=requested_provider)
     adapter = get_provider_adapter(selection.provider)
+    dispatch_ready, dispatch_reason = adapter.dispatch_eligibility(issue_entry)
 
     issue_number = issue_entry.get("number")
     effective_title = issue_entry["title"]
@@ -326,7 +329,8 @@ def build_queue_issue(raw_issue: dict[str, Any], queue_dir: Path, *, requested_p
                 "depends_on": depends_on,
                 "provider": adapter.provider_id,
                 "provider_display_name": adapter.display_name,
-                "provider_dispatch_supported": adapter.supports_dispatch(),
+                "provider_dispatch_supported": dispatch_ready,
+                "provider_dispatch_reason": dispatch_reason,
             }
         ),
         "{{verification_instruction}}": verification_instruction_for(issue_entry),
@@ -365,7 +369,6 @@ def build_queue_issue(raw_issue: dict[str, Any], queue_dir: Path, *, requested_p
         encoding="utf-8",
     )
 
-    ready, provider_reason = adapter.dispatch_eligibility(issue_entry)
     return {
         **issue_entry,
         "cloud_mode": cloud_mode,
@@ -379,8 +382,8 @@ def build_queue_issue(raw_issue: dict[str, Any], queue_dir: Path, *, requested_p
         "provider_selection_reason": selection.reason,
         "provider_selection_source": selection.source,
         "provider_capabilities": adapter.capabilities(),
-        "provider_dispatch_supported": ready,
-        "provider_dispatch_reason": provider_reason,
+        "provider_dispatch_supported": dispatch_ready,
+        "provider_dispatch_reason": dispatch_reason,
         "branch_name": branch_name,
         "draft_pr_title": pr_title,
         "generated_files": {

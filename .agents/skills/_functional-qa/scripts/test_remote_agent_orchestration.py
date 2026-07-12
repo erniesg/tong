@@ -13,6 +13,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import dispatch_issue_queue
+import remote_agent_queue
 import remote_agent_providers
 import resolve_issue_queue_request
 
@@ -100,6 +101,58 @@ class CommentParsingTests(unittest.TestCase):
 
 
 class DispatchSummaryTests(unittest.TestCase):
+    def test_validation_only_issue_is_not_remotely_dispatchable(self) -> None:
+        issue = {
+            "cloud_mode": "cloud-ready",
+            "batch_id": "batch-1",
+            "depends_on": [],
+            "provider": "codex",
+            "provider_display_name": "Codex",
+            "provider_dispatch_supported": False,
+            "provider_dispatch_reason": "validation policy 'validate-and-propose-only' blocks remote dispatch",
+            "validation_policy": {
+                "execution_mode": "validate-and-propose-only",
+                "fix_allowed": False,
+            },
+        }
+
+        ready, reason = remote_agent_providers.get_provider_adapter("codex").dispatch_eligibility(issue)
+
+        self.assertFalse(ready)
+        self.assertIn("blocks remote dispatch", reason)
+        self.assertFalse(remote_agent_queue.is_dispatchable(issue))
+        self.assertIn("blocks remote dispatch", remote_agent_queue.queue_action_for(issue))
+
+    def test_dispatcher_skips_validation_only_issue(self) -> None:
+        issue = {
+            "issue_ref": "erniesg/tong#359",
+            "title": "Archive API fixture backlog before automation resumes",
+            "cloud_mode": "cloud-ready",
+            "batch_id": "batch-1",
+            "depends_on": [],
+            "provider": "codex",
+            "branch_name": "codex/issue-359-planner-gates",
+            "validation_policy": {
+                "execution_mode": "validate-and-propose-only",
+                "fix_allowed": False,
+            },
+        }
+        plan = {"repository": "erniesg/tong", "default_provider": "codex", "issues": [issue]}
+
+        with mock.patch.object(dispatch_issue_queue, "list_open_prs", return_value={}):
+            summary = dispatch_issue_queue.build_dispatch_summary(
+                plan,
+                Path("/tmp/queue"),
+                plan_path=Path("/tmp/queue/queue-plan.json"),
+                action="queue",
+                issue_ref="",
+                max_dispatches=1,
+                dry_run=True,
+            )
+
+        self.assertEqual(summary["counts"], {"considered": 1, "dispatched": 0, "skipped": 1})
+        self.assertIn("blocks remote dispatch", summary["skipped"][0]["reason"])
+
     def test_build_summary_markdown_lists_provider_per_issue(self) -> None:
         markdown = dispatch_issue_queue.build_summary_markdown(
             {
