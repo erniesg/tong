@@ -119,6 +119,27 @@ class IssueRouterLabelTests(unittest.TestCase):
         self.assertEqual(entry["recommended_worktree"]["id"], "server-api")
         self.assertIn("project field `Lane`", " ".join(entry["routing_reasons"]))
 
+    def test_lane_label_cannot_override_explicit_path_ownership(self) -> None:
+        issue = {
+            "number": 358,
+            "title": "Update API route",
+            "body": "Change apps/server/api/profile.ts.",
+            "url": "https://github.com/erniesg/tong/issues/358",
+            "labels": ["lane:qa-platform"],
+            "issue_ref": "erniesg/tong#358",
+        }
+        with (
+            mock.patch.object(issue_router, "fetch_project_overrides", return_value={}),
+            mock.patch.object(issue_router, "find_previous_run", return_value=None),
+        ):
+            entry = issue_router.build_issue_entry(issue)
+
+        self.assertEqual(entry["recommended_worktree"]["id"], "server-api")
+        self.assertTrue(entry["spans_multiple_worktrees"])
+        self.assertIn("conflicts with explicit path ownership", " ".join(entry["routing_reasons"]))
+        lanes = issue_router.build_parallel_lanes([entry])
+        self.assertEqual(lanes[0]["lane_id"], "serialized-cross-boundary")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -183,15 +183,19 @@ def route_worktree(issue: dict[str, Any], issue_class: str, explicit_paths: list
             explicit_candidates.add(worktree["id"])
         scored.append((score, reasons, explicit_matches, worktree))
 
+    label_conflicts_with_paths = bool(label_lane and explicit_candidates and label_lane not in explicit_candidates)
+    project_conflicts_with_paths = bool(project_lane and explicit_candidates and project_lane not in explicit_candidates)
     if preferred_lane:
         preferred = next((item for item in ROUTING_CONFIG["worktrees"] if item["id"] == preferred_lane), None)
-        if preferred:
-            spans_multiple = len(explicit_candidates) > 1
+        if preferred and (project_lane or not label_conflicts_with_paths):
+            spans_multiple = len(explicit_candidates) > 1 or project_conflicts_with_paths
             if project_lane:
                 reasons = [f"project field `{lane_field}` pinned worktree to `{preferred_lane}`"]
             else:
                 reasons = [f"label `lane:{preferred_lane}` pinned worktree to `{preferred_lane}`"]
-            if spans_multiple:
+            if project_conflicts_with_paths:
+                reasons.append("project lane conflicts with explicit path ownership; keep execution serialized")
+            if len(explicit_candidates) > 1:
                 reasons.append("explicit file references span multiple worktrees; keep execution serialized")
             return (preferred, reasons, spans_multiple, sorted(explicit_candidates))
 
@@ -203,8 +207,10 @@ def route_worktree(issue: dict[str, Any], issue_class: str, explicit_paths: list
         worktree = next(item for item in ROUTING_CONFIG["worktrees"] if item["id"] == fallback_id)
         reasons = [f"no path or keyword hit; fell back to `{fallback_id}` for `{issue_class}`"]
 
-    spans_multiple = len(explicit_candidates) > 1
-    if spans_multiple:
+    spans_multiple = len(explicit_candidates) > 1 or label_conflicts_with_paths
+    if label_conflicts_with_paths:
+        reasons.append("lane label conflicts with explicit path ownership; keep execution serialized")
+    if len(explicit_candidates) > 1:
         reasons.append("explicit file references span multiple worktrees; keep execution serialized")
 
     return (worktree, reasons, spans_multiple, sorted(explicit_candidates))
