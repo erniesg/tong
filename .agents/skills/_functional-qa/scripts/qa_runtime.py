@@ -1146,7 +1146,7 @@ def validation_gate_failures(run: dict[str, Any], evidence: dict[str, Any], *, f
     if policy.get("requires_live_model_for_fixed") and not validation.get("live_model_confirmed", False):
         failures.append("live-model validation is not confirmed")
 
-    if policy.get("human_review_required") and not validation.get("human_review_completed", False):
+    if for_fixed_claim and policy.get("human_review_required") and not validation.get("human_review_completed", False):
         failures.append("human review is not marked complete")
 
     for item in validation.get("missing_requirements", []):

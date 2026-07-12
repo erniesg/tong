@@ -61,6 +61,31 @@ class IssueLabelGateTests(unittest.TestCase):
                 self.assertTrue(gated["human_review_required"])
                 self.assertIn(label, " ".join(gated["stop_conditions"]))
 
+    def test_human_review_gate_blocks_fixed_claims_not_validation_updates(self) -> None:
+        run = {
+            "classification": {"issue_class": "functional-logic"},
+            "validation_policy": {
+                "execution_mode": "validate-and-propose-only",
+                "human_review_required": True,
+                "requires_direct_issue_evidence": False,
+                "ui_acceptance_required": False,
+                "required_runtime_modes_for_fixed": [],
+                "requires_live_model_for_fixed": False,
+            },
+        }
+        evidence = {
+            "validation": {
+                "human_review_completed": False,
+                "missing_requirements": [],
+            }
+        }
+
+        validation_failures = qa_runtime.validation_gate_failures(run, evidence, for_fixed_claim=False)
+        fixed_failures = qa_runtime.validation_gate_failures(run, evidence, for_fixed_claim=True)
+
+        self.assertNotIn("human review is not marked complete", validation_failures)
+        self.assertIn("human review is not marked complete", fixed_failures)
+
 
 class IssueRouterLabelTests(unittest.TestCase):
     def test_blocking_and_lane_labels_override_keyword_fallbacks(self) -> None:
