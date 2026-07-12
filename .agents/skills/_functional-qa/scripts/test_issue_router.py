@@ -140,6 +140,34 @@ class IssueRouterLabelTests(unittest.TestCase):
         lanes = issue_router.build_parallel_lanes([entry])
         self.assertEqual(lanes[0]["lane_id"], "serialized-cross-boundary")
 
+    def test_hidden_qa_path_cannot_be_lost_to_stale_lane_label(self) -> None:
+        issue = {
+            "number": 361,
+            "title": "Repair functional QA routing",
+            "body": "Change .agents/skills/_functional-qa/scripts/issue_router.py.",
+            "url": "https://github.com/erniesg/tong/issues/361",
+            "labels": ["lane:server-api"],
+            "issue_ref": "erniesg/tong#361",
+        }
+        with (
+            mock.patch.object(issue_router, "fetch_project_overrides", return_value={}),
+            mock.patch.object(issue_router, "find_previous_run", return_value=None),
+        ):
+            entry = issue_router.build_issue_entry(issue)
+
+        self.assertIn(".agents/skills/_functional-qa/scripts/issue_router.py", entry["explicit_paths"])
+        self.assertEqual(entry["recommended_worktree"]["id"], "qa-platform")
+        self.assertEqual(entry["explicit_worktree_candidates"], ["qa-platform"])
+        self.assertTrue(entry["spans_multiple_worktrees"])
+        self.assertIn("conflicts with explicit path ownership", " ".join(entry["routing_reasons"]))
+        self.assertEqual(issue_router.build_parallel_lanes([entry])[0]["lane_id"], "serialized-cross-boundary")
+
+    def test_hidden_github_paths_are_extracted(self) -> None:
+        self.assertEqual(
+            issue_router.extract_paths("Update .github/ISSUE_TEMPLATE/bug.yml."),
+            [".github/ISSUE_TEMPLATE/bug.yml"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

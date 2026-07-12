@@ -39,7 +39,9 @@ from qa_runtime import (
 
 
 ROUTING_CONFIG = load_json(CONFIG_ROOT / "worktree-routing.json")
-PATH_PATTERN = re.compile(r"(?P<path>(?:apps|packages|scripts|docs|infra|assets|\\.github)/[A-Za-z0-9._/-]+)")
+PATH_PATTERN = re.compile(
+    r"(?P<path>(?:\.[A-Za-z0-9_-]+|apps|packages|scripts|docs|infra|assets)/[A-Za-z0-9._/-]+)"
+)
 
 
 def normalize_issue(payload: dict[str, Any]) -> dict[str, Any]:
