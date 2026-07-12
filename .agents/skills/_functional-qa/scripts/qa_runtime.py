@@ -27,6 +27,12 @@ FIX_STATUSES = {"not-checked", "fixed", "still-reproduces", "inconclusive"}
 ISSUE_ACCURACY = {"accurate", "stale", "misdescribed", "n/a"}
 FIX_ALLOWED_EXECUTION_MODES = {"safe-unattended", "requires-live-model"}
 REVIEWER_PROOF_REQUIRED_CLASSES = {"interaction-input", "animation-transition", "async-streaming-state"}
+QUEUE_BLOCKING_LABELS = {
+    "blocked-on-human",
+    "do-not-merge",
+    "pm:portability-gap",
+    "self-heal:exhausted",
+}
 
 
 def load_json(path: Path) -> Any:
@@ -572,6 +578,28 @@ def apply_execution_mode_override(validation_policy: dict[str, Any], execution_m
     updated["execution_mode"] = execution_mode
     updated["fix_allowed"] = execution_mode in FIX_ALLOWED_EXECUTION_MODES
     updated["human_review_required"] = updated.get("human_review_required", False) or execution_mode == "needs-human-design-review"
+    return updated
+
+
+def apply_issue_label_gates(
+    validation_policy: dict[str, Any],
+    labels: list[str],
+) -> dict[str, Any]:
+    normalized = {label.strip().lower() for label in labels}
+    blocking = sorted(normalized & QUEUE_BLOCKING_LABELS)
+    if not blocking:
+        return dict(validation_policy)
+
+    if validation_policy.get("execution_mode") in {"validate-and-propose-only", "needs-human-design-review"}:
+        updated = dict(validation_policy)
+    else:
+        updated = apply_execution_mode_override(validation_policy, "validate-and-propose-only")
+    updated["fix_allowed"] = False
+    updated["human_review_required"] = True
+    updated["stop_conditions"] = unique_lines(
+        list(updated.get("stop_conditions", []))
+        + [f"issue label `{label}` requires human resolution before fix or dispatch" for label in blocking]
+    )
     return updated
 
 
@@ -1425,6 +1453,10 @@ def init_run(args: argparse.Namespace) -> int:
     execution_mode_field = project_control_plane().get("execution_mode_field") if project_control_plane() else None
     if execution_mode_field and project_fields.get(execution_mode_field):
         validation_policy = apply_execution_mode_override(validation_policy, project_fields[execution_mode_field])
+    validation_policy = apply_issue_label_gates(
+        validation_policy,
+        issue_payload.get("labels", []) if issue_payload else [],
+    )
     portability = portability_preflight(
         issue_payload or {"title": args.target, "body": ""},
         project_fields=project_fields,

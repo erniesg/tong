@@ -12,6 +12,7 @@ from typing import Any
 
 from qa_runtime import (
     apply_execution_mode_override,
+    apply_issue_label_gates,
     CONFIG_ROOT,
     REPO_ROOT,
     artifact_root,
@@ -154,6 +155,17 @@ def score_worktree(worktree: dict[str, Any], lowered_text: str, labels_text: str
     return (score, reasons, explicit_matches)
 
 
+def preferred_lane_from_labels(labels: list[str]) -> str | None:
+    valid_lanes = {worktree["id"] for worktree in ROUTING_CONFIG["worktrees"]}
+    requested = {
+        label.split(":", 1)[1].strip().lower()
+        for label in labels
+        if label.lower().startswith("lane:") and ":" in label
+    }
+    valid_requested = requested & valid_lanes
+    return next(iter(valid_requested)) if len(valid_requested) == 1 else None
+
+
 def route_worktree(issue: dict[str, Any], issue_class: str, explicit_paths: list[str]) -> tuple[dict[str, Any], list[str], bool, list[str]]:
     lowered_text = f"{issue['title']}\n{issue['body']}".lower()
     labels_text = " ".join(label.lower() for label in issue.get("labels", []))
@@ -161,7 +173,9 @@ def route_worktree(issue: dict[str, Any], issue_class: str, explicit_paths: list
     explicit_candidates: set[str] = set()
     project_fields = issue.get("project_fields", {})
     lane_field = project_control_plane().get("lane_field") if project_control_plane() else None
-    preferred_lane = project_fields.get(lane_field) if lane_field else None
+    project_lane = project_fields.get(lane_field) if lane_field else None
+    label_lane = preferred_lane_from_labels(issue.get("labels", [])) if not project_lane else None
+    preferred_lane = project_lane or label_lane
 
     for worktree in ROUTING_CONFIG["worktrees"]:
         score, reasons, explicit_matches = score_worktree(worktree, lowered_text, labels_text, explicit_paths, issue_class)
@@ -173,7 +187,10 @@ def route_worktree(issue: dict[str, Any], issue_class: str, explicit_paths: list
         preferred = next((item for item in ROUTING_CONFIG["worktrees"] if item["id"] == preferred_lane), None)
         if preferred:
             spans_multiple = len(explicit_candidates) > 1
-            reasons = [f"project field `{lane_field}` pinned worktree to `{preferred_lane}`"]
+            if project_lane:
+                reasons = [f"project field `{lane_field}` pinned worktree to `{preferred_lane}`"]
+            else:
+                reasons = [f"label `lane:{preferred_lane}` pinned worktree to `{preferred_lane}`"]
             if spans_multiple:
                 reasons.append("explicit file references span multiple worktrees; keep execution serialized")
             return (preferred, reasons, spans_multiple, sorted(explicit_candidates))
@@ -255,6 +272,7 @@ def build_issue_entry(issue: dict[str, Any]) -> dict[str, Any]:
     execution_mode_field = project_control_plane().get("execution_mode_field") if project_control_plane() else None
     if execution_mode_field and project_fields.get(execution_mode_field):
         validation_policy = apply_execution_mode_override(validation_policy, project_fields[execution_mode_field])
+    validation_policy = apply_issue_label_gates(validation_policy, issue.get("labels", []))
     portability = portability_preflight(
         issue,
         project_fields=project_fields,
