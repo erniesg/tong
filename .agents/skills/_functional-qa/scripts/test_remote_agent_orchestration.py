@@ -27,6 +27,11 @@ def sample_issue(*, lane: str = "qa-platform", execution_mode: str = "safe-unatt
 
 
 class ProviderSelectionTests(unittest.TestCase):
+    def test_current_batch_ids_are_unique(self) -> None:
+        batch_ids = [batch["id"] for batch in remote_agent_queue.CLOUD_CONFIG["current_batches"]]
+
+        self.assertEqual(len(batch_ids), len(set(batch_ids)))
+
     def test_select_provider_uses_default_policy(self) -> None:
         selection = remote_agent_providers.select_provider_for_issue(
             sample_issue(),
