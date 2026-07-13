@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from qa_runtime import CONFIG_ROOT, TEMPLATE_ROOT, load_json, run_command, slugify
+from qa_runtime import CONFIG_ROOT, TEMPLATE_ROOT, issue_ref_matches, load_json, run_command, slugify
 
 
 PROVIDER_REGISTRY = load_json(CONFIG_ROOT / "remote-agent-providers.json")
@@ -201,7 +201,7 @@ def select_provider_for_issue(
     for override in active_policy.get("issue_overrides", []):
         match = str(override.get("match") or "").strip()
         provider_id = str(override.get("provider") or "").strip().lower()
-        if match and issue_ref and match in issue_ref and provider_id:
+        if issue_ref_matches(issue_ref, match) and provider_id:
             normalize_requested_provider(provider_id)
             return ProviderSelection(provider_id, f"issue override `{match}`", "issue-override")
 

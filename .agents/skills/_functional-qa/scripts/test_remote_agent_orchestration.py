@@ -75,6 +75,20 @@ class ProviderSelectionTests(unittest.TestCase):
         self.assertEqual(selection.provider, "claude")
         self.assertEqual(selection.source, "request")
 
+    def test_issue_provider_override_does_not_match_longer_issue_number(self) -> None:
+        selection = remote_agent_providers.select_provider_for_issue(
+            {**sample_issue(), "issue_ref": "erniesg/tong#2920"},
+            policy={
+                "default_provider": "codex",
+                "lane_overrides": {},
+                "execution_mode_overrides": {},
+                "issue_overrides": [{"match": "#292", "provider": "claude"}],
+            },
+        )
+
+        self.assertEqual(selection.provider, "codex")
+        self.assertEqual(selection.source, "policy")
+
 
 class CommentParsingTests(unittest.TestCase):
     def test_parse_comment_command_accepts_repo_native_prefix(self) -> None:
@@ -106,6 +120,12 @@ class CommentParsingTests(unittest.TestCase):
 
 
 class DispatchSummaryTests(unittest.TestCase):
+    def test_cloud_overrides_and_batches_use_exact_issue_numbers(self) -> None:
+        self.assertIsNotNone(remote_agent_queue.override_for("erniesg/tong#11"))
+        self.assertIsNone(remote_agent_queue.override_for("erniesg/tong#110"))
+        self.assertEqual(remote_agent_queue.configured_batch_for("erniesg/tong#11"), "batch-2")
+        self.assertEqual(remote_agent_queue.configured_batch_for("erniesg/tong#110"), "unassigned")
+
     def test_validation_only_issue_is_not_remotely_dispatchable(self) -> None:
         issue = {
             "cloud_mode": "cloud-ready",

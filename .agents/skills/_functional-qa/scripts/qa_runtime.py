@@ -511,9 +511,19 @@ def collect_issue_notes(issue_ref: str | None) -> list[str]:
         return []
     notes: list[str] = []
     for item in REPO_ADAPTER.get("issue_notes", []):
-        if item["match"] in issue_ref:
+        if issue_ref_matches(issue_ref, item["match"]):
             notes.extend(item["notes"])
     return notes
+
+
+def issue_ref_matches(issue_ref: str | None, selector: object) -> bool:
+    normalized_ref = str(issue_ref or "").strip()
+    normalized_selector = str(selector or "").strip()
+    if not normalized_ref or not normalized_selector:
+        return False
+    if re.fullmatch(r"#\d+", normalized_selector):
+        return bool(re.fullmatch(rf"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+{re.escape(normalized_selector)}", normalized_ref))
+    return normalized_ref == normalized_selector
 
 
 def issue_fallback_labels(issue_ref: str | None) -> list[str]:
@@ -521,7 +531,7 @@ def issue_fallback_labels(issue_ref: str | None) -> list[str]:
         return []
     labels: list[str] = []
     for item in REPO_ADAPTER.get("issue_notes", []):
-        if item["match"] in issue_ref:
+        if issue_ref_matches(issue_ref, item["match"]):
             labels.extend(str(label) for label in item.get("fallback_labels", []))
     return unique_lines(labels)
 
@@ -530,7 +540,7 @@ def issue_playbook(issue_ref: str | None) -> dict[str, Any] | None:
     if not issue_ref:
         return None
     for item in REPO_ADAPTER.get("issue_playbooks", []):
-        if item["match"] in issue_ref:
+        if issue_ref_matches(issue_ref, item["match"]):
             return item
     return None
 
@@ -539,7 +549,7 @@ def classification_override(issue_ref: str | None) -> str | None:
     if not issue_ref:
         return None
     for item in REPO_ADAPTER.get("issue_notes", []):
-        if item["match"] in issue_ref:
+        if issue_ref_matches(issue_ref, item["match"]):
             return item.get("issue_class_override")
     return None
 

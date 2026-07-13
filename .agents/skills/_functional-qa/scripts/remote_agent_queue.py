@@ -13,6 +13,7 @@ from qa_runtime import (
     CONFIG_ROOT,
     artifact_root,
     format_portability_summary,
+    issue_ref_matches,
     load_json,
     render_portability_lines,
     repo_name_with_owner,
@@ -43,7 +44,7 @@ def override_for(issue_ref: str | None) -> dict[str, Any] | None:
     if not issue_ref:
         return None
     for item in CLOUD_CONFIG.get("issue_overrides", []):
-        if item["match"] in issue_ref:
+        if issue_ref_matches(issue_ref, item["match"]):
             return item
     return None
 
@@ -133,7 +134,7 @@ def configured_batch_for(issue_ref: str | None) -> str:
         return "unassigned"
     for batch in CLOUD_CONFIG.get("current_batches", []):
         for item in batch.get("issues", []):
-            if item in issue_ref:
+            if issue_ref_matches(issue_ref, item):
                 return batch["id"]
     return "unassigned"
 
@@ -143,7 +144,7 @@ def issue_order_value(issue_ref: str | None, batch_id: str) -> int:
         if batch["id"] != batch_id:
             continue
         for index, item in enumerate(batch.get("issues", [])):
-            if issue_ref and item in issue_ref:
+            if issue_ref_matches(issue_ref, item):
                 return index
         return 999
     return 999

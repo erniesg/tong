@@ -29,6 +29,13 @@ def blocked_issue() -> dict[str, object]:
 
 
 class IssueLabelGateTests(unittest.TestCase):
+    def test_issue_ref_selectors_do_not_match_longer_issue_numbers(self) -> None:
+        self.assertTrue(qa_runtime.issue_ref_matches("erniesg/tong#359", "#359"))
+        self.assertTrue(qa_runtime.issue_ref_matches("erniesg/tong#359", "erniesg/tong#359"))
+        self.assertFalse(qa_runtime.issue_ref_matches("erniesg/tong#3590", "#359"))
+        self.assertFalse(qa_runtime.issue_ref_matches("erniesg/other#359", "erniesg/tong#359"))
+        self.assertEqual(qa_runtime.issue_fallback_labels("erniesg/tong#3590"), [])
+
     def test_blocked_on_human_is_a_non_weakenable_validation_floor(self) -> None:
         policy = {
             "execution_mode": "safe-unattended",
