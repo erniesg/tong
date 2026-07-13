@@ -41,6 +41,7 @@ from qa_runtime import (
 
 ROUTING_CONFIG = load_json(CONFIG_ROOT / "worktree-routing.json")
 PATH_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9._-])"
     r"(?P<path>(?:\.[A-Za-z0-9_-]+|apps|packages|scripts|docs|infra|assets)/[A-Za-z0-9._/-]+)"
 )
 

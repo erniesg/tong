@@ -213,6 +213,18 @@ class IssueRouterLabelTests(unittest.TestCase):
             [".github/ISSUE_TEMPLATE/bug.yml"],
         )
 
+    def test_hidden_paths_are_normalized_from_github_urls(self) -> None:
+        self.assertEqual(
+            issue_router.extract_paths(
+                "Review https://github.com/erniesg/tong/blob/main/.agents/skills/_functional-qa/scripts/issue_router.py "
+                "and https://github.com/erniesg/tong/blob/main/.github/workflows/issue-queue-orchestrator.yml."
+            ),
+            [
+                ".agents/skills/_functional-qa/scripts/issue_router.py",
+                ".github/workflows/issue-queue-orchestrator.yml",
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
