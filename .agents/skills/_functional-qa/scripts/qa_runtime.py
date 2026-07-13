@@ -339,15 +339,18 @@ def fetch_issue(target: str) -> dict[str, Any] | None:
     if parsed["kind"] != "github":
         return None
 
-    result = run_command(
-        [
-            "gh",
-            "api",
-            f"repos/{parsed['repo']}/issues/{parsed['number']}",
-        ],
-        allow_failure=True,
-    )
-    if result.returncode != 0:
+    try:
+        result = run_command(
+            [
+                "gh",
+                "api",
+                f"repos/{parsed['repo']}/issues/{parsed['number']}",
+            ],
+            allow_failure=True,
+        )
+    except FileNotFoundError:
+        result = None
+    if result is None or result.returncode != 0:
         fallback_labels = issue_fallback_labels(parsed["issue_ref"])
         return {
             "repo": parsed["repo"],

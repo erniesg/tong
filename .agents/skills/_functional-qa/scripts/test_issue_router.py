@@ -140,6 +140,16 @@ class IssueRouterLabelTests(unittest.TestCase):
         self.assertFalse(entry["validation_policy"]["fix_allowed"])
         self.assertEqual(entry["recommended_worktree"]["id"], "qa-platform")
 
+    def test_missing_gh_uses_repo_fallback_labels(self) -> None:
+        with mock.patch.object(qa_runtime, "run_command", side_effect=FileNotFoundError("gh")):
+            payload = qa_runtime.fetch_issue("erniesg/tong#359")
+
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload["metadata_resolution"], "repo-adapter-fallback")
+        self.assertIn("blocked-on-human", payload["labels"])
+        self.assertIn("lane:qa-platform", payload["labels"])
+        self.assertIn("rucksack-blocked", payload["labels"])
+
     def test_blocking_and_lane_labels_override_keyword_fallbacks(self) -> None:
         with (
             mock.patch.object(issue_router, "fetch_project_overrides", return_value={}),
