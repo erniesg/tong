@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import subprocess
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -44,7 +45,16 @@ class IssueLabelGateTests(unittest.TestCase):
         self.assertIn("blocked-on-human", " ".join(gated["stop_conditions"]))
 
     def test_all_documented_queue_skip_labels_disable_unattended_fixes(self) -> None:
-        for label in ("blocked-on-human", "do-not-merge", "pm:portability-gap", "self-heal:exhausted"):
+        for label in (
+            "blocked-on-human",
+            "do-not-merge",
+            "pm:portability-gap",
+            "rucksack-blocked",
+            "rucksack-needs-decision",
+            "rucksack-needs-human",
+            "rucksack-provider-limited",
+            "self-heal:exhausted",
+        ):
             with self.subTest(label=label):
                 gated = qa_runtime.apply_issue_label_gates(
                     {
@@ -60,6 +70,21 @@ class IssueLabelGateTests(unittest.TestCase):
                 self.assertFalse(gated["fix_allowed"])
                 self.assertTrue(gated["human_review_required"])
                 self.assertIn(label, " ".join(gated["stop_conditions"]))
+
+    def test_missing_github_metadata_without_repo_fallback_fails_closed(self) -> None:
+        policy = {
+            "execution_mode": "safe-unattended",
+            "fix_allowed": True,
+            "human_review_required": False,
+            "stop_conditions": [],
+        }
+
+        gated = qa_runtime.apply_issue_metadata_gate(policy, "fallback-no-gh")
+
+        self.assertEqual(gated["execution_mode"], "validate-and-propose-only")
+        self.assertFalse(gated["fix_allowed"])
+        self.assertTrue(gated["human_review_required"])
+        self.assertIn("metadata is unavailable", " ".join(gated["stop_conditions"]))
 
     def test_human_review_gate_blocks_fixed_claims_not_validation_updates(self) -> None:
         run = {
@@ -88,6 +113,26 @@ class IssueLabelGateTests(unittest.TestCase):
 
 
 class IssueRouterLabelTests(unittest.TestCase):
+    def test_offline_issue_resolution_uses_repo_fallback_labels(self) -> None:
+        unavailable = subprocess.CompletedProcess(args=["gh"], returncode=1, stdout="", stderr="offline")
+        with (
+            mock.patch.object(qa_runtime, "run_command", return_value=unavailable),
+            mock.patch.object(issue_router, "fetch_project_overrides", return_value={}),
+            mock.patch.object(issue_router, "find_previous_run", return_value=None),
+        ):
+            source, issues = issue_router.resolve_targets(["erniesg/tong#359"], limit=1)
+            entry = issue_router.build_issue_entry(issues[0])
+
+        self.assertEqual(source, "explicit-targets")
+        self.assertEqual(issues[0]["metadata_resolution"], "repo-adapter-fallback")
+        self.assertEqual(entry["metadata_resolution"], "repo-adapter-fallback")
+        self.assertIn("blocked-on-human", entry["labels"])
+        self.assertIn("lane:qa-platform", entry["labels"])
+        self.assertIn("rucksack-blocked", entry["labels"])
+        self.assertEqual(entry["validation_policy"]["execution_mode"], "validate-and-propose-only")
+        self.assertFalse(entry["validation_policy"]["fix_allowed"])
+        self.assertEqual(entry["recommended_worktree"]["id"], "qa-platform")
+
     def test_blocking_and_lane_labels_override_keyword_fallbacks(self) -> None:
         with (
             mock.patch.object(issue_router, "fetch_project_overrides", return_value={}),

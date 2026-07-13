@@ -31,6 +31,10 @@ QUEUE_BLOCKING_LABELS = {
     "blocked-on-human",
     "do-not-merge",
     "pm:portability-gap",
+    "rucksack-blocked",
+    "rucksack-needs-decision",
+    "rucksack-needs-human",
+    "rucksack-provider-limited",
     "self-heal:exhausted",
 }
 
@@ -344,6 +348,7 @@ def fetch_issue(target: str) -> dict[str, Any] | None:
         allow_failure=True,
     )
     if result.returncode != 0:
+        fallback_labels = issue_fallback_labels(parsed["issue_ref"])
         return {
             "repo": parsed["repo"],
             "number": parsed["number"],
@@ -351,10 +356,10 @@ def fetch_issue(target: str) -> dict[str, Any] | None:
             "title": target if target != parsed["issue_ref"] else parsed["issue_ref"],
             "body": "",
             "html_url": f"https://github.com/{parsed['repo']}/issues/{parsed['number']}",
-            "labels": [],
+            "labels": fallback_labels,
             "created_at": None,
             "updated_at": None,
-            "metadata_resolution": "fallback-no-gh",
+            "metadata_resolution": "repo-adapter-fallback" if fallback_labels else "fallback-no-gh",
         }
 
     payload = json.loads(result.stdout)
@@ -368,6 +373,7 @@ def fetch_issue(target: str) -> dict[str, Any] | None:
         "labels": [label["name"] for label in payload.get("labels", [])],
         "created_at": payload.get("created_at"),
         "updated_at": payload.get("updated_at"),
+        "metadata_resolution": "github",
     }
 
 
@@ -510,6 +516,16 @@ def collect_issue_notes(issue_ref: str | None) -> list[str]:
     return notes
 
 
+def issue_fallback_labels(issue_ref: str | None) -> list[str]:
+    if not issue_ref:
+        return []
+    labels: list[str] = []
+    for item in REPO_ADAPTER.get("issue_notes", []):
+        if item["match"] in issue_ref:
+            labels.extend(str(label) for label in item.get("fallback_labels", []))
+    return unique_lines(labels)
+
+
 def issue_playbook(issue_ref: str | None) -> dict[str, Any] | None:
     if not issue_ref:
         return None
@@ -599,6 +615,26 @@ def apply_issue_label_gates(
     updated["stop_conditions"] = unique_lines(
         list(updated.get("stop_conditions", []))
         + [f"issue label `{label}` requires human resolution before fix or dispatch" for label in blocking]
+    )
+    return updated
+
+
+def apply_issue_metadata_gate(
+    validation_policy: dict[str, Any],
+    metadata_resolution: str | None,
+) -> dict[str, Any]:
+    if metadata_resolution != "fallback-no-gh":
+        return dict(validation_policy)
+
+    if validation_policy.get("execution_mode") in {"validate-and-propose-only", "needs-human-design-review"}:
+        updated = dict(validation_policy)
+    else:
+        updated = apply_execution_mode_override(validation_policy, "validate-and-propose-only")
+    updated["fix_allowed"] = False
+    updated["human_review_required"] = True
+    updated["stop_conditions"] = unique_lines(
+        list(updated.get("stop_conditions", []))
+        + ["GitHub issue metadata is unavailable and no repository fallback labels are configured; remote dispatch is blocked"]
     )
     return updated
 
@@ -1456,6 +1492,10 @@ def init_run(args: argparse.Namespace) -> int:
     validation_policy = apply_issue_label_gates(
         validation_policy,
         issue_payload.get("labels", []) if issue_payload else [],
+    )
+    validation_policy = apply_issue_metadata_gate(
+        validation_policy,
+        issue_payload.get("metadata_resolution") if issue_payload else None,
     )
     portability = portability_preflight(
         issue_payload or {"title": args.target, "body": ""},

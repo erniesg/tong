@@ -13,6 +13,7 @@ from typing import Any
 from qa_runtime import (
     apply_execution_mode_override,
     apply_issue_label_gates,
+    apply_issue_metadata_gate,
     CONFIG_ROOT,
     REPO_ROOT,
     artifact_root,
@@ -59,6 +60,7 @@ def normalize_issue(payload: dict[str, Any]) -> dict[str, Any]:
         "url": payload.get("url") or payload.get("html_url", ""),
         "labels": [label for label in normalized_labels if label],
         "issue_ref": payload.get("issue_ref"),
+        "metadata_resolution": payload.get("metadata_resolution"),
     }
 
 
@@ -281,6 +283,7 @@ def build_issue_entry(issue: dict[str, Any]) -> dict[str, Any]:
     if execution_mode_field and project_fields.get(execution_mode_field):
         validation_policy = apply_execution_mode_override(validation_policy, project_fields[execution_mode_field])
     validation_policy = apply_issue_label_gates(validation_policy, issue.get("labels", []))
+    validation_policy = apply_issue_metadata_gate(validation_policy, issue.get("metadata_resolution"))
     portability = portability_preflight(
         issue,
         project_fields=project_fields,
@@ -301,6 +304,7 @@ def build_issue_entry(issue: dict[str, Any]) -> dict[str, Any]:
         "issue_ref": issue_ref,
         "url": issue.get("url", ""),
         "labels": issue.get("labels", []),
+        "metadata_resolution": issue.get("metadata_resolution"),
         "project_fields": project_fields,
         "classification": classification,
         "evidence_plan": evidence_plan,
