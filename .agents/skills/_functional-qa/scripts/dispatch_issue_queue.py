@@ -177,16 +177,16 @@ def build_dispatch_summary(
                     }
                 )
                 continue
+            ready, ready_reason = adapter.dispatch_eligibility(issue)
+            if not ready:
+                skipped.append({"issue_ref": ref, "provider": provider_id, "reason": ready_reason})
+                continue
             if issue.get("batch_id") == "unassigned":
                 skipped.append({"issue_ref": ref, "provider": provider_id, "reason": "issue is not in an execution batch"})
                 continue
             deps_ok, deps_reason = dependencies_satisfied(issue)
             if not deps_ok:
                 skipped.append({"issue_ref": ref, "provider": provider_id, "reason": deps_reason})
-                continue
-            ready, ready_reason = adapter.dispatch_eligibility(issue)
-            if not ready:
-                skipped.append({"issue_ref": ref, "provider": provider_id, "reason": ready_reason})
                 continue
             existing_pr = open_prs.get(issue["branch_name"])
             if existing_pr:

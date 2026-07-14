@@ -64,15 +64,6 @@
       ]
     },
     {
-      "id": "batch-parallel",
-      "description": "Independent remote-first tooling and asset-foundation work that can run in parallel with the client-shell priority wave.",
-      "issues": [
-        "#35",
-        "#36",
-        "#34"
-      ]
-    },
-    {
       "id": "batch-2",
       "description": "Second cloud wave: follow-up onboarding, HUD, Block Crush guidance, and tap-flow fixes after the priority wave settles.",
       "issues": [

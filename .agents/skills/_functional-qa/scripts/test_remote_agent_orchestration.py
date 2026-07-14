@@ -13,6 +13,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import dispatch_issue_queue
+import remote_agent_queue
 import remote_agent_providers
 import resolve_issue_queue_request
 
@@ -26,6 +27,11 @@ def sample_issue(*, lane: str = "qa-platform", execution_mode: str = "safe-unatt
 
 
 class ProviderSelectionTests(unittest.TestCase):
+    def test_current_batch_ids_are_unique(self) -> None:
+        batch_ids = [batch["id"] for batch in remote_agent_queue.CLOUD_CONFIG["current_batches"]]
+
+        self.assertEqual(len(batch_ids), len(set(batch_ids)))
+
     def test_select_provider_uses_default_policy(self) -> None:
         selection = remote_agent_providers.select_provider_for_issue(
             sample_issue(),
@@ -69,6 +75,20 @@ class ProviderSelectionTests(unittest.TestCase):
         self.assertEqual(selection.provider, "claude")
         self.assertEqual(selection.source, "request")
 
+    def test_issue_provider_override_does_not_match_longer_issue_number(self) -> None:
+        selection = remote_agent_providers.select_provider_for_issue(
+            {**sample_issue(), "issue_ref": "erniesg/tong#2920"},
+            policy={
+                "default_provider": "codex",
+                "lane_overrides": {},
+                "execution_mode_overrides": {},
+                "issue_overrides": [{"match": "#292", "provider": "claude"}],
+            },
+        )
+
+        self.assertEqual(selection.provider, "codex")
+        self.assertEqual(selection.source, "policy")
+
 
 class CommentParsingTests(unittest.TestCase):
     def test_parse_comment_command_accepts_repo_native_prefix(self) -> None:
@@ -100,6 +120,90 @@ class CommentParsingTests(unittest.TestCase):
 
 
 class DispatchSummaryTests(unittest.TestCase):
+    def test_cloud_overrides_and_batches_use_exact_issue_numbers(self) -> None:
+        self.assertIsNotNone(remote_agent_queue.override_for("erniesg/tong#11"))
+        self.assertIsNone(remote_agent_queue.override_for("erniesg/tong#110"))
+        self.assertEqual(remote_agent_queue.configured_batch_for("erniesg/tong#11"), "batch-2")
+        self.assertEqual(remote_agent_queue.configured_batch_for("erniesg/tong#110"), "unassigned")
+
+    def test_validation_only_issue_is_not_remotely_dispatchable(self) -> None:
+        issue = {
+            "cloud_mode": "cloud-ready",
+            "batch_id": "unassigned",
+            "depends_on": [],
+            "provider": "codex",
+            "provider_display_name": "Codex",
+            "provider_dispatch_supported": False,
+            "provider_dispatch_reason": "validation policy 'validate-and-propose-only' blocks remote dispatch",
+            "validation_policy": {
+                "execution_mode": "validate-and-propose-only",
+                "fix_allowed": False,
+            },
+        }
+
+        ready, reason = remote_agent_providers.get_provider_adapter("codex").dispatch_eligibility(issue)
+
+        self.assertFalse(ready)
+        self.assertIn("blocks remote dispatch", reason)
+        self.assertFalse(remote_agent_queue.is_dispatchable(issue))
+        self.assertIn("blocks remote dispatch", remote_agent_queue.queue_action_for(issue))
+
+    def test_validation_gate_precedes_batching_guidance(self) -> None:
+        gate_reason = "issue label `blocked-on-human` requires human resolution before remote dispatch"
+        issue = {
+            "issue_ref": "erniesg/tong#359",
+            "title": "Archive and consolidate the open PR backlog before automation resumes",
+            "cloud_mode": "cloud-ready",
+            "batch_id": "unassigned",
+            "depends_on": [],
+            "provider": "codex",
+            "provider_display_name": "Codex",
+            "provider_dispatch_supported": False,
+            "provider_dispatch_reason": gate_reason,
+            "readiness_reason": "Repo context is portable.",
+        }
+
+        self.assertEqual(remote_agent_queue.queue_action_for(issue), f"hold: {gate_reason}")
+        launch = remote_agent_queue.build_launch_instructions(
+            {
+                "default_provider": "codex",
+                "requested_provider": "codex",
+                "issues": [issue],
+            }
+        )
+        self.assertIn(gate_reason, launch)
+        self.assertNotIn("explicitly batched", launch)
+
+    def test_dispatcher_skips_validation_only_issue(self) -> None:
+        issue = {
+            "issue_ref": "erniesg/tong#359",
+            "title": "Archive API fixture backlog before automation resumes",
+            "cloud_mode": "cloud-ready",
+            "batch_id": "batch-1",
+            "depends_on": [],
+            "provider": "codex",
+            "branch_name": "codex/issue-359-planner-gates",
+            "validation_policy": {
+                "execution_mode": "validate-and-propose-only",
+                "fix_allowed": False,
+            },
+        }
+        plan = {"repository": "erniesg/tong", "default_provider": "codex", "issues": [issue]}
+
+        with mock.patch.object(dispatch_issue_queue, "list_open_prs", return_value={}):
+            summary = dispatch_issue_queue.build_dispatch_summary(
+                plan,
+                Path("/tmp/queue"),
+                plan_path=Path("/tmp/queue/queue-plan.json"),
+                action="queue",
+                issue_ref="",
+                max_dispatches=1,
+                dry_run=True,
+            )
+
+        self.assertEqual(summary["counts"], {"considered": 1, "dispatched": 0, "skipped": 1})
+        self.assertIn("blocks remote dispatch", summary["skipped"][0]["reason"])
+
     def test_build_summary_markdown_lists_provider_per_issue(self) -> None:
         markdown = dispatch_issue_queue.build_summary_markdown(
             {

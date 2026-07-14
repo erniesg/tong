@@ -131,6 +131,20 @@
         "Treat the API half of scenario-seed mounts as a server-state verification issue, not a reviewer-proof visual transition.",
         "Prefer strict API replay with contract assertions and console-state traces over screenshot gates."
       ]
+    },
+    {
+      "match": "#359",
+      "issue_class_override": "functional-logic",
+      "fallback_labels": [
+        "blocked-on-human",
+        "lane:qa-platform",
+        "needs-consolidation",
+        "rucksack-blocked"
+      ],
+      "notes": [
+        "Treat this as archival and queue-control work, not as an API or fixture implementation issue.",
+        "The blocked-on-human and lane:qa-platform labels remain authoritative until consolidation is reviewed."
+      ]
     }
   ],
   "issue_playbooks": [

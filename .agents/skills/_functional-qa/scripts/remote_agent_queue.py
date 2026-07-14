@@ -13,6 +13,7 @@ from qa_runtime import (
     CONFIG_ROOT,
     artifact_root,
     format_portability_summary,
+    issue_ref_matches,
     load_json,
     render_portability_lines,
     repo_name_with_owner,
@@ -43,7 +44,7 @@ def override_for(issue_ref: str | None) -> dict[str, Any] | None:
     if not issue_ref:
         return None
     for item in CLOUD_CONFIG.get("issue_overrides", []):
-        if item["match"] in issue_ref:
+        if issue_ref_matches(issue_ref, item["match"]):
             return item
     return None
 
@@ -133,7 +134,7 @@ def configured_batch_for(issue_ref: str | None) -> str:
         return "unassigned"
     for batch in CLOUD_CONFIG.get("current_batches", []):
         for item in batch.get("issues", []):
-            if item in issue_ref:
+            if issue_ref_matches(issue_ref, item):
                 return batch["id"]
     return "unassigned"
 
@@ -143,7 +144,7 @@ def issue_order_value(issue_ref: str | None, batch_id: str) -> int:
         if batch["id"] != batch_id:
             continue
         for index, item in enumerate(batch.get("issues", [])):
-            if issue_ref and item in issue_ref:
+            if issue_ref_matches(issue_ref, item):
                 return index
         return 999
     return 999
@@ -157,12 +158,14 @@ def queue_action_for(issue: dict[str, Any]) -> str:
     provider_name = issue.get("provider_display_name") or issue.get("provider") or "provider"
     if issue["cloud_mode"] == "local-only":
         return "skip remote execution for now"
+    if not issue["provider_dispatch_supported"]:
+        if issue.get("provider_dispatch_reason"):
+            return f"hold: {issue['provider_dispatch_reason']}"
+        return f"hold until the `{provider_name}` adapter is configured for remote dispatch"
     if issue["batch_id"] == "unassigned":
         return "hold for manual batching or split before dispatch"
     if issue["depends_on"]:
         return "launch after listed dependencies merge or are rebased into the task branch"
-    if not issue["provider_dispatch_supported"]:
-        return f"hold until the `{provider_name}` adapter is configured for remote dispatch"
     return f"launch a direct {provider_name} task and create a PR from the task result"
 
 
@@ -285,6 +288,7 @@ def build_queue_issue(raw_issue: dict[str, Any], queue_dir: Path, *, requested_p
 
     selection = select_provider_for_issue(issue_entry, requested_provider=requested_provider)
     adapter = get_provider_adapter(selection.provider)
+    dispatch_ready, dispatch_reason = adapter.dispatch_eligibility(issue_entry)
 
     issue_number = issue_entry.get("number")
     effective_title = issue_entry["title"]
@@ -326,7 +330,8 @@ def build_queue_issue(raw_issue: dict[str, Any], queue_dir: Path, *, requested_p
                 "depends_on": depends_on,
                 "provider": adapter.provider_id,
                 "provider_display_name": adapter.display_name,
-                "provider_dispatch_supported": adapter.supports_dispatch(),
+                "provider_dispatch_supported": dispatch_ready,
+                "provider_dispatch_reason": dispatch_reason,
             }
         ),
         "{{verification_instruction}}": verification_instruction_for(issue_entry),
@@ -365,7 +370,6 @@ def build_queue_issue(raw_issue: dict[str, Any], queue_dir: Path, *, requested_p
         encoding="utf-8",
     )
 
-    ready, provider_reason = adapter.dispatch_eligibility(issue_entry)
     return {
         **issue_entry,
         "cloud_mode": cloud_mode,
@@ -379,8 +383,8 @@ def build_queue_issue(raw_issue: dict[str, Any], queue_dir: Path, *, requested_p
         "provider_selection_reason": selection.reason,
         "provider_selection_source": selection.source,
         "provider_capabilities": adapter.capabilities(),
-        "provider_dispatch_supported": ready,
-        "provider_dispatch_reason": provider_reason,
+        "provider_dispatch_supported": dispatch_ready,
+        "provider_dispatch_reason": dispatch_reason,
         "branch_name": branch_name,
         "draft_pr_title": pr_title,
         "generated_files": {
@@ -483,10 +487,10 @@ def build_launch_instructions(plan: dict[str, Any]) -> str:
         lines.append(f"# {issue['issue_ref'] or issue['title']}")
         if not is_dispatchable(issue):
             reason = issue["readiness_reason"]
-            if issue["batch_id"] == "unassigned":
-                reason = f"{reason} Keep this item out of the launch queue until it is explicitly batched or split into narrower tasks."
-            elif not issue["provider_dispatch_supported"]:
+            if not issue["provider_dispatch_supported"]:
                 reason = issue["provider_dispatch_reason"] or reason
+            elif issue["batch_id"] == "unassigned":
+                reason = f"{reason} Keep this item out of the launch queue until it is explicitly batched or split into narrower tasks."
             lines.append(f"1. Skip remote dispatch for `{issue['provider_display_name']}` for now.")
             lines.append(f"2. Reason: {reason}")
             lines.append("")
