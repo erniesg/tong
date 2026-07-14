@@ -129,7 +129,7 @@ class DispatchSummaryTests(unittest.TestCase):
     def test_validation_only_issue_is_not_remotely_dispatchable(self) -> None:
         issue = {
             "cloud_mode": "cloud-ready",
-            "batch_id": "batch-1",
+            "batch_id": "unassigned",
             "depends_on": [],
             "provider": "codex",
             "provider_display_name": "Codex",
