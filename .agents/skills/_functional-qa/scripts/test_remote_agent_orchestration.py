@@ -148,6 +148,32 @@ class DispatchSummaryTests(unittest.TestCase):
         self.assertFalse(remote_agent_queue.is_dispatchable(issue))
         self.assertIn("blocks remote dispatch", remote_agent_queue.queue_action_for(issue))
 
+    def test_validation_gate_precedes_batching_guidance(self) -> None:
+        gate_reason = "issue label `blocked-on-human` requires human resolution before remote dispatch"
+        issue = {
+            "issue_ref": "erniesg/tong#359",
+            "title": "Archive and consolidate the open PR backlog before automation resumes",
+            "cloud_mode": "cloud-ready",
+            "batch_id": "unassigned",
+            "depends_on": [],
+            "provider": "codex",
+            "provider_display_name": "Codex",
+            "provider_dispatch_supported": False,
+            "provider_dispatch_reason": gate_reason,
+            "readiness_reason": "Repo context is portable.",
+        }
+
+        self.assertEqual(remote_agent_queue.queue_action_for(issue), f"hold: {gate_reason}")
+        launch = remote_agent_queue.build_launch_instructions(
+            {
+                "default_provider": "codex",
+                "requested_provider": "codex",
+                "issues": [issue],
+            }
+        )
+        self.assertIn(gate_reason, launch)
+        self.assertNotIn("explicitly batched", launch)
+
     def test_dispatcher_skips_validation_only_issue(self) -> None:
         issue = {
             "issue_ref": "erniesg/tong#359",

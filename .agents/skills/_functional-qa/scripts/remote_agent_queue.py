@@ -158,14 +158,14 @@ def queue_action_for(issue: dict[str, Any]) -> str:
     provider_name = issue.get("provider_display_name") or issue.get("provider") or "provider"
     if issue["cloud_mode"] == "local-only":
         return "skip remote execution for now"
-    if issue["batch_id"] == "unassigned":
-        return "hold for manual batching or split before dispatch"
-    if issue["depends_on"]:
-        return "launch after listed dependencies merge or are rebased into the task branch"
     if not issue["provider_dispatch_supported"]:
         if issue.get("provider_dispatch_reason"):
             return f"hold: {issue['provider_dispatch_reason']}"
         return f"hold until the `{provider_name}` adapter is configured for remote dispatch"
+    if issue["batch_id"] == "unassigned":
+        return "hold for manual batching or split before dispatch"
+    if issue["depends_on"]:
+        return "launch after listed dependencies merge or are rebased into the task branch"
     return f"launch a direct {provider_name} task and create a PR from the task result"
 
 
@@ -487,10 +487,10 @@ def build_launch_instructions(plan: dict[str, Any]) -> str:
         lines.append(f"# {issue['issue_ref'] or issue['title']}")
         if not is_dispatchable(issue):
             reason = issue["readiness_reason"]
-            if issue["batch_id"] == "unassigned":
-                reason = f"{reason} Keep this item out of the launch queue until it is explicitly batched or split into narrower tasks."
-            elif not issue["provider_dispatch_supported"]:
+            if not issue["provider_dispatch_supported"]:
                 reason = issue["provider_dispatch_reason"] or reason
+            elif issue["batch_id"] == "unassigned":
+                reason = f"{reason} Keep this item out of the launch queue until it is explicitly batched or split into narrower tasks."
             lines.append(f"1. Skip remote dispatch for `{issue['provider_display_name']}` for now.")
             lines.append(f"2. Reason: {reason}")
             lines.append("")
