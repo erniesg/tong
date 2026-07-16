@@ -149,7 +149,7 @@ function LandingPage() {
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       try {
-        await fetch(`${API_BASE}/api/v1/signup/preferences`, {
+        const res = await fetch(`${API_BASE}/api/v1/signup/preferences`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -158,6 +158,10 @@ function LandingPage() {
             explainIn: { ...ex },
           }),
         });
+        if (!res.ok) {
+          showToast('Could not save — try again');
+          return;
+        }
         setPrefsWereSaved(true);
         showToast('Saved');
       } catch {
