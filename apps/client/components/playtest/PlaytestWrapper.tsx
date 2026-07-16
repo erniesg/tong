@@ -55,10 +55,16 @@ export function PlaytestWrapper({ children }: { children: React.ReactNode }) {
 
       try {
         setUploading(true);
-        await fetch(`${API_BASE}/api/v1/playtest/sessions/${sessionId}/upload`, {
+        const res = await fetch(`${API_BASE}/api/v1/playtest/sessions/${sessionId}/upload`, {
           method: 'POST',
           body: formData,
         });
+
+        if (!res.ok) {
+          console.error('Playtest upload failed:', res.status, await res.text().catch(() => ''));
+          setUploading(false);
+          return;
+        }
 
         sessionStorage.removeItem('tong_playtest_session');
         setUploading(false);

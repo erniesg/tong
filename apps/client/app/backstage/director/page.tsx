@@ -153,15 +153,18 @@ export default function BackstagePage() {
     if (!exported) return;
     try {
       const serverUrl = process.env.NEXT_PUBLIC_TONG_SERVER_URL || 'http://localhost:8787';
-      await fetch(`${serverUrl}/api/v1/director/publish`, {
+      const res = await fetch(`${serverUrl}/api/v1/director/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pipelineId: activePipeline.id, ...exported }),
       });
+      if (!res.ok) {
+        console.error('Publish failed:', res.status);
+        return;
+      }
       markPublished(activePipeline.id);
     } catch (err) {
       console.error('Publish failed:', err);
-      markPublished(activePipeline.id);
     }
   }, [activePipeline]);
 
