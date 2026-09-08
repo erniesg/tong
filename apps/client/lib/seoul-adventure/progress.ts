@@ -1,5 +1,5 @@
-import { LOCATIONS, MISSION } from './content.js';
-import type { CompanionId, LocationId, Progress } from './types.js';
+import { LOCATIONS, MISSION } from './content';
+import type { CompanionId, LocationId, Progress } from './types';
 
 const LOCATION_IDS = new Set<LocationId>(LOCATIONS.map(({ id }) => id));
 const COMPANION_IDS: CompanionId[] = ['haeun', 'jin'];
@@ -49,10 +49,10 @@ export function restoreProgress(raw: string | null): Progress {
 
 export function visitLocation(progress: Progress, id: LocationId): Progress {
   if (!LOCATION_IDS.has(id)) return progress;
-  return record({
+  return {
     ...copy(progress),
     visited: addOnce(progress.visited, id),
-  }, id, 'learn', true, 'visit');
+  };
 }
 
 export function completeLesson(progress: Progress, id: LocationId, answer: number) {
@@ -89,7 +89,7 @@ export function completeHangout(progress: Progress, id: LocationId, companion: C
   }
   return result(record(next, id, 'hangout', correct), correct, correct
     ? alreadyValidated ? 'That memory is already yours; enjoy the moment without grinding it.' : location.hangoutReply.explanation
-    : 'Try a response that keeps the invitation open and kind.');
+    : `Not quite. ${location.hangoutReply.explanation}`);
 }
 
 export function missionReady(progress: Progress): boolean {
@@ -114,11 +114,12 @@ export function completeMission(progress: Progress, answer: number) {
 }
 
 export function nextObjective(progress: Progress): string {
-  const nextLesson = LOCATIONS.find((location) => !progress.learned.includes(location.id));
-  if (nextLesson) return nextLesson.objective;
+  if (missionReady(progress) && !progress.missionComplete) return 'Begin the Seoul first-evening mission.';
+  if (progress.missionComplete) return 'Explore Seoul freely and return to the places that feel like yours.';
   const nextHangout = LOCATIONS.find((location) => !progress.hangouts.includes(location.id));
   if (nextHangout) return `Use ${nextHangout.phrase.ko} in a ${nextHangout.name} hangout.`;
-  if (!progress.missionComplete) return missionReady(progress) ? 'Begin the Seoul first-evening mission.' : 'Validate three hangouts to open the mission.';
+  const nextLesson = LOCATIONS.find((location) => !progress.learned.includes(location.id));
+  if (nextLesson) return nextLesson.objective;
   return 'Explore Seoul freely and return to the places that feel like yours.';
 }
 
