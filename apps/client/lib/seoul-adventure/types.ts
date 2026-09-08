@@ -31,6 +31,7 @@ export interface Location {
   phrase: Phrase;
   lesson: Lesson;
   hangout: Record<CompanionId, string>;
+  hangoutTranslation?: Record<CompanionId, string>;
   hangoutReply: Lesson;
 }
 

@@ -1,20 +1,27 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { LOCATIONS, MISSION } from './content.js';
 import {
   completeHangout,
   completeLesson,
   completeMission,
   missionReady,
   newProgress,
+  nextObjective,
   restoreProgress,
   visitLocation,
 } from './progress.js';
 
+const location = (id: (typeof LOCATIONS)[number]['id']) => LOCATIONS.find((item) => item.id === id)!;
+const correctLesson = (id: (typeof LOCATIONS)[number]['id']) => location(id).lesson.answer;
+const wrongLesson = (id: (typeof LOCATIONS)[number]['id']) => (correctLesson(id) + 1) % location(id).lesson.choices.length;
+const correctHangout = (id: (typeof LOCATIONS)[number]['id']) => location(id).hangoutReply.answer;
+
 test('learn rewards only the first correct completion for a location', () => {
   const fresh = newProgress();
-  const first = completeLesson(fresh, 'food_street', 0);
-  const replay = completeLesson(first.progress, 'food_street', 0);
+  const first = completeLesson(fresh, 'food_street', correctLesson('food_street'));
+  const replay = completeLesson(first.progress, 'food_street', correctLesson('food_street'));
 
   assert.equal(first.correct, true);
   assert.equal(first.progress.xp, 20);
@@ -25,16 +32,17 @@ test('learn rewards only the first correct completion for a location', () => {
 });
 
 test('hangouts require a learned location and only reward a validated first response', () => {
-  const blocked = completeHangout(newProgress(), 'cafe', 'haeun', 0);
+  const blocked = completeHangout(newProgress(), 'cafe', 'haeun', correctHangout('cafe'));
   assert.equal(blocked.correct, false);
   assert.equal(blocked.progress.xp, 0);
 
-  const learned = completeLesson(newProgress(), 'cafe', 0).progress;
-  const missed = completeHangout(learned, 'cafe', 'haeun', 1);
-  const passed = completeHangout(missed.progress, 'cafe', 'haeun', 0);
-  const replay = completeHangout(passed.progress, 'cafe', 'jin', 0);
+  const learned = completeLesson(newProgress(), 'cafe', correctLesson('cafe')).progress;
+  const missed = completeHangout(learned, 'cafe', 'haeun', (correctHangout('cafe') + 1) % location('cafe').hangoutReply.choices.length);
+  const passed = completeHangout(missed.progress, 'cafe', 'haeun', correctHangout('cafe'));
+  const replay = completeHangout(passed.progress, 'cafe', 'jin', correctHangout('cafe'));
 
   assert.equal(missed.progress.rp.haeun, 0);
+  assert.match(missed.message, /같이 커피 마실래요/);
   assert.equal(passed.progress.rp.haeun, 8);
   assert.equal(passed.progress.xp, 35);
   assert.equal(replay.progress.xp, 35);
@@ -44,13 +52,13 @@ test('hangouts require a learned location and only reward a validated first resp
 test('three validated hangouts open a one-time mission reward', () => {
   let progress = newProgress();
   for (const id of ['food_street', 'cafe', 'subway_hub'] as const) {
-    progress = completeLesson(progress, id, 0).progress;
-    progress = completeHangout(progress, id, 'haeun', 0).progress;
+    progress = completeLesson(progress, id, correctLesson(id)).progress;
+    progress = completeHangout(progress, id, 'haeun', correctHangout(id)).progress;
   }
 
   assert.equal(missionReady(progress), true);
-  const passed = completeMission(progress, 0);
-  const replay = completeMission(passed.progress, 0);
+  const passed = completeMission(progress, MISSION.answer);
+  const replay = completeMission(passed.progress, MISSION.answer);
 
   assert.equal(passed.correct, true);
   assert.equal(passed.progress.missionComplete, true);
@@ -84,14 +92,36 @@ test('restore rejects corrupted and suspicious saves while retaining bounded kno
   assert.deepEqual(restored.visited, ['cafe']);
 });
 
-test('visits and every submitted answer are recorded in a 30-entry history', () => {
+test('visits update navigation state without inventing a completed lesson history entry', () => {
   let progress = visitLocation(newProgress(), 'food_street');
-  assert.equal(progress.history[0]?.id.startsWith('visit:'), true);
-  assert.equal(progress.history[0]?.location, 'food_street');
+  assert.deepEqual(progress.visited, ['food_street']);
+  assert.deepEqual(progress.history, []);
 
   for (let index = 0; index < 35; index += 1) {
-    progress = completeLesson(progress, 'food_street', 1).progress;
+    progress = completeLesson(progress, 'food_street', wrongLesson('food_street')).progress;
   }
   assert.equal(progress.history.length, 30);
   assert.equal(progress.history.every((entry) => entry.mode === 'learn'), true);
+});
+
+test('next objective progresses from a learned phrase to its hangout, then the mission', () => {
+  let progress = completeLesson(newProgress(), 'food_street', correctLesson('food_street')).progress;
+  assert.match(nextObjective(progress), /hangout/i);
+
+  for (const id of ['food_street', 'cafe', 'subway_hub'] as const) {
+    if (!progress.learned.includes(id)) progress = completeLesson(progress, id, correctLesson(id)).progress;
+    progress = completeHangout(progress, id, 'jin', correctHangout(id)).progress;
+  }
+  assert.equal(missionReady(progress), true);
+  assert.equal(nextObjective(progress), 'Begin the Seoul first-evening mission.');
+  progress = completeMission(progress, MISSION.answer).progress;
+  assert.equal(nextObjective(progress), 'Explore Seoul freely and return to the places that feel like yours.');
+});
+
+test('authored exercises vary their correct answer position and hangouts practise learned language', () => {
+  assert.ok(new Set([...LOCATIONS.map((item) => item.lesson.answer), MISSION.answer]).size > 1);
+  for (const item of LOCATIONS) {
+    const learnedPhrase = item.phrase.ko;
+    assert.equal(item.hangoutReply.choices[item.hangoutReply.answer]?.ko, learnedPhrase);
+  }
 });
