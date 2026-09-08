@@ -18,6 +18,10 @@ const correctLesson = (id: (typeof LOCATIONS)[number]['id']) => location(id).les
 const wrongLesson = (id: (typeof LOCATIONS)[number]['id']) => (correctLesson(id) + 1) % location(id).lesson.choices.length;
 const correctHangout = (id: (typeof LOCATIONS)[number]['id']) => location(id).hangoutReply.answer;
 
+test('a new player receives a practice objective before any hangout', () => {
+  assert.equal(nextObjective(newProgress()), LOCATIONS[0].objective);
+});
+
 test('learn rewards only the first correct completion for a location', () => {
   const fresh = newProgress();
   const first = completeLesson(fresh, 'food_street', correctLesson('food_street'));
