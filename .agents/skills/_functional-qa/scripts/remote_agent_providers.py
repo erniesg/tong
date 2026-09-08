@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,29 @@ class ProviderSelection:
     provider: str
     reason: str
     source: str
+
+
+def provider_state_reason(provider_id: str, provider: dict[str, Any]) -> str:
+    provider_status = str(provider.get("status") or "working").lower()
+    if provider_status != "working":
+        return f"provider `{provider_id}` status is `{provider_status}`"
+
+    availability = provider.get("availability") or {}
+    availability_status = str(availability.get("status") or "available").lower()
+    if availability_status not in {"available", "working"}:
+        return f"provider `{provider_id}` availability is `{availability_status}`"
+
+    unavailable_until = str(availability.get("unavailable_until") or "")
+    if unavailable_until:
+        try:
+            parsed_until = datetime.fromisoformat(unavailable_until.replace("Z", "+00:00"))
+            if parsed_until.tzinfo is None:
+                parsed_until = parsed_until.replace(tzinfo=timezone.utc)
+            if parsed_until.astimezone(timezone.utc) > datetime.now(timezone.utc):
+                return f"provider `{provider_id}` is unavailable until `{unavailable_until}`"
+        except ValueError:
+            return f"provider `{provider_id}` has an invalid unavailable_until value"
+    return ""
 
 
 class ProviderAdapter:
@@ -85,13 +109,49 @@ class ProviderAdapter:
         return dict(self.config.get("capabilities") or {})
 
     def dispatch_eligibility(self, issue: dict[str, Any]) -> tuple[bool, str]:
+        configured_state_reason = provider_state_reason(self.provider_id, self.config)
+        if configured_state_reason:
+            return (False, configured_state_reason)
+
+        planned_provider = issue.get("provider")
+        if isinstance(planned_provider, dict):
+            planned_state_reason = provider_state_reason(self.provider_id, planned_provider)
+            if planned_state_reason:
+                return (False, planned_state_reason)
+
         if self.supports_dispatch():
             return (True, "")
         reason = self.placeholder_reason() or f"provider `{self.provider_id}` does not have a configured dispatch workflow yet"
         return (False, reason)
 
     def dispatch(self, issue: dict[str, Any], queue_dir: Path, *, dry_run: bool, repo: str) -> tuple[str, str]:
-        raise NotImplementedError
+        prompt_path = queue_dir / issue["generated_files"]["task_prompt"]
+        prompt_text = prompt_path.read_text(encoding="utf-8")
+        workflow = self.dispatch_workflow()
+        command = [
+            "gh",
+            "workflow",
+            "run",
+            workflow,
+            "--repo",
+            repo,
+            "-f",
+            f"prompt={prompt_text}",
+            "-f",
+            "base_branch=main",
+            "-f",
+            f"branch={issue['branch_name']}",
+            "-f",
+            f"pr_title={issue['draft_pr_title']}",
+            "-f",
+            f"issue_ref={issue.get('issue_ref') or ''}",
+        ]
+
+        if dry_run:
+            return ("dry-run", f"workflow `{workflow}` dispatch command prepared")
+
+        run_command(command)
+        return ("dispatched", f"workflow `{workflow}` triggered")
 
     def launch_steps(self, issue: dict[str, Any]) -> list[str]:
         ready, reason = self.dispatch_eligibility(issue)
@@ -108,34 +168,6 @@ class ProviderAdapter:
 
 
 class CodexProviderAdapter(ProviderAdapter):
-    def dispatch(self, issue: dict[str, Any], queue_dir: Path, *, dry_run: bool, repo: str) -> tuple[str, str]:
-        prompt_path = queue_dir / issue["generated_files"]["task_prompt"]
-        prompt_text = prompt_path.read_text(encoding="utf-8")
-        command = [
-            "gh",
-            "workflow",
-            "run",
-            self.dispatch_workflow(),
-            "--repo",
-            repo,
-            "-f",
-            f"prompt={prompt_text}",
-            "-f",
-            "base_branch=main",
-            "-f",
-            f"branch={issue['branch_name']}",
-            "-f",
-            f"pr_title={issue['draft_pr_title']}",
-            "-f",
-            f"issue_ref={issue.get('issue_ref') or ''}",
-        ]
-
-        if dry_run:
-            return ("dry-run", "dispatch command prepared")
-
-        run_command(command)
-        return ("dispatched", f"workflow `{self.dispatch_workflow()}` triggered")
-
     def launch_steps(self, issue: dict[str, Any]) -> list[str]:
         dependency_note = (
             f"Only launch after `{', '.join(issue['depends_on'])}` is merged or rebased into the current branch."
