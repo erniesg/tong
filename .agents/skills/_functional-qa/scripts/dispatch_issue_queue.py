@@ -30,6 +30,9 @@ def issue_number(issue_ref: str | None) -> int | None:
 
 
 def find_plan_path(queue_dir: Path) -> Path:
+    remote_plan = queue_dir / "remote-plan.json"
+    if remote_plan.exists():
+        return remote_plan
     queue_plan = queue_dir / "queue-plan.json"
     if queue_plan.exists():
         return queue_plan
@@ -37,6 +40,18 @@ def find_plan_path(queue_dir: Path) -> Path:
     if legacy_plan.exists():
         return legacy_plan
     raise FileNotFoundError(f"No queue plan found under {queue_dir}")
+
+
+def provider_id_for_issue(issue: dict[str, Any]) -> str:
+    provider = issue.get("provider")
+    if isinstance(provider, dict):
+        return str(provider.get("id") or "").strip()
+    return str(provider or "").strip()
+
+
+def provider_breakdown_for_plan(issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized_issues = [{**issue, "provider": provider_id_for_issue(issue) or "unknown"} for issue in issues]
+    return provider_breakdown(normalized_issues)
 
 
 def fetch_issue_state(issue_ref: str) -> str | None:
@@ -163,7 +178,7 @@ def build_dispatch_summary(
     else:
         for issue in candidates:
             ref = issue.get("issue_ref") or issue["title"]
-            provider_id = str(issue.get("provider") or plan.get("default_provider") or "codex")
+            provider_id = provider_id_for_issue(issue) or plan.get("default_provider") or "codex"
             adapter = get_provider_adapter(provider_id)
             if len(launched) >= max_dispatches:
                 skipped.append({"issue_ref": ref, "provider": provider_id, "reason": f"dispatch cap `{max_dispatches}` reached"})
@@ -221,7 +236,7 @@ def build_dispatch_summary(
             "requested_provider": plan.get("requested_provider", "auto"),
             "default_provider": plan.get("default_provider", "codex"),
         },
-        "provider_breakdown": provider_breakdown(candidates),
+        "provider_breakdown": provider_breakdown_for_plan(candidates),
         "launched": launched,
         "skipped": skipped,
         "counts": {
