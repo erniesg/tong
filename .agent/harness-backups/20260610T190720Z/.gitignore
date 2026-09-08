@@ -37,6 +37,3 @@ test-results/
 
 # Presets — dev/backup originals, not deployed
 assets/presets/
-
-# Agent evidence bundles
-.agent/evidence/
