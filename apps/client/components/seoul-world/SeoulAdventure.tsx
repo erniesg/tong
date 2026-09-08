@@ -556,7 +556,7 @@ export default function SeoulAdventure() {
       )}
       {panel === "fallback" && (
         <FallbackDialog
-          error={worldError}
+          onJournal={() => openPanel("journal")}
           onSelect={(entry) => {
             setFocusId(entry.id);
             openPanel("poi");
@@ -932,10 +932,10 @@ function Polaroid({ memory }: { memory: string }) {
   );
 }
 function FallbackDialog({
-  error,
+  onJournal,
   onSelect,
 }: {
-  error: string | null;
+  onJournal: () => void;
   onSelect: (entry: (typeof LOCATIONS)[number]) => void;
 }) {
   return (
@@ -943,10 +943,13 @@ function FallbackDialog({
       <p className={styles.kicker}>TONG / 서울</p>
       <h1>3D view unavailable</h1>
       <p>
-        {error ?? "The neighborhood needs a moment."} Choose a place to keep
-        wandering in 2D.
+        This browser could not open the 3D neighborhood. Choose a place to
+        keep exploring, or open your journal for sessions and memories.
       </p>
       <div>
+        <button type="button" aria-label="Open journal" onClick={onJournal}>
+          Journal & memories <small>Progress and tonight’s mission</small>
+        </button>
         {LOCATIONS.map((entry) => (
           <button key={entry.id} type="button" onClick={() => onSelect(entry)}>
             {entry.name}

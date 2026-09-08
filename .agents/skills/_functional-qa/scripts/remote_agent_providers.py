@@ -60,6 +60,7 @@ class ProviderAdapter:
 
     def __init__(self, provider_id: str, config: dict[str, Any]) -> None:
         self.provider_id = provider_id
+        self.provider_config = dict(config)
         self.config = {**PROVIDER_DEFAULTS, **config}
 
     @property
@@ -85,7 +86,15 @@ class ProviderAdapter:
         return TEMPLATE_ROOT / str(self.config["pr_notes_template"])
 
     def branch_name_for(self, issue_number: int | None, title: str) -> str:
-        pattern = str(self.config.get("branch_pattern") or PROVIDER_DEFAULTS["branch_pattern"])
+        default_pattern = (
+            PROVIDER_DEFAULTS["branch_pattern"]
+            if self.provider_id == "codex"
+            else f"{self.provider_id}/issue-{{number}}-{{slug}}"
+        )
+        pattern = str(
+            self.provider_config.get("branch_pattern")
+            or default_pattern
+        )
         if issue_number is None:
             return pattern.format(number="adhoc", slug=slugify(title))
         return pattern.format(number=issue_number, slug=slugify(title)[:48])
