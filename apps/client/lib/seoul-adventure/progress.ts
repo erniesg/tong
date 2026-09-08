@@ -116,7 +116,7 @@ export function completeMission(progress: Progress, answer: number) {
 export function nextObjective(progress: Progress): string {
   if (missionReady(progress) && !progress.missionComplete) return 'Begin the Seoul first-evening mission.';
   if (progress.missionComplete) return 'Explore Seoul freely and return to the places that feel like yours.';
-  const nextHangout = LOCATIONS.find((location) => !progress.hangouts.includes(location.id));
+  const nextHangout = LOCATIONS.find((location) => progress.learned.includes(location.id) && !progress.hangouts.includes(location.id));
   if (nextHangout) return `Use ${nextHangout.phrase.ko} in a ${nextHangout.name} hangout.`;
   const nextLesson = LOCATIONS.find((location) => !progress.learned.includes(location.id));
   if (nextLesson) return nextLesson.objective;

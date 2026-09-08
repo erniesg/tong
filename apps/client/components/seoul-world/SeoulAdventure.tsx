@@ -335,6 +335,8 @@ export default function SeoulAdventure() {
 
       <div
         className={styles.hud}
+        hidden={panel === "hangout"}
+        ref={(node) => { if (node) node.inert = isOverlay; }}
         aria-hidden={isOverlay}
         data-blocked={isOverlay || undefined}
       >
@@ -350,12 +352,14 @@ export default function SeoulAdventure() {
           <div className={styles.topActions}>
             <button
               type="button"
+              aria-label="Open journal"
               onClick={(e) => openPanel("journal", e.currentTarget)}
             >
               Journal
             </button>
             <button
               type="button"
+              aria-label="Open Seoul map"
               onClick={(e) => openPanel("map", e.currentTarget)}
             >
               Map
@@ -675,7 +679,7 @@ function LessonSheet({
       >
         ×
       </button>
-      <p className={styles.kicker}>Kakao lesson</p>
+      <p className={styles.kicker}>Tong · Korean practice</p>
       <h2>{title}</h2>
       <div className={styles.chat}>
         <p>What would you say?</p>
@@ -894,7 +898,7 @@ function JournalDialog({
                     ?.name ?? entry.location}
                 </b>
                 <span>
-                  {entry.mode} · {entry.success ? "held close" : "practised"} ·{" "}
+                  {entry.mode} · {entry.success ? "completed" : "try again"} ·{" "}
                   {new Date(entry.at).toLocaleDateString()}
                 </span>
               </li>
@@ -923,7 +927,7 @@ function Polaroid({ memory }: { memory: string }) {
       <div aria-hidden="true">
         ✦<span>서울</span>
       </div>
-      <figcaption>{memory}</figcaption>
+      <figcaption>{memory === "seoul-first-evening" ? "Our first Seoul evening" : "A Seoul memory"}</figcaption>
     </figure>
   );
 }
