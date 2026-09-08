@@ -43,6 +43,7 @@ async function checkViewport(page, label) {
 }
 
 try {
+  if (!process.argv.includes('--fallback-only')) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));
@@ -56,6 +57,15 @@ try {
   await page.waitForFunction(before => document.querySelector('[aria-label="Your live position"]')?.getAttribute('style') !== before, initialPosition);
   await page.keyboard.up('d');
   results.push({ check: 'keyboard movement updates the real map position', passed: true });
+  // Let movement easing settle before measuring a separate pointer interaction.
+  await page.waitForTimeout(500);
+  const tapStart = await marker.evaluate(element => parseFloat(element.style.top));
+  await page.mouse.click(1440 * 0.48, 900 * 0.8);
+  await page.waitForFunction(before => Math.abs(parseFloat(document.querySelector('[aria-label="Your live position"]').style.top) - before) > 1, tapStart);
+  await page.keyboard.down('a');
+  await page.waitForTimeout(200);
+  await page.keyboard.up('a');
+  results.push({ check: 'ground click reaches the renderer through the HUD', passed: true });
   if (!process.argv.includes('--snapshots-only')) {
     for (const location of LOCATIONS.slice(0, 3)) {
       await page.getByRole('button', { name: `Walk to ${location.name}`, exact: true }).click();
@@ -107,6 +117,7 @@ try {
   await checkViewport(phone, 'phone-portrait');
   await phone.setViewportSize({ width: 844, height: 390 });
   await checkViewport(phone, 'phone-landscape');
+  }
   const fallbackContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   await fallbackContext.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
@@ -118,12 +129,23 @@ try {
   const fallback = await fallbackContext.newPage();
   await fallback.goto(`${base}/game/seoul`, { waitUntil: 'networkidle' });
   await fallback.getByRole('dialog', { name: '3D view unavailable' }).waitFor();
-  await fallback.getByRole('button', { name: /Food Street/ }).click();
-  await fallback.getByTestId('start-learn').click();
-  await choices(fallback).nth(LOCATIONS[0].lesson.answer).click();
-  await fallback.getByRole('button', { name: 'Close lesson' }).click();
-  await fallback.getByRole('dialog', { name: '3D view unavailable' }).waitFor();
-  results.push({ check: 'WebGL fallback remains playable and returns to locations', passed: true });
+  assert.equal(await fallback.getByRole('button', { name: 'Open journal', exact: true }).count(), 1, 'Fallback exposes the journal directly');
+  for (const location of LOCATIONS.slice(0, 3)) {
+    await fallback.getByRole('button', { name: new RegExp(location.name) }).click();
+    await fallback.getByTestId('start-learn').click();
+    await choices(fallback).nth(location.lesson.answer).click();
+    await fallback.getByRole('button', { name: 'Continue your walk', exact: true }).click();
+    await fallback.getByTestId('start-hangout').click();
+    await choices(fallback).nth(location.hangoutReply.answer).click();
+    await fallback.getByRole('button', { name: 'Back to the street', exact: true }).click();
+    await fallback.getByRole('dialog', { name: '3D view unavailable' }).waitFor();
+  }
+  await fallback.getByRole('button', { name: 'Open journal', exact: true }).click();
+  await fallback.getByTestId('open-mission').click();
+  await choices(fallback).nth(MISSION.answer).click();
+  assert.equal((await save(fallback)).missionComplete, true, 'Fallback can complete the mission');
+  await checkViewport(fallback, 'fallback-mission');
+  results.push({ check: 'WebGL fallback completes lessons, hangouts, journal and mission', passed: true });
   assert.deepEqual(errors, [], 'No uncaught browser errors');
   writeFileSync(path.join(out, 'results.json'), JSON.stringify({ base, results, errors }, null, 2));
   console.log(JSON.stringify({ passed: results.length, evidence: out, errors }));

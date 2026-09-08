@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from qa_runtime import CONFIG_ROOT, REPO_ROOT, load_json
+from remote_agent_providers import get_provider_adapter
 
 
 PROVIDER_CONFIG = load_json(CONFIG_ROOT / "remote-agent-providers.json")
@@ -90,6 +91,19 @@ def provider_meta(provider_id: str) -> dict[str, Any]:
     if not provider:
         raise ValueError(f"Unknown provider `{provider_id}`")
     return {"id": provider_id, **provider}
+
+
+def apply_provider_branch(issue: dict[str, Any], provider_id: str, queue_dir: Path) -> None:
+    adapter = get_provider_adapter(provider_id)
+    previous_branch = str(issue["branch_name"])
+    selected_branch = adapter.branch_name_for(issue.get("number"), str(issue["title"]))
+    if selected_branch == previous_branch:
+        return
+
+    issue["branch_name"] = selected_branch
+    for generated_path in issue.get("generated_files", {}).values():
+        path = queue_dir / str(generated_path)
+        path.write_text(path.read_text(encoding="utf-8").replace(previous_branch, selected_branch), encoding="utf-8")
 
 
 def display_path(path: Path) -> str:
@@ -207,6 +221,7 @@ def build_plan(args: argparse.Namespace) -> int:
 
     for issue in plan.get("issues", []):
         selected = choose_provider(issue, args.provider)
+        apply_provider_branch(issue, selected, queue_dir)
         issue["provider"] = provider_meta(selected)
 
     plan["schema_version"] = "1"
