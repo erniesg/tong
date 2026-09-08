@@ -8,5 +8,11 @@ export function getPublicApiBase(): string {
   }
 
   const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-  return `${protocol}//${window.location.hostname}:8787`;
+  const hostname = window.location.hostname;
+  const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  if (!isLocalHost && protocol === 'https:') {
+    return 'https://tong-api.erniesg.workers.dev';
+  }
+
+  return `${protocol}//${hostname}:8787`;
 }

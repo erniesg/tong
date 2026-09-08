@@ -617,9 +617,12 @@ export default function GamePage() {
     if (primaryLang === 'ko' && searchParams.get('skip_seoul_onboarding') !== '1') {
       const name = profileInput.englishName.trim() || 'Player';
       const lang = gameState.explainIn.seoul ?? 'en';
+      const onboardingNpc = freshNpc && CHARACTER_MAP[freshNpc]?.cityId === 'seoul'
+        ? freshNpc
+        : pickNpcForCity('seoul');
       const onboardingParams = new URLSearchParams({
         dev_intro: '1',
-        npc: pickNpcForCity('seoul'),
+        npc: onboardingNpc,
         name,
         lang,
       });

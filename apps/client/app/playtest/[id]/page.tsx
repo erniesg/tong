@@ -36,6 +36,7 @@ interface PlaytestSessionResponse {
 /* ── City language defaults (CITY_ORDER = ['tokyo','seoul','shanghai']) ── */
 
 const CITY_TO_LANG: Record<string, AppLang> = { seoul: 'ko', tokyo: 'ja', shanghai: 'zh' };
+const CITY_TO_PRIORITY: Record<string, string> = { seoul: 'ko', tokyo: 'ja', shanghai: 'zh' };
 
 /* ── API helper — no demo password required for GET/PATCH ──── */
 
@@ -97,6 +98,10 @@ function buildGameUrl(config: PlaytestConfig): string {
     case 'onboarding':
     default: {
       params.set('fresh', '1');
+      if (config.city) params.set('priority', CITY_TO_PRIORITY[config.city] || 'ko');
+      if (config.npc) params.set('npc', config.npc);
+      if (config.playerName) params.set('name', config.playerName);
+      if (config.chineseName) params.set('cn_name', config.chineseName);
       break;
     }
   }
@@ -107,7 +112,7 @@ function buildGameUrl(config: PlaytestConfig): string {
   }
 
   // Propagate deterministic seed when present (no built-in game support yet — pass as extra param for future use)
-  if (config.seed !== undefined) {
+  if (config.seed != null) {
     params.set('seed', String(config.seed));
   }
 
