@@ -16,7 +16,6 @@
     "test:api-flow:worker-local": "node scripts/mock_api_flow_check.mjs ${TONG_WORKER_LOCAL_API_BASE_URL:-http://localhost:8788} --strict-state",
     "test:api-flow:cloud": "node scripts/mock_api_flow_check.mjs ${TONG_REMOTE_API_BASE_URL:-https://tong-api.erniesg.workers.dev}",
     "test:graph-contracts": "node scripts/graph_contract_check.mjs",
-    "test:seoul": "node scripts/seoul-adventure-check.mjs",
     "test:dashboard-smoke": "node scripts/dashboard_smoke_check.mjs",
     "test:signals-contracts": "node scripts/signals_contract_check.mjs",
     "videoclaw:pack": "node scripts/videoclaw_autoflow.mjs pack",
