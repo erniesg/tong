@@ -1,0 +1,10 @@
+{
+  "configured": true,
+  "mode": "test",
+  "secretKeyPresent": true,
+  "demoProductName": "Tong Supporter Demo",
+  "demoAmountCents": 700,
+  "demoCurrency": "usd",
+  "successPath": "/billing/success",
+  "cancelPath": "/billing/cancel"
+}

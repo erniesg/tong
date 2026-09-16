@@ -1,0 +1,5 @@
+{
+  "checkoutUrl": "https://checkout.stripe.com/c/pay/cs_test_demoTongCheckout123",
+  "sessionId": "cs_test_demoTongCheckout123",
+  "mode": "test"
+}

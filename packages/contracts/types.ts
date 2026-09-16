@@ -1142,3 +1142,101 @@ export interface VolcTTSSynthesizeResponse {
   encoding: string;
   durationMs?: number;
 }
+
+export type LiveAuctionRoomStatus = 'scheduled' | 'open' | 'paused' | 'closed';
+export type LiveAuctionParticipantKind = 'player' | 'npc' | 'admin';
+export type LiveAuctionEventKind = 'join' | 'bid' | 'top_up' | 'house' | 'close';
+
+export interface LiveAuctionLot {
+  lotId: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  imageUrl: string;
+}
+
+export interface LiveAuctionParticipant {
+  participantId: string;
+  displayName: string;
+  kind: LiveAuctionParticipantKind;
+  availableSp: number;
+  currentBid: number;
+  isLeading: boolean;
+  joinedAtIso: string;
+  isAdmin?: boolean;
+}
+
+export interface LiveAuctionLogEntry {
+  entryId: string;
+  kind: LiveAuctionEventKind;
+  text: string;
+  atIso: string;
+}
+
+export interface LiveAuctionWinner {
+  participantId: string;
+  displayName: string;
+  amount: number;
+  kind: LiveAuctionParticipantKind;
+}
+
+export interface LiveAuctionSnapshot {
+  roomId: string;
+  title: string;
+  version: number;
+  status: LiveAuctionRoomStatus;
+  opensAtIso: string;
+  scheduledCloseAtIso?: string | null;
+  closesAtIso?: string | null;
+  nextTransitionAtIso: string;
+  currentLot: LiveAuctionLot;
+  currentBid: number;
+  minIncrement: number;
+  timeRemainingMs?: number;
+  highestBidderId?: string | null;
+  participants: LiveAuctionParticipant[];
+  eventLog: LiveAuctionLogEntry[];
+  winner?: LiveAuctionWinner | null;
+  pauseReason?: 'payment' | null;
+  pausedByParticipantId?: string | null;
+  closingReason?: 'timer' | 'admin_override' | 'manual' | null;
+}
+
+export interface LiveAuctionJoinRequest {
+  participantId?: string;
+  displayName: string;
+  availableSp: number;
+  isAdmin?: boolean;
+}
+
+export interface LiveAuctionJoinResponse {
+  participantId: string;
+  snapshot: LiveAuctionSnapshot;
+}
+
+export interface LiveAuctionBidRequest {
+  participantId: string;
+  amount: number;
+}
+
+export interface LiveAuctionBidResponse {
+  snapshot: LiveAuctionSnapshot;
+}
+
+export interface LiveAuctionTopUpRequest {
+  participantId: string;
+  amount: number;
+}
+
+export interface LiveAuctionTopUpResponse {
+  snapshot: LiveAuctionSnapshot;
+}
+
+export interface LiveAuctionAdminCloseRequest {
+  participantId: string;
+  amount: number;
+}
+
+export interface LiveAuctionAdminCloseResponse {
+  snapshot: LiveAuctionSnapshot;
+}

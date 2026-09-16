@@ -1,4 +1,12 @@
 
+## 2026-04-21 (Issue 240 Worker ledger intent)
+- Date: 2026-04-21
+- Branch/worktree: `work` (server-api implementation crossing into `apps/worker/**` and additive `packages/contracts/fixtures/**`)
+- Intent:
+  - Land issue `#240` on the canonical Worker playtest surface rather than the local mock server.
+  - Normalize `analysis.result.issues[]` into a durable per-finding ledger with explicit route actions for the `#241` orchestrator follow-on.
+  - Keep any `packages/contracts/**` touch additive and limited to fixture coverage for the new Worker responses.
+
 ## 2026-04-20 (Issue 239 GitHub control-plane bootstrap intent)
 - Date: 2026-04-20
 - Branch/worktree: `work` (shared root workspace crossing into `docs/**` and `.github/**` owned by `qa-platform` and `infra-deploy`)

@@ -1,0 +1,18 @@
+export type {
+  LiveAuctionAdminCloseRequest,
+  LiveAuctionAdminCloseResponse,
+  LiveAuctionBidRequest,
+  LiveAuctionBidResponse,
+  LiveAuctionEventKind,
+  LiveAuctionJoinRequest,
+  LiveAuctionJoinResponse,
+  LiveAuctionLogEntry,
+  LiveAuctionLot,
+  LiveAuctionParticipant,
+  LiveAuctionParticipantKind,
+  LiveAuctionRoomStatus,
+  LiveAuctionSnapshot,
+  LiveAuctionTopUpRequest,
+  LiveAuctionTopUpResponse,
+  LiveAuctionWinner,
+} from '../../../../packages/contracts';

@@ -1,5 +1,6 @@
 import type { Location } from '../types/objectives';
 import { POJANGMACHA } from './pojangmacha';
+import { SHANGHAI_XIAOLONGBAO } from './shanghai/location';
 
 /**
  * Location registry mapping "cityId:locationId" → Location object.
@@ -98,7 +99,7 @@ const LOCATION_REGISTRY: Record<string, Location> = {
     grammarTargets: [],
   },
 
-  /* ── Shanghai stub locations ──────────────────────────────── */
+  /* ── Shanghai locations ───────────────────────────────────── */
   'shanghai:metro_station': {
     id: 'metro_station',
     cityId: 'shanghai',
@@ -187,8 +188,13 @@ const LOCATION_REGISTRY: Record<string, Location> = {
     grammarTargets: [],
   },
 
-  'shanghai:dumpling_shop': {
-    id: 'dumpling_shop',
+  'shanghai:dumpling_shop': SHANGHAI_XIAOLONGBAO,
+
+  'shanghai:xiaolongbao': SHANGHAI_XIAOLONGBAO,
+
+  /* Legacy alias retained for existing map/runtime references. */
+  'shanghai:dumpling_shop_legacy': {
+    id: 'dumpling_shop_legacy',
     cityId: 'shanghai',
     name: { en: 'Dumpling Shop', zh: '小笼包店' },
     domain: 'restaurant',

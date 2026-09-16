@@ -47,6 +47,7 @@ main.app-shell {
   max-width: 1080px;
   margin: 0 auto;
   padding: 24px 18px 56px;
+  min-height: 100vh;
 }
 
 .demo-access-bar {
@@ -202,8 +203,103 @@ button,
   background: var(--accent-dark);
 }
 
+.webtoon-bubble {
+  position: absolute;
+  width: min(78vw, 320px);
+  max-width: calc(100% - 24px);
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  pointer-events: none;
+}
+
+.webtoon-bubble.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  transition:
+    opacity 200ms ease,
+    transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.webtoon-bubble--top {
+  top: 16px;
+  left: 16px;
+}
+
+.webtoon-bubble--bottom {
+  bottom: 16px;
+  left: 16px;
+}
+
+.webtoon-bubble--center-bottom {
+  left: 50%;
+  bottom: 10%;
+  transform: translate(-50%, 8px) scale(0.98);
+}
+
+.webtoon-bubble--center-bottom.is-visible {
+  transform: translate(-50%, 0) scale(1);
+}
+
+.webtoon-bubble__button {
+  width: 100%;
+  border: 0;
+  padding: 14px 16px 15px;
+  border-radius: 24px;
+  background: #fff8ee;
+  color: #241c15;
+  text-align: left;
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.24),
+    0 1px 0 rgba(255, 255, 255, 0.72) inset;
+}
+
+.webtoon-bubble__speaker {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(36, 28, 21, 0.58);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.webtoon-bubble__text {
+  display: block;
+  font-size: 1.15rem;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.webtoon-bubble__tooltip {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(17, 14, 12, 0.88);
+  color: rgba(255, 248, 238, 0.92);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+}
+
+.webtoon-bubble__tooltip-line {
+  margin: 0;
+}
+
+.webtoon-bubble__tooltip-line + .webtoon-bubble__tooltip-line {
+  margin-top: 4px;
+}
+
+.webtoon-bubble__tooltip-line--py {
+  font-size: 0.84rem;
+  letter-spacing: 0.03em;
+  color: rgba(255, 238, 216, 0.84);
+}
+
+.webtoon-bubble__tooltip-line--en {
+  font-size: 0.9rem;
+}
+
 /* Inside game-frame: reset — components style themselves */
-.game-frame button:not(.btn-go):not(.btn-skip):not([class*="location-drawer"]):not([class*="exercise"]):not([class*="tg-menu"]):not([class*="tg-tong-intro"]):not([class*="tg-proficiency"]):not([class*="session-picker"]) {
+.game-frame button:not(.btn-go):not(.btn-skip):not([class*="location-drawer"]):not([class*="exercise"]):not([class*="tg-menu"]):not([class*="tg-tong-intro"]):not([class*="tg-proficiency"]):not([class*="session-picker"]):not([class*="city-map__event-pin"]):not([class*="auction-room"]) {
   background: transparent;
   color: inherit;
   padding: 0;
@@ -3366,7 +3462,8 @@ button.nav-link:hover {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  touch-action: pan-y;
+  touch-action: none;
+  overscroll-behavior: contain;
   user-select: none;
 }
 
@@ -3508,9 +3605,124 @@ button.nav-link:hover {
   border: none !important;
 }
 
-@keyframes pinPulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); }
-  50% { transform: scale(1.25); box-shadow: 0 2px 16px rgba(240, 192, 64, 0.6); }
+.city-map__event-pin {
+  position: absolute;
+  z-index: 6;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #fff6ee;
+  cursor: pointer;
+}
+
+.city-map__event-core {
+  position: relative;
+  min-width: 102px;
+  min-height: 102px;
+  padding: 12px 14px;
+  border-radius: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(180deg, rgba(32, 18, 26, 0.96), rgba(132, 32, 55, 0.96));
+  box-shadow:
+    0 18px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 232, 214, 0.16);
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.city-map__event-pin--scheduled .city-map__event-core {
+  background: linear-gradient(180deg, rgba(43, 18, 28, 0.96), rgba(154, 44, 66, 0.96));
+}
+
+.city-map__event-pin--live .city-map__event-core {
+  background: linear-gradient(180deg, rgba(70, 18, 28, 0.98), rgba(231, 86, 44, 0.98));
+}
+
+.city-map__event-pin--closed .city-map__event-core {
+  background: linear-gradient(180deg, rgba(34, 34, 38, 0.96), rgba(77, 77, 88, 0.96));
+}
+
+.city-map__event-pin--active .city-map__event-core,
+.city-map__event-pin:hover .city-map__event-core {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 22px 38px rgba(0, 0, 0, 0.46),
+    0 0 0 1px rgba(255, 232, 214, 0.24);
+}
+
+.city-map__event-live {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #ffcf8a;
+}
+
+.city-map__event-icon-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+}
+
+.city-map__event-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(255, 208, 143, 0.26);
+  animation: cityMapEventPulse 1.7s ease-in-out infinite;
+}
+
+.city-map__event-pin--closed .city-map__event-pulse {
+  animation: none;
+  opacity: 0.2;
+}
+
+.city-map__event-icon {
+  position: relative;
+  z-index: 1;
+  font-size: 22px;
+  line-height: 1;
+  color: #fff7ef;
+  text-shadow: 0 0 18px rgba(255, 143, 104, 0.55);
+}
+
+.city-map__event-label {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(9, 11, 17, 0.82);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.28);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.city-map__event-countdown {
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff6ee;
+}
+
+@keyframes cityMapEventPulse {
+  0%, 100% {
+    transform: scale(0.92);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.9;
+  }
 }
 
 /* ── Location drawer (top swipe-down, like HUD) ───────────── */
@@ -3538,6 +3750,14 @@ button.nav-link:hover {
   animation: drawerSlideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   box-sizing: border-box;
+}
+
+.location-drawer__handle-bar {
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  margin: 0 auto 10px;
 }
 
 .location-drawer__header {
@@ -3680,6 +3900,23 @@ button.nav-link:hover {
   margin-top: 4px;
 }
 
+.auction-drawer__copy {
+  margin: 0 0 10px;
+  color: rgba(255, 245, 237, 0.78);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.auction-drawer__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 /* ── Past sessions in location drawer ────────────────── */
 .location-drawer__past-sessions {
   margin-top: 2px;
@@ -3765,6 +4002,7 @@ button.nav-link:hover {
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.35);
   transition: all 0.3s;
+  cursor: pointer;
 }
 
 .city-map__dot--active {
@@ -3808,6 +4046,261 @@ button.nav-link:hover {
 
 .city-map__arrow--right {
   right: 10px;
+}
+
+.auction-room {
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at top, rgba(204, 102, 60, 0.22), transparent 34%),
+    linear-gradient(180deg, #140f14 0%, #0d1018 54%, #090b12 100%);
+  color: #fff8f0;
+}
+
+.auction-room__hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.auction-room__back {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 20px;
+}
+
+.auction-room__hero-copy {
+  min-width: 0;
+}
+
+.auction-room__hero-copy h1,
+.auction-room__spotlight h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.02;
+}
+
+.auction-room__hero-copy p,
+.auction-room__spotlight p,
+.auction-room__announcement {
+  margin: 0;
+}
+
+.auction-room__kicker,
+.auction-room__spotlight-kicker,
+.auction-room__metric-label,
+.auction-room__panel-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #f1b77c;
+  font-weight: 800;
+}
+
+.auction-room__hero-copy h1 + p {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 245, 237, 0.72);
+}
+
+.auction-room__event-id {
+  margin-top: 8px;
+  font-size: 11px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 245, 237, 0.48) !important;
+}
+
+.auction-room__status {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+}
+
+.auction-room__status strong {
+  font-size: 20px;
+  letter-spacing: -0.04em;
+}
+
+.auction-room__status--closed {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.auction-room__media {
+  position: relative;
+  min-height: 220px;
+}
+
+.auction-room__media-bg,
+.auction-room__media-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.auction-room__media-bg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.auction-room__media-overlay {
+  background: linear-gradient(180deg, rgba(10, 10, 16, 0.16), rgba(10, 10, 16, 0.82));
+}
+
+.auction-room__spotlight {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  padding: 18px 16px 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.auction-room__spotlight-character {
+  width: 108px;
+  height: auto;
+  align-self: end;
+  filter: drop-shadow(0 16px 20px rgba(0, 0, 0, 0.48));
+}
+
+.auction-room__board,
+.auction-room__panel,
+.auction-room__feed {
+  margin: 14px 16px 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.auction-room__board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px;
+}
+
+.auction-room__metric {
+  display: grid;
+  gap: 4px;
+}
+
+.auction-room__metric strong {
+  font-size: 16px;
+}
+
+.auction-room__metric small {
+  color: rgba(255, 245, 237, 0.6);
+  line-height: 1.4;
+}
+
+.auction-room__panel {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.auction-room__wallet {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: rgba(255, 245, 237, 0.76);
+}
+
+.auction-room__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.auction-room__actions button,
+.auction-room__custom-bid button {
+  min-height: 42px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #f0bc7b, #ef7758);
+  color: #1c1010;
+  font-weight: 800;
+  padding: 0 14px;
+}
+
+.auction-room__secondary {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+}
+
+.auction-room__custom-bid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.auction-room__custom-bid input {
+  min-width: 0;
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(9, 11, 18, 0.8);
+  color: #fff;
+  padding: 0 12px;
+}
+
+.auction-room__announcement {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255, 245, 237, 0.66);
+}
+
+.auction-room__feed {
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.auction-room__feed ul {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.auction-room__feed li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.auction-room__feed li div {
+  display: grid;
+  gap: 2px;
+}
+
+.auction-room__feed li span {
+  font-size: 11px;
+  color: rgba(255, 245, 237, 0.54);
+}
+
+.auction-room__feed li b {
+  color: #ffcf8a;
 }
 
 /* ==============================

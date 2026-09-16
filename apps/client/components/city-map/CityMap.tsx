@@ -44,6 +44,18 @@ interface LocationConfig {
   left: string;
 }
 
+export interface SpecialMapPin {
+  id: string;
+  cityId: CityId;
+  label: string;
+  countdownLabel?: string;
+  status?: 'scheduled' | 'live' | 'closed';
+  top: string;
+  left: string;
+  active?: boolean;
+  onTap: () => void;
+}
+
 const CITY_LOCATIONS: Record<CityId, LocationConfig[]> = {
   seoul: [
     { id: 'practice_studio',   labels: { en: 'Chimaek Place',    ko: '치맥',     ja: 'チメク',         zh: '炸鸡啤酒' },   top: '22%', left: '25%' },
@@ -82,6 +94,7 @@ interface CityMapProps {
   onStartLearn: (cityId: CityId, locationId: LocationId) => void;
   onReviewSession?: (session: import('@/lib/store/session-store').CompletedSession) => void;
   gameState: GameState;
+  specialPins?: SpecialMapPin[];
 }
 
 /* ── Component ──────────────────────────────────────────────── */
@@ -95,8 +108,11 @@ export function CityMap({
   onStartLearn,
   onReviewSession,
   gameState,
+  specialPins = [],
 }: CityMapProps) {
+  const mapRef = useRef<HTMLDivElement | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const wheelLockRef = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const [videoCandidateIndex, setVideoCandidateIndex] = useState(0);
   const [posterCandidateIndex, setPosterCandidateIndex] = useState(0);
@@ -109,6 +125,7 @@ export function CityMap({
   const meta = CITY_META[city];
   const comingSoon = !meta.hasVideo;
   const locations = CITY_LOCATIONS[city] ?? [];
+  const visibleSpecialPins = specialPins.filter((pin) => pin.cityId === city);
   const targetLang = getLanguageForCity(city);
   const explainLang = gameState.explainIn[city] ?? 'en';
   const cityMedia = CITY_MEDIA[city];
@@ -116,6 +133,13 @@ export function CityMap({
   const posterCandidates = fallbackRuntimeAssetCandidates(cityMedia.poster);
   const videoSrc = videoCandidates[videoCandidateIndex] ?? '';
   const posterSrc = posterCandidates[posterCandidateIndex] ?? cityMedia.poster;
+
+  const moveCity = useCallback((delta: -1 | 1) => {
+    const nextIndex = Math.max(0, Math.min(CITY_ORDER.length - 1, activeCityIndex + delta));
+    if (nextIndex !== activeCityIndex) {
+      onCityChange(nextIndex);
+    }
+  }, [activeCityIndex, onCityChange]);
 
   /* ── Two-video dissolve loop ─────────────────────────────── */
 
@@ -194,17 +218,43 @@ export function CityMap({
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     if (!touchStartRef.current) return;
     const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
     touchStartRef.current = null;
     setDragOffset(0);
 
-    if (Math.abs(dx) > SWIPE_THRESHOLD) {
-      if (dx > 0 && activeCityIndex > 0) {
-        onCityChange(activeCityIndex - 1);
-      } else if (dx < 0 && activeCityIndex < CITY_ORDER.length - 1) {
-        onCityChange(activeCityIndex + 1);
-      }
+    if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+      moveCity(dx > 0 ? -1 : 1);
     }
-  }, [activeCityIndex, onCityChange]);
+  }, [moveCity]);
+
+  const handleWheelDelta = useCallback((deltaX: number, deltaY: number, preventDefault?: () => void) => {
+    const primaryDelta = Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY;
+    if (Math.abs(primaryDelta) < 8) return;
+    if (wheelLockRef.current) return;
+
+    preventDefault?.();
+    moveCity(primaryDelta > 0 ? 1 : -1);
+
+    wheelLockRef.current = window.setTimeout(() => {
+      wheelLockRef.current = null;
+    }, 320);
+  }, [moveCity]);
+
+  const handleWheel = useCallback((event: React.WheelEvent) => {
+    handleWheelDelta(event.deltaX, event.deltaY, () => event.preventDefault());
+  }, [handleWheelDelta]);
+
+  useEffect(() => {
+    const node = mapRef.current;
+    if (!node) return;
+
+    const onWheel = (event: WheelEvent) => {
+      handleWheelDelta(event.deltaX, event.deltaY, () => event.preventDefault());
+    };
+
+    node.addEventListener('wheel', onWheel, { passive: false });
+    return () => node.removeEventListener('wheel', onWheel);
+  }, [handleWheelDelta]);
 
   /* ── Keyboard navigation ────────────────────────────────── */
 
@@ -222,6 +272,12 @@ export function CityMap({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeCityIndex, onCityChange, selectedLocation, onSelectLocation]);
 
+  useEffect(() => () => {
+    if (wheelLockRef.current) {
+      window.clearTimeout(wheelLockRef.current);
+    }
+  }, []);
+
   /* ── Pin tap ────────────────────────────────────────────── */
 
   const handlePinTap = useCallback((locId: LocationId) => {
@@ -231,12 +287,12 @@ export function CityMap({
   /* ── Arrow navigation ──────────────────────────────────── */
 
   const goLeft = useCallback(() => {
-    if (activeCityIndex > 0) onCityChange(activeCityIndex - 1);
-  }, [activeCityIndex, onCityChange]);
+    moveCity(-1);
+  }, [moveCity]);
 
   const goRight = useCallback(() => {
-    if (activeCityIndex < CITY_ORDER.length - 1) onCityChange(activeCityIndex + 1);
-  }, [activeCityIndex, onCityChange]);
+    moveCity(1);
+  }, [moveCity]);
 
   /* ── Background ─────────────────────────────────────────── */
 
@@ -249,10 +305,13 @@ export function CityMap({
 
   return (
     <div
+      ref={mapRef}
       className="city-map"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onWheelCapture={handleWheel}
+      onWheel={handleWheel}
     >
       {/* Video backgrounds (two for dissolve) / static image */}
       {meta.hasVideo && videoSrc ? (
@@ -263,6 +322,7 @@ export function CityMap({
             className="city-map__bg city-map__bg--dissolve"
             style={bgStyle}
             muted
+            autoPlay
             playsInline
             preload="auto"
             poster={posterSrc}
@@ -283,6 +343,7 @@ export function CityMap({
             className="city-map__bg city-map__bg--dissolve"
             style={{ ...bgStyle, opacity: 0 }}
             muted
+            autoPlay
             playsInline
             preload="auto"
             poster={posterSrc}
@@ -344,6 +405,30 @@ export function CityMap({
         );
       })}
 
+      {visibleSpecialPins.map((pin) => (
+        <button
+          key={pin.id}
+          type="button"
+          className={`city-map__event-pin city-map__event-pin--${pin.status ?? 'scheduled'}${pin.active ? ' city-map__event-pin--active' : ''}`}
+          style={{ top: pin.top, left: pin.left }}
+          onClick={pin.onTap}
+        >
+          <span className="city-map__event-core">
+            <span className="city-map__event-live">
+              {pin.status === 'live' ? 'Live Now' : pin.status === 'closed' ? 'Closed' : 'Live Event'}
+            </span>
+            <span className="city-map__event-icon-wrap" aria-hidden>
+              <span className="city-map__event-pulse" />
+              <span className="city-map__event-icon">🔨</span>
+            </span>
+            {pin.countdownLabel ? (
+              <span className="city-map__event-countdown">{pin.countdownLabel}</span>
+            ) : null}
+          </span>
+          <span className="city-map__event-label">{pin.label}</span>
+        </button>
+      ))}
+
       {/* Bottom sheet */}
       {selectedLocation && (() => {
         const loc = locations.find((l) => l.id === selectedLocation);
@@ -397,6 +482,16 @@ export function CityMap({
           <div
             key={c}
             className={`city-map__dot${i === activeCityIndex ? ' city-map__dot--active' : ''}`}
+            role="button"
+            tabIndex={0}
+            aria-label={`Go to ${CITY_META[c].en}`}
+            onClick={() => onCityChange(i)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onCityChange(i);
+              }
+            }}
           />
         ))}
       </div>

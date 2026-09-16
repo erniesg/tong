@@ -30,6 +30,8 @@ export interface GameState {
   locationLevels: Record<string, { level: number }>;
   locationHangoutCounts: Record<string, number>;   // key: "seoul:food_street"
   unlockedLocations: Record<string, boolean>;       // key: "seoul:cafe"
+  onboardingStatus: Record<string, 'started' | 'dismissed' | 'completed'>;
+  hangoutSeat: Record<string, 'shoucheng' | 'dingman'>;
   explainIn: Record<CityId, AppLang>;                // per-city language Tong explains in
 }
 
@@ -46,6 +48,8 @@ export type GameAction =
   | { type: 'INCREMENT_INTERACTION'; characterId: string }
   | { type: 'INCREMENT_LOCATION_HANGOUT'; cityId: string; locationId: string }
   | { type: 'UNLOCK_LOCATION'; cityId: string; locationId: string }
+  | { type: 'SET_ONBOARDING_STATUS'; sceneId: string; status: 'started' | 'dismissed' | 'completed' }
+  | { type: 'SET_HANGOUT_SEAT'; sceneId: string; seat: 'shoucheng' | 'dingman' }
   | { type: 'SET_EXPLAIN_LANGUAGE'; cityId: CityId; lang: AppLang }
   | { type: 'SET_PLAYER_NAME'; name: string }
   | { type: 'SET_PLAYER_PROFILE'; profile: PlayerProfile }
@@ -75,6 +79,8 @@ function loadState(): GameState {
         },
         locationHangoutCounts: parsed.locationHangoutCounts ?? defaults.locationHangoutCounts,
         unlockedLocations: parsed.unlockedLocations ?? defaults.unlockedLocations,
+        onboardingStatus: parsed.onboardingStatus ?? defaults.onboardingStatus,
+        hangoutSeat: parsed.hangoutSeat ?? defaults.hangoutSeat,
         explainIn: (parsed.explainIn && typeof parsed.explainIn === 'object')
           ? { ...defaults.explainIn, ...parsed.explainIn }
           : defaults.explainIn,
@@ -115,6 +121,8 @@ function createInitialState(): GameState {
     locationLevels: {},
     locationHangoutCounts: {},
     unlockedLocations: { 'seoul:food_street': true, 'shanghai:dumpling_shop': true, 'tokyo:ramen_shop': true },
+    onboardingStatus: {},
+    hangoutSeat: {},
     explainIn: { seoul: 'en', tokyo: 'en', shanghai: 'en' },
   };
 }
@@ -212,6 +220,22 @@ function reduce(state: GameState, action: GameAction): GameState {
         },
       };
     }
+    case 'SET_ONBOARDING_STATUS':
+      return {
+        ...state,
+        onboardingStatus: {
+          ...state.onboardingStatus,
+          [action.sceneId]: action.status,
+        },
+      };
+    case 'SET_HANGOUT_SEAT':
+      return {
+        ...state,
+        hangoutSeat: {
+          ...state.hangoutSeat,
+          [action.sceneId]: action.seat,
+        },
+      };
     case 'SET_EXPLAIN_LANGUAGE':
       return { ...state, explainIn: { ...state.explainIn, [action.cityId]: action.lang } };
     case 'SET_PLAYER_NAME':

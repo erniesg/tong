@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
 import type { ToolInvocation, UIMessage } from 'ai';
 import { startOrResumeGame, type CityId, type LocationId, type ProficiencyLevel, type ScoreState, type UserProficiency, type AppLang } from '@/lib/api';
@@ -23,7 +23,7 @@ import { useVideoGeneration } from '@/lib/hooks/useVideoGeneration';
 import { POJANGMACHA } from '@/lib/content/pojangmacha';
 import { getLocationOrDefault, getLanguageForCity } from '@/lib/content/locations';
 import { getRelationshipStage } from '@/lib/types/relationship';
-import { CityMap, CITY_ORDER } from '@/components/city-map/CityMap';
+import { CityMap, CITY_ORDER, type SpecialMapPin } from '@/components/city-map/CityMap';
 import { KoreanText } from '@/components/shared/KoreanText';
 import { LearnPanel } from '@/components/learn/LearnPanel';
 import { sessionLogger } from '@/lib/debug/session-logger';
@@ -34,6 +34,8 @@ import { GameHUD } from '@/components/hud/GameHUD';
 import { ExerciseModal } from '@/components/learn/ExerciseModal';
 import { resolveRuntimeAssetUrl, runtimeAssetUrl } from '@/lib/runtime-assets';
 import { buildResumePrompt, hydrateResumeState, type ResumeBootstrapPayload } from '@/lib/store/checkpoint-resume';
+import type { LiveAuctionSnapshot } from '@/lib/live-auction/contracts';
+import { ShanghaiAuctionRoom } from '@/components/shanghai/ShanghaiAuctionRoom';
 
 /* ── scene constants ────────────────────────────────────── */
 
@@ -42,6 +44,7 @@ const GAME_INTRO_VIDEO_URL = runtimeAssetUrl('app.intro.video.default');
 const TONG_TRANSPARENT_VIDEO_URL = runtimeAssetUrl('app.tong.video.transparent');
 const TONG_TRANSPARENT_HEVC_URL = runtimeAssetUrl('app.tong.video.transparent.hevc', '/assets/tong_intro_hevc.mov');
 const SEOUL_FOOD_STREET_BACKDROP_URL = runtimeAssetUrl('city.seoul.location.food-street.backdrop.default');
+const SHANGHAI_MAP_POSTER_URL = runtimeAssetUrl('city.shanghai.map.static.default');
 
 const NPC_SPRITES: Record<string, { name: string; nameLocal: string; nameZh: string; src: string; idleVideo?: string; color: string }> = {
   haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: runtimeAssetUrl('character.haeun.portrait.default'), idleVideo: '/assets/characters/haeun/haeun_idle_loop.mp4', color: '#e8485c' },
@@ -134,7 +137,7 @@ const LOCATION_NAMES: Record<LocationId, string> = {
 
 /* ── types ──────────────────────────────────────────────── */
 
-type Phase = 'opening' | 'menu' | 'tong-intro' | 'hangout' | 'city_map' | 'learn' | 'dev';
+type Phase = 'opening' | 'menu' | 'tong-intro' | 'hangout' | 'city_map' | 'auction' | 'learn' | 'dev';
 
 type NpcSpeakToolArgs = {
   characterId?: string;
@@ -147,6 +150,83 @@ type BootstrapQueryIntent = {
   resumeCheckpointId: string | null;
   resumeRequested: boolean;
 };
+
+type AuctionRole = 'bidder' | 'admin';
+type AuctionStatus = 'open' | 'closed';
+
+type AuctionParticipant = {
+  participantId: string;
+  displayName: string;
+  role: AuctionRole | 'house';
+  spAvailable: number;
+  spCommitted: number;
+};
+
+type AuctionBid = {
+  bidId: string;
+  participantId: string;
+  displayName: string;
+  amountSp: number;
+  placedAtMs: number;
+};
+
+type AuctionRoomState = {
+  title: string;
+  subtitle: string;
+  status: AuctionStatus;
+  endsAtMs: number;
+  minOpeningBidSp: number;
+  minIncrementSp: number;
+  unlockKey: string;
+  lastAnnouncement: string | null;
+  participants: AuctionParticipant[];
+  recentBids: AuctionBid[];
+};
+
+const SHANGHAI_AUCTION_CITY_INDEX = CITY_ORDER.indexOf('shanghai');
+const SHANGHAI_AUCTION_DURATION_MS = 11 * 60 * 1000;
+const SHANGHAI_AUCTION_PIN_POSITION = { top: '43%', left: '59%' } as const;
+
+function formatAuctionCountdown(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function buildAuctionRoomState(): AuctionRoomState {
+  const now = Date.now();
+  return {
+    title: 'Shoucheng x Dingman Live Auction',
+    subtitle: 'Bid SP for the rooftop drop, then lock the winner state before the timer runs out.',
+    status: 'open',
+    endsAtMs: now + SHANGHAI_AUCTION_DURATION_MS,
+    minOpeningBidSp: 20,
+    minIncrementSp: 5,
+    unlockKey: 'unlock.shanghai.live-auction',
+    lastAnnouncement: 'Tong: The auction room is live. If you want in, move before the clock does.',
+    participants: [
+      { participantId: 'house', displayName: 'Tong', role: 'house', spAvailable: 0, spCommitted: 0 },
+      { participantId: 'host', displayName: 'Auction Host', role: 'admin', spAvailable: 999, spCommitted: 0 },
+      { participantId: 'player', displayName: 'You', role: 'bidder', spAvailable: 120, spCommitted: 0 },
+      { participantId: 'npc-lin', displayName: 'Lin', role: 'bidder', spAvailable: 90, spCommitted: 35 },
+      { participantId: 'npc-yue', displayName: 'Yue', role: 'bidder', spAvailable: 70, spCommitted: 0 },
+    ],
+    recentBids: [
+      {
+        bidId: 'seed-lin-1',
+        participantId: 'npc-lin',
+        displayName: 'Lin',
+        amountSp: 35,
+        placedAtMs: now - 18_000,
+      },
+    ],
+  };
+}
+
+function getAuctionLeader(room: AuctionRoomState): AuctionBid | null {
+  return room.recentBids.length > 0 ? room.recentBids[0] : null;
+}
 
 
 /* ── helpers ────────────────────────────────────────────── */
@@ -277,8 +357,12 @@ function getWeakestLangIndex(sliders: [number, number, number]): number {
 /* ── component ──────────────────────────────────────────── */
 
 export default function GamePage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const gameState = useGameState();
+  const shanghaiOnboardingComplete = gameState.onboardingStatus['shanghai:h1'] === 'completed';
+  const requestedMapCity = searchParams.get('city');
+  const openAuctionRequested = searchParams.get('openAuction') === '1';
 
   /* ── Fixture mode: ?fixture=name loads static test fixture ──── */
   const fixtureParam = searchParams.get('fixture');
@@ -292,6 +376,7 @@ export default function GamePage() {
   const freshStart = searchParams.get('fresh') === '1';
   const freshNpc = searchParams.get('npc') ?? undefined; // pre-select NPC for fresh start
   const freshLang = searchParams.get('lang') as AppLang | null; // pre-set explain language
+  const auctionEventId = searchParams.get('eventId') || 'shoucheng-dingman';
   const qaRunId = searchParams.get('qa_run_id') ?? undefined;
   const qaTrace = searchParams.get('qa_trace') === '1';
   const bootstrapIntent = readBootstrapQueryIntent(searchParams);
@@ -300,9 +385,10 @@ export default function GamePage() {
   );
   const skipToHangout = phaseParam === 'hangout';
   const skipToCityMap = phaseParam === 'city_map';
+  const skipToAuction = phaseParam === 'auction';
   const skipToLearn = phaseParam === 'learn';
   const [phase, setPhase] = useState<Phase>(
-    fixtureParam ? 'hangout' : freshStart ? 'opening' : devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : seededBootstrapRequested || skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : skipToLearn ? 'learn' : 'opening'
+    fixtureParam ? 'hangout' : freshStart ? 'opening' : devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : seededBootstrapRequested || skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : skipToAuction ? 'auction' : skipToLearn ? 'learn' : 'opening'
   );
   const openingVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -406,9 +492,22 @@ export default function GamePage() {
   const [playerLevel, setPlayerLevel] = useState(0);
 
   /* city map state */
-  const [mapCityIndex, setMapCityIndex] = useState(1); // default Seoul
+  const [mapCityIndex, setMapCityIndex] = useState(() => {
+    const requestedCity = searchParams.get('city');
+    if (requestedCity === 'seoul' || requestedCity === 'tokyo' || requestedCity === 'shanghai') {
+      const requestedIndex = CITY_ORDER.indexOf(requestedCity);
+      if (requestedIndex >= 0) return requestedIndex;
+    }
+    return 1;
+  });
   const [selectedLocation, setSelectedLocation] = useState<LocationId | null>(null);
   const [reviewSession, setReviewSession] = useState<CompletedSession | null>(null);
+  const [auctionRole, setAuctionRole] = useState<AuctionRole>(searchParams.get('admin') === '1' ? 'admin' : 'bidder');
+  const [auctionRoom, setAuctionRoom] = useState<AuctionRoomState>(() => buildAuctionRoomState());
+  const [auctionSnapshot, setAuctionSnapshot] = useState<LiveAuctionSnapshot | null>(null);
+  const [auctionNowMs, setAuctionNowMs] = useState(() => Date.now());
+  const [auctionCustomBid, setAuctionCustomBid] = useState('');
+  const auctionAutofocusHandledRef = useRef(false);
 
   /* dev exercise tester state */
   const [devExType, setDevExType] = useState(searchParams.get('type') ?? 'stroke_tracing');
@@ -460,12 +559,80 @@ export default function GamePage() {
   const [introAct, setIntroAct] = useState<1 | 2>(1);
   const [npcRevealed, setNpcRevealed] = useState(false);
   const MIN_INTRO_EXERCISES = 3;
+
+  useEffect(() => {
+    if (requestedMapCity === 'seoul' || requestedMapCity === 'tokyo' || requestedMapCity === 'shanghai') {
+      const requestedIndex = CITY_ORDER.indexOf(requestedMapCity);
+      if (requestedIndex >= 0 && requestedIndex !== mapCityIndex) {
+        setMapCityIndex(requestedIndex);
+      }
+    }
+  }, [mapCityIndex, requestedMapCity]);
+
+  useEffect(() => {
+    if (phase !== 'city_map') return;
+
+    const currentCity = searchParams.get('city');
+    const nextCity = CITY_ORDER[mapCityIndex];
+    if (currentCity === nextCity) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('phase', 'city_map');
+    params.set('city', nextCity);
+    router.replace(`/game?${params.toString()}`, { scroll: false });
+  }, [mapCityIndex, phase, router, searchParams]);
+
+  useEffect(() => {
+    if (!openAuctionRequested) {
+      auctionAutofocusHandledRef.current = false;
+      return;
+    }
+    if (auctionAutofocusHandledRef.current) return;
+    if (phase !== 'city_map') return;
+    if (requestedMapCity !== 'shanghai') return;
+
+    setSelectedLocation(null);
+    openAuctionRoom('bidder');
+    auctionAutofocusHandledRef.current = true;
+  }, [openAuctionRequested, phase, requestedMapCity]);
   // Random charge time between 1.5–3 minutes (simulates video generation)
   const [chargeDurationMs] = useState(() => Math.round((1.5 + Math.random() * 1.5) * 60 * 1000));
   const [chargeStart] = useState(() => Date.now());
   const [chargePercent, setChargePercent] = useState(0);
   const [chargeNotifShown, setChargeNotifShown] = useState(false);
   const chargeNotifFiredRef = useRef(false);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setAuctionNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const eventSource = new EventSource('/api/live-auction/stream');
+    eventSource.onmessage = (event) => {
+      const nextSnapshot = JSON.parse(event.data) as LiveAuctionSnapshot;
+      setAuctionSnapshot(nextSnapshot);
+    };
+    eventSource.onerror = () => {
+      eventSource.close();
+    };
+
+    return () => eventSource.close();
+  }, []);
+
+  useEffect(() => {
+    if (auctionRoom.status !== 'open') return;
+    if (auctionNowMs < auctionRoom.endsAtMs) return;
+    setAuctionRoom((current) => {
+      if (current.status !== 'open') return current;
+      return {
+        ...current,
+        status: 'closed',
+        endsAtMs: auctionNowMs,
+        lastAnnouncement: 'Tong: Time. The room is settled and the unlock is now fixed.',
+      };
+    });
+  }, [auctionNowMs, auctionRoom.endsAtMs, auctionRoom.status]);
 
   // Time-based charge bar: 0→100% over random duration
   useEffect(() => {
@@ -1973,6 +2140,12 @@ export default function GamePage() {
   /* ── City map handlers ────────────────────────────────────── */
 
   function handleMapHangout(cityId: CityId, locationId: LocationId) {
+    if (cityId === 'shanghai' && locationId === 'dumpling_shop' && !shanghaiOnboardingComplete) {
+      dispatch({ type: 'SET_ONBOARDING_STATUS', sceneId: 'shanghai:h1', status: 'started' });
+      router.push(`/onboarding/shanghai?return=${encodeURIComponent('/game?phase=city_map&city=shanghai&openAuction=1')}`);
+      return;
+    }
+
     const npcId = pickNpcForCity(cityId);
     const npcChar = CHARACTER_MAP[npcId] ?? HAEUN;
     npcRef.current = npcChar;
@@ -2038,6 +2211,84 @@ export default function GamePage() {
     setPhase('learn');
   }
 
+  function handleAuctionBid(amountSp: number) {
+    if (auctionRole !== 'bidder') return;
+    setAuctionRoom((current) => {
+      if (current.status !== 'open') return current;
+
+      const player = current.participants.find((participant) => participant.participantId === 'player');
+      if (!player) return current;
+
+      const leader = getAuctionLeader(current);
+      const minimumBid = leader ? leader.amountSp + current.minIncrementSp : current.minOpeningBidSp;
+      const maxBid = player.spAvailable + player.spCommitted;
+      if (amountSp < minimumBid || amountSp > maxBid) return current;
+
+      const playerName = gameState.playerProfile.englishName.trim() || 'You';
+      const nextBid: AuctionBid = {
+        bidId: `bid-${Date.now()}`,
+        participantId: 'player',
+        displayName: playerName,
+        amountSp,
+        placedAtMs: Date.now(),
+      };
+
+      return {
+        ...current,
+        lastAnnouncement: `Tong: ${playerName} just pushed the room to ${amountSp} SP.`,
+        participants: current.participants.map((participant) => {
+          if (participant.participantId !== 'player') return participant;
+          return {
+            ...participant,
+            displayName: playerName,
+            spAvailable: maxBid - amountSp,
+            spCommitted: amountSp,
+          };
+        }),
+        recentBids: [nextBid, ...current.recentBids].slice(0, 8),
+      };
+    });
+    setAuctionCustomBid('');
+  }
+
+  function handleAuctionExtend(seconds: number) {
+    setAuctionRoom((current) => {
+      if (current.status !== 'open') return current;
+      return {
+        ...current,
+        endsAtMs: current.endsAtMs + seconds * 1000,
+        lastAnnouncement: `Tong: Host extended the room by ${seconds} seconds.`,
+      };
+    });
+  }
+
+  function handleAuctionCloseNow() {
+    setAuctionRoom((current) => ({
+      ...current,
+      status: 'closed',
+      endsAtMs: Date.now(),
+      lastAnnouncement: 'Tong: Host closed the room early. Winner state is now locked.',
+    }));
+  }
+
+  function handleAuctionReset() {
+    setAuctionCustomBid('');
+    setAuctionRoom(buildAuctionRoomState());
+  }
+
+  function openAuctionRoom(nextRole: AuctionRole) {
+    setSelectedLocation(null);
+    const params = new URLSearchParams({
+      restart: '1',
+      return: '/game?phase=city_map&city=shanghai',
+    });
+    if (nextRole === 'admin') {
+      params.set('admin', '1');
+    }
+    params.set('eventId', auctionEventId);
+    router.push(`/auction/shanghai-live?${params.toString()}`);
+  }
+
   /* ── City map phase ──────────────────────────────────────── */
 
   if (phase === 'city_map') {
@@ -2045,6 +2296,43 @@ export default function GamePage() {
     const mapUiLang = (gameState.explainIn[mapCity] ?? 'en') as UILang;
     const mapCityInfo = CITY_NAMES[mapCity] ?? CITY_NAMES.seoul;
     const mapLearnKey = mapCity === 'shanghai' ? 'learn_chinese' : mapCity === 'tokyo' ? 'learn_japanese' : 'learn_korean';
+    const auctionPinStatus: NonNullable<SpecialMapPin['status']> = auctionSnapshot?.status === 'closed'
+      ? 'scheduled'
+      : auctionSnapshot?.status === 'open' || auctionSnapshot?.status === 'paused'
+        ? 'live'
+        : 'scheduled';
+    const auctionCountdownLabel = auctionSnapshot
+      ? auctionSnapshot.status === 'closed'
+        ? 'Tap to start'
+        : auctionSnapshot.status === 'paused'
+          ? 'PAYING'
+        : auctionSnapshot.status === 'open'
+          ? 'LIVE'
+          : formatAuctionCountdown(new Date(auctionSnapshot.nextTransitionAtIso).getTime() - auctionNowMs)
+      : 'Tap in';
+    const specialPins: SpecialMapPin[] = [
+      {
+        id: 'shanghai-live-auction',
+        cityId: 'shanghai',
+        label: 'Live Auction',
+        countdownLabel: auctionCountdownLabel,
+        status: auctionPinStatus,
+        top: SHANGHAI_AUCTION_PIN_POSITION.top,
+        left: SHANGHAI_AUCTION_PIN_POSITION.left,
+        active: false,
+        onTap: () => {
+          openAuctionRoom('bidder');
+        },
+      },
+    ];
+    const auctionLeader = auctionSnapshot?.participants.find((participant) => participant.isLeading) ?? null;
+    const auctionStatusLabel = auctionSnapshot?.status === 'scheduled'
+      ? 'Warming up'
+      : auctionSnapshot?.status === 'open' || auctionSnapshot?.status === 'paused'
+        ? 'Live'
+        : auctionSnapshot?.status === 'closed'
+          ? 'Closed'
+          : 'Loading';
     return (
       <UILangProvider value={mapUiLang}>
       <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -2053,11 +2341,12 @@ export default function GamePage() {
             activeCityIndex={mapCityIndex}
             onCityChange={(idx) => { setMapCityIndex(idx); setSelectedLocation(null); }}
             selectedLocation={selectedLocation}
-            onSelectLocation={setSelectedLocation}
+            onSelectLocation={(loc) => { setSelectedLocation(loc); }}
             onStartHangout={handleMapHangout}
             onStartLearn={handleMapLearn}
             onReviewSession={handleMapReviewSession}
             gameState={gameState}
+            specialPins={specialPins}
           />
           <GameHUD
             xp={gameState.xp}
@@ -2069,6 +2358,16 @@ export default function GamePage() {
         </div>
       </div>
       </UILangProvider>
+    );
+  }
+
+  if (phase === 'auction') {
+    return (
+      <div className="scene-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="game-frame">
+          <ShanghaiAuctionRoom />
+        </div>
+      </div>
     );
   }
 
