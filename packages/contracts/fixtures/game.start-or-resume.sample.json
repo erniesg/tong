@@ -26,6 +26,68 @@
     "Practice KO objective ko_food_l2_001"
   ],
   "resumeSource": "new_session",
+  "recentMediaRationale": {
+    "generatedAtIso": "2026-03-21T09:28:42.000Z",
+    "sourceSummary": [
+      {
+        "source": "youtube",
+        "itemsConsumed": 3,
+        "minutes": 64,
+        "topMedia": [
+          {
+            "mediaId": "yt_001",
+            "title": "K-variety snack challenge",
+            "lang": "ko",
+            "minutes": 38
+          }
+        ]
+      },
+      {
+        "source": "spotify",
+        "itemsConsumed": 2,
+        "minutes": 47,
+        "topMedia": [
+          {
+            "mediaId": "sp_001",
+            "title": "밤 산책",
+            "lang": "ko",
+            "minutes": 19
+          }
+        ]
+      }
+    ],
+    "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+    "rankedTerms": [
+      {
+        "lemma": "주문",
+        "lang": "ko",
+        "source": "youtube",
+        "weightedScore": 0.95
+      },
+      {
+        "lemma": "메뉴",
+        "lang": "ko",
+        "source": "spotify",
+        "weightedScore": 0.65
+      }
+    ],
+    "topicSummary": {
+      "clusterId": "food-ordering",
+      "label": "Food Ordering",
+      "topTerms": ["주문", "메뉴", "떡볶이"]
+    },
+    "placementHints": [
+      {
+        "city": "seoul",
+        "location": "food_street",
+        "mode": "hangout",
+        "placementType": "hangout",
+        "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+        "clusterId": "food-ordering",
+        "objectiveId": "ko_food_l2_001"
+      }
+    ]
+  },
   "gameSession": {
     "sessionId": "sess_demo_001",
     "userId": "demo-user-1",
@@ -78,6 +140,52 @@
       "Review personalized learn targets",
       "Practice KO objective ko_food_l2_001"
     ],
+    "personalization": {
+      "generatedAtIso": "2026-03-21T09:28:42.000Z",
+      "sourceSummary": [
+        {
+          "source": "youtube",
+          "itemsConsumed": 3,
+          "minutes": 64
+        },
+        {
+          "source": "spotify",
+          "itemsConsumed": 2,
+          "minutes": 47
+        }
+      ],
+      "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+      "rankedTerms": [
+        {
+          "lemma": "주문",
+          "lang": "ko",
+          "source": "youtube",
+          "weightedScore": 0.95
+        },
+        {
+          "lemma": "메뉴",
+          "lang": "ko",
+          "source": "spotify",
+          "weightedScore": 0.65
+        }
+      ],
+      "topicSummary": {
+        "clusterId": "food-ordering",
+        "label": "Food Ordering",
+        "topTerms": ["주문", "메뉴", "떡볶이"]
+      },
+      "placementHints": [
+        {
+          "city": "seoul",
+          "location": "food_street",
+          "mode": "hangout",
+          "placementType": "hangout",
+          "reason": "Food-ordering terms reinforce the Seoul food street hangout.",
+          "clusterId": "food-ordering",
+          "objectiveId": "ko_food_l2_001"
+        }
+      ]
+    },
     "resumeSource": "new_session",
     "activeCheckpointId": "ckpt_sess_demo_001_intro",
     "startedAtIso": "2026-03-15T04:55:00.000Z",

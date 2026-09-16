@@ -4,18 +4,21 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import { type SiteNavItem } from '@/components/site/siteNav';
+import { runtimeAssetUrl } from '@/lib/runtime-assets';
 
 type SiteFooterProps = {
   className?: string;
   items: SiteNavItem[];
 };
 
+const SITE_LOGO_URL = runtimeAssetUrl('app.logo.trimmed.default');
+
 export default function SiteFooter({ className = 'landing-footer', items }: SiteFooterProps) {
   return (
     <footer className={className}>
       <div className="landing-footer-brand">
         <Image
-          src="/assets/app/logo_trimmed.png"
+          src={SITE_LOGO_URL}
           alt="Tong"
           width={30}
           height={30}

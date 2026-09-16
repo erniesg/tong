@@ -405,6 +405,8 @@ export function StrokeTracing({ exercise, onResult }: Props) {
   const [hasDrawn, setHasDrawn] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<{ correct: boolean; score: number } | null>(null);
+  const [submittedSummary, setSubmittedSummary] = useState<string | null>(null);
+  const [readyToDismissSingle, setReadyToDismissSingle] = useState(false);
 
   // Drill mode state
   const [cellStates, setCellStates] = useState<CellState[]>(
@@ -636,6 +638,7 @@ export function StrokeTracing({ exercise, onResult }: Props) {
     setSubmitted(true);
     const score = computeScore_single();
     const correct = score >= PASS_THRESHOLD;
+    const summary = `${Math.round(score * 100)}% coverage`;
     const ttsChar = JAMO_TO_SYLLABLE[exercise.targetChar] ? exercise.targetChar : (exercise.sound ?? exercise.targetChar);
     if (correct && exercise.meaning) {
       const localMeaning = getMeaning(exercise.meaning, lang, exercise.targetChar);
@@ -644,8 +647,14 @@ export function StrokeTracing({ exercise, onResult }: Props) {
       playTTS(ttsChar, ttsLang);
     }
     setResult({ correct, score });
-    onResult(correct, `${Math.round(score * 100)}% coverage`);
-  }, [hasDrawn, submitted, computeScore_single, onResult, exercise, ttsLang, lang]);
+    setSubmittedSummary(summary);
+    setReadyToDismissSingle(true);
+  }, [hasDrawn, submitted, computeScore_single, exercise, ttsLang, lang]);
+
+  const handleDismiss_single = useCallback(() => {
+    if (!result) return;
+    onResult(result.correct, submittedSummary ?? `${Math.round(result.score * 100)}% coverage`);
+  }, [onResult, result, submittedSummary]);
 
   const handleClear_single = useCallback(() => {
     if (submitted) return;
@@ -831,6 +840,8 @@ export function StrokeTracing({ exercise, onResult }: Props) {
                   ? 'bg-[var(--color-accent-green)]/20 text-[var(--color-accent-green)]'
                   : 'bg-red-500/20 text-red-400',
               )}
+              onClick={readyToDismissSingle ? handleDismiss_single : undefined}
+              style={readyToDismissSingle ? { cursor: 'pointer' } : undefined}
             >
               {result.correct ? (
                 <>
@@ -851,6 +862,11 @@ export function StrokeTracing({ exercise, onResult }: Props) {
                     {t('stroke_score', lang)}: {Math.round(result.score * 100)}%
                   </div>
                 </>
+              )}
+              {readyToDismissSingle && (
+                <div className="scene-continue-label animate-pulse" style={{ marginTop: 8 }}>
+                  {t('tap_to_continue', lang)}
+                </div>
               )}
             </div>
           )}

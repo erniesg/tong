@@ -1,19 +1,18 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
-import Link from 'next/link';
+
+import RoadmapWaveVisual from '@/components/roadmap/RoadmapWaveVisual';
+import SiteFooter from '@/components/site/SiteFooter';
+import SiteHeader from '@/components/site/SiteHeader';
+import { LANDING_FOOTER_ITEMS, LANDING_HEADER_ITEMS } from '@/components/site/siteNav';
 
 import {
   CRITICAL_PATH,
   ROADMAP_PHASES,
   ROADMAP_PROJECT_URL,
-  ROADMAP_REPO_URL,
   issueUrl,
   type RoadmapExecution,
   type RoadmapIssue,
 } from '@/lib/content/roadmap';
-import { runtimeAssetUrl } from '@/lib/runtime-assets';
-
-const ROADMAP_LOGO_URL = runtimeAssetUrl('app.logo.trimmed.default');
 
 export const metadata: Metadata = {
   title: 'Tong Roadmap',
@@ -88,71 +87,7 @@ const executionCounts = ROADMAP_PHASES.flatMap((phase) => phase.issues).reduce(
   } as Record<RoadmapExecution, number>,
 );
 
-const FOCUS_WINDOWS = [
-  {
-    key: 'now',
-    eyebrow: 'Unlock first',
-    title: 'Make Tong remotely operable',
-    summary:
-      'Before the queue scales, remote agents need portable issues, published assets, and reviewer-visible proof.',
-    issueNumbers: [66, 65, 29, 35, 36, 46],
-  },
-  {
-    key: 'next',
-    eyebrow: 'Unlock second',
-    title: 'Add resume and deterministic checkpoints',
-    summary:
-      'Once the runtime is portable, progression and seeded checkpoints cut replay time for both players and QA.',
-    issueNumbers: [37, 38, 47, 48, 49, 51],
-  },
-  {
-    key: 'later',
-    eyebrow: 'Then accelerate',
-    title: 'Polish, KG, and world content',
-    summary:
-      'Only after the foundations land should the backlog widen into playtest polish, KG-backed generation, and starter packs.',
-    issueNumbers: [31, 17, 19, 53, 60, 69],
-  },
-] as const;
-
-const OVERVIEW_CARDS = [
-  {
-    eyebrow: 'For players',
-    title: 'Tong becomes a world you can leave and return to',
-    copy:
-      'Resume-ready sessions and clearer progression turn the prototype into a living language game instead of a fragile one-shot flow.',
-    points: ['Return to the world map anytime', 'Resume the active hangout without replaying everything'],
-  },
-  {
-    eyebrow: 'For testers',
-    title: 'QA shifts from replay loops to short, reliable proofs',
-    copy:
-      'Deterministic checkpoints, portable issues, and reviewer-proof capture make timing-sensitive bugs faster to prove and faster to close.',
-    points: ['Short proof clips instead of full playthroughs', 'Portable issue bundles agents can rerun remotely'],
-  },
-  {
-    eyebrow: 'For agents',
-    title: 'Remote work stops depending on one laptop',
-    copy:
-      'Published assets, clearer dependencies, and proof rules make unattended implementation much more trustworthy.',
-    points: ['Agent-ready issues route cleanly by lane', 'PRs can carry media humans can actually review'],
-  },
-] as const;
-
-const VALUE_PROMISES = [
-  {
-    label: 'Product outcome',
-    title: 'A resumable, mobile-first language world',
-  },
-  {
-    label: 'Ops outcome',
-    title: 'A queue agents can work 24/7 without hidden local context',
-  },
-  {
-    label: 'Team outcome',
-    title: 'A roadmap where dependencies and blockers are visible before work starts',
-  },
-] as const;
+const totalIssues = ROADMAP_PHASES.reduce((count, phase) => count + phase.issues.length, 0);
 
 function trimTitle(title: string, maxLength: number) {
   if (title.length <= maxLength) return title;
@@ -270,138 +205,56 @@ function RoadmapIssueCard({ issue }: { issue: RoadmapIssue }) {
 export default function RoadmapPage() {
   return (
     <div className="roadmap-shell">
-      <nav className="landing-nav roadmap-nav">
-        <Link href="/" className="landing-nav-brand">
-          <Image
-            src={ROADMAP_LOGO_URL}
-            alt="Tong"
-            width={30}
-            height={30}
-            className="landing-nav-logo"
-          />
-          <div className="landing-brand-cycle">
-            <span>tōng</span>
-            <span>통</span>
-            <span>つう</span>
-          </div>
-        </Link>
-        <div className="landing-nav-links">
-          <Link href="/" className="nav-link">
-            Home
-          </Link>
-          <a href={ROADMAP_REPO_URL} target="_blank" rel="noopener noreferrer" className="nav-link">
-            GitHub Repo
-          </a>
-          <a href={ROADMAP_PROJECT_URL} target="_blank" rel="noopener noreferrer" className="nav-link">
-            GitHub Project
-          </a>
-        </div>
-      </nav>
+      <div className="roadmap-nav">
+        <SiteHeader items={LANDING_HEADER_ITEMS} className="landing-nav roadmap-nav-bar" />
+      </div>
 
       <section className="roadmap-hero">
-        <div className="roadmap-hero-copy">
-          <span className="kicker">Roadmap</span>
-          <h1 className="roadmap-title">What unlocks Tong next.</h1>
-          <p className="roadmap-subhead">
-            The GitHub project is the control plane. This page is the readable execution map: what ships first,
-            what each wave unlocks, where the human blockers still are, and which issues are already safe for
-            unattended agent work.
-          </p>
-          <div className="roadmap-actions">
-            <a href={ROADMAP_PROJECT_URL} target="_blank" rel="noopener noreferrer" className="button">
-              Open GitHub Project
-            </a>
-            <a href={issueUrl(66)} target="_blank" rel="noopener noreferrer" className="button secondary">
-              See Immediate Unblockers
-            </a>
-          </div>
-        </div>
-
-        <div className="roadmap-hero-panel">
-          <div className="roadmap-hero-panel-copy">
-            <div className="roadmap-hero-metric">
-              <span className="roadmap-hero-label">Current unlock</span>
-              <strong>Remote-first QA and asset foundations</strong>
-              <p>Fixing the queue means making proof, runtime assets, and validation portable before widening the scope.</p>
-            </div>
-            <div className="roadmap-hero-metric">
-              <span className="roadmap-hero-label">After that</span>
-              <strong>Resume + deterministic checkpoints</strong>
-              <p>That is the pivot that makes long hangout flows testable and makes the game resumable for real players.</p>
-            </div>
-          </div>
-
-          <div className="roadmap-hero-stat-grid">
-            <div className="roadmap-stat-card">
-              <span>Agent-ready</span>
-              <strong>{executionCounts['agent-ready']}</strong>
-            </div>
-            <div className="roadmap-stat-card">
-              <span>Validate first</span>
-              <strong>{executionCounts['validate-first']}</strong>
-            </div>
-            <div className="roadmap-stat-card">
-              <span>Human-blocked</span>
-              <strong>{executionCounts['human-blocked']}</strong>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="roadmap-overview">
-        <article className="roadmap-overview-lead">
-          <span className="kicker">Overview</span>
-          <h2>Why this roadmap matters beyond “fix the backlog”</h2>
-          <p>
-            This is the path from a promising demo to a remotely operable product system: one where players can
-            actually resume progress, testers can report issues with enough context, and agents can take work
-            unattended without hallucinating the environment around them.
-          </p>
-          <div className="roadmap-value-grid">
-            {VALUE_PROMISES.map((value) => (
-              <div key={value.title} className="roadmap-value-card">
-                <span>{value.label}</span>
-                <strong>{value.title}</strong>
+        <div className="roadmap-hero-shell">
+          <div className="roadmap-hero-copy">
+            <div className="roadmap-hero-grid">
+              <div className="roadmap-hero-copy-column">
+                <span className="kicker landing-hero-kicker">Roadmap</span>
+                <h1 className="roadmap-title">Tong, in three waves.</h1>
+                <p className="roadmap-subhead">
+                  Tap a wave to jump straight to its execution phase below. The visual is the roadmap.
+                </p>
+                <div className="roadmap-actions">
+                  <a href={ROADMAP_PROJECT_URL} target="_blank" rel="noopener noreferrer" className="button">
+                    Open GitHub Project
+                  </a>
+                  <a href="#roadmap-critical-path" className="button secondary">
+                    Jump To Critical Path
+                  </a>
+                </div>
               </div>
-            ))}
-          </div>
-        </article>
 
-        <div className="roadmap-overview-grid">
-          {OVERVIEW_CARDS.map((card) => (
-            <article key={card.title} className="roadmap-overview-card">
-              <span className="roadmap-focus-eyebrow">{card.eyebrow}</span>
-              <h3>{card.title}</h3>
-              <p>{card.copy}</p>
-              <ul className="roadmap-overview-points">
-                {card.points.map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-              </ul>
-            </article>
-          ))}
+              <RoadmapWaveVisual />
+            </div>
+
+            <div className="roadmap-signal-row">
+              <div className="roadmap-signal-pill">
+                <span>Critical path</span>
+                <strong>{CRITICAL_PATH.length}</strong>
+              </div>
+              <div className="roadmap-signal-pill">
+                <span>Agent-ready</span>
+                <strong>{executionCounts['agent-ready']}</strong>
+              </div>
+              <div className="roadmap-signal-pill">
+                <span>Total scope</span>
+                <strong>{totalIssues}</strong>
+              </div>
+              <div className="roadmap-signal-pill roadmap-signal-pill--muted">
+                <span>Human-blocked</span>
+                <strong>{executionCounts['human-blocked']}</strong>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="roadmap-focus-grid">
-        {FOCUS_WINDOWS.map((window) => (
-          <article key={window.key} className={`roadmap-focus-card roadmap-focus-card--${window.key}`}>
-            <span className="roadmap-focus-eyebrow">{window.eyebrow}</span>
-            <h2>{window.title}</h2>
-            <p>{window.summary}</p>
-            <div className="roadmap-chip-row">
-              {window.issueNumbers
-                .map((issueNumber) => issueLookup.get(issueNumber))
-                .filter((issue): issue is RoadmapIssue => Boolean(issue))
-                .map((issue) => (
-                  <IssueReferenceChip key={issue.number} issue={issue} />
-                ))}
-            </div>
-          </article>
-        ))}
-      </section>
-
-      <section className="roadmap-critical-section card">
+      <section id="roadmap-critical-path" className="roadmap-critical-section card">
         <div className="roadmap-section-head">
           <div>
             <span className="kicker">Critical Path</span>
@@ -417,9 +270,11 @@ export default function RoadmapPage() {
           {criticalPathIssues.map((issue, index) => (
             <article key={issue.number} className="roadmap-critical-card">
               <div className="roadmap-critical-step">Step {index + 1}</div>
-              <a href={issueUrl(issue.number)} target="_blank" rel="noopener noreferrer" className="roadmap-card-link">
-                #{issue.number} {issue.title}
-              </a>
+              <h3 className="roadmap-critical-title">
+                <a href={issueUrl(issue.number)} target="_blank" rel="noopener noreferrer" className="roadmap-card-link">
+                  #{issue.number} {issue.title}
+                </a>
+              </h3>
               <div className="roadmap-critical-meta">
                 <span className="pill">{issue.priority}</span>
                 <span className="pill">{issue.lane}</span>
@@ -453,86 +308,87 @@ export default function RoadmapPage() {
         </div>
       </section>
 
-      <section className="roadmap-phase-stack">
-        <div className="roadmap-section-head roadmap-section-head--phases">
-          <div>
-            <span className="kicker">By Wave</span>
-            <h2>Everything upcoming, in dependency order</h2>
-          </div>
-          <p>
-            Each wave shows the outcome, the real blockers, and the issues you can open directly from here without
-            cross-referencing the project board.
-          </p>
-        </div>
+      <details className="roadmap-queue-details">
+        <summary className="roadmap-queue-toggle">
+          <span>Issue map</span>
+          <span>{totalIssues} issues with dependencies and drill-down</span>
+        </summary>
 
-        {ROADMAP_PHASES.map((phase, index) => {
-          const agentReadyCount = phase.issues.filter((issue) => issue.execution === 'agent-ready').length;
-          const humanBlockedCount = phase.issues.filter((issue) => issue.execution === 'human-blocked').length;
-          const phaseWindow = getPhaseWindow(index);
+        <div className="roadmap-queue-body">
+          <section className="roadmap-phase-stack">
+            {ROADMAP_PHASES.map((phase, index) => {
+              const agentReadyCount = phase.issues.filter((issue) => issue.execution === 'agent-ready').length;
+              const humanBlockedCount = phase.issues.filter((issue) => issue.execution === 'human-blocked').length;
+              const phaseWindow = getPhaseWindow(index);
 
-          return (
-            <article
-              key={phase.id}
-              className={`roadmap-phase ${PHASE_THEME_CLASS[index % PHASE_THEME_CLASS.length]}`}
-            >
-              <div className="roadmap-phase-rail">
-                <span className="roadmap-phase-index">{String(index + 1).padStart(2, '0')}</span>
-                <span className="roadmap-phase-tag">{phase.label}</span>
-                <span className={`roadmap-window-tag roadmap-window-tag--${phaseWindow}`}>
-                  {WINDOW_LABELS[phaseWindow]}
-                </span>
-                <p className="roadmap-phase-outcome">{phase.outcome}</p>
-                <div className="roadmap-phase-stats">
-                  <div>
-                    <span>Issues</span>
-                    <strong>{phase.issues.length}</strong>
-                  </div>
-                  <div>
-                    <span>Agent-ready</span>
-                    <strong>{agentReadyCount}</strong>
-                  </div>
-                  <div>
-                    <span>Human gates</span>
-                    <strong>{humanBlockedCount}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="roadmap-phase-body">
-                <div className="roadmap-phase-head">
-                  <div>
-                    <h2>{phase.title}</h2>
-                    <p className="roadmap-phase-summary">{phase.summary}</p>
-                  </div>
-                  {index < ROADMAP_PHASES.length - 1 ? (
-                    <div className="roadmap-phase-next">
-                      <span className="roadmap-link-label">This wave unlocks</span>
-                      <strong>{ROADMAP_PHASES[index + 1].title}</strong>
-                    </div>
-                  ) : null}
-                </div>
-
-                <details className="roadmap-phase-details" open={index <= 1}>
-                  <summary className="roadmap-phase-details-toggle">
-                    <span>View execution details</span>
-                    <span>
-                      {phase.issues.length} issues · {agentReadyCount} agent-ready · {humanBlockedCount} human-gated
+              return (
+                <article
+                  id={phase.id}
+                  key={phase.id}
+                  className={`roadmap-phase ${PHASE_THEME_CLASS[index % PHASE_THEME_CLASS.length]}`}
+                >
+                  <div className="roadmap-phase-rail">
+                    <span className="roadmap-phase-index">{String(index + 1).padStart(2, '0')}</span>
+                    <span className="roadmap-phase-tag">{phase.label}</span>
+                    <span className={`roadmap-window-tag roadmap-window-tag--${phaseWindow}`}>
+                      {WINDOW_LABELS[phaseWindow]}
                     </span>
-                  </summary>
-
-                  <div className="roadmap-phase-details-body">
-                    <div className="roadmap-issue-grid">
-                      {phase.issues.map((issue) => (
-                        <RoadmapIssueCard key={issue.number} issue={issue} />
-                      ))}
+                    <p className="roadmap-phase-outcome">{phase.outcome}</p>
+                    <div className="roadmap-phase-stats">
+                      <div>
+                        <span>Issues</span>
+                        <strong>{phase.issues.length}</strong>
+                      </div>
+                      <div>
+                        <span>Agent-ready</span>
+                        <strong>{agentReadyCount}</strong>
+                      </div>
+                      <div>
+                        <span>Human gates</span>
+                        <strong>{humanBlockedCount}</strong>
+                      </div>
                     </div>
                   </div>
-                </details>
-              </div>
-            </article>
-          );
-        })}
-      </section>
+
+                  <div className="roadmap-phase-body">
+                    <div className="roadmap-phase-head">
+                      <div>
+                        <h2>{phase.title}</h2>
+                        <p className="roadmap-phase-summary">{phase.summary}</p>
+                      </div>
+                      {index < ROADMAP_PHASES.length - 1 ? (
+                        <div className="roadmap-phase-next">
+                          <span className="roadmap-link-label">This wave unlocks</span>
+                          <strong>{ROADMAP_PHASES[index + 1].title}</strong>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <details className="roadmap-phase-details" open={index === 0}>
+                      <summary className="roadmap-phase-details-toggle">
+                        <span>View issues</span>
+                        <span>
+                          {phase.issues.length} issues · {agentReadyCount} agent-ready · {humanBlockedCount} human-gated
+                        </span>
+                      </summary>
+
+                      <div className="roadmap-phase-details-body">
+                        <div className="roadmap-issue-grid">
+                          {phase.issues.map((issue) => (
+                            <RoadmapIssueCard key={issue.number} issue={issue} />
+                          ))}
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+        </div>
+      </details>
+
+      <SiteFooter items={LANDING_FOOTER_ITEMS} className="landing-footer roadmap-footer" />
     </div>
   );
 }

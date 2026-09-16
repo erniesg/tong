@@ -1,17 +1,25 @@
 {
-  "lang": "ko",
-  "city": "seoul",
-  "location": "food_street",
+  "version": "2026-03-21",
   "objectives": [
     {
       "objectiveId": "ko_food_l0_001",
+      "lang": "ko",
+      "city": "seoul",
+      "location": "food_street",
+      "clusterId": "food-ordering",
       "level": 0,
       "mode": "learn",
+      "objectiveCategory": "script",
+      "placementType": "learn",
+      "placementReason": "Menu-reading basics support the Seoul food street learn path.",
+      "summary": "Read a Seoul food-street menu in Korean.",
       "coreTargets": {
         "vocabulary": ["떡볶이", "김밥", "메뉴"],
         "grammar": ["topic marker 은/는"],
         "sentenceStructures": ["N은/는 N이다"]
       },
+      "personalizedFallbackTerms": ["메뉴", "떡볶이", "김밥"],
+      "prerequisiteObjectiveIds": [],
       "completionCriteria": {
         "requiredTurns": 3,
         "requiredAccuracy": 0.7
@@ -19,20 +27,130 @@
     },
     {
       "objectiveId": "ko_food_l2_001",
+      "lang": "ko",
+      "city": "seoul",
+      "location": "food_street",
+      "clusterId": "food-ordering",
       "level": 2,
       "mode": "hangout",
+      "objectiveCategory": "vocabulary",
+      "placementType": "hangout",
+      "placementReason": "Food-ordering terms reinforce the Seoul food street hangout.",
+      "summary": "Order street food politely in Korean.",
       "coreTargets": {
-        "vocabulary": ["주문", "맵다", "포장"],
+        "vocabulary": ["주문", "메뉴", "떡볶이"],
         "grammar": ["-고 싶어요", "-주세요"],
         "sentenceStructures": ["N 주세요", "N이/가 adjective"]
       },
-      "personalizedTargets": [
-        { "source": "youtube", "lemma": "무대" },
-        { "source": "spotify", "lemma": "연습" }
-      ],
+      "personalizedFallbackTerms": ["주문", "메뉴", "떡볶이"],
+      "prerequisiteObjectiveIds": ["ko_food_l1_001"],
+      "hangoutCopy": {
+        "start": "어서 와요! 오늘은 뭐 먹고 싶어요?",
+        "resume": "좋아요, 이어서 주문해 볼까요? 방금 멈춘 지점부터예요.",
+        "successHint": "좋아요. 주문할 때 바로 쓸 수 있는 자연스러운 표현이었어요.",
+        "retryHint": "음식 이름이랑 정중한 끝맺음, 예를 들면 주세요를 붙여 볼까요?",
+        "nextTurnEven": "좋아요, 맵기는 어느 정도로 할까요?",
+        "nextTurnOdd": "좋아요! 다음 주문도 한국어로 말해 볼까요?"
+      },
       "completionCriteria": {
         "requiredTurns": 4,
         "requiredAccuracy": 0.75
+      }
+    },
+    {
+      "objectiveId": "ko_city_l2_003",
+      "lang": "ko",
+      "city": "seoul",
+      "location": "subway_hub",
+      "clusterId": "city-social",
+      "level": 2,
+      "mode": "hangout",
+      "objectiveCategory": "conversation",
+      "placementType": "hangout",
+      "placementReason": "City meetup language supports Seoul station hangouts.",
+      "summary": "Handle a Seoul station meetup in Korean.",
+      "coreTargets": {
+        "vocabulary": ["지하철", "친구", "역"],
+        "grammar": ["-에서 만나요", "-쪽으로 가요"],
+        "sentenceStructures": ["N 에서 만나요", "N 쪽으로 가요"]
+      },
+      "personalizedFallbackTerms": ["지하철", "친구", "역"],
+      "prerequisiteObjectiveIds": ["ko_food_l1_001"],
+      "hangoutCopy": {
+        "start": "왔어요? 오늘은 어디에서 만날까요?",
+        "resume": "좋아요, 이어서 만나기로 한 장소를 말해 볼까요?",
+        "successHint": "좋아요. 약속 장소를 자연스럽게 설명했어요.",
+        "retryHint": "장소 이름이랑 만나요 같은 표현을 같이 써 볼까요?",
+        "nextTurnEven": "좋아요, 어느 출구에서 만날지도 말해 볼까요?",
+        "nextTurnOdd": "좋아요! 이번에는 친구에게 방향을 설명해 볼까요?"
+      },
+      "completionCriteria": {
+        "requiredTurns": 4,
+        "requiredAccuracy": 0.75
+      }
+    },
+    {
+      "objectiveId": "ja_subway_l1_001",
+      "lang": "ja",
+      "city": "tokyo",
+      "location": "subway_hub",
+      "clusterId": "city-social",
+      "level": 1,
+      "mode": "hangout",
+      "objectiveCategory": "vocabulary",
+      "placementType": "hangout",
+      "placementReason": "Transit and meetup language fits the Tokyo subway hangout.",
+      "summary": "Handle a Tokyo station meetup in Japanese.",
+      "coreTargets": {
+        "vocabulary": ["駅", "乗り換え", "ホーム"],
+        "grammar": ["〜たいです", "〜ください"],
+        "sentenceStructures": ["N を ください", "N で 会いましょう"]
+      },
+      "personalizedFallbackTerms": ["駅", "乗り換え", "ホーム"],
+      "prerequisiteObjectiveIds": ["ja_subway_l0_001"],
+      "hangoutCopy": {
+        "start": "いらっしゃい。今日は駅で何をしたい？",
+        "resume": "じゃあ、続けよう。さっきのやり取りからもう一度ね。",
+        "successHint": "いいね。駅でそのまま使える自然な言い方だったよ。",
+        "retryHint": "場所の名前に、お願いしますかくださいを足してみよう。",
+        "nextTurnEven": "いいね。次はどこで乗り換えるか言ってみようか。",
+        "nextTurnOdd": "いいね。待ち合わせの場所を日本語で伝えてみよう。"
+      },
+      "completionCriteria": {
+        "requiredTurns": 4,
+        "requiredAccuracy": 0.75
+      }
+    },
+    {
+      "objectiveId": "zh_stage_l3_002",
+      "lang": "zh",
+      "city": "shanghai",
+      "location": "practice_studio",
+      "clusterId": "performance-energy",
+      "level": 3,
+      "mode": "hangout",
+      "objectiveCategory": "conversation",
+      "placementType": "mission",
+      "placementReason": "Performance language supports the Shanghai texting mission.",
+      "summary": "Coordinate a Shanghai practice-studio meetup in Mandarin.",
+      "coreTargets": {
+        "vocabulary": ["朋友", "舞台", "练习"],
+        "grammar": ["想 + verb", "请 + verb"],
+        "sentenceStructures": ["我们在 + 地点 + 见面", "请给我 + N"]
+      },
+      "personalizedFallbackTerms": ["朋友", "舞台", "练习"],
+      "prerequisiteObjectiveIds": ["zh_stage_l2_001"],
+      "hangoutCopy": {
+        "start": "你来了。今天在练习室附近想做什么？",
+        "resume": "好，我们继续，从刚才停下来的地方接着说。",
+        "successHint": "不错，这句话在练习室见面的时候很自然。",
+        "retryHint": "试着加上食物或地点，再配一个礼貌表达，比如请或者我要。",
+        "nextTurnEven": "好，那你再说一下想几点见面。",
+        "nextTurnOdd": "不错，下一句用中文说明你想点什么吧。"
+      },
+      "completionCriteria": {
+        "requiredTurns": 4,
+        "requiredAccuracy": 0.8
       }
     }
   ]

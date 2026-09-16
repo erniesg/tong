@@ -119,6 +119,42 @@ export interface PlayerMediaProfileResponse {
   };
 }
 
+export interface PlacementHint {
+  city: GraphCityId;
+  location: GraphLocationId;
+  mode: SessionMode;
+  placementType: 'hangout' | 'learn' | 'mission';
+  reason: string;
+  clusterId?: string;
+  objectiveId: string;
+}
+
+export interface RecentMediaRationale {
+  generatedAtIso: string;
+  sourceSummary: Array<{
+    source: 'youtube' | 'spotify';
+    itemsConsumed: number;
+    minutes: number;
+    topMedia?: MediaTopItem[];
+  }>;
+  reason: string;
+  rankedTerms: Array<{
+    lemma: string;
+    lang: TargetLanguage;
+    source: 'youtube' | 'spotify';
+    weightedScore: number;
+    placementHints?: PlacementHint[];
+  }>;
+  topicSummary?: {
+    clusterId: string;
+    label: string;
+    keywords?: string[];
+    topTerms?: string[];
+    placementHints?: PlacementHint[];
+  } | null;
+  placementHints: PlacementHint[];
+}
+
 export interface PlayerLanguageProfile {
   nativeLanguage: AppLanguage;
   targetLanguages: TargetLanguage[];
@@ -147,6 +183,8 @@ export interface ObjectiveDescriptor {
   objectiveNodeId?: string;
   targetNodeIds?: string[];
   summary?: string;
+  recentMediaRationale?: RecentMediaRationale | null;
+  placementHints?: PlacementHint[];
 }
 
 export interface RouteStateDescriptor {
@@ -261,6 +299,7 @@ export interface GameSession {
   unlocks: UnlockSnapshot;
   rewards: RewardGrant[];
   availableActions: string[];
+  personalization?: RecentMediaRationale | null;
   resumeSource: ResumeSource;
   activeCheckpointId?: string;
   startedAtIso: string;
@@ -309,6 +348,7 @@ export interface StartOrResumeGameResponse {
   progression: GameSessionProgression;
   actions: string[];
   resumeSource: ResumeSource;
+  recentMediaRationale?: RecentMediaRationale | null;
   gameSession: GameSession;
   sceneSession: SceneSession;
   activeCheckpoint: Checkpoint | null;
@@ -339,6 +379,8 @@ export interface ObjectiveNextResponse {
     source: 'youtube' | 'spotify';
     linkedNodeIds: string[];
   }>;
+  recentMediaRationale?: RecentMediaRationale | null;
+  placementHints?: PlacementHint[];
   completionCriteria: {
     requiredTurns: number;
     requiredAccuracy: number;

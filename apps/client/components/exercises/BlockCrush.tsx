@@ -98,7 +98,24 @@ const BASE_SPEED = 0.00015;
 const SPAWN_INTERVAL = 1400;
 const MAX_PIECES = 6;
 const PLAYFIELD_HEIGHT = 308;
+const PIECE_SIZE = 52;
+const PLAYFIELD_BOTTOM_GAP = 8;
+const PLAYFIELD_TRAVEL = PLAYFIELD_HEIGHT - PIECE_SIZE - PLAYFIELD_BOTTOM_GAP;
 const BLOCK_CRUSH_HINT_SEEN_KEY = 'tong:block-crush:first-hint-seen';
+const LEGACY_STAGE_ALIASES: Record<string, BlockCrushStage> = {
+  intro: 'intro',
+  identify: 'intro',
+  practice: 'intro',
+  recognition: 'recognition',
+  arrange: 'recognition',
+  recall: 'recall',
+  crush: 'recall',
+};
+
+function normalizeBlockCrushStage(stage: string | undefined, fallback: BlockCrushStage = 'recognition'): BlockCrushStage {
+  if (!stage) return fallback;
+  return LEGACY_STAGE_ALIASES[stage.toLowerCase()] ?? fallback;
+}
 
 /** Play a single piece's sound (short, no meaning follow-up). */
 function playPieceTTS(piece: string, lang: string) {
@@ -212,7 +229,7 @@ function getWrongFeedback(
 }
 
 export function BlockCrush({ exercise, onResult }: Props) {
-  const stage: BlockCrushStage = exercise.stage && STAGE_CONFIG[exercise.stage as BlockCrushStage] ? exercise.stage as BlockCrushStage : 'recognition';
+  const stage = normalizeBlockCrushStage(exercise.stage as string | undefined);
   const cfg = STAGE_CONFIG[stage];
 
   /* ── Multi-char setup ──────────────────────────────── */
@@ -420,26 +437,12 @@ export function BlockCrush({ exercise, onResult }: Props) {
     // For multi-char, just speak the full word (skip meaning TTS — "Ha-" sounds like a random syllable)
     playTTS(displayChar, exercise.language, isMulti ? undefined : exercise.meaning);
 
-    if (stage === 'intro') {
-      // Show detailed overlay, wait for tap
-      setAnimationDone(false);
-      setOverlayDismissing(false);
-      setShowOverlay(true);
-    } else if (stage === 'recognition') {
-      // Brief overlay, auto-dismiss after 2s
-      setAnimationDone(false);
-      setOverlayDismissing(false);
-      setShowOverlay(true);
-      setTimeout(() => {
-        setOverlayDismissing(true);
-        fireResult();
-      }, 2000);
-    } else {
-      // recall: quick flash only
-      setSuccessFlash(true);
-      setTimeout(() => fireResult(), 500);
-    }
-  }, [displayChar, exercise.language, exercise.meaning, isMulti, stage, fireResult]);
+    // Always keep the review overlay on screen until the player dismisses it.
+    setSuccessFlash(false);
+    setAnimationDone(false);
+    setOverlayDismissing(false);
+    setShowOverlay(true);
+  }, [displayChar, exercise.language, exercise.meaning, isMulti, fireResult]);
 
   const dismissOverlay = useCallback(() => {
     if (overlayDismissing) return;
@@ -626,7 +629,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
 
   /* ── Grid layouts ──────────────────────────────────── */
 
-  const S = 52;
+  const S = PIECE_SIZE;
   const W = S * 2 + 1; // +1 for the divider
 
   /** Compute inner content height for a layout (excluding border). */
@@ -886,8 +889,8 @@ export function BlockCrush({ exercise, onResult }: Props) {
                     ref={(el) => { pieceElRefs.current[p.id] = el; }}
                     onPointerDown={(e) => startDrag(e, p)}
                     style={{
-                      position: 'absolute', left: '50%', top: `${p.y * 100}%`,
-                      width: 52, height: 52,
+                      position: 'absolute', left: '50%', top: `${Math.min(1, p.y) * PLAYFIELD_TRAVEL}px`,
+                      width: PIECE_SIZE, height: PIECE_SIZE,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 26, borderRadius: 10, cursor: 'grab',
                       border: pieceBorder,
@@ -935,11 +938,11 @@ export function BlockCrush({ exercise, onResult }: Props) {
       )}
       </div>
 
-      {/* Completion overlay (intro + recognition stages) */}
+      {/* Completion overlay */}
       {showOverlay && (
         <div
           className={`bc-overlay${overlayDismissing ? ' bc-overlay--dismissing' : ''}`}
-          onClick={stage === 'intro' && animationDone ? dismissOverlay : undefined}
+          onClick={animationDone ? dismissOverlay : undefined}
         >
           {isStrokeOrderSupported(exercise.targetChar, exercise.language) ? (
             <StrokeOrderAnimation
@@ -965,9 +968,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
                 {exercise.components.map((c) => c.piece).join(' + ')} → {exercise.targetChar}
               </div>
             )}
-            {stage === 'intro' && (
-              <div className="bc-overlay__tap" style={{ opacity: animationDone ? 1 : 0 }}>{ui.tapToContinue}</div>
-            )}
+            <div className="bc-overlay__tap" style={{ opacity: animationDone ? 1 : 0 }}>{ui.tapToContinue}</div>
           </div>
         </div>
       )}

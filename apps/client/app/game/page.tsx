@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
 import type { ToolInvocation, UIMessage } from 'ai';
 import type { CityId, LocationId, ProficiencyLevel, ScoreState, UserProficiency, AppLang } from '@/lib/api';
-import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData, BlockCrushCharStep, BlockCrushExercise } from '@/lib/types/hangout';
+import type { SessionMessage, ToolQueueItem, SceneSummary, ExerciseData, BlockCrushCharStep, BlockCrushExercise, BlockCrushStage } from '@/lib/types/hangout';
 import type { CompletedSession } from '@/lib/store/session-store';
 import type { DialogueChoice } from '@/components/scene/ChoiceButtons';
 import type { Character } from '@/lib/types/relationship';
@@ -37,11 +37,20 @@ import { resolveRuntimeAssetUrl, runtimeAssetUrl } from '@/lib/runtime-assets';
 /* ── scene constants ────────────────────────────────────── */
 
 const GAME_LOGO_URL = runtimeAssetUrl('app.logo.transparent.default');
+const GAME_OPENING_VIDEO_URL = runtimeAssetUrl('app.opening.video.default');
 const GAME_INTRO_VIDEO_URL = runtimeAssetUrl('app.intro.video.default');
+const GAME_INTRO_VIDEO_FALLBACK_URL = runtimeAssetUrl('app.intro.video.fallback');
 const SEOUL_FOOD_STREET_BACKDROP_URL = runtimeAssetUrl('city.seoul.location.food-street.backdrop.default');
 
 const NPC_SPRITES: Record<string, { name: string; nameLocal: string; nameZh: string; src: string; idleVideo?: string; color: string }> = {
-  haeun: { name: 'Ha-eun', nameLocal: '하은', nameZh: '夏恩', src: runtimeAssetUrl('character.haeun.portrait.default'), color: '#e8485c' },
+  haeun: {
+    name: 'Ha-eun',
+    nameLocal: '하은',
+    nameZh: '夏恩',
+    src: runtimeAssetUrl('character.haeun.portrait.default'),
+    idleVideo: runtimeAssetUrl('character.haeun.idle.default'),
+    color: '#e8485c',
+  },
   jin: { name: 'Jin', nameLocal: '진', nameZh: '珍', src: runtimeAssetUrl('character.jin.portrait.default'), color: '#4a90d9' },
 };
 
@@ -52,6 +61,21 @@ function pickNpcForCity(cityId: CityId): string {
   const cityNpcs = NPC_POOL.filter((id) => CHARACTER_MAP[id]?.cityId === cityId);
   const pool = cityNpcs.length > 0 ? cityNpcs : NPC_POOL;
   return pool[Math.floor(Math.random() * pool.length)];
+}
+
+const BLOCK_CRUSH_STAGE_ALIASES: Record<string, BlockCrushStage> = {
+  intro: 'intro',
+  identify: 'intro',
+  practice: 'intro',
+  recognition: 'recognition',
+  arrange: 'recognition',
+  recall: 'recall',
+  crush: 'recall',
+};
+
+function normalizeBlockCrushStage(stage?: string | null, fallback: BlockCrushStage = 'intro'): BlockCrushStage {
+  if (!stage) return fallback;
+  return BLOCK_CRUSH_STAGE_ALIASES[stage.toLowerCase()] ?? fallback;
 }
 
 /* ── Charge notification (auto-dismisses via parent timer) ── */
@@ -268,6 +292,9 @@ export default function GamePage() {
     freshStart ? 'opening' : devIntro ? 'hangout' : devParam === 'exercise' ? 'dev' : skipToHangout ? 'hangout' : skipToCityMap ? 'city_map' : skipToLearn ? 'learn' : 'opening'
   );
   const openingVideoRef = useRef<HTMLVideoElement>(null);
+  const finishOpening = useCallback(() => {
+    setPhase((current) => (current === 'opening' ? 'menu' : current));
+  }, []);
 
   /* ?fresh=1 — full reset: clear game state + force back to opening.
      Done synchronously during render so no stale-state effects can fire.
@@ -326,6 +353,39 @@ export default function GamePage() {
     introTimerRef.current = setTimeout(() => setIntroCharIdx((c) => Math.min(c + CHARS_PER_TICK, line.length)), TICK_MS);
     return () => { if (introTimerRef.current) clearTimeout(introTimerRef.current); };
   }, [phase, introLineIdx, introCharIdx]);
+
+  useEffect(() => {
+    if (phase !== 'opening') return;
+    const video = openingVideoRef.current;
+    if (!video) return;
+
+    const tryPlay = () => {
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {});
+      }
+    };
+
+    const handleEnded = () => finishOpening();
+    const handleError = () => finishOpening();
+    const handleTimeUpdate = () => {
+      if (!video.duration) return;
+      if (video.currentTime >= Math.max(0.5, video.duration - 0.08)) {
+        finishOpening();
+      }
+    };
+
+    tryPlay();
+    video.addEventListener('ended', handleEnded);
+    video.addEventListener('error', handleError);
+    video.addEventListener('timeupdate', handleTimeUpdate);
+
+    return () => {
+      video.removeEventListener('ended', handleEnded);
+      video.removeEventListener('error', handleError);
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [finishOpening, phase]);
 
   /* tong-intro sub-steps: 0=meet, 1=name, 2=language, 3=world-drop */
   const [introStep, setIntroStep] = useState(0);
@@ -880,7 +940,7 @@ export default function GamePage() {
                 components: first.components,
                 romanization: first.romanization,
                 meaning: first.meaning,
-                stage: bc.stage || 'intro',
+                stage: normalizeBlockCrushStage(bc.stage),
                 sequence: steps,
                 fullWord: targetStr,
               } as BlockCrushExercise;
@@ -899,7 +959,7 @@ export default function GamePage() {
                 components: s.components,
                 romanization: s.romanization,
                 meaning: s.meaning,
-                stage: bc.stage || 'intro',
+                stage: normalizeBlockCrushStage(bc.stage),
               } as BlockCrushExercise;
               console.log('[EX] block_crush single:', s.targetChar);
             } else {
@@ -1027,11 +1087,32 @@ export default function GamePage() {
         break; // auto-advance
     }
 
+    const remainingAfterDequeue = toolQueue.length - 1;
+
     // Auto-advance: dequeue and release lock
     setToolQueue((prev) => prev.slice(1));
     processingRef.current = false;
-    traceQA('tool_queue_auto_advance', { toolName: item.toolName, remainingQueueLength: Math.max(toolQueue.length - 1, 0) });
-  }, [toolQueue, activeNpc, isIntroHangout, introAct]);
+    traceQA('tool_queue_auto_advance', { toolName: item.toolName, remainingQueueLength: Math.max(remainingAfterDequeue, 0) });
+
+    // Some non-blocking tools are terminal for a turn. If they leave the queue empty,
+    // explicitly ask the model for the next beat instead of stalling in a blank hangout.
+    if (remainingAfterDequeue === 0 && !chatLoading && item.toolName !== 'end_scene') {
+      const ctx = buildContextBlock(
+        playerLevel,
+        activeNpc,
+        city,
+        location,
+        npcRef.current,
+        gameState.explainIn[city] ?? 'en',
+        getIntroCtx(),
+      );
+      const msg = `${ctx}Continue.`;
+      sessionLogger.logUserTap(`auto_advance:${item.toolName}`);
+      sessionLogger.logAIRequest(msg);
+      traceQA('tool_queue_auto_advance_request_next_turn', { toolName: item.toolName });
+      void append({ role: 'user', content: msg });
+    }
+  }, [toolQueue, activeNpc, isIntroHangout, introAct, chatLoading, append, playerLevel, city, location, gameState.explainIn, traceQA]);
 
   /* ── Hangout handlers ───────────────────────────────────── */
 
@@ -1307,13 +1388,13 @@ export default function GamePage() {
             <video
               ref={openingVideoRef}
               className="tg-opening-vid"
-              src={GAME_INTRO_VIDEO_URL}
+              src={GAME_OPENING_VIDEO_URL}
               autoPlay
               muted
               playsInline
               preload="auto"
-              onEnded={() => setPhase('menu')}
-              onError={() => setPhase('menu')}
+              onEnded={finishOpening}
+              onError={finishOpening}
             />
             <button className="btn-skip tg-skip-bottom" type="button" onClick={() => setPhase('menu')}>
               Skip
@@ -1396,14 +1477,15 @@ export default function GamePage() {
               <>
                 <video
                   className="tg-tong-intro-video"
-                autoPlay
-                muted
-                playsInline
-                preload="auto"
-                loop
-              >
-                <source src={GAME_INTRO_VIDEO_URL} type='video/webm; codecs="vp09.02.10.08.01"' />
-              </video>
+                  autoPlay
+                  muted
+                  playsInline
+                  preload="auto"
+                  loop
+                >
+                  <source src={GAME_INTRO_VIDEO_URL} type='video/webm; codecs="vp09.02.10.08.01"' />
+                  <source src={GAME_INTRO_VIDEO_FALLBACK_URL} type="video/mp4" />
+                </video>
                 <div className="tg-tong-intro-subtitle">
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
                   <p className="dialogue-text">

@@ -4,18 +4,21 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import { type SiteNavItem } from '@/components/site/siteNav';
+import { runtimeAssetUrl } from '@/lib/runtime-assets';
 
 type SiteHeaderProps = {
   className?: string;
   items: SiteNavItem[];
 };
 
+const SITE_LOGO_URL = runtimeAssetUrl('app.logo.trimmed.default');
+
 export default function SiteHeader({ className = 'landing-nav', items }: SiteHeaderProps) {
   return (
     <nav className={className}>
       <Link href="/" className="landing-nav-brand">
         <Image
-          src="/assets/app/logo_trimmed.png"
+          src={SITE_LOGO_URL}
           alt="Tong"
           width={30}
           height={30}

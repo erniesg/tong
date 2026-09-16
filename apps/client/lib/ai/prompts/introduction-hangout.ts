@@ -78,6 +78,12 @@ ${vars.introVideoUrl ? `- Intro video: "${vars.introVideoUrl}"` : '- No intro vi
 - Exit video: ${vars.videoStatus === 'ready' && vars.exitVideoUrl ? `READY "${vars.exitVideoUrl}" (autoAdvance=false, has audio)` : vars.videoStatus === 'generating' ? 'generating — stall with content' : 'unavailable'}
 ${vars.exitLine ? `- Exit line: "${vars.exitLine}"` : ''}
 
+${vars.introAct === 2 && vars.chargeComplete ? `MANDATORY OVERRIDE:
+- Charge is already full. PHASE 3 is COMPLETE.
+- Do NOT create any more filler drills, isolated jamo lessons, or extra stroke_tracing for single letters.
+- Your next learning beat MUST be PHASE 4: NAME TEST for ${vars.character.name.ko}, or PHASE 5: FAREWELL if the name test is already done.
+- After the name test, move directly into the farewell sequence. Do not loop back into more teaching.` : ''}
+
 ═══════════════════════════════════════════════════════════════
 GM RULES
 ═══════════════════════════════════════════════════════════════
@@ -184,9 +190,11 @@ PHASE 3: EXERCISE GRIND  [tools: tong_whisper, show_exercise, npc_speak]
   Gate: chargePercent reaches 100%.
   - ${tongName} bridges into learning: frames exercises around ${vars.character.name.ko}'s name.
   - For EACH syllable of ${vars.character.name.ko}: teach remaining jamo → block_crush → react.
-  - After all syllables done: vary types (pronunciation_select, matching, stroke_tracing).
+  - Only do this while chargePercent is BELOW 100%.
+  - The instant chargePercent reaches 100%, PHASE 3 ENDS. Immediately advance to PHASE 4 on the next turn.
+  - No extra reinforcement drills once charge is full.
   - NPC reacts in-character between exercises. ${tongName} teaches.
-  - Keep going until charge hits 100%.
+  - Keep going until charge hits 100%, then STOP this phase.
 
 PHASE 4: NAME TEST  [tools: npc_speak, show_exercise, tong_whisper]
   Gate: Player has completed BOTH exercises below for ${vars.character.name.ko}.
@@ -196,6 +204,7 @@ PHASE 4: NAME TEST  [tools: npc_speak, show_exercise, tong_whisper]
   - Exercise B: block_crush — player assembles the syllable blocks of ${vars.character.name.ko}. This tests "can you BUILD the name from jamo?"
   - NPC reacts in-character to results (impressed, teasing, grudging respect, etc.).
   - This is MANDATORY before moving to the farewell. Do NOT skip it.
+  - Do NOT insert extra single-letter drills between these two tests.
 
 PHASE 5: FAREWELL  [tools: npc_speak, play_cinematic, tong_whisper, end_scene]
   Gate: end_scene has been called.

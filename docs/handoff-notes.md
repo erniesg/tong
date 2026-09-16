@@ -118,6 +118,18 @@ Template:
   - The new workflow intentionally blocks fork PRs and same-repo PRs without a repo-visible run bundle; until a rerun automation exists, maintainers still need either a reproducible CI run or a manual publish fallback.
 - Next owner: `codex/qa-platform`
 
+## 2026-03-21 (Scenario seed bootstrap repair)
+- Date: 2026-03-21
+- Branch/worktree: `codex/qa-auto-progression-ci-recipes` (shared root workspace crossing into `server-api` and `client-runtime` paths)
+- What changed:
+  - Restoring the documented `scenarioSeedId` path on `POST /api/v1/game/start-or-resume` so QA/demo seed mounts return `resumeSource=scenario_seed` and hydrate the seeded checkpoint on the real session.
+  - Updating the client API helper to forward additive `sessionId`, `resumeCheckpointId`, and `scenarioSeedId` fields instead of silently dropping them.
+- Contract changes: none; repair aligns runtime behavior with the existing additive contract introduced for issue `#48/#51`.
+- Integration risks:
+  - Scenario seeds still mount on the active session envelope in the mock server, so follow-up product work should keep QA-only seed UX distinct from player-facing resume affordances.
+  - The live `/game` page still needs an explicit query/bootstrap consumer if the route is expected to auto-apply `scenarioSeed` from URL state.
+- Next owner: `codex/server-api`
+
 ## 2026-03-20 (Trusted Codex PR creation + CI recipe regeneration)
 - Date: 2026-03-20
 - Branch/worktree: `codex/remove-judge-hackathon-branding` (shared root workspace crossing into qa-platform-owned paths and `.github/workflows/**`)
@@ -140,4 +152,16 @@ Template:
 - Integration risks:
   - Requires `OPENAI_API_KEY` in GitHub Actions secrets.
   - The workflow assumes the provided branch name already follows the `codex/*` convention.
+- Next owner: `codex/qa-platform`
+
+## 2026-03-21 (World content issue closure plan)
+- Date: 2026-03-21
+- Branch/worktree: `shared root workspace` (crossing into `docs/qa/**` and GitHub issue coordination)
+- What changed:
+  - Adding a repo-visible closeout plan for the world-content / KG-map alignment work so issue closure uses explicit acceptance criteria, proof requirements, and safe lane ownership instead of implicit assumptions.
+  - Capturing the dependency on a contracts-first world-map registry that ties the live `/game` map pins back to the shared DAG location model.
+- Contract changes: none in this note; follow-up work should land any schema changes in `packages/contracts/**` first.
+- Integration risks:
+  - The live map in `apps/client/components/city-map/CityMap.tsx` and the shared DAG location model still diverge; city starter-pack issues should not close until the mapping layer is explicit.
+  - `assets/manifest/**` remains a collision hotspot across `runtime-assets` and `creative-assets`; keep one active owner per merge window.
 - Next owner: `codex/qa-platform`

@@ -186,7 +186,24 @@ async function run() {
     typeof objectiveKo.data?.objectiveId === 'string' && objectiveKo.data.objectiveId.startsWith('ko_'),
     `objectiveKo.objectiveId should start with ko_: ${objectiveKo.data?.objectiveId}`,
   );
+  assertArray(objectiveKo.data?.placementHints, 'objectiveKo.placementHints');
+  assert(typeof objectiveKo.data?.recentMediaRationale?.reason === 'string', 'objectiveKo.recentMediaRationale.reason missing');
   logPass('/api/v1/objectives/next?lang=ko');
+
+  const objectiveJa = await requestJson(
+    `/api/v1/objectives/next?userId=${encodeURIComponent(userId)}&mode=hangout&lang=ja&city=tokyo&location=subway_hub`,
+  );
+  assert(objectiveJa.ok, `/objectives/next ja failed (${objectiveJa.status})`);
+  assert(objectiveJa.data?.lang === 'ja', 'objectiveJa.lang should be ja');
+  assert(objectiveJa.data?.objectiveGraph?.cityId === 'tokyo', 'objectiveJa.objectiveGraph.cityId mismatch');
+  assert(objectiveJa.data?.objectiveGraph?.locationId === 'subway_hub', 'objectiveJa.objectiveGraph.locationId mismatch');
+  assert(
+    typeof objectiveJa.data?.objectiveId === 'string' && objectiveJa.data.objectiveId.startsWith('ja_'),
+    `objectiveJa.objectiveId should start with ja_: ${objectiveJa.data?.objectiveId}`,
+  );
+  assertArray(objectiveJa.data?.placementHints, 'objectiveJa.placementHints');
+  assert(typeof objectiveJa.data?.recentMediaRationale?.reason === 'string', 'objectiveJa.recentMediaRationale.reason missing');
+  logPass('/api/v1/objectives/next?lang=ja');
 
   const objectiveZh = await requestJson(
     `/api/v1/objectives/next?userId=${encodeURIComponent(userId)}&mode=hangout&lang=zh&city=shanghai&location=practice_studio`,
@@ -200,6 +217,8 @@ async function run() {
     typeof objectiveZh.data?.objectiveId === 'string' && objectiveZh.data.objectiveId.startsWith('zh_'),
     `objectiveZh.objectiveId should start with zh_: ${objectiveZh.data?.objectiveId}`,
   );
+  assertArray(objectiveZh.data?.placementHints, 'objectiveZh.placementHints');
+  assert(typeof objectiveZh.data?.recentMediaRationale?.reason === 'string', 'objectiveZh.recentMediaRationale.reason missing');
   logPass('/api/v1/objectives/next?lang=zh');
 
   const graphEvidence = await requestJson('/api/v1/graph/evidence', {

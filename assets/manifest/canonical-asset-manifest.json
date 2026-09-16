@@ -35,6 +35,16 @@
       "uri": "/assets/app/logo_trimmed.png"
     },
     {
+      "key": "app.opening.video.default",
+      "type": "video",
+      "usage": "opening-cinematic",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "ready",
+      "uri": "/assets/app/tong_opening.mp4"
+    },
+    {
       "key": "app.intro.video.default",
       "type": "video",
       "usage": "intro-cinematic",
@@ -43,6 +53,26 @@
       "promptTemplate": null,
       "status": "ready",
       "uri": "/assets/tong_intro.webm"
+    },
+    {
+      "key": "app.intro.video.hevc",
+      "type": "video",
+      "usage": "intro-cinematic",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "ready",
+      "uri": "/assets/tong_intro_hevc.mov"
+    },
+    {
+      "key": "app.intro.video.fallback",
+      "type": "video",
+      "usage": "intro-cinematic",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "ready",
+      "uri": "/assets/tong_intro_fallback.mp4"
     },
     {
       "key": "city.seoul.location.food-street.backdrop.default",
@@ -163,6 +193,16 @@
       "promptTemplate": null,
       "status": "ready",
       "uri": "/assets/characters/haeun/scene.png"
+    },
+    {
+      "key": "character.haeun.idle.default",
+      "type": "video",
+      "usage": "runtime-idle-loop",
+      "source": "repo",
+      "rights": "internal-demo",
+      "promptTemplate": null,
+      "status": "ready",
+      "uri": "/assets/characters/haeun/haeun_idle_loop.mp4"
     },
     {
       "key": "character.jin.portrait.default",

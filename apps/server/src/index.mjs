@@ -53,6 +53,7 @@ function loadJson(relativePath) {
 }
 
 const FIXTURES = {
+  objectiveCatalog: loadJson('packages/contracts/objective-catalog.sample.json'),
   captions: loadJson('packages/contracts/fixtures/captions.enriched.sample.json'),
   dictionary: loadJson('packages/contracts/fixtures/dictionary.entry.sample.json'),
   frequency: loadJson('packages/contracts/fixtures/vocab.frequency.sample.json'),
@@ -150,6 +151,15 @@ const state = {
   learnSessions: [...(FIXTURES.learnSessions.items || [])],
   ingestionByUser: new Map(),
 };
+
+const OBJECTIVE_CONFIGS = Array.isArray(FIXTURES.objectiveCatalog?.objectives)
+  ? FIXTURES.objectiveCatalog.objectives
+  : [];
+const OBJECTIVE_CONFIG_BY_ID = new Map(
+  OBJECTIVE_CONFIGS
+    .filter((objective) => objective && typeof objective === 'object' && typeof objective.objectiveId === 'string')
+    .map((objective) => [objective.objectiveId, objective]),
+);
 
 const AGENT_TOOL_DEFINITIONS = [
   {
@@ -584,6 +594,320 @@ function getWeakestTargetLanguage(profile) {
     })[0] || 'ko';
 }
 
+function getObjectiveConfig({
+  objectiveId = null,
+  lang = null,
+  city = null,
+  location = null,
+  mode = null,
+} = {}) {
+  if (objectiveId && OBJECTIVE_CONFIG_BY_ID.has(objectiveId)) {
+    return OBJECTIVE_CONFIG_BY_ID.get(objectiveId);
+  }
+
+  return (
+    OBJECTIVE_CONFIGS.find((objective) => {
+      if (!objective || typeof objective !== 'object') return false;
+      if (lang && objective.lang !== lang) return false;
+      if (city && objective.city !== city) return false;
+      if (location && objective.location !== location) return false;
+      if (mode && objective.mode !== mode) return false;
+      return true;
+    }) || null
+  );
+}
+
+function getCityPreferredLanguage(profile, city) {
+  const targetLanguages = Array.isArray(profile?.targetLanguages)
+    ? profile.targetLanguages.filter((lang) => lang === 'ko' || lang === 'ja' || lang === 'zh')
+    : [];
+  const configuredLanguages = new Set(
+    OBJECTIVE_CONFIGS
+      .filter((objective) => objective?.mode === 'hangout' && objective?.city === city)
+      .map((objective) => objective.lang),
+  );
+
+  return targetLanguages.find((lang) => configuredLanguages.has(lang)) || null;
+}
+
+function getBootstrapPilotLanguage(profile, city) {
+  return getCityPreferredLanguage(profile, city) || getWeakestTargetLanguage(profile);
+}
+
+function uniqueTerms(items = []) {
+  return [...new Set(
+    items
+      .map((item) => String(item || '').trim())
+      .filter((item) => item.length > 0),
+  )];
+}
+
+function getClusterSnapshot(ingestion, clusterId) {
+  const clusters = Array.isArray(ingestion?.insights?.clusters) ? ingestion.insights.clusters : [];
+  return clusters.find((cluster) => cluster.clusterId === clusterId) || clusters[0] || null;
+}
+
+function getDominantSourceForFallback(ingestion) {
+  const youtubeItems = Number(ingestion?.mediaProfile?.sourceBreakdown?.youtube?.itemsConsumed || 0);
+  const spotifyItems = Number(ingestion?.mediaProfile?.sourceBreakdown?.spotify?.itemsConsumed || 0);
+  return youtubeItems >= spotifyItems ? 'youtube' : 'spotify';
+}
+
+function buildPlacementCandidates(ingestion, mode = 'hangout') {
+  const clusterAffinities = Array.isArray(ingestion?.mediaProfile?.learningSignals?.clusterAffinities)
+    ? ingestion.mediaProfile.learningSignals.clusterAffinities
+    : [];
+  const clusterScoreById = new Map(
+    clusterAffinities.map((entry) => [entry.clusterId, Number(entry.score || 0)]),
+  );
+  const insightItems = Array.isArray(ingestion?.insights?.items) ? ingestion.insights.items : [];
+
+  return OBJECTIVE_CONFIGS
+    .filter((objective) => objective?.mode === mode)
+    .map((objective) => {
+      const objectiveItems = insightItems.filter(
+        (item) =>
+          item?.lang === objective.lang &&
+          Array.isArray(item.objectiveLinks) &&
+          item.objectiveLinks.some((link) => link?.objectiveId === objective.objectiveId),
+      );
+      const clusterItems = insightItems.filter(
+        (item) => item?.lang === objective.lang && item?.clusterId === objective.clusterId,
+      );
+      const supportingItems = objectiveItems.length > 0 ? objectiveItems : clusterItems;
+      const supportScore = supportingItems.reduce((sum, item) => sum + Number(item?.score || 0), 0);
+
+      return {
+        city: objective.city,
+        location: objective.location,
+        mode: objective.mode,
+        lang: objective.lang,
+        objectiveId: objective.objectiveId,
+        clusterId: objective.clusterId,
+        placementType: objective.placementType || objective.mode || 'hangout',
+        reason: objective.placementReason || objective.summary || 'Language-aligned placement.',
+        score: Number(((clusterScoreById.get(objective.clusterId) || 0) + supportScore).toFixed(2)),
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+}
+
+function resolvePlacementCandidate({
+  ingestion,
+  lang = null,
+  city = null,
+  location = null,
+  mode = 'hangout',
+  objectiveId = null,
+} = {}) {
+  const candidates = buildPlacementCandidates(ingestion, mode);
+  const matchers = [
+    (candidate) =>
+      (!objectiveId || candidate.objectiveId === objectiveId) &&
+      (!lang || candidate.lang === lang) &&
+      (!city || candidate.city === city) &&
+      (!location || candidate.location === location),
+    (candidate) =>
+      (!objectiveId || candidate.objectiveId === objectiveId) &&
+      (!lang || candidate.lang === lang) &&
+      (!city || candidate.city === city),
+    (candidate) =>
+      (!objectiveId || candidate.objectiveId === objectiveId) &&
+      (!lang || candidate.lang === lang),
+    (candidate) =>
+      (!objectiveId || candidate.objectiveId === objectiveId) &&
+      (!city || candidate.city === city),
+  ];
+
+  for (const matcher of matchers) {
+    const match = candidates.find(matcher);
+    if (match) {
+      return match;
+    }
+  }
+
+  return candidates[0] || null;
+}
+
+function buildPlacementHint(candidate, fallbackObjective) {
+  const source = candidate || fallbackObjective;
+  if (!source) {
+    return null;
+  }
+
+  return {
+    city: source.city,
+    location: source.location,
+    mode: source.mode || 'hangout',
+    placementType: source.placementType || source.mode || 'hangout',
+    reason: source.reason || source.placementReason || 'Language-aligned placement.',
+    clusterId: source.clusterId || null,
+    objectiveId: source.objectiveId || fallbackObjective?.objectiveId || DEFAULT_OBJECTIVE_BY_LANG.ko,
+  };
+}
+
+function buildObjectiveTermBundle({ ingestion, objectiveConfig, objectiveId, lang }) {
+  const insightItems = Array.isArray(ingestion?.insights?.items) ? ingestion.insights.items : [];
+  const sameLangItems = insightItems.filter((item) => item?.lang === lang);
+  const objectiveItems = sameLangItems.filter(
+    (item) =>
+      Array.isArray(item.objectiveLinks) &&
+      item.objectiveLinks.some((link) => link?.objectiveId === objectiveId),
+  );
+  const clusterItems = sameLangItems.filter((item) => item?.clusterId === objectiveConfig?.clusterId);
+  const scopedItems = objectiveItems.length > 0 ? objectiveItems : clusterItems.length > 0 ? clusterItems : sameLangItems;
+  const fallbackTerms = uniqueTerms(
+    objectiveConfig?.personalizedFallbackTerms || objectiveConfig?.coreTargets?.vocabulary || [],
+  );
+  const vocabulary = uniqueTerms([
+    ...fallbackTerms,
+    ...scopedItems.map((item) => item.lemma),
+  ]).slice(0, 3);
+  const topTerms = Array.isArray(ingestion?.mediaProfile?.learningSignals?.topTerms)
+    ? ingestion.mediaProfile.learningSignals.topTerms.filter((term) => term?.lang === lang)
+    : [];
+  const topTermByLemma = new Map(topTerms.map((term) => [term.lemma, term]));
+  const fallbackSource = getDominantSourceForFallback(ingestion);
+  const fallbackWeight = Number((1 / Math.max(vocabulary.length, 1)).toFixed(2));
+
+  return {
+    vocabulary,
+    personalizedTargets: vocabulary.map((lemma) => {
+      const topTerm = topTermByLemma.get(lemma);
+      const source = topTerm?.dominantSource || fallbackSource;
+      return {
+        lemma,
+        source,
+        linkedNodeIds: [
+          `overlay:${source}:${objectiveConfig?.clusterId || getDominantClusterId(ingestion)}`,
+          `target:${lemma}`,
+        ],
+      };
+    }),
+    rankedTerms: vocabulary.map((lemma) => {
+      const topTerm = topTermByLemma.get(lemma);
+      return {
+        lemma,
+        lang,
+        source: topTerm?.dominantSource || fallbackSource,
+        weightedScore: Number(topTerm?.weightedScore || fallbackWeight),
+      };
+    }),
+  };
+}
+
+function buildRecentMediaRationale({
+  ingestion,
+  city,
+  location,
+  mode,
+  lang,
+  objectiveId,
+  objectiveConfig = null,
+  placementCandidate = null,
+  termBundle = null,
+}) {
+  const mediaProfile = ingestion?.mediaProfile || FIXTURES.mediaProfile;
+  const resolvedObjectiveConfig =
+    objectiveConfig || getObjectiveConfig({ objectiveId, lang, city, location, mode });
+  const resolvedPlacement =
+    placementCandidate ||
+    resolvePlacementCandidate({ ingestion, lang, city, location, mode, objectiveId });
+  const placementHint = buildPlacementHint(resolvedPlacement, {
+    ...(resolvedObjectiveConfig || {}),
+    city: resolvedObjectiveConfig?.city || city,
+    location: resolvedObjectiveConfig?.location || location,
+    mode,
+    objectiveId,
+  });
+  const resolvedTermBundle =
+    termBundle ||
+    buildObjectiveTermBundle({
+      ingestion,
+      objectiveConfig: resolvedObjectiveConfig,
+      objectiveId,
+      lang,
+    });
+  const clusterSnapshot = getClusterSnapshot(
+    ingestion,
+    resolvedObjectiveConfig?.clusterId || resolvedPlacement?.clusterId || getDominantClusterId(ingestion),
+  );
+
+  return {
+    generatedAtIso: mediaProfile.generatedAtIso || new Date().toISOString(),
+    sourceSummary: Object.entries(mediaProfile?.sourceBreakdown || {}).map(([source, value]) => ({
+      source,
+      itemsConsumed: Number(value?.itemsConsumed || 0),
+      minutes: Number(value?.minutes || 0),
+      topMedia: cloneJson(Array.isArray(value?.topMedia) ? value.topMedia.slice(0, 2) : []),
+    })),
+    reason:
+      resolvedPlacement?.reason ||
+      resolvedObjectiveConfig?.placementReason ||
+      'Recent media signals were used to personalize the next objective.',
+    rankedTerms: resolvedTermBundle.rankedTerms.map((term) => ({
+      ...term,
+      placementHints: placementHint ? [cloneJson(placementHint)] : [],
+    })),
+    topicSummary: clusterSnapshot
+      ? {
+          clusterId: clusterSnapshot.clusterId,
+          label: clusterSnapshot.label,
+          keywords: cloneJson(clusterSnapshot.keywords || []),
+          topTerms: cloneJson(clusterSnapshot.topTerms || []),
+          placementHints: placementHint ? [cloneJson(placementHint)] : [],
+        }
+      : null,
+    placementHints: placementHint ? [cloneJson(placementHint)] : [],
+  };
+}
+
+function getHangoutCopyBundle({ sceneSession = null, gameSession = null, body = {} } = {}) {
+  const lang =
+    gameSession?.activeObjective?.lang ||
+    sceneSession?.objective?.lang ||
+    sceneSession?.lang ||
+    (body.lang === 'ja' || body.lang === 'zh' ? body.lang : 'ko');
+  const objectiveId =
+    gameSession?.activeObjective?.objectiveId ||
+    sceneSession?.objective?.objectiveId ||
+    sceneSession?.objectiveId ||
+    body.objectiveId ||
+    DEFAULT_OBJECTIVE_BY_LANG[lang];
+  const city =
+    gameSession?.cityId ||
+    sceneSession?.cityId ||
+    (body.city === 'tokyo' || body.city === 'shanghai' || body.city === 'seoul' ? body.city : null);
+  const location =
+    gameSession?.locationId ||
+    sceneSession?.locationId ||
+    (body.location &&
+    (body.location === 'food_street' ||
+      body.location === 'cafe' ||
+      body.location === 'convenience_store' ||
+      body.location === 'subway_hub' ||
+      body.location === 'practice_studio')
+      ? body.location
+      : null);
+  const objectiveConfig =
+    getObjectiveConfig({ objectiveId }) ||
+    getObjectiveConfig({ lang, city, location, mode: 'hangout' }) ||
+    getObjectiveConfig({ lang, mode: 'hangout' }) ||
+    getObjectiveConfig({ objectiveId: DEFAULT_OBJECTIVE_BY_LANG.ko });
+
+  return {
+    lang,
+    objectiveConfig,
+    copy: objectiveConfig?.hangoutCopy || {},
+  };
+}
+
+const HANGOUT_MATCH_PATTERNS = {
+  ko: ['주세요', '먹', '주문', '라면', '떡볶이', '메뉴'],
+  ja: ['ください', 'お願いします', 'ラーメン', '注文', 'メニュー', '食べ'],
+  zh: ['请', '我要', '拉面', '菜单', '点餐', '火锅', '见面'],
+};
+
 function getCaptionsForVideo(videoId = 'karina-variety-demo') {
   const baseSegments = [
     {
@@ -747,82 +1071,89 @@ function buildPersonalizedObjective({
 }) {
   const ingestion = ensureIngestionForUser(userId);
   const baseObjective = cloneJson(FIXTURES.objectivesNext);
-  const dominantClusterId = getDominantClusterId(ingestion);
-  const dominantCluster =
-    ingestion?.insights?.clusters?.find((cluster) => cluster.clusterId === dominantClusterId) ||
-    ingestion?.insights?.clusters?.[0];
-
-  const insightItems = Array.isArray(ingestion?.insights?.items) ? ingestion.insights.items : [];
-  const langItems = insightItems.filter((item) => item.lang === lang);
-  const scopedItems = langItems.length > 0 ? langItems : insightItems;
-  const scopedClusterItems = dominantCluster
-    ? scopedItems.filter((item) => item.clusterId === dominantCluster.clusterId)
-    : scopedItems;
-
-  let objectiveId =
-    scopedClusterItems[0]?.objectiveLinks?.[0]?.objectiveId ||
-    scopedItems[0]?.objectiveLinks?.[0]?.objectiveId ||
-    baseObjective.objectiveId ||
-    DEFAULT_OBJECTIVE_BY_LANG[lang];
-
-  if (!objectiveMatchesLanguage(objectiveId, lang)) {
-    const languageAlignedObjective =
-      scopedItems.find((item) => objectiveMatchesLanguage(item?.objectiveLinks?.[0]?.objectiveId, lang))
-        ?.objectiveLinks?.[0]?.objectiveId || DEFAULT_OBJECTIVE_BY_LANG[lang];
-
-    if (languageAlignedObjective) {
-      objectiveId = languageAlignedObjective;
-    }
-  }
-
-  const vocabCandidates = [
-    ...scopedClusterItems.map((item) => item.lemma),
-    ...scopedItems.map((item) => item.lemma),
-    ...(dominantCluster?.topTerms || []),
-  ];
-  const vocabulary = [...new Set(vocabCandidates)].slice(0, 3);
-
-  const topTerms = ingestion?.mediaProfile?.learningSignals?.topTerms || [];
-  const preferredTerms = topTerms.filter((item) => item.lang === lang);
-  const personalizedBase = preferredTerms.length > 0 ? preferredTerms : topTerms;
-  const personalizedTargets = personalizedBase.slice(0, 3).map((item) => ({
-    lemma: item.lemma,
-    source: item.dominantSource,
-    linkedNodeIds: [`overlay:${item.dominantSource}:${dominantClusterId}`, `target:${item.lemma}`],
-  }));
-
-  const objectiveNodeId = `objective:${objectiveId}`;
-  const graphCategory = lang === 'zh' ? 'sentences' : lang === 'ja' ? 'script' : 'vocabulary';
-  const graphTargetNodeIds = vocabulary.map((term) => `target:${term}`);
+  const placementCandidate =
+    resolvePlacementCandidate({ ingestion, lang, city, location, mode }) || null;
+  const objectiveConfig =
+    getObjectiveConfig({
+      objectiveId: placementCandidate?.objectiveId || null,
+      lang,
+      city,
+      location,
+      mode,
+    }) ||
+    getObjectiveConfig({ lang, city, location, mode }) ||
+    getObjectiveConfig({ lang, mode }) ||
+    getObjectiveConfig({ objectiveId: DEFAULT_OBJECTIVE_BY_LANG[lang] }) ||
+    null;
+  const resolvedLang = objectiveConfig?.lang || placementCandidate?.lang || lang;
+  const resolvedCity = placementCandidate?.city || objectiveConfig?.city || city;
+  const resolvedLocation = placementCandidate?.location || objectiveConfig?.location || location;
+  const objectiveId =
+    objectiveConfig?.objectiveId || placementCandidate?.objectiveId || DEFAULT_OBJECTIVE_BY_LANG[resolvedLang];
+  const termBundle = buildObjectiveTermBundle({
+    ingestion,
+    objectiveConfig,
+    objectiveId,
+    lang: resolvedLang,
+  });
+  const recentMediaRationale = buildRecentMediaRationale({
+    ingestion,
+    city: resolvedCity,
+    location: resolvedLocation,
+    mode,
+    lang: resolvedLang,
+    objectiveId,
+    objectiveConfig,
+    placementCandidate,
+    termBundle,
+  });
 
   return {
     ...baseObjective,
     objectiveId,
+    level: Number(objectiveConfig?.level || baseObjective.level || 1),
     mode,
-    lang,
+    lang: resolvedLang,
     objectiveGraph: {
-      objectiveNodeId,
-      cityId: city,
-      locationId: location,
-      objectiveCategory: graphCategory,
-      targetNodeIds: graphTargetNodeIds,
-      prerequisiteObjectiveIds: [`${lang}_food_l1_001`],
+      objectiveNodeId: `objective:${objectiveId}`,
+      cityId: resolvedCity,
+      locationId: resolvedLocation,
+      objectiveCategory:
+        objectiveConfig?.objectiveCategory ||
+        (resolvedLang === 'zh' ? 'conversation' : 'vocabulary'),
+      targetNodeIds: termBundle.vocabulary.map((term) => `target:${term}`),
+      prerequisiteObjectiveIds: cloneJson(
+        objectiveConfig?.prerequisiteObjectiveIds || baseObjective.objectiveGraph?.prerequisiteObjectiveIds || [],
+      ),
       source: 'knowledge_graph',
     },
-    coreTargets: {
+    coreTargets: cloneJson(objectiveConfig?.coreTargets || {
       vocabulary:
-        vocabulary.length > 0 ? vocabulary : [...(baseObjective.coreTargets?.vocabulary || [])],
-      grammar: [...(LANG_TARGETS[lang]?.grammar || LANG_TARGETS.ko.grammar)],
+        termBundle.vocabulary.length > 0
+          ? termBundle.vocabulary
+          : [...(baseObjective.coreTargets?.vocabulary || [])],
+      grammar: [...(LANG_TARGETS[resolvedLang]?.grammar || LANG_TARGETS.ko.grammar)],
       sentenceStructures: [
-        ...(LANG_TARGETS[lang]?.sentenceStructures || LANG_TARGETS.ko.sentenceStructures),
+        ...(LANG_TARGETS[resolvedLang]?.sentenceStructures || LANG_TARGETS.ko.sentenceStructures),
       ],
-    },
+    }),
     personalizedTargets:
-      personalizedTargets.length > 0
-        ? personalizedTargets
+      termBundle.personalizedTargets.length > 0
+        ? cloneJson(termBundle.personalizedTargets)
         : cloneJson(baseObjective.personalizedTargets || []),
+    summary: objectiveConfig?.summary || baseObjective.summary || null,
+    recentMediaRationale,
+    placementHints: cloneJson(recentMediaRationale.placementHints || []),
     completionCriteria: {
       ...(baseObjective.completionCriteria || {}),
+      requiredTurns:
+        Number(objectiveConfig?.completionCriteria?.requiredTurns) ||
+        Number(baseObjective.completionCriteria?.requiredTurns) ||
+        4,
+      requiredAccuracy:
+        Number(objectiveConfig?.completionCriteria?.requiredAccuracy) ||
+        Number(baseObjective.completionCriteria?.requiredAccuracy) ||
+        0.75,
       minEvidenceEvents: baseObjective.completionCriteria?.minEvidenceEvents || 3,
       acceptedEvidenceModes: baseObjective.completionCriteria?.acceptedEvidenceModes || [
         'learn',
@@ -842,6 +1173,9 @@ function buildGameActions(lang, objectiveId) {
 }
 
 function buildActiveObjectiveDescriptor({ objective, lang, city, location }) {
+  const objectiveConfig =
+    getObjectiveConfig({ objectiveId: objective.objectiveId }) ||
+    getObjectiveConfig({ lang, city, location, mode: 'hangout' });
   return {
     objectiveId: objective.objectiveId,
     lang,
@@ -851,7 +1185,12 @@ function buildActiveObjectiveDescriptor({ objective, lang, city, location }) {
     objectiveCategory: objective.objectiveGraph?.objectiveCategory,
     objectiveNodeId: objective.objectiveGraph?.objectiveNodeId,
     targetNodeIds: cloneJson(objective.objectiveGraph?.targetNodeIds || []),
-    summary: `Resume ${lang.toUpperCase()} practice at ${location.replace(/_/g, ' ')}.`,
+    summary:
+      objective.summary ||
+      objectiveConfig?.summary ||
+      `Resume ${lang.toUpperCase()} practice at ${location.replace(/_/g, ' ')}.`,
+    recentMediaRationale: cloneJson(objective.recentMediaRationale || null),
+    placementHints: cloneJson(objective.placementHints || []),
   };
 }
 
@@ -943,6 +1282,42 @@ function buildScenarioSeeds(gameSession) {
   ];
 }
 
+function createCheckpointFromScenarioSeed(gameSession, scenarioSeed, nowIso = new Date().toISOString()) {
+  const checkpoint = {
+    checkpointId: `seed_${gameSession.sessionId}_${scenarioSeed.seedId}`,
+    gameSessionId: gameSession.sessionId,
+    sceneSessionId: `scene_${gameSession.sessionId}_${scenarioSeed.seedId}`,
+    kind: 'player_resume',
+    route: cloneJson(scenarioSeed.route),
+    cityId: scenarioSeed.cityId,
+    locationId: scenarioSeed.locationId,
+    mode: scenarioSeed.mode,
+    objective: cloneJson(scenarioSeed.objective),
+    phase: scenarioSeed.phase,
+    turn: scenarioSeed.turn,
+    progressionDelta: cloneJson(
+      scenarioSeed.progressionDelta || {
+        xp: 0,
+        sp: 0,
+        rp: 0,
+        objectiveProgressDelta: 0,
+        validatedHangoutsDelta: 0,
+      },
+    ),
+    rewards: cloneJson(scenarioSeed.rewards || []),
+    missionGate: cloneJson(gameSession.missionGate),
+    unlocks: cloneJson(gameSession.unlocks),
+    rng: cloneJson(scenarioSeed.rng),
+    createdAtIso: nowIso,
+  };
+
+  if (scenarioSeed.activeExercise) {
+    checkpoint.activeExercise = cloneJson(scenarioSeed.activeExercise);
+  }
+
+  return checkpoint;
+}
+
 function createCheckpointRecord(gameSession, sceneSession, boundary, nowIso) {
   const previousCheckpoint = gameSession.activeCheckpointId
     ? state.checkpoints.get(gameSession.activeCheckpointId)
@@ -1007,7 +1382,7 @@ function hydrateSceneSessionFromCheckpoint(gameSession, checkpoint) {
     objective: cloneJson(gameSession.activeObjective),
     phase: checkpoint.phase,
     turn: checkpoint.turn,
-    route: buildHangoutRoute(gameSession.cityId, gameSession.locationId),
+    route: cloneJson(checkpoint.route),
     progressionDelta: cloneJson(checkpoint.progressionDelta),
     checkpointable: true,
     uiPolicy: {
@@ -1032,7 +1407,7 @@ function hydrateSceneSessionFromCheckpoint(gameSession, checkpoint) {
   sceneSession.objective = cloneJson(checkpoint.objective);
   sceneSession.phase = checkpoint.phase;
   sceneSession.turn = checkpoint.turn;
-  sceneSession.route = buildHangoutRoute(checkpoint.cityId, checkpoint.locationId);
+  sceneSession.route = cloneJson(checkpoint.route);
   sceneSession.progressionDelta = cloneJson(checkpoint.progressionDelta);
   sceneSession.updatedAtIso = checkpoint.createdAtIso;
   sceneSession.checkpointable = true;
@@ -1070,6 +1445,15 @@ function buildGameStartResponse(gameSession, sceneSession, activeCheckpoint, res
 
   const nextResumeSource = resumeSource || gameSession.resumeSource || 'new_session';
   gameSession.resumeSource = nextResumeSource;
+  const personalization = buildRecentMediaRationale({
+    ingestion: ensureIngestionForUser(gameSession.userId),
+    city: gameSession.cityId,
+    location: gameSession.locationId,
+    mode: gameSession.currentMode,
+    lang: gameSession.activeObjective?.lang || getWeakestTargetLanguage(gameSession.profile),
+    objectiveId: gameSession.activeObjective?.objectiveId || DEFAULT_OBJECTIVE_BY_LANG.ko,
+  });
+  gameSession.personalization = cloneJson(personalization);
   const responseSceneSession = cloneJson(effectiveSceneSession);
   delete responseSceneSession.score;
 
@@ -1085,6 +1469,7 @@ function buildGameStartResponse(gameSession, sceneSession, activeCheckpoint, res
     progression: cloneJson(gameSession.progression),
     actions: cloneJson(gameSession.availableActions),
     resumeSource: nextResumeSource,
+    recentMediaRationale: cloneJson(personalization),
     gameSession: cloneJson(gameSession),
     sceneSession: responseSceneSession,
     activeCheckpoint: effectiveCheckpoint ? cloneJson(effectiveCheckpoint) : null,
@@ -1117,17 +1502,26 @@ function findGameSessionForResume({ userId, sessionId, resumeCheckpointId }) {
 
 function createNewGameSession(userId, incomingProfile, requestedCity) {
   const profile = incomingProfile || getProfile(userId) || FIXTURES.gameStart.profile;
-  const dominantClusterId = getDominantClusterId(ensureIngestionForUser(userId));
-  const city =
+  const ingestion = ensureIngestionForUser(userId);
+  const dominantClusterId = getDominantClusterId(ingestion);
+  const requestedOrDerivedCity =
     requestedCity === 'tokyo' || requestedCity === 'shanghai' || requestedCity === 'seoul'
       ? requestedCity
       : CLUSTER_CITY_MAP[dominantClusterId] || FIXTURES.gameStart.city || 'seoul';
-  const location = CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
-  const weakestLang = getWeakestTargetLanguage(profile);
+  const bootstrapLang = getBootstrapPilotLanguage(profile, requestedOrDerivedCity);
+  const placementCandidate =
+    resolvePlacementCandidate({
+      ingestion,
+      lang: bootstrapLang,
+      city: requestedOrDerivedCity,
+      mode: 'hangout',
+    }) || null;
+  const city = placementCandidate?.city || requestedOrDerivedCity;
+  const location = placementCandidate?.location || CLUSTER_LOCATION_MAP[dominantClusterId] || 'food_street';
   const objective = buildPersonalizedObjective({
     userId,
     mode: 'hangout',
-    lang: weakestLang,
+    lang: placementCandidate?.lang || bootstrapLang,
     city,
     location,
   });
@@ -1140,7 +1534,7 @@ function createNewGameSession(userId, incomingProfile, requestedCity) {
   const unlocks = buildInitialUnlocks(location);
   const activeObjective = buildActiveObjectiveDescriptor({
     objective,
-    lang: weakestLang,
+    lang: objective.lang,
     city,
     location,
   });
@@ -1159,7 +1553,7 @@ function createNewGameSession(userId, incomingProfile, requestedCity) {
     missionGate: cloneJson(missionGate),
     unlocks: cloneJson(unlocks),
     rewards: [],
-    availableActions: buildGameActions(weakestLang, objective.objectiveId),
+    availableActions: buildGameActions(objective.lang, objective.objectiveId),
     resumeSource: 'new_session',
     startedAtIso: nowIso,
     updatedAtIso: nowIso,
@@ -1216,6 +1610,38 @@ function resumeGameSession(gameSession, resumeCheckpointId) {
   return buildGameStartResponse(gameSession, sceneSession, effectiveCheckpoint, 'checkpoint');
 }
 
+function resumeGameSessionFromScenarioSeed(baseGameSession, scenarioSeedId) {
+  const scenarioSeed = buildScenarioSeeds(baseGameSession).find((seed) => seed.seedId === scenarioSeedId);
+  if (!scenarioSeed) {
+    return null;
+  }
+
+  const nowIso = new Date().toISOString();
+  const seededGameSession = {
+    ...cloneJson(baseGameSession),
+    sessionId: `seed_${baseGameSession.sessionId}_${scenarioSeed.seedId}`,
+    cityId: scenarioSeed.cityId,
+    locationId: scenarioSeed.locationId,
+    currentMode: scenarioSeed.mode,
+    activeSceneId: `${scenarioSeed.locationId}_${scenarioSeed.mode}_seed`,
+    activeObjective: cloneJson(scenarioSeed.objective),
+    rewards: cloneJson(scenarioSeed.rewards || []),
+    availableActions: buildGameActions(scenarioSeed.objective.lang || 'ko', scenarioSeed.objective.objectiveId),
+    resumeSource: 'scenario_seed',
+    startedAtIso: nowIso,
+    updatedAtIso: nowIso,
+  };
+  const checkpoint = createCheckpointFromScenarioSeed(seededGameSession, scenarioSeed, nowIso);
+  seededGameSession.activeSceneSessionId = checkpoint.sceneSessionId;
+  seededGameSession.activeCheckpointId = checkpoint.checkpointId;
+
+  state.sessions.set(seededGameSession.sessionId, seededGameSession);
+  state.checkpoints.set(checkpoint.checkpointId, checkpoint);
+
+  const sceneSession = hydrateSceneSessionFromCheckpoint(seededGameSession, checkpoint);
+  return buildGameStartResponse(seededGameSession, sceneSession, checkpoint, 'scenario_seed');
+}
+
 function getSecretStatus() {
   const youtubeConfigured = Boolean(
     process.env.TONG_YOUTUBE_API_KEY ||
@@ -1250,7 +1676,8 @@ function handleHangoutRespond(body) {
     };
   }
 
-  const goodPatterns = ['주세요', '먹', '주문', '라면', '떡볶이', '메뉴'];
+  const initialCopyBundle = getHangoutCopyBundle({ sceneSession: existing, body });
+  const goodPatterns = HANGOUT_MATCH_PATTERNS[initialCopyBundle.lang] || HANGOUT_MATCH_PATTERNS.ko;
   const matched = goodPatterns.some((pattern) => userUtterance.includes(pattern));
   const xpDelta = matched ? 8 : 4;
   const spDelta = matched ? 2 : 1;
@@ -1265,6 +1692,7 @@ function handleHangoutRespond(body) {
     existing.score.sp += spDelta;
     existing.score.rp += rpDelta;
     state.sceneSessions.set(sceneSessionId, existing);
+    const statelessCopy = initialCopyBundle.copy;
 
     return {
       statusCode: 200,
@@ -1272,16 +1700,16 @@ function handleHangoutRespond(body) {
         accepted: true,
         feedback: {
           tongHint: matched
-            ? 'Great phrasing. You used practical ordering language.'
-            : 'Try adding a food word plus polite ending like 주세요.',
+            ? statelessCopy.successHint || 'Great phrasing. You used practical ordering language.'
+            : statelessCopy.retryHint || 'Try adding a food word plus polite ending like 주세요.',
           objectiveProgressDelta,
         },
         nextLine: {
           speaker: 'character',
           text:
             existing.turn % 2 === 0
-              ? '좋아요, 맵기는 어느 정도로 할까요?'
-              : '좋아요! 다음 주문도 한국어로 말해 볼까요?',
+              ? statelessCopy.nextTurnEven || '좋아요, 맵기는 어느 정도로 할까요?'
+              : statelessCopy.nextTurnOdd || '좋아요! 다음 주문도 한국어로 말해 볼까요?',
         },
         state: {
           turn: existing.turn,
@@ -1300,6 +1728,12 @@ function handleHangoutRespond(body) {
       },
     };
   }
+
+  const localizedCopy = getHangoutCopyBundle({
+    sceneSession: existing,
+    gameSession,
+    body,
+  }).copy;
 
   gameSession.progression.xp += xpDelta;
   gameSession.progression.sp += spDelta;
@@ -1322,8 +1756,8 @@ function handleHangoutRespond(body) {
 
   const nextLine =
     existing.turn % 2 === 0
-      ? '좋아요, 맵기는 어느 정도로 할까요?'
-      : '좋아요! 다음 주문도 한국어로 말해 볼까요?';
+      ? localizedCopy.nextTurnEven || '좋아요, 맵기는 어느 정도로 할까요?'
+      : localizedCopy.nextTurnOdd || '좋아요! 다음 주문도 한국어로 말해 볼까요?';
   const checkpoint = persistCheckpoint(
     gameSession,
     existing,
@@ -1335,8 +1769,8 @@ function handleHangoutRespond(body) {
     accepted: true,
     feedback: {
       tongHint: matched
-        ? 'Great phrasing. You used practical ordering language.'
-        : 'Try adding a food word plus polite ending like 주세요.',
+        ? localizedCopy.successHint || 'Great phrasing. You used practical ordering language.'
+        : localizedCopy.retryHint || 'Try adding a food word plus polite ending like 주세요.',
       objectiveProgressDelta,
     },
     nextLine: {
@@ -1381,6 +1815,11 @@ function startHangoutScene(body = {}) {
         sp: gameSession.progression.sp,
         rp: gameSession.progression.rp,
       };
+      const localizedCopy = getHangoutCopyBundle({
+        sceneSession,
+        gameSession,
+        body,
+      }).copy;
       sceneSession.score = score;
       state.sceneSessions.set(sceneSession.sceneSessionId, sceneSession);
 
@@ -1405,8 +1844,8 @@ function startHangoutScene(body = {}) {
           speaker: 'character',
           text:
             sceneSession.turn > 1
-              ? '좋아요, 이어서 주문해 볼까요? 방금 멈춘 지점부터예요.'
-              : '어서 와요! 오늘은 뭐 먹고 싶어요?',
+              ? localizedCopy.resume || '좋아요, 이어서 주문해 볼까요? 방금 멈춘 지점부터예요.'
+              : localizedCopy.start || '어서 와요! 오늘은 뭐 먹고 싶어요?',
         },
       };
     }
@@ -1414,10 +1853,17 @@ function startHangoutScene(body = {}) {
 
   const sceneSessionId = `hang_${Math.random().toString(36).slice(2, 8)}`;
   const score = { xp: 0, sp: 0, rp: 0 };
+  const initialCopyBundle = getHangoutCopyBundle({ body });
+  const fallbackObjectiveConfig =
+    initialCopyBundle.objectiveConfig || getObjectiveConfig({ objectiveId: DEFAULT_OBJECTIVE_BY_LANG.ko });
   state.sceneSessions.set(sceneSessionId, {
     userId,
     turn: 1,
     score: { ...score },
+    lang: initialCopyBundle.lang,
+    cityId: fallbackObjectiveConfig?.city || body.city || 'seoul',
+    locationId: fallbackObjectiveConfig?.location || body.location || 'food_street',
+    objectiveId: fallbackObjectiveConfig?.objectiveId || body.objectiveId || DEFAULT_OBJECTIVE_BY_LANG.ko,
   });
   return {
     sceneSessionId,
@@ -1432,7 +1878,7 @@ function startHangoutScene(body = {}) {
     },
     initialLine: {
       speaker: 'character',
-      text: '어서 와요! 오늘은 뭐 먹고 싶어요?',
+      text: initialCopyBundle.copy.start || '어서 와요! 오늘은 뭐 먹고 싶어요?',
     },
   };
 }
@@ -2160,14 +2606,41 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/v1/game/start-or-resume' && req.method === 'POST') {
       const body = await readJsonBody(req);
       const userId = body.userId || DEFAULT_USER_ID;
+      const scenarioSeedId =
+        typeof body.scenarioSeedId === 'string' && body.scenarioSeedId.trim()
+          ? body.scenarioSeedId.trim()
+          : null;
       if (body.profile) {
         state.profiles.set(userId, { userId, profile: body.profile });
       }
-      const existingSession = findGameSessionForResume({
+      let existingSession = findGameSessionForResume({
         userId,
         sessionId: body.sessionId,
         resumeCheckpointId: body.resumeCheckpointId,
       });
+
+      if (scenarioSeedId) {
+        if (!existingSession) {
+          const created = createNewGameSession(userId, body.profile, body.city);
+          existingSession = state.sessions.get(created.sessionId) || null;
+        }
+
+        const response = existingSession
+          ? resumeGameSessionFromScenarioSeed(existingSession, scenarioSeedId)
+          : null;
+
+        if (!response) {
+          jsonResponse(res, 400, {
+            error: 'unknown_scenario_seed',
+            scenarioSeedId,
+          });
+          return;
+        }
+
+        jsonResponse(res, 200, response);
+        return;
+      }
+
       const response = existingSession
         ? resumeGameSession(existingSession, body.resumeCheckpointId)
         : createNewGameSession(userId, body.profile, body.city);

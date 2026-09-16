@@ -490,7 +490,15 @@ export function startOrResumeGame(params?: any) {
     [key: string]: any;
   }>('/api/v1/game/start-or-resume', {
     method: 'POST',
-    body: JSON.stringify({ userId, city, profile, preferRomance: params?.preferRomance }),
+    body: JSON.stringify({
+      userId,
+      city,
+      profile,
+      sessionId: params?.sessionId,
+      resumeCheckpointId: params?.resumeCheckpointId,
+      scenarioSeedId: params?.scenarioSeedId,
+      preferRomance: params?.preferRomance,
+    }),
   });
 }
 

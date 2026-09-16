@@ -23,6 +23,8 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
   const videoRef = useRef<HTMLVideoElement>(null);
   const [fadingOut, setFadingOut] = useState(false);
   const [captionVisible, setCaptionVisible] = useState(false);
+  const audioFadeDelayRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const audioFadeIntervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   // Typewriter state for caption
   const [captionChars, setCaptionChars] = useState(0);
@@ -43,13 +45,38 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
     if (!autoAdvance) triggerEnd();
   }, [autoAdvance, triggerEnd]);
 
-  // Autoplay with unmute fallback + audio fade-in
+  const clearAudioFade = useCallback(() => {
+    if (audioFadeDelayRef.current) clearTimeout(audioFadeDelayRef.current);
+    if (audioFadeIntervalRef.current) clearInterval(audioFadeIntervalRef.current);
+    audioFadeDelayRef.current = undefined;
+    audioFadeIntervalRef.current = undefined;
+  }, []);
+
+  const startAudioFade = useCallback(() => {
+    const v = videoRef.current;
+    if (!v || muted || v.muted) return;
+    clearAudioFade();
+    audioFadeDelayRef.current = setTimeout(() => {
+      let vol = Math.max(0, v.volume);
+      audioFadeIntervalRef.current = setInterval(() => {
+        vol = Math.min(1, vol + 0.05);
+        v.volume = vol;
+        if (vol >= 1 && audioFadeIntervalRef.current) {
+          clearInterval(audioFadeIntervalRef.current);
+          audioFadeIntervalRef.current = undefined;
+        }
+      }, 40);
+    }, 180);
+  }, [clearAudioFade, muted]);
+
+  // Autoplay with unmute fallback. Audio starts fading only after playback is visibly underway.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    // Start at zero volume for fade-in
     v.volume = 0;
     v.muted = muted;
+    const handlePlaying = () => startAudioFade();
+    v.addEventListener('playing', handlePlaying);
     const playPromise = v.play();
     if (playPromise) {
       playPromise.catch(() => {
@@ -57,17 +84,11 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
         v.play().catch(() => {});
       });
     }
-    // Fade in audio over 800ms
-    if (!muted) {
-      let vol = 0;
-      const fadeIn = setInterval(() => {
-        vol = Math.min(1, vol + 0.05);
-        v.volume = vol;
-        if (vol >= 1) clearInterval(fadeIn);
-      }, 40);
-      return () => clearInterval(fadeIn);
-    }
-  }, [videoUrl, muted]);
+    return () => {
+      clearAudioFade();
+      v.removeEventListener('playing', handlePlaying);
+    };
+  }, [videoUrl, muted, startAudioFade, clearAudioFade]);
 
   // Fade out audio before video ends
   useEffect(() => {
@@ -122,6 +143,7 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
         if (v && v.muted && !muted) {
           // First tap unmutes if autoplay was forced muted
           v.muted = false;
+          startAudioFade();
           return;
         }
         handleTap();
@@ -133,6 +155,7 @@ export function CinematicOverlay({ videoUrl, caption, captionTranslation, autoAd
         ref={videoRef}
         src={videoUrl}
         playsInline
+        preload="auto"
         muted={muted}
         onEnded={handleEnded}
         className="cinematic-video"

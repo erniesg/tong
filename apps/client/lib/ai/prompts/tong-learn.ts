@@ -118,7 +118,7 @@ EXERCISE DATA SCHEMAS:
 - stroke_tracing: { type: "stroke_tracing", id, objectiveId, difficulty, prompt, targetChar, ghostOverlay: true, explanation, romanization?: string, sound?: string, language?: "ko"|"ja"|"zh", exampleWords?: [{word, romanization, meaning}] }
   romanization = how to read the character (e.g. "giyeok" for ㄱ, "a" for ㅏ). sound = text for TTS (defaults to targetChar). exampleWords = up to 3 real words containing this character, each with romanization + meaning. ALWAYS provide romanization and exampleWords for stroke_tracing.
 - drag_drop: { type: "drag_drop", id, objectiveId, difficulty, prompt, items: [{id, text}], targets: [{id, label}], correctMapping: {itemId: targetId} }
-- block_crush: { type: "block_crush", id, objectiveId, difficulty: 1-3, prompt, language: "ko"|"ja"|"zh", targetChar, components: [{piece, label}], romanization, meaning, explanation, stage?: "identify"|"arrange"|"crush" }
+- block_crush: { type: "block_crush", id, objectiveId, difficulty: 1-3, prompt, language: "ko"|"ja"|"zh", targetChar, components: [{piece, label}], romanization, meaning, explanation, stage?: "intro"|"recognition"|"recall" }
   Player assembles a character from its component pieces (e.g. 가 = ㄱ + ㅏ). Good for hangul/kanji composition practice.
 
 IMPORTANT:
