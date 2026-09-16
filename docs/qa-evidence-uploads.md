@@ -59,6 +59,39 @@ The trusted workflow should run `npm run qa:preflight-reviewer-proof` in the sam
 
 If the PR cannot carry a repo-visible `artifacts/qa-runs/...` bundle, the trusted workflow can still publish reviewer proof when the PR metadata names a supported CI `qa_recipe` that knows how to regenerate the run bundle from scratch.
 
+Before adding or extending a deterministic CI recipe, ask the helper which path fits the issue:
+
+```bash
+npm run qa:suggest-recipe -- --issue-ref erniesg/tong#123
+```
+
+The helper recommends one of:
+- reuse an existing supported recipe
+- scaffold a new deterministic recipe
+- stay on the `trace-ui-state` path first
+- finish with `capture-reviewer-proof` instead of CI recipe generation
+
+## Add a trusted CI recipe
+
+When a new issue needs deterministic CI proof, scaffold the recipe first instead of hand-editing the dispatcher and default mapping files:
+
+```bash
+npm run qa:new-recipe -- --issue-ref erniesg/tong#123
+```
+
+Useful options:
+- `--template api-flow` for strict API replay wrappers
+- `--template dashboard-smoke` for browser-backed dashboard proof wrappers
+- `--route <path>` to override the inferred route metadata
+- `--recipe <id>` to set an explicit `qa_recipe`
+- `--no-register` to generate only the runner file without editing defaults/dispatcher
+
+The scaffold creates `scripts/record_<recipe>_recipe.mjs` and, unless `--no-register` is used, also registers the recipe in:
+- `scripts/run_qa_publish_recipe.mjs`
+- `scripts/lib/qa_publish_defaults.mjs`
+
+After scaffolding, add any issue-specific setup inside the generated runner and validate it locally before relying on `Trusted QA Publish`.
+
 ## Preflight the publishing shell
 
 Before asking a local or remote operator to publish reviewer-visible proof, run:

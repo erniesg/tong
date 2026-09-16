@@ -9,7 +9,9 @@ const root = process.cwd();
 const serverBase = (process.env.TONG_LOCAL_API_BASE_URL || 'http://127.0.0.1:8787').replace(/\/$/, '');
 const clientBase = (process.env.TONG_LOCAL_CLIENT_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
 const dashboardUrl = `${clientBase}/dashboard`;
-const screenshotPath = path.join(os.tmpdir(), `tong-dashboard-smoke-${Date.now()}.png`);
+const screenshotPath = path.resolve(
+  process.env.TONG_DASHBOARD_SMOKE_SCREENSHOT_PATH || path.join(os.tmpdir(), `tong-dashboard-smoke-${Date.now()}.png`),
+);
 
 const startedProcesses = [];
 
@@ -239,6 +241,7 @@ function runPlaywright(command, argsPrefix, learnerId) {
 async function run() {
   console.log(`Running dashboard smoke check against ${serverBase} and ${clientBase}`);
   const playwright = getPlaywrightCommand();
+  fs.mkdirSync(path.dirname(screenshotPath), { recursive: true });
 
   try {
     await ensureServer();

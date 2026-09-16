@@ -221,8 +221,15 @@ function main() {
     title: pr?.title || "",
     headRef: pr?.head?.ref || "",
   });
+  const fallbackIssueRef = inferredIssueRef || (prNumber ? `${repo}#${prNumber}` : "");
   const merged = {
-    issue_ref: workflowInputs.issue_ref || commentFlags.issue_ref || prMetadata.issue_ref || inferredIssueRef || "",
+    issue_ref:
+      workflowInputs.issue_ref ||
+      commentFlags.issue_ref ||
+      prMetadata.issue_ref ||
+      inferredIssueRef ||
+      ((prMetadata.qa_recipe || inferredDefaults.qa_recipe) ? fallbackIssueRef : "") ||
+      "",
     run_dir: workflowInputs.run_dir || commentFlags.run_dir || prMetadata.run_dir || "",
     route: workflowInputs.route || commentFlags.route || prMetadata.route || inferredDefaults.route || "",
     scenario_seed:

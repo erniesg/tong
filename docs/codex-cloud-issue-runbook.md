@@ -169,7 +169,8 @@ Current behavior:
 Important limitation:
 
 - `artifacts/qa-runs/...` is gitignored local staging, so Codex cloud task bundles are not automatically present in the GitHub Actions checkout unless you commit or otherwise publish them into GitHub-visible state.
-- CI regeneration only works for explicitly supported `qa_recipe` values. Add new recipes to `scripts/run_qa_publish_recipe.mjs` as more deterministic capture flows become available.
+- CI regeneration only works for explicitly supported `qa_recipe` values. Prefer scaffolding new recipes with `npm run qa:new-recipe -- --issue-ref <owner/repo#num>` so the runner, dispatcher, and default issue mapping stay in sync.
+- Before scaffolding, run `npm run qa:suggest-recipe -- --issue-ref <owner/repo#num>` so the decision between existing recipe, new recipe, `trace-ui-state`, and `capture-reviewer-proof` stays explicit.
 
 ## Trusted PR creation from GitHub-visible patch artifacts
 

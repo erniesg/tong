@@ -78,6 +78,19 @@ Template:
   - Next.js config allows the remote runtime asset host for image optimization and external manifest import.
 - Integration risks:
   - Any newly added runtime media must land in `assets/manifest/runtime-asset-manifest.json` before client code can reference it via `runtimeAssetUrl(...)`.
+
+## 2026-03-21 (QA recipe scaffold + uploader hardening)
+- Date: 2026-03-21
+- Branch/worktree: `codex/qa-platform` + `.worktrees/qa-platform`
+- What changed:
+  - Hardening the reviewer-proof uploader with retry and public URL verification.
+  - Adding deterministic CI recipe inference for dashboard and issue-55 publish flows.
+  - Adding a shared `qa:new-recipe` scaffold command, which requires touching root `package.json`.
+- Contract changes: none
+- Integration risks:
+  - `package.json` is a shared zone; rebase before merge if another lane changes root scripts.
+  - Newly scaffolded recipes still need human review if they target non-portable or non-deterministic flows.
+- Next owner: `codex/qa-platform`
   - Legacy preview HTML and non-runtime scripts still use literal `/assets/...` references and remain outside the runtime smoke gate.
 - Next owner: `codex/runtime-assets`
 
@@ -140,4 +153,16 @@ Template:
 - Integration risks:
   - Requires `OPENAI_API_KEY` in GitHub Actions secrets.
   - The workflow assumes the provided branch name already follows the `codex/*` convention.
+- Next owner: `codex/qa-platform`
+
+## 2026-03-21 (QA evidence path suggestion helper)
+- Date: 2026-03-21
+- Branch/worktree: `codex/qa-platform` (`/Users/erniesg/code/erniesg/tong/.worktrees/qa-platform`)
+- What changed:
+  - Added `qa:suggest-recipe`, a deterministic helper that classifies an issue or PR surface and recommends one of: reuse an existing CI recipe, scaffold a new deterministic recipe, continue with `trace-ui-state`, or finish with `capture-reviewer-proof`.
+  - Updated the `validate-issue` skill and QA docs to use this helper as a planning hint before creating new trusted publish recipes.
+  - Touched shared `package.json` again to expose the new script as an npm entrypoint.
+- Contract changes: none
+- Integration risks:
+  - The helper is intentionally heuristic. It should inform planning, but `validate-issue` still owns the final evidence strategy after live repro.
 - Next owner: `codex/qa-platform`
