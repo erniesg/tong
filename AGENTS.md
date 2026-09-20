@@ -42,6 +42,7 @@ Build a mobile-first language learning demo with:
 1. First-person immersion.
 2. On-screen content is dialogue + Tong hints/tips only.
 3. No admin/debug/meta panels visible during active scene.
+- Shanghai H1 onboarding must follow `docs/shanghai/h1-onboarding-contract.md`: continuous webtoon strip packets, exactly two webtoon source modes, Seoul-consistent Tong UI, tappable Chinese bubble text, reusable Mandarin exercise generators, dynamic transferable exercises, and no Tong narration inside webtoon packets.
 - Learn mode:
 1. Chatbox styled by current country social app aesthetic.
 2. Must support "Start new session" and "View previous sessions".

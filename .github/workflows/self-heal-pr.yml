@@ -1,0 +1,210 @@
+name: Self-Heal PR
+
+on:
+  pull_request_review:
+    types: [submitted]
+  workflow_run:
+    workflows: ["Trusted QA Publish"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull request number to self-heal"
+        required: true
+        type: string
+      max_attempts:
+        description: "Maximum self-heal attempts"
+        required: false
+        type: string
+        default: "2"
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: self-heal-${{ github.event.pull_request.number || github.event.workflow_run.head_branch || inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'timed_out') ||
+      github.event_name == 'workflow_dispatch'
+    outputs:
+      should_run: ${{ steps.prepare.outputs.should_run }}
+      reason: ${{ steps.prepare.outputs.reason }}
+      pr_number: ${{ steps.prepare.outputs.pr_number }}
+      provider: ${{ steps.prepare.outputs.provider }}
+      branch: ${{ steps.prepare.outputs.branch }}
+      base_branch: ${{ steps.prepare.outputs.base_branch }}
+      pr_title: ${{ steps.prepare.outputs.pr_title }}
+      issue_ref: ${{ steps.prepare.outputs.issue_ref }}
+      route: ${{ steps.prepare.outputs.route }}
+      qa_recipe: ${{ steps.prepare.outputs.qa_recipe }}
+      attempt: ${{ steps.prepare.outputs.attempt }}
+      prior_attempts: ${{ steps.prepare.outputs.prior_attempts }}
+      exhausted: ${{ steps.prepare.outputs.exhausted }}
+      dispatch_workflow: ${{ steps.prepare.outputs.dispatch_workflow }}
+      failure_summary: ${{ steps.prepare.outputs.failure_summary }}
+      prompt: ${{ steps.prepare.outputs.prompt }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Prepare self-heal decision
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SELF_HEAL_MAX_ATTEMPTS: ${{ inputs.max_attempts || '2' }}
+        run: |
+          args=(node scripts/self-heal-prepare-prompt.mjs --repo "${{ github.repository }}")
+          if [ -n "${{ inputs.pr_number }}" ]; then
+            args+=(--pr-number "${{ inputs.pr_number }}")
+          fi
+          "${args[@]}"
+
+      - name: Summary
+        run: |
+          {
+            echo "## Self-Heal Decision"
+            echo
+            echo "- Should run: \`${{ steps.prepare.outputs.should_run }}\`"
+            echo "- Reason: ${{ steps.prepare.outputs.reason }}"
+            echo "- PR: \`#${{ steps.prepare.outputs.pr_number }}\`"
+            echo "- Provider: \`${{ steps.prepare.outputs.provider }}\`"
+            echo "- Attempt: \`${{ steps.prepare.outputs.attempt }}\` (prior: \`${{ steps.prepare.outputs.prior_attempts }}\`)"
+            echo "- Exhausted: \`${{ steps.prepare.outputs.exhausted }}\`"
+            echo "- Dispatch workflow: \`${{ steps.prepare.outputs.dispatch_workflow }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  exhausted:
+    needs: prepare
+    if: needs.prepare.outputs.exhausted == 'true' && needs.prepare.outputs.pr_number != ''
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Ensure control-plane labels
+        run: node scripts/pm/ensure-labels.mjs --repo "${{ github.repository }}"
+
+      - name: Label PR as exhausted
+        run: |
+          gh pr edit "${{ needs.prepare.outputs.pr_number }}" \
+            --repo "${{ github.repository }}" \
+            --add-label "self-heal:exhausted" \
+            --remove-label "auto-self-heal" || true
+
+      - name: Comment exhaustion notice
+        run: |
+          gh pr comment "${{ needs.prepare.outputs.pr_number }}" \
+            --repo "${{ github.repository }}" \
+            --body "$(cat <<'EOF'
+          Self-heal budget exhausted.
+
+          - Prior attempts: ${{ needs.prepare.outputs.prior_attempts }}
+          - Reason: ${{ needs.prepare.outputs.reason }}
+
+          Routing this PR to humans. To resume automatic retry, address the feedback manually and remove the \`self-heal:exhausted\` label and re-add \`auto-self-heal\`. To force one more retry, run the \`Self-Heal PR\` workflow with the PR number directly.
+          EOF
+          )"
+
+      - name: Notify Discord
+        if: env.DISCORD_WEBHOOK_URL != ''
+        run: |
+          node scripts/discord-notify.mjs \
+            --title "Tong self-heal exhausted" \
+            --message "PR #${{ needs.prepare.outputs.pr_number }} self-heal budget exhausted (${{ needs.prepare.outputs.prior_attempts }} attempts). Routing to humans." \
+            --pr-url "${{ github.server_url }}/${{ github.repository }}/pull/${{ needs.prepare.outputs.pr_number }}" \
+            --issue-ref "${{ needs.prepare.outputs.issue_ref }}" \
+            --color "ED4245"
+
+  dispatch:
+    needs: prepare
+    if: needs.prepare.outputs.should_run == 'true' && needs.prepare.outputs.exhausted != 'true'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Ensure control-plane labels
+        run: node scripts/pm/ensure-labels.mjs --repo "${{ github.repository }}"
+
+      - name: Apply attempt label
+        run: |
+          gh pr edit "${{ needs.prepare.outputs.pr_number }}" \
+            --repo "${{ github.repository }}" \
+            --add-label "self-heal:attempt-${{ needs.prepare.outputs.attempt }}" || true
+
+      - name: Dispatch provider workflow
+        env:
+          PROMPT_BODY: ${{ needs.prepare.outputs.prompt }}
+          DISPATCH_WORKFLOW: ${{ needs.prepare.outputs.dispatch_workflow }}
+          BASE_BRANCH: ${{ needs.prepare.outputs.base_branch }}
+          BRANCH: ${{ needs.prepare.outputs.branch }}
+          PR_TITLE: ${{ needs.prepare.outputs.pr_title }}
+          ISSUE_REF: ${{ needs.prepare.outputs.issue_ref }}
+          ROUTE: ${{ needs.prepare.outputs.route }}
+          QA_RECIPE: ${{ needs.prepare.outputs.qa_recipe }}
+          ATTEMPT: ${{ needs.prepare.outputs.attempt }}
+        run: |
+          set -euo pipefail
+          tmp_prompt="$(mktemp)"
+          printf '%s' "$PROMPT_BODY" > "$tmp_prompt"
+          gh workflow run "$DISPATCH_WORKFLOW" \
+            --repo "${{ github.repository }}" \
+            --field "prompt=$(cat "$tmp_prompt")" \
+            --field "base_branch=$BASE_BRANCH" \
+            --field "branch=$BRANCH" \
+            --field "pr_title=$PR_TITLE" \
+            --field "issue_ref=$ISSUE_REF" \
+            --field "route=$ROUTE" \
+            --field "qa_recipe=$QA_RECIPE" \
+            --field "auto_qa_publish=true" \
+            --field "agent_attempts=$ATTEMPT" \
+            --field "enable_self_heal=true"
+
+      - name: Comment retry notice
+        run: |
+          gh pr comment "${{ needs.prepare.outputs.pr_number }}" \
+            --repo "${{ github.repository }}" \
+            --body "$(cat <<'EOF'
+          Self-heal attempt **${{ needs.prepare.outputs.attempt }}** dispatched via \`${{ needs.prepare.outputs.dispatch_workflow }}\`.
+
+          Reason: ${{ needs.prepare.outputs.reason }}
+
+          The agent has been re-prompted with the latest feedback and will push to the same branch (\`${{ needs.prepare.outputs.branch }}\`). Trusted QA Publish will run automatically once the new commit lands. If this attempt also fails, one more retry will be attempted before routing to a human.
+          EOF
+          )"
+
+      - name: Notify Discord
+        if: env.DISCORD_WEBHOOK_URL != ''
+        run: |
+          node scripts/discord-notify.mjs \
+            --title "Tong self-heal triggered" \
+            --message "PR #${{ needs.prepare.outputs.pr_number }} self-heal attempt ${{ needs.prepare.outputs.attempt }} via ${{ needs.prepare.outputs.provider }}." \
+            --pr-url "${{ github.server_url }}/${{ github.repository }}/pull/${{ needs.prepare.outputs.pr_number }}" \
+            --issue-ref "${{ needs.prepare.outputs.issue_ref }}" \
+            --color "FEE75C"

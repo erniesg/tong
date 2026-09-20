@@ -641,6 +641,56 @@ async function readJsonBody(request: Request): Promise<Record<string, any>> {
   return JSON.parse(text);
 }
 
+async function dispatchPlaytestAgentPipeline(
+  env: Record<string, any>,
+  sessionId: string,
+): Promise<{ attempted: boolean; ok?: boolean; status?: number; error?: string }> {
+  const token = env?.GITHUB_PIPELINE_DISPATCH_TOKEN;
+  const repository = env?.GITHUB_REPOSITORY || 'erniesg/tong';
+  if (!token) return { attempted: false };
+
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repository}/dispatches`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'User-Agent': 'tong-playtest-worker',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      body: JSON.stringify({
+        event_type: 'playtest-submitted',
+        client_payload: {
+          session_id: sessionId,
+          preset: env?.PLAYTEST_AGENT_PRESET || 'ux_friction',
+          mode: env?.PLAYTEST_AGENT_ANALYSIS_MODE || 'auto',
+          min_severity: env?.PLAYTEST_AGENT_MIN_SEVERITY || '2',
+          provider: env?.REMOTE_AGENT_PROVIDER || 'auto',
+          create_issues: env?.PLAYTEST_AGENT_CREATE_ISSUES !== 'false',
+          dispatch_codex: env?.PLAYTEST_AGENT_DISPATCH_CODEX === 'true',
+          dry_run: env?.PLAYTEST_AGENT_DRY_RUN === 'true',
+        },
+      }),
+    });
+    if (!res.ok) {
+      return {
+        attempted: true,
+        ok: false,
+        status: res.status,
+        error: await res.text(),
+      };
+    }
+    return { attempted: true, ok: true, status: res.status };
+  } catch (err) {
+    return {
+      attempted: true,
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 const GITHUB_API_BASE_URL = 'https://api.github.com';
 const GITHUB_ROUTE_HUMAN_USER_AGENT = 'tong-route-human/1.0 (+https://github.com/erniesg/tong)';
@@ -3017,6 +3067,8 @@ async function handleRequest(request: Request): Promise<Response> {
         `UPDATE playtest_sessions SET status = 'submitted', r2_recording_key = ?, r2_annotations_key = ?, updated_at = datetime('now') WHERE session_id = ?`
       ).bind(r2RecordingKey, r2AnnotationsKey, sessionId).run();
 
+      const agentPipelineDispatch = await dispatchPlaytestAgentPipeline(env, sessionId);
+
       return jsonResponse(200, {
         ok: true,
         sessionId,
@@ -3024,6 +3076,7 @@ async function handleRequest(request: Request): Promise<Response> {
         recordingUrl: `${publicBase}/${r2RecordingKey}`,
         annotationsUrl: `${publicBase}/${r2AnnotationsKey}`,
         screenshotBaseUrl: `${publicBase}/playtest/${sessionId}/screenshots/`,
+        agentPipelineDispatch,
       });
     }
 

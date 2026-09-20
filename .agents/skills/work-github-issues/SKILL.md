@@ -107,6 +107,13 @@ python .agents/skills/_functional-qa/scripts/codex_cloud_queue.py
 - if the PR is only a partial fix, an audit pass, or work under an umbrella or epic issue, do not close the issue; update the issue title/body or comment so the remaining scope is explicit
 - do not treat merged PRs as sufficient evidence that an issue should close unless the merged scope actually matches the current issue text
 
+9. Keep checkpoint discipline during implementation:
+
+- work in small coherent slices
+- create local checkpoint commits after complete slices when the execution environment supports commits safely
+- if local commits are not safe in the environment, keep the worktree slices coherent and include a checkpoint log in the final output and PR body
+- never push manually from cloud/headless tasks; trusted workflow or hosted PR creation owns pushing
+
 ## Output requirements
 
 - Keep the queue plan under `artifacts/qa-runs/functional-qa/issue-queue/...`.

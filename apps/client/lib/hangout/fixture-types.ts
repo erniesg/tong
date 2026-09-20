@@ -60,11 +60,30 @@ export type CliffhangerSpec = {
 export type WebtoonSpec = {
   panels: WebtoonPanel[];
   autoAdvance?: boolean;
+  packets?: WebtoonPacketSpec[];
+  wrap?: WebtoonWrapSpec;
+};
+
+export type WebtoonPacketSpec = {
+  id: string;
+  panelIds: string[];
+  afterTongLines?: string[];
+  exerciseHook?: {
+    type: string;
+    objectiveId: string;
+    reason: string;
+  };
+};
+
+export type WebtoonWrapSpec = {
+  tongLines: string[];
+  completionLine: string;
 };
 
 export type WebtoonPanel = {
   id: string;
-  imageUrl: string;
+  imageUrl?: string;
+  placeholder?: WebtoonPanelPlaceholder;
   // Three width tiers. No "inset-narrow"/"floating" anymore — those were
   // fake cards. A real inset sits on the theme-surface, not on a black void.
   widthType: "full-bleed" | "full-width" | "inset";
@@ -79,8 +98,28 @@ export type WebtoonPanel = {
   /** Optional layout overrides for staggered inset compositions. */
   layout?: WebtoonPanelLayout;
   isThumbStop?: boolean;
+  /** Visual-only panel action for tooling/QA; not rendered as narrator copy. */
+  action?: WebtoonPanelAction;
+  /** Stylized in-panel sound/effect text such as phone vibration or payment chime. */
+  sfx?: WebtoonPanelSfx | WebtoonPanelSfx[];
   bubble?: WebtoonBubble;
   transition: "fade" | "cut" | "darken";
+};
+
+export type WebtoonPanelAction = {
+  description: string;
+};
+
+export type WebtoonPanelSfx = {
+  text: string;
+  position: "top-left" | "top-right" | "center" | "center-left" | "center-right" | "bottom-left" | "bottom-right";
+  tone?: "phone" | "payment" | "movement" | "pause";
+  ariaLabel?: string;
+};
+
+export type WebtoonPanelPlaceholder = {
+  label?: string;
+  tone?: "warm" | "dark";
 };
 
 export type WebtoonPanelFrame = {

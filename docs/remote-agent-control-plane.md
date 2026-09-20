@@ -12,8 +12,8 @@ The orchestrator owns:
 
 Providers are pluggable backends.
 
-- `codex` is the current working backend
-- `claude` is wired as a placeholder contract in this slice
+- `codex` is the primary implementation backend
+- `claude` is wired through `claude-headless-pr.yml` for review-heavy, proposal-only, and persona-style work
 - future runners should plug in through the same adapter boundary instead of reshaping the queue model
 
 ## Repo-native actions
@@ -37,6 +37,12 @@ Provider choice is configuration and policy, not the orchestrator API.
 - Workflow dispatch can override the provider with `auto`, `codex`, or `claude`
 - Per-issue, per-lane, and per-execution-mode overrides can also live in policy
 
+The runnable queue entry point is:
+
+```bash
+python .agents/skills/_functional-qa/scripts/remote_agent_queue.py plan --provider auto
+```
+
 ## Trigger surfaces
 
 Repo-native GitHub queue commands use `/tong ...`.
@@ -51,8 +57,7 @@ Examples:
 
 Compatibility notes:
 
-- the Discord `route-human` surface should write back `/tong ...` comments so the repo-native command stays the durable API
-- `/codex ...` still works as a legacy compatibility trigger for older Discord cards and manual maintainer comments
+- `/codex ...` still works as a queue trigger because the existing Discord `route-human` buttons write back that form today
 - raw `@codex ...` remains vendor-native and is not the main orchestration API
 
 ## Current slice
@@ -61,6 +66,5 @@ Phase 1 makes the control plane provider-agnostic without breaking the current C
 
 - queue plans emit provider metadata per work item
 - dispatch goes through provider adapters
-- `codex` dispatch remains working through its adapter
-- `claude` has a prompt and PR-note contract plus placeholder dispatch wiring
-- Discord `route-human` stays stable by posting repo-native queue commands back to GitHub
+- `codex` dispatch goes through `codex-headless-pr.yml`
+- `claude` dispatch goes through `claude-headless-pr.yml`

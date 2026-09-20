@@ -6,6 +6,7 @@ import type {
   WebtoonGap,
   WebtoonPanelFrame,
   WebtoonPanelLayout,
+  WebtoonPanelSfx,
 } from '@/lib/hangout/fixture-types';
 import { WebtoonBubble } from './WebtoonBubble';
 
@@ -201,6 +202,118 @@ const WEBTOON_STRIP_CSS = `
   height: auto;
   user-select: none;
   pointer-events: none;
+}
+
+.wt-placeholder {
+  width: 100%;
+  min-height: clamp(18rem, 78vw, 42rem);
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(135deg, rgba(255, 248, 238, 0.08), rgba(255, 248, 238, 0.02)),
+    repeating-linear-gradient(135deg, rgba(255, 248, 238, 0.08) 0 1px, transparent 1px 18px),
+    #17131c;
+  color: rgba(255, 248, 238, 0.7);
+  user-select: none;
+}
+
+.wt-placeholder--warm {
+  background:
+    linear-gradient(135deg, rgba(42, 31, 26, 0.05), rgba(42, 31, 26, 0.015)),
+    repeating-linear-gradient(135deg, rgba(42, 31, 26, 0.08) 0 1px, transparent 1px 18px),
+    #efe2cf;
+  color: rgba(42, 31, 26, 0.62);
+}
+
+.wt-placeholder__label {
+  max-width: min(calc(100% - 96px), 18rem);
+  padding: 0 24px;
+  font-size: clamp(0.82rem, 0.55vw + 0.78rem, 1.05rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+  text-transform: uppercase;
+  text-align: center;
+  overflow-wrap: break-word;
+}
+
+.wt-sfx {
+  position: absolute;
+  z-index: 18;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(8px, 1.5vw, 13px) clamp(11px, 2vw, 18px);
+  max-width: min(58vw, 18rem);
+  color: #fff8ee;
+  text-shadow:
+    0 2px 0 rgba(10, 8, 12, 0.82),
+    0 10px 24px rgba(10, 8, 12, 0.55);
+  font-weight: 900;
+  font-size: clamp(1.65rem, 4.2vw, 4.2rem);
+  line-height: 0.95;
+  letter-spacing: 0;
+  transform: rotate(var(--wt-sfx-tilt, -8deg));
+  animation: wtSfxPop 620ms cubic-bezier(0.18, 0.86, 0.22, 1) both;
+}
+
+.wt-sfx--phone {
+  --wt-sfx-tilt: -10deg;
+  color: #b7d8ff;
+}
+
+.wt-sfx--payment {
+  --wt-sfx-tilt: 6deg;
+  color: #9ef0b6;
+}
+
+.wt-sfx--movement {
+  --wt-sfx-tilt: -4deg;
+  color: #ffe0ab;
+}
+
+.wt-sfx--pause {
+  --wt-sfx-tilt: 0deg;
+  color: #fff8ee;
+}
+
+.wt-sfx--top-left { top: 8%; left: 8%; }
+.wt-sfx--top-right { top: 8%; right: 8%; }
+.wt-sfx--center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(var(--wt-sfx-tilt, -8deg));
+}
+.wt-sfx--center-left { top: 48%; left: 8%; }
+.wt-sfx--center-right { top: 48%; right: 8%; }
+.wt-sfx--bottom-left { bottom: 10%; left: 8%; }
+.wt-sfx--bottom-right { right: 8%; bottom: 10%; }
+
+@keyframes wtSfxPop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92) rotate(var(--wt-sfx-tilt, -8deg));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(var(--wt-sfx-tilt, -8deg));
+  }
+}
+
+.wt-sfx--center {
+  animation-name: wtSfxPopCenter;
+}
+
+@keyframes wtSfxPopCenter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px)) scale(0.92) rotate(var(--wt-sfx-tilt, -8deg));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(var(--wt-sfx-tilt, -8deg));
+  }
 }
 
 .wt-panel.is-thumb-stop {
@@ -529,6 +642,13 @@ function imageStyle(layout: WebtoonPanelLayout | undefined): CSSProperties {
   };
 }
 
+function placeholderStyle(layout: WebtoonPanelLayout | undefined): CSSProperties {
+  if (!layout?.cropAspectRatio) return {};
+  return {
+    height: '100%',
+  };
+}
+
 function bubbleReserveStyle(panel: WebtoonPanelSpec): CSSProperties {
   const bubbleLayout = panel.bubble?.layout;
   if (!bubbleLayout?.outside) return {};
@@ -537,6 +657,11 @@ function bubbleReserveStyle(panel: WebtoonPanelSpec): CSSProperties {
     return { paddingTop: `var(--wt-bubble-reserve-top, ${reserve})` };
   }
   return { paddingBottom: `var(--wt-bubble-reserve-bottom, ${reserve})` };
+}
+
+function normalizeSfx(sfx: WebtoonPanelSpec['sfx']): WebtoonPanelSfx[] {
+  if (!sfx) return [];
+  return Array.isArray(sfx) ? sfx : [sfx];
 }
 
 export function WebtoonStrip({
@@ -556,9 +681,18 @@ export function WebtoonStrip({
   const surface = surfaceColor ?? THEME_SURFACE[theme];
 
   useEffect(() => {
+    setCompleted(false);
+  }, [panels.length]);
+
+  useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     const usePageScroll = scrollRoot === 'page';
+    const markComplete = () => {
+      if (completed) return;
+      setCompleted(true);
+      onComplete?.();
+    };
 
     const updateActiveIndex = () => {
       const rootRect = usePageScroll ? null : container.getBoundingClientRect();
@@ -588,6 +722,13 @@ export function WebtoonStrip({
       } else if (nextCandidate !== -1) {
         setActiveIndex(nextCandidate);
       }
+
+      const atEnd = usePageScroll
+        ? window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 24
+        : container.scrollTop + container.clientHeight >= container.scrollHeight - 24;
+      if (atEnd) {
+        markComplete();
+      }
     };
 
     const observer = new IntersectionObserver(
@@ -596,8 +737,7 @@ export function WebtoonStrip({
           const index = Number((entry.target as HTMLElement).dataset.panelIndex);
           if (Number.isNaN(index)) continue;
           if (index === panels.length - 1 && entry.intersectionRatio > 0.8 && !completed) {
-            setCompleted(true);
-            onComplete?.();
+            markComplete();
           }
         }
       },
@@ -654,14 +794,35 @@ export function WebtoonStrip({
             style={{ ...frameStyle(panel.frame, theme), ...panelLayoutStyle(panel.layout) }}
             aria-label={`${panel.shotType} panel ${index + 1} of ${panels.length}`}
           >
-            <img
-              className="wt-panel__img"
-              src={panel.imageUrl}
-              alt={`${panel.shotType} panel ${index + 1}`}
-              draggable={false}
-              loading={index < 2 ? 'eager' : 'lazy'}
-              style={imageStyle(panel.layout)}
-            />
+            {panel.placeholder ? (
+              <div
+                className={`wt-placeholder wt-placeholder--${panel.placeholder.tone ?? theme}`}
+                style={placeholderStyle(panel.layout)}
+                aria-label={`${panel.shotType} placeholder panel ${index + 1}${panel.placeholder.label ? `: ${panel.placeholder.label}` : ''}`}
+              >
+                {panel.placeholder.label && (
+                  <span className="wt-placeholder__label">{panel.placeholder.label}</span>
+                )}
+              </div>
+            ) : (
+              <img
+                className="wt-panel__img"
+                src={panel.imageUrl}
+                alt={`${panel.shotType} panel ${index + 1}`}
+                draggable={false}
+                loading={index < 2 ? 'eager' : 'lazy'}
+                style={imageStyle(panel.layout)}
+              />
+            )}
+            {normalizeSfx(panel.sfx).map((sfx, sfxIndex) => (
+              <span
+                key={`${panel.id}-sfx-${sfxIndex}`}
+                className={`wt-sfx wt-sfx--${sfx.position}${sfx.tone ? ` wt-sfx--${sfx.tone}` : ''}`}
+                aria-label={sfx.ariaLabel}
+              >
+                {sfx.text}
+              </span>
+            ))}
             {panel.bubble && <WebtoonBubble {...panel.bubble} showHelp={showHelp} />}
           </figure>
         </div>

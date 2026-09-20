@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useChat } from 'ai/react';
 import type { ToolInvocation, UIMessage } from 'ai';
 import { startOrResumeGame, type CityId, type LocationId, type ProficiencyLevel, type ScoreState, type UserProficiency, type AppLang } from '@/lib/api';
@@ -82,14 +82,13 @@ const GAME_LEVELS = [
 
 const SLIDER_TO_LEVEL: ProficiencyLevel[] = ['none', 'none', 'beginner', 'beginner', 'intermediate', 'advanced', 'advanced'];
 
-const LANG_KEYS: (keyof UserProficiency)[] = ['ko', 'ja', 'zh'];
-
 const LANG_LABELS: { key: keyof UserProficiency; name: string; native: string; flag: string }[] = [
   { key: 'zh', name: 'Chinese', native: '中文', flag: '🇨🇳' },
   { key: 'ja', name: 'Japanese', native: '日本語', flag: '🇯🇵' },
   { key: 'ko', name: 'Korean', native: '한국어', flag: '🇰🇷' },
 ];
 
+const LANG_KEYS: (keyof UserProficiency)[] = LANG_LABELS.map((lang) => lang.key);
 const LANG_TO_CITY: Record<string, CityId> = { ko: 'seoul', ja: 'tokyo', zh: 'shanghai' };
 
 const EXPLAIN_LANG_OPTIONS: { value: AppLang; label: string; flag: string }[] = [
@@ -277,6 +276,7 @@ function getWeakestLangIndex(sliders: [number, number, number]): number {
 /* ── component ──────────────────────────────────────────── */
 
 export default function GamePage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const gameState = useGameState();
 
@@ -292,6 +292,8 @@ export default function GamePage() {
   const freshStart = searchParams.get('fresh') === '1';
   const freshNpc = searchParams.get('npc') ?? undefined; // pre-select NPC for fresh start
   const freshLang = searchParams.get('lang') as AppLang | null; // pre-set explain language
+  const priorityParam = searchParams.get('priority');
+  const requestedMapCity = searchParams.get('city') as CityId | null;
   const qaRunId = searchParams.get('qa_run_id') ?? undefined;
   const qaTrace = searchParams.get('qa_trace') === '1';
   const bootstrapIntent = readBootstrapQueryIntent(searchParams);
@@ -395,6 +397,11 @@ export default function GamePage() {
 
   /* proficiency sliders (0-6 each, maps directly to GAME_LEVELS) */
   const [sliders, setSliders] = useState<[number, number, number]>([0, 0, 0]);
+  const [priorityLang, setPriorityLang] = useState<keyof UserProficiency | null>(() => (
+    priorityParam && ['zh', 'ja', 'ko'].includes(priorityParam)
+      ? priorityParam as keyof UserProficiency
+      : null
+  ));
 
   /* hangout state */
   const [loading, setLoading] = useState(false);
@@ -406,9 +413,20 @@ export default function GamePage() {
   const [playerLevel, setPlayerLevel] = useState(0);
 
   /* city map state */
-  const [mapCityIndex, setMapCityIndex] = useState(1); // default Seoul
+  const [mapCityIndex, setMapCityIndex] = useState(() => {
+    const requestedIndex = requestedMapCity ? CITY_ORDER.indexOf(requestedMapCity) : -1;
+    return requestedIndex >= 0 ? requestedIndex : 1; // default Seoul
+  });
   const [selectedLocation, setSelectedLocation] = useState<LocationId | null>(null);
   const [reviewSession, setReviewSession] = useState<CompletedSession | null>(null);
+
+  useEffect(() => {
+    if (phaseParam !== 'city_map' || !requestedMapCity) return;
+    const requestedIndex = CITY_ORDER.indexOf(requestedMapCity);
+    if (requestedIndex >= 0) {
+      setMapCityIndex(requestedIndex);
+    }
+  }, [phaseParam, requestedMapCity]);
 
   /* dev exercise tester state */
   const [devExType, setDevExType] = useState(searchParams.get('type') ?? 'stroke_tracing');
@@ -512,6 +530,11 @@ export default function GamePage() {
     });
   }
 
+  const resolvePrimaryLanguage = useCallback((): keyof UserProficiency => {
+    if (priorityLang) return priorityLang;
+    return LANG_KEYS[getWeakestLangIndex(sliders)] ?? 'ko';
+  }, [priorityLang, sliders]);
+
   /** Build introduction context if in introduction mode */
   function getIntroCtx() {
     if (!isIntroHangout) return undefined;
@@ -575,11 +598,43 @@ export default function GamePage() {
     setError('');
     setLoading(true);
 
-    const weakIdx = getWeakestLangIndex(sliders);
-    const primaryLang = LANG_KEYS[weakIdx] as 'ko' | 'ja' | 'zh';
-
-    const weakLevel = sliders[weakIdx];
+    const primaryLang = resolvePrimaryLanguage() as 'ko' | 'ja' | 'zh';
+    const primaryIdx = Math.max(0, LANG_KEYS.indexOf(primaryLang));
+    const weakLevel = sliders[primaryIdx];
     const preferredCity = (LANG_TO_CITY[primaryLang] ?? 'seoul') as CityId;
+
+    // City-priority onboarding routes own their first companion reveal before
+    // returning to the shared map/hangout runtime.
+    if (primaryLang === 'zh' && searchParams.get('skip_shanghai_onboarding') !== '1') {
+      const name = profileInput.englishName.trim() || 'Player';
+      dispatch({ type: 'SET_PLAYER_PROFILE', profile: { ...profileInput, englishName: name } });
+      dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
+      setLoading(false);
+      router.push('/onboarding/shanghai?entry=chinese-priority&reset=1');
+      return;
+    }
+
+    if (primaryLang === 'ko' && searchParams.get('skip_seoul_onboarding') !== '1') {
+      const name = profileInput.englishName.trim() || 'Player';
+      const lang = gameState.explainIn.seoul ?? 'en';
+      const onboardingNpc = freshNpc && CHARACTER_MAP[freshNpc]?.cityId === 'seoul'
+        ? freshNpc
+        : pickNpcForCity('seoul');
+      const onboardingParams = new URLSearchParams({
+        dev_intro: '1',
+        npc: onboardingNpc,
+        name,
+        lang,
+      });
+      const chineseName = profileInput.chineseName.trim();
+      if (chineseName) onboardingParams.set('cn_name', chineseName);
+      dispatch({ type: 'SET_PLAYER_PROFILE', profile: { ...profileInput, englishName: name } });
+      dispatch({ type: 'SET_SELF_ASSESSED_LEVEL', level: weakLevel });
+      setLoading(false);
+      window.location.assign(`/game?${onboardingParams.toString()}`);
+      return;
+    }
+
     const npcId = freshNpc && CHARACTER_MAP[freshNpc] ? freshNpc : pickNpcForCity(preferredCity);
     const npcChar = CHARACTER_MAP[npcId] ?? HAEUN;
     // Use the NPC's actual city — if no NPC exists for the preferred city,
@@ -1370,6 +1425,11 @@ export default function GamePage() {
         // For exit videos, show the exit line as subtitle overlay
         const exitCaption = isExitVideo && exitLineRef.current ? exitLineRef.current : (args.caption ?? undefined);
         const exitCaptionTranslation = isExitVideo && exitLineTranslationRef.current ? exitLineTranslationRef.current : undefined;
+        setCurrentMessage(null);
+        setTongTip(null);
+        setChoices(null);
+        setChoicePrompt(null);
+        setCurrentExercise(null);
         setCinematic({
           videoUrl: args.videoUrl,
           autoAdvance: args.autoAdvance,
@@ -1598,6 +1658,7 @@ export default function GamePage() {
     displayMessage: displayMessage ? { id: displayMessage.id, role: displayMessage.role, characterId: displayMessage.characterId, contentPreview: displayMessage.content.slice(0, 120) } : null,
     tongTip: tongTip ? { messagePreview: tongTip.message.slice(0, 120), hasTranslation: !!tongTip.translation } : null,
     currentExercise: currentExercise ? { id: currentExercise.id, type: currentExercise.type } : null,
+    cinematic: cinematic ? { videoUrl: cinematic.videoUrl, autoAdvance: cinematic.autoAdvance, muted: cinematic.muted ?? false, hasCaption: !!cinematic.caption } : null,
     hangoutResumeSource,
     hangoutCheckpointPhase,
     sceneTurn,
@@ -1611,7 +1672,85 @@ export default function GamePage() {
     introExerciseCount,
     introAct,
     npcRevealed,
-  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, continuePending, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, hangoutResumeSource, hangoutCheckpointPhase, sceneTurn, hangoutSceneSessionId, hangoutCheckpointId, availableScenarioSeedIds, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
+  }), [qaRunId, qaTrace, phase, sceneReady, chatLoading, continuePending, toolQueue, currentMessage, streamedNpcMessage, displayMessage, dialogueIsStreaming, tongTip, currentExercise, cinematic, hangoutResumeSource, hangoutCheckpointPhase, sceneTurn, hangoutSceneSessionId, hangoutCheckpointId, availableScenarioSeedIds, choices, choicePrompt, sceneSummary, isIntroHangout, introExerciseCount, introAct, npcRevealed]);
+
+  const runPresentationCommand = useCallback((action: string, detail: { correct?: boolean } = {}) => {
+    traceQA('presentation_command', {
+      action,
+      hasExercise: !!currentExercise,
+      choiceCount: choices?.length ?? 0,
+      hasCinematic: !!cinematic,
+    });
+
+    if (action === 'complete_exercise') {
+      if (!currentExercise) return { ok: false, action, reason: 'no_current_exercise' };
+      handleExerciseResult(currentExercise.id, detail.correct !== false);
+      window.setTimeout(() => advanceAfterExercise(), 0);
+      return { ok: true, action, exerciseId: currentExercise.id };
+    }
+
+    if (action === 'choose_first') {
+      const firstChoice = choices?.[0];
+      if (!firstChoice) return { ok: false, action, reason: 'no_choices' };
+      handleChoice(firstChoice.id);
+      return { ok: true, action, choiceId: firstChoice.id };
+    }
+
+    if (action === 'end_cinematic') {
+      if (!cinematic) return { ok: false, action, reason: 'no_cinematic' };
+      setCinematic(null);
+      cinematicCaptionRef.current = null;
+      if (isIntroHangout && !npcRevealed) setNpcRevealed(true);
+      setCurrentMessage(null);
+      setTongTip(null);
+      setChoices(null);
+      setChoicePrompt(null);
+      setCurrentExercise(null);
+      setToolQueue([]);
+      processingRef.current = false;
+      return { ok: true, action, stoppedAfterIntroCinematic: true };
+    }
+
+    if (action === 'continue') {
+      if (tongTip) handleDismissTong();
+      else handleContinue();
+      return { ok: true, action };
+    }
+
+    return { ok: false, action, reason: 'unknown_action' };
+  }, [
+    advanceAfterExercise,
+    choices,
+    cinematic,
+    currentExercise,
+    handleChoice,
+    handleContinue,
+    handleDismissTong,
+    handleExerciseResult,
+    isIntroHangout,
+    npcRevealed,
+    tongTip,
+    traceQA,
+  ]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !qaTrace) return;
+    const handlePresentationMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || data.source !== 'ernie-presentation' || data.type !== 'tong-presentation-action') return;
+      const result = runPresentationCommand(String(data.action || ''), data.detail || {});
+      if (event.source && 'postMessage' in event.source) {
+        (event.source as Window).postMessage({
+          source: 'tong',
+          type: 'tong-presentation-result',
+          action: data.action,
+          result,
+        }, event.origin && event.origin !== 'null' ? event.origin : '*');
+      }
+    };
+    window.addEventListener('message', handlePresentationMessage);
+    return () => window.removeEventListener('message', handlePresentationMessage);
+  }, [qaTrace, runPresentationCommand]);
 
   useEffect(() => {
     if (!qaTrace) return;
@@ -1660,13 +1799,14 @@ export default function GamePage() {
         downloadJson(`tong-qa-logs-${qaRunId}.json`, logs);
       },
       clearLogs: () => sessionLogger.clear(),
+      presentationCommand: runPresentationCommand,
     };
 
     return () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((window as any).__TONG_QA__) delete (window as any).__TONG_QA__;
     };
-  }, [qaRunId, getQaState]);
+  }, [qaRunId, getQaState, runPresentationCommand]);
 
   /* ── renders ──────────────────────────────────────────── */
 
@@ -1752,7 +1892,13 @@ export default function GamePage() {
 
     const handleLanguageNext = () => {
       changeTongExpression('excited');
-      dropLinesRef.current[0] = `Let's head to Seoul, ${profileInput.englishName.trim() || 'trainee'}! I know someone you should meet...`;
+      const primaryLang = resolvePrimaryLanguage();
+      const traineeName = profileInput.englishName.trim() || 'trainee';
+      dropLinesRef.current[0] = primaryLang === 'zh'
+        ? `Let's head to Shanghai, ${traineeName}. First lesson: read the room before anyone talks to you.`
+        : primaryLang === 'ja'
+          ? `Let's head to Tokyo, ${traineeName}! I know someone you should meet...`
+          : `Let's head to Seoul, ${traineeName}! I know someone you should meet...`;
       setDropLineIdx(0);
       setDropCharIdx(0);
       setDropDone(false);
@@ -1855,20 +2001,32 @@ export default function GamePage() {
               <div className="tg-trainee-profile">
                 <div className="tg-tong-intro-subtitle" style={{ position: 'relative', bottom: 'auto', padding: 0, background: 'none' }}>
                   <p className="dialogue-speaker" style={{ color: 'var(--color-accent-gold, #f0c040)' }}>Tong</p>
-                  <p className="dialogue-text">How familiar are you with these?</p>
+                  <p className="dialogue-text">Which language should we prioritize first?</p>
                 </div>
                 <div className="proficiency-panel" style={{ marginTop: 12 }}>
                   {LANG_LABELS.map((lang, idx) => {
                     const val = sliders[idx];
                     const gameLvl = GAME_LEVELS[val];
+                    const resolvedPriorityLang = priorityLang ?? LANG_KEYS[getWeakestLangIndex(sliders)];
+                    const isPriority = resolvedPriorityLang === lang.key;
                     return (
                       <div key={lang.key} className="proficiency-lang">
                         <div className="proficiency-lang-header">
                           <span className="proficiency-lang-name">
                             {lang.flag} {lang.name}
                           </span>
-                          <span className="proficiency-lang-level">
-                            {gameLvl.name}
+                          <span className="proficiency-lang-actions">
+                            <button
+                              type="button"
+                              className={`proficiency-priority-btn${isPriority ? ' is-selected' : ''}`}
+                              onClick={() => setPriorityLang(lang.key)}
+                              aria-pressed={isPriority}
+                            >
+                              {isPriority ? 'Priority' : 'Prioritize'}
+                            </button>
+                            <span className="proficiency-lang-level">
+                              {gameLvl.name}
+                            </span>
                           </span>
                         </div>
                         <input

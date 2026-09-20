@@ -1,550 +1,242 @@
 #!/usr/bin/env python3
-"""Generate provider-neutral remote agent issue batching and task prompts."""
+"""Generate provider-neutral remote agent queue plans.
+
+This wrapper keeps the existing Codex queue generator as the source of task
+prompt generation while adding provider metadata used by repo-native queue
+commands and notification workflows.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
+import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from issue_router import build_issue_entry, resolve_targets
-from qa_runtime import (
-    CONFIG_ROOT,
-    artifact_root,
-    format_portability_summary,
-    load_json,
-    render_portability_lines,
-    repo_name_with_owner,
-    slugify,
-    timestamp_slug,
-)
-from remote_agent_providers import (
-    default_provider_id,
-    get_provider_adapter,
-    normalize_requested_provider,
-    provider_breakdown,
-    select_provider_for_issue,
-)
+from qa_runtime import CONFIG_ROOT, REPO_ROOT, load_json
+from remote_agent_providers import get_provider_adapter
 
 
-CLOUD_CONFIG = load_json(CONFIG_ROOT / "codex-cloud.json")
-TEMPLATE_ROOT = CONFIG_ROOT.parent / "templates"
+PROVIDER_CONFIG = load_json(CONFIG_ROOT / "remote-agent-providers.json")
 
 
-def render_template(path: Path, replacements: dict[str, str]) -> str:
-    rendered = path.read_text(encoding="utf-8")
-    for needle, value in replacements.items():
-        rendered = rendered.replace(needle, value)
-    return rendered
-
-
-def override_for(issue_ref: str | None) -> dict[str, Any] | None:
-    if not issue_ref:
+def parse_iso(value: str) -> datetime | None:
+    if not value:
         return None
-    for item in CLOUD_CONFIG.get("issue_overrides", []):
-        if item["match"] in issue_ref:
-            return item
-    return None
+    try:
+        normalized = value.replace("Z", "+00:00")
+        parsed = datetime.fromisoformat(normalized)
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    except ValueError:
+        return None
 
 
-def default_cloud_mode(raw_issue: dict[str, Any], issue_entry: dict[str, Any]) -> tuple[str, bool, str, list[str]]:
-    lowered = f"{raw_issue['title']}\n{raw_issue['body']}".lower()
-    project_fields = issue_entry.get("project_fields", {})
-    portability = issue_entry.get("portability_preflight", {})
-    portable_context = project_fields.get("Portable Context")
-    if portability.get("blocking"):
-        reason = "Portability preflight failed: " + format_portability_summary(portability)
-        return ("local-only", True, reason, [])
-    if portable_context == "No":
-        reason = "Project marks `Portable Context=No`, so keep this out of unattended remote execution for now."
-        if project_fields.get("Blocked By"):
-            reason += f" Blocked by: {project_fields['Blocked By']}."
-        return ("local-only", True, reason, [])
-
-    if project_fields.get("Agent Ready") == "No":
-        reason = "Project marks `Agent Ready=No`, so this issue should not launch as an unattended remote task yet."
-        if project_fields.get("Blocked By"):
-            reason += f" Blocked by: {project_fields['Blocked By']}."
-        return ("local-only", True, reason, [])
-
-    blockers = [] if portable_context == "Yes" else [keyword for keyword in CLOUD_CONFIG.get("local_only_keywords", []) if keyword in lowered]
-    if blockers:
-        return (
-            "local-only",
-            True,
-            f"Found local-only blocker keywords: {', '.join(blockers)}.",
-            [],
-        )
-
-    issue_class = issue_entry["classification"]["issue_class"]
-    if issue_class in CLOUD_CONFIG.get("cloud_issue_classes_needing_local_acceptance", []):
-        return (
-            "cloud-ready-with-local-proof",
-            True,
-            f"`{issue_class}` is remotely fixable, but final confidence still needs browser-backed local acceptance.",
-            [],
-        )
-
-    return (
-        "cloud-ready",
-        False,
-        "No known remote blocker was detected; the issue appears reproducible from repo state plus setup.",
-        [],
-    )
+def provider_is_available(provider_id: str) -> bool:
+    provider = PROVIDER_CONFIG.get("providers", {}).get(provider_id, {})
+    availability = provider.get("availability", {})
+    status = str(availability.get("status") or "available").lower()
+    if status not in {"available", "working"}:
+        return False
+    unavailable_until = parse_iso(str(availability.get("unavailable_until") or ""))
+    if unavailable_until and unavailable_until > datetime.now(timezone.utc):
+        return False
+    return provider.get("status", "working") == "working"
 
 
-def merge_readiness_reason(reason: str, portability: dict[str, Any]) -> str:
-    if not portability:
-        return reason
-    if portability.get("blocking"):
-        detail = "Portability preflight: " + format_portability_summary(portability)
-        return reason if detail in reason else f"{reason} {detail}"
-    if portability.get("warnings"):
-        detail = "Portability notes: " + "; ".join(portability["warnings"])
-        return reason if detail in reason else f"{reason} {detail}"
-    return reason
-
-
-def enforce_portability_blockers(
-    cloud_mode: str,
-    needs_local_acceptance: bool,
-    readiness_reason: str,
-    portability: dict[str, Any],
-) -> tuple[str, bool, str]:
-    if not portability.get("blocking") or cloud_mode == "local-only":
-        return cloud_mode, needs_local_acceptance, readiness_reason
-
-    blocked_reason = "Portability preflight failed; keep this out of unattended remote execution until blockers are removed."
-    if blocked_reason not in readiness_reason:
-        readiness_reason = f"{readiness_reason} {blocked_reason}".strip()
-    return ("local-only", True, readiness_reason)
-
-
-def batch_order_value(batch_id: str) -> int:
-    for index, batch in enumerate(CLOUD_CONFIG.get("current_batches", []), start=1):
-        if batch["id"] == batch_id:
-            return index
-    return 999
-
-
-def configured_batch_for(issue_ref: str | None) -> str:
-    if not issue_ref:
-        return "unassigned"
-    for batch in CLOUD_CONFIG.get("current_batches", []):
-        for item in batch.get("issues", []):
-            if item in issue_ref:
-                return batch["id"]
-    return "unassigned"
-
-
-def issue_order_value(issue_ref: str | None, batch_id: str) -> int:
-    for batch in CLOUD_CONFIG.get("current_batches", []):
-        if batch["id"] != batch_id:
+def first_available(candidates: list[str]) -> str:
+    providers = PROVIDER_CONFIG.get("providers", {})
+    seen: set[str] = set()
+    ordered = []
+    for candidate in candidates + [PROVIDER_CONFIG.get("default_provider", "codex"), *providers.keys()]:
+        if not candidate or candidate in seen:
             continue
-        for index, item in enumerate(batch.get("issues", [])):
-            if issue_ref and item in issue_ref:
-                return index
-        return 999
-    return 999
+        seen.add(candidate)
+        ordered.append(candidate)
+    for candidate in ordered:
+        if candidate in providers and provider_is_available(candidate):
+            return candidate
+    return ordered[0] if ordered else PROVIDER_CONFIG.get("default_provider", "codex")
 
 
-def is_dispatchable(issue: dict[str, Any]) -> bool:
-    return issue["cloud_mode"] != "local-only" and issue["batch_id"] != "unassigned" and issue["provider_dispatch_supported"]
+def choose_provider(issue: dict[str, Any], requested: str) -> str:
+    if requested != "auto":
+        return requested
+
+    candidates: list[str] = []
+    issue_ref = issue.get("issue_ref")
+    issue_overrides = PROVIDER_CONFIG.get("issue_provider", {})
+    if issue_ref and issue_ref in issue_overrides:
+        candidates.append(issue_overrides[issue_ref])
+
+    lane = issue.get("recommended_worktree", {}).get("id")
+    lane_overrides = PROVIDER_CONFIG.get("lane_provider", {})
+    if lane and lane in lane_overrides:
+        candidates.append(lane_overrides[lane])
+
+    execution_mode = issue.get("validation_policy", {}).get("execution_mode")
+    execution_overrides = PROVIDER_CONFIG.get("execution_mode_provider", {})
+    if execution_mode and execution_mode in execution_overrides:
+        candidates.append(execution_overrides[execution_mode])
+
+    return first_available(candidates)
 
 
-def queue_action_for(issue: dict[str, Any]) -> str:
-    provider_name = issue.get("provider_display_name") or issue.get("provider") or "provider"
-    if issue["cloud_mode"] == "local-only":
-        return "skip remote execution for now"
-    if issue["batch_id"] == "unassigned":
-        return "hold for manual batching or split before dispatch"
-    if issue["depends_on"]:
-        return "launch after listed dependencies merge or are rebased into the task branch"
-    if not issue["provider_dispatch_supported"]:
-        return f"hold until the `{provider_name}` adapter is configured for remote dispatch"
-    return f"launch a direct {provider_name} task and create a PR from the task result"
+def provider_meta(provider_id: str) -> dict[str, Any]:
+    providers = PROVIDER_CONFIG.get("providers", {})
+    provider = providers.get(provider_id)
+    if not provider:
+        raise ValueError(f"Unknown provider `{provider_id}`")
+    return {"id": provider_id, **provider}
 
 
-def reviewer_evidence_expectation(issue_entry: dict[str, Any]) -> str:
-    issue_class = issue_entry["classification"]["issue_class"]
-    if issue_class in {"visual-layout", "localization-content", "accessibility"}:
-        return (
-            "Include one before/after full-frame comparison of the same UI state and one focused comparison crop of the changed region. "
-            "For subtitle, translation, tooltip, or typography fixes, the focused crop should isolate the exact text region reviewers need to inspect."
-        )
-    if issue_entry["evidence_plan"].get("requires_ui_capture"):
-        return (
-            "Include reviewer-facing UI evidence in the PR body or linked comment. "
-            "For timing-sensitive fixes, use ordered frames or short video/GIF evidence anchored to the proof moment."
-        )
-    return "Summarize the non-visual evidence inline and link any uploaded reviewer-facing artifacts."
+def apply_provider_branch(issue: dict[str, Any], provider_id: str, queue_dir: Path) -> None:
+    adapter = get_provider_adapter(provider_id)
+    previous_branch = str(issue["branch_name"])
+    selected_branch = adapter.branch_name_for(issue.get("number"), str(issue["title"]))
+    if selected_branch == previous_branch:
+        return
+
+    issue["branch_name"] = selected_branch
+    for generated_path in issue.get("generated_files", {}).values():
+        path = queue_dir / str(generated_path)
+        path.write_text(path.read_text(encoding="utf-8").replace(previous_branch, selected_branch), encoding="utf-8")
 
 
-def verification_instruction_for(issue_entry: dict[str, Any]) -> str:
-    policy = issue_entry["validation_policy"]
-    if policy.get("fix_allowed"):
-        return "After code changes, rerun `validate-issue --verify-fix` before claiming the issue is fixed."
-    return (
-        f"Execution mode is `{policy.get('execution_mode', 'safe-unattended')}`. "
-        "Validate, trace if needed, and stop with evidence plus a scoped proposal instead of claiming a fix."
-    )
-
-
-def completion_instruction_for(issue_entry: dict[str, Any]) -> str:
-    if issue_entry["validation_policy"].get("fix_allowed"):
-        return (
-            "Return a concise final summary covering validation result, root cause, files changed, "
-            "verification outcome, and reviewer-visible evidence."
-        )
-    return (
-        "Return a concise validation summary with the reproduced behavior, root-cause hypothesis, "
-        "proposed fix scope, and any blockers. Do not make unattended product changes."
-    )
-
-
-def lane_guidance_for(issue_entry: dict[str, Any]) -> str:
-    worktree = issue_entry["recommended_worktree"]
-    shared_zone_hits = issue_entry.get("shared_zone_hits", [])
-    explicit_paths = issue_entry.get("explicit_paths", [])
-    if shared_zone_hits:
-        return (
-            f"Stay within the `{worktree['id']}` lane and keep changes serialized around shared zones: "
-            f"{', '.join(shared_zone_hits)}."
-        )
-    if explicit_paths:
-        return (
-            f"Prefer edits in the `{worktree['id']}` lane's owned paths. If validation forces a cross-lane change, "
-            f"name the boundary and keep it minimal. Explicit paths: {', '.join(explicit_paths)}."
-        )
-    return (
-        f"Stay within the `{worktree['id']}` lane's owned paths and avoid cross-lane edits unless validation proves "
-        "the issue spans another lane."
-    )
-
-
-def render_validation_gate_lines_for_issue(issue_entry: dict[str, Any]) -> str:
-    policy = issue_entry["validation_policy"]
-    runtime_modes = policy.get("required_runtime_modes_for_fixed", [])
-    lines = [
-        f"- Execution mode: `{policy.get('execution_mode', 'safe-unattended')}`",
-        f"- Direct issue evidence: `{'required' if policy.get('requires_direct_issue_evidence') else 'not-required'}`",
-        f"- UI acceptance gate: `{'required' if policy.get('ui_acceptance_required') else 'not-required'}`",
-        f"- Runtime modes to exercise for fixed claim: `{', '.join(runtime_modes) if runtime_modes else 'none specified'}`",
-        f"- Live model confirmation: `{'required' if policy.get('requires_live_model_for_fixed') else 'not-required'}`",
-        f"- Human review: `{'required' if policy.get('human_review_required') else 'not-required'}`",
-    ]
-    return "\n".join(lines)
-
-
-def render_stop_conditions_for_issue(issue: dict[str, Any]) -> str:
-    policy = issue["validation_policy"]
-    portability = issue.get("portability_preflight", {})
-    stop_conditions = list(policy.get("stop_conditions", []))
-    if not policy.get("fix_allowed"):
-        stop_conditions.append(
-            f"Execution mode `{policy.get('execution_mode', 'safe-unattended')}` is validation-only; stop after evidence and a scoped proposal."
-        )
-    if issue.get("cloud_mode") == "local-only":
-        stop_conditions.append("Portable context is not sufficient for unattended remote execution; stop without code changes.")
-    if portability.get("blocking"):
-        stop_conditions.append(f"Portability blockers remain unresolved: {format_portability_summary(portability)}")
-    if issue.get("needs_final_local_acceptance"):
-        stop_conditions.append(
-            "If reviewer-visible media cannot be produced from the remote task, leave final correctness pending local/browser-backed acceptance."
-        )
-    ready, provider_reason = get_provider_adapter(issue["provider"]).dispatch_eligibility(issue)
-    if not ready:
-        stop_conditions.append(provider_reason)
-    if not stop_conditions:
-        return "- None."
-    return "\n".join(f"- {item}" for item in stop_conditions)
-
-
-def build_queue_issue(raw_issue: dict[str, Any], queue_dir: Path, *, requested_provider: str) -> dict[str, Any]:
-    issue_entry = build_issue_entry(raw_issue)
-    issue_ref = issue_entry.get("issue_ref")
-    portability = issue_entry.get("portability_preflight", {})
-    override = override_for(issue_ref)
-    if override:
-        cloud_mode = override["cloud_mode"]
-        needs_local_acceptance = override["needs_final_local_acceptance"]
-        readiness_reason = override["reason"]
-        depends_on = override.get("depends_on", [])
-        batch_id = override["batch"]
-    else:
-        cloud_mode, needs_local_acceptance, readiness_reason, depends_on = default_cloud_mode(raw_issue, issue_entry)
-        batch_id = configured_batch_for(issue_ref)
-    cloud_mode, needs_local_acceptance, readiness_reason = enforce_portability_blockers(
-        cloud_mode,
-        needs_local_acceptance,
-        readiness_reason,
-        portability,
-    )
-    readiness_reason = merge_readiness_reason(readiness_reason, portability)
-
-    selection = select_provider_for_issue(issue_entry, requested_provider=requested_provider)
-    adapter = get_provider_adapter(selection.provider)
-
-    issue_number = issue_entry.get("number")
-    effective_title = issue_entry["title"]
-    if override and override.get("fallback_title") and issue_ref and issue_entry["title"].strip() == issue_ref:
-        effective_title = override["fallback_title"]
-    file_stub = f"issue-{issue_number}" if issue_number is not None else slugify(issue_entry["title"])
-    branch_name = adapter.branch_name_for(issue_number, effective_title)
-    pr_title = adapter.pr_title_for(issue_number, effective_title)
-
-    issue_dir = queue_dir / "issues"
-    issue_dir.mkdir(exist_ok=True)
-    task_prompt_path = issue_dir / f"{file_stub}-task-prompt.md"
-    pr_notes_path = issue_dir / f"{file_stub}-pr-notes.md"
-
-    replacements = {
-        "{{repository}}": repo_name_with_owner(),
-        "{{environment_name}}": adapter.environment_name(),
-        "{{provider_id}}": adapter.provider_id,
-        "{{provider_display_name}}": adapter.display_name,
-        "{{provider_delivery_mode}}": adapter.delivery_mode(),
-        "{{provider_selection_reason}}": selection.reason,
-        "{{issue_ref}}": issue_ref or issue_entry["title"],
-        "{{issue_url}}": raw_issue.get("html_url") or raw_issue.get("url", ""),
-        "{{batch_id}}": batch_id,
-        "{{worktree_id}}": issue_entry["recommended_worktree"]["id"],
-        "{{worktree_branch}}": issue_entry["recommended_worktree"]["branch"],
-        "{{cloud_mode}}": cloud_mode,
-        "{{needs_local_acceptance}}": "yes" if needs_local_acceptance else "no",
-        "{{issue_class}}": issue_entry["classification"]["issue_class"],
-        "{{evidence_required}}": ", ".join(issue_entry["evidence_plan"]["required"]),
-        "{{reviewer_evidence_expectation}}": reviewer_evidence_expectation(issue_entry),
-        "{{initial_skill}}": issue_entry["initial_skill"],
-        "{{follow_up_skills}}": "; ".join(issue_entry["follow_up_skills"]),
-        "{{queue_action}}": queue_action_for(
-            {
-                **issue_entry,
-                "cloud_mode": cloud_mode,
-                "batch_id": batch_id,
-                "depends_on": depends_on,
-                "provider": adapter.provider_id,
-                "provider_display_name": adapter.display_name,
-                "provider_dispatch_supported": adapter.supports_dispatch(),
-            }
-        ),
-        "{{verification_instruction}}": verification_instruction_for(issue_entry),
-        "{{completion_instruction}}": completion_instruction_for(issue_entry),
-        "{{execution_mode}}": issue_entry["validation_policy"].get("execution_mode", "safe-unattended"),
-        "{{lane_guidance}}": lane_guidance_for(issue_entry),
-        "{{validation_gate_lines}}": render_validation_gate_lines_for_issue(issue_entry),
-        "{{stop_conditions}}": render_stop_conditions_for_issue(
-            {
-                **issue_entry,
-                "cloud_mode": cloud_mode,
-                "batch_id": batch_id,
-                "depends_on": depends_on,
-                "provider": adapter.provider_id,
-                "needs_final_local_acceptance": needs_local_acceptance,
-            }
-        ),
-        "{{readiness_reason}}": readiness_reason,
-        "{{suggested_pr_title}}": pr_title,
-        "{{suggested_branch_name}}": branch_name,
-        "{{final_acceptance_note}}": (
-            "Do not send this issue to remote execution yet; keep it local until the blocking asset or environment dependency is removed."
-            if cloud_mode == "local-only"
-            else "Run the final local/browser-backed acceptance recording after merge."
-            if needs_local_acceptance
-            else "No extra local acceptance step is required beyond the normal final integration recording."
-        ),
-    }
-
-    task_prompt_path.write_text(
-        render_template(adapter.prompt_template_path(), replacements) + "\n",
-        encoding="utf-8",
-    )
-    pr_notes_path.write_text(
-        render_template(adapter.pr_notes_template_path(), replacements) + "\n",
-        encoding="utf-8",
-    )
-
-    ready, provider_reason = adapter.dispatch_eligibility(issue_entry)
-    return {
-        **issue_entry,
-        "cloud_mode": cloud_mode,
-        "needs_final_local_acceptance": needs_local_acceptance,
-        "readiness_reason": readiness_reason,
-        "depends_on": depends_on,
-        "batch_id": batch_id,
-        "provider": adapter.provider_id,
-        "provider_display_name": adapter.display_name,
-        "provider_delivery_mode": adapter.delivery_mode(),
-        "provider_selection_reason": selection.reason,
-        "provider_selection_source": selection.source,
-        "provider_capabilities": adapter.capabilities(),
-        "provider_dispatch_supported": ready,
-        "provider_dispatch_reason": provider_reason,
-        "branch_name": branch_name,
-        "draft_pr_title": pr_title,
-        "generated_files": {
-            "task_prompt": str(task_prompt_path.relative_to(queue_dir)),
-            "pr_notes": str(pr_notes_path.relative_to(queue_dir)),
-        },
-    }
-
-
-def build_batches(issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    by_id: dict[str, dict[str, Any]] = {}
-    batch_meta = {item["id"]: item for item in CLOUD_CONFIG.get("current_batches", [])}
-    for issue in issues:
-        batch_id = issue["batch_id"]
-        meta = batch_meta.get(batch_id, {"id": batch_id, "description": "Unassigned batch."})
-        bucket = by_id.setdefault(
-            batch_id,
-            {
-                "id": batch_id,
-                "description": meta["description"],
-                "issues": [],
-            },
-        )
-        bucket["issues"].append(issue["issue_ref"] or issue["title"])
-    return sorted(by_id.values(), key=lambda item: batch_order_value(item["id"]))
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 
 def render_markdown(plan: dict[str, Any]) -> str:
-    provider_line = ", ".join(
-        f"{row['provider']} ({row['count']})" for row in plan["provider_breakdown"]
-    ) or "none"
     lines = [
         "# Remote Agent Queue Plan",
         "",
         f"- Repository: `{plan['repository']}`",
         f"- Generated at: `{plan['generated_at']}`",
-        f"- Source: `{plan['source']}`",
         f"- Requested provider: `{plan['requested_provider']}`",
-        f"- Default provider: `{plan['default_provider']}`",
-        f"- Provider mix: `{provider_line}`",
-        f"- Delivery mode: `{plan['delivery_mode']}`",
-        f"- Suggested labels: `{', '.join(label['name'] for label in plan['label_suggestions'])}`",
+        f"- Default provider: `{plan['provider_policy'].get('default_provider', 'codex')}`",
+        f"- Source queue: `{plan['source_queue_dir']}`",
         "",
-        "## Recommended setup",
+        "## Issues",
         "",
     ]
-    for command in plan["setup_commands"]:
-        lines.append(f"- `{command}`")
 
-    lines.extend(["", "## Batches", ""])
-    for batch in plan["batches"]:
-        lines.append(f"### {batch['id']}")
-        lines.append(batch["description"])
-        lines.append(f"- Issues: {', '.join(batch['issues'])}")
-        lines.append("")
-
-    lines.extend(["## Issue Instructions", ""])
     for issue in plan["issues"]:
-        label = issue["issue_ref"] or issue["title"]
+        provider = issue["provider"]
         lines.extend(
             [
-                f"### {label}",
-                f"- Provider: `{issue['provider']}` ({issue['provider_display_name']})",
-                f"- Provider selection: {issue['provider_selection_reason']}",
-                f"- Provider delivery mode: `{issue['provider_delivery_mode']}`",
-                f"- Cloud mode: `{issue['cloud_mode']}`",
-                f"- Batch: `{issue['batch_id']}`",
-                f"- Branch: `{issue['branch_name']}`",
-                f"- Draft PR title: `{issue['draft_pr_title']}`",
-                f"- Worktree lane: `{issue['recommended_worktree']['id']}` -> `{issue['recommended_worktree']['branch']}`",
-                f"- Start with: `{issue['initial_skill']}`",
-                f"- Follow-ups: `{'; '.join(issue['follow_up_skills'])}`",
-                f"- Depends on: `{', '.join(issue['depends_on']) or 'none'}`",
-                f"- Portability: `{issue['portability_preflight']['status']}`",
-                f"- Portability summary: {format_portability_summary(issue['portability_preflight'])}",
-                f"- Readiness: {issue['readiness_reason']}",
-                f"- Queue action: `{queue_action_for(issue)}`",
-                f"- Task prompt: `{issue['generated_files']['task_prompt']}`",
-                f"- PR notes: `{issue['generated_files']['pr_notes']}`",
+                f"### {issue.get('issue_ref') or issue.get('title')}",
+                f"- Provider: `{provider['id']}` ({provider['status']})",
+                f"- Delivery mode: `{provider['delivery_mode']}`",
+                f"- Queue action: `{issue.get('queue_action', 'n/a')}`",
+                f"- Worktree lane: `{issue.get('recommended_worktree', {}).get('id', 'n/a')}`",
+                f"- Cloud mode: `{issue.get('cloud_mode', 'n/a')}`",
+                f"- Batch: `{issue.get('batch_id', 'unassigned')}`",
+                f"- Task prompt: `{issue.get('generated_files', {}).get('task_prompt', '')}`",
+                f"- PR notes: `{issue.get('generated_files', {}).get('pr_notes', '')}`",
+                f"- Provider notes: {provider.get('notes', '')}",
+                "",
             ]
         )
-        for line in render_portability_lines(issue["portability_preflight"]):
-            if line.startswith("- Portability preflight:") or line.startswith("- Portability summary:"):
-                continue
-            lines.append(line)
-        lines.append("")
+
     return "\n".join(lines).strip() + "\n"
 
 
-def build_launch_instructions(plan: dict[str, Any]) -> str:
-    lines = [
-        "# Remote Agent Launch Instructions",
-        "",
-        f"Use the repo-native queue plan. Default provider policy is `{plan['default_provider']}` and this run requested `{plan['requested_provider']}`.",
-        "Start with the earliest batch only.",
-        "",
+def run_codex_generator(args: argparse.Namespace) -> Path:
+    command = [
+        "python",
+        str(CONFIG_ROOT.parent / "scripts" / "codex_cloud_queue.py"),
+        "plan",
+        *args.targets,
+        "--limit",
+        str(args.limit),
     ]
-    for issue in plan["issues"]:
-        adapter = get_provider_adapter(issue["provider"])
-        lines.append(f"# {issue['issue_ref'] or issue['title']}")
-        if not is_dispatchable(issue):
-            reason = issue["readiness_reason"]
-            if issue["batch_id"] == "unassigned":
-                reason = f"{reason} Keep this item out of the launch queue until it is explicitly batched or split into narrower tasks."
-            elif not issue["provider_dispatch_supported"]:
-                reason = issue["provider_dispatch_reason"] or reason
-            lines.append(f"1. Skip remote dispatch for `{issue['provider_display_name']}` for now.")
-            lines.append(f"2. Reason: {reason}")
-            lines.append("")
-            continue
+    if args.out_dir:
+        command.extend(["--out-dir", args.out_dir])
+    if args.json:
+        command.append("--json")
 
-        for index, step in enumerate(adapter.launch_steps(issue), start=1):
-            lines.append(f"{index}. {step}")
-        lines.append("")
-    return "\n".join(lines).strip() + "\n"
+    result = subprocess.run(
+        command,
+        cwd=str(REPO_ROOT),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or result.stdout.strip())
+
+    if args.out_dir:
+        return Path(args.out_dir).resolve()
+
+    if args.json:
+        payload = json.loads(result.stdout)
+        generated_at = payload["generated_at"]
+        return REPO_ROOT / "artifacts" / "qa-runs" / "functional-qa" / "codex-cloud-queue" / generated_at
+
+    return Path(result.stdout.strip())
+
+
+def empty_plan(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]:
+    from qa_runtime import artifact_root, repo_name_with_owner, timestamp_slug
+
+    generated_at = timestamp_slug()
+    queue_dir = (
+        Path(args.out_dir).resolve()
+        if args.out_dir
+        else artifact_root() / "functional-qa" / "remote-agent-queue" / generated_at
+    )
+    queue_dir.mkdir(parents=True, exist_ok=True)
+    plan = {
+      "schema_version": "1",
+      "generated_at": generated_at,
+      "repository": repo_name_with_owner(),
+      "environment_name": "",
+      "delivery_mode": "provider-neutral",
+      "source": "empty",
+      "setup_commands": [],
+      "label_suggestions": [],
+      "issues": [],
+      "batches": [],
+    }
+    return queue_dir, plan
 
 
 def build_plan(args: argparse.Namespace) -> int:
-    requested_provider = normalize_requested_provider(args.provider)
-    source, targets = resolve_targets(args.targets, args.limit)
-    queue_timestamp = timestamp_slug()
-    queue_dir = artifact_root() / "functional-qa" / "remote-agent-queue" / queue_timestamp
-    queue_dir.mkdir(parents=True, exist_ok=True)
+    if args.provider != "auto":
+        provider_meta(args.provider)
 
-    issues = [build_queue_issue(issue, queue_dir, requested_provider=requested_provider) for issue in targets]
-    issues.sort(
-        key=lambda item: (
-            batch_order_value(item["batch_id"]),
-            issue_order_value(item.get("issue_ref"), item["batch_id"]),
-            item.get("number") or 99999,
-            item["title"],
-        )
-    )
-    batches = build_batches(issues)
-    default_adapter = get_provider_adapter(default_provider_id())
-    plan = {
-        "schema_version": "2",
-        "generated_at": queue_timestamp,
-        "repository": repo_name_with_owner(),
-        "delivery_mode": "provider-neutral",
-        "source": source,
-        "requested_provider": requested_provider,
-        "default_provider": default_provider_id(),
-        "setup_commands": default_adapter.setup_commands(),
-        "label_suggestions": default_adapter.label_suggestions(),
-        "provider_breakdown": provider_breakdown(issues),
-        "issues": issues,
-        "batches": batches,
+    if not args.targets and args.limit == 0:
+        queue_dir, plan = empty_plan(args)
+    else:
+        queue_dir = run_codex_generator(args)
+        cloud_plan_path = queue_dir / "cloud-plan.json"
+        plan = json.loads(cloud_plan_path.read_text(encoding="utf-8"))
+
+    for issue in plan.get("issues", []):
+        selected = choose_provider(issue, args.provider)
+        apply_provider_branch(issue, selected, queue_dir)
+        issue["provider"] = provider_meta(selected)
+
+    plan["schema_version"] = "1"
+    plan["source_queue_dir"] = display_path(queue_dir)
+    plan["requested_provider"] = args.provider
+    plan["provider_policy"] = {
+        "default_provider": PROVIDER_CONFIG.get("default_provider", "codex"),
+        "providers": PROVIDER_CONFIG.get("providers", {}),
     }
 
-    rendered_json = json.dumps(plan, indent=2) + "\n"
-    rendered_markdown = render_markdown(plan)
-    (queue_dir / "queue-plan.json").write_text(rendered_json, encoding="utf-8")
-    (queue_dir / "queue-plan.md").write_text(rendered_markdown, encoding="utf-8")
-    (queue_dir / "cloud-plan.json").write_text(rendered_json, encoding="utf-8")
-    (queue_dir / "cloud-plan.md").write_text(rendered_markdown, encoding="utf-8")
-    (queue_dir / "launch.md").write_text(build_launch_instructions(plan), encoding="utf-8")
-    (queue_dir / "commands.sh").write_text(
-        "# Deprecated: use launch.md and the generated task prompt files for repo-native remote agent tasks.\n",
-        encoding="utf-8",
-    )
+    (queue_dir / "remote-plan.json").write_text(json.dumps(plan, indent=2) + "\n", encoding="utf-8")
+    (queue_dir / "remote-plan.md").write_text(render_markdown(plan), encoding="utf-8")
 
     if args.json:
-        print(rendered_json.strip())
+        print(json.dumps(plan, indent=2))
     else:
         print(str(queue_dir))
     return 0
@@ -554,15 +246,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    plan_parser = subparsers.add_parser("plan", help="Generate the provider-neutral remote issue queue plan.")
-    plan_parser.add_argument("targets", nargs="*", help="Issue numbers or URLs. Defaults to the open GitHub issue queue.")
-    plan_parser.add_argument("--limit", type=int, default=50, help="Open issue limit when no explicit targets are given.")
-    plan_parser.add_argument(
-        "--provider",
-        default="auto",
-        help="Execution provider policy override (`auto`, `codex`, `claude`).",
-    )
-    plan_parser.add_argument("--json", action="store_true", help="Print the JSON plan to stdout.")
+    plan_parser = subparsers.add_parser("plan", help="Generate a provider-neutral queue plan.")
+    plan_parser.add_argument("targets", nargs="*", help="Issue numbers or URLs. Defaults to open issues.")
+    plan_parser.add_argument("--limit", type=int, default=50)
+    plan_parser.add_argument("--provider", choices=["auto", *PROVIDER_CONFIG.get("providers", {}).keys()], default="auto")
+    plan_parser.add_argument("--out-dir", help="Write generated queue files to this directory instead of artifacts/qa-runs.")
+    plan_parser.add_argument("--json", action="store_true")
     plan_parser.set_defaults(func=build_plan)
     return parser
 

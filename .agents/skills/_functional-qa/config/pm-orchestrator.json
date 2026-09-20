@@ -1,0 +1,26 @@
+{
+  "schema_version": "1",
+  "include_label": "pm:agent-ready",
+  "skip_labels": [
+    "pm:portability-gap",
+    "self-heal:exhausted",
+    "do-not-merge",
+    "blocked-on-human"
+  ],
+  "max_dispatches_per_run": 3,
+  "provider_concurrency_caps": {
+    "codex": 3,
+    "claude": 3
+  },
+  "stale_age_days": 14,
+  "stuck_issue_hours": 48,
+  "stuck_pr_hours": 12,
+  "priority_label_weights": {
+    "priority:p0": 100,
+    "priority:p1": 50,
+    "priority:p2": 10
+  },
+  "severity_body_weight": 10,
+  "age_weight_per_day": 1,
+  "notes": "PM orchestrator config. Edit weights/caps to retune scheduling without changing code."
+}

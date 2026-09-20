@@ -2,7 +2,13 @@
 
 ## What this is
 
-H1 of the Shanghai onboarding hangout. The player walks into a 小笼包店, overhears 丁漫 and 守成 negotiating, 守成 leaves first after a phone call, and 方阿姨 closes the scene with a short webtoon cliffhanger. The same fixture should support both a deterministic rehearsal path and the AI-orchestrated path.
+H1 of the Shanghai onboarding hangout. The player enters a 小笼包店 through the wide onboarding panorama when they prioritize learning Chinese, starts on the right edge while Tong introduces the room and the first negotiation-learning hook, completes the anchored 方案 exercise, pans/scrolls left to eavesdrop, enters the webtoon strip automatically, scrolls to the end, and exits after Tong closes the scene. There is no Dingman/Shoucheng tap target in V1; panning is attention, not a camera or seat switch. The same fixture should support both a deterministic rehearsal path and the AI-orchestrated path.
+
+Canonical media for the hangout is `apps/client/public/assets/locations/shanghai-onboarding.mp4`, copied from `~/Downloads/shanghai.mp4`, with poster fallback `apps/client/public/assets/locations/shanghai-onboarding-poster.jpg`. Runtime keys are `city.shanghai.location.dumpling-shop.panorama.video.default` and `city.shanghai.location.dumpling-shop.panorama.poster.default`; the content contract lives in `apps/client/lib/content/shanghai/onboarding-flow.ts`. Do not use `apps/client/public/assets/locations/shanghai.mp4` for this; that is the city-map loop.
+
+Shanghai must reuse the same onboarding hangout shell as Seoul: `scene-root`, `game-frame`, `GameHUD`, `TongOverlay`, `DialogueBox`, existing exercise overlays, and webtoon takeover inside the phone frame. The panorama is scene media, not a separate page style.
+
+For unattended remote work, use `docs/shanghai/remote-agent-onboarding.md` before assigning or dispatching a slice. This handoff remains the local-worker and implementation overview.
 
 ## Parallel slices that can start immediately
 
@@ -50,8 +56,10 @@ I’m picking up a Shanghai H1 slice in the Tong repo.
 
 Read these first:
 1. docs/shanghai/plan.md
-2. docs/shanghai/h1-generation-prompts.md (or .zh.md)
-3. Seoul reference patterns in the existing content, prompt, and route files
+2. docs/shanghai/HANDOFF.md
+3. docs/shanghai/remote-agent-onboarding.md
+4. docs/shanghai/h1-generation-prompts.md (or .zh.md)
+5. Seoul reference patterns in the existing content, prompt, and route files
 
 Task rules:
 - Follow the red, green, files, and acceptance sections exactly
@@ -77,11 +85,13 @@ Done when:
 
 ## V1 definition of done
 
-1. `/game?phase=hangout&city=shanghai&scene=h1&mode=fixture` runs end-to-end without error
-2. `/game?phase=hangout&city=shanghai&scene=h1` runs the dynamic path with consistent voice behavior
-3. Webtoon panels render correctly on mobile and desktop
-4. Credit spend unlocks the full 方阿姨 line and Tong explanation; skip shows the fallback
-5. `hangoutSeat` persists across localStorage reload
-6. The playtest script passes with zero blockers
+1. `/game?fresh=1&priority=zh` routes to `/onboarding/shanghai?entry=chinese-priority&reset=1`
+2. The Shanghai route starts on the right edge of `shanghai-onboarding.mp4`
+3. Tong uses the standard overlay to establish the shop, observer role, and 方案 learning anchor before panning unlocks
+4. The 方案 exercise returns to the same hangout panorama and then unlocks pan/eavesdrop
+5. Panning/scrolling left enters the webtoon strip automatically; no character tap or `hangoutSeat` state is used in V1
+6. Webtoon panels render correctly on mobile and desktop, then Tong closes the scene and exits back to the Shanghai map
 7. Type check and relevant unit tests pass
 8. Seoul flow has no regressions
+
+QA shortcut: `/onboarding/shanghai?entry=chinese-priority&focus=webtoon&reset=1` mounts the webtoon strip directly for visual proof only; it is not the player path.

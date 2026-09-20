@@ -68,18 +68,36 @@ export function CharacterSprite({
   if (!mounted || (!spriteAvailable && !videoAvailable)) return null;
 
   const showVideo = videoAvailable && videoReady;
+  const showSpriteFallback = spriteAvailable && !showVideo;
 
   return (
     <div
       className={cn(
         'absolute inset-0',
         'transition-all duration-500 ease-out',
-        active && showVideo ? 'opacity-100 scale-100' : active && !idleVideoUrl ? 'opacity-100 scale-100' : !active ? 'opacity-40 scale-90 brightness-50' : 'opacity-0',
+        active && (showVideo || showSpriteFallback) ? 'opacity-100 scale-100' : !active ? 'opacity-40 scale-90 brightness-50' : 'opacity-0',
         position === 'left' && 'slide-in-left',
         position === 'right' && 'slide-in-right',
       )}
     >
-      {videoAvailable ? (
+      {showSpriteFallback && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={activeSpriteUrl}
+          alt={name}
+          className="h-full w-full object-cover object-top"
+          style={{
+            maskImage: 'linear-gradient(to bottom, transparent 0%, black 8px, black calc(100% - 10px), transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 8px, black calc(100% - 10px), transparent 100%)',
+          }}
+          onError={() => {
+            if (spriteCandidateIndex + 1 < spriteCandidates.length) {
+              setSpriteCandidateIndex(spriteCandidateIndex + 1);
+            }
+          }}
+        />
+      )}
+      {videoAvailable && (
         <video
           ref={videoRef}
           src={activeIdleVideoUrl}
@@ -97,23 +115,10 @@ export function CharacterSprite({
               setVideoCandidateIndex(idleVideoCandidates.length);
             }
           }}
-          className="h-full w-full object-cover object-top"
-        />
-      ) : (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
-          src={activeSpriteUrl}
-          alt={name}
-          className="h-full w-full object-cover object-top"
-          style={{
-            maskImage: 'linear-gradient(to bottom, transparent 0%, black 8px, black calc(100% - 10px), transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 8px, black calc(100% - 10px), transparent 100%)',
-          }}
-          onError={() => {
-            if (spriteCandidateIndex + 1 < spriteCandidates.length) {
-              setSpriteCandidateIndex(spriteCandidateIndex + 1);
-            }
-          }}
+          className={cn(
+            'h-full w-full object-cover object-top',
+            showSpriteFallback && 'absolute inset-0 opacity-0',
+          )}
         />
       )}
     </div>

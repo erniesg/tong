@@ -14,7 +14,7 @@ export const WEBTOON_FIXTURES: WebtoonFixtureEntry[] = [
   {
     id: 'shanghai-h1',
     label: 'Shanghai · H1 — 小笼包 Negotiation',
-    description: 'Seven-panel webtoon strip of the 守成/丁漫 dumpling-shop negotiation.',
+    description: 'Full deterministic Shanghai H1 strip: prepped eavesdrop, character-read turn, phone departure, and 方阿姨 callout.',
     spec: SHANGHAI_H1_WEBTOON,
   },
 ];

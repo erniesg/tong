@@ -1,0 +1,43 @@
+{
+  "route": "/game?dev_intro=1&dev_act=2&npc=jin&name=Mina&lang=en&qa_trace=1&qa_run_id=seoul-jin-full-recording",
+  "recording": {
+    "file": "seoul-jin-onboarding-proof.mp4",
+    "codec": "h264",
+    "width": 390,
+    "height": 844,
+    "frameRate": 4,
+    "durationSeconds": 33.25,
+    "frameCount": 133
+  },
+  "apiResponses": [
+    200,
+    200,
+    200
+  ],
+  "beats": [
+    {
+      "label": "cinematic reveal",
+      "state": "Jin intro cinematic is active; NPC sprite is not revealed behind it."
+    },
+    {
+      "label": "jin first dialogue",
+      "state": "Jin appears in the dynamic SceneView at Seoul Food Street / 포장마차."
+    },
+    {
+      "label": "tong hint",
+      "state": "Tong hint appears over the same scene."
+    },
+    {
+      "label": "player choices",
+      "state": "Player gets in-character response choices, including a small 안녕 option."
+    },
+    {
+      "label": "jin followup",
+      "state": "Choosing the first response advances to Jin's follow-up dialogue."
+    },
+    {
+      "label": "next beat",
+      "state": "Scene continues in character after the follow-up."
+    }
+  ]
+}

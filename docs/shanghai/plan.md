@@ -11,10 +11,39 @@ Dev port: 3002
 Ship H1 of a Shanghai onboarding hangout that:
 - Runs **prebaked from a fixture** for fast iteration and QA determinism
 - Runs **dynamically via AI** in production, with the same fixture as scaffolding
+- Starts from the **Shanghai dumpling-shop panorama** and lets the player pan/eavesdrop before entering the webtoon strip
+- Is triggered from the game intro when the player prioritizes learning Chinese
 - Includes a **webtoon multi-panel cliffhanger** (new scene type)
 - Enforces **voice rules** so generated dialogue never produces the known cringe patterns (`不一样的` meta-tag, invented backstory, etc.)
 
 V1 = H1 only. H2 branches + show transition = V1.1. Critique pass = V2.
+
+## Canonical onboarding media
+
+The Shanghai onboarding hangout uses the wide restaurant video from `~/Downloads/shanghai.mp4`, checked into the repo as:
+
+- Video: `apps/client/public/assets/locations/shanghai-onboarding.mp4`
+- Poster: `apps/client/public/assets/locations/shanghai-onboarding-poster.jpg`
+- Runtime keys:
+  - `city.shanghai.location.dumpling-shop.panorama.video.default`
+  - `city.shanghai.location.dumpling-shop.panorama.poster.default`
+- Content config: `apps/client/lib/content/shanghai/onboarding-flow.ts`
+
+Do not repurpose `apps/client/public/assets/locations/shanghai.mp4` for this flow. That file remains the Shanghai city-map loop.
+
+The onboarding route should open on the right edge of the panorama while Tong introduces the room and the first learning hooks, then run the 方案 anchor exercise, let the player pan/scroll left, automatically enter the webtoon/eavesdrop strip, and let Tong orchestrate the exit back to the Shanghai map. Do not add 丁漫/守成 tap targets for V1: the player is choosing to observe the table, not selecting a camera, seat, or follow target.
+
+Styling must stay inside the existing hangout shell: `scene-root` → `game-frame`, `GameHUD`, `TongOverlay`, `DialogueBox`/`scene-continue-label`, and the same exercise/webtoon takeover rules used by the Seoul onboarding hangout. Do not build Shanghai as a separately styled standalone page.
+
+## V1 learning shape
+
+Shanghai should mirror the Seoul onboarding logic: do not teach words because they are visible in the room; teach the minimum chunks needed for the scene payoff.
+
+- Primary anchors: `方案`, `看过了`, `想法`, `不一样`, `装不下去`
+- Context/reveal anchors: `接`, `重要`, `小瞿`, `小儿子`
+- Ambient/deflection only: `小笼包`, `蟹壳黄`, `阿姨`
+
+Tong's first job is context-setting: this is a shop, the player is an observer, and the learning task is to read an overheard negotiation. Food words can appear, but they should be framed as Dingman's dodge rather than the main lesson.
 
 ---
 
@@ -312,7 +341,7 @@ export type ResolutionSpec = {
 **Curriculum spec:**
 - **L0 — Script:** pinyin basics; character recognition for 方, 案, 不, 一, 样, 愿, 意, 装, 小, 笼, 包
 - **L1 — Pronunciation:** tone pairs (方案 fāng'àn, 愿意 yuànyì), tone-sandhi drills, 装 and 跑 minimal pairs
-- **L2 — Vocabulary:** 方案 proposal, 愿意 willing, 装 pretend/install, 不一样 different, 小笼包, 蟹壳黄, 阿姨, 犟 stubborn, 本事 ability, 接 answer (phone), 重要 important
+- **L2 — Vocabulary:** 方案 proposal, 看过了 looked it over, 想法 thoughts/opinion, 不一样 different, 装不下去 cannot keep pretending, 接 answer (phone), 重要 important, 小瞿 familiar diminutive, 小儿子 younger son. Food words 小笼包 / 蟹壳黄 are ambient deflection, not primary onboarding targets.
 - **L3 — Grammar:** 不会 vs 不愿意 (inability vs unwillingness); 你 formal/informal; ~了 aspect (看了); ~不下去 potential complement (装不下去)
 
 **Acceptance:**
@@ -444,8 +473,8 @@ romanceable: false
 - ex8 阿姨 LOCKED `小瞿你又多给了！`
 - Cliffhanger webtoon: 3 panels (spec in generation-prompts doc)
 - Tong free after webtoon: "小儿子 — younger son. She knows his family."
-- Credit gate: spend → 阿姨 extended line `跟他爸一个脾气，犟。但是他爸犟是因为有本事。他犟是因为要证明自己也有本事。` + tong explanation; skip → tong fallback
-- Resolution: masteryUpdates (方案, 愿意 or 装, 不一样); affinityChanges (fangayi +3); stateUpdates `hangoutSeat`
+- V1 exits after the available webtoon panels and Tong recap. The longer 方阿姨 reveal/credit gate is deferred until the remaining panels exist.
+- Resolution: masteryUpdates (方案, 看过了, 想法, 不一样); affinityChanges optional once dynamic NPC flow lands. No `hangoutSeat` state in V1.
 
 **Acceptance:**
 - Fixture validates against SceneFixture type (passes `tsc --noEmit`)
@@ -636,22 +665,21 @@ type ValidationResult =
 
 ---
 
-## Slice 4.3 — POV seat state
+## Slice 4.3 — Eavesdrop progression state
 
-**Red:** No game-state field for which NPC the player faced — H2 branch has nothing to read.
+**Red:** The old plan treated a tap on 丁漫/守成 as seat/follow state. V1 no longer uses that interaction.
 
-**Green:** `hangoutSeat: Record<sceneId, "shoucheng" | "dingman">` persisted in game store, written at scene start, available for H2 routing.
+**Green:** H1 persists only resumable onboarding progression: pre-exercise, post-exercise, pan-unlocked, webtoon, complete. Panning is attention, not a branch choice.
 
 **Files:**
-- `apps/client/lib/store/game-store.ts` (modify — add hangoutSeat field to GameState)
-- `apps/client/lib/hangout/fixture-runtime.ts` (modify — emit stateUpdate event on scene start)
-- `apps/client/lib/store/checkpoint-resume.ts` (modify if needed — include hangoutSeat in persisted state)
+- `apps/client/components/shanghai/ShanghaiOnboardingFlow.tsx`
+- `apps/client/lib/content/shanghai/onboarding-flow.ts`
 
 **Acceptance:**
-- After running H1 fixture, `useGameState().hangoutSeat["shanghai/h1-negotiation"]` is either `"shoucheng"` or `"dingman"`
-- Value persists across localStorage reloads
-- Unit test: dispatch state update → game store reflects it
-- H2 branch stub (V1.1) can read this value
+- No character tap targets are visible or focusable
+- Local checkpoint can resume panorama/webtoon/complete states
+- `focus=webtoon&reset=1` mounts the webtoon strip for QA proof
+- Future H2 branching must define a new signal; it must not assume `hangoutSeat` exists
 
 **Dependencies:** 1.2
 **Estimate:** S (half day)
@@ -663,7 +691,7 @@ type ValidationResult =
 Not implemented in V1. Cards listed for later pickup.
 
 ## Slice 5.1 — H2 shoucheng-alone fixture
-Skeleton fixture that runs when `hangoutSeat["shanghai/h1-negotiation"] === "shoucheng"`. Content beats per prior conversation: notebook, 2017 footage phone call, dad call (`我在处理。你跟爸说我在处理`), 阿姨 brings tea unrequested.
+Skeleton fixture for a future branch if a valid H2 branch signal is introduced. Content beats per prior conversation: notebook, 2017 footage phone call, dad call (`我在处理。你跟爸说我在处理`), 阿姨 brings tea unrequested.
 
 ## Slice 5.2 — H2 dingman-alone fixture
 Content beats: one steamer instead of two, earlier arrival, scrolling survival-show clips, asks 阿姨 about 守成's folder `给我看看` / `我拿回去看`, 阿姨 says `迟早的事`.
@@ -815,15 +843,16 @@ npx vitest run lib/ai/validators/voice-rules
 
 The feature is V1-shippable when:
 
-1. `mode=fixture` runs H1 end-to-end without error, producing all beats + webtoon + credit gate
-2. `mode=dynamic` runs H1 end-to-end, every npc_speak passes voice validation
-3. Webtoon panels render correctly on mobile (≤375px viewport) and desktop (≥1024px)
-4. Credit spend unlocks full 阿姨 line + tong explanation
-5. Credit skip shows tong fallback
-6. `hangoutSeat` written to game store and persists across reload
-7. Playtest script (6.3) runs cleanly with zero blockers
-8. Type check passes, relevant unit tests pass
-9. No regressions in Seoul flow
+1. `/game?fresh=1&priority=zh` routes into the Shanghai onboarding hangout
+2. The hangout starts on the right edge of the dumpling-shop panorama and uses standard `GameHUD` + `TongOverlay`
+3. Tong establishes shop context, observer role, and the 方案 learning anchor before panning unlocks
+4. The 方案 exercise returns to the panorama and then unlocks pan/eavesdrop
+5. Panning/scrolling left enters the webtoon strip automatically; no character tap or `hangoutSeat` branch is used in V1
+6. Webtoon panels render correctly on mobile (≤375px viewport) and desktop (≥1024px), then Tong closes and exits to the Shanghai map
+7. Dynamic H1 dialogue passes voice validation when the full AI path is enabled
+8. Playtest script (6.3) runs cleanly with zero blockers
+9. Type check passes, relevant unit tests pass
+10. No regressions in Seoul flow
 
 ---
 
@@ -837,6 +866,7 @@ Decisions approved by user (locked for V1):
 - H4 skipped — transition to show venue scene instead
 - Worktree port 3002
 - Webtoon is a new tool (`show_webtoon`), not an extension of cinematic
+- Shanghai onboarding hangout media is `shanghai-onboarding.mp4` from `~/Downloads/shanghai.mp4`; `shanghai.mp4` stays reserved for the city map
 
 Deferred decisions (not blocking V1):
 - Whether to add Zod runtime validation for fixtures

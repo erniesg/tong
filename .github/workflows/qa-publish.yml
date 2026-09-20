@@ -125,6 +125,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GITHUB_TOKEN: ${{ github.token }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       TONG_RUNS_R2_BUCKET: ${{ vars.TONG_RUNS_R2_BUCKET }}
@@ -283,6 +284,24 @@ jobs:
           fi
           if [ "${{ needs.resolve.outputs.dry_run }}" = "true" ]; then
             args+=(--dry-run)
+          fi
+          "${args[@]}"
+
+      - name: Notify Discord with QA evidence
+        if: success() && env.DISCORD_WEBHOOK_URL != '' && needs.resolve.outputs.dry_run != 'true'
+        run: |
+          set -euo pipefail
+          run_dir="${{ steps.effective_run.outputs.run_dir }}"
+          manifest="$run_dir/upload-manifest.json"
+          args=(
+            node scripts/discord-notify.mjs
+            --title "Tong QA evidence published"
+            --message "Trusted QA publish completed for PR #${{ needs.resolve.outputs.pr_number }}."
+            --pr-url "${{ needs.resolve.outputs.pr_url }}"
+            --issue-ref "${{ needs.resolve.outputs.issue_ref }}"
+          )
+          if [ -f "$manifest" ]; then
+            args+=(--manifest "$manifest")
           fi
           "${args[@]}"
 

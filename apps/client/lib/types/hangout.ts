@@ -91,7 +91,7 @@ export interface FillBlankExercise {
   prompt: string;
   sentence: string;
   blankIndex: number;
-  options: { id: string; text: string }[];
+  options: { id: string; text: string; romanization?: string; meaning?: string }[];
   correctOptionId: string;
   grammarNote?: string;
   explanation?: string;
@@ -135,6 +135,7 @@ export interface StrokeTracingExercise {
   sound?: string;
   language?: 'ko' | 'ja' | 'zh';
   exampleWords?: { word: string; romanization: string; meaning: string }[];
+  strokeOrder?: { label: string; pinyin?: string; description: string; glyph?: string }[];
   /** Number of reps for drill mode (习字 style). Omit or 1 = single trace. */
   reps?: number;
 }

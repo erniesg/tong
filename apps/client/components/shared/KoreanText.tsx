@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useUILang } from '@/lib/i18n/UILangContext';
 import { getCachedTranslation, requestTranslations, onTranslationsReady } from '@/lib/i18n/translation-cache';
@@ -18,6 +18,10 @@ type KoreanHanjaReading = {
   hangul: string;
   romanization: string;
 };
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
 
 /* ── Pinyin map for common Chinese characters ──────────────── */
 const PINYIN_MAP: Record<string, string> = {
@@ -91,6 +95,13 @@ const PINYIN_MAP: Record<string, string> = {
   '手': 'shǒu', '脚': 'jiǎo', '眼': 'yǎn', '耳': 'ěr', '嘴': 'zuǐ',
   '脸': 'liǎn', '心': 'xīn',
   '练': 'liàn', '习': 'xí',
+  // Shanghai H1 onboarding
+  '方': 'fāng', '案': 'àn', '法': 'fǎ', '节': 'jié', '目': 'mù',
+  '自': 'zì', '己': 'jǐ', '需': 'xū', '配': 'pèi', '合': 'hé',
+  '演': 'yǎn', '愿': 'yuàn', '假': 'jiǎ', '话': 'huà', '接': 'jiē', '重': 'zhòng',
+  '瞿': 'Qú', '响': 'xiǎng', '次': 'cì',
+  '付': 'fù', '款': 'kuǎn', '证': 'zhèng',
+  '犟': 'jiàng', '事': 'shì',
 };
 
 /**
@@ -217,8 +228,42 @@ const DICTIONARY: Record<string, DictionaryEntry> = {
   '多少钱': { romanization: 'duō-shǎo qián', translation: 'how much?' },
   '奶茶': { romanization: 'nǎi-chá', translation: 'milk tea' },
   '小笼包': { romanization: 'xiǎo-lóng bāo', translation: 'soup dumplings' },
+  '小': { romanization: 'xiǎo', translation: 'small' },
+  '笼': { romanization: 'lóng', translation: 'steamer basket' },
+  '包': { romanization: 'bāo', translation: 'wrapped bun / bun' },
+  '店': { romanization: 'diàn', translation: 'shop' },
   '地铁': { romanization: 'dì-tiě', translation: 'subway / metro' },
   '烧烤': { romanization: 'shāo-kǎo', translation: 'BBQ / grill' },
+  '方案': { romanization: 'fāng-àn', translation: 'proposal / plan' },
+  '看过了': { romanization: 'kàn guò le', translation: 'have looked it over already' },
+  '吃过了': { romanization: 'chī guò le', translation: 'already ate' },
+  '听过了': { romanization: 'tīng guò le', translation: 'already heard it' },
+  '想法': { romanization: 'xiǎng-fǎ', translation: 'thoughts / take' },
+  '节目': { romanization: 'jié-mù', translation: 'show / program' },
+  '每个': { romanization: 'měi ge', translation: 'every' },
+  '自己': { romanization: 'zì jǐ', translation: 'self' },
+  '不一样': { romanization: 'bù yí yàng', translation: 'different' },
+  '一样': { romanization: 'yí yàng', translation: 'same' },
+  '不装': { romanization: 'bù zhuāng', translation: 'does not put on an act' },
+  '装不下去': { romanization: 'zhuāng bu xià qù', translation: 'cannot keep pretending' },
+  '演不下去': { romanization: 'yǎn bu xià qù', translation: 'cannot keep performing' },
+  '说不下去': { romanization: 'shuō bu xià qù', translation: 'cannot keep saying it' },
+  '吃不下去': { romanization: 'chī bu xià qù', translation: 'cannot keep eating' },
+  '不会': { romanization: 'bù huì', translation: 'cannot' },
+  '不愿意': { romanization: 'bù yuàn yì', translation: 'will not / is unwilling' },
+  '说假话': { romanization: 'shuō jiǎ huà', translation: 'tell lies' },
+  '不会说假话': { romanization: 'bù huì shuō jiǎ huà', translation: 'cannot lie' },
+  '不愿意说假话': { romanization: 'bù yuàn yì shuō jiǎ huà', translation: 'will not lie' },
+  '你接吧': { romanization: 'nǐ jiē ba', translation: 'answer it' },
+  '不重要': { romanization: 'bù zhòng yào', translation: 'not important' },
+  '我知道了': { romanization: 'wǒ zhī dào le', translation: 'I know / got it' },
+  '小瞿': { romanization: 'xiǎo Qú', translation: 'Little Qu; familiar address' },
+  '瞿先生': { romanization: 'Qú xiān sheng', translation: 'Mr. Qu' },
+  '瞿家': { romanization: 'Qú jiā', translation: 'the Qu family' },
+  '小儿子': { romanization: 'xiǎo ér zi', translation: 'younger son' },
+  '犟': { romanization: 'jiàng', translation: 'stubborn in a hard, proud way' },
+  '本事': { romanization: 'běn shi', translation: 'real ability' },
+  '证明': { romanization: 'zhèng míng', translation: 'prove' },
   '我是谁': { romanization: 'wǒ shì shéi', translation: 'who am I' },
   '在哪': { romanization: 'zài nǎ', translation: 'where' },
   '这里': { romanization: 'zhè-lǐ', translation: 'here' },
@@ -335,9 +380,54 @@ function isTargetChar(char: string, targetLang: TargetLang): boolean {
 
 /* ── Text segmentation ─────────────────────────────────────── */
 
+function segmentChineseRun(run: string): { text: string; isTarget: boolean }[] {
+  const segments: { text: string; isTarget: boolean }[] = [];
+  let index = 0;
+  while (index < run.length) {
+    let matched = '';
+    const maxLen = Math.min(6, run.length - index);
+    for (let len = maxLen; len > 1; len -= 1) {
+      const candidate = run.slice(index, index + len);
+      if (DICTIONARY[candidate]) {
+        matched = candidate;
+        break;
+      }
+    }
+    if (matched) {
+      segments.push({ text: matched, isTarget: true });
+      index += matched.length;
+    } else {
+      segments.push({ text: run[index], isTarget: true });
+      index += 1;
+    }
+  }
+  return segments;
+}
+
 function segmentText(text: string, targetLang: TargetLang): { text: string; isTarget: boolean }[] {
   if (!text) return [];
   const segments: { text: string; isTarget: boolean }[] = [];
+
+  if (targetLang === 'zh') {
+    let index = 0;
+    while (index < text.length) {
+      const char = text[index];
+      if (isTargetChar(char, targetLang)) {
+        let end = index + 1;
+        while (end < text.length && isTargetChar(text[end], targetLang)) end += 1;
+        segments.push(...segmentChineseRun(text.slice(index, end)));
+        index = end;
+        continue;
+      }
+
+      let end = index + 1;
+      while (end < text.length && !isTargetChar(text[end], targetLang)) end += 1;
+      segments.push({ text: text.slice(index, end), isTarget: false });
+      index = end;
+    }
+    return segments;
+  }
+
   let current = '';
   let currentIsTarget = false;
 
@@ -520,16 +610,19 @@ function getTooltipInfo(word: string, targetLang: TargetLang, explainLang: strin
 interface KoreanTextProps {
   text: string;
   targetLang?: TargetLang;
+  interactive?: boolean;
   /** Called when a word is tapped (in addition to showing tooltip). */
   onWordTap?: () => void;
 }
 
-export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextProps) {
+export function KoreanText({ text, targetLang = 'ko', interactive = true, onWordTap }: KoreanTextProps) {
   const explainLang = useUILang();
   const [activeWord, setActiveWord] = useState<string | null>(null);
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number; bottom: number } | null>(null);
+  const [tooltipAnchor, setTooltipAnchor] = useState<{ x: number; y: number; bottom: number } | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ left: number; top: number; placement: 'above' | 'below' } | null>(null);
   const [tooltipInfo, setTooltipInfo] = useState<{ romanization: string; translation?: string } | null>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [, setTranslationTick] = useState(0);
 
@@ -551,17 +644,23 @@ export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextPro
   }, []);
 
   const showTooltip = useCallback((word: string, target: HTMLElement) => {
+    if (!interactive) return;
     const info = getTooltipInfo(word.trim(), targetLang, explainLang);
     if (!info) return;
     const rect = target.getBoundingClientRect();
+    setTooltipPos(null);
     setActiveWord(word);
     setTooltipInfo(info);
-    setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top, bottom: rect.bottom });
-  }, [targetLang, explainLang]);
+    setTooltipAnchor({ x: rect.left + rect.width / 2, y: rect.top, bottom: rect.bottom });
+  }, [interactive, targetLang, explainLang]);
 
   const hideTooltip = useCallback(() => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-    hoverTimeoutRef.current = setTimeout(() => { setActiveWord(null); }, 150);
+    hoverTimeoutRef.current = setTimeout(() => {
+      setActiveWord(null);
+      setTooltipPos(null);
+      setTooltipAnchor(null);
+    }, 150);
   }, []);
 
   const handleMouseEnter = useCallback((word: string, e: React.MouseEvent) => {
@@ -578,13 +677,44 @@ export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextPro
     onWordTap?.();
   }, [activeWord, showTooltip, onWordTap, targetLang]);
 
-  const tooltipVisible = activeWord && tooltipInfo && tooltipPos;
+  useLayoutEffect(() => {
+    if (!mounted || !activeWord || !tooltipInfo || !tooltipAnchor) return;
+    const tooltip = tooltipRef.current;
+    if (!tooltip) return;
+
+    const frame = document.querySelector('.game-frame');
+    const frameRect = frame instanceof HTMLElement
+      ? frame.getBoundingClientRect()
+      : { top: 0, left: 0, right: window.innerWidth, bottom: window.innerHeight };
+    const margin = 8;
+    const rect = tooltip.getBoundingClientRect();
+    const availableLeft = Math.max(frameRect.left, 0) + margin;
+    const availableRight = Math.min(frameRect.right, window.innerWidth) - margin;
+    const availableTop = Math.max(frameRect.top, 0) + margin;
+    const availableBottom = Math.min(frameRect.bottom, window.innerHeight) - margin;
+    const availableWidth = Math.max(80, availableRight - availableLeft);
+    const width = Math.min(rect.width || 160, availableWidth, 260);
+    const height = rect.height || 76;
+    const centeredLeft = tooltipAnchor.x - width / 2;
+    const left = clamp(centeredLeft, availableLeft, Math.max(availableLeft, availableRight - width));
+    const aboveTop = tooltipAnchor.y - height - margin;
+    const belowTop = tooltipAnchor.bottom + margin;
+    const placement = aboveTop >= availableTop ? 'above' : 'below';
+    const rawTop = placement === 'above' ? aboveTop : belowTop;
+    const top = clamp(rawTop, availableTop, Math.max(availableTop, availableBottom - height));
+    setTooltipPos({ left, top, placement });
+  }, [activeWord, mounted, tooltipAnchor, tooltipInfo]);
+
+  const tooltipVisible = activeWord && tooltipInfo && tooltipAnchor;
 
   return (
     <>
       <span className="relative inline">
         {segments.map((seg, i) => {
           if (!seg.isTarget) {
+            return <span key={i}>{seg.text}</span>;
+          }
+          if (!interactive) {
             return <span key={i}>{seg.text}</span>;
           }
           return (
@@ -602,33 +732,26 @@ export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextPro
         })}
       </span>
 
-      {mounted && tooltipVisible && (() => {
-        // Find the game-frame to clamp tooltip within its bounds
-        const frame = document.querySelector('.game-frame');
-        const frameRect = frame ? frame.getBoundingClientRect() : { top: 0, left: 0, right: window.innerWidth };
-        const spaceAbove = tooltipPos.y - frameRect.top;
-        const flipBelow = spaceAbove < 90; // tooltip is ~80px tall
-
-        // Clamp horizontal position so tooltip stays within game frame
-        const tooltipHalfW = 80; // ~half of min-w-[140px] + padding
-        const clampedX = Math.max(frameRect.left + tooltipHalfW + 8, Math.min(tooltipPos.x, frameRect.right - tooltipHalfW - 8));
-
-        return createPortal(
+      {mounted && tooltipVisible && createPortal(
           <div
+            ref={tooltipRef}
             className="korean-tooltip fade-in pointer-events-auto"
             onMouseEnter={() => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); }}
             onMouseLeave={hideTooltip}
             style={{
               position: 'fixed',
-              left: `${clampedX}px`,
-              top: flipBelow ? `${tooltipPos.bottom + 8}px` : `${tooltipPos.y - 8}px`,
-              transform: flipBelow ? 'translate(-50%, 0%)' : 'translate(-50%, -100%)',
+              left: `${tooltipPos?.left ?? tooltipAnchor.x}px`,
+              top: `${tooltipPos?.top ?? tooltipAnchor.bottom + 8}px`,
+              transform: 'none',
               zIndex: 99999,
-              maxWidth: `${frameRect.right - frameRect.left - 16}px`,
+              maxWidth: 'min(260px, calc(100vw - 16px))',
+              maxHeight: 'calc(100vh - 16px)',
+              overflowY: 'auto',
+              opacity: tooltipPos ? 1 : 0,
             }}
           >
             {/* Arrow on top when flipped below */}
-            {flipBelow && (
+            {(tooltipPos?.placement ?? 'below') === 'below' && (
               <div className="flex justify-center">
                 <div className="w-2 h-2 rotate-45 bg-[#16213e] border-l border-t border-[var(--color-accent-gold)]/40 -mb-1" style={{ zIndex: 1 }} />
               </div>
@@ -643,15 +766,14 @@ export function KoreanText({ text, targetLang = 'ko', onWordTap }: KoreanTextPro
               )}
             </div>
             {/* Arrow on bottom when above (default) */}
-            {!flipBelow && (
+            {(tooltipPos?.placement ?? 'below') === 'above' && (
               <div className="flex justify-center">
                 <div className="w-2 h-2 rotate-45 bg-[#16213e] border-r border-b border-[var(--color-accent-gold)]/40 -mt-1" />
               </div>
             )}
           </div>,
           document.body,
-        );
-      })()}
+        )}
     </>
   );
 }

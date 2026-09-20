@@ -47,6 +47,7 @@ export function FillBlank({ exercise, onResult }: Props) {
           const isCorrectOpt = opt.id === exercise.correctOptionId;
           const showCorrect = submitted && isCorrectOpt;
           const showWrong = submitted && isThis && !isCorrect;
+          const showDetail = submitted && (isThis || isCorrectOpt) && (opt.romanization || opt.meaning);
 
           return (
             <button
@@ -60,8 +61,17 @@ export function FillBlank({ exercise, onResult }: Props) {
                 showWrong && 'border-red-500 bg-red-500/10',
                 submitted && !isCorrectOpt && !isThis && 'opacity-40',
               )}
+              data-fill-blank-option={opt.id}
             >
-              {opt.text}
+              <span className="fill-blank__option-content">
+                <span>{opt.text}</span>
+                {showDetail && (
+                  <span className="fill-blank__option-detail" data-fill-blank-option-detail>
+                    {opt.romanization && <span className="fill-blank__option-pinyin">{opt.romanization}</span>}
+                    {opt.meaning && <span className="fill-blank__option-gloss">{opt.meaning}</span>}
+                  </span>
+                )}
+              </span>
             </button>
           );
         })}

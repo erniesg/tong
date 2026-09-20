@@ -1,0 +1,209 @@
+name: Claude Headless PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Claude prompt describing the requested implementation"
+        required: true
+        type: string
+      base_branch:
+        description: "Base branch for the generated PR"
+        required: false
+        type: string
+        default: "main"
+      branch:
+        description: "Head branch for the generated PR (must start with claude/)"
+        required: true
+        type: string
+      pr_title:
+        description: "Pull request title"
+        required: true
+        type: string
+      pr_body:
+        description: "Optional PR body preamble"
+        required: false
+        type: string
+      issue_ref:
+        description: "Optional issue ref, e.g. erniesg/tong#49"
+        required: false
+        type: string
+      route:
+        description: "Optional QA route metadata"
+        required: false
+        type: string
+      scenario_seed:
+        description: "Optional QA scenario seed metadata"
+        required: false
+        type: string
+      checkpoint_id:
+        description: "Optional QA checkpoint metadata"
+        required: false
+        type: string
+      qa_recipe:
+        description: "Optional CI QA recipe, e.g. haeun_fresh_demo"
+        required: false
+        type: string
+      no_auto_evidence_upload:
+        description: "Skip automatic evidence upload in trusted QA publish"
+        required: false
+        type: boolean
+        default: false
+      auto_qa_publish:
+        description: "Explicitly dispatch trusted QA publish after PR creation"
+        required: false
+        type: boolean
+        default: true
+      claude_args:
+        description: "Optional extra arguments for claude-code-action (allowed_tools, etc.)"
+        required: false
+        type: string
+      claude_model:
+        description: "Override Claude model id (defaults to action default)"
+        required: false
+        type: string
+      agent_attempts:
+        description: "Number of prior self-heal attempts (0 for original run)"
+        required: false
+        type: string
+        default: "0"
+      enable_self_heal:
+        description: "Apply auto-self-heal label so failed PRs trigger automatic retry"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  actions: write
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  claude:
+    runs-on: ubuntu-latest
+    outputs:
+      pull_request_number: ${{ steps.cpr.outputs.pull-request-number }}
+      pull_request_url: ${{ steps.cpr.outputs.pull-request-url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base_branch }}
+
+      - name: Ensure control-plane labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/pm/ensure-labels.mjs --repo "${{ github.repository }}"
+
+      - name: Validate branch prefix
+        run: |
+          case "${{ inputs.branch }}" in
+            claude/*) ;;
+            *) echo "branch must start with claude/. Got: ${{ inputs.branch }}" >&2; exit 1 ;;
+          esac
+
+      - name: Prime repo context
+        run: |
+          npm --prefix apps/server ci
+          npm --prefix apps/client ci
+          npm run demo:smoke
+          npm run ingest:mock
+
+      - name: Confirm Claude subscription auth
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+            echo "CLAUDE_CODE_OAUTH_TOKEN is not set." >&2
+            echo "Remote Claude execution requires a Claude Code subscription token. Run 'claude setup-token' locally and store the result in GitHub secrets." >&2
+            echo "API key fallback is intentionally disabled to avoid Anthropic API billing." >&2
+            exit 1
+          fi
+
+      - name: Run Claude Code
+        id: claude
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        # Pinned to beta SHA (28f8362 = Claude Code 1.0.88) to prevent silent drift.
+        # Bump intentionally after testing: gh api repos/anthropics/claude-code-action/commits/beta
+        uses: anthropics/claude-code-action@28f83620103c48a57093dcc2837eec89e036bb9f
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          mode: agent
+          prompt: |
+            Repository: ${{ github.repository }}
+            Base branch: ${{ inputs.base_branch }}
+            Issue ref: ${{ inputs.issue_ref }}
+
+            Checkpoint discipline:
+            - Work in small coherent slices.
+            - Create a small local checkpoint commit after each complete slice if the action environment supports local commits without interfering with the workflow create-pull-request step.
+            - If local commits are not safe in this run, keep coherent worktree changes and summarize the checkpoint log in the final output.
+            - Never push manually. Never rewrite, squash, or revert unrelated changes.
+
+            Task:
+            ${{ inputs.prompt }}
+          model: ${{ inputs.claude_model }}
+          claude_args: ${{ inputs.claude_args }}
+
+      - name: Write PR body
+        id: pr_body
+        env:
+          INPUT_PR_TITLE: ${{ inputs.pr_title }}
+          INPUT_BRANCH: ${{ inputs.branch }}
+          INPUT_BASE_BRANCH: ${{ inputs.base_branch }}
+          INPUT_PR_BODY: ${{ inputs.pr_body }}
+          INPUT_ISSUE_REF: ${{ inputs.issue_ref }}
+          INPUT_ROUTE: ${{ inputs.route }}
+          INPUT_SCENARIO_SEED: ${{ inputs.scenario_seed }}
+          INPUT_CHECKPOINT_ID: ${{ inputs.checkpoint_id }}
+          INPUT_QA_RECIPE: ${{ inputs.qa_recipe }}
+          INPUT_NO_AUTO_EVIDENCE_UPLOAD: ${{ inputs.no_auto_evidence_upload }}
+          INPUT_AGENT_PROVIDER: claude
+          INPUT_AGENT_PROMPT: ${{ inputs.prompt }}
+          INPUT_AGENT_ATTEMPTS: ${{ inputs.agent_attempts || '0' }}
+          INPUT_AGENT_ORIGINAL_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node scripts/write_pr_body_with_qa_request.mjs --body-path "$RUNNER_TEMP/pr-body.md"
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: ${{ inputs.pr_title }}
+          title: ${{ inputs.pr_title }}
+          body-path: ${{ runner.temp }}/pr-body.md
+          branch: ${{ inputs.branch }}
+          base: ${{ inputs.base_branch }}
+          delete-branch: false
+
+      - name: Apply auto-self-heal label
+        if: inputs.enable_self_heal && steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr edit "${{ steps.cpr.outputs.pull-request-number }}" \
+            --repo "${{ github.repository }}" \
+            --add-label "auto-self-heal" || true
+
+      - name: Dispatch trusted QA publish
+        if: inputs.auto_qa_publish && steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run qa-publish.yml --repo "${{ github.repository }}" -f pr_number="${{ steps.cpr.outputs.pull-request-number }}"
+
+      - name: Step summary
+        if: always()
+        run: |
+          {
+            echo "## Claude Headless PR"
+            echo
+            echo "- PR: ${{ steps.cpr.outputs.pull-request-url }}"
+            echo "- Issue ref: \`${{ inputs.issue_ref }}\`"
+            echo "- Route: \`${{ inputs.route }}\`"
+            echo "- QA recipe: \`${{ inputs.qa_recipe }}\`"
+            echo "- Auto QA publish: \`${{ inputs.auto_qa_publish }}\`"
+            echo "- Self-heal attempt: \`${{ inputs.agent_attempts || '0' }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

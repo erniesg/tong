@@ -58,10 +58,21 @@ on:
         description: "Optional extra codex exec args"
         required: false
         type: string
+      agent_attempts:
+        description: "Number of prior self-heal attempts (0 for original run)"
+        required: false
+        type: string
+        default: "0"
+      enable_self_heal:
+        description: "Apply auto-self-heal label so failed PRs trigger automatic retry"
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   actions: write
   contents: write
+  issues: write
   pull-requests: write
 
 jobs:
@@ -75,6 +86,11 @@ jobs:
         with:
           ref: ${{ inputs.base_branch }}
 
+      - name: Ensure control-plane labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/pm/ensure-labels.mjs --repo "${{ github.repository }}"
+
       - name: Prime repo context
         run: |
           npm --prefix apps/server ci
@@ -82,15 +98,36 @@ jobs:
           npm run demo:smoke
           npm run ingest:mock
 
+      - name: Configure Codex subscription auth
+        env:
+          CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CODEX_AUTH_JSON:-}" ]; then
+            echo "CODEX_AUTH_JSON is not set." >&2
+            echo "Remote Codex execution requires a ChatGPT subscription token. Run 'codex login' locally and run 'gh secret set CODEX_AUTH_JSON < ~/.codex/auth.json'." >&2
+            echo "API key fallback is intentionally disabled to avoid OpenAI API billing." >&2
+            exit 1
+          fi
+          mkdir -p "$HOME/.codex"
+          printf '%s' "$CODEX_AUTH_JSON" > "$HOME/.codex/auth.json"
+          chmod 600 "$HOME/.codex/auth.json"
+          echo "Codex subscription auth configured from CODEX_AUTH_JSON."
+
       - name: Run Codex
         id: codex
         uses: openai/codex-action@v1
         with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           prompt: |
             Repository: ${{ github.repository }}
             Base branch: ${{ inputs.base_branch }}
             Issue ref: ${{ inputs.issue_ref }}
+
+            Checkpoint discipline:
+            - Work in small coherent slices.
+            - Create a small local checkpoint commit after each complete slice if the action environment supports local commits without interfering with the workflow create-pull-request step.
+            - If local commits are not safe in this run, keep coherent worktree changes and summarize the checkpoint log in the final output.
+            - Never push manually. Never rewrite, squash, or revert unrelated changes.
 
             Task:
             ${{ inputs.prompt }}
@@ -102,6 +139,7 @@ jobs:
         env:
           INPUT_PR_TITLE: ${{ inputs.pr_title }}
           INPUT_BRANCH: ${{ inputs.branch }}
+          INPUT_BASE_BRANCH: ${{ inputs.base_branch }}
           INPUT_PR_BODY: ${{ inputs.pr_body }}
           INPUT_ISSUE_REF: ${{ inputs.issue_ref }}
           INPUT_ROUTE: ${{ inputs.route }}
@@ -109,6 +147,10 @@ jobs:
           INPUT_CHECKPOINT_ID: ${{ inputs.checkpoint_id }}
           INPUT_QA_RECIPE: ${{ inputs.qa_recipe }}
           INPUT_NO_AUTO_EVIDENCE_UPLOAD: ${{ inputs.no_auto_evidence_upload }}
+          INPUT_AGENT_PROVIDER: codex
+          INPUT_AGENT_PROMPT: ${{ inputs.prompt }}
+          INPUT_AGENT_ATTEMPTS: ${{ inputs.agent_attempts || '0' }}
+          INPUT_AGENT_ORIGINAL_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: node scripts/write_pr_body_with_qa_request.mjs --body-path "$RUNNER_TEMP/pr-body.md"
 
       - name: Create Pull Request
@@ -116,12 +158,21 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: ${{ inputs.commit-message }}
+          commit-message: ${{ inputs.pr_title }}
           title: ${{ inputs.pr_title }}
           body-path: ${{ runner.temp }}/pr-body.md
           branch: ${{ inputs.branch }}
           base: ${{ inputs.base_branch }}
           delete-branch: false
+
+      - name: Apply auto-self-heal label
+        if: inputs.enable_self_heal && steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr edit "${{ steps.cpr.outputs.pull-request-number }}" \
+            --repo "${{ github.repository }}" \
+            --add-label "auto-self-heal" || true
 
       - name: Dispatch trusted QA publish
         if: inputs.auto_qa_publish && steps.cpr.outputs.pull-request-number != ''
