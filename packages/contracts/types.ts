@@ -1142,3 +1142,65 @@ export interface VolcTTSSynthesizeResponse {
   encoding: string;
   durationMs?: number;
 }
+
+export type PlaytestFindingRouteStatus =
+  | 'unrouted'
+  | 'skip'
+  | 'update_issue'
+  | 'new_issue'
+  | 'direct_pr'
+  | 'human_review'
+  | 'done';
+
+export interface PlaytestArtifactLink {
+  href: string;
+  label?: string;
+  type?: string;
+}
+
+export interface PlaytestFindingRouteAuditEvent {
+  at: string;
+  type: string;
+  routeStatus?: PlaytestFindingRouteStatus;
+  reason?: string | null;
+  confidence?: number | null;
+  issueRef?: string | null;
+  prRef?: string | null;
+  actor?: string;
+}
+
+export interface PlaytestFindingRecord {
+  findingId: string;
+  dedupeKey: string;
+  sessionId: string;
+  createdAt: string;
+  updatedAt: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  category: string;
+  severity: string;
+  description: string;
+  whatUserExpected?: string;
+  whatActuallyHappened?: string;
+  suggestedFix?: string;
+  inferredComponent?: string;
+  artifactLinks: PlaytestArtifactLink[];
+  routeStatus: PlaytestFindingRouteStatus;
+  routeReason: string | null;
+  routeConfidence: number | null;
+  githubIssueRef: string | null;
+  githubPrRef: string | null;
+  humanOverride: Record<string, unknown> | null;
+  occurrenceCount: number;
+  analysisIds: string[];
+  auditTrail: PlaytestFindingRouteAuditEvent[];
+}
+
+export interface PlaytestFindingIngestResponse {
+  sessionId: string;
+  analysisId: string | null;
+  created: number;
+  updated: number;
+  total: number;
+  findings: PlaytestFindingRecord[];
+}

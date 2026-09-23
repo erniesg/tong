@@ -842,3 +842,35 @@ Response:
   "openAiApiKeyConfigured": false
 }
 ```
+
+## Playtest findings ledger
+
+### POST `/api/v1/playtest/findings/ingest`
+Normalizes `analysis.result.issues[]` (or direct `findings[]`) into persistent per-finding records keyed by a stable dedupe fingerprint.
+
+Request:
+```json
+{
+  "sessionId": "hK29sdL2pQ",
+  "analysisId": "analysis-4c66f2a"
+}
+```
+
+Response shape: `fixtures/playtest.findings.sample.json`.
+
+### GET `/api/v1/playtest/findings`
+Query options:
+- `routeStatus` (optional): `unrouted|skip|update_issue|new_issue|direct_pr|human_review|done`
+- `sessionId` (optional)
+
+### POST `/api/v1/playtest/findings/:findingId/route`
+Stores deterministic route-state transitions with reason/confidence for idempotent orchestration reruns.
+
+### POST `/api/v1/playtest/findings/:findingId/link`
+Attaches GitHub issue/PR refs to a finding record.
+
+### POST `/api/v1/playtest/findings/:findingId/override`
+Stores manual override metadata.
+
+### POST `/api/v1/playtest/findings/:findingId/reopen`
+Returns a previously-routed finding to `unrouted`.
