@@ -18,7 +18,7 @@ interface PlaytestConfig {
   locationId?: string;
   hangoutId?: string;
   exerciseTypes?: string[];
-  seed?: number;
+  seed?: number | null;
   npc?: string;
   playerName?: string;
   chineseName?: string;
