@@ -264,6 +264,7 @@ class PlaytestSmokeTest:
             context = await browser.new_context(
                 viewport=VIEWPORT,
                 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                ignore_https_errors=True,
             )
             page = await context.new_page()
 
