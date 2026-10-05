@@ -264,6 +264,7 @@ class PlaytestSmokeTest:
             context = await browser.new_context(
                 viewport=VIEWPORT,
                 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                ignore_https_errors=True,
             )
             page = await context.new_page()
 
@@ -275,6 +276,14 @@ class PlaytestSmokeTest:
 
             print("\n[2/6] Loading playtest page...", flush=True)
             await self.test_playtest_page_loads(page)
+
+            # Dismiss screen-recording consent dialog if present
+            try:
+                skip_btn = page.get_by_role("button", name="Continue without")
+                await skip_btn.wait_for(state="visible", timeout=10000)
+                await skip_btn.click()
+            except Exception:
+                pass
 
             print("\n[3/6] Verifying redirect to /game...", flush=True)
             await self.test_redirect_to_game(page)
