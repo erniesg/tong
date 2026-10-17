@@ -315,8 +315,8 @@ export const SHANGHAI_ONBOARDING_PANORAMA: ShanghaiOnboardingPanorama = {
   id: 'shanghai-h1-panorama-entry',
   sceneId: 'shanghai/h1-negotiation',
   locationId: 'shanghai:dumpling_shop',
-  videoUrl: runtimeAssetUrl(SHANGHAI_ONBOARDING_PANORAMA_VIDEO_KEY),
-  posterUrl: runtimeAssetUrl(SHANGHAI_ONBOARDING_PANORAMA_POSTER_KEY),
+  videoUrl: runtimeAssetUrl(SHANGHAI_ONBOARDING_PANORAMA_VIDEO_KEY, '/assets/locations/shanghai-onboarding.mp4'),
+  posterUrl: runtimeAssetUrl(SHANGHAI_ONBOARDING_PANORAMA_POSTER_KEY, '/assets/locations/shanghai-onboarding-poster.jpg'),
   media: {
     width: 3840,
     height: 2160,

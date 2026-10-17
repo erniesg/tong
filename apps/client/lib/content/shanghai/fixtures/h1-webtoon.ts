@@ -1,6 +1,7 @@
 import type { WebtoonPanel, WebtoonSpec } from '@/lib/hangout/fixture-types';
+import { resolveRuntimeAssetUrl } from '@/lib/runtime-assets';
 
-const ASSET = (n: number) => `/assets/webtoon/shanghai/h1/${n}.png`;
+const ASSET = (n: number) => resolveRuntimeAssetUrl(`/assets/webtoon/shanghai/h1/${n}.png`);
 
 // Warm daytime palette (parchment surface).
 const PARCHMENT = '#ffffff';
