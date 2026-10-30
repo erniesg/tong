@@ -3,12 +3,13 @@
 // The reference art is atmospheric, not a literal map of Hongdae.
 import * as THREE from 'three';
 import { Reflector } from 'three/addons/objects/Reflector.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { makeTree } from './nature.js';
+import { registerInterior, buildRoom } from './interiors.js';
 import {
   G, add, box, boxMM, collider, mat, makeCanvas, canvasTexture, roundRect, softTexture, textTexture,
   nightGlow, pointLight, hdr, rand, seeded, clamp, worldUV,
 } from './util.js';
-import { asphalt, pavers, brick, stone, plaster, wood, tiles, fabric, bark, tiled } from './textures.js';
+import { asphalt, pavers, brick, stone, plaster, wood, tiles, fabric, tiled } from './textures.js';
 import { toon } from './characters.js';
 
 /* ── Layout ───────────────────────────────────────── */
@@ -44,6 +45,43 @@ export const PLACES = [
   { id: 'studio', ko: '연습실', en: 'Practice Studio', spawn: [-4.6, TERRACE_Y, -37.5], yaw: Math.PI / 2, icon: '💃' },
   { id: 'lookout', ko: '한강 전망대', en: 'Han River Lookout', spawn: [6, TERRACE_Y, -41.5], yaw: 0, icon: '🌉' },
 ];
+for (const place of PLACES) {
+  if (place.id === 'lookout') continue;
+  place.category = place.id;
+  place.interiorId = `seoul-${place.id}-room`;
+  place.entry = { food: [TX, 0, TENT.maxZ], store: [-10, 0, -15.5], cafe: [10, 0, -15.5],
+    subway: [-4, 0, -19.2], studio: [-6, TERRACE_Y, -37.5] }[place.id];
+}
+
+// Register the existing Seoul shells, including their upper floors, fascia and
+// ceiling fixtures. Furniture stays visible; original story/NPC spots stay put.
+function registerSeoulShell(category, initial, bounds, floorY = 0) {
+  const walls = [], roofs = [];
+  G.scene.updateMatrixWorld(true);
+  for (const root of G.scene.children.filter(o => !initial.has(o))) {
+    if (!root.isMesh && !root.isGroup && !root.isLine) continue;
+    const b = new THREE.Box3().setFromObject(root);
+    if (b.isEmpty()) continue;
+    if (b.min.y >= floorY + 2.3) roofs.push(root);
+    else if (b.max.y >= floorY + 3 || (b.max.y - b.min.y > 0.4 &&
+      ((b.max.x - b.min.x < 0.35 && (Math.abs(b.min.x - bounds.minX) < 0.2 || Math.abs(b.max.x - bounds.maxX) < 0.2)) ||
+       (b.max.z - b.min.z < 0.35 && (Math.abs(b.min.z - bounds.minZ) < 0.2 || Math.abs(b.max.z - bounds.maxZ) < 0.2))))) walls.push(root);
+  }
+  for (const collision of G.colliders.slice(initial.colliderStart)) {
+    const boundary = (collision.maxX - collision.minX < 0.4 &&
+      (Math.abs(collision.minX - bounds.minX) < 0.4 || Math.abs(collision.maxX - bounds.maxX) < 0.4)) ||
+      (collision.maxZ - collision.minZ < 0.4 &&
+      (Math.abs(collision.minZ - bounds.minZ) < 0.4 || Math.abs(collision.maxZ - bounds.maxZ) < 0.4));
+    const matching = G.scene.children.filter(o => !initial.has(o) && o.isMesh).map(o => new THREE.Box3().setFromObject(o)).filter(b =>
+      Math.abs(b.min.x - collision.minX) < 0.04 && Math.abs(b.max.x - collision.maxX) < 0.04 &&
+      Math.abs(b.min.z - collision.minZ) < 0.04 && Math.abs(b.max.z - collision.maxZ) < 0.04);
+    const maxY = matching.length ? Math.max(...matching.map(b => b.max.y)) : floorY + (boundary ? 3 : 1);
+    Object.assign(collision, { interiorId: `seoul-${category}-room`, role: boundary || maxY > floorY + 3 ? 'wall' : 'furniture', minY: floorY, maxY });
+  }
+  return registerInterior({ id: `seoul-${category}-room`, city: 'seoul', category, bounds,
+    floorY, door: PLACES.find(p => p.id === category).entry,
+    center: [(bounds.minX + bounds.maxX) / 2, floorY, (bounds.minZ + bounds.maxZ) / 2], walls, roofs });
+}
 
 export const ZONES = [
   { id: 'store', minX: -18, maxX: -10, minZ: -20, maxZ: -11, indoor: true },
@@ -355,36 +393,9 @@ const leafTex = (() => {
 export const treeSpots = [];
 
 function ginkgo(x, y, z, rnd, scale = 1) {
-  const tb = tiled(bark(), 1, 2);
-  const trunk = mat(0xffffff, { map: tb.map, normalMap: tb.normalMap });
-  const h = 3.4 * scale;
-  add(new THREE.CylinderGeometry(0.12 * scale, 0.2 * scale, h, 8), trunk, x, y + h / 2, z);
-  const geos = [];
-  const golds = [0xf5c13a, 0xe9a521, 0xf7d250, 0xe0b03a, 0xd99c1c];
-  const n = 7;
-  for (let i = 0; i < n; i++) {
-    const r = (0.7 + rnd() * 0.6) * scale;
-    const g = new THREE.IcosahedronGeometry(r, 1);
-    const p = g.attributes.position;
-    for (let k = 0; k < p.count; k++) p.setXYZ(k, p.getX(k) * (0.9 + rnd() * 0.25), p.getY(k) * (0.85 + rnd() * 0.25), p.getZ(k) * (0.9 + rnd() * 0.25));
-    const a = (i / n) * Math.PI * 2;
-    const rr = i === 0 ? 0 : 0.7 * scale;
-    g.translate(Math.cos(a) * rr, h * (0.78 + rnd() * 0.25) + (i === 0 ? 0.6 * scale : 0), Math.sin(a) * rr);
-    const col = new THREE.Color(golds[Math.floor(rnd() * golds.length)]);
-    const colors = new Float32Array(p.count * 3);
-    for (let k = 0; k < p.count; k++) {
-      const v = 0.85 + rnd() * 0.3;
-      colors.set([col.r * v, col.g * v, col.b * v], k * 3);
-    }
-    g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geos.push(g);
-  }
-  const canopy = add(mergeGeometries(geos), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9 }), x, y, z);
-  canopy.castShadow = true;
-  G.blockers.push(canopy);
-  collider(x - 0.3, x + 0.3, z - 0.3, z + 0.3);
+  const tree = makeTree({ x, y, z, scale, kind: 'ginkgo', seed: Math.floor(rnd() * 0xffffffff) });
   treeSpots.push(new THREE.Vector3(x, y, z));
-  return canopy;
+  return tree;
 }
 
 function leafCarpet(rnd) {
@@ -589,6 +600,8 @@ function lantern(text, x, y, z, real) {
 }
 
 function buildTent() {
+  const initial = new Set(G.scene.children);
+  initial.colliderStart = G.colliders.length;
   const { minX, maxX, minZ, maxZ, wallH, ridgeH } = TENT;
   const W = maxX - minX;
   const D = maxZ - minZ;
@@ -721,12 +734,18 @@ function buildTent() {
   collider(minX, TX - open, maxZ - 0.1, maxZ + 0.1);
   collider(TX + open, maxX, maxZ - 0.1, maxZ + 0.1);
   collider(minX, maxX, minZ, -0.66);
+  const room = registerSeoulShell('food', initial, { minX, maxX, minZ, maxZ });
+  // The thin tarp panels also need directional cutaway even below 3m.
+  for (const mesh of G.scene.children.filter(o => !initial.has(o))) {
+    if (mesh.isMesh && mesh.material === tarp && !room.walls.includes(mesh) && !room.roofs.includes(mesh)) room.walls.push(mesh);
+  }
+  registerInterior(room);
 }
 
 export function setTentOpen(open) {
   tentMats.flap.visible = !open;
   G.colliders = G.colliders.filter((c) => !c.flap);
-  if (!open) G.colliders.push({ minX: TX - 2.2, maxX: TX + 2.2, minZ: TENT.maxZ - 0.1, maxZ: TENT.maxZ + 0.1, flap: true });
+  if (!open) G.colliders.push({ minX: TX - 2.2, maxX: TX + 2.2, minZ: TENT.maxZ - 0.1, maxZ: TENT.maxZ + 0.1, minY: 0, maxY: TENT.wallH, role: 'wall', interiorId: 'seoul-food-room', flap: true });
 }
 
 function soju(m, x, y, z) {
@@ -768,6 +787,8 @@ function shopShell(side, rnd) {
 }
 
 function buildStore(rnd) {
+  const initial = new Set(G.scene.children);
+  initial.colliderStart = G.colliders.length;
   shopShell(-1, rnd);
   fascia('편의점 24', '24시간 · open 24 hours', '#1f8a4c', '#ffffff', -9.88, 3.25, -15.5, Math.PI / 2, 8.6, 0.6);
   // chimaek pub sign above
@@ -823,9 +844,12 @@ function buildStore(rnd) {
   const panel = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.2 });
   for (const z of [-13, -15.5, -18]) boxMM(-16.5, -11.5, 3.32, 3.4, z - 0.25, z + 0.25, panel, { cast: false });
   pointLight(0xe8f4ff, 7, 12, -14, 3.1, -15.5, { day: 5 });
+  registerSeoulShell('store', initial, { minX: -18, maxX: -10, minZ: -20, maxZ: -11 });
 }
 
 function buildCafe(rnd) {
+  const initial = new Set(G.scene.children);
+  initial.colliderStart = G.colliders.length;
   shopShell(1, rnd);
   fascia('카페 봄', 'Café Bom · coffee & cake', '#f7d6dc', '#b3445e', 9.88, 3.25, -15.5, -Math.PI / 2, 8.6, 0.6);
   // string lights + flower garland on the facade (like the key art)
@@ -914,49 +938,20 @@ function buildCafe(rnd) {
   umb.castShadow = true;
   add(new THREE.CylinderGeometry(0.025, 0.025, 1.6, 6), M.dark, 8.4, 1.4, -10.6);
   collider(8.0, 8.8, -11.0, -10.2);
+  registerSeoulShell('cafe', initial, { minX: 10, maxX: 18, minZ: -20, maxZ: -11 });
 }
 
 function buildSubway() {
-  const x0 = -6;
-  const x1 = -2;
-  const zTop = -19.2;
-  const zBot = -26;
-  const depth = 3.0;
-  // pit walls (inner faces) and floor
-  boxMM(x0 - 0.2, x0, -depth - 0.2, 0, zBot, zTop, M.concrete, { uv: 2 });
-  boxMM(x1, x1 + 0.2, -depth - 0.2, 0, zBot, zTop, M.concrete, { uv: 2 });
-  boxMM(x0, x1, -depth - 0.2, 0, zBot - 0.2, zBot, M.concrete, { uv: 2 });
-  const steps = 11;
-  for (let i = 0; i < steps; i++) {
-    const za = zTop - (i * (zTop - zBot - 1.2)) / steps;
-    const top = -((i + 1) * depth) / steps;
-    boxMM(x0, x1, -depth - 0.2, top, za - (zTop - zBot - 1.2) / steps, za, M.concrete, { uv: 1, cast: false });
-  }
-  boxMM(x0, x1, -depth - 0.2, -depth, zBot, zBot + 1.2, M.tiles, { cast: false });
-  // glowing tunnel wall at the bottom
-  const tunnel = textTexture([['지하철', 120, '#ffffff', 100], ['2호선 · Line 2  →', 54, '#bfe8c8', 200, 'Gowun Dodum']], 768, 256, { bg: '#1d6f3a' });
-  const tm = new THREE.MeshStandardMaterial({ map: tunnel, emissiveMap: tunnel, emissive: 0xffffff, emissiveIntensity: 1.2 });
-  add(new THREE.PlaneGeometry(3.6, 1.2), tm, (x0 + x1) / 2, -depth + 1.3, zBot + 0.02, G.scene, false);
-  const glow = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xeaf6ff, emissiveIntensity: 1.6 });
-  add(new THREE.BoxGeometry(3.6, 0.06, 0.1), glow, (x0 + x1) / 2, -0.3, zBot + 0.3, G.scene, false);
-  // railings + glass canopy
-  const rail = mat(0xc9ced6, { metalness: 0.8, roughness: 0.3 });
-  for (const x of [x0, x1]) {
-    boxMM(x - 0.03, x + 0.03, 1.0, 1.05, zBot, zTop, rail, { cast: false });
-    for (let z = zTop; z >= zBot; z -= 1.2) box(0.05, 1.0, 0.05, rail, x, 0, z);
-  }
-  boxMM(x0, x1, 1.0, 1.05, zBot - 0.03, zBot + 0.03, rail, { cast: false });
-  const canopy = add(new THREE.BoxGeometry(4.4, 0.06, 3.2), M.glass, (x0 + x1) / 2, 2.7, zTop - 1.4, G.scene, false);
-  canopy.rotation.x = 0.12;
-  for (const [x, z] of [[x0, zTop], [x1, zTop], [x0, zTop - 2.8], [x1, zTop - 2.8]]) box(0.08, 2.7, 0.08, rail, x, 0, z);
-  collider(x0 - 0.2, x1 + 0.2, zBot - 0.2, zTop + 0.05);
-  // signpost
-  const st = textTexture([['지하철', 110, '#ffffff', 100], ['홍대입구역 · Hongik Univ.', 46, '#dce8ff', 200, 'Gowun Dodum']], 768, 256, { bg: '#2556b8' });
-  const sm = new THREE.MeshStandardMaterial({ map: st, emissiveMap: st, emissive: 0xffffff });
-  nightGlow(sm, 0.25, 1.3);
-  box(0.1, 3.2, 0.1, M.dark, x1 + 0.6, 0, zTop + 0.4, { collide: true });
-  add(new THREE.BoxGeometry(1.8, 0.6, 0.08), [M.dark, M.dark, M.dark, M.dark, sm, sm], x1 + 0.6, 3.3, zTop + 0.4, G.scene, false);
-  lightPool((x0 + x1) / 2, 0, zTop + 0.5, 2.2, 0xd8ecff);
+  // Replace the sealed decorative stair pit in its original footprint with a
+  // level, open waiting pavilion. SPOTS.subway remains the original story stop.
+  const room = buildRoom({ id: 'seoul-subway-room', city: 'seoul', category: 'subway',
+    x: -4, z: -22.6, w: 4, d: 6.8, h: 2.9, open: true, wallMaterial: M.steel, roofMaterial: M.glass });
+  const st = textTexture([['홍대입구역', 112, '#ffffff', 110], ['Hongik Univ. · 2호선 / Line 2', 52, '#dce8ff', 240, 'Gowun Dodum']], 1024, 320, { bg: '#2556b8' });
+  const sm = nightGlow(mat(0xffffff, { map: st, emissiveMap: st, emissive: 0xffffff }), 0.25, 1.3);
+  const fascia = add(new THREE.PlaneGeometry(4, 1), sm, -4, 2.5, -18.98, G.scene, false);
+  room.roofs[0].attach(fascia);
+  registerInterior(room);
+  lightPool(-4, 0, -18.7, 2.2, 0xd8ecff);
 }
 
 /* ── Terrace, stairs, studio, lookout ─────────────── */
@@ -1006,6 +1001,8 @@ export function studioMirrorVisible(on) {
 }
 
 function buildStudio(rnd) {
+  const initial = new Set(G.scene.children);
+  initial.colliderStart = G.colliders.length;
   const y = TERRACE_Y;
   const wallM = M.white;
   boxMM(-16.3, -16, y, y + 3.6, -44, -31, wallM, { collide: true, block: true });
@@ -1041,8 +1038,8 @@ function buildStudio(rnd) {
     const t = textTexture(lines, 384, 512, { bg });
     add(new THREE.PlaneGeometry(0.9, 1.2), mat(0xffffff, { map: t }), x, y + 1.9, z, G.scene, false).rotation.y = ry;
   };
-  poster([['데뷔까지', 64, '#fff', 180], ['D-100', 120, '#ffd23f', 300], ['화이팅!', 60, '#fff', 420]], '#3b2a6b', -9, -30.72, Math.PI);
-  poster([['연습', 100, '#3a1a10', 200], ['또 연습', 80, '#c0392b', 330]], '#fff3dc', -12, -30.72, Math.PI);
+  poster([['데뷔까지', 64, '#fff', 180], ['D-100', 120, '#ffd23f', 300], ['화이팅!', 60, '#fff', 420]], '#3b2a6b', -9, -31.03, Math.PI);
+  poster([['연습', 100, '#3a1a10', 200], ['또 연습', 80, '#c0392b', 330]], '#fff3dc', -12, -31.03, Math.PI);
   // whiteboard: daily word quiz
   const wb = textTexture(
     [
@@ -1058,6 +1055,10 @@ function buildStudio(rnd) {
   const panel = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.1 });
   for (const z of [-41, -37.5, -34]) boxMM(-15, -7, y + 3.33, y + 3.4, z - 0.2, z + 0.2, panel, { cast: false });
   pointLight(0xfff4e8, 7, 14, -11, y + 3.0, -37.5, { day: 5 });
+  const room = registerSeoulShell('studio', initial, { minX: -16, maxX: -6, minZ: -44, maxZ: -31 }, y);
+  // Mirror is a rear-wall child and must not remain an opaque slab in cutaway.
+  const rear = room.walls.find(m => m.position.x < -16);
+  if (rear && !room.walls.includes(studioMirror)) { rear.attach(studioMirror); registerInterior(room); }
 }
 
 function buildLookout(rnd) {
@@ -1243,7 +1244,7 @@ function buildRiver(rnd) {
   const tw = new THREE.Group();
   tw.position.set(420, 66, -10);
   G.scene.add(tw);
-  const towerM = mat(0xe8e4dc, { roughness: 0.6 });
+  const towerM = nightGlow(mat(0xe8e4dc, { roughness: 0.6, emissive: '#b8d5ed' }), 0, 0.35);
   add(new THREE.CylinderGeometry(2.6, 4.2, 60, 12), towerM, 0, 30, 0, tw, false);
   add(new THREE.CylinderGeometry(9, 7, 9, 16), towerM, 0, 62, 0, tw, false);
   const band = new THREE.MeshStandardMaterial({ color: 0x8fa3c4, emissive: 0xff6aa8, emissiveIntensity: 0 });

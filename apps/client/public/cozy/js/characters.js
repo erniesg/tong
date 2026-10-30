@@ -861,27 +861,138 @@ export function animateTong(tg, dt, t) {
 
 export function makeCat(pos) {
   const g = new THREE.Group();
-  const fur = toon('#f0a24b');
-  const white = toon('#fff4e6');
-  const body = part(new THREE.CapsuleGeometry(0.13, 0.22, 6, 12), fur, 0, 0.12, 0, g);
-  body.rotation.z = Math.PI / 2;
-  const head = new THREE.Group();
-  head.position.set(0.23, 0.15, 0.04);
-  g.add(head);
-  part(new THREE.SphereGeometry(0.12, 16, 12), fur, 0, 0, 0, head);
-  add(new THREE.SphereGeometry(0.07, 12, 10), white, 0.06, -0.04, 0.0, head, false).scale.set(0.7, 0.8, 1);
+  g.name = 'tteok-cat';
+  const fur = toon('#efb36c');
+  const white = toon('#fff2df');
+  const stripe = toon('#bb7848');
+  const pink = toon('#e99caa');
+  const ink = toon('#392f30');
+  const glint = new THREE.MeshBasicMaterial({ color: '#fff9ed' });
+  // Bake proportions into geometry, so the existing body's scale.y breathing
+  // and inverted-hull outlines stay aligned. Paws sit at pos.y (crate top).
+  const ballGeo = new THREE.SphereGeometry(1, 20, 14);
+  function soft(rx, ry, rz, material, x, y, z, parent, ol = 0.003) {
+    return part(ballGeo.clone().scale(rx, ry, rz), material, x, y, z, parent, { ol });
+  }
+  const body = soft(0.215, 0.12, 0.135, fur, -0.035, 0.12, 0, g, 0.005);
+  soft(0.12, 0.075, 0.12, white, 0.1, 0.10, 0.005, g, 0);
   for (const s of [-1, 1]) {
-    const ear = part(new THREE.ConeGeometry(0.045, 0.09, 4), fur, 0, 0.1, 0.06 * s, head, { ol: 0.006 });
-    ear.rotation.x = 0.3 * s;
-    const eye = add(new THREE.BoxGeometry(0.01, 0.006, 0.04), new THREE.MeshBasicMaterial({ color: 0x2a1a10 }), 0.115, 0.02, 0.045 * s, head, false);
-    eye.rotation.y = 0.3 * s;
+    soft(0.07, 0.038, 0.049, white, 0.14, 0.038, s * 0.085, g);
+    soft(0.064, 0.039, 0.053, fur, -0.16, 0.04, s * 0.085, g);
+    // Tiny pink toe beans on the outward-facing edges of tucked paws.
+    for (let k = -1; k <= 1; k++) {
+      soft(0.009, 0.009, 0.004, pink, 0.151 + k * 0.019, 0.033, s * 0.132, g, 0);
+    }
+  }
+  const head = new THREE.Group();
+  head.position.set(0.17, 0.205, 0.005);
+  g.add(head);
+  const face = new THREE.Group();
+  face.rotation.y = Math.PI / 2; // old cat faces +X; face details use local +Z
+  head.add(face);
+  soft(0.15, 0.135, 0.14, fur, 0, 0, 0, face, 0.005);
+  for (const s of [-1, 1]) {
+    soft(0.053, 0.05, 0.07, fur, s * 0.108, -0.043, 0.045, face, 0.003);
+  }
+  const earShape = new THREE.Shape();
+  earShape.moveTo(-0.055, 0);
+  earShape.quadraticCurveTo(-0.06, 0.045, -0.028, 0.133);
+  earShape.quadraticCurveTo(-0.019, 0.148, -0.006, 0.13);
+  earShape.quadraticCurveTo(0.042, 0.075, 0.057, 0.005);
+  earShape.closePath();
+  const earGeo = new THREE.ExtrudeGeometry(earShape, { depth: 0.036, bevelEnabled: true, bevelSize: 0.008, bevelThickness: 0.008, bevelSegments: 2, steps: 1, curveSegments: 6 });
+  const ears = [];
+  const eyes = [];
+  const sleepy = [];
+  const iris = toon('#8b6948');
+  for (const s of [-1, 1]) {
+    const ear = new THREE.Group();
+    ear.position.set(s * 0.1, 0.087, -0.008);
+    ear.rotation.z = -s * 0.25;
+    face.add(ear);
+    part(earGeo, fur, 0, 0, 0, ear, { ol: 0.003 });
+    const inner = add(earGeo, pink, 0, 0.016, 0.046, ear, false);
+    inner.scale.set(0.61, 0.66, 0.36);
+    ears.push(ear);
+    const eye = new THREE.Group();
+    eye.position.set(s * 0.062, 0.012, 0.123);
+    eye.rotation.y = s * 0.2;
+    face.add(eye);
+    soft(0.028, 0.034, 0.014, ink, 0, 0, 0, eye, 0);
+    soft(0.018, 0.014, 0.004, iris, 0, -0.015, 0.012, eye, 0);
+    soft(0.008, 0.009, 0.003, glint, -0.009, 0.012, 0.015, eye, 0);
+    soft(0.0035, 0.004, 0.002, glint, 0.011, -0.009, 0.016, eye, 0);
+    eyes.push(eye);
+    // Curved contented eyelids replace (not squash) the open eyes on petting.
+    const lid = add(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(s * 0.062 - 0.024, 0.007, 0.144),
+      new THREE.Vector3(s * 0.062, 0.031, 0.15),
+      new THREE.Vector3(s * 0.062 + 0.024, 0.007, 0.144),
+    ), 10, 0.0028, 5, false), ink, 0, 0, 0, face, false);
+    lid.visible = false;
+    sleepy.push(lid);
+    soft(0.039, 0.025, 0.022, white, s * 0.029, -0.043, 0.129, face, 0);
+    soft(0.024, 0.009, 0.007, pink, s * 0.102, -0.027, 0.113, face, 0);
+    for (let k = 0; k < 3; k++) {
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(s * 0.072, -0.042 - k * 0.011, 0.128),
+        new THREE.Vector3(s * 0.137, -0.034 - k * 0.016, 0.155),
+        new THREE.Vector3(s * (0.188 - k * 0.009), -0.016 - k * 0.029, 0.126),
+      );
+      add(new THREE.TubeGeometry(curve, 8, 0.0015, 4, false), white, 0, 0, 0, face, false);
+    }
+    // Warm tabby temple marks, not angry eyebrows.
+    soft(0.025, 0.008, 0.005, stripe, s * 0.118, 0.037, 0.082, face, 0).rotation.z = s * 0.35;
+  }
+  for (const x of [-0.024, 0, 0.024]) {
+    soft(0.006, 0.023, 0.004, stripe, x, 0.096 - Math.abs(x) * 0.3, 0.095, face, 0);
+  }
+  const noseShape = new THREE.Shape();
+  noseShape.moveTo(-0.015, 0.003);
+  noseShape.quadraticCurveTo(0, 0.012, 0.015, 0.003);
+  noseShape.quadraticCurveTo(0.012, -0.006, 0, -0.012);
+  noseShape.quadraticCurveTo(-0.012, -0.006, -0.015, 0.003);
+  add(new THREE.ShapeGeometry(noseShape), pink, 0, -0.028, 0.155, face, false);
+  for (const s of [-1, 1]) {
+    add(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(0, -0.043, 0.154),
+      new THREE.Vector3(s * 0.012, -0.059, 0.152),
+      new THREE.Vector3(s * 0.025, -0.047, 0.15),
+    ), 8, 0.0017, 4, false), ink, 0, 0, 0, face, false);
   }
   const tail = new THREE.Group();
-  tail.position.set(-0.24, 0.08, 0);
+  tail.position.set(-0.22, 0.08, 0);
   g.add(tail);
-  part(new THREE.CapsuleGeometry(0.03, 0.22, 4, 8), fur, 0, 0, 0.12, tail, { ol: 0.006 }).rotation.x = Math.PI / 2;
+  const curl = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 0, 0), new THREE.Vector3(-0.07, 0.03, 0.08),
+    new THREE.Vector3(-0.09, 0.08, 0.19), new THREE.Vector3(-0.02, 0.14, 0.23),
+    new THREE.Vector3(0.045, 0.17, 0.18),
+  ]);
+  part(new THREE.TubeGeometry(curl, 24, 0.031, 8, false), fur, 0, 0, 0, tail, { ol: 0.003 });
+  soft(0.032, 0.032, 0.032, white, 0.045, 0.17, 0.18, tail, 0.002);
+  for (const u of [0.28, 0.48, 0.68]) {
+    const p = curl.getPoint(u);
+    const ring = add(new THREE.TorusGeometry(0.0315, 0.004, 5, 10), stripe, p.x, p.y, p.z, tail, false);
+    ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), curl.getTangent(u));
+  }
   g.position.copy(pos);
   g.rotation.y = -0.6;
   G.scene.add(g);
-  return { g, body, head, tail, purr: 0 };
+  const cat = { g, body, head, tail, purr: 0 };
+  G.updaters.push((dt, t) => {
+    if (!g.visible) return;
+    const pleased = cat.purr > 0;
+    const blink = t % 4.7 > 4.54;
+    eyes.forEach(eye => { eye.visible = !pleased && !blink; });
+    sleepy.forEach(lid => { lid.visible = pleased || blink; });
+    // The runtime owns body.scale.y, tail.rotation.y and head.rotation.z.
+    // Animate only nested features / unused axes; don't double-decrement purr.
+    face.position.y = pleased ? Math.sin(t * 24) * 0.0015 : 0;
+    head.rotation.x = pleased ? -0.07 : Math.sin(t * 0.8) * 0.018;
+    if (!pleased) head.rotation.z *= Math.exp(-dt * 8);
+    ears.forEach((ear, i) => {
+      ear.rotation.x = Math.sin(t * 1.2 + i) * 0.025 + (pleased ? 0.05 : 0);
+    });
+  });
+  return cat;
 }

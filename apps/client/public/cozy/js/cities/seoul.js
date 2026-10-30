@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { G, add, box, collider, mat, textTexture, softTexture, worldUV, nightGlow, pointLight } from '../util.js';
 import { asphalt, pavers, brick, plaster, wood } from '../textures.js';
+import { makeTree } from '../nature.js';
 
 const bounds = { minX: -62, maxX: 62, minZ: -45.5, maxZ: 72 };
 const airportSpawn = [-53, 0, 42];
@@ -82,8 +83,8 @@ let M;
 function sign(lines, x, y, z, yaw, w = 3.8, h = 1, bg = '#254742') {
   const tex = textTexture(lines.map((line, i) => {
     const units = [...line].reduce((n, ch) => n + (ch.charCodeAt(0) < 128 ? 0.58 : 1), 0);
-    return [line, Math.min(i ? 40 : 68, Math.floor(680 / units)), i ? '#e4d8ba' : '#fff9df', i ? 165 : 80, i ? 'Gowun Dodum' : 'Jua'];
-  }), 768, 256, { bg, border: '#a5b39a' });
+    return [line, Math.min(i ? 64 : 112, Math.floor(1360 / units)), i ? '#e4d8ba' : '#fff9df', i ? 290 : 130, i ? 'Gowun Dodum' : 'Jua'];
+  }), 1536, 400, { bg, border: '#a5b39a' });
   const material = nightGlow(mat(0xffffff, { map: tex, emissiveMap: tex, emissive: 0xffffff, side: THREE.DoubleSide }), 0.08, 0.85);
   const mesh = add(new THREE.PlaneGeometry(w, h), material, x, y, z, G.scene, false);
   mesh.rotation.y = yaw;
@@ -138,11 +139,7 @@ function lamp(x, z, cool = false, real = false) {
 }
 
 function tree(x, z, scale = 1, gold = false) {
-  add(new THREE.CylinderGeometry(0.1 * scale, 0.18 * scale, 2.9 * scale, 7), M.trunk, x, 1.45 * scale, z);
-  const canopy = add(new THREE.IcosahedronGeometry(1.7 * scale, 1), gold ? M.gold : M.leaf, x, 3.3 * scale, z);
-  canopy.scale.set(1, 0.8, 0.9);
-  G.blockers.push(canopy);
-  collider(x - 0.23 * scale, x + 0.23 * scale, z - 0.23 * scale, z + 0.23 * scale);
+  makeTree({ x, z, scale, kind: 'ginkgo', seed: Math.round(x * 71 + z * 31) });
 }
 
 function bench(x, z, yaw = 0) {
@@ -296,7 +293,9 @@ function travelBoard() {
   texture.colorSpace = THREE.SRGBColorSpace;
   const art = mat(0xffffff, { map: texture, side: THREE.DoubleSide, roughness: 0.9 });
   box(2.45, 4.15, 0.24, M.wood, 7, 0.5, 39, { collide: true, block: true });
-  const poster = add(new THREE.PlaneGeometry(2.16, 3.84), art, 7, 2.58, 38.87, G.scene, false);
+  // Front normal is -z. Keep a real 10cm stand-off from the wood's -z face
+  // (38.88), rather than a nearly coplanar/embedded image at grazing angles.
+  const poster = add(new THREE.PlaneGeometry(2.16, 3.84), art, 7, 2.58, 38.78, G.scene, false);
   poster.rotation.y = Math.PI;
   sign(['서울 · 동네 여행', 'Concept art · stylised, not a literal map'], 7, 5, 38.85, Math.PI, 5.5, 0.8);
   standingSign(['북: 연남   남: 한강 연결', 'N: Yeonnam · S: Han link · W: AREX'], 1, 2.3, 40, Math.PI, 5.3, 1);
@@ -320,6 +319,12 @@ function riverEdges() {
     standingSign(['한강 · 압축 연결', 'Real riverside is farther south · no water access'], x, 2.6, -44.2, 0, 6.8, 1.1);
   }
   sign(['한강 전망 · 거리 압축', 'Scenic link, not literal Hongdae adjacency'], 10, 4.6, -45.65, 0, 6.3, 0.9);
+  standingSign(['남산타워 · 동쪽 원경 ↗', 'PHOTO · Namsan, distant north-bank skyline'], 35, 2.2, -40, Math.PI / 2, 5.6, 1);
+  // Low photo medallions identify viewpoints without putting a board in-frame.
+  for (const [x, z] of [[6, -41.5], [31, -40]]) {
+    const spot = add(new THREE.RingGeometry(0.6, 0.72, 32), M.warm, x, z < -41 ? 2.45 : 0.05, z, G.scene, false);
+    spot.rotation.x = -Math.PI / 2;
+  }
 }
 
 function surroundingBlocks() {
@@ -347,8 +352,7 @@ function build() {
     red: surface(brick('#88574b')), cream: surface(plaster('#d6c9b2')),
     grey: surface(plaster('#9ca3a1')), concrete: surface(plaster('#a9aca4')),
     wood: surface(wood('#9a744d')), roof: mat('#484f52'), metal: mat('#354149', { metalness: 0.45 }),
-    trim: mat('#ccc7b9'), trunk: mat('#65543d'), leaf: mat('#688456', { flatShading: true }),
-    gold: mat('#d9b84b', { flatShading: true }), grass: mat('#778961'), rail: mat('#787165', { metalness: 0.5 }),
+    trim: mat('#ccc7b9'), grass: mat('#778961'), rail: mat('#787165', { metalness: 0.5 }),
     tank: mat('#8babbc'), crate: mat('#bc693c'), scooter: mat('#b95445'), tactile: mat('#d9b543'),
     warm: nightGlow(mat('#fff0c7', { emissive: '#ffd38d' }), 0.05, 2.8),
     cool: nightGlow(mat('#dcf3ec', { emissive: '#b9edec' }), 0.05, 2.2),
@@ -373,6 +377,10 @@ export default {
   id: 'seoul', name: 'Seoul', nativeName: '서울',
   subtitle: 'Hongdae → Yeonnam north (+z); Han River south (−z). Stylised blocks, compressed river / AREX connections.',
   bounds, spawn: [1.6, 0, 9], yaw: 0, places,
+  vistas: [
+    { id: 'seoul-hangang', title: 'Hangang bridge & river lights', nativeName: '한강 야경', spawn: [6, 2.4, -41.5], position: [10, 8, -42], look: [0, -1, -185], description: 'Elevated, unobstructed view south over the compressed Han River connection.' },
+    { id: 'seoul-namsan', title: 'Namsan skyline', nativeName: '남산 서울타워', spawn: [31, 0, -40], position: [28, 7, -43], look: [420, 118, -10], description: 'The distant eastern tower and hill remain on the north bank, not across the Han.' },
+  ],
   airport: { spawn: airportSpawn, name: 'AREX · Gimpo / Incheon connection', nativeName: '공항철도 · 김포 / 인천 연결' },
   roads,
   mapFeatures: [

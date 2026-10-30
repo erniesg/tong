@@ -6,6 +6,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { G, add, box, collider, mat, textTexture, makeCanvas, canvasTexture, softTexture, nightGlow, pointLight, seeded } from '../util.js';
 import { pavers, wood, tiles } from '../textures.js';
+import { makeTree } from '../nature.js';
+import { buildRoom, registerInterior, interiorAt } from '../interiors.js';
 
 const CX = 400;
 const JP = '"Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic"';
@@ -32,6 +34,10 @@ const roads = [
 const place = (id, ko, en, icon, x, z, yaw, description, text, rom, english, radius = 4) => ({
   id: `tokyo-${id}`, ko, en, icon, spawn: at(x, z), yaw, radius, description,
   phrase: { text, rom, en: english },
+  ...(['food', 'cafe', 'store', 'subway', 'studio'].includes(id) ? {
+    category: id, interiorId: `tokyo-${id}-room`,
+    entry: { food: at(-24.5, 4), cafe: at(13, -2), store: at(-46.5, 27), studio: at(-48, 5), subway: at(-3, 45) }[id],
+  } : {}),
 });
 const places = [
   place('food', '仲見世の食べ歩き', 'Nakamise Food Street', '🍡', -20, 4, Math.PI / 2,
@@ -78,9 +84,9 @@ function mesh(geo, m, x, y, z, shadows = true) {
 }
 function sign(title, sub, x, y, z, w, h, rot = 0, bg = '#f3e7cf', fg = '#302c29') {
   const tex = textTexture([
-    [title, 68, fg, sub ? 65 : 96, JP],
-    ...(sub ? [[sub, 25, fg, 143, JP]] : []),
-  ], 768, 192, { bg, radius: 4, border: fg });
+    [title, Math.min(100, 1050 / [...title].length), fg, sub ? 88 : 140, JP],
+    ...(sub ? [[sub, Math.min(48, 1770 / [...sub].length), fg, 218, JP]] : []),
+  ], 1536, 288, { bg, radius: 4, border: fg });
   const m = mat(0xffffff, { map: tex, emissiveMap: tex, emissive: 0xffffff, side: THREE.DoubleSide });
   nightGlow(m, 0.03, 0.7);
   const s = mesh(new THREE.PlaneGeometry(w, h), m, x, y, z, false);
@@ -146,7 +152,21 @@ function lantern(x, y, z, scale, m, M) {
   block(0.018, 0.45, 0.018, M.dark, x, y + 0.48 * scale, z);
 }
 
-function shop(x, z, w, d, h, title, sub, color, M, face = 0) {
+function shop(x, z, w, d, h, title, sub, color, M, face = 0, category = null) {
+  if (category) {
+    const initial = new Set(G.scene.children);
+    roof(x, z, w, d, 3.8, M);
+    const roofs = G.scene.children.filter(m => !initial.has(m));
+    const room = buildRoom({ id: `tokyo-${category}-room`, city: 'tokyo', category,
+      x: CX + x, z, w, d, h: 3.8, face, wallMaterial: M.plaster, roofMaterial: M.roof, roofs });
+    const offset = new THREE.Vector3(0, 0, (Math.abs(Math.sin(face)) > 0.5 ? w : d) / 2 + 0.28).applyAxisAngle(new THREE.Vector3(0, 1, 0), face);
+    const fascia = sign(title, sub, x + offset.x, 3.15, z + offset.z,
+      (Math.abs(Math.sin(face)) > 0.5 ? d : w) - 0.5, 0.95, face, '#f6ecd5', color);
+    // Signs/roof trim fade with the roof, never float across an occupied room.
+    room.roofs[0].attach(fascia);
+    registerInterior(room);
+    return;
+  }
   block(w, h, d, M.plaster, x, 0, z, true);
   roof(x, z, w, d, h, M);
   // Timber corners, skirt boards, rainpipes and side windows prevent the
@@ -188,11 +208,8 @@ function shop(x, z, w, d, h, title, sub, color, M, face = 0) {
 }
 
 function tree(x, z, scale, M, pink = true) {
-  mesh(new THREE.CylinderGeometry(0.12 * scale, 0.24 * scale, 3 * scale, 7), M.wood, x, 1.5 * scale, z);
-  const canopy = mesh(new THREE.IcosahedronGeometry(1.5 * scale, 1), pink ? M.blossom : M.leaf, x, 3.5 * scale, z);
-  canopy.scale.set(1.3, 0.85, 1);
-  G.blockers.push(canopy);
-  collider(CX + x - 0.3 * scale, CX + x + 0.3 * scale, z - 0.3 * scale, z + 0.3 * scale);
+  const tree = makeTree({ x: CX + x, z, scale, kind: 'cherry', seed: Math.round(x * 71 + z * 31) });
+  tree.traverse(m => { m.userData.keepSeparate = true; });
 }
 function bench(x, z, M) {
   block(2.4, 0.12, 0.65, M.wood, x, 0.46, z);
@@ -257,24 +274,24 @@ function buildShops(M) {
     for (const side of [-1, 1]) {
       const [name, sub, color] = names[(i + (side > 0 ? 1 : 0)) % names.length];
       const x = side < 0 ? -30 : -10;
-      shop(x, z, 11, 7, 4.3 + (i % 2) * 2, name, sub, color, M, side < 0 ? Math.PI / 2 : -Math.PI / 2);
+      shop(x, z, 11, 7, 4.3 + (i % 2) * 2, name, sub, color, M, side < 0 ? Math.PI / 2 : -Math.PI / 2, side < 0 && i === 1 ? 'food' : null);
       lantern(side < 0 ? -24.1 : -15.9, 2.65, z - 2.8, 0.8, M.lantern, M);
     }
   }
-  shop(-51, 27, 9, 8, 6.5, 'まちのコンビニ', '24時間 · CONVENIENCE', '#226a7a', M, Math.PI / 2);
-  shop(-52, 5, 8, 12, 7, '音の稽古場', 'PRACTICE STUDIO · 予約制', '#3e4a79', M, Math.PI / 2);
-  shop(8, -2, 10, 9, 6.4, '喫茶 すみだ', 'COFFEE · クリームソーダ', '#52604b', M, Math.PI / 2);
+  shop(-51, 27, 9, 8, 6.5, 'まちのコンビニ', '24時間 · CONVENIENCE', '#226a7a', M, Math.PI / 2, 'store');
+  shop(-52, 5, 8, 12, 7, '音の稽古場', 'PRACTICE STUDIO · 予約制', '#3e4a79', M, Math.PI / 2, 'studio');
+  shop(8, -2, 10, 9, 6.4, '喫茶 すみだ', 'COFFEE · クリームソーダ', '#52604b', M, Math.PI / 2, 'cafe');
   // Backstreet homes vary in depth and height; the alley bends around them.
   shop(-53, -11, 7, 7, 6.3, '花屋', '季節の花 · FLOWERS', '#8b5363', M, Math.PI / 2);
   shop(-52, -26, 8, 6, 4.3, '小さな本屋', 'BOOKS · 古本', '#475a61', M, Math.PI / 2);
   shop(6, 26, 11, 9, 7.5, '和紙の店', 'WASHI · 紙と暮らし', '#625477', M);
   shop(6, 52, 12, 9, 6.5, 'そば処', 'SOBA · 温かいおそば', '#3c5267', M, Math.PI);
   // A few tangible snacks at the Nakamise stall, not just labelled boxes.
-  block(0.8, 0.9, 3, M.wood, -23.8, 0, 4, true);
+  // Dango display sits on the room's rear counter, not across its entrance.
   const rice = mat('#e4bca0');
   for (let i = 0; i < 5; i++) {
-    block(0.55, 0.025, 0.025, M.wood, -23.7, 0.96, 3 + i * 0.45);
-    for (let j = 0; j < 3; j++) mesh(new THREE.SphereGeometry(0.085, 8, 6), rice, -23.88 + j * 0.15, 1.03, 3 + i * 0.45, false);
+    block(0.55, 0.025, 0.025, M.wood, -33.5, 0.96, 3 + i * 0.45);
+    for (let j = 0; j < 3; j++) mesh(new THREE.SphereGeometry(0.085, 8, 6), rice, -33.68 + j * 0.15, 1.03, 3 + i * 0.45, false);
   }
   // Vending machine: one emissive display, no dedicated point light.
   block(0.8, 1.9, 1.15, M.cream, -46.9, 0, 19, true);
@@ -293,12 +310,11 @@ function buildShops(M) {
 }
 
 function buildTransit(M) {
-  // Closed street-level halls avoid unmodelled stairs / pits in heightAt.
-  block(14, 4.8, 8, M.cream, -3, 0, 49, true);
-  block(15, 0.3, 9, M.dark, -3, 4.8, 49);
-  block(11, 2.5, 0.08, M.window, -3, 0.4, 44.93);
-  for (const x of [-7, -3, 1]) block(0.16, 3, 0.15, M.dark, x, 0, 44.8);
-  sign('浅草駅', 'G 銀座線 · A 浅草線 / ASAKUSA', -3, 3.8, 44.8, 10.8, 1.1, Math.PI, '#284b61', '#fff7dc');
+  // Walk-in, level waiting hall in the original station footprint.
+  const station = buildRoom({ id: 'tokyo-subway-room', city: 'tokyo', category: 'subway',
+    x: CX - 3, z: 49, w: 14, d: 8, h: 3.8, face: Math.PI, wallMaterial: M.cream, roofMaterial: M.dark });
+  station.roofs[0].attach(sign('浅草駅', 'G 銀座線 · A 浅草線 / ASAKUSA', -3, 3.15, 44.72, 10.8, 1.1, Math.PI, '#284b61', '#fff7dc'));
+  registerInterior(station);
   // Compact transfer terminal, explicitly labelled as an airport connection.
   block(23, 5.4, 8, M.cream, -42, 0, 65, true);
   block(24, 0.4, 10, M.dark, -42, 5.4, 65);
@@ -311,7 +327,7 @@ function buildTransit(M) {
   const poster = new THREE.TextureLoader().load('/assets/locations/tokyo-static.png');
   poster.colorSpace = THREE.SRGBColorSpace;
   block(1.9, 3.2, 0.18, M.wood, -50.2, 0.4, 60.7);
-  mesh(new THREE.PlaneGeometry(1.65, 2.94), mat(0xffffff, { map: poster }), -50.2, 2, 60.58, false).rotation.y = Math.PI;
+  mesh(new THREE.PlaneGeometry(1.65, 2.94), mat(0xffffff, { map: poster }), -50.2, 2, 60.5, false).rotation.y = Math.PI;
   sign('東京・旅のイメージ', 'STYLISED TRAVEL ART · NOT A MAP', -50.2, 0.7, 60.5, 2, 0.4, Math.PI);
   pointLight(0xd8e9ff, 12, 16, CX - 42, 3.2, 58);
 }
@@ -368,6 +384,7 @@ function buildRiver(M) {
   for (const [x, z, scale] of [[12, -50, 1], [11, -18, 0.8], [12, 21, 1], [12, 49, 1], [51, -53, 1.2], [51, -42, 0.9], [51, 3, 1], [51, 19, 1.1], [51, 50, 1]]) tree(x, z, scale, M);
   for (const [x, z] of [[12, -36], [12, 9], [49, 10], [49, -48], [49, 45]]) bench(x, z, M);
   for (const [x, z] of [[20.5, -24], [20.5, 8], [20.5, 46], [40, -50], [40, -18], [40, 20], [40, 49]]) lamp(x, z, M);
+  sign('スカイツリー 撮影点', 'PHOTO · SUMIDA → OSHIAGE', 19.8, 1.8, -20, 4.5, 0.9, -Math.PI / 2);
   pointLight(0xffd3a1, 9, 14, CX + 20, 3.5, 8);
 }
 
@@ -410,7 +427,7 @@ function batchDetails(roots) {
   G.scene.updateMatrixWorld(true);
   const blockers = new Set(G.blockers), groups = new Map();
   for (const root of roots) root.traverse((m) => {
-    if (!m.isMesh || m.isInstancedMesh) return;
+    if (!m.isMesh || m.isInstancedMesh || m.userData.interiorId || m.userData.keepSeparate || m.parent?.userData.interiorId) return;
     const key = `${m.material.id}:${m.castShadow}:${m.receiveShadow}:${!!m.geometry.index}:${blockers.has(m)}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(m);
@@ -438,14 +455,14 @@ function build() {
   const M = {
     ground: mat('#b3ad99'), stone: mat('#9b9c91', { map: stoneTex.map, normalMap: stoneTex.normalMap }),
     wood: mat(0xffffff, { map: woodTex.map, normalMap: woodTex.normalMap }),
-    roof: mat(0xffffff, { map: roofTex.map, normalMap: roofTex.normalMap, side: THREE.DoubleSide }),
+    roof: nightGlow(mat(0xffffff, { map: roofTex.map, normalMap: roofTex.normalMap, side: THREE.DoubleSide, emissive: '#667485' }), 0, 0.12),
     plaster: mat('#dfd5bd'), gable: mat('#d6c7aa', { side: THREE.DoubleSide }),
-    cream: mat('#e6dfcc'), red: mat('#ad4435'), blue: mat('#527e8b'),
+    cream: mat('#e6dfcc'), red: nightGlow(mat('#ad4435', { emissive: '#ad4435' }), 0, 0.2), blue: mat('#527e8b'),
     dark: mat('#303e40'), gold: mat('#b79750', { metalness: 0.55 }),
     window: nightGlow(mat('#e5c795', { emissive: '#ffb66d', roughness: 0.4 }), 0.04, 0.85),
     lamp: nightGlow(mat('#ffedbf', { emissive: '#ffce85' }), 0.05, 2),
     water: mat('#326d7c', { metalness: 0.35, roughness: 0.28 }),
-    blossom: mat('#eac1c5', { flatShading: true }), leaf: mat('#668675', { flatShading: true }),
+    leaf: mat('#668675', { flatShading: true }),
     tower: mat('#687c8c', { metalness: 0.35 }),
     towerLattice: nightGlow(mat('#d4dfdf', { emissive: '#8eb9d4' }), 0, 0.6),
     pool: new THREE.MeshBasicMaterial({ map: softTexture('rgba(255,205,140,.65)', 'rgba(255,190,110,0)'), color: '#ffcf99', transparent: true, depthWrite: false, opacity: 0 }),
@@ -476,6 +493,11 @@ export default {
   id: 'tokyo', name: 'Tokyo', nativeName: '東京',
   subtitle: 'Compressed, stylised Asakusa–Sumida: temple west, river east, Oshiage beyond. Not a literal map.',
   bounds, spawn: at(-20, 40), yaw: 0, places,
+  vistas: [
+    { id: 'tokyo-sumida-skytree', title: 'Sumida & Skytree', nativeName: '隅田川とスカイツリー', spawn: at(17, -22), position: [CX + 12, 5, -15], look: [CX + 52, 20, -27], description: 'West-bank promenade across Sumida to Oshiage on the east bank.' },
+    { id: 'tokyo-kaminarimon', title: 'Kaminarimon lantern', nativeName: '雷門', spawn: at(-20, 40), position: [CX - 20, 3.2, 44], look: [CX - 20, 4.4, 30], description: 'The great lantern frames the south entrance to Nakamise.' },
+    { id: 'tokyo-sensoji', title: 'Sensō-ji & five-storey pagoda', nativeName: '浅草寺と五重塔', spawn: at(-20, -30), position: [CX - 15, 5, -25], look: [CX - 27, 7, -43], description: 'Temple hall and pagoda remain west of the Sumida.' },
+  ],
   airport: { spawn: at(-42, 56), name: 'Haneda / Narita Connection', nativeName: '羽田・成田 空港連絡' },
   roads,
   mapFeatures: [
@@ -486,4 +508,8 @@ export default {
   ],
   build,
   heightAt: () => 0,
+  zoneAt(x, z) {
+    const room = interiorAt({ x, y: 0, z }, 'tokyo');
+    return room ? { id: `tokyo-${room.category}`, indoor: true } : null;
+  },
 };

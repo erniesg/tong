@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { G, add, box, collider, mat, makeCanvas, canvasTexture, textTexture, nightGlow, pointLight } from '../util.js';
 import { brick, pavers, plaster } from '../textures.js';
+import { makeTree } from '../nature.js';
+import { buildRoom, registerInterior, interiorAt } from '../interiors.js';
 
 const X = 800;
 const pt = (x, z) => [X + x, z];
@@ -24,6 +26,10 @@ const roads = [
 const place = (id, ko, en, icon, x, z, yaw, description, text, rom, english) => ({
   id: `shanghai-${id}`, ko, en, icon, spawn: [X + x, 0, z], yaw, radius: 4,
   description, phrase: { text, rom, en: english },
+  ...(['food', 'cafe', 'store', 'subway', 'studio'].includes(id) ? {
+    category: id, interiorId: `shanghai-${id}-room`,
+    entry: { food: [X - 43.5, 0, 10], cafe: [X - 12.2, 0, -34], store: [X - 43.5, 0, 44], subway: [X - 25.5, 0, -29], studio: [X - 65, 0, -28] }[id],
+  } : {}),
 });
 const places = [
   place('food', '小笼包弄堂', 'Xiaolongbao Lane', '🥟', -34, 16, Math.PI / 4,
@@ -71,7 +77,7 @@ function build() {
     brown: textured(brick('#765b50')),
     cream: textured(plaster('#dfcfb7')),
     roof: mat('#464b50'), stone: mat('#b4aa98'), dark: mat('#283637'),
-    jade: mat('#397066'), green: mat('#527c62'), trunk: mat('#665344'),
+    jade: mat('#397066'),
     gold: mat('#c5a164', { metalness: 0.25 }),
     warm: nightGlow(mat('#e7bd83', { emissive: '#ffd39b', emissiveIntensity: 0 }), 0, 1.6),
     cyan: nightGlow(mat('#81b9c9', { emissive: '#74e3ff', emissiveIntensity: 0 }), 0, 1.4),
@@ -83,7 +89,7 @@ function build() {
   const mesh = (geo, material, x, y, z, shadows = true) => add(geo, material, X + x, y, z, G.scene, shadows);
   const windows = [];
   const lights = [];
-  const leaves = [];
+  const rooms = new Map();
   const panes = [];
   const stoneTrim = [];
   const doors = [];
@@ -91,9 +97,9 @@ function build() {
 
   function sign(title, sub, x, y, z, width = 6, rotation = 0, bg = '#274e4c', height = 1.3) {
     const tex = textTexture([
-      [title, 78, '#fff0d4', 82, 'sans-serif'],
-      [sub, 30, '#f2d4a5', 177, 'sans-serif'],
-    ], 1024, 224, { bg, border: '#ba9a64', radius: 6 });
+      [title, Math.min(120, 1330 / [...title].length), '#fff0d4', 110, '"Noto Sans SC", sans-serif'],
+      [sub, Math.min(52, 2320 / [...sub].length), '#f2d4a5', 252, '"Noto Sans SC", sans-serif'],
+    ], 1536, 320, { bg, border: '#ba9a64', radius: 6 });
     const material = nightGlow(mat(0xffffff, { map: tex, emissiveMap: tex, emissive: 0xffffff, side: THREE.DoubleSide }), 0.08, 0.9);
     const s = mesh(new THREE.PlaneGeometry(width, height), material, x, y, z, false);
     s.rotation.y = rotation;
@@ -116,6 +122,21 @@ function build() {
   }
 
   function house(x, z, w, d, h, index) {
+    const category = x === -43.5 && z === 4 ? 'food' : x === -16.5 && z === -34 ? 'cafe' :
+      x === -43.5 && z === 50 ? 'store' : x === -25.5 && z === -34 ? 'subway' : null;
+    if (category) {
+      const initial = new Set(G.scene.children);
+      // Roof trim must belong to the cutaway, not the static instanced trim.
+      const trimStart = stoneTrim.length;
+      tiledRoof(x, 3.8, z, w, d);
+      for (const [xx, yy, zz, ww, hh, dd] of stoneTrim.splice(trimStart)) b(ww, hh, dd, M.stone, xx, yy - hh / 2, zz);
+      const roofs = G.scene.children.filter(m => !initial.has(m));
+      const room = buildRoom({ id: `shanghai-${category}-room`, city: 'shanghai', category,
+        x: X + x, z, w, d, h: 3.8, face: category === 'cafe' ? Math.PI / 2 : category === 'store' ? Math.PI : 0,
+        wallMaterial: M.red, roofMaterial: M.roof, roofs });
+      rooms.set(category, room);
+      return;
+    }
     solid(w, h, d, index % 3 ? M.red : M.brown, x, 0, z);
     stoneTrim.push([x, h - 0.175, z, w + 0.15, 0.25, d + 0.15]);
     tiledRoof(x, h, z, w, d);
@@ -133,9 +154,7 @@ function build() {
   }
 
   function tree(x, z, size = 1) {
-    mesh(new THREE.CylinderGeometry(0.12 * size, 0.2 * size, 3 * size, 7), M.trunk, x, 1.5 * size, z);
-    leaves.push({ x, y: 3.6 * size, z, size });
-    collider(X + x - 0.22, X + x + 0.22, z - 0.22, z + 0.22);
+    makeTree({ x: X + x, z, scale: size, kind: 'camphor', seed: Math.round(x * 71 + z * 31) });
   }
 
   function lamp(x, z, real = false) {
@@ -180,26 +199,17 @@ function build() {
   b(8, 0.5, 1, M.roof, -34, 4.35, -18, { block: true });
   sign('石库门里弄', 'SHIKUMEN · SHARED LANES', -34, 4.55, -17.45, 5.2, 0, '#633d30', 0.9);
 
-  // Food, coffee, store and studio are street-front destinations, not sealed interiors.
-  sign('小笼包 · 生煎', 'SOUP DUMPLINGS · PAN-FRIED BUNS', -39.1, 3, 9.4, 6.6, Math.PI / 2, '#8d342c');
-  solid(3.3, 0.95, 1.3, M.gold, -42, 0, 11.7);
-  b(4, 0.16, 2.3, M.jade, -42, 2.8, 11.3, { block: true });
-  for (const x of [-42.8, -41.5]) {
-    for (let i = 0; i < 3; i++) mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.2, 16), M.gold, x, 1.05 + i * 0.22, 11.7);
-  }
-  sign('弄堂咖啡', 'LILONG COFFEE · 慢慢来', -12.15, 3, -28, 5.5, Math.PI / 2);
-  sign('便利店 24H', '水 · 零食 · EVERYDAY ESSENTIALS', -39.1, 3, 45, 6, Math.PI / 2, '#255c79');
-  // Studio in the western edge: leaves the outer road clear.
-  solid(8, 7, 16, M.cream, -69, 0, -28);
-  b(8.3, 0.3, 16.3, M.roof, -69, 7, -28, { block: true });
-  for (const z of [-33, -28, -23]) pane(-64.96, 4.5, z, 2.3, 2, Math.PI / 2, true);
-  sign('声动练习室', 'MUSIC · MANDARIN · PRACTICE', -64.9, 2.4, -26, 6.5, Math.PI / 2, '#433951');
-
-  // Metro is a surface pavilion, not a pit that heightAt() cannot support.
-  solid(7, 2.8, 5, M.jade, -23, 0, -33);
-  b(8.4, 0.25, 6.2, M.roof, -23, 2.8, -33, { block: true });
-  sign('人民广场 · 地铁', 'METRO LINK · 1 / 2 / 8', -23, 2.2, -30.45, 6.6, 0, '#9d3e3d');
-  pane(-23, 1.1, -30.48, 4.3, 1.3, 0, true);
+  // Reuse primary shikumen shells, with genuine door gaps and furnished rooms.
+  rooms.get('food').roofs[0].attach(sign('小笼包 · 生煎', 'SOUP DUMPLINGS · PAN-FRIED BUNS', -43.5, 3.15, 10.28, 7.5, 0, '#8d342c'));
+  rooms.get('cafe').roofs[0].attach(sign('弄堂咖啡', 'LILONG COFFEE · 慢慢来', -11.92, 3.15, -34, 7.5, Math.PI / 2));
+  rooms.get('store').roofs[0].attach(sign('便利店 24H', '水 · 零食 · EVERYDAY ESSENTIALS', -43.5, 3.15, 43.72, 7.5, Math.PI, '#255c79'));
+  const studio = buildRoom({ id: 'shanghai-studio-room', city: 'shanghai', category: 'studio',
+    x: X - 69, z: -28, w: 8, d: 16, h: 3.8, face: Math.PI / 2, wallMaterial: M.cream, roofMaterial: M.roof });
+  rooms.set('studio', studio);
+  studio.roofs[0].attach(sign('声动练习室', 'MUSIC · MANDARIN · PRACTICE', -64.72, 3.15, -28, 10, Math.PI / 2, '#433951'));
+  // The former extra metro box overlapped a house; its waiting hall now uses that house.
+  rooms.get('subway').roofs[0].attach(sign('人民广场 · 地铁', 'METRO LINK · 1 / 2 / 8', -25.5, 3.15, -28.72, 7.5, 0, '#9d3e3d'));
+  for (const room of rooms.values()) registerInterior(room);
 
   // Historic Bund façades WEST of the river, facing the east-bank skyline.
   for (const [z, d, h] of [[-48, 12, 11], [-33, 10, 14], [-12, 12, 10], [5, 10, 12], [51, 12, 10]]) {
@@ -239,7 +249,7 @@ function build() {
   sign('上海 · SHANGHAI', 'STYLISED CITY · DISTANCES COMPRESSED', -8, 3.6, 13.2, 9, 0, '#7e3e32');
 
   // Pudong silhouettes: all scenery, physically separated by the Huangpu.
-  const glass = mat('#547d8a', { metalness: 0.4, roughness: 0.35 });
+  const glass = nightGlow(mat('#547d8a', { metalness: 0.4, roughness: 0.35, emissive: '#244459' }), 0, 0.45);
   const silver = mat('#a5b7b8', { metalness: 0.45, roughness: 0.4 });
   for (const [x, z, h, w] of [[62, -56, 18, 7], [69, -43, 23, 7], [69, 33, 22, 6], [59, 48, 16, 8], [70, 59, 21, 7]]) {
     solid(w, h, 7, glass, x, 0, z);
@@ -328,9 +338,7 @@ function build() {
   for (let i = 0; i < 48; i++) reflections.setColorAt(i, new THREE.Color(i < 24 ? '#ef9bbb' : '#91d4e4'));
   for (const red of [false, true]) instances(new THREE.SphereGeometry(1, 10, 8), red ? M.lantern : M.warm,
     lights.filter((l) => l[6] === red).map((l) => l.slice(0, 6)));
-  const canopy = instances(new THREE.IcosahedronGeometry(1, 1), M.green,
-    leaves.map(({ x, y, z, size }) => [x, y, z, 1.6 * size, 1.25 * size, 1.6 * size]));
-  if (canopy) G.blockers.push(canopy);
+  sign('拍照点 · 东方明珠', 'PHOTO VIEW · HUANGPU → PUDONG', 19.5, 1.8, -20.5, 4.8, -Math.PI / 2, '#2c535e', 0.9);
 }
 
 export default {
@@ -339,6 +347,11 @@ export default {
   bounds: { minX: X - 75, maxX: X + 75, minZ: -75, maxZ: 75 },
   spawn: [X - 8, 0, 16], yaw: -Math.PI / 2,
   places,
+  vistas: [
+    { id: 'shanghai-pearl', title: 'Huangpu & Oriental Pearl', nativeName: '黄浦江与东方明珠', spawn: [X + 18, 0, -24], position: [X + 15, 4.5, -19], look: [X + 59, 17, -25], description: 'A clear west-bank view across the Huangpu; the Pearl remains on the east bank.' },
+    { id: 'shanghai-pudong', title: 'Pudong skyline', nativeName: '浦东天际线', spawn: [X + 18, 0, 16], position: [X + 14, 5, 22], look: [X + 67, 22, 2], description: 'Shanghai Tower and the open-aperture Financial Center beyond the river.' },
+    { id: 'shanghai-bund', title: 'Historic Bund waterfront', nativeName: '外滩', spawn: [X + 17, 0, -24], position: [X + 20, 5, -20], look: [X + 3, 12, -36], description: 'The west-bank stone façades and green dome, viewed from their own promenade.' },
+  ],
   airport: { spawn: [X - 46, 0, -60], name: 'Pudong / Hongqiao Transit Terminal', nativeName: '浦东 / 虹桥机场联络站' },
   roads,
   mapFeatures: [
@@ -350,6 +363,8 @@ export default {
   build,
   heightAt: () => 0,
   zoneAt(x, z) {
+    const room = interiorAt({ x, y: 0, z }, 'shanghai');
+    if (room) return { id: `shanghai-${room.category}`, indoor: true };
     const p = places.find((p) => Math.hypot(x - p.spawn[0], z - p.spawn[2]) < p.radius);
     return p ? { id: p.id, indoor: false } : null;
   },
