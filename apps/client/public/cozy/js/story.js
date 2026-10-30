@@ -354,7 +354,7 @@ export function buildNodes(A) {
     telescope: {
       who: 'narration',
       ko: '남산타워가 보인다!',
-      en: 'You can see Namsan (N Seoul) Tower across the river!',
+      en: 'You can see Namsan (N Seoul) Tower to the east, on this side of the Han River!',
       hint: 'At night the tower’s ring lights cycle through colours.',
       enter: () => {
         A.lookAtTower(true);

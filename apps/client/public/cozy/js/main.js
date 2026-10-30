@@ -1333,7 +1333,7 @@ function drawMapBg() {
   const coreRoads = S.city === 'seoul' ? [
     { points: [[0, 29], [0, -19], [5, -28], [5, -41]], width: 7 },
     { points: [[-15, -16], [16, -16]], width: 6 },
-    { points: [[-14, -34], [14, -34]], width: 5 },
+    { points: [[-4, -37.5], [14, -37.5]], width: 5 },
   ] : [];
   for (const road of [...coreRoads, ...currentCity().roads]) {
     path(road.points);
@@ -1415,6 +1415,10 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (modalOpen()) {
     keys.clear();
+    if (k === 'b' && !transitioning && !ui.book.classList.contains('hidden')) {
+      ui.book.classList.add('hidden');
+      return;
+    }
     if (k === 'escape' && !transitioning) {
       ui.travel.classList.add('hidden');
       ui.book.classList.add('hidden');
@@ -1812,7 +1816,7 @@ function updateCamera(dt, t) {
     mode = 'exit';
   } else if (lookTower) {
     camTargetPos.copy(SPOTS.telescope).add(new THREE.Vector3(0, 1.25, 0.2));
-    camTargetLook.set(90, 120, -470);
+    camTargetLook.set(420, 120, -10);
     fov = 14;
     mode = 'tower';
   } else if (S.benchSit && !dlg.state.active) {

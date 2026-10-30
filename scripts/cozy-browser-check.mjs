@@ -10,7 +10,7 @@ const { chromium } = await import(path.isAbsolute(moduleName) ? pathToFileURL(mo
 const url = process.env.COZY_URL || 'http://127.0.0.1:8420/cozy/index.html';
 const evidence = process.env.COZY_EVIDENCE_DIR;
 if (evidence) await mkdir(evidence, { recursive: true });
-const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await chromium.launch({ executablePath: process.env.COZY_CHROMIUM_EXECUTABLE || undefined, headless: true, args: ['--no-sandbox', '--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const results = [];
 const errors = [];
 async function boot(page, resume = false) {
@@ -23,7 +23,7 @@ async function shot(page, name) {
   if (evidence) await page.screenshot({ path: path.join(evidence, `${name}.png`), timeout: 120000 });
 }
 try {
-  const page = await browser.newPage({ viewport: { width: 1100, height: 740 } });
+  const page = await browser.newPage({ viewport: { width: 960, height: 640 }, hasTouch: true });
   page.setDefaultTimeout(30000);
   page.on('pageerror', (e) => errors.push(String(e)));
   await boot(page);
@@ -70,12 +70,15 @@ try {
       await page.locator('#activity-close').click();
     }
     results.push({ ...state, day, night });
+    console.log(`Passed ${city}: travel, map bounds, day/night${city === 'seoul' ? '' : ', phrase activity'}`);
   }
   // Ordinary Continue must retain destination, player position and local progress.
   const before = await page.evaluate(() => { __cozy.save(); return { city: __cozy.S.city, position: __cozy.player.root.position.toArray(), step: __cozy.S.adventures.shanghai.step }; });
   await boot(page, true);
   const after = await page.evaluate(() => ({ city: __cozy.S.city, position: __cozy.player.root.position.toArray(), step: __cozy.S.adventures.shanghai.step }));
   assert.deepEqual(after, before);
+  console.log('Passed reload/Continue: city, position and errand state retained');
+  console.log('Checking return flight and retained remote progress');
   assert.equal(await page.evaluate(() => __cozy.changeCity('seoul', { skipAnimation: true })), true);
   assert.equal(await page.evaluate(() => __cozy.S.adventures.tokyo.step), 1);
   assert.equal(await page.evaluate(() => __cozy.S.adventures.shanghai.step), 1);
@@ -85,19 +88,25 @@ try {
   await page.keyboard.down('s'); await page.waitForTimeout(700); await page.keyboard.up('s');
   const end = await page.evaluate(() => __cozy.player.root.position.toArray());
   assert.ok(Math.hypot(end[0] - start[0], end[2] - start[2]) > 0.1, 'Player must move after travelling');
-  // Touch-sized viewport: game and real interaction button fit without horizontal overflow.
-  const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  mobile.on('pageerror', (e) => errors.push(String(e)));
-  await boot(mobile);
+  console.log('Passed round trip and post-flight keyboard movement');
+  // Responsive touch-sized viewport in the existing touch-capable context.
+  // This is not real-device or mobile-browser acceptance.
+  const mobile = page;
+  await mobile.setViewportSize({ width: 390, height: 844 });
   await mobile.evaluate(() => __cozy.travelTo('airport', { skipAnimation: true }));
   await mobile.locator('#prompt').waitFor({ state: 'visible' });
   await mobile.locator('#prompt').tap();
   await mobile.locator('#travel').waitFor({ state: 'visible' });
   assert.ok(await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await shot(mobile, 'mobile-flights');
-  await mobile.close();
+  console.log('Passed touch interaction and mobile-width flight dialog');
   assert.deepEqual(errors, []);
-  const report = { passed: true, results, resume: after, movement: { start, end }, pageErrors: errors, limits: 'Software-rendered Chromium; no real-device performance or complete Seoul story playthrough claim.' };
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('b');
+  await page.locator('#book').waitFor({ state: 'visible' });
+  await page.keyboard.press('b');
+  await page.locator('#book').waitFor({ state: 'hidden' });
+  const report = { passed: true, results, resume: after, movement: { start, end }, pageErrors: errors, limits: 'Software-rendered Chromium; responsive touch viewport, not real-device performance or complete Seoul story playthrough.' };
   if (evidence) await writeFile(path.join(evidence, 'browser-check.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
 } finally {
