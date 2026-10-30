@@ -1940,6 +1940,7 @@ function updatePlayer(dt) {
     if (keys.has('a') || keys.has('arrowleft')) ix -= 1;
     if (keys.has('d') || keys.has('arrowright')) ix += 1;
     const frozen = !S.started || blocked || dlg.state.active || S.haeunStory === 'exit';
+    if (!frozen && vistaIndex >= 0 && Math.hypot(ix, iz) > 0.08) followCamera();
     // Camera-relative walking/steering; inertia and turning acceleration remain
     // in world coordinates when the player lets go to orbit the camera.
     const x = Math.cos(cam.yaw) * ix + Math.sin(cam.yaw) * iz;
