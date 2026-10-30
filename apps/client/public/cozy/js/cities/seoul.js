@@ -378,7 +378,7 @@ export default {
   subtitle: 'Hongdae → Yeonnam north (+z); Han River south (−z). Stylised blocks, compressed river / AREX connections.',
   bounds, spawn: [1.6, 0, 9], yaw: 0, places,
   vistas: [
-    { id: 'seoul-hangang', title: 'Hangang bridge & river lights', nativeName: '한강 야경', spawn: [6, 2.4, -41.5], position: [10, 8, -42], look: [0, -1, -185], description: 'Elevated, unobstructed view south over the compressed Han River connection.' },
+    { id: 'seoul-hangang', title: 'Hangang bridge & waterfront', nativeName: '한강 전망', spawn: [6, 2.4, -41.5], position: [10, 8, -42], look: [0, -1, -185], description: 'Elevated, unobstructed view south over the compressed Han River connection.' },
     { id: 'seoul-namsan', title: 'Namsan skyline', nativeName: '남산 서울타워', spawn: [31, 0, -40], position: [28, 7, -43], look: [420, 118, -10], description: 'The distant eastern tower and hill remain on the north bank, not across the Han.' },
   ],
   airport: { spawn: airportSpawn, name: 'AREX · Gimpo / Incheon connection', nativeName: '공항철도 · 김포 / 인천 연결' },

@@ -348,7 +348,7 @@ export default {
   spawn: [X - 8, 0, 16], yaw: -Math.PI / 2,
   places,
   vistas: [
-    { id: 'shanghai-pearl', title: 'Huangpu & Oriental Pearl', nativeName: '黄浦江与东方明珠', spawn: [X + 18, 0, -24], position: [X + 15, 4.5, -19], look: [X + 59, 17, -25], description: 'A clear west-bank view across the Huangpu; the Pearl remains on the east bank.' },
+    { id: 'shanghai-pearl', title: 'Huangpu & Oriental Pearl', nativeName: '黄浦江与东方明珠', spawn: [X + 18, 0, -24], position: [X + 15, 11, -14], look: [X + 59, 12, -25], fov: 65, description: 'An elevated west-bank view includes the Huangpu foreground and the full Oriental Pearl on the east bank.' },
     { id: 'shanghai-pudong', title: 'Pudong skyline', nativeName: '浦东天际线', spawn: [X + 18, 0, 16], position: [X + 14, 5, 22], look: [X + 67, 22, 2], description: 'Shanghai Tower and the open-aperture Financial Center beyond the river.' },
     { id: 'shanghai-bund', title: 'Historic Bund waterfront', nativeName: '外滩', spawn: [X + 17, 0, -24], position: [X + 20, 5, -20], look: [X + 3, 12, -36], description: 'The west-bank stone façades and green dome, viewed from their own promenade.' },
   ],

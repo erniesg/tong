@@ -2192,6 +2192,7 @@ function updateCamera(dt, t) {
     const vista = currentCity().vistas[vistaIndex];
     camTargetPos.set(...vista.position);
     camTargetLook.set(...vista.look);
+    fov = clamp(vista.fov ?? 50, 30, 75);
     mode = 'vista';
     k = 5;
   } else {

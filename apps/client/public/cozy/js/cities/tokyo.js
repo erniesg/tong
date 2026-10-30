@@ -494,7 +494,7 @@ export default {
   subtitle: 'Compressed, stylised Asakusa–Sumida: temple west, river east, Oshiage beyond. Not a literal map.',
   bounds, spawn: at(-20, 40), yaw: 0, places,
   vistas: [
-    { id: 'tokyo-sumida-skytree', title: 'Sumida & Skytree', nativeName: '隅田川とスカイツリー', spawn: at(17, -22), position: [CX + 12, 5, -15], look: [CX + 52, 20, -27], description: 'West-bank promenade across Sumida to Oshiage on the east bank.' },
+    { id: 'tokyo-sumida-skytree', title: 'Sumida & Skytree', nativeName: '隅田川とスカイツリー', spawn: at(17, -22), position: [CX + 8, 11, 38], look: [CX + 48, 18, -22], fov: 60, description: 'An elevated west-bank view includes the Sumida foreground and the full Skytree silhouette in Oshiage to the east.' },
     { id: 'tokyo-kaminarimon', title: 'Kaminarimon lantern', nativeName: '雷門', spawn: at(-20, 40), position: [CX - 20, 3.2, 44], look: [CX - 20, 4.4, 30], description: 'The great lantern frames the south entrance to Nakamise.' },
     { id: 'tokyo-sensoji', title: 'Sensō-ji & five-storey pagoda', nativeName: '浅草寺と五重塔', spawn: at(-20, -30), position: [CX - 15, 5, -25], look: [CX - 27, 7, -43], description: 'Temple hall and pagoda remain west of the Sumida.' },
   ],
