@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Tong · 홍대 한 바퀴</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <div id="vignette" class="vignette"></div>
+  <div id="bubbles" class="bubbles"></div>
+  <div id="fade" class="fade"></div>
+
+  <!-- HUD -->
+  <div id="hud" class="hud hidden">
+    <div class="hud-left">
+      <div class="panel quest">
+        <div class="quest-title">오늘의 할 일 · Today <span id="quest-count"></span></div>
+        <ul id="quest-list" class="quest-list"></ul>
+        <div id="quest-hint" class="quest-hint"></div>
+      </div>
+    </div>
+
+    <div class="panel clock">
+      <span id="clock-icon" class="clock-icon">🌇</span>
+      <div class="clock-text">
+        <b id="clock-time">16:30</b>
+        <span id="clock-ko">오후 4시 30분</span>
+      </div>
+      <div class="clock-buttons">
+        <button id="t-pause" class="tbtn" title="Pause time">⏸</button>
+        <button id="t-play" class="tbtn" title="Normal speed">▶</button>
+        <button id="t-fast" class="tbtn" title="Fast forward (F)">⏩</button>
+        <span class="sep"></span>
+        <button id="t-dawn" class="tbtn" title="Dawn">🌅</button>
+        <button id="t-noon" class="tbtn" title="Noon">☀️</button>
+        <button id="t-dusk" class="tbtn" title="Sunset">🌇</button>
+        <button id="t-night" class="tbtn" title="Night">🌙</button>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <div class="panel hearts-panel">
+        <div class="heart-row">
+          <span class="who">하은</span>
+          <span id="hearts-haeun" class="hearts"></span>
+        </div>
+        <div id="stage-haeun" class="stage"></div>
+        <div class="heart-row">
+          <span class="who">진</span>
+          <span id="hearts-jin" class="hearts jin"></span>
+        </div>
+        <div id="stage-jin" class="stage"></div>
+      </div>
+      <div class="hud-buttons">
+        <button id="btn-tong" class="chip" title="Ask Tong (H)"><img src="img/tong-cheerful.png" alt="Tong" /></button>
+        <button id="btn-book" class="chip" title="Phrasebook (B)">📖 <span id="book-count">0</span></button>
+        <button id="btn-map" class="chip" title="Map (N)">🗺️</button>
+        <button id="btn-en" class="chip" title="Toggle English (T)">EN</button>
+        <button id="btn-voice" class="chip" title="Korean voice">🗣️</button>
+        <button id="btn-mute" class="chip" title="Sound (M)">🔊</button>
+      </div>
+      <canvas id="minimap" class="minimap panel" width="150" height="330"></canvas>
+    </div>
+  </div>
+
+  <div id="banner" class="banner hidden"></div>
+
+  <div id="book" class="book panel hidden">
+    <div class="book-head">
+      <span>단어장 · Phrasebook</span>
+      <button id="book-close" class="chip">✕</button>
+    </div>
+    <div id="book-list" class="book-list"></div>
+  </div>
+
+  <button id="prompt" class="prompt hidden"></button>
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Dialogue -->
+  <div id="dialogue" class="dialogue hidden">
+    <div id="portrait" class="portrait"></div>
+    <div class="dialogue-body">
+      <div id="speaker" class="speaker"></div>
+      <div id="line-ko" class="line-ko" title="Tap to hear it"></div>
+      <div id="line-en" class="line-en"></div>
+      <div id="hint" class="hint hidden"></div>
+      <div id="choices" class="choices"></div>
+      <div id="next" class="next hidden">▼</div>
+    </div>
+  </div>
+
+  <!-- Subway travel -->
+  <div id="travel" class="overlay hidden">
+    <div class="card travel-card">
+      <div class="travel-head">
+        <div>
+          <div class="line-badge">2</div>
+        </div>
+        <div>
+          <h2>지하철 · Subway</h2>
+          <p class="subtitle">어디로 갈까요? Where to?</p>
+        </div>
+        <button id="travel-close" class="chip">✕</button>
+      </div>
+      <div id="travel-list" class="travel-list"></div>
+      <div class="end-section">다른 도시 · Other cities</div>
+      <div class="cities">
+        <div class="city locked"><img src="../assets/locations/shanghai-static.png" alt="" /><span>上海 Shanghai<br /><small>coming soon</small></span></div>
+        <div class="city locked"><img src="../assets/locations/tokyo-static.png" alt="" /><span>東京 Tokyo<br /><small>coming soon</small></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Polaroid memory -->
+  <div id="polaroid" class="overlay hidden">
+    <div class="polaroid">
+      <img id="polaroid-img" alt="A polaroid memory" />
+      <div id="polaroid-caption" class="polaroid-caption"></div>
+      <div id="polaroid-date" class="polaroid-date"></div>
+      <button id="polaroid-close" class="btn-primary">추억 저장 · Keep it</button>
+    </div>
+  </div>
+
+  <!-- Mobile controls -->
+  <div id="stick" class="stick hidden"><div id="stick-knob" class="stick-knob"></div></div>
+
+  <!-- Title -->
+  <div id="title" class="overlay title-overlay">
+    <div class="card title-card">
+      <img class="title-tong" src="img/tong-cheerful.png" alt="Tong" />
+      <h1>홍대 한 바퀴</h1>
+      <p class="subtitle">A cozy day-and-night in a Seoul neighbourhood.<br />Order coffee, buy banana milk, watch the Han River,<br />and maybe share tteokbokki with 하은.</p>
+      <label class="name-label" for="name">What should everyone call you?</label>
+      <input id="name" class="name-input" maxlength="12" placeholder="연습생" autocomplete="off" />
+      <div class="title-buttons">
+        <button id="start" class="btn-primary">시작 · New game</button>
+        <button id="continue" class="btn-secondary hidden">이어하기 · Continue</button>
+      </div>
+      <div class="controls-hint">
+        <span><kbd>WASD</kbd> walk</span>
+        <span><kbd>Shift</kbd> run</span>
+        <span><kbd>drag</kbd> look</span>
+        <span><kbd>E</kbd> talk</span>
+        <span><kbd>H</kbd> ask Tong</span>
+        <span><kbd>F</kbd> fast time</span>
+      </div>
+      <div id="loading" class="loading">Building the neighbourhood…</div>
+    </div>
+  </div>
+
+  <!-- Night summary -->
+  <div id="ending" class="overlay hidden">
+    <div class="card end-card">
+      <div class="end-kicker">포장마차의 밤 · A night at the pojangmacha</div>
+      <h2 id="end-title"></h2>
+      <div id="end-hearts" class="hearts big"></div>
+      <p id="end-text" class="end-text"></p>
+      <div class="end-section">Words &amp; phrases so far</div>
+      <div id="end-words" class="end-words"></div>
+      <div class="end-buttons">
+        <button id="stay" class="btn-primary">계속 탐험 · Keep exploring</button>
+        <button id="again" class="btn-secondary">New game</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

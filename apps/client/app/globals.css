@@ -11513,3 +11513,13 @@ body:has(.playtest-pill-expanded) {
     transition: none;
   }
 }
+
+/* ── Cozy 3D pojangmacha (/cozy) ─────────────────────── */
+.cozy-frame {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  background: #1a2140;
+}

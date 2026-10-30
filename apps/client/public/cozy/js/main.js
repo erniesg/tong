@@ -1,0 +1,1709 @@
+// 홍대 한 바퀴 — a cozy, walkable Seoul neighbourhood with day/night,
+// built on Tong's characters (Ha-eun, Jin, Tong) and pojangmacha curriculum.
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { G, clamp, damp, lerp, rand, wrapAngle, makeCanvas, canvasTexture, roundRect, softTexture, hdr, shuffle } from './util.js';
+import { DayNight, koreanTime, timeIcon } from './sky.js';
+import {
+  buildWorld, heightAt, zoneAt, setTentOpen, studioMirrorVisible, makeFood, water, tentMats, lanterns,
+  SPOTS, PLACES, TENT, TX, COUNTER_Y, BOUNDS, TERRACE_Y,
+} from './world.js';
+import {
+  makeHaeun, makeJin, makePlayer, makeAjusshi, makeBarista, makeCashier, makePedestrian, makeTong, makeCat,
+  animate, animateTong, setExpr, lookAtYaw, headPos,
+} from './characters.js';
+import { initAudio, updateAudio, sfx, setMuted, audio, initVoice, speak as speakRaw, voice } from './audio.js';
+import { buildNodes, tongHint, WORDS } from './story.js';
+import { createDialogue } from './dialogue.js';
+
+/* ── State ───────────────────────────────────────── */
+
+const SAVE_KEY = 'tong-cozy-seoul-v2';
+const S = {
+  name: '연습생',
+  hour: 16.5,
+  day: 1,
+  speed: 1,
+  aff: 0,
+  maxAff: 8,
+  jinAff: 0,
+  maxJin: 2,
+  words: new Set(),
+  phrases: new Map(),
+  visited: new Set(),
+  quests: {},
+  pettedCat: false,
+  metHaeunStudio: false,
+  jinTip: false,
+  mistakes: 0,
+  food: null,
+  spicy: false,
+  showEn: true,
+  haeunStory: 'idle', // idle | talking | exit
+  haeunHomeUntil: 0,
+  started: false,
+  benchSit: null,
+  telescope: false,
+  polaroids: [],
+};
+
+function save() {
+  try {
+    localStorage.setItem(
+      SAVE_KEY,
+      JSON.stringify({
+        name: S.name, hour: S.hour, day: S.day, aff: S.aff, jinAff: S.jinAff,
+        words: [...S.words], phrases: [...S.phrases], visited: [...S.visited], quests: S.quests,
+        pettedCat: S.pettedCat, metHaeunStudio: S.metHaeunStudio, jinTip: S.jinTip, haeunHomeUntil: S.haeunHomeUntil,
+      }),
+    );
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function applySave(d) {
+  Object.assign(S, { name: d.name, hour: d.hour, day: d.day, aff: d.aff, jinAff: d.jinAff, quests: d.quests ?? {}, pettedCat: d.pettedCat, metHaeunStudio: d.metHaeunStudio, jinTip: d.jinTip, haeunHomeUntil: d.haeunHomeUntil ?? 0 });
+  S.words = new Set(d.words);
+  S.phrases = new Map(d.phrases);
+  S.visited = new Set(d.visited);
+}
+
+/* ── Renderer ────────────────────────────────────── */
+
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
+camera.position.set(8, 6, 20);
+G.scene = scene;
+G.camera = camera;
+// soft fill light that rides with the camera during conversations
+const faceFill = new THREE.PointLight(0xffe6cc, 0, 7, 2);
+scene.add(faceFill);
+G.renderer = renderer;
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.5, 0.55, 0.92);
+composer.addPass(bloom);
+const grade = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uTint: { value: new THREE.Color(1, 1, 1) }, uSat: { value: 1.1 }, uVig: { value: 0.35 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform vec3 uTint; uniform float uSat; uniform float uVig; varying vec2 vUv;
+    void main(){ vec4 c = texture2D(tDiffuse, vUv); vec3 col = c.rgb * uTint;
+      float l = dot(col, vec3(0.2126, 0.7152, 0.0722)); col = mix(vec3(l), col, uSat);
+      vec2 d = vUv - 0.5; col *= 1.0 - dot(d, d) * uVig * 1.6; gl_FragColor = vec4(col, c.a); }`,
+});
+composer.addPass(grade);
+composer.addPass(new OutputPass());
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* ── UI handles ──────────────────────────────────── */
+
+const $ = (id) => document.getElementById(id);
+const ui = {
+  hud: $('hud'),
+  questList: $('quest-list'),
+  questHint: $('quest-hint'),
+  clockIcon: $('clock-icon'),
+  clockTime: $('clock-time'),
+  clockKo: $('clock-ko'),
+  heartsHaeun: $('hearts-haeun'),
+  stageHaeun: $('stage-haeun'),
+  heartsJin: $('hearts-jin'),
+  stageJin: $('stage-jin'),
+  prompt: $('prompt'),
+  toast: $('toast'),
+  banner: $('banner'),
+  bubbles: $('bubbles'),
+  book: $('book'),
+  bookList: $('book-list'),
+  bookCount: $('book-count'),
+  vignette: $('vignette'),
+  stick: $('stick'),
+  knob: $('stick-knob'),
+  minimap: $('minimap'),
+  travel: $('travel'),
+  fade: $('fade'),
+};
+
+/* ── World & cast ────────────────────────────────── */
+
+let sky;
+let player, haeun, jin, ajusshi, barista, cashier, tong, cat;
+const peds = [];
+const chars = {};
+
+function buildCast() {
+  player = makePlayer();
+  haeun = makeHaeun();
+  jin = makeJin();
+  ajusshi = makeAjusshi();
+  barista = makeBarista();
+  cashier = makeCashier();
+  tong = makeTong();
+  cat = makeCat(SPOTS.cat);
+  Object.assign(chars, { player, haeun, jin, ajusshi, barista, cashier, tong });
+
+  ajusshi.root.position.copy(SPOTS.ajusshi);
+  ajusshi.armPose = (t) => (ajusshi.serveT > 0 ? [-1.4, -1.4] : [-0.9 + Math.sin(t * 3) * 0.25, -0.2]);
+  barista.root.position.copy(SPOTS.barista);
+  barista.root.rotation.y = -Math.PI / 2;
+  barista.armPose = (t) => [-0.6 + Math.sin(t * 1.7) * 0.15, -0.4];
+  cashier.root.position.copy(SPOTS.cashier);
+  cashier.root.rotation.y = Math.PI / 2;
+
+  const loops = [
+    [[1.5, 27], [1.5, -6], [3, -14], [-2, -16], [-1.5, -6], [-1.5, 27]],
+    [[-7, -11], [7, -11], [7, -24], [-7, -24]],
+    [[-2, -34], [14, -34], [14, -42.5], [-4, -42.5]],
+    [[-2.5, 24], [3.5, 12], [3.5, -2], [-1, -12], [4.5, -20], [3.5, -2], [-2.5, 24]],
+  ];
+  loops.forEach((loop, i) => {
+    const p = makePedestrian(100 + i * 17);
+    const pts = loop.map(([x, z]) => new THREE.Vector3(x, heightAt(x, z), z));
+    p.root.position.copy(pts[0]);
+    peds.push({ c: p, pts, i: 1, speed: rand(1.1, 1.5), pause: 0 });
+  });
+}
+
+/* ── Schedules (who is where, when) ──────────────── */
+
+const isOpen = (h) => h >= 19 || h < 3;
+const where = {
+  haeun(h) {
+    if (S.haeunStory !== 'idle') return 'story';
+    // after the night out she heads home until the next morning
+    if (S.day * 24 + h < S.haeunHomeUntil) return 'away';
+    if (h >= 9 && h < 19) return 'studio';
+    if (isOpen(h)) return 'tent';
+    return 'away';
+  },
+  jin(h) {
+    if (h >= 8 && h < 18) return 'cafe';
+    if (h >= 18) return 'lookout';
+    return 'away';
+  },
+};
+const loc = { haeun: null, jin: null, tent: null };
+const eatPose = (t) => {
+  const k = Math.max(0, Math.sin(t * 0.9)) ** 6;
+  return [-0.25 - k * 1.9, -0.35];
+};
+const talkPose = () => [-0.25, -0.35];
+
+function placeHaeun(l) {
+  haeun.root.visible = l !== 'away';
+  haeun.pose = 'idle';
+  haeun.armPose = null;
+  haeun.legSwing = false;
+  if (l === 'studio') {
+    haeun.root.position.copy(SPOTS.haeunStudio);
+    haeun.root.rotation.y = -Math.PI / 2;
+    haeun.pose = 'dance';
+    haeun.baseExpr = 'smirk';
+  } else if (l === 'tent') {
+    haeun.root.position.copy(SPOTS.haeunTent);
+    haeun.root.rotation.y = Math.PI;
+    haeun.pose = 'sit';
+    haeun.legSwing = true;
+    haeun.baseExpr = 'cool';
+    haeun.armPose = eatPose;
+  }
+  setExpr(haeun, haeun.baseExpr);
+}
+
+function placeJin(l) {
+  jin.root.visible = l !== 'away';
+  jin.pose = 'sit';
+  if (l === 'cafe') {
+    jin.root.position.copy(SPOTS.jinCafe);
+    jin.root.rotation.y = -Math.PI / 2;
+    jin.armPose = (t) => [-0.9 - Math.max(0, Math.sin(t * 0.5)) ** 8 * 0.8, -0.3];
+  } else if (l === 'lookout') {
+    jin.root.position.copy(SPOTS.jinLookout);
+    jin.root.rotation.y = Math.PI;
+    jin.armPose = () => [-0.3, -0.3];
+  }
+}
+
+const frustum = new THREE.Frustum();
+const projScreen = new THREE.Matrix4();
+function onScreen(p) {
+  projScreen.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  frustum.setFromProjectionMatrix(projScreen);
+  return frustum.containsPoint(tmpV.copy(p).setY(p.y + 1));
+}
+
+function updateSchedules(force = false) {
+  const h = S.hour;
+  const open = isOpen(h);
+  if (open !== loc.tent || force) {
+    loc.tent = open;
+    setTentOpen(open);
+    ajusshi.root.visible = open;
+    for (const e of tentSteam) e.off = !open;
+  }
+  barista.root.visible = h >= 8 && h < 22;
+  // NPCs change places when you aren't watching them
+  const unseen = (c) => !c.root.visible || player.root.position.distanceTo(c.root.position) > 9 || !onScreen(c.root.position);
+  const hl = where.haeun(h);
+  if (hl !== 'story' && hl !== loc.haeun && !dlg.state.active && (force || unseen(haeun))) {
+    loc.haeun = hl;
+    placeHaeun(hl);
+  }
+  const jl = where.jin(h);
+  if (jl !== loc.jin && !dlg.state.active && (force || unseen(jin))) {
+    loc.jin = jl;
+    placeJin(jl);
+  }
+}
+
+/* ── Particles ───────────────────────────────────── */
+
+const steamTex = softTexture('rgba(255,255,255,0.9)', 'rgba(255,255,255,0)');
+const steamPool = [];
+const emitters = [];
+const tentSteam = [];
+
+function initParticles() {
+  for (let i = 0; i < 140; i++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: steamTex, color: 0xfff0e0, transparent: true, depthWrite: false, opacity: 0 }));
+    s.visible = false;
+    scene.add(s);
+    steamPool.push({ s, alive: false, life: 0, max: 1, v: new THREE.Vector3(), s0: 0.2, s1: 0.7, seed: 0, alpha: 0.3 });
+  }
+  tentSteam.push(emitter(new THREE.Vector3(TX - 1.95, COUNTER_Y + 0.12, -1.08), 5, { s0: 0.2, s1: 0.8 }));
+  tentSteam.push(emitter(new THREE.Vector3(TX - 1.15, COUNTER_Y + 0.3, -1.12), 4, { s0: 0.2, s1: 0.75 }));
+  emitter(new THREE.Vector3(16.6, 1.6, -18.6), 1.5, { s0: 0.08, s1: 0.4, alpha: 0.25, rise: 0.35 });
+}
+
+function emitter(pos, rate, opts = {}) {
+  const e = { pos: pos.clone(), rate, acc: 0, s0: 0.15, s1: 0.65, alpha: 0.28, rise: 0.45, color: 0xfff0e0, ...opts };
+  emitters.push(e);
+  return e;
+}
+
+function updateParticles(dt, t) {
+  for (const e of emitters) {
+    if (e.off) continue;
+    e.acc += e.rate * dt;
+    while (e.acc >= 1) {
+      e.acc -= 1;
+      const p = steamPool.find((q) => !q.alive);
+      if (!p) break;
+      p.alive = true;
+      p.life = 0;
+      p.max = rand(1.8, 2.8);
+      p.s.position.set(e.pos.x + rand(-0.1, 0.1), e.pos.y, e.pos.z + rand(-0.1, 0.1));
+      p.v.set(rand(-0.05, 0.05), e.rise * rand(0.8, 1.2), rand(-0.05, 0.05));
+      p.s0 = e.s0;
+      p.s1 = e.s1;
+      p.alpha = e.alpha;
+      p.seed = Math.random() * 10;
+      p.s.material.color.set(e.color);
+      p.s.visible = true;
+    }
+  }
+  for (const p of steamPool) {
+    if (!p.alive) continue;
+    p.life += dt;
+    const k = p.life / p.max;
+    if (k >= 1) {
+      p.alive = false;
+      p.s.visible = false;
+      continue;
+    }
+    p.s.position.addScaledVector(p.v, dt);
+    p.s.position.x += Math.sin(t * 1.5 + p.seed) * 0.08 * dt;
+    const sc = p.s0 + (p.s1 - p.s0) * k;
+    p.s.scale.set(sc, sc, 1);
+    p.s.material.opacity = Math.sin(Math.PI * k) * p.alpha;
+  }
+}
+
+let motes;
+function buildMotes() {
+  const n = 220;
+  const pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const x = rand(-10, 10);
+    const z = rand(-45, 26);
+    pos.set([x, heightAt(x, z) + rand(0.4, 4.5), z], i * 3);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  motes = new THREE.Points(geo, new THREE.PointsMaterial({ map: softTexture(), size: 0.09, color: hdr(0xffcf8a, 1.8), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  scene.add(motes);
+}
+
+function updateMotes(dt, t) {
+  motes.material.opacity = G.night;
+  const a = motes.geometry.attributes.position;
+  for (let i = 0; i < a.count; i++) {
+    a.setY(i, a.getY(i) + Math.sin(t * 0.8 + i) * dt * 0.08);
+    a.setX(i, a.getX(i) + Math.cos(t * 0.6 + i * 1.3) * dt * 0.06);
+  }
+  a.needsUpdate = true;
+}
+
+/* ── Word pickups ────────────────────────────────── */
+
+const pickups = [];
+function buildPickups() {
+  const glowTex = softTexture('rgba(255,200,120,0.8)', 'rgba(255,160,60,0)');
+  for (const w of WORDS) {
+    const W = 200 + [...w.ko].length * 90;
+    const [c, g] = makeCanvas(W, 192);
+    g.fillStyle = '#e8641c';
+    roundRect(g, 12, 20, W - 24, 150, 60);
+    g.fill();
+    g.strokeStyle = '#ffd9a8';
+    g.lineWidth = 8;
+    g.stroke();
+    g.font = '86px Jua, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = '#fff6e8';
+    g.fillText(w.ko, W / 2, 100);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTexture(c, { repeat: false }), depthWrite: false }));
+    sprite.scale.set((W / 384) * 1.0, 0.5, 1);
+    const y = heightAt(w.at[0], w.at[1]);
+    sprite.position.set(w.at[0], y + 1.3, w.at[1]);
+    scene.add(sprite);
+    const glow = new THREE.Mesh(new THREE.CircleGeometry(0.7, 24), new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.set(w.at[0], y + 0.03, w.at[1]);
+    scene.add(glow);
+    const p = { w, y, sprite, glow, taken: S.words.has(w.ko), fade: 0, phase: Math.random() * 6 };
+    if (p.taken) sprite.visible = glow.visible = false;
+    pickups.push(p);
+  }
+}
+
+function updatePickups(dt, t) {
+  for (const p of pickups) {
+    if (p.taken) {
+      if (p.fade < 1 && p.sprite.visible) {
+        p.fade += dt * 2;
+        p.sprite.position.y += dt * 1.5;
+        p.sprite.material.opacity = 1 - p.fade;
+        p.glow.material.opacity = 1 - p.fade;
+        if (p.fade >= 1) p.sprite.visible = p.glow.visible = false;
+      }
+      continue;
+    }
+    p.sprite.position.y = p.y + 1.3 + Math.sin(t * 2 + p.phase) * 0.1;
+    if (!S.started) continue;
+    const pp = player.root.position;
+    if (Math.hypot(pp.x - p.w.at[0], pp.z - p.w.at[1]) < 0.95 && Math.abs(pp.y - p.y) < 1) {
+      p.taken = true;
+      S.words.add(p.w.ko);
+      learn(p.w.ko, p.w.rom, p.w.en);
+      sfx.chime();
+      tong.spin = 0.8;
+      tong.expr = 'laugh';
+      tong.exprT = 1.5;
+      toast(`<b>${p.w.ko}</b><span>${p.w.rom} · ${p.w.en}</span>`, 2600);
+      speak(p.w.ko, 'player');
+      if (S.words.size >= WORDS.length) done('words');
+      updateQuest();
+      save();
+    }
+  }
+}
+
+/* ── UI helpers ──────────────────────────────────── */
+
+let toastTimer = 0;
+function toast(html, ms = 2200) {
+  ui.toast.innerHTML = html;
+  ui.toast.classList.remove('hidden');
+  ui.toast.style.animation = 'none';
+  void ui.toast.offsetWidth;
+  ui.toast.style.animation = '';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => ui.toast.classList.add('hidden'), ms);
+}
+
+let bannerTimer = 0;
+function banner(ko, en) {
+  ui.banner.innerHTML = `<b></b><span></span>`;
+  ui.banner.children[0].textContent = ko;
+  ui.banner.children[1].textContent = en;
+  ui.banner.classList.remove('hidden', 'out');
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => ui.banner.classList.add('out'), 2200);
+}
+
+function learn(ko, rom, en) {
+  if (!S.phrases.has(ko)) S.phrases.set(ko, { rom, en });
+  ui.bookCount.textContent = S.phrases.size;
+  renderBook();
+}
+
+function renderBook() {
+  if (!S.phrases.size) {
+    ui.bookList.innerHTML = '<div class="book-empty">Glowing words are scattered around the neighbourhood. Walk into them!</div>';
+    return;
+  }
+  ui.bookList.innerHTML = '';
+  for (const [ko, { rom, en }] of S.phrases) {
+    const row = document.createElement('div');
+    row.className = 'word-row';
+    row.innerHTML = '<b></b><span class="rom"></span><span class="en"></span>';
+    row.children[0].textContent = ko;
+    row.children[1].textContent = rom ?? '';
+    row.children[2].textContent = en ?? '';
+    row.onclick = () => speak(ko, 'player');
+    ui.bookList.appendChild(row);
+  }
+}
+
+const HAEUN_STAGES = [[0, '낯선 사람 · strangers'], [2, '아는 사이 · acquaintances'], [4, '동료 · colleagues'], [6, '친구 · friends (almost)']];
+const JIN_STAGES = [[0, '선배 · senior'], [1, '친한 선배 · close senior'], [2, '든든한 선배 · trusted mentor']];
+const stage = (table, v) => [...table].reverse().find(([m]) => v >= m)[1];
+
+function hearts(n, max) {
+  return Array.from({ length: max }, (_, i) => (i < n ? '♥' : '<span class="off">♥</span>')).join('');
+}
+
+function updateHearts() {
+  ui.heartsHaeun.innerHTML = hearts(S.aff, S.maxAff);
+  ui.stageHaeun.textContent = stage(HAEUN_STAGES, S.aff);
+  ui.heartsJin.innerHTML = hearts(S.jinAff, S.maxJin);
+  ui.stageJin.textContent = stage(JIN_STAGES, S.jinAff);
+}
+
+function addAff(who, n) {
+  if (who === 'jin') {
+    S.jinAff = clamp(S.jinAff + n, 0, S.maxJin);
+    bubble(jin, '+♥', { cls: 'heart', dur: 1.3 });
+  } else {
+    S.aff = clamp(S.aff + n, 0, S.maxAff);
+    bubble(haeun, '+♥', { cls: 'heart', dur: 1.3 });
+  }
+  updateHearts();
+  sfx.heart();
+}
+
+const QUESTS = [
+  ['cafe', '☕ Order at 카페 봄 (8:00–22:00)'],
+  ['jin', '🧑‍🎤 Say hi to Jin at the café'],
+  ['haeunDay', '💃 Find 하은 at the studio (9:00–19:00)'],
+  ['store', '🏪 Buy something at the 편의점'],
+  ['haeun', '🏮 Share a night at the 포장마차 (19:00~)'],
+  ['jinNight', '🌉 Find Jin by the Han River (night)'],
+  ['explore', '🗺️ Visit all 6 places'],
+  ['words', '✨ Collect 10 glowing words'],
+  ['quiz', '📝 Ace Tong’s word quiz (studio)'],
+];
+
+function updateQuest() {
+  const open = QUESTS.filter(([id]) => !S.quests[id]);
+  const doneCount = QUESTS.length - open.length;
+  ui.questList.innerHTML = '';
+  for (const [id, label] of open.slice(0, 4)) {
+    const li = document.createElement('li');
+    let txt = label;
+    if (id === 'words') txt += ` ${S.words.size}/10`;
+    if (id === 'explore') txt += ` ${S.visited.size}/6`;
+    li.textContent = txt;
+    ui.questList.appendChild(li);
+  }
+  if (!open.length) ui.questList.innerHTML = '<li class="done">모두 완료! Everything done 🎉</li>';
+  $('quest-count').textContent = `${doneCount}/${QUESTS.length}`;
+}
+
+function done(id) {
+  if (S.quests[id]) return;
+  S.quests[id] = true;
+  const q = QUESTS.find(([qid]) => qid === id);
+  if (q) toast(`<b>✓ 완료!</b><span>${q[1]}</span>`, 2400);
+  sfx.chime();
+  updateQuest();
+  save();
+}
+
+const bubbles = [];
+function bubble(target, text, { cls = '', dur = 2.4 } = {}) {
+  if (!cls) bubbles.filter((b) => b.target === target && !b.el.className.includes('heart')).forEach((b) => (b.life = Math.min(b.life, 0.01)));
+  const el = document.createElement('div');
+  el.className = `bubble ${cls}`;
+  el.textContent = text;
+  ui.bubbles.appendChild(el);
+  bubbles.push({ el, target, life: dur, rise: 0 });
+}
+
+const tmpV = new THREE.Vector3();
+function updateBubbles(dt) {
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    const b = bubbles[i];
+    b.life -= dt;
+    if (b.el.classList.contains('heart')) b.rise += dt * 40;
+    if (b.life <= 0) {
+      b.el.remove();
+      bubbles.splice(i, 1);
+      continue;
+    }
+    if (b.target.head) headPos(b.target, tmpV).y += 0.55;
+    else if (b.target.root) tmpV.copy(b.target.root.position).add(b.target.body.position).y += 0.6;
+    else tmpV.copy(b.target);
+    tmpV.project(camera);
+    b.el.style.display = tmpV.z > 1 ? 'none' : '';
+    b.el.style.left = `${(tmpV.x * 0.5 + 0.5) * window.innerWidth}px`;
+    b.el.style.top = `${(-tmpV.y * 0.5 + 0.5) * window.innerHeight - b.rise}px`;
+    b.el.style.opacity = Math.min(1, b.life * 3);
+  }
+}
+
+function speak(text, who) {
+  if (!/\p{Script=Hangul}/u.test(text)) return;
+  speakRaw(text, who);
+}
+
+function updateToggles() {
+  $('btn-en').classList.toggle('off', !S.showEn);
+  $('btn-mute').textContent = audio.muted ? '🔇' : '🔊';
+  const v = $('btn-voice');
+  v.classList.toggle('off', !voice.on || !voice.available());
+  v.title = voice.available() ? 'Korean voice' : 'No Korean voice on this device';
+  document.body.classList.toggle('no-en', !S.showEn);
+  for (const [id, sp] of [['t-pause', 0], ['t-play', 1], ['t-fast', 8]]) $(id).classList.toggle('on', S.speed === sp);
+}
+
+/* ── Story actions ───────────────────────────────── */
+
+let playerFood = null;
+let foodSteam = null;
+const STAND_SPOT = new THREE.Vector3(SPOTS.playerSeat.x, 0, 0.75);
+
+function walkTo(path, onArrive) {
+  player.auto = { path: path.map((p) => p.clone()), onArrive };
+}
+
+function walkToCounter(onArrive) {
+  const p = player.root.position;
+  const path = [];
+  if (p.z > TENT.maxZ - 0.2 || p.x < TENT.minX || p.x > TENT.maxX) path.push(new THREE.Vector3(clamp(p.x, TX - 1.8, TX + 1.8), 0, TENT.maxZ + 0.7));
+  if (p.distanceTo(STAND_SPOT) > 0.1) path.push(STAND_SPOT);
+  if (path.length) walkTo(path, onArrive);
+  else onArrive?.();
+}
+
+function sitPlayer() {
+  walkToCounter(() => {
+    player.pose = 'sit';
+    player.root.position.copy(SPOTS.playerSeat);
+    player.root.rotation.y = Math.PI;
+  });
+}
+
+function serveFood() {
+  if (playerFood) return;
+  playerFood = makeFood(S.food?.ko ?? '떡볶이', S.spicy);
+  playerFood.position.set(SPOTS.playerSeat.x, COUNTER_Y, -0.86);
+  playerFood.scale.setScalar(0.01);
+  scene.add(playerFood);
+  foodSteam = emitter(new THREE.Vector3(SPOTS.playerSeat.x, COUNTER_Y + 0.15, -0.86), 2.5, { s0: 0.06, s1: 0.22, alpha: 0.16, rise: 0.25 });
+  ajusshi.serveT = 1.0;
+  sfx.chime();
+}
+
+let hotSteam = null;
+function spicyFx(on) {
+  ui.vignette.classList.toggle('on', on);
+  if (on) {
+    sfx.thump();
+    setExpr(player, 'spicy', 6);
+    hotSteam = emitter(new THREE.Vector3(), 9, { s0: 0.1, s1: 0.45, alpha: 0.45, rise: 0.8, color: 0xffb0a0 });
+  } else if (hotSteam) {
+    hotSteam.off = true;
+    setExpr(player, 'laugh', 2);
+  }
+}
+
+function startExit() {
+  S.haeunStory = 'exit';
+  haeun.pose = 'idle';
+  haeun.legSwing = false;
+  haeun.armPose = null;
+  haeun.path = [
+    new THREE.Vector3(SPOTS.haeunTent.x, 0, 0.9),
+    new THREE.Vector3(TX + 1.4, 0, TENT.maxZ + 0.9),
+    new THREE.Vector3(2.4, 0, TENT.maxZ + 1.2),
+    'wave',
+    new THREE.Vector3(2.6, 0, -6),
+    new THREE.Vector3(3.5, 0, -18),
+  ];
+}
+
+function finishNight() {
+  S.haeunStory = 'idle';
+  S.quests.haeun = true;
+  S.haeunHomeUntil = (S.hour >= 19 ? S.day + 1 : S.day) * 24 + 9;
+  haeun.root.visible = false;
+  loc.haeun = 'away';
+  const st = stage(HAEUN_STAGES, S.aff);
+  const lines = {
+    '친구 · friends (almost)': 'Ha-eun almost smiled. Twice. Tomorrow at 7 in the practice room — don’t be late.',
+    '동료 · colleagues': 'Grudging respect, earned over tteokbokki. She’ll pretend she didn’t enjoy tonight.',
+    '아는 사이 · acquaintances': 'You’re not “the new trainee” anymore. That counts for something.',
+    '낯선 사람 · strangers': 'She’ll remember the tteokbokki more than you. Maybe tomorrow.',
+  };
+  $('end-title').textContent = st;
+  $('end-hearts').innerHTML = hearts(S.aff, S.maxAff);
+  $('end-text').textContent = lines[st];
+  const words = $('end-words');
+  words.innerHTML = '';
+  for (const [ko, { en }] of S.phrases) {
+    const s = document.createElement('span');
+    s.textContent = `${ko} · ${en}`;
+    words.appendChild(s);
+  }
+  $('ending').classList.remove('hidden');
+  ui.hud.classList.add('hidden');
+  updateQuest();
+  save();
+}
+
+function standUp() {
+  player.pose = 'idle';
+  player.root.position.set(SPOTS.playerSeat.x, 0, 0.8);
+  player.root.rotation.y = Math.PI;
+  cam.yaw = 0;
+  if (playerFood) {
+    scene.remove(playerFood);
+    playerFood = null;
+  }
+  if (foodSteam) foodSteam.off = true;
+  S.spicy = false;
+  S.mistakes = 0;
+}
+
+let lookTower = false;
+const quiz = { n: 0, score: 0, q: null };
+
+function newQuizQ() {
+  const pool = [...S.phrases].filter(([ko, v]) => v.en && /\p{Script=Hangul}/u.test(ko) && ko.length <= 8);
+  const [ko, v] = pool[Math.floor(Math.random() * pool.length)];
+  const others = shuffle([...S.phrases.values(), ...WORDS].map((x) => x.en).filter((e) => e && e !== v.en));
+  quiz.q = { prompt: ko, answer: v.en, options: shuffle([v.en, ...new Set(others.slice(0, 6))].slice(0, 3)) };
+  if (!quiz.q.options.includes(v.en)) quiz.q.options[0] = v.en;
+  quiz.q.options = shuffle(quiz.q.options);
+}
+
+function quizChoices() {
+  return quiz.q.options.map((o) => ({
+    ko: o,
+    en: '',
+    hideEn: true,
+    wrong: true,
+    next: o === quiz.q.answer ? 'quiz_right' : 'quiz_wrong',
+    do: () => {
+      quiz.n++;
+      if (o === quiz.q.answer) quiz.score++;
+    },
+  }));
+}
+
+let pendingPolaroid = null;
+function polaroid(who) {
+  pendingPolaroid = who;
+  ui.fade.classList.add('flash');
+  setTimeout(() => ui.fade.classList.remove('flash'), 400);
+}
+
+const A = {
+  S,
+  sitPlayer,
+  serveFood,
+  spicyFx,
+  startExit,
+  flipHair: (who) => (chars[who].hairFlip = 0.7),
+  learn,
+  done,
+  toast,
+  sfx,
+  polaroid,
+  lookAtTower: (on) => (lookTower = on),
+  quiz,
+  quizChoices,
+  jinWave: () => {
+    if (loc.jin === 'cafe' && !S.quests.jin) {
+      jin.wave = 1.6;
+      bubble(jin, '어, 여기야!', { dur: 2.4 });
+    }
+  },
+};
+
+const NODES = buildNodes(A);
+NODES.quiz.enter = newQuizQ;
+NODES.tent_again = { who: 'haeun', expr: 'smirk', ko: '…또 왔어? 오늘은 내가 살게. 약속했잖아.', en: '…You again? Tonight’s on me. I promised.', end: true };
+
+const dlg = createDialogue({
+  nodes: NODES,
+  S,
+  chars,
+  addAff,
+  learn,
+  speak,
+  sfx,
+  bubble,
+  onStart: () => {
+    ui.prompt.classList.add('hidden');
+    document.body.classList.add('talking');
+  },
+  onEnd: () => {
+    document.body.classList.remove('talking');
+    if (loc.haeun === 'studio' && S.haeunStory === 'idle') {
+      haeun.pose = 'dance';
+      haeun.root.rotation.y = -Math.PI / 2;
+    }
+    save();
+  },
+});
+
+/* ── Interactions ────────────────────────────────── */
+
+const BENCHES = [1.6, 9, 13.2].map((x) => new THREE.Vector3(x, TERRACE_Y, -44.35));
+
+const interactables = [
+  {
+    label: '하은에게 말 걸기 · Talk to Ha-eun',
+    pos: () => haeun.root.position,
+    r: 2.1,
+    on: () => loc.haeun === 'tent' && S.haeunStory === 'idle' && haeun.root.visible,
+    act: () => {
+      if (S.quests.haeun) return dlg.start('tent_again');
+      S.haeunStory = 'talking';
+      walkToCounter(() => (player.root.rotation.y = Math.atan2(SPOTS.haeunTent.x - STAND_SPOT.x, SPOTS.haeunTent.z - STAND_SPOT.z)));
+      dlg.start('greet');
+    },
+  },
+  {
+    label: '하은 · Ha-eun',
+    pos: () => haeun.root.position,
+    r: 2.3,
+    on: () => loc.haeun === 'studio' && haeun.root.visible,
+    act: () => {
+      haeun.pose = 'idle';
+      haeun.root.rotation.y = Math.atan2(player.root.position.x - haeun.root.position.x, player.root.position.z - haeun.root.position.z);
+      dlg.start(S.quests.haeun ? 'studio_after' : S.metHaeunStudio ? 'studio_tip' : 'studio_hi');
+    },
+  },
+  {
+    label: '아저씨 · Ajusshi',
+    pos: () => SPOTS.ajusshi,
+    r: 2.3,
+    on: () => loc.tent && S.haeunStory === 'idle' && player.pose !== 'sit',
+    act: () => dlg.start(S.quests.haeun ? 'ajusshi_later' : 'ajusshi_hello'),
+  },
+  { label: '간판 읽기 · Read the sign', pos: () => SPOTS.tentSign, r: 1.7, on: () => !loc.tent, act: () => dlg.start('tent_closed') },
+  { label: '고양이 쓰다듬기 · Pet the cat', pos: () => SPOTS.cat, r: 1.4, on: () => true, act: petCat },
+  { label: '자판기 · Vending machine', pos: () => SPOTS.vending, r: 1.3, on: () => true, act: vending },
+  { label: '주문하기 · Order a drink', pos: () => new THREE.Vector3(15.6, 0, -16.5), r: 1.6, on: () => barista.root.visible, act: () => dlg.start('barista_hi') },
+  {
+    label: '진 · Jin',
+    pos: () => jin.root.position,
+    r: 2.0,
+    on: () => jin.root.visible && loc.jin === 'cafe',
+    act: () => dlg.start(S.quests.jin ? 'jin_again' : 'jin_hi'),
+  },
+  {
+    label: '진 · Jin',
+    pos: () => jin.root.position,
+    r: 2.2,
+    on: () => jin.root.visible && loc.jin === 'lookout',
+    act: () => dlg.start(S.quests.jinNight ? 'jin_night_thanks' : 'jin_night'),
+  },
+  { label: '계산하기 · Buy something', pos: () => new THREE.Vector3(-11.6, 0, -12.6), r: 1.4, on: () => true, act: () => dlg.start('cashier_hi') },
+  { label: '지하철 타기 · Take the subway', pos: () => SPOTS.subway, r: 1.6, on: () => true, act: openTravel },
+  { label: '망원경 · Binoculars', pos: () => SPOTS.telescope, r: 1.2, on: () => true, act: () => dlg.start('telescope') },
+  {
+    label: '단어 퀴즈 · Word quiz',
+    pos: () => SPOTS.whiteboard,
+    r: 1.8,
+    on: () => true,
+    act: () => {
+      quiz.n = 0;
+      quiz.score = 0;
+      dlg.start(S.phrases.size >= 4 ? 'quiz' : 'tong_quiz_empty');
+    },
+  },
+  ...BENCHES.map((b) => ({
+    label: '벤치에 앉기 · Sit & watch the river',
+    pos: () => b,
+    r: 1.3,
+    on: () => !(loc.jin === 'lookout' && Math.abs(b.x - SPOTS.jinLookout.x) < 0.5),
+    act: () => sitBench(b),
+  })),
+];
+
+function petCat() {
+  S.pettedCat = true;
+  cat.purr = 1.5;
+  sfx.meow();
+  bubble(SPOTS.cat.clone().add(new THREE.Vector3(0, 0.5, 0)), '야옹~ ♥', { dur: 1.8 });
+  if (!S.phrases.has('고양이')) {
+    learn('고양이', 'goyangi', 'cat');
+    toast('<b>고양이</b><span>goyangi · cat — her name tag says 떡이 (Tteok-i)</span>', 2800);
+  }
+}
+
+function vending() {
+  sfx.coin();
+  learn('바나나우유', 'banana-uyu', 'banana milk');
+  toast('<b>바나나우유</b><span>banana-uyu · banana milk. A Seoul essential.</span>', 2600);
+}
+
+function sitBench(b) {
+  S.benchSit = b;
+  player.pose = 'sit';
+  player.root.position.copy(b);
+  player.root.rotation.y = Math.PI;
+  S.prevSpeed = S.speed;
+  S.speed = 40;
+  updateToggles();
+  toast('<b>⏩</b><span>Time drifts by over the river… press E (or move) to stand up.</span>', 3000);
+}
+
+function standBench() {
+  if (!S.benchSit) return;
+  player.pose = 'idle';
+  player.root.position.set(S.benchSit.x, TERRACE_Y, -43.4);
+  S.benchSit = null;
+  S.speed = S.prevSpeed ?? 1;
+  updateToggles();
+}
+
+let activeInteract = null;
+function updateInteract() {
+  activeInteract = null;
+  if (S.started && !dlg.state.active && !player.auto && player.pose !== 'sit' && S.haeunStory === 'idle' && ui.travel.classList.contains('hidden')) {
+    let best = Infinity;
+    const p = player.root.position;
+    for (const it of interactables) {
+      if (!it.on()) continue;
+      const q = it.pos();
+      if (Math.abs(q.y - p.y) > 1.5) continue;
+      const d = Math.hypot(p.x - q.x, p.z - q.z);
+      if (d < it.r && d < best) {
+        best = d;
+        activeInteract = it;
+      }
+    }
+  }
+  if (activeInteract) {
+    const label = `<kbd>E</kbd> ${activeInteract.label}`;
+    if (ui.prompt.innerHTML !== label) ui.prompt.innerHTML = label;
+    ui.prompt.classList.remove('hidden');
+  } else if (S.benchSit) {
+    const label = '<kbd>E</kbd> 일어나기 · Stand up';
+    if (ui.prompt.innerHTML !== label) ui.prompt.innerHTML = label;
+    ui.prompt.classList.remove('hidden');
+  } else ui.prompt.classList.add('hidden');
+}
+
+function interact() {
+  if (S.benchSit) return standBench();
+  activeInteract?.act();
+}
+
+/* ── Subway travel ───────────────────────────────── */
+
+function openTravel() {
+  const list = $('travel-list');
+  list.innerHTML = '';
+  for (const p of PLACES) {
+    const b = document.createElement('button');
+    b.className = 'place';
+    b.innerHTML = '<span class="icon"></span><span class="txt"><b></b><small></small></span>';
+    b.querySelector('.icon').textContent = p.icon;
+    b.querySelector('b').textContent = p.ko;
+    b.querySelector('small').textContent = p.en;
+    b.onclick = () => travelTo(p);
+    list.appendChild(b);
+  }
+  ui.travel.classList.remove('hidden');
+  sfx.whoosh();
+  learn('지하철', 'jihacheol', 'subway');
+}
+
+function travelTo(p) {
+  ui.travel.classList.add('hidden');
+  ui.fade.classList.add('on');
+  sfx.whoosh();
+  setTimeout(() => {
+    player.root.position.set(...p.spawn);
+    player.root.rotation.y = p.yaw + Math.PI;
+    cam.yaw = p.yaw;
+    S.hour = (S.hour + 0.2) % 24;
+    cam.snap = true;
+    ui.fade.classList.remove('on');
+    toast(`<b>${p.icon} ${p.ko}</b><span>${p.en} · 다음 역은 ${p.ko}입니다 (next stop: ${p.en})</span>`, 2600);
+  }, 650);
+}
+
+/* ── Minimap ─────────────────────────────────────── */
+
+const mm = { ctx: ui.minimap.getContext('2d'), bg: null };
+const MAPB = { minX: -18, maxX: 18, minZ: -48, maxZ: 31 };
+function mapXY(x, z) {
+  const W = ui.minimap.width;
+  const H = ui.minimap.height;
+  return [((x - MAPB.minX) / (MAPB.maxX - MAPB.minX)) * W, ((z - MAPB.minZ) / (MAPB.maxZ - MAPB.minZ)) * H];
+}
+
+function drawMapBg() {
+  const [c, g] = makeCanvas(ui.minimap.width, ui.minimap.height);
+  g.fillStyle = '#2b2f3f';
+  g.fillRect(0, 0, c.width, c.height);
+  const rect = (x0, x1, z0, z1, col) => {
+    const [a, b] = mapXY(x0, z0);
+    const [cc, d] = mapXY(x1, z1);
+    g.fillStyle = col;
+    g.fillRect(a, b, cc - a, d - b);
+  };
+  rect(-16, 16, -46, -28, '#5a5246');
+  rect(-6.2, 6.2, -8, 30, '#4a4d5a');
+  rect(-10, 10, -28, -8, '#6a655e');
+  rect(3, 7, -32, -28, '#7a7266');
+  rect(-18, -10, -20, -11, '#2e9a5a');
+  rect(10, 18, -20, -11, '#e98aa6');
+  rect(-16, -6, -44, -31, '#7a5ab8');
+  rect(TENT.minX, TENT.maxX, TENT.minZ, TENT.maxZ, '#ff7a22');
+  rect(-6, -2, -26, -19.2, '#2556b8');
+  rect(-16, 16, -48, -46, '#3a6a8a');
+  mm.bg = c;
+}
+
+function drawMinimap() {
+  if (ui.minimap.classList.contains('hidden')) return;
+  const g = mm.ctx;
+  g.drawImage(mm.bg, 0, 0);
+  for (const p of pickups) {
+    if (p.taken) continue;
+    const [x, y] = mapXY(p.w.at[0], p.w.at[1]);
+    g.fillStyle = '#ffd23f';
+    g.fillRect(x - 1.5, y - 1.5, 3, 3);
+  }
+  const dot = (c, col) => {
+    if (!c.root.visible) return;
+    const [x, y] = mapXY(c.root.position.x, c.root.position.z);
+    g.fillStyle = col;
+    g.beginPath();
+    g.arc(x, y, 3.5, 0, Math.PI * 2);
+    g.fill();
+  };
+  dot(haeun, '#ff6b8a');
+  dot(jin, '#6bb6ff');
+  const [px, py] = mapXY(player.root.position.x, player.root.position.z);
+  g.save();
+  g.translate(px, py);
+  g.rotate(-player.root.rotation.y + Math.PI);
+  g.fillStyle = '#fff';
+  g.beginPath();
+  g.moveTo(0, -6);
+  g.lineTo(4.5, 5);
+  g.lineTo(-4.5, 5);
+  g.closePath();
+  g.fill();
+  g.restore();
+}
+
+/* ── Input ───────────────────────────────────────── */
+
+const keys = new Set();
+const cam = { yaw: 0, pitch: 0.36, dist: 6.5, look: new THREE.Vector3(), pos: new THREE.Vector3(), snap: true, mode: 'follow' };
+const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
+let drag = null;
+
+window.addEventListener('keydown', (e) => {
+  if (e.target instanceof HTMLInputElement) return;
+  const k = e.key.toLowerCase();
+  keys.add(k);
+  if (!S.started) return;
+  if (dlg.state.active) {
+    if (k === ' ' || k === 'enter' || k === 'e') {
+      e.preventDefault();
+      dlg.advance();
+    }
+    if (/^[1-4]$/.test(k)) dlg.choose(Number(k) - 1);
+    return;
+  }
+  if (k === 'e' || k === 'enter' || k === ' ') {
+    e.preventDefault();
+    interact();
+  }
+  if (k === 'escape') ui.travel.classList.add('hidden');
+  if (k === 'b') ui.book.classList.toggle('hidden');
+  if (k === 't') toggleEn();
+  if (k === 'm') toggleMute();
+  if (k === 'n') ui.minimap.classList.toggle('hidden');
+  if (k === 'h') tongTalk();
+  if (k === 'f') setSpeed(S.speed === 8 ? 1 : 8);
+});
+window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
+window.addEventListener('blur', () => keys.clear());
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch' && e.clientX < window.innerWidth * 0.45 && stick.id === null && !dlg.state.active) {
+    stick.id = e.pointerId;
+    stick.ox = e.clientX;
+    stick.oy = e.clientY;
+    stick.x = stick.y = 0;
+    ui.stick.style.left = `${e.clientX}px`;
+    ui.stick.style.top = `${e.clientY}px`;
+    ui.stick.classList.remove('hidden');
+  } else drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (e.pointerId === stick.id) {
+    const dx = e.clientX - stick.ox;
+    const dy = e.clientY - stick.oy;
+    const len = Math.min(50, Math.hypot(dx, dy));
+    const a = Math.atan2(dy, dx);
+    stick.x = (Math.cos(a) * len) / 50;
+    stick.y = (Math.sin(a) * len) / 50;
+    ui.knob.style.transform = `translate(${Math.cos(a) * len}px, ${Math.sin(a) * len}px)`;
+  } else if (drag && e.pointerId === drag.id) {
+    cam.yaw -= (e.clientX - drag.x) * 0.006;
+    cam.pitch = clamp(cam.pitch + (e.clientY - drag.y) * 0.004, 0.08, 1.15);
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+  }
+});
+const endPointer = (e) => {
+  if (e.pointerId === stick.id) {
+    stick.id = null;
+    stick.x = stick.y = 0;
+    ui.knob.style.transform = '';
+    ui.stick.classList.add('hidden');
+  }
+  if (drag && e.pointerId === drag.id) drag = null;
+};
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+canvas.addEventListener('wheel', (e) => (cam.dist = clamp(cam.dist + e.deltaY * 0.005, 2.5, 12)), { passive: true });
+
+ui.prompt.addEventListener('click', interact);
+function toggleEn() {
+  S.showEn = !S.showEn;
+  updateToggles();
+}
+function toggleMute() {
+  setMuted(!audio.muted);
+  if (audio.muted && 'speechSynthesis' in window) speechSynthesis.cancel();
+  updateToggles();
+}
+function setSpeed(s) {
+  S.speed = s;
+  updateToggles();
+}
+function setHour(h) {
+  S.hour = h;
+  sfx.whoosh();
+}
+function tongTalk() {
+  const h = tongHint(S, S.hour);
+  tong.expr = { cheerful: 'happy', excited: 'laugh', love: 'blush', thinking: 'neutral', proud: 'smile' }[h.expr] ?? 'happy';
+  tong.exprT = 3;
+  tong.talkT = 1.4;
+  tong.spin = 0.8;
+  bubble(tong, h.ko, { dur: 3.2 });
+  speak(h.ko, 'tong');
+  ui.questHint.innerHTML = `<img src="img/tong-${h.expr}.png" alt=""><span>${h.en}</span>`;
+}
+$('btn-en').onclick = toggleEn;
+$('btn-mute').onclick = toggleMute;
+$('btn-voice').onclick = () => {
+  voice.on = !voice.on;
+  updateToggles();
+};
+$('btn-book').onclick = () => ui.book.classList.toggle('hidden');
+$('btn-map').onclick = () => ui.minimap.classList.toggle('hidden');
+$('btn-tong').onclick = tongTalk;
+$('book-close').onclick = () => ui.book.classList.add('hidden');
+$('travel-close').onclick = () => ui.travel.classList.add('hidden');
+$('t-pause').onclick = () => setSpeed(0);
+$('t-play').onclick = () => setSpeed(1);
+$('t-fast').onclick = () => setSpeed(8);
+$('t-dawn').onclick = () => setHour(6.2);
+$('t-noon').onclick = () => setHour(12);
+$('t-dusk').onclick = () => setHour(17.8);
+$('t-night').onclick = () => setHour(20.5);
+$('polaroid-close').onclick = () => $('polaroid').classList.add('hidden');
+
+/* ── Update ──────────────────────────────────────── */
+
+const fwd = new THREE.Vector3();
+const right = new THREE.Vector3();
+const move = new THREE.Vector3();
+
+function resolve(pos, r) {
+  for (const b of G.colliders) {
+    const cx = clamp(pos.x, b.minX, b.maxX);
+    const cz = clamp(pos.z, b.minZ, b.maxZ);
+    const dx = pos.x - cx;
+    const dz = pos.z - cz;
+    const d2 = dx * dx + dz * dz;
+    if (d2 >= r * r) continue;
+    if (d2 > 1e-8) {
+      const d = Math.sqrt(d2);
+      pos.x += (dx / d) * (r - d);
+      pos.z += (dz / d) * (r - d);
+    } else {
+      const opts = [[b.minX - r - pos.x, 0], [b.maxX + r - pos.x, 0], [0, b.minZ - r - pos.z], [0, b.maxZ + r - pos.z]].sort((a, c) => Math.abs(a[0] + a[1]) - Math.abs(c[0] + c[1]));
+      pos.x += opts[0][0];
+      pos.z += opts[0][1];
+    }
+  }
+  pos.x = clamp(pos.x, BOUNDS.minX, BOUNDS.maxX);
+  pos.z = clamp(pos.z, BOUNDS.minZ, BOUNDS.maxZ);
+}
+
+function updatePlayer(dt) {
+  let speed = 0;
+  const p = player.root.position;
+  if (player.auto) {
+    const target = player.auto.path[0];
+    const dx = target.x - p.x;
+    const dz = target.z - p.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.08) {
+      player.auto.path.shift();
+      if (!player.auto.path.length) {
+        const fn = player.auto.onArrive;
+        player.auto = null;
+        fn?.();
+      }
+    } else {
+      const step = Math.min(d, 2.6 * dt);
+      p.x += (dx / d) * step;
+      p.z += (dz / d) * step;
+      player.root.rotation.y = Math.atan2(dx, dz);
+      speed = 0.8;
+    }
+  } else if (S.started && player.pose !== 'sit' && !dlg.state.active && S.haeunStory !== 'exit') {
+    let ix = stick.x;
+    let iz = stick.y;
+    if (keys.has('w') || keys.has('arrowup')) iz -= 1;
+    if (keys.has('s') || keys.has('arrowdown')) iz += 1;
+    if (keys.has('a') || keys.has('arrowleft')) ix -= 1;
+    if (keys.has('d') || keys.has('arrowright')) ix += 1;
+    const mag = Math.min(1, Math.hypot(ix, iz));
+    if (mag > 0.08) {
+      fwd.set(-Math.sin(cam.yaw), 0, -Math.cos(cam.yaw));
+      right.set(Math.cos(cam.yaw), 0, -Math.sin(cam.yaw));
+      move.copy(right).multiplyScalar(ix).addScaledVector(fwd, -iz).normalize();
+      const run = keys.has('shift') ? 1.7 : 1;
+      p.addScaledVector(move, 3.4 * run * mag * dt);
+      player.root.rotation.y += wrapAngle(Math.atan2(move.x, move.z) - player.root.rotation.y) * damp(12, dt);
+      speed = mag * run;
+    }
+    resolve(p, 0.3);
+    for (const c of [haeun, jin, barista, cashier]) {
+      if (!c.root.visible) continue;
+      const q = c.root.position;
+      const dx = p.x - q.x;
+      const dz = p.z - q.z;
+      const d = Math.hypot(dx, dz);
+      if (d < 0.55 && d > 1e-4) {
+        p.x = q.x + (dx / d) * 0.55;
+        p.z = q.z + (dz / d) * 0.55;
+      }
+    }
+  } else if (S.benchSit && (keys.has('w') || keys.has('s') || keys.has('a') || keys.has('d') || Math.hypot(stick.x, stick.y) > 0.3)) {
+    standBench();
+  }
+  if (player.pose !== 'sit') p.y += (heightAt(p.x, p.z) - p.y) * damp(18, dt);
+  if (player.pose === 'sit' && dlg.state.active) lookAtYaw(player, headPos(haeun), 0.9);
+  else player.lookYaw = 0;
+  if (hotSteam && !hotSteam.off) headPos(player, hotSteam.pos).y += 0.35;
+  return speed;
+}
+
+function updateHaeun(dt, t) {
+  let speed = 0;
+  const pp = player.root.position;
+  if (haeun.path?.length) {
+    const target = haeun.path[0];
+    if (target === 'wave') {
+      haeun.waveT = (haeun.waveT ?? 0) + dt;
+      lookAtYaw(haeun, pp, 0.6);
+      haeun.root.rotation.y += wrapAngle(Math.atan2(pp.x - haeun.root.position.x, pp.z - haeun.root.position.z) - haeun.root.rotation.y) * damp(6, dt);
+      if (haeun.waveT < dt * 1.5) {
+        haeun.wave = 1.6;
+        setExpr(haeun, 'smile', 3);
+        bubble(haeun, '내일 7시. 늦지 마!', { dur: 2.6 });
+        speak('내일 일곱 시. 늦지 마!', 'haeun');
+      }
+      if (haeun.waveT > 2.4) haeun.path.shift();
+    } else {
+      const p = haeun.root.position;
+      const dx = target.x - p.x;
+      const dz = target.z - p.z;
+      const d = Math.hypot(dx, dz);
+      if (d < 0.1) {
+        haeun.path.shift();
+        if (!haeun.path.length) {
+          haeun.waveT = 0;
+          finishNight();
+        }
+      } else {
+        const step = Math.min(d, 2.4 * dt);
+        p.x += (dx / d) * step;
+        p.z += (dz / d) * step;
+        haeun.root.rotation.y += wrapAngle(Math.atan2(dx, dz) - haeun.root.rotation.y) * damp(10, dt);
+        haeun.lookYaw = 0;
+        speed = 0.7;
+      }
+    }
+    return speed;
+  }
+  if (!haeun.root.visible) return 0;
+  const dist = haeun.root.position.distanceTo(pp);
+  if (loc.haeun === 'tent') {
+    const want = Math.PI + (dlg.state.active && dlg.state.node?.who !== 'ajusshi' ? 0.45 : 0);
+    haeun.root.rotation.y += wrapAngle(want - haeun.root.rotation.y) * damp(5, dt);
+    if (dist < 7) lookAtYaw(haeun, headPos(player), 1.3);
+    else haeun.lookYaw = Math.sin(t * 0.4) * 0.2;
+    if (!S.noticed && dist < 7 && S.haeunStory === 'idle' && !S.quests.haeun) {
+      S.noticed = true;
+      bubble(haeun, '!', { cls: 'big', dur: 1.6 });
+      sfx.chime();
+    }
+    haeun.armPose = dlg.state.active ? talkPose : eatPose;
+  } else if (loc.haeun === 'studio' && haeun.pose !== 'dance' && dlg.state.active) {
+    lookAtYaw(haeun, headPos(player), 1);
+  }
+  return 0;
+}
+
+function updateNpcs(dt, t) {
+  if (ajusshi.serveT > 0) ajusshi.serveT -= dt;
+  if (!dlg.state.active) lookAtYaw(ajusshi, player.root.position, 0.8);
+  if (playerFood && playerFood.scale.x < 1) playerFood.scale.setScalar(Math.min(1, playerFood.scale.x + dt * 3));
+  for (const c of [barista, cashier, jin]) if (c.root.visible && c.root.position.distanceTo(player.root.position) < 5) lookAtYaw(c, headPos(player), 1);
+  cat.body.scale.y = 1 + Math.sin(t * 2.4) * 0.04;
+  cat.tail.rotation.y = Math.sin(t * (cat.purr > 0 ? 6 : 1.4)) * 0.5;
+  if (cat.purr > 0) {
+    cat.purr -= dt;
+    cat.head.rotation.z = Math.sin(t * 8) * 0.12;
+  }
+  for (const l of lanterns) l.grp.rotation.z = Math.sin(t * 1.1 + l.phase) * 0.06;
+
+  // pedestrians stroll their loops
+  for (const pd of peds) {
+    const c = pd.c;
+    let sp = 0;
+    if (pd.pause > 0) pd.pause -= dt;
+    else {
+      const target = pd.pts[pd.i];
+      const p = c.root.position;
+      const dx = target.x - p.x;
+      const dz = target.z - p.z;
+      const d = Math.hypot(dx, dz);
+      if (d < 0.2) {
+        pd.i = (pd.i + 1) % pd.pts.length;
+        if (Math.random() < 0.3) pd.pause = rand(1, 3);
+      } else {
+        p.x += (dx / d) * pd.speed * dt;
+        p.z += (dz / d) * pd.speed * dt;
+        p.y = heightAt(p.x, p.z);
+        c.root.rotation.y += wrapAngle(Math.atan2(dx, dz) - c.root.rotation.y) * damp(6, dt);
+        sp = pd.speed / 3.4;
+      }
+    }
+    animate(c, dt, t, sp);
+  }
+
+  // Tong floats at the player's shoulder
+  const pr = player.root;
+  // perch higher and out of shot during conversations
+  const talking = dlg.state.active || S.haeunStory !== 'idle';
+  const off = (talking ? new THREE.Vector3(-0.9, 2.3, 0.4) : new THREE.Vector3(0.75, 1.55, -0.35)).applyAxisAngle(new THREE.Vector3(0, 1, 0), pr.rotation.y);
+  const want = pr.position.clone().add(off);
+  tong.root.position.lerp(want, damp(3, dt));
+  tong.root.visible = camera.position.distanceTo(tong.root.position) > 1.3;
+  tong.root.rotation.y += wrapAngle(pr.rotation.y - tong.root.rotation.y) * damp(3, dt);
+  if (dlg.state.active || tong.talkT > 0) tong.root.rotation.y += wrapAngle(Math.atan2(camera.position.x - tong.root.position.x, camera.position.z - tong.root.position.z) - tong.root.rotation.y) * damp(6, dt);
+  animateTong(tong, dt, t);
+}
+
+/* ── Camera ──────────────────────────────────────── */
+
+const ray = new THREE.Raycaster();
+const camTargetPos = new THREE.Vector3();
+const camTargetLook = new THREE.Vector3();
+const hv = new THREE.Vector3();
+const pv = new THREE.Vector3();
+
+function inTent(p) {
+  return p.x > TENT.minX + 0.1 && p.x < TENT.maxX - 0.1 && p.z > TENT.minZ && p.z < TENT.maxZ;
+}
+
+function updateCamera(dt, t) {
+  if (S.debugCam) {
+    camera.position.copy(S.debugCam.pos);
+    camera.lookAt(S.debugCam.look);
+    return;
+  }
+  const p = player.root.position;
+  let k = 4;
+  let fov = 50;
+  let mode = 'follow';
+  const node = dlg.state.node;
+  const atTent = S.haeunStory !== 'idle';
+  if (!S.started) {
+    const a = t * 0.05;
+    camTargetLook.set(0, 2.5, -22);
+    camTargetPos.set(Math.sin(a) * 7.5, 6.5 + Math.sin(t * 0.2), -15 + Math.cos(a) * 7);
+    k = 1.2;
+    mode = 'title';
+  } else if (S.haeunStory === 'exit') {
+    headPos(haeun, hv);
+    camTargetLook.copy(hv).setY(1.1);
+    camTargetPos.set(4.4, 2.1, 7.8);
+    k = 2;
+    mode = 'exit';
+  } else if (lookTower) {
+    camTargetPos.copy(SPOTS.telescope).add(new THREE.Vector3(0, 1.25, 0.2));
+    camTargetLook.set(90, 120, -470);
+    fov = 14;
+    mode = 'tower';
+  } else if (S.benchSit && !dlg.state.active) {
+    camTargetPos.copy(S.benchSit).add(new THREE.Vector3(1.2, 1.9, 2.4));
+    camTargetLook.set(S.benchSit.x - 4, 4, -120);
+    fov = 55;
+    k = 1.5;
+    mode = 'bench';
+  } else if (atTent && (dlg.state.active || player.auto)) {
+    headPos(haeun, hv);
+    headPos(player, pv);
+    const who = node?.who;
+    const mid = (SPOTS.playerSeat.x + SPOTS.haeunTent.x) / 2;
+    if (player.pose === 'sit' && who === 'ajusshi') {
+      headPos(ajusshi, hv);
+      camTargetPos.set(SPOTS.playerSeat.x - 0.2, 2.25, 0.6);
+      camTargetLook.copy(hv).y -= 0.9;
+      mode = 'ajusshi';
+    } else if (player.pose !== 'sit' && dlg.state.id?.startsWith('greet')) {
+      const dir = new THREE.Vector3().subVectors(STAND_SPOT, SPOTS.haeunTent).setY(0).normalize();
+      camTargetPos.copy(STAND_SPOT).addScaledVector(dir, 1.0).add(new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(0.42)).setY(1.68);
+      camTargetLook.copy(hv).y -= 0.25;
+      fov = 55;
+      mode = 'greet';
+    } else {
+      camTargetLook.set(mid, 0.98, 0.3);
+      camTargetPos.set(mid + 0.45, 1.68, -2.02);
+      fov = 60;
+      mode = 'counter';
+    }
+    k = 3;
+  } else if (dlg.state.active && node && chars[node.who] && node.who !== 'tong' && node.who !== 'player') {
+    // two-shot: both faces in frame, from whichever side isn't a wall
+    const sp = chars[node.who];
+    headPos(sp, hv);
+    headPos(player, pv);
+    const dir = new THREE.Vector3(hv.x - pv.x, 0, hv.z - pv.z);
+    const len = Math.max(0.6, dir.length());
+    dir.normalize();
+    const mid = pv.clone().lerp(hv, 0.55);
+    const dist = Math.max(2.0, len * 0.9 + 1.5);
+    if (cam.talkSide === undefined || cam.mode !== `talk-${node.who}`) {
+      let best = 1;
+      let bestFree = -1;
+      for (const sgn of [1, -1]) {
+        const side = new THREE.Vector3(-dir.z * sgn, 0, dir.x * sgn);
+        const want = mid.clone().addScaledVector(side, dist * 0.85).addScaledVector(dir, -dist * 0.45);
+        const d = want.clone().sub(mid);
+        ray.set(mid, d.clone().normalize());
+        ray.far = d.length();
+        const hit = ray.intersectObjects(G.blockers, false)[0];
+        const free = hit ? hit.distance : d.length() + 1;
+        if (free > bestFree) {
+          bestFree = free;
+          best = sgn;
+        }
+      }
+      cam.talkSide = best;
+    }
+    const side = new THREE.Vector3(-dir.z * cam.talkSide, 0, dir.x * cam.talkSide);
+    camTargetPos.copy(mid).addScaledVector(side, dist * 0.85).addScaledVector(dir, -dist * 0.45);
+    const d = camTargetPos.clone().sub(mid);
+    ray.set(mid, d.clone().normalize());
+    ray.far = d.length();
+    const hit = ray.intersectObjects(G.blockers, false)[0];
+    if (hit) camTargetPos.copy(mid).addScaledVector(d.normalize(), Math.max(0.9, hit.distance - 0.3));
+    camTargetPos.y = Math.max(pv.y, hv.y) + 0.35;
+    camTargetLook.copy(mid).y -= 0.45;
+    fov = 50;
+    k = 3;
+    mode = `talk-${node.who}`;
+  } else {
+    const zone = zoneAt(p.x, p.z);
+    const indoor = zone?.indoor || inTent(p);
+    const dist = indoor ? Math.min(cam.dist, 4) : cam.dist;
+    const pitch = indoor ? Math.min(cam.pitch, 0.32) : cam.pitch;
+    camTargetLook.set(p.x, p.y + 1.25, p.z);
+    camTargetPos.set(p.x + Math.sin(cam.yaw) * dist * Math.cos(pitch), p.y + 1.25 + dist * Math.sin(pitch), p.z + Math.cos(cam.yaw) * dist * Math.cos(pitch));
+    // keep the camera out of walls
+    const dir = new THREE.Vector3().subVectors(camTargetPos, camTargetLook);
+    const len = dir.length();
+    dir.normalize();
+    ray.set(camTargetLook, dir);
+    ray.far = len;
+    const hit = ray.intersectObjects(G.blockers, false)[0];
+    if (hit) camTargetPos.copy(camTargetLook).addScaledVector(dir, Math.max(0.6, hit.distance - 0.35));
+    if (inTent(p)) camTargetPos.y = Math.min(camTargetPos.y, 2.6);
+    if (zone?.indoor) camTargetPos.y = Math.min(camTargetPos.y, heightAt(p.x, p.z) + 3.1);
+    k = 7;
+  }
+  if (cam.snap || (mode !== cam.mode && !['follow', 'title'].includes(mode) && cam.mode !== 'title')) {
+    cam.pos.copy(camTargetPos);
+    cam.look.copy(camTargetLook);
+    cam.snap = false;
+  }
+  if (!mode.startsWith('talk')) cam.talkSide = undefined;
+  cam.mode = mode;
+  cam.pos.lerp(camTargetPos, damp(k, dt));
+  cam.look.lerp(camTargetLook, damp(k + 2, dt));
+  camera.position.copy(cam.pos);
+  camera.lookAt(cam.look);
+  faceFill.position.copy(cam.pos).y += 0.4;
+  faceFill.intensity += ((dlg.state.active ? 2.2 + G.night * 1.5 : 0) - faceFill.intensity) * damp(4, dt);
+  if (camera.aspect < 0.8) fov = Math.min(80, fov * 1.35);
+  if (Math.abs(camera.fov - fov) > 0.05) {
+    camera.fov += (fov - camera.fov) * damp(3, dt);
+    camera.updateProjectionMatrix();
+  }
+  // see into the tent from outside
+  const camIn = inTent(camera.position) && camera.position.y < TENT.wallH;
+  const want = (inTent(p) || atTent) && !camIn ? 0.28 : 0.94;
+  const tarp = tentMats.tarp;
+  tarp.opacity += (want - tarp.opacity) * damp(6, dt);
+  tarp.depthWrite = tarp.opacity > 0.8;
+  tentMats.valance.opacity = clamp((tarp.opacity - 0.28) / 0.66, 0.08, 1);
+}
+
+/* ── HUD per frame ───────────────────────────────── */
+
+let lastZone = null;
+let lastClock = '';
+function updateHud() {
+  const tk = koreanTime(S.hour);
+  const key = tk.digital;
+  if (key !== lastClock) {
+    lastClock = key;
+    ui.clockIcon.textContent = timeIcon(S.hour);
+    ui.clockTime.textContent = tk.digital;
+    ui.clockKo.textContent = tk.ko;
+  }
+  const p = player.root.position;
+  const z = zoneAt(p.x, p.z);
+  const place = z && PLACES.find((pl) => pl.id === z.id);
+  const zid = place?.id ?? null;
+  if (zid !== lastZone) {
+    lastZone = zid;
+    if (place && S.started) {
+      banner(place.ko, place.en);
+      if (!S.visited.has(place.id)) {
+        S.visited.add(place.id);
+        if (S.visited.size >= PLACES.length) done('explore');
+        updateQuest();
+      }
+    }
+  }
+}
+
+/* ── Main loop ───────────────────────────────────── */
+
+const clock = new THREE.Clock();
+let saveT = 0;
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+  if (S.started && !dlg.state.active) {
+    const prev = S.hour;
+    S.hour += (dt * S.speed) / 30;
+    if (S.hour >= 24) {
+      S.hour -= 24;
+      S.day++;
+    }
+    if (S.benchSit && ((prev < 19 && S.hour >= 19) || (prev < 7 && S.hour >= 7))) {
+      S.speed = 1;
+      toast(S.hour >= 19 ? '<b>🌙 밤이 됐어요</b><span>Night has fallen. The 포장마차 is open!</span>' : '<b>☀️ 아침이에요</b><span>Good morning, Seoul.</span>', 3000);
+      updateToggles();
+    }
+  }
+  const L = sky.update(S.hour, t, player.root.position, camera);
+  bloom.strength = L.bloom;
+  renderer.toneMappingExposure = L.exposure;
+  const warm = clamp(1 - Math.abs(S.hour - 18) / 2, 0, 1);
+  grade.uniforms.uTint.value.setRGB(1 + warm * 0.06, 1 - warm * 0.01, 1 - warm * 0.08 + L.night * 0.04);
+  water.material.uniforms.uSky.value.copy(L.top);
+  water.material.uniforms.uHorizon.value.copy(L.horizon);
+  water.material.uniforms.uSunDir.value.copy(sky.uniforms.uSunDir.value);
+  water.material.uniforms.uSunColor.value.copy(L.sun).multiplyScalar(L.sunI > 0 ? 1 : 0);
+  water.material.uniforms.uTime.value = t;
+  water.material.uniforms.uNight.value = L.night;
+
+  updateSchedules();
+  const ps = updatePlayer(dt);
+  const hs = updateHaeun(dt, t);
+  updateNpcs(dt, t);
+  animate(player, dt, t, ps);
+  animate(haeun, dt, t, hs);
+  for (const c of [jin, ajusshi, barista, cashier]) if (c.root.visible) animate(c, dt, t, 0);
+  for (const u of G.updaters) u(dt, t);
+  updatePickups(dt, t);
+  updateParticles(dt, t);
+  updateMotes(dt, t);
+  updateInteract();
+  dlg.update(dt);
+  updateCamera(dt, t);
+  updateBubbles(dt);
+  updateHud();
+  drawMinimap();
+  studioMirrorVisible(zoneAt(player.root.position.x, player.root.position.z)?.id === 'studio');
+
+  const pp = player.root.position;
+  updateAudio({
+    night: L.night,
+    distTent: Math.hypot(pp.x - (TX - 1), pp.z + 1),
+    tentOpen: loc.tent,
+    distRiver: Math.max(0, pp.z + 46) + Math.max(0, TERRACE_Y - pp.y) * 6,
+    distSubway: pp.distanceTo(SPOTS.subway),
+    indoor: !!zoneAt(pp.x, pp.z)?.indoor,
+  });
+
+  composer.render();
+  if (pendingPolaroid) {
+    const url = renderer.domElement.toDataURL('image/jpeg', 0.85);
+    $('polaroid-img').src = url;
+    $('polaroid-caption').textContent = pendingPolaroid === 'jin' ? '진 선배와 한강에서 · Jin & me, Han River' : '홍대의 밤 · A night in Hongdae';
+    $('polaroid-date').textContent = `Day ${S.day} · ${koreanTime(S.hour).digital}`;
+    $('polaroid').classList.remove('hidden');
+    S.polaroids.push(url);
+    pendingPolaroid = null;
+  }
+  saveT += dt;
+  if (saveT > 10 && S.started) {
+    saveT = 0;
+    save();
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ── Boot ────────────────────────────────────────── */
+
+async function boot() {
+  try {
+    await Promise.race([
+      Promise.all([document.fonts.load('64px Jua', '포장마차'), document.fonts.load('32px "Gowun Dodum"', '떡볶이')]),
+      new Promise((r) => setTimeout(r, 2500)),
+    ]);
+  } catch {
+    /* system fonts */
+  }
+  sky = new DayNight();
+  buildWorld();
+  buildCast();
+  initParticles();
+  buildMotes();
+  const saved = loadSave();
+  if (saved) $('continue').classList.remove('hidden');
+  buildPickups();
+  drawMapBg();
+  updateHearts();
+  updateQuest();
+  renderBook();
+  initVoice(updateToggles);
+  updateToggles();
+  updateSchedules(true);
+  cam.pos.copy(camera.position);
+  frame();
+
+  $('loading').textContent = '';
+  $('start').disabled = false;
+  const begin = (resume) => {
+    if (resume && saved) {
+      applySave(saved);
+      for (const p of pickups) {
+        p.taken = S.words.has(p.w.ko);
+        p.sprite.visible = p.glow.visible = !p.taken;
+      }
+      updateHearts();
+      updateQuest();
+      renderBook();
+      ui.bookCount.textContent = S.phrases.size;
+    } else {
+      S.name = $('name').value.trim() || '연습생';
+    }
+    initAudio();
+    audio.ctx?.resume();
+    $('title').classList.add('hidden');
+    ui.hud.classList.remove('hidden');
+    S.started = true;
+    player.root.position.set(1.6, 0, 18);
+    player.root.rotation.y = Math.PI;
+    cam.yaw = 0;
+    cam.snap = true;
+    updateSchedules(true);
+    toast(`<b>홍대 · Hongdae</b><span>Day ${S.day}, ${koreanTime(S.hour).ko}. Tong floats beside you — press <kbd>H</kbd> for a hint.</span>`, 3600);
+    setTimeout(tongTalk, 3800);
+    save();
+  };
+  $('start').onclick = () => begin(false);
+  $('continue').onclick = () => begin(true);
+  $('name').addEventListener('keydown', (e) => e.key === 'Enter' && begin(false));
+  $('stay').onclick = () => {
+    $('ending').classList.add('hidden');
+    ui.hud.classList.remove('hidden');
+    standUp();
+    updateQuest();
+  };
+  $('again').onclick = () => {
+    try {
+      localStorage.removeItem(SAVE_KEY);
+    } catch {
+      /* ignore */
+    }
+    window.location.reload();
+  };
+
+  window.__cozy = { S, player, haeun, jin, dlg, renderer, bloom, scene, sky, G, THREE, setHour: (h) => (S.hour = h), travelTo: (id) => travelTo(PLACES.find((p) => p.id === id)), interact, loc, cam };
+}
+
+$('start').disabled = true;
+boot();
