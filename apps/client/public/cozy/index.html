@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <title>Tong · 홍대 한 바퀴</title>
+  <title>Tong · Seoul · Tokyo · Shanghai</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet" />
@@ -28,7 +28,7 @@
   <div id="hud" class="hud hidden">
     <div class="hud-left">
       <div class="panel quest">
-        <div class="quest-title">오늘의 할 일 · Today <span id="quest-count"></span></div>
+        <div class="quest-title"><b id="quest-title-text">서울 · Today</b> <span id="quest-count"></span></div>
         <ul id="quest-list" class="quest-list"></ul>
         <div id="quest-hint" class="quest-hint"></div>
       </div>
@@ -37,6 +37,7 @@
     <div class="panel clock">
       <span id="clock-icon" class="clock-icon">🌇</span>
       <div class="clock-text">
+        <span id="city-title">서울 · Seoul</span>
         <b id="clock-time">16:30</b>
         <span id="clock-ko">오후 4시 30분</span>
       </div>
@@ -68,12 +69,18 @@
       <div class="hud-buttons">
         <button id="btn-tong" class="chip" title="Ask Tong (H)"><img src="img/tong-cheerful.png" alt="Tong" /></button>
         <button id="btn-book" class="chip" title="Phrasebook (B)">📖 <span id="book-count">0</span></button>
-        <button id="btn-map" class="chip" title="Map (N)">🗺️</button>
+        <button id="btn-map" class="chip" title="Map (N)" aria-label="Toggle city map">🗺️</button>
+        <button id="btn-postcards" class="chip" title="City postcard collection" aria-label="City postcards">📮</button>
         <button id="btn-en" class="chip" title="Toggle English (T)">EN</button>
         <button id="btn-voice" class="chip" title="Korean voice">🗣️</button>
         <button id="btn-mute" class="chip" title="Sound (M)">🔊</button>
       </div>
-      <canvas id="minimap" class="minimap panel" width="150" height="330"></canvas>
+      <div id="map-panel" class="map-panel panel">
+        <div class="map-head"><span id="map-title">Seoul · compressed city map</span><button id="map-expand" class="chip" aria-label="Expand or shrink city map">⤢</button><button id="map-close" class="chip" aria-label="Close map">✕</button></div>
+        <canvas id="minimap" class="minimap" width="480" height="480" aria-label="City roads, landmarks and player position"></canvas>
+        <div class="map-help">White arrow: you · ✈ airport flights · tap map to expand</div>
+        <div id="map-legend" class="map-legend"></div>
+      </div>
     </div>
   </div>
 
@@ -104,24 +111,35 @@
   </div>
 
   <!-- Subway travel -->
-  <div id="travel" class="overlay hidden">
+  <div id="travel" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="travel-title">
     <div class="card travel-card">
       <div class="travel-head">
         <div>
-          <div class="line-badge">2</div>
+          <div id="travel-badge" class="line-badge">2</div>
         </div>
         <div>
-          <h2>지하철 · Subway</h2>
-          <p class="subtitle">어디로 갈까요? Where to?</p>
+          <h2 id="travel-title">Local transit</h2>
+          <p id="travel-subtitle" class="subtitle">Choose a stop within this city.</p>
         </div>
-        <button id="travel-close" class="chip">✕</button>
+        <button id="travel-close" class="chip" aria-label="Close travel choices">✕</button>
       </div>
       <div id="travel-list" class="travel-list"></div>
-      <div class="end-section">다른 도시 · Other cities</div>
-      <div class="cities">
-        <div class="city locked"><img src="../assets/locations/shanghai-static.png" alt="" /><span>上海 Shanghai<br /><small>coming soon</small></span></div>
-        <div class="city locked"><img src="../assets/locations/tokyo-static.png" alt="" /><span>東京 Tokyo<br /><small>coming soon</small></span></div>
-      </div>
+      <div id="flight-cities" class="cities hidden"></div>
+    </div>
+  </div>
+
+  <!-- Local, deterministic phrase practice and city errand -->
+  <div id="city-activity" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="activity-title">
+    <div class="card activity-card">
+      <div class="activity-head"><img src="img/tong-thinking.png" alt="Tong" /><h2 id="activity-title"></h2><button id="activity-close" class="chip" aria-label="Close place interaction">✕</button></div>
+      <p id="activity-description" class="subtitle"></p>
+      <p id="activity-objective" class="activity-objective"></p>
+      <div id="activity-native" class="activity-native"></div>
+      <div id="activity-phonetic" class="subtitle"></div>
+      <p id="activity-feedback" class="activity-feedback" role="status" aria-live="polite"></p>
+      <div id="activity-choices" class="activity-choices"></div>
+      <button id="activity-transit" class="btn-secondary hidden">🚇 Open local transit · airport connection</button>
+      <small class="activity-note">Local phrase practice · scripted exercises, not live AI</small>
     </div>
   </div>
 
@@ -142,8 +160,8 @@
   <div id="title" class="overlay title-overlay">
     <div class="card title-card">
       <img class="title-tong" src="img/tong-cheerful.png" alt="Tong" />
-      <h1>홍대 한 바퀴</h1>
-      <p class="subtitle">A cozy day-and-night in a Seoul neighbourhood.<br />Order coffee, buy banana milk, watch the Han River,<br />and maybe share tteokbokki with 하은.</p>
+      <h1>Tong · City Adventures</h1>
+      <p class="subtitle">서울 · 東京 · 上海<br />Explore three compressed cities, day and night.<br />Meet friends in Hongdae, learn local phrases,<br />deliver a snack and fly to your next adventure.</p>
       <label class="name-label" for="name">What should everyone call you?</label>
       <input id="name" class="name-input" maxlength="12" placeholder="연습생" autocomplete="off" />
       <div class="title-buttons">
@@ -158,7 +176,7 @@
         <span><kbd>H</kbd> ask Tong</span>
         <span><kbd>F</kbd> fast time</span>
       </div>
-      <div id="loading" class="loading">Building the neighbourhood…</div>
+      <div id="loading" class="loading">Building three city adventures…</div>
     </div>
   </div>
 

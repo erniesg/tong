@@ -1,5 +1,6 @@
-// The Hongdae neighbourhood: alley → plaza → terrace → Han river lookout.
-// Layout follows apps/client/public/assets/locations/seoul-static.png.
+// Seoul's activity core; cities/seoul.js adds the surrounding street loops.
+// +z is north (Yeonnam), -z south (compressed Han River connection).
+// The reference art is atmospheric, not a literal map of Hongdae.
 import * as THREE from 'three';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -58,7 +59,7 @@ export const ZONES = [
 export const BOUNDS = { minX: -15.7, maxX: 15.7, minZ: -45.5, maxZ: 29.5 };
 
 export function heightAt(x, z) {
-  if (z > -28) return 0;
+  if (z > -28 || x < -16.3 || x > 16.3) return 0;
   if (x > 3 && x < 7 && z > -32) return clamp((-28 - z) / 4, 0, 1) * TERRACE_Y;
   return TERRACE_Y;
 }
@@ -462,7 +463,8 @@ function slab(minX, maxX, minZ, maxZ, material, y = 0, uv = 4) {
 }
 
 function buildGround() {
-  slab(-40, 40, -28, 60, M.asphalt, -0.01, 5);
+  // Keep the core foundation local; the city descriptor owns outer paving/park.
+  slab(-24, 24, -28, 30, M.asphalt, -0.01, 5);
   slab(-6.2, 6.2, -8, 30, M.asphalt, 0.0, 5);
   for (const s of [-1, 1]) slab(s * 6.2 - (s > 0 ? 0.9 : 0), s * 6.2 + (s > 0 ? 0 : 0.9), -8, 30, M.pavers, 0.05, 2);
   // plaza pavers around the subway pit
@@ -478,13 +480,17 @@ function buildGround() {
 
 function buildAlley(rnd) {
   for (const side of [-1, 1]) {
-    let z = 30;
-    while (z > -8) {
-      const width = Math.min(z + 8, 5 + rnd() * 3);
-      const height = 7 + rnd() * 7;
-      const minX = side < 0 ? -12.2 : 6.2;
-      building(minX, minX + 6, z - width, z, height, side < 0 ? 'px' : 'nx', rnd);
-      z -= width;
+    // Two genuine cross-streets connect the original lane to the new loops.
+    // Keep the tent, signs, shops and all activity/character coordinates intact.
+    for (const [south, north] of [[-4, 7.5], [11.5, 30]]) {
+      let z = north;
+      while (z > south) {
+        const width = Math.min(z - south, 5 + rnd() * 3);
+        const height = 7 + rnd() * 7;
+        const minX = side < 0 ? -12.2 : 6.2;
+        building(minX, minX + 6, z - width, z, height, side < 0 ? 'px' : 'nx', rnd);
+        z -= width;
+      }
     }
   }
   neonSign('노래방', '#ff4fa0', -6.12, 3.7, 12, Math.PI / 2, 2.4, 0.9);
@@ -1227,14 +1233,15 @@ function buildRiver(rnd) {
   }
   G.scene.add(sky);
 
-  // Namsan with N Seoul Tower
-  const hill = add(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3f5f3a, flatShading: true, roughness: 1 }), 90, -10, -470, G.scene, false);
-  hill.scale.set(170, 80, 120);
+  // Distant eastern, north-bank skyline: Namsan is not across the Han.
+  // Scenic compression only; the tower is not a walkable Hongdae neighbour.
+  const hill = add(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3f5f3a, flatShading: true, roughness: 1 }), 420, -10, -10, G.scene, false);
+  hill.scale.set(110, 80, 45);
   const hp = hill.geometry.attributes.position;
   for (let i = 0; i < hp.count; i++) if (hp.getY(i) > 0.05) hp.setXYZ(i, hp.getX(i) * (0.95 + rr() * 0.1), hp.getY(i) * (0.92 + rr() * 0.12), hp.getZ(i));
   hill.geometry.computeVertexNormals();
   const tw = new THREE.Group();
-  tw.position.set(90, 66, -470);
+  tw.position.set(420, 66, -10);
   G.scene.add(tw);
   const towerM = mat(0xe8e4dc, { roughness: 0.6 });
   add(new THREE.CylinderGeometry(2.6, 4.2, 60, 12), towerM, 0, 30, 0, tw, false);

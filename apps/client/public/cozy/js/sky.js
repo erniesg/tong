@@ -179,8 +179,8 @@ export class DayNight {
 
     for (const c of this.clouds) {
       c.a += c.speed * 0.016;
-      c.s.position.x = Math.cos(c.a) * c.r;
-      c.s.position.z = Math.sin(c.a) * c.r - 120;
+      c.s.position.x = focus.x + Math.cos(c.a) * c.r;
+      c.s.position.z = focus.z + Math.sin(c.a) * c.r - 120;
       c.s.material.color.copy(L.horizon).lerp(L.sun.clone().addScalar(0.4), 0.35).multiplyScalar(lerp(1.05, 0.35, L.night));
       c.s.material.opacity = lerp(0.85, 0.35, L.night);
     }

@@ -9,8 +9,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { G, clamp, damp, lerp, rand, wrapAngle, makeCanvas, canvasTexture, roundRect, softTexture, hdr, shuffle } from './util.js';
 import { DayNight, koreanTime, timeIcon } from './sky.js';
 import {
-  buildWorld, heightAt, zoneAt, setTentOpen, studioMirrorVisible, makeFood, water, tentMats, lanterns,
-  SPOTS, PLACES, TENT, TX, COUNTER_Y, BOUNDS, TERRACE_Y,
+  buildWorld, heightAt as seoulHeightAt, zoneAt as seoulZoneAt, setTentOpen, studioMirrorVisible, makeFood, water, tentMats, lanterns,
+  SPOTS, PLACES as SEOUL_PLACES, TENT, TX, COUNTER_Y, TERRACE_Y,
 } from './world.js';
 import {
   makeHaeun, makeJin, makePlayer, makeAjusshi, makeBarista, makeCashier, makePedestrian, makeTong, makeCat,
@@ -19,12 +19,32 @@ import {
 import { initAudio, updateAudio, sfx, setMuted, audio, initVoice, speak as speakRaw, voice } from './audio.js';
 import { buildNodes, tongHint, WORDS } from './story.js';
 import { createDialogue } from './dialogue.js';
+import seoul from './cities/seoul.js';
+import tokyo from './cities/tokyo.js';
+import shanghai from './cities/shanghai.js';
+
+const cities = { seoul, tokyo, shanghai };
+const cityGroups = {};
+const currentCity = () => cities[S.city];
+const cityPlaces = () => S.city === 'seoul' ? [...SEOUL_PLACES, ...seoul.places] : currentCity().places;
+const localHour = () => (S.hour + (S.city === 'shanghai' ? -1 : 0) + 24) % 24;
+const inSeoulCore = (x, z) => x >= -18 && x <= 18 && z >= -46 && z <= 31;
+function heightAt(x, z) {
+  return S.city === 'seoul' && inSeoulCore(x, z) ? seoulHeightAt(x, z) : currentCity().heightAt(x, z);
+}
+function zoneAt(x, z) {
+  return (S.city === 'seoul' && inSeoulCore(x, z) ? seoulZoneAt(x, z) : null) ?? currentCity().zoneAt?.(x, z) ?? null;
+}
 
 /* ── State ───────────────────────────────────────── */
 
 const SAVE_KEY = 'tong-cozy-seoul-v2';
 const S = {
   name: '연습생',
+  city: 'seoul',
+  adventures: {},
+  cityPositions: {},
+  postcards: [],
   hour: 16.5,
   day: 1,
   speed: 1,
@@ -56,6 +76,8 @@ function save() {
     localStorage.setItem(
       SAVE_KEY,
       JSON.stringify({
+        version: 3, city: S.city, position: safePose(), adventures: S.adventures,
+        cityPositions: S.cityPositions, postcards: S.postcards,
         name: S.name, hour: S.hour, day: S.day, aff: S.aff, jinAff: S.jinAff,
         words: [...S.words], phrases: [...S.phrases], visited: [...S.visited], quests: S.quests,
         pettedCat: S.pettedCat, metHaeunStudio: S.metHaeunStudio, jinTip: S.jinTip, haeunHomeUntil: S.haeunHomeUntil,
@@ -77,9 +99,56 @@ function loadSave() {
 
 function applySave(d) {
   Object.assign(S, { name: d.name, hour: d.hour, day: d.day, aff: d.aff, jinAff: d.jinAff, quests: d.quests ?? {}, pettedCat: d.pettedCat, metHaeunStudio: d.metHaeunStudio, jinTip: d.jinTip, haeunHomeUntil: d.haeunHomeUntil ?? 0 });
-  S.words = new Set(d.words);
-  S.phrases = new Map(d.phrases);
-  S.visited = new Set(d.visited);
+  S.city = Object.hasOwn(cities, d.city) ? d.city : 'seoul';
+  S.hour = Number.isFinite(d.hour) ? ((d.hour % 24) + 24) % 24 : 16.5;
+  S.day = Number.isFinite(d.day) && d.day >= 1 ? Math.floor(d.day) : 1;
+  S.name = typeof d.name === 'string' ? d.name : '연습생';
+  S.aff = clamp(Number(d.aff) || 0, 0, S.maxAff);
+  S.jinAff = clamp(Number(d.jinAff) || 0, 0, S.maxJin);
+  S.adventures = {};
+  for (const id of Object.keys(cities)) {
+    const a = d.adventures?.[id];
+    S.adventures[id] = {
+      discovered: Array.isArray(a?.discovered) ? a.discovered.filter((x) => typeof x === 'string') : [],
+      mastered: Array.isArray(a?.mastered) ? a.mastered.filter((x) => typeof x === 'string') : [],
+      step: clamp(Math.floor(Number(a?.step) || 0), 0, 3),
+    };
+  }
+  S.cityPositions = d.cityPositions && typeof d.cityPositions === 'object' ? d.cityPositions : {};
+  S.postcards = Array.isArray(d.postcards) ? d.postcards.filter((id) => Object.hasOwn(cities, id)) : [];
+  S.words = new Set(d.words ?? []);
+  S.phrases = new Map(d.phrases ?? []);
+  S.visited = new Set(d.visited ?? []);
+  placePlayer(d.position);
+}
+
+function validPose(pose) {
+  if (!pose || !Array.isArray(pose.position) || pose.position.length !== 3 || !pose.position.every(Number.isFinite) || !Number.isFinite(pose.yaw)) return false;
+  const [x, y, z] = pose.position;
+  const b = currentCity().bounds;
+  if (x < b.minX || x > b.maxX || z < b.minZ || z > b.maxZ || Math.abs(y - heightAt(x, z)) > 0.7) return false;
+  return !G.colliders.some((c) => x > c.minX - 0.3 && x < c.maxX + 0.3 && z > c.minZ - 0.3 && z < c.maxZ + 0.3);
+}
+
+function safePose() {
+  const pose = { position: player.root.position.toArray(), yaw: cam.yaw, rotation: player.root.rotation.y };
+  if (validPose(pose)) {
+    pose.position[1] = heightAt(pose.position[0], pose.position[2]);
+    S.cityPositions[S.city] = pose;
+    return pose;
+  }
+  const previous = S.cityPositions[S.city];
+  return validPose(previous) ? previous : { position: [...currentCity().spawn], yaw: currentCity().yaw };
+}
+
+function placePlayer(pose) {
+  const safe = validPose(pose) ? pose : { position: currentCity().spawn, yaw: currentCity().yaw };
+  player.root.position.set(...safe.position);
+  player.root.position.y = heightAt(player.root.position.x, player.root.position.z);
+  cam.yaw = safe.yaw;
+  player.root.rotation.y = Number.isFinite(safe.rotation) ? safe.rotation : cam.yaw + Math.PI;
+  cam.snap = true;
+  tong.root.position.copy(player.root.position).y += 1.6;
 }
 
 /* ── Renderer ────────────────────────────────────── */
@@ -188,7 +257,7 @@ function buildCast() {
   ];
   loops.forEach((loop, i) => {
     const p = makePedestrian(100 + i * 17);
-    const pts = loop.map(([x, z]) => new THREE.Vector3(x, heightAt(x, z), z));
+    const pts = loop.map(([x, z]) => new THREE.Vector3(x, seoulHeightAt(x, z), z));
     p.root.position.copy(pts[0]);
     peds.push({ c: p, pts, i: 1, speed: rand(1.1, 1.5), pause: 0 });
   });
@@ -312,6 +381,10 @@ function emitter(pos, rate, opts = {}) {
 }
 
 function updateParticles(dt, t) {
+  if (S.city !== 'seoul') {
+    for (const p of steamPool) { p.alive = false; p.s.visible = false; }
+    return;
+  }
   for (const e of emitters) {
     if (e.off) continue;
     e.acc += e.rate * dt;
@@ -527,6 +600,23 @@ const QUESTS = [
 ];
 
 function updateQuest() {
+  $('quest-title-text').textContent = `${currentCity().nativeName} · Today`;
+  $('city-title').textContent = `${currentCity().nativeName} · ${currentCity().name}`;
+  $('map-title').textContent = `${currentCity().name} · compressed city map`;
+  document.title = `Tong · ${currentCity().name}`;
+  document.body.classList.toggle('remote-city', S.city !== 'seoul');
+  if (S.city !== 'seoul') {
+    ui.questList.replaceChildren();
+    const a = adventure();
+    for (const label of [errandLabel(), `Explore ${a.discovered.length}/${cityPlaces().length} places · ${a.mastered.length} phrases learned`]) {
+      const li = document.createElement('li');
+      li.textContent = label;
+      ui.questList.appendChild(li);
+    }
+    $('quest-count').textContent = `${a.step}/3`;
+    ui.questHint.textContent = 'E / tap at landmarks · Subway stays in this city · Flights leave from the airport.';
+    return;
+  }
   const open = QUESTS.filter(([id]) => !S.quests[id]);
   const doneCount = QUESTS.length - open.length;
   ui.questList.innerHTML = '';
@@ -539,6 +629,9 @@ function updateQuest() {
     ui.questList.appendChild(li);
   }
   if (!open.length) ui.questList.innerHTML = '<li class="done">모두 완료! Everything done 🎉</li>';
+  const local = document.createElement('li');
+  local.textContent = errandLabel();
+  ui.questList.prepend(local);
   $('quest-count').textContent = `${doneCount}/${QUESTS.length}`;
 }
 
@@ -855,7 +948,8 @@ const interactables = [
     act: () => {
       quiz.n = 0;
       quiz.score = 0;
-      dlg.start(S.phrases.size >= 4 ? 'quiz' : 'tong_quiz_empty');
+      const koreanPool = [...S.phrases].filter(([ko, v]) => v.en && /\p{Script=Hangul}/u.test(ko) && ko.length <= 8);
+      dlg.start(koreanPool.length >= 4 ? 'quiz' : 'tong_quiz_empty');
     },
   },
   ...BENCHES.map((b) => ({
@@ -907,10 +1001,17 @@ function standBench() {
 let activeInteract = null;
 function updateInteract() {
   activeInteract = null;
-  if (S.started && !dlg.state.active && !player.auto && player.pose !== 'sit' && S.haeunStory === 'idle' && ui.travel.classList.contains('hidden')) {
+  if (S.started && !modalOpen() && !dlg.state.active && !player.auto && player.pose !== 'sit' && (S.city !== 'seoul' || S.haeunStory === 'idle')) {
     let best = Infinity;
     const p = player.root.position;
-    for (const it of interactables) {
+    const airport = currentCity().airport;
+    const local = cityPlaces().map((place) => ({
+      label: `${place.icon} ${place.ko} · ${place.en}`,
+      pos: () => new THREE.Vector3(...place.spawn), r: place.radius ?? 2.8,
+      on: () => true, act: () => openPlace(place),
+    }));
+    local.unshift({ label: `✈ ${airport.name} · Flights`, pos: () => new THREE.Vector3(...airport.spawn), r: 4, on: () => true, act: () => openTravel('flights') });
+    for (const it of [...(S.city === 'seoul' ? interactables : []), ...local]) {
       if (!it.on()) continue;
       const q = it.pos();
       if (Math.abs(q.y - p.y) > 1.5) continue;
@@ -933,16 +1034,227 @@ function updateInteract() {
 }
 
 function interact() {
+  if (modalOpen() || dlg.state.active) return;
   if (S.benchSit) return standBench();
   activeInteract?.act();
 }
 
-/* ── Subway travel ───────────────────────────────── */
+/* ── City adventures & travel ────────────────────── */
 
-function openTravel() {
+let transitioning = false;
+let activityPlace = null;
+function modalOpen() {
+  return transitioning || !!document.querySelector('.overlay:not(.hidden)') || !ui.book.classList.contains('hidden');
+}
+function clearControls() {
+  keys.clear();
+  stick.id = null;
+  stick.x = stick.y = 0;
+  drag = null;
+  ui.knob.style.transform = '';
+  ui.stick.classList.add('hidden');
+  activeInteract = null;
+  ui.prompt.classList.add('hidden');
+}
+function adventure() {
+  return S.adventures[S.city] ??= { discovered: [], mastered: [], step: 0 };
+}
+function roleOf(p) {
+  const text = `${p.id} ${p.en}`.toLowerCase();
+  if (/food|market|ramen|yatai|snack|pojang|tteok/.test(text)) return 'food';
+  if (/cafe|café|coffee/.test(text)) return 'cafe';
+  if (/subway|station|metro/.test(text)) return 'subway';
+  if (/store|convenience/.test(text)) return 'store';
+  if (/studio|practice/.test(text)) return 'studio';
+  return 'scenic';
+}
+function errandPlaces() {
+  const places = cityPlaces();
+  return [places.find((p) => roleOf(p) === 'food'), places.find((p) => roleOf(p) === 'cafe'), places.find((p) => roleOf(p) === 'scenic')];
+}
+function errandLabel() {
+  const a = adventure();
+  const target = errandPlaces()[a.step];
+  return a.step === 3 ? '✓ Postcard earned! Keep exploring and learning.' : `${['🥡 Pick up a snack', '☕ Deliver your snack', '📮 Collect a scenic postcard'][a.step]} · ${target?.en ?? currentCity().name}`;
+}
+const SEOUL_PHRASES = {
+  food: { text: '포장해 주세요', rom: 'pojanghae juseyo', en: 'Please pack it to go' },
+  cafe: { text: '여기 있어요', rom: 'yeogi isseoyo', en: 'Here it is' },
+  store: { text: '얼마예요?', rom: 'eolmayeyo?', en: 'How much is it?' },
+  subway: { text: '어디예요?', rom: 'eodiyeyo?', en: 'Where is it?' },
+  studio: { text: '연습해요', rom: 'yeonseuphaeyo', en: 'Let’s practice' },
+  scenic: { text: '정말 아름다워요', rom: 'jeongmal areumdawoyo', en: 'It is really beautiful' },
+};
+function phraseFor(p) { return p.phrase ?? SEOUL_PHRASES[roleOf(p)]; }
+function discover(p) {
+  const a = adventure();
+  if (a.discovered.includes(p.id)) return;
+  a.discovered.push(p.id);
+  banner(`${p.icon} ${p.ko}`, p.en);
+  updateQuest();
+  save();
+}
+function closeActivity() {
+  $('city-activity').classList.add('hidden');
+  activityPlace = null;
+  clearControls();
+}
+function openPlace(p) {
+  if (transitioning || dlg.state.active) return;
+  clearControls();
+  activityPlace = p;
+  discover(p);
+  const phrase = phraseFor(p);
+  $('activity-title').textContent = `${p.icon} ${p.ko} · ${p.en}`;
+  $('activity-description').textContent = p.description ?? `A stop in ${currentCity().name}. Practice a local phrase with Tong.`;
+  $('activity-objective').textContent = errandLabel();
+  $('activity-native').textContent = phrase.text;
+  $('activity-phonetic').textContent = phrase.rom;
+  $('activity-feedback').textContent = `What does this phrase mean? Learn it to help with your local errand.`;
+  const choices = $('activity-choices');
+  choices.replaceChildren();
+  const distractors = [...new Set(cityPlaces().map((q) => phraseFor(q).en))].filter((en) => en !== phrase.en);
+  for (const fallback of ['Good night', 'Where is the station?', 'Thank you']) {
+    if (fallback !== phrase.en && !distractors.includes(fallback)) distractors.push(fallback);
+  }
+  const options = [phrase.en, ...distractors.slice(0, 2)];
+  const shift = [...p.id].reduce((n, ch) => n + ch.charCodeAt(0), 0) % options.length;
+  const ordered = [...options.slice(shift), ...options.slice(0, shift)];
+  ordered.forEach((answer) => {
+    const b = document.createElement('button');
+    b.className = 'place';
+    b.textContent = answer;
+    b.onclick = () => {
+      if (activityPlace !== p || transitioning) return;
+      if (answer !== phrase.en) {
+        $('activity-feedback').textContent = 'Not quite. Look at the phonetic help and try another meaning. Your errand has not advanced.';
+        b.disabled = true;
+        return;
+      }
+      const a = adventure();
+      if (!a.mastered.includes(p.id)) a.mastered.push(p.id);
+      learn(phrase.text, phrase.rom, phrase.en);
+      const targets = errandPlaces();
+      let feedback = `✓ ${phrase.text} · ${phrase.en}. Phrase saved to your book.`;
+      if (a.step < 3 && targets[a.step]?.id === p.id) {
+        a.step++;
+        feedback += [' Snack packed! Carry it to the café.', ' Delivered! Head to the scenic stop for your postcard.', ` Postcard unlocked: ${currentCity().nativeName} memory!`][a.step - 1];
+        if (a.step === 3 && !S.postcards.includes(S.city)) {
+          S.postcards.push(S.city);
+          showPostcard(S.city);
+        }
+      } else if (a.step < 3) feedback += ` Next: ${errandLabel()}`;
+      $('activity-feedback').textContent = feedback;
+      $('activity-objective').textContent = errandLabel();
+      choices.querySelectorAll('button').forEach((button) => { button.disabled = true; });
+      sfx.chime();
+      tong.spin = 0.8;
+      updateQuest();
+      save();
+    };
+    choices.appendChild(b);
+  });
+  $('activity-transit').classList.toggle('hidden', roleOf(p) !== 'subway');
+  $('activity-transit').onclick = () => { closeActivity(); openTravel('subway'); };
+  $('city-activity').classList.remove('hidden');
+  $('activity-close').focus();
+}
+function showPostcard(id) {
+  closeActivity();
+  const city = cities[id];
+  $('polaroid-img').src = `/assets/locations/${id}-static.png`;
+  $('polaroid-caption').textContent = `${city.nativeName} · Local errand complete`;
+  $('polaroid-date').textContent = `Day ${S.day} · ${city.name} · Collectible postcard`;
+  $('polaroid').classList.remove('hidden');
+  $('polaroid-close').focus();
+}
+function advanceHours(hours) {
+  const total = S.hour + hours;
+  S.day += Math.floor(total / 24);
+  S.hour = total % 24;
+}
+function syncCity() {
+  for (const [id, group] of Object.entries(cityGroups)) group.visible = S.city === id;
+  if (S.city === 'seoul') {
+    loc.haeun = loc.jin = null;
+    cashier.root.visible = true;
+    updateSchedules(true);
+  } else for (const c of [haeun, jin, ajusshi, barista, cashier]) c.root.visible = false;
+  cat.g.visible = S.city === 'seoul';
+  for (const pd of peds) pd.c.root.visible = S.city === 'seoul';
+  motes.visible = S.city === 'seoul';
+  for (const p of pickups) p.sprite.visible = p.glow.visible = S.city === 'seoul' && !p.taken;
+  ui.questHint.textContent = '';
+  lastZone = null;
+  lastClock = '';
+  drawMapBg();
+  updateQuest();
+}
+function prepareTransition() {
+  clearControls();
+  standBench();
+  player.auto = null;
+  player.pose = 'idle';
+  lookTower = false;
+  if (playerFood) { scene.remove(playerFood); playerFood = null; }
+  if (foodSteam) foodSteam.off = true;
+  spicyFx(false);
+  for (const b of bubbles) b.el.remove();
+  bubbles.length = 0;
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  $('city-activity').classList.add('hidden');
+  activityPlace = null;
+  ui.travel.classList.add('hidden');
+  ui.book.classList.add('hidden');
+  ui.fade.classList.add('on');
+  sfx.whoosh();
+}
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+async function changeCity(id, { skipAnimation = false } = {}) {
+  if (!Object.hasOwn(cities, id) || id === S.city || transitioning) return false;
+  const from = currentCity().name;
+  S.cityPositions[S.city] = safePose();
+  transitioning = true;
+  clearControls();
+  // A chosen Seoul response has a 750ms feedback callback. Let it settle
+  // behind a hidden dialogue before ending it, so it cannot reopen abroad.
+  $('dialogue').classList.add('hidden');
+  if (dlg.state.locked) await wait(800);
+  if (dlg.state.active) dlg.end();
+  if (S.haeunStory !== 'idle') {
+    S.haeunStory = 'idle';
+    haeun.path = null;
+    haeun.waveT = 0;
+    loc.haeun = null;
+  }
+  prepareTransition();
+  if (!skipAnimation) await wait(650);
+  S.city = id;
+  advanceHours(2);
+  const destination = currentCity();
+  placePlayer({ position: destination.airport.spawn, yaw: destination.yaw });
+  syncCity();
+  save();
+  if (!skipAnimation) await wait(250);
+  ui.fade.classList.remove('on');
+  transitioning = false;
+  clearControls();
+  banner(destination.nativeName, `${from} → ${destination.name} · Arrived at ${destination.airport.name}`);
+  toast(`<b>✈ ${destination.name}</b><span>Two hours later · ${koreanTime(localHour()).digital} local · Explore on foot or use this city’s subway.</span>`, 4200);
+  return true;
+}
+function openTravel(mode = 'subway') {
+  if (transitioning || dlg.state.active || S.haeunStory !== 'idle') return false;
+  clearControls();
+  const flights = mode === 'flights';
+  $('travel-badge').textContent = flights ? '✈' : S.city === 'seoul' ? '2' : 'M';
+  $('travel-title').textContent = flights ? `✈ ${currentCity().airport.nativeName}` : `🚇 ${currentCity().name} · Local transit`;
+  $('travel-subtitle').textContent = flights ? 'Choose a real destination. Two-hour flight · progress stays saved. All cities are compressed interpretations.' : 'Local stops only. To fly, take the airport connection below or walk to the ✈ marker.';
   const list = $('travel-list');
-  list.innerHTML = '';
-  for (const p of PLACES) {
+  list.replaceChildren();
+  list.classList.toggle('hidden', flights);
+  const airport = { id: 'airport', icon: '✈', ko: currentCity().airport.nativeName, en: `${currentCity().airport.name} · airport connection`, spawn: currentCity().airport.spawn, yaw: currentCity().yaw };
+  if (!flights) for (const p of [...cityPlaces(), airport]) {
     const b = document.createElement('button');
     b.className = 'place';
     b.innerHTML = '<span class="icon"></span><span class="txt"><b></b><small></small></span>';
@@ -952,64 +1264,115 @@ function openTravel() {
     b.onclick = () => travelTo(p);
     list.appendChild(b);
   }
+  const cards = $('flight-cities');
+  cards.replaceChildren();
+  cards.classList.toggle('hidden', !flights);
+  if (flights) for (const city of Object.values(cities)) {
+    const b = document.createElement('button');
+    b.className = 'city';
+    b.disabled = city.id === S.city;
+    b.innerHTML = '<img alt=""><span><b></b><small></small></span>';
+    b.querySelector('img').src = `/assets/locations/${city.id}-static.png`;
+    b.querySelector('b').textContent = `${city.nativeName} · ${city.name}`;
+    b.querySelector('small').textContent = city.id === S.city ? 'You are here' : 'Fly · compressed city';
+    b.onclick = () => changeCity(city.id);
+    cards.appendChild(b);
+  }
   ui.travel.classList.remove('hidden');
+  $('travel-close').focus();
   sfx.whoosh();
-  learn('지하철', 'jihacheol', 'subway');
+  return true;
 }
-
-function travelTo(p) {
-  ui.travel.classList.add('hidden');
-  ui.fade.classList.add('on');
-  sfx.whoosh();
-  setTimeout(() => {
-    player.root.position.set(...p.spawn);
-    player.root.rotation.y = p.yaw + Math.PI;
-    cam.yaw = p.yaw;
-    S.hour = (S.hour + 0.2) % 24;
-    cam.snap = true;
-    ui.fade.classList.remove('on');
-    toast(`<b>${p.icon} ${p.ko}</b><span>${p.en} · 다음 역은 ${p.ko}입니다 (next stop: ${p.en})</span>`, 2600);
-  }, 650);
+async function travelTo(p, { skipAnimation = false } = {}) {
+  if (!p || transitioning || dlg.state.active || S.haeunStory !== 'idle') return false;
+  transitioning = true;
+  prepareTransition();
+  if (!skipAnimation) await wait(650);
+  placePlayer({ position: p.spawn, yaw: p.yaw });
+  advanceHours(0.2);
+  save();
+  ui.fade.classList.remove('on');
+  transitioning = false;
+  clearControls();
+  toast(`<b>${p.icon} ${p.ko}</b><span>${p.en} · ${p.id === 'airport' ? 'Airport connection arrived. Press E at the terminal to choose a flight.' : 'Local transit arrival — no flight taken.'}</span>`, 3400);
+  return true;
 }
 
 /* ── Minimap ─────────────────────────────────────── */
 
 const mm = { ctx: ui.minimap.getContext('2d'), bg: null };
-const MAPB = { minX: -18, maxX: 18, minZ: -48, maxZ: 31 };
 function mapXY(x, z) {
-  const W = ui.minimap.width;
-  const H = ui.minimap.height;
-  return [((x - MAPB.minX) / (MAPB.maxX - MAPB.minX)) * W, ((z - MAPB.minZ) / (MAPB.maxZ - MAPB.minZ)) * H];
+  const b = currentCity().bounds;
+  const size = Math.max(b.maxX - b.minX, b.maxZ - b.minZ) + 12;
+  const cx = (b.minX + b.maxX) / 2;
+  const cz = (b.minZ + b.maxZ) / 2;
+  // Original Seoul faces the Han River toward -z (south). Other cities use -z north.
+  const north = S.city === 'seoul' ? -1 : 1;
+  return [(0.5 + (x - cx) / size) * ui.minimap.width, (0.5 + north * (z - cz) / size) * ui.minimap.height];
 }
 
 function drawMapBg() {
   const [c, g] = makeCanvas(ui.minimap.width, ui.minimap.height);
   g.fillStyle = '#2b2f3f';
   g.fillRect(0, 0, c.width, c.height);
-  const rect = (x0, x1, z0, z1, col) => {
-    const [a, b] = mapXY(x0, z0);
-    const [cc, d] = mapXY(x1, z1);
-    g.fillStyle = col;
-    g.fillRect(a, b, cc - a, d - b);
+  const path = (points) => {
+    g.beginPath();
+    points.forEach(([x, z], i) => {
+      const [px, py] = mapXY(x, z);
+      if (i) g.lineTo(px, py); else g.moveTo(px, py);
+    });
   };
-  rect(-16, 16, -46, -28, '#5a5246');
-  rect(-6.2, 6.2, -8, 30, '#4a4d5a');
-  rect(-10, 10, -28, -8, '#6a655e');
-  rect(3, 7, -32, -28, '#7a7266');
-  rect(-18, -10, -20, -11, '#2e9a5a');
-  rect(10, 18, -20, -11, '#e98aa6');
-  rect(-16, -6, -44, -31, '#7a5ab8');
-  rect(TENT.minX, TENT.maxX, TENT.minZ, TENT.maxZ, '#ff7a22');
-  rect(-6, -2, -26, -19.2, '#2556b8');
-  rect(-16, 16, -48, -46, '#3a6a8a');
+  for (const feature of currentCity().mapFeatures ?? []) {
+    path(feature.points);
+    g.closePath();
+    g.fillStyle = feature.color;
+    g.fill();
+  }
+  const b = currentCity().bounds;
+  const scale = c.width / (Math.max(b.maxX - b.minX, b.maxZ - b.minZ) + 12);
+  const coreRoads = S.city === 'seoul' ? [
+    { points: [[0, 29], [0, -19], [5, -28], [5, -41]], width: 7 },
+    { points: [[-15, -16], [16, -16]], width: 6 },
+    { points: [[-14, -34], [14, -34]], width: 5 },
+  ] : [];
+  for (const road of [...coreRoads, ...currentCity().roads]) {
+    path(road.points);
+    g.lineWidth = Math.max(2, road.width * scale);
+    g.strokeStyle = road.color ?? '#8b8277';
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.stroke();
+  }
+  g.font = '15px sans-serif';
+  g.textAlign = 'center';
+  for (const p of cityPlaces()) {
+    const [x, y] = mapXY(p.spawn[0], p.spawn[2]);
+    g.fillText(p.icon, x, y);
+  }
+  const [ax, ay] = mapXY(currentCity().airport.spawn[0], currentCity().airport.spawn[2]);
+  g.fillText('✈', ax, ay);
+  g.textAlign = 'left';
+  g.fillStyle = '#fff1da';
+  g.font = 'bold 17px sans-serif';
+  g.fillText('↑ N', 12, 24);
   mm.bg = c;
+  const legend = $('map-legend');
+  legend.replaceChildren();
+  for (const p of cityPlaces()) {
+    const row = document.createElement('span');
+    row.textContent = `${p.icon} ${p.en}`;
+    legend.appendChild(row);
+  }
+  const airportLabel = document.createElement('span');
+  airportLabel.textContent = `✈ ${currentCity().airport.name} · Walk here for flights`;
+  legend.appendChild(airportLabel);
 }
 
 function drawMinimap() {
-  if (ui.minimap.classList.contains('hidden')) return;
+  if ($('map-panel').classList.contains('hidden')) return;
   const g = mm.ctx;
   g.drawImage(mm.bg, 0, 0);
-  for (const p of pickups) {
+  for (const p of S.city === 'seoul' ? pickups : []) {
     if (p.taken) continue;
     const [x, y] = mapXY(p.w.at[0], p.w.at[1]);
     g.fillStyle = '#ffd23f';
@@ -1028,7 +1391,8 @@ function drawMinimap() {
   const [px, py] = mapXY(player.root.position.x, player.root.position.z);
   g.save();
   g.translate(px, py);
-  g.rotate(-player.root.rotation.y + Math.PI);
+  const yaw = player.root.rotation.y;
+  g.rotate(Math.atan2(Math.sin(yaw), -(S.city === 'seoul' ? -1 : 1) * Math.cos(yaw)));
   g.fillStyle = '#fff';
   g.beginPath();
   g.moveTo(0, -6);
@@ -1049,6 +1413,26 @@ let drag = null;
 window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLInputElement) return;
   const k = e.key.toLowerCase();
+  if (modalOpen()) {
+    keys.clear();
+    if (k === 'escape' && !transitioning) {
+      ui.travel.classList.add('hidden');
+      ui.book.classList.add('hidden');
+      $('polaroid').classList.add('hidden');
+      closeActivity();
+    }
+    const modal = [...document.querySelectorAll('.overlay:not(.hidden)')].at(-1) ?? (!ui.book.classList.contains('hidden') ? ui.book : null);
+    if (k === 'tab' && modal) {
+      const focusable = [...modal.querySelectorAll('button:not(:disabled), input')].filter((el) => !el.closest('.hidden'));
+      const index = focusable.indexOf(document.activeElement);
+      if (focusable.length) {
+        e.preventDefault();
+        focusable[(index + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length].focus();
+      }
+    }
+    if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
+    return;
+  }
   keys.add(k);
   if (!S.started) return;
   if (dlg.state.active) {
@@ -1067,7 +1451,7 @@ window.addEventListener('keydown', (e) => {
   if (k === 'b') ui.book.classList.toggle('hidden');
   if (k === 't') toggleEn();
   if (k === 'm') toggleMute();
-  if (k === 'n') ui.minimap.classList.toggle('hidden');
+  if (k === 'n') toggleMap();
   if (k === 'h') tongTalk();
   if (k === 'f') setSpeed(S.speed === 8 ? 1 : 8);
 });
@@ -1075,6 +1459,7 @@ window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
 window.addEventListener('blur', () => keys.clear());
 
 canvas.addEventListener('pointerdown', (e) => {
+  if (modalOpen()) return;
   if (e.pointerType === 'touch' && e.clientX < window.innerWidth * 0.45 && stick.id === null && !dlg.state.active) {
     stick.id = e.pointerId;
     stick.ox = e.clientX;
@@ -1087,6 +1472,7 @@ canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointermove', (e) => {
+  if (modalOpen()) return;
   if (e.pointerId === stick.id) {
     const dx = e.clientX - stick.ox;
     const dy = e.clientY - stick.oy;
@@ -1130,10 +1516,19 @@ function setSpeed(s) {
   updateToggles();
 }
 function setHour(h) {
-  S.hour = h;
+  if (transitioning) return;
+  S.hour = (h + (S.city === 'shanghai' ? 1 : 0)) % 24;
   sfx.whoosh();
 }
 function tongTalk() {
+  if (modalOpen() || dlg.state.active) return;
+  if (S.city !== 'seoul') {
+    const greeting = S.city === 'tokyo' ? (localHour() < 17 ? 'こんにちは · Konnichiwa' : 'こんばんは · Konbanwa') : (localHour() < 17 ? '你好 · Nǐ hǎo' : '晚上好 · Wǎnshàng hǎo');
+    bubble(tong, `${greeting}! ${errandLabel()}`, { dur: 5 });
+    ui.questHint.textContent = `${currentCity().subtitle} · ${errandLabel()} · E / tap to practice at a landmark.`;
+    tong.spin = 0.8;
+    return;
+  }
   const h = tongHint(S, S.hour);
   tong.expr = { cheerful: 'happy', excited: 'laugh', love: 'blush', thinking: 'neutral', proud: 'smile' }[h.expr] ?? 'happy';
   tong.exprT = 3;
@@ -1150,10 +1545,26 @@ $('btn-voice').onclick = () => {
   updateToggles();
 };
 $('btn-book').onclick = () => ui.book.classList.toggle('hidden');
-$('btn-map').onclick = () => ui.minimap.classList.toggle('hidden');
+function toggleMap() {
+  const panel = $('map-panel');
+  if (window.innerWidth <= 900) {
+    panel.classList.remove('hidden');
+    panel.classList.toggle('expanded');
+  } else panel.classList.toggle('hidden');
+}
+$('btn-map').onclick = toggleMap;
+$('map-expand').onclick = () => $('map-panel').classList.toggle('expanded');
+ui.minimap.onclick = () => $('map-panel').classList.toggle('expanded');
+$('map-close').onclick = () => $('map-panel').classList.add('hidden');
+$('activity-close').onclick = closeActivity;
+$('btn-postcards').onclick = () => {
+  const id = S.postcards.includes(S.city) ? S.city : S.postcards[0];
+  if (id && !transitioning) { clearControls(); showPostcard(id); }
+  else toast('<b>📮 City postcards</b><span>Pick up a snack, deliver it to the café, then practice at the scenic stop. Earn a postcard in every city!</span>', 4000);
+};
 $('btn-tong').onclick = tongTalk;
 $('book-close').onclick = () => ui.book.classList.add('hidden');
-$('travel-close').onclick = () => ui.travel.classList.add('hidden');
+$('travel-close').onclick = () => { ui.travel.classList.add('hidden'); clearControls(); };
 $('t-pause').onclick = () => setSpeed(0);
 $('t-play').onclick = () => setSpeed(1);
 $('t-fast').onclick = () => setSpeed(8);
@@ -1187,13 +1598,15 @@ function resolve(pos, r) {
       pos.z += opts[0][1];
     }
   }
-  pos.x = clamp(pos.x, BOUNDS.minX, BOUNDS.maxX);
-  pos.z = clamp(pos.z, BOUNDS.minZ, BOUNDS.maxZ);
+  const bounds = currentCity().bounds;
+  pos.x = clamp(pos.x, bounds.minX, bounds.maxX);
+  pos.z = clamp(pos.z, bounds.minZ, bounds.maxZ);
 }
 
 function updatePlayer(dt) {
   let speed = 0;
   const p = player.root.position;
+  if (modalOpen()) return 0;
   if (player.auto) {
     const target = player.auto.path[0];
     const dx = target.x - p.x;
@@ -1253,6 +1666,7 @@ function updatePlayer(dt) {
 }
 
 function updateHaeun(dt, t) {
+  if (S.city !== 'seoul') return 0;
   let speed = 0;
   const pp = player.root.position;
   if (haeun.path?.length) {
@@ -1339,7 +1753,7 @@ function updateNpcs(dt, t) {
       } else {
         p.x += (dx / d) * pd.speed * dt;
         p.z += (dz / d) * pd.speed * dt;
-        p.y = heightAt(p.x, p.z);
+        p.y = seoulHeightAt(p.x, p.z);
         c.root.rotation.y += wrapAngle(Math.atan2(dx, dz) - c.root.rotation.y) * damp(6, dt);
         sp = pd.speed / 3.4;
       }
@@ -1369,7 +1783,7 @@ const hv = new THREE.Vector3();
 const pv = new THREE.Vector3();
 
 function inTent(p) {
-  return p.x > TENT.minX + 0.1 && p.x < TENT.maxX - 0.1 && p.z > TENT.minZ && p.z < TENT.maxZ;
+  return S.city === 'seoul' && p.x > TENT.minX + 0.1 && p.x < TENT.maxX - 0.1 && p.z > TENT.minZ && p.z < TENT.maxZ;
 }
 
 function updateCamera(dt, t) {
@@ -1383,14 +1797,14 @@ function updateCamera(dt, t) {
   let fov = 50;
   let mode = 'follow';
   const node = dlg.state.node;
-  const atTent = S.haeunStory !== 'idle';
+  const atTent = S.city === 'seoul' && S.haeunStory !== 'idle';
   if (!S.started) {
     const a = t * 0.05;
     camTargetLook.set(0, 2.5, -22);
     camTargetPos.set(Math.sin(a) * 7.5, 6.5 + Math.sin(t * 0.2), -15 + Math.cos(a) * 7);
     k = 1.2;
     mode = 'title';
-  } else if (S.haeunStory === 'exit') {
+  } else if (S.city === 'seoul' && S.haeunStory === 'exit') {
     headPos(haeun, hv);
     camTargetLook.copy(hv).setY(1.1);
     camTargetPos.set(4.4, 2.1, 7.8);
@@ -1521,25 +1935,27 @@ function updateCamera(dt, t) {
 let lastZone = null;
 let lastClock = '';
 function updateHud() {
-  const tk = koreanTime(S.hour);
-  const key = tk.digital;
+  const tk = koreanTime(localHour());
+  const key = `${S.city}:${tk.digital}`;
   if (key !== lastClock) {
     lastClock = key;
-    ui.clockIcon.textContent = timeIcon(S.hour);
+    ui.clockIcon.textContent = timeIcon(localHour());
     ui.clockTime.textContent = tk.digital;
-    ui.clockKo.textContent = tk.ko;
+    ui.clockKo.textContent = S.city === 'seoul' ? tk.ko : `${currentCity().name} · UTC+${S.city === 'shanghai' ? 8 : 9} · ${localHour() < 6 ? 'Night' : localHour() < 12 ? 'Morning' : localHour() < 18 ? 'Afternoon' : 'Evening'}`;
   }
   const p = player.root.position;
   const z = zoneAt(p.x, p.z);
-  const place = z && PLACES.find((pl) => pl.id === z.id);
+  const places = cityPlaces();
+  const nearby = places.find((pl) => Math.hypot(p.x - pl.spawn[0], p.z - pl.spawn[2]) < (pl.radius ?? 3.5) && Math.abs(p.y - pl.spawn[1]) < 1.5);
+  const place = nearby ?? (z && places.find((pl) => pl.id === z.id));
   const zid = place?.id ?? null;
   if (zid !== lastZone) {
     lastZone = zid;
     if (place && S.started) {
-      banner(place.ko, place.en);
-      if (!S.visited.has(place.id)) {
+      discover(place);
+      if (S.city === 'seoul' && SEOUL_PLACES.some((pl) => pl.id === place.id) && !S.visited.has(place.id)) {
         S.visited.add(place.id);
-        if (S.visited.size >= PLACES.length) done('explore');
+        if (S.visited.size >= SEOUL_PLACES.length) done('explore');
         updateQuest();
       }
     }
@@ -1553,7 +1969,7 @@ let saveT = 0;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
-  if (S.started && !dlg.state.active) {
+  if (S.started && !dlg.state.active && !modalOpen()) {
     const prev = S.hour;
     S.hour += (dt * S.speed) / 30;
     if (S.hour >= 24) {
@@ -1566,10 +1982,10 @@ function frame() {
       updateToggles();
     }
   }
-  const L = sky.update(S.hour, t, player.root.position, camera);
+  const L = sky.update(localHour(), t, player.root.position, camera);
   bloom.strength = L.bloom;
   renderer.toneMappingExposure = L.exposure;
-  const warm = clamp(1 - Math.abs(S.hour - 18) / 2, 0, 1);
+  const warm = clamp(1 - Math.abs(localHour() - 18) / 2, 0, 1);
   grade.uniforms.uTint.value.setRGB(1 + warm * 0.06, 1 - warm * 0.01, 1 - warm * 0.08 + L.night * 0.04);
   water.material.uniforms.uSky.value.copy(L.top);
   water.material.uniforms.uHorizon.value.copy(L.horizon);
@@ -1578,7 +1994,7 @@ function frame() {
   water.material.uniforms.uTime.value = t;
   water.material.uniforms.uNight.value = L.night;
 
-  updateSchedules();
+  if (S.city === 'seoul') updateSchedules();
   const ps = updatePlayer(dt);
   const hs = updateHaeun(dt, t);
   updateNpcs(dt, t);
@@ -1601,9 +2017,9 @@ function frame() {
   updateAudio({
     night: L.night,
     distTent: Math.hypot(pp.x - (TX - 1), pp.z + 1),
-    tentOpen: loc.tent,
-    distRiver: Math.max(0, pp.z + 46) + Math.max(0, TERRACE_Y - pp.y) * 6,
-    distSubway: pp.distanceTo(SPOTS.subway),
+    tentOpen: S.city === 'seoul' && loc.tent,
+    distRiver: S.city === 'seoul' ? Math.max(0, pp.z + 46) + Math.max(0, TERRACE_Y - pp.y) * 6 : Infinity,
+    distSubway: Math.min(...cityPlaces().filter((p) => roleOf(p) === 'subway').map((p) => Math.hypot(pp.x - p.spawn[0], pp.z - p.spawn[2]))),
     indoor: !!zoneAt(pp.x, pp.z)?.indoor,
   });
 
@@ -1637,7 +2053,16 @@ async function boot() {
     /* system fonts */
   }
   sky = new DayNight();
-  buildWorld();
+  const buildCityGeometry = (id, build) => {
+    const before = new Set(scene.children);
+    build();
+    const group = cityGroups[id] ??= new THREE.Group();
+    for (const child of [...scene.children]) if (!before.has(child)) group.add(child);
+    scene.add(group);
+    group.visible = id === S.city;
+  };
+  buildCityGeometry('seoul', buildWorld);
+  for (const city of Object.values(cities)) buildCityGeometry(city.id, () => city.build());
   buildCast();
   initParticles();
   buildMotes();
@@ -1675,12 +2100,9 @@ async function boot() {
     $('title').classList.add('hidden');
     ui.hud.classList.remove('hidden');
     S.started = true;
-    player.root.position.set(1.6, 0, 18);
-    player.root.rotation.y = Math.PI;
-    cam.yaw = 0;
-    cam.snap = true;
-    updateSchedules(true);
-    toast(`<b>홍대 · Hongdae</b><span>Day ${S.day}, ${koreanTime(S.hour).ko}. Tong floats beside you — press <kbd>H</kbd> for a hint.</span>`, 3600);
+    if (!resume || !saved) placePlayer({ position: [1.6, 0, 18], yaw: 0 });
+    syncCity();
+    toast(`<b>${currentCity().nativeName} · ${currentCity().name}</b><span>Day ${S.day}, ${koreanTime(localHour()).digital} local. Tong floats beside you — press <kbd>H</kbd> for a hint. Walk to ✈ for flights.</span>`, 4200);
     setTimeout(tongTalk, 3800);
     save();
   };
@@ -1702,7 +2124,16 @@ async function boot() {
     window.location.reload();
   };
 
-  window.__cozy = { S, player, haeun, jin, dlg, renderer, bloom, scene, sky, G, THREE, setHour: (h) => (S.hour = h), travelTo: (id) => travelTo(PLACES.find((p) => p.id === id)), interact, loc, cam };
+  window.__cozy = {
+    S, player, haeun, jin, dlg, renderer, bloom, scene, sky, G, THREE, setHour,
+    travelTo: (id, options) => travelTo(id === 'airport' ? { id: 'airport', icon: '✈', ko: currentCity().airport.nativeName, en: currentCity().airport.name, spawn: currentCity().airport.spawn, yaw: currentCity().yaw } : cityPlaces().find((p) => p.id === id), options),
+    cities, cityRegistry: cities, get currentCity() { return currentCity(); },
+    changeCity, openTravel, save, localHour, heightAt, zoneAt,
+    get bounds() { return currentCity().bounds; },
+    get transitioning() { return transitioning; },
+    openPlace: (id) => { const p = cityPlaces().find((p) => p.id === id); if (p) openPlace(p); },
+    interact, loc, cam,
+  };
 }
 
 $('start').disabled = true;
