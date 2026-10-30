@@ -1034,7 +1034,7 @@ function standBench() {
 let activeInteract = null;
 function updateInteract() {
   activeInteract = null;
-  if (S.started && !modalOpen() && !dlg.state.active && !player.auto && player.pose !== 'sit' && (S.city !== 'seoul' || S.haeunStory === 'idle')) {
+  if (S.started && vistaIndex < 0 && !modalOpen() && !dlg.state.active && !player.auto && player.pose !== 'sit' && (S.city !== 'seoul' || S.haeunStory === 'idle')) {
     let best = Infinity;
     const p = player.root.position;
     const airport = currentCity().airport;
@@ -1043,7 +1043,7 @@ function updateInteract() {
       label: `${place.icon} ${place.ko} · ${place.en}`,
       // Remote rooms retain their objective interaction throughout the room.
       // Seoul keeps its authored NPC/counter/quiz proximity and choreography.
-      pos: () => S.city !== 'seoul' && room?.id === place.interiorId ? p : new THREE.Vector3(...place.spawn), r: place.radius ?? 2.8,
+      pos: () => S.city !== 'seoul' && room && room.id === place.interiorId ? p : new THREE.Vector3(...place.spawn), r: place.radius ?? 2.8,
       on: () => true, act: () => openPlace(place),
     }));
     local.unshift({ label: `✈ ${airport.name} · Flights`, pos: () => new THREE.Vector3(...airport.spawn), r: 4, on: () => true, act: () => openTravel('flights') });
