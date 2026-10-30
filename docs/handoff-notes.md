@@ -32,6 +32,7 @@ Current note:
 
 - Area: Cozy playability and responsive cutaway-world integration
 - Scope: demo travel; camera/zoom; jump, run and rideable transport; usable city interiors; tree/cat/sign polish; orientation-safe typography and controls
-- Contract touch points: `apps/client/public/cozy/**`; runtime owns `js/main.js`, UI owns `index.html`/`style.css`, interiors owns city/world geometry, visual assets owns characters and a new shared nature module
-- Integration risks: one writer per file; interior/cutaway and UI control APIs agreed before integration; preserve `38e0f0d` and existing saves/story; prior long-run browser acceptance remains pending rather than reset by this new feature scope
-- Next owner: cozy feature-branch coordinator; no main merge or deployment authority
+- Contract touch points: `apps/client/public/cozy/**`; all four implementation lanes finished, coordinator now owns integration. Runtime/UI/interior/nature interfaces are integrated; preserve existing saves/story and pushed recovery point `38e0f0d`.
+- Integration risks: PR #363 remains draft. Mirror appearance, integrated responsive visual comparison, comprehensive location/story/native checks and unclassified browser timeouts remain held; source/CPU checks are not universal gameplay acceptance. Current details and evidence belong in the PR, not this note.
+- Retained resources: feature worktree/remote branch `feat/cozy-pojangmacha-3d`; loopback preview 8420 serves its public directory through the scratch `preview-current` symlink. QA bundles and failed histories are under `artifacts/qa-runs/` and bounded scratch `tong-cozy-playability`/`tong-cozy-preview`; baseline snapshot retained for comparison. No test browser or implementation worker remains active. Preexisting workerd processes are not owned by this pass.
+- Next owner: cozy feature-branch coordinator/PR reviewer; revisit retained resources when acceptance or abandonment is decided. No main merge or deployment authority.

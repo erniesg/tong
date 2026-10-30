@@ -25,7 +25,7 @@ Open `http://localhost:8420/cozy/index.html`. This does not deploy the game or e
 - **E / interaction button:** talk, practice a phrase, use transit or choose a flight at an airport connection.
 - **B:** phrasebook; **N:** map; **H:** ask Tong; **Escape:** close panels or return from a scenic camera. The map can be expanded with its expand button or by tapping it.
 - **Tools → Get around:** choose walking, skateboard, scooter or bicycle. Rides accelerate and coast; **Brake / X / Control** slows them. They are packed away inside rooms. Movement uses gravity and bounded collision substeps, not a full vehicle physics simulation.
-- **Tools → Neighbourhood guide:** find every location category, set a walking waypoint or select a camera-only landmark view. Moving returns scenic cameras to the player.
+- **Tools → Neighbourhood guide:** find every location category, set a walking waypoint or select one of eight camera-only landmark views: Hangang/Namsan; Sumida–Skytree, Kaminarimon and Sensō-ji; Huangpu–Oriental Pearl, Pudong and the Bund. Views do not teleport the player. Moving or Escape returns to the player; the clock controls let you compare day/night.
 - **Tools → Demo shortcuts:** explicitly enable immediate city/stop visits. Demo defaults OFF, does not reset progress and is separate from normal flights. Turn it off to disable shortcuts.
 - **Tools → Screen layout / Text size:** use Auto for the actual window/device orientation, or preview portrait/landscape in a contained, letterboxed stage. Previews do not force OS screen rotation. Large text also enlarges the on-screen wayfinding label; game zoom does not shrink HUD text.
 - **Tools → Take your time:** dawn, noon, sunset, night and pause/play/fast-forward. These affect the game clock, not real time. Seoul's food tent retains its original 19:00–03:00 opening hours.
@@ -47,7 +47,7 @@ Every city has food, café, convenience-store, subway and practice-studio destin
 
 ## Source ownership
 
-- `apps/client/public/cozy/js/cities/*.js`: city descriptors, streets, landmarks, collision geometry and day/night-aware lighting.
+- `apps/client/public/cozy/js/cities/*.js`: city descriptors, streets, landmarks, collision geometry and day/night-aware lighting. Scenic descriptors declare camera `position`/`look` and optionally a vertical `fov` (clamped to 30–75° before responsive adjustment); river panoramas use wider framing to include the water and named tower.
 - `js/world.js`: original Seoul activity buildings, terrain, river and props.
 - `js/main.js`: input/camera, city selection, interaction, travel, maps, progression, stage sizing and saves.
 - `js/interiors.js`: room registry, furnished shells, selective cutaway/material handling and physical ceiling declarations.
