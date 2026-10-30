@@ -22,6 +22,9 @@ import { createDialogue } from './dialogue.js';
 import seoul from './cities/seoul.js';
 import tokyo from './cities/tokyo.js';
 import shanghai from './cities/shanghai.js';
+import { interiors, interiorAt, updateCutaways, isCameraOccluder, cutawaySnapshot } from './interiors.js';
+import { MODES, overlaps, createTraversal, stopTraversal, resetTraversal, queueJump, stepTraversal } from './traversal.js';
+import { createRides } from './rides.js';
 
 const cities = { seoul, tokyo, shanghai };
 const cityGroups = {};
@@ -30,11 +33,18 @@ const cityPlaces = () => S.city === 'seoul' ? [...SEOUL_PLACES, ...seoul.places]
 const localHour = () => (S.hour + (S.city === 'shanghai' ? -1 : 0) + 24) % 24;
 const inSeoulCore = (x, z) => x >= -18 && x <= 18 && z >= -46 && z <= 31;
 function heightAt(x, z) {
-  return S.city === 'seoul' && inSeoulCore(x, z) ? seoulHeightAt(x, z) : currentCity().heightAt(x, z);
+  const room = interiors.find((i) => i.city === S.city && x >= i.bounds.minX && x <= i.bounds.maxX && z >= i.bounds.minZ && z <= i.bounds.maxZ);
+  return room?.floorY ?? (S.city === 'seoul' && inSeoulCore(x, z) ? seoulHeightAt(x, z) : currentCity().heightAt(x, z));
 }
 function zoneAt(x, z) {
-  return (S.city === 'seoul' && inSeoulCore(x, z) ? seoulZoneAt(x, z) : null) ?? currentCity().zoneAt?.(x, z) ?? null;
+  const zone = (S.city === 'seoul' && inSeoulCore(x, z) ? seoulZoneAt(x, z) : null) ?? currentCity().zoneAt?.(x, z) ?? null;
+  const room = interiorAt({ x, y: player?.root.position.y ?? heightAt(x, z), z }, S.city);
+  return room ? { ...zone, id: zone?.id ?? room.id, indoor: true, interiorId: room.id, category: room.category } : zone;
 }
+const traversal = createTraversal();
+let rides;
+let runEnabled = false, braking = false, demoEnabled = false;
+let overview = false, vistaIndex = -1;
 
 /* ── State ───────────────────────────────────────── */
 
@@ -126,13 +136,14 @@ function validPose(pose) {
   if (!pose || !Array.isArray(pose.position) || pose.position.length !== 3 || !pose.position.every(Number.isFinite) || !Number.isFinite(pose.yaw)) return false;
   const [x, y, z] = pose.position;
   const b = currentCity().bounds;
-  if (x < b.minX || x > b.maxX || z < b.minZ || z > b.maxZ || Math.abs(y - heightAt(x, z)) > 0.7) return false;
-  return !G.colliders.some((c) => x > c.minX - 0.3 && x < c.maxX + 0.3 && z > c.minZ - 0.3 && z < c.maxZ + 0.3);
+  const radius = MODES[pose.mode]?.radius ?? 0.3;
+  if (x < b.minX + radius || x > b.maxX - radius || z < b.minZ + radius || z > b.maxZ - radius || Math.abs(y - heightAt(x, z)) > 0.12) return false;
+  return !G.colliders.some((c) => overlaps(x, z, radius, c));
 }
 
 function safePose() {
-  const pose = { position: player.root.position.toArray(), yaw: cam.yaw, rotation: player.root.rotation.y };
-  if (validPose(pose)) {
+  const pose = { position: player.root.position.toArray(), yaw: cam.yaw, rotation: player.root.rotation.y, mode: traversal.mode };
+  if (traversal.grounded && player.pose !== 'sit' && validPose(pose)) {
     pose.position[1] = heightAt(pose.position[0], pose.position[2]);
     S.cityPositions[S.city] = pose;
     return pose;
@@ -145,7 +156,11 @@ function placePlayer(pose) {
   const safe = validPose(pose) ? pose : { position: currentCity().spawn, yaw: currentCity().yaw };
   player.root.position.set(...safe.position);
   player.root.position.y = heightAt(player.root.position.x, player.root.position.z);
-  cam.yaw = safe.yaw;
+  setTransport(interiorAt(player.root.position, S.city) ? 'walk' : safe.mode ?? 'walk', true);
+  resetTraversal(traversal, traversal.mode);
+  overview = false;
+  vistaIndex = -1;
+  cam.yaw = Number.isFinite(safe.yaw) ? safe.yaw : currentCity().yaw;
   player.root.rotation.y = Number.isFinite(safe.rotation) ? safe.rotation : cam.yaw + Math.PI;
   cam.snap = true;
   tong.root.position.copy(player.root.position).y += 1.6;
@@ -154,16 +169,22 @@ function placePlayer(pose) {
 /* ── Renderer ────────────────────────────────────── */
 
 const canvas = document.getElementById('scene');
+const shell = document.getElementById('game-shell');
+const stage = { width: 1, height: 1 };
+function stageRect() { return (shell ?? canvas).getBoundingClientRect(); }
+const initialRect = stageRect();
+stage.width = Math.max(1, initialRect.width);
+stage.height = Math.max(1, initialRect.height);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(stage.width, stage.height, false);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
+const camera = new THREE.PerspectiveCamera(50, stage.width / stage.height, 0.1, 2000);
 camera.position.set(8, 6, 20);
 G.scene = scene;
 G.camera = camera;
@@ -174,7 +195,7 @@ G.renderer = renderer;
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.5, 0.55, 0.92);
+const bloom = new UnrealBloomPass(new THREE.Vector2(stage.width, stage.height), 0.5, 0.55, 0.92);
 composer.addPass(bloom);
 const grade = new ShaderPass({
   uniforms: { tDiffuse: { value: null }, uTint: { value: new THREE.Color(1, 1, 1) }, uSat: { value: 1.1 }, uVig: { value: 0.35 } },
@@ -187,12 +208,17 @@ const grade = new ShaderPass({
 composer.addPass(grade);
 composer.addPass(new OutputPass());
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
+function resizeStage() {
+  const rect = stageRect();
+  stage.width = Math.max(1, rect.width);
+  stage.height = Math.max(1, rect.height);
+  camera.aspect = stage.width / stage.height;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
-});
+  renderer.setSize(stage.width, stage.height, false);
+  composer.setSize(stage.width, stage.height);
+}
+window.addEventListener('resize', resizeStage);
+if (shell) new ResizeObserver(resizeStage).observe(shell);
 
 /* ── UI handles ──────────────────────────────────── */
 
@@ -232,6 +258,7 @@ const chars = {};
 
 function buildCast() {
   player = makePlayer();
+  rides = createRides(player);
   haeun = makeHaeun();
   jin = makeJin();
   ajusshi = makeAjusshi();
@@ -562,7 +589,7 @@ function renderBook() {
 
 const HAEUN_STAGES = [[0, '낯선 사람 · strangers'], [2, '아는 사이 · acquaintances'], [4, '동료 · colleagues'], [6, '친구 · friends (almost)']];
 const JIN_STAGES = [[0, '선배 · senior'], [1, '친한 선배 · close senior'], [2, '든든한 선배 · trusted mentor']];
-const stage = (table, v) => [...table].reverse().find(([m]) => v >= m)[1];
+const relationshipStage = (table, v) => [...table].reverse().find(([m]) => v >= m)[1];
 
 function hearts(n, max) {
   return Array.from({ length: max }, (_, i) => (i < n ? '♥' : '<span class="off">♥</span>')).join('');
@@ -570,9 +597,9 @@ function hearts(n, max) {
 
 function updateHearts() {
   ui.heartsHaeun.innerHTML = hearts(S.aff, S.maxAff);
-  ui.stageHaeun.textContent = stage(HAEUN_STAGES, S.aff);
+  ui.stageHaeun.textContent = relationshipStage(HAEUN_STAGES, S.aff);
   ui.heartsJin.innerHTML = hearts(S.jinAff, S.maxJin);
-  ui.stageJin.textContent = stage(JIN_STAGES, S.jinAff);
+  ui.stageJin.textContent = relationshipStage(JIN_STAGES, S.jinAff);
 }
 
 function addAff(who, n) {
@@ -671,8 +698,8 @@ function updateBubbles(dt) {
     else tmpV.copy(b.target);
     tmpV.project(camera);
     b.el.style.display = tmpV.z > 1 ? 'none' : '';
-    b.el.style.left = `${(tmpV.x * 0.5 + 0.5) * window.innerWidth}px`;
-    b.el.style.top = `${(-tmpV.y * 0.5 + 0.5) * window.innerHeight - b.rise}px`;
+    b.el.style.left = `${(tmpV.x * 0.5 + 0.5) * stage.width}px`;
+    b.el.style.top = `${(-tmpV.y * 0.5 + 0.5) * stage.height - b.rise}px`;
     b.el.style.opacity = Math.min(1, b.life * 3);
   }
 }
@@ -699,6 +726,8 @@ let foodSteam = null;
 const STAND_SPOT = new THREE.Vector3(SPOTS.playerSeat.x, 0, 0.75);
 
 function walkTo(path, onArrive) {
+  setTransport('walk', true);
+  stopTraversal(traversal);
   player.auto = { path: path.map((p) => p.clone()), onArrive };
 }
 
@@ -764,7 +793,7 @@ function finishNight() {
   S.haeunHomeUntil = (S.hour >= 19 ? S.day + 1 : S.day) * 24 + 9;
   haeun.root.visible = false;
   loc.haeun = 'away';
-  const st = stage(HAEUN_STAGES, S.aff);
+  const st = relationshipStage(HAEUN_STAGES, S.aff);
   const lines = {
     '친구 · friends (almost)': 'Ha-eun almost smiled. Twice. Tomorrow at 7 in the practice room — don’t be late.',
     '동료 · colleagues': 'Grudging respect, earned over tteokbokki. She’ll pretend she didn’t enjoy tonight.',
@@ -871,6 +900,10 @@ const dlg = createDialogue({
   sfx,
   bubble,
   onStart: () => {
+    clearControls();
+    setTransport('walk', true);
+    overview = false;
+    vistaIndex = -1;
     ui.prompt.classList.add('hidden');
     document.body.classList.add('talking');
   },
@@ -1005,9 +1038,12 @@ function updateInteract() {
     let best = Infinity;
     const p = player.root.position;
     const airport = currentCity().airport;
+    const room = interiorAt(p, S.city);
     const local = cityPlaces().map((place) => ({
       label: `${place.icon} ${place.ko} · ${place.en}`,
-      pos: () => new THREE.Vector3(...place.spawn), r: place.radius ?? 2.8,
+      // Remote rooms retain their objective interaction throughout the room.
+      // Seoul keeps its authored NPC/counter/quiz proximity and choreography.
+      pos: () => S.city !== 'seoul' && room?.id === place.interiorId ? p : new THREE.Vector3(...place.spawn), r: place.radius ?? 2.8,
       on: () => true, act: () => openPlace(place),
     }));
     local.unshift({ label: `✈ ${airport.name} · Flights`, pos: () => new THREE.Vector3(...airport.spawn), r: 4, on: () => true, act: () => openTravel('flights') });
@@ -1034,7 +1070,8 @@ function updateInteract() {
 }
 
 function interact() {
-  if (modalOpen() || dlg.state.active) return;
+  if (modalOpen() || dlg.state.active || !traversal.grounded) return;
+  setTransport('walk', true);
   if (S.benchSit) return standBench();
   activeInteract?.act();
 }
@@ -1048,11 +1085,15 @@ function modalOpen() {
 }
 function clearControls() {
   keys.clear();
+  stopTraversal(traversal);
+  braking = false;
+  for (const [id] of lookPointers) if (canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
+  if (stick.id !== null && ui.stick.hasPointerCapture(stick.id)) ui.stick.releasePointerCapture(stick.id);
+  lookPointers.clear();
+  pinchDistance = 0;
   stick.id = null;
   stick.x = stick.y = 0;
-  drag = null;
   ui.knob.style.transform = '';
-  ui.stick.classList.add('hidden');
   activeInteract = null;
   ui.prompt.classList.add('hidden');
 }
@@ -1060,6 +1101,7 @@ function adventure() {
   return S.adventures[S.city] ??= { discovered: [], mastered: [], step: 0 };
 }
 function roleOf(p) {
+  if (['food', 'cafe', 'store', 'subway', 'studio', 'scenic'].includes(p.category ?? p.role)) return p.category ?? p.role;
   const text = `${p.id} ${p.en}`.toLowerCase();
   if (/food|market|ramen|yatai|snack|pojang|tteok/.test(text)) return 'food';
   if (/cafe|café|coffee/.test(text)) return 'cafe';
@@ -1189,9 +1231,16 @@ function syncCity() {
   lastClock = '';
   drawMapBg();
   updateQuest();
+  waypointId = null;
+  populateLocations();
+  updateCameraButtons();
 }
 function prepareTransition() {
   clearControls();
+  setTransport('walk', true);
+  resetTraversal(traversal);
+  overview = false;
+  vistaIndex = -1;
   standBench();
   player.auto = null;
   player.pose = 'idle';
@@ -1210,8 +1259,8 @@ function prepareTransition() {
   sfx.whoosh();
 }
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-async function changeCity(id, { skipAnimation = false } = {}) {
-  if (!Object.hasOwn(cities, id) || id === S.city || transitioning) return false;
+async function changeCity(id, { skipAnimation = false, demo = false } = {}) {
+  if (!Object.hasOwn(cities, id) || id === S.city || transitioning || (demo && !demoEnabled)) return false;
   const from = currentCity().name;
   S.cityPositions[S.city] = safePose();
   transitioning = true;
@@ -1230,17 +1279,17 @@ async function changeCity(id, { skipAnimation = false } = {}) {
   prepareTransition();
   if (!skipAnimation) await wait(650);
   S.city = id;
-  advanceHours(2);
+  if (!demo) advanceHours(2);
   const destination = currentCity();
-  placePlayer({ position: destination.airport.spawn, yaw: destination.yaw });
+  placePlayer(demo ? S.cityPositions[id] : { position: destination.airport.spawn, yaw: destination.yaw });
   syncCity();
   save();
   if (!skipAnimation) await wait(250);
   ui.fade.classList.remove('on');
   transitioning = false;
   clearControls();
-  banner(destination.nativeName, `${from} → ${destination.name} · Arrived at ${destination.airport.name}`);
-  toast(`<b>✈ ${destination.name}</b><span>Two hours later · ${koreanTime(localHour()).digital} local · Explore on foot or use this city’s subway.</span>`, 4200);
+  banner(destination.nativeName, demo ? `Demo shortcut · ${destination.name} · Progress preserved` : `${from} → ${destination.name} · Arrived at ${destination.airport.name}`);
+  toast(demo ? `<b>Demo · ${destination.name}</b><span>Immediate jump. Progress and clock preserved; turn Demo off for normal airport travel.</span>` : `<b>✈ ${destination.name}</b><span>Two hours later · ${koreanTime(localHour()).digital} local · Explore on foot or use this city’s subway.</span>`, 4200);
   return true;
 }
 function openTravel(mode = 'subway') {
@@ -1408,102 +1457,157 @@ function drawMinimap() {
 const keys = new Set();
 const cam = { yaw: 0, pitch: 0.36, dist: 6.5, look: new THREE.Vector3(), pos: new THREE.Vector3(), snap: true, mode: 'follow' };
 const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
-let drag = null;
-
+const lookPointers = new Map();
+let pinchDistance = 0;
+const actionsAllowed = () => S.started && !modalOpen() && !dlg.state.active && !player.auto && S.haeunStory === 'idle';
+function jump() {
+  if (!actionsAllowed() || player.pose === 'sit') return;
+  safePose();
+  queueJump(traversal);
+}
+function zoom(factor) {
+  if (!actionsAllowed()) return;
+  vistaIndex = -1;
+  cam.dist = clamp(cam.dist * factor, 2.5, 24);
+  updateCameraButtons();
+}
+function followCamera() {
+  overview = false;
+  vistaIndex = -1;
+  updateCameraButtons();
+}
+function orbit(dx, dy = 0) {
+  if (!actionsAllowed()) return;
+  vistaIndex = -1;
+  cam.yaw = wrapAngle(cam.yaw - dx);
+  cam.pitch = clamp(cam.pitch + dy, 0.08, 1.35);
+  updateCameraButtons();
+}
 window.addEventListener('keydown', (e) => {
-  if (e.target instanceof HTMLInputElement) return;
   const k = e.key.toLowerCase();
   if (modalOpen()) {
     keys.clear();
-    if (k === 'b' && !transitioning && !ui.book.classList.contains('hidden')) {
-      ui.book.classList.add('hidden');
-      return;
-    }
+    if (k === 'b' && !transitioning && !ui.book.classList.contains('hidden') && !e.target.closest('input, select, textarea')) ui.book.classList.add('hidden');
     if (k === 'escape' && !transitioning) {
       ui.travel.classList.add('hidden');
       ui.book.classList.add('hidden');
       $('polaroid').classList.add('hidden');
+      $('tools-panel')?.classList.add('hidden');
       closeActivity();
+      clearControls();
     }
     const modal = [...document.querySelectorAll('.overlay:not(.hidden)')].at(-1) ?? (!ui.book.classList.contains('hidden') ? ui.book : null);
     if (k === 'tab' && modal) {
-      const focusable = [...modal.querySelectorAll('button:not(:disabled), input')].filter((el) => !el.closest('.hidden'));
+      const focusable = [...modal.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled)')].filter((el) => !el.closest('.hidden'));
       const index = focusable.indexOf(document.activeElement);
       if (focusable.length) {
         e.preventDefault();
         focusable[(index + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length].focus();
       }
     }
-    if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
+    if (!e.target.closest('input, select, textarea') && [' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
     return;
   }
-  keys.add(k);
-  if (!S.started) return;
+  if (e.target.closest('input, select, textarea, [contenteditable="true"]') || !S.started) return;
   if (dlg.state.active) {
+    if (e.target.closest('#choices button') && [' ', 'enter'].includes(k)) return;
     if (k === ' ' || k === 'enter' || k === 'e') {
       e.preventDefault();
-      dlg.advance();
+      if (!e.repeat) dlg.advance();
     }
-    if (/^[1-4]$/.test(k)) dlg.choose(Number(k) - 1);
+    if (/^[1-4]$/.test(k) && !e.repeat) dlg.choose(Number(k) - 1);
     return;
   }
-  if (k === 'e' || k === 'enter' || k === ' ') {
-    e.preventDefault();
-    interact();
-  }
-  if (k === 'escape') ui.travel.classList.add('hidden');
-  if (k === 'b') ui.book.classList.toggle('hidden');
+  if (e.target.closest('button') && [' ', 'enter'].includes(k)) return;
+  keys.add(k);
+  if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
+  if (e.repeat) return;
+  if (k === ' ') jump();
+  if (k === 'e' || k === 'enter') interact();
+  if (k === 'escape') { followCamera(); clearControls(); }
+  if (k === 'b') { clearControls(); ui.book.classList.toggle('hidden'); }
   if (k === 't') toggleEn();
   if (k === 'm') toggleMute();
   if (k === 'n') toggleMap();
   if (k === 'h') tongTalk();
   if (k === 'f') setSpeed(S.speed === 8 ? 1 : 8);
+  if (k === '+' || k === '=') zoom(0.85);
+  if (k === '-') zoom(1 / 0.85);
 });
 window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
-window.addEventListener('blur', () => keys.clear());
+window.addEventListener('blur', clearControls);
+window.addEventListener('orientationchange', () => { clearControls(); resizeStage(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) clearControls(); });
+const modalObserver = new MutationObserver(() => { if (modalOpen()) clearControls(); });
+for (const el of [...document.querySelectorAll('.overlay'), ui.book]) modalObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
 
+ui.stick.style.touchAction = 'none';
+canvas.style.touchAction = 'none';
+ui.stick.addEventListener('pointerdown', (e) => {
+  if (!actionsAllowed() || stick.id !== null) return;
+  e.preventDefault();
+  const r = ui.stick.getBoundingClientRect();
+  stick.id = e.pointerId;
+  stick.ox = r.left + r.width / 2;
+  stick.oy = r.top + r.height / 2;
+  ui.stick.setPointerCapture(e.pointerId);
+  updateStick(e);
+});
+function updateStick(e) {
+  if (e.pointerId !== stick.id) return;
+  const r = ui.stick.getBoundingClientRect();
+  const radius = Math.max(16, r.width * 0.34);
+  const dx = e.clientX - stick.ox, dy = e.clientY - stick.oy;
+  const length = Math.hypot(dx, dy) || 1;
+  const scale = Math.min(1, radius / length);
+  stick.x = dx * scale / radius;
+  stick.y = dy * scale / radius;
+  ui.knob.style.transform = `translate(${dx * scale}px, ${dy * scale}px)`;
+}
+ui.stick.addEventListener('pointermove', (e) => { if (actionsAllowed()) updateStick(e); });
+function endStick(e) {
+  if (e.pointerId !== stick.id) return;
+  stick.id = null;
+  stick.x = stick.y = 0;
+  ui.knob.style.transform = '';
+}
+for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) ui.stick.addEventListener(event, endStick);
+
+function pointerDistance() {
+  const [a, b] = [...lookPointers.values()];
+  return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+}
 canvas.addEventListener('pointerdown', (e) => {
-  if (modalOpen()) return;
-  if (e.pointerType === 'touch' && e.clientX < window.innerWidth * 0.45 && stick.id === null && !dlg.state.active) {
-    stick.id = e.pointerId;
-    stick.ox = e.clientX;
-    stick.oy = e.clientY;
-    stick.x = stick.y = 0;
-    ui.stick.style.left = `${e.clientX}px`;
-    ui.stick.style.top = `${e.clientY}px`;
-    ui.stick.classList.remove('hidden');
-  } else drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  if (!actionsAllowed()) return;
+  e.preventDefault();
+  lookPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  pinchDistance = pointerDistance();
   canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointermove', (e) => {
-  if (modalOpen()) return;
-  if (e.pointerId === stick.id) {
-    const dx = e.clientX - stick.ox;
-    const dy = e.clientY - stick.oy;
-    const len = Math.min(50, Math.hypot(dx, dy));
-    const a = Math.atan2(dy, dx);
-    stick.x = (Math.cos(a) * len) / 50;
-    stick.y = (Math.sin(a) * len) / 50;
-    ui.knob.style.transform = `translate(${Math.cos(a) * len}px, ${Math.sin(a) * len}px)`;
-  } else if (drag && e.pointerId === drag.id) {
-    cam.yaw -= (e.clientX - drag.x) * 0.006;
-    cam.pitch = clamp(cam.pitch + (e.clientY - drag.y) * 0.004, 0.08, 1.15);
-    drag.x = e.clientX;
-    drag.y = e.clientY;
+  if (!actionsAllowed() || !lookPointers.has(e.pointerId)) return;
+  const previous = lookPointers.get(e.pointerId);
+  lookPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (lookPointers.size >= 2) {
+    const distance = pointerDistance();
+    if (pinchDistance > 5 && distance > 5) zoom(pinchDistance / distance);
+    pinchDistance = distance;
+  } else {
+    const r = stageRect();
+    orbit((e.clientX - previous.x) * Math.PI * 2 / Math.max(240, r.width), (e.clientY - previous.y) * Math.PI / Math.max(240, r.height));
   }
 });
 const endPointer = (e) => {
-  if (e.pointerId === stick.id) {
-    stick.id = null;
-    stick.x = stick.y = 0;
-    ui.knob.style.transform = '';
-    ui.stick.classList.add('hidden');
-  }
-  if (drag && e.pointerId === drag.id) drag = null;
+  lookPointers.delete(e.pointerId);
+  pinchDistance = pointerDistance();
 };
-canvas.addEventListener('pointerup', endPointer);
-canvas.addEventListener('pointercancel', endPointer);
-canvas.addEventListener('wheel', (e) => (cam.dist = clamp(cam.dist + e.deltaY * 0.005, 2.5, 12)), { passive: true });
+for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(event, endPointer);
+canvas.addEventListener('wheel', (e) => {
+  if (!actionsAllowed()) return;
+  e.preventDefault();
+  const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? stage.height : 1);
+  zoom(Math.exp(clamp(delta * 0.002, -0.5, 0.5)));
+}, { passive: false });
 
 ui.prompt.addEventListener('click', interact);
 function toggleEn() {
@@ -1551,7 +1655,7 @@ $('btn-voice').onclick = () => {
 $('btn-book').onclick = () => ui.book.classList.toggle('hidden');
 function toggleMap() {
   const panel = $('map-panel');
-  if (window.innerWidth <= 900) {
+  if (stage.width <= 900) {
     panel.classList.remove('hidden');
     panel.classList.toggle('expanded');
   } else panel.classList.toggle('hidden');
@@ -1578,43 +1682,241 @@ $('t-dusk').onclick = () => setHour(17.8);
 $('t-night').onclick = () => setHour(20.5);
 $('polaroid-close').onclick = () => $('polaroid').classList.add('hidden');
 
-/* ── Update ──────────────────────────────────────── */
+/* ── Play tools (normal travel remains airport/subway gated) ── */
 
-const fwd = new THREE.Vector3();
-const right = new THREE.Vector3();
-const move = new THREE.Vector3();
-
-function resolve(pos, r) {
-  for (const b of G.colliders) {
-    const cx = clamp(pos.x, b.minX, b.maxX);
-    const cz = clamp(pos.z, b.minZ, b.maxZ);
-    const dx = pos.x - cx;
-    const dz = pos.z - cz;
-    const d2 = dx * dx + dz * dz;
-    if (d2 >= r * r) continue;
-    if (d2 > 1e-8) {
-      const d = Math.sqrt(d2);
-      pos.x += (dx / d) * (r - d);
-      pos.z += (dz / d) * (r - d);
-    } else {
-      const opts = [[b.minX - r - pos.x, 0], [b.maxX + r - pos.x, 0], [0, b.minZ - r - pos.z], [0, b.maxZ + r - pos.z]].sort((a, c) => Math.abs(a[0] + a[1]) - Math.abs(c[0] + c[1]));
-      pos.x += opts[0][0];
-      pos.z += opts[0][1];
+function setTransport(mode, force = false) {
+  if (!Object.hasOwn(MODES, mode)) return false;
+  if (!force && (!S.started || transitioning || dlg.state.active || player.auto || player.pose === 'sit' || !traversal.grounded)) return false;
+  const p = player?.root.position;
+  if (mode !== 'walk' && p && interiorAt(p, S.city)) {
+    mode = 'walk';
+    if (!force) toast('<b>Walk indoors</b><span>Your ride stays packed while you explore the room.</span>');
+  }
+  if (mode !== 'walk' && p && G.colliders.some((b) => overlaps(p.x, p.z, MODES[mode].radius, b))) mode = 'walk';
+  traversal.mode = mode;
+  stopTraversal(traversal);
+  rides?.resetPose();
+  if ($('transport-select')) $('transport-select').value = mode;
+  return true;
+}
+function updateCameraButtons() {
+  if ($('camera-view')) {
+    $('camera-view').textContent = overview ? 'Return to follow' : 'Overview';
+    $('camera-view').setAttribute('aria-pressed', String(overview));
+  }
+  const vistas = currentCity().vistas ?? [];
+  if ($('landmark-view')) {
+    $('landmark-view').disabled = !vistas.length;
+    $('landmark-view').textContent = vistaIndex >= 0 ? 'Return to player' : `Signature view · ${vistas[0]?.title ?? currentCity().name}`;
+    $('landmark-view').setAttribute('aria-pressed', String(vistaIndex >= 0));
+  }
+}
+function resetCamera() {
+  if (!actionsAllowed()) return;
+  followCamera();
+  cam.yaw = currentCity().yaw;
+  cam.pitch = 0.36;
+  cam.dist = 6.5;
+  cam.snap = true;
+}
+let waypointId = null;
+const categoryNames = { food: 'Food Street', cafe: 'Cafe', store: 'Convenience Store', subway: 'Subway Hub', studio: 'Practice Studio', scenic: 'Landmark' };
+function populateLocations() {
+  const select = $('demo-place-select'), list = $('location-list');
+  const selected = select?.value;
+  select?.replaceChildren();
+  list?.replaceChildren();
+  const progress = adventure();
+  for (const p of cityPlaces()) {
+    if (select) {
+      const option = document.createElement('option');
+      option.value = p.id;
+      option.textContent = `${categoryNames[roleOf(p)]} · ${p.en}`;
+      select.appendChild(option);
+    }
+    if (list) {
+      const row = document.createElement('li');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'place';
+      const room = interiors.find((i) => i.city === S.city && (i.id === p.interiorId || (i.category === roleOf(p) && p.category)));
+      const target = p.entry ?? room?.door ?? p.spawn;
+      const distance = player ? Math.round(Math.hypot(player.root.position.x - target[0], player.root.position.z - target[2])) : 0;
+      button.textContent = `${p.icon} ${categoryNames[roleOf(p)]} · ${p.en} · ${distance}m${room ? ' · Walk-in room' : ''} · ${progress.mastered.includes(p.id) ? 'Learned ✓' : progress.discovered.includes(p.id) ? 'Explored ✓' : 'Explore'}`;
+      button.onclick = () => {
+        waypointId = p.id;
+        if (select) select.value = p.id;
+        $('tools-panel')?.classList.add('hidden');
+        clearControls();
+        toast('<b>Wayfinding</b><span>Follow the on-screen place label. Use Demo → Jump to place only if you want a shortcut.</span>', 3200);
+      };
+      row.appendChild(button);
+      list.appendChild(row);
     }
   }
-  const bounds = currentCity().bounds;
-  pos.x = clamp(pos.x, bounds.minX, bounds.maxX);
-  pos.z = clamp(pos.z, bounds.minZ, bounds.maxZ);
+  for (const [index, vista] of (currentCity().vistas ?? []).entries()) {
+    if (!list) break;
+    const row = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'place';
+    button.textContent = `📷 View · ${vista.nativeName ?? ''} · ${vista.title} · Camera only`;
+    button.onclick = () => {
+      $('tools-panel')?.classList.add('hidden');
+      clearControls();
+      if (!actionsAllowed()) return;
+      vistaIndex = index;
+      overview = false;
+      cam.snap = true;
+      updateCameraButtons();
+      banner(vista.nativeName ?? vista.title, `${vista.title} · Orbit or use Return to player to resume following`);
+      canvas.focus();
+    };
+    row.appendChild(button);
+    list.appendChild(row);
+  }
+  if (select && [...select.options].some((o) => o.value === selected)) select.value = selected;
+  if ($('demo-city-select')) $('demo-city-select').value = S.city;
 }
+async function demoJump(id, placeId = null) {
+  if (!demoEnabled || !S.started || transitioning || dlg.state.active || S.haeunStory !== 'idle') return false;
+  clearControls();
+  $('tools-panel')?.classList.add('hidden');
+  if (id !== S.city && !await changeCity(id, { skipAnimation: true, demo: true })) return false;
+  if (placeId) {
+    const p = cityPlaces().find((place) => place.id === placeId);
+    if (!p) return false;
+    prepareTransition();
+    placePlayer({ position: p.spawn, yaw: p.yaw });
+    ui.fade.classList.remove('on');
+    save();
+    banner(p.ko, `Demo shortcut · ${p.en} · Progress preserved`);
+  }
+  return true;
+}
+function bindTools() {
+  const cameraTools = ['orbit-left', 'orbit-right', 'camera-reset', 'camera-view', 'landmark-view'];
+  const bind = (id, fn) => {
+    if ($(id)) $(id).onclick = (e) => {
+      if (cameraTools.includes(id) && !$('tools-panel')?.classList.contains('hidden')) {
+        $('tools-panel').classList.add('hidden');
+        clearControls();
+        canvas.focus();
+      }
+      fn(e);
+      if (!modalOpen() && !dlg.state.active) canvas.focus();
+    };
+  };
+  canvas.tabIndex = 0;
+  bind('btn-tools', () => {
+    if (!S.started || transitioning || dlg.state.active) return;
+    clearControls();
+    populateLocations();
+    $('tools-panel').classList.remove('hidden');
+    $('tools-close').focus();
+  });
+  bind('tools-close', () => { $('tools-panel').classList.add('hidden'); clearControls(); canvas.focus(); });
+  if ($('demo-enabled')) $('demo-enabled').onchange = (e) => {
+    demoEnabled = e.target.checked;
+    clearControls();
+    for (const id of ['demo-go', 'demo-place-go', 'demo-city-select', 'demo-place-select']) if ($(id)) $(id).disabled = !demoEnabled;
+  };
+  for (const id of ['demo-go', 'demo-place-go', 'demo-city-select', 'demo-place-select']) if ($(id)) $(id).disabled = true;
+  if ($('demo-enabled')) $('demo-enabled').checked = false;
+  bind('demo-go', () => demoJump($('demo-city-select').value));
+  bind('demo-place-go', () => demoJump(S.city, $('demo-place-select').value));
+  bind('zoom-in', () => zoom(0.82));
+  bind('zoom-out', () => zoom(1 / 0.82));
+  bind('orbit-left', () => orbit(-Math.PI / 6));
+  bind('orbit-right', () => orbit(Math.PI / 6));
+  bind('camera-reset', resetCamera);
+  bind('camera-view', () => {
+    if (!actionsAllowed()) return;
+    overview = !overview;
+    vistaIndex = -1;
+    updateCameraButtons();
+  });
+  bind('landmark-view', () => {
+    if (!actionsAllowed() || !currentCity().vistas?.length) return;
+    vistaIndex = vistaIndex >= 0 ? -1 : 0;
+    overview = false;
+    cam.snap = true;
+    updateCameraButtons();
+    if (vistaIndex >= 0) {
+      const v = currentCity().vistas[vistaIndex];
+      banner(v.nativeName ?? v.title, v.description ?? v.title);
+    }
+  });
+  if ($('transport-select')) $('transport-select').onchange = (e) => {
+    if (!setTransport(e.target.value)) e.target.value = traversal.mode;
+  };
+  bind('run-toggle', () => {
+    if (!actionsAllowed()) return;
+    runEnabled = !runEnabled;
+    $('run-toggle').setAttribute('aria-pressed', String(runEnabled));
+    $('run-toggle').textContent = runEnabled ? 'Run: on' : 'Run';
+  });
+  bind('jump-button', jump);
+  const brake = $('brake-button');
+  if (brake) {
+    brake.style.touchAction = 'none';
+    brake.onpointerdown = (e) => {
+      if (!actionsAllowed()) return;
+      e.preventDefault();
+      braking = true;
+      brake.setPointerCapture(e.pointerId);
+    };
+    for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) brake.addEventListener(event, () => { braking = false; });
+    brake.onkeydown = (e) => { if ((e.key === ' ' || e.key === 'Enter') && actionsAllowed()) braking = true; };
+    brake.onkeyup = brake.onblur = () => { braking = false; };
+  }
+  let settings = {};
+  try { settings = JSON.parse(localStorage.getItem('tong-cozy-layout') ?? '{}') ?? {}; } catch { /* local preferences only */ }
+  function applySettings() {
+    document.body.dataset.layout = ['portrait', 'landscape'].includes(settings.layout) ? settings.layout : 'auto';
+    document.body.dataset.textScale = settings.textScale === 'large' ? 'large' : 'normal';
+    if ($('view-layout')) $('view-layout').value = document.body.dataset.layout;
+    if ($('text-scale')) $('text-scale').value = document.body.dataset.textScale;
+    clearControls();
+    requestAnimationFrame(resizeStage);
+    try { localStorage.setItem('tong-cozy-layout', JSON.stringify(settings)); } catch { /* storage unavailable */ }
+  }
+  if ($('view-layout')) $('view-layout').onchange = (e) => { settings.layout = e.target.value; applySettings(); };
+  if ($('text-scale')) $('text-scale').onchange = (e) => { settings.textScale = e.target.value; applySettings(); };
+  bind('fullscreen-button', async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else if (shell?.requestFullscreen) await shell.requestFullscreen();
+      else throw new Error('Unavailable');
+    } catch { toast('<b>Fullscreen unavailable</b><span>You can still use Auto, Portrait or Landscape preview.</span>'); }
+    resizeStage();
+  });
+  applySettings();
+  updateCameraButtons();
+}
+bindTools();
 
+/* ── Update ──────────────────────────────────────── */
+
+let lastTraversalSpeed = 0;
+function traversalEnvironment() {
+  const colliders = [...G.colliders];
+  for (const c of [haeun, jin, barista, cashier]) {
+    if (!c.root.visible || Math.abs(c.root.position.y - player.root.position.y) > 1.5) continue;
+    const q = c.root.position;
+    colliders.push({ minX: q.x - 0.2, maxX: q.x + 0.2, minZ: q.z - 0.2, maxZ: q.z + 0.2 });
+  }
+  return { colliders, heightAt, bounds: currentCity().bounds };
+}
 function updatePlayer(dt) {
   let speed = 0;
   const p = player.root.position;
-  if (modalOpen()) return 0;
-  if (player.auto) {
+  const blocked = modalOpen();
+  if (S.benchSit && !blocked && (keys.has('w') || keys.has('s') || keys.has('a') || keys.has('d') || Math.hypot(stick.x, stick.y) > 0.3)) standBench();
+  if (player.auto && !blocked) {
+    // Keep the authored Seoul counter choreography, including dialogue walks.
     const target = player.auto.path[0];
-    const dx = target.x - p.x;
-    const dz = target.z - p.z;
+    const dx = target.x - p.x, dz = target.z - p.z;
     const d = Math.hypot(dx, dz);
     if (d < 0.08) {
       player.auto.path.shift();
@@ -1625,48 +1927,40 @@ function updatePlayer(dt) {
       }
     } else {
       const step = Math.min(d, 2.6 * dt);
-      p.x += (dx / d) * step;
-      p.z += (dz / d) * step;
+      p.x += dx / d * step;
+      p.z += dz / d * step;
       player.root.rotation.y = Math.atan2(dx, dz);
-      speed = 0.8;
+      speed = 2.6;
     }
-  } else if (S.started && player.pose !== 'sit' && !dlg.state.active && S.haeunStory !== 'exit') {
-    let ix = stick.x;
-    let iz = stick.y;
+    if (player.pose !== 'sit') p.y = heightAt(p.x, p.z);
+  } else if (player.pose !== 'sit') {
+    let ix = stick.x, iz = stick.y;
     if (keys.has('w') || keys.has('arrowup')) iz -= 1;
     if (keys.has('s') || keys.has('arrowdown')) iz += 1;
     if (keys.has('a') || keys.has('arrowleft')) ix -= 1;
     if (keys.has('d') || keys.has('arrowright')) ix += 1;
-    const mag = Math.min(1, Math.hypot(ix, iz));
-    if (mag > 0.08) {
-      fwd.set(-Math.sin(cam.yaw), 0, -Math.cos(cam.yaw));
-      right.set(Math.cos(cam.yaw), 0, -Math.sin(cam.yaw));
-      move.copy(right).multiplyScalar(ix).addScaledVector(fwd, -iz).normalize();
-      const run = keys.has('shift') ? 1.7 : 1;
-      p.addScaledVector(move, 3.4 * run * mag * dt);
-      player.root.rotation.y += wrapAngle(Math.atan2(move.x, move.z) - player.root.rotation.y) * damp(12, dt);
-      speed = mag * run;
+    const frozen = !S.started || blocked || dlg.state.active || S.haeunStory === 'exit';
+    // Camera-relative walking/steering; inertia and turning acceleration remain
+    // in world coordinates when the player lets go to orbit the camera.
+    const x = Math.cos(cam.yaw) * ix + Math.sin(cam.yaw) * iz;
+    const z = -Math.sin(cam.yaw) * ix + Math.cos(cam.yaw) * iz;
+    speed = stepTraversal(traversal, p, { x, z, run: runEnabled || keys.has('shift'), brake: braking || keys.has('x') || keys.has('control'), frozen }, traversalEnvironment(), dt);
+    if (speed > 0.08) {
+      const yaw = Math.atan2(traversal.vx, traversal.vz);
+      player.root.rotation.y += wrapAngle(yaw - player.root.rotation.y) * damp(traversal.mode === 'walk' ? 12 : 7, dt);
     }
-    resolve(p, 0.3);
-    for (const c of [haeun, jin, barista, cashier]) {
-      if (!c.root.visible) continue;
-      const q = c.root.position;
-      const dx = p.x - q.x;
-      const dz = p.z - q.z;
-      const d = Math.hypot(dx, dz);
-      if (d < 0.55 && d > 1e-4) {
-        p.x = q.x + (dx / d) * 0.55;
-        p.z = q.z + (dz / d) * 0.55;
-      }
+    const room = interiorAt(p, S.city);
+    if (room && traversal.mode !== 'walk') setTransport('walk', true);
+    if (room && !traversal.grounded && Number.isFinite(room.bounds.maxY)) {
+      const ceiling = Math.max(room.floorY, room.bounds.maxY - 1.8);
+      if (p.y > ceiling) { p.y = ceiling; traversal.vy = Math.min(0, traversal.vy); }
     }
-  } else if (S.benchSit && (keys.has('w') || keys.has('s') || keys.has('a') || keys.has('d') || Math.hypot(stick.x, stick.y) > 0.3)) {
-    standBench();
-  }
-  if (player.pose !== 'sit') p.y += (heightAt(p.x, p.z) - p.y) * damp(18, dt);
+  } else stopTraversal(traversal);
+  lastTraversalSpeed = speed;
   if (player.pose === 'sit' && dlg.state.active) lookAtYaw(player, headPos(haeun), 0.9);
   else player.lookYaw = 0;
   if (hotSteam && !hotSteam.off) headPos(player, hotSteam.pos).y += 0.35;
-  return speed;
+  return traversal.mode === 'walk' ? speed / 3.4 : 0;
 }
 
 function updateHaeun(dt, t) {
@@ -1863,11 +2157,12 @@ function updateCamera(dt, t) {
       let bestFree = -1;
       for (const sgn of [1, -1]) {
         const side = new THREE.Vector3(-dir.z * sgn, 0, dir.x * sgn);
-        const want = mid.clone().addScaledVector(side, dist * 0.85).addScaledVector(dir, -dist * 0.45);
+        const want = mid.clone().addScaledVector(side, dist * 0.85).addScaledVector(dir, -dist * 0.45).setY(Math.max(pv.y, hv.y) + 0.35);
+        updateCutaways(p, want, 0, S.city);
         const d = want.clone().sub(mid);
         ray.set(mid, d.clone().normalize());
         ray.far = d.length();
-        const hit = ray.intersectObjects(G.blockers, false)[0];
+        const hit = ray.intersectObjects(G.blockers.filter(isCameraOccluder), false)[0];
         const free = hit ? hit.distance : d.length() + 1;
         if (free > bestFree) {
           bestFree = free;
@@ -1877,36 +2172,42 @@ function updateCamera(dt, t) {
       cam.talkSide = best;
     }
     const side = new THREE.Vector3(-dir.z * cam.talkSide, 0, dir.x * cam.talkSide);
-    camTargetPos.copy(mid).addScaledVector(side, dist * 0.85).addScaledVector(dir, -dist * 0.45);
+    camTargetPos.copy(mid).addScaledVector(side, dist * 0.85).addScaledVector(dir, -dist * 0.45).setY(Math.max(pv.y, hv.y) + 0.35);
+    updateCutaways(p, camTargetPos, dt, S.city);
     const d = camTargetPos.clone().sub(mid);
     ray.set(mid, d.clone().normalize());
     ray.far = d.length();
-    const hit = ray.intersectObjects(G.blockers, false)[0];
+    const hit = ray.intersectObjects(G.blockers.filter(isCameraOccluder), false)[0];
     if (hit) camTargetPos.copy(mid).addScaledVector(d.normalize(), Math.max(0.9, hit.distance - 0.3));
-    camTargetPos.y = Math.max(pv.y, hv.y) + 0.35;
     camTargetLook.copy(mid).y -= 0.45;
     fov = 50;
     k = 3;
     mode = `talk-${node.who}`;
+  } else if (vistaIndex >= 0 && currentCity().vistas?.[vistaIndex]) {
+    const vista = currentCity().vistas[vistaIndex];
+    camTargetPos.set(...vista.position);
+    camTargetLook.set(...vista.look);
+    mode = 'vista';
+    k = 5;
   } else {
-    const zone = zoneAt(p.x, p.z);
-    const indoor = zone?.indoor || inTent(p);
-    const dist = indoor ? Math.min(cam.dist, 4) : cam.dist;
-    const pitch = indoor ? Math.min(cam.pitch, 0.32) : cam.pitch;
+    const dist = overview ? Math.max(18, cam.dist * 2.4) : cam.dist;
+    const pitch = overview ? Math.max(0.95, cam.pitch) : cam.pitch;
     camTargetLook.set(p.x, p.y + 1.25, p.z);
     camTargetPos.set(p.x + Math.sin(cam.yaw) * dist * Math.cos(pitch), p.y + 1.25 + dist * Math.sin(pitch), p.z + Math.cos(cam.yaw) * dist * Math.cos(pitch));
-    // keep the camera out of walls
+    // Cutaway decisions use the DESIRED camera, before a wall can shorten it.
+    // Fading never removes the corresponding physical collider.
+    updateCutaways(p, camTargetPos, dt, S.city);
     const dir = new THREE.Vector3().subVectors(camTargetPos, camTargetLook);
     const len = dir.length();
     dir.normalize();
     ray.set(camTargetLook, dir);
     ray.far = len;
-    const hit = ray.intersectObjects(G.blockers, false)[0];
+    const hit = ray.intersectObjects(G.blockers.filter(isCameraOccluder), false)[0];
     if (hit) camTargetPos.copy(camTargetLook).addScaledVector(dir, Math.max(0.6, hit.distance - 0.35));
-    if (inTent(p)) camTargetPos.y = Math.min(camTargetPos.y, 2.6);
-    if (zone?.indoor) camTargetPos.y = Math.min(camTargetPos.y, heightAt(p.x, p.z) + 3.1);
+    if (overview) mode = 'overview';
     k = 7;
   }
+  if (!['follow', 'overview'].includes(mode) && !mode.startsWith('talk-')) updateCutaways(p, camTargetPos, dt, S.city);
   if (cam.snap || (mode !== cam.mode && !['follow', 'title'].includes(mode) && cam.mode !== 'title')) {
     cam.pos.copy(camTargetPos);
     cam.look.copy(camTargetLook);
@@ -1941,6 +2242,28 @@ function updateCamera(dt, t) {
 }
 
 /* ── HUD per frame ───────────────────────────────── */
+
+const wayfindingLabel = document.createElement('div');
+wayfindingLabel.className = 'place-wayfinding';
+Object.assign(wayfindingLabel.style, { position: 'absolute', display: 'none', font: 'bold 14px "Gowun Dodum", sans-serif', lineHeight: '1.35', color: '#302921', background: '#fff6e8ed', padding: '5px 9px', borderRadius: '9px', maxWidth: 'min(260px, 75%)', textAlign: 'center', transform: 'translate(-50%, -100%)', pointerEvents: 'none' });
+ui.bubbles.appendChild(wayfindingLabel);
+function updateWayfinding() {
+  wayfindingLabel.style.display = 'none';
+  if (!S.started || modalOpen() || dlg.state.active || vistaIndex >= 0 || S.haeunStory !== 'idle') return;
+  const p = player.root.position;
+  const distanceTo = (place) => Math.hypot(p.x - (place.entry ?? place.spawn)[0], p.z - (place.entry ?? place.spawn)[2]);
+  const target = cityPlaces().find((place) => place.id === waypointId) ?? [...cityPlaces()].sort((a, b) => distanceTo(a) - distanceTo(b))[0];
+  if (!target) return;
+  const distance = distanceTo(target);
+  if (!waypointId && distance > 18) return;
+  const at = target.entry ?? target.spawn;
+  tmpV.set(at[0], at[1] + 2.3, at[2]).project(camera);
+  const behind = tmpV.z > 1;
+  wayfindingLabel.textContent = `${behind ? '↻ ' : ''}${target.ko} · ${categoryNames[roleOf(target)]} · ${Math.round(distance)}m`;
+  wayfindingLabel.style.display = '';
+  wayfindingLabel.style.left = `${clamp(behind ? stage.width / 2 : (tmpV.x * 0.5 + 0.5) * stage.width, Math.min(110, stage.width / 2), Math.max(stage.width / 2, stage.width - 110))}px`;
+  wayfindingLabel.style.top = `${clamp(behind ? stage.height * 0.35 : (-tmpV.y * 0.5 + 0.5) * stage.height, Math.min(160, stage.height * 0.35), stage.height - 150)}px`;
+}
 
 let lastZone = null;
 let lastClock = '';
@@ -2009,6 +2332,11 @@ function frame() {
   const hs = updateHaeun(dt, t);
   updateNpcs(dt, t);
   animate(player, dt, t, ps);
+  const yaw = player.root.rotation.y;
+  const ppRide = player.root.position;
+  const frontY = heightAt(ppRide.x + Math.sin(yaw) * 0.5, ppRide.z + Math.cos(yaw) * 0.5);
+  const rearY = heightAt(ppRide.x - Math.sin(yaw) * 0.5, ppRide.z - Math.cos(yaw) * 0.5);
+  rides.update(traversal, lastTraversalSpeed, t, Math.atan2(rearY - frontY, 1));
   animate(haeun, dt, t, hs);
   for (const c of [jin, ajusshi, barista, cashier]) if (c.root.visible) animate(c, dt, t, 0);
   for (const u of G.updaters) u(dt, t);
@@ -2019,6 +2347,7 @@ function frame() {
   dlg.update(dt);
   updateCamera(dt, t);
   updateBubbles(dt);
+  updateWayfinding();
   updateHud();
   drawMinimap();
   studioMirrorVisible(zoneAt(player.root.position.x, player.root.position.z)?.id === 'studio');
@@ -2142,7 +2471,12 @@ async function boot() {
     get bounds() { return currentCity().bounds; },
     get transitioning() { return transitioning; },
     openPlace: (id) => { const p = cityPlaces().find((p) => p.id === id); if (p) openPlace(p); },
-    interact, loc, cam,
+    interact, loc, cam, camera, composer, stage, resizeStage, safePose, validPose,
+    traversal, rides, jump, setTransport, demoJump,
+    get demoEnabled() { return demoEnabled; },
+    get controls() { return { keys: [...keys], joystick: { ...stick }, pointers: lookPointers.size, braking, runEnabled }; },
+    get cameraDiagnostics() { return { mode: cam.mode, desired: camTargetPos.toArray(), actual: camera.position.toArray(), yaw: cam.yaw, pitch: cam.pitch, distance: cam.dist, overview, vistaIndex, near: camera.near }; },
+    get interiorDiagnostics() { return { current: interiorAt(player.root.position, S.city)?.id ?? null, cutaways: cutawaySnapshot() }; },
   };
 }
 

@@ -1,0 +1,77 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createTraversal, stepTraversal, queueJump, resetTraversal, MODES, overlaps } from '../apps/client/public/cozy/js/traversal.js';
+
+const flat = { heightAt: () => 0, colliders: [], bounds: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 } };
+const advance = (s, p, input, seconds, env = flat, dt = 1 / 60) => {
+  for (let t = 0; t < seconds - 1e-9; t += dt) stepTraversal(s, p, input, env, Math.min(dt, seconds - t));
+};
+const actor = (mode = 'walk') => { const s = createTraversal(); resetTraversal(s, mode); return [s, { x: 0, y: 0, z: 0 }]; };
+
+test('run travels faster than walking without diagonal speed inflation', () => {
+  const [walk, a] = actor(), [run, b] = actor(), [diagonal, c] = actor();
+  advance(walk, a, { x: 1, z: 0 }, 1);
+  advance(run, b, { x: 1, z: 0, run: true }, 1);
+  advance(diagonal, c, { x: 1, z: 1 }, 1);
+  assert.ok(a.x > 2.5 && a.x < 3.5);
+  assert.ok(b.x > a.x * 1.5);
+  assert.ok(Math.abs(Math.hypot(c.x, c.z) - a.x) < 0.02);
+});
+
+test('jump has gravity, cannot double jump, and lands on the terrain', () => {
+  const [s, p] = actor(); queueJump(s); let peak = 0;
+  for (let i = 0; i < 90; i++) {
+    stepTraversal(s, p, {}, flat, 1 / 120);
+    peak = Math.max(peak, p.y);
+    if (i === 20) { queueJump(s); assert.equal(s.jumpQueued, false); }
+    assert.ok(Number.isFinite(p.y) && p.y >= 0);
+  }
+  assert.ok(peak > 0.8 && peak < 1.5, `jump apex ${peak}`);
+  assert.equal(s.grounded, true); assert.equal(s.vy, 0); assert.equal(p.y, 0);
+});
+
+for (const mode of ['skateboard', 'scooter', 'bicycle']) {
+  test(`${mode} accelerates and coasts; braking stops faster than coasting`, () => {
+    const [s, p] = actor(mode);
+    advance(s, p, { x: 1 }, 0.1);
+    assert.ok(s.vx > 0 && s.vx < MODES[mode].speed / 2);
+    advance(s, p, { x: 1 }, 2.5);
+    const a = { ...s }, b = { ...s }, pa = { ...p }, pb = { ...p };
+    advance(a, pa, {}, 0.3); advance(b, pb, { brake: true }, 0.3);
+    assert.ok(a.vx > 0, 'releasing input must not instantly stop a ride');
+    assert.ok(b.vx < a.vx, 'braking must be stronger than coast drag');
+    assert.ok(pb.x - p.x < pa.x - p.x);
+  });
+  test(`${mode} cannot tunnel through thin walls at a long frame interval`, () => {
+    const [s, p] = actor(mode); s.vx = MODES[mode].speed;
+    const wall = { minX: 1, maxX: 1.05, minZ: -50, maxZ: 50 };
+    advance(s, p, { x: 1 }, 2, { ...flat, colliders: [wall] }, 0.25);
+    assert.ok(p.x <= wall.minX - MODES[mode].radius + 1e-7);
+    assert.equal(overlaps(p.x, p.z, MODES[mode].radius, wall), false);
+    assert.equal(p.y, 0);
+  });
+}
+
+test('terrain ledges are not elevators, while the continuous Seoul-style ramp is walkable', () => {
+  const [s, p] = actor();
+  advance(s, p, { x: 1 }, 2, { ...flat, heightAt: (x) => x < 0.5 ? 0 : 2.4 });
+  assert.ok(p.x < 0.5); assert.equal(p.y, 0);
+  const [r, q] = actor();
+  const ramp = { ...flat, heightAt: (x) => Math.max(0, Math.min(2.4, x * 0.6)) };
+  advance(r, q, { x: 1 }, 2, ramp);
+  assert.ok(q.x > 4); assert.ok(Math.abs(q.y - 2.4) < 1e-7);
+});
+
+test('frozen controls stop horizontal motion without suspending gravity', () => {
+  const [s, p] = actor(); advance(s, p, { x: 1 }, 0.4); queueJump(s);
+  stepTraversal(s, p, { x: 1 }, flat, 0.1);
+  const x = p.x; advance(s, p, { x: 1, frozen: true }, 1);
+  assert.equal(p.x, x); assert.equal(s.vx, 0); assert.equal(p.y, 0); assert.equal(s.grounded, true);
+});
+
+test('city edges account for the ride radius and invalid modes reset safely', () => {
+  const [s, p] = actor('bicycle');
+  advance(s, p, { x: 1, z: 1 }, 3, { ...flat, bounds: { minX: -1, maxX: 1, minZ: -1, maxZ: 1 } });
+  assert.ok(p.x <= 1 - MODES.bicycle.radius + 1e-7 && p.z <= 1 - MODES.bicycle.radius + 1e-7);
+  resetTraversal(s, 'unknown'); assert.equal(s.mode, 'walk'); assert.equal(s.vx, 0);
+});
