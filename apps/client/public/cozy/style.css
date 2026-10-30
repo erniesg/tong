@@ -135,7 +135,7 @@ kbd {
 .minimap { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: 10px; cursor: zoom-in; }
 .map-help { font-size: 10px; margin: 5px 0; }
 .map-legend { display: none; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; max-height: 100px; overflow: auto; }
-.map-panel.expanded { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(560px, 92vw, 85dvh); z-index: 8; box-shadow: 0 0 0 100vmax rgba(10, 8, 22, .5); }
+.map-panel.expanded { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(560px, 92vw, 85dvh); max-height: calc(100dvh - 24px); overflow-y: auto; z-index: 8; box-shadow: 0 0 0 100vmax rgba(10, 8, 22, .5); }
 .map-panel.expanded .map-legend { display: flex; }
 .map-panel.expanded .minimap { cursor: zoom-out; }
 .remote-city .hearts-panel { display: none; }

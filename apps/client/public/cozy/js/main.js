@@ -1921,6 +1921,12 @@ function updateCamera(dt, t) {
   faceFill.position.copy(cam.pos).y += 0.4;
   faceFill.intensity += ((dlg.state.active ? 2.2 + G.night * 1.5 : 0) - faceFill.intensity) * damp(4, dt);
   if (camera.aspect < 0.8) fov = Math.min(80, fov * 1.35);
+  // Binoculars focus on the distant skyline, past nearby foliage and props.
+  const near = mode === 'tower' ? 30 : 0.1;
+  if (camera.near !== near) {
+    camera.near = near;
+    camera.updateProjectionMatrix();
+  }
   if (Math.abs(camera.fov - fov) > 0.05) {
     camera.fov += (fov - camera.fov) * damp(3, dt);
     camera.updateProjectionMatrix();
