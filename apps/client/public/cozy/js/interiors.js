@@ -16,6 +16,14 @@ export function registerInterior(descriptor) {
     root.updateWorldMatrix(true, true);
     root.traverse(mesh => {
       if ((!mesh.isMesh && !mesh.isLine) || states.has(mesh)) return;
+      // Reflector owns live render-target/matrix uniforms. Cloning them breaks
+      // reflection, and its shader does not use Material.opacity. Hide only
+      // this decorative surface during a cutaway; ordinary walls still fade.
+      if (mesh.isReflector) {
+        mesh.userData.interiorId = descriptor.id;
+        states.set(mesh, { room: descriptor, root, roof: descriptor.roofs.includes(root), amount: 0, reflector: true, wasHidden: false });
+        return;
+      }
       const original = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       const materials = original.map(m => m.clone());
       // Keep the day/night material controller connected to the clones.
@@ -66,6 +74,13 @@ export function updateCutaways(playerPosition, cameraPosition, dt, cityId) {
     mesh.userData.cutawayHidden = hidden;
     state.amount += ((hidden ? 1 : 0) - state.amount) * k;
     if (Math.abs(state.amount - (hidden ? 1 : 0)) < 0.001) state.amount = hidden ? 1 : 0;
+    if (state.reflector) {
+      if (hidden && !state.wasHidden) state.restoreVisible = mesh.visible;
+      if (hidden) mesh.visible = false;
+      else if (state.wasHidden) mesh.visible = state.restoreVisible;
+      state.wasHidden = hidden;
+      continue;
+    }
     for (const { m, opacity, transparent, depthWrite } of state.materials) {
       m.opacity = opacity * (1 - state.amount * 0.96);
       const fading = state.amount > 0;
@@ -184,7 +199,13 @@ export function buildRoom({ id, city, category, x, z, w, d, h = 3.6, face = 0, w
     copies.forEach(g => g.dispose());
   }
   const [dx, dz] = position(0, fd / 2);
-  return registerInterior({ id, city, category, bounds: { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 },
+  return registerInterior({ id, city, category,
+    bounds: { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, minY: -0.25, maxY: h },
+    // The lamp sits just below the roof; a closed room also has a 2.6m lintel.
+    ceilingAt: (px, pz) => {
+      const u = c * (px - x) - s * (pz - z), v = s * (px - x) + c * (pz - z);
+      return !open && Math.abs(u) < 1.5 && Math.abs(v - fd / 2) < 0.4 ? Math.min(h - 0.15, 2.6) : h - 0.15;
+    },
     floorY: 0, center: [x, 0, z], door: [dx, 0, dz], walls, roofs });
 }
 function mirrorMaterial() { return nightGlow(mat('#b0d5d9', { emissive: '#7ac5dd' }), 0.1, 0.8); }

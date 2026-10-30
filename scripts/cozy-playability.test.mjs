@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTraversal, stepTraversal, queueJump, resetTraversal, MODES, overlaps } from '../apps/client/public/cozy/js/traversal.js';
+import { createTraversal, stepTraversal, queueJump, resetTraversal, MODES, overlaps, PLAYER_CLEARANCE } from '../apps/client/public/cozy/js/traversal.js';
 
 const flat = { heightAt: () => 0, colliders: [], bounds: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 } };
 const advance = (s, p, input, seconds, env = flat, dt = 1 / 60) => {
@@ -60,6 +60,32 @@ test('terrain ledges are not elevators, while the continuous Seoul-style ramp is
   const ramp = { ...flat, heightAt: (x) => Math.max(0, Math.min(2.4, x * 0.6)) };
   advance(r, q, { x: 1 }, 2, ramp);
   assert.ok(q.x > 4); assert.ok(Math.abs(q.y - 2.4) < 1e-7);
+});
+
+test('a jump hits a low sloping roof without passing through it, then lands', () => {
+  const [s, p] = actor(); p.z = 1.5;
+  // Physical tent: eaves 2.3m, ridge 3m, z range -2.2..2.0.
+  const roof = (z) => 3 - 0.7 * Math.min(1, Math.abs(z + 0.1) / 2.1);
+  const env = { ...flat, ceilingAt: (_x, z) => roof(z) };
+  queueJump(s); let peak = 0;
+  for (let i = 0; i < 120; i++) {
+    stepTraversal(s, p, {}, env, 1 / 120);
+    peak = Math.max(peak, p.y);
+    assert.ok(p.y + PLAYER_CLEARANCE <= roof(p.z) + 1e-8);
+  }
+  assert.ok(peak > 0.3 && peak <= roof(p.z) - PLAYER_CLEARANCE + 1e-8);
+  assert.equal(p.y, 0); assert.equal(s.grounded, true); assert.equal(s.vy, 0);
+});
+
+test('ceiling collisions stay active while horizontal input is frozen', () => {
+  const [s, p] = actor(); queueJump(s);
+  stepTraversal(s, p, {}, flat, 0.1);
+  const x = p.x;
+  const env = { ...flat, ceilingAt: () => 2.1 };
+  stepTraversal(s, p, { x: 1, frozen: true }, env, 1 / 60);
+  assert.ok(p.y + PLAYER_CLEARANCE <= 2.1 + 1e-8);
+  advance(s, p, { x: 1, frozen: true }, 1, env);
+  assert.equal(p.x, x); assert.equal(p.y, 0); assert.equal(s.grounded, true);
 });
 
 test('frozen controls stop horizontal motion without suspending gravity', () => {

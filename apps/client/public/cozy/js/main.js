@@ -1906,7 +1906,15 @@ function traversalEnvironment() {
     const q = c.root.position;
     colliders.push({ minX: q.x - 0.2, maxX: q.x + 0.2, minZ: q.z - 0.2, maxZ: q.z + 0.2 });
   }
-  return { colliders, heightAt, bounds: currentCity().bounds };
+  return {
+    colliders, heightAt, bounds: currentCity().bounds,
+    ceilingAt: (x, z) => {
+      const floor = heightAt(x, z);
+      const room = interiorAt({ x, y: floor, z }, S.city) ?? interiors.find((candidate) =>
+        candidate.city === S.city && Math.abs(candidate.floorY - floor) < 0.3 && Math.hypot(x - candidate.door[0], z - candidate.door[2]) < 0.45);
+      return room?.ceilingAt?.(x, z) ?? room?.bounds.maxY;
+    },
+  };
 }
 function updatePlayer(dt) {
   let speed = 0;
@@ -1952,10 +1960,6 @@ function updatePlayer(dt) {
     }
     const room = interiorAt(p, S.city);
     if (room && traversal.mode !== 'walk') setTransport('walk', true);
-    if (room && !traversal.grounded && Number.isFinite(room.bounds.maxY)) {
-      const ceiling = Math.max(room.floorY, room.bounds.maxY - 1.8);
-      if (p.y > ceiling) { p.y = ceiling; traversal.vy = Math.min(0, traversal.vy); }
-    }
   } else stopTraversal(traversal);
   lastTraversalSpeed = speed;
   if (player.pose === 'sit' && dlg.state.active) lookAtYaw(player, headPos(haeun), 0.9);
@@ -2246,7 +2250,7 @@ function updateCamera(dt, t) {
 
 const wayfindingLabel = document.createElement('div');
 wayfindingLabel.className = 'place-wayfinding';
-Object.assign(wayfindingLabel.style, { position: 'absolute', display: 'none', font: 'bold 14px "Gowun Dodum", sans-serif', lineHeight: '1.35', color: '#302921', background: '#fff6e8ed', padding: '5px 9px', borderRadius: '9px', maxWidth: 'min(260px, 75%)', textAlign: 'center', transform: 'translate(-50%, -100%)', pointerEvents: 'none' });
+Object.assign(wayfindingLabel.style, { position: 'absolute', display: 'none', fontFamily: '"Gowun Dodum", sans-serif', fontWeight: '700', fontSize: 'var(--small, 14px)', lineHeight: '1.35', color: '#302921', background: '#fff6e8ed', padding: '5px 9px', borderRadius: '9px', maxWidth: 'min(260px, 75%)', textAlign: 'center', transform: 'translate(-50%, -100%)', pointerEvents: 'none' });
 ui.bubbles.appendChild(wayfindingLabel);
 function updateWayfinding() {
   wayfindingLabel.style.display = 'none';

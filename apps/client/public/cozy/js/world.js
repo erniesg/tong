@@ -78,7 +78,14 @@ function registerSeoulShell(category, initial, bounds, floorY = 0) {
     const maxY = matching.length ? Math.max(...matching.map(b => b.max.y)) : floorY + (boundary ? 3 : 1);
     Object.assign(collision, { interiorId: `seoul-${category}-room`, role: boundary || maxY > floorY + 3 ? 'wall' : 'furniture', minY: floorY, maxY });
   }
-  return registerInterior({ id: `seoul-${category}-room`, city: 'seoul', category, bounds,
+  const ceilingAt = category === 'food' ? (_x, z) => {
+    // The front valance is lower than the sloped tent roof.
+    if (z > TENT.maxZ - 0.4) return TENT.wallH - 0.45;
+    const mid = (TENT.minZ + TENT.maxZ) / 2;
+    return TENT.ridgeH - (TENT.ridgeH - TENT.wallH) * clamp(Math.abs(z - mid) / ((TENT.maxZ - TENT.minZ) / 2), 0, 1);
+  } : () => floorY + 3.4;
+  return registerInterior({ id: `seoul-${category}-room`, city: 'seoul', category,
+    bounds: { ...bounds, minY: floorY - 0.25, maxY: category === 'food' ? TENT.ridgeH : floorY + 3.4 }, ceilingAt,
     floorY, door: PLACES.find(p => p.id === category).entry,
     center: [(bounds.minX + bounds.maxX) / 2, floorY, (bounds.minZ + bounds.maxZ) / 2], walls, roofs });
 }
@@ -997,7 +1004,7 @@ function buildTerrace(rnd) {
 
 let studioMirror;
 export function studioMirrorVisible(on) {
-  if (studioMirror) studioMirror.visible = on;
+  if (studioMirror) studioMirror.visible = on && !studioMirror.userData.cutawayHidden;
 }
 
 function buildStudio(rnd) {

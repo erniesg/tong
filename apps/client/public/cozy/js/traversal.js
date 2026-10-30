@@ -1,5 +1,7 @@
 // Deterministic, renderer-independent arcade traversal. Positions are feet on
 // terrain; legacy XZ colliders remain solid at every jump height (not roofs).
+// Includes the player's beanie/pom-pom and a small animation margin.
+export const PLAYER_CLEARANCE = 1.9;
 export const MODES = Object.freeze({
   walk: { speed: 3.4, acceleration: 28, coast: 24, brake: 32, radius: 0.3 },
   skateboard: { speed: 7, acceleration: 4.2, coast: 0.85, brake: 14, radius: 0.46 },
@@ -96,6 +98,11 @@ export function stepTraversal(state, position, input, environment, dt) {
         state.vy = 0;
         state.grounded = true;
       }
+    }
+    const ceiling = environment.ceilingAt?.(position.x, position.z);
+    if (Number.isFinite(ceiling) && position.y + PLAYER_CLEARANCE > ceiling) {
+      position.y = Math.max(ground, ceiling - PLAYER_CLEARANCE);
+      state.vy = Math.min(0, state.vy);
     }
   }
   return Math.hypot(state.vx, state.vz);
