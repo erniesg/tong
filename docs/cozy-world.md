@@ -63,7 +63,7 @@ Optional environment variables:
 
 - `PLAYWRIGHT_MODULE`: path to an existing Playwright module if it is not resolvable in this checkout.
 - `COZY_URL`: override the browser-game URL.
-- `COZY_CHROMIUM_EXECUTABLE`: use another installed Chromium executable. The host's older Chromium 1208 software renderer has timed out during reload; a small isolated reload/Continue scenario succeeded with 1228. Do not interpret an interrupted full run as a pass.
+- `COZY_CHROMIUM_EXECUTABLE`: use another installed Chromium executable. Software-rendered Chromium 1208 and 1228 have timed out during longer/reload scenarios on this VM; a small isolated reload/Continue scenario also succeeded with 1228. The cause is not established. Do not interpret an interrupted full run as a pass.
 - `COZY_EVIDENCE_DIR`: write screenshots and a final JSON report outside source history.
 
 The check uses diagnostic local transit to shorten walking, ordinary flight-selection and phrase-answer buttons, day/night state, reload/Continue, a return trip, keyboard movement and a touch-sized viewport. It is not an uninterrupted manual walking playthrough, real-device performance test, model-integration test or complete Seoul story acceptance. Only a completed report establishes that particular run passed.
