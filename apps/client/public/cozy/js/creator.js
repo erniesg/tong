@@ -124,7 +124,6 @@ export function createCreator() {
   function syncSpin() {
     const rotating = playing && !holdFront;
     spinBtn.setAttribute('aria-pressed', String(rotating));
-    spinBtn.querySelector('.creator-spin-icon').textContent = rotating ? '⏸' : '▶';
     spinBtn.querySelector('.creator-spin-text').textContent = rotating ? 'Pause' : 'Rotate';
   }
 

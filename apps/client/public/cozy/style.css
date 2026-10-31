@@ -237,6 +237,9 @@ body.no-en .line-en, body.no-en .choice .en { display: none; }
 .creator-spin { gap: 6px; justify-content: flex-start; }
 .creator-spin[aria-pressed="true"] { background: var(--cream); color: var(--ink); border-color: transparent; }
 .creator-spin[aria-pressed="false"] { background: var(--orange); color: #fff; }
+/* Drawn icon (fonts render ⏸/▶ inconsistently): two bars while rotating, a play triangle when paused. */
+.creator-spin-icon { display: inline-block; flex: none; width: 14px; height: 14px; box-sizing: border-box; border-left: 4px solid currentColor; border-right: 4px solid currentColor; }
+.creator-spin[aria-pressed="false"] .creator-spin-icon { width: 0; height: 0; border-style: solid; border-color: transparent; border-width: 7px 0 7px 12px; border-left-color: currentColor; margin-left: 2px; }
 .creator-form { display: flex; flex-direction: column; min-height: 0; padding: 18px 20px 14px; border-left: 1px solid #deccb5; }
 .creator-head h2 { margin: 2px 0 10px; }
 .creator-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 8px; flex-shrink: 0; }
