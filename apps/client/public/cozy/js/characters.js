@@ -20,18 +20,19 @@ export const toon = (color, opts = {}) => new THREE.MeshToonMaterial({ color, gr
 
 const outlineMat = new THREE.MeshBasicMaterial({ color: 0x2a1c22, side: THREE.BackSide });
 
-/** Inverted-hull ink outline. */
+/**
+ * Inverted-hull ink outline. It is a child of the mesh with a uniform local
+ * scale, so it inherits any position/rotation/scale the caller applies after
+ * part() returns (shoes, ears, locks, brims) and hides along with the mesh.
+ */
 function outline(mesh, t = 0.011) {
   mesh.geometry.computeBoundingSphere();
   const r = Math.max(0.03, mesh.geometry.boundingSphere.radius);
   const o = new THREE.Mesh(mesh.geometry, outlineMat);
-  const k = 1 + t / r;
-  o.position.copy(mesh.position);
-  o.rotation.copy(mesh.rotation);
-  o.scale.copy(mesh.scale).multiplyScalar(k);
+  o.scale.setScalar(1 + t / r);
   o.castShadow = false;
   o.userData.isOutline = true;
-  mesh.parent.add(o);
+  mesh.add(o);
   return o;
 }
 
@@ -559,6 +560,30 @@ function bunHair(head, color, light) {
 
 /* ── Body ─────────────────────────────────────────── */
 
+const SHOE_UPPER = new THREE.SphereGeometry(0.084, 20, 10, 0, TAU, 0, Math.PI / 2);
+const SHOE_SOLE = new THREE.CylinderGeometry(0.086, 0.082, 0.032, 20);
+const soleMats = new Map();
+
+/**
+ * A sneaker: a flat sole plus a domed upper that runs forward into a toe.
+ * Leg-local; the leg pivot sits 0.5 m above the floor, so y = -0.5 is ground.
+ */
+function makeShoe(leg, material) {
+  const shoe = new THREE.Group();
+  shoe.position.set(0, -0.5, 0.038);
+  leg.add(shoe);
+  // Contrasting sole: cream under dark shoes, warm grey under light ones.
+  const lum = material.color ? material.color.r * 0.3 + material.color.g * 0.59 + material.color.b * 0.11 : 0;
+  const soleHex = lum > 0.55 ? '#d8cfc2' : '#efe8dc';
+  if (!soleMats.has(soleHex)) soleMats.set(soleHex, toon(soleHex));
+  const sole = part(SHOE_SOLE, soleMats.get(soleHex), 0, 0.016, 0, shoe, { ol: 0.006 });
+  sole.scale.set(1, 1, 1.5);
+  const upper = part(SHOE_UPPER, material, 0, 0.03, 0.004, shoe, { ol: 0.008 });
+  upper.scale.set(1, 1.08, 1.5);
+  shoe.userData.shoe = true;
+  return shoe;
+}
+
 export function makeChibi(spec) {
   const root = new THREE.Group();
   const body = new THREE.Group();
@@ -571,9 +596,7 @@ export function makeChibi(spec) {
     g.position.set(0.095 * s, 0.5, 0);
     body.add(g);
     part(new THREE.CapsuleGeometry(0.088, 0.28, 4, 10), mats.legs, 0, -0.2, 0, g);
-    const shoe = part(new THREE.CapsuleGeometry(0.075, 0.12, 4, 10), mats.shoes, 0, -0.43, 0.04, g);
-    shoe.rotation.x = Math.PI / 2;
-    shoe.scale.set(1.15, 1, 0.8);
+    makeShoe(g, mats.shoes);
     return g;
   });
 
