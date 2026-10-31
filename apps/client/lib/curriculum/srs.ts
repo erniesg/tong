@@ -88,13 +88,17 @@ export function getDueItems(mastery: Record<string, ItemMastery>): string[] {
 }
 
 /**
- * Get items that haven't been seen yet (not in mastery map).
+ * Get items not yet practised: absent from the mastery map, or only met
+ * (RECORD_ITEM_SEEN) without any answer.
  */
 export function getNewItems(
   mastery: Record<string, ItemMastery>,
   pool: string[],
 ): string[] {
-  return pool.filter((item) => !(item in mastery));
+  return pool.filter((item) => {
+    const m = mastery[item];
+    return !m || m.correct + m.incorrect === 0;
+  });
 }
 
 /**

@@ -1,0 +1,95 @@
+{
+  "description": "Cozy 3D game <-> /cozy host page postMessage bridge (CozyToHostMessage / HostToCozyMessage in types.ts). Same-origin only; the host checks event.origin and event.source.",
+  "cozyToHost": [
+    { "protocol": "tong-cozy-bridge", "version": 1, "type": "cozy:hello", "requestId": "c1-hello", "payload": {} },
+    {
+      "protocol": "tong-cozy-bridge", "version": 1, "type": "cozy:migrate", "requestId": "c1-migrate",
+      "payload": {
+        "saveId": "legacy-v2-2k9f1x",
+        "hearts": [{ "characterId": "haeun", "hearts": 3 }, { "characterId": "jin", "hearts": 1 }],
+        "phrases": [{ "ko": "주세요", "en": "please (give me)" }, { "ko": "우유", "en": "milk" }]
+      }
+    },
+    {
+      "protocol": "tong-cozy-bridge", "version": 1, "type": "cozy:exercise", "requestId": "c1-ex-1",
+      "payload": {
+        "exerciseType": "block_crush",
+        "targetItems": ["우유"],
+        "objectiveId": "ko-script-blocks-2part",
+        "framing": { "speakerId": "cashier", "ko": "가격표가 지워졌네… 이름 좀 맞춰 줄래요?", "en": "The label is smudged. Rebuild the product name so the clerk can find the price." },
+        "meaning": "milk",
+        "cityId": "seoul",
+        "locationId": "convenience_store",
+        "characterId": "cashier"
+      }
+    },
+    {
+      "protocol": "tong-cozy-bridge", "version": 1, "type": "cozy:exercise", "requestId": "c1-ex-2",
+      "payload": {
+        "exerciseType": "sentence_builder",
+        "targetItems": ["떡볶이", "주세요"],
+        "distractors": ["감사합니다", "맵다"],
+        "objectiveId": "ko-gram-juseyo",
+        "framing": { "speakerId": "ajusshi", "ko": "오늘은 떡볶이가 맛있어요. 주문해 봐요!", "en": "Order the tteokbokki: put the words in order." },
+        "meaning": "Tteokbokki, please.",
+        "cityId": "seoul",
+        "locationId": "food_street",
+        "characterId": "ajusshi"
+      }
+    },
+    {
+      "protocol": "tong-cozy-bridge", "version": 1, "type": "cozy:progress", "requestId": "c1-progress",
+      "payload": {
+        "events": [
+          { "kind": "affinity", "characterId": "haeun", "delta": 5 },
+          { "kind": "item_seen", "itemId": "얼마예요", "category": "vocabulary" },
+          { "kind": "location_hangout", "cityId": "seoul", "locationId": "convenience_store" }
+        ]
+      }
+    }
+  ],
+  "hostToCozy": [
+    {
+      "protocol": "tong-cozy-bridge", "version": 1, "type": "host:ready", "requestId": "c1-hello",
+      "payload": { "progress": { "xp": 0, "sp": 0, "level": null, "relationships": {}, "locationHangoutCounts": {}, "items": {} } }
+    },
+    {
+      "protocol": "tong-cozy-bridge", "version": 1, "type": "host:exercise-result", "requestId": "c1-ex-1",
+      "payload": {
+        "outcome": "completed",
+        "correct": true,
+        "exerciseId": "cozy-bc-138w13c0",
+        "exerciseType": "block_crush",
+        "recordedItems": [
+          { "itemId": "우", "category": "script", "correct": true },
+          { "itemId": "유", "category": "script", "correct": true },
+          { "itemId": "우유", "category": "vocabulary", "correct": true }
+        ],
+        "xpAwarded": 10,
+        "progress": {
+          "xp": 10, "sp": 0, "level": null,
+          "relationships": { "haeun": { "affinity": 15, "stage": "strangers" } },
+          "locationHangoutCounts": {},
+          "items": {
+            "우": { "masteryLevel": "learning", "correct": 1, "incorrect": 0 },
+            "유": { "masteryLevel": "learning", "correct": 1, "incorrect": 0 },
+            "우유": { "masteryLevel": "learning", "correct": 1, "incorrect": 0 }
+          }
+        }
+      }
+    },
+    {
+      "protocol": "tong-cozy-bridge", "version": 1, "type": "host:exercise-result", "requestId": "c1-ex-2",
+      "payload": {
+        "outcome": "dismissed", "correct": null, "exerciseId": "cozy-sb-x", "exerciseType": "sentence_builder",
+        "recordedItems": [], "xpAwarded": 0,
+        "progress": { "xp": 10, "sp": 0, "level": null, "relationships": {}, "locationHangoutCounts": {}, "items": {} }
+      }
+    },
+    {
+      "protocol": "tong-cozy-bridge", "version": 1, "type": "host:migrated", "requestId": "c1-migrate",
+      "payload": { "applied": true, "progress": { "xp": 0, "sp": 0, "level": null, "relationships": { "haeun": { "affinity": 15, "stage": "strangers" }, "jin": { "affinity": 5, "stage": "strangers" } }, "locationHangoutCounts": {}, "items": {} } }
+    },
+    { "protocol": "tong-cozy-bridge", "version": 1, "type": "host:error", "requestId": "c1-bad", "payload": { "reason": "unknown exerciseType" } }
+  ]
+}

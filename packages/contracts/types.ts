@@ -1142,3 +1142,131 @@ export interface VolcTTSSynthesizeResponse {
   encoding: string;
   durationMs?: number;
 }
+
+/* ── Cozy 3D game ↔ host page bridge (window.postMessage) ───────────────
+ * The cozy Three.js game (apps/client/public/cozy) runs in an iframe on /cozy.
+ * It never keeps its own learning progress: it asks the host page to run the
+ * shared exercise components and to read/write the shared game store.
+ * Messages are same-origin only; the host also checks event.source.
+ */
+
+export const COZY_BRIDGE_PROTOCOL = 'tong-cozy-bridge' as const;
+export const COZY_BRIDGE_VERSION = 1 as const;
+
+export type CozyExerciseType = 'block_crush' | 'sentence_builder' | 'multiple_choice' | 'pronunciation_select' | 'matching';
+export type CozyExerciseStage = 'intro' | 'recognition' | 'recall';
+export type CozyItemCategory = 'script' | 'vocabulary' | 'grammar';
+export type CozyCityId = 'seoul' | 'tokyo' | 'shanghai';
+
+export interface CozyExerciseRequest {
+  exerciseType: CozyExerciseType;
+  /**
+   * What is practised. block_crush: one Hangul word (["우유"]).
+   * sentence_builder: the tokens in their correct order (["떡볶이", "주세요"]).
+   * Other types: hint items passed to the shared generators.
+   */
+  targetItems: string[];
+  /** Objective id from the shared curriculum, e.g. "ko-script-blocks-2part". */
+  objectiveId: string;
+  /** Omit to let the host choose from the player's mastery. */
+  stage?: CozyExerciseStage;
+  /** How the world frames the exercise; shown above it. */
+  framing: { speakerId?: string; ko?: string; en: string };
+  /** Meaning of the target (block_crush, sentence_builder). */
+  meaning?: string;
+  /** Extra wrong tiles for sentence_builder. */
+  distractors?: string[];
+  cityId: CozyCityId;
+  /** Shared location id, e.g. "convenience_store", "food_street". */
+  locationId: string;
+  characterId?: string;
+}
+
+export type CozyExerciseOutcome = 'completed' | 'dismissed' | 'unavailable';
+
+export interface CozyRecordedItem {
+  itemId: string;
+  category: CozyItemCategory;
+  correct: boolean;
+}
+
+export interface CozyExerciseResult {
+  outcome: CozyExerciseOutcome;
+  /** null unless outcome is 'completed'. */
+  correct: boolean | null;
+  exerciseId: string | null;
+  exerciseType: CozyExerciseType;
+  /** Mastery results the host recorded in the shared store. */
+  recordedItems: CozyRecordedItem[];
+  xpAwarded: number;
+  progress: CozyProgressSnapshot;
+  /** Why the exercise could not run (outcome 'unavailable'). */
+  reason?: string;
+}
+
+/** World events the cozy game reports; the host validates and applies them. */
+export type CozyProgressEvent =
+  | { kind: 'affinity'; characterId: string; delta: number }
+  | { kind: 'item_seen'; itemId: string; category: CozyItemCategory }
+  | { kind: 'location_hangout'; cityId: CozyCityId; locationId: string };
+
+export interface CozyRelationshipSnapshot {
+  affinity: number;
+  stage: 'strangers' | 'acquaintances' | 'colleagues' | 'friends' | 'close' | 'romantic';
+}
+
+export interface CozyItemSnapshot {
+  masteryLevel: 'new' | 'seen' | 'learning' | 'familiar' | 'mastered';
+  correct: number;
+  incorrect: number;
+}
+
+/** Read-only view of the shared game store sent to the cozy game. */
+export interface CozyProgressSnapshot {
+  xp: number;
+  sp: number;
+  level: number | null;
+  relationships: Record<string, CozyRelationshipSnapshot>;
+  /** Keyed "seoul:convenience_store". */
+  locationHangoutCounts: Record<string, number>;
+  items: Record<string, CozyItemSnapshot>;
+}
+
+/** One-time import of a legacy cozy save (localStorage "tong-cozy-seoul-v2"). */
+export interface CozyLegacyMigration {
+  /** Deterministic id of the legacy save; a repeat import is ignored. */
+  saveId: string;
+  /** Cozy hearts per character (Ha-eun 0–8, Jin 0–2 in the legacy save). */
+  hearts: { characterId: 'haeun' | 'jin'; hearts: number }[];
+  /** Phrase book entries the player met. */
+  phrases: { ko: string; en?: string }[];
+}
+
+export interface CozyMigrationResult {
+  applied: boolean;
+  progress: CozyProgressSnapshot;
+}
+
+interface CozyEnvelope<T extends string, P> {
+  protocol: typeof COZY_BRIDGE_PROTOCOL;
+  version: typeof COZY_BRIDGE_VERSION;
+  type: T;
+  /** Set on requests; echoed on the matching reply. */
+  requestId?: string;
+  payload: P;
+}
+
+/** Cozy game → host page. */
+export type CozyToHostMessage =
+  | CozyEnvelope<'cozy:hello', Record<string, never>>
+  | CozyEnvelope<'cozy:exercise', CozyExerciseRequest>
+  | CozyEnvelope<'cozy:progress', { events: CozyProgressEvent[] }>
+  | CozyEnvelope<'cozy:migrate', CozyLegacyMigration>;
+
+/** Host page → cozy game. 'host:progress' is also pushed unprompted when the store changes. */
+export type HostToCozyMessage =
+  | CozyEnvelope<'host:ready', { progress: CozyProgressSnapshot }>
+  | CozyEnvelope<'host:progress', { progress: CozyProgressSnapshot }>
+  | CozyEnvelope<'host:exercise-result', CozyExerciseResult>
+  | CozyEnvelope<'host:migrated', CozyMigrationResult>
+  | CozyEnvelope<'host:error', { reason: string }>;
