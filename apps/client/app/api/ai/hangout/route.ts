@@ -392,7 +392,7 @@ function buildFallbackResponse(characterId: string, isFirstEncounter: boolean, m
       args: {
         message: isHauen
           ? "That's Ha-eun — she's competitive but secretly nice. She's testing you!"
-          : "That's Jin — a senior trainee, super friendly. He wants to help you settle in!",
+          : "That's Jin. He knows this menu well — you can ask for a recommendation or choose for yourself.",
         translation: null,
       },
     });
