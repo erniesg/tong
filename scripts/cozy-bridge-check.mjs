@@ -49,7 +49,13 @@ async function openHost(page) {
 async function shot(page, name) {
   // The software compositor can hand back a frame from before the overlay; let it settle.
   await page.waitForTimeout(2500);
-  if (evidence) await page.screenshot({ path: path.join(evidence, `${name}.png`), timeout: 150000 });
+  if (!evidence) return;
+  // Evidence only: a slow software-rendered capture must not fail the behaviour checks.
+  try {
+    await page.screenshot({ path: path.join(evidence, `${name}.png`), timeout: 150000 });
+  } catch (err) {
+    console.log(`screenshot ${name} skipped: ${String(err).split('\n')[0]}`);
+  }
 }
 
 /**
@@ -147,6 +153,8 @@ try {
     // The whole playfield must fit on screen without scrolling (phones in landscape too).
     await page.waitForTimeout(600);
     const fit = await page.evaluate(() => {
+      // At ~1 fps here the modal's 40px slide-up entrance is still running; measure its end state.
+      document.querySelector('.exercise-modal-content').getAnimations().forEach((a) => a.finish());
       const card = document.querySelector('.exercise-modal-content > .exercise-card').getBoundingClientRect();
       const slots = [...document.querySelectorAll('[data-slot]')].map((e) => e.getBoundingClientRect());
       return { bottom: card.bottom, top: card.top, h: innerHeight, slotsVisible: slots.length > 0 && slots.every((r) => r.top >= 0 && r.bottom <= innerHeight), zoom: document.querySelector('.exercise-modal-content > .exercise-card').style.zoom || '1' };
@@ -226,6 +234,7 @@ try {
     await frame.locator('#continue').click();
     await frame.waitForFunction(() => __cozy.S.started);
     assert.match(await frame.evaluate(() => document.querySelector('#stage-haeun').textContent), /acquaintances/);
+    await frame.evaluate(() => __cozy.renderer.setPixelRatio(0.3));
     await shot(page, `${name}-after-reload`);
     r.final = { xp: s.xp, haeun: s.relationships.haeun.affinity, hangouts: s.locationHangoutCounts };
     assert.deepEqual(errors, [], `page errors: ${errors.join('; ')}`);
