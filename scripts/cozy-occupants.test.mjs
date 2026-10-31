@@ -75,9 +75,12 @@ test('compact actual apartment lower-body sightline fades the intersecting wall 
   const wall = hits[0].object;
   assert.equal(h.isCameraOccluder(wall), false, 'partition is not opaque across lower avatar/bed');
   assert.ok(wall.material.opacity < .05);
+  assert.equal(wall.visible, false, 'settled stacked-home wall is not drawn as a ghost band');
+  assert.ok(b.rooms[1].roofs.every(mesh => !mesh.visible), 'settled active-home ceiling is not drawn or casting a wash');
   h.updateCutaways(p, { x: eye.x, y: eye.y, z: p.z - 8 * Math.cos(.6) }, 1, 'shanghai');
   assert.equal(h.isCameraOccluder(wall), true, 'opposite orbit restores the internal wall');
   assert.equal(wall.material.opacity, 1);
+  assert.equal(wall.visible, true, 'opposite orbit restores original visibility');
   h.updateCutaways({ x: 784, y: 0, z: -60 }, eye, 1, 'shanghai');
   for (const room of b.rooms) for (const mesh of [...room.walls, ...room.roofs, ...room.occluders]) {
     assert.equal(mesh.visible, true);
@@ -118,6 +121,9 @@ test('rotated Tokyo pilot: separated visual floor, explicit idempotent opt-in an
     const t = i / 20, p = room.door.map((value, axis) => value + t * (room.staff.spawn[axis] - value));
     assert.ok(!h.G.colliders.some(b => overlapsBody(p, b)), `blocked approach step ${i}`);
   }
+  h.updateCutaways({ x: 428, y: 0, z: -2 }, { x: 434, y: 5, z: 1 }, 1, 'tokyo');
+  assert.equal(room.roofs[0].visible, true, 'single-floor generic fading is unchanged');
+  assert.ok(room.roofs[0].material.opacity < .05);
   const authored = { id: 'seoul-cafe-room', city: 'seoul', category: 'cafe', furniture: [] };
   assert.equal(h.enhanceRoom(authored), authored); assert.equal(authored.staff, undefined);
 });

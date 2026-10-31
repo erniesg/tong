@@ -125,10 +125,12 @@ export function updateCutaways(playerPosition, cameraPosition, dt, cityId) {
     if (lower) state.amount = 0; // In particular, the slab under the standing floor.
     else state.amount += ((hidden ? 1 : 0) - state.amount) * k;
     if (Math.abs(state.amount - (hidden ? 1 : 0)) < 0.001) state.amount = hidden ? 1 : 0;
-    // Upper slabs/furniture must disappear completely, not leave a translucent
-    // mass over downstairs. Active-room walls retain the original fade.
-    if (state.reflector || upper || state.wasHidden) {
-      const hideMesh = state.reflector ? hidden : upper;
+    // Stacked homes must not retain ghost ceiling/partition layers over the
+    // occupied room. Fade first, then stop drawing those settled planes (and
+    // their shadows). Single-floor rooms keep their existing fade behavior.
+    const settledHomeCutaway = !!state.room.buildingId && hidden && state.amount === 1;
+    if (state.reflector || upper || settledHomeCutaway || state.wasHidden) {
+      const hideMesh = state.reflector ? hidden : upper || settledHomeCutaway;
       if (hideMesh && !state.wasHidden) state.restoreVisible = mesh.visible;
       if (hideMesh) mesh.visible = false;
       else if (state.wasHidden) mesh.visible = state.restoreVisible;
@@ -151,10 +153,10 @@ export function isCameraOccluder(mesh) {
 
 export function cutawaySnapshot() {
   return interiors.map(room => ({ id: room.id, city: room.city, category: room.category,
-    walls: room.walls.map(root => ({ hidden: !!root.userData.cutawayHidden, opacity: (Array.isArray(root.material) ? root.material[0] : root.material)?.opacity })),
-    roofs: room.roofs.map(root => ({ hidden: !!root.userData.cutawayHidden, opacity: (Array.isArray(root.material) ? root.material[0] : root.material)?.opacity })),
+    walls: room.walls.map(root => ({ hidden: !!root.userData.cutawayHidden, visible: root.visible, opacity: (Array.isArray(root.material) ? root.material[0] : root.material)?.opacity })),
+    roofs: room.roofs.map(root => ({ hidden: !!root.userData.cutawayHidden, visible: root.visible, opacity: (Array.isArray(root.material) ? root.material[0] : root.material)?.opacity })),
     buildingId: room.buildingId, level: room.level,
-    occluders: (room.occluders ?? []).map(root => ({ hidden: !!root.userData.cutawayHidden })),
+    occluders: (room.occluders ?? []).map(root => ({ hidden: !!root.userData.cutawayHidden, visible: root.visible })),
   }));
 }
 
