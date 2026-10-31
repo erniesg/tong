@@ -22,10 +22,11 @@ Open `http://localhost:8420/cozy/index.html`. This does not deploy the game or e
 
 - **WASD / arrows:** move; **Shift / Run:** run; **Space / Jump:** hop. In dialogue, Space advances the conversation instead.
 - **Drag the world:** full orbit; **scroll / trackpad / pinch / + / −:** zoom. The visible zoom buttons work without opening a menu. Touch movement uses the dedicated joystick, leaving the rest of the world available for look/pinch gestures.
-- **E / interaction button:** talk, practice a phrase, use transit or choose a flight at an airport connection.
+- **E / interaction button:** talk, practice a phrase, use transit or choose a flight at an airport connection. In staffed rooms, walk up to the actual attendant; the activity retains local phrase/errand progress. Subway staff also offer the normal transit menu. Seoul's authored characters and schedules remain distinct.
 - **B:** phrasebook; **N:** map; **H:** ask Tong; **Escape:** close panels or return from a scenic camera. The map can be expanded with its expand button or by tapping it.
 - **Tools → Get around:** choose walking, skateboard, scooter or bicycle. Rides accelerate and coast; **Brake / X / Control** slows them. They are packed away inside rooms. Movement uses gravity and bounded collision substeps, not a full vehicle physics simulation.
 - **Tools → Neighbourhood guide:** find every location category, set a walking waypoint or select one of eight camera-only landmark views: Hangang/Namsan; Sumida–Skytree, Kaminarimon and Sensō-ji; Huangpu–Oriental Pearl, Pudong and the Bund. Views do not teleport the player. Moving or Escape returns to the player; the clock controls let you compare day/night.
+- **Apartments:** find Yeonnam Apartments (Seoul), Asakusa Apartments (Tokyo) or Lilong Apartments (Shanghai) in the guide. Each initial three-storey block has a shared lobby and two furnished upper homes with living/kitchen, bedroom and bathroom spaces. Walk the real stair flights/landings with normal controls; there is no floor-teleport button. Upper structure and residents hide when needed to reveal the occupied lower floor, then restore outside.
 - **Tools → Demo shortcuts:** explicitly enable immediate city/stop visits. Demo defaults OFF, does not reset progress and is separate from normal flights. Turn it off to disable shortcuts.
 - **Tools → Screen layout / Text size:** use Auto for the actual window/device orientation, or preview portrait/landscape in a contained, letterboxed stage. Previews do not force OS screen rotation. Large text also enlarges the on-screen wayfinding label; game zoom does not shrink HUD text.
 - **Tools → Take your time:** dawn, noon, sunset, night and pause/play/fast-forward. These affect the game clock, not real time. Seoul's food tent retains its original 19:00–03:00 opening hours.
@@ -51,7 +52,10 @@ Every city has food, café, convenience-store, subway and practice-studio destin
 - `js/world.js`: original Seoul activity buildings, terrain, river and props.
 - `js/main.js`: input/camera, city selection, interaction, travel, maps, progression, stage sizing and saves.
 - `js/interiors.js`: room registry, furnished shells, selective cutaway/material handling and physical ceiling declarations.
-- `js/traversal.js`, `js/rides.js`: renderer-independent movement/gravity/collision steps and attached ride models.
+- `js/traversal.js`, `js/rides.js`: renderer-independent movement/gravity/collision steps and attached ride models; finite-Y bodies and explicit feet-height support preserve floor separation and safe positions.
+- `js/apartments.js`, `js/level-support.js`: authored multi-storey geometry, real stairs/landings, furnished flats and shared support/ceiling plans.
+- `js/occupants.js`: city-local staff/residents, actual nearby selection and finite-height collision bodies.
+- `js/surfaces.js`: non-overlapping Tokyo road footprints/triangles and consistent world UVs, rather than layered junction boxes.
 - `js/nature.js`, `js/characters.js`: seeded city-specific trees and chibi characters/cat.
 - `js/sky.js`: shared sun/moon/sky, fog, window glow and lights.
 - `js/story.js`, `js/dialogue.js`: Seoul scripted narrative.
