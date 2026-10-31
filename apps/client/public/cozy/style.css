@@ -161,9 +161,11 @@ button:hover:not(:disabled), summary:hover { border-color: var(--orange); }
 .book-head { position: sticky; top: -12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; background: var(--cream); font-family: 'Jua', sans-serif; font-size: 20px; z-index: 1; }
 .book-list { display: grid; gap: 8px; margin-top: 8px; }
 .book-empty { font-size: var(--small); color: var(--ink-soft); }
-.word-row { display: grid; grid-template-columns: auto 1fr; gap: 0 12px; padding: 10px; border-radius: 12px; background: var(--cream-2); cursor: pointer; }
-.word-row b { grid-row: span 2; align-self: center; font-size: 20px; }
+.word-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; padding: 10px; border-radius: 12px; background: var(--cream-2); cursor: pointer; }
+.word-row > * { min-width: 0; overflow-wrap: anywhere; }
+.word-row b { font-size: 20px; }
 .word-row span { font-size: var(--small); color: var(--ink-soft); }
+.book:not(.hidden) ~ .toast { z-index: 7; }
 
 .banner { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); width: calc(100% - 24px); text-align: center; pointer-events: none; color: #fff; text-shadow: 0 2px 8px #000c; animation: banner-in .6s ease-out; transition: opacity .8s; }
 .banner b { display: block; font-family: 'Jua', sans-serif; font-weight: 400; font-size: clamp(28px, 5cqi, 46px); }
