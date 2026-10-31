@@ -59,7 +59,7 @@ async function scene(cityId) {
 function checkBoardGuide({ G, city }) {
   const views = Array.from(city.vistas), view = views.find(v => v.id === 'seoul-board-art');
   assert.ok(view, 'actual ordinary world-art Guide entry exists');
-  assert.deepEqual(views.filter(v => v.kind !== 'artwork').map(v => v.id), ['seoul-hangang', 'seoul-namsan']);
+  assert.deepEqual(views.filter(v => v.kind !== 'artwork').map(v => v.id), ['seoul-hangang', 'seoul-namsan', 'seoul-hill-view']);
   assert.equal(view.kind, 'artwork'); assert.equal(view.fov, 55);
   let poster; G.scene.traverse(m => { if (m.userData.artworkId === view.id) poster = m; });
   assert.ok(poster?.isMesh, 'view points to actual authored world poster, not a replacement UI image');

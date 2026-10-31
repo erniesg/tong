@@ -26,9 +26,9 @@ Open `http://localhost:8420/cozy/index.html`. This does not deploy the game or e
 - **E / interaction button:** talk, practice a phrase, use transit or choose a flight at an airport connection. In staffed rooms, walk up to the actual attendant; the activity retains local phrase/errand progress. Subway staff also offer the normal transit menu. Seoul's authored characters and schedules remain distinct.
 - **B:** phrasebook; **N:** map; **H:** ask Tong; **Escape:** close panels or return from a scenic camera. The map can be expanded with its expand button or by tapping it.
 - **Tools → Get around:** choose walking, skateboard, scooter or bicycle. Rides accelerate and coast; **Brake / X / Control** slows them. They are packed away inside rooms. Movement uses gravity and bounded collision substeps, not a full vehicle physics simulation.
-- **Tools → Neighbourhood guide:** find every location category, set a walking waypoint or select one of eight camera-only landmark views: Hangang/Namsan; Sumida–Skytree, Kaminarimon and Sensō-ji; Huangpu–Oriental Pearl, Pudong and the Bund. Views do not teleport the player. Moving or Escape returns to the player; the clock controls let you compare day/night.
+- **Tools → Neighbourhood guide:** find every location category, set a walking waypoint or select one of nine camera-only landmark views: Hangang/Namsan/Yeonhui hill; Sumida–Skytree, Kaminarimon and Sensō-ji; Huangpu–Oriental Pearl, Pudong and the Bund. Views do not teleport the player. Moving or Escape returns to the player; the clock controls let you compare day/night.
 - **Tools → Neighbourhood guide → Board artwork:** inspect the full original Seoul concept image in its actual world frame, with the ordinary HUD still visible. This additional camera does not replace the eight named landmark views or teleport the player; movement or Escape returns to follow. The image is concept art, not a literal navigation map. The adjacent **Original concept image · full resolution (new tab)** link is a supplemental detail reader: use native browser image zoom/scroll, then close the tab to return. It retains the original image/watermark; it does not replace the actual world view.
-- **Apartments:** find Yeonnam Apartments (Seoul), Asakusa Apartments (Tokyo) or Lilong Apartments (Shanghai) in the guide. Each initial three-storey block has a shared lobby and two furnished upper homes with living/kitchen, bedroom and bathroom spaces. Walk the real stair flights/landings with normal controls; there is no floor-teleport button. Upper structure and residents hide when needed to reveal the occupied lower floor, then restore outside.
+- **Apartments:** find Yeonnam Apartments (Seoul), Asakusa Apartments (Tokyo) or Lilong Apartments (Shanghai) in the guide. Each initial three-storey block has a shared lobby and two furnished upper homes with living/kitchen, bedroom and bathroom spaces. Walk the real stair flights/landings with normal controls; there is no floor-teleport button. Upper structure and residents hide when needed to reveal the occupied lower floor, then restore outside. The stairs continue to a **rooftop terrace** (outdoors): a sitting platform (평상), plastic table and stools, vegetable boxes, drying rack, water tank and string lights that glow at night, behind a parapet and with the stairwell railed off.
 - **Tools → Demo shortcuts:** explicitly enable immediate city/stop visits. Demo defaults OFF, does not reset progress and is separate from normal flights. Turn it off to disable shortcuts.
 - **Tools → Screen layout / Text size:** use Auto for the actual window/device orientation, or preview portrait/landscape in a contained, letterboxed stage. Previews do not force OS screen rotation. Large text also enlarges the on-screen wayfinding label; game zoom does not shrink HUD text.
 - **Tools → Take your time:** dawn, noon, sunset, night and pause/play/fast-forward. These affect the game clock, not real time. Seoul's food tent retains its original 19:00–03:00 opening hours. Its real front header/roller now clears the full player; daytime closure still blocks entry.
@@ -42,7 +42,7 @@ These are authored neighbourhood interpretations, **not navigational maps or lit
 
 | City | Spatial anchors | Airport interpretation |
 | --- | --- | --- |
-| Seoul | Retained Hongdae activity core, lateral snack/busking loops, Yeonnam/Gyeongui park to the north, compressed Mangwon/Han links south, distant Namsan east on the north bank | AREX connection to Gimpo/Incheon; the airport is not depicted inside Hongdae |
+| Seoul | Retained Hongdae activity core, lateral snack/busking loops, Yeonnam/Gyeongui park to the north, the **Yeonhui hillside** climbing toward Ansan beyond it (lower slope, retaining wall crossed by a stair alley or a sloped lane, upper terrace with a lookout pavilion), compressed Mangwon/Han links south, distant Namsan east on the north bank | AREX connection to Gimpo/Incheon; the airport is not depicted inside Hongdae |
 | Tokyo | Asakusa-style timber shopping/temple lanes west of the Sumida, riverside loops and crossings, Skytree east | Haneda/Narita transit connection, not a downtown runway |
 | Shanghai | Lilong/food/tea lanes inland west of the Huangpu, Bund promenade on its west bank, decorative Pudong skyline east | Pudong/Hongqiao transit connection |
 
@@ -55,7 +55,8 @@ Every city has food, café, convenience-store, subway and practice-studio destin
 - `js/main.js`: input/camera, city selection, interaction, travel, maps, progression, stage sizing and saves.
 - `js/interiors.js`: room registry, furnished shells, selective cutaway/material handling and physical ceiling declarations.
 - `js/traversal.js`, `js/rides.js`: renderer-independent movement/gravity/collision steps and attached ride models; finite-Y bodies and explicit feet-height support preserve floor separation and safe positions.
-- `js/apartments.js`, `js/level-support.js`: authored multi-storey geometry, real stairs/landings, furnished flats and shared support/ceiling plans.
+- `js/apartments.js`, `js/level-support.js`: authored multi-storey geometry, real stairs/landings, furnished flats, rooftop terraces and shared support/ceiling plans.
+- `js/cities/seoul-terrain.js`, `js/cities/seoul-hill.js`: the Yeonhui hillside's pure height function (physics, placement, map, tests) and its rendering. Seoul outside the original core uses this height; everything south of the park stays at 0.
 - `js/occupants.js`: city-local staff/residents, actual nearby selection and finite-height collision bodies.
 - `js/surfaces.js`: non-overlapping Tokyo road footprints/triangles and consistent world UVs, rather than layered junction boxes.
 - `js/nature.js`, `js/characters.js`: seeded city-specific trees and chibi characters/cat.
@@ -69,7 +70,7 @@ City descriptors use disjoint scene coordinates. The runtime shows only the sele
 Pure movement/ceiling checks need no browser:
 
 ```sh
-node --test scripts/cozy-playability.test.mjs
+node --test scripts/cozy-playability.test.mjs scripts/cozy-hill.test.mjs
 ```
 
 With the private server running and Playwright available, check the new actual controls independently of reload/long-session behavior:

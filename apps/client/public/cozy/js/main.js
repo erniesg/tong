@@ -2270,6 +2270,9 @@ function updateCamera(dt, t) {
     ray.far = len;
     const hit = ray.intersectObjects(G.blockers.filter(isCameraOccluder), false)[0];
     if (hit) camTargetPos.copy(camTargetLook).addScaledVector(dir, Math.max(0.6, hit.distance - 0.35));
+    // On slopes (Seoul's hillside), never let the follow camera sink into the ground.
+    const groundY = currentCity().heightAt?.(camTargetPos.x, camTargetPos.z) ?? 0;
+    if (camTargetPos.y < groundY + 0.7) camTargetPos.y = groundY + 0.7;
     if (overview) mode = 'overview';
     k = 7;
   }

@@ -4,8 +4,10 @@ import * as THREE from 'three';
 import { G, add, box, collider, mat, textTexture, softTexture, worldUV, nightGlow, pointLight } from '../util.js';
 import { asphalt, pavers, brick, plaster, wood } from '../textures.js';
 import { makeTree } from '../nature.js';
+import { buildHill } from './seoul-hill.js';
+import { hillHeight, hillZone, hillPlace, hillVista, HILL_END, HILL_ROADS, HILL_STAIRS } from './seoul-terrain.js';
 
-const bounds = { minX: -62, maxX: 62, minZ: -45.5, maxZ: 72 };
+const bounds = { minX: -62, maxX: 62, minZ: -45.5, maxZ: HILL_END };
 const airportSpawn = [-53, 0, 42];
 const roads = [
   // Existing activity core, including its only terrace ascent (the stairs).
@@ -77,6 +79,7 @@ const places = [
     description: 'The existing Seoul concept artwork is displayed as artwork, not a literal map. North: Yeonnam; south: a compressed Han connection; west: AREX airport transfer.',
     phrase: { text: '지도를 볼 수 있을까요?', rom: 'Jidoreul bol su isseulkkayo?', en: 'Could I look at the map?' },
   },
+  hillPlace,
   {
     id: 'seoul-airport-link', ko: '공항철도 연결 광장', en: 'AREX Airport Connection', icon: '✈️',
     spawn: airportSpawn, yaw: Math.PI, radius: 5,
@@ -341,16 +344,12 @@ function surroundingBlocks() {
   // These modest villas are scenery, not extra discoverable destinations.
   box(180, 0.08, 145.5, M.ground, 0, -0.23, 27.25, { cast: false, uv: 5 });
   for (const x of [-61.9, 61.9]) box(0.24, 0.8, 117.5, M.red, x, 0, 13.25, { collide: true, block: true });
-  box(124, 0.8, 0.24, M.red, 0, 0, 71.85, { collide: true, block: true });
+  // The north edge now opens onto the Yeonhui hillside (seoul-hill.js).
   for (const side of [-1, 1]) {
     for (let i = 0; i < 4; i++) {
       building(side * 77, -29 + i * 28, 13, 16, 12 + (i % 3) * 4, i % 2 ? M.grey : M.cream,
         -side * Math.PI / 2, '서울 빌라', 'RESIDENTIAL BLOCK', '#5c6c64', i);
     }
-  }
-  for (let i = 0; i < 4; i++) {
-    building(-48 + i * 31, 88, 20, 14, 13 + (i % 3) * 4, i % 2 ? M.red : M.grey,
-      Math.PI, '연남 빌라', 'RESIDENTIAL BLOCK', '#53675f', i + 1);
   }
 }
 
@@ -380,6 +379,7 @@ function build() {
   riverEdges();
   for (const [x, z] of [[-33, -3], [-38, -23], [-34, 20], [30, 27], [35, -21], [28, -3], [-14, 34], [18, 34]]) lamp(x, z);
   for (const [x, z] of [[-40, 23], [-31, 32], [36, 31], [28, -16], [-28, -18], [55, 30], [-55, -4]]) tree(x, z, 1, true);
+  buildHill(M, sign);
 }
 
 export default {
@@ -390,18 +390,23 @@ export default {
   vistas: [
     { id: 'seoul-hangang', title: 'Hangang bridge & waterfront', nativeName: '한강 전망', spawn: [6, 2.4, -41.5], position: [10, 8, -42], look: [0, -1, -185], description: 'Elevated, unobstructed view south over the compressed Han River connection.' },
     { id: 'seoul-namsan', title: 'Namsan skyline', nativeName: '남산 서울타워', spawn: [31, 0, -40], position: [28, 7, -43], look: [420, 118, -10], description: 'The distant eastern tower and hill remain on the north bank, not across the Han.' },
+    hillVista,
     { id: 'seoul-board-art', kind: 'artwork', artworkHref: '/assets/locations/seoul-static.png', title: 'Board artwork', nativeName: '서울 동네 원화', position: [7, 3.6, 28], look: [7, 3.6, 38.78], fov: 55, description: 'Full original neighbourhood artwork in its world frame; camera only, not a map or teleport.' },
   ],
   airport: { spawn: airportSpawn, name: 'AREX · Gimpo / Incheon connection', nativeName: '공항철도 · 김포 / 인천 연결' },
-  roads,
+  roads: [...roads, ...HILL_ROADS, ...HILL_STAIRS],
   mapFeatures: [
+    { type: 'hill', points: [[-62, 73], [62, 73], [62, 113], [-62, 113]], color: '#5d6650' },
+    { type: 'hill', points: [[-62, 91], [62, 91], [62, 113], [-62, 113]], color: '#6b7458' },
     { type: 'park', points: parkOutline, color: '#75895d' },
     { type: 'water', points: [[-62, -46], [62, -46], [62, -58], [-62, -58]], color: '#487c91' },
     { type: 'block', points: [[-60, 46.5], [-46, 46.5], [-46, 55.5], [-60, 55.5]], color: '#7397a0' },
   ],
   build,
-  heightAt: () => 0, // Runtime dispatch preserves world.js's original terrace/stairs.
+  heightAt: hillHeight, // Runtime dispatch preserves world.js's original terrace/stairs.
   zoneAt(x, z) {
+    const hill = hillZone(x, z);
+    if (hill) return hill;
     if (x < -43 && z > 33 && z < 57) return { id: 'seoul-airport-link', indoor: false };
     if (z > 42 && x > -25 && x < 33) return { id: 'seoul-yeonnam', indoor: false };
     return null;
