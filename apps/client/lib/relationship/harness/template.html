@@ -1,0 +1,652 @@
+<title>Tong Relationship Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a fixed "starting state" rail beside the scene stage; compare runs as columns. Night-shift convenience-store palette. */
+:root {
+  --bg: #eef2f0;
+  --surface: #ffffff;
+  --sunk: #e3e9e6;
+  --ink: #16201c;
+  --muted: #586862;
+  --line: #cfd9d4;
+  --accent: #1f6356;
+  --accent-ink: #ffffff;
+  --banana: #f4d266;
+  --banana-ink: #3a2f05;
+  --warmth: #c8492f;
+  --tension: #6f45c0;
+  --trust: #16806e;
+  --bad: #b3261e;
+  --tong: #e7f1ff;
+  --tong-ink: #183b6b;
+  --display: "Do Hyeon", "IBM Plex Sans KR", system-ui, sans-serif;
+  --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1513; --surface: #17201d; --sunk: #111915; --ink: #e4ebe8; --muted: #93a39c; --line: #2a3632;
+    --accent: #6bc3ae; --accent-ink: #0b1714; --banana: #e3c25a; --banana-ink: #231c02;
+    --warmth: #f07a5f; --tension: #a98af0; --trust: #4cc3ac; --bad: #ff8a80; --tong: #1a2b44; --tong-ink: #cfe0ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1513; --surface: #17201d; --sunk: #111915; --ink: #e4ebe8; --muted: #93a39c; --line: #2a3632;
+  --accent: #6bc3ae; --accent-ink: #0b1714; --banana: #e3c25a; --banana-ink: #231c02;
+  --warmth: #f07a5f; --tension: #a98af0; --trust: #4cc3ac; --bad: #ff8a80; --tong: #1a2b44; --tong-ink: #cfe0ff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; max-width: 1360px; margin: 0 auto; }
+header.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin-bottom: 18px; }
+h1 { font: 34px/1.1 var(--display); margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; max-width: 70ch; }
+.grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+aside { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 16px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); max-height: calc(100vh - 24px); overflow: auto; }
+@media (max-width: 860px) { aside { position: static; max-height: none; } }
+.label { font: 500 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: 64px minmax(0,1fr) 36px; align-items: center; gap: 8px; }
+.row output { font: 13px var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+select, input[type=number] { font: inherit; font-size: 14px; color: var(--ink); background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; width: 100%; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+.seg button { font: 13px var(--mono); border: 0; background: var(--sunk); color: var(--ink); padding: 6px 0; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); }
+.checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.chk { display: inline-flex; align-items: center; gap: 5px; font: 12px var(--mono); background: var(--sunk); border: 1px solid var(--line); border-radius: 5px; padding: 3px 7px; cursor: pointer; }
+.chk input { margin: 0; accent-color: var(--accent); }
+.derived { display: flex; flex-wrap: wrap; gap: 6px; font: 12px var(--mono); }
+.pill { border: 1px solid var(--line); border-radius: 5px; padding: 2px 7px; background: var(--sunk); }
+.pill.on { background: var(--banana); color: var(--banana-ink); border-color: transparent; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+main { display: grid; gap: 16px; min-width: 0; }
+.picker { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.picker select { font-size: 15px; padding: 8px 10px; }
+.scenehead { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 10px; }
+.scenehead h2 { font: 26px/1.15 var(--display); margin: 0; text-wrap: balance; }
+.scenehead h2 small { font: 15px var(--body); color: var(--muted); margin-left: 8px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; font: 12px var(--mono); color: var(--muted); }
+.meta span { background: var(--sunk); border-radius: 5px; padding: 2px 7px; }
+.gate-ok { color: var(--trust); } .gate-no { color: var(--bad); }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; }
+button.btn { font: 500 14px var(--body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+button.btn:hover { border-color: var(--accent); }
+button.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs button { font: 500 14px var(--body); background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; color: var(--muted); cursor: pointer; }
+.tabs button[aria-selected=true] { color: var(--ink); border-bottom-color: var(--accent); }
+.stage { display: grid; gap: 10px; }
+.beat { display: grid; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.who { font: 500 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ko { font-size: 18px; line-height: 1.45; }
+.en { color: var(--muted); font-size: 14px; }
+.note { font-size: 13px; color: var(--muted); font-style: italic; }
+.narr .ko { font-size: 15px; font-style: italic; }
+.tong { background: var(--tong); color: var(--tong-ink); border-radius: 8px; padding: 8px 10px; font-size: 14px; display: grid; gap: 2px; }
+.tong b { font: 500 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.ex { border: 1px dashed var(--accent); border-radius: 8px; padding: 8px 10px; font-size: 14px; display: grid; gap: 6px; }
+.ex code { font: 13px var(--mono); }
+.ex .res { font: 12px var(--mono); }
+.choices { display: grid; gap: 6px; }
+.choice { text-align: left; display: grid; grid-template-columns: auto minmax(0,1fr); gap: 2px 10px; align-items: baseline; font: inherit; background: var(--sunk); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+.choice:hover:not([disabled]) { border-color: var(--accent); }
+.choice .intent { font: 11px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); grid-row: span 2; min-width: 70px; }
+.choice .say-ko { font-size: 16px; }
+.choice .say-en { font-size: 13px; color: var(--muted); }
+.choice[disabled] { opacity: 0.5; cursor: not-allowed; }
+.choice .why { font: 11px var(--mono); color: var(--bad); grid-column: 2; }
+.picked { border-left: 3px solid var(--banana); padding-left: 10px; display: grid; gap: 2px; }
+.picked .me { font: 11px var(--mono); color: var(--muted); }
+.deltas { display: flex; flex-wrap: wrap; gap: 6px; font: 12px var(--mono); }
+.d { border-radius: 5px; padding: 1px 6px; border: 1px solid currentColor; font-variant-numeric: tabular-nums; }
+.d.warmth { color: var(--warmth); } .d.tension { color: var(--tension); } .d.trust { color: var(--trust); }
+.d.flag { color: var(--muted); } .d.mem { color: var(--banana-ink); background: var(--banana); border-color: transparent; }
+.d.stage { color: var(--accent-ink); background: var(--accent); border-color: transparent; }
+.d.block { color: var(--bad); }
+.end { font: 12px var(--mono); color: var(--muted); text-align: center; padding: 6px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.col { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.col h3 { font: 19px/1.2 var(--display); margin: 0; }
+.col .cfg { font: 11px var(--mono); color: var(--muted); }
+.mini { display: grid; gap: 2px; border-top: 1px solid var(--line); padding-top: 6px; }
+.mini .ko { font-size: 15px; }
+.mini .en { font-size: 12.5px; }
+.final { font: 12px var(--mono); display: flex; flex-wrap: wrap; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
+.axes-now { display: grid; gap: 4px; }
+.bar { display: grid; grid-template-columns: 64px minmax(0,1fr) 54px; gap: 8px; align-items: center; font: 12px var(--mono); }
+.bar i { display: block; height: 6px; border-radius: 3px; background: var(--sunk); position: relative; overflow: hidden; }
+.bar i b { position: absolute; inset: 0 auto 0 0; border-radius: 3px; }
+.phone { width: min(380px, 100%); margin: 0 auto; background: #b2c7d9; border-radius: 22px; padding: 10px; display: grid; gap: 8px; color: #111; }
+.phone { --kk-bg: #b2c7d9; --kk-me: #fee66b; --kk-them: #ffffff; --kk-ink: #111; --kk-meta: #4b5a66; }
+.phone .head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; padding: 4px 6px; color: var(--kk-ink); }
+.phone .head span { font: 11px var(--mono); color: var(--kk-meta); }
+.msgs { display: grid; gap: 6px; padding: 4px; }
+.m { display: flex; gap: 6px; align-items: flex-end; }
+.m.me { flex-direction: row-reverse; }
+.bub { max-width: 78%; border-radius: 12px; padding: 7px 10px; background: var(--kk-them); color: var(--kk-ink); font-size: 14.5px; display: grid; gap: 2px; }
+.m.me .bub { background: var(--kk-me); }
+.bub .tr { font-size: 12px; color: #55606a; }
+.bub.del { background: transparent; border: 1px dashed #7a8a96; color: #4b5a66; font-style: italic; }
+.bub.photo { background: #e9eef2; }
+.bub.photo .ph { aspect-ratio: 4 / 3; max-width: 100%; border-radius: 8px; background: repeating-linear-gradient(135deg, #d4dde4 0 10px, #c7d2db 10px 20px); display: grid; place-items: center; font: 11px var(--mono); color: #4b5a66; padding: 6px; text-align: center; }
+.ts { font: 10px var(--mono); color: var(--kk-meta); display: grid; justify-items: end; }
+.m.me .ts { justify-items: start; }
+.ts .one { color: #c9a400; font-weight: 600; }
+.sysmsg { text-align: center; font: 11px var(--mono); color: var(--kk-meta); }
+.replies { display: grid; gap: 6px; padding: 4px; }
+.replies .choice { background: rgba(255,255,255,0.85); color: #111; border-color: rgba(0,0,0,0.12); }
+.replies .choice .intent { color: #1f6356; }
+.replies .choice .say-en { color: #4b5a66; }
+.phone .deltas { padding: 0 6px; }
+.phone .d.warmth { color: #a3361f; } .phone .d.tension { color: #5a2fae; } .phone .d.trust { color: #0f6b5c; } .phone .d.flag { color: #36434d; }
+.canon { display: grid; gap: 12px; }
+.canon section { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.canon h3 { font: 20px var(--display); margin: 0; }
+.canon ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.canon li { max-width: 80ch; }
+.canon .k { font: 12px var(--mono); color: var(--muted); }
+.empty { color: var(--muted); padding: 20px; text-align: center; }
+@media (prefers-reduced-motion: no-preference) { .beat, .m { animation: rise .18s ease-out both; } @keyframes rise { from { transform: translateY(4px); opacity: .6; } } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Tong Relationship Lab</h1>
+    <p class="sub">Set a starting state, pick a scene, and play it. Same seed and choices replay the same night. Numbers are visible here; in the game she only shows them through her Korean.</p>
+  </header>
+  <div class="grid">
+    <aside aria-label="Starting state">
+      <fieldset>
+        <span class="label">Stage</span>
+        <select id="stage"></select>
+      </fieldset>
+      <fieldset id="axes"><span class="label">Feeling (hidden in game)</span></fieldset>
+      <fieldset id="moodf"><span class="label">Mood</span></fieldset>
+      <fieldset>
+        <span class="label">World</span>
+        <div class="two">
+          <label><span class="label">Hour</span><input id="hour" type="number" min="0" max="23"></label>
+          <label><span class="label">Seed</span><input id="seed" type="number"></label>
+        </div>
+        <div class="two">
+          <label><span class="label">Weather</span><select id="weather"><option>clear</option><option>rain</option><option>cold</option><option>snow</option><option>humid</option></select></label>
+          <label><span class="label">Korean level</span><input id="level" type="number" min="0" max="6"></label>
+        </div>
+        <span class="label">How you answer (input tier)</span>
+        <div class="seg" id="tier" role="group" aria-label="Input tier"></div>
+      </fieldset>
+      <fieldset><span class="label">Flags this scene reads</span><div class="checks" id="flags"></div></fieldset>
+      <fieldset><span class="label">What you know</span><div class="checks" id="knows"></div></fieldset>
+      <fieldset><span class="label">Memories</span><div class="checks" id="mems"></div></fieldset>
+      <fieldset><span class="label">Derived</span><div class="derived" id="derived"></div></fieldset>
+      <fieldset><span class="label">Now (after your choices)</span><div class="axes-now" id="now"></div></fieldset>
+    </aside>
+    <main>
+      <div class="picker">
+        <label><span class="label">Scene</span><select id="scene"></select></label>
+        <button class="btn primary" id="restart">Restart</button>
+      </div>
+      <div class="scenehead" id="head"></div>
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div id="view"></div>
+    </main>
+  </div>
+</div>
+
+<script type="module">
+/*__ENGINE__*/
+const DATA = /*__DATA__*/;
+
+const $ = (s) => document.querySelector(s);
+const h = (tag, attrs = {}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (v === true) el.setAttribute(k, '');
+    else if (v !== false && v != null) el.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) el.append(k.nodeType ? k : document.createTextNode(String(k)));
+  return el;
+};
+const NAMES = { haeun: '하은 Ha-eun', jin: '진 Jin', tong: 'Tong', narration: 'Narration', player: 'You', coach_park: '박 코치 Coach Park', manager_choi: '최 실장 Manager Choi', minji: '민지 Minji', yerin: '예린 Yerin', ajusshi: '아저씨 Ajusshi', cashier: 'Clerk', sua: '수아 Su-a', manager_kang: '강 매니저 Manager Kang', group: '온새 연습생 단톡' };
+const nameOf = (id) => NAMES[id] ?? id;
+const STAGE_LIST = ['strangers', 'acquaintances', 'friends', 'close', 'romantic_tension', 'partners'];
+
+const items = [
+  ...DATA.scenes.map((m) => ({ kind: m.scene.kind, id: m.scene.id, mod: m })),
+  ...DATA.threads.map((m) => ({ kind: 'kakao', id: m.thread.id, mod: m })),
+];
+const ui = { item: null, tab: 'play', ctl: null, play: null };
+
+/* ── controls ───────────────────────────────── */
+function collectKeys(obj) {
+  const out = { flags: new Set(), knows: new Set(), mems: new Set() };
+  const visit = (o) => {
+    if (Array.isArray(o)) return o.forEach(visit);
+    if (!o || typeof o !== 'object') return;
+    for (const [k, v] of Object.entries(o)) {
+      if ((k === 'flags' || k === 'notFlags' || k === 'setFlags') && Array.isArray(v)) v.forEach((x) => out.flags.add(x));
+      else if ((k === 'knows' || k === 'notKnows' || k === 'learn') && Array.isArray(v)) v.forEach((x) => out.knows.add(x));
+      else if (k === 'memories' && Array.isArray(v) && v.every((x) => typeof x === 'string')) v.forEach((x) => out.mems.add(x));
+      else if (k === 'memory' && v && v.tag) out.mems.add(v.tag);
+      else visit(v);
+    }
+  };
+  visit(obj);
+  for (const f of [...out.flags]) if (f.startsWith('ex_') || f === 'used_tong_last') out.flags.delete(f);
+  return out;
+}
+
+function ctlFromPreset(charId, p) {
+  const { state, world } = presetState(charId, p);
+  return { state, world };
+}
+
+function buildControls() {
+  const { state, world } = ui.ctl;
+  const stage = $('#stage');
+  stage.replaceChildren(...STAGE_LIST.map((s) => h('option', { value: s, selected: s === state.stage }, s.replace('_', ' '))));
+  stage.onchange = () => { state.stage = stage.value; restart(); };
+
+  const axes = $('#axes');
+  axes.replaceChildren(axes.firstElementChild);
+  for (const a of ['warmth', 'tension', 'trust']) {
+    const out = h('output', {}, state.axes[a]);
+    const r = h('input', { type: 'range', min: 0, max: 100, value: state.axes[a], id: `ax-${a}`, 'aria-label': a });
+    r.oninput = () => { state.axes[a] = +r.value; out.textContent = r.value; restart(); };
+    axes.append(h('div', { class: 'row' }, h('span', { style: `color:var(--${a})` }, a), r, out));
+  }
+  const moodf = $('#moodf');
+  moodf.replaceChildren(moodf.firstElementChild);
+  for (const a of ['valence', 'energy']) {
+    const out = h('output', {}, state.mood[a]);
+    const r = h('input', { type: 'range', min: -2, max: 2, step: 1, value: state.mood[a], id: `mood-${a}`, 'aria-label': a });
+    r.oninput = () => { state.mood[a] = +r.value; out.textContent = r.value; restart(); };
+    moodf.append(h('div', { class: 'row' }, h('span', {}, a), r, out));
+  }
+  for (const [id, key, num] of [['hour', 'hour', 1], ['seed', 'seed', 1], ['weather', 'weather', 0], ['level', 'playerLevel', 1]]) {
+    const el = $('#' + id);
+    el.value = world[key];
+    el.onchange = () => { world[key] = num ? +el.value : el.value; restart(); };
+  }
+  const tier = $('#tier');
+  tier.replaceChildren(...[0, 1, 2, 3].map((t) => {
+    const b = h('button', { type: 'button', 'aria-pressed': String(world.inputTier === t), title: ['Tong speaks for you', 'Pick a Korean line', 'Build the line', 'Say it freely'][t] }, `T${t}`);
+    b.onclick = () => { world.inputTier = t; buildControls(); restart(); };
+    return b;
+  }));
+
+  const keys = collectKeys(ui.item.mod);
+  const checks = (sel, set, bag) => {
+    const box = $(sel);
+    box.replaceChildren(...[...set].sort().map((k) => {
+      const i = h('input', { type: 'checkbox', checked: !!bag(k), id: `${sel.slice(1)}-${k}` });
+      i.onchange = () => { bag(k, i.checked); restart(); };
+      return h('label', { class: 'chk' }, i, k);
+    }));
+    if (!set.size) box.append(h('span', { class: 'note' }, 'none'));
+  };
+  checks('#flags', keys.flags, (k, v) => (v === undefined ? state.flags[k] : (state.flags[k] = v)));
+  checks('#knows', keys.knows, (k, v) => (v === undefined ? state.knows[k] : (state.knows[k] = v)));
+  checks('#mems', keys.mems, (k, v) => {
+    if (v === undefined) return state.memories.some((m) => m.tag === k);
+    state.memories = state.memories.filter((m) => m.tag !== k);
+    if (v) state.memories.push({ tag: k, day: 1, note: '(set in lab)' });
+  });
+}
+
+function renderDerived(s, w) {
+  const tag = moodTag(s.mood);
+  const nextStage = STAGE_LIST[STAGE_LIST.indexOf(s.stage) + 1];
+  const eligible = nextStage ? canAdvanceTo(nextStage, s, w) : false;
+  $('#derived').replaceChildren(
+    h('span', { class: 'pill' }, `mood: ${tag}`),
+    h('span', { class: 'pill' + (leaks(s) ? ' on' : '') }, leaks(s) ? 'leaking (반말 slips)' : 'no leak'),
+    nextStage ? h('span', { class: 'pill' + (eligible ? ' on' : '') }, `${nextStage.replace('_', ' ')}: ${eligible ? 'eligible' : 'not yet'}`) : null,
+  );
+}
+
+function renderNow(s, start) {
+  $('#now').replaceChildren(
+    ...['warmth', 'tension', 'trust'].map((a) => {
+      const d = s.axes[a] - start.axes[a];
+      return h('div', { class: 'bar' }, h('span', {}, a), h('i', {}, h('b', { style: `width:${s.axes[a]}%;background:var(--${a})` })), h('span', {}, `${s.axes[a]}${d ? (d > 0 ? ' +' : ' ') + d : ''}`));
+    }),
+    h('div', { class: 'derived' }, h('span', { class: 'pill' }, `stage: ${s.stage.replace('_', ' ')}`), ...s.memories.filter((m) => m.note !== '(set in lab)').map((m) => h('span', { class: 'pill on' }, `memory: ${m.tag}`))),
+  );
+}
+
+/* ── scene header ───────────────────────────── */
+function renderHead() {
+  const it = ui.item;
+  const head = $('#head');
+  const presets = it.mod.presets;
+  const presetBtns = presets.map((p) => h('button', { class: 'btn', type: 'button', onclick: () => loadPreset(p) }, p.label));
+  if (it.kind === 'kakao') {
+    const t = it.mod.thread;
+    const ok = matches(t.gate, ui.ctl.state, ui.ctl.world);
+    head.replaceChildren(
+      h('h2', {}, t.title, h('small', {}, `KakaoTalk · ${nameOf(t.characterId)} · ${t.at}`)),
+      h('p', { class: 'sub' }, t.summary),
+      h('div', { class: 'meta' }, h('span', { class: ok ? 'gate-ok' : 'gate-no' }, ok ? 'gate passes' : 'gate fails with this state'), h('span', {}, t.id)),
+      h('div', { class: 'presets' }, h('span', { class: 'label', style: 'align-self:center' }, 'Presets'), ...presetBtns),
+    );
+    return;
+  }
+  const sc = it.mod.scene;
+  const ok = matches(sc.gate, ui.ctl.state, ui.ctl.world);
+  head.replaceChildren(
+    h('h2', {}, sc.title.ko, h('small', {}, sc.title.en)),
+    h('p', { class: 'sub' }, sc.summary),
+    h('div', { class: 'meta' },
+      h('span', {}, sc.kind), sc.slot ? h('span', {}, `slot ${sc.slot}`) : null, h('span', {}, sc.location), h('span', {}, nameOf(sc.characterId)),
+      h('span', { class: ok ? 'gate-ok' : 'gate-no' }, ok ? 'gate passes' : `gate fails${sc.fallback ? ` → fallback ${sc.fallback}` : ''}`)),
+    sc.seeds?.length ? h('div', { class: 'meta' }, h('span', { class: 'label', style: 'background:none' }, 'Seeds'), ...sc.seeds.map((x) => h('span', {}, x))) : null,
+    h('div', { class: 'presets' }, h('span', { class: 'label', style: 'align-self:center' }, 'Presets'), ...presetBtns),
+  );
+}
+
+function renderTabs() {
+  const tabs = ui.item.kind === 'kakao' ? [['play', 'Phone']] : [['play', 'Play'], ['compare', 'Compare presets']];
+  tabs.push(['canon', 'Canon']);
+  if (!tabs.some(([k]) => k === ui.tab)) ui.tab = 'play';
+  $('#tabs').replaceChildren(...tabs.map(([k, label]) => h('button', { role: 'tab', 'aria-selected': String(ui.tab === k), onclick: () => { ui.tab = k; renderTabs(); renderView(); } }, label)));
+}
+
+/* ── interactive play ───────────────────────── */
+const fmtDeltas = (o, extra = {}) => {
+  const out = [];
+  for (const a of ['warmth', 'tension', 'trust']) if (o.deltas?.[a]) out.push(h('span', { class: `d ${a}` }, `${o.deltas[a] > 0 ? '+' : ''}${o.deltas[a]} ${a}`));
+  for (const f of o.setFlags ?? []) out.push(h('span', { class: 'd flag' }, `flag ${f}`));
+  for (const f of o.learn ?? []) out.push(h('span', { class: 'd flag' }, `learns ${f}`));
+  if (o.memory) out.push(h('span', { class: 'd mem', title: o.memory.note }, `memory ${o.memory.tag}`));
+  if (extra.stageChanged) out.push(h('span', { class: 'd stage' }, `stage → ${extra.stageChanged.to.replace('_', ' ')}`));
+  if (extra.stageBlocked) out.push(h('span', { class: 'd block' }, `${extra.stageBlocked.replace('_', ' ')} not eligible yet`));
+  return out.length ? h('div', { class: 'deltas' }, out) : null;
+};
+
+const lineEl = (speaker, line, expr) => h('div', { class: 'beat' + (speaker === 'narration' ? ' narr' : '') },
+  h('span', { class: 'who' }, nameOf(speaker) + (expr ? ` · ${expr}` : '')),
+  h('div', { class: 'ko' }, line.ko), h('div', { class: 'en' }, line.en), line.note ? h('div', { class: 'note' }, line.note) : null,
+  line.review ? h('div', { class: 'note' }, `needs ${line.review} review`) : null);
+
+function startPlay() {
+  const sc = ui.item.mod.scene;
+  const s = structuredClone(ui.ctl.state);
+  const w = { ...ui.ctl.world };
+  ui.play = { s, start: structuredClone(s), w, beatId: sc.beats[0].id, out: [], done: false };
+  if (!matches(sc.gate, s, w)) {
+    ui.play.out.push(h('div', { class: 'empty' }, `The gate doesn't pass with this state. ${sc.fallback ? `The slot would run ${sc.fallback} instead.` : 'Load a preset or change the state.'}`));
+    ui.play.done = true;
+  }
+  advance();
+}
+
+function advance() {
+  const P = ui.play;
+  const sc = ui.item.mod.scene;
+  const byId = new Map(sc.beats.map((b) => [b.id, b]));
+  for (let guard = 0; !P.done && guard < 100; guard++) {
+    const b = byId.get(P.beatId);
+    if (!b) { P.done = true; break; }
+    if (b.when && !matches(b.when, P.s, P.w)) { if (!b.next) { P.done = true; break; } P.beatId = b.next; continue; }
+    if (b.exercise && P.pendingEx !== b.id && P.s.flags[`ex_${b.id}`] === undefined) {
+      P.pendingEx = b.id;
+      P.waiting = { kind: 'exercise', beat: b };
+      break;
+    }
+    if (!P.shown?.has(b.id)) {
+      P.shown = P.shown ?? new Set();
+      P.shown.add(b.id);
+      const line = pick(b.lines, P.s, P.w);
+      const el = lineEl(b.speaker, line, b.expr);
+      const tong = tongFor(b, P.w);
+      if (tong) el.append(h('div', { class: 'tong' }, h('b', {}, 'Tong'), h('span', {}, tong.ko), h('span', {}, tong.en)));
+      if (b.exercise) el.append(exerciseCard(b.exercise, P.s.flags[`ex_${b.id}`]));
+      if (b.effects) {
+        const a = applyEffects(P.s, b.effects, P.w);
+        P.s = a.state;
+        const d = fmtDeltas(b.effects, a);
+        if (d) el.append(d);
+      }
+      P.out.push(el);
+    }
+    const options = availableChoices(b, P.s, P.w);
+    if (options.length) { P.waiting = { kind: 'choice', beat: b }; break; }
+    if (b.end || !b.next) { P.done = true; break; }
+    P.beatId = b.next;
+  }
+  renderView();
+}
+
+function exerciseCard(hook, result) {
+  return h('div', { class: 'ex' },
+    h('span', {}, h('code', {}, hook.type), ` · ${hook.objectiveId} · targets `, h('code', {}, hook.targets.join(', ')), ` · on fail: ${hook.onFail}`),
+    h('span', { class: 'ko' }, hook.framing.ko), h('span', { class: 'en' }, hook.framing.en),
+    result === undefined ? null : h('span', { class: 'res' }, result ? 'passed' : 'failed'));
+}
+
+function renderPlay(view) {
+  const P = ui.play;
+  view.append(...P.out);
+  if (P.waiting?.kind === 'exercise') {
+    const b = P.waiting.beat;
+    const lineCard = lineEl(b.speaker, pick(b.lines, P.s, P.w), b.expr);
+    lineCard.append(exerciseCard(b.exercise));
+    const go = (ok) => { P.s.flags[`ex_${b.id}`] = ok; P.waiting = null; P.pendingEx = null; advance(); };
+    lineCard.append(h('div', { class: 'presets' }, h('button', { class: 'btn primary', onclick: () => go(true) }, 'Player passes'), h('button', { class: 'btn', onclick: () => go(false) }, 'Player fails')));
+    view.append(lineCard);
+  } else if (P.waiting?.kind === 'choice') {
+    const b = P.waiting.beat;
+    const avail = availableChoices(b, P.s, P.w);
+    const hidden = (b.choices ?? []).filter((c) => !avail.includes(c));
+    const tier = P.w.inputTier;
+    const box = h('div', { class: 'choices', role: 'group', 'aria-label': 'Choices' });
+    for (const c of avail) {
+      box.append(h('button', { class: 'choice', onclick: () => choose(b, c) },
+        h('span', { class: 'intent' }, c.intent),
+        h('span', { class: 'say-ko' }, tier === 0 ? c.say.en : c.say.ko),
+        h('span', { class: 'say-en' }, tier === 0 ? '(Tong says it in Korean for you)' : c.say.en + (c.exercise && tier >= 2 ? ` · build it: ${c.exercise.type}` : ''))));
+    }
+    for (const c of hidden) {
+      const why = (c.minTier ?? 0) > tier ? `hidden: needs tier ${c.minTier}` : 'hidden: gate not met';
+      box.append(h('button', { class: 'choice', disabled: true },
+        h('span', { class: 'intent' }, c.intent), h('span', { class: 'say-ko' }, c.say.ko), h('span', { class: 'say-en' }, c.say.en), h('span', { class: 'why' }, why)));
+    }
+    view.append(box);
+  }
+  if (P.done) view.append(h('div', { class: 'end' }, 'End of scene'));
+  renderNow(P.s, P.start);
+  renderDerived(P.s, P.w);
+}
+
+function choose(b, c) {
+  const P = ui.play;
+  if (c.exercise && P.w.inputTier >= 2) P.s.flags[`ex_${b.id}_${c.id}`] = true;
+  const r = resolveChoice(c, P.s, P.w, P.w.inputTier);
+  P.s = r.state;
+  P.out.push(h('div', { class: 'picked' }, h('span', { class: 'me' }, `You (${c.intent}, tier ${r.tier})`), h('span', { class: 'ko' }, P.w.inputTier === 0 ? `Tong: ${c.say.ko}` : c.say.ko), h('span', { class: 'en' }, c.say.en)));
+  const el = lineEl(r.outcome.speaker ?? b.speaker, r.outcome.reaction, r.outcome.expr);
+  const d = fmtDeltas(r.outcome, r);
+  if (d) el.append(d);
+  P.out.push(el);
+  P.waiting = null;
+  const next = r.outcome.next ?? b.next;
+  if (b.end && !r.outcome.next) P.done = true;
+  else if (!next) P.done = true;
+  else P.beatId = next;
+  advance();
+}
+
+/* ── compare ────────────────────────────────── */
+function renderCompare(view) {
+  const sc = ui.item.mod.scene;
+  const cols = h('div', { class: 'cols' });
+  for (const p of ui.item.mod.presets) {
+    const run = playPreset(sc, p);
+    const col = h('div', { class: 'col' }, h('h3', {}, p.label));
+    const st = run.start;
+    col.append(h('div', { class: 'cfg' }, `${st.stage} · w${st.axes.warmth} t${st.axes.tension} tr${st.axes.trust} · mood ${moodTag(st.mood)} · ${run.world.weather} ${run.world.hour}:00 · T${run.world.inputTier}`));
+    if (run.gated) col.append(h('div', { class: 'note' }, 'Gate fails for this preset.'));
+    for (const step of run.log) {
+      if (step.line) col.append(h('div', { class: 'mini' }, h('span', { class: 'who' }, nameOf(step.speaker)), h('span', { class: 'ko' }, step.line.ko), h('span', { class: 'en' }, step.line.en)));
+      if (step.tong) col.append(h('div', { class: 'tong' }, h('b', {}, 'Tong'), h('span', {}, step.tong.en)));
+      if (step.exercise) col.append(h('div', { class: 'note' }, `${step.exercise.hook.type} ${step.exercise.hook.targets.join(', ')}: ${step.exercise.passed ? 'passed' : 'failed'}`));
+      if (step.choice) {
+        const ch = sc.beats.find((b) => b.id === step.beatId)?.choices?.find((c) => c.id === step.choice);
+        col.append(h('div', { class: 'picked' }, h('span', { class: 'me' }, `You · ${ch?.intent}`), h('span', { class: 'ko' }, ch?.say.ko ?? step.choice)));
+        if (step.reaction) col.append(h('div', { class: 'mini' }, h('span', { class: 'ko' }, step.reaction.ko), h('span', { class: 'en' }, step.reaction.en)));
+        const d = fmtDeltas({ deltas: step.deltas }, step);
+        if (d) col.append(d);
+      } else if (step.stageChanged) col.append(fmtDeltas({}, step));
+    }
+    const s = run.state;
+    col.append(h('div', { class: 'final' }, ...['warmth', 'tension', 'trust'].map((a) => {
+      const d = s.axes[a] - st.axes[a];
+      return h('span', { class: `d ${a}` }, `${a} ${s.axes[a]}${d ? ` (${d > 0 ? '+' : ''}${d})` : ''}`);
+    }), h('span', { class: 'd flag' }, s.stage.replace('_', ' ')), ...s.memories.filter((m) => !st.memories.some((x) => x.tag === m.tag)).map((m) => h('span', { class: 'd mem', title: m.note }, m.tag))));
+    cols.append(col);
+  }
+  view.append(cols);
+}
+
+/* ── KakaoTalk ──────────────────────────────── */
+function addTime(hhmm, mins) {
+  const [hh, mm] = hhmm.split(':').map(Number);
+  const t = (hh * 60 + mm + mins) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+}
+function startPhone() {
+  const t = ui.item.mod.thread;
+  const s = structuredClone(ui.ctl.state);
+  ui.play = { s, start: structuredClone(s), w: { ...ui.ctl.world }, clock: t.at, msgs: [], replied: false, fx: null };
+  pushMsgs(t.messages);
+}
+function pushMsgs(list) {
+  for (const m of list) {
+    ui.play.clock = addTime(ui.play.clock, m.delay ?? 0);
+    ui.play.msgs.push({ ...m, time: ui.play.clock });
+  }
+}
+function renderPhone(view) {
+  const t = ui.item.mod.thread;
+  const P = ui.play;
+  const ok = matches(t.gate, P.start, P.w);
+  const phone = h('div', { class: 'phone' }, h('div', { class: 'head' }, nameOf(t.characterId), h('span', {}, t.at)));
+  if (!ok) phone.append(h('div', { class: 'sysmsg' }, "This thread's gate fails with the current state. Load a preset."));
+  const msgs = h('div', { class: 'msgs' });
+  for (const m of P.msgs) {
+    const me = m.from === 'me';
+    let bub;
+    if (m.deleted) bub = h('div', { class: 'bub del' }, '삭제된 메시지입니다.', h('span', { class: 'tr' }, `This message was deleted. (Lab only: “${m.ko}” / ${m.en})`));
+    else if (m.photo) bub = h('div', { class: 'bub photo' }, h('div', { class: 'ph' }, `photo: ${m.photo}`), m.ko && m.ko !== '(사진)' ? h('span', {}, m.ko) : null, h('span', { class: 'tr' }, m.en));
+    else bub = h('div', { class: 'bub' }, m.sender ? h('span', { class: 'tr' }, m.sender) : null, h('span', {}, m.ko), h('span', { class: 'tr' }, m.en));
+    const unread = me && P.msgs.indexOf(m) === P.msgs.length - 1 && P.fx?.leftOnRead === false && P.msgs[P.msgs.length - 1] === m;
+    msgs.append(h('div', { class: 'm' + (me ? ' me' : '') }, bub, h('span', { class: 'ts' }, unread ? h('span', { class: 'one' }, '1') : null, m.time)));
+  }
+  phone.append(msgs);
+  if (ok && !P.replied && t.replies?.length) {
+    const avail = t.replies.filter((r) => matches(r.gate, P.s, P.w) && (r.minTier ?? 0) <= P.w.inputTier);
+    const box = h('div', { class: 'replies' });
+    for (const r of t.replies) {
+      const on = avail.includes(r);
+      box.append(h('button', { class: 'choice', disabled: !on, onclick: () => reply(r) },
+        h('span', { class: 'intent' }, r.intent),
+        h('span', { class: 'say-ko' }, P.w.inputTier === 0 && on ? r.say.en : r.say.ko),
+        h('span', { class: 'say-en' }, on ? r.say.en : (r.minTier ?? 0) > P.w.inputTier ? `hidden: needs tier ${r.minTier}` : 'hidden: gate not met')));
+    }
+    phone.append(box);
+  }
+  if (P.fx) phone.append(P.fx.el);
+  view.append(phone);
+  renderNow(P.s, P.start);
+  renderDerived(P.s, P.w);
+}
+function reply(r) {
+  const P = ui.play;
+  const o = r.outcomes.find((x) => matches(x.when, P.s, P.w)) ?? r.outcomes[r.outcomes.length - 1];
+  if (r.intent !== 'leave') pushMsgs([{ from: 'me', ko: r.say.ko, en: r.say.en, delay: 1 }]);
+  else P.msgs.push({ from: 'me', ko: '', en: '', time: P.clock, hiddenRead: true });
+  if (r.intent === 'leave') P.msgs.pop();
+  pushMsgs(o.messages);
+  const a = applyEffects(P.s, o, P.w);
+  P.s = a.state;
+  P.replied = true;
+  P.fx = { el: fmtDeltas(o, a) ?? h('span'), leftOnRead: r.intent === 'leave' ? null : false };
+  if (r.intent === 'leave') P.fx.el = h('div', { class: 'deltas' }, h('span', { class: 'd flag' }, 'left on read'), ...(fmtDeltas(o, a)?.childNodes ?? []));
+  renderView();
+}
+
+/* ── canon ──────────────────────────────────── */
+function renderCanon(view) {
+  const wrap = h('div', { class: 'canon' });
+  for (const c of DATA.canon.characters) {
+    wrap.append(h('section', {},
+      h('h3', {}, `${c.name.ko} ${c.name.en}`),
+      h('div', { class: 'k' }, `${c.age} · ${c.hometown} · ${c.role}`),
+      h('span', { class: 'label' }, 'Facts'), h('ul', {}, ...c.facts.map((f) => h('li', {}, h('span', { class: 'k' }, f.id + ' '), f.fact))),
+      h('span', { class: 'label' }, 'Secrets (reveal conditions)'), h('ul', {}, ...c.secrets.map((f) => h('li', {}, h('span', { class: 'k' }, f.id + ' '), f.fact, h('div', { class: 'note' }, `Revealed: ${f.revealWhen}`)))),
+      h('span', { class: 'label' }, 'Continuity rules'), h('ul', {}, ...c.mustNot.map((f) => h('li', {}, f)))));
+  }
+  const w = DATA.canon.world;
+  wrap.append(h('section', {}, h('h3', {}, `${w.agency.ko} ${w.agency.en}`), h('div', { class: 'k' }, w.agency.note),
+    h('span', { class: 'label' }, 'Calendar'), h('ul', {}, ...w.calendar.map((m) => h('li', {}, h('span', { class: 'k' }, `M${m.month} `), `${m.label}: ${m.beats.join(' · ')}`))),
+    h('span', { class: 'label' }, 'World rules'), h('ul', {}, ...w.rules.map((r) => h('li', {}, r)))));
+  view.append(wrap);
+}
+
+/* ── wiring ─────────────────────────────────── */
+function renderView() {
+  const view = $('#view');
+  view.replaceChildren();
+  const stage = h('div', { class: 'stage' });
+  if (ui.tab === 'canon') renderCanon(stage);
+  else if (ui.item.kind === 'kakao') renderPhone(stage);
+  else if (ui.tab === 'compare') { renderCompare(stage); renderNow(ui.ctl.state, ui.ctl.state); renderDerived(ui.ctl.state, ui.ctl.world); }
+  else renderPlay(stage);
+  view.append(stage);
+}
+function restart() {
+  renderHead();
+  if (ui.item.kind === 'kakao') { startPhone(); renderView(); } else startPlay();
+}
+function loadPreset(p) {
+  const charId = ui.item.kind === 'kakao' ? ui.item.mod.thread.characterId : ui.item.mod.scene.characterId;
+  ui.ctl = ctlFromPreset(charId, p);
+  buildControls();
+  restart();
+}
+function selectItem(id) {
+  ui.item = items.find((x) => x.id === id) ?? items[0];
+  $('#scene').value = ui.item.id;
+  if (ui.item.kind === 'ambient' && ui.tab === 'play' && !ui.touched) ui.tab = 'compare';
+  renderTabs();
+  loadPreset(ui.item.mod.presets[0]);
+  try { localStorage.setItem('rel-lab-scene', ui.item.id); } catch {}
+  if (location.hash.slice(1) !== ui.item.id.replace(/[^A-Za-z0-9-]/g, '-')) history.replaceState(null, '', '#' + ui.item.id.replace(/[^A-Za-z0-9-]/g, '-'));
+}
+
+const groups = [['story', 'Story'], ['ambient', 'Ambient'], ['kakao', 'KakaoTalk']];
+$('#scene').replaceChildren(...groups.map(([k, label]) => h('optgroup', { label }, ...items.filter((x) => x.kind === k).map((x) => {
+  const t = x.kind === 'kakao' ? x.mod.thread.title : `${x.mod.scene.title.ko} · ${x.mod.scene.title.en}`;
+  return h('option', { value: x.id }, t);
+}))));
+$('#scene').onchange = (e) => { ui.touched = false; selectItem(e.target.value); };
+$('#restart').onclick = restart;
+$('#tabs').addEventListener('click', () => { ui.touched = true; });
+
+const fromHash = items.find((x) => x.id.replace(/[^A-Za-z0-9-]/g, '-') === location.hash.slice(1));
+let saved = null;
+try { saved = localStorage.getItem('rel-lab-scene'); } catch {}
+selectItem(fromHash?.id ?? saved ?? items[0]?.id);
+</script>

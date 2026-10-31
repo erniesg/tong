@@ -185,9 +185,9 @@ export function buildNodes(A) {
     fluster: {
       who: 'haeun',
       expr: 'blush',
-      ko: '뭐, 뭐라카노… 갑자기.',
+      ko: '뭐, 뭐래… 갑자기.',
       en: 'W-what are you on about… all of a sudden.',
-      hint: 'She slipped into Busan 사투리 (dialect) — it happens when she’s flustered.',
+      hint: '<b>뭐래</b> = “what are you on about”. Her go-to when she’s flustered.',
       enter: () => A.flipHair('haeun'),
       next: 'bill',
     },
