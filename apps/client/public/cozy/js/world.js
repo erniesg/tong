@@ -631,7 +631,7 @@ function buildTent() {
   // Keep the real header/roller above the 1.9m player, not just its query.
   const rollerRadius = 0.075, openingHeight = wallH - valanceDrop;
   add(new THREE.PlaneGeometry(open * 2, valanceDrop), tarp, TX, wallH - valanceDrop / 2, maxZ, G.scene, false);
-  add(new THREE.CylinderGeometry(rollerRadius, rollerRadius, open * 2, 12), tarp, TX, openingHeight + rollerRadius, maxZ + 0.02, G.scene, false).rotation.z = Math.PI / 2;
+  add(new THREE.CylinderGeometry(rollerRadius, rollerRadius, open * 2, 12), tarp, TX, openingHeight + rollerRadius, maxZ - rollerRadius - 0.02, G.scene, false).rotation.z = Math.PI / 2;
   // closed flap (daytime)
   const flap = add(new THREE.PlaneGeometry(open * 2, openingHeight), tarp, TX, openingHeight / 2, maxZ + 0.01, G.scene, false);
   tentMats.flap = flap;

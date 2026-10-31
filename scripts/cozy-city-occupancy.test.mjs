@@ -99,13 +99,15 @@ function checkTentEntry(h) {
   const p = { x: TX, y: 0, z: TENT.maxZ + .8 }, state = createTraversal();
   for (let i = 0; i < 480 && p.z > TENT.maxZ - .9; i++) stepTraversal(state, p, { x: 0, z: -1 }, env, 1 / 120);
   const headers = G.scene.children.filter(m => m.isMesh).map(m => new THREE.Box3().setFromObject(m)).filter(b =>
-    b.max.x - b.min.x > 4 && b.max.x - b.min.x < 4.6 && b.min.y > 1 && b.max.y <= TENT.wallH + .001 && b.min.z >= TENT.maxZ - .101 && b.max.z <= TENT.maxZ + .101);
+    b.max.x - b.min.x > 4 && b.max.x - b.min.x < 4.6 && b.min.y > 1 && b.max.y <= TENT.wallH + .001 && b.min.z >= TENT.maxZ - .201 && b.max.z <= TENT.maxZ + .101);
   const visualClearance = Math.min(...headers.map(b => b.min.y)), logicalClearance = runtimeCeiling(TX, TENT.maxZ - .05, 0);
   console.log(JSON.stringify({ tent: { openWalkZ: p.z, visualClearance, logicalClearance, playerClearance: 1.9, headerPieces: headers.length } }));
   assert.ok(p.z < TENT.maxZ - .8, 'actual runtime ceiling/physics must allow normal night doorway entry');
   assert.ok(headers.length >= 3, 'real tarp header, roller and painted valance measured');
   assert.ok(visualClearance >= 2, 'visible opening clears the full player, not a collision bypass');
   assert.ok(Math.abs(visualClearance - logicalClearance) < 1e-5, 'physical ceiling matches lowest visible header component');
+  const roller = G.scene.children.find(m => m.isMesh && m.geometry.type === 'CylinderGeometry' && Math.abs(m.geometry.parameters.height - 4.4) < .01 && Math.abs(m.position.x - TX) < .01 && Math.abs(m.position.y - logicalClearance - .075) < .01);
+  assert.ok(roller && new THREE.Box3().setFromObject(roller).max.z < TENT.maxZ, 'raised roll stays behind the painted valance, not over its lettering');
   world.setTentOpen(false); env.colliders = G.colliders;
   Object.assign(p, { x: TX, y: 0, z: TENT.maxZ + .8 }); const closed = createTraversal();
   for (let i = 0; i < 240; i++) stepTraversal(closed, p, { x: 0, z: -1 }, env, 1 / 120);
