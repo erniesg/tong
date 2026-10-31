@@ -122,10 +122,21 @@ test('rotated Tokyo pilot: separated visual floor, explicit idempotent opt-in an
     assert.ok(!h.G.colliders.some(b => overlapsBody(p, b)), `blocked approach step ${i}`);
   }
   h.updateCutaways({ x: 428, y: 0, z: -2 }, { x: 434, y: 5, z: 1 }, 1, 'tokyo');
-  assert.equal(room.roofs[0].visible, true, 'single-floor generic fading is unchanged');
+  assert.equal(room.roofs[0].visible, false, 'settled single-floor roof no longer leaves ghost layers');
   assert.ok(room.roofs[0].material.opacity < .05);
   const authored = { id: 'seoul-cafe-room', city: 'seoul', category: 'cafe', furniture: [] };
   assert.equal(h.enhanceRoom(authored), authored); assert.equal(authored.staff, undefined);
+});
+
+test('settled generic cutaway hides late attached roof labels and restores their original state', async () => {
+  const h = await harness(), room = h.buildRoom(roomArgs(h));
+  const label = new h.THREE.Mesh(new h.THREE.PlaneGeometry(1, 1), h.mat('#ffffff'));
+  room.roofs[0].add(label); // City signs attach AFTER room registration.
+  h.updateCutaways({ x: 428, y: 0, z: -2 }, { x: 434, y: 5, z: -2 }, 1, 'tokyo');
+  assert.equal(room.roofs[0].visible, false, 'parent suppresses even unregistered opaque sign children');
+  assert.equal(label.visible, true); assert.equal(label.material.opacity, 1, 'do not mutate authored label material/state');
+  h.updateCutaways({ x: 450, y: 0, z: 20 }, { x: 456, y: 5, z: 20 }, 1, 'tokyo');
+  assert.equal(room.roofs[0].visible, true); assert.equal(label.visible, true); assert.equal(label.material.opacity, 1);
 });
 
 test('all category kits place semantic geometry, retain baseline, finite collisions and reachable staff', async () => {

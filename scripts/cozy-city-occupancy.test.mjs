@@ -55,8 +55,38 @@ async function scene(cityId) {
   return { G, city, b, occupants, rooms, places, nativeSolids, heightAt, ceilingAt };
 }
 
-for (const cityId of ['seoul', 'tokyo', 'shanghai']) test(`${cityId}: actual plot, every generic staffed room, both apartment floors and physical exit`, async () => {
+function checkBoardGuide({ G, city }) {
+  const views = Array.from(city.vistas), view = views.find(v => v.id === 'seoul-board-art');
+  assert.ok(view, 'actual ordinary world-art Guide entry exists');
+  assert.deepEqual(views.filter(v => v.kind !== 'artwork').map(v => v.id), ['seoul-hangang', 'seoul-namsan']);
+  assert.equal(view.kind, 'artwork'); assert.equal(view.fov, 55);
+  let poster; G.scene.traverse(m => { if (m.userData.artworkId === view.id) poster = m; });
+  assert.ok(poster?.isMesh, 'view points to actual authored world poster, not a replacement UI image');
+  assert.equal(poster.geometry.parameters.width, 2.16); assert.equal(poster.geometry.parameters.height, 3.84);
+  const main = readFileSync(resolve('apps/client/public/cozy/js/main.js'), 'utf8');
+  const fn = name => { const start = main.indexOf(`function ${name}(`); assert.ok(start >= 0); return main.slice(start, main.indexOf('\n}', start) + 2); };
+  const node = () => ({ children: [], appendChild(n) { this.children.push(n); }, replaceChildren() { this.children = []; } });
+  const list = node(), tools = { hidden: false, classList: { add(value) { if (value === 'hidden') tools.hidden = true; } } };
+  const S = { city: 'seoul', started: true, storySentinel: 7 }, player = { root: { position: { x: 4, y: 0, z: 35 } } }, cam = {};
+  const before = JSON.stringify({ S, player }); let focused = false;
+  const context = { S, player, cam, currentCity: () => city, cityPlaces: () => [], adventure: () => ({}),
+    $: id => id === 'location-list' ? list : id === 'tools-panel' ? tools : null,
+    document: { createElement: node }, clearControls() {}, actionsAllowed: () => tools.hidden && S.started,
+    updateCameraButtons() {}, banner() {}, canvas: { focus() { focused = true; } } };
+  const api = new Function(...Object.keys(context), `let vistaIndex = -1, overview = true; ${['populateLocations', 'resetCamera', 'followCamera'].map(fn).join('\n')} return { populateLocations, resetCamera, get index() { return vistaIndex; }, get overview() { return overview; } };`)(...Object.values(context));
+  api.populateLocations();
+  const button = list.children.flatMap(n => n.children).find(n => n.textContent?.includes(view.title));
+  assert.ok(button && button.textContent.includes('Camera only'));
+  button.onclick(); // Actual runtime callback; DOM adapters only, not a selector stub.
+  assert.equal(api.index, views.indexOf(view)); assert.equal(api.overview, false); assert.equal(cam.snap, true); assert.equal(focused, true);
+  assert.equal(JSON.stringify({ S, player }), before, 'selection cannot teleport or alter story/city');
+  api.resetCamera(); assert.equal(api.index, -1); assert.equal(api.overview, false);
+  assert.equal(cam.yaw, city.yaw); assert.equal(cam.pitch, .36); assert.equal(cam.dist, 6.5);
+}
+
+for (const cityId of ['seoul', 'tokyo', 'shanghai']) test(`${cityId}: actual plot, every generic staffed room, both apartment floors and physical exit`, async (t) => {
   const h = await scene(cityId), { G, city, b, occupants, rooms, places } = h;
+  if (cityId === 'seoul') await t.test('actual artwork Guide callback is camera-only and preserves named landmarks / reset', () => checkBoardGuide(h));
   assert.equal(places.filter(p => p.category === 'home').length, 1);
   for (const category of ['food','cafe','store','subway','studio']) assert.ok(places.some(p => p.category === category), category);
   assert.ok(b.bounds.minX > city.bounds.minX && b.bounds.maxX < city.bounds.maxX && b.bounds.minZ > city.bounds.minZ && b.bounds.maxZ < city.bounds.maxZ);

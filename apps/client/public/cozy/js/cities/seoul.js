@@ -305,6 +305,7 @@ function travelBoard() {
   // (38.88), rather than a nearly coplanar/embedded image at grazing angles.
   const poster = add(new THREE.PlaneGeometry(2.16, 3.84), art, 7, 2.58, 38.78, G.scene, false);
   poster.rotation.y = Math.PI;
+  poster.userData.artworkId = 'seoul-board-art';
   sign(['서울 · 동네 여행', 'Concept art · stylised, not a literal map'], 7, 5, 38.85, Math.PI, 5.5, 0.8);
   standingSign(['북: 연남   남: 한강 연결', 'N: Yeonnam · S: Han link · W: AREX'], 1, 2.3, 40, Math.PI, 5.3, 1);
   pointLight(0xffdda4, 4, 9, 7, 4.4, 37.7);
@@ -389,6 +390,7 @@ export default {
   vistas: [
     { id: 'seoul-hangang', title: 'Hangang bridge & waterfront', nativeName: '한강 전망', spawn: [6, 2.4, -41.5], position: [10, 8, -42], look: [0, -1, -185], description: 'Elevated, unobstructed view south over the compressed Han River connection.' },
     { id: 'seoul-namsan', title: 'Namsan skyline', nativeName: '남산 서울타워', spawn: [31, 0, -40], position: [28, 7, -43], look: [420, 118, -10], description: 'The distant eastern tower and hill remain on the north bank, not across the Han.' },
+    { id: 'seoul-board-art', kind: 'artwork', title: 'Board artwork', nativeName: '서울 동네 원화', position: [7, 3.6, 28], look: [7, 3.6, 38.78], fov: 55, description: 'Full original neighbourhood artwork in its world frame; camera only, not a map or teleport.' },
   ],
   airport: { spawn: airportSpawn, name: 'AREX · Gimpo / Incheon connection', nativeName: '공항철도 · 김포 / 인천 연결' },
   roads,

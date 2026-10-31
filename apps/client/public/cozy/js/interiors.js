@@ -125,12 +125,12 @@ export function updateCutaways(playerPosition, cameraPosition, dt, cityId) {
     if (lower) state.amount = 0; // In particular, the slab under the standing floor.
     else state.amount += ((hidden ? 1 : 0) - state.amount) * k;
     if (Math.abs(state.amount - (hidden ? 1 : 0)) < 0.001) state.amount = hidden ? 1 : 0;
-    // Stacked homes must not retain ghost ceiling/partition layers over the
-    // occupied room. Fade first, then stop drawing those settled planes (and
-    // their shadows). Single-floor rooms keep their existing fade behavior.
-    const settledHomeCutaway = !!state.room.buildingId && hidden && state.amount === 1;
-    if (state.reflector || upper || settledHomeCutaway || state.wasHidden) {
-      const hideMesh = state.reflector ? hidden : upper || settledHomeCutaway;
+    // Remove settled cutaway planes and their shadows/attached signs, rather
+    // than leave ghost layers over any occupied room. Fade first; restoration
+    // still preserves each mesh's original visibility and physical boundaries.
+    const settledCutaway = hidden && state.amount === 1;
+    if (state.reflector || upper || settledCutaway || state.wasHidden) {
+      const hideMesh = state.reflector ? hidden : upper || settledCutaway;
       if (hideMesh && !state.wasHidden) state.restoreVisible = mesh.visible;
       if (hideMesh) mesh.visible = false;
       else if (state.wasHidden) mesh.visible = state.restoreVisible;
