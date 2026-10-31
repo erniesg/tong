@@ -69,7 +69,7 @@ export function createCreator() {
   const FRAMES = {
     body: { y: 0.92, half: 1.08, width: 0.62 },
     head: { y: 1.18, half: 0.62, width: 0.62 },
-    face: { y: 1.28, half: 0.42, width: 0.5 },
+    face: { y: 1.3, half: 0.5, width: 0.62 },
   };
   let framing = 'body';
   let frozen = null; // fixed turn angle for inspection/screenshots; null = normal turntable
