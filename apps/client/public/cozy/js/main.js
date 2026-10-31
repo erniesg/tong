@@ -2453,12 +2453,15 @@ async function boot() {
   buildCityGeometry('seoul', buildWorld);
   for (const city of Object.values(cities)) buildCityGeometry(city.id, () => {
     city.build();
-    // Staged pilot only. Other shops/cities wait for coordinator gameplay proof.
-    if (city.id === 'tokyo') {
-      const cafe = enhanceRoom(interiors.find((room) => room.id === 'tokyo-cafe-room'));
-      cafe.staff.placeId = 'tokyo-cafe';
-      buildApartment({ id: 'tokyo-home', city: 'tokyo', x: 348, z: -47, w: 14, d: 12, style: 'tokyo' });
+    // The staffed-shop and stair pilots passed before opting in other cities.
+    // Keep Seoul's authored rooms/cast; only generic shells receive new kits.
+    const places = city.id === 'seoul' ? [...SEOUL_PLACES, ...city.places] : city.places;
+    for (const room of interiors.filter((room) => room.city === city.id && room.layout)) {
+      enhanceRoom(room);
+      const place = places.find((place) => place.interiorId === room.id);
+      if (room.staff && place) room.staff.placeId = place.id;
     }
+    buildApartment(city.home);
   });
   buildCast();
   occupants = createOccupants(interiors, { groups: cityGroups });

@@ -21,12 +21,20 @@ const roads = [
   { points: [[0, 36], [-5, 43]], width: 4, color: '#c7b397' },
   { points: [[-26, 37], [-18, 48], [-8, 57], [8, 65], [24, 63], [17, 59]], width: 3.5, color: '#c7b397' },
   { points: [[-37, 25], [-50, 29], [-53, 36], [-53, 42]], width: 5 },
+  // The housing lane stays east of AREX and outside the railway park.
+  { points: [[-35, 68.2], [-44, 68.2], [-44, 37], [-26, 37]], width: 2.8, color: '#c7b397' },
   // Each riverside spur returns by a different lane, rather than a dead end.
   { points: [[-31, -40], [-26, -36], [-28, -30], [-29, -6]], width: 3.2, color: '#c7b397' },
   { points: [[31, -40], [26, -36], [28, -30], [30, -6]], width: 3.2, color: '#c7b397' },
 ];
 const parkOutline = [[-24, 43], [-12, 39], [4, 44], [24, 55], [31, 67], [14, 71], [-4, 62], [-21, 55]];
 const places = [
+  {
+    id: 'seoul-home', ko: '연남 다세대주택', en: 'Yeonnam Apartments', icon: '🏠', category: 'home',
+    spawn: [-35, 0, 68.2], entry: [-35, 0, 67], yaw: 0, radius: 3,
+    description: 'A small warm-plaster residential block northwest of the railway park. Walk upstairs to furnished homes and meet the residents.',
+    phrase: { text: '초대해 주셔서 감사해요.', rom: 'Chodaehae jusyeoseo gamsahaeyo.', en: 'Thank you for inviting me in.' },
+  },
   {
     id: 'seoul-yeonnam', ko: '연남동 숲길', en: 'Yeonnam Forest Walk', icon: '🌳',
     spawn: [1, 0, 53], yaw: Math.PI, radius: 5,
@@ -377,6 +385,7 @@ export default {
   id: 'seoul', name: 'Seoul', nativeName: '서울',
   subtitle: 'Hongdae → Yeonnam north (+z); Han River south (−z). Stylised blocks, compressed river / AREX connections.',
   bounds, spawn: [1.6, 0, 9], yaw: 0, places,
+  home: { id: 'seoul-home', city: 'seoul', x: -35, z: 61, w: 14, d: 12, style: 'seoul' },
   vistas: [
     { id: 'seoul-hangang', title: 'Hangang bridge & waterfront', nativeName: '한강 전망', spawn: [6, 2.4, -41.5], position: [10, 8, -42], look: [0, -1, -185], description: 'Elevated, unobstructed view south over the compressed Han River connection.' },
     { id: 'seoul-namsan', title: 'Namsan skyline', nativeName: '남산 서울타워', spawn: [31, 0, -40], position: [28, 7, -43], look: [420, 118, -10], description: 'The distant eastern tower and hill remain on the north bank, not across the Han.' },

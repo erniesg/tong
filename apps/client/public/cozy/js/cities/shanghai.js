@@ -21,6 +21,7 @@ const roads = [
   road([[15, -66], [15, 66]], 8, '#d0bda1'),
   road([[2, 16], [2, 40]], 2.8, '#d0bda1'),
   road([[-8, 34], [15, 34]], 2.8, '#d0bda1'),
+  road([[-20, -62.8], [-20, -60]], 2.4, '#b8a38e'),
 ];
 
 const place = (id, ko, en, icon, x, z, yaw, description, text, rom, english) => ({
@@ -32,6 +33,9 @@ const place = (id, ko, en, icon, x, z, yaw, description, text, rom, english) => 
   } : {}),
 });
 const places = [
+  { ...place('home', '弄堂公寓', 'Lilong Apartments', '🏠', -20, -62.8, 0,
+    'A jade-and-stone residential block beside the northern lane, west of the Huangpu. Real stairs connect furnished living rooms, kitchens, bedrooms and bathrooms.',
+    '谢谢你邀请我。', 'Xièxie nǐ yāoqǐng wǒ.', 'Thank you for inviting me in.'), category: 'home', entry: [X - 20, 0, -64] },
   place('food', '小笼包弄堂', 'Xiaolongbao Lane', '🥟', -34, 16, Math.PI / 4,
     'Bamboo steamers and red-brick lanes evoke Shanghai breakfast culture; this is a stylised neighbourhood, not a literal street map.',
     '来一笼小笼包。', 'Lái yì lóng xiǎolóngbāo.', 'One basket of soup dumplings, please.'),
@@ -346,6 +350,7 @@ export default {
   subtitle: 'Compressed Shanghai · west-bank lanes, Bund & distant Pudong',
   bounds: { minX: X - 75, maxX: X + 75, minZ: -75, maxZ: 75 },
   spawn: [X - 8, 0, 16], yaw: -Math.PI / 2,
+  home: { id: 'shanghai-home', city: 'shanghai', x: X - 20, z: -69, w: 14, d: 10, style: 'shanghai' },
   places,
   vistas: [
     { id: 'shanghai-pearl', title: 'Huangpu & Oriental Pearl', nativeName: '黄浦江与东方明珠', spawn: [X + 18, 0, -24], position: [X + 15, 11, -14], look: [X + 59, 12, -25], fov: 65, description: 'An elevated west-bank view includes the Huangpu foreground and the full Oriental Pearl on the east bank.' },
