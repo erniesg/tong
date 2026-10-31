@@ -14,8 +14,9 @@ import {
 } from './world.js';
 import {
   makeHaeun, makeJin, makePlayer, makeAjusshi, makeBarista, makeCashier, makePedestrian, makeTong, makeCat,
-  animate, animateTong, setExpr, lookAtYaw, headPos,
+  animate, animateTong, setExpr, lookAtYaw, headPos, restylePlayer, normalizeLook,
 } from './characters.js';
+import { createCreator } from './creator.js';
 import { initAudio, updateAudio, sfx, setMuted, audio, initVoice, speak as speakRaw, voice } from './audio.js';
 import { buildNodes, tongHint, WORDS } from './story.js';
 import { createDialogue } from './dialogue.js';
@@ -68,6 +69,7 @@ let overview = false, vistaIndex = -1;
 const SAVE_KEY = 'tong-cozy-seoul-v2';
 const S = {
   name: '연습생',
+  look: null, // character-creator look; null keeps the original default player
   city: 'seoul',
   adventures: {},
   cityPositions: {},
@@ -105,7 +107,7 @@ function save() {
       JSON.stringify({
         version: 3, city: S.city, position: safePose(), adventures: S.adventures,
         cityPositions: S.cityPositions, postcards: S.postcards,
-        name: S.name, hour: S.hour, day: S.day, aff: S.aff, jinAff: S.jinAff,
+        name: S.name, look: S.look, hour: S.hour, day: S.day, aff: S.aff, jinAff: S.jinAff,
         words: [...S.words], phrases: [...S.phrases], visited: [...S.visited], quests: S.quests,
         pettedCat: S.pettedCat, metHaeunStudio: S.metHaeunStudio, jinTip: S.jinTip, haeunHomeUntil: S.haeunHomeUntil,
       }),
@@ -146,6 +148,8 @@ function applySave(d) {
   S.words = new Set(d.words ?? []);
   S.phrases = new Map(d.phrases ?? []);
   S.visited = new Set(d.visited ?? []);
+  S.look = d.look && typeof d.look === 'object' ? normalizeLook(d.look) : null;
+  if (S.look) restylePlayer(player, S.look);
   placePlayer(d.position);
 }
 
@@ -1531,6 +1535,10 @@ window.addEventListener('keydown', (e) => {
   if (modalOpen()) {
     keys.clear();
     if (k === 'b' && !transitioning && !ui.book.classList.contains('hidden') && !e.target.closest('input, select, textarea')) ui.book.classList.add('hidden');
+    if (k === 'escape' && !transitioning && !$('creator').classList.contains('hidden')) {
+      $('creator-back').click();
+      return;
+    }
     if (k === 'escape' && !transitioning) {
       ui.travel.classList.add('hidden');
       ui.book.classList.add('hidden');
@@ -2516,9 +2524,41 @@ async function boot() {
     setTimeout(tongTalk, 3800);
     save();
   };
-  $('start').onclick = () => begin(false);
+  const creator = createCreator();
+  $('start').onclick = () => {
+    $('title').classList.add('hidden');
+    creator.open({
+      look: S.look,
+      mode: 'new',
+      done: (look) => {
+        S.look = look;
+        restylePlayer(player, look);
+        begin(false);
+      },
+      back: () => {
+        $('title').classList.remove('hidden');
+        $('start').focus();
+      },
+    });
+  };
   $('continue').onclick = () => begin(true);
-  $('name').addEventListener('keydown', (e) => e.key === 'Enter' && begin(false));
+  $('name').addEventListener('keydown', (e) => e.key === 'Enter' && $('creator-start').click());
+  $('btn-look').onclick = () => {
+    if (!S.started || transitioning || dlg.state.active) return;
+    $('tools-panel').classList.add('hidden');
+    clearControls();
+    creator.open({
+      look: S.look,
+      mode: 'edit',
+      done: (look) => {
+        S.look = look;
+        restylePlayer(player, look);
+        save();
+        canvas.focus();
+      },
+      back: () => canvas.focus(),
+    });
+  };
   $('stay').onclick = () => {
     $('ending').classList.add('hidden');
     ui.hud.classList.remove('hidden');
@@ -2535,7 +2575,7 @@ async function boot() {
   };
 
   window.__cozy = {
-    S, player, haeun, jin, dlg, renderer, bloom, scene, sky, G, THREE, setHour,
+    S, player, haeun, jin, dlg, creator, renderer, bloom, scene, sky, G, THREE, setHour,
     travelTo: (id, options) => travelTo(id === 'airport' ? { id: 'airport', icon: '✈', ko: currentCity().airport.nativeName, en: currentCity().airport.name, spawn: currentCity().airport.spawn, yaw: currentCity().yaw } : cityPlaces().find((p) => p.id === id), options),
     cities, cityRegistry: cities, get currentCity() { return currentCity(); },
     changeCity, openTravel, save, localHour, heightAt, zoneAt,

@@ -17,6 +17,7 @@ async function boot(page, resume = false) {
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForFunction(() => window.__cozy, null, { timeout: 90000 });
   await page.locator(resume ? '#continue' : '#start').click();
+  if (!resume) await page.locator('#creator-start').click();
   await page.evaluate(() => { __cozy.S.speed = 0; __cozy.renderer.setPixelRatio(0.65); });
 }
 async function shot(page, name) {

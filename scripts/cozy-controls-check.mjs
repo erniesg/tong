@@ -29,6 +29,7 @@ try {
   await check('open actual cozy route', () => p.goto(process.env.COZY_URL || 'http://127.0.0.1:8420/cozy/index.html', { waitUntil: 'domcontentloaded', timeout: 60000 }), 65000);
   await check('runtime ready', () => p.waitForFunction(() => window.__cozy, null, { timeout: 90000 }), 95000);
   await check('Start', () => p.locator('#start').click());
+  await check('Create character', () => p.locator('#creator-start').click());
   await check('diagnostic paused-noon scene setup (not clock UI acceptance)', () => p.evaluate(() => { __cozy.S.speed = 0; __cozy.setHour(12); }));
   const initial = await p.evaluate(() => __cozy.cam.dist);
   await check('visible zoom in', async () => { await p.locator('#zoom-in').click(); await p.waitForFunction((distance) => __cozy.cam.dist < distance, initial); });

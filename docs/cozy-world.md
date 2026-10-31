@@ -20,6 +20,7 @@ Open `http://localhost:8420/cozy/index.html`. This does not deploy the game or e
 
 ## Play
 
+- **New game → Make your character:** name, play as 남자/여자 (guy/girl), then face (skin, eyes, single/double/hooded eyelids, brows, nose, mouth, freckles/beauty mark, hair, glasses) and outfit (hoodie/tee/knit/jacket, jeans/slacks/shorts/skirt, colours, shoes, beanie/cap). The live preview zooms to the face while you edit face options; drag to turn. Presentation shows the matching Korean address terms (형/누나 or 오빠/언니). **Tools → Change look** restyles you mid-game. The look is saved with the game; older saves keep the original default player.
 - **WASD / arrows:** move; **Shift / Run:** run; **Space / Jump:** hop. In dialogue, Space advances the conversation instead.
 - **Drag the world:** full orbit; **scroll / trackpad / pinch / + / −:** zoom. The visible zoom buttons work without opening a menu. Touch movement uses the dedicated joystick, leaving the rest of the world available for look/pinch gestures.
 - **E / interaction button:** talk, practice a phrase, use transit or choose a flight at an airport connection. In staffed rooms, walk up to the actual attendant; the activity retains local phrase/errand progress. Subway staff also offer the normal transit menu. Seoul's authored characters and schedules remain distinct.

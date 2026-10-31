@@ -155,7 +155,9 @@ function drawEye(g, cx, cy, ew, eh, side, f, E, state, look) {
     return;
   }
 
-  const lidOff = (E.lid ?? 0) * h * 1.25;
+  // Single lids sit a little lower at rest; hooded lids lower still.
+  const lidBase = f.lid === 'single' ? 0.12 : f.lid === 'hooded' ? 0.2 : 0;
+  const lidOff = Math.max(E.lid ?? 0, lidBase) * h * 1.25;
   const sclera = new Path2D();
   sclera.moveTo(-w, h * 0.12);
   sclera.bezierCurveTo(-w * 0.62, -h * 1.08, w * 0.62, -h * 1.08, w, -h * 0.08);
@@ -196,6 +198,18 @@ function drawEye(g, cx, cy, ew, eh, side, f, E, state, look) {
   g.moveTo(-w * 1.04, h * 0.12);
   g.bezierCurveTo(-w * 0.62, -h * 1.08 + lidOff * 1.3, w * 0.62, -h * 1.08 + lidOff * 1.3, w * 1.04, -h * 0.08);
   g.stroke();
+  if (f.lid === 'double' || f.lid === 'hooded') {
+    // Lid crease: well above the lash line for double lids, tucked close for hooded.
+    const up = f.lid === 'double' ? h * 0.36 : h * 0.14;
+    g.save();
+    g.globalAlpha = 0.5;
+    g.lineWidth = h * 0.07;
+    g.beginPath();
+    g.moveTo(-w * 0.7, -h * 0.55 - up * 0.6 + lidOff);
+    g.bezierCurveTo(-w * 0.4, -h * 1.08 - up + lidOff * 1.3, w * 0.55, -h * 1.08 - up + lidOff * 1.3, w * 1.0, -h * 0.3 - up * 0.5);
+    g.stroke();
+    g.restore();
+  }
   if (f.liner) {
     g.lineWidth = h * 0.17;
     g.beginPath();
@@ -220,7 +234,8 @@ function drawEye(g, cx, cy, ew, eh, side, f, E, state, look) {
 
 function drawMouth(g, kind, f) {
   const [mx, my, sx] = P(0, f.style === 'tong' ? -0.14 : -0.19);
-  const mw = sx * (f.mouthW ?? 0.07);
+  const shape = f.mouthShape ?? 'classic';
+  const mw = sx * (f.mouthW ?? 0.07) * (MOUTH_WIDTH[shape] ?? 1);
   g.save();
   g.translate(mx, my);
   g.lineCap = 'round';
@@ -228,6 +243,21 @@ function drawMouth(g, kind, f) {
   g.strokeStyle = f.mouthLine;
   g.lineWidth = 4;
   const dark = '#7a2832';
+  if (shape === 'cat' && (kind === 'smile' || kind === 'neutral')) {
+    // ω-shaped "cat" mouth, a common anime resting mouth
+    const h = kind === 'smile' ? mw * 0.2 : mw * 0.12;
+    g.beginPath();
+    g.moveTo(-mw * 0.42, -2);
+    g.quadraticCurveTo(-mw * 0.21, h * 1.6, 0, -1);
+    g.quadraticCurveTo(mw * 0.21, h * 1.6, mw * 0.42, -2);
+    g.stroke();
+    g.restore();
+    return;
+  }
+  if (shape === 'full' && ['smile', 'neutral', 'smirk', 'frown'].includes(kind)) {
+    g.fillStyle = 'rgba(214,112,122,0.55)';
+    ellipse(g, 0, mw * 0.2, mw * 0.24, mw * 0.1);
+  }
   switch (kind) {
     case 'smile':
       g.beginPath();
@@ -288,7 +318,90 @@ function drawMouth(g, kind, f) {
   g.restore();
 }
 
-function drawFace(g, f, st) {
+const MOUTH_WIDTH = { classic: 1, small: 0.75, wide: 1.3, cat: 1, full: 1 };
+
+// Brow shapes: thickness factor, arch height (px) and inner/outer lift (head-local metres).
+const BROWS = {
+  soft: { w: 1, arch: 5, inY: 0, outY: 0 },
+  straight: { w: 1, arch: 0, inY: 0.004, outY: -0.002 },
+  arched: { w: 0.85, arch: 11, inY: -0.004, outY: -0.004 },
+  thick: { w: 1.45, arch: 3, inY: 0.002, outY: 0 },
+  thin: { w: 0.6, arch: 7, inY: 0, outY: 0 },
+};
+
+/** Tapered brows; thicker at the inner end, raised/lowered by expression. */
+function drawBrows(g, f, E) {
+  const b = BROWS[f.browStyle] ?? BROWS.soft;
+  const lift = 0.014 * (E.brow ?? 0);
+  const w = (f.browW ?? 5) * 2.5 * b.w;
+  g.fillStyle = f.brow;
+  for (const s of [-1, 1]) {
+    const [ix, iy] = P(0.06 * s, 0.022 + lift + b.inY);
+    const [ox, oy] = P(0.185 * s, 0.03 + (f.browTilt ?? 0) * 0.012 + lift * 0.5 + b.outY);
+    const mx = ix + (ox - ix) * 0.55;
+    const my = Math.min(iy, oy) - b.arch;
+    g.beginPath();
+    g.moveTo(ix, iy - w / 2);
+    g.quadraticCurveTo(mx, my - w * 0.45, ox, oy - w * 0.12);
+    g.quadraticCurveTo(mx, my + w * 0.35, ix, iy + w / 2);
+    g.closePath();
+    g.fill();
+  }
+}
+
+function drawNose(g, f) {
+  const [nx, ny, sx] = P(0, -0.128);
+  const kind = f.nose ?? 'dot';
+  g.lineCap = 'round';
+  if (kind === 'button') {
+    g.strokeStyle = 'rgba(160,92,88,0.7)';
+    g.lineWidth = 2.5;
+    g.beginPath();
+    g.moveTo(nx - sx * 0.012, ny - 1);
+    g.quadraticCurveTo(nx, ny + 4, nx + sx * 0.012, ny - 1);
+    g.stroke();
+  } else if (kind === 'line') {
+    g.strokeStyle = 'rgba(150,88,84,0.7)';
+    g.lineWidth = 2.5;
+    g.beginPath();
+    g.moveTo(nx + 2, ny - sx * 0.03);
+    g.lineTo(nx + 4, ny + 1);
+    g.lineTo(nx - 1, ny + 3);
+    g.stroke();
+  } else if (kind === 'soft') {
+    const gr = g.createRadialGradient(nx, ny - 4, 0, nx, ny - 4, sx * 0.03);
+    gr.addColorStop(0, 'rgba(200,120,110,0.28)');
+    gr.addColorStop(1, 'rgba(200,120,110,0)');
+    g.fillStyle = gr;
+    ellipse(g, nx, ny - 4, sx * 0.03, sx * 0.025);
+    g.fillStyle = 'rgba(150,85,80,0.55)';
+    for (const s of [-1, 1]) ellipse(g, nx + s * 4, ny + 1, 2, 1.4);
+  } else {
+    g.fillStyle = 'rgba(170,100,95,0.55)';
+    ellipse(g, nx, ny, 3, 2);
+  }
+}
+
+// Fixed freckle scatter (head-local metres), mirrored across both cheeks and the nose bridge.
+const FRECKLES = [[0.15, -0.1], [0.18, -0.115], [0.205, -0.098], [0.165, -0.132], [0.225, -0.12], [0.135, -0.118], [0.19, -0.142], [0.035, -0.105]];
+
+function drawMarks(g, f) {
+  const m = f.marks ?? 'none';
+  if (m === 'freckles' || m === 'both') {
+    g.fillStyle = 'rgba(160,92,62,0.5)';
+    for (const s of [-1, 1]) for (const [x, y] of FRECKLES) {
+      const [fx, fy] = P(x * s, y);
+      ellipse(g, fx, fy, 2.4, 2);
+    }
+  }
+  if (m === 'mole' || m === 'both') {
+    const [mx, my] = P(0.165, -0.115);
+    g.fillStyle = 'rgba(70,40,34,0.85)';
+    ellipse(g, mx + 6, my + 10, 2.6, 2.6);
+  }
+}
+
+function drawFace(g, f, st, browG) {
   g.clearRect(0, 0, FW, FH);
   const E = EXPR[st.expr] ?? EXPR.neutral;
   const blush = Math.max(f.blush ?? 0.2, E.blush ?? 0);
@@ -311,9 +424,8 @@ function drawFace(g, f, st) {
     }
   }
   if (f.style !== 'tong') {
-    const [nx, ny] = P(0, -0.128);
-    g.fillStyle = 'rgba(170,100,95,0.55)';
-    ellipse(g, nx, ny, 3, 2);
+    drawMarks(g, f);
+    drawNose(g, f);
   }
   const eyeState = st.blink ? 'closed' : E.eyes;
   const ey = f.style === 'tong' ? -0.02 : -0.055;
@@ -321,21 +433,10 @@ function drawFace(g, f, st) {
   for (const s of [-1, 1]) {
     const [x, y, sx, sy] = P(ex * s, ey);
     const size = f.eyeSize ?? 1;
-    drawEye(g, x, y, sx * 0.1 * size, sy * 0.115 * size, s, f, E, eyeState, st.look ?? 0);
+    drawEye(g, x, y, sx * 0.1 * size, sy * 0.115 * size * (f.lid === 'single' ? 0.92 : 1), s, f, E, eyeState, st.look ?? 0);
   }
-  if (f.style !== 'tong' && !f.noBrows) {
-    g.strokeStyle = f.brow;
-    g.lineCap = 'round';
-    g.lineWidth = f.browW ?? 5;
-    for (const s of [-1, 1]) {
-      const [ix, iy] = P(0.07 * s, 0.045 + 0.014 * (E.brow ?? 0));
-      const [ox, oy] = P(0.19 * s, 0.05 + (f.browTilt ?? 0) * 0.012);
-      g.beginPath();
-      g.moveTo(ix, iy);
-      g.quadraticCurveTo((ix + ox) / 2, Math.min(iy, oy) - 6, ox, oy);
-      g.stroke();
-    }
-  }
+  if (browG) browG.clearRect(0, 0, FW, FH);
+  if (f.style !== 'tong' && !f.noBrows && (browG || !f.browLayer)) drawBrows(browG ?? g, f, E);
   if (f.mustache) {
     const [mx, my, sx] = P(0, -0.158);
     g.fillStyle = '#5a524e';
@@ -352,7 +453,15 @@ function makeFace(head, f) {
   const m = new THREE.Mesh(geo, toon(0xffffff, { map: tex, transparent: true, depthWrite: false }));
   m.renderOrder = 2;
   head.add(m);
-  return { g, tex, key: '', f };
+  // Brows live on a slightly larger shell so they read over bangs, as in anime art.
+  const [bc, browG] = makeCanvas(FW, FH);
+  const browTex = canvasTexture(bc, { repeat: false });
+  const browGeo = new THREE.SphereGeometry(R + 0.04, 48, 32, Math.PI / 2 - PHI_SPAN / 2, PHI_SPAN, TH0, TH1 - TH0);
+  const brows = new THREE.Mesh(browGeo, toon(0xffffff, { map: browTex, transparent: true, depthWrite: false }));
+  brows.renderOrder = 4;
+  head.add(brows);
+  f.browLayer = true;
+  return { g, tex, browG, browTex, key: '', browKey: null, f };
 }
 
 /* ── Hair ─────────────────────────────────────────── */
@@ -583,8 +692,14 @@ export function animate(c, dt, t, speed = 0) {
   const key = `${c.expr}|${c.blinking}|${talkOpen}|${c.look.toFixed(1)}`;
   if (key !== c.face.key) {
     c.face.key = key;
-    drawFace(c.face.g, c.face.f, { expr: c.expr, blink: c.blinking, talkOpen, look: c.look });
+    // Brows only depend on expression; skip their texture upload on blinks/talking.
+    const browG = c.face.browG && c.face.browKey !== c.expr ? c.face.browG : null;
+    drawFace(c.face.g, c.face.f, { expr: c.expr, blink: c.blinking, talkOpen, look: c.look }, browG);
     c.face.tex.needsUpdate = true;
+    if (browG) {
+      c.face.browKey = c.expr;
+      c.face.browTex.needsUpdate = true;
+    }
   }
 }
 
@@ -616,7 +731,7 @@ export function makeHaeun() {
     hairLight: 'rgba(150,160,200,0.85)',
     hairStyle: 'long',
     expr: 'cool',
-    face: { ...FACE_BASE, liner: true, tilt: 0.16, browTilt: 0.6, browW: 5, mouthLine: '#b8545c', blush: 0.18, iris: '#5a3a2a' },
+    face: { ...FACE_BASE, browStyle: 'arched', nose: 'line', mouthShape: 'full', lid: 'single', marks: 'mole', liner: true, tilt: 0.16, browTilt: 0.6, browW: 5, mouthLine: '#b8545c', blush: 0.18, iris: '#5a3a2a' },
     mats: { legs: texMat('#ffffff', denim('#5277b3'), 1.5), shoes: toon('#1d1d22'), sleeves: jacket },
     outfit: (c, { body, skin }) => {
       lathe([[0, 0.4], [0.18, 0.4], [0.205, 0.5], [0.19, 0.62], [0, 0.62]], texMat('#ffffff', denim('#5277b3'), 1.5), body);
@@ -654,7 +769,7 @@ export function makeJin() {
     hairLight: 'rgba(200,150,110,0.8)',
     hairStyle: 'wavy',
     expr: 'smile',
-    face: { ...FACE_BASE, iris: '#6a4632', tilt: 0.02, browW: 6, browTilt: -0.2, brow: '#3b261c', mouthLine: '#a56060', blush: 0.12, eyeSize: 0.92 },
+    face: { ...FACE_BASE, browStyle: 'soft', nose: 'button', mouthShape: 'cat', lid: 'double', iris: '#6a4632', tilt: 0.02, browW: 6, browTilt: -0.2, brow: '#3b261c', mouthLine: '#a56060', blush: 0.12, eyeSize: 0.92 },
     mats: { legs: toon('#5d5f66'), shoes: toon('#efe9df'), sleeves: sweater },
     outfit: (c, { body }) => {
       lathe([[0, 0.4], [0.18, 0.4], [0.2, 0.5], [0.19, 0.6], [0, 0.6]], toon('#5d5f66'), body);
@@ -674,32 +789,169 @@ export function makeJin() {
   });
 }
 
-export function makePlayer() {
-  const hoodie = texMat('#ffffff', fabric('#e7dac4'), 0.5);
+/* ── Player look (character creator) ─────────────── */
+
+export const LOOK_OPTIONS = {
+  skin: ['#f8dcc8', '#f4d4bd', '#e9bf9c', '#c98f68', '#8d5b3e'],
+  hair: ['#141419', '#3b2a20', '#7a5236', '#c9a06a', '#b0566b', '#5b6b8f'],
+  hairStyle: ['short', 'wavy', 'long', 'bun'],
+  eyes: ['#4e3a2c', '#2b1d18', '#6b7a4a', '#4f6f8f'],
+  brows: ['soft', 'straight', 'arched', 'thick', 'thin'],
+  nose: ['dot', 'button', 'line', 'soft'],
+  mouth: ['classic', 'small', 'wide', 'cat', 'full'],
+  lids: ['double', 'single', 'hooded'],
+  marks: ['none', 'freckles', 'mole', 'both'],
+  topStyle: ['hoodie', 'tee', 'knit', 'jacket'],
+  top: ['#e7dac4', '#9fb8d6', '#e9a8b5', '#7c9a6e', '#3c3f4a', '#c95b4a'],
+  bottom: ['jeans', 'slacks', 'shorts', 'skirt'],
+  bottomColor: ['#3e4f6e', '#5a5148', '#2f2f36', '#c9b48f', '#8a4a5a'],
+  shoes: ['#f7f4ee', '#2a2a2e', '#c9a27a', '#d9534f'],
+  hat: ['beanie', 'cap', 'none'],
+  glasses: [false, true],
+};
+
+// Fields stored as palette indices; the rest store the option value itself.
+const INDEXED = new Set(['skin', 'hair', 'eyes', 'top', 'bottomColor', 'shoes']);
+export const isIndexedLook = (k) => INDEXED.has(k);
+
+/** Presentation presets; every field remains individually editable. */
+export const LOOK_PRESETS = {
+  m: { gender: 'm', skin: 1, hair: 1, hairStyle: 'short', eyes: 0, brows: 'soft', nose: 'dot', mouth: 'classic', lids: 'double', marks: 'none',
+    topStyle: 'hoodie', top: 0, bottom: 'jeans', bottomColor: 0, shoes: 0, hat: 'beanie', glasses: false },
+  f: { gender: 'f', skin: 0, hair: 1, hairStyle: 'long', eyes: 0, brows: 'arched', nose: 'button', mouth: 'full', lids: 'double', marks: 'none',
+    topStyle: 'knit', top: 2, bottom: 'skirt', bottomColor: 2, shoes: 0, hat: 'none', glasses: false },
+};
+
+/** Coerce a saved/edited look into a valid one (unknown values fall back to the preset). */
+export function normalizeLook(look) {
+  const base = LOOK_PRESETS[look?.gender === 'f' ? 'f' : 'm'];
+  const out = { gender: base.gender };
+  for (const [k, values] of Object.entries(LOOK_OPTIONS)) {
+    let v = look?.[k];
+    if (k === 'hat' && typeof v === 'boolean') v = v ? 'beanie' : 'none'; // first creator build stored a boolean
+    const ok = INDEXED.has(k) ? Number.isInteger(v) && v >= 0 && v < values.length : values.includes(v);
+    out[k] = ok ? v : base[k];
+  }
+  return out;
+}
+
+function addTop(c, body, look, color) {
+  const torso = [[0, 0.5], [0.21, 0.5], [0.22, 0.6], [0.21, 0.78], [0.215, 0.95], [0.225, 1.03], [0.19, 1.1], [0.1, 1.15], [0, 1.16]];
+  if (look.topStyle === 'tee') {
+    const tee = toon(color);
+    lathe([[0, 0.5], [0.2, 0.5], [0.21, 0.6], [0.2, 0.78], [0.205, 0.95], [0.215, 1.03], [0.185, 1.1], [0.1, 1.15], [0, 1.16]], tee, body);
+    const neck = add(new THREE.TorusGeometry(0.095, 0.02, 8, 24), tee, 0, 1.13, 0.01, body);
+    neck.rotation.x = Math.PI / 2;
+    for (const a of c.arms) part(new THREE.CylinderGeometry(0.088, 0.096, 0.16, 12), tee, 0, -0.06, 0, a, { ol: 0.008 });
+  } else if (look.topStyle === 'knit') {
+    const sweater = texMat('#ffffff', knit(color), 0.6);
+    lathe(torso, sweater, body);
+    const hem = add(new THREE.TorusGeometry(0.212, 0.025, 8, 28), sweater, 0, 0.52, 0, body);
+    hem.rotation.x = Math.PI / 2;
+    const collar = add(new THREE.TorusGeometry(0.1, 0.03, 8, 24), sweater, 0, 1.13, 0.01, body);
+    collar.rotation.x = Math.PI / 2;
+    for (const a of c.arms) {
+      const cuff = add(new THREE.TorusGeometry(0.075, 0.025, 8, 16), sweater, 0, -0.31, 0, a);
+      cuff.rotation.x = Math.PI / 2;
+    }
+  } else if (look.topStyle === 'jacket') {
+    const jacket = texMat(color, leather(), 3);
+    lathe([[0, 0.5], [0.19, 0.5], [0.2, 0.6], [0.19, 0.8], [0.2, 0.95], [0.21, 1.03], [0.18, 1.1], [0.09, 1.15], [0, 1.16]], toon('#f7f5f0'), body);
+    const gap = 1.0;
+    const jk = lathe([[0.215, 0.5], [0.225, 0.6], [0.212, 0.8], [0.218, 0.95], [0.232, 1.03], [0.2, 1.1], [0.13, 1.16]], jacket, body, { phiStart: gap / 2, phiLength: TAU - gap, ol: 0 });
+    jk.material = jacket.clone();
+    jk.material.side = THREE.DoubleSide;
+    const collar = add(new THREE.TorusGeometry(0.13, 0.03, 8, 24, TAU - 1.3), jacket, 0, 1.13, 0, body);
+    collar.rotation.set(Math.PI / 2, 0, Math.PI / 2 + 0.65);
+  } else {
+    const hoodie = texMat('#ffffff', fabric(color), 0.5);
+    lathe(torso, hoodie, body);
+    add(new THREE.BoxGeometry(0.22, 0.12, 0.04), hoodie, 0, 0.66, 0.2, body);
+    const hood = add(new THREE.TorusGeometry(0.16, 0.07, 10, 24), hoodie, 0, 1.12, -0.1, body);
+    hood.rotation.x = Math.PI / 2 + 0.35;
+    for (const s of [-1, 1]) add(new THREE.CylinderGeometry(0.008, 0.008, 0.18, 5), toon('#f8f3ea'), s * 0.05, 0.98, 0.205, body, false);
+  }
+}
+
+function addHeadwear(c, look) {
+  if (look.hat === 'beanie') {
+    const beanieTex = tiled(knit('#e8a33d'), 3, 1.5);
+    const beanie = toon('#ffffff', { map: beanieTex.map, normalMap: beanieTex.normalMap });
+    part(new THREE.SphereGeometry(R + 0.04, 32, 16, 0, TAU, 0, Math.PI * 0.4), beanie, 0, 0.05, -0.01, c.head);
+    const cuff = add(new THREE.TorusGeometry(R + 0.005, 0.05, 10, 32), beanie, 0, 0.12, -0.01, c.head);
+    cuff.rotation.x = Math.PI / 2;
+    part(new THREE.SphereGeometry(0.08, 12, 10), toon('#fff3dc'), 0, 0.43, -0.01, c.head, { ol: 0.008 });
+  } else if (look.hat === 'cap') {
+    const capM = toon(LOOK_OPTIONS.top[look.top]);
+    part(new THREE.SphereGeometry(R + 0.035, 32, 16, 0, TAU, 0, Math.PI * 0.42), capM, 0, 0.06, -0.01, c.head);
+    const brim = part(new THREE.CylinderGeometry(0.2, 0.2, 0.025, 24, 1, false, -Math.PI / 2, Math.PI), capM, 0, 0.17, 0.25, c.head, { ol: 0.008 });
+    brim.scale.set(1, 1, 0.9);
+    brim.rotation.x = 0.12;
+    part(new THREE.SphereGeometry(0.03, 8, 6), capM, 0, 0.43, -0.01, c.head, { ol: 0.006 });
+  }
+  if (look.glasses) {
+    const frame = toon('#2a1c22');
+    for (const s of [-1, 1]) {
+      const ring = add(new THREE.TorusGeometry(0.068, 0.009, 6, 24), frame, s * 0.128, -0.055, 0.35, c.head, false);
+      ring.rotation.y = s * 0.36;
+      add(new THREE.BoxGeometry(0.012, 0.012, 0.3), frame, s * 0.33, -0.04, 0.17, c.head, false).rotation.y = s * 0.12;
+    }
+    add(new THREE.BoxGeometry(0.06, 0.01, 0.01), frame, 0, -0.045, 0.36, c.head, false);
+  }
+}
+
+export function makePlayer(rawLook = LOOK_PRESETS.m) {
+  const look = normalizeLook(rawLook);
+  const fem = look.gender === 'f';
+  const O = LOOK_OPTIONS;
+  const skinTone = O.skin[look.skin];
+  const lower = O.bottomColor[look.bottomColor];
+  const denimMat = texMat('#ffffff', denim(lower), 1.5);
+  const cloth = look.bottom === 'jeans' ? denimMat : look.bottom === 'skirt' ? texMat('#ffffff', fabric(lower), 0.8) : toon(lower);
+  // Shorts and skirts show the leg; a skirt adds dark tights.
+  const legs = look.bottom === 'shorts' ? toon(skinTone) : look.bottom === 'skirt' ? toon('#3a3640') : cloth;
+  const sleeves = look.topStyle === 'tee' ? toon(skinTone)
+    : look.topStyle === 'knit' ? texMat('#ffffff', knit(O.top[look.top]), 0.6)
+    : look.topStyle === 'jacket' ? texMat(O.top[look.top], leather(), 3)
+    : texMat('#ffffff', fabric(O.top[look.top]), 0.5);
+  const features = { browStyle: look.brows, nose: look.nose, mouthShape: look.mouth, lid: look.lids, marks: look.marks, iris: O.eyes[look.eyes], brow: '#2b1d1a' };
   return makeChibi({
     name: 'player',
-    skin: '#f4d4bd',
-    hair: '#3b2a20',
-    hairLight: 'rgba(160,120,90,0.7)',
-    hairStyle: 'short',
+    skin: skinTone,
+    hair: O.hair[look.hair],
+    hairLight: 'rgba(170,130,100,0.7)',
+    hairStyle: look.hairStyle,
     expr: 'smile',
-    face: { ...FACE_BASE, iris: '#4e3a2c', tilt: 0.04, browW: 5, eyeSize: 0.95 },
-    mats: { legs: texMat('#ffffff', denim('#3e4f6e'), 1.5), shoes: toon('#f7f4ee'), sleeves: hoodie },
+    face: fem
+      ? { ...FACE_BASE, lashes: true, tilt: 0.08, browW: 4.5, blush: 0.24, mouthLine: '#b8585f', eyeSize: 1, ...features }
+      : { ...FACE_BASE, tilt: 0.04, browW: 5.5, eyeSize: 0.95, ...features },
+    mats: { legs, shoes: toon(O.shoes[look.shoes]), sleeves },
     outfit: (c, { body }) => {
-      lathe([[0, 0.4], [0.18, 0.4], [0.2, 0.5], [0.19, 0.6], [0, 0.6]], texMat('#ffffff', denim('#3e4f6e'), 1.5), body);
-      lathe([[0, 0.5], [0.21, 0.5], [0.22, 0.6], [0.21, 0.78], [0.215, 0.95], [0.225, 1.03], [0.19, 1.1], [0.1, 1.15], [0, 1.16]], hoodie, body);
-      add(new THREE.BoxGeometry(0.22, 0.12, 0.04), hoodie, 0, 0.66, 0.2, body);
-      const hood = add(new THREE.TorusGeometry(0.16, 0.07, 10, 24), hoodie, 0, 1.12, -0.1, body);
-      hood.rotation.x = Math.PI / 2 + 0.35;
-      for (const s of [-1, 1]) add(new THREE.CylinderGeometry(0.008, 0.008, 0.18, 5), toon('#f8f3ea'), s * 0.05, 0.98, 0.205, body, false);
-      const beanieTex = tiled(knit('#e8a33d'), 3, 1.5);
-      const beanie = toon('#ffffff', { map: beanieTex.map, normalMap: beanieTex.normalMap });
-      part(new THREE.SphereGeometry(R + 0.04, 32, 16, 0, TAU, 0, Math.PI * 0.4), beanie, 0, 0.05, -0.01, c.head);
-      const cuff = add(new THREE.TorusGeometry(R + 0.005, 0.05, 10, 32), beanie, 0, 0.12, -0.01, c.head);
-      cuff.rotation.x = Math.PI / 2;
-      part(new THREE.SphereGeometry(0.08, 12, 10), toon('#fff3dc'), 0, 0.43, -0.01, c.head, { ol: 0.008 });
+      if (look.bottom === 'skirt') {
+        lathe([[0, 0.38], [0.27, 0.38], [0.24, 0.5], [0.205, 0.62], [0, 0.62]], cloth, body);
+      } else {
+        lathe([[0, 0.4], [0.18, 0.4], [0.2, 0.5], [0.19, 0.6], [0, 0.6]], cloth, body);
+        if (look.bottom === 'shorts') for (const l of c.legs) part(new THREE.CylinderGeometry(0.105, 0.11, 0.16, 12), cloth, 0, -0.04, 0, l, { ol: 0.008 });
+      }
+      addTop(c, body, look, O.top[look.top]);
+      addHeadwear(c, look);
     },
   });
+}
+
+/** Rebuild an existing player's body in place, keeping its root, rides, pose and story references. */
+export function restylePlayer(c, look) {
+  const n = makePlayer(look);
+  n.root.remove(n.body);
+  G.scene.remove(n.root);
+  n.body.position.copy(c.body.position);
+  n.body.rotation.copy(c.body.rotation);
+  c.root.remove(c.body);
+  c.root.add(n.body);
+  for (const k of ['body', 'head', 'legs', 'arms', 'hair', 'face', 'skin', 'legSwing']) c[k] = n[k];
+  c.face.key = '';
+  c.face.browKey = null;
+  return c;
 }
 
 export function makeAjusshi() {
@@ -710,7 +962,7 @@ export function makeAjusshi() {
     hairLight: 'rgba(230,230,230,0.6)',
     hairStyle: 'short',
     expr: 'smile',
-    face: { ...FACE_BASE, iris: '#3a2a22', tilt: -0.05, browW: 8, brow: '#6d6560', mustache: true, eyeSize: 0.8, blush: 0.3 },
+    face: { ...FACE_BASE, browStyle: 'thick', nose: 'soft', mouthShape: 'wide', lid: 'hooded', iris: '#3a2a22', tilt: -0.05, browW: 8, brow: '#6d6560', mustache: true, eyeSize: 0.8, blush: 0.3 },
     mats: { legs: toon('#3e3f48'), shoes: toon('#2a2a2e'), sleeves: toon('#ddd5c4') },
     outfit: (c, { body }) => {
       lathe([[0, 0.4], [0.18, 0.4], [0.21, 0.5], [0.2, 0.6], [0, 0.6]], toon('#3e3f48'), body);
@@ -731,7 +983,7 @@ export function makeBarista() {
     hairLight: 'rgba(200,150,110,0.7)',
     hairStyle: 'bun',
     expr: 'smile',
-    face: { ...FACE_BASE, lashes: true, iris: '#5d3c2a', tilt: 0.06, blush: 0.28, mouthLine: '#c0606a' },
+    face: { ...FACE_BASE, browStyle: 'thin', nose: 'button', mouthShape: 'small', lid: 'double', marks: 'freckles', lashes: true, iris: '#5d3c2a', tilt: 0.06, blush: 0.28, mouthLine: '#c0606a' },
     mats: { legs: toon('#2f2f36'), shoes: toon('#2a2a2e'), sleeves: toon('#f4ede4') },
     outfit: (c, { body }) => {
       lathe([[0, 0.4], [0.18, 0.4], [0.2, 0.5], [0.19, 0.6], [0, 0.6]], toon('#2f2f36'), body);
@@ -749,7 +1001,7 @@ export function makeCashier() {
     hairLight: 'rgba(140,150,190,0.7)',
     hairStyle: 'short',
     expr: 'smile',
-    face: { ...FACE_BASE, iris: '#3e2c22', tilt: 0, eyeSize: 0.9 },
+    face: { ...FACE_BASE, browStyle: 'straight', nose: 'dot', lid: 'single', iris: '#3e2c22', tilt: 0, eyeSize: 0.9 },
     mats: { legs: toon('#33384a'), shoes: toon('#2a2a2e'), sleeves: toon('#fafafa') },
     outfit: (c, { body }) => {
       lathe([[0, 0.4], [0.18, 0.4], [0.2, 0.5], [0.19, 0.6], [0, 0.6]], toon('#33384a'), body);
@@ -776,7 +1028,9 @@ export function makePedestrian(seed) {
     hairLight: 'rgba(170,150,140,0.6)',
     hairStyle: style,
     expr: p(['neutral', 'smile', 'smile']),
-    face: { ...FACE_BASE, lashes: style !== 'short', tilt: r() * 0.12, eyeSize: 0.85 + r() * 0.15 },
+    face: { ...FACE_BASE, lashes: style !== 'short', tilt: r() * 0.12, eyeSize: 0.85 + r() * 0.15,
+      browStyle: p(['soft', 'straight', 'arched', 'thick', 'thin']), nose: p(['dot', 'button', 'line', 'soft']), mouthShape: p(['classic', 'small', 'wide', 'cat', 'full']),
+      lid: p(['single', 'single', 'double', 'hooded']), marks: p(['none', 'none', 'none', 'freckles', 'mole']) },
     mats: { legs: toon(pants), shoes: toon(p(['#f7f4ee', '#2a2a2e', '#c9a27a'])), sleeves: toon(top) },
     outfit: (c, { body }) => {
       lathe([[0, 0.4], [0.18, 0.4], [0.2, 0.5], [0.19, 0.6], [0, 0.6]], toon(pants), body);

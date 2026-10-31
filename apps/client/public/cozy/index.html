@@ -112,6 +112,7 @@
           <button id="btn-voice" class="chip" title="Korean voice">🗣️ Voice</button>
           <button id="btn-mute" class="chip" title="Sound (M)">🔊 Sound</button>
           <button id="btn-postcards" class="chip" title="City postcard collection">📮 Postcards</button>
+          <button id="btn-look" class="chip" title="Change your look">👕 Change look</button>
         </div>
       </section>
       <section class="tool-section" aria-labelledby="time-title">
@@ -217,8 +218,6 @@
       <img class="title-tong" src="img/tong-cheerful.png" alt="Tong" />
       <h1>Tong · City Adventures</h1>
       <p class="subtitle">서울 · 東京 · 上海<br />Explore three compressed cities, day and night.<br />Meet friends in Hongdae, learn local phrases,<br />deliver a snack and fly to your next adventure.</p>
-      <label class="name-label" for="name">What should everyone call you?</label>
-      <input id="name" class="name-input" maxlength="12" placeholder="연습생" autocomplete="off" />
       <div class="title-buttons">
         <button id="start" class="btn-primary">시작 · New game</button>
         <button id="continue" class="btn-secondary hidden">이어하기 · Continue</button>
@@ -234,6 +233,39 @@
         <span><kbd>F</kbd> fast time</span>
       </div>
       <div id="loading" class="loading">Building three city adventures…</div>
+    </div>
+  </div>
+
+  <!-- Character creator -->
+  <div id="creator" class="overlay title-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="creator-title">
+    <div class="card creator-card">
+      <div class="creator-preview">
+        <canvas id="creator-canvas" aria-label="Your character preview. Drag to turn."></canvas>
+        <button id="creator-zoom" type="button" class="chip creator-zoom">🔍 Face</button>
+        <span class="creator-turn">drag to turn</span>
+      </div>
+      <div class="creator-form">
+        <span class="eyebrow">나 · Me</span>
+        <h2 id="creator-title">Make your character</h2>
+        <div class="creator-name">
+          <label class="name-label" for="name">What should everyone call you?</label>
+          <input id="name" class="name-input" maxlength="12" placeholder="연습생" autocomplete="off" />
+        </div>
+        <div class="creator-row" role="radiogroup" aria-label="Play as">
+          <span class="creator-label">Play as</span>
+          <div class="creator-options">
+            <button type="button" role="radio" class="creator-choice" data-gender="m">남자 · Guy</button>
+            <button type="button" role="radio" class="creator-choice" data-gender="f">여자 · Girl</button>
+          </div>
+        </div>
+        <p id="look-note" class="look-note"></p>
+        <div id="creator-rows"></div>
+        <div class="title-buttons creator-buttons">
+          <button id="creator-back" class="btn-secondary">← Back</button>
+          <button id="creator-shuffle" class="btn-secondary" aria-label="Surprise me">🎲<span class="creator-wide"> Surprise me</span></button>
+          <button id="creator-start" class="btn-primary">시작 · Start</button>
+        </div>
+      </div>
     </div>
   </div>
 
