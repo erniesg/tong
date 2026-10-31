@@ -658,7 +658,7 @@ function buildTent() {
     add(new THREE.CylinderGeometry(0.005, 0.005, 0.45, 4), poleM, TX + dx, ridgeH - 0.25, -0.1, G.scene, false);
     add(new THREE.SphereGeometry(0.07, 12, 10), bulbM, TX + dx, ridgeH - 0.5, -0.1, G.scene, false);
   }
-  tentMats.light = pointLight(0xffb066, 10, 14, TX, 2.35, -0.3, { day: 2 });
+  tentMats.light = pointLight(0xffb066, 4, 14, TX, 2.35, -0.3, { day: 2 });
 
   const menu = textTexture(
     [

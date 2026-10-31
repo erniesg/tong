@@ -33,7 +33,8 @@ async function scene(cityId) {
   const homes = await load(resolve(root, 'apartments.js'));
   const staff = await load(resolve(root, 'occupants.js'));
   const world = cityId === 'seoul' ? await load(resolve(root, 'world.js')) : null;
-  await native.evaluate(); await homes.evaluate(); await staff.evaluate(); if (world) await world.evaluate();
+  const sky = cityId === 'seoul' ? await load(resolve(root, 'sky.js')) : null;
+  await native.evaluate(); await homes.evaluate(); await staff.evaluate(); if (world) await world.evaluate(); if (sky) await sky.evaluate();
   const THREE = (await load(process.env.COZY_THREE_MODULE)).namespace;
   const { G } = (await load(resolve(root, 'util.js'))).namespace;
   const rooms = (await load(resolve(root, 'interiors.js'))).namespace;
@@ -52,7 +53,7 @@ async function scene(cityId) {
   const occupants = staff.namespace.createOccupants(rooms.interiors);
   const heightAt = (x,z,y) => homes.namespace.apartmentHeightAt(x,z,y,cityId) ?? 0;
   const ceilingAt = (x,z,y) => homes.namespace.apartmentCeilingAt(x,z,y,cityId) ?? rooms.interiorAt({x,y,z},cityId)?.ceilingAt?.(x,z,y);
-  return { G, THREE, world: world?.namespace, homeApi: homes.namespace, city, b, occupants, rooms, places, nativeSolids, heightAt, ceilingAt };
+  return { G, THREE, sky: sky?.namespace, world: world?.namespace, homeApi: homes.namespace, city, b, occupants, rooms, places, nativeSolids, heightAt, ceilingAt };
 }
 
 function checkBoardGuide({ G, city }) {
@@ -89,6 +90,20 @@ function checkBoardGuide({ G, city }) {
   assert.equal(cam.yaw, city.yaw); assert.equal(cam.pitch, .36); assert.equal(cam.dist, 6.5);
 }
 
+function checkTentLight({ G, THREE, world, sky }) {
+  const lamp = G.nightLights.find(({ light }) => light.position.x === world.TX && light.position.y === 2.35 && light.position.z === -.3);
+  assert.ok(lamp, 'actual authored tent emitter is registered');
+  assert.equal(lamp.day, 2); assert.equal(lamp.night, 4);
+  assert.equal(lamp.light.color.getHex(), 0xffb066);
+  assert.equal(lamp.light.distance, 14); assert.equal(lamp.light.decay, 2);
+  const cycle = new sky.DayNight(), focus = new THREE.Vector3(), camera = new THREE.PerspectiveCamera();
+  for (const [hour, expected] of [[12, 2], [18.5, 3.1], [20.5, 3.922222222222222], [0, 4], [12, 2]]) {
+    cycle.update(hour, 0, focus, camera);
+    assert.ok(Math.abs(lamp.light.intensity - expected) < 1e-10, `actual day/night update at ${hour}`);
+  }
+  // This checks local configuration/interpolation, NOT visual improvement.
+}
+
 function checkTentEntry(h) {
   const { G, THREE, world, homeApi, rooms, city } = h, { TX, TENT } = world;
   const source = readFileSync(resolve('apps/client/public/cozy/js/main.js'), 'utf8');
@@ -119,6 +134,7 @@ for (const cityId of ['seoul', 'tokyo', 'shanghai']) test(`${cityId}: actual plo
   if (cityId === 'seoul') {
     await t.test('actual artwork Guide callback is camera-only and preserves named landmarks / reset', () => checkBoardGuide(h));
     await t.test('authored tent visible header and actual runtime ceiling permit night entry, retain closed flap', () => checkTentEntry(h));
+    await t.test('local tent calibration preserves noon and the actual day/night update path', () => checkTentLight(h));
   }
   assert.equal(places.filter(p => p.category === 'home').length, 1);
   for (const category of ['food','cafe','store','subway','studio']) assert.ok(places.some(p => p.category === category), category);
