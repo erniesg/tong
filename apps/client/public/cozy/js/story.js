@@ -252,7 +252,7 @@ export function buildNodes(A) {
       en: 'Oh, you made it? Have a seat.',
       choices: [
         { ko: '선배님, 안녕하세요!', rom: 'seonbaenim, annyeonghaseyo', en: 'Hello, sunbae!', jin: 1, next: 'jin_sunbae' },
-        { ko: '오늘 연습 어땠어요?', rom: 'oneul yeonseup eottaesseoyo', en: 'How was practice today?', jin: 1, next: 'jin_practice' },
+        { ko: '오늘 촬영 어땠어요?', rom: 'oneul chwaryeong eottaesseoyo', en: 'How was filming today?', jin: 1, next: 'jin_practice' },
       ],
     },
     jin_sunbae: {
@@ -264,7 +264,7 @@ export function buildNodes(A) {
       enter: () => A.learn('선배', 'seonbae', 'senior (at school/work)'),
       next: 'jin_haeun',
     },
-    jin_practice: { who: 'jin', expr: 'sad', ko: '솔직히 좀 떨려. 데뷔가 얼마 안 남았거든.', en: 'Honestly, I’m a bit nervous. Debut is coming up.', next: 'jin_haeun' },
+    jin_practice: { who: 'jin', expr: 'sad', ko: '길었어. 하루 종일 다른 사람으로 살았거든.', en: 'Long. I spent all day being someone else.', hint: '<b>촬영</b> (chwaryeong) = filming, a shoot.', enter: () => A.learn('촬영', 'chwaryeong', 'filming / a shoot'), next: 'jin_haeun' },
     jin_haeun: {
       who: 'jin',
       expr: 'smile',
@@ -282,19 +282,19 @@ export function buildNodes(A) {
     jin_night: {
       who: 'jin',
       expr: 'smile',
-      ko: '한강 진짜 예쁘지? …데뷔하면 이런 밤이 그리울 것 같아.',
-      en: 'The Han River’s beautiful, right? …Once I debut, I’ll miss nights like this.',
+      ko: '한강 진짜 예쁘지? …여기선 아무도 날 못 알아봐. 그게 좋아.',
+      en: 'The Han River’s beautiful, right? …Nobody recognises me out here. I like that.',
       choices: [
-        { ko: '선배는 잘할 거예요.', rom: 'seonbaeneun jalhal geoyeyo', en: 'You’ll do great, sunbae.', jin: 1, next: 'jin_night_thanks' },
+        { ko: '여기선 그냥 진이에요.', rom: 'yeogiseon geunyang jinieyo', en: 'Out here you’re just Jin.', jin: 1, next: 'jin_night_thanks' },
         { ko: '같이 사진 찍어요!', rom: 'gachi sajin jjigeoyo', en: 'Let’s take a photo together!', jin: 1, next: 'jin_photo' },
       ],
     },
-    jin_night_thanks: { who: 'jin', expr: 'happy', ko: '고마워. 너도 금방이야. 진짜로.', en: 'Thanks. You’ll get there soon too. Really.', enter: () => A.done('jinNight'), end: true },
+    jin_night_thanks: { who: 'jin', expr: 'happy', ko: '…고마워. 그 말 좋다.', en: '…Thanks. I like hearing that.', enter: () => A.done('jinNight'), end: true },
     jin_photo: {
       who: 'jin',
       expr: 'laugh',
-      ko: '좋아! 하나, 둘, 셋— 김치!',
-      en: 'Sure! One, two, three— kimchi!',
+      ko: '우리끼리만 보는 거면… 좋아. 하나, 둘, 셋— 김치!',
+      en: 'If it stays just between us… okay. One, two, three— kimchi!',
       hint: 'Koreans say <b>김치~</b> instead of “cheese” for photos.',
       enter: () => {
         A.done('jinNight');
