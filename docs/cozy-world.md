@@ -76,6 +76,8 @@ With the private server running and Playwright available, check the new actual c
 node scripts/cozy-controls-check.mjs
 ```
 
+The occupied-world follow-up adds source/geometry regressions for the actual ride selector and saved-pose dispatch, open stocked shelf bays, and compact apartment wall-plane cutaways. At product `03cf8ea`, 57 configured CPU checks passed; focused browser checks exercised all three actual ride selections/models/movement and the repaired store. New apartment angle/restoration views use explicit diagnostic positions, separate from the earlier physical stair journeys. They are not native-quality, reload or whole-game acceptance; independent repair review is still pending.
+
 That focused scenario exercises visible zoom, wheel, more than one full drag orbit, actual two-touch pinch, responsive resize, run/jump/landing and all three rendered ride/brake inputs. It uses a labelled diagnostic paused/noon setup, not the clock UI as proof. It does not prove all interiors, device performance or every older gameplay path.
 
 The older combined `node scripts/cozy-browser-check.mjs` includes reload and a longer journey. Its unresolved VM timeout history remains a separate hold; new feature checks do not erase it.
