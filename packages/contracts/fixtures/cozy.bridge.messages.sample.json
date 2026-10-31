@@ -90,6 +90,7 @@
       "protocol": "tong-cozy-bridge", "version": 1, "type": "host:migrated", "requestId": "c1-migrate",
       "payload": { "applied": true, "progress": { "xp": 0, "sp": 0, "level": null, "relationships": { "haeun": { "affinity": 15, "stage": "strangers" }, "jin": { "affinity": 5, "stage": "strangers" } }, "locationHangoutCounts": {}, "items": {} } }
     },
+    { "protocol": "tong-cozy-bridge", "version": 1, "type": "host:viewport", "payload": { "safeArea": { "top": 47, "right": 0, "bottom": 34, "left": 0 } } },
     { "protocol": "tong-cozy-bridge", "version": 1, "type": "host:error", "requestId": "c1-bad", "payload": { "reason": "unknown exerciseType" } }
   ]
 }

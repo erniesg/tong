@@ -38,10 +38,10 @@ body[data-text-scale="large"] { --small: 16px; --body: 18px; --native: clamp(24p
   overflow: hidden;
   background: #333b42;
   --edge: 16px;
-  --top: max(var(--edge), env(safe-area-inset-top, 0px));
-  --bottom: max(var(--edge), env(safe-area-inset-bottom, 0px));
-  --left: max(var(--edge), env(safe-area-inset-left, 0px));
-  --right: max(var(--edge), env(safe-area-inset-right, 0px));
+  --top: max(var(--edge), env(safe-area-inset-top, 0px), var(--host-safe-top, 0px));
+  --bottom: max(var(--edge), env(safe-area-inset-bottom, 0px), var(--host-safe-bottom, 0px));
+  --left: max(var(--edge), env(safe-area-inset-left, 0px), var(--host-safe-left, 0px));
+  --right: max(var(--edge), env(safe-area-inset-right, 0px), var(--host-safe-right, 0px));
 }
 body[data-layout="portrait"] #game-shell {
   width: min(100vw, calc(100dvh * 9 / 16));
@@ -210,7 +210,7 @@ body.no-en .line-en, body.no-en .choice .en { display: none; }
 @keyframes blink { 50% { opacity: 0; } }
 
 /* Contained, scrollable dialogs with reachable close controls. */
-.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); background: #14132199; z-index: 10; }
+.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: max(12px, var(--top)) max(12px, var(--right)) max(12px, var(--bottom)) max(12px, var(--left)); background: #14132199; z-index: 10; }
 .title-overlay { background: radial-gradient(ellipse at center, #14132118, #0a08168c); }
 .card { background: var(--cream); border-radius: 24px; padding: clamp(16px, 3cqi, 26px); box-shadow: 0 20px 60px #0005; border: 2px solid #fff; text-align: center; width: min(500px, 100%); max-height: 100%; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .title-tong { width: 80px; height: 80px; object-fit: contain; }

@@ -1263,9 +1263,18 @@ export type CozyToHostMessage =
   | CozyEnvelope<'cozy:progress', { events: CozyProgressEvent[] }>
   | CozyEnvelope<'cozy:migrate', CozyLegacyMigration>;
 
-/** Host page → cozy game. 'host:progress' is also pushed unprompted when the store changes. */
+/** The host page's safe-area insets in CSS px; an iframe cannot read them itself on iOS. */
+export interface CozyViewport {
+  safeArea: { top: number; right: number; bottom: number; left: number };
+}
+
+/**
+ * Host page → cozy game. 'host:progress' is also pushed unprompted when the
+ * store changes, and 'host:viewport' after ready and on resize/rotation.
+ */
 export type HostToCozyMessage =
   | CozyEnvelope<'host:ready', { progress: CozyProgressSnapshot }>
+  | CozyEnvelope<'host:viewport', CozyViewport>
   | CozyEnvelope<'host:progress', { progress: CozyProgressSnapshot }>
   | CozyEnvelope<'host:exercise-result', CozyExerciseResult>
   | CozyEnvelope<'host:migrated', CozyMigrationResult>

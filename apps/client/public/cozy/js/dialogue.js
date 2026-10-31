@@ -103,8 +103,21 @@ export function createDialogue(ctx) {
     d.typing = false;
     d.shown = d.full.length;
     ui.ko.textContent = d.full;
-    if (d.choices.length) renderChoices();
+    if (d.node?.exercise) runExercise(d.node);
+    else if (d.choices.length) renderChoices();
     else ui.next.classList.remove('hidden');
+  }
+
+  // Exercise nodes hand over to a shared Tong exercise once the line is shown,
+  // then continue with next(result) (a CozyExerciseResult).
+  function runExercise(n) {
+    if (d.locked) return;
+    d.locked = true;
+    setTimeout(async () => {
+      if (d.node !== n) return;
+      const result = await ctx.exercise(val(n.exercise));
+      if (d.node === n) go(n.next(result));
+    }, 600);
   }
 
   function renderChoices() {

@@ -20,6 +20,7 @@ import { createCreator } from './creator.js';
 import { initAudio, updateAudio, sfx, setMuted, audio, initVoice, speak as speakRaw, voice } from './audio.js';
 import { buildNodes, tongHint, WORDS } from './story.js';
 import { createDialogue } from './dialogue.js';
+import { createBridge, AFFINITY_PER_HEART, stageOf, affinityOf, legacyProgress } from './bridge.js';
 import seoul from './cities/seoul.js';
 import tokyo from './cities/tokyo.js';
 import shanghai from './cities/shanghai.js';
@@ -77,6 +78,8 @@ const S = {
   hour: 16.5,
   day: 1,
   speed: 1,
+  // Hearts earned this session (tonight's ending card). Lasting relationships
+  // live in the Tong app's shared store via the bridge.
   aff: 0,
   maxAff: 8,
   jinAff: 0,
@@ -98,18 +101,23 @@ const S = {
   benchSit: null,
   telescope: false,
   polaroids: [],
+  legacy: null, // pre-bridge progress awaiting a one-time import into the shared store
 };
+
+const bridge = createBridge();
+let bridgeBusy = false; // a shared exercise is open over the game
 
 function save() {
   try {
     localStorage.setItem(
       SAVE_KEY,
       JSON.stringify({
-        version: 3, city: S.city, position: safePose(), adventures: S.adventures,
+        version: 4, city: S.city, position: safePose(), adventures: S.adventures,
         cityPositions: S.cityPositions, postcards: S.postcards,
-        name: S.name, look: S.look, hour: S.hour, day: S.day, aff: S.aff, jinAff: S.jinAff,
-        words: [...S.words], phrases: [...S.phrases], visited: [...S.visited], quests: S.quests,
+        name: S.name, look: S.look, hour: S.hour, day: S.day,
+        words: [...S.words], gloss: [...S.phrases], visited: [...S.visited], quests: S.quests,
         pettedCat: S.pettedCat, metHaeunStudio: S.metHaeunStudio, jinTip: S.jinTip, haeunHomeUntil: S.haeunHomeUntil,
+        ...(S.legacy ? { legacy: S.legacy } : {}),
       }),
     );
   } catch {
@@ -127,13 +135,11 @@ function loadSave() {
 }
 
 function applySave(d) {
-  Object.assign(S, { name: d.name, hour: d.hour, day: d.day, aff: d.aff, jinAff: d.jinAff, quests: d.quests ?? {}, pettedCat: d.pettedCat, metHaeunStudio: d.metHaeunStudio, jinTip: d.jinTip, haeunHomeUntil: d.haeunHomeUntil ?? 0 });
+  Object.assign(S, { name: d.name, hour: d.hour, day: d.day, quests: d.quests ?? {}, pettedCat: d.pettedCat, metHaeunStudio: d.metHaeunStudio, jinTip: d.jinTip, haeunHomeUntil: d.haeunHomeUntil ?? 0 });
   S.city = Object.hasOwn(cities, d.city) ? d.city : 'seoul';
   S.hour = Number.isFinite(d.hour) ? ((d.hour % 24) + 24) % 24 : 16.5;
   S.day = Number.isFinite(d.day) && d.day >= 1 ? Math.floor(d.day) : 1;
   S.name = typeof d.name === 'string' ? d.name : '연습생';
-  S.aff = clamp(Number(d.aff) || 0, 0, S.maxAff);
-  S.jinAff = clamp(Number(d.jinAff) || 0, 0, S.maxJin);
   S.adventures = {};
   for (const id of Object.keys(cities)) {
     const a = d.adventures?.[id];
@@ -146,7 +152,7 @@ function applySave(d) {
   S.cityPositions = d.cityPositions && typeof d.cityPositions === 'object' ? d.cityPositions : {};
   S.postcards = Array.isArray(d.postcards) ? d.postcards.filter((id) => Object.hasOwn(cities, id)) : [];
   S.words = new Set(d.words ?? []);
-  S.phrases = new Map(d.phrases ?? []);
+  S.phrases = new Map((d.version >= 4 ? d.gloss : d.phrases) ?? []);
   S.visited = new Set(d.visited ?? []);
   S.look = d.look && typeof d.look === 'object' ? normalizeLook(d.look) : null;
   if (S.look) restylePlayer(player, S.look);
@@ -589,19 +595,30 @@ function banner(ko, en) {
   bannerTimer = setTimeout(() => ui.banner.classList.add('out'), 2200);
 }
 
+const HANGUL = /[\uac00-\ud7a3]/;
+
 function learn(ko, rom, en) {
   if (!S.phrases.has(ko)) S.phrases.set(ko, { rom, en });
-  ui.bookCount.textContent = S.phrases.size;
+  // Meeting a phrase is evidence for the shared word mastery (#379 builds on it).
+  if (HANGUL.test(ko) && ko.length <= 40) bridge.report([{ kind: 'item_seen', itemId: ko, category: 'vocabulary' }]);
   renderBook();
 }
 
+/** Phrases in the book: the glossary filtered by what the shared store knows the player met. */
+function bookEntries() {
+  const items = bridge.progress.items;
+  return [...S.phrases].filter(([ko]) => !bridge.connected || !HANGUL.test(ko) || items[ko]);
+}
+
 function renderBook() {
-  if (!S.phrases.size) {
+  const entries = bookEntries();
+  ui.bookCount.textContent = entries.length;
+  if (!entries.length) {
     ui.bookList.innerHTML = '<div class="book-empty">Glowing words are scattered around the neighbourhood. Walk into them!</div>';
     return;
   }
   ui.bookList.innerHTML = '';
-  for (const [ko, { rom, en }] of S.phrases) {
+  for (const [ko, { rom, en }] of entries) {
     const row = document.createElement('div');
     row.className = 'word-row';
     row.innerHTML = '<b></b><span class="rom"></span><span class="en"></span>';
@@ -613,19 +630,23 @@ function renderBook() {
   }
 }
 
+// Tonight's verdict on the ending card, from hearts earned this session.
 const HAEUN_STAGES = [[0, '낯선 사람 · strangers'], [2, '아는 사이 · acquaintances'], [4, '동료 · colleagues'], [6, '친구 · friends (almost)']];
-const JIN_STAGES = [[0, '선배 · senior'], [1, '친한 선배 · close senior'], [2, '든든한 선배 · trusted mentor']];
 const relationshipStage = (table, v) => [...table].reverse().find(([m]) => v >= m)[1];
 
 function hearts(n, max) {
   return Array.from({ length: max }, (_, i) => (i < n ? '♥' : '<span class="off">♥</span>')).join('');
 }
 
+/** HUD hearts: the shared relationship (0–100 affinity) as five hearts plus its stage. */
 function updateHearts() {
-  ui.heartsHaeun.innerHTML = hearts(S.aff, S.maxAff);
-  ui.stageHaeun.textContent = relationshipStage(HAEUN_STAGES, S.aff);
-  ui.heartsJin.innerHTML = hearts(S.jinAff, S.maxJin);
-  ui.stageJin.textContent = relationshipStage(JIN_STAGES, S.jinAff);
+  for (const [id, h, st] of [['haeun', ui.heartsHaeun, ui.stageHaeun], ['jin', ui.heartsJin, ui.stageJin]]) {
+    const affinity = affinityOf(bridge.progress, id);
+    const stage = stageOf(affinity);
+    h.innerHTML = hearts(Math.ceil(affinity / 20), 5);
+    h.title = `${affinity} / 100`;
+    st.textContent = `${stage.ko} · ${stage.en}`;
+  }
 }
 
 function addAff(who, n) {
@@ -636,6 +657,7 @@ function addAff(who, n) {
     S.aff = clamp(S.aff + n, 0, S.maxAff);
     bubble(haeun, '+♥', { cls: 'heart', dur: 1.3 });
   }
+  bridge.report([{ kind: 'affinity', characterId: who === 'jin' ? 'jin' : 'haeun', delta: n * AFFINITY_PER_HEART }]);
   updateHearts();
   sfx.heart();
 }
@@ -686,6 +708,53 @@ function updateQuest() {
   local.textContent = errandLabel();
   ui.questList.prepend(local);
   $('quest-count').textContent = `${doneCount}/${QUESTS.length}`;
+}
+
+/** Connect to the hosting Tong app, then carry any pre-bridge progress into its store once. */
+async function connectBridge() {
+  bridge.on('progress', () => {
+    updateHearts();
+    renderBook();
+  });
+  bridge.on('viewport', ({ safeArea } = {}) => {
+    for (const side of ['top', 'right', 'bottom', 'left']) {
+      const px = Number(safeArea?.[side]);
+      document.documentElement.style.setProperty(`--host-safe-${side}`, `${Number.isFinite(px) ? clamp(px, 0, 200) : 0}px`);
+    }
+  });
+  if (!(await bridge.connect()) || !S.legacy) return;
+  const result = await bridge.migrate(S.legacy);
+  if (!result) return;
+  S.legacy = null;
+  // Record the import in the stored save even before the player presses Continue.
+  const stored = loadSave();
+  if (stored) {
+    delete stored.legacy;
+    if (stored.version < 4) stored.sharedImport = true;
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(stored));
+    } catch {
+      /* storage unavailable */
+    }
+  }
+  if (result.applied) toast('<b>진행 상황 이전 · Progress moved</b><span>Your hearts and phrases from this neighbourhood now count in Tong.</span>', 3600);
+}
+
+/** A completed hangout at a shared location (counts toward its missions). */
+function hangout(locationId) {
+  bridge.report([{ kind: 'location_hangout', cityId: 'seoul', locationId }]);
+}
+
+/** Open a shared exercise over the game; the world waits until it closes. */
+async function exercise(req) {
+  bridgeBusy = true;
+  clearControls();
+  try {
+    return await bridge.exercise(req);
+  } finally {
+    bridgeBusy = false;
+    canvas.focus();
+  }
 }
 
 function done(id) {
@@ -816,6 +885,7 @@ function startExit() {
 function finishNight() {
   S.haeunStory = 'idle';
   S.quests.haeun = true;
+  hangout('food_street');
   S.haeunHomeUntil = (S.hour >= 19 ? S.day + 1 : S.day) * 24 + 9;
   haeun.root.visible = false;
   loc.haeun = 'away';
@@ -898,6 +968,8 @@ const A = {
   flipHair: (who) => (chars[who].hairFlip = 0.7),
   learn,
   done,
+  hangout,
+  exercise,
   toast,
   sfx,
   polaroid,
@@ -922,6 +994,7 @@ const dlg = createDialogue({
   chars,
   addAff,
   learn,
+  exercise,
   speak,
   sfx,
   bubble,
@@ -1125,7 +1198,7 @@ function interact() {
 let transitioning = false;
 let activityPlace = null;
 function modalOpen() {
-  return transitioning || !!document.querySelector('.overlay:not(.hidden)') || !ui.book.classList.contains('hidden');
+  return transitioning || bridgeBusy || !!document.querySelector('.overlay:not(.hidden)') || !ui.book.classList.contains('hidden');
 }
 function clearControls() {
   keys.clear();
@@ -2369,6 +2442,12 @@ function updateHud() {
 const clock = new THREE.Clock();
 let saveT = 0;
 function frame() {
+  if (bridgeBusy) {
+    // A shared exercise covers the game: hold the world still and spare the GPU.
+    clock.getDelta();
+    requestAnimationFrame(frame);
+    return;
+  }
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
   if (S.started && !dlg.state.active && !modalOpen()) {
@@ -2489,6 +2568,8 @@ async function boot() {
   buildMotes();
   const saved = loadSave();
   if (saved) $('continue').classList.remove('hidden');
+  S.legacy = saved ? (saved.version >= 4 ? saved.legacy ?? null : legacyProgress(saved)) : null;
+  connectBridge();
   buildPickups();
   drawMapBg();
   updateHearts();
@@ -2512,7 +2593,6 @@ async function boot() {
       updateHearts();
       updateQuest();
       renderBook();
-      ui.bookCount.textContent = S.phrases.size;
     } else {
       S.name = $('name').value.trim() || '연습생';
     }
@@ -2578,7 +2658,8 @@ async function boot() {
   };
 
   window.__cozy = {
-    S, player, haeun, jin, dlg, creator, renderer, bloom, scene, sky, G, THREE, setHour,
+    S, player, haeun, jin, dlg, creator, renderer, bloom, scene, sky, G, THREE, setHour, bridge,
+    get bridgeBusy() { return bridgeBusy; },
     travelTo: (id, options) => travelTo(id === 'airport' ? { id: 'airport', icon: '✈', ko: currentCity().airport.nativeName, en: currentCity().airport.name, spawn: currentCity().airport.spawn, yaw: currentCity().yaw } : cityPlaces().find((p) => p.id === id), options),
     cities, cityRegistry: cities, get currentCity() { return currentCity(); },
     changeCity, openTravel, save, localHour, heightAt, zoneAt,

@@ -19,10 +19,11 @@ export const WORDS = [
   { ko: '한강', rom: 'hangang', en: 'the Han River', at: [7.5, -43] },
 ];
 
+// label: the core word on the product label, rebuilt in the clerk's block-crush.
 const STORE_ITEMS = [
-  { ko: '삼각김밥', rom: 'samgak-gimbap', en: 'triangle gimbap', price: 1200, priceKo: '천이백' },
-  { ko: '바나나우유', rom: 'banana-uyu', en: 'banana milk', price: 1700, priceKo: '천칠백' },
-  { ko: '컵라면', rom: 'keop-ramyeon', en: 'cup noodles', price: 1500, priceKo: '천오백' },
+  { ko: '삼각김밥', rom: 'samgak-gimbap', en: 'triangle gimbap', price: 1200, priceKo: '천이백', label: { ko: '김밥', en: 'gimbap (rice roll)' } },
+  { ko: '바나나우유', rom: 'banana-uyu', en: 'banana milk', price: 1700, priceKo: '천칠백', label: { ko: '우유', en: 'milk' } },
+  { ko: '컵라면', rom: 'keop-ramyeon', en: 'cup noodles', price: 1500, priceKo: '천오백', label: { ko: '라면', en: 'ramyeon (noodles)' } },
 ];
 
 const CAFE_ITEMS = [
@@ -36,7 +37,10 @@ const won = (n) => n.toLocaleString('en-US');
 /**
  * A = actions/state from main.js:
  *   S, sitPlayer, serveFood, spicyFx, startExit, flipHair(who), learn, done(questId),
+ *   hangout(locationId), exercise(request) → Promise<CozyExerciseResult>,
  *   toast, sfx, polaroid, startQuiz, quizChoices, lookAtTower
+ * Nodes with `exercise: () => CozyExerciseRequest` open a shared Tong exercise
+ * after their line and continue with `next(result)`.
  */
 export function buildNodes(A) {
   const S = A.S;
@@ -88,7 +92,34 @@ export function buildNodes(A) {
     greet_en: { who: 'haeun', expr: 'cool', ko: '여기선 한국어로 시켜야 돼. 연습 더 해.', en: 'Here you order in Korean. Practice more.', next: afterGreet },
     cat: { who: 'haeun', expr: 'smile', ko: '…아까 떡이 쓰다듬었지? 걔 아무한테나 안 가는데.', en: '…You petted Tteok earlier, right? She doesn’t go to just anyone.', aff: 1, next: 'sit' },
     sit: { who: 'haeun', expr: 'cool', ko: '앉아. 서 있으면 아저씨가 싫어하셔.', en: 'Sit. Ajusshi hates it when people hover.', enter: () => A.sitPlayer(), next: 'order_nudge' },
-    order_nudge: { who: 'haeun', expr: 'smirk', ko: '배고프지? 아저씨한테 직접 시켜 봐.', en: 'You’re hungry, right? Order from Ajusshi yourself.', hint: 'Pattern: <b>[food] + 주세요</b> = “[food], please.”', next: 'order' },
+    order_nudge: { who: 'haeun', expr: 'smirk', ko: '배고프지? 아저씨한테 직접 시켜 봐.', en: 'You’re hungry, right? Order from Ajusshi yourself.', hint: 'Pattern: <b>[food] + 주세요</b> = “[food], please.”', next: 'order_build' },
+    // In Tong, ordering is a shared sentence-builder; opened on its own, the choice menu below.
+    order_build: {
+      who: 'ajusshi',
+      expr: 'smile',
+      enter: () => (S.suggest = pick(FOODS.filter((w) => S.words.has(w.ko) || w.ko === '떡볶이' || w.ko === '오뎅'))),
+      ko: () => `뭐 줄까요? 오늘은 ${S.suggest.ko} 맛있어요!`,
+      en: () => `What’ll it be? Today’s pick: ${S.suggest.en}!`,
+      exercise: () => ({
+        exerciseType: 'sentence_builder',
+        targetItems: [S.suggest.ko, '주세요'],
+        distractors: ['감사합니다', pick(FOODS.filter((w) => w.ko !== S.suggest.ko)).ko],
+        objectiveId: 'ko-gram-juseyo',
+        framing: { speakerId: 'ajusshi', ko: `${S.suggest.ko} 주문해 봐요!`, en: `Order the ${S.suggest.en}: put the words in order.` },
+        meaning: `${S.suggest.en}, please.`,
+        cityId: 'seoul',
+        locationId: 'food_street',
+        characterId: 'ajusshi',
+      }),
+      next: (r) => {
+        if (r.outcome !== 'completed') return 'order';
+        S.food = S.suggest;
+        if (r.correct) return 'order_right';
+        S.mistakes++;
+        return 'order_assist';
+      },
+    },
+    order_assist: { who: 'ajusshi', expr: 'laugh', ko: '괜찮아요~ 음식 먼저, 그다음 “주세요”!', en: 'No worries~ Food first, then “주세요”!', hint: () => `<b>${S.food.ko} 주세요</b> = ${S.food.en}, please.`, next: 'order_right' },
     order: { who: 'ajusshi', expr: 'smile', ko: '뭐 줄까요?', en: 'What’ll it be?', choices: orderChoices, hint: 'Pick the polite order: <b>[food] 주세요</b>' },
     order_wrong_phrase: { who: 'ajusshi', expr: 'laugh', ko: '하하, 감사는 먹고 나서! “주세요”라고 해 봐요.', en: 'Haha, thanks comes after eating! Try “주세요”.', enter: () => S.mistakes++, next: 'order' },
     order_wrong_order: { who: 'ajusshi', expr: 'laugh', ko: '거꾸로네~ 음식 먼저, 그다음 “주세요”!', en: 'Backwards~ Food first, then “주세요”!', enter: () => S.mistakes++, next: 'order' },
@@ -199,6 +230,7 @@ export function buildNodes(A) {
       enter: () => {
         S.metHaeunStudio = true;
         A.done('haeunDay');
+        A.hangout('practice_studio');
       },
       end: true,
     },
@@ -241,6 +273,7 @@ export function buildNodes(A) {
         A.sfx.coin();
         A.learn(S.drink.ko, S.drink.rom, S.drink.en.replace(/^an? /, ''));
         A.done('cafe');
+        A.hangout('cafe');
       },
       end: true,
       after: () => A.jinWave(),
@@ -309,8 +342,28 @@ export function buildNodes(A) {
       expr: 'smile',
       ko: '어서 오세요~',
       en: 'Welcome~',
-      choices: STORE_ITEMS.map((it) => ({ ko: `${it.ko} 주세요`, rom: `${it.rom} juseyo`, en: `${it.en}, please`, next: 'cashier_price', do: () => (S.item = it) })),
+      choices: STORE_ITEMS.map((it) => ({ ko: `${it.ko} 주세요`, rom: `${it.rom} juseyo`, en: `${it.en}, please`, next: 'cashier_label', do: () => (S.item = it) })),
     },
+    // The clerk's smudged label: a shared block-crush on the product word (skipped when opened on its own).
+    cashier_label: {
+      who: 'cashier',
+      expr: 'surprised',
+      ko: () => `${S.item.ko}요? 어, 가격표가 지워졌네…`,
+      en: 'Oh, the price label is smudged…',
+      exercise: () => ({
+        exerciseType: 'block_crush',
+        targetItems: [S.item.label.ko],
+        objectiveId: 'ko-script-blocks-2part',
+        framing: { speakerId: 'cashier', ko: '이름 좀 맞춰 줄래요? 가격 찾아 드릴게요.', en: `Rebuild “${S.item.label.ko}” (${S.item.label.en}) on the label so the clerk can find the price.` },
+        meaning: S.item.label.en,
+        cityId: 'seoul',
+        locationId: 'convenience_store',
+        characterId: 'cashier',
+      }),
+      next: (r) => (r.outcome !== 'completed' ? 'cashier_price' : r.correct ? 'cashier_label_ok' : 'cashier_label_close'),
+    },
+    cashier_label_ok: { who: 'cashier', expr: 'happy', ko: () => `${S.item.label.ko}! 찾았다~ 고마워요.`, en: () => `${S.item.label.en}! Found it~ thanks.`, next: 'cashier_price' },
+    cashier_label_close: { who: 'cashier', expr: 'smile', ko: '괜찮아요, 찾았어요~', en: 'No worries, I found it~', hint: () => `<b>${S.item.label.ko}</b> = ${S.item.label.en}`, next: 'cashier_price' },
     cashier_price: {
       who: 'cashier',
       expr: 'smile',
@@ -346,6 +399,7 @@ export function buildNodes(A) {
         A.learn(S.item.ko, S.item.rom, S.item.en);
         A.learn('얼마예요', 'eolmayeyo', 'how much is it?');
         A.done('store');
+        A.hangout('convenience_store');
       },
       end: true,
     },
