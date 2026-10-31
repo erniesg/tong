@@ -32,7 +32,7 @@ Branch: `feat/relationship-engine` (worktree `~/code/erniesg/tong-relationship`,
 | State harness (sliders + preset replay) | `apps/client/public/studio/relationship/index.html` | drafted |
 | Store migration (`Relationship` → `RelState`, legacy affinity derived) | `lib/store/game-store.ts`, cozy bridge | todo |
 | Input ladder UI in cozy dialogue | `public/cozy/js/dialogue.js` | todo |
-| Interactive KakaoTalk (choices, read "1", deleted messages) | extends #369 | todo |
+| Interactive KakaoTalk (choices, read "1", deleted messages) | #369 | todo |
 | Exercise trigger map (month → targets → slots → exercises → notebook pages) | this doc + `lib/content/routes/` | todo |
 | Cozy wiring (onboarding move, schedules → mood, bridge events) | `public/cozy/js/{story,main}.js`, `lib/cozy/bridge.ts` | todo |
 
@@ -117,4 +117,26 @@ The notebook is the visible literacy meter: pages decode as targets reach `famil
 
 ## Issues
 
-Epic and children are filed on `erniesg/tong`; see the epic for the live checklist.
+Epic: #397 (child of #364). The live checklist is on the epic.
+
+| Issue | Scope | State |
+|---|---|---|
+| #387 | Canon store | drafted, needs owner review |
+| #388 | Engine v2 in the game store | engine drafted; store migration todo |
+| #389 | Lab harness and content lint in CI | drafted; CI todo |
+| #390 | Input ladder in cozy dialogue | todo |
+| #391 | 12-month calendar, evals, exercise trigger map | todo |
+| #369 | Interactive KakaoTalk (spec in comment) | content drafted; UI todo |
+| #394 | Move onboarding in cozy | todo |
+| #392 | Haeun route H3–H12, endings | H0–H2 drafted |
+| #393 | Jin route | J0 drafted |
+| #396 | Sua's notebook as literacy meter | todo |
+| #395 | Native Korean and Jeju review | todo |
+
+## Commands
+
+```sh
+cd apps/client
+node --test lib/relationship/engine.test.ts lib/relationship/content.test.ts   # Node ≥ 22.18
+node scripts/build-relationship-lab.mjs   # rebuilds public/studio/relationship/index.html
+```
