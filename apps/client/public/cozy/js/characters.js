@@ -29,7 +29,10 @@ function outline(mesh, t = 0.011) {
   mesh.geometry.computeBoundingSphere();
   const r = Math.max(0.03, mesh.geometry.boundingSphere.radius);
   const o = new THREE.Mesh(mesh.geometry, outlineMat);
-  o.scale.setScalar(1 + t / r);
+  const k = 1 + t / r;
+  // Grow about the geometry's own centre, so off-origin lathes (torsos, cowls) get an even rim.
+  o.scale.setScalar(k);
+  o.position.copy(mesh.geometry.boundingSphere.center).multiplyScalar(1 - k);
   o.castShadow = false;
   o.userData.isOutline = true;
   mesh.add(o);
@@ -497,24 +500,64 @@ function strandMat(color, tips, depth) {
   return toon(color, { alphaMap: strandAlpha(tips, depth), alphaTest: 0.5, side: THREE.DoubleSide });
 }
 
+// Hair parts carry userData.keep = true when they should stay visible under a
+// raised hood (fringe, face-framing locks). Every hair group records its crown
+// (head-local centre + outer radius) so hats and hoods can fit over it.
+const keep = (m) => { m.userData.keep = true; return m; };
+const DEFAULT_CROWN = { y: 0.02, z: -0.02, r: R + 0.03 };
+
+/** A domed hair cap; `tilt` < 0 lifts the hairline at the front and drops it at the nape. */
+function hairCap(hair, color, light, { r = R + 0.022, theta = 0.56, tilt = -0.42, y = 0.02, z = -0.015, ol = 0.011 } = {}) {
+  const g = new THREE.Group();
+  g.position.set(0, y, z);
+  g.rotation.x = tilt;
+  hair.add(g);
+  const cap = part(new THREE.SphereGeometry(r, 32, 18, 0, TAU, 0, Math.PI * theta), hairMat(color, light), 0, 0, 0, g, { ol });
+  cap.rotation.y = Math.PI;
+  cap.userData.crownPart = true;
+  return cap;
+}
+
+/** Bangs: an open cylinder band with an alpha-cut strand edge, centred on `at` (radians, 0 = front). */
+function bangs(hair, color, { at = 0, span = 2.0, y = 0.055, h = 0.15, r0 = R + 0.026, r1 = R + 0.036, tips = 24, depth = 0.3, tiltZ = 0 } = {}) {
+  const f = add(new THREE.CylinderGeometry(r0, r1, h, 48, 1, true, at - span / 2, span), strandMat(color, tips, depth), 0, y, 0, hair);
+  f.rotation.z = tiltZ;
+  f.renderOrder = 3;
+  return keep(f);
+}
+
+/** A tapered hanging tail (ponytail/pigtail) from a tie at `pos`, swinging back by `swing`, out by `splay`. */
+function tail(hair, color, pos, { len = 0.52, w = 0.09, swing = 0.25, splay = 0 } = {}) {
+  const g = new THREE.Group();
+  g.position.set(...pos);
+  g.rotation.set(Math.PI + swing, 0, splay);
+  g.userData.tail = true;
+  hair.add(g);
+  const prof = [[0, 0], [w * 0.55, 0.02], [w, len * 0.22], [w * 0.95, len * 0.55], [w * 0.6, len * 0.85], [0, len]];
+  lathe(prof, toon(color), g, { ol: 0.008, segments: 16 });
+  const tie = add(new THREE.TorusGeometry(w * 0.5, 0.014, 6, 14), toon('#d65a6e'), 0, 0.02, 0, g, false);
+  tie.rotation.x = Math.PI / 2;
+  return g;
+}
+
 function longHair(head, color, light) {
   const hair = new THREE.Group();
   head.add(hair);
   const cap = part(new THREE.SphereGeometry(R + 0.024, 36, 18, 0, TAU, 0, Math.PI * 0.47), hairMat(color, light), 0, 0.006, 0, hair);
   cap.rotation.y = Math.PI;
-  // blunt bangs with strand tips
-  const fringe = add(new THREE.CylinderGeometry(R + 0.026, R + 0.036, 0.15, 48, 1, true, -1.0, 2.0), strandMat(color, 24, 0.3), 0, 0.055, 0, hair);
-  fringe.renderOrder = 3;
+  cap.userData.crownPart = true;
+  bangs(hair, color); // blunt bangs with strand tips
   // long back curtain
   const back = add(new THREE.CylinderGeometry(R + 0.03, R + 0.085, 1.0, 48, 1, true, 0.82, TAU - 1.64), strandMat(color, 30, 0.18), 0, -0.4, -0.01, hair);
   back.scale.z = 0.92;
   // side locks framing the face
   const lockM = toon(color);
   for (const s of [-1, 1]) {
-    const l = part(new THREE.CapsuleGeometry(0.045, 0.5, 4, 8), lockM, 0.29 * s, -0.33, 0.1, hair, { ol: 0.008 });
+    const l = keep(part(new THREE.CapsuleGeometry(0.045, 0.5, 4, 8), lockM, 0.29 * s, -0.33, 0.1, hair, { ol: 0.008 }));
     l.scale.set(1, 1, 1.6);
     l.rotation.z = -0.06 * s;
   }
+  hair.userData.crown = { y: 0.006, z: 0, r: R + 0.024 };
   return hair;
 }
 
@@ -525,10 +568,11 @@ function wavyHair(head, color, light) {
   const flat = toon(color);
   const cap = part(new THREE.SphereGeometry(R + 0.03, 32, 16, 0, TAU, 0, Math.PI * 0.5), m, 0, 0.02, -0.02, hair);
   cap.rotation.y = Math.PI;
+  cap.userData.crownPart = true;
   const locks = [
-    [-0.13, 0.17, 0.27, 0.13, 0.4],
-    [0.04, 0.2, 0.28, 0.14, -0.2],
-    [0.18, 0.12, 0.25, 0.11, -0.6],
+    [-0.13, 0.17, 0.27, 0.13, 0.4, 1],
+    [0.04, 0.2, 0.28, 0.14, -0.2, 1],
+    [0.18, 0.12, 0.25, 0.11, -0.6, 1],
     [-0.31, 0.12, 0.0, 0.12, 0.9],
     [0.31, 0.1, -0.01, 0.11, -0.9],
     [0, 0.26, 0.05, 0.18, 0],
@@ -536,26 +580,115 @@ function wavyHair(head, color, light) {
     [0.18, 0.22, -0.15, 0.17, -0.3],
     [0, 0.05, -0.27, 0.22, 0],
   ];
-  for (const [x, y, z, r, rot] of locks) {
+  for (const [x, y, z, r, rot, front] of locks) {
     const s = part(new THREE.SphereGeometry(r, 14, 10), flat, x, y, z, hair, { ol: 0.008 });
     s.scale.set(1.2, 0.75, 1);
     s.rotation.z = rot;
+    if (front) keep(s);
   }
+  hair.userData.crown = { y: 0.02, z: -0.02, r: R + 0.03 };
   return hair;
 }
 
 function shortHair(head, color, light) {
   const hair = new THREE.Group();
   head.add(hair);
-  part(new THREE.SphereGeometry(R + 0.022, 30, 16, 0, TAU, 0, Math.PI * 0.62), hairMat(color, light), 0, 0.02, -0.06, hair).rotation.y = Math.PI;
-  part(new THREE.SphereGeometry(R + 0.018, 30, 16, 0, TAU, 0, Math.PI * 0.3), toon(color), 0, 0.03, 0, hair, { ol: 0 });
+  hairCap(hair, color, light);
+  // short textured fringe that stops above the brows
+  bangs(hair, color, { y: 0.13, h: 0.1, span: 1.9, r0: R + 0.012, r1: R + 0.03, tips: 18, depth: 0.45 });
+  hair.userData.crown = { y: 0.02, z: -0.015, r: R + 0.022 };
   return hair;
 }
 
 function bunHair(head, color, light) {
   const hair = shortHair(head, color, light);
-  part(new THREE.SphereGeometry(0.13, 16, 12), toon(color), 0, 0.3, -0.18, hair, { ol: 0.008 });
+  const bun = part(new THREE.SphereGeometry(0.13, 16, 12), toon(color), 0, 0.3, -0.18, hair, { ol: 0.008 });
+  bun.userData.bun = true;
   return hair;
+}
+
+function bobHair(head, color, light) {
+  const hair = new THREE.Group();
+  head.add(hair);
+  hairCap(hair, color, light, { r: R + 0.026, theta: 0.5, tilt: -0.2, z: -0.01 });
+  bangs(hair, color, { y: 0.06, span: 1.9 });
+  // chin-length shell, tucking in slightly at the ends
+  const shell = add(new THREE.CylinderGeometry(R + 0.035, R + 0.06, 0.44, 48, 1, true, 0.62, TAU - 1.24), strandMat(color, 40, 0.12), 0, -0.13, -0.01, hair);
+  shell.scale.z = 0.95;
+  hair.userData.crown = { y: 0.02, z: -0.01, r: R + 0.026 };
+  return hair;
+}
+
+function ponytailHair(head, color, light) {
+  const hair = new THREE.Group();
+  head.add(hair);
+  hairCap(hair, color, light, { r: R + 0.022, theta: 0.58, tilt: -0.5 });
+  bangs(hair, color, { y: 0.075, h: 0.13, at: 0.15, span: 1.8, tiltZ: 0.1, tips: 16, depth: 0.42 });
+  tail(hair, color, [0, 0.17, -0.37], { len: 0.55, swing: 0.3 });
+  hair.userData.crown = { y: 0.02, z: -0.015, r: R + 0.022 };
+  return hair;
+}
+
+function pigtailHair(head, color, light) {
+  const hair = new THREE.Group();
+  head.add(hair);
+  hairCap(hair, color, light, { r: R + 0.022, theta: 0.6, tilt: -0.35 });
+  bangs(hair, color, { y: 0.07, span: 1.9, tips: 20 });
+  for (const s of [-1, 1]) tail(hair, color, [0.3 * s, -0.04, -0.17], { len: 0.42, w: 0.075, swing: 0.15, splay: -0.25 * s });
+  hair.userData.crown = { y: 0.02, z: -0.015, r: R + 0.022 };
+  return hair;
+}
+
+function curtainHair(head, color, light) {
+  const hair = new THREE.Group();
+  head.add(hair);
+  hairCap(hair, color, light, { r: R + 0.024, theta: 0.57, tilt: -0.38 });
+  // centre-parted bangs sweeping out toward the temples
+  for (const s of [-1, 1]) bangs(hair, color, { y: 0.08, h: 0.16, at: s * 0.58, span: 1.0, tiltZ: -0.16 * s, tips: 12, depth: 0.5 });
+  hair.userData.crown = { y: 0.02, z: -0.015, r: R + 0.024 };
+  return hair;
+}
+
+function buzzHair(head, color, light) {
+  const hair = new THREE.Group();
+  head.add(hair);
+  hairCap(hair, color, light, { r: R + 0.008, theta: 0.55, tilt: -0.32, ol: 0.006 });
+  hair.userData.crown = { y: 0.02, z: -0.015, r: R + 0.008 };
+  return hair;
+}
+
+const HAIR_BUILDERS = { short: shortHair, wavy: wavyHair, long: longHair, bun: bunHair, bob: bobHair, ponytail: ponytailHair, curtain: curtainHair, buzz: buzzHair, pigtails: pigtailHair };
+
+/**
+ * Fit hair under a shell (hat or raised hood) centred at `center` (head-local) with
+ * `radius`. A part whose bounds reach past the shell while its centre sits above
+ * `minY` is hidden, except: the crown cap (always fits), `keep` parts (fringe,
+ * face-framing locks), which are pressed down instead when `press` is set, and
+ * hanging tails when `tails` is set (they fall out from under a hat).
+ */
+function tuckHair(c, center, radius, { minY = -Infinity, press = false, tails = false } = {}) {
+  c.root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(c.head.matrixWorld).invert();
+  const m = new THREE.Matrix4();
+  const sphere = new THREE.Sphere();
+  for (const o of [...c.hair.children]) {
+    const meshes = [];
+    o.traverse((x) => x.isMesh && !x.userData.isOutline && meshes.push(x));
+    if (meshes.some((x) => x.userData.crownPart) || (tails && o.userData.tail)) continue;
+    let out = false;
+    for (const mesh of meshes) {
+      mesh.geometry.computeBoundingSphere();
+      sphere.copy(mesh.geometry.boundingSphere).applyMatrix4(m.multiplyMatrices(inv, mesh.matrixWorld));
+      if (sphere.center.y > minY && sphere.center.distanceTo(center) + sphere.radius > radius) out = true;
+    }
+    if (!out) continue;
+    if (o.userData.keep) {
+      if (press) {
+        o.position.y -= 0.05;
+        o.scale.y *= 0.8;
+      }
+    } else o.visible = false;
+  }
 }
 
 /* ── Body ─────────────────────────────────────────── */
@@ -618,12 +751,8 @@ export function makeChibi(spec) {
   for (const s of [-1, 1]) part(new THREE.SphereGeometry(0.06, 10, 8), skin, s * 0.345, -0.05, 0, head, { ol: 0.006 }).scale.set(0.5, 1, 0.8);
   const face = makeFace(head, { skin: spec.skin ?? '#f7d9c4', ...spec.face });
 
-  let hair;
-  const hc = spec.hair;
-  if (spec.hairStyle === 'long') hair = longHair(head, hc, spec.hairLight);
-  else if (spec.hairStyle === 'wavy') hair = wavyHair(head, hc, spec.hairLight);
-  else if (spec.hairStyle === 'bun') hair = bunHair(head, hc, spec.hairLight);
-  else hair = shortHair(head, hc, spec.hairLight);
+  const hair = (HAIR_BUILDERS[spec.hairStyle] ?? shortHair)(head, spec.hair, spec.hairLight);
+  hair.userData.crown ??= DEFAULT_CROWN;
 
   const c = {
     name: spec.name,
@@ -839,7 +968,7 @@ export function makeJin() {
 export const LOOK_OPTIONS = {
   skin: ['#f8dcc8', '#f4d4bd', '#e9bf9c', '#c98f68', '#8d5b3e'],
   hair: ['#141419', '#3b2a20', '#7a5236', '#c9a06a', '#b0566b', '#5b6b8f'],
-  hairStyle: ['short', 'wavy', 'long', 'bun'],
+  hairStyle: ['short', 'wavy', 'long', 'bun', 'bob', 'ponytail', 'curtain', 'buzz', 'pigtails'],
   eyes: ['#4e3a2c', '#2b1d18', '#6b7a4a', '#4f6f8f'],
   brows: ['soft', 'straight', 'arched', 'thick', 'thin'],
   nose: ['dot', 'button', 'line', 'soft'],
@@ -847,6 +976,7 @@ export const LOOK_OPTIONS = {
   lids: ['double', 'single', 'hooded'],
   marks: ['none', 'freckles', 'mole', 'both'],
   topStyle: ['hoodie', 'tee', 'knit', 'jacket'],
+  hood: ['down', 'up'],
   top: ['#e7dac4', '#9fb8d6', '#e9a8b5', '#7c9a6e', '#3c3f4a', '#c95b4a'],
   bottom: ['jeans', 'slacks', 'shorts', 'skirt'],
   bottomColor: ['#3e4f6e', '#5a5148', '#2f2f36', '#c9b48f', '#8a4a5a'],
@@ -862,9 +992,9 @@ export const isIndexedLook = (k) => INDEXED.has(k);
 /** Presentation presets; every field remains individually editable. */
 export const LOOK_PRESETS = {
   m: { gender: 'm', skin: 1, hair: 1, hairStyle: 'short', eyes: 0, brows: 'soft', nose: 'dot', mouth: 'classic', lids: 'double', marks: 'none',
-    topStyle: 'hoodie', top: 0, bottom: 'jeans', bottomColor: 0, shoes: 0, hat: 'beanie', glasses: false },
+    topStyle: 'hoodie', hood: 'down', top: 0, bottom: 'jeans', bottomColor: 0, shoes: 0, hat: 'beanie', glasses: false },
   f: { gender: 'f', skin: 0, hair: 1, hairStyle: 'long', eyes: 0, brows: 'arched', nose: 'button', mouth: 'full', lids: 'double', marks: 'none',
-    topStyle: 'knit', top: 2, bottom: 'skirt', bottomColor: 2, shoes: 0, hat: 'none', glasses: false },
+    topStyle: 'knit', hood: 'down', top: 2, bottom: 'skirt', bottomColor: 2, shoes: 0, hat: 'none', glasses: false },
 };
 
 /** Coerce a saved/edited look into a valid one (unknown values fall back to the preset). */
@@ -878,6 +1008,59 @@ export function normalizeLook(look) {
     out[k] = ok ? v : base[k];
   }
   return out;
+}
+
+// Face opening of a raised hood, in unit-sphere directions around the hood centre.
+const HOOD_HOLE = { x: 0.7, y0: -0.12, y: 0.74, minY: -0.8 };
+const inHoodHole = (d) => d.z > 0 && (d.x / HOOD_HOLE.x) ** 2 + ((d.y - HOOD_HOLE.y0) / HOOD_HOLE.y) ** 2 < 1;
+
+/** A raised hood: a sphere shell around the hair crown with an oval face opening and a soft rim. */
+function hoodUp(c, material) {
+  const crown = c.hair.userData.crown;
+  const r = crown.r + 0.06;
+  const center = new THREE.Vector3(0, crown.y, crown.z - 0.01);
+  const geo = new THREE.SphereGeometry(r, 40, 28);
+  const pos = geo.attributes.position;
+  const idx = geo.index.array;
+  const kept = [];
+  const d = new THREE.Vector3();
+  for (let i = 0; i < idx.length; i += 3) {
+    d.set(0, 0, 0);
+    for (let k = 0; k < 3; k++) d.x += pos.getX(idx[i + k]), d.y += pos.getY(idx[i + k]), d.z += pos.getZ(idx[i + k]);
+    d.normalize();
+    if (d.y < HOOD_HOLE.minY || inHoodHole(d)) continue;
+    kept.push(idx[i], idx[i + 1], idx[i + 2]);
+  }
+  geo.setIndex(kept);
+  const hood = new THREE.Group();
+  hood.position.copy(center);
+  hood.userData.hood = 'up';
+  c.head.add(hood);
+  const shellMat = material.clone();
+  shellMat.side = THREE.DoubleSide;
+  part(geo, shellMat, 0, 0, 0, hood, { ol: 0.01 });
+  // rolled rim around the opening
+  const pts = [];
+  for (let i = 0; i <= 48; i++) {
+    const a = -Math.PI / 2 + (i / 48) * TAU;
+    const x = HOOD_HOLE.x * Math.cos(a);
+    const y = HOOD_HOLE.y0 + HOOD_HOLE.y * Math.sin(a);
+    if (y < HOOD_HOLE.minY + 0.02) continue;
+    const z = Math.sqrt(Math.max(0, 1 - x * x - y * y));
+    pts.push(new THREE.Vector3(x, y, z).multiplyScalar(r));
+  }
+  part(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, 0.028, 8, false), material, 0, 0, 0, hood, { ol: 0.006 });
+  tuckHair(c, center, r - 0.012);
+  return hood;
+}
+
+/** A lowered hood: a soft folded cowl lying across the upper back, under any long hair. */
+function hoodDown(body, material) {
+  const m = material.clone();
+  m.side = THREE.DoubleSide;
+  const cowl = lathe([[0.215, 0.87], [0.255, 0.9], [0.29, 0.98], [0.285, 1.07], [0.235, 1.135], [0.16, 1.15]], m, body, { phiStart: Math.PI - 1.25, phiLength: 2.5, ol: 0.008 });
+  cowl.userData.hood = 'down';
+  return cowl;
 }
 
 function addTop(c, body, look, color) {
@@ -912,27 +1095,34 @@ function addTop(c, body, look, color) {
     const hoodie = texMat('#ffffff', fabric(color), 0.5);
     lathe(torso, hoodie, body);
     add(new THREE.BoxGeometry(0.22, 0.12, 0.04), hoodie, 0, 0.66, 0.2, body);
-    const hood = add(new THREE.TorusGeometry(0.16, 0.07, 10, 24), hoodie, 0, 1.12, -0.1, body);
-    hood.rotation.x = Math.PI / 2 + 0.35;
+    if (look.hood === 'up') hoodUp(c, hoodie);
+    else hoodDown(body, hoodie);
     for (const s of [-1, 1]) add(new THREE.CylinderGeometry(0.008, 0.008, 0.18, 5), toon('#f8f3ea'), s * 0.05, 0.98, 0.205, body, false);
   }
 }
 
 function addHeadwear(c, look) {
+  const crown = c.hair.userData.crown;
+  const center = new THREE.Vector3(0, crown.y, crown.z);
+  const hooded = look.topStyle === 'hoodie' && look.hood === 'up';
   if (look.hat === 'beanie') {
     const beanieTex = tiled(knit('#e8a33d'), 3, 1.5);
     const beanie = toon('#ffffff', { map: beanieTex.map, normalMap: beanieTex.normalMap });
-    part(new THREE.SphereGeometry(R + 0.04, 32, 16, 0, TAU, 0, Math.PI * 0.4), beanie, 0, 0.05, -0.01, c.head);
-    const cuff = add(new THREE.TorusGeometry(R + 0.005, 0.05, 10, 32), beanie, 0, 0.12, -0.01, c.head);
+    const r = crown.r + 0.026;
+    part(new THREE.SphereGeometry(r, 32, 16, 0, TAU, 0, Math.PI * 0.42), beanie, 0, crown.y + 0.03, crown.z, c.head);
+    const cuff = add(new THREE.TorusGeometry(r - 0.012, 0.048, 10, 32), beanie, 0, crown.y + 0.03 + r * Math.cos(Math.PI * 0.42) - 0.01, crown.z, c.head);
     cuff.rotation.x = Math.PI / 2;
-    part(new THREE.SphereGeometry(0.08, 12, 10), toon('#fff3dc'), 0, 0.43, -0.01, c.head, { ol: 0.008 });
+    if (!hooded) part(new THREE.SphereGeometry(0.08, 12, 10), toon('#fff3dc'), 0, crown.y + 0.03 + r + 0.03, crown.z, c.head, { ol: 0.008 });
+    if (!hooded) tuckHair(c, center, r + 0.004, { minY: crown.y + 0.1, press: true, tails: true });
   } else if (look.hat === 'cap') {
     const capM = toon(LOOK_OPTIONS.top[look.top]);
-    part(new THREE.SphereGeometry(R + 0.035, 32, 16, 0, TAU, 0, Math.PI * 0.42), capM, 0, 0.06, -0.01, c.head);
-    const brim = part(new THREE.CylinderGeometry(0.2, 0.2, 0.025, 24, 1, false, -Math.PI / 2, Math.PI), capM, 0, 0.17, 0.25, c.head, { ol: 0.008 });
+    const r = crown.r + 0.02;
+    part(new THREE.SphereGeometry(r, 32, 16, 0, TAU, 0, Math.PI * 0.42), capM, 0, crown.y + 0.04, crown.z, c.head);
+    const brim = part(new THREE.CylinderGeometry(0.2, 0.2, 0.025, 24, 1, false, -Math.PI / 2, Math.PI), capM, 0, crown.y + 0.04 + r * Math.cos(Math.PI * 0.42) + 0.005, crown.z + r * Math.sin(Math.PI * 0.42) - 0.12, c.head, { ol: 0.008 });
     brim.scale.set(1, 1, 0.9);
     brim.rotation.x = 0.12;
-    part(new THREE.SphereGeometry(0.03, 8, 6), capM, 0, 0.43, -0.01, c.head, { ol: 0.006 });
+    if (!hooded) part(new THREE.SphereGeometry(0.03, 8, 6), capM, 0, crown.y + 0.04 + r, crown.z, c.head, { ol: 0.006 });
+    if (!hooded) tuckHair(c, center, r + 0.004, { minY: crown.y + 0.12, press: true, tails: true });
   }
   if (look.glasses) {
     const frame = toon('#2a1c22');
