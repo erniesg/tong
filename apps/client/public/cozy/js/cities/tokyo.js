@@ -8,6 +8,7 @@ import { G, add, box, collider, mat, textTexture, makeCanvas, canvasTexture, sof
 import { pavers, wood, tiles } from '../textures.js';
 import { makeTree } from '../nature.js';
 import { buildRoom, registerInterior, interiorAt } from '../interiors.js';
+import { roadSurfaceData } from '../surfaces.js';
 
 const CX = 400;
 const JP = '"Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic"';
@@ -30,6 +31,8 @@ const roads = [
   road([[2, -42], [17, -42], [44, -42]], 8, '#6f9ca5'), // Kototoi-inspired footbridge
   road([[44, 54], [44, 36], [44, -12], [44, -42], [44, -54]], 5, '#d4c9b3'),
   road([[44, -12], [51, -12]], 4),
+  // Home approach skirts the native pagoda/bookshop and joins the western lane.
+  road([[-52, -39.8], [-43, -38.5], [-43, -30]], 2.4),
 ];
 const place = (id, ko, en, icon, x, z, yaw, description, text, rom, english, radius = 4) => ({
   id: `tokyo-${id}`, ko, en, icon, spawn: at(x, z), yaw, radius, description,
@@ -55,6 +58,9 @@ const places = [
   place('studio', '路地の稽古場', 'Backstreet Practice Studio', '🎵', -43, 5, Math.PI / 2,
     'A small rehearsal room in the residential backstreets, away from the ceremonial temple axis.',
     'もう一度練習しましょう。', 'Mō ichido renshū shimashō.', 'Let’s practise one more time.'),
+  { ...place('home', '浅草の住まい', 'Asakusa Apartments', '🏠', -52, -39.8, 0,
+    'Walk in from the western lane. The lobby stairs lead to furnished upstairs homes; walk back down to leave. Meet a resident and learn a home greeting.',
+    'おじゃまします。', 'Ojama shimasu.', 'Thank you for inviting me in.'), category: 'home', entry: at(-52, -41) },
   place('gate', '雷門', 'Kaminarimon Gate', '🏮', -20, 34, 0,
     'The great lantern marks the southern entrance to the Sensō-ji approach. Architecture and distances here are deliberately compressed.',
     '雷門で会いましょう。', 'Kaminarimon de aimashō.', 'Let’s meet at Kaminarimon.'),
@@ -93,17 +99,6 @@ function sign(title, sub, x, y, z, w, h, rot = 0, bg = '#f3e7cf', fg = '#302c29'
   s.rotation.y = rot;
   return s;
 }
-function surface(ps, width, m) {
-  for (let i = 1; i < ps.length; i++) {
-    const [ax, az] = ps[i - 1], [bx, bz] = ps[i];
-    const length = Math.hypot(bx - ax, bz - az);
-    const b = box(width, 0.025, length, m, (ax + bx) / 2, -0.01, (az + bz) / 2, { cast: false });
-    b.rotation.y = Math.atan2(bx - ax, bz - az);
-  }
-  // Square junction pads close the small triangular gaps at alley bends.
-  for (const [x, z] of ps) box(width, 0.025, width, m, x, -0.01, z, { cast: false });
-}
-
 function roof(x, z, w, d, y, M) {
   // Two pitched planes with generous eaves, ridge caps and upturned ends.
   const rise = Math.min(1.5, d * 0.24);
@@ -260,7 +255,9 @@ function buildTemple(M) {
   for (const x of [-0.8, 4.8]) block(0.45, 4.4, 0.5, M.stone, x, 0, -46.3, true);
   block(7.5, 0.45, 0.7, M.stone, 2, 4.1, -46.3);
   block(6.5, 0.25, 0.4, M.stone, 2, 3.1, -46.3);
-  for (const [x, z] of [[-46, -52], [-8, -56], [10, -59], [-35, -58]]) tree(x, z, 1.1, M, false);
+  // Keep the courtyard cherry, just east of the new home's footprint rather
+  // than embedding its trunk in the upstairs bedroom (native landmarks stay).
+  for (const [x, z] of [[-42, -55], [-8, -56], [10, -59], [-35, -58]]) tree(x, z, 1.1, M, false);
   pointLight(0xffac6c, 14, 16, CX - 20, 4.5, -34);
   pointLight(0xffbd79, 10, 14, CX - 20, 4, 31);
 }
@@ -476,10 +473,17 @@ function build() {
   block(18, 0.009, 122, mat('#92a285'), 49, 0.001, 0);
   block(13, 0.009, 125, mat('#99a58a'), 13, 0.001, -3);
   block(56, 0.01, 32, M.stone, -20, 0.001, -45);
-  const roadMats = new Map();
-  for (const r of roads) {
-    if (!roadMats.has(r.color)) roadMats.set(r.color, mat(r.color, { map: stoneTex.map, normalMap: stoneTex.normalMap }));
-    surface(r.points, r.width, roadMats.get(r.color));
+  // One disjoint triangulated surface, not overlapping segment/pad box tops.
+  // Later road descriptors retain their paint priority at crossings.
+  for (const data of roadSurfaceData(roads)) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(data.positions, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(data.normals, 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(data.uv, 2));
+    const roadMesh = new THREE.Mesh(geo, mat(data.color, { map: stoneTex.map, normalMap: stoneTex.normalMap }));
+    roadMesh.receiveShadow = true;
+    roadMesh.userData.keepSeparate = true;
+    G.scene.add(roadMesh);
   }
   buildRiver(M);
   buildTemple(M);
@@ -508,8 +512,8 @@ export default {
   ],
   build,
   heightAt: () => 0,
-  zoneAt(x, z) {
-    const room = interiorAt({ x, y: 0, z }, 'tokyo');
+  zoneAt(x, z, feetY = 0) {
+    const room = interiorAt({ x, y: feetY, z }, 'tokyo');
     return room ? { id: `tokyo-${room.category}`, indoor: true } : null;
   },
 };

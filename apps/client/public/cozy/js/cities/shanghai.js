@@ -362,8 +362,8 @@ export default {
   ],
   build,
   heightAt: () => 0,
-  zoneAt(x, z) {
-    const room = interiorAt({ x, y: 0, z }, 'shanghai');
+  zoneAt(x, z, feetY = 0) {
+    const room = interiorAt({ x, y: feetY, z }, 'shanghai');
     if (room) return { id: `shanghai-${room.category}`, indoor: true };
     const p = places.find((p) => Math.hypot(x - p.spawn[0], z - p.spawn[2]) < p.radius);
     return p ? { id: p.id, indoor: false } : null;

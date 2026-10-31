@@ -22,9 +22,11 @@ import { createDialogue } from './dialogue.js';
 import seoul from './cities/seoul.js';
 import tokyo from './cities/tokyo.js';
 import shanghai from './cities/shanghai.js';
-import { interiors, interiorAt, updateCutaways, isCameraOccluder, cutawaySnapshot } from './interiors.js';
-import { MODES, overlaps, createTraversal, stopTraversal, resetTraversal, queueJump, stepTraversal } from './traversal.js';
+import { interiors, interiorAt, enhanceRoom, updateCutaways, isCameraOccluder, cutawaySnapshot } from './interiors.js';
+import { MODES, PLAYER_CLEARANCE, bodyOverlaps, segmentHitsBox, createTraversal, stopTraversal, resetTraversal, queueJump, stepTraversal } from './traversal.js';
 import { createRides } from './rides.js';
+import { createOccupants } from './occupants.js';
+import { apartments, buildApartment, apartmentHeightAt, apartmentCeilingAt, apartmentZoneAt } from './apartments.js';
 
 const cities = { seoul, tokyo, shanghai };
 const cityGroups = {};
@@ -32,17 +34,32 @@ const currentCity = () => cities[S.city];
 const cityPlaces = () => S.city === 'seoul' ? [...SEOUL_PLACES, ...seoul.places] : currentCity().places;
 const localHour = () => (S.hour + (S.city === 'shanghai' ? -1 : 0) + 24) % 24;
 const inSeoulCore = (x, z) => x >= -18 && x <= 18 && z >= -46 && z <= 31;
-function heightAt(x, z) {
-  const room = interiors.find((i) => i.city === S.city && x >= i.bounds.minX && x <= i.bounds.maxX && z >= i.bounds.minZ && z <= i.bounds.maxZ);
+function heightAt(x, z, feetY = player?.root.position.y ?? 0) {
+  const support = apartmentHeightAt(x, z, feetY, S.city);
+  if (Number.isFinite(support)) return support;
+  // Generic legacy rooms have a single floor. Never choose a stacked room by
+  // its XZ registration order, nor snap to an unreachable floor above the feet.
+  const room = interiors.filter((i) => !i.buildingId && i.city === S.city && i.floorY <= feetY + 0.08 &&
+    x >= i.bounds.minX && x <= i.bounds.maxX && z >= i.bounds.minZ && z <= i.bounds.maxZ)
+    .sort((a, b) => b.floorY - a.floorY)[0];
   return room?.floorY ?? (S.city === 'seoul' && inSeoulCore(x, z) ? seoulHeightAt(x, z) : currentCity().heightAt(x, z));
 }
-function zoneAt(x, z) {
-  const zone = (S.city === 'seoul' && inSeoulCore(x, z) ? seoulZoneAt(x, z) : null) ?? currentCity().zoneAt?.(x, z) ?? null;
-  const room = interiorAt({ x, y: player?.root.position.y ?? heightAt(x, z), z }, S.city);
+function ceilingAt(x, z, feetY) {
+  const overhead = apartmentCeilingAt(x, z, feetY, S.city);
+  if (Number.isFinite(overhead) || apartmentZoneAt({ x, y: feetY, z }, S.city)) return overhead;
+  const room = interiorAt({ x, y: feetY, z }, S.city) ?? interiors.find((candidate) =>
+    !candidate.buildingId && candidate.city === S.city && Math.abs(candidate.floorY - feetY) < 0.3 && Math.hypot(x - candidate.door[0], z - candidate.door[2]) < 0.45);
+  return room?.ceilingAt?.(x, z) ?? room?.bounds.maxY;
+}
+function zoneAt(x, z, feetY = player?.root.position.y ?? 0) {
+  const home = apartmentZoneAt({ x, y: feetY, z }, S.city);
+  if (home) return { id: home.id, buildingId: home.buildingId, level: home.level, floorY: home.floorY, category: 'home', interiorId: home.id, indoor: true };
+  const zone = (S.city === 'seoul' && inSeoulCore(x, z) ? seoulZoneAt(x, z) : null) ?? currentCity().zoneAt?.(x, z, feetY) ?? null;
+  const room = interiorAt({ x, y: feetY, z }, S.city);
   return room ? { ...zone, id: zone?.id ?? room.id, indoor: true, interiorId: room.id, category: room.category } : zone;
 }
 const traversal = createTraversal();
-let rides;
+let rides, occupants;
 let runEnabled = false, braking = false, demoEnabled = false;
 let overview = false, vistaIndex = -1;
 
@@ -137,14 +154,16 @@ function validPose(pose) {
   const [x, y, z] = pose.position;
   const b = currentCity().bounds;
   const radius = MODES[pose.mode]?.radius ?? 0.3;
-  if (x < b.minX + radius || x > b.maxX - radius || z < b.minZ + radius || z > b.maxZ - radius || Math.abs(y - heightAt(x, z)) > 0.12) return false;
-  return !G.colliders.some((c) => overlaps(x, z, radius, c));
+  if (x < b.minX + radius || x > b.maxX - radius || z < b.minZ + radius || z > b.maxZ - radius || Math.abs(y - heightAt(x, z, y)) > 0.12) return false;
+  const ceiling = ceilingAt(x, z, y);
+  if (Number.isFinite(ceiling) && y + PLAYER_CLEARANCE > ceiling + 1e-6) return false;
+  return !physicsColliders().some((c) => bodyOverlaps(x, y, z, radius, c));
 }
 
 function safePose() {
   const pose = { position: player.root.position.toArray(), yaw: cam.yaw, rotation: player.root.rotation.y, mode: traversal.mode };
   if (traversal.grounded && player.pose !== 'sit' && validPose(pose)) {
-    pose.position[1] = heightAt(pose.position[0], pose.position[2]);
+    pose.position[1] = heightAt(pose.position[0], pose.position[2], pose.position[1]);
     S.cityPositions[S.city] = pose;
     return pose;
   }
@@ -153,9 +172,12 @@ function safePose() {
 }
 
 function placePlayer(pose) {
+  // Establish target-city availability before validating a restored pose;
+  // actors hidden in the previous city must still protect their new spawn.
+  occupants?.update({ city: S.city, position: player.root.position, hour: localHour(), dt: 0, time: 0 });
   const safe = validPose(pose) ? pose : { position: currentCity().spawn, yaw: currentCity().yaw };
   player.root.position.set(...safe.position);
-  player.root.position.y = heightAt(player.root.position.x, player.root.position.z);
+  player.root.position.y = heightAt(player.root.position.x, player.root.position.z, safe.position[1]);
   setTransport(interiorAt(player.root.position, S.city) ? 'walk' : safe.mode ?? 'walk', true);
   resetTraversal(traversal, traversal.mode);
   overview = false;
@@ -1032,6 +1054,11 @@ function standBench() {
 }
 
 let activeInteract = null;
+function staffAccessible(actor, position) {
+  const q = actor.character.root.position;
+  return !G.colliders.some((box) => box.role === 'wall' && segmentHitsBox(
+    { x: position.x, y: position.y + 1.1, z: position.z }, { x: q.x, y: q.y + 1.1, z: q.z }, box));
+}
 function updateInteract() {
   activeInteract = null;
   if (S.started && vistaIndex < 0 && !modalOpen() && !dlg.state.active && !player.auto && player.pose !== 'sit' && (S.city !== 'seoul' || S.haeunStory === 'idle')) {
@@ -1041,11 +1068,24 @@ function updateInteract() {
     const room = interiorAt(p, S.city);
     const local = cityPlaces().map((place) => ({
       label: `${place.icon} ${place.ko} · ${place.en}`,
-      // Remote rooms retain their objective interaction throughout the room.
-      // Seoul keeps its authored NPC/counter/quiz proximity and choreography.
-      pos: () => S.city !== 'seoul' && room && room.id === place.interiorId ? p : new THREE.Vector3(...place.spawn), r: place.radius ?? 2.8,
-      on: () => true, act: () => openPlace(place),
+      // Retain the legacy room fallback ONLY for unstaffed rooms. Occupied
+      // shops/homes require approaching their actual same-room/floor actor.
+      pos: () => S.city !== 'seoul' && room && !room.staff && room.id === place.interiorId ? p : new THREE.Vector3(...place.spawn), r: place.radius ?? 2.8,
+      on: () => !interiors.some((i) => i.city === S.city && i.staff &&
+        (i.id === place.interiorId || i.staff.placeId === place.id || i.buildingId === place.id)),
+      act: () => openPlace(place),
     }));
+    const staff = room && occupants?.nearest({ city: S.city, position: p, roomId: room.id });
+    const staffPlace = staff && cityPlaces().find((place) => place.id === staff.placeId || place.interiorId === staff.roomId || place.id === room.buildingId);
+    if (staffPlace && staffAccessible(staff, p)) local.unshift({
+      label: `${staff.name} · ${staffPlace.icon} ${staffPlace.en}`,
+      pos: () => staff.character.root.position, r: 2.8, on: () => true,
+      act: () => {
+        const active = interiorAt(player.root.position, S.city);
+        const nearest = active && occupants.nearest({ city: S.city, position: player.root.position, roomId: active.id });
+        if (nearest?.character === staff.character && nearest.roomId === staff.roomId && staffAccessible(nearest, player.root.position)) openPlace(staffPlace, staff);
+      },
+    });
     local.unshift({ label: `✈ ${airport.name} · Flights`, pos: () => new THREE.Vector3(...airport.spawn), r: 4, on: () => true, act: () => openTravel('flights') });
     for (const it of [...(S.city === 'seoul' ? interactables : []), ...local]) {
       if (!it.on()) continue;
@@ -1101,7 +1141,7 @@ function adventure() {
   return S.adventures[S.city] ??= { discovered: [], mastered: [], step: 0 };
 }
 function roleOf(p) {
-  if (['food', 'cafe', 'store', 'subway', 'studio', 'scenic'].includes(p.category ?? p.role)) return p.category ?? p.role;
+  if (['food', 'cafe', 'store', 'subway', 'studio', 'home', 'scenic'].includes(p.category ?? p.role)) return p.category ?? p.role;
   const text = `${p.id} ${p.en}`.toLowerCase();
   if (/food|market|ramen|yatai|snack|pojang|tteok/.test(text)) return 'food';
   if (/cafe|café|coffee/.test(text)) return 'cafe';
@@ -1125,6 +1165,7 @@ const SEOUL_PHRASES = {
   store: { text: '얼마예요?', rom: 'eolmayeyo?', en: 'How much is it?' },
   subway: { text: '어디예요?', rom: 'eodiyeyo?', en: 'Where is it?' },
   studio: { text: '연습해요', rom: 'yeonseuphaeyo', en: 'Let’s practice' },
+  home: { text: '초대해 주셔서 감사해요', rom: 'chodaehae jusyeoseo gamsahaeyo', en: 'Thank you for inviting me' },
   scenic: { text: '정말 아름다워요', rom: 'jeongmal areumdawoyo', en: 'It is really beautiful' },
 };
 function phraseFor(p) { return p.phrase ?? SEOUL_PHRASES[roleOf(p)]; }
@@ -1141,18 +1182,19 @@ function closeActivity() {
   activityPlace = null;
   clearControls();
 }
-function openPlace(p) {
+function openPlace(p, actor = null) {
   if (transitioning || dlg.state.active) return;
   clearControls();
   activityPlace = p;
   discover(p);
   const phrase = phraseFor(p);
-  $('activity-title').textContent = `${p.icon} ${p.ko} · ${p.en}`;
-  $('activity-description').textContent = p.description ?? `A stop in ${currentCity().name}. Practice a local phrase with Tong.`;
-  $('activity-objective').textContent = errandLabel();
+  $('activity-title').textContent = `${actor ? `${actor.name} · ` : ''}${p.icon} ${p.ko} · ${p.en}`;
+  $('activity-description').textContent = `${actor ? `${actor.name}: ${actor.greeting} ` : ''}${p.description ?? `A stop in ${currentCity().name}. Practice a local phrase with Tong.`}`;
+  const objective = () => roleOf(p) === 'home' ? 'Home visit · Greet your host politely. Learn the phrase for your next visit.' : errandLabel();
+  $('activity-objective').textContent = objective();
   $('activity-native').textContent = phrase.text;
   $('activity-phonetic').textContent = phrase.rom;
-  $('activity-feedback').textContent = `What does this phrase mean? Learn it to help with your local errand.`;
+  $('activity-feedback').textContent = roleOf(p) === 'home' ? 'What does your home greeting mean?' : 'What does this phrase mean? Learn it to help with your local errand.';
   const choices = $('activity-choices');
   choices.replaceChildren();
   const distractors = [...new Set(cityPlaces().map((q) => phraseFor(q).en))].filter((en) => en !== phrase.en);
@@ -1185,9 +1227,9 @@ function openPlace(p) {
           S.postcards.push(S.city);
           showPostcard(S.city);
         }
-      } else if (a.step < 3) feedback += ` Next: ${errandLabel()}`;
+      } else if (a.step < 3 && roleOf(p) !== 'home') feedback += ` Next: ${errandLabel()}`;
       $('activity-feedback').textContent = feedback;
-      $('activity-objective').textContent = errandLabel();
+      $('activity-objective').textContent = objective();
       choices.querySelectorAll('button').forEach((button) => { button.disabled = true; });
       sfx.chime();
       tong.spin = 0.8;
@@ -1222,6 +1264,7 @@ function syncCity() {
     cashier.root.visible = true;
     updateSchedules(true);
   } else for (const c of [haeun, jin, ajusshi, barista, cashier]) c.root.visible = false;
+  occupants?.update({ city: S.city, position: player.root.position, hour: localHour(), dt: 0, time: 0 });
   cat.g.visible = S.city === 'seoul';
   for (const pd of peds) pd.c.root.visible = S.city === 'seoul';
   motes.visible = S.city === 'seoul';
@@ -1720,7 +1763,7 @@ function resetCamera() {
   cam.snap = true;
 }
 let waypointId = null;
-const categoryNames = { food: 'Food Street', cafe: 'Cafe', store: 'Convenience Store', subway: 'Subway Hub', studio: 'Practice Studio', scenic: 'Landmark' };
+const categoryNames = { food: 'Food Street', cafe: 'Cafe', store: 'Convenience Store', subway: 'Subway Hub', studio: 'Practice Studio', home: 'Home', scenic: 'Landmark' };
 function populateLocations() {
   const select = $('demo-place-select'), list = $('location-list');
   const selected = select?.value;
@@ -1899,21 +1942,21 @@ bindTools();
 /* ── Update ──────────────────────────────────────── */
 
 let lastTraversalSpeed = 0;
-function traversalEnvironment() {
-  const colliders = [...G.colliders];
-  for (const c of [haeun, jin, barista, cashier]) {
-    if (!c.root.visible || Math.abs(c.root.position.y - player.root.position.y) > 1.5) continue;
+function physicsColliders() {
+  const colliders = [...G.colliders, ...(occupants?.colliders(S.city) ?? [])];
+  for (const c of [haeun, jin, ajusshi, barista, cashier]) {
+    if (!c.root.visible) continue;
     const q = c.root.position;
-    colliders.push({ minX: q.x - 0.2, maxX: q.x + 0.2, minZ: q.z - 0.2, maxZ: q.z + 0.2 });
+    colliders.push({ minX: q.x - 0.2, maxX: q.x + 0.2, minZ: q.z - 0.2, maxZ: q.z + 0.2, minY: q.y, maxY: q.y + 1.8 });
   }
-  return {
-    colliders, heightAt, bounds: currentCity().bounds,
-    ceilingAt: (x, z) => {
-      const floor = heightAt(x, z);
-      const room = interiorAt({ x, y: floor, z }, S.city) ?? interiors.find((candidate) =>
-        candidate.city === S.city && Math.abs(candidate.floorY - floor) < 0.3 && Math.hypot(x - candidate.door[0], z - candidate.door[2]) < 0.45);
-      return room?.ceilingAt?.(x, z) ?? room?.bounds.maxY;
-    },
+  return colliders;
+}
+function traversalEnvironment() {
+  return { colliders: physicsColliders(), heightAt, ceilingAt, bounds: currentCity().bounds,
+    // Only actual multi-level building edges may fall. Preserve the authored
+    // Seoul terrace/legacy terrain's bidirectional discontinuity protection.
+    allowDrop: (fromX, fromZ) => apartments.some((b) => b.city === S.city &&
+      fromX >= b.bounds.minX && fromX <= b.bounds.maxX && fromZ >= b.bounds.minZ && fromZ <= b.bounds.maxZ),
   };
 }
 function updatePlayer(dt) {
@@ -1940,7 +1983,7 @@ function updatePlayer(dt) {
       player.root.rotation.y = Math.atan2(dx, dz);
       speed = 2.6;
     }
-    if (player.pose !== 'sit') p.y = heightAt(p.x, p.z);
+    if (player.pose !== 'sit') p.y = heightAt(p.x, p.z, p.y);
   } else if (player.pose !== 'sit') {
     let ix = stick.x, iz = stick.y;
     if (keys.has('w') || keys.has('arrowup')) iz -= 1;
@@ -2334,14 +2377,15 @@ function frame() {
   water.material.uniforms.uNight.value = L.night;
 
   if (S.city === 'seoul') updateSchedules();
+  occupants?.update({ city: S.city, position: player.root.position, hour: localHour(), dt, time: t });
   const ps = updatePlayer(dt);
   const hs = updateHaeun(dt, t);
   updateNpcs(dt, t);
   animate(player, dt, t, ps);
   const yaw = player.root.rotation.y;
   const ppRide = player.root.position;
-  const frontY = heightAt(ppRide.x + Math.sin(yaw) * 0.5, ppRide.z + Math.cos(yaw) * 0.5);
-  const rearY = heightAt(ppRide.x - Math.sin(yaw) * 0.5, ppRide.z - Math.cos(yaw) * 0.5);
+  const frontY = heightAt(ppRide.x + Math.sin(yaw) * 0.5, ppRide.z + Math.cos(yaw) * 0.5, ppRide.y);
+  const rearY = heightAt(ppRide.x - Math.sin(yaw) * 0.5, ppRide.z - Math.cos(yaw) * 0.5, ppRide.y);
   rides.update(traversal, lastTraversalSpeed, t, Math.atan2(rearY - frontY, 1));
   animate(haeun, dt, t, hs);
   for (const c of [jin, ajusshi, barista, cashier]) if (c.root.visible) animate(c, dt, t, 0);
@@ -2407,8 +2451,17 @@ async function boot() {
     group.visible = id === S.city;
   };
   buildCityGeometry('seoul', buildWorld);
-  for (const city of Object.values(cities)) buildCityGeometry(city.id, () => city.build());
+  for (const city of Object.values(cities)) buildCityGeometry(city.id, () => {
+    city.build();
+    // Staged pilot only. Other shops/cities wait for coordinator gameplay proof.
+    if (city.id === 'tokyo') {
+      const cafe = enhanceRoom(interiors.find((room) => room.id === 'tokyo-cafe-room'));
+      cafe.staff.placeId = 'tokyo-cafe';
+      buildApartment({ id: 'tokyo-home', city: 'tokyo', x: 348, z: -47, w: 14, d: 12, style: 'tokyo' });
+    }
+  });
   buildCast();
+  occupants = createOccupants(interiors, { groups: cityGroups });
   initParticles();
   buildMotes();
   const saved = loadSave();
@@ -2482,7 +2535,26 @@ async function boot() {
     get demoEnabled() { return demoEnabled; },
     get controls() { return { keys: [...keys], joystick: { ...stick }, pointers: lookPointers.size, braking, runEnabled }; },
     get cameraDiagnostics() { return { mode: cam.mode, desired: camTargetPos.toArray(), actual: camera.position.toArray(), yaw: cam.yaw, pitch: cam.pitch, distance: cam.dist, overview, vistaIndex, near: camera.near }; },
-    get interiorDiagnostics() { return { current: interiorAt(player.root.position, S.city)?.id ?? null, cutaways: cutawaySnapshot() }; },
+    get interiorDiagnostics() {
+      const room = interiorAt(player.root.position, S.city);
+      return { current: room?.id ?? null, buildingId: room?.buildingId ?? null, level: room?.level ?? null, cutaways: cutawaySnapshot() };
+    },
+    // Detached records only: diagnostics describe actual geometry/state without
+    // introducing a floor switch/teleport into normal gameplay.
+    get apartmentDiagnostics() {
+      return apartments.map((b) => ({ id: b.id, city: b.city, bounds: { ...b.bounds }, entry: [...b.entry],
+        route: b.route.map((p) => ({ ...p })), supports: b.supports.map((s) => ({ ...s })),
+        rooms: b.rooms.map((r) => ({ id: r.id, level: r.level, floorY: r.floorY, furniture: r.furniture.map((f) => ({ kind: f.kind, position: [...f.position] })) })) }));
+    },
+    get occupantDiagnostics() {
+      return occupants.actors.map((a) => ({ roomId: a.roomId, city: a.city, role: a.role, name: a.name, greeting: a.greeting,
+        placeId: a.placeId, spawn: [...a.spawn], position: a.character.root.position.toArray(), visible: a.character.root.visible }));
+    },
+    get levelDiagnostics() {
+      const p = player.root.position;
+      return { position: p.toArray(), support: heightAt(p.x, p.z, p.y), ceiling: ceilingAt(p.x, p.z, p.y) ?? null,
+        zone: zoneAt(p.x, p.z, p.y), traversal: { ...traversal }, interaction: activeInteract?.label ?? null };
+    },
   };
 }
 

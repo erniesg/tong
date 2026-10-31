@@ -1,5 +1,6 @@
 // Deterministic, renderer-independent arcade traversal. Positions are feet on
 // terrain; legacy XZ colliders remain solid at every jump height (not roofs).
+// New solids use finite vertical body intervals, shared with save validation.
 // Includes the player's beanie/pom-pom and a small animation margin.
 export const PLAYER_CLEARANCE = 1.9;
 export const MODES = Object.freeze({
@@ -13,6 +14,28 @@ export function overlaps(x, z, radius, box) {
   const dx = x - clamp(x, box.minX, box.maxX);
   const dz = z - clamp(z, box.minZ, box.maxZ);
   return dx * dx + dz * dz < radius * radius - 1e-9;
+}
+export function bodyOverlaps(x, feetY, z, radius, box) {
+  const intersectsY = (!Number.isFinite(box.minY) || feetY + PLAYER_CLEARANCE > box.minY + 1e-6) &&
+    (!Number.isFinite(box.maxY) || feetY < box.maxY - 1e-6);
+  return intersectsY && overlaps(x, z, radius, box);
+}
+// Closed segment / AABB intersection for physical sight lines. Cutaway
+// transparency must never permit talking through a wall.
+export function segmentHitsBox(a, b, box) {
+  let near = 0, far = 1;
+  for (const [axis, low, high] of [['x', 'minX', 'maxX'], ['y', 'minY', 'maxY'], ['z', 'minZ', 'maxZ']]) {
+    const min = Number.isFinite(box[low]) ? box[low] : -Infinity;
+    const max = Number.isFinite(box[high]) ? box[high] : Infinity;
+    const delta = b[axis] - a[axis];
+    if (Math.abs(delta) < 1e-9) { if (a[axis] < min || a[axis] > max) return false; }
+    else {
+      const t0 = (min - a[axis]) / delta, t1 = (max - a[axis]) / delta;
+      near = Math.max(near, Math.min(t0, t1)); far = Math.min(far, Math.max(t0, t1));
+      if (near > far) return false;
+    }
+  }
+  return near <= far;
 }
 export function createTraversal() {
   return { mode: 'walk', vx: 0, vz: 0, vy: 0, grounded: true, jumpQueued: false, blocked: false, distance: 0 };
@@ -55,10 +78,16 @@ export function stepTraversal(state, position, input, environment, dt) {
   }
   const canMove = (x, z, fromX, fromZ) => {
     if (x < bounds.minX + radius || x > bounds.maxX - radius || z < bounds.minZ + radius || z > bounds.maxZ - radius) return false;
-    if (colliders.some((box) => overlaps(x, z, radius, box))) return false;
-    const floor = heightAt(x, z), before = heightAt(fromX, fromZ);
+    // Read the live feet Y for EVERY substep (including the second slide axis).
+    const floor = heightAt(x, z, position.y), before = heightAt(fromX, fromZ, position.y);
     if (!Number.isFinite(floor) || !Number.isFinite(before)) return false;
-    return Math.abs(floor - before) <= 0.025 + Math.hypot(x - fromX, z - fromZ) * 0.9;
+    const limit = 0.025 + Math.hypot(x - fromX, z - fromZ) * 0.9;
+    if (floor - before > limit) return false;
+    if (before - floor > limit && !environment.allowDrop?.(fromX, fromZ, x, z, position.y)) return false;
+    const feet = state.grounded && Math.abs(floor - position.y) <= limit ? floor : position.y;
+    if (colliders.some((box) => bodyOverlaps(x, feet, z, radius, box))) return false;
+    const ceiling = environment.ceilingAt?.(x, z, feet);
+    return !Number.isFinite(ceiling) || feet + PLAYER_CLEARANCE <= ceiling + 1e-6;
   };
   for (let i = 0; i < count; i++) {
     if (!input.frozen) {
@@ -88,7 +117,13 @@ export function stepTraversal(state, position, input, environment, dt) {
       }
       state.distance += Math.hypot(position.x - beforeX, position.z - beforeZ);
     }
-    const ground = heightAt(position.x, position.z);
+    let ground = heightAt(position.x, position.z, position.y);
+    for (const box of colliders) {
+      if (Number.isFinite(box.maxY) && box.maxY <= position.y + 1e-6 && box.maxY > ground && overlaps(position.x, position.z, radius, box)) ground = box.maxY;
+    }
+    // Continuous slopes follow support; an actual open edge starts a fall.
+    if (state.grounded && position.y - ground > 0.025 + Math.hypot(state.vx, state.vz) * h * 0.9) state.grounded = false;
+    const beforeY = position.y;
     if (state.grounded) position.y = ground;
     else {
       state.vy -= 17 * h;
@@ -98,8 +133,18 @@ export function stepTraversal(state, position, input, environment, dt) {
         state.vy = 0;
         state.grounded = true;
       }
+      // Swept vertical contacts with finite solids (furniture/staff/rails).
+      // Unbounded legacy colliders remain horizontal-only, as before.
+      for (const box of colliders) {
+        if (!overlaps(position.x, position.z, radius, box)) continue;
+        if (state.vy <= 0 && Number.isFinite(box.maxY) && beforeY >= box.maxY - 1e-6 && position.y < box.maxY) {
+          position.y = box.maxY; state.vy = 0; state.grounded = true;
+        } else if (state.vy > 0 && Number.isFinite(box.minY) && beforeY + PLAYER_CLEARANCE <= box.minY + 1e-6 && position.y + PLAYER_CLEARANCE > box.minY) {
+          position.y = box.minY - PLAYER_CLEARANCE; state.vy = 0;
+        }
+      }
     }
-    const ceiling = environment.ceilingAt?.(position.x, position.z);
+    const ceiling = environment.ceilingAt?.(position.x, position.z, beforeY);
     if (Number.isFinite(ceiling) && position.y + PLAYER_CLEARANCE > ceiling) {
       position.y = Math.max(ground, ceiling - PLAYER_CLEARANCE);
       state.vy = Math.min(0, state.vy);
