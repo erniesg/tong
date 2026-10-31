@@ -423,6 +423,7 @@ export function createCreator() {
       root.dataset.mode = mode;
       $('creator-start').textContent = mode === 'new' ? '시작 · Start' : '완성 · Done';
       $('creator-back').textContent = mode === 'new' ? '← Back' : 'Cancel';
+      $('creator-title').textContent = mode === 'new' ? 'Make your character' : 'Change your look';
       root.classList.remove('hidden');
       playing = !reducedMotion();
       spin = 0.5;
