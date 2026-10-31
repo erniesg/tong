@@ -34,12 +34,13 @@ export function zoneAt(building, position) {
   return building.levels[Math.min(level, building.floors - 1)] ?? null;
 }
 
-/** Small authored switchback home, front +Z. All dimensions in metres. */
-export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3, storeyHeight = 3.4, style = city }) {
+/** Small authored switchback home, front +Z. All dimensions in metres.
+ *  With `rooftop`, the stairwell continues to a walkable, dressed roof terrace. */
+export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3, storeyHeight = 3.4, style = city, rooftop = true }) {
   if (!id || !city || ![x, z, w, d, storeyHeight].every(Number.isFinite) || w < 14 || d < 10 || !Number.isInteger(floors) || floors < 2 || storeyHeight < 3.2 || storeyHeight > 3.5)
     throw new RangeError('Apartment needs id/city, finite origin, w>=14, d>=10, >=2 floors, and 3.2–3.5m storeys');
   const b = { id, city, x, z, w, d, floors, storeyHeight, style,
-    bounds: { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, minY: -0.16, maxY: floors * storeyHeight + 0.2 },
+    bounds: { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, minY: -0.16, maxY: floors * storeyHeight + (rooftop ? 3 : 0.2) },
     entry: [x, 0, z + d / 2], levels: [], supports: [], ceilings: [], solids: [], pieces: [], route: [], safePoints: [], categoryPositions: [] };
   const back = -d / 2, front = d / 2;
   const left = -w / 2 + 0.45, right = left + 4.6, divider = right + 0.25;
@@ -203,14 +204,16 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
       piece(level, 'rail', 'trim', (left + right) / 2, y, rear - 0.035, right - left, 1.05, 0.07, { solid: true });
       piece(level, 'rail', 'trim', (laneA + laneB) / 2, y, start, laneB - laneA - 1.8, 1.05, 0.07, { solid: true });
     }
-    if (level === floors - 1) {
+    if (level === floors - 1 && !rooftop) {
       // Cap roof belongs to top room. Lower rooms own ONLY the next slab.
       piece(level, 'slab', 'roof', 0, y + storeyHeight - 0.16, 0, w + 0.3, 0.24, d + 0.3, { overhead: true }).cutaway = 'roof';
       piece(level, 'roof-trim', 'trim', 0, y + storeyHeight + 0.08, front, w + 0.5, 0.12, 0.26);
     }
   }
 
-  for (let level = 0; level < floors - 1; level++) {
+  // One switchback per storey; a rooftop adds the top flat's flight to the roof.
+  const flights = rooftop ? floors : floors - 1;
+  for (let level = 0; level < flights; level++) {
     const y = level * storeyHeight;
     slab(level, (left + right) / 2, (rear + end) / 2, right - left, end - rear, y + rise, 'half-landing', level);
     for (const [u, a, dir, y0] of [[laneA, start, -1, y], [laneB, end, 1, y + rise]]) {
@@ -234,6 +237,61 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
       piece(level, 'rail', 'trim', u, y + rise, rear + 0.05, 0.07, 1, 0.07, { solid: true });
     piece(level, 'rail', 'wood', (left + right) / 2, y + rise + 1, rear + 0.05, right - left, 0.07, 0.07, { solid: true });
   }
+  const roofY = floors * storeyHeight;
+  if (rooftop) {
+    // Roof terrace: the same four slabs around the continuing stairwell. It is
+    // outdoors (zoneAt stops at roofY) but owned by the top flat's cutaway, so
+    // it and its dressing hide with the upper structure from inside.
+    const top = floors - 1;
+    for (const p of [
+      slab(floors, (right + w / 2 - 0.11) / 2, 0, w / 2 - 0.11 - right, d - 0.22, roofY),
+      slab(floors, (-w / 2 + 0.11 + left) / 2, 0, left + w / 2 - 0.11, d - 0.22, roofY),
+      slab(floors, (left + right) / 2, (back + 0.11 + rear) / 2, right - left, rear - back - 0.11, roofY),
+      slab(floors, (left + right) / 2, (start + front - 0.11) / 2, right - left, front - 0.11 - start, roofY, 'landing'),
+    ]) p.color = 'rooftop';
+    const roofPiece = (role, color, u, y, v, ww, hh, dd, solid = true) => {
+      const p = piece(top, role, color, u, y, v, ww, hh, dd, { solid });
+      p.cutaway = 'roof';
+      return p;
+    };
+    // Parapet continues the outer walls; coping caps it.
+    const parapetH = 1.2; // above a standing jump's ~1.09m apex
+    for (const [u, v, ww, dd] of [[0, back, w + 0.2, 0.2], [0, front, w + 0.2, 0.2], [-w / 2, 0, 0.2, d], [w / 2, 0, 0.2, d]]) {
+      roofPiece('parapet', 'plaster', u, roofY - 0.16, v, ww, parapetH + 0.16, dd);
+      roofPiece('roof-trim', 'trim', u, roofY + parapetH, v, ww + 0.12, 0.08, dd + 0.12, false);
+    }
+    // Guard every open edge of the stairwell except the arriving east flight.
+    roofPiece('rail', 'trim', (left + right) / 2, roofY, rear - 0.035, right - left, 1.05, 0.07);
+    roofPiece('rail', 'trim', left - 0.035, roofY, (rear + start) / 2, 0.07, 1.05, start - rear);
+    roofPiece('rail', 'trim', right + 0.035, roofY, (rear + start) / 2, 0.07, 1.05, start - rear);
+    roofPiece('rail', 'trim', (left + laneB - 0.9) / 2, roofY, start + 0.035, laneB - 0.9 - left, 1.05, 0.07);
+    // Dressing: a wooden sitting platform (평상), a plastic table and stools,
+    // styrofoam vegetable boxes, a drying rack, a water tank and string lights.
+    const sit = (kind, u, v, ww, dd, hh) => {
+      roofPiece(kind, 'wood', u, roofY, v, ww, hh, dd);
+      support(u, v, ww, dd, roofY + hh, floors, 'furniture-top');
+    };
+    sit('rooftop-platform', 4.8, -3.8, 2.4, 1.8, 0.42);
+    roofPiece('rooftop-platform-mat', 'linen', 4.8, roofY + 0.42, -3.8, 1.6, 0.02, 1.2, false);
+    roofPiece('rooftop-table', 'plastic', 4.6, roofY, 1.2, 0.85, 0.72, 0.85);
+    for (const [du, dv] of [[-0.85, 0], [0.85, 0], [0, -0.85], [0, 0.85]]) roofPiece('rooftop-stool', 'plastic', 4.6 + du, roofY, 1.2 + dv, 0.36, 0.42, 0.36);
+    for (const u of [-1.2, -0.3, 0.6, 1.5]) {
+      roofPiece('planter-box', 'white', u, roofY, back + 0.45, 0.75, 0.38, 0.42);
+      roofPiece('planter-greens', 'green', u, roofY + 0.38, back + 0.45, 0.65, 0.22, 0.34, false);
+    }
+    for (const v of [-1.9, -0.1]) roofPiece('drying-rack-post', 'trim', 6.3, roofY, v, 0.06, 1.5, 0.06);
+    for (const dy of [1.15, 1.45]) roofPiece('drying-rack-bar', 'trim', 6.3, roofY + dy, -1, 0.04, 0.04, 1.8, false);
+    for (const [v, color] of [[-1.55, 'linen'], [-0.95, 'accent'], [-0.4, 'linen']]) roofPiece('drying-laundry', color, 6.3, roofY + 0.75, v, 0.03, 0.7, 0.42, false);
+    roofPiece('water-tank', 'tank', 6.1, roofY, 4.9, 1.1, 1.3, 1.1);
+    for (const v of [back + 0.35, front - 0.35]) {
+      for (const u of [-1.4, 6.6]) roofPiece('light-pole', 'trim', u, roofY, v, 0.06, 2.4, 0.06);
+      roofPiece('light-wire', 'dark', 2.6, roofY + 2.32, v, 8, 0.015, 0.015, false);
+      for (let u = -1; u <= 6.2; u += 0.8) roofPiece('string-bulb', 'bulb', u, roofY + 2.18, v, 0.07, 0.1, 0.07, false);
+    }
+    b.safePoints.push(point(1, roofY, 3.6, 'rooftop'));
+    b.categoryPositions.push(point(4.8, roofY + 0.42, -3.8, 'rooftop-platform'));
+  }
+
   // Normal-input route, explicitly including both halves of every switchback
   // and upper-room visits. Descent reverses the physical path, not a floor API.
   walk(w / 2 + 2, 0, front + 2.5, 'street-approach');
@@ -254,6 +312,16 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
     walk(4, y + storeyHeight, -1.3, 'bedroom'); walk(1.55, y + storeyHeight, -1.3, 'living');
     walk(1.55, y + storeyHeight, 1.3, 'living'); walk(4, y + storeyHeight, 1.3, 'bathroom');
     walk(1.55, y + storeyHeight, 1.3, 'living'); walk(1.55, y + storeyHeight, 3.25, 'home-entry');
+  }
+  if (rooftop) {
+    const y = (floors - 1) * storeyHeight;
+    walk(laneA, y, 3.25, 'stair-entry'); walk(laneA, y, start, 'flight-start');
+    walk(laneA, y + rise, end, 'flight-end'); walk(laneA, y + rise, -1, 'half-landing');
+    walk(laneB, y + rise, -1, 'half-landing'); walk(laneB, y + rise, end, 'flight-start');
+    walk(laneB, roofY, start, 'flight-end'); walk(laneB, roofY, 3.6, 'roof-landing');
+    walk(1, roofY, 3.6, 'rooftop'); walk(1, roofY, -1, 'rooftop-view');
+    walk(3.3, roofY, -1, 'rooftop-platform-side'); walk(1, roofY, -1, 'rooftop-view');
+    walk(1, roofY, 3.6, 'rooftop'); walk(laneB, roofY, 3.6, 'roof-landing');
   }
   const ascent = b.route.slice();
   b.route.push(...ascent.slice(0, -1).reverse().map(p => ({ ...p, kind: `descent-${p.kind}` })));

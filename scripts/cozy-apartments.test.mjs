@@ -60,10 +60,33 @@ for (const depth of [12, 10]) {
       assert.ok(reached, `stuck approaching ${JSON.stringify(target)} at ${JSON.stringify(p)}`);
       assert.ok(Math.abs(p.y - target.y) < 0.04, `wrong level at ${target.kind}: ${p.y}`);
     }
-    close(maxY, 6.8, 'reached actual top floor');
+    close(maxY, 10.2, 'reached the actual rooftop above the top floor');
     close(p.y, 0, 'exited at street height');
   });
 }
+
+test('rooftop terrace is outdoors, guarded at the well and the parapet, with a platform to sit on', () => {
+  const b = make(), env = environment(b), roofY = 10.2;
+  close(supportAt(b, 352, -48, roofY), roofY, 'walkable terrace');
+  assert.equal(zoneAt(b, { x: 352, y: roofY, z: -48 }), null, 'roof is outdoors, not the top flat');
+  close(supportAt(b, 352.8, -50.8, roofY + 0.42), roofY + 0.42, 'sitting platform top');
+  const walkFor = (p, input, seconds, jump = false) => {
+    const state = createTraversal();
+    for (let i = 0; i < seconds * 120; i++) {
+      if (jump && i % 60 === 0) state.jumpQueued = true;
+      stepTraversal(state, p, input, env, 1 / 120);
+      assert.ok(!b.solids.some(s => bodyOverlaps(p.x, p.y, p.z, 0.3, s)), 'no penetration');
+    }
+    return p;
+  };
+  // From the arrival landing, walking into the well over the west flight is blocked.
+  const well = walkFor({ x: 342.45, y: roofY, z: -43.4 }, { z: -1 }, 3);
+  close(well.y, roofY, 'still on the roof');
+  assert.ok(well.z > -44.8 + 0.3, `stopped at the well rail, z=${well.z}`);
+  // Running and jumping at the east parapet never carries the player over it.
+  const edge = walkFor({ x: 352, y: roofY, z: -45 }, { x: 1 }, 4, true);
+  assert.ok(edge.x < 355 - 0.1 - 0.3 + 1e-6 && edge.y >= roofY - 1e-6, `kept inside the parapet ${JSON.stringify(edge)}`);
+});
 
 test('feet-Y selects reachable support, never the highest floor; holes expose lower geometry', () => {
   const b = make();
