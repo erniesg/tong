@@ -1242,8 +1242,11 @@ function addHeadwear(c, look) {
     const beanie = toon('#ffffff', { map: beanieTex.map, normalMap: beanieTex.normalMap });
     const r = crown.r + 0.026;
     part(new THREE.SphereGeometry(r, 32, 16, 0, TAU, 0, Math.PI * 0.42), beanie, 0, crown.y + 0.03, crown.z, c.head);
-    const cuff = add(new THREE.TorusGeometry(r - 0.012, 0.048, 10, 32), beanie, 0, crown.y + 0.03 + r * Math.cos(Math.PI * 0.42) - 0.01, crown.z, c.head);
-    cuff.rotation.x = Math.PI / 2;
+    // The rolled cuff is thicker than the hood allows; under a raised hood only the crown shows.
+    if (!hooded) {
+      const cuff = add(new THREE.TorusGeometry(r - 0.012, 0.048, 10, 32), beanie, 0, crown.y + 0.03 + r * Math.cos(Math.PI * 0.42) - 0.01, crown.z, c.head);
+      cuff.rotation.x = Math.PI / 2;
+    }
     if (!hooded) part(new THREE.SphereGeometry(0.08, 12, 10), toon('#fff3dc'), 0, crown.y + 0.03 + r + 0.03, crown.z, c.head, { ol: 0.008 });
     if (!hooded) tuckHair(c, center, r + 0.004, { minY: crown.y + 0.1, press: true, tails: true });
   } else if (look.hat === 'cap') {
