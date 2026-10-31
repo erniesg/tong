@@ -390,7 +390,7 @@ export default {
   vistas: [
     { id: 'seoul-hangang', title: 'Hangang bridge & waterfront', nativeName: '한강 전망', spawn: [6, 2.4, -41.5], position: [10, 8, -42], look: [0, -1, -185], description: 'Elevated, unobstructed view south over the compressed Han River connection.' },
     { id: 'seoul-namsan', title: 'Namsan skyline', nativeName: '남산 서울타워', spawn: [31, 0, -40], position: [28, 7, -43], look: [420, 118, -10], description: 'The distant eastern tower and hill remain on the north bank, not across the Han.' },
-    { id: 'seoul-board-art', kind: 'artwork', title: 'Board artwork', nativeName: '서울 동네 원화', position: [7, 3.6, 28], look: [7, 3.6, 38.78], fov: 55, description: 'Full original neighbourhood artwork in its world frame; camera only, not a map or teleport.' },
+    { id: 'seoul-board-art', kind: 'artwork', artworkHref: '/assets/locations/seoul-static.png', title: 'Board artwork', nativeName: '서울 동네 원화', position: [7, 3.6, 28], look: [7, 3.6, 38.78], fov: 55, description: 'Full original neighbourhood artwork in its world frame; camera only, not a map or teleport.' },
   ],
   airport: { spawn: airportSpawn, name: 'AREX · Gimpo / Incheon connection', nativeName: '공항철도 · 김포 / 인천 연결' },
   roads,

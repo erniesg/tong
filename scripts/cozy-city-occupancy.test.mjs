@@ -52,7 +52,7 @@ async function scene(cityId) {
   const occupants = staff.namespace.createOccupants(rooms.interiors);
   const heightAt = (x,z,y) => homes.namespace.apartmentHeightAt(x,z,y,cityId) ?? 0;
   const ceilingAt = (x,z,y) => homes.namespace.apartmentCeilingAt(x,z,y,cityId) ?? rooms.interiorAt({x,y,z},cityId)?.ceilingAt?.(x,z,y);
-  return { G, city, b, occupants, rooms, places, nativeSolids, heightAt, ceilingAt };
+  return { G, THREE, world: world?.namespace, homeApi: homes.namespace, city, b, occupants, rooms, places, nativeSolids, heightAt, ceilingAt };
 }
 
 function checkBoardGuide({ G, city }) {
@@ -77,6 +77,11 @@ function checkBoardGuide({ G, city }) {
   api.populateLocations();
   const button = list.children.flatMap(n => n.children).find(n => n.textContent?.includes(view.title));
   assert.ok(button && button.textContent.includes('Camera only'));
+  const originalLink = list.children.flatMap(n => n.children).find(n => n.href);
+  assert.ok(originalLink, 'supplemental full-resolution original is keyboard-accessible beside the world view');
+  assert.equal(originalLink.href, '/assets/locations/seoul-static.png');
+  assert.equal(originalLink.href, view.artworkHref); assert.equal(originalLink.target, '_blank');
+  assert.ok(originalLink.rel.split(' ').includes('noopener'));
   button.onclick(); // Actual runtime callback; DOM adapters only, not a selector stub.
   assert.equal(api.index, views.indexOf(view)); assert.equal(api.overview, false); assert.equal(cam.snap, true); assert.equal(focused, true);
   assert.equal(JSON.stringify({ S, player }), before, 'selection cannot teleport or alter story/city');
@@ -84,9 +89,35 @@ function checkBoardGuide({ G, city }) {
   assert.equal(cam.yaw, city.yaw); assert.equal(cam.pitch, .36); assert.equal(cam.dist, 6.5);
 }
 
+function checkTentEntry(h) {
+  const { G, THREE, world, homeApi, rooms, city } = h, { TX, TENT } = world;
+  const source = readFileSync(resolve('apps/client/public/cozy/js/main.js'), 'utf8');
+  const start = source.indexOf('function ceilingAt('), text = source.slice(start, source.indexOf('\n}', start) + 2);
+  const runtimeCeiling = new Function('apartmentCeilingAt', 'apartmentZoneAt', 'S', 'interiorAt', 'interiors', `${text}; return ceilingAt;`)(homeApi.apartmentCeilingAt, homeApi.apartmentZoneAt, { city: 'seoul' }, rooms.interiorAt, rooms.interiors);
+  world.setTentOpen(true);
+  const env = { heightAt: world.heightAt, ceilingAt: runtimeCeiling, colliders: G.colliders, bounds: city.bounds, allowDrop: () => true };
+  const p = { x: TX, y: 0, z: TENT.maxZ + .8 }, state = createTraversal();
+  for (let i = 0; i < 480 && p.z > TENT.maxZ - .9; i++) stepTraversal(state, p, { x: 0, z: -1 }, env, 1 / 120);
+  const headers = G.scene.children.filter(m => m.isMesh).map(m => new THREE.Box3().setFromObject(m)).filter(b =>
+    b.max.x - b.min.x > 4 && b.max.x - b.min.x < 4.6 && b.min.y > 1 && b.max.y <= TENT.wallH + .001 && b.min.z >= TENT.maxZ - .101 && b.max.z <= TENT.maxZ + .101);
+  const visualClearance = Math.min(...headers.map(b => b.min.y)), logicalClearance = runtimeCeiling(TX, TENT.maxZ - .05, 0);
+  console.log(JSON.stringify({ tent: { openWalkZ: p.z, visualClearance, logicalClearance, playerClearance: 1.9, headerPieces: headers.length } }));
+  assert.ok(p.z < TENT.maxZ - .8, 'actual runtime ceiling/physics must allow normal night doorway entry');
+  assert.ok(headers.length >= 3, 'real tarp header, roller and painted valance measured');
+  assert.ok(visualClearance >= 2, 'visible opening clears the full player, not a collision bypass');
+  assert.ok(Math.abs(visualClearance - logicalClearance) < 1e-5, 'physical ceiling matches lowest visible header component');
+  world.setTentOpen(false); env.colliders = G.colliders;
+  Object.assign(p, { x: TX, y: 0, z: TENT.maxZ + .8 }); const closed = createTraversal();
+  for (let i = 0; i < 240; i++) stepTraversal(closed, p, { x: 0, z: -1 }, env, 1 / 120);
+  assert.ok(p.z > TENT.maxZ + .25, 'closed daytime flap remains physically blocking');
+}
+
 for (const cityId of ['seoul', 'tokyo', 'shanghai']) test(`${cityId}: actual plot, every generic staffed room, both apartment floors and physical exit`, async (t) => {
   const h = await scene(cityId), { G, city, b, occupants, rooms, places } = h;
-  if (cityId === 'seoul') await t.test('actual artwork Guide callback is camera-only and preserves named landmarks / reset', () => checkBoardGuide(h));
+  if (cityId === 'seoul') {
+    await t.test('actual artwork Guide callback is camera-only and preserves named landmarks / reset', () => checkBoardGuide(h));
+    await t.test('authored tent visible header and actual runtime ceiling permit night entry, retain closed flap', () => checkTentEntry(h));
+  }
   assert.equal(places.filter(p => p.category === 'home').length, 1);
   for (const category of ['food','cafe','store','subway','studio']) assert.ok(places.some(p => p.category === category), category);
   assert.ok(b.bounds.minX > city.bounds.minX && b.bounds.maxX < city.bounds.maxX && b.bounds.minZ > city.bounds.minZ && b.bounds.maxZ < city.bounds.maxZ);

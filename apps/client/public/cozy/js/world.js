@@ -15,7 +15,7 @@ import { toon } from './characters.js';
 /* ── Layout ───────────────────────────────────────── */
 
 export const TX = -2.4;
-export const TENT = { minX: TX - 3, maxX: TX + 3, minZ: -2.2, maxZ: 2.0, wallH: 2.3, ridgeH: 3.0 };
+export const TENT = { minX: TX - 3, maxX: TX + 3, minZ: -2.2, maxZ: 2.0, wallH: 2.3, ridgeH: 3.0, valanceDrop: 0.25 };
 export const COUNTER_Y = 0.87;
 export const STOOLS = [-1.8, -0.6, 0.6, 1.8].map((dx) => new THREE.Vector3(TX + dx, 0, 0));
 export const TERRACE_Y = 2.4;
@@ -80,7 +80,7 @@ function registerSeoulShell(category, initial, bounds, floorY = 0) {
   }
   const ceilingAt = category === 'food' ? (_x, z) => {
     // The front valance is lower than the sloped tent roof.
-    if (z > TENT.maxZ - 0.4) return TENT.wallH - 0.45;
+    if (z > TENT.maxZ - 0.4) return TENT.wallH - TENT.valanceDrop;
     const mid = (TENT.minZ + TENT.maxZ) / 2;
     return TENT.ridgeH - (TENT.ridgeH - TENT.wallH) * clamp(Math.abs(z - mid) / ((TENT.maxZ - TENT.minZ) / 2), 0, 1);
   } : () => floorY + 3.4;
@@ -609,7 +609,7 @@ function lantern(text, x, y, z, real) {
 function buildTent() {
   const initial = new Set(G.scene.children);
   initial.colliderStart = G.colliders.length;
-  const { minX, maxX, minZ, maxZ, wallH, ridgeH } = TENT;
+  const { minX, maxX, minZ, maxZ, wallH, ridgeH, valanceDrop } = TENT;
   const W = maxX - minX;
   const D = maxZ - minZ;
   const midZ = (minZ + maxZ) / 2;
@@ -628,17 +628,20 @@ function buildTent() {
   const open = 2.2;
   add(new THREE.PlaneGeometry(maxX - (TX + open), wallH), tarp, (TX + open + maxX) / 2, wallH / 2, maxZ, G.scene, false);
   add(new THREE.PlaneGeometry(TX - open - minX, wallH), tarp, (minX + TX - open) / 2, wallH / 2, maxZ, G.scene, false);
-  add(new THREE.PlaneGeometry(open * 2, 0.45), tarp, TX, wallH - 0.225, maxZ, G.scene, false);
-  add(new THREE.CylinderGeometry(0.075, 0.075, open * 2, 12), tarp, TX, wallH - 0.5, maxZ + 0.02, G.scene, false).rotation.z = Math.PI / 2;
+  // Keep the real header/roller above the 1.9m player, not just its query.
+  const rollerRadius = 0.075, openingHeight = wallH - valanceDrop;
+  add(new THREE.PlaneGeometry(open * 2, valanceDrop), tarp, TX, wallH - valanceDrop / 2, maxZ, G.scene, false);
+  add(new THREE.CylinderGeometry(rollerRadius, rollerRadius, open * 2, 12), tarp, TX, openingHeight + rollerRadius, maxZ + 0.02, G.scene, false).rotation.z = Math.PI / 2;
   // closed flap (daytime)
-  const flap = add(new THREE.PlaneGeometry(open * 2, wallH - 0.45), tarp, TX, (wallH - 0.45) / 2, maxZ + 0.01, G.scene, false);
+  const flap = add(new THREE.PlaneGeometry(open * 2, openingHeight), tarp, TX, openingHeight / 2, maxZ + 0.01, G.scene, false);
   tentMats.flap = flap;
 
   const valTex = textTexture([['포장마차 · 떡볶이 · 오뎅 · 소주', 64, '#fff6e0', 64]], 1024, 128);
   const valM = new THREE.MeshStandardMaterial({ map: valTex, emissiveMap: valTex, transparent: true, emissive: 0xffffff, depthWrite: false });
   nightGlow(valM, 0.05, 0.4);
   tentMats.valance = valM;
-  add(new THREE.PlaneGeometry(open * 2, 0.4), valM, TX, wallH - 0.23, maxZ + 0.015, G.scene, false).renderOrder = 2;
+  const valance = add(new THREE.PlaneGeometry(open * 2, valanceDrop * 0.88), valM, TX, wallH - valanceDrop / 2, maxZ + 0.015, G.scene, false);
+  valance.renderOrder = 2;
 
   const half = D / 2;
   const slopeL = Math.hypot(half, ridgeH - wallH);
@@ -746,6 +749,7 @@ function buildTent() {
   for (const mesh of G.scene.children.filter(o => !initial.has(o))) {
     if (mesh.isMesh && mesh.material === tarp && !room.walls.includes(mesh) && !room.roofs.includes(mesh)) room.walls.push(mesh);
   }
+  if (!room.walls.includes(valance) && !room.roofs.includes(valance)) room.walls.push(valance);
   registerInterior(room);
 }
 

@@ -1541,7 +1541,7 @@ window.addEventListener('keydown', (e) => {
     }
     const modal = [...document.querySelectorAll('.overlay:not(.hidden)')].at(-1) ?? (!ui.book.classList.contains('hidden') ? ui.book : null);
     if (k === 'tab' && modal) {
-      const focusable = [...modal.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled)')].filter((el) => !el.closest('.hidden'));
+      const focusable = [...modal.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), a[href]')].filter((el) => !el.closest('.hidden'));
       const index = focusable.indexOf(document.activeElement);
       if (focusable.length) {
         e.preventDefault();
@@ -1816,6 +1816,15 @@ function populateLocations() {
       canvas.focus();
     };
     row.appendChild(button);
+    if (vista.artworkHref) {
+      const link = document.createElement('a');
+      link.className = 'btn-secondary artwork-link';
+      link.href = vista.artworkHref;
+      link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.textContent = 'Original concept image · full resolution (new tab)';
+      link.title = 'Use native browser zoom and scroll; close the tab to return. The world view remains available above.';
+      row.appendChild(link);
+    }
     list.appendChild(row);
   }
   if (select && [...select.options].some((o) => o.value === selected)) select.value = selected;
