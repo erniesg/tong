@@ -42,6 +42,7 @@ export function createCreator() {
   // Framing: whole body for outfits, a close-up while editing the face.
   const FRAMES = { body: { y: 0.92, half: 1.08, width: 0.62 }, face: { y: 1.3, half: 0.34, width: 0.4 } };
   let framing = 'body';
+  let frozen = null; // fixed turn angle for inspection/screenshots; null = normal turntable
   const view = { ...FRAMES.body };
 
   function ensureRenderer() {
@@ -94,6 +95,7 @@ export function createCreator() {
     last = now;
     if (dragX === null) spin += dt * (framing === 'face' ? 0 : 0.35);
     if (framing === 'face') spin += (Math.round(spin / (Math.PI * 2)) * Math.PI * 2 - spin) * Math.min(1, dt * 4);
+    if (frozen !== null) spin = frozen;
     model.root.rotation.y = spin;
     const target = FRAMES[framing];
     for (const k of ['y', 'half', 'width']) view[k] += (target[k] - view[k]) * Math.min(1, dt * 5);
@@ -211,5 +213,7 @@ export function createCreator() {
     },
     get look() { return look; },
     get model() { return model; },
+    set frozen(angle) { frozen = Number.isFinite(angle) ? angle : null; },
+    setFraming,
   };
 }

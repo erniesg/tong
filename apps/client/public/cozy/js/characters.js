@@ -446,6 +446,26 @@ function drawFace(g, f, st, browG) {
   drawMouth(g, mouth, f);
 }
 
+const BROW_DEPTH_BIAS = 0.055; // metres; just more than the deepest bangs sit in front of the face
+
+function browMaterial(map) {
+  const m = toon(0xffffff, { map, transparent: true, depthWrite: false });
+  m.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <project_vertex>',
+      `#include <project_vertex>
+      {
+        vec4 biased = mvPosition;
+        biased.xyz *= max(0.0, 1.0 - ${BROW_DEPTH_BIAS.toFixed(3)} / length(mvPosition.xyz));
+        vec4 clip = projectionMatrix * biased;
+        gl_Position.z = clip.z / clip.w * gl_Position.w;
+      }`,
+    );
+  };
+  m.customProgramCacheKey = () => 'tong-brow-depth-bias';
+  return m;
+}
+
 function makeFace(head, f) {
   const [c, g] = makeCanvas(FW, FH);
   const tex = canvasTexture(c, { repeat: false });
@@ -453,11 +473,13 @@ function makeFace(head, f) {
   const m = new THREE.Mesh(geo, toon(0xffffff, { map: tex, transparent: true, depthWrite: false }));
   m.renderOrder = 2;
   head.add(m);
-  // Brows live on a slightly larger shell so they read over bangs, as in anime art.
+  // Brows sit on the face surface but their depth is biased toward the camera,
+  // so they read over bangs (as in anime art) without floating off the face in
+  // profile. Hands, walls and other characters further in front still cover them.
   const [bc, browG] = makeCanvas(FW, FH);
   const browTex = canvasTexture(bc, { repeat: false });
-  const browGeo = new THREE.SphereGeometry(R + 0.04, 48, 32, Math.PI / 2 - PHI_SPAN / 2, PHI_SPAN, TH0, TH1 - TH0);
-  const brows = new THREE.Mesh(browGeo, toon(0xffffff, { map: browTex, transparent: true, depthWrite: false }));
+  const browGeo = new THREE.SphereGeometry(R * 1.008, 48, 32, Math.PI / 2 - PHI_SPAN / 2, PHI_SPAN, TH0, TH1 - TH0);
+  const brows = new THREE.Mesh(browGeo, browMaterial(browTex));
   brows.renderOrder = 4;
   head.add(brows);
   f.browLayer = true;
