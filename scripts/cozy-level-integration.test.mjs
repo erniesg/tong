@@ -7,7 +7,7 @@ import { resolve, dirname } from 'node:path';
 import vm from 'node:vm';
 import { createApartmentPlan, supportAt, ceilingAt as planCeilingAt, zoneAt as planZoneAt } from '../apps/client/public/cozy/js/level-support.js';
 import { roadSurfaceData } from '../apps/client/public/cozy/js/surfaces.js';
-import { createTraversal, resetTraversal, stepTraversal, bodyOverlaps, segmentHitsBox, MODES, PLAYER_CLEARANCE } from '../apps/client/public/cozy/js/traversal.js';
+import { createTraversal, resetTraversal, stopTraversal, stepTraversal, bodyOverlaps, segmentHitsBox, MODES, PLAYER_CLEARANCE } from '../apps/client/public/cozy/js/traversal.js';
 
 const source = readFileSync(new URL('../apps/client/public/cozy/js/main.js', import.meta.url), 'utf8');
 const functionSource = (name) => {
@@ -16,8 +16,31 @@ const functionSource = (name) => {
   return source.slice(start, source.indexOf('\n}', start) + 2);
 };
 const plan = () => createApartmentPlan({ id: 'tokyo-home', city: 'tokyo', x: 348, z: -47, w: 14, d: 12 });
+test('actual ride selector and saved-pose dispatcher use finite-height collisions for all three rides', () => {
+  for (const mode of ['skateboard', 'scooter', 'bicycle']) {
+    const r = runtime(plan());
+    r.p.set(380, 0, 40); // Outdoors; real, nonempty apartment collider list.
+    assert.equal(r.setTransport(mode), true);
+    assert.equal(r.state.mode, mode);
+    const saved = r.safePose();
+    assert.equal(saved.mode, mode);
+    r.setTransport('walk');
+    r.placePlayer(saved); // Actual dispatcher returns void; verify resulting pose/mode below.
+    assert.deepEqual(r.p.toArray(), saved.position);
+    assert.equal(r.state.mode, mode);
+    const overhead = { minX: 379, maxX: 381, minZ: 39, maxZ: 41, minY: 3.4, maxY: 6.6 };
+    const upper = runtime(plan(), { G: { colliders: [overhead] } });
+    upper.p.set(380, 0, 40);
+    upper.setTransport(mode);
+    assert.equal(upper.state.mode, mode, 'overhead furniture does not pack an outdoor ride');
+    overhead.minY = 0; overhead.maxY = 2;
+    upper.setTransport(mode);
+    assert.equal(upper.state.mode, 'walk', 'same-level obstacle still packs the ride safely');
+  }
+});
+
 function runtime(building, overrides = {}) {
-  const S = { city: 'tokyo', cityPositions: {} };
+  const S = { city: 'tokyo', started: true, cityPositions: {} };
   const city = { bounds: { minX: 340, maxX: 460, minZ: -70, maxZ: 70 }, spawn: [380, 0, 40], yaw: 0, heightAt: () => 0 };
   const p = { ...building.safePoints[0], toArray() { return [this.x, this.y, this.z]; }, set(x,y,z) { Object.assign(this, { x,y,z }); return this; } };
   const player = { root: { position: p, rotation: { y: 0 } }, pose: 'idle' };
@@ -33,10 +56,11 @@ function runtime(building, overrides = {}) {
     physicsColliders: () => building.solids, MODES, PLAYER_CLEARANCE, bodyOverlaps,
     traversal: createTraversal(), cam: { yaw: 0 },
     occupants: { update() {} }, localHour: () => 16.5,
-    setTransport: (mode) => { context.traversal.mode = mode; }, resetTraversal,
+    G: { colliders: building.solids }, transitioning: false, dlg: { state: { active: false } },
+    rides: { resetPose() {} }, $: () => null, toast() {}, resetTraversal, stopTraversal,
     tong: { root: { position: { copy(position) { this.y = position.y; return this; } } } }, ...overrides,
   };
-  const names = ['heightAt', 'ceilingAt', 'zoneAt', 'validPose', 'safePose', 'placePlayer'];
+  const names = ['heightAt', 'ceilingAt', 'zoneAt', 'validPose', 'safePose', 'placePlayer', 'setTransport'];
   const api = new Function(...Object.keys(context), `let overview, vistaIndex; ${names.map(functionSource).join('\n')}\nreturn {${names.join(',')}};`)(...Object.values(context));
   return { ...api, S, p, state: context.traversal, city };
 }

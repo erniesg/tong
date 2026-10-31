@@ -39,8 +39,52 @@ async function harness() {
   const THREE = (await load(process.env.COZY_THREE_MODULE)).namespace;
   const util = (await load(resolve(sourceRoot, 'util.js'))).namespace;
   util.G.scene = new THREE.Scene();
-  return { ...interiorModule.namespace, ...occupantsModule.namespace, THREE, ...util };
+  return { ...interiorModule.namespace, ...occupantsModule.namespace, THREE, ...util, load };
 }
+test('actual stocked cans are exposed to the aisle in rotated open shelf bays', async () => {
+  for (const face of [0, Math.PI / 2, -Math.PI / 2, Math.PI]) {
+    const h = await harness(), room = h.buildRoom(roomArgs(h, 'store', { city: 'shanghai', face }));
+    h.enhanceRoom(room); h.G.scene.updateMatrixWorld(true);
+    const s = Math.round(Math.sin(face)), c = Math.round(Math.cos(face));
+    const cans = room.furniture.filter(p => p.kind === 'stocked-can');
+    assert.equal(cans.length, 8);
+    for (const record of cans) {
+      const target = new h.THREE.Vector3(...record.position);
+      const dx = target.x - room.layout.x, dz = target.z - room.layout.z;
+      const v = s * dx + c * dz;
+      const origin = new h.THREE.Vector3(room.layout.x + s * (v + 1), target.y, room.layout.z + c * (v + 1));
+      const ray = new h.THREE.Raycaster(origin, target.clone().sub(origin).normalize(), 0, origin.distanceTo(target) + 0.15);
+      const hit = ray.intersectObjects(h.G.scene.children, true).find(hit => hit.object.material.opacity > 0.5);
+      assert.ok(hit, 'actual geometry intersects the stock view');
+      assert.ok(hit.object.userData.furniture?.some(p => p.kind === 'stocked-can'), 'first opaque surface is exposed stock, not a shelf casing');
+      assert.ok(hit.point.distanceTo(target) < 0.13, 'visible stock is the targeted can, not another prop in its batch');
+    }
+  }
+});
+
+test('compact actual apartment lower-body sightline fades the intersecting wall plane and restores on orbit/exit', async () => {
+  const h = await harness(), module = await h.load(resolve(sourceRoot, 'apartments.js'));
+  await module.evaluate();
+  const b = module.namespace.buildApartment({ id: 'shanghai-home', city: 'shanghai', x: 780, z: -69, w: 14, d: 10 });
+  const p = new h.THREE.Vector3(784, 3.4, -72.35);
+  const eye = new h.THREE.Vector3(784, p.y + 1.25 + 8 * Math.sin(.6), p.z + 8 * Math.cos(.6));
+  const target = p.clone().add(new h.THREE.Vector3(0, .2, 0));
+  h.updateCutaways(p, eye, 1, 'shanghai'); h.G.scene.updateMatrixWorld(true);
+  const hits = new h.THREE.Raycaster(eye, target.clone().sub(eye).normalize(), 0, eye.distanceTo(target)).intersectObjects(b.rooms[1].walls, true);
+  assert.ok(hits.length > 0, 'the photographed lower-body ray really intersects authored partition geometry');
+  const wall = hits[0].object;
+  assert.equal(h.isCameraOccluder(wall), false, 'partition is not opaque across lower avatar/bed');
+  assert.ok(wall.material.opacity < .05);
+  h.updateCutaways(p, { x: eye.x, y: eye.y, z: p.z - 8 * Math.cos(.6) }, 1, 'shanghai');
+  assert.equal(h.isCameraOccluder(wall), true, 'opposite orbit restores the internal wall');
+  assert.equal(wall.material.opacity, 1);
+  h.updateCutaways({ x: 784, y: 0, z: -60 }, eye, 1, 'shanghai');
+  for (const room of b.rooms) for (const mesh of [...room.walls, ...room.roofs, ...room.occluders]) {
+    assert.equal(mesh.visible, true);
+    assert.equal(h.isCameraOccluder(mesh), true);
+  }
+});
+
 function roomArgs(h, category = 'cafe', extra = {}) {
   return { id: `tokyo-${category}-room`, city: 'tokyo', category, x: 428, z: -2,
     w: 10, d: 9, face: Math.PI / 2, wallMaterial: h.mat('#eeeecc'), roofMaterial: h.mat('#555555'), ...extra };

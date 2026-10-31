@@ -1735,7 +1735,7 @@ function setTransport(mode, force = false) {
     mode = 'walk';
     if (!force) toast('<b>Walk indoors</b><span>Your ride stays packed while you explore the room.</span>');
   }
-  if (mode !== 'walk' && p && G.colliders.some((b) => overlaps(p.x, p.z, MODES[mode].radius, b))) mode = 'walk';
+  if (mode !== 'walk' && p && G.colliders.some((b) => bodyOverlaps(p.x, p.y, p.z, MODES[mode].radius, b))) mode = 'walk';
   traversal.mode = mode;
   stopTraversal(traversal);
   rides?.resetPose();

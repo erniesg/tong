@@ -97,13 +97,23 @@ export function updateCutaways(playerPosition, cameraPosition, dt, cityId) {
       if (state.roof) hidden = true;
       else {
         if (!facing.has(state.root)) {
-          box3.setFromObject(state.root).getCenter(center);
-          const b = active.bounds;
-          const rx = (center.x - (b.minX + b.maxX) / 2) / ((b.maxX - b.minX) / 2);
-          const rz = (center.z - (b.minZ + b.maxZ) / 2) / ((b.maxZ - b.minZ) / 2);
-          const side = state.root.userData.cutawaySide ?? (Math.abs(rx) > Math.abs(rz) ? (rx < 0 ? 0 : 1) : (rz < 0 ? 2 : 3));
-          const dx = cameraPosition.x - playerPosition.x, dz = cameraPosition.z - playerPosition.z;
-          facing.set(state.root, [dx < -0.05, dx > 0.05, dz < -0.05, dz > 0.05][side]);
+          const plane = state.root.userData.cutawayPlane;
+          if (plane) {
+            // Internal partitions are not necessarily aligned with the nearest
+            // exterior side. Fade their actual plane only when it lies between
+            // the player and camera; keep walls behind the player intact.
+            const fromPlayer = plane.at - playerPosition[plane.axis];
+            const toCamera = cameraPosition[plane.axis] - plane.at;
+            facing.set(state.root, fromPlayer * toCamera > 0);
+          } else {
+            box3.setFromObject(state.root).getCenter(center);
+            const b = active.bounds;
+            const rx = (center.x - (b.minX + b.maxX) / 2) / ((b.maxX - b.minX) / 2);
+            const rz = (center.z - (b.minZ + b.maxZ) / 2) / ((b.maxZ - b.minZ) / 2);
+            const side = state.root.userData.cutawaySide ?? (Math.abs(rx) > Math.abs(rz) ? (rx < 0 ? 0 : 1) : (rz < 0 ? 2 : 3));
+            const dx = cameraPosition.x - playerPosition.x, dz = cameraPosition.z - playerPosition.z;
+            facing.set(state.root, [dx < -0.05, dx > 0.05, dz < -0.05, dz > 0.05][side]);
+          }
         }
         hidden = facing.get(state.root);
       }
@@ -184,9 +194,13 @@ export function buildRoom({ id, city, category, x, z, w, d, h = 3.6, face = 0, w
   // Keep a central 2.2m aisle from the doorway to the back of every room.
   if (category === 'store') {
     for (const side of [-1, 1]) {
-      piece(0.65, 2.1, fd - 1.4, cream, side * (fw / 2 - 0.6), 0, 0, true);
+      const u = side * (fw / 2 - 0.6);
+      // Open bays: back/end panels and real ledges, not a solid case that
+      // encloses every product. Ledges retain the shelf's physical boundary.
+      piece(0.08, 2.1, fd - 1.4, cream, u + side * 0.285, 0, 0, true);
+      for (const end of [-1, 1]) piece(0.65, 2.1, 0.08, cream, u, 0, end * (fd / 2 - 0.7), true);
       for (let level = 0; level < 4; level++) {
-        piece(0.8, 0.06, fd - 1.3, dark, side * (fw / 2 - 0.6), 0.35 + level * 0.48, 0);
+        piece(0.8, 0.06, fd - 1.3, dark, u, 0.35 + level * 0.48, 0, true);
         for (let row = 0; row < 7; row++) piece(0.3, 0.28, 0.32, row % 2 ? wood : cream, side * (fw / 2 - 0.6), 0.4 + level * 0.48, -fd / 2 + 1 + row * (fd - 2) / 7);
       }
     }
@@ -378,7 +392,7 @@ export function enhanceRoom(room) {
     block('register-screen', 0.32, 0.2, 0.035, ink, till, 1, v + 0.17);
     block('card-reader', 0.18, 0.07, 0.25, metal, till + 0.37, 0.95, v);
     for (const side of [-1, 1]) for (let i = 0; i < 4; i++) {
-      const su = side * (fw / 2 - 0.6), sv = -fd / 2 + 1.3 + i * (fd - 2.6) / 4;
+      const su = side * (fw / 2 - 0.88), sv = -fd / 2 + 1.3 + i * (fd - 2.6) / 4;
       cylinder('stocked-can', 0.1, 0.1, 0.24, accent, su, 1.85, sv);
       ring('can-rim', 0.09, 0.01, metal, su, 2.09, sv);
     }

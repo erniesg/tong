@@ -60,6 +60,7 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
       p.minY = p.position[1] - ey; p.maxY = p.position[1] + ey;
       p.minZ = p.position[2] - ez; p.maxZ = p.position[2] + ez;
     }
+    if (role === 'wall') p.cutawayPlane = ww <= dd ? { axis: 'x', at: x + u } : { axis: 'z', at: z + v };
     b.pieces.push(p);
     if (solid) b.solids.push(p);
     if (overhead) b.ceilings.push(p);
@@ -87,9 +88,14 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
   // A real window opening: sill/spandrel, lintel, jambs, glass and mullions.
   const windowWall = (room, axis, fixed, lo, hi) => {
     const span = hi - lo, middle = (lo + hi) / 2, aperture = Math.min(2.4, span - 0.8), side = (span - aperture) / 2;
-    const part = (along, y, length, h, color, solid = true) => piece(room.level, 'wall', color,
-      axis === 'x' ? along : fixed, y, axis === 'x' ? fixed : along,
-      axis === 'x' ? length : 0.20, h, axis === 'x' ? 0.20 : length, { solid });
+    const part = (along, y, length, h, color, solid = true) => {
+      const p = piece(room.level, 'wall', color,
+        axis === 'x' ? along : fixed, y, axis === 'x' ? fixed : along,
+        axis === 'x' ? length : 0.20, h, axis === 'x' ? 0.20 : length, { solid });
+      // Narrow jambs/mullions still belong to the authored window plane.
+      p.cutawayPlane = axis === 'x' ? { axis: 'z', at: z + fixed } : { axis: 'x', at: x + fixed };
+      return p;
+    };
     part(middle, room.floorY, span, 0.95, 'plaster');
     part(middle, room.floorY + 2.55, span, storeyHeight - 2.71, 'plaster');
     for (const sign of [-1, 1]) part(middle + sign * (aperture / 2 + side / 2), room.floorY + 0.95, side, 1.6, 'plaster');

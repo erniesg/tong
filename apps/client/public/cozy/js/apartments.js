@@ -21,22 +21,21 @@ export function buildApartment(options) {
     ceilingAt: (x, z, feetY = level.floorY) => ceilingAt(building, x, z, feetY),
     floorSupport: (x, z, feetY) => supportAt(building, x, z, feetY),
   }));
-  // Instance ONLY within one level, cutaway role and directional wall side.
+  // Instance ONLY within one level, cutaway role and authored wall plane.
   // Floors owned by a lower ceiling never get merged into the upper contents.
   const batches = new Map();
   for (const p of building.pieces) {
-    const u = p.position[0] - building.x, v = p.position[2] - building.z;
-    const side = Math.abs(u / (building.w / 2)) > Math.abs(v / (building.d / 2)) ? (u < 0 ? 0 : 1) : (v < 0 ? 2 : 3);
-    const group = p.role === 'wall' ? `wall:${side}` : p.cutaway === 'roof' || p.role === 'roof-trim' ? 'roof' : p.cutaway === 'base' ? 'base' : 'content';
+    const plane = p.cutawayPlane;
+    const group = p.role === 'wall' ? `wall:${plane.axis}:${plane.at}` : p.cutaway === 'roof' || p.role === 'roof-trim' ? 'roof' : p.cutaway === 'base' ? 'base' : 'content';
     const key = `${p.level}:${group}:${p.color}`;
-    if (!batches.has(key)) batches.set(key, { level: p.level, group, side, pieces: [] });
+    if (!batches.has(key)) batches.set(key, { level: p.level, group, plane, pieces: [] });
     batches.get(key).pieces.push(p);
   }
   const geometry = new THREE.BoxGeometry(1, 1, 1);
   const matrix = new THREE.Matrix4(), quaternion = new THREE.Quaternion(), axis = new THREE.Vector3(1, 0, 0);
   const position = new THREE.Vector3(), scale = new THREE.Vector3();
   building.meshes = [];
-  for (const { level, group, side, pieces } of batches.values()) {
+  for (const { level, group, plane, pieces } of batches.values()) {
     const mesh = new THREE.InstancedMesh(geometry, materials[pieces[0].color], pieces.length);
     pieces.forEach((p, i) => {
       quaternion.setFromAxisAngle(axis, p.rotationX);
@@ -48,7 +47,7 @@ export function buildApartment(options) {
     mesh.computeBoundingBox(); mesh.computeBoundingSphere();
     mesh.castShadow = mesh.receiveShadow = true;
     mesh.userData = { buildingId: building.id, interiorId: rooms[level].id, level, role: group,
-      pieceIds: pieces.map(p => p.id), ...(group.startsWith('wall:') ? { cutawaySide: side } : {}) };
+      pieceIds: pieces.map(p => p.id), ...(group.startsWith('wall:') ? { cutawayPlane: plane } : {}) };
     G.scene.add(mesh); building.meshes.push(mesh);
     if (group.startsWith('wall:')) rooms[level].walls.push(mesh);
     else if (group === 'roof') rooms[level].roofs.push(mesh);
