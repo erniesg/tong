@@ -196,12 +196,35 @@ function drawEye(g, cx, cy, ew, eh, side, f, E, state, look) {
   }
   g.restore();
 
-  // upper lash line (follows the lid)
-  g.lineWidth = h * (f.lashW ?? 0.2);
+  // upper lash line (follows the lid); lashThick scales its weight
+  const lashThick = f.lashThick ?? 1;
+  g.lineWidth = f.lashThick == null ? h * (f.lashW ?? 0.2) : h * 0.17 * lashThick;
+  const lid = [[-w * 1.04, h * 0.12], [-w * 0.62, -h * 1.08 + lidOff * 1.3], [w * 0.62, -h * 1.08 + lidOff * 1.3], [w * 1.04, -h * 0.08]];
   g.beginPath();
-  g.moveTo(-w * 1.04, h * 0.12);
-  g.bezierCurveTo(-w * 0.62, -h * 1.08 + lidOff * 1.3, w * 0.62, -h * 1.08 + lidOff * 1.3, w * 1.04, -h * 0.08);
+  g.moveTo(...lid[0]);
+  g.bezierCurveTo(...lid[1], ...lid[2], ...lid[3]);
   g.stroke();
+  // Lash flicks along the outer half of the lid, independent of presentation.
+  const lashLen = f.lashLen ?? (f.lashes ? 0.55 : 0);
+  if (lashLen > 0.02) {
+    const at = (u) => {
+      const v = 1 - u;
+      const k = [v * v * v, 3 * v * v * u, 3 * v * u * u, u * u * u];
+      return [0, 1].map((j) => lid.reduce((acc, p, i) => acc + p[j] * k[i], 0));
+    };
+    g.save();
+    g.lineWidth = h * 0.085 * lashThick;
+    for (const [u, a, l] of [[0.66, 0.3, 0.6], [0.82, 0.62, 0.85], [0.95, 0.95, 1]]) {
+      const [x, y] = at(side > 0 ? u : 1 - u);
+      const len = h * 0.5 * lashLen * l;
+      const ang = -Math.PI / 2 + side * a;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.quadraticCurveTo(x + Math.cos(ang) * len * 0.4, y + Math.sin(ang) * len * 0.7, x + Math.cos(ang + side * 0.35) * len, y + Math.sin(ang + side * 0.35) * len);
+      g.stroke();
+    }
+    g.restore();
+  }
   if (f.lid === 'double' || f.lid === 'hooded') {
     // Lid crease: well above the lash line for double lids, tucked close for hooded.
     const up = f.lid === 'double' ? h * 0.36 : h * 0.14;
@@ -219,12 +242,6 @@ function drawEye(g, cx, cy, ew, eh, side, f, E, state, look) {
     g.beginPath();
     g.moveTo(side * w * 0.92, -h * 0.12);
     g.lineTo(side * w * 1.42, -h * 0.55);
-    g.stroke();
-  } else if (f.lashes) {
-    g.lineWidth = h * 0.1;
-    g.beginPath();
-    g.moveTo(side * w * 0.95, -h * 0.15);
-    g.lineTo(side * w * 1.25, -h * 0.45);
     g.stroke();
   }
   g.globalAlpha = 0.45;
@@ -324,32 +341,93 @@ function drawMouth(g, kind, f) {
 
 const MOUTH_WIDTH = { classic: 1, small: 0.75, wide: 1.3, cat: 1, full: 1 };
 
-// Brow shapes: thickness factor, arch height (px) and inner/outer lift (head-local metres).
+// Brow shapes (head-local metres unless noted): arch height and where it peaks
+// (0 = inner head, 1 = tail), tail drop, how much the tail tapers, a thickness
+// factor and how much feathered hair texture is drawn over the soft body.
 const BROWS = {
-  soft: { w: 1, arch: 5, inY: 0, outY: 0 },
-  straight: { w: 1, arch: 0, inY: 0.004, outY: -0.002 },
-  arched: { w: 0.85, arch: 11, inY: -0.004, outY: -0.004 },
-  thick: { w: 1.45, arch: 3, inY: 0.002, outY: 0 },
-  thin: { w: 0.6, arch: 7, inY: 0, outY: 0 },
+  soft: { arch: 0.009, peak: 0.6, drop: 0.006, taper: 0.62, w: 1, feather: 0.7 },
+  straight: { arch: 0.002, peak: 0.55, drop: 0.001, taper: 0.5, w: 1, feather: 0.6, inY: 0.003 },
+  arched: { arch: 0.018, peak: 0.66, drop: 0.012, taper: 0.72, w: 0.9, feather: 0.5, inY: -0.003 },
+  natural: { arch: 0.006, peak: 0.58, drop: 0.004, taper: 0.42, w: 1.22, feather: 1.2 },
+  tapered: { arch: 0.011, peak: 0.5, drop: 0.009, taper: 0.88, w: 1, feather: 0.6 },
+  // NPC-only legacy shapes
+  thick: { arch: 0.004, peak: 0.55, drop: 0.002, taper: 0.35, w: 1.2, feather: 0.8 },
+  thin: { arch: 0.012, peak: 0.6, drop: 0.006, taper: 0.7, w: 0.6, feather: 0.25 },
 };
 
-/** Tapered brows; thicker at the inner end, raised/lowered by expression. */
+function rgba(hex, a) {
+  const n = parseInt(String(hex).slice(1), 16) || 0;
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+/**
+ * Soft, feathered brows: a body with a diffuse inner head, full middle and
+ * tapered tail, overlaid with short hair strokes that rise at the head and
+ * sweep toward the tail. Thickness, length and expression lift are continuous.
+ */
 function drawBrows(g, f, E) {
   const b = BROWS[f.browStyle] ?? BROWS.soft;
   const lift = 0.014 * (E.brow ?? 0);
-  const w = (f.browW ?? 5) * 2.5 * b.w;
-  g.fillStyle = f.brow;
+  const thick = f.browThick ?? 1;
+  const len = f.browLen ?? 1;
+  const half = (4 + (f.browW ?? 5) * 1.3) * b.w * thick; // px, half-width at the fullest point
+  const tilt = (f.browTilt ?? 0) * 0.012;
+  const N = 18;
   for (const s of [-1, 1]) {
-    const [ix, iy] = P(0.06 * s, 0.022 + lift + b.inY);
-    const [ox, oy] = P(0.185 * s, 0.03 + (f.browTilt ?? 0) * 0.012 + lift * 0.5 + b.outY);
-    const mx = ix + (ox - ix) * 0.55;
-    const my = Math.min(iy, oy) - b.arch;
+    // Centre line in canvas pixels, inner head (i = 0) to tail (i = N).
+    const pts = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const bump = t < b.peak ? Math.sin((t / b.peak) * Math.PI / 2) : 1 - ((t - b.peak) / (1 - b.peak)) ** 2 * 1.15;
+      const y = 0.024 + (b.inY ?? 0) + lift * (1 - 0.5 * t) + tilt * t + b.arch * bump - b.drop * t * t;
+      const x = 0.058 + 0.128 * len * t;
+      const [px, py] = P(x * s, y);
+      // fullest a quarter of the way in; soft inner head, tapered tail
+      const w = t < 0.25 ? half * (0.78 + 0.88 * t) : half * (1 - b.taper * ((t - 0.25) / 0.75) ** 1.4);
+      pts.push([px, py, Math.max(0.6, w), t]);
+    }
+    const [x0] = pts[0];
+    const [x1] = pts[N];
+    const body = g.createLinearGradient(x0, 0, x1, 0);
+    body.addColorStop(0, rgba(f.brow, 0.3));
+    body.addColorStop(0.18, rgba(f.brow, 0.78));
+    body.addColorStop(0.55, rgba(f.brow, 0.92));
+    body.addColorStop(1, rgba(f.brow, 0.72));
+    g.save();
+    g.fillStyle = body;
+    g.filter = 'blur(0.8px)';
     g.beginPath();
-    g.moveTo(ix, iy - w / 2);
-    g.quadraticCurveTo(mx, my - w * 0.45, ox, oy - w * 0.12);
-    g.quadraticCurveTo(mx, my + w * 0.35, ix, iy + w / 2);
+    pts.forEach(([x, y, w], i) => (i ? g.lineTo(x, y - w) : g.moveTo(x, y - w)));
+    for (let i = N; i >= 0; i--) g.lineTo(pts[i][0], pts[i][1] + pts[i][2] * 0.85);
     g.closePath();
     g.fill();
+    g.filter = 'none';
+    // Hair strokes. Seeded per side so the texture is stable between redraws.
+    const rnd = seeded(s > 0 ? 7 : 11);
+    const count = Math.round((14 + 30 * b.feather) * len * Math.min(1.4, 0.6 + 0.4 * thick));
+    g.lineCap = 'round';
+    for (let k = 0; k < count; k++) {
+      const u = rnd() * N * 0.98;
+      const i = Math.floor(u);
+      const fr = u - i;
+      const [ax, ay, aw, t] = pts[i];
+      const [bx, by, bw] = pts[i + 1];
+      const w = aw + (bw - aw) * fr;
+      const v = (rnd() * 2 - 1) * 0.62;
+      const x = ax + (bx - ax) * fr;
+      const y = ay + (by - ay) * fr - v * w;
+      // inner hairs stand up; the rest lie along the brow, angled slightly upward
+      const along = Math.atan2(by - ay, bx - ax);
+      const ang = t < 0.18 ? Math.atan2(-Math.cos(0.4), s * Math.sin(0.4)) : along - s * 0.22;
+      const l = Math.min(w * (t < 0.18 ? 0.95 : 1.35), 14) * (0.7 + rnd() * 0.5);
+      g.strokeStyle = rgba(f.brow, t < 0.15 ? 0.35 : 0.55 + rnd() * 0.3);
+      g.lineWidth = Math.max(0.8, 1.3 * Math.min(1.2, thick));
+      g.beginPath();
+      g.moveTo(x - Math.cos(ang) * l * 0.5, y - Math.sin(ang) * l * 0.5);
+      g.lineTo(x + Math.cos(ang) * l * 0.5, y + Math.sin(ang) * l * 0.5);
+      g.stroke();
+    }
+    g.restore();
   }
 }
 
@@ -512,14 +590,17 @@ function hairCap(hair, color, light, { r = R + 0.022, theta = 0.56, tilt = -0.42
   g.position.set(0, y, z);
   g.rotation.x = tilt;
   hair.add(g);
-  const cap = part(new THREE.SphereGeometry(r, 32, 18, 0, TAU, 0, Math.PI * theta), hairMat(color, light), 0, 0, 0, g, { ol });
+  const cap = part(new THREE.SphereGeometry(r, 44, 24, 0, TAU, 0, Math.PI * theta), hairMat(color, light), 0, 0, 0, g, { ol });
   cap.rotation.y = Math.PI;
   cap.userData.crownPart = true;
   return cap;
 }
 
 /** Bangs: an open cylinder band with an alpha-cut strand edge, centred on `at` (radians, 0 = front). */
-function bangs(hair, color, { at = 0, span = 2.0, y = 0.055, h = 0.15, r0 = R + 0.026, r1 = R + 0.036, tips = 24, depth = 0.3, tiltZ = 0 } = {}) {
+function bangs(hair, color, { at = 0, span = 2.0, y = 0.055, h = 0.15, r0, r1, tips = 24, depth = 0.3, tiltZ = 0 } = {}) {
+  // By default the band is a cone hugging the skull, so it doesn't float off the head in profile.
+  r0 ??= Math.sqrt((R + 0.024) ** 2 - (y + h / 2) ** 2) + 0.004;
+  r1 ??= Math.sqrt((R + 0.012) ** 2 - Math.min(0, y - h / 2) ** 2) + 0.006;
   const f = add(new THREE.CylinderGeometry(r0, r1, h, 48, 1, true, at - span / 2, span), strandMat(color, tips, depth), 0, y, 0, hair);
   f.rotation.z = tiltZ;
   f.renderOrder = 3;
@@ -546,7 +627,7 @@ function longHair(head, color, light) {
   const cap = part(new THREE.SphereGeometry(R + 0.024, 36, 18, 0, TAU, 0, Math.PI * 0.47), hairMat(color, light), 0, 0.006, 0, hair);
   cap.rotation.y = Math.PI;
   cap.userData.crownPart = true;
-  bangs(hair, color); // blunt bangs with strand tips
+  bangs(hair, color, { r0: R + 0.026, r1: R + 0.036 }); // blunt bangs with strand tips (Ha-eun's canon look)
   // long back curtain
   const back = add(new THREE.CylinderGeometry(R + 0.03, R + 0.085, 1.0, 48, 1, true, 0.82, TAU - 1.64), strandMat(color, 30, 0.18), 0, -0.4, -0.01, hair);
   back.scale.z = 0.92;
@@ -595,7 +676,7 @@ function shortHair(head, color, light) {
   head.add(hair);
   hairCap(hair, color, light);
   // short textured fringe that stops above the brows
-  bangs(hair, color, { y: 0.13, h: 0.1, span: 1.9, r0: R + 0.012, r1: R + 0.03, tips: 18, depth: 0.45 });
+  bangs(hair, color, { y: 0.13, h: 0.1, span: 1.9, tips: 18, depth: 0.45 });
   hair.userData.crown = { y: 0.02, z: -0.015, r: R + 0.022 };
   return hair;
 }
@@ -644,7 +725,7 @@ function curtainHair(head, color, light) {
   head.add(hair);
   hairCap(hair, color, light, { r: R + 0.024, theta: 0.57, tilt: -0.38 });
   // centre-parted bangs sweeping out toward the temples
-  for (const s of [-1, 1]) bangs(hair, color, { y: 0.08, h: 0.16, at: s * 0.58, span: 1.0, tiltZ: -0.16 * s, tips: 12, depth: 0.5 });
+  for (const s of [-1, 1]) bangs(hair, color, { y: 0.08, h: 0.16, at: s * 0.58, span: 1.0, tiltZ: -0.1 * s, tips: 12, depth: 0.5 });
   hair.userData.crown = { y: 0.02, z: -0.015, r: R + 0.024 };
   return hair;
 }
@@ -652,8 +733,8 @@ function curtainHair(head, color, light) {
 function buzzHair(head, color, light) {
   const hair = new THREE.Group();
   head.add(hair);
-  hairCap(hair, color, light, { r: R + 0.008, theta: 0.55, tilt: -0.32, ol: 0.006 });
-  hair.userData.crown = { y: 0.02, z: -0.015, r: R + 0.008 };
+  hairCap(hair, color, light, { r: R + 0.014, theta: 0.55, tilt: -0.32, ol: 0.006 });
+  hair.userData.crown = { y: 0.02, z: -0.015, r: R + 0.014 };
   return hair;
 }
 
@@ -970,7 +1051,7 @@ export const LOOK_OPTIONS = {
   hair: ['#141419', '#3b2a20', '#7a5236', '#c9a06a', '#b0566b', '#5b6b8f'],
   hairStyle: ['short', 'wavy', 'long', 'bun', 'bob', 'ponytail', 'curtain', 'buzz', 'pigtails'],
   eyes: ['#4e3a2c', '#2b1d18', '#6b7a4a', '#4f6f8f'],
-  brows: ['soft', 'straight', 'arched', 'thick', 'thin'],
+  brows: ['soft', 'straight', 'arched', 'natural', 'tapered'],
   nose: ['dot', 'button', 'line', 'soft'],
   mouth: ['classic', 'small', 'wide', 'cat', 'full'],
   lids: ['double', 'single', 'hooded'],
@@ -989,25 +1070,76 @@ export const LOOK_OPTIONS = {
 const INDEXED = new Set(['skin', 'hair', 'eyes', 'top', 'bottomColor', 'shoes']);
 export const isIndexedLook = (k) => INDEXED.has(k);
 
+/** Continuous look values: [min, max]. Stored as numbers rounded to 0.01. */
+export const LOOK_RANGES = {
+  browThick: [0.5, 1.6],
+  browLen: [0.8, 1.2],
+  lashLen: [0, 1],
+  lashThick: [0.4, 1.6],
+};
+
 /** Presentation presets; every field remains individually editable. */
 export const LOOK_PRESETS = {
-  m: { gender: 'm', skin: 1, hair: 1, hairStyle: 'short', eyes: 0, brows: 'soft', nose: 'dot', mouth: 'classic', lids: 'double', marks: 'none',
-    topStyle: 'hoodie', hood: 'down', top: 0, bottom: 'jeans', bottomColor: 0, shoes: 0, hat: 'beanie', glasses: false },
-  f: { gender: 'f', skin: 0, hair: 1, hairStyle: 'long', eyes: 0, brows: 'arched', nose: 'button', mouth: 'full', lids: 'double', marks: 'none',
-    topStyle: 'knit', hood: 'down', top: 2, bottom: 'skirt', bottomColor: 2, shoes: 0, hat: 'none', glasses: false },
+  m: { gender: 'm', skin: 1, hair: 1, hairStyle: 'short', eyes: 0, brows: 'straight', nose: 'dot', mouth: 'classic', lids: 'double', marks: 'none',
+    topStyle: 'hoodie', hood: 'down', top: 0, bottom: 'jeans', bottomColor: 0, shoes: 0, hat: 'beanie', glasses: false,
+    browThick: 1.15, browLen: 1, lashLen: 0, lashThick: 0.8 },
+  f: { gender: 'f', skin: 0, hair: 1, hairStyle: 'long', eyes: 0, brows: 'soft', nose: 'button', mouth: 'full', lids: 'double', marks: 'none',
+    topStyle: 'knit', hood: 'down', top: 2, bottom: 'skirt', bottomColor: 2, shoes: 0, hat: 'none', glasses: false,
+    browThick: 0.95, browLen: 1, lashLen: 0.55, lashThick: 0.9 },
 };
+
+// Brow shapes retired from the creator, mapped to a shape plus a thickness.
+const LEGACY_BROWS = { thick: ['natural', 1.4], thin: ['tapered', 0.65] };
 
 /** Coerce a saved/edited look into a valid one (unknown values fall back to the preset). */
 export function normalizeLook(look) {
   const base = LOOK_PRESETS[look?.gender === 'f' ? 'f' : 'm'];
+  const src = { ...look };
+  if (typeof src.hat === 'boolean') src.hat = src.hat ? 'beanie' : 'none'; // first creator build stored a boolean
+  if (LEGACY_BROWS[src.brows]) {
+    const [shape, thick] = LEGACY_BROWS[src.brows];
+    src.brows = shape;
+    if (!Number.isFinite(src.browThick)) src.browThick = thick;
+  }
   const out = { gender: base.gender };
   for (const [k, values] of Object.entries(LOOK_OPTIONS)) {
-    let v = look?.[k];
-    if (k === 'hat' && typeof v === 'boolean') v = v ? 'beanie' : 'none'; // first creator build stored a boolean
+    const v = src[k];
     const ok = INDEXED.has(k) ? Number.isInteger(v) && v >= 0 && v < values.length : values.includes(v);
     out[k] = ok ? v : base[k];
   }
+  for (const [k, [lo, hi]] of Object.entries(LOOK_RANGES)) {
+    const v = src[k];
+    out[k] = typeof v === 'number' && Number.isFinite(v) ? Math.round(clamp(v, lo, hi) * 100) / 100 : base[k];
+  }
   return out;
+}
+
+/** Brow colour follows the hair colour, deepened toward dark brown. */
+function browColor(hairHex) {
+  const n = parseInt(hairHex.slice(1), 16);
+  const mix = (c, d) => Math.round(c * 0.45 + d * 0.55);
+  const r = mix((n >> 16) & 255, 0x1e), g = mix((n >> 8) & 255, 0x15), b = mix(n & 255, 0x12);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+/** Face-painter features for a (normalized) player look. */
+export function playerFace(look) {
+  const O = LOOK_OPTIONS;
+  const features = {
+    browStyle: look.brows, nose: look.nose, mouthShape: look.mouth, lid: look.lids, marks: look.marks, iris: O.eyes[look.eyes],
+    brow: browColor(O.hair[look.hair]), browThick: look.browThick, browLen: look.browLen, lashLen: look.lashLen, lashThick: look.lashThick,
+  };
+  return look.gender === 'f'
+    ? { ...FACE_BASE, tilt: 0.08, browW: 5, blush: 0.24, mouthLine: '#b8585f', eyeSize: 1, ...features }
+    : { ...FACE_BASE, tilt: 0.04, browW: 5, eyeSize: 0.95, ...features };
+}
+
+/** Repaint a player's face for a new look without rebuilding the body (brow/lash sliders). */
+export function repaintFace(c, rawLook) {
+  const look = normalizeLook(rawLook);
+  Object.assign(c.face.f, playerFace(look));
+  c.face.key = '';
+  c.face.browKey = null;
 }
 
 // Face opening of a raised hood, in unit-sphere directions around the hood centre.
@@ -1137,7 +1269,6 @@ function addHeadwear(c, look) {
 
 export function makePlayer(rawLook = LOOK_PRESETS.m) {
   const look = normalizeLook(rawLook);
-  const fem = look.gender === 'f';
   const O = LOOK_OPTIONS;
   const skinTone = O.skin[look.skin];
   const lower = O.bottomColor[look.bottomColor];
@@ -1149,7 +1280,6 @@ export function makePlayer(rawLook = LOOK_PRESETS.m) {
     : look.topStyle === 'knit' ? texMat('#ffffff', knit(O.top[look.top]), 0.6)
     : look.topStyle === 'jacket' ? texMat(O.top[look.top], leather(), 3)
     : texMat('#ffffff', fabric(O.top[look.top]), 0.5);
-  const features = { browStyle: look.brows, nose: look.nose, mouthShape: look.mouth, lid: look.lids, marks: look.marks, iris: O.eyes[look.eyes], brow: '#2b1d1a' };
   return makeChibi({
     name: 'player',
     skin: skinTone,
@@ -1157,9 +1287,7 @@ export function makePlayer(rawLook = LOOK_PRESETS.m) {
     hairLight: 'rgba(170,130,100,0.7)',
     hairStyle: look.hairStyle,
     expr: 'smile',
-    face: fem
-      ? { ...FACE_BASE, lashes: true, tilt: 0.08, browW: 4.5, blush: 0.24, mouthLine: '#b8585f', eyeSize: 1, ...features }
-      : { ...FACE_BASE, tilt: 0.04, browW: 5.5, eyeSize: 0.95, ...features },
+    face: playerFace(look),
     mats: { legs, shoes: toon(O.shoes[look.shoes]), sleeves },
     outfit: (c, { body }) => {
       if (look.bottom === 'skirt') {
