@@ -1549,7 +1549,7 @@ window.addEventListener('keydown', (e) => {
     }
     const modal = [...document.querySelectorAll('.overlay:not(.hidden)')].at(-1) ?? (!ui.book.classList.contains('hidden') ? ui.book : null);
     if (k === 'tab' && modal) {
-      const focusable = [...modal.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), a[href]')].filter((el) => !el.closest('.hidden'));
+      const focusable = [...modal.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), a[href], [tabindex="0"]')].filter((el) => !el.closest('.hidden') && el.tabIndex >= 0);
       const index = focusable.indexOf(document.activeElement);
       if (focusable.length) {
         e.preventDefault();

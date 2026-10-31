@@ -237,30 +237,41 @@
   </div>
 
   <!-- Character creator -->
-  <div id="creator" class="overlay title-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="creator-title">
+  <div id="creator" class="overlay title-overlay creator-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="creator-title">
     <div class="card creator-card">
       <div class="creator-preview">
-        <canvas id="creator-canvas" aria-label="Your character preview. Drag to turn."></canvas>
+        <canvas id="creator-canvas" tabindex="0" aria-label="Your character preview. Drag, or press the left and right arrow keys, to turn."></canvas>
         <button id="creator-zoom" type="button" class="chip creator-zoom">🔍 Face</button>
-        <span class="creator-turn">drag to turn</span>
+        <div class="creator-view" role="group" aria-label="Preview turntable">
+          <button id="creator-spin" type="button" class="chip creator-spin" aria-label="Auto-rotate" aria-pressed="true"><span class="creator-spin-icon" aria-hidden="true">⏸</span><span class="creator-spin-text" aria-hidden="true">Pause</span></button>
+          <button id="creator-turn-left" type="button" class="chip creator-turn-btn" aria-label="Turn left">↺</button>
+          <button id="creator-turn-right" type="button" class="chip creator-turn-btn" aria-label="Turn right">↻</button>
+        </div>
       </div>
       <div class="creator-form">
-        <span class="eyebrow">나 · Me</span>
-        <h2 id="creator-title">Make your character</h2>
-        <div class="creator-name">
-          <label class="name-label" for="name">What should everyone call you?</label>
-          <input id="name" class="name-input" maxlength="12" placeholder="연습생" autocomplete="off" />
+        <div class="creator-head">
+          <span class="eyebrow">나 · Me</span>
+          <h2 id="creator-title">Make your character</h2>
         </div>
-        <div class="creator-row" role="radiogroup" aria-label="Play as">
-          <span class="creator-label">Play as</span>
-          <div class="creator-options">
-            <button type="button" role="radio" class="creator-choice" data-gender="m">남자 · Guy</button>
-            <button type="button" role="radio" class="creator-choice" data-gender="f">여자 · Girl</button>
+        <div id="creator-tabs" class="creator-tabs" role="tablist" aria-label="Character categories"></div>
+        <div id="creator-panel" class="creator-panel" role="tabpanel">
+          <div id="creator-basics" class="creator-basics">
+            <div class="creator-name">
+              <label class="name-label" for="name">What should everyone call you?</label>
+              <input id="name" class="name-input" maxlength="12" placeholder="연습생" autocomplete="off" enterkeyhint="done" />
+            </div>
+            <div class="creator-row">
+              <span class="creator-label" id="creator-l-gender">Play as</span>
+              <div class="creator-options" role="radiogroup" aria-labelledby="creator-l-gender">
+                <button type="button" role="radio" class="creator-choice" data-gender="m">남자 · Guy</button>
+                <button type="button" role="radio" class="creator-choice" data-gender="f">여자 · Girl</button>
+              </div>
+            </div>
+            <p id="look-note" class="look-note"></p>
           </div>
+          <div id="creator-rows" class="creator-rows"></div>
         </div>
-        <p id="look-note" class="look-note"></p>
-        <div id="creator-rows"></div>
-        <div class="title-buttons creator-buttons">
+        <div class="creator-buttons">
           <button id="creator-back" class="btn-secondary">← Back</button>
           <button id="creator-shuffle" class="btn-secondary" aria-label="Surprise me">🎲<span class="creator-wide"> Surprise me</span></button>
           <button id="creator-start" class="btn-primary">시작 · Start</button>
