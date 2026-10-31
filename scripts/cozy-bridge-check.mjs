@@ -47,6 +47,8 @@ async function openHost(page) {
 }
 
 async function shot(page, name) {
+  // The software compositor can hand back a frame from before the overlay; let it settle.
+  await page.waitForTimeout(2500);
   if (evidence) await page.screenshot({ path: path.join(evidence, `${name}.png`), timeout: 150000 });
 }
 
@@ -142,6 +144,15 @@ try {
     await page.locator('.cozy-exercise-frame').waitFor({ state: 'visible', timeout: 60000 });
     assert.equal(await page.locator('iframe.cozy-frame').getAttribute('inert'), '', 'game is inert under the exercise');
     assert.equal(await frame.evaluate(() => __cozy.bridgeBusy), true, 'game waits while the exercise is open');
+    // The whole playfield must fit on screen without scrolling (phones in landscape too).
+    await page.waitForTimeout(600);
+    const fit = await page.evaluate(() => {
+      const card = document.querySelector('.exercise-modal-content > .exercise-card').getBoundingClientRect();
+      const slots = [...document.querySelectorAll('[data-slot]')].map((e) => e.getBoundingClientRect());
+      return { bottom: card.bottom, top: card.top, h: innerHeight, slotsVisible: slots.length > 0 && slots.every((r) => r.top >= 0 && r.bottom <= innerHeight), zoom: document.querySelector('.exercise-modal-content > .exercise-card').style.zoom || '1' };
+    });
+    assert.ok(fit.top >= 0 && fit.bottom <= fit.h + 1 && fit.slotsVisible, `exercise fits the viewport: ${JSON.stringify(fit)}`);
+    r.fit = fit;
     // Pieces fall in real time (a missed piece costs a life), so build first, then inspect
     // while the intro completion card waits for a tap.
     // On this software-rendered VM the page can drop to ~1 fps and pieces may fall past
@@ -199,6 +210,13 @@ try {
     await frame.evaluate(() => __cozy.dlg.start('greet'));
     await clickChoice(frame, '하은');
     await page.waitForFunction((b) => JSON.parse(localStorage.getItem('tong-game')).relationships.haeun.affinity === b + 5, before);
+    await frame.evaluate(() => __cozy.dlg.end());
+    // Replaying the same beat (e.g. after restarting the cozy world) earns nothing more.
+    await frame.evaluate(() => __cozy.dlg.start('greet'));
+    await clickChoice(frame, '하은');
+    await page.waitForTimeout(2000);
+    assert.equal((await shared(page)).relationships.haeun.affinity, before + 5, 'a story beat is awarded once');
+    assert.equal((await shared(page)).relationships.haeun.interactionCount, 0, '/game still plays its first meeting');
     await frame.evaluate(() => __cozy.dlg.end());
 
     // Reload: progress persists, the HUD reads it back.

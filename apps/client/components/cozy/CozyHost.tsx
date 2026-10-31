@@ -14,6 +14,8 @@ import {
 } from '@/lib/cozy/bridge';
 
 const IMPORTS_KEY = 'tong-cozy-imports';
+const AWARDED_KEY = 'tong-cozy-awarded'; // story beats already applied to the shared store
+const MAX_AWARDED = 4000;
 const SPEAKERS: Record<string, string> = {
   cashier: '직원 · Clerk', ajusshi: '아저씨 · Ajusshi', barista: '바리스타 · Barista',
   haeun: '하은 · Ha-eun', jin: '진 · Jin', tong: '통 · Tong',
@@ -27,13 +29,38 @@ interface Active {
 
 const isKnownLocation = (key: string) => getRegisteredLocationKeys().includes(key);
 
-function importedSaves(): string[] {
+function storedList(key: string): string[] {
   try {
-    const v = JSON.parse(localStorage.getItem(IMPORTS_KEY) ?? '[]');
+    const v = JSON.parse(localStorage.getItem(key) ?? '[]');
     return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : [];
   } catch {
     return [];
   }
+}
+
+function storeList(key: string, list: string[]) {
+  try { localStorage.setItem(key, JSON.stringify(list)); } catch { /* storage unavailable */ }
+}
+
+const importedSaves = () => storedList(IMPORTS_KEY);
+
+/**
+ * Scale the exercise card (CSS zoom keeps pointer hit-testing consistent) so it
+ * fits without scrolling, e.g. a block-crush on a phone held in landscape.
+ */
+function fitExercise() {
+  const content = document.querySelector<HTMLElement>('.exercise-modal-content');
+  const card = content?.querySelector<HTMLElement>(':scope > .exercise-card');
+  const frame = content?.querySelector<HTMLElement>('.cozy-exercise-frame');
+  if (!content || !card) return;
+  card.style.zoom = '1';
+  const natural = card.getBoundingClientRect().height;
+  const backdrop = content.parentElement ? getComputedStyle(content.parentElement) : null;
+  const pad = backdrop ? parseFloat(backdrop.paddingTop) + parseFloat(backdrop.paddingBottom) : 24;
+  const beside = matchMedia('(orientation: landscape) and (max-height: 500px)').matches;
+  const avail = window.innerHeight - pad - (beside || !frame ? 0 : frame.offsetHeight + 10);
+  const zoom = Math.max(0.55, Math.min(1, avail / natural));
+  card.style.zoom = zoom < 0.99 ? zoom.toFixed(3) : '';
 }
 
 function buildExercise(req: CozyExerciseRequest): ExerciseData {
@@ -127,16 +154,20 @@ export function CozyHost() {
           post(envelope('host:ready', { progress: progress() }, requestId));
           post(envelope('host:viewport', { safeArea: safeArea() }));
           break;
-        case 'cozy:progress':
-          for (const action of actionsForEvents(m.payload.events, isKnownLocation)) dispatch(action);
+        case 'cozy:progress': {
+          const awarded = new Set(storedList(AWARDED_KEY));
+          const before = awarded.size;
+          for (const action of actionsForEvents(m.payload.events, isKnownLocation, awarded)) dispatch(action);
+          if (awarded.size !== before) storeList(AWARDED_KEY, [...awarded].slice(-MAX_AWARDED));
           post(envelope('host:progress', { progress: progress() }, requestId));
           break;
+        }
         case 'cozy:migrate': {
           const done = importedSaves();
           const applied = !done.includes(m.payload.saveId);
           if (applied) {
             for (const action of actionsForMigration(m.payload)) dispatch(action);
-            try { localStorage.setItem(IMPORTS_KEY, JSON.stringify([...done, m.payload.saveId])); } catch { /* storage unavailable */ }
+            storeList(IMPORTS_KEY, [...done, m.payload.saveId]);
           }
           post(envelope('host:migrated', { applied, progress: progress() }, requestId));
           break;
@@ -172,6 +203,25 @@ export function CozyHost() {
     };
   }, [post]);
 
+  // While an exercise is open: fit it to the screen, take focus from the inert game, Escape dismisses.
+  useEffect(() => {
+    if (!active) return;
+    const fit = () => fitExercise();
+    const timers = [0, 120, 400].map((ms) => setTimeout(fit, ms));
+    window.addEventListener('resize', fit);
+    const frameEl = document.querySelector<HTMLElement>('.cozy-exercise-frame');
+    frameEl?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') document.querySelector<HTMLButtonElement>('.exercise-dismiss-btn')?.click();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      timers.forEach(clearTimeout);
+      window.removeEventListener('resize', fit);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [active]);
+
   // Push store changes (including ones made by the exercise overlay) to the game.
   useEffect(() => {
     if (connected.current) post(envelope('host:progress', { progress: snapshotFromState(game) }));
@@ -188,7 +238,7 @@ export function CozyHost() {
           onResult={(_id, correct) => finish('completed', correct)}
           onClose={() => finish('dismissed', null)}
           header={
-            <div className="cozy-exercise-frame" role="status">
+            <div className="cozy-exercise-frame" role="status" tabIndex={-1}>
               {req.framing.speakerId && <span className="cozy-exercise-speaker">{SPEAKERS[req.framing.speakerId] ?? req.framing.speakerId}</span>}
               {req.framing.ko && <p className="cozy-exercise-ko" lang="ko">{req.framing.ko}</p>}
               <p className="cozy-exercise-en">{req.framing.en}</p>

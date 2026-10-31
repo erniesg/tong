@@ -11572,6 +11572,36 @@ body:has(.playtest-pill-expanded) {
   color: #6b5560;
 }
 
+/* Phone in landscape: framing beside the exercise so the playfield keeps the height. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .exercise-modal-content:has(.cozy-exercise-frame) {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: min(100%, 680px);
+    max-width: 680px;
+  }
+  .exercise-modal-content:has(.cozy-exercise-frame) > .cozy-exercise-frame {
+    flex: 0 0 min(32%, 210px);
+    margin: 0;
+    padding-right: 40px;
+  }
+  /* Keep the minimise button on the framing card, clear of the exercise header. */
+  .exercise-modal-content:has(.cozy-exercise-frame) > .exercise-dismiss-btn {
+    top: 6px;
+    right: auto;
+    left: calc(min(32%, 210px) - 38px);
+    background: rgba(58, 42, 48, 0.12);
+    color: #3a2a30;
+  }
+  .exercise-modal-content:has(.cozy-exercise-frame) > .exercise-card {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.cozy-exercise-frame:focus { outline: none; }
+
 @media (max-height: 480px) {
   .cozy-exercise-frame { padding: 6px 12px; margin-bottom: 6px; }
   .cozy-exercise-ko { font-size: 15px; }

@@ -141,13 +141,21 @@ export function createBridge({ win = window, helloTimeout = 1500, helloAttempts 
       })();
       return connecting;
     },
+    /** Resolves once the hello settles: true when a Tong host answered. */
+    ready() {
+      return connecting ?? Promise.resolve(connected);
+    },
     /** Report world events (affinity, words met, hangouts). Never throws. */
     report(events) {
       if (!events.length) return;
       // Show the change at once; the host's snapshot replaces it.
       applyLocally(events);
-      if (connected) request('cozy:progress', { events }).catch(() => {});
-      else if (connecting) queued.push(...events);
+      if (!connected) {
+        if (connecting) queued.push(...events);
+        return;
+      }
+      // The contract caps a progress message at 50 events.
+      for (let i = 0; i < events.length; i += 50) request('cozy:progress', { events: events.slice(i, i + 50) }).catch(() => {});
     },
     /** Ask the host to run a shared exercise. Resolves with a CozyExerciseResult. */
     async exercise(req) {
@@ -155,7 +163,8 @@ export function createBridge({ win = window, helloTimeout = 1500, helloAttempts 
       if (connecting) await connecting;
       if (!connected) return unavailable('standalone');
       try {
-        return await request('cozy:exercise', req);
+        // Generous: the player may take their time, but a lost reply must not freeze the world.
+        return await request('cozy:exercise', req, 20 * 60 * 1000);
       } catch (err) {
         return unavailable(String(err?.message ?? err));
       }

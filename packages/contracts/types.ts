@@ -1204,11 +1204,16 @@ export interface CozyExerciseResult {
   reason?: string;
 }
 
-/** World events the cozy game reports; the host validates and applies them. */
+/**
+ * World events the cozy game reports; the host validates and applies them.
+ * beatId names the story beat that earned the event (e.g. "aff:greet#1",
+ * "hangout:convenience_store:day3"); the host applies each beat once, so
+ * replaying scripted scenes or restarting the cozy world cannot farm progress.
+ */
 export type CozyProgressEvent =
-  | { kind: 'affinity'; characterId: string; delta: number }
+  | { kind: 'affinity'; characterId: string; delta: number; beatId?: string }
   | { kind: 'item_seen'; itemId: string; category: CozyItemCategory }
-  | { kind: 'location_hangout'; cityId: CozyCityId; locationId: string };
+  | { kind: 'location_hangout'; cityId: CozyCityId; locationId: string; beatId?: string };
 
 export interface CozyRelationshipSnapshot {
   affinity: number;

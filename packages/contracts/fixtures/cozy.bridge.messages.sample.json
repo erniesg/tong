@@ -41,9 +41,9 @@
       "protocol": "tong-cozy-bridge", "version": 1, "type": "cozy:progress", "requestId": "c1-progress",
       "payload": {
         "events": [
-          { "kind": "affinity", "characterId": "haeun", "delta": 5 },
+          { "kind": "affinity", "characterId": "haeun", "delta": 5, "beatId": "aff:greet#1" },
           { "kind": "item_seen", "itemId": "얼마예요", "category": "vocabulary" },
-          { "kind": "location_hangout", "cityId": "seoul", "locationId": "convenience_store" }
+          { "kind": "location_hangout", "cityId": "seoul", "locationId": "convenience_store", "beatId": "hangout:convenience_store:day2" }
         ]
       }
     }

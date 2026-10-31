@@ -604,14 +604,8 @@ function learn(ko, rom, en) {
   renderBook();
 }
 
-/** Phrases in the book: the glossary filtered by what the shared store knows the player met. */
-function bookEntries() {
-  const items = bridge.progress.items;
-  return [...S.phrases].filter(([ko]) => !bridge.connected || !HANGUL.test(ko) || items[ko]);
-}
-
 function renderBook() {
-  const entries = bookEntries();
+  const entries = [...S.phrases];
   ui.bookCount.textContent = entries.length;
   if (!entries.length) {
     ui.bookList.innerHTML = '<div class="book-empty">Glowing words are scattered around the neighbourhood. Walk into them!</div>';
@@ -649,7 +643,7 @@ function updateHearts() {
   }
 }
 
-function addAff(who, n) {
+function addAff(who, n, beatId) {
   if (who === 'jin') {
     S.jinAff = clamp(S.jinAff + n, 0, S.maxJin);
     bubble(jin, '+♥', { cls: 'heart', dur: 1.3 });
@@ -657,7 +651,7 @@ function addAff(who, n) {
     S.aff = clamp(S.aff + n, 0, S.maxAff);
     bubble(haeun, '+♥', { cls: 'heart', dur: 1.3 });
   }
-  bridge.report([{ kind: 'affinity', characterId: who === 'jin' ? 'jin' : 'haeun', delta: n * AFFINITY_PER_HEART }]);
+  bridge.report([{ kind: 'affinity', characterId: who === 'jin' ? 'jin' : 'haeun', delta: n * AFFINITY_PER_HEART, ...(beatId ? { beatId } : {}) }]);
   updateHearts();
   sfx.heart();
 }
@@ -711,18 +705,22 @@ function updateQuest() {
 }
 
 /** Connect to the hosting Tong app, then carry any pre-bridge progress into its store once. */
+/** Phrases met while playing on its own (or before the bridge) count as met in Tong too. */
+function reportGloss() {
+  bridge.report([...S.phrases.keys()].filter((ko) => HANGUL.test(ko) && ko.length <= 40).map((itemId) => ({ kind: 'item_seen', itemId, category: 'vocabulary' })));
+}
+
 async function connectBridge() {
-  bridge.on('progress', () => {
-    updateHearts();
-    renderBook();
-  });
+  bridge.on('progress', updateHearts);
   bridge.on('viewport', ({ safeArea } = {}) => {
     for (const side of ['top', 'right', 'bottom', 'left']) {
       const px = Number(safeArea?.[side]);
       document.documentElement.style.setProperty(`--host-safe-${side}`, `${Number.isFinite(px) ? clamp(px, 0, 200) : 0}px`);
     }
   });
-  if (!(await bridge.connect()) || !S.legacy) return;
+  if (!(await bridge.connect())) return;
+  reportGloss();
+  if (!S.legacy) return;
   const result = await bridge.migrate(S.legacy);
   if (!result) return;
   S.legacy = null;
@@ -740,13 +738,15 @@ async function connectBridge() {
   if (result.applied) toast('<b>진행 상황 이전 · Progress moved</b><span>Your hearts and phrases from this neighbourhood now count in Tong.</span>', 3600);
 }
 
-/** A completed hangout at a shared location (counts toward its missions). */
+/** A completed hangout at a shared location (counts toward its missions), at most once per in-game day. */
 function hangout(locationId) {
-  bridge.report([{ kind: 'location_hangout', cityId: 'seoul', locationId }]);
+  bridge.report([{ kind: 'location_hangout', cityId: 'seoul', locationId, beatId: `hangout:${locationId}:day${S.day}` }]);
 }
 
 /** Open a shared exercise over the game; the world waits until it closes. */
 async function exercise(req) {
+  // Don't freeze the world while still waiting to hear whether a host exists.
+  await bridge.ready();
   bridgeBusy = true;
   clearControls();
   try {
@@ -2593,6 +2593,7 @@ async function boot() {
       updateHearts();
       updateQuest();
       renderBook();
+      reportGloss();
     } else {
       S.name = $('name').value.trim() || '연습생';
     }

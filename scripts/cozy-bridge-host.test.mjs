@@ -51,10 +51,34 @@ test('world events map to shared store actions, clamped and allow-listed', () =>
   ], known);
   assert.deepEqual(actions, [
     { type: 'UPDATE_AFFINITY', characterId: 'haeun', delta: 10 },
-    { type: 'INCREMENT_INTERACTION', characterId: 'haeun' },
     { type: 'RECORD_ITEM_SEEN', itemId: '우유', category: 'vocabulary' },
     { type: 'INCREMENT_LOCATION_HANGOUT', cityId: 'seoul', locationId: 'convenience_store' },
   ]);
+  // Never an interaction: /game plays its first-meeting hangout while interactionCount is 0.
+  assert.equal(actions.some((a) => a.type === 'INCREMENT_INTERACTION'), false);
+});
+
+test('each story beat is awarded once, so replays cannot farm progress', () => {
+  const known = () => true;
+  const awarded = new Set();
+  const beat = [
+    { kind: 'affinity', characterId: 'haeun', delta: 5, beatId: 'aff:greet#1' },
+    { kind: 'location_hangout', cityId: 'seoul', locationId: 'cafe', beatId: 'hangout:cafe:day1' },
+  ];
+  assert.equal(actionsForEvents(beat, known, awarded).length, 2);
+  assert.equal(actionsForEvents(beat, known, awarded).length, 0);
+  assert.deepEqual([...awarded], ['aff:greet#1', 'hangout:cafe:day1']);
+  assert.equal(actionsForEvents([{ ...beat[1], beatId: 'hangout:cafe:day2' }], known, awarded).length, 1);
+});
+
+test('ids that collide with Object.prototype are refused', () => {
+  for (const bad of [
+    msg('cozy:progress', { events: [{ kind: 'affinity', characterId: 'constructor', delta: 5 }] }),
+    msg('cozy:progress', { events: [{ kind: 'item_seen', itemId: '__proto__', category: 'vocabulary' }] }),
+    msg('cozy:progress', { events: [{ kind: 'affinity', characterId: 'haeun', delta: 5, beatId: 'no spaces' }] }),
+    msg('cozy:exercise', { ...milk, exerciseType: 'sentence_builder', targetItems: ['toString', '주세요'] }),
+    msg('cozy:migrate', { saveId: 'x', hearts: [], phrases: [{ ko: 'hasOwnProperty' }] }),
+  ]) assert.equal(parseCozyMessage(bad).ok, false, JSON.stringify(bad.payload));
 });
 
 test('legacy saves import hearts as affinity and phrases as met items, once per phrase', () => {

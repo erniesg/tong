@@ -36,11 +36,14 @@ const CITIES = new Set(['seoul', 'tokyo', 'shanghai']);
 const ID = /^[a-z][a-z0-9_]{0,39}$/;
 const OBJECTIVE = /^[a-z0-9][a-z0-9-]{0,79}$/;
 const SAVE_ID = /^[a-z0-9-]{1,64}$/;
+const BEAT_ID = /^[\w:#.-]{1,80}$/;
 
 type Parsed = { ok: true; message: CozyToHostMessage } | { ok: false; reason: string };
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
-const text = (v: unknown, max: number): v is string => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
+/** Ids become store keys: refuse names that collide with Object.prototype (constructor, __proto__, …). */
+const safeKey = (v: string) => v !== '__proto__' && !(v in Object.prototype);
+const text = (v: unknown, max: number): v is string => typeof v === 'string' && v.trim().length > 0 && v.length <= max && safeKey(v.trim());
 const optText = (v: unknown, max: number) => v === undefined || text(v, max);
 const textList = (v: unknown, min: number, max: number, len: number): v is string[] =>
   Array.isArray(v) && v.length >= min && v.length <= max && v.every((s) => text(s, len));
@@ -56,14 +59,15 @@ function exerciseError(p: Record<string, unknown>): string | null {
   if (p.distractors !== undefined && !textList(p.distractors, 0, 6, 40)) return 'bad distractors';
   if (!CITIES.has(p.cityId as string)) return 'bad cityId';
   if (typeof p.locationId !== 'string' || !ID.test(p.locationId)) return 'bad locationId';
-  if (p.characterId !== undefined && !(typeof p.characterId === 'string' && ID.test(p.characterId))) return 'bad characterId';
+  if (p.characterId !== undefined && !(typeof p.characterId === 'string' && ID.test(p.characterId) && safeKey(p.characterId))) return 'bad characterId';
   return null;
 }
 
 function eventError(e: unknown): string | null {
   if (!isObj(e)) return 'bad event';
+  if (e.beatId !== undefined && !(typeof e.beatId === 'string' && BEAT_ID.test(e.beatId))) return 'bad beatId';
   if (e.kind === 'affinity') {
-    if (typeof e.characterId !== 'string' || !ID.test(e.characterId)) return 'bad characterId';
+    if (typeof e.characterId !== 'string' || !ID.test(e.characterId) || !safeKey(e.characterId)) return 'bad characterId';
     if (typeof e.delta !== 'number' || !Number.isFinite(e.delta)) return 'bad delta';
     return null;
   }
@@ -141,15 +145,28 @@ export function snapshotFromState(state: GameState): CozyProgressSnapshot {
   };
 }
 
-/** Store actions for validated world events. Unknown locations are dropped; affinity steps are clamped. */
-export function actionsForEvents(events: CozyProgressEvent[], isKnownLocation: (key: string) => boolean): GameAction[] {
+/**
+ * Store actions for validated world events. Unknown locations are dropped;
+ * affinity steps are clamped; a beat already in `awarded` is skipped and new
+ * beats are added to it (the caller persists it).
+ *
+ * Affinity deliberately does not count as an interaction: /game uses
+ * interactionCount === 0 to play its first-meeting hangout.
+ */
+export function actionsForEvents(
+  events: CozyProgressEvent[],
+  isKnownLocation: (key: string) => boolean,
+  awarded: Set<string> = new Set(),
+): GameAction[] {
   const out: GameAction[] = [];
   for (const e of events) {
+    if (e.kind !== 'item_seen' && e.beatId) {
+      if (awarded.has(e.beatId)) continue;
+      awarded.add(e.beatId);
+    }
     if (e.kind === 'affinity') {
       const delta = Math.max(-MAX_AFFINITY_DELTA, Math.min(MAX_AFFINITY_DELTA, Math.round(e.delta)));
-      if (!delta) continue;
-      out.push({ type: 'UPDATE_AFFINITY', characterId: e.characterId, delta });
-      out.push({ type: 'INCREMENT_INTERACTION', characterId: e.characterId });
+      if (delta) out.push({ type: 'UPDATE_AFFINITY', characterId: e.characterId, delta });
     } else if (e.kind === 'item_seen') {
       out.push({ type: 'RECORD_ITEM_SEEN', itemId: e.itemId.trim(), category: e.category });
     } else if (isKnownLocation(`${e.cityId}:${e.locationId}`)) {

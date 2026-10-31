@@ -61,7 +61,8 @@ export function createDialogue(ctx) {
     d.node = n;
     d.locked = false;
     n.enter?.();
-    if (n.aff) ctx.addAff('haeun', n.aff);
+    // Beat ids let the shared store award each scripted beat once.
+    if (n.aff) ctx.addAff('haeun', n.aff, `aff:${id}`);
 
     const sp = SPEAKERS[n.who];
     ui.speaker.textContent = sp.label;
@@ -153,8 +154,8 @@ export function createDialogue(ctx) {
     if (c.rom && !c.wrong) ctx.learn(c.ko, c.rom, c.en);
     if (c.set) Object.assign(ctx.S, c.set);
     c.do?.();
-    if (c.aff) ctx.addAff('haeun', c.aff);
-    if (c.jin) ctx.addAff('jin', c.jin);
+    if (c.aff) ctx.addAff('haeun', c.aff, `aff:${d.id}#${i}`);
+    if (c.jin) ctx.addAff('jin', c.jin, `aff:${d.id}#${i}`);
     setTimeout(() => go(val(c.next)), 750);
   }
 
