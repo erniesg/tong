@@ -684,8 +684,22 @@ function addAff(who, n, beatId) {
   sfx.heart();
 }
 
+// Day one in Seoul is one short chain; the rest of the list waits for day two.
+const ARRIVAL = [
+  ['locker', '🔑 Find your locker at Onsae'],
+  ['register', '📝 Hand in your trainee registration'],
+  ['dorm', '🏠 Get to the dorm (Yeonnam Apartments)'],
+  ['firstNight', '🛏️ Sleep in your bunk'],
+];
+const arrivalDone = () => ARRIVAL.every(([id]) => S.quests[id]);
+/** Ticks the arrival steps from game state (old saves past day one count as done). */
+function checkArrival() {
+  if (S.city !== 'seoul') return;
+  const f = S.story.flags, past = S.day >= 2;
+  const state = { locker: f.h0_done || past, register: !!seoulEval?.chapter?.profile || past, dorm: f.dorm_arrived || past, firstNight: past };
+  for (const [id] of ARRIVAL) if (state[id] && !S.quests[id]) done(id);
+}
 const QUESTS = [
-  ['locker', '🔑 Find your locker at the 연습실'],
   ['haeunDay', '💃 Meet your partner at the studio (9:00–19:00)'],
   ['pojang', '🏮 Dinner at the 포장마차 (19:00~)'],
   ['cafe', '☕ Order at 카페 봄 (8:00–22:00)'],
@@ -714,6 +728,17 @@ function updateQuest() {
     }
     $('quest-count').textContent = `${a.step}/3`;
     ui.questHint.textContent = 'E / tap at landmarks · Subway stays in this city · Flights leave from the airport.';
+    return;
+  }
+  if (!arrivalDone()) {
+    ui.questList.innerHTML = '';
+    for (const [id, label] of ARRIVAL) {
+      const li = document.createElement('li');
+      li.textContent = label;
+      if (S.quests[id]) li.className = 'step-done';
+      ui.questList.appendChild(li);
+    }
+    $('quest-count').textContent = `${ARRIVAL.filter(([id]) => S.quests[id]).length}/${ARRIVAL.length}`;
     return;
   }
   const open = QUESTS.filter(([id]) => !S.quests[id]);
@@ -822,7 +847,7 @@ async function practice(mode) {
 function done(id) {
   if (S.quests[id]) return;
   S.quests[id] = true;
-  const q = QUESTS.find(([qid]) => qid === id);
+  const q = [...ARRIVAL, ...QUESTS].find(([qid]) => qid === id);
   if (q) toast(`<b>✓ 완료!</b><span>${q[1]}</span>`, 2400);
   sfx.chime();
   updateQuest();
@@ -1093,7 +1118,7 @@ const dlg = createDialogue({
 /* ── Relationship scenes ─────────────────────────── */
 
 // Authored scenes (lib/content/routes) played through the shared engine.
-const SCENE_QUEST = { 'haeun.h0': 'locker', 'haeun.h1': 'haeunDay', 'haeun.h2': 'drill', 'jin.j0': 'pojang', 'jin.a1.cafe': 'jin', 'jin.a2.river': 'jinNight' };
+const SCENE_QUEST = { 'haeun.h0': 'locker', 'haeun.h0.dorm': 'dorm', 'haeun.h1': 'haeunDay', 'haeun.h2': 'drill', 'jin.j0': 'pojang', 'jin.a1.cafe': 'jin', 'jin.a2.river': 'jinNight' };
 const scenes = createScenePlayer({
   S,
   nodes: NODES,
@@ -2730,6 +2755,7 @@ function frame() {
   const running = lastTraversalSpeed > DAY_CONFIG.runningSpeed;
   dayMoves = { walkMetres: running ? 0 : moved, runMetres: running ? moved : 0 };
   if (S.city === 'seoul') {
+    if (!arrivalDone() && (window.__arrivalTick = (window.__arrivalTick ?? 0) + 1) % 30 === 0) checkArrival();
     const room = interiorAt(player.root.position, S.city);
     dormCast?.update(S.hour, room);
     for (const a of dormCast?.actors ?? []) if (a.character.root.visible) animate(a.character, dt, t, 0);
@@ -2957,7 +2983,7 @@ async function boot() {
     get bounds() { return currentCity().bounds; },
     get transitioning() { return transitioning; },
     openPlace: (id) => { const p = cityPlaces().find((p) => p.id === id); if (p) openPlace(p); },
-    interact, loc, cam, camera, composer, stage, resizeStage, safePose, validPose,
+    interact, loc, tongHint: () => tongHint(S, localHour()).en, cam, camera, composer, stage, resizeStage, safePose, validPose,
     traversal, rides, jump, setTransport, demoJump,
     get demoEnabled() { return demoEnabled; },
     get controls() { return { keys: [...keys], joystick: { ...stick }, pointers: lookPointers.size, braking, runEnabled }; },

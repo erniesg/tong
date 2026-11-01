@@ -438,6 +438,8 @@ export function tongHint(S, hour) {
   const night = hour >= 19 || hour < 3;
   if (!f.h0_done) return { ko: '연습실에 네 사물함이 있어!', en: 'Your locker is in the agency’s practice studio, up the stairs. Start there.', expr: 'excited' };
   if (!f.dorm_arrived) return { ko: '숙소로 가자!', en: 'Manager Choi is waiting at the dorm: Yeonnam Apartments, northwest of the railway park. First floor. Your bed is there.', expr: 'excited' };
+  if ((S.day ?? 1) < 2) return { ko: '오늘은 푹 자!', en: 'Long day. Your bed is the bottom bunk in Da-on\'s room. Studio at 10 tomorrow: Coach Park said don\'t be late.', expr: 'cheerful' };
+  if (!f.h1_done && hour >= 5 && hour < 9) return { ko: '열 시까지 연습실!', en: 'Studio at 10: Coach Park is pairing you with someone today.', expr: 'cheerful' };
   if (!f.h1_done && hour >= 9 && hour < 19) return { ko: '하은이 연습실에 있어!', en: 'Coach Park paired you with someone. She’s in the studio. Read the water-bottle name tags to find her.', expr: 'excited' };
   if (!f.j0_done && night) return { ko: '포장마차 문 열었어!', en: 'The pojangmacha is open. Go order something yourself: [food] + 주세요.', expr: 'love' };
   if (!S.quests.cafe && hour >= 8 && hour < 22) return { ko: '카페 봄에서 커피 한 잔 어때?', en: 'How about a coffee at Café Bom? It’s on the right side of the plaza.', expr: 'cheerful' };
