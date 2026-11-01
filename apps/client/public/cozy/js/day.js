@@ -7,7 +7,7 @@
 /** Every rate and threshold of the day loop. Hours are clock hours (0–24). */
 export const DAY_CONFIG = Object.freeze({
   max: 100,
-  wakeHour: 7, // morning starts 07:00–08:00 depending on condition (see CONDITIONS)
+  wakeHour: 7, // the dorm wakes at 07:00; bedtime only changes condition and 기력
   bedFrom: 20, // a real night's sleep from ~20:00; earlier the bed offers a nap
   bedUntil: 7, // ...until 07:00 (after that it's a new day: nap only)
   curfewHour: 23, // canon: curfew 23:00 with Manager Choi's night check
@@ -38,9 +38,9 @@ export const DAY_CONFIG = Object.freeze({
  */
 export const CONDITIONS = Object.freeze({
   fresh: { id: 'fresh', ko: '상쾌', en: 'Refreshed', face: '😊', start: 100, wake: 7, timingWindowScale: 1, tongHintCostScale: 1 },
-  okay: { id: 'okay', ko: '보통', en: 'Okay', face: '🙂', start: 80, wake: 7.5, timingWindowScale: 0.95, tongHintCostScale: 1 },
-  tired: { id: 'tired', ko: '피곤', en: 'Tired', face: '🥱', start: 60, wake: 8, timingWindowScale: 0.85, tongHintCostScale: 1.25 },
-  wrecked: { id: 'wrecked', ko: '엉망', en: 'Wrecked', face: '😵', start: 35, wake: 8, timingWindowScale: 0.7, tongHintCostScale: 1.5 },
+  okay: { id: 'okay', ko: '보통', en: 'Okay', face: '🙂', start: 80, wake: 7, timingWindowScale: 0.95, tongHintCostScale: 1 },
+  tired: { id: 'tired', ko: '피곤', en: 'Tired', face: '🥱', start: 60, wake: 7, timingWindowScale: 0.85, tongHintCostScale: 1.25 },
+  wrecked: { id: 'wrecked', ko: '엉망', en: 'Wrecked', face: '😵', start: 35, wake: 7, timingWindowScale: 0.7, tongHintCostScale: 1.5 },
 });
 
 /**

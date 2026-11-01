@@ -98,3 +98,5 @@ body.no-en .eval-prompt-en { display: none; }
   .dance-pose { font-size: var(--small); }
   .eval-band { font-size: 52px; }
 }
+.eval-change { margin-top: 8px; padding: 6px 12px; border-radius: 12px; background: #fff3d6; color: #6b4a12; font-size: 0.92em; }
+.eval-fixed { opacity: 0.8; }

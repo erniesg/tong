@@ -9,7 +9,7 @@ import {
   recordRound, restartRound, finishEval, recordRehearsal, CONFIRM_LINE,
 } from './chapter.js';
 import { hashSeed, scoreRound, suggestTier, gradeEval, rankBoard, weakObjectives, updateMastery, tierMultiplier } from './runner.js';
-import { EVAL1, itemsFor, danceItems, lunchOutcome, LUNCH, ROSTER, RESULT_LINES, PROFILE_OPTIONS, defaultProfile } from './eval1.js';
+import { EVAL1, itemsFor, danceItems, lunchOutcome, LUNCH, ROSTER, RESULT_LINES, PROFILE_OPTIONS, defaultProfile, birthKo } from './eval1.js';
 import { createEvalUI } from './ui.js';
 import { createTtsAudio } from './voice.js';
 import { getDayLoop } from '../day.js';
@@ -19,7 +19,7 @@ const MONTH_KO = { 1: '3월', 2: '4월', 3: '5월' };
 const ROUND_NOTE = {
   vocal: 'Song 1 「좋아요」: dictation and questions.',
   dance: 'Follow the call on the beat.',
-  judges: 'Trainee profile, then three questions.',
+  judges: 'Profile form, then three questions.',
   field: 'Team lunch run at the 분식집.',
 };
 
@@ -34,6 +34,7 @@ export function createSeoulEval(ctx) {
   const debug = typeof location !== 'undefined' && (/[?&]evaldebug\b/.test(location.search) || safeGet('tong-eval-debug') === '1');
   let ui = null;
   let running = false;
+  let registering = false;
   let boardTex = null;
 
   function getUI() {
@@ -110,8 +111,8 @@ export function createSeoulEval(ctx) {
     if (c.month > EVAL1.month) {
       body = `<p>이번 달 평가는 아직 없어요.</p><p class="eval-muted">Eval ${c.month} isn't built yet.</p>`;
     } else if (c.status === 'eve') {
-      body = '<p><b>평가는 내일이에요.</b></p><p class="eval-muted">Eval day is tomorrow. Go to bed when you are ready.</p>';
-      actions.push({ label: '🛏️ 자러 가기 · Sleep until morning', value: 'sleep', primary: true, id: 'sleep' });
+      body = '<p><b>평가는 내일이에요. 집에 가서 푹 자요.</b></p><p class="eval-muted">Eval day is tomorrow. Go home and sleep when you\'re ready; what time you go to bed decides how you feel in the morning.</p>';
+      if (!getDayLoop()) actions.push({ label: '🛏️ 자러 가기 · Sleep until morning', value: 'sleep', primary: true, id: 'sleep' });
     } else if (canStart(c, flags())) {
       body = '<p><b>1차 평가: 입소 평가</b></p><p class="eval-muted">Eval 1 is open. Vocal, dance, judges, then a field quest.</p>';
       actions.push({ label: '평가 시작 · Start the eval', value: 'start', primary: true, id: 'start' });
@@ -169,45 +170,62 @@ export function createSeoulEval(ctx) {
     if (evalDayDue(c, S.day, S.hour) || c.status === 'eval') runEvalDay();
   }, 500) : null;
 
-  async function profileSetup() {
+  const who = () => ({ nationality: S.nationality, birthday: S.birthday });
+
+  /**
+   * 연습생 등록 카드: agency paperwork on arrival (after H0). Ungraded; eval 1's judges ask about it.
+   * Nationality and birthday come from the creator; this asks hobby, special skill and family.
+   */
+  async function registration({ eyebrow = '온새 엔터테인먼트 · Onsae Entertainment' } = {}) {
     const c = chapter();
     if (c.profile) return c.profile;
     const u = getUI();
-    const base = { ...defaultProfile(S.name), name: S.name };
+    const base = defaultProfile(S.name, who());
     const form = u.el('div', 'eval-profile');
     const sel = (label, key, opts) => {
       const l = u.el('label', 'field', label);
       const s = u.el('select');
       s.dataset.profile = key;
       for (const [v, t] of opts) s.add(new Option(t, String(v)));
-      s.value = String(key.includes('.') ? base.birth[key.split('.')[1]] : base[key]);
+      s.value = String(base[key]);
       l.append(s);
       form.append(l);
       return s;
     };
+    const fixed = (ko, en, value) => form.append(u.el('div', 'field eval-fixed', `${ko} · ${en}: ${value}`));
+    fixed('이름', 'Name', S.name);
+    fixed('국적', 'Nationality', base.nationality);
+    fixed('생년월일', 'Date of birth', birthKo(base.birth));
     const hobbies = PROFILE_OPTIONS.hobby.map(([k, e]) => [k, `${k} · ${e}`]);
     const fields = {
-      nationality: sel('Nationality', 'nationality', PROFILE_OPTIONS.nationality.map(([k, e]) => [k, `${k} · ${e}`])),
-      y: sel('Birth year', 'birth.y', [2005, 2006, 2007, 2008, 2009].map((y) => [y, y])),
-      m: sel('Month', 'birth.m', Array.from({ length: 12 }, (_, i) => [i + 1, i + 1])),
-      d: sel('Day', 'birth.d', Array.from({ length: 28 }, (_, i) => [i + 1, i + 1])),
-      hobby: sel('Hobby', 'hobby', hobbies),
-      specialty: sel('Special skill', 'specialty', hobbies),
-      family: sel('Family (people, incl. you)', 'family', PROFILE_OPTIONS.family.map((n) => [n, n])),
+      hobby: sel('취미 · Hobby', 'hobby', hobbies),
+      specialty: sel('특기 · Special skill', 'specialty', hobbies),
+      family: sel('가족 · Family (people, incl. you)', 'family', PROFILE_OPTIONS.family.map((n) => [n, `${n}명`])),
     };
     await u.show({
-      eyebrow: '심사 · Judges', title: '연습생 카드 · Trainee card', sub: 'Agency paperwork. Ungraded: the judges will ask about this.',
-      body: form, actions: [{ label: '저장 · Save', value: true, primary: true, id: 'profile-save' }], tag: 'profile',
+      eyebrow, title: '연습생 등록 카드 · Trainee registration', sub: 'Agency paperwork. Not graded, but the judges will ask about it.',
+      body: form, actions: [{ label: '제출 · Hand it in', value: true, primary: true, id: 'profile-save' }], tag: 'profile',
     });
+    u.close();
     const profile = {
-      name: S.name, nationality: fields.nationality.value,
-      birth: { y: Number(fields.y.value), m: Number(fields.m.value), d: Number(fields.d.value) },
+      ...base,
       hobby: fields.hobby.value, specialty: fields.specialty.value === fields.hobby.value ? (fields.hobby.value === '춤' ? '노래' : '춤') : fields.specialty.value,
       family: Number(fields.family.value),
     };
     setChapter({ ...chapter(), profile });
     return profile;
   }
+
+  // Hand the form over once H0 (arrival) is done and the world is free.
+  const regPoll = typeof setInterval !== 'undefined' ? setInterval(() => {
+    if (running || registering || !S.started || S.city !== 'seoul' || ctx.isBusy?.()) return;
+    if (chapter().profile || !flags().h0_done) return;
+    registering = true;
+    registration().finally(() => { registering = false; });
+  }, 700) : null;
+
+  /** Judges round: the profile from arrival (asked now only if it was skipped, e.g. a forced unlock). */
+  const profileSetup = () => registration({ eyebrow: '심사 · Judges' });
 
   async function chooseTier(round, suggested) {
     const u = getUI();
@@ -228,7 +246,7 @@ export function createSeoulEval(ctx) {
     const suggested = suggestTier(c.mastery, round.skill, Math.min(2, round.maxTier));
     tier ??= await chooseTier(round, suggested);
     const profile = round.id === 'judges' ? await profileSetup() : null;
-    const items = itemsFor(round.id, seed, tier, profile ?? c.profile ?? defaultProfile(S.name));
+    const items = itemsFor(round.id, seed, tier, profile ?? c.profile ?? defaultProfile(S.name, who()));
     const records = [];
     const responses = {};
     const eyebrow = rehearsal ? '리허설 · Rehearsal' : `${EVAL1.title.ko} · ${round.en}`;

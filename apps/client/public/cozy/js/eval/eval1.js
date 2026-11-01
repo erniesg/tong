@@ -107,8 +107,19 @@ const HOBBY_DO = { 노래: '노래해요', 춤: '춤춰요', 요리: '요리해�
 const NATIVE = { 2: '두', 3: '세', 4: '네', 5: '다섯', 6: '여섯' };
 const SINO = { 2: '이', 3: '삼', 4: '사', 5: '오', 6: '육' };
 
-export function defaultProfile(name = '연습생') {
-  return { name, nationality: '싱가포르', birth: { y: 2007, m: 5, d: 3 }, hobby: '노래', specialty: '춤', family: 4 };
+/** Age is fixed by the game (TODO owner: confirm 18, same as Haeun and Sua); the year follows from it. */
+export const PLAYER_AGE = 18;
+export const GAME_START_YEAR = 2026; // TODO owner: the in-game year of the March you arrive
+export const birthYear = () => GAME_START_YEAR - PLAYER_AGE;
+
+/** Nationality and birthday come from the creator; hobby, skill and family from the arrival registration. */
+export function defaultProfile(name = '연습생', who = {}) {
+  return {
+    name,
+    nationality: who.nationality || '싱가포르',
+    birth: { y: birthYear(), m: who.birthday?.m || 5, d: who.birthday?.d || 3 },
+    hobby: '노래', specialty: '춤', family: 4,
+  };
 }
 
 export const birthKo = (b) => `${b.y}년 ${b.m}월 ${b.d}일`;
@@ -223,6 +234,8 @@ export const LUNCH = {
   wallet: [50000, 10000, 10000, 5000, 5000, 1000, 1000, 1000, 1000, 1000],
   // review: 'native' — the shop owner's lines.
   owner: { who: '사장님', greet: { ko: '뭐 드릴까요?', en: 'What can I get you?' } },
+  // review: 'native'
+  change: { ko: '거스름돈 여기요.', en: 'Here\'s your change.' },
 };
 
 export const segmentText = (s) => `${s.food} ${s.num} ${s.counter}`;
@@ -237,7 +250,8 @@ export function fieldItems(seed, tier = 1) {
   });
   items.push({
     id: 'field-pay', skill: 'listening', objective: 'ko-num-sino-man', type: 'wallet', audio: { text: LUNCH.priceKo },
-    prompt: { ko: LUNCH.priceKo, en: 'Pay the right amount.', showText: tier === 1 }, wallet: [...LUNCH.wallet], answer: [LUNCH.price], hint: '이만 = 20,000',
+    prompt: { ko: LUNCH.priceKo, en: 'Pay for the order.', showText: tier === 1 }, wallet: [...LUNCH.wallet], answer: [LUNCH.price], hint: '이만 = 20,000',
+    change: LUNCH.change,
   });
   return items;
 }
@@ -296,6 +310,7 @@ export function check(item, answer) {
   if (item.type === 'choice') return item.answer.includes(answer);
   if (item.type === 'blocks') return item.answer.some((a) => norm(a.join('')) === norm((answer ?? []).join('')) && a.length === (answer ?? []).length);
   if (item.type === 'type') return item.answer.some((a) => norm(a) === norm(answer));
-  if (item.type === 'wallet') return item.answer.includes(Number(answer));
+  // Overpaying is fine: the owner gives change. Only short of the price is wrong.
+  if (item.type === 'wallet') return Number(answer) >= item.answer[0];
   return false;
 }

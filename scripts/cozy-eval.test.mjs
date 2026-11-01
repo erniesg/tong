@@ -13,6 +13,7 @@ import {
 import { GRID, START, makeCalls, applyInput, matches, legalCalls } from '../apps/client/public/cozy/js/eval/dance.js';
 import {
   EVAL1, SONG1, itemsFor, check, lunchOutcome, LUNCH, ROSTER, defaultProfile, segmentText,
+  birthYear,
 } from '../apps/client/public/cozy/js/eval/eval1.js';
 
 const BEATS = { h0_done: true, h1_done: true, h2_done: true };
@@ -229,7 +230,7 @@ test('judges: the form uses the player\'s profile, and the three interview quest
   assert.ok(!check(t1[5], '가족이 오 명이에요.'), 'Sino number for people is wrong');
   assert.ok(check(t1[6], '주말에 보통 요리해요.'));
   const t2 = itemsFor('judges', 3, 2, p);
-  assert.ok(check(t2[2], ['2007년', '5월', '3일']));
+  assert.ok(check(t2[2], [`${birthYear()}년`, '5월', '3일']), 'birth year follows the fixed age');
   assert.ok(check(t2[5], ['가족이', '다섯', '명이에요']));
   assert.ok(t2.slice(5).every((i) => i.speech?.slots), 'speech hook carries the slots');
 });
@@ -239,7 +240,8 @@ test('field quest: the order, the price, and who reacts to the wrong food', () =
   const t1 = itemsFor('field', 5, 1);
   const pay = t1.find((i) => i.type === 'wallet');
   assert.ok(check(pay, 20000));
-  assert.ok(!check(pay, 50000));
+  assert.ok(check(pay, 50000), 'overpaying is fine: change comes back');
+  assert.ok(!check(pay, 15000), 'short is wrong');
   assert.ok(check(t1[0], '김밥 두 줄'));
   const wrong = lunchOutcome({
     'field-gimbap': { correct: false, answer: '김밥 두 개' },

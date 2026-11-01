@@ -24,6 +24,7 @@ import { createScenePlayer } from './scene-player.js';
 import { createBridge, AFFINITY_PER_HEART, stageOf, affinityOf, legacyProgress } from './bridge.js';
 import { createSeoulEval } from './eval/index.js';
 import { normalizeChapter } from './eval/chapter.js';
+import { PROFILE_OPTIONS } from './eval/eval1.js';
 import seoul from './cities/seoul.js';
 import tokyo from './cities/tokyo.js';
 import shanghai from './cities/shanghai.js';
@@ -122,7 +123,7 @@ function save() {
         chapter: S.chapter, // Seoul evals: month, eval state, results (js/eval/chapter.js)
         version: 4, city: S.city, position: safePose(), adventures: S.adventures,
         cityPositions: S.cityPositions, postcards: S.postcards,
-        name: S.name, look: S.look, hour: S.hour, day: S.day,
+        name: S.name, nationality: S.nationality, birthday: S.birthday, look: S.look, hour: S.hour, day: S.day,
         words: [...S.words], gloss: [...S.phrases], visited: [...S.visited], signs: [...S.signs], quests: S.quests,
         pettedCat: S.pettedCat, seed: S.seed, rel: S.rel, story: S.story, dayLoop: S.dayLoop,
         ...(S.legacy ? { legacy: S.legacy } : {}),
@@ -153,6 +154,8 @@ function applySave(d) {
   S.day = Number.isFinite(d.day) && d.day >= 1 ? Math.floor(d.day) : 1;
   S.dayLoop = normalizeDayState(d.dayLoop, S.day);
   S.name = typeof d.name === 'string' ? d.name : '연습생';
+  S.nationality = typeof d.nationality === 'string' ? d.nationality : null;
+  S.birthday = d.birthday && Number.isInteger(d.birthday.m) && Number.isInteger(d.birthday.d) ? d.birthday : null;
   S.adventures = {};
   for (const id of Object.keys(cities)) {
     const a = d.adventures?.[id];
@@ -2756,7 +2759,24 @@ function frame() {
 
 /* ── Boot ────────────────────────────────────────── */
 
+/** Creator identity: nationality and birthday (age is fixed by the game, see eval1.js PLAYER_AGE). */
+function fillIdentityFields() {
+  const nat = $('nationality'), m = $('birth-m'), d = $('birth-d');
+  if (!nat || nat.options.length) return;
+  for (const [ko, en] of PROFILE_OPTIONS.nationality) nat.add(new Option(`${en} · ${ko}`, ko));
+  for (let i = 1; i <= 12; i++) m.add(new Option(`${i}월`, String(i)));
+  const days = () => {
+    const keep = Number(d.value) || 1;
+    const n = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][Number(m.value) - 1];
+    d.replaceChildren(...Array.from({ length: n }, (_, i) => new Option(`${i + 1}일`, String(i + 1))));
+    d.value = String(Math.min(keep, n));
+  };
+  m.onchange = days;
+  days();
+}
+
 async function boot() {
+  fillIdentityFields();
   try {
     await Promise.race([
       Promise.all([document.fonts.load('64px Jua', '포장마차'), document.fonts.load('32px "Gowun Dodum"', '떡볶이')]),
@@ -2822,6 +2842,8 @@ async function boot() {
       reportGloss();
     } else {
       S.name = $('name').value.trim() || '연습생';
+      S.nationality = $('nationality').value;
+      S.birthday = { m: Number($('birth-m').value), d: Number($('birth-d').value) };
     }
     initAudio();
     audio.ctx?.resume();

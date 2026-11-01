@@ -99,7 +99,7 @@ test('bedtime sets tomorrow’s condition', () => {
   assert.equal(sleepOutcome(null, 90).energy, CONDITIONS.wrecked.start, 'and you start tired');
   for (const h of [20, 23, 0.5, 1.5, 3]) {
     const o = sleepOutcome(h, 50);
-    assert.ok(o.wakeHour >= 7 && o.wakeHour <= 8);
+    assert.equal(o.wakeHour, 7, 'the dorm always wakes at 07:00');
     assert.equal(((h + o.hours) % 24).toFixed(6), o.wakeHour.toFixed(6));
   }
   assert.equal(bedKind(19.9), 'nap');
@@ -160,7 +160,7 @@ test('bed → recap → sleep → morning: new day, condition, event', async () 
   S.hour = 1.5;
   await loop.sleepUntilMorning({ skipRecap: true });
   assert.equal(S.day, 5);
-  assert.equal(S.hour, 8);
+  assert.equal(S.hour, 7);
   assert.equal(loop.getCondition().id, 'tired');
   assert.equal(loop.getCondition().timingWindowScale, CONDITIONS.tired.timingWindowScale);
 

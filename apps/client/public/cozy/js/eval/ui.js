@@ -220,6 +220,9 @@ export function createEvalUI({ root, audio, speech = null, sfx = {}, debug = fal
 
     audio.stop?.();
     const correct = check(item, answer);
+    if (correct && item.type === 'wallet' && Number(answer) > item.answer[0] && item.change) {
+      card.append(el('div', 'eval-change', `${item.change.ko} ${won(Number(answer) - item.answer[0])} · ${item.change.en}`));
+    }
     const right = item.type === 'blocks' ? item.answer[0].join(' ') : item.type === 'wallet' ? won(item.answer[0]) : item.answer[0];
     await feedback(correct, right);
     return { answer, correct, hint: state.hint };

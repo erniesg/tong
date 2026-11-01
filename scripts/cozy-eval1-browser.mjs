@@ -103,7 +103,9 @@ async function run(label, viewport, plan) {
   await f.evaluate(() => { __cozy.seoulEval.openBoard(); });
   await screen('board');
   await shot('board-eve');
-  await action('sleep');
+  await action('close');
+  // Go to bed at home: the same day-loop call the bed makes.
+  await f.evaluate(() => { __cozy.day.sleepUntilMorning(); });
   // The eve goes to bed through the day loop (#410): recap, then the morning board.
   const dayBtn = async (text) => {
     const btn = f.locator('.day-overlay:not(.hidden) button', { hasText: text });
@@ -133,7 +135,6 @@ async function run(label, viewport, plan) {
     await action(`tier-${tier}`);
     if (round === 'judges') {
       if (await f.locator('[data-screen="profile"]').count() || await screen('profile').then(() => true, () => false)) {
-        await f.selectOption('select[data-profile="nationality"]', '싱가포르');
         await f.selectOption('select[data-profile="family"]', '4');
         await f.selectOption('select[data-profile="hobby"]', '요리');
         await shot('judges-profile');
