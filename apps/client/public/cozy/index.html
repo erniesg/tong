@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Tong · Seoul · Tokyo · Shanghai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body data-layout="auto" data-text-scale="normal">
+  <main id="game-shell" aria-label="Tong city adventure">
+  <canvas id="scene" aria-label="City world. Drag to orbit; scroll or pinch to zoom."></canvas>
+
+  <div id="vignette" class="vignette"></div>
+  <div id="bubbles" class="bubbles"></div>
+  <div id="fade" class="fade"></div>
+
+  <!-- HUD -->
+  <div id="hud" class="hud hidden">
+    <div class="hud-left">
+      <details class="panel quest">
+        <summary class="quest-title"><b id="quest-title-text">서울 · Today</b> <span id="quest-count"></span></summary>
+        <ul id="quest-list" class="quest-list"></ul>
+        <div id="quest-hint" class="quest-hint"></div>
+      </details>
+    </div>
+
+    <div class="panel clock">
+      <span id="clock-icon" class="clock-icon">🌇</span>
+      <div class="clock-text">
+        <span id="city-title">서울 · Seoul</span>
+        <b id="clock-time">16:30</b>
+        <span id="clock-ko">오후 4시 30분</span>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <div class="hud-buttons">
+        <button id="btn-tong" class="chip" title="Ask Tong (H)"><img src="img/tong-cheerful.png" alt="Tong" /></button>
+        <button id="btn-book" class="chip" title="Phrasebook (B)">📖 <span id="book-count">0</span></button>
+        <button id="btn-map" class="chip" title="Map (N)" aria-label="Toggle city map">🗺️</button>
+        <button id="btn-tools" class="chip" aria-haspopup="dialog" aria-controls="tools-panel" aria-label="Open travel kit and settings">☷ <span class="tools-label">Tools</span></button>
+      </div>
+      <div id="map-panel" class="map-panel panel hidden">
+        <div class="map-head"><span id="map-title">Seoul · compressed city map</span><button id="map-expand" class="chip" aria-label="Expand or shrink city map">⤢</button><button id="map-close" class="chip" aria-label="Close map">✕</button></div>
+        <canvas id="minimap" class="minimap" width="480" height="480" aria-label="City roads, landmarks and player position"></canvas>
+        <div class="map-help">White arrow: you · ✈ airport flights · tap map to expand</div>
+        <div id="map-legend" class="map-legend"></div>
+      </div>
+    </div>
+
+    <p id="controls-help" class="controls-help"><span class="desktop-help">WASD move · Shift run · Space jump · E talk<br />Drag to orbit · scroll to zoom</span><span class="touch-help">Joystick to move · drag to orbit<br />Pinch or + / − to zoom</span><span class="short-help">Drag to orbit · pinch / scroll to zoom</span></p>
+    <div id="move-controls" class="move-controls">
+      <span class="joystick-label">Move · joystick</span>
+      <div id="stick" class="stick" aria-label="Movement joystick"><div id="stick-knob" class="stick-knob"></div></div>
+    </div>
+    <div class="play-controls" aria-label="Camera and movement">
+      <div class="zoom-controls" role="group" aria-label="Zoom">
+        <button id="zoom-out" class="chip" aria-label="Zoom out">−</button>
+        <span>Zoom</span>
+        <button id="zoom-in" class="chip" aria-label="Zoom in">+</button>
+      </div>
+      <div class="action-controls">
+        <button id="run-toggle" class="chip" aria-pressed="false">Run</button>
+        <button id="jump-button" class="chip">Jump</button>
+        <button id="brake-button" class="chip">Brake</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tools-panel" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tools-title">
+    <div class="card tools-card" tabindex="-1">
+      <div class="tools-head"><div><span class="eyebrow">Make yourself at home</span><h2 id="tools-title">Your travel kit</h2></div><button id="tools-close" class="chip" aria-label="Close travel kit">✕</button></div>
+      <section class="tool-section" aria-labelledby="guide-title">
+        <h3 id="guide-title">Neighbourhood guide</h3>
+        <p>Find food, a café, a convenience store, the subway and a practice studio in every city. Walk through open doorways; look out for landmark views.</p>
+        <ul id="location-list" class="location-list" aria-label="Places and landmarks"></ul>
+      </section>
+      <section class="tool-section" aria-labelledby="camera-title">
+        <h3 id="camera-title">Look around</h3>
+        <p>Drag anywhere on the world to orbit. Scroll, pinch or use the on-screen + / − to get closer.</p>
+        <div class="tool-buttons">
+          <button id="orbit-left" class="btn-secondary">↶ Orbit left</button>
+          <button id="orbit-right" class="btn-secondary">Orbit right ↷</button>
+          <button id="camera-reset" class="btn-secondary">Reset camera</button>
+          <button id="camera-view" class="btn-secondary">Follow / overview</button>
+          <button id="landmark-view" class="btn-secondary">Landmark view</button>
+        </div>
+        <label class="field" for="transport-select">Get around<select id="transport-select"><option value="walk">Walk</option><option value="skateboard">Skateboard</option><option value="scooter">Scooter</option><option value="bicycle">Bicycle</option></select></label>
+        <p>Hold Shift or tap Run. Space or Jump to hop; Brake slows your ride. E to interact. During a conversation, Space advances dialogue instead.</p>
+      </section>
+      <section class="tool-section" aria-labelledby="display-title">
+        <h3 id="display-title">A view that fits you</h3>
+        <div class="field-grid">
+          <label class="field" for="view-layout">Screen layout<select id="view-layout"><option value="auto">Auto · fit this window</option><option value="portrait">Portrait preview</option><option value="landscape">Landscape preview</option></select></label>
+          <label class="field" for="text-scale">Text size<select id="text-scale"><option value="normal">Normal</option><option value="large">Large</option></select></label>
+        </div>
+        <p>Auto follows your window or device rotation. Previews frame the game without rotating your screen. Browser zoom is welcome.</p>
+        <div class="tool-buttons">
+          <button id="fullscreen-button" class="btn-secondary">Full screen</button>
+          <button id="btn-en" class="chip" title="Toggle English (T)">EN · Translation</button>
+          <button id="btn-voice" class="chip" title="Korean voice">🗣️ Voice</button>
+          <button id="btn-mute" class="chip" title="Sound (M)">🔊 Sound</button>
+          <button id="btn-postcards" class="chip" title="City postcard collection">📮 Postcards</button>
+          <button id="btn-look" class="chip" title="Change your look">👕 Change look</button>
+        </div>
+      </section>
+      <section class="tool-section" aria-labelledby="time-title">
+        <h3 id="time-title">Take your time</h3>
+        <div class="clock-buttons tool-buttons">
+          <button id="t-pause" class="tbtn" aria-label="Pause time">⏸ Pause</button>
+          <button id="t-play" class="tbtn" aria-label="Normal time speed">▶ Play</button>
+          <button id="t-fast" class="tbtn" aria-label="Fast forward time">⏩ Fast</button>
+          <button id="t-dawn" class="tbtn">🌅 Dawn</button>
+          <button id="t-noon" class="tbtn">☀️ Noon</button>
+          <button id="t-dusk" class="tbtn">🌇 Sunset</button>
+          <button id="t-night" class="tbtn">🌙 Night</button>
+        </div>
+        <div class="hearts-panel">
+          <div class="heart-row"><span class="who">하은</span><span id="hearts-haeun" class="hearts"></span></div><div id="stage-haeun" class="stage"></div>
+          <div class="heart-row"><span class="who">진</span><span id="hearts-jin" class="hearts jin"></span></div><div id="stage-jin" class="stage"></div>
+        </div>
+      </section>
+      <section class="tool-section demo-section" aria-labelledby="demo-title">
+        <h3 id="demo-title">Demo shortcuts</h3>
+        <p id="demo-description">Optional instant visits — normal travel unchanged. Leave this off to explore on foot and use local transit and airport flights.</p>
+        <label class="check-field" for="demo-enabled"><input id="demo-enabled" type="checkbox" aria-describedby="demo-description" /> Enable demo shortcuts</label>
+        <div class="demo-destinations">
+          <div class="demo-row"><label class="field" for="demo-city-select">City<select id="demo-city-select"><option value="seoul">서울 · Seoul</option><option value="tokyo">東京 · Tokyo</option><option value="shanghai">上海 · Shanghai</option></select></label><button id="demo-go" class="btn-secondary" disabled>Visit city</button></div>
+          <div class="demo-row"><label class="field" for="demo-place-select">Local stop<select id="demo-place-select" aria-label="Demo destination in current city"></select></label><button id="demo-place-go" class="btn-secondary" disabled>Visit stop</button></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="banner" class="banner hidden"></div>
+
+  <div id="book" class="book panel hidden">
+    <div class="book-head">
+      <span>단어장 · Phrasebook</span>
+      <button id="book-close" class="chip" aria-label="Close phrasebook">✕</button>
+    </div>
+    <div id="book-list" class="book-list"></div>
+  </div>
+
+  <button id="prompt" class="prompt hidden"></button>
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Dialogue -->
+  <div id="dialogue" class="dialogue hidden">
+    <div id="portrait" class="portrait"></div>
+    <div class="dialogue-body">
+      <div id="speaker" class="speaker"></div>
+      <div id="line-ko" class="line-ko" title="Tap to hear it"></div>
+      <div id="line-en" class="line-en"></div>
+      <div id="hint" class="hint hidden"></div>
+      <div id="choices" class="choices"></div>
+      <div id="next" class="next hidden">▼</div>
+    </div>
+  </div>
+
+  <!-- Subway travel -->
+  <div id="travel" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="travel-title">
+    <div class="card travel-card">
+      <div class="travel-head">
+        <div>
+          <div id="travel-badge" class="line-badge">2</div>
+        </div>
+        <div>
+          <h2 id="travel-title">Local transit</h2>
+          <p id="travel-subtitle" class="subtitle">Choose a stop within this city.</p>
+        </div>
+        <button id="travel-close" class="chip" aria-label="Close travel choices">✕</button>
+      </div>
+      <div id="travel-list" class="travel-list"></div>
+      <div id="flight-cities" class="cities hidden"></div>
+    </div>
+  </div>
+
+  <!-- Local, deterministic phrase practice and city errand -->
+  <div id="city-activity" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="activity-title">
+    <div class="card activity-card">
+      <div class="activity-head"><img src="img/tong-thinking.png" alt="Tong" /><h2 id="activity-title"></h2><button id="activity-close" class="chip" aria-label="Close place interaction">✕</button></div>
+      <p id="activity-description" class="subtitle"></p>
+      <p id="activity-objective" class="activity-objective"></p>
+      <div id="activity-native" class="activity-native"></div>
+      <div id="activity-phonetic" class="subtitle"></div>
+      <p id="activity-feedback" class="activity-feedback" role="status" aria-live="polite"></p>
+      <div id="activity-choices" class="activity-choices"></div>
+      <button id="activity-transit" class="btn-secondary hidden">🚇 Open local transit · airport connection</button>
+      <small class="activity-note">Local phrase practice · scripted exercises, not live AI</small>
+    </div>
+  </div>
+
+  <!-- Polaroid memory -->
+  <div id="polaroid" class="overlay hidden">
+    <div class="polaroid">
+      <img id="polaroid-img" alt="A polaroid memory" />
+      <div id="polaroid-caption" class="polaroid-caption"></div>
+      <div id="polaroid-date" class="polaroid-date"></div>
+      <button id="polaroid-close" class="btn-primary">추억 저장 · Keep it</button>
+    </div>
+  </div>
+
+  <!-- Title -->
+  <div id="title" class="overlay title-overlay">
+    <div class="card title-card">
+      <img class="title-tong" src="img/tong-cheerful.png" alt="Tong" />
+      <h1>Tong · City Adventures</h1>
+      <p class="subtitle">서울 · 東京 · 上海<br />Explore three compressed cities, day and night.<br />Meet friends in Hongdae, learn local phrases,<br />deliver a snack and fly to your next adventure.</p>
+      <div class="title-buttons">
+        <button id="start" class="btn-primary">시작 · New game</button>
+        <button id="continue" class="btn-secondary hidden">이어하기 · Continue</button>
+      </div>
+      <div class="controls-hint">
+        <span><kbd>WASD</kbd> walk</span>
+        <span><kbd>Shift</kbd> run</span>
+        <span><kbd>drag</kbd> look</span>
+        <span><kbd>scroll / pinch</kbd> zoom</span>
+        <span><kbd>Space</kbd> jump</span>
+        <span><kbd>E</kbd> talk</span>
+        <span><kbd>H</kbd> ask Tong</span>
+        <span><kbd>F</kbd> fast time</span>
+      </div>
+      <div id="loading" class="loading">Building three city adventures…</div>
+    </div>
+  </div>
+
+  <!-- Character creator -->
+  <div id="creator" class="overlay title-overlay creator-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="creator-title">
+    <div class="card creator-card">
+      <div class="creator-preview">
+        <canvas id="creator-canvas" tabindex="0" aria-label="Your character preview. Drag, or press the left and right arrow keys, to turn."></canvas>
+        <button id="creator-zoom" type="button" class="chip creator-zoom">🔍 Face</button>
+        <div class="creator-view" role="group" aria-label="Preview turntable">
+          <button id="creator-spin" type="button" class="chip creator-spin" aria-label="Auto-rotate" aria-pressed="true"><span class="creator-spin-icon" aria-hidden="true"></span><span class="creator-spin-text" aria-hidden="true">Pause</span></button>
+          <button id="creator-turn-left" type="button" class="chip creator-turn-btn" aria-label="Turn left">↺</button>
+          <button id="creator-turn-right" type="button" class="chip creator-turn-btn" aria-label="Turn right">↻</button>
+        </div>
+      </div>
+      <div class="creator-form">
+        <div class="creator-head">
+          <span class="eyebrow">나 · Me</span>
+          <h2 id="creator-title">Make your character</h2>
+        </div>
+        <div id="creator-tabs" class="creator-tabs" role="tablist" aria-label="Character categories"></div>
+        <div id="creator-panel" class="creator-panel" role="tabpanel">
+          <div id="creator-basics" class="creator-basics">
+            <div class="creator-name">
+              <label class="name-label" for="name">What should everyone call you?</label>
+              <input id="name" class="name-input" maxlength="12" placeholder="연습생" autocomplete="off" enterkeyhint="done" />
+            </div>
+            <div class="creator-row">
+              <span class="creator-label" id="creator-l-gender">Play as</span>
+              <div class="creator-options" role="radiogroup" aria-labelledby="creator-l-gender">
+                <button type="button" role="radio" class="creator-choice" data-gender="m">남자 · Guy</button>
+                <button type="button" role="radio" class="creator-choice" data-gender="f">여자 · Girl</button>
+              </div>
+            </div>
+            <p id="look-note" class="look-note"></p>
+          </div>
+          <div id="creator-rows" class="creator-rows"></div>
+        </div>
+        <div class="creator-buttons">
+          <button id="creator-back" class="btn-secondary">← Back</button>
+          <button id="creator-shuffle" class="btn-secondary" aria-label="Surprise me">🎲<span class="creator-wide"> Surprise me</span></button>
+          <button id="creator-start" class="btn-primary">시작 · Start</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Night summary -->
+  <div id="ending" class="overlay hidden">
+    <div class="card end-card">
+      <div class="end-kicker">포장마차의 밤 · A night at the pojangmacha</div>
+      <h2 id="end-title"></h2>
+      <div id="end-hearts" class="hearts big"></div>
+      <p id="end-text" class="end-text"></p>
+      <div class="end-section">Words &amp; phrases so far</div>
+      <div id="end-words" class="end-words"></div>
+      <div class="end-buttons">
+        <button id="stay" class="btn-primary">계속 탐험 · Keep exploring</button>
+        <button id="again" class="btn-secondary">New game</button>
+      </div>
+    </div>
+  </div>
+
+  </main>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

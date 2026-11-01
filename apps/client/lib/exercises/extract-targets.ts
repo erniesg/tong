@@ -65,6 +65,9 @@ export function extractTargetItems(
       return [{ itemId: exercise.targetChar, category }];
 
     case 'block_crush':
+      if (exercise.sequence && exercise.sequence.length > 1) {
+        return [...new Set(exercise.sequence.map((s) => s.targetChar))].map((itemId) => ({ itemId, category: 'script' as const }));
+      }
       return [{ itemId: exercise.targetChar, category: 'script' as const }];
 
     case 'error_correction': {

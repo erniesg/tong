@@ -28,3 +28,7 @@ Naming note:
 - Objective payloads now carry canonical graph `objectiveId` values plus additive `legacyObjectiveId` / `objectiveAliasIds` compatibility fields while consumers migrate.
 
 - `fixtures/learn.scripted-scenes.sample.json` demonstrates deterministic scripted learn-mode messaging scenes for Seoul, Tokyo, and Shanghai.
+
+Cozy 3D game bridge:
+- `types.ts` section "Cozy 3D game ↔ host page bridge" defines the same-origin `postMessage` protocol between the cozy iframe (`apps/client/public/cozy`) and `/cozy` (exercise requests/results, progress events, snapshots, one-time legacy save import).
+- `fixtures/cozy.bridge.messages.sample.json` has one example of every message; `scripts/cozy-bridge-host.test.mjs` validates them against the host parser.

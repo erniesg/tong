@@ -38,6 +38,8 @@ export interface GameState {
 export type GameAction =
   | { type: 'UPDATE_AFFINITY'; characterId: string; delta: number }
   | { type: 'RECORD_ITEM_RESULT'; itemId: string; category: 'script' | 'vocabulary' | 'grammar'; correct: boolean }
+  /** The player met an item (a line, sign or phrase) without being tested on it. */
+  | { type: 'RECORD_ITEM_SEEN'; itemId: string; category: 'script' | 'vocabulary' | 'grammar' }
   | { type: 'ADD_XP'; amount: number }
   | { type: 'ADD_SP'; amount: number }
   | { type: 'SET_CALIBRATED_LEVEL'; level: number }
@@ -161,6 +163,21 @@ function reduce(state: GameState, action: GameAction): GameState {
           },
         },
       };
+    }
+    case 'RECORD_ITEM_SEEN': {
+      const existing = state.itemMastery[action.itemId];
+      const entry: ItemMastery = existing
+        ? { ...existing, lastSeen: Date.now() }
+        : {
+            itemId: action.itemId,
+            category: action.category,
+            correct: 0,
+            incorrect: 0,
+            lastSeen: Date.now(),
+            masteryLevel: computeMasteryLevel(0, 0),
+            ...defaultSRSFields(),
+          };
+      return { ...state, itemMastery: { ...state.itemMastery, [action.itemId]: entry } };
     }
     case 'ADD_XP':
       return { ...state, xp: state.xp + action.amount };

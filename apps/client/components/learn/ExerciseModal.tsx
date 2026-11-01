@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { ExerciseData } from '@/lib/types/hangout';
 import { ExerciseRenderer } from '@/components/exercises/ExerciseRenderer';
@@ -10,9 +10,11 @@ interface ExerciseModalProps {
   onResult: (exerciseId: string, correct: boolean, summary?: string) => void;
   readOnly?: boolean;
   onClose?: () => void;
+  /** Optional context shown above the exercise (e.g. who asked for it in the cozy world). */
+  header?: ReactNode;
 }
 
-export function ExerciseModal({ exercise, onResult, readOnly, onClose }: ExerciseModalProps) {
+export function ExerciseModal({ exercise, onResult, readOnly, onClose, header }: ExerciseModalProps) {
   const [dismissing, setDismissing] = useState(false);
   const [resultDone, setResultDone] = useState(false);
 
@@ -65,6 +67,7 @@ export function ExerciseModal({ exercise, onResult, readOnly, onClose }: Exercis
             &#x25BE;
           </button>
         )}
+        {header}
         <ExerciseRenderer
           exercise={exercise}
           onResult={readOnly ? () => {} : handleResult}

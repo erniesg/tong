@@ -295,7 +295,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
 
   // For multi-char, compute combined meaning
   const displayMeaning = isMulti
-    ? charSteps.map(s => getMeaning(s.meaning, explainLang, s.targetChar)).join(', ')
+    ? [...new Set(charSteps.map(s => getMeaning(s.meaning, explainLang, s.targetChar)))].join(', ')
     : localMeaning;
 
   const ui = getUI(explainLang);
@@ -590,6 +590,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
       <div
         key={comp.slot}
         ref={(el) => { slotRefs.current[comp.slot] = el; }}
+        data-slot={comp.slot}
         className={isWrong ? 'bc-slot--wrong-shake' : ''}
         style={{
           width: w, height: h,
@@ -884,6 +885,7 @@ export function BlockCrush({ exercise, onResult }: Props) {
                   <div
                     key={p.id}
                     ref={(el) => { pieceElRefs.current[p.id] = el; }}
+                    data-piece={p.piece}
                     onPointerDown={(e) => startDrag(e, p)}
                     style={{
                       position: 'absolute', left: '50%', top: `${p.y * 100}%`,
