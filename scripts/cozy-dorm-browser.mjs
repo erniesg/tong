@@ -67,15 +67,17 @@ async function run({ width, height, tag, touch }) {
     const s = await f.evaluate(() => { __cozy.dlg.finishTyping(); return { who: __cozy.dlg.state.node?.who, choices: __cozy.dlg.state.choices.length, text: document.querySelector('#dialogue')?.innerText.slice(0, 120) }; });
     if (seen.at(-1) !== s.who) seen.push(s.who);
     if (s.who === 'manager_choi' && !seen.includes('shot-choi')) { seen.push('shot-choi'); await frames(2); await shot('2-manager-choi'); }
-    if (s.who === 'haeun' && s.choices) { await frames(2); await shot('3-haeun-steers-you'); await f.evaluate(() => __cozy.dlg.choose(0)); await frames(2); continue; }
+    // Haeun is unnamed on day one (speaker haeun_unnamed, until H1).
+    if (s.who === 'haeun_unnamed' && s.choices) { await frames(2); await shot('3-haeun-steers-you'); await f.evaluate(() => __cozy.dlg.choose(0)); await frames(2); continue; }
     if (s.who === 'daon' && !seen.includes('shot-daon')) { seen.push('shot-daon'); await frames(2); await shot('4-daon'); }
+    if (s.choices) { await f.evaluate(() => __cozy.dlg.choose(0)); await frames(2); continue; }
     await f.evaluate(() => __cozy.dlg.advance());
     await frames(2);
   }
   const flags = await f.evaluate(() => __cozy.S.story.flags);
   log(tag, 'speakers', seen.filter((s) => !s.startsWith('shot')), 'dorm_arrived', flags.dorm_arrived);
   assert.ok(flags.dorm_arrived, 'arrival scene finished');
-  for (const who of ['manager_choi', 'haeun', 'daon', 'boram']) assert.ok(seen.includes(who), `${who} speaks`);
+  for (const who of ['manager_choi', 'haeun_unnamed', 'daon', 'boram']) assert.ok(seen.includes(who), `${who} speaks`);
 
   // 3. Night: the roommates are in; Haeun is in room A.
   await f.evaluate(() => __cozy.setHour(22.8));
