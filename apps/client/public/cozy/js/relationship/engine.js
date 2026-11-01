@@ -204,9 +204,15 @@ export function resolveChoice(c, s, w, tier) {
     const applied = applyEffects(probe, outcome, w);
     return { ...applied, outcome, tier };
 }
-/** The line Tong offers for a beat, or nothing once the player has outgrown it. */
-export function tongFor(b, w) {
+/**
+ * The line Tong offers for a beat, or nothing once the player has outgrown it,
+ * or when the player agreed to switch Tong off around this character
+ * (flag `tong_off_with_<characterId>`, e.g. Jin's "you don't need the translator with me").
+ */
+export function tongFor(b, w, characterId) {
     if (!b.tong)
+        return undefined;
+    if (characterId && w.flags?.[`tong_off_with_${characterId}`])
         return undefined;
     if (b.tong.maxLevel !== undefined && w.playerLevel > b.tong.maxLevel)
         return undefined;
@@ -250,7 +256,7 @@ export function runScene(scene, start, world, choose, tier = world.inputTier, ex
             const ok = passed(exercises, beat.id);
             s = withFlag(s, `ex_${beat.id}`, ok);
         }
-        const step = { beatId: beat.id, speaker: beat.speaker, line: pick(beat.lines, s, w), tong: tongFor(beat, w) };
+        const step = { beatId: beat.id, speaker: beat.speaker, line: pick(beat.lines, s, w), tong: tongFor(beat, w, scene.characterId) };
         if (beat.exercise)
             step.exercise = { hook: beat.exercise, passed: !!s.flags[`ex_${beat.id}`] };
         if (beat.effects) {

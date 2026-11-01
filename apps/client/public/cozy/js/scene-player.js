@@ -95,7 +95,7 @@ export function createScenePlayer(ctx) {
   const after = () => run?.done && finish();
 
   function hintFor(beat, line) {
-    const tong = tongFor(beat, run.w);
+    const tong = tongFor(beat, run.w, run.scene.characterId);
     const parts = [];
     if (tong) parts.push(`<b>통</b> ${esc(fill(tong.en))}`);
     if (line?.note) parts.push(`<i>${esc(fill(line.note))}</i>`);

@@ -102,21 +102,21 @@ for (const { file, mod } of scenes) {
   }
 }
 
-// Canon (jin.ts mustNot): with Jin, yes and no score the same. Deferring is counted, never rewarded;
-// declining is never punished.
+// Canon (jin.ts mustNot): tag what Jin asks for. Going along with a directive is counted;
+// generosity never is. Saying no to a directive always builds trust (it may cost warmth now).
+const ACCEPT = new Set(['defer', 'apologize']);
 const jinOutcomes = [
-  ...scenes.filter((s) => s.mod.scene.characterId === 'jin').flatMap((s) => s.mod.scene.beats.flatMap((b) => (b.choices ?? []).map((c) => ({ id: `${s.file}/${c.id}`, intent: c.intent, outcomes: c.outcomes })))),
-  ...threads.filter((t) => t.mod.thread.characterId === 'jin').flatMap((t) => (t.mod.thread.replies ?? []).map((r) => ({ id: `${t.file}/${r.id}`, intent: r.intent, outcomes: r.outcomes }))),
+  ...scenes.filter((s) => s.mod.scene.characterId === 'jin').flatMap((s) => s.mod.scene.beats.flatMap((b) => (b.choices ?? []).map((c) => ({ id: `${s.file}/${c.id}`, intent: c.intent, ask: c.ask, outcomes: c.outcomes })))),
+  ...threads.filter((t) => t.mod.thread.characterId === 'jin').flatMap((t) => (t.mod.thread.replies ?? []).map((r) => ({ id: `${t.file}/${r.id}`, intent: r.intent, ask: r.ask, outcomes: r.outcomes }))),
 ];
-test('Jin: deferring earns nothing; declining costs nothing', () => {
+test('Jin: directives you accept are counted, generosity never is, and a no builds trust', () => {
   for (const c of jinOutcomes) {
+    if (c.intent === 'defer') assert.ok(c.ask, `${c.id}: going along with Jin must say what he asked for (ask: generosity | directive)`);
     for (const o of c.outcomes) {
-      if (c.intent === 'defer') {
-        assert.ok(!((o.deltas?.warmth ?? 0) > 0 || (o.deltas?.trust ?? 0) > 0), `${c.id}: deferring to Jin raises warmth/trust`);
-      }
-      if (c.intent === 'decline') {
-        assert.ok(!((o.deltas?.warmth ?? 0) < 0 || (o.deltas?.trust ?? 0) < 0), `${c.id}: declining Jin lowers warmth/trust`);
-      }
+      const counted = !!o.tally?.includes('jin_directives');
+      if (c.ask === 'directive' && ACCEPT.has(c.intent)) assert.ok(counted, `${c.id}: accepting a directive is not counted`);
+      if (c.ask !== 'directive' || !ACCEPT.has(c.intent)) assert.ok(!counted, `${c.id}: only accepted directives are counted`);
+      if (c.ask === 'directive' && c.intent === 'decline') assert.ok((o.deltas?.trust ?? 0) > 0, `${c.id}: a no to a directive must build trust`);
     }
   }
 });

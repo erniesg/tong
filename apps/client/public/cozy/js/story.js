@@ -239,61 +239,19 @@ export function buildNodes(A) {
       end: true,
       after: () => A.jinWave(),
     },
-    jin_hi: {
-      who: 'jin',
-      expr: 'happy',
-      ko: () => (S.story?.flags?.jin_banmal_accepted ? '어, 왔어? 여기 앉아.' : '어, 왔어요? 여기 앉아요.'),
-      en: 'Oh, you made it? Have a seat.',
-      choices: [
-        { ko: '선배님, 안녕하세요!', rom: 'seonbaenim, annyeonghaseyo', en: 'Hello, sunbae!', jin: 1, next: 'jin_sunbae' },
-        { ko: '오늘 촬영 어땠어요?', rom: 'oneul chwaryeong eottaesseoyo', en: 'How was filming today?', jin: 1, next: 'jin_practice' },
-      ],
-    },
-    jin_sunbae: {
-      who: 'jin',
-      expr: 'laugh',
-      ko: '“님”은 빼도 돼. 편하게 해.',
-      en: 'You can drop the “님”. Relax.',
-      hint: '<b>선배</b> (seonbae) = someone senior at school or work. <b>님</b> adds extra respect.',
-      enter: () => A.learn('선배', 'seonbae', 'senior (at school/work)'),
-      next: 'jin_haeun',
-    },
-    jin_practice: { who: 'jin', expr: 'sad', ko: '길었어. 하루 종일 다른 사람으로 살았거든.', en: 'Long. I spent all day being someone else.', hint: '<b>촬영</b> (chwaryeong) = filming, a shoot.', enter: () => A.learn('촬영', 'chwaryeong', 'filming / a shoot'), next: 'jin_haeun' },
-    jin_haeun: {
+    // Jin's café and river scenes are authored in lib/content/routes/jin/ambient and played by scene-player.js.
+    jin_cafe_idle: {
       who: 'jin',
       expr: 'smile',
-      ko: '아, 하은이랑 짝이야? 걔 연습실에서 안 나와. 매운 거 엄청 좋아하고.',
-      en: 'Oh, you’re paired with Ha-eun? She never leaves the studio. Loves spicy food, too.',
-      hint: '💡 Tip unlocked: Ha-eun loves spicy food.',
-      enter: () => {
-        S.jinTip = true;
-        A.done('jin');
-      },
-      next: 'jin_bye',
+      ko: () => (S.story?.flags?.jin_banmal_accepted ? '대본 읽는 중이야. 내일 또 와.' : '대본 읽는 중이에요. 내일 또 와요.'),
+      en: 'Reading my script. Come by again tomorrow.',
+      end: true,
     },
-    jin_bye: { who: 'jin', expr: 'happy', ko: '연습 열심히 해. 화이팅!', en: 'Practise hard. Fighting!', enter: () => A.learn('화이팅', 'hwaiting', 'you can do it! (cheer)'), end: true },
-    jin_again: { who: 'jin', expr: 'smile', ko: '커피 맛있지? 여기 내 단골이야.', en: 'Good coffee, right? This is my regular spot.', hint: '<b>단골</b> (dangol) = a regular (customer or spot).', enter: () => A.learn('단골', 'dangol', 'a regular (spot/customer)'), end: true },
-    jin_night: {
+    jin_river_idle: {
       who: 'jin',
       expr: 'smile',
-      ko: '한강 진짜 예쁘지? …여기선 아무도 날 못 알아봐. 그게 좋아.',
-      en: 'The Han River’s beautiful, right? …Nobody recognises me out here. I like that.',
-      choices: [
-        { ko: '여기선 그냥 진이에요.', rom: 'yeogiseon geunyang jinieyo', en: 'Out here you’re just Jin.', jin: 1, next: 'jin_night_thanks' },
-        { ko: '같이 사진 찍어요!', rom: 'gachi sajin jjigeoyo', en: 'Let’s take a photo together!', jin: 1, next: 'jin_photo' },
-      ],
-    },
-    jin_night_thanks: { who: 'jin', expr: 'happy', ko: '…고마워. 그 말 좋다.', en: '…Thanks. I like hearing that.', enter: () => A.done('jinNight'), end: true },
-    jin_photo: {
-      who: 'jin',
-      expr: 'laugh',
-      ko: '우리끼리만 보는 거면… 좋아. 하나, 둘, 셋— 김치!',
-      en: 'If it stays just between us… okay. One, two, three— kimchi!',
-      hint: 'Koreans say <b>김치~</b> instead of “cheese” for photos.',
-      enter: () => {
-        A.done('jinNight');
-        setTimeout(() => A.polaroid('jin'), 900);
-      },
+      ko: () => (S.story?.flags?.jin_banmal_accepted ? '오늘은 그냥 물 보고 싶어.' : '오늘은 그냥 물 보고 싶어요.'),
+      en: 'Tonight I just want to look at the water.',
       end: true,
     },
 

@@ -81,7 +81,7 @@ export interface WorldCtx {
    * Manager Choi's thread). `flags` conditions match either map.
    */
   flags?: Record<string, boolean>;
-  /** Save-wide counters, e.g. tally.jin_decided = times you let Jin decide for you. */
+  /** Save-wide counters, e.g. tally.jin_directives = Jin's directives you went along with. */
   tally?: Record<string, number>;
 }
 
@@ -96,7 +96,7 @@ export interface Condition {
   /** Matches the relationship's own flags or the save-wide story flags. */
   flags?: string[];
   notFlags?: string[];
-  /** Inclusive bounds on save-wide counters: { jin_decided: { min: 3 } }. */
+  /** Inclusive bounds on save-wide counters: { jin_directives: { min: 3 } }. */
   tally?: Record<string, { min?: number; max?: number }>;
   knows?: string[];
   notKnows?: string[];
@@ -191,9 +191,18 @@ export interface Outcome extends Effects {
   next?: string;
 }
 
+/**
+ * What the other person is asking you to accept (Jin's route). Generosity (he
+ * pays, gives you a ride) is fine to take and never counts against you.
+ * A directive (where you go, who you see, what you say, when you reply) is
+ * what tally.jin_directives counts when you go along with it.
+ */
+export type Ask = 'generosity' | 'directive';
+
 export interface Choice {
   id: string;
   intent: Intent;
+  ask?: Ask;
   gate?: Condition;
   /** What the player says. Tier 0 shows `en`; tier 1+ shows `ko`. */
   say: Line;
@@ -214,7 +223,7 @@ export interface TongLine extends Line {
  * Stage directions a runtime may act on (the lab ignores them): the cozy 3D
  * world sits the player down at 'sit', serves food at 'serve', and so on.
  */
-export type Cue = 'sit' | 'serve' | 'phone_buzz' | 'stand' | 'leave';
+export type Cue = 'sit' | 'serve' | 'phone_buzz' | 'stand' | 'leave' | 'photo';
 
 export interface Beat {
   id: string;
@@ -288,6 +297,7 @@ export interface KakaoMsg {
 export interface KakaoReply {
   id: string;
   intent: Intent;
+  ask?: Ask;
   say: Line;
   gate?: Condition;
   minTier?: InputTier;

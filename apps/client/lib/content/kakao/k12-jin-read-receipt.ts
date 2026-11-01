@@ -23,11 +23,13 @@ export const module: KakaoModule = {
       {
         id: 'sorry',
         intent: 'apologize',
+        ask: 'directive',
         say: { ko: '미안해요, 연습하느라 정신없었어요', rom: 'mianhaeyo, yeonseuphaneura jeongsin eopseosseoyo', en: 'Sorry, practice was crazy' },
         outcomes: [
           {
             messages: [{ from: 'them', ko: '아니야 아니야 ㅋㅋ 그냥 걱정돼서 😊', en: 'No no lol, I just worry 😊', delay: 0 }],
             deltas: { warmth: 1 },
+            tally: ['jin_directives'],
             setFlags: ['jin_read_apology'],
             memory: { tag: 'apologized_for_read', note: 'Apologised to Jin for reading and not replying.' },
           },
@@ -36,6 +38,7 @@ export const module: KakaoModule = {
       {
         id: 'boundary',
         intent: 'decline',
+        ask: 'directive',
         minTier: 2,
         say: { ko: '바로 답 못 할 때도 있어요. 걱정 안 해도 돼요.', rom: 'baro dap mot hal ttaedo isseoyo. geokjeong an haedo dwaeyo', en: 'Sometimes I can\'t reply right away. You don\'t need to worry.' },
         outcomes: [
@@ -44,7 +47,7 @@ export const module: KakaoModule = {
               { from: 'them', ko: '…아 그렇지. 당연하지! 내가 좀 오버했다 ㅎㅎ', en: '…Ah right. Of course! I overdid it a bit hehe', delay: 3 },
               { from: 'them', ko: '알겠습니다~ 연습 화이팅하세요!', en: 'Understood~ Good luck with practice!', delay: 1 },
             ],
-            deltas: { tension: 2, trust: 1 },
+            deltas: { warmth: -1, tension: 2, trust: 2 },
             setFlags: ['jin_boundary_1'],
             memory: { tag: 'jin_boundary_read', note: 'Told Jin you won\'t always reply right away. His answer went suddenly formal.' },
           },

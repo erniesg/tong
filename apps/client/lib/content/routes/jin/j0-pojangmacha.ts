@@ -3,7 +3,9 @@ import type { SceneModule } from '../../../relationship/types';
 /**
  * J0 · 포장마차 (Jin's onboarding). Warm, easy, a little too easy. Refusing him
  * never costs warmth or trust (canon/jin.ts mustNot); deferring is what gets
- * counted in tally.jin_decided. Saying yes and saying no score the same.
+ * Generosity (he pays) is fine to accept; a directive (he plans for you) counts in
+ * tally.jin_directives when you go along. Yes is rewarding now; no costs a little
+ * warmth now and builds trust; how you say no matters.
  */
 export const module: SceneModule = {
   scene: {
@@ -16,7 +18,7 @@ export const module: SceneModule = {
     gate: { hours: { from: 19, to: 3 } },
     summary:
       'Night tent. You fumble the order; a man in a low cap rescues it and orders 떡볶이 for you (or adjusts your correct order). He gives his name freely, proposes 반말, asks a lot of questions. His phone buzzes: one second, a different face. He insists on paying. He leaves in a cap and mask. That was easy. Too easy?',
-    seeds: ['saw_face_change', 'tally.jin_decided (deferring)', 'jin_adjusted_order even when you got it right', 'jin_banmal_declined'],
+    seeds: ['saw_face_change', 'tally.jin_directives (going along with his plans)', 'jin_adjusted_order even when you got it right', 'jin_banmal_declined'],
     beats: [
       {
         id: 'j0_open',
@@ -131,13 +133,15 @@ export const module: SceneModule = {
         choices: [
           {
             id: 'j0_banmal_yes',
-            intent: 'defer',
+            // an offer between equals, not him deciding for you
+            intent: 'commit',
             say: { ko: '좋아요! …아, 좋아.', en: 'Sure! …I mean, sure. (switching)', rom: 'joayo! …a, joa' },
             outcomes: [
               {
                 speaker: 'jin',
                 expr: 'smile',
                 reaction: { ko: '그치? 훨씬 편하다.', en: 'Right? So much easier.' },
+                deltas: { warmth: 2 },
                 setFlags: ['jin_banmal_accepted'],
               },
             ],
@@ -185,27 +189,63 @@ export const module: SceneModule = {
           {
             id: 'j0_plan_yes',
             intent: 'defer',
+            ask: 'directive',
             say: { ko: '좋아요!', en: 'Sounds good!', rom: 'joayo' },
             outcomes: [
               {
                 speaker: 'jin',
                 expr: 'smile',
                 reaction: { ko: '약속이다.', en: 'It\'s a promise.', note: 'You didn\'t pick a day. He already has one in mind.' },
+                deltas: { warmth: 2 },
                 setFlags: ['jin_plan_accepted'],
-                tally: ['jin_decided'],
+                tally: ['jin_directives'],
               },
             ],
           },
           {
             id: 'j0_plan_maybe',
             intent: 'decline',
+            ask: 'directive',
             say: { ko: '생각해 볼게요.', en: 'I\'ll think about it.', rom: 'saenggakae bolgeyo' },
             outcomes: [
               {
                 speaker: 'jin',
                 expr: 'laugh',
                 reaction: { ko: 'ㅋㅋ 다음에! 알았어요.', en: 'Haha, next time then! Got it.', note: 'Charming. He\'ll ask again.' },
+                deltas: { warmth: -1, trust: 1 },
                 setFlags: ['jin_plan_declined'],
+              },
+            ],
+          },
+          {
+            id: 'j0_plan_mine',
+            intent: 'decline',
+            ask: 'directive',
+            minTier: 1,
+            say: { ko: '좋아요. 근데 날짜는 제가 정할게요.', en: 'Sure. But I\'ll pick the day.', rom: 'joayo. geunde naljjaneun jega jeonghalgeyo' },
+            outcomes: [
+              {
+                speaker: 'jin',
+                expr: 'surprised',
+                reaction: { ko: '…오. 그래요, 그럼 연락 기다릴게요.', en: '…Oh. Okay, I\'ll wait for your call then.', note: 'Kind and clear. It throws him for a second, and he likes you a little more for it.', review: 'native' },
+                deltas: { warmth: 1, trust: 2 },
+                setFlags: ['jin_plan_counter'],
+                memory: { tag: 'picked_the_day', note: 'Said yes to Jin\'s plan but kept the choice of day.' },
+              },
+            ],
+          },
+          {
+            id: 'j0_plan_no',
+            intent: 'decline',
+            ask: 'directive',
+            say: { ko: '아니요, 괜찮아요.', en: 'No, I\'m good.', rom: 'aniyo, gwaenchanayo' },
+            outcomes: [
+              {
+                speaker: 'jin',
+                expr: 'smile',
+                reaction: { ko: '아… 네. 알겠어요.', en: 'Ah… sure. Got it.', note: 'Flat. The smile stays on a beat too long.' },
+                deltas: { warmth: -3, tension: 2, trust: 1 },
+                setFlags: ['jin_plan_refused'],
               },
             ],
           },
@@ -236,26 +276,29 @@ export const module: SceneModule = {
           {
             id: 'j0_let_pay',
             intent: 'defer',
+            ask: 'generosity',
             say: { ko: '…잘 먹겠습니다.', en: 'Let him: "…Thanks for the meal."', rom: 'jal meokgetseumnida' },
             outcomes: [
               {
                 speaker: 'jin',
                 expr: 'smile',
                 reaction: { ko: '당연하지. 내가 불렀잖아.', en: 'Of course. I invited you.', note: 'He didn\'t. You sat down next to him.', review: 'native' },
+                deltas: { warmth: 2 },
                 setFlags: ['jin_paid'],
-                tally: ['jin_decided'],
               },
             ],
           },
           {
             id: 'j0_split',
             intent: 'decline',
+            ask: 'generosity',
             say: { ko: '반반 해요.', en: 'Let\'s split it.', rom: 'banban haeyo' },
             outcomes: [
               {
                 speaker: 'jin',
                 expr: 'smile',
                 reaction: { ko: '에이, 다음에 네가 사. 그치?', en: 'Nah, you get the next one. Right?', note: 'He pays anyway, and now there\'s a next one.', review: 'native' },
+                deltas: { warmth: 1 },
                 setFlags: ['jin_paid', 'jin_next_plan'],
               },
             ],
@@ -263,6 +306,7 @@ export const module: SceneModule = {
           {
             id: 'j0_pay_self',
             intent: 'decline',
+            ask: 'generosity',
             minTier: 1,
             say: { ko: '제가 낼게요. 진짜로요.', en: 'I\'ll pay. I mean it.', rom: 'jega naelgeyo. jinjjaroyo' },
             outcomes: [

@@ -1416,7 +1416,7 @@ export const SCENES = {
   "summary": "Night tent. You fumble the order; a man in a low cap rescues it and orders 떡볶이 for you (or adjusts your correct order). He gives his name freely, proposes 반말, asks a lot of questions. His phone buzzes: one second, a different face. He insists on paying. He leaves in a cap and mask. That was easy. Too easy?",
   "seeds": [
    "saw_face_change",
-   "tally.jin_decided (deferring)",
+   "tally.jin_directives (going along with his plans)",
    "jin_adjusted_order even when you got it right",
    "jin_banmal_declined"
   ],
@@ -1663,7 +1663,7 @@ export const SCENES = {
     "choices": [
      {
       "id": "j0_banmal_yes",
-      "intent": "defer",
+      "intent": "commit",
       "say": {
        "ko": "좋아요! …아, 좋아.",
        "en": "Sure! …I mean, sure. (switching)",
@@ -1676,6 +1676,9 @@ export const SCENES = {
         "reaction": {
          "ko": "그치? 훨씬 편하다.",
          "en": "Right? So much easier."
+        },
+        "deltas": {
+         "warmth": 2
         },
         "setFlags": [
          "jin_banmal_accepted"
@@ -1743,6 +1746,7 @@ export const SCENES = {
      {
       "id": "j0_plan_yes",
       "intent": "defer",
+      "ask": "directive",
       "say": {
        "ko": "좋아요!",
        "en": "Sounds good!",
@@ -1757,11 +1761,14 @@ export const SCENES = {
          "en": "It's a promise.",
          "note": "You didn't pick a day. He already has one in mind."
         },
+        "deltas": {
+         "warmth": 2
+        },
         "setFlags": [
          "jin_plan_accepted"
         ],
         "tally": [
-         "jin_decided"
+         "jin_directives"
         ]
        }
       ]
@@ -1769,6 +1776,7 @@ export const SCENES = {
      {
       "id": "j0_plan_maybe",
       "intent": "decline",
+      "ask": "directive",
       "say": {
        "ko": "생각해 볼게요.",
        "en": "I'll think about it.",
@@ -1783,8 +1791,75 @@ export const SCENES = {
          "en": "Haha, next time then! Got it.",
          "note": "Charming. He'll ask again."
         },
+        "deltas": {
+         "warmth": -1,
+         "trust": 1
+        },
         "setFlags": [
          "jin_plan_declined"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "j0_plan_mine",
+      "intent": "decline",
+      "ask": "directive",
+      "minTier": 1,
+      "say": {
+       "ko": "좋아요. 근데 날짜는 제가 정할게요.",
+       "en": "Sure. But I'll pick the day.",
+       "rom": "joayo. geunde naljjaneun jega jeonghalgeyo"
+      },
+      "outcomes": [
+       {
+        "speaker": "jin",
+        "expr": "surprised",
+        "reaction": {
+         "ko": "…오. 그래요, 그럼 연락 기다릴게요.",
+         "en": "…Oh. Okay, I'll wait for your call then.",
+         "note": "Kind and clear. It throws him for a second, and he likes you a little more for it.",
+         "review": "native"
+        },
+        "deltas": {
+         "warmth": 1,
+         "trust": 2
+        },
+        "setFlags": [
+         "jin_plan_counter"
+        ],
+        "memory": {
+         "tag": "picked_the_day",
+         "note": "Said yes to Jin's plan but kept the choice of day."
+        }
+       }
+      ]
+     },
+     {
+      "id": "j0_plan_no",
+      "intent": "decline",
+      "ask": "directive",
+      "say": {
+       "ko": "아니요, 괜찮아요.",
+       "en": "No, I'm good.",
+       "rom": "aniyo, gwaenchanayo"
+      },
+      "outcomes": [
+       {
+        "speaker": "jin",
+        "expr": "smile",
+        "reaction": {
+         "ko": "아… 네. 알겠어요.",
+         "en": "Ah… sure. Got it.",
+         "note": "Flat. The smile stays on a beat too long."
+        },
+        "deltas": {
+         "warmth": -3,
+         "tension": 2,
+         "trust": 1
+        },
+        "setFlags": [
+         "jin_plan_refused"
         ]
        }
       ]
@@ -1832,6 +1907,7 @@ export const SCENES = {
      {
       "id": "j0_let_pay",
       "intent": "defer",
+      "ask": "generosity",
       "say": {
        "ko": "…잘 먹겠습니다.",
        "en": "Let him: \"…Thanks for the meal.\"",
@@ -1847,11 +1923,11 @@ export const SCENES = {
          "note": "He didn't. You sat down next to him.",
          "review": "native"
         },
+        "deltas": {
+         "warmth": 2
+        },
         "setFlags": [
          "jin_paid"
-        ],
-        "tally": [
-         "jin_decided"
         ]
        }
       ]
@@ -1859,6 +1935,7 @@ export const SCENES = {
      {
       "id": "j0_split",
       "intent": "decline",
+      "ask": "generosity",
       "say": {
        "ko": "반반 해요.",
        "en": "Let's split it.",
@@ -1874,6 +1951,9 @@ export const SCENES = {
          "note": "He pays anyway, and now there's a next one.",
          "review": "native"
         },
+        "deltas": {
+         "warmth": 1
+        },
         "setFlags": [
          "jin_paid",
          "jin_next_plan"
@@ -1884,6 +1964,7 @@ export const SCENES = {
      {
       "id": "j0_pay_self",
       "intent": "decline",
+      "ask": "generosity",
       "minTier": 1,
       "say": {
        "ko": "제가 낼게요. 진짜로요.",
@@ -2965,6 +3046,648 @@ export const SCENES = {
         }
        }
       ]
+     }
+    ],
+    "end": true
+   }
+  ]
+ },
+ "jin.a1.cafe": {
+  "id": "jin.a1.cafe",
+  "kind": "ambient",
+  "title": {
+   "ko": "카페 봄",
+   "en": "Café Bom"
+  },
+  "characterId": "jin",
+  "location": "cafe",
+  "gate": {
+   "hours": {
+    "from": 8,
+    "to": 17
+   },
+   "flags": [
+    "met_jin"
+   ]
+  },
+  "summary": "Jin at his regular table, cap on, script open. Register follows J0 (반말 only if you accepted). First visit: he asks you to put Tong away (\"나랑 있을 땐 번역기 필요 없잖아\") — agree (counted directive, Tong goes quiet around him), keep Tong kindly, or shut him down. He talks about the shoot (more honest on a low day), passes on that Ha-eun loves spicy food if you're paired, and calls the café his 단골.",
+  "seeds": [
+   "tong_off_with_jin (Tong-as-rival)",
+   "tip_haeun_spicy",
+   "being someone else all day (the wound)"
+  ],
+  "beats": [
+   {
+    "id": "ja1_open",
+    "speaker": "jin",
+    "expr": "smile",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "jin_banmal_accepted"
+       ]
+      },
+      "value": {
+       "ko": "어, 왔어? 여기 앉아.",
+       "en": "Oh, you made it? Sit here."
+      }
+     },
+     {
+      "value": {
+       "ko": "어, 왔어요? 여기 앉아요.",
+       "en": "Oh, you made it? Have a seat.",
+       "note": "He moves his script off the other chair before you can say no."
+      }
+     }
+    ],
+    "next": "ja1_rival"
+   },
+   {
+    "id": "ja1_rival",
+    "speaker": "jin",
+    "expr": "smile",
+    "when": {
+     "notFlags": [
+      "jin_tong_asked"
+     ]
+    },
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "jin_banmal_accepted"
+       ]
+      },
+      "value": {
+       "ko": "그 앱 계속 켜 놔? 나랑 있을 땐 번역기 필요 없잖아. 내가 다 알려 줄게.",
+       "en": "You keep that app on? You don't need a translator with me. I'll teach you everything.",
+       "review": "native"
+      }
+     },
+     {
+      "value": {
+       "ko": "그 앱 계속 켜 놔요? 저랑 있을 땐 번역기 필요 없잖아요. 제가 다 알려 줄게요.",
+       "en": "You keep that app on? You don't need a translator with me. I'll teach you everything.",
+       "review": "native"
+      }
+     }
+    ],
+    "tong": {
+     "ko": "…나 말하는 거야?",
+     "en": "…Is he talking about me?",
+     "maxLevel": 6
+    },
+    "choices": [
+     {
+      "id": "ja1_tong_off",
+      "intent": "defer",
+      "ask": "directive",
+      "say": {
+       "ko": "…그래요. 꺼 둘게요.",
+       "en": "…Okay. I'll switch it off.",
+       "rom": "geuraeyo. kkeo dulgeyo"
+      },
+      "outcomes": [
+       {
+        "when": {
+         "flags": [
+          "jin_banmal_accepted"
+         ]
+        },
+        "speaker": "jin",
+        "expr": "smile",
+        "reaction": {
+         "ko": "잘했어. 모르는 거 있으면 나한테 물어봐.",
+         "en": "Good. Anything you don't know, ask me.",
+         "note": "Tong goes quiet whenever he's around now. It was easier. That's the point."
+        },
+        "deltas": {
+         "warmth": 3
+        },
+        "setFlags": [
+         "jin_tong_asked",
+         "tong_off_with_jin"
+        ],
+        "tally": [
+         "jin_directives"
+        ]
+       },
+       {
+        "speaker": "jin",
+        "expr": "smile",
+        "reaction": {
+         "ko": "잘했어요. 모르는 거 있으면 저한테 물어봐요.",
+         "en": "Good. Anything you don't know, ask me.",
+         "note": "Tong goes quiet whenever he's around now. It was easier. That's the point.",
+         "review": "native"
+        },
+        "deltas": {
+         "warmth": 3
+        },
+        "setFlags": [
+         "jin_tong_asked",
+         "tong_off_with_jin"
+        ],
+        "tally": [
+         "jin_directives"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "ja1_tong_kind",
+      "intent": "decline",
+      "ask": "directive",
+      "minTier": 1,
+      "say": {
+       "ko": "통은 제 선생님이에요. 진 씨도 같이 알려 주세요.",
+       "en": "Tong's my teacher. You can teach me too.",
+       "rom": "tong-eun je seonsaengnimieyo. jin ssido gachi allyeo juseyo"
+      },
+      "outcomes": [
+       {
+        "speaker": "jin",
+        "expr": "laugh",
+        "reaction": {
+         "ko": "하하, 선생님이 둘이네. 좋아요.",
+         "en": "Haha, two teachers, then. Fine.",
+         "note": "He means it, mostly. He glances at your phone once more before he lets it go."
+        },
+        "deltas": {
+         "warmth": -1,
+         "trust": 2
+        },
+        "setFlags": [
+         "jin_tong_asked",
+         "kept_tong_kindly"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "ja1_tong_cold",
+      "intent": "decline",
+      "ask": "directive",
+      "say": {
+       "ko": "제가 알아서 할게요.",
+       "en": "I'll handle it myself.",
+       "rom": "jega araseo halgeyo"
+      },
+      "outcomes": [
+       {
+        "speaker": "jin",
+        "expr": "smile",
+        "reaction": {
+         "ko": "…네, 그럼요. 당연하죠.",
+         "en": "…Sure, of course. Naturally.",
+         "note": "Suddenly very polite. That's his tell."
+        },
+        "deltas": {
+         "warmth": -3,
+         "tension": 2,
+         "trust": 1
+        },
+        "setFlags": [
+         "jin_tong_asked",
+         "kept_tong_coldly"
+        ]
+       }
+      ]
+     }
+    ],
+    "next": "ja1_shoot"
+   },
+   {
+    "id": "ja1_shoot",
+    "speaker": "jin",
+    "expr": "neutral",
+    "lines": [
+     {
+      "when": {
+       "mood": [
+        "raw",
+        "low"
+       ],
+       "flags": [
+        "jin_banmal_accepted"
+       ]
+      },
+      "value": {
+       "ko": "어제 촬영… 길었어. 하루 종일 다른 사람으로 살았거든.",
+       "en": "Yesterday's shoot… was long. I spent all day being someone else.",
+       "note": "He doesn't smile for once. Then he does."
+      }
+     },
+     {
+      "when": {
+       "mood": [
+        "raw",
+        "low"
+       ]
+      },
+      "value": {
+       "ko": "어제 촬영… 길었어요. 하루 종일 다른 사람으로 살았거든요.",
+       "en": "Yesterday's shoot… was long. I spent all day being someone else.",
+       "note": "He doesn't smile for once. Then he does.",
+       "review": "native"
+      }
+     },
+     {
+      "when": {
+       "flags": [
+        "jin_banmal_accepted"
+       ]
+      },
+      "value": {
+       "ko": "어제 촬영 대박이었어. 감독님이 원 테이크로 끝냈어, ㅋㅋ.",
+       "en": "Yesterday's shoot was great. The director got it in one take, lol."
+      }
+     },
+     {
+      "value": {
+       "ko": "어제 촬영 잘 끝났어요. 감독님이 한 번에 오케이 했어요.",
+       "en": "Yesterday's shoot went well. The director okayed it in one take."
+      }
+     }
+    ],
+    "tong": {
+     "ko": "촬영 = 영화나 드라마 찍기",
+     "en": "촬영 (chwaryeong) = filming, a shoot.",
+     "maxLevel": 3
+    },
+    "effects": {
+     "vocab": [
+      {
+       "ko": "촬영",
+       "en": "filming / a shoot",
+       "rom": "chwaryeong"
+      }
+     ]
+    },
+    "next": "ja1_haeun"
+   },
+   {
+    "id": "ja1_haeun",
+    "speaker": "jin",
+    "expr": "smile",
+    "when": {
+     "flags": [
+      "h1_done"
+     ],
+     "notFlags": [
+      "tip_haeun_spicy"
+     ]
+    },
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "jin_banmal_accepted"
+       ]
+      },
+      "value": {
+       "ko": "하은이랑 짝이라며? 걔 연습실에서 안 나와. 매운 거 엄청 좋아하고.",
+       "en": "I hear you're paired with Ha-eun? She never leaves the studio. Loves spicy food, too."
+      }
+     },
+     {
+      "value": {
+       "ko": "하은 씨랑 짝이라면서요? 연습실에서 안 나와요, 그 친구. 매운 거 엄청 좋아하고요.",
+       "en": "I hear you're paired with Ha-eun? She never leaves the studio. Loves spicy food, too.",
+       "review": "native"
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "tip_haeun_spicy"
+     ]
+    },
+    "next": "ja1_bye"
+   },
+   {
+    "id": "ja1_bye",
+    "speaker": "jin",
+    "expr": "smile",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "jin_banmal_accepted"
+       ]
+      },
+      "value": {
+       "ko": "여기 내 단골이야. 언제든 와.",
+       "en": "This is my regular spot. Come by any time."
+      }
+     },
+     {
+      "value": {
+       "ko": "여기 제 단골이에요. 언제든 와요.",
+       "en": "This is my regular spot. Come by any time."
+      }
+     }
+    ],
+    "tong": {
+     "ko": "단골 = 자주 가는 곳",
+     "en": "단골 (dangol) = a regular (spot or customer).",
+     "maxLevel": 3
+    },
+    "effects": {
+     "vocab": [
+      {
+       "ko": "단골",
+       "en": "a regular (spot/customer)",
+       "rom": "dangol"
+      }
+     ]
+    },
+    "end": true
+   }
+  ]
+ },
+ "jin.a2.river": {
+  "id": "jin.a2.river",
+  "kind": "ambient",
+  "title": {
+   "ko": "한강",
+   "en": "The river"
+  },
+  "characterId": "jin",
+  "location": "han_river",
+  "gate": {
+   "hours": {
+    "from": 18,
+    "to": 23
+   },
+   "flags": [
+    "met_jin"
+   ]
+  },
+  "summary": "Night at the lookout, cap off. \"Nobody recognises me out here.\" Tell him he's just Jin here, take a photo together (\"only if it stays between us\" — this is the photo that leaks in Act 3), or, at tier 2, ask his real name: he deflects, and the question is remembered for the Seen ending. A low night: he says less and asks you to stay a bit.",
+  "seeds": [
+   "river_photo (the leaked photo, Act 3)",
+   "asked_real_name (Seen ending)",
+   "just_jin"
+  ],
+  "beats": [
+   {
+    "id": "ja2_open",
+    "speaker": "narration",
+    "lines": [
+     {
+      "when": {
+       "mood": [
+        "raw",
+        "low"
+       ]
+      },
+      "value": {
+       "ko": "…",
+       "en": "(The lookout. Jin is on the bench with his cap in his hands, not looking at the water.)"
+      }
+     },
+     {
+      "value": {
+       "ko": "…",
+       "en": "(The lookout. Jin has his cap off. Out here he looks younger.)"
+      }
+     }
+    ],
+    "next": "ja2_jin"
+   },
+   {
+    "id": "ja2_jin",
+    "speaker": "jin",
+    "expr": "smile",
+    "lines": [
+     {
+      "when": {
+       "mood": [
+        "raw",
+        "low"
+       ],
+       "flags": [
+        "jin_banmal_accepted"
+       ]
+      },
+      "value": {
+       "ko": "…잠깐만 같이 있어 줄래? 말 안 해도 돼.",
+       "en": "…Stay a minute? You don't have to talk."
+      }
+     },
+     {
+      "when": {
+       "mood": [
+        "raw",
+        "low"
+       ]
+      },
+      "value": {
+       "ko": "…잠깐만 같이 있어 줄래요? 말 안 해도 돼요.",
+       "en": "…Stay a minute? You don't have to talk.",
+       "review": "native"
+      }
+     },
+     {
+      "when": {
+       "flags": [
+        "jin_banmal_accepted"
+       ]
+      },
+      "value": {
+       "ko": "한강 진짜 예쁘지? …여기선 아무도 날 못 알아봐. 그게 좋아.",
+       "en": "The Han River's beautiful, right? …Nobody recognises me out here. I like that."
+      }
+     },
+     {
+      "value": {
+       "ko": "한강 진짜 예쁘죠? …여기선 아무도 저를 못 알아봐요. 그게 좋아요.",
+       "en": "The Han River's beautiful, right? …Nobody recognises me out here. I like that."
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "ja2_just_jin",
+      "intent": "comfort",
+      "say": {
+       "ko": "여기선 그냥 진이에요.",
+       "en": "Out here you're just Jin.",
+       "rom": "yeogiseon geunyang jinieyo"
+      },
+      "outcomes": [
+       {
+        "when": {
+         "mood": [
+          "raw",
+          "low"
+         ]
+        },
+        "reaction": {
+         "ko": "…고마워요. 그 말 좋다.",
+         "en": "…Thank you. I like hearing that.",
+         "note": "He leans back. For a while neither of you says anything, and it's fine."
+        },
+        "expr": "smile",
+        "deltas": {
+         "warmth": 4,
+         "trust": 2
+        },
+        "memory": {
+         "tag": "just_jin",
+         "note": "Told Jin \"out here you're just Jin\" on a bad night."
+        }
+       },
+       {
+        "reaction": {
+         "ko": "…고마워. 그 말 좋다.",
+         "en": "…Thanks. I like hearing that."
+        },
+        "expr": "smile",
+        "deltas": {
+         "warmth": 3
+        },
+        "memory": {
+         "tag": "just_jin",
+         "note": "Told Jin \"out here you're just Jin\"."
+        }
+       }
+      ]
+     },
+     {
+      "id": "ja2_photo",
+      "intent": "ask",
+      "say": {
+       "ko": "같이 사진 찍어요!",
+       "en": "Let's take a photo together!",
+       "rom": "gachi sajin jjigeoyo"
+      },
+      "outcomes": [
+       {
+        "when": {
+         "flags": [
+          "jin_banmal_accepted"
+         ]
+        },
+        "reaction": {
+         "ko": "우리끼리만 보는 거면… 좋아. 하나, 둘, 셋, 김치!",
+         "en": "If it stays just between us… okay. One, two, three, kimchi!",
+         "note": "He angles the phone so the bridge lights are behind you both. He sends it to himself."
+        },
+        "expr": "laugh",
+        "deltas": {
+         "warmth": 2
+        },
+        "setFlags": [
+         "river_photo"
+        ],
+        "memory": {
+         "tag": "river_photo",
+         "note": "Took a photo with Jin at the river; he kept a copy. Only the two of you knew that angle."
+        }
+       },
+       {
+        "reaction": {
+         "ko": "우리끼리만 보는 거면… 좋아요. 하나, 둘, 셋, 김치!",
+         "en": "If it stays just between us… okay. One, two, three, kimchi!",
+         "note": "He angles the phone so the bridge lights are behind you both. He sends it to himself.",
+         "review": "native"
+        },
+        "expr": "laugh",
+        "deltas": {
+         "warmth": 2
+        },
+        "setFlags": [
+         "river_photo"
+        ],
+        "memory": {
+         "tag": "river_photo",
+         "note": "Took a photo with Jin at the river; he kept a copy. Only the two of you knew that angle."
+        }
+       }
+      ]
+     },
+     {
+      "id": "ja2_real_name",
+      "intent": "ask",
+      "minTier": 2,
+      "gate": {
+       "notFlags": [
+        "asked_real_name"
+       ]
+      },
+      "say": {
+       "ko": "진 씨 진짜 이름은 뭐예요?",
+       "en": "What's your real name, Jin?",
+       "rom": "jin ssi jinjja ireumeun mwoyeyo"
+      },
+      "outcomes": [
+       {
+        "reaction": {
+         "ko": "…진이 진짜 이름이에요. 거의.",
+         "en": "…Jin is my real name. Almost.",
+         "note": "He laughs it off. Nobody has asked him that in years."
+        },
+        "expr": "surprised",
+        "deltas": {
+         "trust": 3,
+         "tension": 1
+        },
+        "setFlags": [
+         "asked_real_name"
+        ],
+        "memory": {
+         "tag": "asked_real_name",
+         "note": "Asked Jin his real name at the river. He said \"almost\"."
+        }
+       }
+      ]
+     }
+    ],
+    "next": "ja2_end"
+   },
+   {
+    "id": "ja2_end",
+    "speaker": "narration",
+    "cue": "photo",
+    "when": {
+     "flags": [
+      "river_photo"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "찰칵.",
+       "en": "(Click. The two of you against the bridge lights.)"
+      }
+     }
+    ],
+    "next": "ja2_bye"
+   },
+   {
+    "id": "ja2_bye",
+    "speaker": "jin",
+    "expr": "smile",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "jin_banmal_accepted"
+       ]
+      },
+      "value": {
+       "ko": "조심히 들어가. 도착하면 문자해.",
+       "en": "Get home safe. Text me when you're in."
+      }
+     },
+     {
+      "value": {
+       "ko": "조심히 들어가요. 도착하면 문자 줘요.",
+       "en": "Get home safe. Text me when you're in."
+      }
      }
     ],
     "end": true

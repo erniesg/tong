@@ -412,7 +412,7 @@ function advance() {
       P.shown.add(b.id);
       const line = pick(b.lines, P.s, P.w);
       const el = lineEl(b.speaker, line, b.expr);
-      const tong = tongFor(b, P.w);
+      const tong = tongFor(b, P.w, sc.characterId);
       if (tong) el.append(h('div', { class: 'tong' }, h('b', {}, 'Tong'), h('span', {}, tong.ko), h('span', {}, tong.en)));
       if (b.exercise) el.append(exerciseCard(b.exercise, P.s.flags[`ex_${b.id}`]));
       if (b.effects) {

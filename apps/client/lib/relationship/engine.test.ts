@@ -119,14 +119,14 @@ test('runScene: same choice lands differently by mood; tier 0 is visible to outc
 
 test('flags and tallies set in one relationship are readable from another', () => {
   const choi = { ...at({}), characterId: 'manager_choi' };
-  const a = applyEffects(choi, { setFlags: ['covered_for_haeun'], tally: ['jin_decided'] }, W);
-  const b = applyEffects(choi, { tally: ['jin_decided'] }, a.world);
+  const a = applyEffects(choi, { setFlags: ['covered_for_haeun'], tally: ['jin_directives'] }, W);
+  const b = applyEffects(choi, { tally: ['jin_directives'] }, a.world);
   const haeun = at({});
   assert.equal(matches({ flags: ['covered_for_haeun'] }, haeun, a.world), true);
   assert.equal(matches({ flags: ['covered_for_haeun'] }, haeun, W), false);
-  assert.equal(b.world.tally?.jin_decided, 2);
-  assert.equal(matches({ tally: { jin_decided: { min: 2 } } }, haeun, b.world), true);
-  assert.equal(matches({ tally: { jin_decided: { max: 1 } } }, haeun, b.world), false);
+  assert.equal(b.world.tally?.jin_directives, 2);
+  assert.equal(matches({ tally: { jin_directives: { min: 2 } } }, haeun, b.world), true);
+  assert.equal(matches({ tally: { jin_directives: { max: 1 } } }, haeun, b.world), false);
   assert.equal(W.flags, undefined, 'the input world is not mutated');
 });
 

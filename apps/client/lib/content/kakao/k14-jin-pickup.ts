@@ -18,6 +18,7 @@ export const module: KakaoModule = {
       {
         id: 'alone',
         intent: 'decline',
+        ask: 'directive',
         say: { ko: '괜찮아요, 혼자 갈 수 있어요', rom: 'gwaenchanayo, honja gal su isseoyo', en: 'It\'s okay, I can get back on my own' },
         outcomes: [
           {
@@ -31,7 +32,7 @@ export const module: KakaoModule = {
               { from: 'them', ko: '에이~ 늦었잖아. 위험해 😟', en: 'Aw come on~ it\'s late. It\'s not safe 😟', delay: 1 },
               { from: 'them', ko: '거의 다 왔어. 그냥 기다려, 그치?', en: 'Almost there. Just wait, yeah?', delay: 1 },
             ],
-            deltas: { tension: 2 },
+            deltas: { warmth: -1, tension: 2, trust: 1 },
             memory: { tag: 'jin_came_anyway', note: 'Said you\'d go home alone; Jin kept driving.' },
           },
         ],
@@ -39,11 +40,14 @@ export const module: KakaoModule = {
       {
         id: 'thanks',
         intent: 'defer',
+        ask: 'directive',
         say: { ko: '고마워요!', rom: 'gomawoyo!', en: 'Thank you!' },
         outcomes: [
           {
             messages: [{ from: 'them', ko: '당연하지 😊 5분!', en: 'Of course 😊 5 min!', delay: 0 }],
-            tally: ['jin_decided'],
+            deltas: { warmth: 2 },
+            tally: ['jin_directives'],
+            setFlags: ['jin_ride_home'],
             memory: { tag: 'let_jin_pick_up', note: 'Let Jin pick you up without sending a location; he already knew roughly where.' },
           },
         ],

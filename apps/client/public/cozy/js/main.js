@@ -94,7 +94,6 @@ const S = {
   rel: {},
   story: { flags: {}, tally: {} },
   pettedCat: false,
-  jinTip: false,
   mistakes: 0,
   food: null,
   spicy: false,
@@ -119,7 +118,7 @@ function save() {
         cityPositions: S.cityPositions, postcards: S.postcards,
         name: S.name, look: S.look, hour: S.hour, day: S.day,
         words: [...S.words], gloss: [...S.phrases], visited: [...S.visited], quests: S.quests,
-        pettedCat: S.pettedCat, jinTip: S.jinTip, seed: S.seed, rel: S.rel, story: S.story,
+        pettedCat: S.pettedCat, seed: S.seed, rel: S.rel, story: S.story,
         ...(S.legacy ? { legacy: S.legacy } : {}),
       }),
     );
@@ -138,7 +137,7 @@ function loadSave() {
 }
 
 function applySave(d) {
-  Object.assign(S, { name: d.name, hour: d.hour, day: d.day, quests: d.quests ?? {}, pettedCat: d.pettedCat, jinTip: d.jinTip });
+  Object.assign(S, { name: d.name, hour: d.hour, day: d.day, quests: d.quests ?? {}, pettedCat: d.pettedCat });
   if (Number.isInteger(d.seed)) S.seed = d.seed;
   S.rel = d.rel && typeof d.rel === 'object' ? d.rel : {};
   S.story = { flags: { ...d.story?.flags }, tally: { ...d.story?.tally } };
@@ -898,18 +897,19 @@ function finishNight() {
   jin.root.visible = false;
   loc.jin = 'away';
   const f = S.story.flags;
-  const decided = S.story.tally.jin_decided ?? 0;
   const haeunStage = scenes.stage('haeun');
   const haeunLine = !f.h1_done
     ? 'Somewhere in the agency there’s a girl who slammed her locker without looking at you. Tomorrow you’ll find out who.'
     : haeunStage === 'strangers'
       ? 'Ha-eun still calls you “the new one”. 내일 아홉 시. Don’t be late.'
       : 'Ha-eun knows your name now. She’ll pretend she doesn’t.';
-  const jinLine = f.paid_myself
-    ? 'You paid for yourself. Jin smiled, and put his card away slowly.'
-    : decided >= 2
-      ? 'Jin ordered, planned and paid. It was easy. Maybe too easy.'
-      : 'A man in a cap knows your name. You still aren’t sure you know his.';
+  const jinLine = f.jin_plan_counter
+    ? 'You said yes to Jin’s plan and kept the day for yourself. He didn’t expect that.'
+    : f.paid_myself
+      ? 'You paid for yourself. Jin smiled, and put his card away slowly.'
+      : f.jin_plan_accepted && f.jin_paid
+        ? 'Jin ordered, planned and paid. It was easy. Maybe too easy.'
+        : 'A man in a cap knows your name. You still aren’t sure you know his.';
   $('end-title').textContent = '첫날 · Day one';
   $('end-hearts').innerHTML = hearts(Math.ceil(scenes.affinity('haeun') / 20), 5);
   $('end-text').textContent = `${haeunLine} ${jinLine}`;
@@ -1034,7 +1034,7 @@ const dlg = createDialogue({
 /* ── Relationship scenes ─────────────────────────── */
 
 // Authored scenes (lib/content/routes) played through the shared engine.
-const SCENE_QUEST = { 'haeun.h0': 'locker', 'haeun.h1': 'haeunDay', 'haeun.h2': 'drill', 'jin.j0': 'pojang' };
+const SCENE_QUEST = { 'haeun.h0': 'locker', 'haeun.h1': 'haeunDay', 'haeun.h2': 'drill', 'jin.j0': 'pojang', 'jin.a1.cafe': 'jin', 'jin.a2.river': 'jinNight' };
 const scenes = createScenePlayer({
   S,
   nodes: NODES,
@@ -1052,6 +1052,7 @@ const scenes = createScenePlayer({
       sfx.thump();
       setExpr(jin, 'neutral', 1.2);
     } else if (c === 'stand') standUp();
+    else if (c === 'photo') setTimeout(() => polaroid('jin'), 600);
   },
   changed(id, { before, after, beatId, stageChanged }) {
     // Shared affinity (the HUD hearts) follows warmth; the stage label lives in the engine.
@@ -1139,14 +1140,14 @@ const interactables = [
     pos: () => jin.root.position,
     r: 2.0,
     on: () => jin.root.visible && loc.jin === 'cafe',
-    act: () => dlg.start(S.quests.jin ? 'jin_again' : 'jin_hi'),
+    act: () => scenes.play('jin.a1.cafe') || dlg.start('jin_cafe_idle'),
   },
   {
     label: '진 · Jin',
     pos: () => jin.root.position,
     r: 2.2,
     on: () => jin.root.visible && loc.jin === 'lookout',
-    act: () => dlg.start(S.quests.jinNight ? 'jin_night_thanks' : 'jin_night'),
+    act: () => scenes.play('jin.a2.river') || dlg.start('jin_river_idle'),
   },
   { label: '계산하기 · Buy something', pos: () => new THREE.Vector3(-11.6, 0, -12.6), r: 1.4, on: () => true, act: () => dlg.start('cashier_hi') },
   { label: '지하철 타기 · Take the subway', pos: () => SPOTS.subway, r: 1.6, on: () => true, act: openTravel },

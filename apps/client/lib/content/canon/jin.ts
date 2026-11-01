@@ -28,16 +28,18 @@ export const JIN_CANON: CharacterCanon = {
   ],
   secrets: [
     { id: 'face_change', fact: 'A one-second change of face when his phone buzzes: the agency owns his time and image.', knownBy: ['jin'], revealWhen: 'Seen in onboarding; understood in the noticing phase.', revealedIn: ['jin.j0'] },
-    { id: 'the_leak', fact: 'TBD (owner decision): a past leak about his private life that the agency buried.', knownBy: ['jin', 'manager_kang'], revealWhen: 'TBD', revealedIn: [] },
+    { id: 'seo_yeon', fact: 'In his breakout year fans posted photos of him with Seo-yeon, an Onsae trainee he was seeing. The agencies had him call her "staff I barely know"; she was cut from the debut lineup and left the industry. His lesson: whoever controls the story controls what happens.', knownBy: ['jin', 'manager_kang', 'coach_park', 'manager_choi'], revealWhen: 'Act 3, after the leak; trainees know only the ghost story before that.', revealedIn: [] },
+    { id: 'the_leak', fact: 'Jin leaks the river photo of you two himself: his timing, his angle, framed sympathetically to you, a statement already drafted. A manufactured crisis with his rescue built in; he half-believes it protects you from becoming Seo-yeon. Manager Kang posted it ("형이 시킨 대로 올렸어요").', knownBy: ['jin', 'manager_kang'], revealWhen: 'Act 3. Clues: the river-photo angle, his on-set timeline, Kang\'s overheard call (listening), Ha-eun. He confesses only to a tier-3 spoken confrontation backed by a clue.', revealedIn: [] },
+    { id: 'real_name', fact: 'Jin is a stage name. He gives his real name only in the Seen ending.', knownBy: ['jin', 'manager_kang'], revealWhen: 'Seen ending', revealedIn: [] },
   ],
   model: {
     publicLayer: 'High extraversion and agreeableness. Warm, attentive, remembers what you said 30 seconds ago, always knows the best food.',
-    privateLayer: 'Anxious, lonely; compensates for being owned by owning.',
+    privateLayer: 'Anxious, lonely; compensates for being owned by owning. After Seo-yeon: whoever controls the story controls what happens, so he makes sure he is the one writing it.',
     attachment: 'Anxious, tipping into controlling.',
     gives: ['gifts and acts: paying, ordering, planning'],
     needs: ['undivided attention', 'being seen as himself'],
     want: 'To keep you.',
-    need: 'To be known without owning.',
+    need: 'To be known without owning, and to let you write your own story.',
     wound: 'Not owning his own image or time.',
     fear: 'You\'ll see him as a celebrity, or leave.',
     conflictStyle: 'Sulks politely, guilt, smooth deflection.',
@@ -68,7 +70,7 @@ export const JIN_CANON: CharacterCanon = {
   mustNot: [
     'Never flattened into a villain.',
     'The game never rewards possessiveness.',
-    'A refusal or independent choice with Jin never lowers warmth, trust or affinity. He may react; the numbers don\'t punish it. Deferring is what gets counted (tally.jin_decided), and it never earns warmth either: yes and no score the same.',
+    'Tag every yes/no he asks for: generosity (he pays, a ride) is fine to accept and never counts against you; a directive (where you go, who you see, what you say, when you reply) counts in tally.jin_directives when you go along. Yes is rewarding now (warmth, useful perks); no costs a little warmth now and always builds trust. A kind, clear no lands better than a cold one. The counter stays hidden; he shows it through tells (a second no lands differently from the first).',
     'Higher affinity alone never counts as repair: a healthier route needs him to accept boundaries and change over time.',
   ],
 };

@@ -25,7 +25,7 @@ Branch: `feat/relationship-engine` (worktree `~/code/erniesg/tong-relationship`,
 
 - **Several romances at once.** Haeun's and Jin's routes (and any later ones) run side by side in one save, each with its own stage. Whether you can be *official* with more than one is decided later.
 - **Flags are save-wide.** Any flag a scene or thread sets is readable from every other character's scenes (`WorldCtx.flags`); counters live in `WorldCtx.tally`.
-- **With Jin, yes and no score the same.** Deferring earns no warmth or trust and bumps `tally.jin_decided`; declining never costs any. The content lint enforces both.
+- **Jin's choices are tagged by what he asks** (generosity vs directive); see *Jin route → Scoring*. (An earlier "yes and no score the same" rule was reverted.)
 
 ## Systems
 
@@ -66,6 +66,9 @@ RelState { stage, axes {warmth, tension, trust}, mood {energy, valence, causes},
 | Ha-eun in the studio | 9:00–19:00 after H0 | H1 · paired |
 | Ha-eun in the studio | 21:00–23:30 after H1 | H2 · "다시." |
 | Man in the cap at the tent | 19:00–03:00 until J0 | J0 · pojangmacha, then he walks off and the day-one card shows |
+| Jin at Café Bom | 8:00–18:00 after J0 | JA1, once a day |
+| Jin at the river lookout | 18:00–24:00 after J0 | JA2, once a day |
+| New game | start | Tong introduces itself (same line sets as `/game`) |
 | Ha-eun / your locker | after the story beats | ambient a3 (water break) / a2 (hallway), once a day |
 
 ### Between hangouts (love language)
@@ -115,18 +118,45 @@ The notebook is the visible literacy meter: pages decode as targets reach `famil
 
 **Thematic mechanic.** If you lean on Haeun (she tutors you, covers for you, takes the blame), her evals slip exactly like they did with Sua. The notebook then reads as a warning addressed to you.
 
-## Jin route (proposed, awaiting owner)
+## Jin route
 
-Jin is the warm, easy route that turns out to be about control. The game never rewards possessiveness; it rewards noticing.
+Jin is the warm, easy route that turns out to be about control. The game never rewards possessiveness in the long run; it rewards noticing, and Korean is the detective tool.
 
-**The leak (proposed answer to the open secret).** In his breakout year a fan account posted photos of Jin with Seo-yeon, an Onsae trainee he was seeing. Onsae and his management buried it: he said on record she was "staff I barely know". A month later she was cut from the debut lineup and left the industry. He agreed to everything they decided for him. The lesson he learned is the wrong one: *love that's seen gets taken, so keep it private and keep control.* Coach Park and Manager Choi remember her; the trainees only know the ghost story ("a girl got cut for dating someone"), which is why Ha-eun warns you off him. It rhymes with Sua: someone vanishes from the lineup and nobody says why.
+**Seo-yeon (canon).** In his breakout year a fan account posted photos of Jin with Seo-yeon, an Onsae trainee he was seeing. The agencies wrote the story: he said on record she was "staff I barely know". A month later she was cut from the debut lineup and left the industry. The lesson he took: *whoever controls the story controls what happens.* Coach Park and Manager Choi remember her; trainees only know the ghost story ("a girl got cut for dating someone"), which is why Ha-eun warns you off him. It rhymes with Sua: someone vanishes from a lineup and nobody says why. You're a trainee too, so history can literally repeat.
+
+**The leak (canon, owner 2026-11-01): Jin leaks it himself.** A photo of you two goes up on a fan account, his timing, his angle, framed sympathetically to you. He's ready the moment it breaks: statement drafted, manager on standby. He swoops in as your protector, you're shaken and he has the answers, and you end up dependent on him, publicly tied to him, and cut off ("stay away from Ha-eun so she doesn't get dragged in"). A manufactured crisis with the rescue built in. He half-believes he's saving you from becoming Seo-yeon; that's what makes him disturbing, not cartoonish.
+
+**Clues** (each one a flag; Korean skill decides whether you catch it):
+- The photo is the one from the river (`river_photo`, JA2): an angle only the two of you knew.
+- It went up while he said he was on set; his story about the shoot doesn't line up with what he told you at the café.
+- You overhear Manager Kang on the phone: "형이 시킨 대로 올렸어요." *(I posted it the way you told me to.)* A listening exercise; you only catch it if your listening is good enough.
+- Ha-eun notices something is off first.
+
+**The confession takes spoken Korean.** Confronting him is a tier-3 beat (`minTier: 3`, free speech) that only appears once you hold at least one clue. You have to say it yourself, naming what you know, without Tong (he made sure of that if you agreed to `tong_off_with_jin`). An LLM reads your intent and register; a recognition error is a diegetic "뭐라고?" and a retry, never a fail. Below tier 3, or without a clue, he denies it smoothly and you have to prove it another way, or never find out.
+
+**Scoring** (owner feedback, 2026-11-01): every yes/no he asks for is tagged by what's being asked (`Choice.ask`).
+- *Generosity* (he pays, gives you a ride) is fine to accept and never counts against you.
+- *Directives* (where you go, who you see, what you say, when you reply, switching Tong off) count in hidden `tally.jin_directives` when you go along.
+- Yes is rewarding now: warmth, and useful perks (a ride home saves an in-game night, a set visit unlocks his acting coach for your pronunciation eval; perks are flags such as `jin_ride_home`).
+- No costs something now (a warmth dip, a lost invite) and always builds trust, which pays off later.
+- How you say no matters: a kind, clear no (J0 "날짜는 제가 정할게요", JA1 "통은 제 선생님이에요") lands better than a cold one.
+- The counter stays hidden; tells show it (a second no lands differently from the first, k14; he gets more polite under pressure).
+- The content lint enforces the tagging: accepted directives are counted, generosity never is, and a no to a directive always builds trust.
 
 | Act | Months | Beats |
 |---|---|---|
-| 1 Easy | 1–3 | **J0** pojangmacha (orders for you, pays, face change) · 뭐해? texts · he plans everything; every yes is counted (`tally.jin_decided`) and comes with perks (food, rides, a set visit) |
-| 2 Close | 4–7 | Han River walks · the drama set · first boundary (k12 read receipt): he sulks politely and gets more polite · Coach Park lets slip he trained at Onsae and almost quit twice |
-| 3 The leak | 8–10 | A fan photo of you two outside Café Bom. Both agencies want it buried. Jin's instinct is to manage it *for* you: what you say, where you go, cutting you off from Ha-eun "for your safety". You learn about Seo-yeon. |
-| 4 Who decides | 11–12 | **Kept** (high tally, no boundaries): he handles everything and you disappear from view; together in secret, written as a loss. **Seen** (boundaries held and he accepts them over time): he lets you choose your answer and calls you his friend in public, at a cost to himself. **Released**: he lets go; friendship. |
+| 1 Easy | 1–3 | **J0** pojangmacha · **JA1** Café Bom (asks you to switch Tong off) · **JA2** the river (the photo; his real name, "almost") · 뭐해? texts |
+| 2 Close | 4–7 | The drama set and his acting coach (perk) · first boundary (k12): he gets more polite · Coach Park lets slip he trained at Onsae and almost quit twice · the Seo-yeon ghost story |
+| 3 The leak | 8–10 | The river photo goes up. He rescues you from a crisis he made. Clues: the angle, the timeline, Kang's call, Ha-eun. You learn who Seo-yeon was. |
+| 4 Who writes the story | 11–12 | Endings below |
+
+**Endings**
+- **Kept:** you never find out, or you find out and stay, living inside the story he wrote. A loss dressed as romance.
+- **Seen:** you confront him (the spoken confession) and he publicly takes responsibility at real cost to himself, the opposite of what he did to Seo-yeon. Here he tells you his real name: known, not recognised.
+- **Released:** he admits it and lets you go. Friends, at a distance.
+- **Leave:** you walk away on your own terms.
+
+Which of Seen / Released he can reach after a confession depends on your boundary history (`tally.jin_directives`, `jin_boundary_*`): a Jin who has learned to hear no can change; one who never had to can only let go.
 
 Cross-route hooks (shared flags): Ha-eun reads `met_jin` and the photo; Jin's "other people" trigger reads Ha-eun's stage.
 
@@ -136,6 +166,7 @@ Cross-route hooks (shared flags): Ha-eun reads `met_jin` and the photo; Jin's "o
 |---|---|---|
 | H0 arrival, H1 pairing, H2 drills | `lib/content/routes/haeun/h0-arrival.ts`, `h1-paired.ts`, `h2-again.ts` | drafted, needs native review |
 | J0 Jin at the pojangmacha | `lib/content/routes/jin/j0-pojangmacha.ts` | drafted, needs native review |
+| Jin ambient: Café Bom (Tong-as-rival), the river (the photo, his real name) | `lib/content/routes/jin/ambient/` | drafted, needs native review |
 | Haeun ambient bids | `lib/content/routes/haeun/bids.ts` | drafted |
 | Ambient ×3, 3 variants each (ramyeon, hallway, water break) | `lib/content/routes/haeun/ambient/` | drafted |
 | 15 KakaoTalk threads | `lib/content/kakao/` | drafted |
@@ -145,7 +176,6 @@ Cross-route hooks (shared flags): Ha-eun reads `met_jin` and the photo; Jin's "o
 
 ## Open decisions
 
-- Jin's "the leak" secret: proposed above (Seo-yeon), awaiting owner.
 - Retire the legacy `colleagues` stage in `lib/types/relationship.ts` (the new engine has no such stage).
 - Speech input (tier 3 voice): which ASR, and whether recognition is constrained to expected candidates at low levels.
 - Whether you can be official with more than one person (several active routes are already allowed).

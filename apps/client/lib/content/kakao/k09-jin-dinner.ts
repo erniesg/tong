@@ -18,11 +18,13 @@ export const module: KakaoModule = {
       {
         id: 'sure',
         intent: 'defer',
+        ask: 'directive',
         say: { ko: '좋아요!', rom: 'joayo!', en: 'Sounds good!' },
         outcomes: [
           {
             messages: [{ from: 'them', ko: '역시 말이 통한다니까 😆', en: 'See, we just get each other 😆', delay: 0 }],
-            tally: ['jin_decided'],
+            deltas: { warmth: 2 },
+            tally: ['jin_directives'],
             memory: { tag: 'let_jin_decide', note: 'Let Jin decide dinner and the pickup without being asked.' },
           },
         ],
@@ -30,6 +32,7 @@ export const module: KakaoModule = {
       {
         id: 'practice',
         intent: 'decline',
+        ask: 'directive',
         say: { ko: '오늘은 연습 있어서 안 돼요', rom: 'oneureun yeonseup isseoseo an dwaeyo', en: 'I can\'t tonight, I have practice' },
         outcomes: [
           {
@@ -37,7 +40,7 @@ export const module: KakaoModule = {
               { from: 'them', ko: '아 그래? ㅠㅠ', en: 'Oh really? ㅠㅠ', delay: 1 },
               { from: 'them', ko: '그럼 연습 끝나고 9시는? 잠깐만 보자 🙏', en: 'Then 9, after practice? Just for a bit 🙏', delay: 1 },
             ],
-            deltas: { tension: 1 },
+            deltas: { warmth: -1, tension: 1, trust: 1 },
             setFlags: ['jin_second_try'],
           },
         ],
