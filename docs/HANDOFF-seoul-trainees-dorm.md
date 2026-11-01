@@ -1,5 +1,7 @@
 # Handoff: Seoul trainee cohort + the girls' dorm
 
+> **Superseded 2026-11-01 (late):** see [`HANDOFF-seoul-arrival-dorm.md`](HANDOFF-seoul-arrival-dorm.md) for what is built and what is next. Rules of the road below still apply.
+
 Written 2026-11-01 for the next agent. Goal: name and build the girls' trainee cohort and the dorm, and write them into the first encounters (H0 arrival, H1, the dorm), so the world, the eval 1 ranking board and the sleep loop all use real people and a real place.
 
 Issues: #423 (dorm), #416 (roster, ranking, probation). Epic #408. Sibling relationship epic #397.
