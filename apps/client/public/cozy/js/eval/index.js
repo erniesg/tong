@@ -389,7 +389,7 @@ export function createSeoulEval(ctx) {
   const interactables = [{
     label: '📋 스케줄표 · Schedule board',
     pos: () => new THREE.Vector3(BOARD.x, TERRACE_Y, BOARD.z),
-    r: 1.3,
+    r: 1.6,
     on: () => true,
     act: openBoard,
   }];

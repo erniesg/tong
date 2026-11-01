@@ -131,8 +131,12 @@ export function createEvalUI({ root, audio, speech = null, sfx = {}, debug = fal
     }
     const p = item.prompt ?? {};
     if (item.formLabel) body.append(el('div', 'eval-form-label', item.formLabel));
-    if (p.showText || !voiceOk) body.append(el('div', 'eval-prompt-ko', p.ko));
-    if (!p.showText && !voiceOk) body.append(el('div', 'eval-note', '(No Korean voice on this device: the line is shown.)'));
+    const heard = item.audio?.text;
+    // Tier 2+ prompts are instructions ("build the line you hear"); the heard line itself stays hidden.
+    if (p.showText || (p.ko && p.ko !== heard)) body.append(el('div', 'eval-prompt-ko', p.ko));
+    if (!p.showText && !voiceOk && heard) {
+      body.append(el('div', 'eval-lyric', heard), el('div', 'eval-note', '(No Korean voice on this device: the line is shown.)'));
+    }
     if (p.en) body.append(el('div', 'eval-prompt-en', p.en));
     if (item.audio && !item.context) setTimeout(() => audio.play(item.audio), 250);
     else if (item.context) setTimeout(() => audio.play(item.audio), 250);
@@ -272,6 +276,7 @@ export function createEvalUI({ root, audio, speech = null, sfx = {}, debug = fal
     }
     const hintBtn = el('button', 'btn-secondary eval-hint-btn', '💡 통 힌트 · Tong hint (½)');
     stage.append(callBox, beats, judge, gridWrap, poses, hintBtn);
+    if (opts.tier >= 2 && !voiceOk) callBox.append(el('div', 'eval-note', '(No Korean voice on this device: calls are shown.)'));
     card.append(stage);
 
     let state = { ...START };
@@ -304,6 +309,7 @@ export function createEvalUI({ root, audio, speech = null, sfx = {}, debug = fal
     const results = [];
     for (const [n, call] of calls.entries()) {
       state = { ...call.from };
+      if (card.contains(document.activeElement)) document.activeElement.blur(); // no stale focus ring on last call's cell
       draw();
       active = { call, lastInput: null, hint: false };
       card.dataset.call = String(n);
