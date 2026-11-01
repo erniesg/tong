@@ -9,7 +9,7 @@ import {
   recordRound, restartRound, finishEval, recordRehearsal, CONFIRM_LINE,
 } from './chapter.js';
 import { hashSeed, scoreRound, suggestTier, gradeEval, rankBoard, weakObjectives, updateMastery, tierMultiplier } from './runner.js';
-import { EVAL1, itemsFor, danceItems, lunchOutcome, LUNCH, ROSTER, RESULT_LINES, PROFILE_OPTIONS, defaultProfile, birthKo } from './eval1.js';
+import { EVAL1, itemsFor, danceItems, lunchOutcome, LUNCH, rosterFor, RESULT_LINES, PROFILE_OPTIONS, defaultProfile, birthKo } from './eval1.js';
 import { createEvalUI } from './ui.js';
 import { createTtsAudio } from './voice.js';
 import { getDayLoop } from '../day.js';
@@ -342,7 +342,7 @@ export function createSeoulEval(ctx) {
     const scores = Object.fromEntries(EVAL1.rounds.map((r) => [r.id, c.run.rounds[r.id]?.score ?? 0]));
     const { grade, band, probation } = gradeEval(scores);
     const items = rounds.flatMap((r) => r.items);
-    const board = rankBoard({ seed: c.run.seed, month: c.month, player: { name: S.name, grade }, roster: ROSTER });
+    const board = rankBoard({ seed: c.run.seed, month: c.month, player: { name: S.name, grade }, roster: rosterFor(S.seed ?? 0, S.nationality) });
     const rank = board.find((r) => r.id === 'player').rank;
     return {
       result: { grade, band, probation, scores, rank, of: board.length, board, tiers: Object.fromEntries(rounds.map((r, i) => [EVAL1.rounds[i].id, r.tier])) },

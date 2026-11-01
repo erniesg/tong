@@ -2,6 +2,7 @@
 // Sources: docs/seoul-evals.md → "Eval 1", docs/seoul-songs.md → Song 1 좋아요.
 // Every Korean line here still needs native review (#395). Lines not given by the design
 // docs are functional placeholders and carry review: 'native'.
+import { pickForeignTrainee } from '../cohort-data.js';
 
 import { rng, hashSeed, shuffled } from './runner.js';
 import { makeCalls } from './dance.js';
@@ -190,12 +191,12 @@ export function judgesItems(seed, tier = 1, profile) {
 
 export const LUNCH = {
   place: 'seoul-market', // 동네 분식 골목 · 모퉁이 분식
-  // review: 'native' — placeholder group chat. 'TODO-roster' marks a stub trainee.
+  // review: 'native' — placeholder group chat.
   chat: [
     { who: '하은', ko: '김밥이요.', en: 'Gimbap.' },
     { who: '민지', ko: '저도 김밥!', en: 'Gimbap for me too!' },
     { who: '예린', ko: '떡볶이요~', en: 'Tteokbokki~' },
-    { who: '연습생 A', ko: '라면이요.', en: 'Ramyeon.', placeholder: 'TODO-roster' },
+    { who: '다온', ko: '라면이요!', en: 'Ramyeon!' },
     { who: 'me', ko: '저는 라면!', en: 'Ramyeon for me!' },
   ],
   segments: [
@@ -222,8 +223,8 @@ export const LUNCH = {
       wrong: [{ ko: '라면 한 개', fault: 'amount' }, { ko: '라면 두 줄', fault: 'counter' }],
       distractors: ['이', '줄'],
       reactions: {
-        amount: { who: '연습생 A', ko: '제 라면은요?', en: 'Where\'s my ramyeon?', arrives: 'one ramyeon', placeholder: 'TODO-roster' },
-        counter: { who: '연습생 A', ko: '라면이 김밥이 됐어요.', en: 'The ramyeon turned into gimbap.', arrives: 'two rolls of gimbap instead of ramyeon', placeholder: 'TODO-roster' },
+        amount: { who: '다온', ko: '언니, 제 라면은요?', en: 'Eonni, where\'s my ramyeon?', arrives: 'one ramyeon' },
+        counter: { who: '다온', ko: '라면이 김밥이 됐어요…', en: 'The ramyeon turned into gimbap…', arrives: 'two rolls of gimbap instead of ramyeon' },
       },
     },
   ],
@@ -286,14 +287,22 @@ export function itemsFor(round, seed, tier, profile) {
 
 /* ── Results night ───────────────────────────────── */
 
-/** Stub roster: Haeun + Minji + Yerin (canon) + two placeholders. Curves are stubs (#416). */
+/** The girls' cohort (canon/cohort.ts). Bases follow the roles; curves past eval 1 are #416. */
 export const ROSTER = [
   { id: 'haeun', name: '하은', base: 86, spread: 5 },
-  { id: 'minji', name: '민지', base: 74, spread: 8 },
-  { id: 'yerin', name: '예린', base: 69, spread: 8 },
-  { id: 'trainee_a', name: '연습생 A', base: 64, spread: 10, placeholder: 'TODO-roster' },
-  { id: 'trainee_b', name: '연습생 B', base: 58, spread: 10, placeholder: 'TODO-roster' },
+  { id: 'dohee', name: '도희', base: 78, spread: 6 }, // camera-ready, strong all round
+  { id: 'boram', name: '보람', base: 74, spread: 9 }, // strong dancer, slipping
+  { id: 'minji', name: '민지', base: 72, spread: 8 },
+  { id: 'yunseo', name: '윤서', base: 71, spread: 6 }, // strongest on the written side
+  { id: 'yerin', name: '예린', base: 69, spread: 8 }, // quietly the best vocalist
+  { id: 'daon', name: '다온', base: 61, spread: 10 }, // the youngest
 ];
+
+/** The roster for one save: the cohort plus the foreign trainee picked for it. */
+export function rosterFor(seed, nationality) {
+  const t = pickForeignTrainee(seed, nationality);
+  return [...ROSTER, { id: t.id, name: t.name.ko, base: 65, spread: 9 }];
+}
 
 // review: 'native' — functional placeholder lines for results night.
 export const RESULT_LINES = {

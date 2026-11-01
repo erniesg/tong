@@ -16,7 +16,9 @@ The shared premise is fixed: you are a foreign trainee handpicked for possible d
 - Evaluation results come from player skill in the minigames, never from origin stats.
 - Production stays bounded: shared spine, short vantage scenes, per-origin codas.
 
-**Out of scope:** Shanghai and Tokyo origin variants, Jin-route origin content beyond one note per origin, origin selection UI.
+**Out of scope:** Shanghai and Tokyo origin variants, Jin-route origin content beyond one note per origin.
+
+*Owner, 2026-11-01:* the player picks an origin at the start, in the creator, because Day 1's shortcuts depend on it ([`seoul-day1.md`](seoul-day1.md)). Day 1 sets each origin's first `toll`: taxi on the family card (Debt), the fan at the station (Exposure), the sprint for the train (Strain).
 
 ## Design principles
 
@@ -63,7 +65,7 @@ The International-School Kid's Sunday call mirrors Haeun's Sunday call from Gran
 
 ## Athlete
 
-The Athlete's fate is keeping the whole group together: with enough team trust, nobody is cut and everyone can debut.
+The Athlete's fate is keeping the whole group together: with enough team trust, the unit debuts whole. *Owner, 2026-11-01:* the eval 6 cut (Bo-ram) is the industry's fixed cost and can't be prevented; "whole" means no one is lost after eval 6.
 
 **Who:** a foreign former national-team athlete (sport TBD), retired young. Your career has already ended once.
 
@@ -281,9 +283,9 @@ The funeral, evaluations and route endings stay shared.
 Points found when checking the PRD against `canon/*.ts`, `seoul-evals.md` and `seoul-evals-tbc.md` (2026-11-01). None is decided; each needs an owner call before it is built.
 
 1. **Decided 2026-11-01, added to `haeun.ts`.** Haeun's mum's restaurant is new canon. `haeun.ts` says her mother "works in Jeju-si" and Haeun sends money home. A restaurant dream (in Seoul) has to be added to her family background.
-2. **Two cuts.** The dorm direction (T17) uses a cut at eval 6 to open a bed; the PRD adds a default month-8 Yerin cut. Both can stand, but T2 (who is cut at eval 6) now has to account for both, and the Athlete's "nobody is cut" fate has to say whether it also prevents the eval 6 cut.
+2. **Decided 2026-11-01: eval 6 cuts Bo-ram (fixed cost, unpreventable); month 8 Yerin is the Athlete's preventable loss.** Two cuts. The dorm direction (T17) uses a cut at eval 6 to open a bed; the PRD adds a default month-8 Yerin cut. Both can stand, but T2 (who is cut at eval 6) now has to account for both, and the Athlete's "nobody is cut" fate has to say whether it also prevents the eval 6 cut.
 3. **Decided 2026-11-01: only the International-School Kid can be locked out of debut; `world.ts` rule updated.** Debut lockout vs "the player is never cut". `world.ts`: "A bad eval means probation, not a wall." The PRD's crisis gates lock you out of debut whatever your scores. Not a contradiction (scores still never wall you), but the rule should name the crisis gate as the one exception.
 4. **Yerin's role.** The cohort handoff makes Yerin quietly the best vocalist; the PRD makes her the overtrainer who gets cut. Compatible, but her canon entry should carry both.
 5. **Where the Sunday calls happen.** Haeun's is canon on the dorm rooftop (her "place to be nobody"). Putting the International-School Kid's call on the same rooftop the same evening is a new shared scene, not a clash, but it touches her private place.
 6. **The dorm.** The PRD's "no separate living arrangement" matches the dorm decision (girls' dorm, separate buildings by gender). The International-School Kid's officetel is daytime only.
-7. **Origin selection UI is out of scope,** but `homeLanguage` is set at character creation; the cozy creator already asks nationality and birthday (#424), so it is the natural place to add both.
+7. **Origin is picked in the creator (owner, 2026-11-01),** and `homeLanguage` is set at character creation; the cozy creator already asks nationality and birthday (#424), so it is the natural place to add both.
