@@ -744,6 +744,7 @@ function updateQuest() {
     }
     $('quest-count').textContent = `${ARRIVAL.filter(([id]) => S.quests[id]).length}/${ARRIVAL.length}`;
     addHangulLine();
+    refreshHint();
     return;
   }
   const open = QUESTS.filter(([id]) => !S.quests[id]);
@@ -763,6 +764,13 @@ function updateQuest() {
   ui.questList.prepend(local);
   $('quest-count').textContent = `${doneCount}/${QUESTS.length}`;
   addHangulLine();
+  refreshHint();
+}
+/** Keep Tong's last hint under the Today list current as steps tick off. */
+function refreshHint() {
+  if (!inKorea() || !ui.questHint.innerHTML) return;
+  const h = tongHint(S, S.hour);
+  ui.questHint.innerHTML = `<img src="img/tong-${h.expr}.png" alt=""><span>${h.en}</span>`;
 }
 function addHangulLine() {
   const { count, total } = hangul();
@@ -1259,7 +1267,7 @@ function dayOneTick(room) {
   if (dlg.state.active || modalOpen() || !S.started) return;
   if (S.city === 'incheon' && !flag('played:seoul.d1.airport')) return void scenes.play('seoul.d1.airport');
   if (S.city !== 'seoul' || !flag('d1_arrived_hongdae') || flag('played:seoul.d1.arrive')) return;
-  if (zoneAt(player.root.position.x, player.root.position.z)?.id !== 'studio' || signOpen) return;
+  if (zoneAt(player.root.position.x, player.root.position.z)?.id !== 'studio') return;
   setHour(studioHour(S.story.flags, S.hour));
   scenes.play('seoul.d1.arrive');
 }

@@ -2550,7 +2550,7 @@ export const SCENES = {
       "value": {
        "ko": "오늘 오후 3시까지 회사로 오세요. 늦지 마세요!",
        "en": "Come to the company by 3pm today. Don't be late!",
-       "note": "KakaoTalk. Every word can be tapped.",
+       "note": "KakaoTalk.",
        "review": "native"
       }
      }
@@ -3781,8 +3781,7 @@ export const SCENES = {
      {
       "value": {
        "ko": "…",
-       "en": "Half formal, half casual. The room goes quiet. Yun-seo smiles.",
-       "note": "Nothing is failed; this is only the cohort's first impression."
+       "en": "Half formal, half casual. The room goes quiet. Yun-seo smiles."
       }
      }
     ],

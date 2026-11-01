@@ -65,7 +65,7 @@ export const module: SceneModule = {
       {
         id: 'a_choi',
         speaker: 'manager_choi',
-        lines: [{ value: { ko: '오늘 오후 3시까지 회사로 오세요. 늦지 마세요!', en: 'Come to the company by 3pm today. Don\'t be late!', note: 'KakaoTalk. Every word can be tapped.', review: 'native' } }],
+        lines: [{ value: { ko: '오늘 오후 3시까지 회사로 오세요. 늦지 마세요!', en: 'Come to the company by 3pm today. Don\'t be late!', note: 'KakaoTalk.', review: 'native' } }],
         tong: { ko: '3시 = 세 시!', en: '3시 (se si) = three o\'clock. 회사 = the company. 늦지 마세요 = don\'t be late.', maxLevel: 3 },
         effects: { vocab: [{ ko: '회사', en: 'company', rom: 'hoesa' }] },
         next: 'a_mum',

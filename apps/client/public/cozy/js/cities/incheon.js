@@ -16,7 +16,7 @@ const pointLight = (color, i, dist, x, y, z, o) => pointLightW(color, i, dist, X
 const bounds = { minX: X0 - 22, maxX: X0 + 24, minZ: -10, maxZ: 25 };
 const H = 6; // terminal ceiling
 export const INCHEON = {
-  spawn: [X0 - 16, 0, 0],
+  spawn: [X0 - 15, 0, -3.6],
   exitDoor: new THREE.Vector3(X0 - 2, 0, 4),
   board: new THREE.Vector3(X0 + 10.6, 0, 0),
   seat: [X0 + 7, 0, 21.85],
@@ -87,11 +87,12 @@ function terminal() {
   sign('출구', null, -2.25, 3.6, 4, -Math.PI / 2, 2.2, 0.86, '#1f6b47');
 
   // Arrivals hall: belt, suitcases, 도착 and 화장실.
-  box(1.4, 0.5, 10, M.belt, -13, 0, 0, { collide: true });
-  box(1.5, 0.06, 10.2, M.metal, -13, 0.5, 0);
-  suitcase(-13.1, -3, '#c0392b', 0.3);
-  suitcase(-12.9, 1.5, '#2e4a62', -0.2);
-  suitcase(-13, 3.8, '#e8c547', 0.5);
+  // The belt runs along the south wall, clear of the walk from the belt to the doors.
+  box(10, 0.5, 1.4, M.belt, -12, 0, -5.6, { collide: true });
+  box(10.2, 0.06, 1.5, M.metal, -12, 0.5, -5.6);
+  suitcase(-15, -5.6, '#c0392b', 1.2);
+  suitcase(-11.5, -5.5, '#2e4a62', 1.7);
+  suitcase(-8.6, -5.7, '#e8c547', 1.4);
   sign('도착', 'ARRIVALS', -8, 4.4, 0, -Math.PI / 2, 3.4, 1.3);
   sign('화장실', 'RESTROOMS', -17, 3.4, -7.85, 0, 2.6, 1);
   sign('← 공항철도', 'AREX · Airport Railroad', -10, 4.2, 7.85, Math.PI, 4.2, 1.2);

@@ -102,7 +102,8 @@ async function run(tag) {
   await f.evaluate(() => { __cozy.renderer.setPixelRatio(0.5); window.__fr = 0; const k = () => { window.__fr++; requestAnimationFrame(k); }; k(); });
   // 0. Creator: pick the origin.
   await f.evaluate(() => document.querySelector('#start').click());
-  await f.evaluate((o) => { document.querySelector('#origin').value = o; }, cfg.origin);
+  // Day 1 is the female route (girls' dorm, 언니): play as a girl.
+  await f.evaluate((o) => { document.querySelector('#origin').value = o; document.querySelector('[data-gender="f"]').click(); }, cfg.origin);
   await shot('0-creator-origin');
   await f.evaluate(() => document.querySelector('#creator-start').click());
 

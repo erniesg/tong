@@ -312,11 +312,12 @@ export function buildNodes(A) {
     hangul_recap: {
       who: 'tong',
       expr: 'proud',
-      ko: () => A.hangul().letters.map((l) => l.letter).join(' '),
+      ko: () => `한글 ${A.hangul().count}/${A.hangul().total}`,
+      // Grouped by the word each letter first came from: 출구 ㅊㅜㄹㄱ · 홍대입구 ㅎㅗㅇ…
       en: () => {
-        const h = A.hangul();
-        const where = h.letters.map((l) => `${l.letter} ${l.word}`).join(' · ');
-        return `${h.count} of ${h.total} letters today: ${where}. ${h.total - h.count} to go.`;
+        const h = A.hangul(), by = new Map();
+        for (const l of h.letters) by.set(l.word, (by.get(l.word) ?? '') + l.letter);
+        return `${[...by].map(([w, ls]) => `${w} ${ls}`).join(' · ')}. ${h.total - h.count} to go.`;
       },
       hint: '<b>한글</b> · Tong goes over these in Review whenever you like.',
       end: true,

@@ -98,7 +98,7 @@ export const module: SceneModule = {
         id: 'o_intro_mixed',
         speaker: 'narration',
         when: { notFlags: ['intro_formal', 'intro_casual'] },
-        lines: [{ value: { ko: '…', en: 'Half formal, half casual. The room goes quiet. Yun-seo smiles.', note: 'Nothing is failed; this is only the cohort\'s first impression.' } }],
+        lines: [{ value: { ko: '…', en: 'Half formal, half casual. The room goes quiet. Yun-seo smiles.' } }],
         effects: { setFlags: ['intro_casual'] },
         next: 'o_parents',
       },
