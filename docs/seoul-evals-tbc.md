@@ -19,7 +19,8 @@ Open questions and parked ideas for [`seoul-evals.md`](seoul-evals.md). Add the 
 | T11 | **Evals 4–12 round design.** | Review each one after evals 1–3 have been played. | — |
 | T13 | **Male player route.** | Later. Likely their own evals and boys' trainee world, with progress with Haeun affected by it. Female route is built first. | — |
 | T14 | **The dorm.** Follow what agencies actually do. | Agency-rented apartment for the girls' trainees, a dorm manager, rooms of 2–4 with bunk beds, shared kitchen and bathroom; Seoul-local trainees may commute. Boys' trainees live separately. | Sleep loop, roster (#423) |
-| T15 | **Trainee ideas (owner likes, not canon yet).** | A Chinese trainee (the foreign trainee); an ex-survival-show contestant as **Haeun's rival** (popularity vs skill), possibly a love interest later. Others on the shortlist: the youngest, the rich kid, the oldest (eval 6 cut, stays as assistant choreographer), the neighbouring agency's group. | Roster (#416) |
+| T15 | **Foreign trainee's country.** | Fixed (China is a strong fit: real agencies have many Chinese trainees, and it ties to Shanghai) or drawn at random per save, probably never the player's own country. | Roster |
+| T16 | **Names, ages, looks and voices for the cohort.** | Draft after the roster is agreed. | Roster |
 | T12 | **Can the player opt out of a late night that a character asks for** without a relationship cost? | Yes, but the character remembers which you chose. | Day loop |
 
 ## Closed
@@ -35,3 +36,5 @@ Open questions and parked ideas for [`seoul-evals.md`](seoul-evals.md). Add the 
 | 2026-11-01 | Center: the player can take it if they want it, otherwise it's Haeun's. Small story differences where they make sense. |
 | 2026-11-01 | Songs 1–3 written in-house (`seoul-songs.md`). |
 | 2026-11-01 | Build the female player's route first. |
+| 2026-11-01 | Working cohort (girls' trainees), owner OK: 민지 (gossip), 예린 (Minji's shadow, quiet best vocalist), the youngest (15), a foreign trainee, the ex-survival-show contestant, the rich kid, the oldest (22, likely eval 6 cut, stays as assistant choreographer), plus the neighbouring agency's group. |
+| 2026-11-01 | The ex-contestant was hugely popular on a survival show and should have debuted, but a scandal at the show or her company scrapped the debut. Now Haeun's rival (her popularity vs Haeun's skill); maybe a love interest later. |
