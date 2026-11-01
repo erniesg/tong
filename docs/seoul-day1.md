@@ -1,13 +1,13 @@
 # Seoul Day 1: Incheon to the dorm
 
-Source: "Tong — Seoul Day 1 Onboarding Script" (Chen Enjiao, 2026-11-01), reconciled with canon and what is built on PR #434. The design rules below are the script's, kept as they were; the scenes are the script's, changed only where canon or reality disagreed. Owner decisions are dated. Open items are in [`seoul-evals-tbc.md`](seoul-evals-tbc.md) (T18–T21).
+Source: "Tong — Seoul Day 1 Onboarding Script" (Chen Enjiao, 2026-11-01), reconciled with canon and what is built on PR #434. The design rules below are the script's, kept as they were; the scenes are the script's, changed only where canon or reality disagreed. Owner decisions are dated. Open items are in [`seoul-evals-tbc.md`](seoul-evals-tbc.md) (T19–T21).
 
 ## Decisions (owner, 2026-11-01)
 
 - **Rooming stays T17.** Haeun is in another room. You room with 다온 Da-on (youngest) and 보람 Bo-ram (oldest).
 - **The language road is the all-stop to 홍대입구.** The agency is in Hongdae, and only the all-stop (일반) stops there. The express (직통) runs nonstop to Seoul Station, so it is the trap.
 - **Lockers are part of orientation.** The built H0 (Sua's label, the notebook, Haeun's glimpse) and the registration card play in Scene 4.
-- **Tong is the floating mascot** (the 3D Tong already in cozy), not an app on your phone.
+- **Tong is the floating mascot** (the 3D Tong already in cozy), not an app on your phone. Nobody else can see or hear it.
 - **The formation drill moves to day 2,** first practice with Coach Park.
 - **Origins are picked at the start,** in the creator, so Day 1's shortcuts work (#427).
 - **The hidden counter is `toll`,** read as Debt, Exposure or Strain (`seoul-origins.md`).
@@ -40,7 +40,7 @@ From the script, unchanged:
 | Curfew 10pm, dorm "behind the company" | Curfew 23:00; Yeonnam Apartments, a separate building in Yeonnam-dong |
 | Room 302: Haeun, youngest, player | Your room: Da-on, Bo-ram, you. Haeun rooms with Do-hee; Sua's bed in that room stays empty (built `haeun.h0.dorm`) |
 | "First eval in four weeks", D-28 on screen | "첫 월말평가는 이번 달 말이에요." No countdown on screen. The month lasts until the player starts the eval |
-| Tong in the bag, "nobody else can see me" | Floating mascot; whether others can see it is T18 |
+| Tong in the bag, "nobody else can see me" | Floating mascot, invisible to everyone else (keeps "Nobody else can see me") |
 | Kitchen ramyeon and fetch, Haeun cooks | Cut |
 | Formation drill at orientation | Day 2 |
 
@@ -160,4 +160,4 @@ The formation baseline moves to day 2 with the drill.
 5. Ambient Sua lines.
 6. 한글 X/24 tracker in the save.
 7. The ARRIVAL chain on the Today list: airport → station → agency → orientation → lockers → card → dorm → first night.
-8. Fixes to built scenes: H2's summary drops "three days before the placement eval" (it is gated on H1, not a date); H1/H2's Tong-on-the-phone lines depend on T18.
+8. Fixes to built scenes: H2's summary drops "three days before the placement eval" (it is gated on H1, not a date); H1/H2's Tong-on-the-phone lines are rewritten (nobody else sees Tong).

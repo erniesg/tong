@@ -16,7 +16,6 @@ Open questions and parked ideas for [`seoul-evals.md`](seoul-evals.md). Add the 
 | T10 | **Sua's line.** | Owner agrees she can be discovered before Act 3 with a richer backstory; how, when, where she works and what she knows are undecided. Ideas parked: a night job near the dorm, studying for the 검정고시. | Months 3–9 |
 | T11 | **Evals 4–12 round design.** | Review each one after evals 1–3 have been played. | — |
 | T12 | **Can the player opt out of a late night that a character asks for** without a relationship cost? | Yes, but the character remembers which you chose. | Day loop |
-| T18 | **Can other people see Tong?** | No: Tong floats beside you and only you see and hear it; others see you glance at nothing. H1's "또 그거 써요?" and H2's "폰이 춤추는 거예요?" (written for Tong on a phone) become Haeun noticing you mutter to yourself. | H1, H2, Day 1 |
 | T19 | **Sua's snacks on eval day.** | Owner, 2026-11-01: the first snack turns up on eval day (not Day 1). Not yet in any doc or canon: who leaves it, where, and whether anyone knows it's her stays under T10. | Eval 1 day |
 | T20 | **Tong's backstory** ("Long story. Another time." on Day 1). | Keep the line as a seed; write nothing about the answer until the owner decides it. | Later |
 | T21 | **Day 1 rival.** | 도희 Do-hee says "쟤가 새로 온 애야?": the ex-survival favourite, so the Creator's airport photo touches her sore spot. Minji keeps H1's "Sua's spot" whisper. | Day 1 on-time arrival |
@@ -41,4 +40,5 @@ Open questions and parked ideas for [`seoul-evals.md`](seoul-evals.md). Add the 
 | 2026-11-01 | (was T17) Rooming. Arrival: Manager Choi offers the free bed in Haeun's room (Sua's); Haeun gives a perfectly polite excuse and you room with Da-on and Bo-ram. Sua's bed stays empty. After Bo-ram's cut the agency merges rooms, so Sua's bed has to be filled: you can ask Haeun for it, and she agrees only on trust. Low trust: Da-on gets it. Rooming unlocks late-night talks (cost sleep), night-time Jeju, noticing small things; losing the room after a betrayal is a consequence. Built: arrival scene `haeun.h0.dorm`. |
 | 2026-11-01 | Day 1 (`seoul-day1.md`): language road is the all-stop to 홍대입구 (express is the trap); lockers and the card are part of orientation; formation drill moves to day 2; no kitchen scene; no new exercise types (block crush, sentence builder); ambient gossip that Sua left; no on-screen countdown ("첫 월말평가는 이번 달 말"); hidden counter is `toll`. |
 | 2026-11-01 | Origins are picked at the start, in the creator (overrides the PRD's "selection UI out of scope"). |
-| 2026-11-01 | Tong is the floating mascot (built 3D Tong), not a phone app. Whether others see it: T18. |
+| 2026-11-01 | Tong is the floating mascot (built 3D Tong), not a phone app. |
+| 2026-11-01 | (was T18) Nobody else can see or hear Tong. H1's "또 그거 써요?" and H2's "폰이 춤추는 거예요?" (written for Tong on a phone) must be rewritten: at most, people notice you glancing at nothing or muttering. |
