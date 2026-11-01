@@ -141,7 +141,13 @@ async function run({ width, height, tag, touch }) {
   await f.evaluate(() => { __cozy.setHour(22.9); __cozy.S.speed = 0; });
   for (const [u, v, label] of [[3, 3.25, 'corridor'], [3, 0.95, 'room B door'], [5.4, 0.95, 'room B'], [5.4, 0.6, 'bedside']]) await walk(home.x + u, home.z + v, label, 0.35);
   await frames(6);
-  await f.waitForFunction(() => /침대/.test(document.querySelector('#prompt').textContent), null, { timeout: 120000, polling: 500 });
+  await f.waitForFunction(() => /침대/.test(document.querySelector('#prompt').textContent), null, { timeout: 120000, polling: 500 }).catch(async (e) => {
+    log(tag, 'no bed prompt', await f.evaluate(() => ({ prompt: document.querySelector('#prompt').textContent, hidden: document.querySelector('#prompt').classList.contains('hidden'),
+      dlg: __cozy.dlg.state.active && __cozy.dlg.state.id, overlays: [...document.querySelectorAll('.overlay:not(.hidden)')].map((o) => o.id), pose: __cozy.player.pose,
+      pos: __cozy.player.root.position.toArray().map((n) => +n.toFixed(2)), sleeping: __cozy.day.sleeping, bridge: __cozy.bridgeBusy })));
+    await shot('7-no-bed-prompt');
+    throw e;
+  });
   await shot('7-your-bunk');
   await f.evaluate(() => __cozy.interact());
   await f.waitForSelector('#bed-overlay:not(.hidden)', { state: 'attached' });
@@ -159,8 +165,9 @@ async function run({ width, height, tag, touch }) {
 }
 
 try {
-  await run({ width: 1280, height: 800, tag: 'laptop' });
-  await run({ width: 390, height: 844, tag: 'phone', touch: true });
+  const only = process.env.COZY_ONLY;
+  if (!only || only === 'laptop') await run({ width: 1280, height: 800, tag: 'laptop' });
+  if (!only || only === 'phone') await run({ width: 390, height: 844, tag: 'phone', touch: true });
   log('PASS');
 } finally {
   await browser.close();

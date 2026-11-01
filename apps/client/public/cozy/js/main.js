@@ -1266,7 +1266,17 @@ const day = createDayLoop({ S, advanceHours, save, ui: dayUI });
 function bedSpot() {
   const room = apartments.find((b) => b.id === DORM_HOME)?.rooms.find((r) => r.level === DORM_LEVEL);
   const m = room?.furniture.find((f) => f.kind === 'your-bunk');
-  return m ? { x: m.position[0], y: room.floorY, z: m.position[2] } : null;
+  if (!m) return null;
+  // The nearest point of the mattress, so standing beside the bunk always reaches it
+  // (a roommate at the foot of the bed must not win the prompt).
+  const p = player.root.position, [w, , d] = m.size;
+  return { x: clamp(p.x, m.position[0] - w / 2, m.position[0] + w / 2), y: room.floorY, z: clamp(p.z, m.position[2] - d / 2, m.position[2] + d / 2) };
+}
+/** Is the player inside room B of the dorm (so the bed is never offered through a wall)? */
+function inYourRoom() {
+  const room = apartments.find((b) => b.id === DORM_HOME)?.rooms.find((r) => r.level === DORM_LEVEL);
+  const z = room?.zones.find((zone) => zone.name === 'room_b'), p = player.root.position;
+  return !!z && Math.abs(p.y - room.floorY) < 1 && p.x > z.minX && p.x < z.maxX && p.z > z.minZ && p.z < z.maxZ;
 }
 async function useBed() {
   clearControls();
@@ -1294,7 +1304,7 @@ for (const i of [0, 1, 2, 3, 4]) interactables.push({
     toast(`<b>${a.name.split(' ')[0]}</b><span>${a.line.en}</span>`, 2400);
   },
 });
-interactables.push({ label: '내 침대 · Your bed', pos: () => bedSpot() ?? { x: 0, y: -99, z: 0 }, r: 1.9, on: () => !!bedSpot() && !day.sleeping, act: useBed });
+interactables.push({ label: '내 침대 · Your bed', pos: () => bedSpot() ?? { x: 0, y: -99, z: 0 }, r: 1.9, on: () => !!bedSpot() && inYourRoom() && !day.sleeping, act: useBed });
 
 function petCat() {
   S.pettedCat = true;
