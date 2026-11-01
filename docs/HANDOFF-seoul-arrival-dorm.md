@@ -65,6 +65,8 @@ In `docs/seoul-evals-tbc.md` (closed table), canon and `docs/seoul-origins.md`:
 
 ## Next
 
+**Day 1 is being rebuilt from Incheon:** see [`seoul-day1.md`](seoul-day1.md) (decisions, scenes, letters, build order) and its issue. It replaces the current start at the studio and puts H0's lockers inside orientation.
+
 ### Needs the owner
 1. **Merge #424, then #434.**
 2. **Today panel:** it starts collapsed, so during the arrival you only see "2/4". Open it automatically on day one? (proposed)

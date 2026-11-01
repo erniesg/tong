@@ -16,7 +16,9 @@ The shared premise is fixed: you are a foreign trainee handpicked for possible d
 - Evaluation results come from player skill in the minigames, never from origin stats.
 - Production stays bounded: shared spine, short vantage scenes, per-origin codas.
 
-**Out of scope:** Shanghai and Tokyo origin variants, Jin-route origin content beyond one note per origin, origin selection UI.
+**Out of scope:** Shanghai and Tokyo origin variants, Jin-route origin content beyond one note per origin.
+
+*Owner, 2026-11-01:* the player picks an origin at the start, in the creator, because Day 1's shortcuts depend on it ([`seoul-day1.md`](seoul-day1.md)). Day 1 sets each origin's first `toll`: taxi on the family card (Debt), the fan at the station (Exposure), the sprint for the train (Strain).
 
 ## Design principles
 
@@ -286,4 +288,4 @@ Points found when checking the PRD against `canon/*.ts`, `seoul-evals.md` and `s
 4. **Yerin's role.** The cohort handoff makes Yerin quietly the best vocalist; the PRD makes her the overtrainer who gets cut. Compatible, but her canon entry should carry both.
 5. **Where the Sunday calls happen.** Haeun's is canon on the dorm rooftop (her "place to be nobody"). Putting the International-School Kid's call on the same rooftop the same evening is a new shared scene, not a clash, but it touches her private place.
 6. **The dorm.** The PRD's "no separate living arrangement" matches the dorm decision (girls' dorm, separate buildings by gender). The International-School Kid's officetel is daytime only.
-7. **Origin selection UI is out of scope,** but `homeLanguage` is set at character creation; the cozy creator already asks nationality and birthday (#424), so it is the natural place to add both.
+7. **Origin is picked in the creator (owner, 2026-11-01),** and `homeLanguage` is set at character creation; the cozy creator already asks nationality and birthday (#424), so it is the natural place to add both.
