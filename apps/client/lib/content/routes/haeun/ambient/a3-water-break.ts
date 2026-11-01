@@ -42,7 +42,7 @@ export const module: SceneModule = {
             value: { ko: '마셔. 두 개 샀어.', en: 'Drink. I bought two.', note: 'Holds out the second bottle without looking. Never says it was for you.' },
           },
           {
-            value: { ko: '팔. 각도 틀렸어요. …여기.', en: 'Arm. Wrong angle. …Here.', note: 'She taps your elbow up two centimetres in the mirror.' },
+            value: { ko: '팔 각도만 조금 올려 볼까요? …여기요.', en: 'Shall we lift the arm angle a little? …Here.', note: 'She taps your elbow up two centimetres in the mirror, smiling. Correct, helpful, and not a degree warmer.' },
           },
         ],
         choices: [
@@ -65,7 +65,7 @@ export const module: SceneModule = {
                 deltas: { trust: 4, warmth: 2 },
                 memory: { tag: 'stayed_on_bad_night', note: 'Stayed silently while she practised alone on a bad night.' },
               },
-              { reaction: { ko: '뭐 해요, 연습 안 해요?', en: 'What are you doing, not practising?' }, expr: 'cool', deltas: { tension: 1 } },
+              { reaction: { ko: '쉬세요~ 저는 조금 더 할게요.', en: 'Take a rest~ I\'ll do a bit more.' }, expr: 'smile', deltas: { tension: 1 } },
             ],
           },
           {
@@ -80,7 +80,7 @@ export const module: SceneModule = {
               },
               {
                 when: { stageBelow: 'friends' },
-                reaction: { ko: '다시. 하나, 둘, 셋, 넷.', en: 'Again. One, two, three, four.' },
+                reaction: { ko: '좋아요, 한 번 더 해요. 하나, 둘, 셋, 넷.', en: 'Great, once more. One, two, three, four.' },
                 expr: 'smirk',
                 deltas: { tension: 2, warmth: 1 },
                 vocab: [{ ko: '하나, 둘, 셋, 넷', rom: 'hana, dul, set, net', en: 'one, two, three, four (native Korean counting)' }],
@@ -130,7 +130,7 @@ export const module: SceneModule = {
                 expr: 'blush',
                 deltas: { trust: 3, warmth: 1 },
               },
-              { reaction: { ko: '…봤어요? 됐어요. 다시 해요.', en: '…You saw? Forget it. Again.' }, expr: 'cool', deltas: { tension: 2, warmth: 1 } },
+              { reaction: { ko: '아, 그거요? 아무것도 아니에요~ 다시 해요.', en: 'Oh, that? It\'s nothing~ Let\'s go again.', note: 'Too fast. You were right.' }, expr: 'smile', deltas: { tension: 2, warmth: 1 } },
             ],
           },
           {

@@ -14,7 +14,7 @@ export const module: SceneModule = {
     slot: 'm1.s1',
     gate: { flags: ['h0_done'], month: { from: 1, to: 1 } },
     summary:
-      'Coach Park: "하은이 옆에 서." You find her by reading the water-bottle tags. Minji whispers that you took Sua\'s spot. Haeun, flat: "하은. 저랑 짝이래요." How you answer sets the first temperature: in stride, a register slip, asking about Sua straight out, or asking her to teach you.',
+      'Coach Park: "하은이 옆에 서." You find her by reading the water-bottle tags. Minji whispers that you took Sua\'s spot. Haeun, impeccably polite with a perfect smile: "안녕하세요, 하은이에요. 저랑 짝이래요. 잘 부탁해요." Textbook, and she never asks your name. How you answer sets the first temperature: in stride, a register slip, asking about Sua straight out, or asking her to teach you.',
     seeds: ['memory asked_straight (re-read at the rooftop)', 'tong_seen_once (her "또 그거 써요?")', 'banmal_too_early'],
     beats: [
       {
@@ -97,9 +97,9 @@ export const module: SceneModule = {
         lines: [
           {
             when: { flags: ['misread_name'] },
-            value: { ko: '하은. …저예요. 저랑 짝이래요.', en: 'Ha-eun. …That\'s me. Apparently I\'m paired with you.', review: 'native' },
+            value: { ko: '아, 하은이에요. 저랑 짝이래요. 잘 부탁해요.', en: 'Oh, I\'m Ha-eun. Apparently we\'re partners. Nice to work with you.', note: 'A perfect smile. She says it to the space just beside your face.', review: 'native' },
           },
-          { value: { ko: '하은. 저랑 짝이래요.', en: 'Ha-eun. Apparently I\'m paired with you.', review: 'native' } },
+          { value: { ko: '안녕하세요, 하은이에요. 저랑 짝이래요. 잘 부탁해요.', en: 'Hi, I\'m Ha-eun. Apparently we\'re partners. Nice to work with you.', note: 'A perfect smile. Textbook.', review: 'native' } },
         ],
         tong: { ko: '짝 = 파트너!', en: '짝 (jjak) = partner, pair. -래요 = "apparently / they say."', maxLevel: 2 },
         choices: [
@@ -112,7 +112,7 @@ export const module: SceneModule = {
                 when: { flags: ['used_tong_last', 'tong_seen_once'] },
                 speaker: 'haeun',
                 expr: 'smirk',
-                reaction: { ko: '…또 그거 써요?', en: '…Using that thing again?', review: 'native' },
+                reaction: { ko: '아, 또 앱이에요? 편하겠다~', en: 'Oh, the app again? That must be handy~', note: 'Still smiling.', review: 'native' },
                 deltas: { tension: 3 },
                 memory: { tag: 'tong_noticed', note: 'She noticed you speaking through Tong on day one.' },
               },
@@ -120,13 +120,13 @@ export const module: SceneModule = {
                 when: { flags: ['used_tong_last'] },
                 speaker: 'haeun',
                 expr: 'cool',
-                reaction: { ko: '…네.', en: '…Sure.', note: 'Her eyes go to your phone, not to you.' },
+                reaction: { ko: '네~', en: 'Sure~', note: 'Her eyes go to your phone, not to you.' },
                 setFlags: ['tong_seen_once'],
               },
               {
                 speaker: 'haeun',
                 expr: 'cool',
-                reaction: { ko: '…네.', en: '…Sure.' },
+                reaction: { ko: '네~ 잘 부탁해요.', en: 'Sure~ Nice to work with you.', note: 'Then she turns back to the mirror.' },
                 deltas: { trust: 2 },
               },
             ],
@@ -140,7 +140,7 @@ export const module: SceneModule = {
               {
                 speaker: 'haeun',
                 expr: 'smirk',
-                reaction: { ko: '…언제부터 반말이에요?', en: '…Since when are we on casual speech?', review: 'native' },
+                reaction: { ko: '아… 네. 잘 부탁해요.', en: 'Oh… sure. Nice to work with you.', note: 'She answers in 존댓말 anyway. The smile doesn\'t move at all.', review: 'native' },
                 deltas: { tension: 5 },
                 memory: { tag: 'banmal_too_early', note: 'Used 반말 with her the moment you met.' },
                 vocab: [{ ko: '반말', en: 'casual speech', rom: 'banmal' }],
@@ -155,7 +155,7 @@ export const module: SceneModule = {
               {
                 speaker: 'haeun',
                 expr: 'cool',
-                reaction: { ko: '…몰라도 돼요.', en: '…You don\'t need to know.', note: 'She turns to the mirror. The room goes quiet for a second.', review: 'native' },
+                reaction: { ko: '아, 그냥 예전에 있던 친구예요. …음악 시작한대요.', en: 'Oh, just a friend who used to be here. …Music\'s starting.', note: 'Smooth. The subject is closed before you notice she closed it.', review: 'native' },
                 deltas: { warmth: -5, tension: 3 },
                 memory: { tag: 'asked_straight', note: 'Asked her about Sua to her face on day one while everyone else whispered.' },
               },
@@ -170,13 +170,13 @@ export const module: SceneModule = {
                 when: { flags: ['read_haeun'] },
                 speaker: 'haeun',
                 expr: 'thinking',
-                reaction: { ko: '…이름은 읽네요. 생각해 볼게요.', en: '…You can read names, at least. I\'ll think about it.', review: 'native' },
+                reaction: { ko: '와, 이름도 읽으시네요. 그럼요, 다음에 시간 될 때요~', en: 'Wow, you can read names. Of course, sometime when we\'re free~', note: '"다음에". Next time never has a date.', review: 'native' },
                 deltas: { warmth: 4 },
               },
               {
                 speaker: 'haeun',
                 expr: 'smirk',
-                reaction: { ko: '이름도 못 읽으면서요?', en: 'You can\'t even read my name.', review: 'native' },
+                reaction: { ko: '아~ 그럼요. 다음에 밥 한번 먹어요.', en: 'Oh~ of course. Let\'s grab a meal sometime.', note: 'Everyone says that. Nobody means it.', review: 'native' },
                 deltas: { tension: 4, warmth: -2 },
                 memory: { tag: 'filed_as_weak', note: 'Asked her to teach you before you could read her name.' },
               },
@@ -205,11 +205,13 @@ export const module: SceneModule = {
         speaker: 'haeun',
         expr: 'cool',
         lines: [
-          { when: { memories: ['asked_straight'] }, value: { ko: '내일 아홉 시.', en: 'Tomorrow, nine.', note: 'She doesn\'t look at you.' } },
-          { when: { memories: ['filed_as_weak'] }, value: { ko: '내일 아홉 시. 늦으면 혼자 해요.', en: 'Tomorrow, nine. Late and you practise alone.', review: 'native' } },
-          { value: { ko: '내일 아홉 시. 늦지 마요.', en: 'Tomorrow, nine. Don\'t be late.' } },
+          { when: { memories: ['asked_straight'] }, value: { ko: '수고하셨어요~ 내일 봐요.', en: 'Good work today~ See you tomorrow.', note: 'Same smile. She doesn\'t look at you.' } },
+          { when: { memories: ['filed_as_weak'] }, value: { ko: '수고하셨어요. 내일은 아홉 시부터래요~', en: 'Good work. Tomorrow starts at nine, apparently~', note: 'Helpful. Pointed.', review: 'native' } },
+          { value: { ko: '수고하셨어요~ 내일 봐요.', en: 'Good work today~ See you tomorrow.' } },
         ],
         effects: { stageTo: 'acquaintances', setFlags: ['h1_done'], vocab: [{ ko: '짝', en: 'partner, pair', rom: 'jjak' }] },
+        // Tong states the observation only; the contrast scene, 눈치, and her first 반말 do the rest.
+        tong: { ko: '처음부터 끝까지 존댓말.', en: 'She kept it all 존댓말.', maxLevel: 4 },
         end: true,
       },
     ],

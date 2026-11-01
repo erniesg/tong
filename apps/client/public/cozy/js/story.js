@@ -182,13 +182,13 @@ export function buildNodes(A) {
 
     /* ── 연습실 (day) ─────────────────────────── */
     // Ha-eun's scenes are authored in lib/content/routes/haeun and played by scene-player.js.
-    haeun_busy: { who: 'haeun', expr: 'cool', ko: '…연습 중이에요.', en: '…I’m practising.', end: true },
-    haeun_tomorrow: { who: 'haeun', expr: 'cool', ko: '…내일 봐요.', en: '…See you tomorrow.', end: true },
+    haeun_busy: { who: 'haeun', expr: 'smile', ko: '아, 지금 연습 중이라서요~ 나중에 얘기해요.', en: 'Oh, I’m in the middle of practice~ Let’s talk later.', end: true },
+    haeun_tomorrow: { who: 'haeun', expr: 'smile', ko: '수고하셨어요~ 내일 봐요.', en: 'Good work~ See you tomorrow.', end: true },
     haeun_idle: {
       who: 'haeun',
       expr: 'smirk',
-      ko: () => (S.story?.flags?.dropped_formal ? '뭐. 연습이나 해.' : '…뭐요. 연습이나 해요.'),
-      en: '…What. Go practise.',
+      ko: () => (S.story?.flags?.dropped_formal ? '뭐. 연습이나 해.' : '아, 네~ 수고하세요.'),
+      en: () => (S.story?.flags?.dropped_formal ? 'What. Go practise.' : 'Oh, sure~ Keep it up.'),
       end: true,
     },
     locker_again: {

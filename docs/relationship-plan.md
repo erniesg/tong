@@ -116,6 +116,16 @@ The notebook is the visible literacy meter: pages decode as targets reach `famil
 
 **Sua's artifacts.** First, her chat on 안읽씹: the preview shows only "잘 지내.", and the notebook mention sits earlier in the thread. Second, the notebook behind your locker drawer, with her copy of their 인생네컷 strip inside.
 
+**Her distance is a polite wall (owner, 2026-11-01).** Korean social rejection is rarely blunt; it's politeness used as a wall, and the player has to pick up the vibe (눈치). Early Ha-eun is impeccably polite with a perfect smile, never drops 존댓말 with you, gives short closed answers, never asks about you or uses your name, deflects (Sua is "그냥 예전에 있던 친구"), and offers empty invitations ("다음에 밥 한번 먹어요"). Her intimacy shows up as breaking politeness: the first "야, 이것도 못 해?" is her letting you in. It's the inverse of Jin.
+
+Tong states observations, never conclusions, and later moments connect the dots:
+1. **Observation** (end of H1): "She kept it all 존댓말."
+2. **Contrast** (a few weeks later): you see her laughing in 반말 with another trainee. Nobody explains.
+3. **Vocab hook** (middle): a trainee jokes someone has "눈치가 없어"; Tong teaches 눈치 there.
+4. **Callback** (first 반말 at you, `haeun_first_banmal`): "That's the first time she's used 반말 with you."
+
+Beginners get these neutral pointers; players clearly reading her get silence (Tong lines carry `maxLevel`).
+
 **Thematic mechanic.** If you lean on Haeun (she tutors you, covers for you, takes the blame), her evals slip exactly like they did with Sua. The notebook then reads as a warning addressed to you.
 
 ## Jin route
@@ -133,6 +143,14 @@ Jin is the warm, easy route that turns out to be about control. The game never r
 - Ha-eun notices something is off first.
 
 **The confession takes spoken Korean.** Confronting him is a tier-3 beat (`minTier: 3`, free speech) that only appears once you hold at least one clue. You have to say it yourself, naming what you know, without Tong (he made sure of that if you agreed to `tong_off_with_jin`). An LLM reads your intent and register; a recognition error is a diegetic "뭐라고?" and a retry, never a fail. Below tier 3, or without a clue, he denies it smoothly and you have to prove it another way, or never find out.
+
+**The confrontation (Act 3 climax).** The hardest Korean test in the game, closer to Ace Attorney than a dialogue choice: he controls stories with language, so you take control back the same way.
+- Several rounds at the top input tier (free speech, `minTier: 3`), unlocked by holding at least one clue.
+- He deflects like a pro: charm, changing the subject, vague answers ("그냥… 일이 좀 꼬였어" *(things just got a bit tangled)*), flattery, turning it back on you.
+- You press with evidence and precise phrasing. You must name the contradiction exactly (the timeline, the angle, Kang's words); vague accusations slide off him.
+- Register is a band. Too aggressive and he goes cold and polished (actor mode) and you lose him; too soft and he reassures you and moves on. Clear, steady, specific Korean wins.
+- Lean on Tong or switch to English and he escapes into charming English, back on his turf.
+- An LLM grades each turn on three things: evidence named, register in the band, Korean only. A recognition error is "뭐라고?" and a retry, never a fail. He confesses only when you've cornered him with the right words.
 
 **Scoring** (owner feedback, 2026-11-01): every yes/no he asks for is tagged by what's being asked (`Choice.ask`).
 - *Generosity* (he pays, gives you a ride) is fine to accept and never counts against you.

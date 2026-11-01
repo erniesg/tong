@@ -57,10 +57,13 @@ export const HAEUN_CANON: CharacterCanon = {
   },
   speech: {
     rules: [
-      'Strangers/acquaintances: clipped 해요체 with you, for distance not respect (she doesn\'t know your age and won\'t ask). Short sentences, no softeners.',
-      '반말 slips out when she\'s annoyed or competitive, and she catches it ("…해. 하세요. 아 몰라."). That slip is the leak signal. "말 놓을까?" is a friend-stage milestone; either side can raise it.',
-      '야 early is a rivalry jab that comes with a slip, not intimacy. Saying your name softly is a late-route event.',
-      'Says the opposite of what she means. Questions are challenges ("이것도 못 해?").',
+      'Strangers/acquaintances: politeness as a wall (눈치 to read, never open hostility; open hostility could be reported, so trainees are nice to everyone). Impeccable 해요체, a perfect smile, textbook lines ("하은이에요. 잘 부탁해요.").',
+      'The wall, concretely: short closed answers ("네~", "그렇구나"); never asks anything about you; never uses your name; polite deflection instead of refusal ("아, 그냥 예전에 있던 친구예요." then a smooth change of subject); empty invitations ("다음에 밥 한번 먹어요"); extra-polite -세요 as condescension; a polite apology aimed like a slap.',
+      'She never drops 존댓말 with you while she uses 반말 with other trainees; the contrast is there to notice, nobody explains it.',
+      'Intimacy shows up as breaking politeness. Her first 반말 at you ("야, 이것도 못 해?") is her letting you in, not a jab. An early slip she catches ("다시 해. …아, 다시 해 볼까요?") is the leak signal. "말 놓을까?" is a friend-stage milestone; either side can raise it.',
+      'Inverse of Jin: he starts warm and the control hides inside the politeness; she starts polite and the warmth hides behind it.',
+      'Tong only states observations about her ("She kept it all 존댓말."), never conclusions. Later scenes connect the dots: her laughing in 반말 with another trainee, a trainee joking someone has "눈치가 없어" (Tong teaches 눈치 there), and her first 반말 at you ("That\'s the first time she\'s used 반말 with you.").',
+      'With friends: says the opposite of what she means; questions are challenges ("이것도 못 해?"). Saying your name softly is a late-route event.',
       'Praise is rare and memorable: "…나쁘지 않네."',
       'Jeju leaks only under real emotion, late, and rarely. Never as a cute tic.',
     ],

@@ -40,12 +40,12 @@ export const module: SceneModule = {
         lines: [
           { when: { mood: ['raw'], stageAtLeast: 'close' }, value: { ko: '…지금 말 시키지 마.', en: '…Don\'t talk to me right now.' } },
           { when: { mood: ['raw'] }, value: { ko: '…비켜요.', en: '…Move.' } },
-          { when: { mood: ['high'] }, value: { ko: '뭘 봐요. 1등 처음 봐요?', en: 'What are you looking at. Never seen first place before?' } },
+          { when: { mood: ['high'] }, value: { ko: '아, 안녕하세요~', en: 'Oh, hi~', note: 'First place on the sheet today. She is radiantly, unbearably polite about it.' } },
           {
             when: { leak: true, stageBelow: 'friends' },
             value: { ko: '아, 너 왔어? …왔어요. 아 몰라.', en: 'Oh, you\'re here? …You\'re here. Whatever.', note: '반말 slipped out; she caught it and gave up.' },
           },
-          { value: { ko: '…수업 끝났어요?', en: '…Lesson over?' } },
+          { value: { ko: '아, 수업 끝났어요? 수고하셨어요~', en: 'Oh, lesson over? Good work~', note: 'She doesn\'t wait for the answer.' } },
         ],
         tong: { ko: '반말 / 존댓말', en: 'Listen to the ending: 왔어 vs 왔어요. Casual vs polite.', maxLevel: 2 },
         choices: [
@@ -60,7 +60,7 @@ export const module: SceneModule = {
                 expr: 'tired',
                 deltas: { trust: 2, warmth: 1 },
               },
-              { reaction: { ko: '…고마워요.', en: '…Thanks.' }, deltas: { warmth: 1 } },
+              { reaction: { ko: '어, 감사해요~', en: 'Oh, thank you~' }, deltas: { warmth: 1 } },
             ],
           },
           {
@@ -71,7 +71,7 @@ export const module: SceneModule = {
             outcomes: [
               {
                 when: { stageBelow: 'friends' },
-                reaction: { ko: '…당연하죠.', en: '…Obviously.' },
+                reaction: { ko: '에이, 운이 좋았어요~', en: 'Oh, I just got lucky~', note: 'Modest, word-perfect. She doesn\'t believe a word of it.' },
                 expr: 'blush',
                 deltas: { warmth: 2, tension: 1 },
               },

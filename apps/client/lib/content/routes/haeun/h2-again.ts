@@ -36,7 +36,7 @@ export const module: SceneModule = {
         id: 'h2_count',
         speaker: 'haeun',
         expr: 'cool',
-        lines: [{ value: { ko: '카운트 몰라요? 하나, 둘, 셋, 넷.', en: 'You don\'t know the counts? One, two, three, four.', review: 'native' } }],
+        lines: [{ value: { ko: '아, 카운트가 헷갈리세요? 하나, 둘, 셋, 넷.', en: 'Oh, are the counts confusing you? One, two, three, four.', note: 'Extra-polite -세요. Helpful on the surface.', review: 'native' } }],
         tong: {
           ko: '춤 카운트는 하나, 둘, 셋…',
           en: 'Dance counts use native Korean numbers: 하나 둘 셋 넷 다섯 여섯 일곱 여덟. Not 일 이 삼 사, those are for money and dates.',
@@ -57,7 +57,7 @@ export const module: SceneModule = {
         speaker: 'haeun',
         expr: 'cool',
         when: { flags: ['ex_h2_count'] },
-        lines: [{ value: { ko: '…다시. 이번엔 박자 맞춰서.', en: '…Again. On the beat this time.', note: 'You counted one to eight in native numbers, clean.', review: 'native' } }],
+        lines: [{ value: { ko: '잘하시네요. 한 번 더 해 볼까요? 이번엔 박자 맞춰서.', en: 'You\'re good at this. Shall we go again? On the beat this time.', note: 'You counted one to eight in native numbers, clean.', review: 'native' } }],
         effects: { deltas: { trust: 2 } },
         next: 'h2_count_sino',
       },
@@ -67,8 +67,8 @@ export const module: SceneModule = {
         expr: 'smirk',
         when: { notFlags: ['ex_h2_count'], minTier: 1 },
         lines: [
-          { when: { mood: ['raw'] }, value: { ko: '…그건 돈 셀 때요.', en: '…That\'s for counting money.', note: 'You counted 일, 이, 삼, 사. No smile; she\'s too tired to find it funny.', review: 'native' } },
-          { value: { ko: '그건 돈 셀 때요.', en: 'That\'s for counting money.', note: 'You counted 일, 이, 삼, 사. The corner of her mouth moves. Almost.', review: 'native' } },
+          { when: { mood: ['raw'] }, value: { ko: '…그건 돈 셀 때 쓰는 거예요.', en: '…That\'s for counting money.', note: 'You counted 일, 이, 삼, 사. No smile tonight; she\'s too tired to perform it.', review: 'native' } },
+          { value: { ko: '아~ 그건 돈 셀 때 쓰는 거예요.', en: 'Oh~ that\'s for counting money.', note: 'You counted 일, 이, 삼, 사. Her smile is perfect, and for once there might be something real under it.', review: 'native' } },
         ],
         effects: { setFlags: ['h2_counted_sino'], memory: { tag: 'counted_money', note: 'Counted the choreo in Sino numbers; she said that\'s for money.' } },
         next: 'h2_count_tong',
@@ -79,10 +79,37 @@ export const module: SceneModule = {
         expr: 'smirk',
         when: { notFlags: ['ex_h2_count', 'h2_counted_sino'] },
         lines: [
-          { when: { flags: ['tong_seen_once'] }, value: { ko: '폰이 춤춰요?', en: 'Is your phone doing the dance?', note: 'Tong counted out loud for you.', review: 'native' } },
+          { when: { flags: ['tong_seen_once'] }, value: { ko: '폰이 춤추는 거예요? 신기하다~', en: 'Is your phone doing the dance? How neat~', note: 'Tong counted out loud for you.', review: 'native' } },
           { value: { ko: '…', en: 'Tong counts out loud for you. She lets the phone count. She doesn\'t count with it.' } },
         ],
         effects: { setFlags: ['tong_seen_once'] },
+        next: 'h2_slip',
+      },
+      {
+        // The first crack in the wall: only when warmth runs ahead of stage.
+        id: 'h2_slip',
+        speaker: 'haeun',
+        expr: 'cool',
+        when: { leak: true },
+        lines: [
+          {
+            value: {
+              ko: '다시 해. …아, 다시 해 볼까요?',
+              en: 'Do it again. …Oh, shall we go again?',
+              note: 'It slips out flat, then the smile comes back a beat late.',
+              review: 'native',
+            },
+          },
+        ],
+        next: 'h2_slip_tong',
+      },
+      {
+        // Tong only states the observation; later scenes help the player connect the dots.
+        id: 'h2_slip_tong',
+        speaker: 'tong',
+        when: { leak: true, notFlags: ['haeun_first_banmal'] },
+        lines: [{ value: { ko: '방금 반말이었어.', en: 'That\'s the first time she\'s used 반말 with you.' } }],
+        effects: { setFlags: ['haeun_first_banmal'] },
         next: 'h2_drill',
       },
       {
@@ -90,17 +117,8 @@ export const module: SceneModule = {
         speaker: 'haeun',
         expr: 'cool',
         lines: [
-          {
-            when: { leak: true },
-            value: {
-              ko: '다시 해. …하세요. 아 몰라, 다시.',
-              en: 'Do it again. …Please do it again. Ugh, whatever. Again.',
-              note: 'Her first 반말 slip. She hears it, corrects it, gives up correcting it.',
-              review: 'native',
-            },
-          },
-          { when: { mood: ['raw'] }, value: { ko: '다시. …다시.', en: 'Again. …Again.', note: 'Sharper every time. It isn\'t really about you.' } },
-          { value: { ko: '다시.', en: 'Again.' } },
+          { when: { mood: ['raw'] }, value: { ko: '한 번 더요. …한 번 더.', en: 'Once more. …Once more.', note: 'The smile is gone tonight. It isn\'t really about you.' } },
+          { value: { ko: '한 번 더 해요~', en: 'Once more~', note: 'Twelve times, the same smile. That\'s the wall.' } },
         ],
         choices: [
           {
@@ -132,13 +150,13 @@ export const module: SceneModule = {
                 when: { flags: ['ex_h2_count'] },
                 speaker: 'haeun',
                 expr: 'smirk',
-                reaction: { ko: '못되게? 데뷔하고 싶다면서요.', en: 'Mean? You said you wanted to debut.', review: 'native' },
+                reaction: { ko: '제가요? 도와드리는 건데요. 데뷔하고 싶으시다면서요.', en: 'Me? I\'m helping you. You said you wanted to debut.', note: 'Still polite. Somehow you\'re the one who sounds rude.', review: 'native' },
                 deltas: { tension: 6, warmth: 3 },
               },
               {
                 speaker: 'haeun',
                 expr: 'cool',
-                reaction: { ko: '카운트부터 해요.', en: 'Learn the counts first.' },
+                reaction: { ko: '제가요? 도와드리는 건데요~', en: 'Me? I\'m helping you~', note: 'Somehow you\'re the one who sounds rude.' },
                 deltas: { tension: 6 },
               },
             ],
@@ -175,7 +193,7 @@ export const module: SceneModule = {
               {
                 speaker: 'haeun',
                 expr: 'cool',
-                reaction: { ko: '반말?', en: 'Casual speech? With me?', review: 'native' },
+                reaction: { ko: '…아, 네. 죄송해요, 제가 뭘 잘못했나 봐요.', en: '…Oh, okay. Sorry, I must have done something wrong.', note: 'A polite apology, aimed like a slap. She keeps 존댓말.', review: 'native' },
                 deltas: { tension: 8 },
                 memory: { tag: 'banmal_too_early', note: 'Used 반말 with her before she ever did.' },
               },
@@ -190,14 +208,14 @@ export const module: SceneModule = {
                 when: { mood: ['raw', 'low'] },
                 speaker: 'haeun',
                 expr: 'angry',
-                reaction: { ko: '동정하지 마요.', en: 'Don\'t pity me.', review: 'native' },
+                reaction: { ko: '…괜찮아요. 신경 써 주셔서 감사해요.', en: '…I\'m fine. Thank you for your concern.', note: 'The wall, back up in one second flat.', review: 'native' },
                 deltas: { tension: 5, warmth: 1 },
                 memory: { tag: 'comforted_early', note: 'Comforted her on the night she\'d been flagged weak.' },
               },
               {
                 speaker: 'haeun',
                 expr: 'cool',
-                reaction: { ko: '…안 힘든데요.', en: '…I\'m not.', review: 'native' },
+                reaction: { ko: '저요? 전 괜찮아요~', en: 'Me? I\'m fine~', review: 'native' },
                 deltas: { tension: 2 },
               },
             ],
@@ -210,7 +228,7 @@ export const module: SceneModule = {
               {
                 speaker: 'haeun',
                 expr: 'cool',
-                reaction: { ko: '…가요.', en: '…Go, then.', note: 'In the mirror she watches the door until it shuts.' },
+                reaction: { ko: '네~ 들어가세요.', en: 'Sure~ Get home safe.', note: 'In the mirror she watches the door until it shuts.' },
                 deltas: { warmth: -2 },
                 setFlags: ['h2_left_early'],
                 memory: { tag: 'left_early', note: 'Left her alone in the studio three nights before the placement eval.' },
@@ -230,7 +248,7 @@ export const module: SceneModule = {
             value: { ko: '…', en: 'Behind the door the music starts again. Then it stops, mid-bar, and doesn\'t start again.' },
           },
           { when: { flags: ['ex_h2_count'], min: { trust: 20 } }, value: { ko: '…나쁘지 않네요.', en: '…Not bad.', note: 'Rare. Remember it.', review: 'native' } },
-          { value: { ko: '내일 또 해요.', en: 'Again tomorrow.' } },
+          { value: { ko: '수고하셨어요. 내일 또 해요~', en: 'Good work. Again tomorrow~' } },
         ],
         effects: { setFlags: ['h2_done'], vocab: [{ ko: '다시', en: 'again', rom: 'dasi' }] },
         end: true,

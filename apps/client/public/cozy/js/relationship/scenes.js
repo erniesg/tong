@@ -355,7 +355,7 @@ export const SCENES = {
     "to": 1
    }
   },
-  "summary": "Coach Park: \"하은이 옆에 서.\" You find her by reading the water-bottle tags. Minji whispers that you took Sua's spot. Haeun, flat: \"하은. 저랑 짝이래요.\" How you answer sets the first temperature: in stride, a register slip, asking about Sua straight out, or asking her to teach you.",
+  "summary": "Coach Park: \"하은이 옆에 서.\" You find her by reading the water-bottle tags. Minji whispers that you took Sua's spot. Haeun, impeccably polite with a perfect smile: \"안녕하세요, 하은이에요. 저랑 짝이래요. 잘 부탁해요.\" Textbook, and she never asks your name. How you answer sets the first temperature: in stride, a register slip, asking about Sua straight out, or asking her to teach you.",
   "seeds": [
    "memory asked_straight (re-read at the rooftop)",
    "tong_seen_once (her \"또 그거 써요?\")",
@@ -570,15 +570,17 @@ export const SCENES = {
        ]
       },
       "value": {
-       "ko": "하은. …저예요. 저랑 짝이래요.",
-       "en": "Ha-eun. …That's me. Apparently I'm paired with you.",
+       "ko": "아, 하은이에요. 저랑 짝이래요. 잘 부탁해요.",
+       "en": "Oh, I'm Ha-eun. Apparently we're partners. Nice to work with you.",
+       "note": "A perfect smile. She says it to the space just beside your face.",
        "review": "native"
       }
      },
      {
       "value": {
-       "ko": "하은. 저랑 짝이래요.",
-       "en": "Ha-eun. Apparently I'm paired with you.",
+       "ko": "안녕하세요, 하은이에요. 저랑 짝이래요. 잘 부탁해요.",
+       "en": "Hi, I'm Ha-eun. Apparently we're partners. Nice to work with you.",
+       "note": "A perfect smile. Textbook.",
        "review": "native"
       }
      }
@@ -608,8 +610,9 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "smirk",
         "reaction": {
-         "ko": "…또 그거 써요?",
-         "en": "…Using that thing again?",
+         "ko": "아, 또 앱이에요? 편하겠다~",
+         "en": "Oh, the app again? That must be handy~",
+         "note": "Still smiling.",
          "review": "native"
         },
         "deltas": {
@@ -629,8 +632,8 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "cool",
         "reaction": {
-         "ko": "…네.",
-         "en": "…Sure.",
+         "ko": "네~",
+         "en": "Sure~",
          "note": "Her eyes go to your phone, not to you."
         },
         "setFlags": [
@@ -641,8 +644,9 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "cool",
         "reaction": {
-         "ko": "…네.",
-         "en": "…Sure."
+         "ko": "네~ 잘 부탁해요.",
+         "en": "Sure~ Nice to work with you.",
+         "note": "Then she turns back to the mirror."
         },
         "deltas": {
          "trust": 2
@@ -665,8 +669,9 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "smirk",
         "reaction": {
-         "ko": "…언제부터 반말이에요?",
-         "en": "…Since when are we on casual speech?",
+         "ko": "아… 네. 잘 부탁해요.",
+         "en": "Oh… sure. Nice to work with you.",
+         "note": "She answers in 존댓말 anyway. The smile doesn't move at all.",
          "review": "native"
         },
         "deltas": {
@@ -699,9 +704,9 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "cool",
         "reaction": {
-         "ko": "…몰라도 돼요.",
-         "en": "…You don't need to know.",
-         "note": "She turns to the mirror. The room goes quiet for a second.",
+         "ko": "아, 그냥 예전에 있던 친구예요. …음악 시작한대요.",
+         "en": "Oh, just a friend who used to be here. …Music's starting.",
+         "note": "Smooth. The subject is closed before you notice she closed it.",
          "review": "native"
         },
         "deltas": {
@@ -733,8 +738,9 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "thinking",
         "reaction": {
-         "ko": "…이름은 읽네요. 생각해 볼게요.",
-         "en": "…You can read names, at least. I'll think about it.",
+         "ko": "와, 이름도 읽으시네요. 그럼요, 다음에 시간 될 때요~",
+         "en": "Wow, you can read names. Of course, sometime when we're free~",
+         "note": "\"다음에\". Next time never has a date.",
          "review": "native"
         },
         "deltas": {
@@ -745,8 +751,9 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "smirk",
         "reaction": {
-         "ko": "이름도 못 읽으면서요?",
-         "en": "You can't even read my name.",
+         "ko": "아~ 그럼요. 다음에 밥 한번 먹어요.",
+         "en": "Oh~ of course. Let's grab a meal sometime.",
+         "note": "Everyone says that. Nobody means it.",
          "review": "native"
         },
         "deltas": {
@@ -813,9 +820,9 @@ export const SCENES = {
        ]
       },
       "value": {
-       "ko": "내일 아홉 시.",
-       "en": "Tomorrow, nine.",
-       "note": "She doesn't look at you."
+       "ko": "수고하셨어요~ 내일 봐요.",
+       "en": "Good work today~ See you tomorrow.",
+       "note": "Same smile. She doesn't look at you."
       }
      },
      {
@@ -825,15 +832,16 @@ export const SCENES = {
        ]
       },
       "value": {
-       "ko": "내일 아홉 시. 늦으면 혼자 해요.",
-       "en": "Tomorrow, nine. Late and you practise alone.",
+       "ko": "수고하셨어요. 내일은 아홉 시부터래요~",
+       "en": "Good work. Tomorrow starts at nine, apparently~",
+       "note": "Helpful. Pointed.",
        "review": "native"
       }
      },
      {
       "value": {
-       "ko": "내일 아홉 시. 늦지 마요.",
-       "en": "Tomorrow, nine. Don't be late."
+       "ko": "수고하셨어요~ 내일 봐요.",
+       "en": "Good work today~ See you tomorrow."
       }
      }
     ],
@@ -849,6 +857,11 @@ export const SCENES = {
        "rom": "jjak"
       }
      ]
+    },
+    "tong": {
+     "ko": "처음부터 끝까지 존댓말.",
+     "en": "She kept it all 존댓말.",
+     "maxLevel": 4
     },
     "end": true
    }
@@ -912,8 +925,9 @@ export const SCENES = {
     "lines": [
      {
       "value": {
-       "ko": "카운트 몰라요? 하나, 둘, 셋, 넷.",
-       "en": "You don't know the counts? One, two, three, four.",
+       "ko": "아, 카운트가 헷갈리세요? 하나, 둘, 셋, 넷.",
+       "en": "Oh, are the counts confusing you? One, two, three, four.",
+       "note": "Extra-polite -세요. Helpful on the surface.",
        "review": "native"
       }
      }
@@ -962,8 +976,8 @@ export const SCENES = {
     "lines": [
      {
       "value": {
-       "ko": "…다시. 이번엔 박자 맞춰서.",
-       "en": "…Again. On the beat this time.",
+       "ko": "잘하시네요. 한 번 더 해 볼까요? 이번엔 박자 맞춰서.",
+       "en": "You're good at this. Shall we go again? On the beat this time.",
        "note": "You counted one to eight in native numbers, clean.",
        "review": "native"
       }
@@ -994,17 +1008,17 @@ export const SCENES = {
        ]
       },
       "value": {
-       "ko": "…그건 돈 셀 때요.",
+       "ko": "…그건 돈 셀 때 쓰는 거예요.",
        "en": "…That's for counting money.",
-       "note": "You counted 일, 이, 삼, 사. No smile; she's too tired to find it funny.",
+       "note": "You counted 일, 이, 삼, 사. No smile tonight; she's too tired to perform it.",
        "review": "native"
       }
      },
      {
       "value": {
-       "ko": "그건 돈 셀 때요.",
-       "en": "That's for counting money.",
-       "note": "You counted 일, 이, 삼, 사. The corner of her mouth moves. Almost.",
+       "ko": "아~ 그건 돈 셀 때 쓰는 거예요.",
+       "en": "Oh~ that's for counting money.",
+       "note": "You counted 일, 이, 삼, 사. Her smile is perfect, and for once there might be something real under it.",
        "review": "native"
       }
      }
@@ -1038,8 +1052,8 @@ export const SCENES = {
        ]
       },
       "value": {
-       "ko": "폰이 춤춰요?",
-       "en": "Is your phone doing the dance?",
+       "ko": "폰이 춤추는 거예요? 신기하다~",
+       "en": "Is your phone doing the dance? How neat~",
        "note": "Tong counted out loud for you.",
        "review": "native"
       }
@@ -1056,6 +1070,49 @@ export const SCENES = {
       "tong_seen_once"
      ]
     },
+    "next": "h2_slip"
+   },
+   {
+    "id": "h2_slip",
+    "speaker": "haeun",
+    "expr": "cool",
+    "when": {
+     "leak": true
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "다시 해. …아, 다시 해 볼까요?",
+       "en": "Do it again. …Oh, shall we go again?",
+       "note": "It slips out flat, then the smile comes back a beat late.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "h2_slip_tong"
+   },
+   {
+    "id": "h2_slip_tong",
+    "speaker": "tong",
+    "when": {
+     "leak": true,
+     "notFlags": [
+      "haeun_first_banmal"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "방금 반말이었어.",
+       "en": "That's the first time she's used 반말 with you."
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "haeun_first_banmal"
+     ]
+    },
     "next": "h2_drill"
    },
    {
@@ -1065,31 +1122,21 @@ export const SCENES = {
     "lines": [
      {
       "when": {
-       "leak": true
-      },
-      "value": {
-       "ko": "다시 해. …하세요. 아 몰라, 다시.",
-       "en": "Do it again. …Please do it again. Ugh, whatever. Again.",
-       "note": "Her first 반말 slip. She hears it, corrects it, gives up correcting it.",
-       "review": "native"
-      }
-     },
-     {
-      "when": {
        "mood": [
         "raw"
        ]
       },
       "value": {
-       "ko": "다시. …다시.",
-       "en": "Again. …Again.",
-       "note": "Sharper every time. It isn't really about you."
+       "ko": "한 번 더요. …한 번 더.",
+       "en": "Once more. …Once more.",
+       "note": "The smile is gone tonight. It isn't really about you."
       }
      },
      {
       "value": {
-       "ko": "다시.",
-       "en": "Again."
+       "ko": "한 번 더 해요~",
+       "en": "Once more~",
+       "note": "Twelve times, the same smile. That's the wall."
       }
      }
     ],
@@ -1155,8 +1202,9 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "smirk",
         "reaction": {
-         "ko": "못되게? 데뷔하고 싶다면서요.",
-         "en": "Mean? You said you wanted to debut.",
+         "ko": "제가요? 도와드리는 건데요. 데뷔하고 싶으시다면서요.",
+         "en": "Me? I'm helping you. You said you wanted to debut.",
+         "note": "Still polite. Somehow you're the one who sounds rude.",
          "review": "native"
         },
         "deltas": {
@@ -1168,8 +1216,9 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "cool",
         "reaction": {
-         "ko": "카운트부터 해요.",
-         "en": "Learn the counts first."
+         "ko": "제가요? 도와드리는 건데요~",
+         "en": "Me? I'm helping you~",
+         "note": "Somehow you're the one who sounds rude."
         },
         "deltas": {
          "tension": 6
@@ -1249,8 +1298,9 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "cool",
         "reaction": {
-         "ko": "반말?",
-         "en": "Casual speech? With me?",
+         "ko": "…아, 네. 죄송해요, 제가 뭘 잘못했나 봐요.",
+         "en": "…Oh, okay. Sorry, I must have done something wrong.",
+         "note": "A polite apology, aimed like a slap. She keeps 존댓말.",
          "review": "native"
         },
         "deltas": {
@@ -1282,8 +1332,9 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "angry",
         "reaction": {
-         "ko": "동정하지 마요.",
-         "en": "Don't pity me.",
+         "ko": "…괜찮아요. 신경 써 주셔서 감사해요.",
+         "en": "…I'm fine. Thank you for your concern.",
+         "note": "The wall, back up in one second flat.",
          "review": "native"
         },
         "deltas": {
@@ -1299,8 +1350,8 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "cool",
         "reaction": {
-         "ko": "…안 힘든데요.",
-         "en": "…I'm not.",
+         "ko": "저요? 전 괜찮아요~",
+         "en": "Me? I'm fine~",
          "review": "native"
         },
         "deltas": {
@@ -1322,8 +1373,8 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "cool",
         "reaction": {
-         "ko": "…가요.",
-         "en": "…Go, then.",
+         "ko": "네~ 들어가세요.",
+         "en": "Sure~ Get home safe.",
          "note": "In the mirror she watches the door until it shuts."
         },
         "deltas": {
@@ -1376,8 +1427,8 @@ export const SCENES = {
      },
      {
       "value": {
-       "ko": "내일 또 해요.",
-       "en": "Again tomorrow."
+       "ko": "수고하셨어요. 내일 또 해요~",
+       "en": "Good work. Again tomorrow~"
       }
      }
     ],
@@ -2495,8 +2546,9 @@ export const SCENES = {
        ]
       },
       "value": {
-       "ko": "뭘 봐요. 1등 처음 봐요?",
-       "en": "What are you looking at. Never seen first place before?"
+       "ko": "아, 안녕하세요~",
+       "en": "Oh, hi~",
+       "note": "First place on the sheet today. She is radiantly, unbearably polite about it."
       }
      },
      {
@@ -2512,8 +2564,9 @@ export const SCENES = {
      },
      {
       "value": {
-       "ko": "…수업 끝났어요?",
-       "en": "…Lesson over?"
+       "ko": "아, 수업 끝났어요? 수고하셨어요~",
+       "en": "Oh, lesson over? Good work~",
+       "note": "She doesn't wait for the answer."
       }
      }
     ],
@@ -2549,8 +2602,8 @@ export const SCENES = {
        },
        {
         "reaction": {
-         "ko": "…고마워요.",
-         "en": "…Thanks."
+         "ko": "어, 감사해요~",
+         "en": "Oh, thank you~"
         },
         "deltas": {
          "warmth": 1
@@ -2577,8 +2630,9 @@ export const SCENES = {
          "stageBelow": "friends"
         },
         "reaction": {
-         "ko": "…당연하죠.",
-         "en": "…Obviously."
+         "ko": "에이, 운이 좋았어요~",
+         "en": "Oh, I just got lucky~",
+         "note": "Modest, word-perfect. She doesn't believe a word of it."
         },
         "expr": "blush",
         "deltas": {
@@ -2760,9 +2814,9 @@ export const SCENES = {
      },
      {
       "value": {
-       "ko": "팔. 각도 틀렸어요. …여기.",
-       "en": "Arm. Wrong angle. …Here.",
-       "note": "She taps your elbow up two centimetres in the mirror."
+       "ko": "팔 각도만 조금 올려 볼까요? …여기요.",
+       "en": "Shall we lift the arm angle a little? …Here.",
+       "note": "She taps your elbow up two centimetres in the mirror, smiling. Correct, helpful, and not a degree warmer."
       }
      }
     ],
@@ -2822,10 +2876,10 @@ export const SCENES = {
        },
        {
         "reaction": {
-         "ko": "뭐 해요, 연습 안 해요?",
-         "en": "What are you doing, not practising?"
+         "ko": "쉬세요~ 저는 조금 더 할게요.",
+         "en": "Take a rest~ I'll do a bit more."
         },
-        "expr": "cool",
+        "expr": "smile",
         "deltas": {
          "tension": 1
         }
@@ -2862,8 +2916,8 @@ export const SCENES = {
          "stageBelow": "friends"
         },
         "reaction": {
-         "ko": "다시. 하나, 둘, 셋, 넷.",
-         "en": "Again. One, two, three, four."
+         "ko": "좋아요, 한 번 더 해요. 하나, 둘, 셋, 넷.",
+         "en": "Great, once more. One, two, three, four."
         },
         "expr": "smirk",
         "deltas": {
@@ -3003,10 +3057,11 @@ export const SCENES = {
        },
        {
         "reaction": {
-         "ko": "…봤어요? 됐어요. 다시 해요.",
-         "en": "…You saw? Forget it. Again."
+         "ko": "아, 그거요? 아무것도 아니에요~ 다시 해요.",
+         "en": "Oh, that? It's nothing~ Let's go again.",
+         "note": "Too fast. You were right."
         },
-        "expr": "cool",
+        "expr": "smile",
         "deltas": {
          "tension": 2,
          "warmth": 1
