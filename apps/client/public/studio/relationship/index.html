@@ -1,0 +1,1034 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>Tong Relationship Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a fixed "starting state" rail beside the scene stage; compare runs as columns. Night-shift convenience-store palette. */
+:root {
+  --bg: #eef2f0;
+  --surface: #ffffff;
+  --sunk: #e3e9e6;
+  --ink: #16201c;
+  --muted: #586862;
+  --line: #cfd9d4;
+  --accent: #1f6356;
+  --accent-ink: #ffffff;
+  --banana: #f4d266;
+  --banana-ink: #3a2f05;
+  --warmth: #c8492f;
+  --tension: #6f45c0;
+  --trust: #16806e;
+  --bad: #b3261e;
+  --tong: #e7f1ff;
+  --tong-ink: #183b6b;
+  --display: "Do Hyeon", "IBM Plex Sans KR", system-ui, sans-serif;
+  --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1513; --surface: #17201d; --sunk: #111915; --ink: #e4ebe8; --muted: #93a39c; --line: #2a3632;
+    --accent: #6bc3ae; --accent-ink: #0b1714; --banana: #e3c25a; --banana-ink: #231c02;
+    --warmth: #f07a5f; --tension: #a98af0; --trust: #4cc3ac; --bad: #ff8a80; --tong: #1a2b44; --tong-ink: #cfe0ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1513; --surface: #17201d; --sunk: #111915; --ink: #e4ebe8; --muted: #93a39c; --line: #2a3632;
+  --accent: #6bc3ae; --accent-ink: #0b1714; --banana: #e3c25a; --banana-ink: #231c02;
+  --warmth: #f07a5f; --tension: #a98af0; --trust: #4cc3ac; --bad: #ff8a80; --tong: #1a2b44; --tong-ink: #cfe0ff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; max-width: 1360px; margin: 0 auto; }
+header.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin-bottom: 18px; }
+h1 { font: 34px/1.1 var(--display); margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; max-width: 70ch; }
+.grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+aside { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 16px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); max-height: calc(100vh - 24px); overflow: auto; }
+@media (max-width: 860px) { aside { position: static; max-height: none; } }
+.label { font: 500 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: 64px minmax(0,1fr) 36px; align-items: center; gap: 8px; }
+.row output { font: 13px var(--mono); text-align: right; font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+select, input[type=number] { font: inherit; font-size: 14px; color: var(--ink); background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; width: 100%; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+.seg button { font: 13px var(--mono); border: 0; background: var(--sunk); color: var(--ink); padding: 6px 0; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); }
+.checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.chk { display: inline-flex; align-items: center; gap: 5px; font: 12px var(--mono); background: var(--sunk); border: 1px solid var(--line); border-radius: 5px; padding: 3px 7px; cursor: pointer; }
+.chk input { margin: 0; accent-color: var(--accent); }
+.derived { display: flex; flex-wrap: wrap; gap: 6px; font: 12px var(--mono); }
+.pill { border: 1px solid var(--line); border-radius: 5px; padding: 2px 7px; background: var(--sunk); }
+.pill.on { background: var(--banana); color: var(--banana-ink); border-color: transparent; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+main { display: grid; gap: 16px; min-width: 0; }
+.picker { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.picker select { font-size: 15px; padding: 8px 10px; }
+.scenehead { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 10px; }
+.scenehead h2 { font: 26px/1.15 var(--display); margin: 0; text-wrap: balance; }
+.scenehead h2 small { font: 15px var(--body); color: var(--muted); margin-left: 8px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; font: 12px var(--mono); color: var(--muted); }
+.meta span { background: var(--sunk); border-radius: 5px; padding: 2px 7px; }
+.gate-ok { color: var(--trust); } .gate-no { color: var(--bad); }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; }
+button.btn { font: 500 14px var(--body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+button.btn:hover { border-color: var(--accent); }
+button.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs button { font: 500 14px var(--body); background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; color: var(--muted); cursor: pointer; }
+.tabs button[aria-selected=true] { color: var(--ink); border-bottom-color: var(--accent); }
+.stage { display: grid; gap: 10px; }
+.beat { display: grid; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.who { font: 500 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ko { font-size: 18px; line-height: 1.45; }
+.en { color: var(--muted); font-size: 14px; }
+.note { font-size: 13px; color: var(--muted); font-style: italic; }
+.narr .ko { font-size: 15px; font-style: italic; }
+.tong { background: var(--tong); color: var(--tong-ink); border-radius: 8px; padding: 8px 10px; font-size: 14px; display: grid; gap: 2px; }
+.tong b { font: 500 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.ex { border: 1px dashed var(--accent); border-radius: 8px; padding: 8px 10px; font-size: 14px; display: grid; gap: 6px; }
+.ex code { font: 13px var(--mono); }
+.ex .res { font: 12px var(--mono); }
+.choices { display: grid; gap: 6px; }
+.choice { text-align: left; display: grid; grid-template-columns: auto minmax(0,1fr); gap: 2px 10px; align-items: baseline; font: inherit; background: var(--sunk); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+.choice:hover:not([disabled]) { border-color: var(--accent); }
+.choice .intent { font: 11px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); grid-row: span 2; min-width: 70px; }
+.choice .say-ko { font-size: 16px; }
+.choice .say-en { font-size: 13px; color: var(--muted); }
+.choice[disabled] { opacity: 0.5; cursor: not-allowed; }
+.choice .why { font: 11px var(--mono); color: var(--bad); grid-column: 2; }
+.picked { border-left: 3px solid var(--banana); padding-left: 10px; display: grid; gap: 2px; }
+.picked .me { font: 11px var(--mono); color: var(--muted); }
+.deltas { display: flex; flex-wrap: wrap; gap: 6px; font: 12px var(--mono); }
+.d { border-radius: 5px; padding: 1px 6px; border: 1px solid currentColor; font-variant-numeric: tabular-nums; }
+.d.warmth { color: var(--warmth); } .d.tension { color: var(--tension); } .d.trust { color: var(--trust); }
+.d.flag { color: var(--muted); } .d.mem { color: var(--banana-ink); background: var(--banana); border-color: transparent; }
+.d.stage { color: var(--accent-ink); background: var(--accent); border-color: transparent; }
+.d.block { color: var(--bad); }
+.end { font: 12px var(--mono); color: var(--muted); text-align: center; padding: 6px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.col { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.col h3 { font: 19px/1.2 var(--display); margin: 0; }
+.col .cfg { font: 11px var(--mono); color: var(--muted); }
+.mini { display: grid; gap: 2px; border-top: 1px solid var(--line); padding-top: 6px; }
+.mini .ko { font-size: 15px; }
+.mini .en { font-size: 12.5px; }
+.final { font: 12px var(--mono); display: flex; flex-wrap: wrap; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
+.axes-now { display: grid; gap: 4px; }
+.bar { display: grid; grid-template-columns: 64px minmax(0,1fr) 54px; gap: 8px; align-items: center; font: 12px var(--mono); }
+.bar i { display: block; height: 6px; border-radius: 3px; background: var(--sunk); position: relative; overflow: hidden; }
+.bar i b { position: absolute; inset: 0 auto 0 0; border-radius: 3px; }
+.phone { width: min(380px, 100%); margin: 0 auto; background: #b2c7d9; border-radius: 22px; padding: 10px; display: grid; gap: 8px; color: #111; }
+.phone { --kk-bg: #b2c7d9; --kk-me: #fee66b; --kk-them: #ffffff; --kk-ink: #111; --kk-meta: #4b5a66; }
+.phone .head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; padding: 4px 6px; color: var(--kk-ink); }
+.phone .head span { font: 11px var(--mono); color: var(--kk-meta); }
+.msgs { display: grid; gap: 6px; padding: 4px; }
+.m { display: flex; gap: 6px; align-items: flex-end; }
+.m.me { flex-direction: row-reverse; }
+.bub { max-width: 78%; border-radius: 12px; padding: 7px 10px; background: var(--kk-them); color: var(--kk-ink); font-size: 14.5px; display: grid; gap: 2px; }
+.m.me .bub { background: var(--kk-me); }
+.bub .tr { font-size: 12px; color: #55606a; }
+.bub.del { background: transparent; border: 1px dashed #7a8a96; color: #4b5a66; font-style: italic; }
+.bub.photo { background: #e9eef2; }
+.bub.photo .ph { aspect-ratio: 4 / 3; max-width: 100%; border-radius: 8px; background: repeating-linear-gradient(135deg, #d4dde4 0 10px, #c7d2db 10px 20px); display: grid; place-items: center; font: 11px var(--mono); color: #4b5a66; padding: 6px; text-align: center; }
+.ts { font: 10px var(--mono); color: var(--kk-meta); display: grid; justify-items: end; }
+.m.me .ts { justify-items: start; }
+.ts .one { color: #c9a400; font-weight: 600; }
+.sysmsg { text-align: center; font: 11px var(--mono); color: var(--kk-meta); }
+.replies { display: grid; gap: 6px; padding: 4px; }
+.replies .choice { background: rgba(255,255,255,0.85); color: #111; border-color: rgba(0,0,0,0.12); }
+.replies .choice .intent { color: #1f6356; }
+.replies .choice .say-en { color: #4b5a66; }
+.phone .deltas { padding: 0 6px; }
+.phone .d.warmth { color: #a3361f; } .phone .d.tension { color: #5a2fae; } .phone .d.trust { color: #0f6b5c; } .phone .d.flag { color: #36434d; }
+.canon { display: grid; gap: 12px; }
+.canon section { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.canon h3 { font: 20px var(--display); margin: 0; }
+.canon ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.canon li { max-width: 80ch; }
+.canon .k { font: 12px var(--mono); color: var(--muted); }
+.empty { color: var(--muted); padding: 20px; text-align: center; }
+@media (prefers-reduced-motion: no-preference) { .beat, .m { animation: rise .18s ease-out both; } @keyframes rise { from { transform: translateY(4px); opacity: .6; } } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Tong Relationship Lab</h1>
+    <p class="sub">Set a starting state, pick a scene, and play it. Same seed and choices replay the same night. Numbers are visible here; in the game she only shows them through her Korean.</p>
+  </header>
+  <div class="grid">
+    <aside aria-label="Starting state">
+      <fieldset>
+        <span class="label">Stage</span>
+        <select id="stage"></select>
+      </fieldset>
+      <fieldset id="axes"><span class="label">Feeling (hidden in game)</span></fieldset>
+      <fieldset id="moodf"><span class="label">Mood</span></fieldset>
+      <fieldset>
+        <span class="label">World</span>
+        <div class="two">
+          <label><span class="label">Hour</span><input id="hour" type="number" min="0" max="23"></label>
+          <label><span class="label">Seed</span><input id="seed" type="number"></label>
+        </div>
+        <div class="two">
+          <label><span class="label">Weather</span><select id="weather"><option>clear</option><option>rain</option><option>cold</option><option>snow</option><option>humid</option></select></label>
+          <label><span class="label">Korean level</span><input id="level" type="number" min="0" max="6"></label>
+        </div>
+        <span class="label">How you answer (input tier)</span>
+        <div class="seg" id="tier" role="group" aria-label="Input tier"></div>
+      </fieldset>
+      <fieldset><span class="label">Flags this scene reads</span><div class="checks" id="flags"></div></fieldset>
+      <fieldset><span class="label">What you know</span><div class="checks" id="knows"></div></fieldset>
+      <fieldset><span class="label">Memories</span><div class="checks" id="mems"></div></fieldset>
+      <fieldset><span class="label">Derived</span><div class="derived" id="derived"></div></fieldset>
+      <fieldset><span class="label">Now (after your choices)</span><div class="axes-now" id="now"></div></fieldset>
+    </aside>
+    <main>
+      <div class="picker">
+        <label><span class="label">Scene</span><select id="scene"></select></label>
+        <button class="btn primary" id="restart">Restart</button>
+      </div>
+      <div class="scenehead" id="head"></div>
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div id="view"></div>
+    </main>
+  </div>
+</div>
+
+<script type="module">
+const STAGES = ['strangers', 'acquaintances', 'friends', 'close', 'romantic_tension', 'partners'];
+export const stageIndex = (s) => STAGES.indexOf(s);
+/* ── Seeded RNG ────────────────────────────────────────── */
+function hash(str) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h;
+}
+/** mulberry32 seeded from save seed + a key ("mood:haeun:d12"). */
+export function rng(seed, key) {
+    let a = (seed ^ hash(key)) >>> 0;
+    return () => {
+        a = (a + 0x6d2b79f5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+const CAUSE_SHIFT = {
+    eval_top: { valence: 2, energy: 1 },
+    eval_passed: { valence: 1 },
+    eval_flagged: { valence: -2, energy: -1 },
+    homesick: { valence: -1 },
+    // Hidden causes: nothing to do with the player.
+    call_from_home: { valence: -1 },
+    senior_snapped: { valence: -1, energy: 1 },
+    no_sleep: { energy: -2 },
+    good_sleep: { energy: 1 },
+    small_win: { valence: 1 },
+};
+const HIDDEN_CAUSES = ['call_from_home', 'senior_snapped', 'no_sleep', 'good_sleep', 'small_win'];
+/** Today's mood. Same seed + day + inputs = same mood. */
+export function moodFor(characterId, day, seed, inputs) {
+    const r = rng(seed, `mood:${characterId}:d${day}`);
+    const causes = [...inputs.scheduled];
+    // Volatile characters pick up hidden causes more often.
+    if (r() < 0.25 + inputs.volatility * 0.35)
+        causes.push(HIDDEN_CAUSES[Math.floor(r() * HIDDEN_CAUSES.length)]);
+    let energy = 0;
+    let valence = inputs.lastHangout * 0.5;
+    for (const c of causes) {
+        energy += CAUSE_SHIFT[c]?.energy ?? 0;
+        valence += CAUSE_SHIFT[c]?.valence ?? 0;
+    }
+    const clamp = (n) => Math.max(-2, Math.min(2, Math.round(n)));
+    return { energy: clamp(energy), valence: clamp(valence), causes };
+}
+export function moodTag(m) {
+    if (m.valence <= -2)
+        return 'raw';
+    if (m.valence < 0 || m.energy <= -2)
+        return 'low';
+    if (m.valence >= 2)
+        return 'high';
+    return 'ok';
+}
+/* ── Leak ──────────────────────────────────────────────── */
+/** Typical warmth ceiling per stage; past it, the relationship leaks through (반말 slips, unprompted texts). */
+const LEAK_AT = {
+    strangers: 25,
+    acquaintances: 40,
+    friends: 60,
+    close: 75,
+    romantic_tension: 90,
+    partners: 101,
+};
+export const leaks = (s) => s.axes.warmth >= LEAK_AT[s.stage];
+/* ── Conditions ────────────────────────────────────────── */
+export function month(day) {
+    return Math.ceil(day / 28);
+}
+function inHours(hour, w) {
+    return w.from <= w.to ? hour >= w.from && hour <= w.to : hour >= w.from || hour <= w.to;
+}
+export function matches(c, s, w) {
+    if (!c)
+        return true;
+    const si = stageIndex(s.stage);
+    if (c.stage && !c.stage.includes(s.stage))
+        return false;
+    if (c.stageAtLeast && si < stageIndex(c.stageAtLeast))
+        return false;
+    if (c.stageBelow && si >= stageIndex(c.stageBelow))
+        return false;
+    for (const [k, v] of Object.entries(c.min ?? {}))
+        if (s.axes[k] < v)
+            return false;
+    for (const [k, v] of Object.entries(c.max ?? {}))
+        if (s.axes[k] > v)
+            return false;
+    const flag = (f) => !!(s.flags[f] || w.flags?.[f]);
+    if (c.flags?.some((f) => !flag(f)))
+        return false;
+    if (c.notFlags?.some(flag))
+        return false;
+    for (const [k, b] of Object.entries(c.tally ?? {})) {
+        const n = w.tally?.[k] ?? 0;
+        if ((b.min !== undefined && n < b.min) || (b.max !== undefined && n > b.max))
+            return false;
+    }
+    if (c.knows?.some((f) => !s.knows[f]))
+        return false;
+    if (c.notKnows?.some((f) => s.knows[f]))
+        return false;
+    if (c.memories?.some((t) => !s.memories.some((m) => m.tag === t)))
+        return false;
+    if (c.mood && !c.mood.includes(moodTag(s.mood)))
+        return false;
+    if (c.weather && !c.weather.includes(w.weather))
+        return false;
+    if (c.hours && !inHours(w.hour, c.hours))
+        return false;
+    if (c.month && (month(s.day) < c.month.from || month(s.day) > c.month.to))
+        return false;
+    if (c.minLevel !== undefined && w.playerLevel < c.minLevel)
+        return false;
+    if (c.minTier !== undefined && w.inputTier < c.minTier)
+        return false;
+    if (c.leak !== undefined && leaks(s) !== c.leak)
+        return false;
+    if (c.any && !c.any.some((sub) => matches(sub, s, w)))
+        return false;
+    return true;
+}
+export function pick(variants, s, w) {
+    return variants.find((v) => matches(v.when, s, w))?.value;
+}
+/* ── Milestones ────────────────────────────────────────── */
+/**
+ * A stage only changes at a beat that asks for it (Effects.stageTo), and only
+ * when that beat's milestone is eligible. Numbers make a transition possible;
+ * a scene makes it happen.
+ */
+export const STAGE_MILESTONES = {
+    acquaintances: {},
+    friends: { any: [{ min: { warmth: 30 }, flags: ['first_secret'] }, { min: { tension: 40 }, flags: ['outscored_her'] }] },
+    close: { min: { trust: 50 }, flags: ['rooftop_done'] },
+    romantic_tension: { min: { warmth: 65 }, flags: ['spark'], any: [{ flags: ['haeun_opened'] }, { flags: ['haeun_armored'] }] },
+    partners: { flags: ['confessed'] },
+};
+export function canAdvanceTo(to, s, w) {
+    if (to === 'strangers')
+        return false;
+    if (stageIndex(to) !== stageIndex(s.stage) + 1)
+        return false;
+    return matches(STAGE_MILESTONES[to], s, w);
+}
+const clamp100 = (n) => Math.max(0, Math.min(100, n));
+export function applyEffects(s, e, w) {
+    const next = {
+        ...s,
+        axes: { ...s.axes },
+        flags: { ...s.flags },
+        knows: { ...s.knows },
+        memories: [...s.memories],
+    };
+    for (const [k, v] of Object.entries(e.deltas ?? {})) {
+        next.axes[k] = clamp100(next.axes[k] + v);
+    }
+    for (const f of e.setFlags ?? [])
+        next.flags[f] = true;
+    for (const f of e.learn ?? [])
+        next.knows[f] = true;
+    if (e.memory)
+        next.memories.push({ ...e.memory, day: s.day });
+    let world = w;
+    if (e.setFlags?.length || e.tally?.length) {
+        world = { ...w, flags: { ...w.flags }, tally: { ...w.tally } };
+        for (const f of e.setFlags ?? [])
+            world.flags[f] = true;
+        for (const k of e.tally ?? [])
+            world.tally[k] = (world.tally[k] ?? 0) + 1;
+    }
+    const out = { state: next, world };
+    if (e.stageTo) {
+        if (canAdvanceTo(e.stageTo, next, world)) {
+            out.stageChanged = { from: next.stage, to: e.stageTo };
+            next.stage = e.stageTo;
+        }
+        else if (stageIndex(e.stageTo) > stageIndex(next.stage)) {
+            out.stageBlocked = e.stageTo;
+        }
+    }
+    return out;
+}
+/* ── Choices ───────────────────────────────────────────── */
+/** Options the player can see right now. Tier-gated replies are hidden, not greyed out. */
+export function availableChoices(b, s, w) {
+    return (b.choices ?? []).filter((c) => matches(c.gate, s, w) && (c.minTier ?? 0) <= w.inputTier);
+}
+/**
+ * Resolve a choice. `tier` is the tier the player actually used; tier 0
+ * (Tong speaks) is marked so scenes and memories can react to it.
+ */
+export function resolveChoice(c, s, w, tier) {
+    const usedTong = tier === 0;
+    const probe = usedTong ? { ...s, flags: { ...s.flags, used_tong_last: true } } : { ...s, flags: { ...s.flags, used_tong_last: false } };
+    const outcome = c.outcomes.find((o) => matches(o.when, probe, w)) ?? c.outcomes[c.outcomes.length - 1];
+    const applied = applyEffects(probe, outcome, w);
+    return { ...applied, outcome, tier };
+}
+/**
+ * The line Tong offers for a beat, or nothing once the player has outgrown it,
+ * or when the player agreed to switch Tong off around this character
+ * (flag `tong_off_with_<characterId>`, e.g. Jin's "you don't need the translator with me").
+ */
+export function tongFor(b, w, characterId) {
+    if (!b.tong)
+        return undefined;
+    if (characterId && w.flags?.[`tong_off_with_${characterId}`])
+        return undefined;
+    if (b.tong.maxLevel !== undefined && w.playerLevel > b.tong.maxLevel)
+        return undefined;
+    return b.tong;
+}
+/* ── The player's name ─────────────────────────────────── */
+/** True / false when the name's last syllable has a final consonant (받침); null for non-Hangul names. */
+function hasBatchim(name) {
+    const c = name.trim().charCodeAt(name.trim().length - 1);
+    if (!(c >= 0xac00 && c <= 0xd7a3))
+        return null;
+    return (c - 0xac00) % 28 !== 0;
+}
+/**
+ * Fills {name}, choosing the particle that follows it: {name}이에요 → 테오예요 / 지민이에요,
+ * {name}아 (calling someone) → 테오야 / 지민아. Non-Hangul names get the neutral form.
+ */
+export function fillName(text, name) {
+    const b = hasBatchim(name);
+    return text
+        .replaceAll('{name}이에요', `${name}${b === null ? '(이)에요' : b ? '이에요' : '예요'}`)
+        .replace(/\{name\}아(?![가-힣])/g, `${name}${b === null ? '' : b ? '아' : '야'}`)
+        .replaceAll('{name}', name);
+}
+const passed = (r, key) => (typeof r === 'object' ? r[key] ?? true : r ?? true);
+const withFlag = (s, flag, v) => ({ ...s, flags: { ...s.flags, [flag]: v } });
+export function runScene(scene, start, world, choose, tier = world.inputTier, exercises) {
+    if (!matches(scene.gate, start, world))
+        return { gated: true, log: [], state: start, world };
+    const byId = new Map(scene.beats.map((b) => [b.id, b]));
+    const log = [];
+    let s = start;
+    let w = world;
+    let beat = scene.beats[0];
+    for (let guard = 0; beat && guard < 200; guard++) {
+        if (beat.when && !matches(beat.when, s, w)) {
+            beat = beat.next ? byId.get(beat.next) : undefined;
+            continue;
+        }
+        if (beat.exercise) {
+            const ok = passed(exercises, beat.id);
+            s = withFlag(s, `ex_${beat.id}`, ok);
+        }
+        const step = { beatId: beat.id, speaker: beat.speaker, line: pick(beat.lines, s, w), tong: tongFor(beat, w, scene.characterId) };
+        if (beat.exercise)
+            step.exercise = { hook: beat.exercise, passed: !!s.flags[`ex_${beat.id}`] };
+        if (beat.effects) {
+            const a = applyEffects(s, beat.effects, w);
+            s = a.state;
+            w = a.world;
+            if (a.stageChanged)
+                step.stageChanged = a.stageChanged;
+        }
+        let next = beat.next;
+        const options = availableChoices(beat, s, w);
+        const chosen = options.length ? choose(options, beat) : undefined;
+        if (chosen) {
+            if (chosen.exercise) {
+                const key = `${beat.id}_${chosen.id}`;
+                const ok = passed(exercises, key);
+                s = withFlag(s, `ex_${key}`, ok);
+                step.exercise = { hook: chosen.exercise, passed: ok };
+            }
+            const r = resolveChoice(chosen, s, w, Math.min(tier, w.inputTier));
+            s = r.state;
+            w = r.world;
+            Object.assign(step, { choice: chosen.id, reaction: r.outcome.reaction, deltas: r.outcome.deltas });
+            if (r.stageChanged)
+                step.stageChanged = r.stageChanged;
+            next = r.outcome.next ?? next;
+        }
+        log.push(step);
+        if (beat.end)
+            break;
+        beat = next ? byId.get(next) : undefined;
+    }
+    return { gated: false, log, state: s, world: w };
+}
+/* ── Presets ───────────────────────────────────────────── */
+export const DEFAULT_WORLD = { hour: 21, weather: 'clear', playerLevel: 1, inputTier: 1, seed: 7 };
+export function presetState(characterId, p) {
+    const base = initialState(characterId);
+    const state = {
+        ...base,
+        ...p.state,
+        axes: { ...base.axes, ...p.state.axes },
+        mood: { ...base.mood, ...p.state.mood },
+    };
+    return { state, world: { ...DEFAULT_WORLD, ...p.world } };
+}
+/** Picker that follows a preset's path (choice ids in order), else the first option. */
+export function pathPicker(path = []) {
+    const queue = [...path];
+    return (choices) => {
+        const i = choices.findIndex((c) => c.id === queue[0]);
+        if (i >= 0) {
+            queue.shift();
+            return choices[i];
+        }
+        return choices[0];
+    };
+}
+export function playPreset(scene, p) {
+    const { state, world } = presetState(scene.characterId, p);
+    return { ...runScene(scene, state, world, pathPicker(p.path), world.inputTier, p.exercises), start: state };
+}
+const DIMINISH = [1, 0.5, 0.25, 0];
+/**
+ * An ambient bid's effect: need match × mood × specificity × diminishing returns.
+ * Deterministic: no randomness, so players can learn her.
+ */
+export function resolveBid(bid, needs, s, w) {
+    if (!matches(bid.gate, s, w))
+        return { allowed: false };
+    if (bid.backfire && matches(bid.backfire.when, s, w)) {
+        const a = applyEffects(s, { deltas: bid.backfire.deltas }, w);
+        return { allowed: true, reaction: bid.backfire.reaction, state: bumpBid(a.state, bid.id), deltas: bid.backfire.deltas };
+    }
+    const fit = Math.max(0, ...bid.expresses.map((l) => needs.feels[l] ?? 0));
+    const specific = !!bid.specificTo?.some((t) => s.memories.some((m) => m.tag === t));
+    const tag = moodTag(s.mood);
+    const moodMul = tag === 'raw' || tag === 'low' ? 1.5 : 1; // small kindnesses count more on bad days
+    const n = s.bidsThisWeek[bid.id] ?? 0;
+    const mul = fit * moodMul * (specific ? 2 : 1) * (DIMINISH[n] ?? 0);
+    const deltas = {};
+    for (const [k, v] of Object.entries(bid.base))
+        deltas[k] = Math.round(v * mul);
+    const a = applyEffects(s, { deltas }, w);
+    const reaction = n >= 2 ? { ko: '또?', en: 'Again?' } : specific && bid.specificReaction ? bid.specificReaction : bid.reaction;
+    return { allowed: true, reaction, state: bumpBid(a.state, bid.id), deltas };
+}
+function bumpBid(s, id) {
+    return { ...s, bidsThisWeek: { ...s.bidsThisWeek, [id]: (s.bidsThisWeek[id] ?? 0) + 1 } };
+}
+/* ── Defaults ──────────────────────────────────────────── */
+export function initialState(characterId) {
+    return {
+        characterId,
+        stage: 'strangers',
+        axes: { warmth: 10, tension: 10, trust: 10 },
+        mood: { energy: 0, valence: 0, causes: [] },
+        memories: [],
+        flags: {},
+        knows: {},
+        day: 1,
+        bidsThisWeek: {},
+    };
+}
+/** Legacy single number for existing UI and the cozy bridge (affinity 0–100). */
+export function legacyAffinity(s) {
+    const base = [5, 25, 45, 65, 80, 92][stageIndex(s.stage)];
+    return Math.max(0, Math.min(100, Math.round(base + (s.axes.warmth + s.axes.trust - 2 * 50) / 20)));
+}
+
+const DATA = {"scenes":[{"scene":{"id":"haeun.h0","kind":"story","title":{"ko":"첫날","en":"Day one"},"characterId":"haeun","location":"agency_lockers","slot":"m1.s0","gate":{"month":{"from":1,"to":1}},"summary":"You arrive at Onsae (Tong has already introduced itself at the start of the game). Your locker has a half-scraped name label (수아) and a notebook jammed behind the drawer. Keep it, hand it in, or leave it. A girl slams her locker without looking at you. Coach Park: studio, 10am.","seeds":["knows.sua_name (from the label)","notebook_kept / notebook_handed_in / notebook_left","first glimpse of Haeun"],"beats":[{"id":"h0_open","speaker":"narration","lines":[{"when":{"weather":["rain"]},"value":{"ko":"홍대, 3월. 비.","en":"Hongdae, March. Rain on the glass doors of Onsae Entertainment. Your suitcase is soaked."}},{"value":{"ko":"홍대, 3월.","en":"Hongdae, March. The glass doors of Onsae Entertainment. Your suitcase wheel is already broken."}}],"tong":{"ko":"여기야! 온새 엔터.","en":"This is it: your agency. Tap me any time and I'll help, but the more you do yourself, the more people here will notice.","maxLevel":1},"next":"h0_tong_blocks"},{"id":"h0_tong_blocks","speaker":"tong","when":{"minLevel":0},"lines":[{"when":{"minLevel":2},"value":{"ko":"한글은 이미 좀 읽네? 좋아.","en":"You already read some Hangul? Good. I'll stay quiet unless you need me."}},{"value":{"ko":"한글은 블록이야.","en":"Korean is written in blocks. Each block is one syllable: a consonant, a vowel, sometimes one more underneath. You'll be reading signs by tonight."}}],"next":"h0_choi"},{"id":"h0_choi","speaker":"manager_choi","expr":"neutral","lines":[{"value":{"ko":"외국인 연습생이죠? 이쪽이에요. 사물함은 여기 써요.","en":"You're the foreign trainee? This way. Use this locker.","review":"native"}}],"tong":{"ko":"사물함 = 락커!","en":"사물함 (samulham) = locker.","maxLevel":2},"effects":{"vocab":[{"ko":"사물함","en":"locker","rom":"samulham"}]},"next":"h0_label"},{"id":"h0_label","speaker":"narration","lines":[{"value":{"ko":"ㅅ…아","en":"An old name label on the locker door, half scraped off. Masking tape and marker. Someone peeled it and gave up."}}],"exercise":{"type":"block_crush","objectiveId":"ko-script-blocks-2part","targets":["수아"],"distractors":["ㅇ","ㅗ"],"framing":{"ko":"이름을 맞춰 봐.","en":"Rebuild the name on the scraped label."},"onFail":"assist"},"next":"h0_label_pass"},{"id":"h0_label_pass","speaker":"narration","when":{"flags":["ex_h0_label"]},"lines":[{"value":{"ko":"수아.","en":"Su-a. Someone's name. Not yours. This was someone's locker last week."}}],"effects":{"learn":["sua_name"],"setFlags":["read_locker_label"],"memory":{"tag":"read_sua_label","note":"Read \"수아\" on your locker label yourself on day one."}},"next":"h0_label_assist"},{"id":"h0_label_assist","speaker":"tong","when":{"notFlags":["ex_h0_label"]},"lines":[{"when":{"minTier":1},"value":{"ko":"거의! ㅅ이야. 수아.","en":"Almost! That's ㅅ (s), not ㅇ. 수아, Su-a. A name. Someone had this locker before you."}},{"value":{"ko":"수아. 이름이야.","en":"\"수아\", Su-a. Probably whoever had this locker before you."}}],"effects":{"learn":["sua_name"]},"next":"h0_drawer"},{"id":"h0_drawer","speaker":"narration","lines":[{"value":{"ko":"서랍이 안 닫힌다.","en":"The drawer won't close. Something is jammed behind it: a practice notebook, soft at the corners. Pages of handwriting you can't read yet. Counts, arrows, a doodle of a girl with stars around her."}}],"choices":[{"id":"h0_keep","intent":"commit","say":{"ko":"(가방에 넣는다)","en":"Put it in your bag. You'll figure out whose it is."},"outcomes":[{"speaker":"narration","reaction":{"ko":"…","en":"It's heavier than it looks."},"setFlags":["notebook_kept"],"memory":{"tag":"found_notebook","note":"Found a notebook behind the locker drawer and kept it."}}]},{"id":"h0_hand_in","intent":"defer","say":{"ko":"이거… 여기 있었어요.","en":"Hand it to Manager Choi: \"This… was in here.\"","rom":"igeo… yeogi isseosseoyo"},"outcomes":[{"speaker":"manager_choi","expr":"thinking","reaction":{"ko":"아… 제가 가져갈게요.","en":"Ah… I'll take that.","note":"She looks at the cover a second too long, then pockets it.","review":"native"},"setFlags":["notebook_handed_in"],"memory":{"tag":"handed_in_notebook","note":"Handed the notebook to Manager Choi on day one."}}]},{"id":"h0_leave","intent":"leave","say":{"ko":"(다시 넣어 둔다)","en":"Push it back where it was. Not yours."},"outcomes":[{"speaker":"narration","reaction":{"ko":"…","en":"The drawer still won't close properly."},"setFlags":["notebook_left"]}]}],"next":"h0_glimpse"},{"id":"h0_glimpse","speaker":"narration","lines":[{"value":{"ko":"쾅.","en":"Bang. At the far end of the corridor a girl shuts her locker, headphones in, and walks past without looking at you."}}],"effects":{"setFlags":["glimpsed_haeun"]},"next":"h0_coach"},{"id":"h0_coach","speaker":"coach_park","expr":"neutral","lines":[{"value":{"ko":"새로 온 연습생? 내일 아침 열 시, 연습실. 늦지 마요.","en":"The new trainee? Tomorrow, 10am, the studio. Don't be late.","review":"native"}}],"tong":{"ko":"연습실 = 연습 + 실(방)!","en":"연습실 = 연습 (practice) + 실 (room). Practice room. You'll live there now.","maxLevel":2},"effects":{"setFlags":["h0_done"],"vocab":[{"ko":"연습실","en":"practice room","rom":"yeonseupsil"}]},"end":true}]},"presets":[{"id":"h0_tier0","label":"Fresh start, no Hangul (tier 0): Tong reads the label, keeps the notebook","state":{"day":1},"world":{"playerLevel":0,"inputTier":0,"hour":15,"weather":"rain"},"path":["h0_keep"],"exercises":false},{"id":"h0_tier1","label":"Learned the blocks (tier 1): reads 수아 herself, keeps the notebook","state":{"day":1},"world":{"playerLevel":1,"inputTier":1,"hour":15,"weather":"clear"},"path":["h0_keep"]},{"id":"h0_tier2_handin","label":"Placement-tested (tier 2): Tong stays quiet, hands the notebook in","state":{"day":1},"world":{"playerLevel":3,"inputTier":2,"hour":15,"weather":"clear"},"path":["h0_hand_in"]}]},{"scene":{"id":"haeun.h1","kind":"story","title":{"ko":"짝","en":"Paired"},"characterId":"haeun","location":"practice_studio","slot":"m1.s1","gate":{"flags":["h0_done"],"month":{"from":1,"to":1}},"summary":"Coach Park: \"하은이 옆에 서.\" You find her by reading the water-bottle tags. Minji whispers that you took Sua's spot. Haeun, impeccably polite with a perfect smile: \"안녕하세요, 하은이에요. 저랑 짝이래요. 잘 부탁해요.\" Textbook, and she never asks your name. How you answer sets the first temperature: in stride, a register slip, asking about Sua straight out, or asking her to teach you.","seeds":["memory asked_straight (re-read at the rooftop)","tong_seen_once (her \"또 그거 써요?\")","banmal_too_early"],"beats":[{"id":"h1_open","speaker":"narration","lines":[{"value":{"ko":"연습실. 오전 10시.","en":"The studio, 10am. A mirror wall. A ranking sheet taped by the door. A row of water bottles on the floor, each with a name on masking tape."}}],"next":"h1_whisper"},{"id":"h1_whisper","speaker":"minji","expr":"smirk","lines":[{"value":{"ko":"쟤가 수아 자리 들어온 애래.","en":"That's the one who took Sua's spot.","review":"native"}}],"tong":{"ko":"너 얘기야. 자리 = 자리, spot.","en":"They're talking about you. 자리 (jari) = seat, spot.","maxLevel":2},"effects":{"learn":["sua_name"],"setFlags":["heard_whisper"]},"next":"h1_whisper_echo"},{"id":"h1_whisper_echo","speaker":"narration","lines":[{"when":{"flags":["read_locker_label"]},"value":{"ko":"수아.","en":"Su-a. The name you read on your locker yesterday."}},{"when":{"knows":["sua_name"],"memories":["found_notebook"]},"value":{"ko":"수아.","en":"Su-a. The locker. Maybe the notebook in your bag."}},{"value":{"ko":"수아.","en":"Su-a. Whoever that is, you're standing where she used to."}}],"next":"h1_coach"},{"id":"h1_coach","speaker":"coach_park","expr":"neutral","lines":[{"value":{"ko":"하은이 옆에 서.","en":"Stand next to Ha-eun."}}],"tong":{"ko":"하은이 누구지? 물병 봐!","en":"Which one is 하은? Check the names on the water bottles.","maxLevel":1},"exercise":{"type":"multiple_choice","objectiveId":"ko-rel-read-names","targets":["하은"],"distractors":["하늘","은하","민지"],"framing":{"ko":"하은 물병은 어느 거예요?","en":"Which bottle says 하은?"},"onFail":"assist"},"next":"h1_tags_pass"},{"id":"h1_tags_pass","speaker":"narration","when":{"flags":["ex_h1_coach"]},"lines":[{"value":{"ko":"…","en":"You stand by the bottle that says 하은. The girl from the corridor. She glances at the bottle, then at you. You found her yourself; she noticed."}}],"effects":{"setFlags":["read_haeun"],"deltas":{"warmth":2}},"next":"h1_tags_misread"},{"id":"h1_tags_misread","speaker":"yerin","expr":"laugh","when":{"notFlags":["ex_h1_coach"],"minTier":1},"lines":[{"value":{"ko":"저 하늘인데요?","en":"Um, I'm Ha-neul?","note":"You stood by the wrong bottle. Coach Park points. The girl from the corridor doesn't laugh.","review":"native"}}],"effects":{"setFlags":["misread_name"],"deltas":{"tension":3}},"next":"h1_tags_tong"},{"id":"h1_tags_tong","speaker":"tong","when":{"notFlags":["ex_h1_coach","misread_name"]},"lines":[{"value":{"ko":"저 물병! 하은.","en":"\"하은\", the one on the left.","note":"You held up your phone to read the tags. Ha-eun watches your phone talk. She says nothing."}}],"effects":{"setFlags":["tong_seen_once"]},"next":"h1_meet"},{"id":"h1_meet","speaker":"haeun","expr":"cool","lines":[{"when":{"flags":["misread_name"]},"value":{"ko":"아, 하은이에요. 저랑 짝이래요. 잘 부탁해요.","en":"Oh, I'm Ha-eun. Apparently we're partners. Nice to work with you.","note":"A perfect smile. She says it to the space just beside your face.","review":"native"}},{"value":{"ko":"안녕하세요, 하은이에요. 저랑 짝이래요. 잘 부탁해요.","en":"Hi, I'm Ha-eun. Apparently we're partners. Nice to work with you.","note":"A perfect smile. Textbook.","review":"native"}}],"tong":{"ko":"짝 = 파트너!","en":"짝 (jjak) = partner, pair. -래요 = \"apparently / they say.\"","maxLevel":2},"choices":[{"id":"h1_stride","intent":"commit","say":{"ko":"잘 부탁해요.","en":"Nice to work with you.","rom":"jal butakaeyo"},"outcomes":[{"when":{"flags":["used_tong_last","tong_seen_once"]},"speaker":"haeun","expr":"smirk","reaction":{"ko":"아, 또 앱이에요? 편하겠다~","en":"Oh, the app again? That must be handy~","note":"Still smiling.","review":"native"},"deltas":{"tension":3},"memory":{"tag":"tong_noticed","note":"She noticed you speaking through Tong on day one."}},{"when":{"flags":["used_tong_last"]},"speaker":"haeun","expr":"cool","reaction":{"ko":"네~","en":"Sure~","note":"Her eyes go to your phone, not to you."},"setFlags":["tong_seen_once"]},{"speaker":"haeun","expr":"cool","reaction":{"ko":"네~ 잘 부탁해요.","en":"Sure~ Nice to work with you.","note":"Then she turns back to the mirror."},"deltas":{"trust":2}}]},{"id":"h1_banmal","intent":"commit","minTier":1,"say":{"ko":"그래, 잘 부탁해.","en":"Cool, nice to work with you. (casual)","rom":"geurae, jal butakae","note":"반말 to someone you just met."},"outcomes":[{"speaker":"haeun","expr":"smirk","reaction":{"ko":"아… 네. 잘 부탁해요.","en":"Oh… sure. Nice to work with you.","note":"She answers in 존댓말 anyway. The smile doesn't move at all.","review":"native"},"deltas":{"tension":5},"memory":{"tag":"banmal_too_early","note":"Used 반말 with her the moment you met."},"vocab":[{"ko":"반말","en":"casual speech","rom":"banmal"}]}]},{"id":"h1_ask_sua","intent":"ask","say":{"ko":"수아가 누구예요?","en":"Who's Sua?","rom":"suaga nuguyeyo"},"outcomes":[{"speaker":"haeun","expr":"cool","reaction":{"ko":"아, 그냥 예전에 있던 친구예요. …음악 시작한대요.","en":"Oh, just a friend who used to be here. …Music's starting.","note":"Smooth. The subject is closed before you notice she closed it.","review":"native"},"deltas":{"warmth":-5,"tension":3},"memory":{"tag":"asked_straight","note":"Asked her about Sua to her face on day one while everyone else whispered."}}]},{"id":"h1_ask_teach","intent":"ask","say":{"ko":"한국어… 좀 가르쳐 줄 수 있어요?","en":"Could you… teach me some Korean?","rom":"hangugeo… jom gareuchyeo jul su isseoyo"},"outcomes":[{"when":{"flags":["read_haeun"]},"speaker":"haeun","expr":"thinking","reaction":{"ko":"와, 이름도 읽으시네요. 그럼요, 다음에 시간 될 때요~","en":"Wow, you can read names. Of course, sometime when we're free~","note":"\"다음에\". Next time never has a date.","review":"native"},"deltas":{"warmth":4}},{"speaker":"haeun","expr":"smirk","reaction":{"ko":"아~ 그럼요. 다음에 밥 한번 먹어요.","en":"Oh~ of course. Let's grab a meal sometime.","note":"Everyone says that. Nobody means it.","review":"native"},"deltas":{"tension":4,"warmth":-2},"memory":{"tag":"filed_as_weak","note":"Asked her to teach you before you could read her name."}}]}],"next":"h1_run"},{"id":"h1_run","speaker":"coach_park","lines":[{"value":{"ko":"음악 갈게요. 하나, 둘, 셋, 넷!","en":"Music's coming. One, two, three, four!"}}],"next":"h1_run_after"},{"id":"h1_run_after","speaker":"narration","lines":[{"when":{"mood":["raw","low"]},"value":{"ko":"…","en":"You're half a count behind the whole time. She isn't, but she isn't smiling either. She drills the same eight counts alone while everyone drinks water."}},{"value":{"ko":"…","en":"You're half a count behind the whole time. She isn't. In the mirror, once, she watches your feet."}}],"next":"h1_end"},{"id":"h1_end","speaker":"haeun","expr":"cool","lines":[{"when":{"memories":["asked_straight"]},"value":{"ko":"수고하셨어요~ 내일 봐요.","en":"Good work today~ See you tomorrow.","note":"Same smile. She doesn't look at you."}},{"when":{"memories":["filed_as_weak"]},"value":{"ko":"수고하셨어요. 내일은 아홉 시부터래요~","en":"Good work. Tomorrow starts at nine, apparently~","note":"Helpful. Pointed.","review":"native"}},{"value":{"ko":"수고하셨어요~ 내일 봐요.","en":"Good work today~ See you tomorrow."}}],"effects":{"stageTo":"acquaintances","setFlags":["h1_done"],"vocab":[{"ko":"짝","en":"partner, pair","rom":"jjak"}]},"tong":{"ko":"처음부터 끝까지 존댓말.","en":"She kept it all 존댓말.","maxLevel":4},"end":true}]},"presets":[{"id":"h1_tier0","label":"Tier 0: Tong reads the tags, then Tong speaks again (\"또 그거 써요?\")","state":{"day":2,"flags":{"h0_done":true},"knows":{"sua_name":true}},"world":{"playerLevel":0,"inputTier":0,"hour":10,"weather":"clear"},"path":["h1_stride"],"exercises":false},{"id":"h1_tier1_teach","label":"Tier 1: reads 하은 herself, asks her to teach","state":{"day":2,"flags":{"h0_done":true,"read_locker_label":true},"knows":{"sua_name":true}},"world":{"playerLevel":1,"inputTier":1,"hour":10,"weather":"clear"},"path":["h1_ask_teach"]},{"id":"h1_tier1_sua","label":"Tier 1, she's raw: misreads 하늘, asks about Sua straight out","state":{"day":2,"flags":{"h0_done":true},"knows":{"sua_name":true},"mood":{"valence":-2}},"world":{"playerLevel":1,"inputTier":1,"hour":10,"weather":"rain"},"path":["h1_ask_sua"],"exercises":{"h1_coach":false}},{"id":"h1_tier1_banmal","label":"Tier 1: register trap, 반말 on day one","state":{"day":2,"flags":{"h0_done":true},"knows":{"sua_name":true}},"world":{"playerLevel":1,"inputTier":1,"hour":10,"weather":"clear"},"path":["h1_banmal"]}]},{"scene":{"id":"haeun.h2","kind":"story","title":{"ko":"다시.","en":"Again."},"characterId":"haeun","location":"practice_studio","slot":"m1.s2","gate":{"flags":["h1_done"],"month":{"from":1,"to":1}},"summary":"21:40, three days before the placement eval. She drills you on eight counts in native numbers and says nothing but \"다시.\" Keep going, call her mean (clean Korean earns respect), comfort her (backfires if she's raw), or leave early (looks like a loss; pays off much later).","seeds":["memory left_early (re-read when cried_in_studio is revealed, close+)","memory comforted_early (re-read as pity in a later fight)","first 반말 slip"],"beats":[{"id":"h2_open","speaker":"narration","lines":[{"when":{"mood":["raw","low"]},"value":{"ko":"오후 9시 40분.","en":"21:40. Everyone else has gone. On the ranking sheet by the door, Coach Park has circled one line in red: 하은 — 보컬 약함 (vocals: weak)."}},{"value":{"ko":"오후 9시 40분.","en":"21:40. Everyone else has gone. She's running the bridge alone, perfectly, again."}}],"next":"h2_count"},{"id":"h2_count","speaker":"haeun","expr":"cool","lines":[{"value":{"ko":"아, 카운트가 헷갈리세요? 하나, 둘, 셋, 넷.","en":"Oh, are the counts confusing you? One, two, three, four.","note":"Extra-polite -세요. Helpful on the surface.","review":"native"}}],"tong":{"ko":"춤 카운트는 하나, 둘, 셋…","en":"Dance counts use native Korean numbers: 하나 둘 셋 넷 다섯 여섯 일곱 여덟. Not 일 이 삼 사, those are for money and dates.","maxLevel":2},"exercise":{"type":"pronunciation_select","objectiveId":"ko-vocab-numbers","targets":["하나","둘","셋","넷","다섯","여섯","일곱","여덟"],"distractors":["일","이","삼","사"],"framing":{"ko":"카운트 따라 해 봐요.","en":"Count the eight with her."},"onFail":"retry"},"next":"h2_count_pass"},{"id":"h2_count_pass","speaker":"haeun","expr":"cool","when":{"flags":["ex_h2_count"]},"lines":[{"value":{"ko":"잘하시네요. 한 번 더 해 볼까요? 이번엔 박자 맞춰서.","en":"You're good at this. Shall we go again? On the beat this time.","note":"You counted one to eight in native numbers, clean.","review":"native"}}],"effects":{"deltas":{"trust":2}},"next":"h2_count_sino"},{"id":"h2_count_sino","speaker":"haeun","expr":"smirk","when":{"notFlags":["ex_h2_count"],"minTier":1},"lines":[{"when":{"mood":["raw"]},"value":{"ko":"…그건 돈 셀 때 쓰는 거예요.","en":"…That's for counting money.","note":"You counted 일, 이, 삼, 사. No smile tonight; she's too tired to perform it.","review":"native"}},{"value":{"ko":"아~ 그건 돈 셀 때 쓰는 거예요.","en":"Oh~ that's for counting money.","note":"You counted 일, 이, 삼, 사. Her smile is perfect, and for once there might be something real under it.","review":"native"}}],"effects":{"setFlags":["h2_counted_sino"],"memory":{"tag":"counted_money","note":"Counted the choreo in Sino numbers; she said that's for money."}},"next":"h2_count_tong"},{"id":"h2_count_tong","speaker":"haeun","expr":"smirk","when":{"notFlags":["ex_h2_count","h2_counted_sino"]},"lines":[{"when":{"flags":["tong_seen_once"]},"value":{"ko":"폰이 춤추는 거예요? 신기하다~","en":"Is your phone doing the dance? How neat~","note":"Tong counted out loud for you.","review":"native"}},{"value":{"ko":"…","en":"Tong counts out loud for you. She lets the phone count. She doesn't count with it."}}],"effects":{"setFlags":["tong_seen_once"]},"next":"h2_slip"},{"id":"h2_slip","speaker":"haeun","expr":"cool","when":{"leak":true},"lines":[{"value":{"ko":"다시 해. …아, 다시 해 볼까요?","en":"Do it again. …Oh, shall we go again?","note":"It slips out flat, then the smile comes back a beat late.","review":"native"}}],"next":"h2_slip_tong"},{"id":"h2_slip_tong","speaker":"tong","when":{"leak":true,"notFlags":["haeun_first_banmal"]},"lines":[{"value":{"ko":"방금 반말이었어.","en":"That's the first time she's used 반말 with you."}}],"effects":{"setFlags":["haeun_first_banmal"]},"next":"h2_drill"},{"id":"h2_drill","speaker":"haeun","expr":"cool","lines":[{"when":{"mood":["raw"]},"value":{"ko":"한 번 더요. …한 번 더.","en":"Once more. …Once more.","note":"The smile is gone tonight. It isn't really about you."}},{"value":{"ko":"한 번 더 해요~","en":"Once more~","note":"Twelve times, the same smile. That's the wall."}}],"choices":[{"id":"h2_keep","intent":"commit","say":{"ko":"…네. 다시요.","en":"…Okay. Again.","rom":"ne. dasiyo"},"outcomes":[{"when":{"mood":["raw","low"]},"speaker":"narration","reaction":{"ko":"…","en":"On the fourth run she counts slower, for you, without saying so."},"deltas":{"trust":7,"warmth":2},"memory":{"tag":"she_slowed_count","note":"On her bad night she slowed the count down for you."}},{"speaker":"narration","reaction":{"ko":"…","en":"Eleven more times. She doesn't say good. She doesn't say stop."},"deltas":{"trust":5}}]},{"id":"h2_mean","intent":"challenge","minTier":1,"say":{"ko":"왜 이렇게 못되게 굴어요?","en":"Why are you being so mean?","rom":"wae ireoke motdoege gureoyo"},"outcomes":[{"when":{"flags":["ex_h2_count"]},"speaker":"haeun","expr":"smirk","reaction":{"ko":"제가요? 도와드리는 건데요. 데뷔하고 싶으시다면서요.","en":"Me? I'm helping you. You said you wanted to debut.","note":"Still polite. Somehow you're the one who sounds rude.","review":"native"},"deltas":{"tension":6,"warmth":3}},{"speaker":"haeun","expr":"cool","reaction":{"ko":"제가요? 도와드리는 건데요~","en":"Me? I'm helping you~","note":"Somehow you're the one who sounds rude."},"deltas":{"tension":6}}]},{"id":"h2_mean_banmal","intent":"challenge","minTier":2,"say":{"ko":"왜 이렇게 못되게 굴어?","en":"Why are you being so mean? (casual)","rom":"wae ireoke motdoege gureo"},"exercise":{"type":"sentence_builder","objectiveId":"ko-rel-register-banmal","targets":["왜","이렇게","못되게","굴어?"],"distractors":["굴어요?","먹어?"],"framing":{"ko":"반말로 말해 봐요.","en":"Say it back to her in 반말."},"onFail":"continue"},"outcomes":[{"when":{"notFlags":["ex_h2_drill_h2_mean_banmal"]},"speaker":"haeun","expr":"cool","reaction":{"ko":"…뭐라고요?","en":"…What did you just say?","note":"The sentence came out in the wrong order. The moment's gone.","review":"native"},"deltas":{"tension":2}},{"when":{"leak":true},"speaker":"haeun","expr":"surprised","reaction":{"ko":"…너도 반말하네.","en":"…So you're on 반말 too.","note":"She almost laughs. Almost.","review":"native"},"deltas":{"warmth":5,"tension":3},"memory":{"tag":"matched_banmal","note":"When she slipped into 반말, you answered in 반말."}},{"speaker":"haeun","expr":"cool","reaction":{"ko":"…아, 네. 죄송해요, 제가 뭘 잘못했나 봐요.","en":"…Oh, okay. Sorry, I must have done something wrong.","note":"A polite apology, aimed like a slap. She keeps 존댓말.","review":"native"},"deltas":{"tension":8},"memory":{"tag":"banmal_too_early","note":"Used 반말 with her before she ever did."}}]},{"id":"h2_comfort","intent":"comfort","say":{"ko":"괜찮아요? 힘들어 보여요.","en":"Are you okay? You look exhausted.","rom":"gwaenchanayo? himdeureo boyeoyo"},"outcomes":[{"when":{"mood":["raw","low"]},"speaker":"haeun","expr":"angry","reaction":{"ko":"…괜찮아요. 신경 써 주셔서 감사해요.","en":"…I'm fine. Thank you for your concern.","note":"The wall, back up in one second flat.","review":"native"},"deltas":{"tension":5,"warmth":1},"memory":{"tag":"comforted_early","note":"Comforted her on the night she'd been flagged weak."}},{"speaker":"haeun","expr":"cool","reaction":{"ko":"저요? 전 괜찮아요~","en":"Me? I'm fine~","review":"native"},"deltas":{"tension":2}}]},{"id":"h2_quit","intent":"leave","say":{"ko":"오늘은 여기까지 할게요.","en":"I'll stop here for today.","rom":"oneureun yeogikkaji halgeyo"},"outcomes":[{"speaker":"haeun","expr":"cool","reaction":{"ko":"네~ 들어가세요.","en":"Sure~ Get home safe.","note":"In the mirror she watches the door until it shuts."},"deltas":{"warmth":-2},"setFlags":["h2_left_early"],"memory":{"tag":"left_early","note":"Left her alone in the studio three nights before the placement eval."}}]}],"next":"h2_end"},{"id":"h2_end","speaker":"haeun","expr":"cool","lines":[{"when":{"flags":["h2_left_early"]},"value":{"ko":"…","en":"Behind the door the music starts again. Then it stops, mid-bar, and doesn't start again."}},{"when":{"flags":["ex_h2_count"],"min":{"trust":20}},"value":{"ko":"…나쁘지 않네요.","en":"…Not bad.","note":"Rare. Remember it.","review":"native"}},{"value":{"ko":"수고하셨어요. 내일 또 해요~","en":"Good work. Again tomorrow~"}}],"effects":{"setFlags":["h2_done"],"vocab":[{"ko":"다시","en":"again","rom":"dasi"}]},"end":true}]},"presets":[{"id":"h2_tier0_fine","label":"Tier 0, she's fine: Tong counts, you keep going","state":{"day":4,"stage":"acquaintances","flags":{"h1_done":true},"axes":{"warmth":14,"tension":12,"trust":12}},"world":{"playerLevel":0,"inputTier":0,"hour":21,"weather":"clear"},"path":["h2_keep"],"exercises":false},{"id":"h2_tier1_raw","label":"Tier 1, she was flagged weak (raw): clean count, then you comfort her (backfires)","state":{"day":4,"stage":"acquaintances","flags":{"h1_done":true},"axes":{"warmth":18,"tension":15,"trust":14},"mood":{"valence":-2,"energy":-1}},"world":{"playerLevel":1,"inputTier":1,"hour":21,"weather":"rain"},"path":["h2_comfort"]},{"id":"h2_tier2_leak","label":"Tier 2, warmth ahead of stage (leak): her first 반말 slip, you answer in 반말","state":{"day":4,"stage":"acquaintances","flags":{"h1_done":true},"axes":{"warmth":42,"tension":20,"trust":22},"mood":{"valence":-1}},"world":{"playerLevel":3,"inputTier":2,"hour":21,"weather":"clear"},"path":["h2_mean_banmal"]},{"id":"h2_tier1_quit","label":"Tier 1: you leave early (looks like a loss)","state":{"day":4,"stage":"acquaintances","flags":{"h1_done":true},"axes":{"warmth":16,"tension":12,"trust":12},"mood":{"valence":-2}},"world":{"playerLevel":1,"inputTier":1,"hour":21,"weather":"clear"},"path":["h2_quit"],"exercises":{"h2_count":false}}]},{"scene":{"id":"jin.j0","kind":"story","title":{"ko":"포장마차","en":"The pojangmacha"},"characterId":"jin","location":"food_street","slot":"m1.j0","gate":{"hours":{"from":19,"to":3}},"summary":"Night tent. You fumble the order; a man in a low cap rescues it and orders 떡볶이 for you (or adjusts your correct order). He gives his name freely, proposes 반말, asks a lot of questions. His phone buzzes: one second, a different face. He insists on paying. He leaves in a cap and mask. That was easy. Too easy?","seeds":["saw_face_change","tally.jin_directives (going along with his plans)","jin_adjusted_order even when you got it right","jin_banmal_declined"],"beats":[{"id":"j0_open","speaker":"narration","cue":"sit","lines":[{"when":{"weather":["rain","cold"]},"value":{"ko":"포장마차. 김이 난다.","en":"The pojangmacha. Steam, plastic sheeting, rain drumming on the tarp. One stool left, next to a man in a low black cap."}},{"value":{"ko":"포장마차. 김이 난다.","en":"The pojangmacha. Steam, orange light, the smell of gochujang. One stool left, next to a man in a low black cap."}}],"tong":{"ko":"[음식] + 주세요!","en":"Order with [food] + 주세요 (juseyo), \"please give me\".","maxLevel":1},"next":"j0_order"},{"id":"j0_order","speaker":"ajusshi","expr":"smile","lines":[{"value":{"ko":"뭐 줄까요?","en":"What'll it be?"}}],"exercise":{"type":"sentence_builder","objectiveId":"ko-gram-juseyo","targets":["떡볶이","주세요"],"distractors":["감사합니다","순대"],"framing":{"ko":"주문해 봐요.","en":"Order the tteokbokki: put the words in order."},"onFail":"assist"},"next":"j0_order_pass"},{"id":"j0_order_pass","speaker":"jin","expr":"smile","when":{"flags":["ex_j0_order"]},"lines":[{"value":{"ko":"오, 발음 좋은데요? 근데 여기 엄청 매워요. 아저씨, 덜 맵게요!","en":"Oh, nice pronunciation! But it's really spicy here. Ajusshi, make it less spicy!","note":"You ordered it right: 떡볶이 주세요. He changed it anyway, smiling, without asking.","review":"native"}}],"effects":{"setFlags":["ordered_self","jin_adjusted_order"],"deltas":{"warmth":2}},"next":"j0_confused"},{"id":"j0_confused","speaker":"ajusshi","expr":"surprised","when":{"notFlags":["ex_j0_order"]},"lines":[{"when":{"minTier":1},"value":{"ko":"네? 하하, 감사는 먹고 나서!","en":"Huh? Haha, thanks comes after eating!","note":"The words came out jumbled."}},{"value":{"ko":"네? 폰이 말하네?","en":"Huh? The phone's talking?","note":"You pointed at the menu and let Tong say it."}}],"next":"j0_rescue"},{"id":"j0_rescue","speaker":"jin","expr":"smile","when":{"notFlags":["ex_j0_order"]},"lines":[{"value":{"ko":"아저씨, 여기 떡볶이 하나요. 덜 맵게. …처음이죠? 괜찮아요, 다들 그래요.","en":"Ajusshi, one tteokbokki here. Less spicy. …First time? It's fine, everyone does that.","note":"He orders for you before you can try again. He didn't ask what you wanted.","review":"native"}}],"effects":{"setFlags":["jin_ordered_for_you"]},"next":"j0_name"},{"id":"j0_name","speaker":"jin","expr":"smile","cue":"serve","lines":[{"value":{"ko":"저는 진이에요. 그냥 진.","en":"I'm Jin. Just Jin.","note":"He offers it freely, like it costs nothing."}}],"tong":{"ko":"어디서 본 얼굴 같은데…?","en":"Huh. He looks… familiar? Never mind.","maxLevel":1},"choices":[{"id":"j0_intro","intent":"commit","say":{"ko":"저는 {name}이에요. 반가워요.","en":"I'm {name}. Nice to meet you.","rom":"jeoneun {name}ieyo. bangawoyo"},"outcomes":[{"speaker":"jin","expr":"smile","reaction":{"ko":"{name}. 좋은 이름이다.","en":"{name}. Nice name."},"deltas":{"warmth":3}}]},{"id":"j0_familiar","intent":"ask","say":{"ko":"혹시… 어디서 본 것 같은데요.","en":"Have I… seen you somewhere?","rom":"hoksi… eodiseo bon geot gateundeyo"},"outcomes":[{"speaker":"jin","expr":"laugh","reaction":{"ko":"그런 말 많이 들어요. 흔한 얼굴이라.","en":"I get that a lot. Common face.","note":"Smooth. Too smooth. He tugs the cap a little lower.","review":"native"},"setFlags":["nearly_recognised_jin"],"memory":{"tag":"said_familiar","note":"Told Jin he looked familiar the night you met."}}]}],"next":"j0_banmal"},{"id":"j0_banmal","speaker":"jin","expr":"smile","lines":[{"value":{"ko":"우리 말 놓을까요? 나이 별로 차이 안 날 것 같은데.","en":"Shall we drop the formal speech? I bet we're not that far apart in age.","review":"native"}}],"tong":{"ko":"말 놓다 = 반말 하기!","en":"말 놓다 = to switch to casual speech (반말). People usually check age first. He didn't.","maxLevel":3},"choices":[{"id":"j0_banmal_yes","intent":"commit","say":{"ko":"좋아요! …아, 좋아.","en":"Sure! …I mean, sure. (switching)","rom":"joayo! …a, joa"},"outcomes":[{"speaker":"jin","expr":"smile","reaction":{"ko":"그치? 훨씬 편하다.","en":"Right? So much easier."},"deltas":{"warmth":2},"setFlags":["jin_banmal_accepted"]}]},{"id":"j0_banmal_later","intent":"decline","minTier":1,"say":{"ko":"아직은… 존댓말이 편해요.","en":"For now… I'm more comfortable with polite speech.","rom":"ajigeun… jondaenmari pyeonhaeyo"},"outcomes":[{"speaker":"jin","expr":"smile","reaction":{"ko":"아, 그럼요. 천천히 해요.","en":"Oh, of course. Take your time.","note":"A flicker, then the smile again. The numbers don't move; he noticed."},"setFlags":["jin_banmal_declined"],"memory":{"tag":"declined_jin_banmal","note":"Kept 존댓말 with Jin when he offered 반말 the first night."}}]}],"next":"j0_talk"},{"id":"j0_talk","speaker":"jin","expr":"smile","lines":[{"when":{"flags":["jin_banmal_accepted"]},"value":{"ko":"{name}, 한국 온 지 얼마나 됐어? 일주일? 진짜? 그럼 내가 맛집 다 알려 줄게. 다음엔 순대 먹자, 그치?","en":"{name}, how long have you been in Korea? A week? Really? Then I'll show you all the good places. Sundae next time, right?","review":"native"}},{"value":{"ko":"{name} 씨, 한국 온 지 얼마나 됐어요? 일주일? 그럼 제가 맛집 다 알려 줄게요. 다음엔 순대 먹어요, 그쵸?","en":"{name}, how long have you been in Korea? A week? Then I'll show you all the good places. Sundae next time, yeah?","review":"native"}}],"choices":[{"id":"j0_plan_yes","intent":"defer","ask":"directive","say":{"ko":"좋아요!","en":"Sounds good!","rom":"joayo"},"outcomes":[{"speaker":"jin","expr":"smile","reaction":{"ko":"약속이다.","en":"It's a promise.","note":"You didn't pick a day. He already has one in mind."},"deltas":{"warmth":2},"setFlags":["jin_plan_accepted"],"tally":["jin_directives"]}]},{"id":"j0_plan_maybe","intent":"decline","ask":"directive","say":{"ko":"생각해 볼게요.","en":"I'll think about it.","rom":"saenggakae bolgeyo"},"outcomes":[{"speaker":"jin","expr":"laugh","reaction":{"ko":"ㅋㅋ 다음에! 알았어요.","en":"Haha, next time then! Got it.","note":"Charming. He'll ask again."},"deltas":{"warmth":-1,"trust":1},"setFlags":["jin_plan_declined"]}]},{"id":"j0_plan_mine","intent":"decline","ask":"directive","minTier":1,"say":{"ko":"좋아요. 근데 날짜는 제가 정할게요.","en":"Sure. But I'll pick the day.","rom":"joayo. geunde naljjaneun jega jeonghalgeyo"},"outcomes":[{"speaker":"jin","expr":"surprised","reaction":{"ko":"…오. 그래요, 그럼 연락 기다릴게요.","en":"…Oh. Okay, I'll wait for your call then.","note":"Kind and clear. It throws him for a second, and he likes you a little more for it.","review":"native"},"deltas":{"warmth":1,"trust":2},"setFlags":["jin_plan_counter"],"memory":{"tag":"picked_the_day","note":"Said yes to Jin's plan but kept the choice of day."}}]},{"id":"j0_plan_no","intent":"decline","ask":"directive","say":{"ko":"아니요, 괜찮아요.","en":"No, I'm good.","rom":"aniyo, gwaenchanayo"},"outcomes":[{"speaker":"jin","expr":"smile","reaction":{"ko":"아… 네. 알겠어요.","en":"Ah… sure. Got it.","note":"Flat. The smile stays on a beat too long."},"deltas":{"warmth":-3,"tension":2,"trust":1},"setFlags":["jin_plan_refused"]}]}],"next":"j0_phone"},{"id":"j0_phone","speaker":"narration","cue":"phone_buzz","lines":[{"value":{"ko":"진동.","en":"His phone buzzes face-down on the table. For one second his face is someone else's: flat, careful, owned. Then he smiles again. \"…미안, 일이에요.\" (Sorry, it's work.)"}}],"effects":{"setFlags":["saw_face_change"],"memory":{"tag":"saw_face_change","note":"Saw Jin's face change when his phone buzzed."}},"next":"j0_bill"},{"id":"j0_bill","speaker":"ajusshi","expr":"smile","lines":[{"value":{"ko":"다 해서 만 이천 원이에요~","en":"That's 12,000 won altogether~","note":"Jin's card is already out."}}],"choices":[{"id":"j0_let_pay","intent":"defer","ask":"generosity","say":{"ko":"…잘 먹겠습니다.","en":"Let him: \"…Thanks for the meal.\"","rom":"jal meokgetseumnida"},"outcomes":[{"speaker":"jin","expr":"smile","reaction":{"ko":"당연하지. 내가 불렀잖아.","en":"Of course. I invited you.","note":"He didn't. You sat down next to him.","review":"native"},"deltas":{"warmth":2},"setFlags":["jin_paid"]}]},{"id":"j0_split","intent":"decline","ask":"generosity","say":{"ko":"반반 해요.","en":"Let's split it.","rom":"banban haeyo"},"outcomes":[{"speaker":"jin","expr":"smile","reaction":{"ko":"에이, 다음에 네가 사. 그치?","en":"Nah, you get the next one. Right?","note":"He pays anyway, and now there's a next one.","review":"native"},"deltas":{"warmth":1},"setFlags":["jin_paid","jin_next_plan"]}]},{"id":"j0_pay_self","intent":"decline","ask":"generosity","minTier":1,"say":{"ko":"제가 낼게요. 진짜로요.","en":"I'll pay. I mean it.","rom":"jega naelgeyo. jinjjaroyo"},"outcomes":[{"speaker":"jin","expr":"surprised","reaction":{"ko":"…그래요, 그럼. 고마워요.","en":"…Okay then. Thank you.","note":"A flicker. He puts the card away slowly."},"setFlags":["paid_myself"],"memory":{"tag":"paid_myself","note":"Paid for yourself the night you met Jin, over his card."}}]}],"next":"j0_bye"},{"id":"j0_bye","speaker":"jin","expr":"smile","lines":[{"when":{"flags":["jin_banmal_accepted"]},"value":{"ko":"또 보자, {name}.","en":"See you, {name}."}},{"value":{"ko":"또 봐요, {name} 씨.","en":"See you around, {name}."}}],"next":"j0_after"},{"id":"j0_after","speaker":"narration","cue":"leave","lines":[{"value":{"ko":"…","en":"He pulls the cap low and a black mask up before he steps out from under the tarp. That was easy. Maybe too easy. What are you missing?"}}],"effects":{"setFlags":["j0_done","met_jin"]},"end":true}]},"presets":[{"id":"j0_tier0","label":"Tier 0: Tong orders, Jin rescues, you go along with everything","state":{"day":2},"world":{"playerLevel":0,"inputTier":0,"hour":22,"weather":"rain"},"path":["j0_intro","j0_banmal_yes","j0_plan_yes","j0_let_pay"],"exercises":false},{"id":"j0_tier1_right","label":"Tier 1: orders right (he adjusts it anyway), splits the bill","state":{"day":2},"world":{"playerLevel":1,"inputTier":1,"hour":22,"weather":"clear"},"path":["j0_familiar","j0_banmal_yes","j0_plan_maybe","j0_split"]},{"id":"j0_tier1_boundaries","label":"Tier 1: jumbled order (Jin rescues), declines 반말 and the plan, pays for yourself","state":{"day":2},"world":{"playerLevel":1,"inputTier":1,"hour":22,"weather":"cold"},"path":["j0_intro","j0_banmal_later","j0_plan_maybe","j0_pay_self"],"exercises":{"j0_order":false}}]},{"scene":{"id":"haeun.a1.ramyeon","kind":"ambient","title":{"ko":"편의점 라면","en":"Convenience-store ramyeon"},"characterId":"haeun","location":"convenience_store","gate":{"hours":{"from":0,"to":3},"any":[{"flags":["first_secret"]},{"stageAtLeast":"friends"}]},"summary":"After curfew at the plastic chairs outside the store. Opening varies by stage and rain; she mentions being tired (a bid). Tease on her bad day hurts early and helps at close; comfort too early reads as pity.","beats":[{"id":"open","speaker":"haeun","expr":"cool","lines":[{"when":{"stageAtLeast":"close","weather":["rain"]},"value":{"ko":"…","en":"(Rain drums on the awning. She slides the second cup toward you without looking up.)","note":"No line. She never says she bought it for you."}},{"when":{"stageAtLeast":"friends"},"value":{"ko":"왔네. 라면 두 개 샀어. 하나는… 실수로.","en":"You came. I bought two ramyeon. One was… a mistake."}},{"value":{"ko":"…너 여기서 뭐 해요. 통금 지났잖아요.","en":"…What are you doing here. It's past curfew.","note":"반말 slip: 너 with 해요. She doesn't correct it."}}],"tong":{"ko":"통금 = curfew","en":"통금 (tonggeum) = curfew. Short for 통행금지.","maxLevel":1},"next":"tired"},{"id":"tired","speaker":"haeun","lines":[{"when":{"stageAtLeast":"close"},"value":{"ko":"…나 오늘 좀 피곤해.","en":"…I'm kind of tired today."}},{"when":{"stageAtLeast":"friends"},"value":{"ko":"아, 피곤해 죽겠다.","en":"Ugh, I'm dead tired."}},{"value":{"ko":"피곤해요. 그러니까 조용히 먹어요.","en":"I'm tired. So eat quietly."}}],"choices":[{"id":"ask","intent":"ask","say":{"ko":"왜? 무슨 일 있었어?","rom":"wae? museun il isseosseo?","en":"Why? Did something happen?"},"outcomes":[{"when":{"stageBelow":"friends"},"reaction":{"ko":"…알아서 뭐 하게요.","en":"…What's it to you."},"expr":"cool","deltas":{"tension":2,"warmth":1}},{"when":{"mood":["raw","low"]},"reaction":{"ko":"박 코치님이 '다시'만 백 번. …진짜 백 번은 한 것 같아.","en":"Coach Park said \"again\" a hundred times. …Literally a hundred, I think."},"expr":"tired","deltas":{"trust":3,"warmth":2},"memory":{"tag":"asked_why_tired","note":"Asked why she was tired on a bad night; she told you about Coach Park."}},{"reaction":{"ko":"그냥. 잠을 못 잤어.","en":"Just. Didn't sleep."},"deltas":{"warmth":1,"trust":1}}]},{"id":"sit","intent":"presence","say":{"ko":"(그냥 같이 먹는다)","en":"(Let it go. Just eat with her.)"},"outcomes":[{"when":{"stageAtLeast":"close","mood":["raw","low"]},"reaction":{"ko":"…","en":"(After a while she leans a little closer. Neither of you mentions it.)"},"expr":"tired","deltas":{"trust":3,"warmth":1}},{"reaction":{"ko":"…","en":"(The fridge hums. She eats. It's fine.)"},"deltas":{"warmth":1}}]},{"id":"tease","intent":"tease","say":{"ko":"그래서 아까 센터 위험했구나?","rom":"geuraeseo akka senteo wiheomhaetguna?","en":"So that's why your center spot looked shaky today?"},"outcomes":[{"when":{"mood":["raw","low"],"stageBelow":"close"},"reaction":{"ko":"…너나 잘해.","en":"…Worry about yourself.","note":"She leaves her ramyeon half-eaten and goes in."},"expr":"angry","deltas":{"warmth":-3,"tension":3}},{"when":{"mood":["raw","low"]},"reaction":{"ko":"…고마워. 아 아니, 시끄러워.","en":"…Thanks. I mean, shut up.","note":"At close, treating her as normal on a bad day is the right call."},"expr":"smirk","deltas":{"trust":3,"warmth":2},"memory":{"tag":"teased_on_bad_day","note":"Teased her on a bad night instead of pitying her; she thanked you, then took it back."}},{"when":{"stageBelow":"friends"},"reaction":{"ko":"너나 잘해요. …잘해.","en":"Worry about yourself. …Seriously.","note":"반말 slip on the repeat."},"expr":"smirk","deltas":{"tension":2,"warmth":1}},{"reaction":{"ko":"ㅋ 죽을래?","en":"Heh. Want to die?"},"expr":"laugh","deltas":{"warmth":2}}]},{"id":"comfort","intent":"comfort","say":{"ko":"힘들었지. 괜찮아?","rom":"himdeureotji. gwaenchana?","en":"Rough day, huh. You okay?"},"outcomes":[{"when":{"mood":["raw","low"],"stageBelow":"close"},"reaction":{"ko":"동정하지 마요.","en":"Don't pity me."},"expr":"cool","deltas":{"tension":2,"warmth":-1},"memory":{"tag":"comforted_too_early","note":"Comforted her on a bad night before she trusted you; she called it pity."}},{"when":{"mood":["raw","low"]},"reaction":{"ko":"…응.","en":"…Yeah."},"expr":"tired","deltas":{"trust":2,"warmth":2}},{"reaction":{"ko":"뭐가? 나 괜찮은데.","en":"What? I'm fine.","note":"Comfort she doesn't need feels like being handled."},"expr":"cool","deltas":{"tension":1}}]}],"next":"close"},{"id":"close","speaker":"haeun","lines":[{"when":{"weather":["rain"]},"value":{"ko":"비 그칠 때까지만 있어.","en":"Stay till the rain stops. Just till then."}},{"when":{"stageAtLeast":"friends"},"value":{"ko":"…내일 늦지 마.","en":"…Don't be late tomorrow."}},{"value":{"ko":"먼저 들어가요. 같이 들어가면 걸려요.","en":"You go in first. If we go in together we'll get caught."}}],"end":true}]},"presets":[{"id":"rival-good-day","label":"Acquaintances, first secret kept, she topped the eval. Tease lands as banter.","state":{"stage":"acquaintances","flags":{"first_secret":true},"axes":{"warmth":28,"tension":35,"trust":25},"mood":{"valence":2,"energy":1,"causes":["eval_top"]}},"world":{"hour":1,"weather":"clear"},"path":["tease"]},{"id":"friend-ordinary","label":"Friends, ordinary night. Asking why gets a short, real answer.","state":{"stage":"friends","flags":{"first_secret":true},"axes":{"warmth":50,"tension":30,"trust":40},"mood":{"valence":0,"energy":-1,"causes":["no_sleep"]}},"world":{"hour":1,"weather":"clear"},"path":["ask"]},{"id":"close-raw-rain","label":"Close, raining, she was flagged at eval. She slides the cup over silently; teasing her is the right call now.","state":{"stage":"close","flags":{"first_secret":true,"rooftop_done":true},"axes":{"warmth":68,"tension":40,"trust":62},"mood":{"valence":-2,"energy":-1,"causes":["eval_flagged"]}},"world":{"hour":2,"weather":"rain"},"path":["tease"]}]},{"scene":{"id":"haeun.a2.hallway","kind":"ambient","title":{"ko":"복도에서","en":"In the corridor"},"characterId":"haeun","location":"agency_lockers","gate":{"hours":{"from":10,"to":18},"stageAtLeast":"acquaintances"},"summary":"A brief pass in the corridor. Just flagged by Coach Park: she wants space, and a wordless act of service lands. Topped the ranking: she pretends not to care. Ordinary day with warmth ahead of stage: her 반말 slips and you can catch it.","beats":[{"id":"scene","speaker":"narration","lines":[{"when":{"mood":["raw"]},"value":{"ko":"하은이, 다시. 오늘 왜 이래?","en":"(Coach Park's voice through the door: \"Ha-eun, again. What's wrong with you today?\" She comes out, jaw tight, and nearly walks into you.)"}},{"when":{"mood":["high"]},"value":{"ko":"1위 하은","en":"(The new ranking sheet is up. 1st: Ha-eun. She's very carefully not looking at it.)"}},{"value":{"ko":"…","en":"(She's sitting against the corridor wall, retying her shoes.)"}}],"next":"meet"},{"id":"meet","speaker":"haeun","lines":[{"when":{"mood":["raw"],"stageAtLeast":"close"},"value":{"ko":"…지금 말 시키지 마.","en":"…Don't talk to me right now."}},{"when":{"mood":["raw"]},"value":{"ko":"…비켜요.","en":"…Move."}},{"when":{"mood":["high"]},"value":{"ko":"아, 안녕하세요~","en":"Oh, hi~","note":"First place on the sheet today. She is radiantly, unbearably polite about it."}},{"when":{"leak":true,"stageBelow":"friends"},"value":{"ko":"아, 너 왔어? …왔어요. 아 몰라.","en":"Oh, you're here? …You're here. Whatever.","note":"반말 slipped out; she caught it and gave up."}},{"value":{"ko":"아, 수업 끝났어요? 수고하셨어요~","en":"Oh, lesson over? Good work~","note":"She doesn't wait for the answer."}}],"tong":{"ko":"반말 / 존댓말","en":"Listen to the ending: 왔어 vs 왔어요. Casual vs polite.","maxLevel":2},"choices":[{"id":"water","intent":"help","say":{"ko":"(들고 있던 물을 건넨다)","en":"(Hand her the water you were carrying.)"},"outcomes":[{"when":{"mood":["raw"]},"reaction":{"ko":"…","en":"(She takes it without looking at you, and drinks half of it in one go.)"},"expr":"tired","deltas":{"trust":2,"warmth":1}},{"reaction":{"ko":"어, 감사해요~","en":"Oh, thank you~"},"deltas":{"warmth":1}}]},{"id":"congrats","intent":"comfort","gate":{"mood":["high"]},"say":{"ko":"1등 축하해요!","rom":"ildeung chukahaeyo!","en":"Congrats on first place!"},"outcomes":[{"when":{"stageBelow":"friends"},"reaction":{"ko":"에이, 운이 좋았어요~","en":"Oh, I just got lucky~","note":"Modest, word-perfect. She doesn't believe a word of it."},"expr":"blush","deltas":{"warmth":2,"tension":1}},{"reaction":{"ko":"다음 달에도 1등 할 거야. 너는 2등 해.","en":"I'm taking first next month too. You take second."},"expr":"smirk","deltas":{"warmth":2}}]},{"id":"catch_slip","intent":"tease","gate":{"leak":true,"stageBelow":"friends"},"say":{"ko":"방금 반말했죠?","rom":"banggeum banmalhaetjyo?","en":"You just used 반말, didn't you?"},"outcomes":[{"reaction":{"ko":"…안 했어요. 했나. 됐어.","en":"…I didn't. Did I. Forget it."},"expr":"blush","deltas":{"warmth":2,"tension":1},"setFlags":["caught_banmal_slip"],"memory":{"tag":"caught_her_slip","note":"Caught her first 반말 slip in the corridor; she didn't take it back."}}]},{"id":"walk_on","intent":"leave","say":{"ko":"(고개만 끄덕이고 지나간다)","en":"(Nod and keep walking.)"},"outcomes":[{"when":{"mood":["raw"]},"reaction":{"ko":"…","en":"(Behind you, a locker door slams.)"},"deltas":{"trust":-1}},{"when":{"mood":["high"]},"reaction":{"ko":"…","en":"(She glances at the ranking sheet, then at your back.)"},"deltas":{"tension":1}},{"reaction":{"ko":"…","en":"(She goes back to her shoes.)"}}]}],"end":true}]},"presets":[{"id":"flagged-raw","label":"Friends, she was just flagged by Coach Park. She wants space; handing her water is the right move.","state":{"stage":"friends","axes":{"warmth":50,"tension":30,"trust":40},"mood":{"valence":-2,"energy":0,"causes":["eval_flagged"]}},"world":{"hour":15},"path":["water"]},{"id":"topped-ranking","label":"Acquaintances, she topped the ranking. Congratulating her gets \"…obviously.\"","state":{"stage":"acquaintances","axes":{"warmth":30,"tension":40,"trust":25},"mood":{"valence":2,"energy":1,"causes":["eval_top"]}},"world":{"hour":16},"path":["congrats"]},{"id":"banmal-leak","label":"Acquaintances, ordinary day, warmth ahead of stage. Her 반말 slips and you can catch it.","state":{"stage":"acquaintances","axes":{"warmth":45,"tension":25,"trust":30},"mood":{"valence":0,"energy":0,"causes":[]}},"world":{"hour":13},"path":["catch_slip"]}]},{"scene":{"id":"haeun.a3.water_break","kind":"ambient","title":{"ko":"물 마시는 시간","en":"Water break"},"characterId":"haeun","location":"practice_studio","gate":{"hours":{"from":17,"to":23},"stageAtLeast":"acquaintances"},"summary":"Evening in the studio. Rival: she fixes your arm angle. Bad night: she practises alone, and staying silently is the bid. Close: she hands you her second water. A tier-2 question about why she stopped mid-routine only appears if you can build it.","beats":[{"id":"scene","speaker":"narration","lines":[{"when":{"mood":["raw","low"]},"value":{"ko":"…","en":"(Everyone's gone. She's alone with headphones in, running the same eight counts. Again. Again. She stops halfway and starts over.)"}},{"when":{"stageAtLeast":"close"},"value":{"ko":"…","en":"(Water break. She drops down next to you against the mirror.)"}},{"value":{"ko":"…","en":"(Water break. In the mirror your arms are a beat behind hers. She notices.)"}}],"next":"her"},{"id":"her","speaker":"haeun","lines":[{"when":{"mood":["raw","low"]},"value":{"ko":"…","en":"(She sees you in the mirror. Doesn't stop.)"}},{"when":{"stageAtLeast":"close"},"value":{"ko":"마셔. 두 개 샀어.","en":"Drink. I bought two.","note":"Holds out the second bottle without looking. Never says it was for you."}},{"value":{"ko":"팔 각도만 조금 올려 볼까요? …여기요.","en":"Shall we lift the arm angle a little? …Here.","note":"She taps your elbow up two centimetres in the mirror, smiling. Correct, helpful, and not a degree warmer."}}],"choices":[{"id":"sit","intent":"presence","say":{"ko":"(벽에 기대 앉아서 기다린다)","en":"(Sit against the wall and wait.)"},"outcomes":[{"when":{"mood":["raw","low"],"stageBelow":"close"},"reaction":{"ko":"…안 가요?","en":"…You're not leaving?","note":"Twenty minutes later. She sits down a metre away."},"expr":"tired","deltas":{"trust":4,"warmth":1},"memory":{"tag":"stayed_on_bad_night","note":"Stayed silently while she practised alone on a bad night."}},{"when":{"mood":["raw","low"]},"reaction":{"ko":"…아직 있었어?","en":"…You're still here?","note":"She sits down right next to you."},"expr":"tired","deltas":{"trust":4,"warmth":2},"memory":{"tag":"stayed_on_bad_night","note":"Stayed silently while she practised alone on a bad night."}},{"reaction":{"ko":"쉬세요~ 저는 조금 더 할게요.","en":"Take a rest~ I'll do a bit more."},"expr":"smile","deltas":{"tension":1}}]},{"id":"again","intent":"challenge","say":{"ko":"다시 해 볼게요.","rom":"dasi hae bolgeyo","en":"I'll try it again."},"outcomes":[{"when":{"mood":["raw","low"]},"reaction":{"ko":"…","en":"(She takes one earbud out and nods at the spot next to her. You run it side by side.)"},"deltas":{"warmth":2,"trust":1}},{"when":{"stageBelow":"friends"},"reaction":{"ko":"좋아요, 한 번 더 해요. 하나, 둘, 셋, 넷.","en":"Great, once more. One, two, three, four."},"expr":"smirk","deltas":{"tension":2,"warmth":1},"vocab":[{"ko":"하나, 둘, 셋, 넷","rom":"hana, dul, set, net","en":"one, two, three, four (native Korean counting)"}]},{"reaction":{"ko":"좋아. 이번엔 안 봐준다.","en":"Good. Not going easy on you this time."},"expr":"smirk","deltas":{"tension":1,"warmth":2}}]},{"id":"thanks","intent":"comfort","gate":{"stageAtLeast":"close","mood":["ok","high"]},"say":{"ko":"고마워.","rom":"gomawo","en":"Thanks."},"outcomes":[{"reaction":{"ko":"뭐가. 그냥 두 개 산 거야.","en":"For what. I just bought two."},"expr":"blush","deltas":{"warmth":2}}]},{"id":"specific","intent":"ask","minTier":2,"say":{"ko":"아까 왜 그 부분에서 멈췄어?","rom":"akka wae geu bubuneseo meomchwosseo?","en":"Why did you stop at that part earlier?"},"exercise":{"type":"sentence_builder","objectiveId":"ko-gram-past-tense","targets":["아까","왜","그 부분에서","멈췄어?"],"distractors":["멈춰요","어디"],"framing":{"ko":"물어봐.","en":"Ask why she stopped at that part earlier (past tense + 왜)."},"onFail":"assist"},"outcomes":[{"when":{"notFlags":["ex_her_specific"]},"reaction":{"ko":"…뭐라고? 됐어. 물이나 마셔.","en":"…What? Forget it. Just drink your water."},"expr":"cool","deltas":{"warmth":1}},{"when":{"mood":["raw","low"]},"reaction":{"ko":"…발목. 아무한테도 말하지 마.","en":"…My ankle. Don't tell anyone."},"expr":"sad","deltas":{"trust":4},"setFlags":["knows_ankle"],"memory":{"tag":"noticed_ankle","note":"Noticed where she stopped; she told you about her ankle and asked you not to tell."}},{"when":{"stageAtLeast":"close"},"reaction":{"ko":"…그걸 봤어? 역시 너밖에 없다.","en":"…You saw that? Of course it's only you who would.","review":"native"},"expr":"blush","deltas":{"trust":3,"warmth":1}},{"reaction":{"ko":"아, 그거요? 아무것도 아니에요~ 다시 해요.","en":"Oh, that? It's nothing~ Let's go again.","note":"Too fast. You were right."},"expr":"smile","deltas":{"tension":2,"warmth":1}}]},{"id":"leave","intent":"leave","say":{"ko":"먼저 갈게요.","rom":"meonjeo galgeyo","en":"I'll head out first."},"outcomes":[{"when":{"mood":["raw","low"]},"reaction":{"ko":"…","en":"(She doesn't look up.)"},"deltas":{"warmth":-2,"trust":-1}},{"reaction":{"ko":"…가요.","en":"…Go."}}]}],"end":true}]},"presets":[{"id":"rival-correction","label":"Acquaintances, ordinary evening. She corrects your arm; you go again on her count.","state":{"stage":"acquaintances","axes":{"warmth":25,"tension":40,"trust":20},"mood":{"valence":0,"energy":0,"causes":[]}},"world":{"hour":19,"inputTier":1},"path":["again"]},{"id":"bad-night-alone","label":"Friends, bad night, she practises alone. Sitting silently is the bid.","state":{"stage":"friends","axes":{"warmth":50,"tension":30,"trust":42},"mood":{"valence":-1,"energy":-2,"causes":["no_sleep","eval_flagged"]}},"world":{"hour":22,"inputTier":1},"path":["sit"]},{"id":"close-second-water","label":"Close, ordinary night, tier 2 unlocked. She hands over her second water; you can ask the specific question.","state":{"stage":"close","flags":{"rooftop_done":true},"axes":{"warmth":66,"tension":35,"trust":60},"mood":{"valence":1,"energy":0,"causes":[]}},"world":{"hour":20,"inputTier":2},"path":["specific"]}]},{"scene":{"id":"jin.a1.cafe","kind":"ambient","title":{"ko":"카페 봄","en":"Café Bom"},"characterId":"jin","location":"cafe","gate":{"hours":{"from":8,"to":17},"flags":["met_jin"]},"summary":"Jin at his regular table, cap on, script open. Register follows J0 (반말 only if you accepted). First visit: he asks you to put Tong away (\"나랑 있을 땐 번역기 필요 없잖아\") — agree (counted directive, Tong goes quiet around him), keep Tong kindly, or shut him down. He talks about the shoot (more honest on a low day), passes on that Ha-eun loves spicy food if you're paired, and calls the café his 단골.","seeds":["tong_off_with_jin (Tong-as-rival)","tip_haeun_spicy","being someone else all day (the wound)"],"beats":[{"id":"ja1_open","speaker":"jin","expr":"smile","lines":[{"when":{"flags":["jin_banmal_accepted"]},"value":{"ko":"어, 왔어? 여기 앉아.","en":"Oh, you made it? Sit here."}},{"value":{"ko":"어, 왔어요? 여기 앉아요.","en":"Oh, you made it? Have a seat.","note":"He moves his script off the other chair before you can say no."}}],"next":"ja1_rival"},{"id":"ja1_rival","speaker":"jin","expr":"smile","when":{"notFlags":["jin_tong_asked"]},"lines":[{"when":{"flags":["jin_banmal_accepted"]},"value":{"ko":"그 앱 계속 켜 놔? 나랑 있을 땐 번역기 필요 없잖아. 내가 다 알려 줄게.","en":"You keep that app on? You don't need a translator with me. I'll teach you everything.","review":"native"}},{"value":{"ko":"그 앱 계속 켜 놔요? 저랑 있을 땐 번역기 필요 없잖아요. 제가 다 알려 줄게요.","en":"You keep that app on? You don't need a translator with me. I'll teach you everything.","review":"native"}}],"tong":{"ko":"…나 말하는 거야?","en":"…Is he talking about me?","maxLevel":6},"choices":[{"id":"ja1_tong_off","intent":"defer","ask":"directive","say":{"ko":"…그래요. 꺼 둘게요.","en":"…Okay. I'll switch it off.","rom":"geuraeyo. kkeo dulgeyo"},"outcomes":[{"when":{"flags":["jin_banmal_accepted"]},"speaker":"jin","expr":"smile","reaction":{"ko":"잘했어. 모르는 거 있으면 나한테 물어봐.","en":"Good. Anything you don't know, ask me.","note":"Tong goes quiet whenever he's around now. It was easier. That's the point."},"deltas":{"warmth":3},"setFlags":["jin_tong_asked","tong_off_with_jin"],"tally":["jin_directives"]},{"speaker":"jin","expr":"smile","reaction":{"ko":"잘했어요. 모르는 거 있으면 저한테 물어봐요.","en":"Good. Anything you don't know, ask me.","note":"Tong goes quiet whenever he's around now. It was easier. That's the point.","review":"native"},"deltas":{"warmth":3},"setFlags":["jin_tong_asked","tong_off_with_jin"],"tally":["jin_directives"]}]},{"id":"ja1_tong_kind","intent":"decline","ask":"directive","minTier":1,"say":{"ko":"통은 제 선생님이에요. 진 씨도 같이 알려 주세요.","en":"Tong's my teacher. You can teach me too.","rom":"tong-eun je seonsaengnimieyo. jin ssido gachi allyeo juseyo"},"outcomes":[{"speaker":"jin","expr":"laugh","reaction":{"ko":"하하, 선생님이 둘이네. 좋아요.","en":"Haha, two teachers, then. Fine.","note":"He means it, mostly. He glances at your phone once more before he lets it go."},"deltas":{"warmth":-1,"trust":2},"setFlags":["jin_tong_asked","kept_tong_kindly"]}]},{"id":"ja1_tong_cold","intent":"decline","ask":"directive","say":{"ko":"제가 알아서 할게요.","en":"I'll handle it myself.","rom":"jega araseo halgeyo"},"outcomes":[{"speaker":"jin","expr":"smile","reaction":{"ko":"…네, 그럼요. 당연하죠.","en":"…Sure, of course. Naturally.","note":"Suddenly very polite. That's his tell."},"deltas":{"warmth":-3,"tension":2,"trust":1},"setFlags":["jin_tong_asked","kept_tong_coldly"]}]}],"next":"ja1_shoot"},{"id":"ja1_shoot","speaker":"jin","expr":"neutral","lines":[{"when":{"mood":["raw","low"],"flags":["jin_banmal_accepted"]},"value":{"ko":"어제 촬영… 길었어. 하루 종일 다른 사람으로 살았거든.","en":"Yesterday's shoot… was long. I spent all day being someone else.","note":"He doesn't smile for once. Then he does."}},{"when":{"mood":["raw","low"]},"value":{"ko":"어제 촬영… 길었어요. 하루 종일 다른 사람으로 살았거든요.","en":"Yesterday's shoot… was long. I spent all day being someone else.","note":"He doesn't smile for once. Then he does.","review":"native"}},{"when":{"flags":["jin_banmal_accepted"]},"value":{"ko":"어제 촬영 대박이었어. 감독님이 원 테이크로 끝냈어, ㅋㅋ.","en":"Yesterday's shoot was great. The director got it in one take, lol."}},{"value":{"ko":"어제 촬영 잘 끝났어요. 감독님이 한 번에 오케이 했어요.","en":"Yesterday's shoot went well. The director okayed it in one take."}}],"tong":{"ko":"촬영 = 영화나 드라마 찍기","en":"촬영 (chwaryeong) = filming, a shoot.","maxLevel":3},"effects":{"vocab":[{"ko":"촬영","en":"filming / a shoot","rom":"chwaryeong"}]},"next":"ja1_haeun"},{"id":"ja1_haeun","speaker":"jin","expr":"smile","when":{"flags":["h1_done"],"notFlags":["tip_haeun_spicy"]},"lines":[{"when":{"flags":["jin_banmal_accepted"]},"value":{"ko":"하은이랑 짝이라며? 걔 연습실에서 안 나와. 매운 거 엄청 좋아하고.","en":"I hear you're paired with Ha-eun? She never leaves the studio. Loves spicy food, too."}},{"value":{"ko":"하은 씨랑 짝이라면서요? 연습실에서 안 나와요, 그 친구. 매운 거 엄청 좋아하고요.","en":"I hear you're paired with Ha-eun? She never leaves the studio. Loves spicy food, too.","review":"native"}}],"effects":{"setFlags":["tip_haeun_spicy"]},"next":"ja1_bye"},{"id":"ja1_bye","speaker":"jin","expr":"smile","lines":[{"when":{"flags":["jin_banmal_accepted"]},"value":{"ko":"여기 내 단골이야. 언제든 와.","en":"This is my regular spot. Come by any time."}},{"value":{"ko":"여기 제 단골이에요. 언제든 와요.","en":"This is my regular spot. Come by any time."}}],"tong":{"ko":"단골 = 자주 가는 곳","en":"단골 (dangol) = a regular (spot or customer).","maxLevel":3},"effects":{"vocab":[{"ko":"단골","en":"a regular (spot/customer)","rom":"dangol"}]},"end":true}]},"presets":[{"id":"ja1_banmal_first","label":"First visit, 반말 accepted at J0: switch Tong off for him","state":{"stage":"acquaintances","flags":{"met_jin":true,"jin_banmal_accepted":true,"h1_done":true},"day":3},"world":{"hour":14},"path":["ja1_tong_off"]},{"id":"ja1_polite_kind","label":"First visit, kept 존댓말: keep Tong, kindly","state":{"stage":"acquaintances","flags":{"met_jin":true,"jin_banmal_declined":true},"day":3},"world":{"hour":11},"path":["ja1_tong_kind"]},{"id":"ja1_low_repeat","label":"A later visit on a low day: the shoot line drops the act","state":{"stage":"friends","flags":{"met_jin":true,"jin_tong_asked":true,"tip_haeun_spicy":true},"mood":{"energy":-1,"valence":-1,"causes":["no_sleep"]},"day":40},"world":{"hour":16}}]},{"scene":{"id":"jin.a2.river","kind":"ambient","title":{"ko":"한강","en":"The river"},"characterId":"jin","location":"han_river","gate":{"hours":{"from":18,"to":23},"flags":["met_jin"]},"summary":"Night at the lookout, cap off. \"Nobody recognises me out here.\" Tell him he's just Jin here, take a photo together (\"only if it stays between us\" — this is the photo that leaks in Act 3), or, at tier 2, ask his real name: he deflects, and the question is remembered for the Seen ending. A low night: he says less and asks you to stay a bit.","seeds":["river_photo (the leaked photo, Act 3)","asked_real_name (Seen ending)","just_jin"],"beats":[{"id":"ja2_open","speaker":"narration","lines":[{"when":{"mood":["raw","low"]},"value":{"ko":"…","en":"(The lookout. Jin is on the bench with his cap in his hands, not looking at the water.)"}},{"value":{"ko":"…","en":"(The lookout. Jin has his cap off. Out here he looks younger.)"}}],"next":"ja2_jin"},{"id":"ja2_jin","speaker":"jin","expr":"smile","lines":[{"when":{"mood":["raw","low"],"flags":["jin_banmal_accepted"]},"value":{"ko":"…잠깐만 같이 있어 줄래? 말 안 해도 돼.","en":"…Stay a minute? You don't have to talk."}},{"when":{"mood":["raw","low"]},"value":{"ko":"…잠깐만 같이 있어 줄래요? 말 안 해도 돼요.","en":"…Stay a minute? You don't have to talk.","review":"native"}},{"when":{"flags":["jin_banmal_accepted"]},"value":{"ko":"한강 진짜 예쁘지? …여기선 아무도 날 못 알아봐. 그게 좋아.","en":"The Han River's beautiful, right? …Nobody recognises me out here. I like that."}},{"value":{"ko":"한강 진짜 예쁘죠? …여기선 아무도 저를 못 알아봐요. 그게 좋아요.","en":"The Han River's beautiful, right? …Nobody recognises me out here. I like that."}}],"choices":[{"id":"ja2_just_jin","intent":"comfort","say":{"ko":"여기선 그냥 진이에요.","en":"Out here you're just Jin.","rom":"yeogiseon geunyang jinieyo"},"outcomes":[{"when":{"mood":["raw","low"]},"reaction":{"ko":"…고마워요. 그 말 좋다.","en":"…Thank you. I like hearing that.","note":"He leans back. For a while neither of you says anything, and it's fine."},"expr":"smile","deltas":{"warmth":4,"trust":2},"memory":{"tag":"just_jin","note":"Told Jin \"out here you're just Jin\" on a bad night."}},{"reaction":{"ko":"…고마워. 그 말 좋다.","en":"…Thanks. I like hearing that."},"expr":"smile","deltas":{"warmth":3},"memory":{"tag":"just_jin","note":"Told Jin \"out here you're just Jin\"."}}]},{"id":"ja2_photo","intent":"ask","say":{"ko":"같이 사진 찍어요!","en":"Let's take a photo together!","rom":"gachi sajin jjigeoyo"},"outcomes":[{"when":{"flags":["jin_banmal_accepted"]},"reaction":{"ko":"우리끼리만 보는 거면… 좋아. 하나, 둘, 셋, 김치!","en":"If it stays just between us… okay. One, two, three, kimchi!","note":"He angles the phone so the bridge lights are behind you both. He sends it to himself."},"expr":"laugh","deltas":{"warmth":2},"setFlags":["river_photo"],"memory":{"tag":"river_photo","note":"Took a photo with Jin at the river; he kept a copy. Only the two of you knew that angle."}},{"reaction":{"ko":"우리끼리만 보는 거면… 좋아요. 하나, 둘, 셋, 김치!","en":"If it stays just between us… okay. One, two, three, kimchi!","note":"He angles the phone so the bridge lights are behind you both. He sends it to himself.","review":"native"},"expr":"laugh","deltas":{"warmth":2},"setFlags":["river_photo"],"memory":{"tag":"river_photo","note":"Took a photo with Jin at the river; he kept a copy. Only the two of you knew that angle."}}]},{"id":"ja2_real_name","intent":"ask","minTier":2,"gate":{"notFlags":["asked_real_name"]},"say":{"ko":"진 씨 진짜 이름은 뭐예요?","en":"What's your real name, Jin?","rom":"jin ssi jinjja ireumeun mwoyeyo"},"outcomes":[{"reaction":{"ko":"…진이 진짜 이름이에요. 거의.","en":"…Jin is my real name. Almost.","note":"He laughs it off. Nobody has asked him that in years."},"expr":"surprised","deltas":{"trust":3,"tension":1},"setFlags":["asked_real_name"],"memory":{"tag":"asked_real_name","note":"Asked Jin his real name at the river. He said \"almost\"."}}]}],"next":"ja2_end"},{"id":"ja2_end","speaker":"narration","cue":"photo","when":{"flags":["river_photo"]},"lines":[{"value":{"ko":"찰칵.","en":"(Click. The two of you against the bridge lights.)"}}],"next":"ja2_bye"},{"id":"ja2_bye","speaker":"jin","expr":"smile","lines":[{"when":{"flags":["jin_banmal_accepted"]},"value":{"ko":"조심히 들어가. 도착하면 문자해.","en":"Get home safe. Text me when you're in."}},{"value":{"ko":"조심히 들어가요. 도착하면 문자 줘요.","en":"Get home safe. Text me when you're in."}}],"end":true}]},"presets":[{"id":"ja2_banmal_photo","label":"반말 with Jin, a good night: take the photo","state":{"stage":"acquaintances","flags":{"met_jin":true,"jin_banmal_accepted":true},"day":5},"world":{"hour":21},"path":["ja2_photo"]},{"id":"ja2_low_just_jin","label":"A low night: \"out here you're just Jin\"","state":{"stage":"friends","flags":{"met_jin":true},"mood":{"energy":-1,"valence":-2,"causes":["senior_snapped"]},"day":50},"world":{"hour":22},"path":["ja2_just_jin"]},{"id":"ja2_tier2_name","label":"Tier 2, polite: ask his real name","state":{"stage":"friends","flags":{"met_jin":true},"day":60},"world":{"hour":20,"inputTier":2},"path":["ja2_real_name"]}]}],"threads":[{"thread":{"id":"kakao.onsae.schedule","characterId":"onsae_group","title":"온새 연습생 단톡","gate":{"month":{"from":1,"to":12}},"at":"21:00","summary":"Manager Choi posts tomorrow's schedule in the trainee group chat. Read it; reply 넵 or nothing. Teaches 체중 측정, 통금, 엄수.","messages":[{"from":"them","ko":"최 실장: [공지] 내일 일정입니다.","en":"Manager Choi: [Notice] Tomorrow's schedule."},{"from":"them","ko":"07:30 체중 측정\n10:00 보컬\n14:00 댄스 (박 코치님)\n19:00 한국어 수업\n23:00 통금 엄수","en":"07:30 weigh-in\n10:00 vocals\n14:00 dance (Coach Park)\n19:00 Korean class\n23:00 curfew, strictly observed"},{"from":"them","ko":"민지: 넵!","en":"Minji: Yes sir!","delay":1},{"from":"them","ko":"예린: 넵~","en":"Yerin: Yep~","delay":0}],"replies":[{"id":"ack","intent":"commit","say":{"ko":"넵!","rom":"nep!","en":"Yes! (casual-polite ack)"},"outcomes":[{"messages":[],"vocab":[{"ko":"체중 측정","rom":"chejung cheukjeong","en":"weigh-in"},{"ko":"통금 엄수","rom":"tonggeum eomsu","en":"curfew strictly observed"}]}]},{"id":"formal","intent":"commit","say":{"ko":"알겠습니다!","rom":"algetseumnida!","en":"Understood! (formal)"},"outcomes":[{"messages":[{"from":"them","ko":"민지: ㅋㅋ 군대야?","en":"Minji: lol is this the army?","delay":1}]}]},{"id":"read","intent":"leave","say":{"ko":"(읽씹)","en":"(leave it on read)"},"outcomes":[{"messages":[]}]}]},"presets":[{"id":"m1","label":"Month 1, first week.","state":{"stage":"strangers","day":3},"world":{"hour":21}}]},{"thread":{"id":"kakao.haeun.oo","characterId":"haeun","title":"하은","gate":{"stage":["acquaintances"]},"at":"22:40","summary":"You asked what time practice is. She answers with \"10시\" fourteen minutes later. Thank her and get \"ㅇㅇ\"; tease the slow reply and she bites.","messages":[{"from":"me","ko":"내일 연습 몇 시예요?","en":"What time is practice tomorrow?"},{"from":"them","ko":"10시","en":"10.","delay":14}],"replies":[{"id":"thanks","intent":"commit","say":{"ko":"고마워요!","rom":"gomawoyo!","en":"Thanks!"},"outcomes":[{"messages":[{"from":"them","ko":"ㅇㅇ","en":"yup"}],"deltas":{"warmth":1}}]},{"id":"tease","intent":"tease","say":{"ko":"답장 빠르네요 ㅋㅋ","rom":"dapjang ppareuneyo kk","en":"Wow, fast reply lol"},"outcomes":[{"messages":[{"from":"them","ko":"바빴어요","en":"I was busy.","delay":2},{"from":"them","ko":"늦지 마요","en":"Don't be late.","delay":0}],"deltas":{"tension":1,"warmth":1}}]},{"id":"read","intent":"leave","say":{"ko":"(읽씹)","en":"(leave it on read)"},"outcomes":[{"messages":[]}]}]},"presets":[{"id":"acq","label":"Acquaintances, month 1.","state":{"stage":"acquaintances","day":20},"world":{"hour":22}}]},{"thread":{"id":"kakao.jin.first","characterId":"jin","title":"진 선배","gate":{"flags":["met_jin"],"stage":["strangers","acquaintances"]},"at":"23:10","summary":"First text from Jin after onboarding. Offering to pay next time gets a charming no: \"선배가 사는 거야. 알지?\" — the first time he decides for you, logged.","messages":[{"from":"them","ko":"오늘 떡볶이 맛있었지? 😆","en":"The tteokbokki was good tonight, right? 😆"},{"from":"them","ko":"아 나 진이야! 포장마차 ㅋㅋ","en":"Oh it's Jin! From the pojangmacha lol","delay":0},{"from":"them","ko":"번호 저장해 둬 📱","en":"Save my number 📱","delay":0}],"replies":[{"id":"thanks","intent":"commit","say":{"ko":"네! 잘 먹었어요. 감사합니다!","rom":"ne! jal meogeosseoyo. gamsahamnida!","en":"Yes! Thanks for the meal!"},"outcomes":[{"messages":[{"from":"them","ko":"에이 감사는 무슨 ㅋㅋ 다음엔 더 맛있는 데 가자 👍","en":"Aw, no need to thank me lol. Next time let's go somewhere even better 👍","delay":1}],"deltas":{"warmth":2}}]},{"id":"my_turn","intent":"decline","say":{"ko":"다음엔 제가 살게요!","rom":"daeumen jega salgeyo!","en":"Next time it's on me!"},"outcomes":[{"messages":[{"from":"them","ko":"ㅋㅋ 안 돼~ 선배가 사는 거야. 알지? 😉","en":"lol nope~ the senior pays. You know that, right? 😉","delay":1}],"deltas":{"warmth":2,"tension":1},"setFlags":["jin_overrode_you"],"memory":{"tag":"jin_insisted_pay","note":"Offered to pay next time; Jin said the senior pays, \"알지?\""}}]},{"id":"read","intent":"leave","say":{"ko":"(읽씹)","en":"(leave it on read)"},"outcomes":[{"messages":[{"from":"them","ko":"자나 보다 ㅎㅎ 잘 자~ 🌙","en":"Must be asleep hehe. Night~ 🌙","delay":40}]}]}]},"presets":[{"id":"after-j0","label":"Night of the pojangmacha onboarding.","state":{"stage":"strangers","flags":{"met_jin":true},"day":2},"world":{"hour":23}}]},{"thread":{"id":"kakao.haeun.food_photo","characterId":"haeun","title":"하은","gate":{"stageAtLeast":"friends","hours":{"from":0,"to":2}},"at":"00:47","summary":"She sends a photo of two cups of ramyeon outside the store. No caption. \"나도 갈래\" gets \"ㅇ 빨리\"; leaving it on read gets \"다 불었어\" in the morning.","messages":[{"from":"them","ko":"(사진)","en":"(Photo: two cups of ramyeon on the plastic table outside the store. No caption.)","photo":"haeun-two-ramyeon"}],"replies":[{"id":"coming","intent":"commit","say":{"ko":"나도 갈래","rom":"nado gallae","en":"I'm coming too"},"outcomes":[{"messages":[{"from":"them","ko":"ㅇ 빨리","en":"k hurry"}],"deltas":{"warmth":2}}]},{"id":"looks_good","intent":"presence","say":{"ko":"맛있겠다","rom":"masitgetda","en":"Looks good"},"outcomes":[{"messages":[{"from":"them","ko":"ㅋ","en":"heh"}],"deltas":{"warmth":1}}]},{"id":"curfew","intent":"tease","say":{"ko":"통금 지났는데?","rom":"tonggeum jinanneunde?","en":"Isn't it past curfew?"},"outcomes":[{"when":{"min":{"tension":35}},"messages":[{"from":"them","ko":"너나 잘해","en":"worry about yourself"}],"deltas":{"tension":1,"warmth":1}},{"messages":[{"from":"them","ko":"그래서 안 와?","en":"so you're not coming?"}],"deltas":{"warmth":1}}]},{"id":"read","intent":"leave","say":{"ko":"(읽씹)","en":"(leave it on read)"},"outcomes":[{"messages":[{"from":"them","ko":"다 불었어","en":"they went soggy","delay":420}],"deltas":{"warmth":-1}}]}]},"presets":[{"id":"friend","label":"Friends, after curfew.","state":{"stage":"friends","axes":{"warmth":50,"tension":30,"trust":40},"day":100},"world":{"hour":0}}]},{"thread":{"id":"kakao.jin.mwohae","characterId":"jin","title":"진 선배","gate":{"stageAtLeast":"acquaintances"},"at":"21:02","summary":"Jin's first 뭐해? check-in after a shoot. Asking how he is lands best (being seen as himself). Ignoring it gets \"?\" twenty-five minutes later.","messages":[{"from":"them","ko":"뭐해? 👀","en":"Whatcha doing? 👀"},{"from":"them","ko":"나 촬영 방금 끝났어 😮‍💨","en":"Just wrapped a shoot 😮‍💨","delay":1}],"replies":[{"id":"practising","intent":"commit","say":{"ko":"연습 중이에요!","rom":"yeonseup jungieyo!","en":"Practising!"},"outcomes":[{"messages":[{"from":"them","ko":"역시 ㅋㅋ 열심히 하네 👏 끝나면 연락해!","en":"Of course lol, so hardworking 👏 text me when you're done!","delay":1}],"deltas":{"warmth":1}}]},{"id":"how_was_it","intent":"ask","say":{"ko":"수고했어요! 오늘 촬영 어땠어요?","rom":"sugohaesseoyo! oneul chwaryeong eottaesseoyo?","en":"Good work! How was the shoot?"},"outcomes":[{"messages":[{"from":"them","ko":"와 그거 물어봐 준 사람 너밖에 없어 ㅠㅠ","en":"Wow, you're the only one who asked ㅠㅠ","delay":1},{"from":"them","ko":"하루 종일 다른 사람으로 살았어 ㅋㅋ 이제야 나로 돌아옴","en":"Spent all day being someone else lol. Only just back to being me","delay":0}],"deltas":{"warmth":3}}]},{"id":"read","intent":"leave","say":{"ko":"(읽씹)","en":"(leave it on read)"},"outcomes":[{"messages":[{"from":"them","ko":"바쁜가 보네 ㅎㅎ","en":"Must be busy hehe","delay":15},{"from":"them","ko":"?","en":"?","delay":25}],"setFlags":["left_jin_on_read"]}]}]},"presets":[{"id":"acq","label":"Acquaintances, evening.","state":{"stage":"acquaintances","flags":{"met_jin":true},"day":30},"world":{"hour":21}}]},{"thread":{"id":"kakao.choi.curfew","characterId":"manager_choi","title":"최 실장님","gate":{"month":{"from":2,"to":12}},"at":"09:12","summary":"Manager Choi asks what time you got in last night. Lie, own it alone, or deflect. Owning it alone is cover for Haeun at a small cost to your standing.","messages":[{"from":"them","ko":"어제 몇 시에 들어왔어요?","en":"What time did you get in last night?"},{"from":"them","ko":"편의점 근처에서 연습생 봤다는 얘기가 있어서요.","en":"Someone said they saw a trainee near the convenience store.","delay":0}],"replies":[{"id":"lie","intent":"deflect","say":{"ko":"11시 전에 들어왔어요.","rom":"yeolhansi jeone deureowasseoyo","en":"I was in before 11."},"outcomes":[{"messages":[{"from":"them","ko":"네. 알겠어요.","en":"Okay. Noted.","delay":3}],"setFlags":["lied_to_choi"],"deltas":{"trust":-1}}]},{"id":"own_it","intent":"apologize","say":{"ko":"죄송합니다. 혼자 나갔다 왔어요.","rom":"joesonghamnida. honja nagatda wasseoyo","en":"I'm sorry. I went out by myself."},"outcomes":[{"messages":[{"from":"them","ko":"혼자요?","en":"By yourself?","delay":2},{"from":"them","ko":"…다음엔 경고 들어가요.","en":"…Next time it's a formal warning.","delay":1}],"setFlags":["covered_for_haeun"],"deltas":{"tension":1}}]},{"id":"mistake","intent":"deflect","minTier":2,"say":{"ko":"물 사러 잠깐 나갔었어요. 바로 들어왔어요.","rom":"mul sareo jamkkan nagasseosseoyo. baro deureowasseoyo","en":"I just popped out to buy water. Came straight back."},"outcomes":[{"messages":[{"from":"them","ko":"물은 숙소에도 있어요 ^^","en":"There's water in the dorm too ^^","delay":2}],"deltas":{"trust":1}}]}]},"presets":[{"id":"m2","label":"Month 2, the morning after the first sneak-out.","state":{"stage":"acquaintances","flags":{"first_secret":true},"day":40},"world":{"hour":9,"inputTier":2}}]},{"thread":{"id":"kakao.haeun.nawa","characterId":"haeun","title":"하은","gate":{"stageAtLeast":"friends","hours":{"from":0,"to":2}},"at":"01:03","summary":"She texts \"나와.\" Go; leave her on read (she acts like she didn't care); or ask \"왜?\" — she says \"됐어\", then texts again ten minutes later.","messages":[{"from":"them","ko":"나와.","en":"Come out."}],"replies":[{"id":"go","intent":"commit","say":{"ko":"갈게","rom":"galge","en":"Coming"},"outcomes":[{"messages":[{"from":"them","ko":"ㅇ","en":"k"}],"deltas":{"warmth":3},"setFlags":["nawa_went"]}]},{"id":"why","intent":"ask","say":{"ko":"왜?","rom":"wae?","en":"Why?"},"outcomes":[{"messages":[{"from":"them","ko":"됐어.","en":"Forget it.","delay":1},{"from":"them","ko":"…라면. 두 개 샀어.","en":"…Ramyeon. I bought two.","delay":10}],"deltas":{"warmth":1,"tension":1}}]},{"id":"read","intent":"leave","say":{"ko":"(읽씹)","en":"(leave it on read)"},"outcomes":[{"messages":[{"from":"them","ko":"ㅋ 자나 보네. 아무것도 아님","en":"heh guess you're asleep. it was nothing","delay":20}],"deltas":{"warmth":-3},"memory":{"tag":"left_nawa_on_read","note":"Left her first \"나와.\" on read. She said it was nothing."}}]}]},"presets":[{"id":"friend","label":"Friends, 1am.","state":{"stage":"friends","flags":{"first_secret":true},"axes":{"warmth":45,"tension":35,"trust":40},"day":95},"world":{"hour":1}}]},{"thread":{"id":"kakao.haeun.bad_eval","characterId":"haeun","title":"하은","gate":{"stageAtLeast":"acquaintances","mood":["raw","low"]},"at":"21:30","summary":"She was flagged at the monthly eval. You decide whether and how to text first. \"편의점 갈래?\" is her love language; \"괜찮아?\" reads as pity until close.","messages":[],"replies":[{"id":"okay","intent":"comfort","say":{"ko":"괜찮아?","rom":"gwaenchana?","en":"You okay?"},"outcomes":[{"when":{"stageAtLeast":"close"},"messages":[{"from":"them","ko":"아니. 근데 고마워","en":"no. but thanks","delay":6}],"deltas":{"trust":2,"warmth":1}},{"messages":[{"from":"them","ko":"뭐가요","en":"about what","delay":40}],"deltas":{"tension":1}}]},{"id":"store","intent":"help","say":{"ko":"편의점 갈래?","rom":"pyeonuijeom gallae?","en":"Wanna go to the convenience store?"},"outcomes":[{"messages":[{"from":"them","ko":"…10분 뒤","en":"…10 min","delay":3}],"deltas":{"warmth":2,"trust":2},"memory":{"tag":"invited_after_bad_eval","note":"Texted her an invitation, not sympathy, the night she was flagged."}}]},{"id":"tease","intent":"tease","say":{"ko":"오늘 센터 위험하던데 ㅋ","rom":"oneul senteo wiheomhadeonde k","en":"Your center spot looked shaky today lol"},"outcomes":[{"when":{"stageAtLeast":"close"},"messages":[{"from":"them","ko":"죽을래 ㅋ","en":"want to die lol","delay":2}],"deltas":{"trust":2,"warmth":1}},{"messages":[],"deltas":{"warmth":-2,"tension":2},"memory":{"tag":"teased_too_early_text","note":"Teased her by text the night she was flagged; she read it and never answered."}}]},{"id":"none","intent":"leave","say":{"ko":"(문자 안 보낸다)","en":"(Don't text.)"},"outcomes":[{"messages":[]}]}]},"presets":[{"id":"acq-raw","label":"Acquaintances, she was flagged.","state":{"stage":"acquaintances","axes":{"warmth":30,"tension":35,"trust":25},"mood":{"valence":-2,"energy":-1,"causes":["eval_flagged"]},"day":56},"world":{"hour":21}},{"id":"close-raw","label":"Close, she was flagged. Now teasing helps.","state":{"stage":"close","axes":{"warmth":68,"tension":35,"trust":60},"mood":{"valence":-2,"energy":-1,"causes":["eval_flagged"]},"day":196},"world":{"hour":21}}]},{"thread":{"id":"kakao.jin.dinner","characterId":"jin","title":"진 선배","gate":{"stageAtLeast":"friends"},"at":"18:20","summary":"Jin asks what you want for dinner, then decides himself and says he'll pick you up at 7. Deferring feels great and is logged; saying you have practice gets a second try; naming what you want gets overridden with \"그치?\".","messages":[{"from":"them","ko":"오늘 저녁 뭐 먹을래?","en":"What do you want for dinner tonight?"},{"from":"them","ko":"아 아니다 내가 정할게 ㅋㅋ","en":"Ah no wait, I'll pick lol","delay":0},{"from":"them","ko":"삼겹살 콜? 7시에 데리러 갈게 🚗","en":"Samgyeopsal? I'll pick you up at 7 🚗","delay":0}],"replies":[{"id":"sure","intent":"defer","ask":"directive","say":{"ko":"좋아요!","rom":"joayo!","en":"Sounds good!"},"outcomes":[{"messages":[{"from":"them","ko":"역시 말이 통한다니까 😆","en":"See, we just get each other 😆","delay":0}],"deltas":{"warmth":2},"tally":["jin_directives"],"memory":{"tag":"let_jin_decide","note":"Let Jin decide dinner and the pickup without being asked."}}]},{"id":"practice","intent":"decline","ask":"directive","say":{"ko":"오늘은 연습 있어서 안 돼요","rom":"oneureun yeonseup isseoseo an dwaeyo","en":"I can't tonight, I have practice"},"outcomes":[{"messages":[{"from":"them","ko":"아 그래? ㅠㅠ","en":"Oh really? ㅠㅠ","delay":1},{"from":"them","ko":"그럼 연습 끝나고 9시는? 잠깐만 보자 🙏","en":"Then 9, after practice? Just for a bit 🙏","delay":1}],"deltas":{"warmth":-1,"tension":1,"trust":1},"setFlags":["jin_second_try"]}]},{"id":"my_pick","intent":"challenge","say":{"ko":"저는 떡볶이 먹고 싶은데요?","rom":"jeoneun tteokbokki meokgo sipeundeyo?","en":"I kind of want tteokbokki though?"},"outcomes":[{"messages":[{"from":"them","ko":"ㅋㅋ 떡볶이는 저번에 먹었잖아~ 삼겹살 먹자, 그치?","en":"lol we had tteokbokki last time~ let's do samgyeopsal, yeah?","delay":1}],"deltas":{"tension":1},"memory":{"tag":"jin_overrode_choice","note":"Said what you wanted; Jin overrode it with \"그치?\"."}}]}]},"presets":[{"id":"friend","label":"Friends with Jin, early evening.","state":{"stage":"friends","flags":{"met_jin":true},"axes":{"warmth":55,"tension":20,"trust":40},"day":120},"world":{"hour":18}}]},{"thread":{"id":"kakao.haeun.banana_milk","characterId":"haeun","title":"하은","gate":{"stageAtLeast":"acquaintances","flags":["left_banana_milk"]},"at":"07:52","summary":"Photo of the banana milk on her locker: \"이거 너지\". Owning it lands; if you knew it's her pre-eval habit it lands hard (\"…어떻게 알았어\").","messages":[{"from":"them","ko":"(사진)","en":"(Photo: a 바나나우유 on top of her locker.)","photo":"haeun-locker-banana-milk"},{"from":"them","ko":"이거 너지","en":"This was you, right","delay":0}],"replies":[{"id":"yes","intent":"commit","say":{"ko":"네. 오늘 평가잖아요","rom":"ne. oneul pyeonggajanayo","en":"Yeah. It's eval day."},"outcomes":[{"when":{"knows":["banana_milk"]},"messages":[{"from":"them","ko":"…어떻게 알았어","en":"…how did you know","delay":4},{"from":"them","ko":"고마워","en":"thanks","delay":1}],"deltas":{"warmth":3,"trust":1},"memory":{"tag":"banana_milk_specific","note":"Left banana milk before an eval knowing it was her ritual."}},{"messages":[{"from":"them","ko":"ㅇ 고마워","en":"k thanks","delay":2}],"deltas":{"warmth":2}}]},{"id":"deny","intent":"tease","say":{"ko":"아닌데?","rom":"aninde?","en":"Wasn't me?"},"outcomes":[{"messages":[{"from":"them","ko":"ㅋ 거짓말","en":"heh liar","delay":1}],"deltas":{"warmth":1,"tension":1}}]},{"id":"read","intent":"leave","say":{"ko":"(읽씹)","en":"(leave it on read)"},"outcomes":[{"messages":[]}]}]},"presets":[{"id":"generic","label":"Acquaintances, you didn't know the habit.","state":{"stage":"acquaintances","flags":{"left_banana_milk":true},"day":56},"world":{"hour":7}},{"id":"specific","label":"Friends, you knew it's her pre-eval ritual.","state":{"stage":"friends","flags":{"left_banana_milk":true},"knows":{"banana_milk":true},"day":112},"world":{"hour":7}}]},{"thread":{"id":"kakao.haeun.mal_nokka","characterId":"haeun","title":"하은","gate":{"stage":["friends"],"notFlags":["dropped_formal"]},"at":"23:58","summary":"She asks how old you are, gives up, and asks to drop formal speech. Saying yes in 반말 seals it; answering politely is funny; \"갑자기?\" makes her retreat, then commit; leaving it on read is remembered.","messages":[{"from":"them","ko":"근데 몇 살이에요","en":"So how old are you"},{"from":"them","ko":"아 됐다 그냥","en":"ugh never mind","delay":1},{"from":"them","ko":"말 놓을래요?","en":"Want to drop the formal speech?","delay":1}],"replies":[{"id":"yes","intent":"commit","say":{"ko":"좋아!","rom":"joa!","en":"Sure! (already in 반말)"},"outcomes":[{"messages":[{"from":"them","ko":"ㅇㅇ 그럼 이제 반말한다","en":"k, 반말 from now on then","delay":1}],"deltas":{"warmth":3},"setFlags":["dropped_formal"],"memory":{"tag":"dropped_formal","note":"Dropped formal speech by text, a minute before midnight."}}]},{"id":"polite_yes","intent":"commit","say":{"ko":"편하게 해요 ㅋㅋ","rom":"pyeonhage haeyo kk","en":"Go ahead, be casual lol (still polite)"},"outcomes":[{"messages":[{"from":"them","ko":"…지금 그거 존댓말이잖아","en":"…that was 존댓말 just now","delay":1}],"deltas":{"warmth":2,"tension":1},"setFlags":["dropped_formal"],"memory":{"tag":"dropped_formal","note":"Agreed to drop formal speech, politely; she called it out."}}]},{"id":"suddenly","intent":"ask","say":{"ko":"갑자기?","rom":"gapjagi?","en":"All of a sudden?"},"outcomes":[{"messages":[{"from":"them","ko":"됐어요. 잊어요","en":"Forget it. Never mind","delay":1},{"from":"them","ko":"…아니 그냥 놓자","en":"…no. let's just drop it","delay":5}],"deltas":{"warmth":1,"tension":1},"setFlags":["dropped_formal"]}]},{"id":"read","intent":"leave","say":{"ko":"(읽씹)","en":"(leave it on read)"},"outcomes":[{"messages":[],"deltas":{"warmth":-3,"trust":-1},"memory":{"tag":"mal_nokka_on_read","note":"Left her 말 놓을래요? on read. She never asked again; you will have to."}}]}]},"presets":[{"id":"friend","label":"Friends, still 존댓말.","state":{"stage":"friends","axes":{"warmth":52,"tension":30,"trust":40},"day":110},"world":{"hour":23}}]},{"thread":{"id":"kakao.jin.read_receipt","characterId":"jin","title":"진 선배","gate":{"stageAtLeast":"friends"},"at":"20:05","summary":"Five messages over an hour after the \"1\" vanished: question, \"?\", \"읽었는데 답이 없네 ㅎㅎ\", \"괜찮아 😊\", \"다음엔 읽으면 답 좀 해 줘~ 걱정되잖아 🥺\". Apologising feeds the pattern; a calm boundary (tier 2) is the healthy branch, and his reply turns oddly polite.","messages":[{"from":"them","ko":"오늘 연습 어땠어?","en":"How was practice today?"},{"from":"them","ko":"?","en":"?","delay":20},{"from":"them","ko":"읽었는데 답이 없네 ㅎㅎ","en":"You read it but no reply hehe","delay":40},{"from":"them","ko":"바빴구나! 괜찮아 😊","en":"You were busy! It's fine 😊","delay":5},{"from":"them","ko":"근데 다음엔 읽으면 답 좀 해 줘~ 걱정되잖아 🥺","en":"But next time if you read it, reply okay~ I worry 🥺","delay":30}],"replies":[{"id":"sorry","intent":"apologize","ask":"directive","say":{"ko":"미안해요, 연습하느라 정신없었어요","rom":"mianhaeyo, yeonseuphaneura jeongsin eopseosseoyo","en":"Sorry, practice was crazy"},"outcomes":[{"messages":[{"from":"them","ko":"아니야 아니야 ㅋㅋ 그냥 걱정돼서 😊","en":"No no lol, I just worry 😊","delay":0}],"deltas":{"warmth":1},"tally":["jin_directives"],"setFlags":["jin_read_apology"],"memory":{"tag":"apologized_for_read","note":"Apologised to Jin for reading and not replying."}}]},{"id":"boundary","intent":"decline","ask":"directive","minTier":2,"say":{"ko":"바로 답 못 할 때도 있어요. 걱정 안 해도 돼요.","rom":"baro dap mot hal ttaedo isseoyo. geokjeong an haedo dwaeyo","en":"Sometimes I can't reply right away. You don't need to worry."},"outcomes":[{"messages":[{"from":"them","ko":"…아 그렇지. 당연하지! 내가 좀 오버했다 ㅎㅎ","en":"…Ah right. Of course! I overdid it a bit hehe","delay":3},{"from":"them","ko":"알겠습니다~ 연습 화이팅하세요!","en":"Understood~ Good luck with practice!","delay":1}],"deltas":{"warmth":-1,"tension":2,"trust":2},"setFlags":["jin_boundary_1"],"memory":{"tag":"jin_boundary_read","note":"Told Jin you won't always reply right away. His answer went suddenly formal."}}]},{"id":"read","intent":"leave","say":{"ko":"(또 읽씹)","en":"(leave it on read again)"},"outcomes":[{"messages":[{"from":"them","ko":"자?","en":"Asleep?","delay":60},{"from":"them","ko":"내가 뭐 잘못했나? 😅","en":"Did I do something wrong? 😅","delay":1}],"deltas":{"tension":2},"memory":{"tag":"jin_on_read_twice","note":"Left Jin on read twice in one night."}}]}]},"presets":[{"id":"tier1","label":"Friends with Jin, tier 1: no boundary option yet.","state":{"stage":"friends","flags":{"met_jin":true},"axes":{"warmth":58,"tension":22,"trust":40},"day":130},"world":{"hour":21,"inputTier":1}},{"id":"tier2","label":"Friends with Jin, tier 2: you can set the boundary.","state":{"stage":"friends","flags":{"met_jin":true},"axes":{"warmth":58,"tension":22,"trust":40},"day":130},"world":{"hour":21,"inputTier":2}}]},{"thread":{"id":"kakao.haeun.deleted","characterId":"haeun","title":"하은","gate":{"stageAtLeast":"romantic_tension"},"at":"02:14","summary":"A deleted message, then \"아무것도 아님\", then \"자\". Asking is remembered (payoff later); matching her (\"나도 아무것도 아님\") gets real laughter; \"잘 자\" gets \"…너도\".","messages":[{"from":"them","ko":"삭제된 메시지입니다.","en":"This message was deleted.","deleted":true},{"from":"them","ko":"아무것도 아님","en":"it's nothing","delay":1},{"from":"them","ko":"자","en":"go to sleep","delay":0}],"replies":[{"id":"ask","intent":"ask","say":{"ko":"뭐 보냈었어?","rom":"mwo bonaesseosseo?","en":"What did you send?"},"outcomes":[{"messages":[{"from":"them","ko":"아무것도 아니라니까","en":"I said it's nothing","delay":1}],"deltas":{"warmth":1,"tension":1},"memory":{"tag":"asked_deleted_msg","note":"Asked what the deleted 2am message said. She wouldn't say. Yet."}}]},{"id":"match","intent":"tease","say":{"ko":"나도 아무것도 아님","rom":"nado amugeotdo anim","en":"me neither, nothing"},"outcomes":[{"messages":[{"from":"them","ko":"ㅋㅋㅋㅋ 뭐래","en":"lololol what are you on about","delay":1}],"deltas":{"warmth":3}}]},{"id":"night","intent":"comfort","say":{"ko":"잘 자","rom":"jal ja","en":"Good night"},"outcomes":[{"messages":[{"from":"them","ko":"…너도","en":"…you too","delay":2}],"deltas":{"warmth":2,"trust":1}}]}]},"presets":[{"id":"tension","label":"Romantic tension, 2am.","state":{"stage":"romantic_tension","flags":{"spark":true,"dropped_formal":true},"axes":{"warmth":75,"tension":45,"trust":65},"day":280},"world":{"hour":2}}]},{"thread":{"id":"kakao.jin.pickup","characterId":"jin","title":"진 선배","gate":{"stageAtLeast":"close"},"at":"22:40","summary":"Jin is already driving to pick you up. Saying you'll go alone: he pushes (\"위험해\", \"그치?\") unless you set a boundary before, in which case he accepts — politely, too politely. Asking how he knew where you were: he passed the store.","messages":[{"from":"them","ko":"어디야?","en":"Where are you?"},{"from":"them","ko":"데리러 갈게. 위치 보내 줘 📍","en":"I'll come get you. Send your location 📍","delay":0},{"from":"them","ko":"벌써 차 탔어 ㅋㅋ","en":"Already in the car lol","delay":1}],"replies":[{"id":"alone","intent":"decline","ask":"directive","say":{"ko":"괜찮아요, 혼자 갈 수 있어요","rom":"gwaenchanayo, honja gal su isseoyo","en":"It's okay, I can get back on my own"},"outcomes":[{"when":{"flags":["jin_boundary_1"]},"messages":[{"from":"them","ko":"…그래요. 도착하면 문자 줘요.","en":"…Alright. Text me when you get in.","delay":2}],"deltas":{"trust":1,"tension":1},"setFlags":["jin_boundary_2"]},{"messages":[{"from":"them","ko":"에이~ 늦었잖아. 위험해 😟","en":"Aw come on~ it's late. It's not safe 😟","delay":1},{"from":"them","ko":"거의 다 왔어. 그냥 기다려, 그치?","en":"Almost there. Just wait, yeah?","delay":1}],"deltas":{"warmth":-1,"tension":2,"trust":1},"memory":{"tag":"jin_came_anyway","note":"Said you'd go home alone; Jin kept driving."}}]},{"id":"thanks","intent":"defer","ask":"directive","say":{"ko":"고마워요!","rom":"gomawoyo!","en":"Thank you!"},"outcomes":[{"messages":[{"from":"them","ko":"당연하지 😊 5분!","en":"Of course 😊 5 min!","delay":0}],"deltas":{"warmth":2},"tally":["jin_directives"],"setFlags":["jin_ride_home"],"memory":{"tag":"let_jin_pick_up","note":"Let Jin pick you up without sending a location; he already knew roughly where."}}]},{"id":"how_know","intent":"ask","say":{"ko":"근데 제가 밖에 있는 거 어떻게 알았어요?","rom":"geunde jega bakke inneun geo eotteoke arasseoyo?","en":"Wait, how did you know I was out?"},"outcomes":[{"messages":[{"from":"them","ko":"아까 편의점 앞 지나가다 봤어 ㅋㅋ 손 흔들었는데 못 봤지?","en":"Drove past the convenience store earlier lol. I waved, you didn't see?","delay":1}],"deltas":{"tension":2},"setFlags":["jin_noticed_location"]}]}]},"presets":[{"id":"no-boundary","label":"Close with Jin, no boundary set before.","state":{"stage":"close","flags":{"met_jin":true},"axes":{"warmth":70,"tension":25,"trust":50},"day":220},"world":{"hour":22},"path":["alone"]},{"id":"after-boundary","label":"Close with Jin, you set the read-receipt boundary earlier.","state":{"stage":"close","flags":{"met_jin":true,"jin_boundary_1":true},"axes":{"warmth":65,"tension":35,"trust":55},"day":220},"world":{"hour":22},"path":["alone"]}]},{"thread":{"id":"kakao.haeun.voice_note","characterId":"haeun","title":"하은","gate":{"stageAtLeast":"romantic_tension","month":{"from":9,"to":12}},"at":"01:37","summary":"She sends a 0:07 voice note and deletes it before you can play it. \"다시 보내 줘\" → \"싫어\", then a promise to say it in person. Bluffing that you heard it makes her panic.","messages":[{"from":"them","ko":"(음성메시지 0:07)","en":"(Voice message, 0:07)"},{"from":"them","ko":"삭제된 메시지입니다.","en":"This message was deleted.","deleted":true,"delay":1},{"from":"them","ko":"잘못 보냄","en":"sent by mistake","delay":0}],"replies":[{"id":"resend","intent":"ask","say":{"ko":"다시 보내 줘","rom":"dasi bonae jwo","en":"Send it again"},"outcomes":[{"messages":[{"from":"them","ko":"싫어","en":"no","delay":1},{"from":"them","ko":"…내일 직접 말할게","en":"…I'll tell you in person tomorrow","delay":3}],"deltas":{"warmth":2,"trust":1},"setFlags":["voice_note_promise"]}]},{"id":"bluff","intent":"tease","say":{"ko":"이미 들었는데?","rom":"imi deureonneunde?","en":"Already heard it though?"},"outcomes":[{"messages":[{"from":"them","ko":"거짓말","en":"liar","delay":0},{"from":"them","ko":"…뭘 들었는데","en":"…heard what","delay":1}],"deltas":{"warmth":2,"tension":2}}]},{"id":"night","intent":"presence","say":{"ko":"ㅋㅋ 알았어. 잘 자","rom":"kk arasseo. jal ja","en":"lol okay. Good night"},"outcomes":[{"messages":[{"from":"them","ko":"…ㅇ 잘 자","en":"…k night","delay":1}],"deltas":{"warmth":1}}]}]},"presets":[{"id":"late","label":"Romantic tension, month 10.","state":{"stage":"romantic_tension","flags":{"spark":true,"dropped_formal":true},"axes":{"warmth":80,"tension":40,"trust":70},"day":270},"world":{"hour":1}}]}],"canon":{"characters":[{"id":"haeun","name":{"ko":"하은","en":"Ha-eun"},"age":18,"hometown":"Seogwipo, Jeju","role":"Onsae trainee, two years in. Strongest dancer in the cohort; center in most line-ups.","family":"Raised mostly by her grandmother, a retired 해녀 (sea diver), in Seogwipo. Mother works in Jeju-si. Haeun sends money home. No one in the family can afford to visit Seoul often.","timeline":[{"when":"age 13–15","event":"Tutors younger kids in Seogwipo to pay for dance classes and, later, the move to Seoul.","knownBy":["haeun","sua","grandmother"]},{"when":"age 15","event":"Moves to Seoul with Sua for an audition program; both are cast as Onsae trainees.","knownBy":["haeun","sua","manager_choi"]},{"when":"year 1–2","event":"Covers for Sua: runs her parts, lies to managers about curfew, shares tutoring savings when Sua's family is short.","knownBy":["haeun","sua"]},{"when":"year 2","event":"Haeun's own evals dip because of the covering. Coach Park notices; Sua notices too.","knownBy":["haeun","sua","coach_park"]},{"when":"two weeks before you arrive","event":"Sua leaves Onsae without telling Haeun, a week before she would likely have been cut. Sends several KakaoTalk messages that night. Haeun never opens the chat.","knownBy":["haeun","sua","manager_choi","trainees"]},{"when":"m1 d1","event":"You arrive and take Sua's lineup spot and locker. Coach Park pairs you with Haeun as practice buddy.","knownBy":["everyone"]}],"people":[{"id":"sua","name":{"ko":"수아","en":"Su-a"},"relation":"best friend from Jeju, left Onsae","note":"See canon/sua.ts."},{"id":"grandmother","name":{"ko":"할망","en":"Grandma"},"relation":"grandmother","note":"Jeju 할망 (grandma). Calls on Sundays. The person Haeun speaks Jeju with."},{"id":"coach_park","name":{"ko":"박 코치","en":"Coach Park"},"relation":"coach","note":"The only adult she respects at Onsae."}],"ownedPlaces":[{"id":"dorm_rooftop","why":"Where she goes to be nobody. Grandma calls her here."},{"id":"convenience_store","why":"The plastic chair on the left. Two cups of ramyeon, \"one was a mistake.\""}],"facts":[{"id":"from_jeju","fact":"She is from Seogwipo, Jeju, not Seoul. Her standard Korean is flawless because she performs it.","knownBy":["haeun","sua","trainees"]},{"id":"sua_name","fact":"There was a trainee called Sua whose spot you took.","knownBy":["trainees"]},{"id":"tutored_kids","fact":"She paid her own way by tutoring kids.","knownBy":["haeun","sua"]},{"id":"sends_money_home","fact":"She sends money home and can't afford gifts or the trip to Jeju at Chuseok.","knownBy":["haeun"]},{"id":"banana_milk","fact":"She drinks a 바나나우유 (banana milk) before every eval. Habit from Sua.","knownBy":["haeun","sua"]}],"secrets":[{"id":"sua_friend","fact":"Sua was her best friend; they came up from Jeju together.","knownBy":["haeun","sua"],"revealWhen":"Rooftop (H7): close-ish, trust ≥ 45, first_secret, knows from_jeju.","revealedIn":["haeun.h7"]},{"id":"unread_chat","fact":"Sua's chat sits unread. The preview shows only the last message, \"잘 지내.\" Opening it would clear the \"1\". She leaves it on 안읽씹 deliberately: she refuses to let Sua off the hook.","knownBy":["haeun"],"revealWhen":"Rooftop (H7).","revealedIn":["haeun.h7"]},{"id":"covered_for_sua","fact":"Her evals dropped because she was carrying Sua.","knownBy":["haeun","sua","coach_park"],"revealWhen":"Notebook (H9).","revealedIn":["haeun.h9"]},{"id":"cried_in_studio","fact":"The night of H2 she cried alone in the studio after everyone left.","knownBy":["haeun"],"revealWhen":"Only if the player left early in H2; told much later, close+.","revealedIn":["haeun.h7","haeun.h8"]}],"model":{"publicLayer":"Low agreeableness, high conscientiousness, commanding on stage. Cold, competitive, unimpressed.","privateLayer":"Kind underneath, anxious, homesick, hides neuroticism. Introverted offstage.","attachment":"Avoidant: people leave, so she leaves first.","gives":["acts of service: the \"extra\" snack, correcting your form","drilling you"],"needs":["quality time without being handled","words she can't ask for"],"want":"Debut.","need":"To let someone stay.","wound":"Being left without an explanation.","fear":"You'll leave too.","conflictStyle":"Withdraws, then blunt.","humor":"Deadpan, competitive.","values":["effort","competence","keeping secrets","being treated as normal"],"triggers":["pity","being handled","broken promises","letting her win on purpose"],"volatility":0.7,"moodTells":["shorter replies","\"ㅇ\" instead of \"ㅇㅇ\"","skips the second ramyeon","practises alone with headphones in"]},"speech":{"rules":["Strangers/acquaintances: politeness as a wall (눈치 to read, never open hostility; open hostility could be reported, so trainees are nice to everyone). Impeccable 해요체, a perfect smile, textbook lines (\"하은이에요. 잘 부탁해요.\").","The wall, concretely: short closed answers (\"네~\", \"그렇구나\"); never asks anything about you; never uses your name; polite deflection instead of refusal (\"아, 그냥 예전에 있던 친구예요.\" then a smooth change of subject); empty invitations (\"다음에 밥 한번 먹어요\"); extra-polite -세요 as condescension; a polite apology aimed like a slap.","She never drops 존댓말 with you while she uses 반말 with other trainees; the contrast is there to notice, nobody explains it.","Intimacy shows up as breaking politeness. Her first 반말 at you (\"야, 이것도 못 해?\") is her letting you in, not a jab. An early slip she catches (\"다시 해. …아, 다시 해 볼까요?\") is the leak signal. \"말 놓을까?\" is a friend-stage milestone; either side can raise it.","Inverse of Jin: he starts warm and the control hides inside the politeness; she starts polite and the warmth hides behind it.","Tong only states observations about her (\"She kept it all 존댓말.\"), never conclusions. Later scenes connect the dots: her laughing in 반말 with another trainee, a trainee joking someone has \"눈치가 없어\" (Tong teaches 눈치 there), and her first 반말 at you (\"That's the first time she's used 반말 with you.\").","With friends: says the opposite of what she means; questions are challenges (\"이것도 못 해?\"). Saying your name softly is a late-route event.","Praise is rare and memorable: \"…나쁘지 않네.\"","Jeju leaks only under real emotion, late, and rarely. Never as a cute tic."],"tics":["됐어","뭐래","…진짜?","다시."],"texting":["dry: \"ㅇㅇ\", a single ㅋ, no emoji","photos of food with no caption","late route: \"ㅋㅋㅋㅋ\", voice notes she deletes"],"underPressure":"Goes quiet, then Jeju leaks.","neverSays":["aegyo","long apologies","Busan satoori (retired canon)"]},"schedule":[{"slot":"07:00–09:00","where":"dorm","note":"Weigh-in on eval weeks."},{"slot":"10:00–18:00","where":"practice_studio"},{"slot":"18:00–22:30","where":"practice_studio","note":"Stays late. Alone with headphones on bad days."},{"slot":"23:00","where":"dorm","note":"Curfew."},{"slot":"00:30–02:00","where":"convenience_store","note":"Only after the sneak-out thread starts (m2+)."},{"slot":"Sunday evening","where":"dorm_rooftop","note":"Grandma calls."}],"mustNot":["Never at the pojangmacha in Act 1. That is Jin's onboarding place.","Never openly sweet before close stage; warmth shows through acts, not words.","No fogged-window ㅎ outside the single rare Act 3 ambient.","She does not know the notebook exists until the player gives it to her or she finds out.","She does not read Sua's chat until after the notebook (H9)."]},{"id":"sua","name":{"ko":"수아","en":"Su-a"},"age":18,"hometown":"Jeju-si, Jeju","role":"Former Onsae trainee. Now works at a café in Yeonnam-dong.","family":"Family business in Jeju-si hit hard two years ago; Haeun quietly helped.","timeline":[{"when":"age 15","event":"Comes up from Jeju with Haeun.","knownBy":["haeun","sua"]},{"when":"year 2","event":"Evals slip; the agency signals a cut is coming.","knownBy":["sua","coach_park"]},{"when":"year 2","event":"Realises Haeun's evals are suffering because Haeun keeps carrying her.","knownBy":["sua"]},{"when":"two weeks before you arrive","event":"Leaves before she can be cut. Writes the explanation on the last page of her practice notebook, jams it behind her locker drawer for Haeun, then sends several messages.","knownBy":["sua"]},{"when":"after leaving","event":"Gets a job at a Yeonnam café. Keeps track of Onsae; knows who took her spot.","knownBy":["sua"]}],"people":[{"id":"haeun","name":{"ko":"하은","en":"Ha-eun"},"relation":"best friend","note":"Sua's message thread is on 안읽씹."}],"ownedPlaces":[{"id":"yeonnam_cafe","why":"Where she works now."}],"facts":[{"id":"sua_messages","fact":"Sua's messages, in order: \"하은아\" / \"미안해\" / \"내 사물함 서랍 뒤에 노트 있어. 너한테 쓴 거야.\" / \"직접 말 못 해서 미안.\" / \"잘 지내.\" The chat list previews only the last one.","knownBy":["sua"]},{"id":"notebook","fact":"Practice notebook: choreo counts, schedules, a doodle of Haeun labelled \"센터!!\", her copy of their 인생네컷 strip tucked inside, and a last page written to Haeun, partly in Jeju.","knownBy":["sua"]},{"id":"photo_strip","fact":"인생네컷 prints two strips. Haeun's copy is in her locker door; Sua's is inside the notebook.","knownBy":["haeun","sua"]}],"secrets":[{"id":"why_sua_left","fact":"Half saving face (leaving before being cut), half setting Haeun free (Haeun's evals were suffering because of her). She couldn't say either: Haeun would have refused to let her go.","knownBy":["sua"],"revealWhen":"Notebook last page (H9), readable with enough Korean plus jeju_word for the Jeju line.","revealedIn":["haeun.h9","haeun.h10"]}],"model":{"publicLayer":"Bright, easygoing.","privateLayer":"Proud, guilty, conflict-avoidant.","attachment":"Anxious-avoidant: leaves rather than be left.","gives":["notes, doodles, small written things"],"needs":["to be forgiven without having to ask"],"want":"Haeun to debut.","need":"To say it out loud.","wound":"Being the one carried.","fear":"That Haeun hates her.","conflictStyle":"Avoids, then writes it down.","humor":"Silly, doodles.","values":["loyalty"],"triggers":["being pitied"],"volatility":0.4,"moodTells":[]},"speech":{"rules":["Softer than Haeun. Jeju comes out more easily with her."],"tics":["하은아"],"texting":["Several short messages in a row."],"underPressure":"Apologises, then leaves.","neverSays":[]},"schedule":[{"slot":"afternoons","where":"yeonnam_cafe"}],"mustNot":["Never on screen before Act 3 except in photos.","Never written as a villain."]},{"id":"jin","name":{"ko":"진","en":"Jin"},"age":26,"hometown":"Daejeon","role":"Actor on Onsae's small roster. Former Onsae trainee who never debuted as an idol and switched to acting; now on a hit drama. The 선배 (senior) figure in the world you're entering.","family":"Parents in Daejeon who watch every episode and call him by his character's name. TBD: more.","timeline":[{"when":"age 16–20","event":"Onsae idol trainee. Almost quit twice.","knownBy":["jin","coach_park"]},{"when":"age 21","event":"Moves to acting. First small role.","knownBy":["public"]},{"when":"last year","event":"Breakout drama role. Gets recognised everywhere; the agency manages his image and schedule tightly.","knownBy":["public"]},{"when":"m1","event":"Meets the player at the pojangmacha: rescues a misorder, orders 떡볶이 for them, insists on paying. Leaves in a low cap and mask.","knownBy":["jin"]}],"people":[{"id":"manager_kang","name":{"ko":"강 매니저","en":"Manager Kang"},"relation":"his road manager","note":"Calls during the onboarding; the face-change call."},{"id":"haeun","name":{"ko":"하은","en":"Ha-eun"},"relation":"knows of her","note":"Knows she's the cohort's center. Haeun knows his reputation."}],"ownedPlaces":[{"id":"food_street","why":"The pojangmacha ajusshi doesn't watch dramas."},{"id":"cafe","why":"Café Bom is his 단골 (regular spot)."},{"id":"han_river","why":"The only place he walks without being looked at."}],"facts":[{"id":"jin_actor","fact":"He's an actor on a hit drama; most people recognise his face before his name.","knownBy":["public"]},{"id":"jin_ex_trainee","fact":"He trained at Onsae and never debuted as an idol.","knownBy":["jin","coach_park","haeun"]}],"secrets":[{"id":"face_change","fact":"A one-second change of face when his phone buzzes: the agency owns his time and image.","knownBy":["jin"],"revealWhen":"Seen in onboarding; understood in the noticing phase.","revealedIn":["jin.j0"]},{"id":"seo_yeon","fact":"In his breakout year fans posted photos of him with Seo-yeon, an Onsae trainee he was seeing. The agencies had him call her \"staff I barely know\"; she was cut from the debut lineup and left the industry. His lesson: whoever controls the story controls what happens.","knownBy":["jin","manager_kang","coach_park","manager_choi"],"revealWhen":"Act 3, after the leak; trainees know only the ghost story before that.","revealedIn":[]},{"id":"the_leak","fact":"Jin leaks the river photo of you two himself: his timing, his angle, framed sympathetically to you, a statement already drafted. A manufactured crisis with his rescue built in; he half-believes it protects you from becoming Seo-yeon. Manager Kang posted it (\"형이 시킨 대로 올렸어요\").","knownBy":["jin","manager_kang"],"revealWhen":"Act 3. Clues: the river-photo angle, his on-set timeline, Kang's overheard call (listening), Ha-eun. He confesses only to a tier-3 spoken confrontation backed by a clue.","revealedIn":[]},{"id":"real_name","fact":"Jin is a stage name. He gives his real name only in the Seen ending.","knownBy":["jin","manager_kang"],"revealWhen":"Seen ending","revealedIn":[]}],"model":{"publicLayer":"High extraversion and agreeableness. Warm, attentive, remembers what you said 30 seconds ago, always knows the best food.","privateLayer":"Anxious, lonely; compensates for being owned by owning. After Seo-yeon: whoever controls the story controls what happens, so he makes sure he is the one writing it.","attachment":"Anxious, tipping into controlling.","gives":["gifts and acts: paying, ordering, planning"],"needs":["undivided attention","being seen as himself"],"want":"To keep you.","need":"To be known without owning, and to let you write your own story.","wound":"Not owning his own image or time.","fear":"You'll see him as a celebrity, or leave.","conflictStyle":"Sulks politely, guilt, smooth deflection.","humor":"Playful, self-deprecating.","values":["being treated as normal","your full attention"],"triggers":["phone attention","other people","being recognised"],"volatility":0.3,"moodTells":["a sudden, flawless calm","gets more polite"]},"speech":{"rules":["Fluent, warm, easy. Uses your name often. Starts in warm 존댓말 and proposes 반말 early (\"우리 말 놓을까요?\"); the player may decline. In hindsight the ease is a tell.","Suggestions as 하자 / 할래?; tag questions that presume agreement (그치? 알지?).","Switches to English to feel closer.","Under pressure gets *more* polite."],"tics":["그치?","알지?","밥 먹었어?"],"texting":["fast, emojis","뭐해? check-ins","notices when your \"1\" disappears and you don't reply"],"underPressure":"Actor mode: flawless, polite, calm.","neverSays":["anything outright cruel"]},"schedule":[{"slot":"unpredictable","where":"shoots / press"},{"slot":"some nights","where":"food_street","note":"Low cap, mask."},{"slot":"afternoons off","where":"cafe"},{"slot":"late nights","where":"han_river"}],"mustNot":["Never flattened into a villain.","The game never rewards possessiveness.","Tag every yes/no he asks for: generosity (he pays, a ride) is fine to accept and never counts against you; a directive (where you go, who you see, what you say, when you reply) counts in tally.jin_directives when you go along. Yes is rewarding now (warmth, useful perks); no costs a little warmth now and always builds trust. A kind, clear no lands better than a cold one. The counter stays hidden; he shows it through tells (a second no lands differently from the first).","Higher affinity alone never counts as repair: a healthier route needs him to accept boundaries and change over time."]}],"world":{"agency":{"ko":"온새 엔터테인먼트","en":"Onsae Entertainment","note":"Mid-size Hongdae agency with an idol trainee program and a small actor roster. Trainees and actors share the building; that is how Jin is around."},"calendar":[{"month":1,"label":"March: you arrive","eval":"Placement eval (dance, vocal, Korean)","beats":["H0 arrival","H1 pairing","H2 drills"]},{"month":2,"label":"April: cherry blossoms","eval":"Monthly eval","beats":["H3 sneak-out by accident"]},{"month":3,"label":"May","eval":"Monthly eval; stage check (friend or rival)","beats":["first rivalry minigame"]},{"month":4,"label":"June","eval":"Monthly eval","beats":["H4 \"나와.\""]},{"month":5,"label":"July: 장마 (monsoon)","eval":"Monthly eval","beats":["H5 tutor / English-lyrics role reversal","rain forces proximity"]},{"month":6,"label":"August","eval":"Monthly eval","beats":["H6 almost caught (stealth)"]},{"month":7,"label":"September: 추석 (Chuseok)","eval":"Monthly eval","beats":["Chuseok: everyone goes home but Haeun can't afford Jeju","H7 rooftop"]},{"month":8,"label":"October","eval":"Monthly eval","beats":["H8 Jeju slips out"]},{"month":9,"label":"November","eval":"Monthly eval","beats":["H9 the notebook","rare fogged window"]},{"month":10,"label":"December: 첫눈 (first snow)","eval":"Monthly eval","beats":["H10 Sua","first snow confession window"]},{"month":11,"label":"January","eval":"Monthly eval","beats":["H11 the decision"]},{"month":12,"label":"February","eval":"Final evaluation","beats":["H12 the night before"]}],"places":[{"id":"practice_studio","name":{"ko":"연습실","en":"Practice Studio"},"note":"Onsae's rehearsal floor. Mirror wall, ranking sheet, water bottles with name tags."},{"id":"agency_lockers","name":{"ko":"사물함","en":"Trainee lockers"},"note":"Corridor outside the studio. Your locker was Sua's."},{"id":"convenience_store","name":{"ko":"편의점","en":"Convenience store"},"note":"24h. Plastic chairs outside. The ramyeon ritual."},{"id":"dorm","name":{"ko":"숙소","en":"Trainee dorm"},"note":"Yeonnam Apartments. Girls and boys on separate floors; curfew 23:00; night check by the dorm manager."},{"id":"dorm_rooftop","name":{"ko":"옥상","en":"Dorm rooftop"},"note":"Yeonnam Apartments rooftop terrace: 평상, drying rack, string lights. Haeun's private place."},{"id":"food_street","name":{"ko":"포장마차","en":"Pojangmacha"},"note":"Jin's onboarding place. Trainees can't casually be here; Haeun is never here early."},{"id":"cafe","name":{"ko":"카페 봄","en":"Café Bom"},"note":"Jin's regular spot."},{"id":"han_river","name":{"ko":"한강","en":"Han River"},"note":"Riverbank, chimaek delivery."},{"id":"yeonnam_cafe","name":{"ko":"연남동 카페","en":"Yeonnam café"},"note":"Where Sua works now. Not on the route until Act 3."}],"people":[{"id":"coach_park","name":{"ko":"박 코치","en":"Coach Park"},"relation":"dance coach","note":"Blunt, fair. Says \"다시.\" more than Haeun does."},{"id":"manager_choi","name":{"ko":"최 실장","en":"Manager Choi"},"relation":"dorm/trainee manager","note":"Night checks with a flashlight. Not cruel, just the system."},{"id":"minji","name":{"ko":"민지","en":"Minji"},"relation":"trainee","note":"Gossip. Says the \"Sua's spot\" line in H1."},{"id":"yerin","name":{"ko":"예린","en":"Yerin"},"relation":"trainee","note":"Minji's shadow."}],"rules":["Twelve in-game months, March to February, one evaluation per month. The calendar advances with play, not real time. Learn sessions do not use up nights.","The player is a foreign trainee of either gender (cozy creator). Nothing may depend on sharing a dorm room with Haeun. You inherit Sua's lineup spot and her agency locker, not her bed.","Trainees are under a dating ban and a curfew; contracts restrict social media and public appearances.","No masked busking. Haeun's defiance is curfew breaks, the convenience store, the rooftop.","Jeju lines (제주어) are written or approved by a Jeju speaker; Tong cannot translate them."]}}};
+
+const $ = (s) => document.querySelector(s);
+const h = (tag, attrs = {}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (v === true) el.setAttribute(k, '');
+    else if (v !== false && v != null) el.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) el.append(k.nodeType ? k : document.createTextNode(String(k)));
+  return el;
+};
+const NAMES = { haeun: '하은 Ha-eun', jin: '진 Jin', tong: 'Tong', narration: 'Narration', player: 'You', coach_park: '박 코치 Coach Park', manager_choi: '최 실장 Manager Choi', minji: '민지 Minji', yerin: '예린 Yerin', ajusshi: '아저씨 Ajusshi', cashier: 'Clerk', sua: '수아 Su-a', manager_kang: '강 매니저 Manager Kang', group: '온새 연습생 단톡' };
+const nameOf = (id) => NAMES[id] ?? id;
+const STAGE_LIST = ['strangers', 'acquaintances', 'friends', 'close', 'romantic_tension', 'partners'];
+
+const items = [
+  ...DATA.scenes.map((m) => ({ kind: m.scene.kind, id: m.scene.id, mod: m })),
+  ...DATA.threads.map((m) => ({ kind: 'kakao', id: m.thread.id, mod: m })),
+];
+const ui = { item: null, tab: 'play', ctl: null, play: null };
+
+/* ── controls ───────────────────────────────── */
+function collectKeys(obj) {
+  const out = { flags: new Set(), knows: new Set(), mems: new Set() };
+  const visit = (o) => {
+    if (Array.isArray(o)) return o.forEach(visit);
+    if (!o || typeof o !== 'object') return;
+    for (const [k, v] of Object.entries(o)) {
+      if ((k === 'flags' || k === 'notFlags' || k === 'setFlags') && Array.isArray(v)) v.forEach((x) => out.flags.add(x));
+      else if ((k === 'knows' || k === 'notKnows' || k === 'learn') && Array.isArray(v)) v.forEach((x) => out.knows.add(x));
+      else if (k === 'memories' && Array.isArray(v) && v.every((x) => typeof x === 'string')) v.forEach((x) => out.mems.add(x));
+      else if (k === 'memory' && v && v.tag) out.mems.add(v.tag);
+      else visit(v);
+    }
+  };
+  visit(obj);
+  for (const f of [...out.flags]) if (f.startsWith('ex_') || f === 'used_tong_last') out.flags.delete(f);
+  return out;
+}
+
+function ctlFromPreset(charId, p) {
+  const { state, world } = presetState(charId, p);
+  return { state, world };
+}
+
+function buildControls() {
+  const { state, world } = ui.ctl;
+  const stage = $('#stage');
+  stage.replaceChildren(...STAGE_LIST.map((s) => h('option', { value: s, selected: s === state.stage }, s.replace('_', ' '))));
+  stage.onchange = () => { state.stage = stage.value; restart(); };
+
+  const axes = $('#axes');
+  axes.replaceChildren(axes.firstElementChild);
+  for (const a of ['warmth', 'tension', 'trust']) {
+    const out = h('output', {}, state.axes[a]);
+    const r = h('input', { type: 'range', min: 0, max: 100, value: state.axes[a], id: `ax-${a}`, 'aria-label': a });
+    r.oninput = () => { state.axes[a] = +r.value; out.textContent = r.value; restart(); };
+    axes.append(h('div', { class: 'row' }, h('span', { style: `color:var(--${a})` }, a), r, out));
+  }
+  const moodf = $('#moodf');
+  moodf.replaceChildren(moodf.firstElementChild);
+  for (const a of ['valence', 'energy']) {
+    const out = h('output', {}, state.mood[a]);
+    const r = h('input', { type: 'range', min: -2, max: 2, step: 1, value: state.mood[a], id: `mood-${a}`, 'aria-label': a });
+    r.oninput = () => { state.mood[a] = +r.value; out.textContent = r.value; restart(); };
+    moodf.append(h('div', { class: 'row' }, h('span', {}, a), r, out));
+  }
+  for (const [id, key, num] of [['hour', 'hour', 1], ['seed', 'seed', 1], ['weather', 'weather', 0], ['level', 'playerLevel', 1]]) {
+    const el = $('#' + id);
+    el.value = world[key];
+    el.onchange = () => { world[key] = num ? +el.value : el.value; restart(); };
+  }
+  const tier = $('#tier');
+  tier.replaceChildren(...[0, 1, 2, 3].map((t) => {
+    const b = h('button', { type: 'button', 'aria-pressed': String(world.inputTier === t), title: ['Tong speaks for you', 'Pick a Korean line', 'Build the line', 'Say it freely'][t] }, `T${t}`);
+    b.onclick = () => { world.inputTier = t; buildControls(); restart(); };
+    return b;
+  }));
+
+  const keys = collectKeys(ui.item.mod);
+  const checks = (sel, set, bag) => {
+    const box = $(sel);
+    box.replaceChildren(...[...set].sort().map((k) => {
+      const i = h('input', { type: 'checkbox', checked: !!bag(k), id: `${sel.slice(1)}-${k}` });
+      i.onchange = () => { bag(k, i.checked); restart(); };
+      return h('label', { class: 'chk' }, i, k);
+    }));
+    if (!set.size) box.append(h('span', { class: 'note' }, 'none'));
+  };
+  checks('#flags', keys.flags, (k, v) => (v === undefined ? state.flags[k] : (state.flags[k] = v)));
+  checks('#knows', keys.knows, (k, v) => (v === undefined ? state.knows[k] : (state.knows[k] = v)));
+  checks('#mems', keys.mems, (k, v) => {
+    if (v === undefined) return state.memories.some((m) => m.tag === k);
+    state.memories = state.memories.filter((m) => m.tag !== k);
+    if (v) state.memories.push({ tag: k, day: 1, note: '(set in lab)' });
+  });
+}
+
+function renderDerived(s, w) {
+  const tag = moodTag(s.mood);
+  const nextStage = STAGE_LIST[STAGE_LIST.indexOf(s.stage) + 1];
+  const eligible = nextStage ? canAdvanceTo(nextStage, s, w) : false;
+  $('#derived').replaceChildren(
+    h('span', { class: 'pill' }, `mood: ${tag}`),
+    h('span', { class: 'pill' + (leaks(s) ? ' on' : '') }, leaks(s) ? 'leaking (반말 slips)' : 'no leak'),
+    nextStage ? h('span', { class: 'pill' + (eligible ? ' on' : '') }, `${nextStage.replace('_', ' ')}: ${eligible ? 'eligible' : 'not yet'}`) : null,
+    ...Object.entries(w.tally ?? {}).map(([k, n]) => h('span', { class: 'pill on' }, `${k}: ${n}`)),
+  );
+}
+
+function renderNow(s, start) {
+  $('#now').replaceChildren(
+    ...['warmth', 'tension', 'trust'].map((a) => {
+      const d = s.axes[a] - start.axes[a];
+      return h('div', { class: 'bar' }, h('span', {}, a), h('i', {}, h('b', { style: `width:${s.axes[a]}%;background:var(--${a})` })), h('span', {}, `${s.axes[a]}${d ? (d > 0 ? ' +' : ' ') + d : ''}`));
+    }),
+    h('div', { class: 'derived' }, h('span', { class: 'pill' }, `stage: ${s.stage.replace('_', ' ')}`), ...s.memories.filter((m) => m.note !== '(set in lab)').map((m) => h('span', { class: 'pill on' }, `memory: ${m.tag}`))),
+  );
+}
+
+/* ── scene header ───────────────────────────── */
+function renderHead() {
+  const it = ui.item;
+  const head = $('#head');
+  const presets = it.mod.presets;
+  const presetBtns = presets.map((p) => h('button', { class: 'btn', type: 'button', onclick: () => loadPreset(p) }, p.label));
+  if (it.kind === 'kakao') {
+    const t = it.mod.thread;
+    const ok = matches(t.gate, ui.ctl.state, ui.ctl.world);
+    head.replaceChildren(
+      h('h2', {}, t.title, h('small', {}, `KakaoTalk · ${nameOf(t.characterId)} · ${t.at}`)),
+      h('p', { class: 'sub' }, t.summary),
+      h('div', { class: 'meta' }, h('span', { class: ok ? 'gate-ok' : 'gate-no' }, ok ? 'gate passes' : 'gate fails with this state'), h('span', {}, t.id)),
+      h('div', { class: 'presets' }, h('span', { class: 'label', style: 'align-self:center' }, 'Presets'), ...presetBtns),
+    );
+    return;
+  }
+  const sc = it.mod.scene;
+  const ok = matches(sc.gate, ui.ctl.state, ui.ctl.world);
+  head.replaceChildren(
+    h('h2', {}, sc.title.ko, h('small', {}, sc.title.en)),
+    h('p', { class: 'sub' }, sc.summary),
+    h('div', { class: 'meta' },
+      h('span', {}, sc.kind), sc.slot ? h('span', {}, `slot ${sc.slot}`) : null, h('span', {}, sc.location), h('span', {}, nameOf(sc.characterId)),
+      h('span', { class: ok ? 'gate-ok' : 'gate-no' }, ok ? 'gate passes' : `gate fails${sc.fallback ? ` → fallback ${sc.fallback}` : ''}`)),
+    sc.seeds?.length ? h('div', { class: 'meta' }, h('span', { class: 'label', style: 'background:none' }, 'Seeds'), ...sc.seeds.map((x) => h('span', {}, x))) : null,
+    h('div', { class: 'presets' }, h('span', { class: 'label', style: 'align-self:center' }, 'Presets'), ...presetBtns),
+  );
+}
+
+function renderTabs() {
+  const tabs = ui.item.kind === 'kakao' ? [['play', 'Phone']] : [['play', 'Play'], ['compare', 'Compare presets']];
+  tabs.push(['canon', 'Canon']);
+  if (!tabs.some(([k]) => k === ui.tab)) ui.tab = 'play';
+  $('#tabs').replaceChildren(...tabs.map(([k, label]) => h('button', { role: 'tab', 'aria-selected': String(ui.tab === k), onclick: () => { ui.tab = k; renderTabs(); renderView(); } }, label)));
+}
+
+/* ── interactive play ───────────────────────── */
+const fmtDeltas = (o, extra = {}) => {
+  const out = [];
+  for (const a of ['warmth', 'tension', 'trust']) if (o.deltas?.[a]) out.push(h('span', { class: `d ${a}` }, `${o.deltas[a] > 0 ? '+' : ''}${o.deltas[a]} ${a}`));
+  for (const f of o.setFlags ?? []) out.push(h('span', { class: 'd flag' }, `flag ${f}`));
+  for (const k of o.tally ?? []) out.push(h('span', { class: 'd block' }, `tally ${k} +1${extra.world?.tally?.[k] ? ` (${extra.world.tally[k]})` : ''}`));
+  for (const f of o.learn ?? []) out.push(h('span', { class: 'd flag' }, `learns ${f}`));
+  if (o.memory) out.push(h('span', { class: 'd mem', title: o.memory.note }, `memory ${o.memory.tag}`));
+  if (extra.stageChanged) out.push(h('span', { class: 'd stage' }, `stage → ${extra.stageChanged.to.replace('_', ' ')}`));
+  if (extra.stageBlocked) out.push(h('span', { class: 'd block' }, `${extra.stageBlocked.replace('_', ' ')} not eligible yet`));
+  return out.length ? h('div', { class: 'deltas' }, out) : null;
+};
+
+const lineEl = (speaker, line, expr) => h('div', { class: 'beat' + (speaker === 'narration' ? ' narr' : '') },
+  h('span', { class: 'who' }, nameOf(speaker) + (expr ? ` · ${expr}` : '')),
+  h('div', { class: 'ko' }, line.ko), h('div', { class: 'en' }, line.en), line.note ? h('div', { class: 'note' }, line.note) : null,
+  line.review ? h('div', { class: 'note' }, `needs ${line.review} review`) : null);
+
+function startPlay() {
+  const sc = ui.item.mod.scene;
+  const s = structuredClone(ui.ctl.state);
+  const w = { ...ui.ctl.world };
+  ui.play = { s, start: structuredClone(s), w, beatId: sc.beats[0].id, out: [], done: false };
+  if (!matches(sc.gate, s, w)) {
+    ui.play.out.push(h('div', { class: 'empty' }, `The gate doesn't pass with this state. ${sc.fallback ? `The slot would run ${sc.fallback} instead.` : 'Load a preset or change the state.'}`));
+    ui.play.done = true;
+  }
+  advance();
+}
+
+function advance() {
+  const P = ui.play;
+  const sc = ui.item.mod.scene;
+  const byId = new Map(sc.beats.map((b) => [b.id, b]));
+  for (let guard = 0; !P.done && guard < 100; guard++) {
+    const b = byId.get(P.beatId);
+    if (!b) { P.done = true; break; }
+    if (b.when && !matches(b.when, P.s, P.w)) { if (!b.next) { P.done = true; break; } P.beatId = b.next; continue; }
+    if (b.exercise && P.pendingEx !== b.id && P.s.flags[`ex_${b.id}`] === undefined) {
+      P.pendingEx = b.id;
+      P.waiting = { kind: 'exercise', beat: b };
+      break;
+    }
+    if (!P.shown?.has(b.id)) {
+      P.shown = P.shown ?? new Set();
+      P.shown.add(b.id);
+      const line = pick(b.lines, P.s, P.w);
+      const el = lineEl(b.speaker, line, b.expr);
+      const tong = tongFor(b, P.w, sc.characterId);
+      if (tong) el.append(h('div', { class: 'tong' }, h('b', {}, 'Tong'), h('span', {}, tong.ko), h('span', {}, tong.en)));
+      if (b.exercise) el.append(exerciseCard(b.exercise, P.s.flags[`ex_${b.id}`]));
+      if (b.effects) {
+        const a = applyEffects(P.s, b.effects, P.w);
+        P.s = a.state;
+        P.w = a.world;
+        const d = fmtDeltas(b.effects, a);
+        if (d) el.append(d);
+      }
+      P.out.push(el);
+    }
+    const options = availableChoices(b, P.s, P.w);
+    if (options.length) { P.waiting = { kind: 'choice', beat: b }; break; }
+    if (b.end || !b.next) { P.done = true; break; }
+    P.beatId = b.next;
+  }
+  renderView();
+}
+
+function exerciseCard(hook, result) {
+  return h('div', { class: 'ex' },
+    h('span', {}, h('code', {}, hook.type), ` · ${hook.objectiveId} · targets `, h('code', {}, hook.targets.join(', ')), ` · on fail: ${hook.onFail}`),
+    h('span', { class: 'ko' }, hook.framing.ko), h('span', { class: 'en' }, hook.framing.en),
+    result === undefined ? null : h('span', { class: 'res' }, result ? 'passed' : 'failed'));
+}
+
+function renderPlay(view) {
+  const P = ui.play;
+  view.append(...P.out);
+  if (P.waiting?.kind === 'exercise') {
+    const b = P.waiting.beat;
+    const lineCard = lineEl(b.speaker, pick(b.lines, P.s, P.w), b.expr);
+    lineCard.append(exerciseCard(b.exercise));
+    const go = (ok) => { P.s.flags[`ex_${b.id}`] = ok; P.waiting = null; P.pendingEx = null; advance(); };
+    lineCard.append(h('div', { class: 'presets' }, h('button', { class: 'btn primary', onclick: () => go(true) }, 'Player passes'), h('button', { class: 'btn', onclick: () => go(false) }, 'Player fails')));
+    view.append(lineCard);
+  } else if (P.waiting?.kind === 'choice') {
+    const b = P.waiting.beat;
+    const avail = availableChoices(b, P.s, P.w);
+    const hidden = (b.choices ?? []).filter((c) => !avail.includes(c));
+    const tier = P.w.inputTier;
+    const box = h('div', { class: 'choices', role: 'group', 'aria-label': 'Choices' });
+    for (const c of avail) {
+      box.append(h('button', { class: 'choice', onclick: () => choose(b, c) },
+        h('span', { class: 'intent' }, c.intent),
+        h('span', { class: 'say-ko' }, tier === 0 ? c.say.en : c.say.ko),
+        h('span', { class: 'say-en' }, tier === 0 ? '(Tong says it in Korean for you)' : c.say.en + (c.exercise && tier >= 2 ? ` · build it: ${c.exercise.type}` : ''))));
+    }
+    for (const c of hidden) {
+      const why = (c.minTier ?? 0) > tier ? `hidden: needs tier ${c.minTier}` : 'hidden: gate not met';
+      box.append(h('button', { class: 'choice', disabled: true },
+        h('span', { class: 'intent' }, c.intent), h('span', { class: 'say-ko' }, c.say.ko), h('span', { class: 'say-en' }, c.say.en), h('span', { class: 'why' }, why)));
+    }
+    view.append(box);
+  }
+  if (P.done) view.append(h('div', { class: 'end' }, 'End of scene'));
+  renderNow(P.s, P.start);
+  renderDerived(P.s, P.w);
+}
+
+function choose(b, c) {
+  const P = ui.play;
+  if (c.exercise && P.w.inputTier >= 2) P.s.flags[`ex_${b.id}_${c.id}`] = true;
+  const r = resolveChoice(c, P.s, P.w, P.w.inputTier);
+  P.s = r.state;
+  P.w = r.world;
+  P.out.push(h('div', { class: 'picked' }, h('span', { class: 'me' }, `You (${c.intent}, tier ${r.tier})`), h('span', { class: 'ko' }, P.w.inputTier === 0 ? `Tong: ${c.say.ko}` : c.say.ko), h('span', { class: 'en' }, c.say.en)));
+  const el = lineEl(r.outcome.speaker ?? b.speaker, r.outcome.reaction, r.outcome.expr);
+  const d = fmtDeltas(r.outcome, r);
+  if (d) el.append(d);
+  P.out.push(el);
+  P.waiting = null;
+  const next = r.outcome.next ?? b.next;
+  if (b.end && !r.outcome.next) P.done = true;
+  else if (!next) P.done = true;
+  else P.beatId = next;
+  advance();
+}
+
+/* ── compare ────────────────────────────────── */
+function renderCompare(view) {
+  const sc = ui.item.mod.scene;
+  const cols = h('div', { class: 'cols' });
+  for (const p of ui.item.mod.presets) {
+    const run = playPreset(sc, p);
+    const col = h('div', { class: 'col' }, h('h3', {}, p.label));
+    const st = run.start;
+    col.append(h('div', { class: 'cfg' }, `${st.stage} · w${st.axes.warmth} t${st.axes.tension} tr${st.axes.trust} · mood ${moodTag(st.mood)} · ${run.world.weather} ${run.world.hour}:00 · T${run.world.inputTier}`));
+    if (run.gated) col.append(h('div', { class: 'note' }, 'Gate fails for this preset.'));
+    for (const step of run.log) {
+      if (step.line) col.append(h('div', { class: 'mini' }, h('span', { class: 'who' }, nameOf(step.speaker)), h('span', { class: 'ko' }, step.line.ko), h('span', { class: 'en' }, step.line.en)));
+      if (step.tong) col.append(h('div', { class: 'tong' }, h('b', {}, 'Tong'), h('span', {}, step.tong.en)));
+      if (step.exercise) col.append(h('div', { class: 'note' }, `${step.exercise.hook.type} ${step.exercise.hook.targets.join(', ')}: ${step.exercise.passed ? 'passed' : 'failed'}`));
+      if (step.choice) {
+        const ch = sc.beats.find((b) => b.id === step.beatId)?.choices?.find((c) => c.id === step.choice);
+        col.append(h('div', { class: 'picked' }, h('span', { class: 'me' }, `You · ${ch?.intent}`), h('span', { class: 'ko' }, ch?.say.ko ?? step.choice)));
+        if (step.reaction) col.append(h('div', { class: 'mini' }, h('span', { class: 'ko' }, step.reaction.ko), h('span', { class: 'en' }, step.reaction.en)));
+        const d = fmtDeltas({ deltas: step.deltas }, step);
+        if (d) col.append(d);
+      } else if (step.stageChanged) col.append(fmtDeltas({}, step));
+    }
+    const s = run.state;
+    col.append(h('div', { class: 'final' }, ...['warmth', 'tension', 'trust'].map((a) => {
+      const d = s.axes[a] - st.axes[a];
+      return h('span', { class: `d ${a}` }, `${a} ${s.axes[a]}${d ? ` (${d > 0 ? '+' : ''}${d})` : ''}`);
+    }), h('span', { class: 'd flag' }, s.stage.replace('_', ' ')), ...s.memories.filter((m) => !st.memories.some((x) => x.tag === m.tag)).map((m) => h('span', { class: 'd mem', title: m.note }, m.tag))));
+    cols.append(col);
+  }
+  view.append(cols);
+}
+
+/* ── KakaoTalk ──────────────────────────────── */
+function addTime(hhmm, mins) {
+  const [hh, mm] = hhmm.split(':').map(Number);
+  const t = (hh * 60 + mm + mins) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+}
+function startPhone() {
+  const t = ui.item.mod.thread;
+  const s = structuredClone(ui.ctl.state);
+  ui.play = { s, start: structuredClone(s), w: { ...ui.ctl.world }, clock: t.at, msgs: [], replied: false, fx: null };
+  pushMsgs(t.messages);
+}
+function pushMsgs(list) {
+  for (const m of list) {
+    ui.play.clock = addTime(ui.play.clock, m.delay ?? 0);
+    ui.play.msgs.push({ ...m, time: ui.play.clock });
+  }
+}
+function renderPhone(view) {
+  const t = ui.item.mod.thread;
+  const P = ui.play;
+  const ok = matches(t.gate, P.start, P.w);
+  const phone = h('div', { class: 'phone' }, h('div', { class: 'head' }, nameOf(t.characterId), h('span', {}, t.at)));
+  if (!ok) phone.append(h('div', { class: 'sysmsg' }, "This thread's gate fails with the current state. Load a preset."));
+  const msgs = h('div', { class: 'msgs' });
+  for (const m of P.msgs) {
+    const me = m.from === 'me';
+    let bub;
+    if (m.deleted) bub = h('div', { class: 'bub del' }, '삭제된 메시지입니다.', h('span', { class: 'tr' }, `This message was deleted. (Lab only: “${m.ko}” / ${m.en})`));
+    else if (m.photo) bub = h('div', { class: 'bub photo' }, h('div', { class: 'ph' }, `photo: ${m.photo}`), m.ko && m.ko !== '(사진)' ? h('span', {}, m.ko) : null, h('span', { class: 'tr' }, m.en));
+    else bub = h('div', { class: 'bub' }, m.sender ? h('span', { class: 'tr' }, m.sender) : null, h('span', {}, m.ko), h('span', { class: 'tr' }, m.en));
+    const unread = me && P.msgs.indexOf(m) === P.msgs.length - 1 && P.fx?.leftOnRead === false && P.msgs[P.msgs.length - 1] === m;
+    msgs.append(h('div', { class: 'm' + (me ? ' me' : '') }, bub, h('span', { class: 'ts' }, unread ? h('span', { class: 'one' }, '1') : null, m.time)));
+  }
+  phone.append(msgs);
+  if (ok && !P.replied && t.replies?.length) {
+    const avail = t.replies.filter((r) => matches(r.gate, P.s, P.w) && (r.minTier ?? 0) <= P.w.inputTier);
+    const box = h('div', { class: 'replies' });
+    for (const r of t.replies) {
+      const on = avail.includes(r);
+      box.append(h('button', { class: 'choice', disabled: !on, onclick: () => reply(r) },
+        h('span', { class: 'intent' }, r.intent),
+        h('span', { class: 'say-ko' }, P.w.inputTier === 0 && on ? r.say.en : r.say.ko),
+        h('span', { class: 'say-en' }, on ? r.say.en : (r.minTier ?? 0) > P.w.inputTier ? `hidden: needs tier ${r.minTier}` : 'hidden: gate not met')));
+    }
+    phone.append(box);
+  }
+  if (P.fx) phone.append(P.fx.el);
+  view.append(phone);
+  renderNow(P.s, P.start);
+  renderDerived(P.s, P.w);
+}
+function reply(r) {
+  const P = ui.play;
+  const o = r.outcomes.find((x) => matches(x.when, P.s, P.w)) ?? r.outcomes[r.outcomes.length - 1];
+  if (r.intent !== 'leave') pushMsgs([{ from: 'me', ko: r.say.ko, en: r.say.en, delay: 1 }]);
+  else P.msgs.push({ from: 'me', ko: '', en: '', time: P.clock, hiddenRead: true });
+  if (r.intent === 'leave') P.msgs.pop();
+  pushMsgs(o.messages);
+  const a = applyEffects(P.s, o, P.w);
+  P.s = a.state;
+  P.w = a.world;
+  P.replied = true;
+  P.fx = { el: fmtDeltas(o, a) ?? h('span'), leftOnRead: r.intent === 'leave' ? null : false };
+  if (r.intent === 'leave') P.fx.el = h('div', { class: 'deltas' }, h('span', { class: 'd flag' }, 'left on read'), ...(fmtDeltas(o, a)?.childNodes ?? []));
+  renderView();
+}
+
+/* ── canon ──────────────────────────────────── */
+function renderCanon(view) {
+  const wrap = h('div', { class: 'canon' });
+  for (const c of DATA.canon.characters) {
+    wrap.append(h('section', {},
+      h('h3', {}, `${c.name.ko} ${c.name.en}`),
+      h('div', { class: 'k' }, `${c.age} · ${c.hometown} · ${c.role}`),
+      h('span', { class: 'label' }, 'Facts'), h('ul', {}, ...c.facts.map((f) => h('li', {}, h('span', { class: 'k' }, f.id + ' '), f.fact))),
+      h('span', { class: 'label' }, 'Secrets (reveal conditions)'), h('ul', {}, ...c.secrets.map((f) => h('li', {}, h('span', { class: 'k' }, f.id + ' '), f.fact, h('div', { class: 'note' }, `Revealed: ${f.revealWhen}`)))),
+      h('span', { class: 'label' }, 'Continuity rules'), h('ul', {}, ...c.mustNot.map((f) => h('li', {}, f)))));
+  }
+  const w = DATA.canon.world;
+  wrap.append(h('section', {}, h('h3', {}, `${w.agency.ko} ${w.agency.en}`), h('div', { class: 'k' }, w.agency.note),
+    h('span', { class: 'label' }, 'Calendar'), h('ul', {}, ...w.calendar.map((m) => h('li', {}, h('span', { class: 'k' }, `M${m.month} `), `${m.label}: ${m.beats.join(' · ')}`))),
+    h('span', { class: 'label' }, 'World rules'), h('ul', {}, ...w.rules.map((r) => h('li', {}, r)))));
+  view.append(wrap);
+}
+
+/* ── wiring ─────────────────────────────────── */
+function renderView() {
+  const view = $('#view');
+  view.replaceChildren();
+  const stage = h('div', { class: 'stage' });
+  if (ui.tab === 'canon') renderCanon(stage);
+  else if (ui.item.kind === 'kakao') renderPhone(stage);
+  else if (ui.tab === 'compare') { renderCompare(stage); renderNow(ui.ctl.state, ui.ctl.state); renderDerived(ui.ctl.state, ui.ctl.world); }
+  else renderPlay(stage);
+  view.append(stage);
+}
+function restart() {
+  renderHead();
+  if (ui.item.kind === 'kakao') { startPhone(); renderView(); } else startPlay();
+}
+function loadPreset(p) {
+  const charId = ui.item.kind === 'kakao' ? ui.item.mod.thread.characterId : ui.item.mod.scene.characterId;
+  ui.ctl = ctlFromPreset(charId, p);
+  buildControls();
+  restart();
+}
+function selectItem(id) {
+  ui.item = items.find((x) => x.id === id) ?? items[0];
+  $('#scene').value = ui.item.id;
+  if (ui.item.kind === 'ambient' && ui.tab === 'play' && !ui.touched) ui.tab = 'compare';
+  renderTabs();
+  loadPreset(ui.item.mod.presets[0]);
+  try { localStorage.setItem('rel-lab-scene', ui.item.id); } catch {}
+  if (location.hash.slice(1) !== ui.item.id.replace(/[^A-Za-z0-9-]/g, '-')) history.replaceState(null, '', '#' + ui.item.id.replace(/[^A-Za-z0-9-]/g, '-'));
+}
+
+const groups = [['story', 'Story'], ['ambient', 'Ambient'], ['kakao', 'KakaoTalk']];
+$('#scene').replaceChildren(...groups.map(([k, label]) => h('optgroup', { label }, ...items.filter((x) => x.kind === k).map((x) => {
+  const t = x.kind === 'kakao' ? x.mod.thread.title : `${x.mod.scene.title.ko} · ${x.mod.scene.title.en}`;
+  return h('option', { value: x.id }, t);
+}))));
+$('#scene').onchange = (e) => { ui.touched = false; selectItem(e.target.value); };
+$('#restart').onclick = restart;
+$('#tabs').addEventListener('click', () => { ui.touched = true; });
+
+const fromHash = items.find((x) => x.id.replace(/[^A-Za-z0-9-]/g, '-') === location.hash.slice(1));
+let saved = null;
+try { saved = localStorage.getItem('rel-lab-scene'); } catch {}
+selectItem(fromHash?.id ?? saved ?? items[0]?.id);
+</script>
+
+</body>
+</html>

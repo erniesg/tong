@@ -24,7 +24,7 @@ export const HAEUN: Character = {
     dislikes: ['being underestimated', 'aegyo', 'losing', 'showing vulnerability'],
     quirks: [
       'flips hair when nervous',
-      'switches to slight Busan satoori when emotional',
+      'Jeju dialect (제주어) leaks only under real emotion, late and rarely',
       'always orders the spiciest option',
       'secretly watches player practice from afar',
     ],
@@ -37,7 +37,7 @@ export const HAEUN: Character = {
     defaultRegister: '존댓말 initially, shifts to 반말',
     slang: ['대박', '헐', 'ㅋㅋ', '짱', '미쳤어'],
     catchphrases: ['야, 연습 더 해', '괜찮아...아마', '내가 왜?'],
-    dialectNotes: 'Slight Busan accent surfaces when angry or flustered',
+    dialectNotes: 'From Seogwipo, Jeju. Flawless standard Korean (she performs it); Jeju leaks only under real emotion. Tong cannot translate it. See lib/content/canon/haeun.ts.',
     byRelationshipStage: stageMap({
       strangers: {
         register: '존댓말 (formal)',
@@ -78,7 +78,7 @@ export const HAEUN: Character = {
     }),
   },
   backstory:
-    'Born in Busan, moved to Seoul at 15 to train. Has been training for 2 years. Fiercely independent — paid her own way by tutoring younger kids. Sees the entertainment industry as her ticket out. The player is the first non-Korean trainee she\'s taken seriously.',
+    'From Seogwipo, Jeju, raised mostly by her grandmother. Paid her own way by tutoring younger kids, moved to Seoul at 15 with her best friend Sua, and has trained at Onsae for 2 years. Sua quit two weeks before the player arrived; the player takes Sua\'s spot. Canon: lib/content/canon/haeun.ts.',
   defaultLocationId: 'pojangmacha',
   romanceable: true,
   voiceId: 'coral',

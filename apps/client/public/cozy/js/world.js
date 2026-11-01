@@ -21,7 +21,7 @@ export const STOOLS = [-1.8, -0.6, 0.6, 1.8].map((dx) => new THREE.Vector3(TX + 
 export const TERRACE_Y = 2.4;
 
 export const SPOTS = {
-  haeunTent: STOOLS[2],
+  tentGuest: STOOLS[2],
   playerSeat: STOOLS[1],
   ajusshi: new THREE.Vector3(TX - 1.55, 0, -1.75),
   cat: new THREE.Vector3(1.45, 0.82, -1.4),
@@ -33,6 +33,7 @@ export const SPOTS = {
   subway: new THREE.Vector3(-4, 0, -18.4),
   telescope: new THREE.Vector3(4.6, TERRACE_Y, -45.2),
   whiteboard: new THREE.Vector3(-9.2, TERRACE_Y, -43.2),
+  locker: new THREE.Vector3(-13.75, TERRACE_Y, -32.1),
   tentSign: new THREE.Vector3(TX + 2.6, 0, 2.6),
   vending: new THREE.Vector3(5.4, 0, -4.5),
 };
@@ -305,8 +306,55 @@ function bladeSign(text, color, x, y, z) {
   add(new THREE.PlaneGeometry(0.6, 0.6 * chars.length + 0.15), m, x, y, z, G.scene, false);
 }
 
-function fascia(text, sub, bg, fg, x, y, z, rotY, w, h = 0.6) {
-  const tex = textTexture(
+/* ── Readable signs ──────────────────────────────────
+ * Main shop signs start with their letters jumbled; the player reads one by
+ * rebuilding its word (main.js). Place id → what is built and how it is named.
+ */
+export const SIGNS = {
+  food: { word: '포장마차', rom: 'pojangmacha', en: 'street tent bar', name: '포장마차', note: 'A covered street stall: snacks and soju at night.', locationId: 'food_street' },
+  store: { word: '편의점', rom: 'pyeonuijeom', en: 'convenience store', name: '편의점', note: 'Convenience store. 24시간 = open 24 hours.', locationId: 'convenience_store' },
+  cafe: { word: '카페', rom: 'kape', en: 'café', name: '카페 봄', note: 'Café Bom. 봄 = spring.', locationId: 'cafe' },
+  subway: { word: '홍대입구역', rom: 'hongdae-ipgu-yeok', en: 'Hongdae Entrance Station', name: '홍대입구역', note: 'Hongik Univ. Station, Line 2. 입구 = entrance, 역 = station.', locationId: 'subway_hub' },
+  studio: { word: '연습실', rom: 'yeonseupsil', en: 'practice room', name: '온새 엔터 연습실', note: 'Onsae Entertainment’s practice studio: your agency.', locationId: 'practice_studio' },
+};
+const signViews = {}; // place id → [swap(read)] for each sign surface
+
+const JAMO_LEAD = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+const JAMO_VOWEL = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ';
+const JAMO_TAIL = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+
+/** The Hangul in text as loose jamo in a fixed jumbled order: 편의점 → ㅈㅕㅁㅍ… */
+export function jumble(text) {
+  const out = [];
+  for (const ch of text) {
+    const n = ch.codePointAt(0) - 0xac00;
+    if (n < 0 || n > 11171) continue;
+    out.push(JAMO_LEAD[Math.floor(n / 588)], JAMO_VOWEL[Math.floor((n % 588) / 28)], JAMO_TAIL[n % 28]);
+  }
+  const j = out.filter(Boolean);
+  // Deterministic: interleave from both ends so it never reads in order.
+  const mixed = [];
+  for (let a = 0, b = j.length - 1; a <= b; a++, b--) mixed.push(j[b], ...(a < b ? [j[a]] : []));
+  return mixed.join('');
+}
+
+/** A material whose map can flip between a jumbled and a readable texture. */
+function signSurface(id, m, read, jumbled) {
+  const swap = (on) => {
+    m.map = m.emissiveMap = on ? read : jumbled;
+    m.needsUpdate = true;
+  };
+  swap(false);
+  (signViews[id] ??= []).push(swap);
+}
+
+/** Show a place's sign readable (true) or jumbled (false). */
+export function setSignRead(id, on) {
+  for (const swap of signViews[id] ?? []) swap(on);
+}
+
+function fasciaTexture(text, sub, bg, fg) {
+  return textTexture(
     [
       [text, 150, fg, sub ? 110 : 128],
       ...(sub ? [[sub, 56, fg, 205, 'Gowun Dodum']] : []),
@@ -315,8 +363,13 @@ function fascia(text, sub, bg, fg, x, y, z, rotY, w, h = 0.6) {
     256,
     { bg, radius: 20 },
   );
+}
+
+function fascia(text, sub, bg, fg, x, y, z, rotY, w, h = 0.6, sign = null) {
+  const tex = fasciaTexture(text, sub, bg, fg);
   const m = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, roughness: 0.5 });
   nightGlow(m, 0.15, 1.15);
+  if (sign) signSurface(sign, m, tex, fasciaTexture(jumble(text), '? ? ?', bg, fg));
   const mesh = add(new THREE.BoxGeometry(w, h, 0.12), [M.dark, M.dark, M.dark, M.dark, m, M.dark], x, y, z, G.scene, false);
   mesh.rotation.y = rotY;
   return mesh;
@@ -589,12 +642,13 @@ function lanternTexture(text) {
   return canvasTexture(c, { repeat: false });
 }
 
-function lantern(text, x, y, z, real) {
+function lantern(text, x, y, z, real, sign = null) {
   const grp = new THREE.Group();
   grp.position.set(x, y, z);
   const tex = lanternTexture(text);
   const m = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, side: THREE.DoubleSide });
   nightGlow(m, 0.25, 1.4);
+  if (sign) signSurface(sign, m, tex, lanternTexture(jumble(text).slice(0, 5)));
   const body = add(new THREE.SphereGeometry(0.28, 24, 16), m, 0, 0, 0, grp, false);
   body.scale.set(1, 1.25, 1);
   const capM = mat(0x2a1a14);
@@ -639,6 +693,7 @@ function buildTent() {
   const valTex = textTexture([['포장마차 · 떡볶이 · 오뎅 · 소주', 64, '#fff6e0', 64]], 1024, 128);
   const valM = new THREE.MeshStandardMaterial({ map: valTex, emissiveMap: valTex, transparent: true, emissive: 0xffffff, depthWrite: false });
   nightGlow(valM, 0.05, 0.4);
+  signSurface('food', valM, valTex, textTexture([[`${jumble('포장마차')} · 떡볶이 · 오뎅 · 소주`, 64, '#fff6e0', 64]], 1024, 128));
   tentMats.valance = valM;
   const valance = add(new THREE.PlaneGeometry(open * 2, valanceDrop * 0.88), valM, TX, wallH - valanceDrop / 2, maxZ + 0.015, G.scene, false);
   valance.renderOrder = 2;
@@ -709,7 +764,7 @@ function buildTent() {
   const sojuM = mat(0x2f9e4f, { roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.85 });
   for (const [x, z] of [[TX + 1.3, -1.2], [TX + 1.45, -1.25], [TX + 2.0, -1.15], [TX - 0.2, -1.2]]) soju(sojuM, x, COUNTER_Y, z);
 
-  lantern('포장마차', maxX + 0.15, 2.2, maxZ + 0.15, true);
+  lantern('포장마차', maxX + 0.15, 2.2, maxZ + 0.15, true, 'food');
   lantern('오뎅', minX - 0.15, 2.1, maxZ + 0.15, false);
 
   // opening-hours sign: a reading exercise during the day
@@ -801,7 +856,7 @@ function buildStore(rnd) {
   const initial = new Set(G.scene.children);
   initial.colliderStart = G.colliders.length;
   shopShell(-1, rnd);
-  fascia('편의점 24', '24시간 · open 24 hours', '#1f8a4c', '#ffffff', -9.88, 3.25, -15.5, Math.PI / 2, 8.6, 0.6);
+  fascia('편의점 24', '24시간 · open 24 hours', '#1f8a4c', '#ffffff', -9.88, 3.25, -15.5, Math.PI / 2, 8.6, 0.6, 'store');
   // chimaek pub sign above
   const chimaek = textTexture([['치맥', 170, '#ffffff', 120], ['치킨 + 맥주', 54, '#ffd23f', 215, 'Gowun Dodum']], 768, 256, { bg: '#2a1a14', border: '#ffb000' });
   const cm = new THREE.MeshStandardMaterial({ map: chimaek, emissiveMap: chimaek, emissive: 0xffffff });
@@ -862,7 +917,7 @@ function buildCafe(rnd) {
   const initial = new Set(G.scene.children);
   initial.colliderStart = G.colliders.length;
   shopShell(1, rnd);
-  fascia('카페 봄', 'Café Bom · coffee & cake', '#f7d6dc', '#b3445e', 9.88, 3.25, -15.5, -Math.PI / 2, 8.6, 0.6);
+  fascia('카페 봄', 'Café Bom · coffee & cake', '#f7d6dc', '#b3445e', 9.88, 3.25, -15.5, -Math.PI / 2, 8.6, 0.6, 'cafe');
   // string lights + flower garland on the facade (like the key art)
   stringLights(9.92, 3.75, -20.4, 9.92, 3.75, -10.6, 22, 0.35);
   const flowers = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.07, 0), mat(0xffffff, { roughness: 0.8 }), 70);
@@ -959,6 +1014,7 @@ function buildSubway() {
     x: -4, z: -22.6, w: 4, d: 6.8, h: 2.9, open: true, wallMaterial: M.steel, roofMaterial: M.glass });
   const st = textTexture([['홍대입구역', 112, '#ffffff', 110], ['Hongik Univ. · 2호선 / Line 2', 52, '#dce8ff', 240, 'Gowun Dodum']], 1024, 320, { bg: '#2556b8' });
   const sm = nightGlow(mat(0xffffff, { map: st, emissiveMap: st, emissive: 0xffffff }), 0.25, 1.3);
+  signSurface('subway', sm, st, textTexture([[jumble('홍대입구역'), 96, '#ffffff', 110], ['2호선 / Line 2', 52, '#dce8ff', 240, 'Gowun Dodum']], 1024, 320, { bg: '#2556b8' }));
   const fascia = add(new THREE.PlaneGeometry(4, 1), sm, -4, 2.5, -18.98, G.scene, false);
   room.roofs[0].attach(fascia);
   registerInterior(room);
@@ -1029,7 +1085,7 @@ function buildStudio(rnd) {
   collider(-6.15, -5.85, -36, -31);
   for (const z of [-44, -39, -36, -31]) boxMM(-6.08, -5.92, y, y + 3.0, z - 0.06, z + 0.06, M.dark);
   boxMM(-6.1, -5.9, y + 3.0, y + 3.6, -44, -31, M.dark, { cast: false });
-  fascia('별빛 엔터 연습실', 'STARLIGHT ENT. · Practice Studio', '#1d1b3a', '#ffe9a8', -5.88, y + 3.3, -37.5, Math.PI / 2, 8, 0.6);
+  fascia('온새 엔터 연습실', 'ONSAE ENT. · Practice Studio', '#1d1b3a', '#ffe9a8', -5.88, y + 3.3, -37.5, Math.PI / 2, 8, 0.6, 'studio');
 
   // the mirror wall
   studioMirror = new Reflector(new THREE.PlaneGeometry(12.6, 2.6), {
@@ -1063,6 +1119,13 @@ function buildStudio(rnd) {
     { bg: '#ffffff', border: '#9aa0a8' },
   );
   add(new THREE.PlaneGeometry(2.4, 1.0), mat(0xffffff, { map: wb, roughness: 0.3 }), -9.2, y + 1.6, -43.97, G.scene, false);
+  // trainee lockers; the middle one is yours, with Su-a's half-scraped name label (H0)
+  const lockerM = mat(0x6f8fa8, { roughness: 0.5, metalness: 0.3 });
+  boxMM(-14.9, -12.6, y, y + 1.9, -31.45, -31.0, lockerM, { collide: true, block: true });
+  for (const x of [-14.13, -13.37]) boxMM(x - 0.01, x + 0.01, y + 0.05, y + 1.85, -31.47, -31.44, M.dark, { cast: false });
+  for (const x of [-14.3, -13.55, -12.8]) boxMM(x - 0.02, x + 0.02, y + 0.95, y + 1.15, -31.5, -31.45, steel, { cast: false });
+  const label = textTexture([['ㅅ…아', 72, '#333', 70, 'Gowun Dodum']], 256, 112, { bg: '#f3ead2' });
+  add(new THREE.PlaneGeometry(0.34, 0.15), mat(0xffffff, { map: label }), -13.75, y + 1.62, -31.5, G.scene, false).rotation.y = Math.PI;
   const panel = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.1 });
   for (const z of [-41, -37.5, -34]) boxMM(-15, -7, y + 3.33, y + 3.4, z - 0.2, z + 0.2, panel, { cast: false });
   pointLight(0xfff4e8, 7, 14, -11, y + 3.0, -37.5, { day: 5 });

@@ -169,6 +169,18 @@ export function createBridge({ win = window, helloTimeout = 1500, helloAttempts 
         return unavailable(String(err?.message ?? err));
       }
     },
+    /** Open Tong's Learn or Review over the game. Resolves with a CozyPracticeResult. */
+    async practice(req) {
+      const unavailable = (reason) => ({ outcome: 'unavailable', mode: req.mode, exercises: 0, correct: 0, xpAwarded: 0, progress, reason });
+      if (connecting) await connecting;
+      if (!connected) return unavailable('standalone');
+      try {
+        // A lesson can run long; a lost reply must still not freeze the world forever.
+        return await request('cozy:practice', req, 2 * 60 * 60 * 1000);
+      } catch (err) {
+        return unavailable(String(err?.message ?? err));
+      }
+    },
     /** Import a legacy save once. Resolves with { applied } or null when not hosted. */
     async migrate(migration) {
       if (connecting) await connecting;

@@ -10,6 +10,10 @@ export const SPEAKERS = {
   ajusshi: { label: '아저씨 Ajusshi', emoji: '👨‍🍳', cls: 'green' },
   barista: { label: '바리스타 Barista', emoji: '☕', cls: 'pink' },
   cashier: { label: '직원 Clerk', emoji: '🏪', cls: 'green' },
+  manager_choi: { label: '최 실장 Manager Choi', emoji: '📋', cls: 'purple' },
+  coach_park: { label: '박 코치 Coach Park', emoji: '📣', cls: 'green' },
+  minji: { label: '민지 Minji', emoji: '🎧', cls: 'pink' },
+  yerin: { label: '예린 Yerin', emoji: '🎀', cls: 'pink' },
   tong: { label: '통 Tong', tong: true, cls: 'gold' },
   narration: { label: '…', none: true, cls: 'purple' },
 };
@@ -70,13 +74,13 @@ export function createDialogue(ctx) {
     ui.portrait.className = `portrait ${sp.none ? 'none' : ''}`;
     ui.portrait.textContent = sp.emoji ?? '';
     if (sp.img) ui.portrait.style.backgroundImage = `url(${sp.img})`;
-    else if (sp.tong) ui.portrait.style.backgroundImage = `url(img/tong-${TONG_IMG[n.expr] ?? 'cheerful'}.png)`;
+    else if (sp.tong) ui.portrait.style.backgroundImage = `url(img/tong-${TONG_IMG[val(n.expr)] ?? 'cheerful'}.png)`;
     else ui.portrait.style.backgroundImage = '';
     ui.portrait.classList.toggle('contain', !!sp.tong);
 
     const c = ctx.chars[n.who];
     if (n.who === 'tong' && c) {
-      c.expr = TONG_FACE[n.expr] ?? 'happy';
+      c.expr = TONG_FACE[val(n.expr)] ?? 'happy';
       c.exprT = 3;
       c.talkT = 1.4;
     } else if (c) {
@@ -104,19 +108,20 @@ export function createDialogue(ctx) {
     d.typing = false;
     d.shown = d.full.length;
     ui.ko.textContent = d.full;
-    if (d.node?.exercise) runExercise(d.node);
+    if (d.node?.exercise || d.node?.task) runExercise(d.node);
     else if (d.choices.length) renderChoices();
     else ui.next.classList.remove('hidden');
   }
 
   // Exercise nodes hand over to a shared Tong exercise once the line is shown,
-  // then continue with next(result) (a CozyExerciseResult).
+  // then continue with next(result) (a CozyExerciseResult). Task nodes do the
+  // same with any async step (task() → result), e.g. Tong's Learn / Review.
   function runExercise(n) {
     if (d.locked) return;
     d.locked = true;
     setTimeout(async () => {
       if (d.node !== n) return;
-      const result = await ctx.exercise(val(n.exercise));
+      const result = await (n.task ? n.task() : ctx.exercise(val(n.exercise)));
       if (d.node === n) go(n.next(result));
     }, 600);
   }

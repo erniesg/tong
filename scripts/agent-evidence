@@ -5,7 +5,20 @@ const { join } = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { createHash } = require("node:crypto");
 
-const allLanes = [];
+// Dependency-free suites (Node 22.18+ strips the TypeScript types).
+const allLanes = [
+  {
+    id: "relationship",
+    required: true,
+    // The bundle-staleness test compiles with typescript; the root has no dependencies, so fetch just that.
+    command: "{ [ -d apps/client/node_modules/typescript ] || [ -d node_modules/typescript ] || npm install --no-save --no-package-lock --no-audit --no-fund typescript@5.9.3; } && cd apps/client && node --test lib/relationship/engine.test.ts lib/relationship/content.test.ts",
+  },
+  {
+    id: "cozy",
+    required: true,
+    command: "node --test scripts/cozy-review.test.mjs scripts/cozy-bridge-host.test.mjs scripts/cozy-level-integration.test.mjs scripts/cozy-playability.test.mjs scripts/cozy-apartments.test.mjs scripts/cozy-hill.test.mjs scripts/cozy-surfaces.test.mjs",
+  },
+];
 const invocation = {
   argv: process.argv.slice(2),
   npm_config_e2e: process.env.npm_config_e2e || "",

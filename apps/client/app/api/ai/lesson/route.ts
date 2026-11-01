@@ -477,8 +477,13 @@ function buildFallbackResponse(messages: any[], explainIn: string = 'en') {
   console.log(`[lesson] Fallback turn: userMsgs=${userMsgs.length}, exerciseCount=${exerciseCount}, usedTypes=${usedTypes.join(',')}`);
 
   const toolCalls: Array<{ toolName: string; args: Record<string, unknown>; pauses?: boolean }> = [];
+  // The client resubmits on its own after running its tools (useChat maxSteps).
+  // Only a player message starts a scripted turn; otherwise the turn replays.
+  const playerTurn = messages[messages.length - 1]?.role === 'user';
 
-  if (userMsgs.length <= 1) {
+  if (!playerTurn) {
+    // Nothing to add: just finish the step.
+  } else if (userMsgs.length <= 1) {
     // ── TURN 1: Greeting + teach random consonants ──
     const consonants = srsAwarePick(CONSONANTS, 3 + Math.floor(Math.random() * 3), itemMastery);
     const exType = pickExerciseType(usedTypes);

@@ -29,7 +29,8 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm ci
+        # The root package has no dependencies or lockfile; the evidence lanes need none.
+        run: if [ -f package-lock.json ]; then npm ci; fi
 
       - name: Run agent evidence
         id: evidence
@@ -98,7 +99,8 @@ jobs:
             exit 0
           fi
           body="$(MANIFEST="$manifest" node -e 'const fs=require("fs"); const m=JSON.parse(fs.readFileSync(process.env.MANIFEST,"utf8")); const lines=["<!-- agent-evidence -->","### Agent evidence","",`- Result: \`${m.result}\``,`- Commit: \`${m.commit}\``,`- Lanes: \`${(m.lanes_run || []).join(", ") || "(none)"}\``,`- Required failures: \`${(m.required_failures || []).join(", ") || "(none)"}\``]; console.log(lines.join("\n"));')"
-          existing="$(gh pr view "$PR_URL" --json comments --jq '.comments[] | select(.body | contains("<!-- agent-evidence -->")) | .id' | tail -1)"
+          # REST ids: `gh pr view --json comments` gives GraphQL node ids, which the PATCH below can't use.
+          existing="$(gh api --paginate "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" --jq '.[] | select(.body | contains("<!-- agent-evidence -->")) | .id' | tail -1)"
           if [ -n "$existing" ]; then
             gh api --method PATCH "repos/${{ github.repository }}/issues/comments/$existing" -f body="$body" >/dev/null
           else

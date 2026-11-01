@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CozyExerciseRequest, CozyExerciseResult, CozyRecordedItem, HostToCozyMessage } from '../../../../packages/contracts';
+import type { CozyExerciseRequest, CozyExerciseResult, CozyPracticeRequest, CozyRecordedItem, HostToCozyMessage } from '../../../../packages/contracts';
 import { ExerciseModal } from '@/components/learn/ExerciseModal';
+import { CozyPractice, type PracticeTally } from './CozyPractice';
 import { dispatch, getGameState, useGameState } from '@/lib/store/game-store';
 import { generateExercise } from '@/lib/exercises/generators';
 import { extractTargetItems } from '@/lib/exercises/extract-targets';
@@ -20,6 +21,11 @@ const SPEAKERS: Record<string, string> = {
   cashier: '직원 · Clerk', ajusshi: '아저씨 · Ajusshi', barista: '바리스타 · Barista',
   haeun: '하은 · Ha-eun', jin: '진 · Jin', tong: '통 · Tong',
 };
+
+interface Practice {
+  requestId: string;
+  request: CozyPracticeRequest;
+}
 
 interface Active {
   requestId: string;
@@ -102,6 +108,8 @@ export function CozyHost() {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [active, setActive] = useState<Active | null>(null);
   const activeRef = useRef<Active | null>(null);
+  const [practice, setPractice] = useState<Practice | null>(null);
+  const practiceRef = useRef<Practice | null>(null);
   const connected = useRef(false);
   const game = useGameState();
 
@@ -130,6 +138,19 @@ export function CozyHost() {
     activeRef.current = null;
     setActive(null);
     post(envelope('host:exercise-result', result, a.requestId));
+    const frame = frameRef.current;
+    if (frame) {
+      frame.removeAttribute('inert');
+      frame.focus();
+    }
+  }, [post]);
+
+  const finishPractice = useCallback((tally: PracticeTally) => {
+    const p = practiceRef.current;
+    if (!p) return;
+    practiceRef.current = null;
+    setPractice(null);
+    post(envelope('host:practice-result', { outcome: 'completed', mode: p.request.mode, ...tally, progress: progress() }, p.requestId));
     const frame = frameRef.current;
     if (frame) {
       frame.removeAttribute('inert');
@@ -174,8 +195,8 @@ export function CozyHost() {
         }
         case 'cozy:exercise': {
           const base = { correct: null, exerciseId: null, exerciseType: m.payload.exerciseType, recordedItems: [], xpAwarded: 0 };
-          if (activeRef.current || !requestId) {
-            post(envelope('host:exercise-result', { ...base, outcome: 'unavailable', reason: activeRef.current ? 'busy' : 'missing requestId', progress: progress() }, requestId));
+          if (activeRef.current || practiceRef.current || !requestId) {
+            post(envelope('host:exercise-result', { ...base, outcome: 'unavailable', reason: requestId ? 'busy' : 'missing requestId', progress: progress() }, requestId));
             break;
           }
           let exercise: ExerciseData;
@@ -192,6 +213,18 @@ export function CozyHost() {
           setActive(next);
           break;
         }
+        case 'cozy:practice': {
+          if (activeRef.current || practiceRef.current || !requestId) {
+            const reason = requestId ? 'busy' : 'missing requestId';
+            post(envelope('host:practice-result', { outcome: 'unavailable', mode: m.payload.mode, exercises: 0, correct: 0, xpAwarded: 0, reason, progress: progress() }, requestId));
+            break;
+          }
+          const next = { requestId, request: m.payload };
+          practiceRef.current = next;
+          frame.setAttribute('inert', '');
+          setPractice(next);
+          break;
+        }
       }
     }
     window.addEventListener('message', onMessage);
@@ -203,24 +236,41 @@ export function CozyHost() {
     };
   }, [post]);
 
-  // While an exercise is open: fit it to the screen, take focus from the inert game, Escape dismisses.
+  // While an exercise or practice is open: fit exercises to the screen, take focus from the inert game, Escape dismisses.
+  const overlay = !!active || !!practice;
   useEffect(() => {
-    if (!active) return;
-    const fit = () => fitExercise();
-    const timers = [0, 120, 400].map((ms) => setTimeout(fit, ms));
-    window.addEventListener('resize', fit);
-    const frameEl = document.querySelector<HTMLElement>('.cozy-exercise-frame');
-    frameEl?.focus();
+    if (!overlay) return;
+    let timers: ReturnType<typeof setTimeout>[] = [];
+    const refit = () => {
+      timers.forEach(clearTimeout);
+      timers = [0, 120, 400].map((ms) => setTimeout(fitExercise, ms));
+    };
+    refit();
+    window.addEventListener('resize', refit);
+    // Review opens one exercise after another; refit and refocus each one.
+    const seen = new WeakSet<Element>();
+    const observer = new MutationObserver(() => {
+      const frameEl = document.querySelector<HTMLElement>('.cozy-exercise-frame');
+      if (!frameEl || seen.has(frameEl)) return;
+      seen.add(frameEl);
+      frameEl.focus();
+      refit();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    document.querySelector<HTMLElement>('.cozy-exercise-frame')?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') document.querySelector<HTMLButtonElement>('.exercise-dismiss-btn')?.click();
+      if (e.key !== 'Escape') return;
+      const btn = document.querySelector<HTMLButtonElement>('.exercise-dismiss-btn') ?? document.querySelector<HTMLButtonElement>('.cozy-practice__close');
+      btn?.click();
     };
     window.addEventListener('keydown', onKey);
     return () => {
       timers.forEach(clearTimeout);
-      window.removeEventListener('resize', fit);
+      observer.disconnect();
+      window.removeEventListener('resize', refit);
       window.removeEventListener('keydown', onKey);
     };
-  }, [active]);
+  }, [overlay]);
 
   // Push store changes (including ones made by the exercise overlay) to the game.
   useEffect(() => {
@@ -231,6 +281,7 @@ export function CozyHost() {
   return (
     <>
       <iframe ref={frameRef} className="cozy-frame" src="/cozy/index.html" title="홍대 한 바퀴 — cozy 3D Seoul" allow="autoplay; fullscreen" />
+      {practice && <CozyPractice key={practice.requestId} request={practice.request} onClose={finishPractice} />}
       {active && req && (
         <ExerciseModal
           key={active.requestId}

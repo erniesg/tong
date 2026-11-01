@@ -9,6 +9,11 @@ keep_vars = true
 [assets]
 binding = "ASSETS"
 directory = ".open-next/assets"
+# /cozy is the Next page that hosts the game. With the default HTML handling the
+# asset handler matched public/cozy/index.html, redirected /cozy to /cozy/ and
+# served the game bare (no bridge: no shared exercises, Learn or Review).
+# Static HTML is requested by file name (/cozy/index.html, /studio/relationship/index.html).
+html_handling = "none"
 
 [[r2_buckets]]
 binding = "TONG_ASSETS_BUCKET"
@@ -38,6 +43,7 @@ keep_vars = true
 [env.staging.assets]
 binding = "ASSETS"
 directory = ".open-next/assets"
+html_handling = "none"
 
 [[env.staging.r2_buckets]]
 binding = "TONG_ASSETS_BUCKET"
