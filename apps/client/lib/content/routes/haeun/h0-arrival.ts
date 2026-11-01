@@ -14,7 +14,7 @@ export const module: SceneModule = {
     slot: 'm1.s0',
     gate: { month: { from: 1, to: 1 } },
     summary:
-      'You arrive at Onsae. Tong introduces itself. Your locker has a half-scraped name label (수아) and a notebook jammed behind the drawer. Keep it, hand it in, or leave it. A girl slams her locker without looking at you. Coach Park: studio, 10am.',
+      'You arrive at Onsae (Tong has already introduced itself at the start of the game). Your locker has a half-scraped name label (수아) and a notebook jammed behind the drawer. Keep it, hand it in, or leave it. A girl slams her locker without looking at you. Coach Park: studio, 10am.',
     seeds: ['knows.sua_name (from the label)', 'notebook_kept / notebook_handed_in / notebook_left', 'first glimpse of Haeun'],
     beats: [
       {
@@ -25,8 +25,8 @@ export const module: SceneModule = {
           { value: { ko: '홍대, 3월.', en: 'Hongdae, March. The glass doors of Onsae Entertainment. Your suitcase wheel is already broken.' } },
         ],
         tong: {
-          ko: '안녕! 나는 통이야.',
-          en: 'Hi! I\'m Tong. I live in your phone. Tap me any time and I\'ll help, but the more you do yourself, the more people here will notice.',
+          ko: '여기야! 온새 엔터.',
+          en: 'This is it: your agency. Tap me any time and I\'ll help, but the more you do yourself, the more people here will notice.',
           maxLevel: 1,
         },
         next: 'h0_tong_blocks',

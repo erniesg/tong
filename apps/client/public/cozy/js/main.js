@@ -991,6 +991,7 @@ const A = {
   lookAtTower: (on) => (lookTower = on),
   quiz,
   quizChoices,
+  tongTalk: () => tongTalk(),
   jinWave: () => {
     if (loc.jin === 'cafe' && !S.quests.jin) {
       jin.wave = 1.6;
@@ -2680,8 +2681,13 @@ async function boot() {
     S.started = true;
     if (!resume || !saved) placePlayer({ position: [1.6, 0, 18], yaw: 0 });
     syncCity();
-    toast(`<b>${currentCity().nativeName} · ${currentCity().name}</b><span>Day ${S.day}, ${koreanTime(localHour()).digital} local. Tong floats beside you — press <kbd>H</kbd> for a hint. Walk to ✈ for flights.</span>`, 4200);
-    setTimeout(tongTalk, 3800);
+    if (resume && saved) {
+      toast(`<b>${currentCity().nativeName} · ${currentCity().name}</b><span>Day ${S.day}, ${koreanTime(localHour()).digital} local. Tong floats beside you — press <kbd>H</kbd> for a hint. Walk to ✈ for flights.</span>`, 4200);
+      setTimeout(tongTalk, 3800);
+    } else {
+      // A new game opens with Tong introducing itself, like /game's tong-intro.
+      setTimeout(() => dlg.start('tong_intro_1'), 600);
+    }
     save();
   };
   const creator = createCreator();

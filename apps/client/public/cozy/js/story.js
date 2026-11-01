@@ -34,6 +34,32 @@ const CAFE_ITEMS = [
 
 const won = (n) => n.toLocaleString('en-US');
 
+// Tong's intro lines: the English is /game's tong-intro (app/game/page.tsx); one set per new game.
+// Korean is drafted and needs native review (#395).
+const INTRO_SETS = [
+  [
+    ['사람을 잇는 게 내 일이야. 나는 통!', 'They call me Tong. I connect people. It’s what I do.'],
+    ['단어를 배우고, 분위기를 읽고, 관계를 쌓아.', 'Learn the words. Read the room. Build the bonds.'],
+    ['세 도시가 네 인생을 바꿀 거야.', 'Three cities are about to change your life.'],
+  ],
+  [
+    ['나는 통. 기다리고 있었어.', 'I’m Tong. I’ve been waiting for you.'],
+    ['서울, 도쿄, 상하이. 다 너한테 필요한 게 있어.', 'Seoul, Tokyo, Shanghai: each one has something you need.'],
+    ['말을 배우고 믿음을 얻으면, 문이 열려.', 'Speak their language, earn their trust, and doors will open.'],
+  ],
+  [
+    ['나는 통. 네 비밀 무기라고 생각해.', 'The name’s Tong. Think of me as your edge.'],
+    ['이 업계는 인맥 없인 아무도 못 떠.', 'Nobody makes it in this industry without the right connections.'],
+    ['다행히 난 모두를 알아. 시작하자!', 'Lucky for you, I know everyone. Let’s get started.'],
+  ],
+  [
+    ['나는 통. 네가 아는 스타들, 다 여기서 시작했어.', 'I’m Tong. Every star you’ve heard of? They started exactly where you are.'],
+    ['세 도시. 세 언어. 기회는 한 번.', 'Three cities. Three languages. One shot to make it.'],
+    ['정신 바짝 차리고 나만 따라와.', 'Stay sharp and follow my lead.'],
+  ],
+];
+const INTRO = INTRO_SETS[Math.floor(Math.random() * INTRO_SETS.length)];
+
 /**
  * A = actions/state from main.js:
  *   S, sitPlayer, serveFood, spicyFx, startExit, flipHair(who), learn, done(questId),
@@ -337,6 +363,20 @@ export function buildNodes(A) {
         A.hangout('convenience_store');
       },
       end: true,
+    },
+
+    /* ── New game: Tong introduces itself (same lines as /game's tong-intro) ── */
+    tong_intro_1: { who: 'tong', expr: 'cheerful', ko: () => INTRO[0][0], en: () => INTRO[0][1], next: 'tong_intro_2' },
+    tong_intro_2: { who: 'tong', expr: 'excited', ko: () => INTRO[1][0], en: () => INTRO[1][1], next: 'tong_intro_3' },
+    tong_intro_3: { who: 'tong', expr: 'proud', ko: () => INTRO[2][0], en: () => INTRO[2][1], next: 'tong_intro_seoul' },
+    tong_intro_seoul: {
+      who: 'tong',
+      expr: 'love',
+      ko: '서울에 온 걸 환영해, {name}!',
+      en: 'Welcome to Seoul, {name}! Your agency is up the stairs. Let’s find your locker first. Press H whenever you need me.',
+      hint: '<b>환영해</b> = welcome · Tong lives in your phone. The more you do yourself, the more people here notice.',
+      end: true,
+      after: () => A.tongTalk(),
     },
 
     /* ── Misc ─────────────────────────────────── */
