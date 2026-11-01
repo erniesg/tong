@@ -26,7 +26,7 @@ export function createDayUI({ host, clockText, fade, toast, onClose = () => {} }
   meter.setAttribute('role', 'meter');
   meter.setAttribute('aria-valuemin', '0');
   meter.setAttribute('aria-valuemax', String(DAY_CONFIG.max));
-  const curfew = el('span', 'vigor-curfew', '🌙 통금 후');
+  const curfew = el('span', 'vigor-curfew', '🌙<span class="vigor-curfew-text"> 통금 후</span>');
   curfew.title = 'After curfew (23:00)';
   meter.appendChild(curfew);
   clockText?.appendChild(meter);

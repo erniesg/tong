@@ -197,3 +197,15 @@ test('main.js wires the clock through clockRuns with every Tong surface', async 
   assert.match(src, /function modalOpen\(\) \{\s*return transitioning \|\| bridgeBusy \|\| !!document\.querySelector\('\.overlay:not\(\.hidden\)'\) \|\| !ui\.book\.classList\.contains\('hidden'\);/);
   assert.match(src, /bridgeBusy = true;[\s\S]{0,120}bridge\.practice\(/);
 });
+
+test('the HUD shows "after curfew" only when out of the dorm after 23:00', () => {
+  const S = clockState(23.2);
+  const loop = createDayLoop({ S, advanceHours: advance(S), target: null });
+  loop.tick(0.01, { awayFromDorm: true });
+  assert.equal(loop.view().afterCurfew, true);
+  loop.tick(0.01, { awayFromDorm: false });
+  assert.equal(loop.view().afterCurfew, false);
+  S.hour = 21;
+  loop.tick(0.01, { awayFromDorm: true });
+  assert.equal(loop.view().afterCurfew, false);
+});

@@ -203,6 +203,7 @@ export function createDayLoop({ S, advanceHours, save = () => {}, ui = null, tar
   };
   const d = () => (S.dayLoop ??= freshDayState(S.day));
   let sleeping = false;
+  let where = { awayFromDorm: false, curfewApplies: true }; // from the last tick
 
   const api = {
     config: DAY_CONFIG,
@@ -221,7 +222,8 @@ export function createDayLoop({ S, advanceHours, save = () => {}, ui = null, tar
       return () => listeners.get(type).delete(fn);
     },
     /** Called by the frame loop while the clock runs. */
-    tick(hours, ctx) {
+    tick(hours, ctx = {}) {
+      where = { awayFromDorm: !!ctx.awayFromDorm, curfewApplies: ctx.curfewApplies ?? true };
       const events = tick(S, d(), hours, ctx);
       if (events.includes('curfew')) emit('curfew', { hour: S.hour, day: S.day }); // hook: Manager Choi's night check
       if (events.includes('low')) ui?.toast?.('<b>기력이 없어요</b><span>Low energy. Eat, rest, or go to bed.</span>');
@@ -296,7 +298,7 @@ export function createDayLoop({ S, advanceHours, save = () => {}, ui = null, tar
       return sleepReaction(characterId, d().condition, stage);
     },
     view() {
-      return { ...api.getCondition(), max: DAY_CONFIG.max, afterCurfew: afterCurfew(S.hour), bed: bedKind(S.hour) };
+      return { ...api.getCondition(), max: DAY_CONFIG.max, afterCurfew: where.curfewApplies && where.awayFromDorm && afterCurfew(S.hour), bed: bedKind(S.hour) };
     },
   };
   current = api;

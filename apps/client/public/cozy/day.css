@@ -1,7 +1,7 @@
 /* Seoul day loop (js/day.js, js/day-ui.js): the 기력 meter, bed and morning board. */
 .vigor { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: var(--small); line-height: 1.2; margin-top: 2px; }
-.vigor-face { font-size: 16px; }
-.vigor-label { color: var(--ink-soft); }
+.vigor-face { font-size: 16px; flex: none; }
+.vigor-label { color: var(--ink-soft); white-space: nowrap; }
 .vigor-bar { position: relative; flex: 1 1 64px; min-width: 48px; max-width: 120px; height: 7px; border-radius: 4px; background: var(--cream-2); overflow: hidden; }
 .vigor-bar i { position: absolute; inset: 0 auto 0 0; background: #4f9a5b; border-radius: inherit; transition: width .4s ease; }
 .vigor.low .vigor-bar i { background: var(--orange); }
@@ -23,6 +23,6 @@
 .vigor.big .vigor-bar { max-width: 200px; height: 10px; }
 
 @container game (max-width: 640px) {
-  .vigor-label { display: none; }
+  .vigor-label, .vigor-curfew-text { display: none; }
   .vigor-bar { max-width: none; }
 }
