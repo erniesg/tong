@@ -21,7 +21,7 @@ export const STOOLS = [-1.8, -0.6, 0.6, 1.8].map((dx) => new THREE.Vector3(TX + 
 export const TERRACE_Y = 2.4;
 
 export const SPOTS = {
-  haeunTent: STOOLS[2],
+  tentGuest: STOOLS[2],
   playerSeat: STOOLS[1],
   ajusshi: new THREE.Vector3(TX - 1.55, 0, -1.75),
   cat: new THREE.Vector3(1.45, 0.82, -1.4),
@@ -33,6 +33,7 @@ export const SPOTS = {
   subway: new THREE.Vector3(-4, 0, -18.4),
   telescope: new THREE.Vector3(4.6, TERRACE_Y, -45.2),
   whiteboard: new THREE.Vector3(-9.2, TERRACE_Y, -43.2),
+  locker: new THREE.Vector3(-13.75, TERRACE_Y, -32.1),
   tentSign: new THREE.Vector3(TX + 2.6, 0, 2.6),
   vending: new THREE.Vector3(5.4, 0, -4.5),
 };
@@ -1029,7 +1030,7 @@ function buildStudio(rnd) {
   collider(-6.15, -5.85, -36, -31);
   for (const z of [-44, -39, -36, -31]) boxMM(-6.08, -5.92, y, y + 3.0, z - 0.06, z + 0.06, M.dark);
   boxMM(-6.1, -5.9, y + 3.0, y + 3.6, -44, -31, M.dark, { cast: false });
-  fascia('별빛 엔터 연습실', 'STARLIGHT ENT. · Practice Studio', '#1d1b3a', '#ffe9a8', -5.88, y + 3.3, -37.5, Math.PI / 2, 8, 0.6);
+  fascia('온새 엔터 연습실', 'ONSAE ENT. · Practice Studio', '#1d1b3a', '#ffe9a8', -5.88, y + 3.3, -37.5, Math.PI / 2, 8, 0.6);
 
   // the mirror wall
   studioMirror = new Reflector(new THREE.PlaneGeometry(12.6, 2.6), {
@@ -1063,6 +1064,13 @@ function buildStudio(rnd) {
     { bg: '#ffffff', border: '#9aa0a8' },
   );
   add(new THREE.PlaneGeometry(2.4, 1.0), mat(0xffffff, { map: wb, roughness: 0.3 }), -9.2, y + 1.6, -43.97, G.scene, false);
+  // trainee lockers; the middle one is yours, with Su-a's half-scraped name label (H0)
+  const lockerM = mat(0x6f8fa8, { roughness: 0.5, metalness: 0.3 });
+  boxMM(-14.9, -12.6, y, y + 1.9, -31.45, -31.0, lockerM, { collide: true, block: true });
+  for (const x of [-14.13, -13.37]) boxMM(x - 0.01, x + 0.01, y + 0.05, y + 1.85, -31.47, -31.44, M.dark, { cast: false });
+  for (const x of [-14.3, -13.55, -12.8]) boxMM(x - 0.02, x + 0.02, y + 0.95, y + 1.15, -31.5, -31.45, steel, { cast: false });
+  const label = textTexture([['ㅅ…아', 72, '#333', 70, 'Gowun Dodum']], 256, 112, { bg: '#f3ead2' });
+  add(new THREE.PlaneGeometry(0.34, 0.15), mat(0xffffff, { map: label }), -13.75, y + 1.62, -31.5, G.scene, false).rotation.y = Math.PI;
   const panel = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.1 });
   for (const z of [-41, -37.5, -34]) boxMM(-15, -7, y + 3.33, y + 3.4, z - 0.2, z + 0.2, panel, { cast: false });
   pointLight(0xfff4e8, 7, 14, -11, y + 3.0, -37.5, { day: 5 });

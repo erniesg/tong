@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { matches, playPreset, presetState } from './engine.ts';
@@ -32,6 +33,9 @@ function checkLine(l: Line | undefined, where: string) {
   assert.ok(l.en?.trim(), `${where}: empty en`);
 }
 
+// Speakers the cozy dialogue box can show (public/cozy/js/dialogue.js SPEAKERS).
+const SPEAKERS = new Set(['narration', 'tong', 'haeun', 'jin', 'ajusshi', 'barista', 'cashier', 'manager_choi', 'coach_park', 'minji', 'yerin']);
+
 const RETIRED = [/Busan|부산|라카노/, /내 이름 읽을 수 있어/, /masked busk|busks? masked/i];
 
 test('content was found', () => {
@@ -53,6 +57,7 @@ for (const { file, mod } of scenes) {
     for (const b of scene.beats) {
       if (b.next) assert.ok(ids.has(b.next), `${b.id}.next → ${b.next} missing`);
       assert.ok(b.lines.length > 0, `${b.id}: no lines`);
+      assert.ok(SPEAKERS.has(b.speaker), `${b.id}: unknown speaker ${b.speaker}`);
       assert.ok(!b.lines[b.lines.length - 1].when, `${b.id}: last line variant must be unconditional`);
       b.lines.forEach((v, i) => checkLine(v.value, `${b.id}.lines[${i}]`));
       for (const c of b.choices ?? []) {
@@ -61,6 +66,7 @@ for (const { file, mod } of scenes) {
         assert.ok(!c.outcomes[c.outcomes.length - 1].when, `${b.id}/${c.id}: last outcome must be unconditional`);
         for (const o of c.outcomes) {
           checkLine(o.reaction, `${b.id}/${c.id} reaction`);
+          if (o.speaker) assert.ok(SPEAKERS.has(o.speaker), `${b.id}/${c.id}: unknown speaker ${o.speaker}`);
           if (o.next) assert.ok(ids.has(o.next), `${b.id}/${c.id} → ${o.next} missing`);
         }
       }
@@ -96,6 +102,25 @@ for (const { file, mod } of scenes) {
   }
 }
 
+// Canon (jin.ts mustNot): with Jin, yes and no score the same. Deferring is counted, never rewarded;
+// declining is never punished.
+const jinOutcomes = [
+  ...scenes.filter((s) => s.mod.scene.characterId === 'jin').flatMap((s) => s.mod.scene.beats.flatMap((b) => (b.choices ?? []).map((c) => ({ id: `${s.file}/${c.id}`, intent: c.intent, outcomes: c.outcomes })))),
+  ...threads.filter((t) => t.mod.thread.characterId === 'jin').flatMap((t) => (t.mod.thread.replies ?? []).map((r) => ({ id: `${t.file}/${r.id}`, intent: r.intent, outcomes: r.outcomes }))),
+];
+test('Jin: deferring earns nothing; declining costs nothing', () => {
+  for (const c of jinOutcomes) {
+    for (const o of c.outcomes) {
+      if (c.intent === 'defer') {
+        assert.ok(!((o.deltas?.warmth ?? 0) > 0 || (o.deltas?.trust ?? 0) > 0), `${c.id}: deferring to Jin raises warmth/trust`);
+      }
+      if (c.intent === 'decline') {
+        assert.ok(!((o.deltas?.warmth ?? 0) < 0 || (o.deltas?.trust ?? 0) < 0), `${c.id}: declining Jin lowers warmth/trust`);
+      }
+    }
+  }
+});
+
 for (const { file, mod } of threads) {
   const { thread, presets } = mod;
   test(`${file}: thread`, () => {
@@ -116,6 +141,12 @@ for (const { file, mod } of threads) {
     for (const re of RETIRED) assert.ok(!re.test(text), `retired canon ${re}`);
   });
 }
+
+test('the lab and the cozy bundle are rebuilt from this content', () => {
+  const script = fileURLToPath(new URL('../../scripts/build-relationship-lab.mjs', import.meta.url));
+  const r = spawnSync(process.execPath, [script, '--check'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+});
 
 test('canon files load', async () => {
   for (const f of ['haeun', 'sua', 'jin', 'world']) {

@@ -21,6 +21,12 @@ Branch: `feat/relationship-engine` (worktree `~/code/erniesg/tong-relationship`,
 - Haeun's first meeting moves from the pojangmacha to the **agency (H0 lockers, H1 studio)**. The pojangmacha becomes **Jin's onboarding (J0)**.
 - Refusing Jin never lowers the numbers; deferring to him is what gets logged.
 
+## Owner decisions (2026-11-01, later)
+
+- **Several romances at once.** Haeun's and Jin's routes (and any later ones) run side by side in one save, each with its own stage. Whether you can be *official* with more than one is decided later.
+- **Flags are save-wide.** Any flag a scene or thread sets is readable from every other character's scenes (`WorldCtx.flags`); counters live in `WorldCtx.tally`.
+- **With Jin, yes and no score the same.** Deferring earns no warmth or trust and bumps `tally.jin_decided`; declining never costs any. The content lint enforces both.
+
 ## Systems
 
 | System | Where | Status |
@@ -34,7 +40,7 @@ Branch: `feat/relationship-engine` (worktree `~/code/erniesg/tong-relationship`,
 | Input ladder UI in cozy dialogue | `public/cozy/js/dialogue.js` | todo |
 | Interactive KakaoTalk (choices, read "1", deleted messages) | #369 | todo |
 | Exercise trigger map (month → targets → slots → exercises → notebook pages) | this doc + `lib/content/routes/` | todo |
-| Cozy wiring (onboarding move, schedules → mood, bridge events) | `public/cozy/js/{story,main}.js`, `lib/cozy/bridge.ts` | todo |
+| Cozy wiring: authored scenes play in the 3D world (H0 locker, H1/H2 studio, J0 tent) | `public/cozy/js/scene-player.js`, `main.js`, generated `public/cozy/js/relationship/` | done (#394) |
 
 ### State
 
@@ -47,6 +53,20 @@ RelState { stage, axes {warmth, tension, trust}, mood {energy, valence, causes},
 - **Leak:** warmth past the stage's ceiling means the relationship leaks through. She texts first, 반말 slips, she sends a second message.
 - **Mood tags:** raw / low / ok / high, derived from energy and valence.
 - **Knows** uses canon fact ids, so "has the player learned she's from Jeju" is the same key everywhere.
+- **Save-wide flags and tallies:** `setFlags` writes to the relationship *and* to `WorldCtx.flags`; a `flags` condition matches either, so Haeun's scenes can read `covered_for_haeun` from Manager Choi's thread. `Effects.tally` bumps a counter; `Condition.tally` bounds it (`{ jin_decided: { min: 3 } }`).
+- **Cues:** a beat may carry a stage direction (`sit`, `serve`, `phone_buzz`, `stand`, `leave`) that the 3D world acts on and the lab ignores.
+
+### How the cozy world plays scenes
+
+`scripts/build-relationship-lab.mjs` compiles the engine and every scene into `public/cozy/js/relationship/` (generated; the content test fails if it is stale). `scene-player.js` turns beats into dialogue nodes: the engine picks each line and the visible choices, beat exercises open the shared Tong exercise (a dismissed or unavailable exercise counts as a fail, so Tong assists), and outcomes show as reaction lines. RelState per character and the save-wide flags persist in the cozy save. Warmth changes report to the shared store as affinity, keyed by beat id so replays award nothing.
+
+| Where | When | Scene |
+|---|---|---|
+| Your locker (studio) | any time, once | H0 · arrival |
+| Ha-eun in the studio | 9:00–19:00 after H0 | H1 · paired |
+| Ha-eun in the studio | 21:00–23:30 after H1 | H2 · "다시." |
+| Man in the cap at the tent | 19:00–03:00 until J0 | J0 · pojangmacha, then he walks off and the day-one card shows |
+| Ha-eun / your locker | after the story beats | ambient a3 (water break) / a2 (hallway), once a day |
 
 ### Between hangouts (love language)
 
@@ -86,7 +106,7 @@ The notebook is the visible literacy meter: pages decode as targets reach `famil
 
 | Act | Months | Beats |
 |---|---|---|
-| 1 Rivals | 1–3 | **H0** arrival + locker (수아 label, notebook) · **H1** "하은. 너랑 짝이래." · **H2** "다시." · H3 sneak-out by accident · stage check (friend via warm or rival door, fallback rival H4) |
+| 1 Rivals | 1–3 | **H0** arrival + locker (수아 label, notebook) · **H1** "하은. 저랑 짝이래요." · **H2** "다시." · H3 sneak-out by accident · stage check (friend via warm or rival door, fallback rival H4) |
 | 2 Accomplices | 4–7 | H4 "나와." · H5 tutor *or* English-lyrics role reversal · H6 almost caught (stealth minigame) · Chuseok · H7 rooftop (Sua, unread chat, close) |
 | 3 What Sua couldn't say | 8–10 | H8 Jeju slips out · rare fogged window · H9 notebook · H10 Sua |
 | 4 Debut | 11–12 | H11 decision (Opened / Armored / Stuck) · H12 the night before · final eval · endings |
@@ -94,6 +114,21 @@ The notebook is the visible literacy meter: pages decode as targets reach `famil
 **Sua's artifacts.** First, her chat on 안읽씹: the preview shows only "잘 지내.", and the notebook mention sits earlier in the thread. Second, the notebook behind your locker drawer, with her copy of their 인생네컷 strip inside.
 
 **Thematic mechanic.** If you lean on Haeun (she tutors you, covers for you, takes the blame), her evals slip exactly like they did with Sua. The notebook then reads as a warning addressed to you.
+
+## Jin route (proposed, awaiting owner)
+
+Jin is the warm, easy route that turns out to be about control. The game never rewards possessiveness; it rewards noticing.
+
+**The leak (proposed answer to the open secret).** In his breakout year a fan account posted photos of Jin with Seo-yeon, an Onsae trainee he was seeing. Onsae and his management buried it: he said on record she was "staff I barely know". A month later she was cut from the debut lineup and left the industry. He agreed to everything they decided for him. The lesson he learned is the wrong one: *love that's seen gets taken, so keep it private and keep control.* Coach Park and Manager Choi remember her; the trainees only know the ghost story ("a girl got cut for dating someone"), which is why Ha-eun warns you off him. It rhymes with Sua: someone vanishes from the lineup and nobody says why.
+
+| Act | Months | Beats |
+|---|---|---|
+| 1 Easy | 1–3 | **J0** pojangmacha (orders for you, pays, face change) · 뭐해? texts · he plans everything; every yes is counted (`tally.jin_decided`) and comes with perks (food, rides, a set visit) |
+| 2 Close | 4–7 | Han River walks · the drama set · first boundary (k12 read receipt): he sulks politely and gets more polite · Coach Park lets slip he trained at Onsae and almost quit twice |
+| 3 The leak | 8–10 | A fan photo of you two outside Café Bom. Both agencies want it buried. Jin's instinct is to manage it *for* you: what you say, where you go, cutting you off from Ha-eun "for your safety". You learn about Seo-yeon. |
+| 4 Who decides | 11–12 | **Kept** (high tally, no boundaries): he handles everything and you disappear from view; together in secret, written as a loss. **Seen** (boundaries held and he accepts them over time): he lets you choose your answer and calls you his friend in public, at a cost to himself. **Released**: he lets go; friendship. |
+
+Cross-route hooks (shared flags): Ha-eun reads `met_jin` and the photo; Jin's "other people" trigger reads Ha-eun's stage.
 
 ## Content
 
@@ -110,10 +145,10 @@ The notebook is the visible literacy meter: pages decode as targets reach `famil
 
 ## Open decisions
 
-- Jin's "the leak" secret: what was it?
+- Jin's "the leak" secret: proposed above (Seo-yeon), awaiting owner.
 - Retire the legacy `colleagues` stage in `lib/types/relationship.ts` (the new engine has no such stage).
 - Speech input (tier 3 voice): which ASR, and whether recognition is constrained to expected candidates at low levels.
-- Whether Haeun's romance route and Jin's can both be active in one save (cross-route jealousy).
+- Whether you can be official with more than one person (several active routes are already allowed).
 
 ## Issues
 
@@ -127,7 +162,7 @@ Epic: #397 (child of #364). The live checklist is on the epic.
 | #390 | Input ladder in cozy dialogue | todo |
 | #391 | 12-month calendar, evals, exercise trigger map | todo |
 | #369 | Interactive KakaoTalk (spec in comment) | content drafted; UI todo |
-| #394 | Move onboarding in cozy | todo |
+| #394 | Move onboarding in cozy | done on branch |
 | #392 | Haeun route H3–H12, endings | H0–H2 drafted |
 | #393 | Jin route | J0 drafted |
 | #396 | Sua's notebook as literacy meter | todo |
@@ -138,5 +173,5 @@ Epic: #397 (child of #364). The live checklist is on the epic.
 ```sh
 cd apps/client
 node --test lib/relationship/engine.test.ts lib/relationship/content.test.ts   # Node ≥ 22.18
-node scripts/build-relationship-lab.mjs   # rebuilds public/studio/relationship/index.html
+node scripts/build-relationship-lab.mjs   # rebuilds the lab and public/cozy/js/relationship/
 ```

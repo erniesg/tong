@@ -33,8 +33,8 @@ export const module: KakaoModule = {
         outcomes: [
           {
             messages: [{ from: 'them', ko: 'ㅋㅋ 안 돼~ 선배가 사는 거야. 알지? 😉', en: 'lol nope~ the senior pays. You know that, right? 😉', delay: 1 }],
-            deltas: { warmth: 1, tension: 1 },
-            setFlags: ['jin_decided_1'],
+            deltas: { warmth: 2, tension: 1 },
+            setFlags: ['jin_overrode_you'],
             memory: { tag: 'jin_insisted_pay', note: 'Offered to pay next time; Jin said the senior pays, "알지?"' },
           },
         ],

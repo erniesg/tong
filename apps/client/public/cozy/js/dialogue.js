@@ -10,6 +10,10 @@ export const SPEAKERS = {
   ajusshi: { label: '아저씨 Ajusshi', emoji: '👨‍🍳', cls: 'green' },
   barista: { label: '바리스타 Barista', emoji: '☕', cls: 'pink' },
   cashier: { label: '직원 Clerk', emoji: '🏪', cls: 'green' },
+  manager_choi: { label: '최 실장 Manager Choi', emoji: '📋', cls: 'purple' },
+  coach_park: { label: '박 코치 Coach Park', emoji: '📣', cls: 'green' },
+  minji: { label: '민지 Minji', emoji: '🎧', cls: 'pink' },
+  yerin: { label: '예린 Yerin', emoji: '🎀', cls: 'pink' },
   tong: { label: '통 Tong', tong: true, cls: 'gold' },
   narration: { label: '…', none: true, cls: 'purple' },
 };

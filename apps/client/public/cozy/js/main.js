@@ -19,7 +19,8 @@ import {
 import { createCreator } from './creator.js';
 import { initAudio, updateAudio, sfx, setMuted, audio, initVoice, speak as speakRaw, voice } from './audio.js';
 import { buildNodes, tongHint, WORDS } from './story.js';
-import { createDialogue } from './dialogue.js';
+import { createDialogue, SPEAKERS } from './dialogue.js';
+import { createScenePlayer } from './scene-player.js';
 import { createBridge, AFFINITY_PER_HEART, stageOf, affinityOf, legacyProgress } from './bridge.js';
 import seoul from './cities/seoul.js';
 import tokyo from './cities/tokyo.js';
@@ -88,15 +89,17 @@ const S = {
   phrases: new Map(),
   visited: new Set(),
   quests: {},
+  // Relationship engine state (scene-player.js): per-character RelState and save-wide story flags.
+  seed: Math.floor(Math.random() * 2 ** 31),
+  rel: {},
+  story: { flags: {}, tally: {} },
   pettedCat: false,
-  metHaeunStudio: false,
   jinTip: false,
   mistakes: 0,
   food: null,
   spicy: false,
   showEn: true,
-  haeunStory: 'idle', // idle | talking | exit
-  haeunHomeUntil: 0,
+  tentStory: 'idle', // the pojangmacha night: idle | talking | exit
   started: false,
   benchSit: null,
   telescope: false,
@@ -116,7 +119,7 @@ function save() {
         cityPositions: S.cityPositions, postcards: S.postcards,
         name: S.name, look: S.look, hour: S.hour, day: S.day,
         words: [...S.words], gloss: [...S.phrases], visited: [...S.visited], quests: S.quests,
-        pettedCat: S.pettedCat, metHaeunStudio: S.metHaeunStudio, jinTip: S.jinTip, haeunHomeUntil: S.haeunHomeUntil,
+        pettedCat: S.pettedCat, jinTip: S.jinTip, seed: S.seed, rel: S.rel, story: S.story,
         ...(S.legacy ? { legacy: S.legacy } : {}),
       }),
     );
@@ -135,7 +138,10 @@ function loadSave() {
 }
 
 function applySave(d) {
-  Object.assign(S, { name: d.name, hour: d.hour, day: d.day, quests: d.quests ?? {}, pettedCat: d.pettedCat, metHaeunStudio: d.metHaeunStudio, jinTip: d.jinTip, haeunHomeUntil: d.haeunHomeUntil ?? 0 });
+  Object.assign(S, { name: d.name, hour: d.hour, day: d.day, quests: d.quests ?? {}, pettedCat: d.pettedCat, jinTip: d.jinTip });
+  if (Number.isInteger(d.seed)) S.seed = d.seed;
+  S.rel = d.rel && typeof d.rel === 'object' ? d.rel : {};
+  S.story = { flags: { ...d.story?.flags }, tally: { ...d.story?.tally } };
   S.city = Object.hasOwn(cities, d.city) ? d.city : 'seoul';
   S.hour = Number.isFinite(d.hour) ? ((d.hour % 24) + 24) % 24 : 16.5;
   S.day = Number.isFinite(d.day) && d.day >= 1 ? Math.floor(d.day) : 1;
@@ -327,14 +333,15 @@ function buildCast() {
 const isOpen = (h) => h >= 19 || h < 3;
 const where = {
   haeun(h) {
-    if (S.haeunStory !== 'idle') return 'story';
-    // after the night out she heads home until the next morning
-    if (S.day * 24 + h < S.haeunHomeUntil) return 'away';
     if (h >= 9 && h < 19) return 'studio';
-    if (isOpen(h)) return 'tent';
+    // once you're paired she drills late, alone (H2)
+    if (S.story.flags.h1_done && h >= 21 && h < 23.5) return 'studio';
     return 'away';
   },
   jin(h) {
+    if (S.tentStory !== 'idle') return 'story';
+    // until you've met him he's only the man in the cap at the pojangmacha (J0)
+    if (!S.story.flags.j0_done) return isOpen(h) ? 'tent' : 'away';
     if (h >= 8 && h < 18) return 'cafe';
     if (h >= 18) return 'lookout';
     return 'away';
@@ -357,13 +364,6 @@ function placeHaeun(l) {
     haeun.root.rotation.y = -Math.PI / 2;
     haeun.pose = 'dance';
     haeun.baseExpr = 'smirk';
-  } else if (l === 'tent') {
-    haeun.root.position.copy(SPOTS.haeunTent);
-    haeun.root.rotation.y = Math.PI;
-    haeun.pose = 'sit';
-    haeun.legSwing = true;
-    haeun.baseExpr = 'cool';
-    haeun.armPose = eatPose;
   }
   setExpr(haeun, haeun.baseExpr);
 }
@@ -371,7 +371,14 @@ function placeHaeun(l) {
 function placeJin(l) {
   jin.root.visible = l !== 'away';
   jin.pose = 'sit';
-  if (l === 'cafe') {
+  jin.legSwing = false;
+  if (l === 'tent') {
+    // low cap, eating alone at the counter
+    jin.root.position.copy(SPOTS.tentGuest);
+    jin.root.rotation.y = Math.PI;
+    jin.legSwing = true;
+    jin.armPose = eatPose;
+  } else if (l === 'cafe') {
     jin.root.position.copy(SPOTS.jinCafe);
     jin.root.rotation.y = -Math.PI / 2;
     jin.armPose = (t) => [-0.9 - Math.max(0, Math.sin(t * 0.5)) ** 8 * 0.8, -0.3];
@@ -403,12 +410,12 @@ function updateSchedules(force = false) {
   // NPCs change places when you aren't watching them
   const unseen = (c) => !c.root.visible || player.root.position.distanceTo(c.root.position) > 9 || !onScreen(c.root.position);
   const hl = where.haeun(h);
-  if (hl !== 'story' && hl !== loc.haeun && !dlg.state.active && (force || unseen(haeun))) {
+  if (hl !== loc.haeun && !dlg.state.active && (force || unseen(haeun))) {
     loc.haeun = hl;
     placeHaeun(hl);
   }
   const jl = where.jin(h);
-  if (jl !== loc.jin && !dlg.state.active && (force || unseen(jin))) {
+  if (jl !== 'story' && jl !== loc.jin && !dlg.state.active && (force || unseen(jin))) {
     loc.jin = jl;
     placeJin(jl);
   }
@@ -657,11 +664,13 @@ function addAff(who, n, beatId) {
 }
 
 const QUESTS = [
+  ['locker', '🔑 Find your locker at the 연습실'],
+  ['haeunDay', '💃 Meet your partner at the studio (9:00–19:00)'],
+  ['pojang', '🏮 Dinner at the 포장마차 (19:00~)'],
   ['cafe', '☕ Order at 카페 봄 (8:00–22:00)'],
-  ['jin', '🧑‍🎤 Say hi to Jin at the café'],
-  ['haeunDay', '💃 Find 하은 at the studio (9:00–19:00)'],
   ['store', '🏪 Buy something at the 편의점'],
-  ['haeun', '🏮 Share a night at the 포장마차 (19:00~)'],
+  ['drill', '🌙 The studio lights at 21:00'],
+  ['jin', '🧑‍🎤 Find Jin at the café'],
   ['jinNight', '🌉 Find Jin by the Han River (night)'],
   ['explore', '🗺️ Visit all 6 places'],
   ['words', '✨ Collect 10 glowing words'],
@@ -867,13 +876,14 @@ function spicyFx(on) {
   }
 }
 
+// Jin leaves the tent at the end of J0: cap low, mask up, a wave from the street.
 function startExit() {
-  S.haeunStory = 'exit';
-  haeun.pose = 'idle';
-  haeun.legSwing = false;
-  haeun.armPose = null;
-  haeun.path = [
-    new THREE.Vector3(SPOTS.haeunTent.x, 0, 0.9),
+  S.tentStory = 'exit';
+  jin.pose = 'idle';
+  jin.legSwing = false;
+  jin.armPose = null;
+  jin.path = [
+    new THREE.Vector3(SPOTS.tentGuest.x, 0, 0.9),
     new THREE.Vector3(TX + 1.4, 0, TENT.maxZ + 0.9),
     new THREE.Vector3(2.4, 0, TENT.maxZ + 1.2),
     'wave',
@@ -882,23 +892,27 @@ function startExit() {
   ];
 }
 
+// The first night's card: where each relationship stands after day one.
 function finishNight() {
-  S.haeunStory = 'idle';
-  S.quests.haeun = true;
-  hangout('food_street');
-  S.haeunHomeUntil = (S.hour >= 19 ? S.day + 1 : S.day) * 24 + 9;
-  haeun.root.visible = false;
-  loc.haeun = 'away';
-  const st = relationshipStage(HAEUN_STAGES, S.aff);
-  const lines = {
-    '친구 · friends (almost)': 'Ha-eun almost smiled. Twice. Tomorrow at 7 in the practice room — don’t be late.',
-    '동료 · colleagues': 'Grudging respect, earned over tteokbokki. She’ll pretend she didn’t enjoy tonight.',
-    '아는 사이 · acquaintances': 'You’re not “the new trainee” anymore. That counts for something.',
-    '낯선 사람 · strangers': 'She’ll remember the tteokbokki more than you. Maybe tomorrow.',
-  };
-  $('end-title').textContent = st;
-  $('end-hearts').innerHTML = hearts(S.aff, S.maxAff);
-  $('end-text').textContent = lines[st];
+  S.tentStory = 'idle';
+  jin.root.visible = false;
+  loc.jin = 'away';
+  const f = S.story.flags;
+  const decided = S.story.tally.jin_decided ?? 0;
+  const haeunStage = scenes.stage('haeun');
+  const haeunLine = !f.h1_done
+    ? 'Somewhere in the agency there’s a girl who slammed her locker without looking at you. Tomorrow you’ll find out who.'
+    : haeunStage === 'strangers'
+      ? 'Ha-eun still calls you “the new one”. 내일 아홉 시. Don’t be late.'
+      : 'Ha-eun knows your name now. She’ll pretend she doesn’t.';
+  const jinLine = f.paid_myself
+    ? 'You paid for yourself. Jin smiled, and put his card away slowly.'
+    : decided >= 2
+      ? 'Jin ordered, planned and paid. It was easy. Maybe too easy.'
+      : 'A man in a cap knows your name. You still aren’t sure you know his.';
+  $('end-title').textContent = '첫날 · Day one';
+  $('end-hearts').innerHTML = hearts(Math.ceil(scenes.affinity('haeun') / 20), 5);
+  $('end-text').textContent = `${haeunLine} ${jinLine}`;
   const words = $('end-words');
   words.innerHTML = '';
   for (const [ko, { en }] of S.phrases) {
@@ -961,6 +975,7 @@ function polaroid(who) {
 
 const A = {
   S,
+  standUp,
   sitPlayer,
   serveFood,
   spicyFx,
@@ -986,7 +1001,6 @@ const A = {
 
 const NODES = buildNodes(A);
 NODES.quiz.enter = newQuizQ;
-NODES.tent_again = { who: 'haeun', expr: 'smirk', ko: '…또 왔어? 오늘은 내가 살게. 약속했잖아.', en: '…You again? Tonight’s on me. I promised.', end: true };
 
 const dlg = createDialogue({
   nodes: NODES,
@@ -1008,7 +1022,7 @@ const dlg = createDialogue({
   },
   onEnd: () => {
     document.body.classList.remove('talking');
-    if (loc.haeun === 'studio' && S.haeunStory === 'idle') {
+    if (loc.haeun === 'studio' && S.tentStory === 'idle') {
       haeun.pose = 'dance';
       haeun.root.rotation.y = -Math.PI / 2;
     }
@@ -1016,21 +1030,71 @@ const dlg = createDialogue({
   },
 });
 
+/* ── Relationship scenes ─────────────────────────── */
+
+// Authored scenes (lib/content/routes) played through the shared engine.
+const SCENE_QUEST = { 'haeun.h0': 'locker', 'haeun.h1': 'haeunDay', 'haeun.h2': 'drill', 'jin.j0': 'pojang' };
+const scenes = createScenePlayer({
+  S,
+  nodes: NODES,
+  dlg,
+  speakers: SPEAKERS,
+  exercise,
+  learn,
+  cue(c) {
+    if (c === 'sit') sitPlayer();
+    else if (c === 'serve') {
+      S.food = { ko: '떡볶이', en: 'tteokbokki' };
+      serveFood();
+    } else if (c === 'phone_buzz') {
+      bubble(jin, '📳', { dur: 1.6 });
+      sfx.thump();
+      setExpr(jin, 'neutral', 1.2);
+    } else if (c === 'stand') standUp();
+  },
+  changed(id, { before, after, beatId, stageChanged }) {
+    // Shared affinity (the HUD hearts) follows warmth; the stage label lives in the engine.
+    const delta = after.axes.warmth - before.axes.warmth;
+    const c = id === 'jin' ? jin : id === 'haeun' ? haeun : null;
+    if (delta > 0 && c?.root.visible) {
+      bubble(c, '+♥', { cls: 'heart', dur: 1.3 });
+      sfx.heart();
+    }
+    if (delta && (id === 'haeun' || id === 'jin')) {
+      bridge.report([{ kind: 'affinity', characterId: id, delta: clamp(delta, -10, 10), beatId }]);
+    }
+    if (stageChanged) toast(`<b>${id === 'jin' ? '진' : '하은'}</b><span>${stageChanged.to.replace('_', ' ')}</span>`, 2600);
+    updateHearts();
+  },
+  done(scene) {
+    if (SCENE_QUEST[scene.id]) done(SCENE_QUEST[scene.id]);
+    hangout(scene.location === 'agency_lockers' ? 'practice_studio' : scene.location);
+    if (scene.id === 'jin.j0') startExit();
+    save();
+  },
+});
+
+/** Ha-eun in the studio: the next story beat if one is ready, else a small moment, else a brush-off. */
+function talkToHaeun() {
+  const f = S.story.flags;
+  if (!f.h0_done) return dlg.start('haeun_busy');
+  if (scenes.play('haeun.h1') || scenes.play('haeun.h2') || scenes.play('haeun.a3.water_break')) return;
+  dlg.start(f.h1_done ? 'haeun_idle' : 'haeun_tomorrow');
+}
+
 /* ── Interactions ────────────────────────────────── */
 
 const BENCHES = [1.6, 9, 13.2].map((x) => new THREE.Vector3(x, TERRACE_Y, -44.35));
 
 const interactables = [
   {
-    label: '하은에게 말 걸기 · Talk to Ha-eun',
-    pos: () => haeun.root.position,
+    label: '모자 쓴 남자 옆에 앉기 · Sit next to the man in the cap',
+    pos: () => jin.root.position,
     r: 2.1,
-    on: () => loc.haeun === 'tent' && S.haeunStory === 'idle' && haeun.root.visible,
+    on: () => loc.jin === 'tent' && S.tentStory === 'idle' && jin.root.visible,
     act: () => {
-      if (S.quests.haeun) return dlg.start('tent_again');
-      S.haeunStory = 'talking';
-      walkToCounter(() => (player.root.rotation.y = Math.atan2(SPOTS.haeunTent.x - STAND_SPOT.x, SPOTS.haeunTent.z - STAND_SPOT.z)));
-      dlg.start('greet');
+      S.tentStory = 'talking';
+      if (!scenes.play('jin.j0')) S.tentStory = 'idle';
     },
   },
   {
@@ -1041,15 +1105,29 @@ const interactables = [
     act: () => {
       haeun.pose = 'idle';
       haeun.root.rotation.y = Math.atan2(player.root.position.x - haeun.root.position.x, player.root.position.z - haeun.root.position.z);
-      dlg.start(S.quests.haeun ? 'studio_after' : S.metHaeunStudio ? 'studio_tip' : 'studio_hi');
+      talkToHaeun();
     },
+  },
+  {
+    label: '내 사물함 · Your locker',
+    pos: () => SPOTS.locker,
+    r: 1.4,
+    on: () => true,
+    act: () => scenes.play('haeun.h0') || scenes.play('haeun.a2.hallway') || dlg.start('locker_again'),
   },
   {
     label: '아저씨 · Ajusshi',
     pos: () => SPOTS.ajusshi,
     r: 2.3,
-    on: () => loc.tent && S.haeunStory === 'idle' && player.pose !== 'sit',
-    act: () => dlg.start(S.quests.haeun ? 'ajusshi_later' : 'ajusshi_hello'),
+    on: () => loc.tent && S.tentStory === 'idle' && player.pose !== 'sit',
+    act: () => dlg.start(S.story.flags.j0_done ? 'ajusshi_later' : 'ajusshi_hello'),
+  },
+  {
+    label: '주문하기 · Order',
+    pos: () => STAND_SPOT,
+    r: 1.2,
+    on: () => loc.tent && S.tentStory === 'idle' && S.story.flags.j0_done && player.pose !== 'sit',
+    act: () => sitPlayer() || dlg.start('order_build'),
   },
   { label: '간판 읽기 · Read the sign', pos: () => SPOTS.tentSign, r: 1.7, on: () => !loc.tent, act: () => dlg.start('tent_closed') },
   { label: '고양이 쓰다듬기 · Pet the cat', pos: () => SPOTS.cat, r: 1.4, on: () => true, act: petCat },
@@ -1138,7 +1216,7 @@ function staffAccessible(actor, position) {
 }
 function updateInteract() {
   activeInteract = null;
-  if (S.started && vistaIndex < 0 && !modalOpen() && !dlg.state.active && !player.auto && player.pose !== 'sit' && (S.city !== 'seoul' || S.haeunStory === 'idle')) {
+  if (S.started && vistaIndex < 0 && !modalOpen() && !dlg.state.active && !player.auto && player.pose !== 'sit' && (S.city !== 'seoul' || S.tentStory === 'idle')) {
     let best = Infinity;
     const p = player.root.position;
     const airport = currentCity().airport;
@@ -1390,11 +1468,11 @@ async function changeCity(id, { skipAnimation = false, demo = false } = {}) {
   $('dialogue').classList.add('hidden');
   if (dlg.state.locked) await wait(800);
   if (dlg.state.active) dlg.end();
-  if (S.haeunStory !== 'idle') {
-    S.haeunStory = 'idle';
-    haeun.path = null;
-    haeun.waveT = 0;
-    loc.haeun = null;
+  if (S.tentStory !== 'idle') {
+    S.tentStory = 'idle';
+    jin.path = null;
+    jin.waveT = 0;
+    loc.jin = null;
   }
   prepareTransition();
   if (!skipAnimation) await wait(650);
@@ -1413,7 +1491,7 @@ async function changeCity(id, { skipAnimation = false, demo = false } = {}) {
   return true;
 }
 function openTravel(mode = 'subway') {
-  if (transitioning || dlg.state.active || S.haeunStory !== 'idle') return false;
+  if (transitioning || dlg.state.active || S.tentStory !== 'idle') return false;
   clearControls();
   const flights = mode === 'flights';
   $('travel-badge').textContent = flights ? '✈' : S.city === 'seoul' ? '2' : 'M';
@@ -1453,7 +1531,7 @@ function openTravel(mode = 'subway') {
   return true;
 }
 async function travelTo(p, { skipAnimation = false } = {}) {
-  if (!p || transitioning || dlg.state.active || S.haeunStory !== 'idle') return false;
+  if (!p || transitioning || dlg.state.active || S.tentStory !== 'idle') return false;
   transitioning = true;
   prepareTransition();
   if (!skipAnimation) await wait(650);
@@ -1579,7 +1657,7 @@ const cam = { yaw: 0, pitch: 0.36, dist: 6.5, look: new THREE.Vector3(), pos: ne
 const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
 const lookPointers = new Map();
 let pinchDistance = 0;
-const actionsAllowed = () => S.started && !modalOpen() && !dlg.state.active && !player.auto && S.haeunStory === 'idle';
+const actionsAllowed = () => S.started && !modalOpen() && !dlg.state.active && !player.auto && S.tentStory === 'idle';
 function jump() {
   if (!actionsAllowed() || player.pose === 'sit') return;
   safePose();
@@ -1912,7 +1990,7 @@ function populateLocations() {
   if ($('demo-city-select')) $('demo-city-select').value = S.city;
 }
 async function demoJump(id, placeId = null) {
-  if (!demoEnabled || !S.started || transitioning || dlg.state.active || S.haeunStory !== 'idle') return false;
+  if (!demoEnabled || !S.started || transitioning || dlg.state.active || S.tentStory !== 'idle') return false;
   clearControls();
   $('tools-panel')?.classList.add('hidden');
   if (id !== S.city && !await changeCity(id, { skipAnimation: true, demo: true })) return false;
@@ -2080,7 +2158,7 @@ function updatePlayer(dt) {
     if (keys.has('s') || keys.has('arrowdown')) iz += 1;
     if (keys.has('a') || keys.has('arrowleft')) ix -= 1;
     if (keys.has('d') || keys.has('arrowright')) ix += 1;
-    const frozen = !S.started || blocked || dlg.state.active || S.haeunStory === 'exit';
+    const frozen = !S.started || blocked || dlg.state.active || S.tentStory === 'exit';
     if (!frozen && vistaIndex >= 0 && Math.hypot(ix, iz) > 0.08) followCamera();
     // Camera-relative walking/steering; inertia and turning acceleration remain
     // in world coordinates when the player lets go to orbit the camera.
@@ -2095,66 +2173,62 @@ function updatePlayer(dt) {
     if (room && traversal.mode !== 'walk') setTransport('walk', true);
   } else stopTraversal(traversal);
   lastTraversalSpeed = speed;
-  if (player.pose === 'sit' && dlg.state.active) lookAtYaw(player, headPos(haeun), 0.9);
+  if (player.pose === 'sit' && dlg.state.active) lookAtYaw(player, headPos(jin), 0.9);
   else player.lookYaw = 0;
   if (hotSteam && !hotSteam.off) headPos(player, hotSteam.pos).y += 0.35;
   return traversal.mode === 'walk' ? speed / 3.4 : 0;
 }
 
 function updateHaeun(dt, t) {
+  if (S.city !== 'seoul' || !haeun.root.visible) return 0;
+  if (loc.haeun === 'studio' && haeun.pose !== 'dance' && dlg.state.active) lookAtYaw(haeun, headPos(player), 1);
+  return 0;
+}
+
+/** Jin at the tent: eats, turns to you while you talk, then walks off into the street (J0). */
+function updateJin(dt, t) {
   if (S.city !== 'seoul') return 0;
-  let speed = 0;
   const pp = player.root.position;
-  if (haeun.path?.length) {
-    const target = haeun.path[0];
+  if (jin.path?.length) {
+    const target = jin.path[0];
     if (target === 'wave') {
-      haeun.waveT = (haeun.waveT ?? 0) + dt;
-      lookAtYaw(haeun, pp, 0.6);
-      haeun.root.rotation.y += wrapAngle(Math.atan2(pp.x - haeun.root.position.x, pp.z - haeun.root.position.z) - haeun.root.rotation.y) * damp(6, dt);
-      if (haeun.waveT < dt * 1.5) {
-        haeun.wave = 1.6;
-        setExpr(haeun, 'smile', 3);
-        bubble(haeun, '내일 7시. 늦지 마!', { dur: 2.6 });
-        speak('내일 일곱 시. 늦지 마!', 'haeun');
+      jin.waveT = (jin.waveT ?? 0) + dt;
+      lookAtYaw(jin, pp, 0.6);
+      jin.root.rotation.y += wrapAngle(Math.atan2(pp.x - jin.root.position.x, pp.z - jin.root.position.z) - jin.root.rotation.y) * damp(6, dt);
+      if (jin.waveT < dt * 1.5) {
+        jin.wave = 1.6;
+        const line = S.story.flags.jin_banmal_accepted ? '또 보자!' : '또 봐요!';
+        bubble(jin, line, { dur: 2.6 });
+        speak(line, 'jin');
       }
-      if (haeun.waveT > 2.4) haeun.path.shift();
-    } else {
-      const p = haeun.root.position;
-      const dx = target.x - p.x;
-      const dz = target.z - p.z;
-      const d = Math.hypot(dx, dz);
-      if (d < 0.1) {
-        haeun.path.shift();
-        if (!haeun.path.length) {
-          haeun.waveT = 0;
-          finishNight();
-        }
-      } else {
-        const step = Math.min(d, 2.4 * dt);
-        p.x += (dx / d) * step;
-        p.z += (dz / d) * step;
-        haeun.root.rotation.y += wrapAngle(Math.atan2(dx, dz) - haeun.root.rotation.y) * damp(10, dt);
-        haeun.lookYaw = 0;
-        speed = 0.7;
-      }
+      if (jin.waveT > 2.4) jin.path.shift();
+      return 0;
     }
-    return speed;
+    const p = jin.root.position;
+    const dx = target.x - p.x;
+    const dz = target.z - p.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.1) {
+      jin.path.shift();
+      if (!jin.path.length) {
+        jin.waveT = 0;
+        finishNight();
+      }
+      return 0;
+    }
+    const step = Math.min(d, 2.4 * dt);
+    p.x += (dx / d) * step;
+    p.z += (dz / d) * step;
+    jin.root.rotation.y += wrapAngle(Math.atan2(dx, dz) - jin.root.rotation.y) * damp(10, dt);
+    jin.lookYaw = 0;
+    return 0.7;
   }
-  if (!haeun.root.visible) return 0;
-  const dist = haeun.root.position.distanceTo(pp);
-  if (loc.haeun === 'tent') {
-    const want = Math.PI + (dlg.state.active && dlg.state.node?.who !== 'ajusshi' ? 0.45 : 0);
-    haeun.root.rotation.y += wrapAngle(want - haeun.root.rotation.y) * damp(5, dt);
-    if (dist < 7) lookAtYaw(haeun, headPos(player), 1.3);
-    else haeun.lookYaw = Math.sin(t * 0.4) * 0.2;
-    if (!S.noticed && dist < 7 && S.haeunStory === 'idle' && !S.quests.haeun) {
-      S.noticed = true;
-      bubble(haeun, '!', { cls: 'big', dur: 1.6 });
-      sfx.chime();
-    }
-    haeun.armPose = dlg.state.active ? talkPose : eatPose;
-  } else if (loc.haeun === 'studio' && haeun.pose !== 'dance' && dlg.state.active) {
-    lookAtYaw(haeun, headPos(player), 1);
+  if (loc.jin === 'tent' && jin.root.visible) {
+    const want = Math.PI + (dlg.state.active && dlg.state.node?.who !== 'ajusshi' ? -0.45 : 0);
+    jin.root.rotation.y += wrapAngle(want - jin.root.rotation.y) * damp(5, dt);
+    if (S.tentStory !== 'idle') lookAtYaw(jin, headPos(player), 1.3);
+    else jin.lookYaw = Math.sin(t * 0.4) * 0.2;
+    jin.armPose = dlg.state.active ? talkPose : eatPose;
   }
   return 0;
 }
@@ -2163,7 +2237,7 @@ function updateNpcs(dt, t) {
   if (ajusshi.serveT > 0) ajusshi.serveT -= dt;
   if (!dlg.state.active) lookAtYaw(ajusshi, player.root.position, 0.8);
   if (playerFood && playerFood.scale.x < 1) playerFood.scale.setScalar(Math.min(1, playerFood.scale.x + dt * 3));
-  for (const c of [barista, cashier, jin]) if (c.root.visible && c.root.position.distanceTo(player.root.position) < 5) lookAtYaw(c, headPos(player), 1);
+  for (const c of [barista, cashier, ...(loc.jin === 'tent' ? [] : [jin])]) if (c.root.visible && c.root.position.distanceTo(player.root.position) < 5) lookAtYaw(c, headPos(player), 1);
   cat.body.scale.y = 1 + Math.sin(t * 2.4) * 0.04;
   cat.tail.rotation.y = Math.sin(t * (cat.purr > 0 ? 6 : 1.4)) * 0.5;
   if (cat.purr > 0) {
@@ -2200,7 +2274,7 @@ function updateNpcs(dt, t) {
   // Tong floats at the player's shoulder
   const pr = player.root;
   // perch higher and out of shot during conversations
-  const talking = dlg.state.active || S.haeunStory !== 'idle';
+  const talking = dlg.state.active || S.tentStory !== 'idle';
   const off = (talking ? new THREE.Vector3(-0.9, 2.3, 0.4) : new THREE.Vector3(0.75, 1.55, -0.35)).applyAxisAngle(new THREE.Vector3(0, 1, 0), pr.rotation.y);
   const want = pr.position.clone().add(off);
   tong.root.position.lerp(want, damp(3, dt));
@@ -2233,15 +2307,15 @@ function updateCamera(dt, t) {
   let fov = 50;
   let mode = 'follow';
   const node = dlg.state.node;
-  const atTent = S.city === 'seoul' && S.haeunStory !== 'idle';
+  const atTent = S.city === 'seoul' && S.tentStory !== 'idle';
   if (!S.started) {
     const a = t * 0.05;
     camTargetLook.set(0, 2.5, -22);
     camTargetPos.set(Math.sin(a) * 7.5, 6.5 + Math.sin(t * 0.2), -15 + Math.cos(a) * 7);
     k = 1.2;
     mode = 'title';
-  } else if (S.city === 'seoul' && S.haeunStory === 'exit') {
-    headPos(haeun, hv);
+  } else if (S.city === 'seoul' && S.tentStory === 'exit') {
+    headPos(jin, hv);
     camTargetLook.copy(hv).setY(1.1);
     camTargetPos.set(4.4, 2.1, 7.8);
     k = 2;
@@ -2258,17 +2332,17 @@ function updateCamera(dt, t) {
     k = 1.5;
     mode = 'bench';
   } else if (atTent && (dlg.state.active || player.auto)) {
-    headPos(haeun, hv);
+    headPos(jin, hv);
     headPos(player, pv);
     const who = node?.who;
-    const mid = (SPOTS.playerSeat.x + SPOTS.haeunTent.x) / 2;
+    const mid = (SPOTS.playerSeat.x + SPOTS.tentGuest.x) / 2;
     if (player.pose === 'sit' && who === 'ajusshi') {
       headPos(ajusshi, hv);
       camTargetPos.set(SPOTS.playerSeat.x - 0.2, 2.25, 0.6);
       camTargetLook.copy(hv).y -= 0.9;
       mode = 'ajusshi';
-    } else if (player.pose !== 'sit' && dlg.state.id?.startsWith('greet')) {
-      const dir = new THREE.Vector3().subVectors(STAND_SPOT, SPOTS.haeunTent).setY(0).normalize();
+    } else if (player.pose !== 'sit' && dlg.state.id?.startsWith('jin.j0:')) {
+      const dir = new THREE.Vector3().subVectors(STAND_SPOT, SPOTS.tentGuest).setY(0).normalize();
       camTargetPos.copy(STAND_SPOT).addScaledVector(dir, 1.0).add(new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(0.42)).setY(1.68);
       camTargetLook.copy(hv).y -= 0.25;
       fov = 55;
@@ -2391,7 +2465,7 @@ Object.assign(wayfindingLabel.style, { position: 'absolute', display: 'none', fo
 ui.bubbles.appendChild(wayfindingLabel);
 function updateWayfinding() {
   wayfindingLabel.style.display = 'none';
-  if (!S.started || modalOpen() || dlg.state.active || vistaIndex >= 0 || S.haeunStory !== 'idle') return;
+  if (!S.started || modalOpen() || dlg.state.active || vistaIndex >= 0 || S.tentStory !== 'idle') return;
   const p = player.root.position;
   const distanceTo = (place) => Math.hypot(p.x - (place.entry ?? place.spawn)[0], p.z - (place.entry ?? place.spawn)[2]);
   const target = cityPlaces().find((place) => place.id === waypointId) ?? [...cityPlaces()].sort((a, b) => distanceTo(a) - distanceTo(b))[0];
@@ -2479,6 +2553,7 @@ function frame() {
   occupants?.update({ city: S.city, position: player.root.position, hour: localHour(), dt, time: t });
   const ps = updatePlayer(dt);
   const hs = updateHaeun(dt, t);
+  const js = updateJin(dt, t);
   updateNpcs(dt, t);
   animate(player, dt, t, ps);
   const yaw = player.root.rotation.y;
@@ -2487,7 +2562,8 @@ function frame() {
   const rearY = heightAt(ppRide.x - Math.sin(yaw) * 0.5, ppRide.z - Math.cos(yaw) * 0.5, ppRide.y);
   rides.update(traversal, lastTraversalSpeed, t, Math.atan2(rearY - frontY, 1));
   animate(haeun, dt, t, hs);
-  for (const c of [jin, ajusshi, barista, cashier]) if (c.root.visible) animate(c, dt, t, 0);
+  if (jin.root.visible) animate(jin, dt, t, js);
+  for (const c of [ajusshi, barista, cashier]) if (c.root.visible) animate(c, dt, t, 0);
   for (const u of G.updaters) u(dt, t);
   updatePickups(dt, t);
   updateParticles(dt, t);
@@ -2659,7 +2735,7 @@ async function boot() {
   };
 
   window.__cozy = {
-    S, player, haeun, jin, dlg, creator, renderer, bloom, scene, sky, G, THREE, setHour, bridge,
+    S, player, haeun, jin, dlg, scenes, creator, renderer, bloom, scene, sky, G, THREE, setHour, bridge,
     get bridgeBusy() { return bridgeBusy; },
     travelTo: (id, options) => travelTo(id === 'airport' ? { id: 'airport', icon: '✈', ko: currentCity().airport.nativeName, en: currentCity().airport.name, spawn: currentCity().airport.spawn, yaw: currentCity().yaw } : cityPlaces().find((p) => p.id === id), options),
     cities, cityRegistry: cities, get currentCity() { return currentCity(); },

@@ -102,6 +102,21 @@ async function untilNode(frame, ids) {
   throw new Error(`dialogue never reached ${ids}`);
 }
 
+/** Tap through plain lines (like a player) until the dialogue reaches one of `ids`. */
+async function advanceUntil(frame, ids) {
+  for (let i = 0; i < 240; i++) {
+    const id = await frame.evaluate(() => {
+      const d = __cozy.dlg.state;
+      if (d.typing) __cozy.dlg.finishTyping();
+      else if (d.active && !d.locked && !d.choices.length && !d.node?.exercise) __cozy.dlg.advance();
+      return __cozy.dlg.state.id;
+    });
+    if (ids.includes(id)) return id;
+    await frame.page().waitForTimeout(250);
+  }
+  throw new Error(`dialogue never reached ${ids}`);
+}
+
 async function clickChoice(frame, text) {
   await skipTyping(frame);
   const choice = frame.locator('#choices .choice').filter({ hasText: text }).first();
@@ -213,30 +228,36 @@ try {
     assert.equal(await frame.evaluate(() => __cozy.bridgeBusy), false);
     await frame.evaluate(() => __cozy.dlg.end());
 
-    // Affinity from a story choice reaches the shared store.
-    const before = (await shared(page)).relationships.haeun.affinity;
-    await frame.evaluate(() => __cozy.dlg.start('greet'));
-    await clickChoice(frame, '하은');
-    await page.waitForFunction((b) => JSON.parse(localStorage.getItem('tong-game')).relationships.haeun.affinity === b + 5, before);
-    await frame.evaluate(() => __cozy.dlg.end());
+    // Affinity from an authored story choice (scene-player.js, J0) reaches the shared store.
+    const before = (await shared(page)).relationships.jin.affinity;
+    const playJ0 = async () => {
+      await frame.evaluate(() => { delete __cozy.S.story.flags['played:jin.j0']; __cozy.S.tentStory = 'talking'; return __cozy.scenes.play('jin.j0'); });
+      await advanceUntil(frame, ['jin.j0:j0_order']);
+      await skipTyping(frame);
+      await page.locator('.exercise-dismiss-btn').click();
+      await advanceUntil(frame, ['jin.j0:j0_name']);
+      await clickChoice(frame, '반가워요');
+    };
+    await playJ0();
+    await page.waitForFunction((b) => JSON.parse(localStorage.getItem('tong-game')).relationships.jin.affinity === b + 3, before);
+    await frame.evaluate(() => { __cozy.dlg.end(); __cozy.S.tentStory = 'idle'; });
     // Replaying the same beat (e.g. after restarting the cozy world) earns nothing more.
-    await frame.evaluate(() => __cozy.dlg.start('greet'));
-    await clickChoice(frame, '하은');
+    await playJ0();
     await page.waitForTimeout(2000);
-    assert.equal((await shared(page)).relationships.haeun.affinity, before + 5, 'a story beat is awarded once');
-    assert.equal((await shared(page)).relationships.haeun.interactionCount, 0, '/game still plays its first meeting');
-    await frame.evaluate(() => __cozy.dlg.end());
+    assert.equal((await shared(page)).relationships.jin.affinity, before + 3, 'a story beat is awarded once');
+    assert.equal((await shared(page)).relationships.jin.interactionCount, 0, '/game still plays its first meeting');
+    await frame.evaluate(() => { __cozy.dlg.end(); __cozy.S.tentStory = 'idle'; });
 
     // Reload: progress persists, the HUD reads it back.
     frame = await openHost(page);
     s = await shared(page);
-    assert.equal(s.relationships.haeun.affinity, before + 5);
+    assert.equal(s.relationships.jin.affinity, before + 3);
     await frame.locator('#continue').click();
     await frame.waitForFunction(() => __cozy.S.started);
     assert.match(await frame.evaluate(() => document.querySelector('#stage-haeun').textContent), /acquaintances/);
     await frame.evaluate(() => __cozy.renderer.setPixelRatio(0.3));
     await shot(page, `${name}-after-reload`);
-    r.final = { xp: s.xp, haeun: s.relationships.haeun.affinity, hangouts: s.locationHangoutCounts };
+    r.final = { xp: s.xp, haeun: s.relationships.haeun.affinity, jin: s.relationships.jin.affinity, hangouts: s.locationHangoutCounts };
     assert.deepEqual(errors, [], `page errors: ${errors.join('; ')}`);
     report.push(r);
     console.log(`Passed ${name}:`, JSON.stringify(r));

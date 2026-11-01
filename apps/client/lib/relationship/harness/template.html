@@ -313,6 +313,7 @@ function renderDerived(s, w) {
     h('span', { class: 'pill' }, `mood: ${tag}`),
     h('span', { class: 'pill' + (leaks(s) ? ' on' : '') }, leaks(s) ? 'leaking (반말 slips)' : 'no leak'),
     nextStage ? h('span', { class: 'pill' + (eligible ? ' on' : '') }, `${nextStage.replace('_', ' ')}: ${eligible ? 'eligible' : 'not yet'}`) : null,
+    ...Object.entries(w.tally ?? {}).map(([k, n]) => h('span', { class: 'pill on' }, `${k}: ${n}`)),
   );
 }
 
@@ -368,6 +369,7 @@ const fmtDeltas = (o, extra = {}) => {
   const out = [];
   for (const a of ['warmth', 'tension', 'trust']) if (o.deltas?.[a]) out.push(h('span', { class: `d ${a}` }, `${o.deltas[a] > 0 ? '+' : ''}${o.deltas[a]} ${a}`));
   for (const f of o.setFlags ?? []) out.push(h('span', { class: 'd flag' }, `flag ${f}`));
+  for (const k of o.tally ?? []) out.push(h('span', { class: 'd block' }, `tally ${k} +1${extra.world?.tally?.[k] ? ` (${extra.world.tally[k]})` : ''}`));
   for (const f of o.learn ?? []) out.push(h('span', { class: 'd flag' }, `learns ${f}`));
   if (o.memory) out.push(h('span', { class: 'd mem', title: o.memory.note }, `memory ${o.memory.tag}`));
   if (extra.stageChanged) out.push(h('span', { class: 'd stage' }, `stage → ${extra.stageChanged.to.replace('_', ' ')}`));
@@ -416,6 +418,7 @@ function advance() {
       if (b.effects) {
         const a = applyEffects(P.s, b.effects, P.w);
         P.s = a.state;
+        P.w = a.world;
         const d = fmtDeltas(b.effects, a);
         if (d) el.append(d);
       }
@@ -475,6 +478,7 @@ function choose(b, c) {
   if (c.exercise && P.w.inputTier >= 2) P.s.flags[`ex_${b.id}_${c.id}`] = true;
   const r = resolveChoice(c, P.s, P.w, P.w.inputTier);
   P.s = r.state;
+  P.w = r.world;
   P.out.push(h('div', { class: 'picked' }, h('span', { class: 'me' }, `You (${c.intent}, tier ${r.tier})`), h('span', { class: 'ko' }, P.w.inputTier === 0 ? `Tong: ${c.say.ko}` : c.say.ko), h('span', { class: 'en' }, c.say.en)));
   const el = lineEl(r.outcome.speaker ?? b.speaker, r.outcome.reaction, r.outcome.expr);
   const d = fmtDeltas(r.outcome, r);
@@ -581,6 +585,7 @@ function reply(r) {
   pushMsgs(o.messages);
   const a = applyEffects(P.s, o, P.w);
   P.s = a.state;
+  P.w = a.world;
   P.replied = true;
   P.fx = { el: fmtDeltas(o, a) ?? h('span'), leftOnRead: r.intent === 'leave' ? null : false };
   if (r.intent === 'leave') P.fx.el = h('div', { class: 'deltas' }, h('span', { class: 'd flag' }, 'left on read'), ...(fmtDeltas(o, a)?.childNodes ?? []));

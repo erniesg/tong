@@ -68,7 +68,7 @@ export const JIN_CANON: CharacterCanon = {
   mustNot: [
     'Never flattened into a villain.',
     'The game never rewards possessiveness.',
-    'A refusal or independent choice with Jin never lowers warmth, trust or affinity. He may react; the numbers don\'t punish it. Deferring is what gets logged (jin_decided_for_you).',
+    'A refusal or independent choice with Jin never lowers warmth, trust or affinity. He may react; the numbers don\'t punish it. Deferring is what gets counted (tally.jin_decided), and it never earns warmth either: yes and no score the same.',
     'Higher affinity alone never counts as repair: a healthier route needs him to accept boundaries and change over time.',
   ],
 };

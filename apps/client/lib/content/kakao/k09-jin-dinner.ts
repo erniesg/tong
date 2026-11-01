@@ -22,8 +22,7 @@ export const module: KakaoModule = {
         outcomes: [
           {
             messages: [{ from: 'them', ko: '역시 말이 통한다니까 😆', en: 'See, we just get each other 😆', delay: 0 }],
-            deltas: { warmth: 2 },
-            setFlags: ['jin_decided_2'],
+            tally: ['jin_decided'],
             memory: { tag: 'let_jin_decide', note: 'Let Jin decide dinner and the pickup without being asked.' },
           },
         ],

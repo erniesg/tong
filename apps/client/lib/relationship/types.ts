@@ -75,6 +75,14 @@ export interface WorldCtx {
   inputTier: InputTier;
   /** Deterministic seed for this save; same seed + same choices = same night. */
   seed: number;
+  /**
+   * Save-wide story flags. Every flag a scene or thread sets lands here too, so
+   * any character's scene can read it (Haeun reads covered_for_haeun from
+   * Manager Choi's thread). `flags` conditions match either map.
+   */
+  flags?: Record<string, boolean>;
+  /** Save-wide counters, e.g. tally.jin_decided = times you let Jin decide for you. */
+  tally?: Record<string, number>;
 }
 
 /* ── Conditions ────────────────────────────────────────── */
@@ -85,8 +93,11 @@ export interface Condition {
   stageBelow?: Stage;
   min?: Partial<Axes>;
   max?: Partial<Axes>;
+  /** Matches the relationship's own flags or the save-wide story flags. */
   flags?: string[];
   notFlags?: string[];
+  /** Inclusive bounds on save-wide counters: { jin_decided: { min: 3 } }. */
+  tally?: Record<string, { min?: number; max?: number }>;
   knows?: string[];
   notKnows?: string[];
   memories?: string[];
@@ -160,7 +171,10 @@ export const exerciseFlag = (beatId: string, choiceId?: string) => (choiceId ? `
 
 export interface Effects {
   deltas?: Partial<Axes>;
+  /** Set on this relationship and save-wide (see WorldCtx.flags). */
   setFlags?: string[];
+  /** Save-wide counters to bump by one (see WorldCtx.tally). */
+  tally?: string[];
   learn?: string[];
   memory?: { tag: string; note: string };
   /** Only applied when the milestone's eligibility holds (see STAGE_MILESTONES). */
@@ -196,10 +210,17 @@ export interface TongLine extends Line {
   maxLevel?: number;
 }
 
+/**
+ * Stage directions a runtime may act on (the lab ignores them): the cozy 3D
+ * world sits the player down at 'sit', serves food at 'serve', and so on.
+ */
+export type Cue = 'sit' | 'serve' | 'phone_buzz' | 'stand' | 'leave';
+
 export interface Beat {
   id: string;
   speaker: string;
   expr?: Expr;
+  cue?: Cue;
   lines: Variant<Line>[];
   when?: Condition;
   tong?: TongLine;

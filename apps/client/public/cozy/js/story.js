@@ -44,7 +44,6 @@ const won = (n) => n.toLocaleString('en-US');
  */
 export function buildNodes(A) {
   const S = A.S;
-  const afterGreet = () => (S.pettedCat ? 'cat' : 'sit');
 
   const orderChoices = () => {
     const known = FOODS.filter((w) => S.words.has(w.ko) || w.ko === '떡볶이' || w.ko === '오뎅');
@@ -69,30 +68,6 @@ export function buildNodes(A) {
       enter: () => A.learn('영업시간', 'yeongeop-sigan', 'business hours'),
       end: true,
     },
-    greet: {
-      who: 'haeun',
-      expr: 'cool',
-      ko: () => (S.metHaeunStudio ? '…또 너야? 연습실에서 봤잖아.' : '…아, 새로운 trainee? 한국어 할 줄 알아?'),
-      en: () => (S.metHaeunStudio ? '…You again? I saw you at the studio.' : '…Oh. The new trainee? Can you even speak Korean?'),
-      choices: () =>
-        S.metHaeunStudio
-          ? [
-              { ko: '배고파서 왔어요!', rom: 'baegopaseo wasseoyo', en: 'I came because I’m hungry!', aff: 1, next: 'greet_yes' },
-              { ko: '하은 씨 보러 왔어요.', rom: 'haeun ssi boreo wasseoyo', en: 'I came to see you, Ha-eun.', aff: 1, next: 'greet_flirt' },
-            ]
-          : [
-              { ko: '네, 조금요!', rom: 'ne, jogeumyo', en: 'Yes, a little!', aff: 1, next: 'greet_yes' },
-              { ko: '안녕하세요, 하은 씨!', rom: 'annyeonghaseyo, haeun ssi', en: 'Hello, Ha-eun!', aff: 1, next: 'greet_name' },
-              { ko: 'Uh… English?', en: '(panic)', next: 'greet_en' },
-            ],
-    },
-    greet_yes: { who: 'haeun', expr: 'smirk', ko: '흥. 발음은… 나쁘지 않네.', en: 'Hmph. Your pronunciation is… not bad.', next: afterGreet },
-    greet_flirt: { who: 'haeun', expr: 'blush', ko: '뭐, 뭐래… 밥이나 먹어.', en: 'W-what are you saying… just eat.', enter: () => A.flipHair('haeun'), next: afterGreet },
-    greet_name: { who: 'haeun', expr: 'smirk', ko: '내 이름 어떻게 알아? …뭐, 내가 좀 유명하지.', en: 'How do you know my name? …Well, I am kind of famous.', enter: () => A.flipHair('haeun'), next: afterGreet },
-    greet_en: { who: 'haeun', expr: 'cool', ko: '여기선 한국어로 시켜야 돼. 연습 더 해.', en: 'Here you order in Korean. Practice more.', next: afterGreet },
-    cat: { who: 'haeun', expr: 'smile', ko: '…아까 떡이 쓰다듬었지? 걔 아무한테나 안 가는데.', en: '…You petted Tteok earlier, right? She doesn’t go to just anyone.', aff: 1, next: 'sit' },
-    sit: { who: 'haeun', expr: 'cool', ko: '앉아. 서 있으면 아저씨가 싫어하셔.', en: 'Sit. Ajusshi hates it when people hover.', enter: () => A.sitPlayer(), next: 'order_nudge' },
-    order_nudge: { who: 'haeun', expr: 'smirk', ko: '배고프지? 아저씨한테 직접 시켜 봐.', en: 'You’re hungry, right? Order from Ajusshi yourself.', hint: 'Pattern: <b>[food] + 주세요</b> = “[food], please.”', next: 'order_build' },
     // In Tong, ordering is a shared sentence-builder; opened on its own, the choice menu below.
     order_build: {
       who: 'ajusshi',
@@ -129,21 +104,19 @@ export function buildNodes(A) {
       ko: '{food} 하나요~ 금방 나와요!',
       en: 'One {foodEn}~ coming right up!',
       enter: () => A.learn('주세요', 'juseyo', 'please (give me)'),
-      next: () => (S.mistakes === 0 ? 'order_praise' : 'spice_q'),
+      next: 'spice_q',
     },
-    order_praise: { who: 'haeun', expr: 'surprised', ko: '오, “주세요” 제대로 하네?', en: 'Oh, you actually got “주세요” right?', aff: 1, next: 'spice_q' },
     spice_q: {
       who: 'ajusshi',
       expr: 'smile',
       ko: '맵게 해 줄까요?',
       en: 'Want it spicy?',
-      hint: () => (S.jinTip ? '💡 Jin said Ha-eun <i>loves</i> spicy food…' : null),
       choices: [
         { ko: '네, 맵게 해 주세요!', rom: 'ne, maepge hae juseyo', en: 'Yes, make it spicy!', next: 'spicy_dare', set: { spicy: true } },
         { ko: '안 맵게 해 주세요…', rom: 'an maepge hae juseyo', en: 'Not spicy, please…', next: 'mild' },
       ],
     },
-    spicy_dare: { who: 'haeun', expr: 'surprised', ko: '오? 나처럼 제일 맵게? …대박.', en: 'Oh? Spiciest, like me? …Whoa.', aff: 1, enter: () => A.serveFood(), next: 'spicy_hit' },
+    spicy_dare: { who: 'ajusshi', expr: 'surprised', ko: '오? 제일 맵게? 용감하네~', en: 'Oh? The spiciest? Brave~', enter: () => A.serveFood(), next: 'spicy_hit' },
     spicy_hit: {
       who: 'narration',
       ko: '…맵다!!! 혀에 불이 났다.',
@@ -155,12 +128,12 @@ export function buildNodes(A) {
         { ko: '…맛있어요!', rom: 'masisseoyo', en: '…It’s delicious!', next: 'tough' },
       ],
     },
-    water: { who: 'haeun', expr: 'laugh', ko: 'ㅋㅋㅋ 미쳤어. 자, 내 물 마셔.', en: 'LOL you’re crazy. Here, drink my water.', aff: 1, enter: () => A.spicyFx(false), next: 'talk' },
-    tough: { who: 'haeun', expr: 'surprised', ko: '…진짜? 눈물 나는데? …인정.', en: '…Really? You’re literally crying. …Respect.', aff: 1, enter: () => setTimeout(() => A.spicyFx(false), 1800), next: 'talk' },
-    mild: { who: 'haeun', expr: 'smirk', ko: '…겁쟁이.', en: '…Scaredy-cat.', enter: () => A.serveFood(), next: 'mild_taste' },
+    water: { who: 'ajusshi', expr: 'laugh', ko: '하하, 여기 물! 천천히 먹어요.', en: 'Haha, here’s water! Eat slowly.', enter: () => A.spicyFx(false), next: 'bill' },
+    tough: { who: 'ajusshi', expr: 'surprised', ko: '…울면서 맛있대. 인정!', en: '…Crying and still saying it’s good. Respect!', enter: () => setTimeout(() => A.spicyFx(false), 1800), next: 'bill' },
+    mild: { who: 'ajusshi', expr: 'smile', ko: '네~ 안 맵게!', en: 'Sure~ not spicy!', enter: () => A.serveFood(), next: 'mild_taste' },
     mild_taste: {
-      who: 'haeun',
-      expr: 'neutral',
+      who: 'ajusshi',
+      expr: 'smile',
       ko: '맛있어?',
       en: 'Is it good?',
       choices: [
@@ -168,74 +141,36 @@ export function buildNodes(A) {
         { ko: '조금 짜요.', rom: 'jogeum jjayo', en: 'A little salty.', next: 'mild_salty' },
       ],
     },
-    mild_good: { who: 'haeun', expr: 'smile', ko: '그치? 여기가 홍대 최고야.', en: 'Right? Best stall in Hongdae.', next: 'talk' },
-    mild_salty: { who: 'ajusshi', expr: 'surprised', ko: '뭐라고요?!', en: 'What was that?!', next: 'mild_salty2' },
-    mild_salty2: { who: 'haeun', expr: 'laugh', ko: 'ㅋㅋ 아저씨 앞에서 그런 말 하지 마.', en: 'LOL don’t say that in front of Ajusshi.', next: 'talk' },
-    talk: {
-      who: 'haeun',
-      expr: 'sad',
-      ko: '…솔직히, 오늘 연습 진짜 힘들었어.',
-      en: '…Honestly, practice was really rough today.',
-      choices: [
-        { ko: '하은 씨 진짜 잘해요.', rom: 'haeun ssi jinjja jalhaeyo', en: 'You’re really good, Ha-eun.', aff: 1, next: 'fluster' },
-        { ko: '내일 같이 연습해요!', rom: 'naeil gachi yeonseupaeyo', en: 'Let’s practice together tomorrow!', aff: 1, next: 'together' },
-        { ko: '…떡볶이 더 먹어요.', rom: 'tteokbokki deo meogeoyo', en: '…Have more tteokbokki.', next: 'more_food' },
-      ],
-    },
-    fluster: {
-      who: 'haeun',
-      expr: 'blush',
-      ko: '뭐, 뭐래… 갑자기.',
-      en: 'W-what are you on about… all of a sudden.',
-      hint: '<b>뭐래</b> = “what are you on about”. Her go-to when she’s flustered.',
-      enter: () => A.flipHair('haeun'),
-      next: 'bill',
-    },
-    together: { who: 'haeun', expr: 'blush', ko: '…같이? 내가 왜? …알았어. 내일 7시.', en: '…Together? Why would I? …Fine. Tomorrow, 7.', next: 'bill' },
-    more_food: { who: 'haeun', expr: 'smile', ko: '…응. 고마워.', en: '…Yeah. Thanks.', next: 'bill' },
+    mild_good: { who: 'ajusshi', expr: 'happy', ko: '그쵸? 홍대 최고예요~', en: 'Right? Best in Hongdae~', next: 'bill' },
+    mild_salty: { who: 'ajusshi', expr: 'surprised', ko: '뭐라고요?! …물 더 줄게요.', en: 'What was that?! …I’ll bring more water.', next: 'bill' },
     bill: {
       who: 'ajusshi',
       expr: 'happy',
-      ko: '다 해서 만 이천 원이에요~',
-      en: 'That’s 12,000 won altogether~',
-      choices: [
-        { ko: '제가 낼게요!', rom: 'jega naelgeyo', en: 'I’ll pay!', aff: 1, next: 'pay' },
-        { ko: '반반 해요.', rom: 'banban haeyo', en: 'Let’s split it.', next: 'split' },
-      ],
+      ko: () => `${S.food?.ko ?? '떡볶이'} 사천 원이에요~`,
+      en: () => `${S.food?.en ?? 'Tteokbokki'}: 4,000 won~`,
+      hint: '<b>사천</b> = 4,000 · <b>원</b> = won',
+      enter: () => A.sfx.coin(),
+      end: true,
+      after: () => A.standUp(),
     },
-    pay: { who: 'haeun', expr: 'blush', ko: '…다음엔 내가 사. 진짜야.', en: '…Next time it’s on me. I mean it.', next: 'bye' },
-    split: { who: 'haeun', expr: 'smile', ko: '좋아. 공평하게.', en: 'Good. Fair’s fair.', next: 'bye' },
-    bye: { who: 'haeun', expr: 'smirk', ko: '흥, {name}… 조금은 인정해줄게.', en: 'Hmph, {name}… I’ll give you a little credit.', end: true, after: () => A.startExit() },
 
     /* ── 연습실 (day) ─────────────────────────── */
-    studio_hi: {
+    // Ha-eun's scenes are authored in lib/content/routes/haeun and played by scene-player.js.
+    haeun_busy: { who: 'haeun', expr: 'cool', ko: '…연습 중이에요.', en: '…I’m practising.', end: true },
+    haeun_tomorrow: { who: 'haeun', expr: 'cool', ko: '…내일 봐요.', en: '…See you tomorrow.', end: true },
+    haeun_idle: {
       who: 'haeun',
-      expr: 'surprised',
-      ko: '…뭐야. 구경하러 왔어?',
-      en: '…What. You came to watch?',
-      choices: [
-        { ko: '와, 춤 진짜 잘 춰요!', rom: 'wa, chum jinjja jal chwoyo', en: 'Wow, you dance really well!', aff: 1, next: 'studio_compliment' },
-        { ko: '같이 연습해도 돼요?', rom: 'gachi yeonseupaedo dwaeyo', en: 'Can I practise with you?', aff: 1, next: 'studio_together' },
-        { ko: '안녕히 계세요!', rom: 'annyeonghi gyeseyo', en: 'Goodbye! (to someone staying)', next: 'studio_bye' },
-      ],
-    },
-    studio_compliment: { who: 'haeun', expr: 'blush', ko: '…다, 당연하지. 데뷔할 거니까.', en: '…O-of course. I’m going to debut.', enter: () => A.flipHair('haeun'), next: 'studio_tip' },
-    studio_together: { who: 'haeun', expr: 'smirk', ko: '…저 구석에서 해. 방해하지 마.', en: '…Use that corner. Don’t get in my way.', next: 'studio_tip' },
-    studio_tip: {
-      who: 'haeun',
-      expr: 'cool',
-      ko: '배고프면… 밤에 포장마차 와. 특별히 알려 주는 거야.',
-      en: 'If you get hungry… come to the pojangmacha tonight. I’m only telling you because I’m nice.',
-      hint: 'The 포장마차 opens at 19:00. Use the clock ⏩, or sit on a lookout bench to let time pass.',
-      enter: () => {
-        S.metHaeunStudio = true;
-        A.done('haeunDay');
-        A.hangout('practice_studio');
-      },
+      expr: 'smirk',
+      ko: () => (S.story?.flags?.dropped_formal ? '뭐. 연습이나 해.' : '…뭐요. 연습이나 해요.'),
+      en: '…What. Go practise.',
       end: true,
     },
-    studio_bye: { who: 'haeun', expr: 'cool', ko: '…응. 가.', en: '…Yeah. Go.', hint: '<b>안녕히 계세요</b> = bye (you leave, they stay) · <b>안녕히 가세요</b> = bye (they leave)', end: true },
-    studio_after: { who: 'haeun', expr: 'blush', ko: '어제… 고마웠어. 진짜야. …연습이나 해!', en: 'About yesterday… thanks. I mean it. …Now go practise!', enter: () => A.flipHair('haeun'), end: true },
+    locker_again: {
+      who: 'narration',
+      ko: () => (S.story?.flags?.notebook_kept ? '사물함. 노트는 가방에 있다.' : '사물함. 서랍이 잘 안 닫힌다.'),
+      en: () => (S.story?.flags?.notebook_kept ? 'Your locker. The notebook is in your bag.' : 'Your locker. The drawer still sticks.'),
+      end: true,
+    },
 
     /* ── 카페 봄 ───────────────────────────────── */
     barista_hi: {
@@ -281,7 +216,7 @@ export function buildNodes(A) {
     jin_hi: {
       who: 'jin',
       expr: 'happy',
-      ko: '어, 왔어? 여기 앉아.',
+      ko: () => (S.story?.flags?.jin_banmal_accepted ? '어, 왔어? 여기 앉아.' : '어, 왔어요? 여기 앉아요.'),
       en: 'Oh, you made it? Have a seat.',
       choices: [
         { ko: '선배님, 안녕하세요!', rom: 'seonbaenim, annyeonghaseyo', en: 'Hello, sunbae!', jin: 1, next: 'jin_sunbae' },
@@ -301,8 +236,8 @@ export function buildNodes(A) {
     jin_haeun: {
       who: 'jin',
       expr: 'smile',
-      ko: '아, 하은이 봤어? 밤에 포장마차 자주 가. 매운 거 엄청 좋아해.',
-      en: 'Oh, have you met Ha-eun? She’s at the pojangmacha most nights. Loves spicy food.',
+      ko: '아, 하은이랑 짝이야? 걔 연습실에서 안 나와. 매운 거 엄청 좋아하고.',
+      en: 'Oh, you’re paired with Ha-eun? She never leaves the studio. Loves spicy food, too.',
       hint: '💡 Tip unlocked: Ha-eun loves spicy food.',
       enter: () => {
         S.jinTip = true;
@@ -441,13 +376,17 @@ export function buildNodes(A) {
 
 /** Contextual hint from Tong (H key). */
 export function tongHint(S, hour) {
+  const f = S.story?.flags ?? {};
   const night = hour >= 19 || hour < 3;
+  if (!f.h0_done) return { ko: '연습실에 네 사물함이 있어!', en: 'Your locker is in the agency’s practice studio, up the stairs. Start there.', expr: 'excited' };
+  if (!f.h1_done && hour >= 9 && hour < 19) return { ko: '하은이 연습실에 있어!', en: 'Coach Park paired you with someone. She’s in the studio. Read the water-bottle name tags to find her.', expr: 'excited' };
+  if (!f.j0_done && night) return { ko: '포장마차 문 열었어!', en: 'The pojangmacha is open. Go order something yourself: [food] + 주세요.', expr: 'love' };
   if (!S.quests.cafe && hour >= 8 && hour < 22) return { ko: '카페 봄에서 커피 한 잔 어때?', en: 'How about a coffee at Café Bom? It’s on the right side of the plaza.', expr: 'cheerful' };
-  if (!S.quests.haeunDay && hour >= 9 && hour < 18.5) return { ko: '연습실에서 음악 소리가 들려!', en: 'I can hear music from the practice studio up the stairs…', expr: 'excited' };
-  if (!S.quests.store) return { ko: '편의점은 24시간이야!', en: 'The convenience store is open 24 hours — try buying something.', expr: 'cheerful' };
-  if (!S.quests.haeun && night) return { ko: '포장마차 문 열었어!', en: 'The pojangmacha is open now. Someone familiar might be there…', expr: 'love' };
-  if (!S.quests.haeun) return { ko: '포장마차는 밤에 열어.', en: 'The pojangmacha opens at 7 PM. Sit on a lookout bench to watch the sunset.', expr: 'thinking' };
-  if (!S.quests.jinNight && night) return { ko: '진 선배가 한강에 있대.', en: 'Jin is at the river lookout tonight.', expr: 'cheerful' };
+  if (!S.quests.store) return { ko: '편의점은 24시간이야!', en: 'The convenience store is open 24 hours. Try buying something.', expr: 'cheerful' };
+  if (!f.h1_done) return { ko: '하은은 낮에 연습실에 있어.', en: 'Ha-eun practises in the studio from 9 to 7. Sit on a lookout bench to pass time.', expr: 'thinking' };
+  if (!f.j0_done) return { ko: '포장마차는 밤에 열어.', en: 'The pojangmacha opens at 7 PM. Sit on a lookout bench to watch the sunset.', expr: 'thinking' };
+  if (f.h1_done && !f.h2_done && hour >= 21 && hour < 23.5) return { ko: '연습실 불이 아직 켜져 있어…', en: 'The studio lights are still on. Ha-eun is drilling late.', expr: 'thinking' };
+  if (!S.quests.jinNight && night && f.met_jin) return { ko: '진이 한강에 있대.', en: 'Jin is at the river lookout tonight.', expr: 'cheerful' };
   if (S.words.size < 10) return { ko: '반짝이는 단어를 찾아봐!', en: `Find the glowing words around the neighbourhood (${S.words.size}/10).`, expr: 'thinking' };
   return { ko: '오늘 정말 잘했어!', en: 'You did amazing today. Try the word quiz in the studio!', expr: 'proud' };
 }

@@ -3,7 +3,7 @@ import type { SceneModule } from '../../../relationship/types';
 /**
  * J0 · 포장마차 (Jin's onboarding). Warm, easy, a little too easy. Refusing him
  * never costs warmth or trust (canon/jin.ts mustNot); deferring is what gets
- * logged as jin_decided_for_you.
+ * counted in tally.jin_decided. Saying yes and saying no score the same.
  */
 export const module: SceneModule = {
   scene: {
@@ -16,11 +16,12 @@ export const module: SceneModule = {
     gate: { hours: { from: 19, to: 3 } },
     summary:
       'Night tent. You fumble the order; a man in a low cap rescues it and orders 떡볶이 for you (or adjusts your correct order). He gives his name freely, proposes 반말, asks a lot of questions. His phone buzzes: one second, a different face. He insists on paying. He leaves in a cap and mask. That was easy. Too easy?',
-    seeds: ['saw_face_change', 'jin_decided_for_you (deferring)', 'jin_adjusted_order even when you got it right', 'jin_banmal_declined'],
+    seeds: ['saw_face_change', 'tally.jin_decided (deferring)', 'jin_adjusted_order even when you got it right', 'jin_banmal_declined'],
     beats: [
       {
         id: 'j0_open',
         speaker: 'narration',
+        cue: 'sit',
         lines: [
           { when: { weather: ['rain', 'cold'] }, value: { ko: '포장마차. 김이 난다.', en: 'The pojangmacha. Steam, plastic sheeting, rain drumming on the tarp. One stool left, next to a man in a low black cap.' } },
           { value: { ko: '포장마차. 김이 난다.', en: 'The pojangmacha. Steam, orange light, the smell of gochujang. One stool left, next to a man in a low black cap.' } },
@@ -94,6 +95,7 @@ export const module: SceneModule = {
         id: 'j0_name',
         speaker: 'jin',
         expr: 'smile',
+        cue: 'serve',
         lines: [{ value: { ko: '저는 진이에요. 그냥 진.', en: 'I\'m Jin. Just Jin.', note: 'He offers it freely, like it costs nothing.' } }],
         tong: { ko: '어디서 본 얼굴 같은데…?', en: 'Huh. He looks… familiar? Never mind.', maxLevel: 1 },
         choices: [
@@ -136,7 +138,6 @@ export const module: SceneModule = {
                 speaker: 'jin',
                 expr: 'smile',
                 reaction: { ko: '그치? 훨씬 편하다.', en: 'Right? So much easier.' },
-                deltas: { warmth: 2 },
                 setFlags: ['jin_banmal_accepted'],
               },
             ],
@@ -190,8 +191,8 @@ export const module: SceneModule = {
                 speaker: 'jin',
                 expr: 'smile',
                 reaction: { ko: '약속이다.', en: 'It\'s a promise.', note: 'You didn\'t pick a day. He already has one in mind.' },
-                deltas: { warmth: 2 },
-                setFlags: ['jin_plan_accepted', 'jin_decided_for_you'],
+                setFlags: ['jin_plan_accepted'],
+                tally: ['jin_decided'],
               },
             ],
           },
@@ -214,6 +215,7 @@ export const module: SceneModule = {
       {
         id: 'j0_phone',
         speaker: 'narration',
+        cue: 'phone_buzz',
         lines: [
           {
             value: {
@@ -240,8 +242,8 @@ export const module: SceneModule = {
                 speaker: 'jin',
                 expr: 'smile',
                 reaction: { ko: '당연하지. 내가 불렀잖아.', en: 'Of course. I invited you.', note: 'He didn\'t. You sat down next to him.', review: 'native' },
-                deltas: { warmth: 2 },
-                setFlags: ['jin_paid', 'jin_decided_for_you'],
+                setFlags: ['jin_paid'],
+                tally: ['jin_decided'],
               },
             ],
           },
@@ -289,6 +291,7 @@ export const module: SceneModule = {
       {
         id: 'j0_after',
         speaker: 'narration',
+        cue: 'leave',
         lines: [
           {
             value: {

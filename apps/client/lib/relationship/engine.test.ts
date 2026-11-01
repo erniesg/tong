@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   applyEffects,
+  fillName,
   initialState,
   leaks,
   matches,
@@ -114,4 +115,26 @@ test('runScene: same choice lands differently by mood; tier 0 is visible to outc
   assert.equal(good.log[0].reaction?.ko, '너나 잘해.');
   assert.equal(raw.log[0].reaction?.en, '(she leaves)');
   assert.equal(tong.log[0].reaction?.ko, '또 그거 써?');
+});
+
+test('flags and tallies set in one relationship are readable from another', () => {
+  const choi = { ...at({}), characterId: 'manager_choi' };
+  const a = applyEffects(choi, { setFlags: ['covered_for_haeun'], tally: ['jin_decided'] }, W);
+  const b = applyEffects(choi, { tally: ['jin_decided'] }, a.world);
+  const haeun = at({});
+  assert.equal(matches({ flags: ['covered_for_haeun'] }, haeun, a.world), true);
+  assert.equal(matches({ flags: ['covered_for_haeun'] }, haeun, W), false);
+  assert.equal(b.world.tally?.jin_decided, 2);
+  assert.equal(matches({ tally: { jin_decided: { min: 2 } } }, haeun, b.world), true);
+  assert.equal(matches({ tally: { jin_decided: { max: 1 } } }, haeun, b.world), false);
+  assert.equal(W.flags, undefined, 'the input world is not mutated');
+});
+
+test('fillName picks the particle by the name\'s final consonant', () => {
+  assert.equal(fillName('저는 {name}이에요.', '테오'), '저는 테오예요.');
+  assert.equal(fillName('저는 {name}이에요.', '지민'), '저는 지민이에요.');
+  assert.equal(fillName('{name}아, 가자.', '지민'), '지민아, 가자.');
+  assert.equal(fillName('{name}아, 가자.', '테오'), '테오야, 가자.');
+  assert.equal(fillName('{name} 씨, 안녕.', 'Theo'), 'Theo 씨, 안녕.');
+  assert.equal(fillName('저는 {name}이에요.', 'Theo'), '저는 Theo(이)에요.');
 });

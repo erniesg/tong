@@ -43,8 +43,7 @@ export const module: KakaoModule = {
         outcomes: [
           {
             messages: [{ from: 'them', ko: '당연하지 😊 5분!', en: 'Of course 😊 5 min!', delay: 0 }],
-            deltas: { warmth: 2 },
-            setFlags: ['jin_decided_3'],
+            tally: ['jin_decided'],
             memory: { tag: 'let_jin_pick_up', note: 'Let Jin pick you up without sending a location; he already knew roughly where.' },
           },
         ],

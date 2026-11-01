@@ -18,7 +18,7 @@ export const module: SceneModule = {
     beats: [
       {
         id: 'scene',
-        speaker: 'narrator',
+        speaker: 'narration',
         lines: [
           {
             when: { mood: ['raw', 'low'] },

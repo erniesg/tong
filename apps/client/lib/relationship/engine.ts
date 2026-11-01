@@ -132,8 +132,13 @@ export function matches(c: Condition | undefined, s: RelState, w: WorldCtx): boo
   if (c.stageBelow && si >= stageIndex(c.stageBelow)) return false;
   for (const [k, v] of Object.entries(c.min ?? {})) if (s.axes[k as keyof Axes] < (v as number)) return false;
   for (const [k, v] of Object.entries(c.max ?? {})) if (s.axes[k as keyof Axes] > (v as number)) return false;
-  if (c.flags?.some((f) => !s.flags[f])) return false;
-  if (c.notFlags?.some((f) => s.flags[f])) return false;
+  const flag = (f: string) => !!(s.flags[f] || w.flags?.[f]);
+  if (c.flags?.some((f) => !flag(f))) return false;
+  if (c.notFlags?.some(flag)) return false;
+  for (const [k, b] of Object.entries(c.tally ?? {})) {
+    const n = w.tally?.[k] ?? 0;
+    if ((b.min !== undefined && n < b.min) || (b.max !== undefined && n > b.max)) return false;
+  }
   if (c.knows?.some((f) => !s.knows[f])) return false;
   if (c.notKnows?.some((f) => s.knows[f])) return false;
   if (c.memories?.some((t) => !s.memories.some((m) => m.tag === t))) return false;
@@ -177,6 +182,8 @@ export function canAdvanceTo(to: Stage, s: RelState, w: WorldCtx): boolean {
 
 export interface Applied {
   state: RelState;
+  /** The world with save-wide flags and tallies updated. */
+  world: WorldCtx;
   stageChanged?: { from: Stage; to: Stage };
   stageBlocked?: Stage;
 }
@@ -197,9 +204,15 @@ export function applyEffects(s: RelState, e: Effects, w: WorldCtx): Applied {
   for (const f of e.setFlags ?? []) next.flags[f] = true;
   for (const f of e.learn ?? []) next.knows[f] = true;
   if (e.memory) next.memories.push({ ...e.memory, day: s.day });
-  const out: Applied = { state: next };
+  let world = w;
+  if (e.setFlags?.length || e.tally?.length) {
+    world = { ...w, flags: { ...w.flags }, tally: { ...w.tally } };
+    for (const f of e.setFlags ?? []) world.flags![f] = true;
+    for (const k of e.tally ?? []) world.tally![k] = (world.tally![k] ?? 0) + 1;
+  }
+  const out: Applied = { state: next, world };
   if (e.stageTo) {
-    if (canAdvanceTo(e.stageTo, next, w)) {
+    if (canAdvanceTo(e.stageTo, next, world)) {
       out.stageChanged = { from: next.stage, to: e.stageTo };
       next.stage = e.stageTo;
     } else if (stageIndex(e.stageTo) > stageIndex(next.stage)) {
@@ -241,6 +254,27 @@ export function tongFor(b: Beat, w: WorldCtx): Line | undefined {
   return b.tong;
 }
 
+/* ── The player's name ─────────────────────────────────── */
+
+/** True / false when the name's last syllable has a final consonant (받침); null for non-Hangul names. */
+function hasBatchim(name: string): boolean | null {
+  const c = name.trim().charCodeAt(name.trim().length - 1);
+  if (!(c >= 0xac00 && c <= 0xd7a3)) return null;
+  return (c - 0xac00) % 28 !== 0;
+}
+
+/**
+ * Fills {name}, choosing the particle that follows it: {name}이에요 → 테오예요 / 지민이에요,
+ * {name}아 (calling someone) → 테오야 / 지민아. Non-Hangul names get the neutral form.
+ */
+export function fillName(text: string, name: string): string {
+  const b = hasBatchim(name);
+  return text
+    .replaceAll('{name}이에요', `${name}${b === null ? '(이)에요' : b ? '이에요' : '예요'}`)
+    .replace(/\{name\}아(?![가-힣])/g, `${name}${b === null ? '' : b ? '아' : '야'}`)
+    .replaceAll('{name}', name);
+}
+
 /* ── Scene walking (harness + tests) ───────────────────── */
 
 export interface StepLog {
@@ -267,15 +301,16 @@ const withFlag = (s: RelState, flag: string, v: boolean): RelState => ({ ...s, f
 export function runScene(
   scene: Scene,
   start: RelState,
-  w: WorldCtx,
+  world: WorldCtx,
   choose: Picker,
-  tier: InputTier = w.inputTier,
+  tier: InputTier = world.inputTier,
   exercises?: ExerciseResults,
 ) {
-  if (!matches(scene.gate, start, w)) return { gated: true as const, log: [] as StepLog[], state: start };
+  if (!matches(scene.gate, start, world)) return { gated: true as const, log: [] as StepLog[], state: start, world };
   const byId = new Map(scene.beats.map((b) => [b.id, b]));
   const log: StepLog[] = [];
   let s = start;
+  let w = world;
   let beat: Beat | undefined = scene.beats[0];
   for (let guard = 0; beat && guard < 200; guard++) {
     if (beat.when && !matches(beat.when, s, w)) {
@@ -291,6 +326,7 @@ export function runScene(
     if (beat.effects) {
       const a = applyEffects(s, beat.effects, w);
       s = a.state;
+      w = a.world;
       if (a.stageChanged) step.stageChanged = a.stageChanged;
     }
     let next = beat.next;
@@ -305,6 +341,7 @@ export function runScene(
       }
       const r = resolveChoice(chosen, s, w, Math.min(tier, w.inputTier) as InputTier);
       s = r.state;
+      w = r.world;
       Object.assign(step, { choice: chosen.id, reaction: r.outcome.reaction, deltas: r.outcome.deltas });
       if (r.stageChanged) step.stageChanged = r.stageChanged;
       next = r.outcome.next ?? next;
@@ -313,7 +350,7 @@ export function runScene(
     if (beat.end) break;
     beat = next ? byId.get(next) : undefined;
   }
-  return { gated: false as const, log, state: s };
+  return { gated: false as const, log, state: s, world: w };
 }
 
 /* ── Presets ───────────────────────────────────────────── */
@@ -346,7 +383,7 @@ export function pathPicker(path: string[] = []): Picker {
 
 export function playPreset(scene: Scene, p: Preset) {
   const { state, world } = presetState(scene.characterId, p);
-  return { ...runScene(scene, state, world, pathPicker(p.path), world.inputTier, p.exercises), start: state, world };
+  return { ...runScene(scene, state, world, pathPicker(p.path), world.inputTier, p.exercises), start: state };
 }
 
 /* ── Ambient bids (between hangouts) ───────────────────── */
