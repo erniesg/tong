@@ -14,6 +14,10 @@ export const SPEAKERS = {
   coach_park: { label: '박 코치 Coach Park', emoji: '📣', cls: 'green' },
   minji: { label: '민지 Minji', emoji: '🎧', cls: 'pink' },
   yerin: { label: '예린 Yerin', emoji: '🎀', cls: 'pink' },
+  daon: { label: '다온 Da-on', emoji: '🐣', cls: 'pink' },
+  boram: { label: '보람 Bo-ram', emoji: '🧺', cls: 'green' },
+  dohee: { label: '도희 Do-hee', emoji: '📸', cls: 'pink' },
+  yunseo: { label: '윤서 Yun-seo', emoji: '🖋️', cls: 'purple' },
   tong: { label: '통 Tong', tong: true, cls: 'gold' },
   narration: { label: '…', none: true, cls: 'purple' },
 };

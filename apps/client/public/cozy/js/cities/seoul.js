@@ -32,9 +32,9 @@ const roads = [
 const parkOutline = [[-24, 43], [-12, 39], [4, 44], [24, 55], [31, 67], [14, 71], [-4, 62], [-21, 55]];
 const places = [
   {
-    id: 'seoul-home', ko: '연남 다세대주택', en: 'Yeonnam Apartments', icon: '🏠', category: 'home',
+    id: 'seoul-home', ko: '연습생 숙소', en: 'Trainee dorm · Yeonnam Apartments', icon: '🏠', category: 'home',
     spawn: [-35, 0, 68.2], entry: [-35, 0, 67], yaw: 0, radius: 3,
-    description: 'A small warm-plaster residential block northwest of the railway park. Walk upstairs to furnished homes and meet the residents.',
+    description: 'Onsae\'s girls\' trainee dorm. Your cohort lives on the first floor: three bunk rooms, one bathroom, Manager Choi\'s desk by the door. Another unit lives upstairs; the rooftop is above.',
     phrase: { text: '초대해 주셔서 감사해요.', rom: 'Chodaehae jusyeoseo gamsahaeyo.', en: 'Thank you for inviting me in.' },
   },
   {
@@ -386,7 +386,7 @@ export default {
   id: 'seoul', name: 'Seoul', nativeName: '서울',
   subtitle: 'Hongdae → Yeonnam north (+z); Han River south (−z). Stylised blocks, compressed river / AREX connections.',
   bounds, spawn: [1.6, 0, 9], yaw: 0, places,
-  home: { id: 'seoul-home', city: 'seoul', x: -35, z: 61, w: 14, d: 12, style: 'seoul' },
+  home: { id: 'seoul-home', city: 'seoul', x: -35, z: 61, w: 14, d: 12, style: 'seoul', layout: 'dorm' },
   vistas: [
     { id: 'seoul-hangang', title: 'Hangang bridge & waterfront', nativeName: '한강 전망', spawn: [6, 2.4, -41.5], position: [10, 8, -42], look: [0, -1, -185], description: 'Elevated, unobstructed view south over the compressed Han River connection.' },
     { id: 'seoul-namsan', title: 'Namsan skyline', nativeName: '남산 서울타워', spawn: [31, 0, -40], position: [28, 7, -43], look: [420, 118, -10], description: 'The distant eastern tower and hill remain on the north bank, not across the Han.' },

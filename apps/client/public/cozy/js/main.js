@@ -35,6 +35,7 @@ import { createOccupants } from './occupants.js';
 import { apartments, buildApartment, apartmentHeightAt, apartmentCeilingAt, apartmentZoneAt } from './apartments.js';
 import { createDayLoop, normalizeDayState, clockRuns, clockHours, bedKind, DAY_CONFIG } from './day.js';
 import { createDayUI } from './day-ui.js';
+import { DORM_HOME, DORM_LEVEL, HAEUN_DORM, createDormCast, haeunDormSpot, onDormFloor } from './dorm.js';
 
 const cities = { seoul, tokyo, shanghai };
 const cityGroups = {};
@@ -349,7 +350,8 @@ const where = {
     if (h >= 9 && h < 19) return 'studio';
     // once you're paired she drills late, alone (H2)
     if (S.story.flags.h1_done && h >= 21 && h < 23.5) return 'studio';
-    return 'away';
+    // Otherwise she is at the dorm (room A); she renders only while you are on that floor.
+    return 'dorm';
   },
   jin(h) {
     if (S.tentStory !== 'idle') return 'story';
@@ -368,10 +370,16 @@ const eatPose = (t) => {
 const talkPose = () => [-0.25, -0.35];
 
 function placeHaeun(l) {
-  haeun.root.visible = l !== 'away';
+  haeun.root.visible = l !== 'away' && l !== 'dorm';
   haeun.pose = 'idle';
   haeun.armPose = null;
   haeun.legSwing = false;
+  if (l === 'dorm') {
+    const home = apartments.find((b) => b.id === DORM_HOME);
+    if (home) haeun.root.position.copy(haeunDormSpot(home));
+    haeun.root.rotation.y = HAEUN_DORM.yaw;
+    haeun.baseExpr = 'cool';
+  }
   if (l === 'studio') {
     haeun.root.position.copy(SPOTS.haeunStudio);
     haeun.root.rotation.y = -Math.PI / 2;
@@ -1229,11 +1237,10 @@ const interactables = [
 
 const dayUI = createDayUI({ host: $('game-shell'), clockText: document.querySelector('.clock .clock-text'), fade: ui.fade, toast, onClose: () => canvas.focus() });
 const day = createDayLoop({ S, advanceHours, save, ui: dayUI });
-// Your bed: the first-floor bed of the Seoul home (Yeonnam Apartments) until the real dorm lands (#423).
-const BED_HOME = 'seoul-home', BED_LEVEL = 1;
+// Your bed: the bottom bunk in room B of the girls' dorm (dorm.js, canon/cohort.ts).
 function bedSpot() {
-  const room = apartments.find((b) => b.id === BED_HOME)?.rooms.find((r) => r.level === BED_LEVEL);
-  const m = room?.furniture.find((f) => f.kind === 'mattress');
+  const room = apartments.find((b) => b.id === DORM_HOME)?.rooms.find((r) => r.level === DORM_LEVEL);
+  const m = room?.furniture.find((f) => f.kind === 'your-bunk');
   return m ? { x: m.position[0], y: room.floorY, z: m.position[2] } : null;
 }
 async function useBed() {
@@ -1243,6 +1250,25 @@ async function useBed() {
   } else await day.sleepUntilMorning();
   updateSchedules(true);
 }
+interactables.push({
+  label: '하은 · Ha-eun',
+  pos: () => haeun.root.position,
+  r: 1.8,
+  on: () => loc.haeun === 'dorm' && haeun.root.visible,
+  act: () => { bubble(haeun, HAEUN_DORM.line.ko); toast(`<b>하은</b><span>${HAEUN_DORM.line.en}</span>`, 2400); },
+});
+let dormCast = null;
+for (const i of [0, 1, 2, 3, 4]) interactables.push({
+  get label() { return dormCast?.actors[i].name ?? ''; },
+  pos: () => dormCast?.actors[i].character.root.position ?? { x: 0, y: -99, z: 0 },
+  r: 1.6,
+  on: () => !!dormCast?.actors[i].character.root.visible,
+  act: () => {
+    const a = dormCast.actors[i];
+    bubble(a.character, a.line.ko);
+    toast(`<b>${a.name.split(' ')[0]}</b><span>${a.line.en}</span>`, 2400);
+  },
+});
 interactables.push({ label: '내 침대 · Your bed', pos: () => bedSpot() ?? { x: 0, y: -99, z: 0 }, r: 1.9, on: () => !!bedSpot() && !day.sleeping, act: useBed });
 
 function petCat() {
@@ -2703,6 +2729,14 @@ function frame() {
   const moved = traversal.mode === 'walk' ? Math.hypot(player.root.position.x - walkFrom[0], player.root.position.z - walkFrom[1]) : 0;
   const running = lastTraversalSpeed > DAY_CONFIG.runningSpeed;
   dayMoves = { walkMetres: running ? 0 : moved, runMetres: running ? moved : 0 };
+  if (S.city === 'seoul') {
+    const room = interiorAt(player.root.position, S.city);
+    dormCast?.update(S.hour, room);
+    for (const a of dormCast?.actors ?? []) if (a.character.root.visible) animate(a.character, dt, t, 0);
+    if (loc.haeun === 'dorm') haeun.root.visible = onDormFloor(room);
+    // Day one, evening: walking onto your floor plays the arrival (H0 · 숙소).
+    if (onDormFloor(room) && !dlg.state.active && !modalOpen() && !S.story.flags.dorm_arrived && S.story.flags.h0_done) scenes.play('haeun.h0.dorm');
+  }
   const hs = updateHaeun(dt, t);
   const js = updateJin(dt, t);
   updateNpcs(dt, t);
@@ -2810,6 +2844,8 @@ async function boot() {
   buildCast();
   seoulEval.build(cityGroups.seoul);
   occupants = createOccupants(interiors, { groups: cityGroups });
+  const dormHome = apartments.find((b) => b.id === DORM_HOME);
+  if (dormHome) dormCast = createDormCast({ building: dormHome, group: cityGroups.seoul });
   initParticles();
   buildMotes();
   const saved = loadSave();

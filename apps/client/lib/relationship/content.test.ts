@@ -34,7 +34,7 @@ function checkLine(l: Line | undefined, where: string) {
 }
 
 // Speakers the cozy dialogue box can show (public/cozy/js/dialogue.js SPEAKERS).
-const SPEAKERS = new Set(['narration', 'tong', 'haeun', 'jin', 'ajusshi', 'barista', 'cashier', 'manager_choi', 'coach_park', 'minji', 'yerin']);
+const SPEAKERS = new Set(['narration', 'tong', 'haeun', 'jin', 'ajusshi', 'barista', 'cashier', 'manager_choi', 'coach_park', 'minji', 'yerin', 'daon', 'boram', 'dohee', 'yunseo']);
 
 const RETIRED = [/Busan|부산|라카노/, /내 이름 읽을 수 있어/, /masked busk|busks? masked/i];
 
@@ -149,8 +149,18 @@ test('the lab and the cozy bundle are rebuilt from this content', () => {
 });
 
 test('canon files load', async () => {
-  for (const f of ['haeun', 'sua', 'jin', 'world']) {
+  for (const f of ['haeun', 'sua', 'jin', 'world', 'cohort']) {
     const src = readFileSync(join(root, 'canon', `${f}.ts`), 'utf8');
     assert.ok(src.length > 100);
   }
+});
+
+test('the cozy copy of the foreign-trainee pool matches canon', async () => {
+  const canon = await import(pathToFileURL(join(root, 'canon', 'cohort.ts')).href);
+  const cozy = await import(new URL('../../public/cozy/js/cohort-data.js', import.meta.url).href);
+  assert.deepEqual(
+    cozy.FOREIGN_TRAINEES,
+    canon.FOREIGN_TRAINEES.map(({ id, nationality, name }: { id: string; nationality: string; name: { ko: string; en: string } }) => ({ id, nationality, name })),
+  );
+  for (const seed of [0, 1, 2, 5, 99]) assert.equal(cozy.pickForeignTrainee(seed, '일본').id, canon.pickForeignTrainee(seed, '일본').id);
 });

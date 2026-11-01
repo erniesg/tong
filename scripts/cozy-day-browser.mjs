@@ -97,7 +97,7 @@ async function run({ width, height, tag, bedHour, touch }) {
   await f.evaluate(() => { __cozy.S.speed = 0; });
   const bed = await f.evaluate(() => {
     const room = __cozy.apartmentDiagnostics.find((b) => b.id === 'seoul-home').rooms.find((r) => r.level === 1);
-    const m = room.furniture.find((x) => x.kind === 'mattress');
+    const m = room.furniture.find((x) => x.kind === 'your-bunk');
     return { x: m.position[0] - 1.25, y: room.floorY, z: m.position[2] };
   });
   await f.evaluate(({ x, y, z, h }) => {

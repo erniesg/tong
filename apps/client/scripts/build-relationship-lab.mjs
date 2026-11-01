@@ -31,6 +31,7 @@ const canon = {
     (await load(join(content, 'canon/haeun.ts'))).HAEUN_CANON,
     (await load(join(content, 'canon/sua.ts'))).SUA_CANON,
     (await load(join(content, 'canon/jin.ts'))).JIN_CANON,
+    ...(({ DOHEE_CANON, DAON_CANON, BORAM_CANON, YUNSEO_CANON }) => [DOHEE_CANON, DAON_CANON, BORAM_CANON, YUNSEO_CANON])(await load(join(content, 'canon/cohort.ts'))),
   ],
   world: (await load(join(content, 'canon/world.ts'))).SEOUL_WORLD,
 };

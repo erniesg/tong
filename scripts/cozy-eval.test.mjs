@@ -12,7 +12,7 @@ import {
 } from '../apps/client/public/cozy/js/eval/chapter.js';
 import { GRID, START, makeCalls, applyInput, matches, legalCalls } from '../apps/client/public/cozy/js/eval/dance.js';
 import {
-  EVAL1, SONG1, itemsFor, check, lunchOutcome, LUNCH, ROSTER, defaultProfile, segmentText,
+  EVAL1, SONG1, itemsFor, check, lunchOutcome, LUNCH, ROSTER, rosterFor, defaultProfile, segmentText,
   birthYear,
 } from '../apps/client/public/cozy/js/eval/eval1.js';
 
@@ -95,16 +95,24 @@ test('mastery rises only on success at the suggested tier or above', () => {
   assert.equal(updateMastery(m0, [{ tier: 2, suggested: 1, items: good('writing') }], { gain: 0.25 }).writing, 0.25);
 });
 
-test('ranking board: seeded NPC curves, the player placed, placeholders marked', () => {
+test('ranking board: seeded NPC curves, the player placed, the real cohort', () => {
   const a = rankBoard({ seed: 7, month: 1, player: { name: '나', grade: 80 }, roster: ROSTER });
   const b = rankBoard({ seed: 7, month: 1, player: { name: '나', grade: 80 }, roster: ROSTER });
   assert.deepEqual(a, b);
-  assert.equal(a.length, 6);
-  assert.deepEqual(a.map((r) => r.rank), [1, 2, 3, 4, 5, 6]);
+  assert.equal(a.length, ROSTER.length + 1);
+  assert.deepEqual(a.map((r) => r.rank), a.map((_, i) => i + 1));
   assert.ok(a.some((r) => r.id === 'player' && r.grade === 80));
   assert.ok(a.every((r, i) => i === 0 || a[i - 1].grade >= r.grade));
-  assert.deepEqual(ROSTER.filter((r) => r.placeholder).map((r) => r.placeholder), ['TODO-roster', 'TODO-roster']);
-  assert.ok(['haeun', 'minji', 'yerin'].every((id) => ROSTER.some((r) => r.id === id)));
+  assert.equal(ROSTER.some((r) => r.placeholder), false, 'no placeholder trainees');
+  assert.deepEqual(ROSTER.map((r) => r.id), ['haeun', 'dohee', 'boram', 'minji', 'yunseo', 'yerin', 'daon']);
+  // The foreign trainee is never from the player's country, and is stable per save.
+  for (let seed = 0; seed < 12; seed++) {
+    const r = rosterFor(seed, '중국');
+    assert.equal(r.length, ROSTER.length + 1);
+    assert.notEqual(r.at(-1).id, 'xiaoyu');
+    assert.deepEqual(rosterFor(seed, '중국'), r);
+  }
+  assert.ok(new Set(Array.from({ length: 12 }, (_, s) => rosterFor(s, '싱가포르').at(-1).id)).size > 1, 'varies by save');
   assert.notDeepEqual(a.map((r) => r.grade), rankBoard({ seed: 8, month: 1, player: { name: '나', grade: 80 }, roster: ROSTER }).map((r) => r.grade));
 });
 
@@ -248,7 +256,7 @@ test('field quest: the order, the price, and who reacts to the wrong food', () =
     'field-tteokbokki': { correct: true, answer: '떡볶이 일 인분' },
     'field-ramyeon': { correct: false, answer: ['라면', '이', '개'] },
   });
-  assert.deepEqual(wrong.map((o) => [o.segment, o.fault, o.who]), [['gimbap', 'counter', '민지'], ['ramyeon', 'amount', '연습생 A']]);
+  assert.deepEqual(wrong.map((o) => [o.segment, o.fault, o.who]), [['gimbap', 'counter', '민지'], ['ramyeon', 'amount', '다온']]);
   assert.ok(wrong.every((o) => o.ko && o.en && o.arrives));
   assert.deepEqual(lunchOutcome({}), []);
 });
