@@ -30,6 +30,8 @@ import { MODES, PLAYER_CLEARANCE, bodyOverlaps, segmentHitsBox, createTraversal,
 import { createRides } from './rides.js';
 import { createOccupants } from './occupants.js';
 import { apartments, buildApartment, apartmentHeightAt, apartmentCeilingAt, apartmentZoneAt } from './apartments.js';
+import { createSeoulEval } from './eval/index.js';
+import { normalizeChapter } from './eval/chapter.js';
 
 const cities = { seoul, tokyo, shanghai };
 const cityGroups = {};
@@ -120,6 +122,7 @@ function save() {
         name: S.name, look: S.look, hour: S.hour, day: S.day,
         words: [...S.words], gloss: [...S.phrases], visited: [...S.visited], signs: [...S.signs], quests: S.quests,
         pettedCat: S.pettedCat, seed: S.seed, rel: S.rel, story: S.story,
+        chapter: S.chapter, // Seoul evals: month, eval state, results (js/eval/chapter.js)
         ...(S.legacy ? { legacy: S.legacy } : {}),
       }),
     );
@@ -142,6 +145,7 @@ function applySave(d) {
   if (Number.isInteger(d.seed)) S.seed = d.seed;
   S.rel = d.rel && typeof d.rel === 'object' ? d.rel : {};
   S.story = { flags: { ...d.story?.flags }, tally: { ...d.story?.tally } };
+  S.chapter = normalizeChapter(d.chapter);
   S.city = Object.hasOwn(cities, d.city) ? d.city : 'seoul';
   S.hour = Number.isFinite(d.hour) ? ((d.hour % 24) + 24) % 24 : 16.5;
   S.day = Number.isFinite(d.day) && d.day >= 1 ? Math.floor(d.day) : 1;
@@ -1211,6 +1215,13 @@ const interactables = [
     act: () => sitBench(b),
   })),
 ];
+
+// Seoul evals (js/eval): the studio schedule board, eval day, results night, 리허설.
+const seoulEval = createSeoulEval({
+  S, save: () => save(), toast, sfx, isBusy: () => modalOpen() || dlg.state.active || transitioning,
+  isMuted: () => audio.muted, goTo: (id) => travelTo(cityPlaces().find((p) => p.id === id), { skipAnimation: true }),
+});
+interactables.push(...seoulEval.interactables);
 
 function petCat() {
   S.pettedCat = true;
@@ -2747,6 +2758,7 @@ async function boot() {
     buildApartment(city.home);
   });
   buildCast();
+  seoulEval.build(cityGroups.seoul);
   occupants = createOccupants(interiors, { groups: cityGroups });
   initParticles();
   buildMotes();
@@ -2848,7 +2860,7 @@ async function boot() {
   };
 
   window.__cozy = {
-    S, player, haeun, jin, dlg, scenes, creator, renderer, bloom, scene, sky, G, THREE, setHour, bridge,
+    S, player, haeun, jin, dlg, scenes, creator, renderer, bloom, scene, sky, G, THREE, setHour, bridge, seoulEval,
     get bridgeBusy() { return bridgeBusy; },
     travelTo: (id, options) => travelTo(id === 'airport' ? { id: 'airport', icon: '✈', ko: currentCity().airport.nativeName, en: currentCity().airport.name, spawn: currentCity().airport.spawn, yaw: currentCity().yaw } : cityPlaces().find((p) => p.id === id), options),
     cities, cityRegistry: cities, get currentCity() { return currentCity(); },

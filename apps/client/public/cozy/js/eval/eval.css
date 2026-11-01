@@ -1,0 +1,100 @@
+/* Seoul eval overlay (js/eval). Loaded by js/eval/index.js; uses the cozy tokens in style.css. */
+.eval-overlay { z-index: 30; }
+.eval-card { width: min(560px, 100%); text-align: left; }
+.eval-card.wide { width: min(720px, 100%); }
+.eval-head .eyebrow { display: block; font-size: var(--small); color: var(--ink-soft); letter-spacing: .02em; }
+.eval-title { margin: 2px 0 4px; font-family: Jua, 'Gowun Dodum', sans-serif; font-weight: 400; font-size: clamp(22px, 3.2cqi, 30px); line-height: 1.25; }
+.eval-sub { margin: 0 0 6px; color: var(--ink-soft); }
+.eval-body { margin-top: 8px; }
+.eval-body p { margin: 6px 0; }
+.eval-muted { color: var(--ink-soft); font-size: var(--small); }
+.eval-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.eval-actions button { flex: 1 1 200px; min-height: 44px; }
+.eval-context { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #fff; border-radius: 14px; padding: 8px 10px; margin-bottom: 8px; }
+.eval-lyric { font-size: var(--native); font-weight: 700; flex: 1 1 200px; }
+.eval-listen { min-height: 40px; }
+.eval-form-label { display: inline-block; background: var(--sky); color: #fff; border-radius: 8px; padding: 2px 10px; margin-top: 6px; font-size: var(--native); }
+.eval-prompt-ko { font-size: var(--native); font-weight: 700; margin-top: 8px; }
+.eval-prompt-en { color: var(--ink-soft); }
+body.no-en .eval-prompt-en { display: none; }
+.eval-note { font-size: var(--small); color: var(--rose); }
+.eval-choices .choice { width: 100%; min-height: 44px; }
+.eval-tray { min-height: 54px; display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 2px dashed #cbb394; border-radius: 14px; margin-top: 10px; background: #fffdf8; align-items: center; }
+.eval-tray-empty { color: var(--ink-soft); font-size: var(--small); }
+.eval-pool { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.eval-block { min-height: 44px; min-width: 44px; padding: 6px 14px; border-radius: 12px; border: 2px solid #deccb5; background: #fff; font-size: max(18px, var(--body)); box-shadow: 0 3px 0 #deccb5; }
+.eval-block.placed { background: #ffedbd; border-color: #e7b84a; box-shadow: 0 3px 0 #e7b84a; }
+.eval-block:disabled { opacity: .3; }
+.eval-check { margin-top: 12px; width: 100%; min-height: 44px; }
+.eval-check:disabled { opacity: .5; }
+.eval-input { max-width: none; margin-top: 10px; font-size: max(18px, var(--body)); }
+.eval-hint-row { margin-top: 10px; }
+.eval-hint-btn { font-size: var(--small); padding: 6px 12px; min-height: 36px; }
+.eval-hint-row .hint { display: block; margin-top: 6px; }
+.eval-feedback { margin-top: 10px; padding: 8px 12px; border-radius: 12px; font-weight: 700; }
+.eval-feedback.ok { background: #dff3e1; color: #1f6b33; }
+.eval-feedback.no { background: #fde2e2; color: #9a2a2a; }
+.eval-wallet { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 10px; }
+.eval-bill { min-height: 48px; border-radius: 10px; border: 2px solid #b9c7a6; background: #eef5e4; font-size: var(--small); }
+.eval-bill.b50000 { background: #fff1c9; border-color: #e3c36b; }
+.eval-bill.b10000 { background: #e3f1e0; border-color: #8fbf87; }
+.eval-bill.b5000 { background: #fde6d6; border-color: #e3a27d; }
+.eval-bill.b1000 { background: #e2ecfa; border-color: #8aa8d6; }
+.eval-bill[aria-pressed="true"] { outline: 3px solid var(--orange); transform: translateY(-2px); }
+.eval-total { margin-top: 8px; font-size: var(--native); font-weight: 700; text-align: right; }
+.eval-chat { display: grid; gap: 6px; background: #b7cbe0; border-radius: 14px; padding: 10px; }
+.eval-msg { background: #fff; border-radius: 12px; padding: 6px 10px; justify-self: start; max-width: 85%; }
+.eval-msg b { display: block; font-size: var(--small); color: var(--ink-soft); font-weight: 400; }
+.eval-msg.me { background: #ffe94a; justify-self: end; }
+.eval-react { background: #fff; border-radius: 12px; padding: 8px 10px; margin-top: 6px; display: grid; gap: 2px; }
+.eval-profile { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.eval-profile .field { display: grid; gap: 4px; font-size: var(--small); }
+.eval-profile select { min-height: 40px; border-radius: 10px; border: 2px solid #deccb5; background: #fff; padding: 4px 6px; font-size: var(--body); }
+.eval-plan { margin: 6px 0 0; padding-left: 22px; font-size: var(--native); }
+/* Formation grid */
+.dance-stage { display: grid; gap: 8px; }
+.dance-call { min-height: 64px; text-align: center; }
+.dance-call-ko { font-size: clamp(22px, 3.6cqi, 32px); font-weight: 700; font-family: Jua, 'Gowun Dodum', sans-serif; }
+.dance-call-en { color: var(--ink-soft); font-size: var(--small); }
+.dance-beats { display: flex; justify-content: center; gap: 10px; }
+.dance-beats .beat { width: 14px; height: 14px; border-radius: 50%; background: #e6d6bf; transition: background .08s; }
+.dance-beats .beat.hit { width: 22px; height: 22px; margin-top: -4px; border: 2px solid var(--orange); }
+.dance-beats .beat.lit { background: var(--orange); }
+.dance-stage[data-phase="hit"] .dance-grid { box-shadow: 0 0 0 4px #ffd23f; }
+.dance-judge { text-align: center; min-height: 1.5em; font-weight: 700; }
+.dance-judge.perfect { color: #1f7a3a; }
+.dance-judge.good { color: var(--sky); }
+.dance-judge.miss { color: var(--rose); }
+.dance-grid-wrap { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: '. front .' 'left grid right' '. back .'; gap: 4px 6px; align-items: center; }
+.dance-front { grid-area: front; text-align: center; font-size: var(--small); color: var(--ink-soft); }
+.dance-back { grid-area: back; text-align: center; font-size: var(--small); color: var(--ink-soft); }
+.dance-side { font-size: var(--small); color: var(--ink-soft); writing-mode: vertical-rl; }
+.dance-side.left { grid-area: left; }
+.dance-side.right { grid-area: right; }
+.dance-grid { grid-area: grid; display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 6px; padding: 8px; border-radius: 14px; background: #3a3550; transition: box-shadow .08s; }
+.dance-cell { aspect-ratio: 1.25; min-height: 44px; border-radius: 10px; border: 2px solid #5b5577; background: #4a4466; color: #fff; font-size: clamp(20px, 4cqi, 32px); }
+.dance-cell.me { background: #ffd23f; border-color: #fff; }
+.dance-poses { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.dance-pose { min-height: 44px; padding: 6px 4px; }
+.dance-pose.on { background: #ffedbd; border-color: #e7b84a; }
+/* Results */
+.eval-grade { display: flex; align-items: baseline; gap: 12px; justify-content: center; margin: 4px 0 10px; }
+.eval-band { font-family: Jua, sans-serif; font-size: 64px; line-height: 1; color: var(--orange); }
+.eval-grade.band-D .eval-band, .eval-grade.band-F .eval-band { color: var(--rose); }
+.eval-score { font-size: 28px; font-weight: 700; }
+.eval-rounds { width: 100%; border-collapse: collapse; }
+.eval-rounds td { padding: 4px 6px; border-bottom: 1px solid #ecdcc4; }
+.eval-rounds td:last-child { text-align: right; font-weight: 700; }
+.eval-results h3 { margin: 12px 0 4px; font-size: var(--body); }
+.eval-board { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.eval-board li { display: grid; grid-template-columns: 32px 1fr auto; gap: 8px; background: #fff; border-radius: 10px; padding: 6px 10px; }
+.eval-board li.me { background: #ffedbd; font-weight: 700; }
+.eval-rank { font-weight: 700; color: var(--orange); }
+.eval-line { margin-top: 10px; padding: 8px 10px; border-radius: 12px; background: #fff; }
+.eval-line.probation { background: #fde2e2; }
+@container game (max-width: 640px) {
+  .eval-card, .eval-card.wide { padding: 14px; }
+  .dance-cell { aspect-ratio: 1; }
+  .dance-pose { font-size: var(--small); }
+  .eval-band { font-size: 52px; }
+}
