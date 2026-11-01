@@ -1,0 +1,28 @@
+/* Seoul day loop (js/day.js, js/day-ui.js): the 기력 meter, bed and morning board. */
+.vigor { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: var(--small); line-height: 1.2; margin-top: 2px; }
+.vigor-face { font-size: 16px; }
+.vigor-label { color: var(--ink-soft); }
+.vigor-bar { position: relative; flex: 1 1 64px; min-width: 48px; max-width: 120px; height: 7px; border-radius: 4px; background: var(--cream-2); overflow: hidden; }
+.vigor-bar i { position: absolute; inset: 0 auto 0 0; background: #4f9a5b; border-radius: inherit; transition: width .4s ease; }
+.vigor.low .vigor-bar i { background: var(--orange); }
+.vigor-num { font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right; font-weight: 700; }
+.vigor-curfew { display: none; color: #4b4f86; white-space: nowrap; }
+.vigor.after-curfew .vigor-curfew { display: inline; }
+.clock.after-curfew { background: rgba(232, 232, 248, .96); }
+
+.day-card { width: min(420px, 100%); }
+.day-kicker, .day-section { font-size: var(--small); color: var(--ink-soft); }
+.day-card h2 { margin: 4px 0 8px; }
+.day-line { margin: 6px 0; }
+.day-words { margin: 4px 0 8px; font-size: var(--small); }
+.day-list { margin: 4px 0 8px; padding: 0; list-style: none; font-size: var(--small); }
+.day-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+.day-diary:empty { display: none; }
+.morning-face { font-size: 64px; line-height: 1.1; }
+.vigor.big { justify-content: center; font-size: var(--body); margin: 8px 0; }
+.vigor.big .vigor-bar { max-width: 200px; height: 10px; }
+
+@container game (max-width: 640px) {
+  .vigor-label { display: none; }
+  .vigor-bar { max-width: none; }
+}

@@ -30,6 +30,8 @@ import { MODES, PLAYER_CLEARANCE, bodyOverlaps, segmentHitsBox, createTraversal,
 import { createRides } from './rides.js';
 import { createOccupants } from './occupants.js';
 import { apartments, buildApartment, apartmentHeightAt, apartmentCeilingAt, apartmentZoneAt } from './apartments.js';
+import { createDayLoop, normalizeDayState, clockRuns, clockHours, bedKind, DAY_CONFIG } from './day.js';
+import { createDayUI } from './day-ui.js';
 
 const cities = { seoul, tokyo, shanghai };
 const cityGroups = {};
@@ -119,7 +121,7 @@ function save() {
         cityPositions: S.cityPositions, postcards: S.postcards,
         name: S.name, look: S.look, hour: S.hour, day: S.day,
         words: [...S.words], gloss: [...S.phrases], visited: [...S.visited], signs: [...S.signs], quests: S.quests,
-        pettedCat: S.pettedCat, seed: S.seed, rel: S.rel, story: S.story,
+        pettedCat: S.pettedCat, seed: S.seed, rel: S.rel, story: S.story, dayLoop: S.dayLoop,
         ...(S.legacy ? { legacy: S.legacy } : {}),
       }),
     );
@@ -145,6 +147,7 @@ function applySave(d) {
   S.city = Object.hasOwn(cities, d.city) ? d.city : 'seoul';
   S.hour = Number.isFinite(d.hour) ? ((d.hour % 24) + 24) % 24 : 16.5;
   S.day = Number.isFinite(d.day) && d.day >= 1 ? Math.floor(d.day) : 1;
+  S.dayLoop = normalizeDayState(d.dayLoop, S.day);
   S.name = typeof d.name === 'string' ? d.name : '연습생';
   S.adventures = {};
   for (const id of Object.keys(cities)) {
@@ -752,6 +755,7 @@ async function connectBridge() {
 
 /** A completed hangout at a shared location (counts toward its missions), at most once per in-game day. */
 function hangout(locationId) {
+  if (locationId === 'cafe' || locationId === 'convenience_store') day.eat('snack');
   bridge.report([{ kind: 'location_hangout', cityId: 'seoul', locationId, beatId: `hangout:${locationId}:day${S.day}` }]);
 }
 
@@ -895,6 +899,7 @@ function serveFood() {
   foodSteam = emitter(new THREE.Vector3(SPOTS.playerSeat.x, COUNTER_Y + 0.15, -0.86), 2.5, { s0: 0.06, s1: 0.22, alpha: 0.16, rise: 0.25 });
   ajusshi.serveT = 1.0;
   sfx.chime();
+  day.eat('meal');
 }
 
 let hotSteam = null;
@@ -1109,6 +1114,7 @@ const scenes = createScenePlayer({
   },
   done(scene) {
     if (SCENE_QUEST[scene.id]) done(SCENE_QUEST[scene.id]);
+    if (scene.id === 'haeun.h2') day.spend('dance'); // the drills scene is dance practice
     hangout(scene.location === 'agency_lockers' ? 'practice_studio' : scene.location);
     if (scene.id === 'jin.j0') startExit();
     save();
@@ -1211,6 +1217,26 @@ const interactables = [
     act: () => sitBench(b),
   })),
 ];
+
+/* ── Day loop: 기력, bed, morning (day.js) ───────── */
+
+const dayUI = createDayUI({ host: $('game-shell'), clockText: document.querySelector('.clock .clock-text'), fade: ui.fade, toast, onClose: () => canvas.focus() });
+const day = createDayLoop({ S, advanceHours, save, ui: dayUI });
+// Your bed: the first-floor bed of the Seoul home (Yeonnam Apartments) until the real dorm lands (#423).
+const BED_HOME = 'seoul-home', BED_LEVEL = 1;
+function bedSpot() {
+  const room = apartments.find((b) => b.id === BED_HOME)?.rooms.find((r) => r.level === BED_LEVEL);
+  const m = room?.furniture.find((f) => f.kind === 'mattress');
+  return m ? { x: m.position[0], y: room.floorY, z: m.position[2] } : null;
+}
+async function useBed() {
+  clearControls();
+  if (bedKind(S.hour) === 'nap') {
+    if (await dayUI.napPrompt({ hour: S.hour }) === 'nap') day.nap();
+  } else await day.sleepUntilMorning();
+  updateSchedules(true);
+}
+interactables.push({ label: '내 침대 · Your bed', pos: () => bedSpot() ?? { x: 0, y: -99, z: 0 }, r: 1.9, on: () => !!bedSpot() && !day.sleeping, act: useBed });
 
 function petCat() {
   S.pettedCat = true;
@@ -1486,7 +1512,7 @@ function showPostcard(id) {
   const city = cities[id];
   $('polaroid-img').src = `/assets/locations/${id}-static.png`;
   $('polaroid-caption').textContent = `${city.nativeName} · Local errand complete`;
-  $('polaroid-date').textContent = `Day ${S.day} · ${city.name} · Collectible postcard`;
+  $('polaroid-date').textContent = `${city.name} · Collectible postcard`; // days aren't counted on screen
   $('polaroid').classList.remove('hidden');
   $('polaroid-close').focus();
 }
@@ -2622,6 +2648,7 @@ function updateHud() {
 
 const clock = new THREE.Clock();
 let saveT = 0;
+let dayMoves = { walkMetres: 0, runMetres: 0 }; // last frame's footsteps, spent on the next clock tick
 function frame() {
   if (bridgeBusy) {
     // A shared exercise covers the game: hold the world still and spare the GPU.
@@ -2631,13 +2658,12 @@ function frame() {
   }
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
-  if (S.started && !dlg.state.active && !modalOpen()) {
+  // Tapping Tong stops time: no clock and no 기력 while any panel is open.
+  const clockOn = clockRuns({ started: S.started, dialogue: dlg.state.active, modal: modalOpen(), bridgeBusy });
+  if (clockOn) {
     const prev = S.hour;
-    S.hour += (dt * S.speed) / 30;
-    if (S.hour >= 24) {
-      S.hour -= 24;
-      S.day++;
-    }
+    const here = zoneAt(player.root.position.x, player.root.position.z);
+    day.tick(clockHours(dt, S.speed), { ...dayMoves, resting: !!S.benchSit, awayFromDorm: here?.buildingId !== 'seoul-home', curfewApplies: S.city === 'seoul' });
     if (S.benchSit && ((prev < 19 && S.hour >= 19) || (prev < 7 && S.hour >= 7))) {
       S.speed = 1;
       toast(S.hour >= 19 ? '<b>🌙 밤이 됐어요</b><span>Night has fallen. The 포장마차 is open!</span>' : '<b>☀️ 아침이에요</b><span>Good morning, Seoul.</span>', 3000);
@@ -2658,7 +2684,11 @@ function frame() {
 
   if (S.city === 'seoul') updateSchedules();
   occupants?.update({ city: S.city, position: player.root.position, hour: localHour(), dt, time: t });
+  const walkFrom = [player.root.position.x, player.root.position.z];
   const ps = updatePlayer(dt);
+  const moved = traversal.mode === 'walk' ? Math.hypot(player.root.position.x - walkFrom[0], player.root.position.z - walkFrom[1]) : 0;
+  const running = lastTraversalSpeed > DAY_CONFIG.runningSpeed;
+  dayMoves = { walkMetres: running ? 0 : moved, runMetres: running ? moved : 0 };
   const hs = updateHaeun(dt, t);
   const js = updateJin(dt, t);
   updateNpcs(dt, t);
@@ -2700,7 +2730,7 @@ function frame() {
     const url = renderer.domElement.toDataURL('image/jpeg', 0.85);
     $('polaroid-img').src = url;
     $('polaroid-caption').textContent = pendingPolaroid === 'jin' ? '진 선배와 한강에서 · Jin & me, Han River' : '홍대의 밤 · A night in Hongdae';
-    $('polaroid-date').textContent = `Day ${S.day} · ${koreanTime(S.hour).digital}`;
+    $('polaroid-date').textContent = koreanTime(S.hour).digital;
     $('polaroid').classList.remove('hidden');
     S.polaroids.push(url);
     pendingPolaroid = null;
@@ -2789,7 +2819,7 @@ async function boot() {
     if (!resume || !saved) placePlayer({ position: [1.6, 0, 18], yaw: 0 });
     syncCity();
     if (resume && saved) {
-      toast(`<b>${currentCity().nativeName} · ${currentCity().name}</b><span>Day ${S.day}, ${koreanTime(localHour()).digital} local. Tong floats beside you — press <kbd>H</kbd> for a hint. Walk to ✈ for flights.</span>`, 4200);
+      toast(`<b>${currentCity().nativeName} · ${currentCity().name}</b><span>${koreanTime(localHour()).digital} local. Tong floats beside you — press <kbd>H</kbd> for a hint. Walk to ✈ for flights.</span>`, 4200);
       setTimeout(tongHintBubble, 3800);
     } else {
       // A new game opens with Tong introducing itself, like /game's tong-intro.
@@ -2850,6 +2880,7 @@ async function boot() {
   window.__cozy = {
     S, player, haeun, jin, dlg, scenes, creator, renderer, bloom, scene, sky, G, THREE, setHour, bridge,
     get bridgeBusy() { return bridgeBusy; },
+    day,
     travelTo: (id, options) => travelTo(id === 'airport' ? { id: 'airport', icon: '✈', ko: currentCity().airport.nativeName, en: currentCity().airport.name, spawn: currentCity().airport.spawn, yaw: currentCity().yaw } : cityPlaces().find((p) => p.id === id), options),
     cities, cityRegistry: cities, get currentCity() { return currentCity(); },
     changeCity, openTravel, save, localHour, heightAt, zoneAt,
