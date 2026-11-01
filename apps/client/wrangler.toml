@@ -69,6 +69,7 @@ keep_vars = true
 [env.production.assets]
 binding = "ASSETS"
 directory = ".open-next/assets"
+html_handling = "none"
 
 [[env.production.r2_buckets]]
 binding = "TONG_ASSETS_BUCKET"
