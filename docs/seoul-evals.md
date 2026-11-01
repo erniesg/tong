@@ -8,19 +8,20 @@ Canon for characters and places is in `apps/client/lib/content/canon/`. Relation
 
 ### A month is a chapter
 
-- It stays March until you start eval 1. No date, no day counter on screen.
+- It stays March until you finish eval 1. No date, no day counter on screen.
 - Each month has a spine of fixed beats in order (opening beat → free play → mid-month beat → free play → eval). Mid-month beats fire on conditions, not dates (cherry-blossom night fires after two hangouts with anyone).
 - Arcs across months open by month ("from June") and close by gate ("before eval 10").
 - Scarcity comes from choices that exclude each other (two invitations for the same night), not from a timer.
 
-### Eval week and the one graded attempt
+### The eval: unlock, confirm, play once
 
-1. When the month's required beats are done, the schedule board shows **평가 주간 시작** (start eval week). Trainers keep mentioning it; the game waits.
-2. Starting eval week is the point of no return: "Ready? Some things this month will pass." Seasonal content you skipped is gone.
-3. Eval week is three in-game days. Eve-of-eval beats live here (H2 "three days before the placement eval", the banana milk, the night before).
-4. Eval day runs the rounds in order. **Each round's result is saved the moment it ends.** There is no save or reload inside eval day.
-5. Quitting mid-round resumes that round from its start with a fresh seeded item set at the same difficulty, so quitting gains nothing.
-6. Practice is unlimited and ungraded: **리허설** (rehearsal) in the practice studio replays any round you've seen, with new items. Rehearsal moves mastery, never grade or rank.
+1. The eval unlocks at a set point in the month (after the month's required beats). Until then the month just continues.
+2. Once unlocked, the player can start it whenever they like. Starting asks for confirmation: "Ready? Some things this month will pass." That is the point of no return.
+3. Confirming makes tomorrow eval day. That evening and night are the eve (banana milk, the night before); you go to bed and wake up on eval day. There is no deadline and no multi-day window.
+4. Eval day is played once and the score counts.
+5. Practice before it is unlimited and ungraded: **리허설** (rehearsal) in the practice studio runs any round type you've met. It moves mastery, never grade or rank.
+
+(Implementation detail, not design: if the tab closes mid-round, that round restarts with fresh items.)
 
 ### The day
 
@@ -113,7 +114,7 @@ One meter.
 
 **Can-do:** introduce yourself, family, hobbies, weather; order and buy. ~600 words.
 
-**Month spine:** H0 arrival → H1 paired with Haeun → J0 pojangmacha (any night) → H2 drills (eval week) → eval.
+**Month spine:** H0 arrival → H1 paired with Haeun → J0 pojangmacha (any night) → H2 drills → eval unlocks → eval.
 
 | Round | Skills | Task | Micro-game | First seen |
 |---|---|---|---|---|
@@ -128,7 +129,7 @@ Nationality and answers come from the player's creator choices, never hard-coded
 
 **Can-do:** daily routine, time, days, plans. ~800 words.
 
-**Month spine:** month opens with the weekly timetable posted (k01) → cherry-blossom night (after two hangouts) → H3 sneak-out by accident (#399) → eval week → eval.
+**Month spine:** month opens with the weekly timetable posted (k01) → cherry-blossom night (after two hangouts) → H3 sneak-out by accident (#399) → eval unlocks → eval.
 
 | Round | Skills | Task | Micro-game | First seen |
 |---|---|---|---|---|
@@ -141,22 +142,14 @@ Nationality and answers come from the player's creator choices, never hard-coded
 
 **Can-do:** make and take calls, ask and offer favours, ask someone to repeat. ~1,200 words.
 
-**Month spine:** month opens with Manager Choi's new rules after a fan incident (k06 curfew) → phone battery and texting become a thing → H4 "나와." can open late in the month or slip to June → eval week → eval.
+**Month spine:** tbc. Candidates: Manager Choi's new rules after a fan incident (k06 curfew), H4 "나와." late in the month or slipping to June.
 
 | Round | Skills | Task | Micro-game | First seen |
 |---|---|---|---|---|
 | Vocal | Listening, writing | Song 3 "같이 있어요". 놀토-style dictation: hear [가치 이써요], write 같이 있어요; the phonetic spelling scores zero | Lyric dictation, linked sounds | Tong micro-lessons on 연음 at signs and menus |
 | Dance | Listening | Polite requests at speed mixed with commands: 두 칸 뒤로 가 주세요! 하은 씨랑 자리 바꿔 주세요! | Formation grid: request calls | Daily practice |
 | Judges | Listening, speaking | Audio-only call: the manager moves tomorrow's call time (내일 촬영이 일곱 시로 바뀌었어요. 여섯 시 반까지 로비로 와 주세요). Q: 몇 시까지 어디로 가요? Then call back with a favour: 죄송하지만 보컬 레슨을 목요일로 바꿔 주실 수 있어요? Tier 1 sees a transcript; tier 3 may ask 다시 한번 말씀해 주시겠어요? once at a small fluency cost | Phone call (audio only) | Ordering by phone (#384), Manager Choi calls |
-| Field quest | Speaking, listening | **Locked out.** See below | Favour + digits by ear | — |
-
-**Locked out.** A fan found the dorm, so Manager Choi changed the door code this afternoon and posted it in the group chat. You knew it was changing; the new code landed after your phone died. It's 22:40, curfew is 23:00, and night check follows.
-
-1. You punch the old code from habit. The lock: 비밀번호가 틀렸습니다.
-2. At the 편의점 by the station, ask the night-shift worker a favour: 죄송한데 전화 한 통만 써도 될까요?
-3. Call a teammate: 미안한데 새 도어락 비밀번호 좀 알려 줄 수 있어? (or 존댓말 if you aren't close; register is noted, not marked)
-4. Catch six digits read fast in Sino numbers plus the star: 공팔이사칠일 별표. A misheard digit means another call and another favour.
-5. The worker is Sua. She knows exactly who you are (you took her spot). You don't know who she is. She lends you a charger cable too, and doodles on the receipt.
+| Field quest | Speaking, listening | **Tbc.** Must test asking for and offering a favour on the phone. The "locked out" idea needs rework (tbc T4, T13) | Favour on the phone | — |
 
 **Daily micro-games needed by evals 1–3**
 
@@ -178,6 +171,7 @@ Kept as in the source design and not built yet. Each gets tuned once evals 1–3
 
 - The group forms earlier than eval 9: survivors of the eval 6 cut become the unit; eval 9 adds the name, positions and fandom; eval 12 sets the final lineup size.
 - Eval 7's "shout in silence" is on hold (tbc).
+- Center is the player's choice, not a score race: take it if you want it, or it's Haeun's. It should matter a little, where it makes sense.
 - Names must be canon (no 지수 unless added); answers about the player's family follow creator choices.
 
 See the source doc for the round tables of evals 4–12.
@@ -190,7 +184,7 @@ See the source doc for the round tables of evals 4–12.
 | Group score | Group rounds in evals 6, 8, 10, 12 | Final lineup size |
 | Mastery per skill | Successes at your tier or above | Options in key conversations |
 | Weak objectives | Per-objective accuracy | Next month's daily scenes are seeded with them |
-| Haeun's score | Her base curve, plus your practice sessions with her, minus the times you lean on her | Whether she debuts; the center battle |
+| Haeun's score | Her base curve, plus your practice sessions with her, minus the times you lean on her | Whether she debuts |
 | Make-up evals | Missing an eval (Jeju) | Harder solo eval; passing restores rank |
 
 ## Minimal verifiable outcome: evals 1–3 loop
@@ -199,11 +193,11 @@ See the source doc for the round tables of evals 4–12.
 
 Done when:
 
-1. **Chapter state.** Month 1–3 with spine beats, eval week trigger, point-of-no-return prompt, per-round autosave. Unit tests for gating and the resume rule.
+1. **Chapter state.** Months 1–3 with spine beats, eval unlock point, confirm prompt (point of no return), eval the next morning. Unit tests for gating.
 2. **Day loop.** Bed → diary → morning board; 기력 drains and restores; condition face from bedtime; Tong pauses time. Unit tests for sleep-quality math.
 3. **Eval runner.** Four rounds + results, tiers 1–2 (tier 3 typing for dictation only), scoring and bands, Tong-hint cap. Unit tests for scoring.
 4. **Micro-games.** The table above, each playable in daily life before its eval.
-5. **Content.** Three songs (audio + line timing map), three field quests, eval 1–3 item banks tagged by skill and objective, Sua's first appearance in eval 3.
+5. **Content.** Three songs (audio + line timing map), three field quests, eval 1–3 item banks tagged by skill and objective.
 6. **Results.** A ranking board with a stub trainee roster (4–6 NPC curves), probation scene on D/F, weak objectives seeding month 2 and 3.
 7. **Unlocks.** At least one hangout and one place that open only after eval 1 and eval 2 (unlock map).
 8. **Proof.** Lab harness replays two presets (beginner tier 1, strong tier 2) from H0 to eval 3 results and asserts grades, flags and unlocks; one recorded browser run of eval 1 end to end on laptop and phone width.

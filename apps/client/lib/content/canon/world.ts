@@ -10,7 +10,7 @@ export const SEOUL_WORLD: WorldCanon = {
   calendar: [
     { month: 1, label: 'March: you arrive', eval: 'Eval 1: entry (placement) · TOPIK 1', beats: ['H0 arrival', 'H1 pairing', 'H2 drills'] },
     { month: 2, label: 'April: cherry blossoms', eval: 'Eval 2: schedules · TOPIK 1', beats: ['H3 sneak-out by accident'] },
-    { month: 3, label: 'May', eval: 'Eval 3: phone calls and favours · TOPIK 2; stage check (friend or rival)', beats: ['first rivalry minigame', 'door code changed after a fan finds the dorm', 'locked out: first meeting with Sua (as a stranger)'] },
+    { month: 3, label: 'May', eval: 'Eval 3: phone calls and favours · TOPIK 2; stage check (friend or rival)', beats: ['first rivalry minigame'] },
     { month: 4, label: 'June', eval: 'Eval 4: getting around · TOPIK 2', beats: ['H4 "나와."'] },
     { month: 5, label: 'July: 장마 (monsoon)', eval: 'Eval 5: registers and the Golden Bell · TOPIK 2', beats: ['H5 tutor / English-lyrics role reversal', 'rain forces proximity'] },
     { month: 6, label: 'August', eval: 'Eval 6: mid-year cut · TOPIK 3; survivors become the unit', beats: ['H6 almost caught (stealth)'] },
@@ -30,8 +30,7 @@ export const SEOUL_WORLD: WorldCanon = {
     { id: 'food_street', name: { ko: '포장마차', en: 'Pojangmacha' }, note: 'Jin\'s onboarding place. Trainees can\'t casually be here; Haeun is never here early.' },
     { id: 'cafe', name: { ko: '카페 봄', en: 'Café Bom' }, note: 'Jin\'s regular spot.' },
     { id: 'han_river', name: { ko: '한강', en: 'Han River' }, note: 'Riverbank, chimaek delivery.' },
-    { id: 'yeonnam_cafe', name: { ko: '연남동 카페', en: 'Yeonnam café' }, note: 'Sua\'s afternoon job. Not on the route until Act 3.' },
-    { id: 'station_store', name: { ko: '역 앞 편의점', en: 'Station convenience store' }, note: 'By Hongik Univ. station, a different store from the dorm one. Sua works the night shift. Open to the player from the eval 3 night.' },
+    { id: 'yeonnam_cafe', name: { ko: '연남동 카페', en: 'Yeonnam café' }, note: 'Where Sua works now. When the player can find her is tbc.' },
   ],
   people: [
     { id: 'coach_park', name: { ko: '박 코치', en: 'Coach Park' }, relation: 'dance coach', note: 'Blunt, fair. Says "다시." more than Haeun does.' },
@@ -40,10 +39,10 @@ export const SEOUL_WORLD: WorldCanon = {
     { id: 'yerin', name: { ko: '예린', en: 'Yerin' }, relation: 'trainee', note: 'Minji\'s shadow.' },
   ],
   rules: [
-    'Twelve in-game months, March to February, one evaluation per month. A month is a chapter: it lasts until the player starts eval week, and days are not counted on screen. See docs/seoul-evals.md.',
+    'Twelve in-game months, March to February, one evaluation per month. A month is a chapter: it lasts until the player confirms the eval, and days are not counted on screen. See docs/seoul-evals.md.',
     'Days pass by sleeping. One energy meter (기력); sleep quality sets the next day\'s condition. Tapping Tong stops time: practice, learning and reading never cost clock time or energy.',
     'Curfew is 23:00 with a night check. Anything later is a sneak-out; late nights are rare, authored and cost condition.',
-    'Each eval is graded once. Rounds save as they end; rehearsal in the studio is unlimited and ungraded.',
+    'Each eval unlocks at a set point in the month and runs once, after the player confirms it (point of no return). Rehearsal before it is unlimited and ungraded.',
     'The player is never cut. A bad eval means probation, not a wall.',
     'The player is a foreign trainee of either gender (cozy creator). Nothing may depend on sharing a dorm room with Haeun. You inherit Sua\'s lineup spot and her agency locker, not her bed.',
     'Trainees are under a dating ban and a curfew; contracts restrict social media and public appearances.',
