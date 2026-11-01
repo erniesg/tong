@@ -17,9 +17,7 @@ Open questions and parked ideas for [`seoul-evals.md`](seoul-evals.md). Add the 
 | T9 | **Group timeline.** | Survivors of eval 6 become the unit; eval 9 adds name, positions, fandom; eval 12 sets lineup size (7/5/4 from group score). | Evals 6, 9 |
 | T10 | **Sua's line.** | Owner agrees she can be discovered before Act 3 with a richer backstory; how, when, where she works and what she knows are undecided. Ideas parked: a night job near the dorm, studying for the 검정고시. | Months 3–9 |
 | T11 | **Evals 4–12 round design.** | Review each one after evals 1–3 have been played. | — |
-| T13 | **Co-ed or not.** The player can be either gender and inherits Sua's lineup spot. Is the debut unit co-ed, or does a male player join a parallel boys' line? | Decides dorm floors and roommates. | Dorm, roster |
-| T14 | **The dorm.** How big, who rooms with whom. | Owner doubts boys and girls share a building; real agencies usually house them in separate dorms. Proposal: a girls-only dorm (canon note to change). Rooms of 2–4 with bunk beds; the player shares with 1–3 trainees, so roommates are the first cast. | Sleep loop, roster |
-| T17 | **Rooming with Haeun** (female route). | Owner: you can room with her. Open: always, or by choice? Do you get Sua's empty bunk (contradicts canon "not her bed")? `world.ts` rule needs revising. | Dorm, H0–H2 |
+| T17 | **Rooming with Haeun** (female route). | Owner direction: same dorm from day one, not the same room; rooming with her is earned. Start: you room with the youngest (who idolises Haeun and is jealous you got close); Haeun rooms with the ex-survival contestant. A cut opens a bed and forces a reshuffle: you can ask for Haeun, and she agrees only on trust, not warmth; low trust and she picks someone else, maybe the rival. Rooming unlocks late-night talks (cost sleep, build intimacy), night-time Jeju moments, noticing small things; losing the room after a betrayal is a consequence. Open: which cut opens the bed (ties to T2 and the origins PRD's month-8 Yerin cut); what happens to Sua's old bed. | Dorm, H0–H2, eval 6 |
 | T12 | **Can the player opt out of a late night that a character asks for** without a relationship cost? | Yes, but the character remembers which you chose. | Day loop |
 
 ## Closed
@@ -34,3 +32,5 @@ Open questions and parked ideas for [`seoul-evals.md`](seoul-evals.md). Add the 
 | 2026-11-01 | Sua can be discovered before Act 3 with a richer backstory (details in T10). |
 | 2026-11-01 | Center: the player can take it if they want it, otherwise it's Haeun's. Small story differences where they make sense. |
 | 2026-11-01 | Songs 1–3 written in-house (`seoul-songs.md`). |
+| 2026-11-01 | (was T13) Not co-ed. The female player's route is built first. A male player later joins a boys' line with its own cohort. |
+| 2026-11-01 | (was T14) Girls and boys live in separate buildings, spread out in the neighbourhood. Yeonnam Apartments is the girls' dorm: rooms of 2–4 on bunk beds, shared kitchen and bathroom, dorm manager, curfew and night check. Canon `world.ts` updated. |
