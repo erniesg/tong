@@ -102,6 +102,11 @@ async function run({ width, height, tag, touch }) {
   await f.waitForFunction(() => /침대/.test(document.querySelector('#prompt').textContent), null, { timeout: 300000, polling: 500 });
   await shot('8-your-bunk');
   await f.evaluate(() => __cozy.interact());
+  // The first night: Tong's bedtime moment and the Hangul recap come before the bed.
+  for (let i = 0; i < 40 && (await f.evaluate(() => __cozy.dlg.state.active)); i++) {
+    await f.evaluate(() => { __cozy.dlg.finishTyping(); if (__cozy.dlg.state.choices.length) __cozy.dlg.choose(0); else __cozy.dlg.advance(); });
+    await frames(2);
+  }
   await f.waitForSelector('#bed-overlay:not(.hidden)', { state: 'attached' });
   await click('#bed-overlay .btn-primary');
   await f.waitForSelector('#morning-board:not(.hidden)', { state: 'attached', timeout: 60000 });
