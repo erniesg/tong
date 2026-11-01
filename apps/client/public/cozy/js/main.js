@@ -22,6 +22,8 @@ import { buildNodes, tongHint, WORDS } from './story.js';
 import { createDialogue, SPEAKERS } from './dialogue.js';
 import { createScenePlayer } from './scene-player.js';
 import { createBridge, AFFINITY_PER_HEART, stageOf, affinityOf, legacyProgress } from './bridge.js';
+import { createSeoulEval } from './eval/index.js';
+import { normalizeChapter } from './eval/chapter.js';
 import seoul from './cities/seoul.js';
 import tokyo from './cities/tokyo.js';
 import shanghai from './cities/shanghai.js';
@@ -30,8 +32,6 @@ import { MODES, PLAYER_CLEARANCE, bodyOverlaps, segmentHitsBox, createTraversal,
 import { createRides } from './rides.js';
 import { createOccupants } from './occupants.js';
 import { apartments, buildApartment, apartmentHeightAt, apartmentCeilingAt, apartmentZoneAt } from './apartments.js';
-import { createSeoulEval } from './eval/index.js';
-import { normalizeChapter } from './eval/chapter.js';
 
 const cities = { seoul, tokyo, shanghai };
 const cityGroups = {};
@@ -117,12 +117,12 @@ function save() {
     localStorage.setItem(
       SAVE_KEY,
       JSON.stringify({
+        chapter: S.chapter, // Seoul evals: month, eval state, results (js/eval/chapter.js)
         version: 4, city: S.city, position: safePose(), adventures: S.adventures,
         cityPositions: S.cityPositions, postcards: S.postcards,
         name: S.name, look: S.look, hour: S.hour, day: S.day,
         words: [...S.words], gloss: [...S.phrases], visited: [...S.visited], signs: [...S.signs], quests: S.quests,
         pettedCat: S.pettedCat, seed: S.seed, rel: S.rel, story: S.story,
-        chapter: S.chapter, // Seoul evals: month, eval state, results (js/eval/chapter.js)
         ...(S.legacy ? { legacy: S.legacy } : {}),
       }),
     );
@@ -1216,13 +1216,6 @@ const interactables = [
   })),
 ];
 
-// Seoul evals (js/eval): the studio schedule board, eval day, results night, 리허설.
-const seoulEval = createSeoulEval({
-  S, save: () => save(), toast, sfx, isBusy: () => modalOpen() || dlg.state.active || transitioning,
-  isMuted: () => audio.muted, goTo: (id) => travelTo(cityPlaces().find((p) => p.id === id), { skipAnimation: true }),
-});
-interactables.push(...seoulEval.interactables);
-
 function petCat() {
   S.pettedCat = true;
   cat.purr = 1.5;
@@ -1259,6 +1252,13 @@ function standBench() {
   S.speed = S.prevSpeed ?? 1;
   updateToggles();
 }
+
+// Seoul evals (js/eval): the studio schedule board, eval day, results night, 리허설.
+const seoulEval = createSeoulEval({
+  S, save: () => save(), toast, sfx, isBusy: () => modalOpen() || dlg.state.active || transitioning,
+  isMuted: () => audio.muted, goTo: (id) => travelTo(cityPlaces().find((p) => p.id === id), { skipAnimation: true }),
+});
+interactables.push(...seoulEval.interactables);
 
 let activeInteract = null;
 function staffAccessible(actor, position) {
