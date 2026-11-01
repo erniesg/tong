@@ -18,6 +18,11 @@ export const SPEAKERS = {
   boram: { label: '보람 Bo-ram', emoji: '🧺', cls: 'green' },
   dohee: { label: '도희 Do-hee', emoji: '📸', cls: 'pink' },
   yunseo: { label: '윤서 Yun-seo', emoji: '🖋️', cls: 'purple' },
+  // Day one: Ha-eun before you read her name on the water bottles (H1).
+  haeun_unnamed: { label: '연습생 Trainee', img: 'img/haeun-portrait.jpg' },
+  stranger: { label: '행인 Passer-by', emoji: '🧳', cls: 'green' },
+  driver: { label: '택시 기사 Driver', emoji: '🚕', cls: 'green' },
+  fan: { label: '팬 Fan', emoji: '📱', cls: 'pink' },
   tong: { label: '통 Tong', tong: true, cls: 'gold' },
   narration: { label: '…', none: true, cls: 'purple' },
 };

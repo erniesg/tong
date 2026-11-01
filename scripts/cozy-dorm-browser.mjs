@@ -40,6 +40,9 @@ async function run({ width, height, tag, touch }) {
   await f.evaluate(() => { __cozy.renderer.setPixelRatio(0.5); window.__fr = 0; const k = () => { window.__fr++; requestAnimationFrame(k); }; k(); });
   await click('#start');
   await click('#creator-start');
+  // Day 1 now starts at Incheon (cozy-day1-browser.mjs covers it); this proof starts in Hongdae.
+  await f.waitForFunction(() => __cozy.S.started, null, { polling: 500 });
+  await f.evaluate(() => __cozy.skipDayOne());
   await f.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 120000, polling: 500 }).catch(() => {});
   // Day one: the lockers (H0) are done; it's evening.
   await f.evaluate(() => { if (__cozy.dlg.state.active) __cozy.dlg.end(); __cozy.S.story.flags.h0_done = true; __cozy.setHour(19.5); __cozy.S.speed = 0; });
@@ -64,15 +67,17 @@ async function run({ width, height, tag, touch }) {
     const s = await f.evaluate(() => { __cozy.dlg.finishTyping(); return { who: __cozy.dlg.state.node?.who, choices: __cozy.dlg.state.choices.length, text: document.querySelector('#dialogue')?.innerText.slice(0, 120) }; });
     if (seen.at(-1) !== s.who) seen.push(s.who);
     if (s.who === 'manager_choi' && !seen.includes('shot-choi')) { seen.push('shot-choi'); await frames(2); await shot('2-manager-choi'); }
-    if (s.who === 'haeun' && s.choices) { await frames(2); await shot('3-haeun-steers-you'); await f.evaluate(() => __cozy.dlg.choose(0)); await frames(2); continue; }
+    // Haeun is unnamed on day one (speaker haeun_unnamed, until H1).
+    if (s.who === 'haeun_unnamed' && s.choices) { await frames(2); await shot('3-haeun-steers-you'); await f.evaluate(() => __cozy.dlg.choose(0)); await frames(2); continue; }
     if (s.who === 'daon' && !seen.includes('shot-daon')) { seen.push('shot-daon'); await frames(2); await shot('4-daon'); }
+    if (s.choices) { await f.evaluate(() => __cozy.dlg.choose(0)); await frames(2); continue; }
     await f.evaluate(() => __cozy.dlg.advance());
     await frames(2);
   }
   const flags = await f.evaluate(() => __cozy.S.story.flags);
   log(tag, 'speakers', seen.filter((s) => !s.startsWith('shot')), 'dorm_arrived', flags.dorm_arrived);
   assert.ok(flags.dorm_arrived, 'arrival scene finished');
-  for (const who of ['manager_choi', 'haeun', 'daon', 'boram']) assert.ok(seen.includes(who), `${who} speaks`);
+  for (const who of ['manager_choi', 'haeun_unnamed', 'daon', 'boram']) assert.ok(seen.includes(who), `${who} speaks`);
 
   // 3. Night: the roommates are in; Haeun is in room A.
   await f.evaluate(() => __cozy.setHour(22.8));
@@ -97,6 +102,11 @@ async function run({ width, height, tag, touch }) {
   await f.waitForFunction(() => /침대/.test(document.querySelector('#prompt').textContent), null, { timeout: 300000, polling: 500 });
   await shot('8-your-bunk');
   await f.evaluate(() => __cozy.interact());
+  // The first night: Tong's bedtime moment and the Hangul recap come before the bed.
+  for (let i = 0; i < 40 && (await f.evaluate(() => __cozy.dlg.state.active)); i++) {
+    await f.evaluate(() => { __cozy.dlg.finishTyping(); if (__cozy.dlg.state.choices.length) __cozy.dlg.choose(0); else __cozy.dlg.advance(); });
+    await frames(2);
+  }
   await f.waitForSelector('#bed-overlay:not(.hidden)', { state: 'attached' });
   await click('#bed-overlay .btn-primary');
   await f.waitForSelector('#morning-board:not(.hidden)', { state: 'attached', timeout: 60000 });

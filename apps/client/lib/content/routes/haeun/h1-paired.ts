@@ -15,7 +15,7 @@ export const module: SceneModule = {
     gate: { flags: ['h0_done'], month: { from: 1, to: 1 } },
     summary:
       'Coach Park: "하은이 옆에 서." You find her by reading the water-bottle tags. Minji whispers that you took Sua\'s spot. Haeun, impeccably polite with a perfect smile: "안녕하세요, 하은이에요. 저랑 짝이래요. 잘 부탁해요." Textbook, and she never asks your name. How you answer sets the first temperature: in stride, a register slip, asking about Sua straight out, or asking her to teach you.',
-    seeds: ['memory asked_straight (re-read at the rooftop)', 'tong_seen_once (her "또 그거 써요?")', 'banmal_too_early'],
+    seeds: ['memory asked_straight (re-read at the rooftop)', 'tong_seen_once (she notices you leaning on help nobody else can see: "또 외워서 말하는 거예요?")', 'banmal_too_early'],
     beats: [
       {
         id: 'h1_open',
@@ -86,7 +86,7 @@ export const module: SceneModule = {
         id: 'h1_tags_tong',
         speaker: 'tong',
         when: { notFlags: ['ex_h1_coach', 'misread_name'] },
-        lines: [{ value: { ko: '저 물병! 하은.', en: '"하은", the one on the left.', note: 'You held up your phone to read the tags. Ha-eun watches your phone talk. She says nothing.' } }],
+        lines: [{ value: { ko: '저 물병! 하은.', en: '"하은", the one on the left.', note: 'Tong reads the tags for you. To everyone else you stared at the bottles, then muttered to yourself. Ha-eun says nothing.' } }],
         effects: { setFlags: ['tong_seen_once'] },
         next: 'h1_meet',
       },
@@ -112,15 +112,15 @@ export const module: SceneModule = {
                 when: { flags: ['used_tong_last', 'tong_seen_once'] },
                 speaker: 'haeun',
                 expr: 'smirk',
-                reaction: { ko: '아, 또 앱이에요? 편하겠다~', en: 'Oh, the app again? That must be handy~', note: 'Still smiling.', review: 'native' },
+                reaction: { ko: '또 외워서 말하는 거예요? 열심히 하네~', en: 'Reciting again? Working hard~', note: 'You repeated Tong\'s whisper word by word. She noticed. Still smiling.', review: 'native' },
                 deltas: { tension: 3 },
-                memory: { tag: 'tong_noticed', note: 'She noticed you speaking through Tong on day one.' },
+                memory: { tag: 'tong_noticed', note: 'She noticed you reciting someone else\'s words on day one.' },
               },
               {
                 when: { flags: ['used_tong_last'] },
                 speaker: 'haeun',
                 expr: 'cool',
-                reaction: { ko: '네~', en: 'Sure~', note: 'Her eyes go to your phone, not to you.' },
+                reaction: { ko: '네~', en: 'Sure~', note: 'Her eyes go to the empty air beside you, where you keep glancing.' },
                 setFlags: ['tong_seen_once'],
               },
               {
@@ -219,7 +219,7 @@ export const module: SceneModule = {
   presets: [
     {
       id: 'h1_tier0',
-      label: 'Tier 0: Tong reads the tags, then Tong speaks again ("또 그거 써요?")',
+      label: 'Tier 0: Tong reads the tags, then you recite Tong again ("또 외워서 말하는 거예요?")',
       state: { day: 2, flags: { h0_done: true }, knows: { sua_name: true } },
       world: { playerLevel: 0, inputTier: 0, hour: 10, weather: 'clear' },
       path: ['h1_stride'],

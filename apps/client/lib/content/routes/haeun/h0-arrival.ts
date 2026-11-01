@@ -1,8 +1,9 @@
 import type { SceneModule } from '../../../relationship/types';
 
 /**
- * H0 · 첫날 (Arrival). Tong onboards you; the locker plants Sua's name and the
- * notebook without anyone explaining either. Haeun is only a glimpse.
+ * H0 · 사물함 (the lockers, end of orientation on day one; docs/seoul-day1.md). The
+ * locker plants Sua's name and the notebook without anyone explaining either.
+ * Haeun is only a glimpse.
  */
 export const module: SceneModule = {
   scene: {
@@ -12,37 +13,17 @@ export const module: SceneModule = {
     characterId: 'haeun',
     location: 'agency_lockers',
     slot: 'm1.s0',
-    gate: { month: { from: 1, to: 1 } },
+    gate: { flags: ['orientation_done'], month: { from: 1, to: 1 } },
     summary:
-      'You arrive at Onsae (Tong has already introduced itself at the start of the game). Your locker has a half-scraped name label (수아) and a notebook jammed behind the drawer. Keep it, hand it in, or leave it. A girl slams her locker without looking at you. Coach Park: studio, 10am.',
+      'End of orientation: Manager Choi shows you your locker. It has a half-scraped name label (수아) and a notebook jammed behind the drawer. Keep it, hand it in, or leave it. A girl slams her locker without looking at you. Coach Park: studio, 10am.',
     seeds: ['knows.sua_name (from the label)', 'notebook_kept / notebook_handed_in / notebook_left', 'first glimpse of Haeun'],
     beats: [
       {
         id: 'h0_open',
         speaker: 'narration',
         lines: [
-          { when: { weather: ['rain'] }, value: { ko: '홍대, 3월. 비.', en: 'Hongdae, March. Rain on the glass doors of Onsae Entertainment. Your suitcase is soaked.' } },
-          { value: { ko: '홍대, 3월.', en: 'Hongdae, March. The glass doors of Onsae Entertainment. Your suitcase wheel is already broken.' } },
-        ],
-        tong: {
-          ko: '여기야! 온새 엔터.',
-          en: 'This is it: your agency. Tap me any time and I\'ll help, but the more you do yourself, the more people here will notice.',
-          maxLevel: 1,
-        },
-        next: 'h0_tong_blocks',
-      },
-      {
-        id: 'h0_tong_blocks',
-        speaker: 'tong',
-        when: { minLevel: 0 },
-        lines: [
-          { when: { minLevel: 2 }, value: { ko: '한글은 이미 좀 읽네? 좋아.', en: 'You already read some Hangul? Good. I\'ll stay quiet unless you need me.' } },
-          {
-            value: {
-              ko: '한글은 블록이야.',
-              en: 'Korean is written in blocks. Each block is one syllable: a consonant, a vowel, sometimes one more underneath. You\'ll be reading signs by tonight.',
-            },
-          },
+          { when: { weather: ['rain'] }, value: { ko: '연습실 뒤쪽. 사물함.', en: 'The back of the studio. A row of lockers. Rain ticks on the high windows.' } },
+          { value: { ko: '연습실 뒤쪽. 사물함.', en: 'The back of the studio. A row of lockers, mirrors on the far wall.' } },
         ],
         next: 'h0_choi',
       },
@@ -53,14 +34,12 @@ export const module: SceneModule = {
         lines: [
           {
             value: {
-              ko: '외국인 연습생이죠? 이쪽이에요. 사물함은 여기 써요.',
-              en: 'You\'re the foreign trainee? This way. Use this locker.',
+              ko: '이거예요. 사물함은 여기 써요.',
+              en: 'This one. Use this locker.',
               review: 'native',
             },
           },
         ],
-        tong: { ko: '사물함 = 락커!', en: '사물함 (samulham) = locker.', maxLevel: 2 },
-        effects: { vocab: [{ ko: '사물함', en: 'locker', rom: 'samulham' }] },
         next: 'h0_label',
       },
       {
@@ -82,6 +61,7 @@ export const module: SceneModule = {
           framing: { ko: '이름을 맞춰 봐.', en: 'Rebuild the name on the scraped label.' },
           onFail: 'assist',
         },
+        effects: { setFlags: ['hangul:수아'] },
         next: 'h0_label_pass',
       },
       {
@@ -166,6 +146,13 @@ export const module: SceneModule = {
         speaker: 'narration',
         lines: [
           {
+            when: { flags: ['d1_early'] },
+            value: {
+              ko: '쾅.',
+              en: 'Bang. At the far end of the row, the girl from Practice Room B shuts her locker, headphones in, and walks past without looking at you.',
+            },
+          },
+          {
             value: {
               ko: '쾅.',
               en: 'Bang. At the far end of the corridor a girl shuts her locker, headphones in, and walks past without looking at you.',
@@ -199,7 +186,7 @@ export const module: SceneModule = {
       id: 'h0_tier0',
       label: 'Fresh start, no Hangul (tier 0): Tong reads the label, keeps the notebook',
       state: { day: 1 },
-      world: { playerLevel: 0, inputTier: 0, hour: 15, weather: 'rain' },
+      world: { playerLevel: 0, inputTier: 0, hour: 15, weather: 'rain', flags: { orientation_done: true } },
       path: ['h0_keep'],
       exercises: false,
     },
@@ -207,14 +194,14 @@ export const module: SceneModule = {
       id: 'h0_tier1',
       label: 'Learned the blocks (tier 1): reads 수아 herself, keeps the notebook',
       state: { day: 1 },
-      world: { playerLevel: 1, inputTier: 1, hour: 15, weather: 'clear' },
+      world: { playerLevel: 1, inputTier: 1, hour: 15, weather: 'clear', flags: { orientation_done: true } },
       path: ['h0_keep'],
     },
     {
       id: 'h0_tier2_handin',
       label: 'Placement-tested (tier 2): Tong stays quiet, hands the notebook in',
       state: { day: 1 },
-      world: { playerLevel: 3, inputTier: 2, hour: 15, weather: 'clear' },
+      world: { playerLevel: 3, inputTier: 2, hour: 15, weather: 'clear', flags: { orientation_done: true, d1_early: true } },
       path: ['h0_hand_in'],
     },
   ],

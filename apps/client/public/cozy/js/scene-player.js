@@ -136,7 +136,9 @@ export function createScenePlayer(ctx) {
         ? {
             exercise: () => request(beat.exercise),
             next: (r) => {
-              run.s = { ...run.s, flags: { ...run.s.flags, [`ex_${beat.id}`]: r.outcome === 'completed' && !!r.correct } };
+              // Closed or unavailable (no Tong host) is not a wrong answer: scenes can branch on _skipped.
+              const skipped = r.outcome !== 'completed';
+              run.s = { ...run.s, flags: { ...run.s.flags, [`ex_${beat.id}`]: !skipped && !!r.correct, [`ex_${beat.id}_skipped`]: skipped } };
               commit();
               return choices ? key(beat, '#choices') : onward();
             },
@@ -176,8 +178,8 @@ export function createScenePlayer(ctx) {
   function request(hook) {
     return {
       exerciseType: hook.type,
-      targetItems: hook.targets,
-      ...(hook.distractors ? { distractors: hook.distractors } : {}),
+      targetItems: hook.targets.map(fill),
+      ...(hook.distractors ? { distractors: hook.distractors.map(fill) } : {}),
       objectiveId: hook.objectiveId,
       framing: { speakerId: run.scene.characterId, ko: fill(hook.framing.ko), en: fill(hook.framing.en) },
       cityId: 'seoul',

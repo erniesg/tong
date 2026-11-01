@@ -34,6 +34,9 @@ async function run({ width, height, tag, bedHour, touch }) {
   await f.evaluate(() => { __cozy.renderer.setPixelRatio(0.5); window.__fr = 0; const k = () => { window.__fr++; requestAnimationFrame(k); }; k(); });
   await click('#start');
   await click('#creator-start');
+  // Day 1 now starts at Incheon (cozy-day1-browser.mjs covers it); this proof starts in Hongdae.
+  await f.waitForFunction(() => __cozy.S.started, null, { polling: 500 });
+  await f.evaluate(() => __cozy.skipDayOne());
   await f.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 120000, polling: 500 }).catch(() => {});
   await f.evaluate(() => { if (__cozy.dlg.state.active) __cozy.dlg.end(); __cozy.setHour(17); __cozy.S.speed = 1; });
   const shot = (name) => page.screenshot({ path: `${OUT}/${tag}-${name}.png`, timeout: 600000 });

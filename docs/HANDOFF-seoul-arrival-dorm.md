@@ -60,12 +60,12 @@ In `docs/seoul-evals-tbc.md` (closed table), canon and `docs/seoul-origins.md`:
 ### Verified
 - Unit tests: 72 cozy pass, 65 relationship pass. The dorm runs the same route and traversal checks as the other flats. A test checks that the cozy pool mirror matches canon.
 - `scripts/cozy-dorm-browser.mjs`: dorm scene → night roommates → bunk → morning. Passes at 1280×800 and 390×844.
-- `scripts/cozy-arrival-browser.mjs`: fresh save → map to studio → walk to locker → H0 → card → map to dorm → walk upstairs → scene → bunk → day 2. Passes at both sizes. `COZY_ONLY=laptop|phone` runs one size.
+- `scripts/cozy-arrival-browser.mjs` is retired: Day 1 now starts at Incheon, and `scripts/cozy-day1-browser.mjs` walks it from the creator to day 2 (see [`seoul-day1.md`](seoul-day1.md)). Older proofs call `__cozy.skipDayOne()` to start in Hongdae.
 - Not run: `cozy-city-occupancy`, `cozy-occupants` and `cozy-creator` need `COZY_THREE_MODULE`. They fail the same way on #424.
 
 ## Next
 
-**Day 1 is being rebuilt from Incheon:** see [`seoul-day1.md`](seoul-day1.md) (decisions, scenes, letters, build order) and its issue. It replaces the current start at the studio and puts H0's lockers inside orientation.
+**Day 1 starts at Incheon** (branch `feat/seoul-day1`, issue #435): see [`seoul-day1.md`](seoul-day1.md) for what plays, the flags and what's not built yet. H0's lockers are now the end of orientation.
 
 ### Needs the owner
 1. **Merge #424, then #434.**

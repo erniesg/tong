@@ -31,6 +31,9 @@ async function run(label, viewport, plan) {
   await f.evaluate(() => { try { localStorage.removeItem('tong-cozy-seoul-v2'); } catch {} });
   await f.locator('#start').click();
   await f.locator('#creator-start').click();
+  // Day 1 now starts at Incheon (cozy-day1-browser.mjs covers it); this proof starts in Hongdae.
+  await f.waitForFunction(() => __cozy.S.started, null, { polling: 500 });
+  await f.evaluate(() => __cozy.skipDayOne());
   await f.waitForFunction(() => __cozy.S.started);
   // A new game opens with Tong's intro; let it start, then close it.
   await f.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 15000 }).catch(() => {});
