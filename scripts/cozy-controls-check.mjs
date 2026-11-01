@@ -30,6 +30,7 @@ try {
   await check('runtime ready', () => p.waitForFunction(() => window.__cozy, null, { timeout: 90000 }), 95000);
   await check('Start', () => p.locator('#start').click());
   await check('Create character', () => p.locator('#creator-start').click());
+  await check('skip Day 1 to Hongdae', async () => { await p.waitForFunction(() => __cozy.S.started); await p.evaluate(() => __cozy.skipDayOne()); });
   await check('diagnostic paused-noon scene setup (not clock UI acceptance)', () => p.evaluate(() => { __cozy.S.speed = 0; __cozy.setHour(12); }));
   const initial = await p.evaluate(() => __cozy.cam.dist);
   await check('visible zoom in', async () => { await p.locator('#zoom-in').click(); await p.waitForFunction((distance) => __cozy.cam.dist < distance, initial); });

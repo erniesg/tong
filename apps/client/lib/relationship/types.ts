@@ -163,7 +163,9 @@ export interface ExerciseHook {
  * `b` (or on choice `c` of beat `b`) finishes, the runtime sets
  * `ex_<b>` (or `ex_<b>_<c>`) to true on a pass and false on a fail, before
  * the beat's choices and outcomes resolve. Branch on it with
- * `when: { flags: ['ex_h1_tags'] }` / `notFlags`.
+ * `when: { flags: ['ex_h1_tags'] }` / `notFlags`. When the player closes the
+ * exercise or it can't run (no Tong host), the cozy runtime also sets
+ * `ex_<b>_skipped`, so a scene can offer a plain choice instead.
  */
 export const exerciseFlag = (beatId: string, choiceId?: string) => (choiceId ? `ex_${beatId}_${choiceId}` : `ex_${beatId}`);
 
@@ -223,7 +225,7 @@ export interface TongLine extends Line {
  * Stage directions a runtime may act on (the lab ignores them): the cozy 3D
  * world sits the player down at 'sit', serves food at 'serve', and so on.
  */
-export type Cue = 'sit' | 'serve' | 'phone_buzz' | 'stand' | 'leave' | 'photo';
+export type Cue = 'sit' | 'serve' | 'phone_buzz' | 'stand' | 'leave' | 'photo' | 'ride';
 
 export interface Beat {
   id: string;

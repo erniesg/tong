@@ -96,6 +96,8 @@ p { overflow-wrap: anywhere; }
 .quest-list li.done::before { content: ''; }
 .quest-list li.step-done { opacity: 0.55; text-decoration: line-through; }
 .quest-list li.step-done::before { content: '✓ '; }
+.quest-list li.hangul-count { font-weight: 700; color: var(--orange); }
+.quest-list li.hangul-count::before { content: ''; }
 .quest-hint { display: flex; align-items: center; gap: 8px; padding: 0 12px 12px; color: var(--ink-soft); }
 .quest-hint:empty { display: none; }
 .quest-hint img { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; }

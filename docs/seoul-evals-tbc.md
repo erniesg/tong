@@ -18,7 +18,6 @@ Open questions and parked ideas for [`seoul-evals.md`](seoul-evals.md). Add the 
 | T12 | **Can the player opt out of a late night that a character asks for** without a relationship cost? | Yes, but the character remembers which you chose. | Day loop |
 | T19 | **Sua's snacks on eval day.** | Owner, 2026-11-01: the first snack turns up on eval day (not Day 1). Not yet in any doc or canon: who leaves it, where, and whether anyone knows it's her stays under T10. | Eval 1 day |
 | T20 | **Tong's backstory** ("Long story. Another time." on Day 1). | Keep the line as a seed; write nothing about the answer until the owner decides it. | Later |
-| T21 | **Day 1 rival.** | 도희 Do-hee says "쟤가 새로 온 애야?": the ex-survival favourite, so the Creator's airport photo touches her sore spot. Minji keeps H1's "Sua's spot" whisper. | Day 1 on-time arrival |
 
 ## Closed
 
@@ -42,3 +41,5 @@ Open questions and parked ideas for [`seoul-evals.md`](seoul-evals.md). Add the 
 | 2026-11-01 | Origins are picked at the start, in the creator (overrides the PRD's "selection UI out of scope"). |
 | 2026-11-01 | Tong is the floating mascot (built 3D Tong), not a phone app. |
 | 2026-11-01 | (was T18) Nobody else can see or hear Tong. H1's "또 그거 써요?" and H2's "폰이 춤추는 거예요?" (written for Tong on a phone) must be rewritten: at most, people notice you glancing at nothing or muttering. |
+| 2026-11-01 | (was T21) No Day 1 rival. Minji (gossip) says "쟤가 새로 온 애야?" to Yerin on the on-time arrival; Do-hee stays Haeun's rival only. |
+| 2026-11-01 | Day 1 built from Incheon (`seoul-day1.md`, #435): Haeun stays unnamed until H1 (day 2); the Today list opens by itself on day one; a closed or unavailable exercise offers a plain choice instead of counting as wrong. |

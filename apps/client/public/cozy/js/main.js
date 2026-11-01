@@ -28,6 +28,7 @@ import { PROFILE_OPTIONS } from './eval/eval1.js';
 import seoul from './cities/seoul.js';
 import tokyo from './cities/tokyo.js';
 import shanghai from './cities/shanghai.js';
+import incheon, { INCHEON, setExitOpen } from './cities/incheon.js';
 import { interiors, interiorAt, enhanceRoom, updateCutaways, isCameraOccluder, cutawaySnapshot } from './interiors.js';
 import { MODES, PLAYER_CLEARANCE, bodyOverlaps, segmentHitsBox, createTraversal, stopTraversal, resetTraversal, queueJump, stepTraversal } from './traversal.js';
 import { createRides } from './rides.js';
@@ -36,8 +37,12 @@ import { apartments, buildApartment, apartmentHeightAt, apartmentCeilingAt, apar
 import { createDayLoop, normalizeDayState, clockRuns, clockHours, bedKind, DAY_CONFIG } from './day.js';
 import { createDayUI } from './day-ui.js';
 import { DORM_HOME, DORM_LEVEL, HAEUN_DORM, createDormCast, haeunDormSpot, onDormFloor } from './dorm.js';
+import { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn, createStudioCast } from './day1.js';
+import { hangulProgress, metWords } from './hangul.js';
 
-const cities = { seoul, tokyo, shanghai };
+const cities = { seoul, tokyo, shanghai, incheon };
+// Korea: Seoul and day one's Incheon share the clock, Tong's menu and the Today list.
+const inKorea = () => S.city === 'seoul' || S.city === 'incheon';
 const cityGroups = {};
 const currentCity = () => cities[S.city];
 const cityPlaces = () => S.city === 'seoul' ? [...SEOUL_PLACES, ...seoul.places] : currentCity().places;
@@ -78,6 +83,7 @@ const SAVE_KEY = 'tong-cozy-seoul-v2';
 const S = {
   name: '연습생',
   look: null, // character-creator look; null keeps the original default player
+  origin: null, // 'athlete' | 'creator' | 'intl_kid' (docs/seoul-origins.md), picked in the creator
   city: 'seoul',
   adventures: {},
   cityPositions: {},
@@ -124,7 +130,7 @@ function save() {
         chapter: S.chapter, // Seoul evals: month, eval state, results (js/eval/chapter.js)
         version: 4, city: S.city, position: safePose(), adventures: S.adventures,
         cityPositions: S.cityPositions, postcards: S.postcards,
-        name: S.name, nationality: S.nationality, birthday: S.birthday, look: S.look, hour: S.hour, day: S.day,
+        name: S.name, nationality: S.nationality, birthday: S.birthday, origin: S.origin, look: S.look, hour: S.hour, day: S.day,
         words: [...S.words], gloss: [...S.phrases], visited: [...S.visited], signs: [...S.signs], quests: S.quests,
         pettedCat: S.pettedCat, seed: S.seed, rel: S.rel, story: S.story, dayLoop: S.dayLoop,
         ...(S.legacy ? { legacy: S.legacy } : {}),
@@ -148,7 +154,8 @@ function applySave(d) {
   Object.assign(S, { name: d.name, hour: d.hour, day: d.day, quests: d.quests ?? {}, pettedCat: d.pettedCat });
   if (Number.isInteger(d.seed)) S.seed = d.seed;
   S.rel = d.rel && typeof d.rel === 'object' ? d.rel : {};
-  S.story = { flags: { ...d.story?.flags }, tally: { ...d.story?.tally } };
+  // Saves from before Day 1 began at Incheon start at the agency (day1.js migrateDay1).
+  S.story = { flags: migrateDay1({ ...d.story?.flags }), tally: { ...d.story?.tally } };
   S.chapter = normalizeChapter(d.chapter);
   S.city = Object.hasOwn(cities, d.city) ? d.city : 'seoul';
   S.hour = Number.isFinite(d.hour) ? ((d.hour % 24) + 24) % 24 : 16.5;
@@ -156,6 +163,7 @@ function applySave(d) {
   S.dayLoop = normalizeDayState(d.dayLoop, S.day);
   S.name = typeof d.name === 'string' ? d.name : '연습생';
   S.nationality = typeof d.nationality === 'string' ? d.nationality : null;
+  S.origin = ORIGINS.some((o) => o.id === d.origin) ? d.origin : null;
   S.birthday = d.birthday && Number.isInteger(d.birthday.m) && Number.isInteger(d.birthday.d) ? d.birthday : null;
   S.adventures = {};
   for (const id of Object.keys(cities)) {
@@ -684,21 +692,17 @@ function addAff(who, n, beatId) {
   sfx.heart();
 }
 
-// Day one in Seoul is one short chain; the rest of the list waits for day two.
-const ARRIVAL = [
-  ['locker', '🔑 Find your locker at Onsae'],
-  ['register', '📝 Hand in your trainee registration'],
-  ['dorm', '🏠 Get to the dorm (Yeonnam Apartments)'],
-  ['firstNight', '🛏️ Sleep in your bunk'],
-];
+// Day one is one chain from Incheon to your bunk (day1.js); the rest of the list waits for day two.
+const ARRIVAL = ARRIVAL_STEPS;
 const arrivalDone = () => ARRIVAL.every(([id]) => S.quests[id]);
 /** Ticks the arrival steps from game state (old saves past day one count as done). */
 function checkArrival() {
-  if (S.city !== 'seoul') return;
-  const f = S.story.flags, past = S.day >= 2;
-  const state = { locker: f.h0_done || past, register: !!seoulEval?.chapter?.profile || past, dorm: f.dorm_arrived || past, firstNight: past };
+  if (!inKorea()) return;
+  const state = arrivalState(S.story.flags, { day: S.day, registered: !!seoulEval?.chapter?.profile });
   for (const [id] of ARRIVAL) if (state[id] && !S.quests[id]) done(id);
 }
+/** 한글 X/24: letters from the words this save rebuilt, plus the signs it read. */
+const hangul = () => hangulProgress(metWords(S.story.flags, [...S.signs].map((id) => SIGNS[id]?.word).filter(Boolean)));
 const QUESTS = [
   ['haeunDay', '💃 Meet your partner at the studio (9:00–19:00)'],
   ['pojang', '🏮 Dinner at the 포장마차 (19:00~)'],
@@ -717,8 +721,8 @@ function updateQuest() {
   $('city-title').textContent = `${currentCity().nativeName} · ${currentCity().name}`;
   $('map-title').textContent = `${currentCity().name} · compressed city map`;
   document.title = `Tong · ${currentCity().name}`;
-  document.body.classList.toggle('remote-city', S.city !== 'seoul');
-  if (S.city !== 'seoul') {
+  document.body.classList.toggle('remote-city', !inKorea());
+  if (!inKorea()) {
     ui.questList.replaceChildren();
     const a = adventure();
     for (const label of [errandLabel(), `Explore ${a.discovered.length}/${cityPlaces().length} places · ${a.mastered.length} phrases learned`]) {
@@ -739,6 +743,7 @@ function updateQuest() {
       ui.questList.appendChild(li);
     }
     $('quest-count').textContent = `${ARRIVAL.filter(([id]) => S.quests[id]).length}/${ARRIVAL.length}`;
+    addHangulLine();
     return;
   }
   const open = QUESTS.filter(([id]) => !S.quests[id]);
@@ -757,6 +762,15 @@ function updateQuest() {
   local.textContent = errandLabel();
   ui.questList.prepend(local);
   $('quest-count').textContent = `${doneCount}/${QUESTS.length}`;
+  addHangulLine();
+}
+function addHangulLine() {
+  const { count, total } = hangul();
+  if (!count) return;
+  const li = document.createElement('li');
+  li.className = 'hangul-count';
+  li.textContent = `한글 ${count}/${total}`;
+  ui.questList.appendChild(li);
 }
 
 /** Connect to the hosting Tong app, then carry any pre-bridge progress into its store once. */
@@ -1073,6 +1087,8 @@ const A = {
   quizChoices,
   tongTalk: () => tongHintBubble(),
   practice,
+  hangul: () => hangul(),
+  sleepNow: () => useBed(),
   get sign() { return signOpen; },
   readSign,
   laterSign: () => (signDeclined = signOpen?.id ?? null),
@@ -1137,6 +1153,7 @@ const scenes = createScenePlayer({
       setExpr(jin, 'neutral', 1.2);
     } else if (c === 'stand') standUp();
     else if (c === 'photo') setTimeout(() => polaroid('jin'), 600);
+    else if (c === 'ride') rideTrain();
   },
   changed(id, { before, after, beatId, stageChanged }) {
     // Shared affinity (the HUD hearts) follows warmth; the stage label lives in the engine.
@@ -1154,6 +1171,7 @@ const scenes = createScenePlayer({
   },
   done(scene) {
     if (SCENE_QUEST[scene.id]) done(SCENE_QUEST[scene.id]);
+    if (dayOneDone(scene)) return;
     if (scene.id === 'haeun.h2') day.spend('dance'); // the drills scene is dance practice
     hangout(scene.location === 'agency_lockers' ? 'practice_studio' : scene.location);
     if (scene.id === 'jin.j0') startExit();
@@ -1164,10 +1182,104 @@ const scenes = createScenePlayer({
 /** Ha-eun in the studio: the next story beat if one is ready, else a small moment, else a brush-off. */
 function talkToHaeun() {
   const f = S.story.flags;
-  if (!f.h0_done) return dlg.start('haeun_busy');
+  // Day one she's only a trainee you haven't been introduced to; H1 is tomorrow at 10.
+  if (!f.h0_done || S.day < 2) return dlg.start('haeun_busy_d1');
   if (scenes.play('haeun.h1') || scenes.play('haeun.h2') || scenes.play('haeun.a3.water_break')) return;
   dlg.start(f.h1_done ? 'haeun_idle' : 'haeun_tomorrow');
 }
+
+/* ── Day 1: Incheon → Hongdae → Onsae (day1.js, docs/seoul-day1.md) ── */
+
+const flag = (f) => !!S.story.flags[f];
+/** Move between Day 1's places behind a fade, without the flight banner or the two-hour hop. */
+async function dayOneMove(cityId, pose, hour) {
+  transitioning = true;
+  prepareTransition();
+  await wait(650);
+  if (S.city !== cityId) {
+    S.cityPositions[S.city] = safePose();
+    S.city = cityId;
+  }
+  if (Number.isFinite(hour)) S.hour = hour;
+  placePlayer(pose);
+  syncCity();
+  save();
+  await wait(250);
+  ui.fade.classList.remove('on');
+  transitioning = false;
+  clearControls();
+}
+/** Cue 'ride': sit down in the train car while the dialogue goes on. */
+function rideTrain() {
+  ui.fade.classList.add('on');
+  setTimeout(() => {
+    player.auto = null;
+    player.root.position.set(...INCHEON.seat);
+    player.root.rotation.y = 0;
+    player.pose = 'sit';
+    cam.yaw = Math.PI;
+    cam.snap = true;
+    ui.fade.classList.remove('on');
+  }, 450);
+}
+const HONGDAE_POSES = {
+  station: { position: SEOUL_PLACES.find((p) => p.id === 'subway').spawn, yaw: 0 },
+  street: { position: [1.6, 0, 18], yaw: 0 },
+};
+async function arriveHongdae() {
+  const { at, hour } = hongdaeArrival(S.story.flags);
+  player.pose = 'idle';
+  if (flag('read_sign_subway') && !S.signs.has('subway')) {
+    S.signs.add('subway');
+    setSignRead('subway', true);
+  }
+  await dayOneMove('seoul', HONGDAE_POSES[at], hour);
+  banner(at === 'street' ? '홍대' : '🚇 홍대입구역', 'Hongdae · Onsae is up the stairs by the river');
+  checkArrival();
+  setTimeout(tongHintBubble, 1200);
+}
+/** Day 1 scene endings. Returns true when the scene is one of Day 1's own. */
+function dayOneDone(scene) {
+  if (scene.id === 'haeun.h0.dorm' && flag('d1_stayed_up')) {
+    day.spend(12);
+    advanceHours(1);
+  }
+  if (!scene.id.startsWith('seoul.d1.')) return false;
+  if (scene.id === 'seoul.d1.exit') setExitOpen(true);
+  if (scene.id === 'seoul.d1.station') arriveHongdae();
+  if (scene.id === 'seoul.d1.arrive') setTimeout(() => scenes.play('seoul.d1.orientation'), 500);
+  if (scene.id === 'seoul.d1.bedtime') setTimeout(() => dlg.start('hangul_recap'), 400);
+  checkArrival();
+  updateQuest();
+  save();
+  return true;
+}
+/** Per frame on Day 1: start the airport scene, and the arrival when you walk into the studio. */
+function dayOneTick(room) {
+  if (dlg.state.active || modalOpen() || !S.started) return;
+  if (S.city === 'incheon' && !flag('played:seoul.d1.airport')) return void scenes.play('seoul.d1.airport');
+  if (S.city !== 'seoul' || !flag('d1_arrived_hongdae') || flag('played:seoul.d1.arrive')) return;
+  if (zoneAt(player.root.position.x, player.root.position.z)?.id !== 'studio' || signOpen) return;
+  setHour(studioHour(S.story.flags, S.hour));
+  scenes.play('seoul.d1.arrive');
+}
+const INCHEON_INTERACTABLES = [
+  {
+    label: '출구 · The way out',
+    pos: () => INCHEON.exitDoor,
+    r: 3,
+    on: () => !flag('d1_exit_done'),
+    act: () => scenes.play('seoul.d1.exit'),
+  },
+  {
+    label: '전광판 · Departure board',
+    pos: () => INCHEON.board,
+    r: 3.2,
+    on: () => flag('d1_exit_done') && !flag('d1_arrived_hongdae'),
+    act: () => scenes.play('seoul.d1.station'),
+  },
+];
+let studioCast = null;
 
 /* ── Interactions ────────────────────────────────── */
 
@@ -1185,7 +1297,7 @@ const interactables = [
     },
   },
   {
-    label: '하은 · Ha-eun',
+    get label() { return S.story.flags.h1_done ? '하은 · Ha-eun' : '연습생 · Trainee'; },
     pos: () => haeun.root.position,
     r: 2.3,
     on: () => loc.haeun === 'studio' && haeun.root.visible,
@@ -1280,17 +1392,20 @@ function inYourRoom() {
 }
 async function useBed() {
   clearControls();
+  // The first night: Tong goes over the day, then the Hangul recap, then sleep (dayOneDone).
+  if (bedKind(S.hour) !== 'nap' && scenes.play('seoul.d1.bedtime')) return;
   if (bedKind(S.hour) === 'nap') {
     if (await dayUI.napPrompt({ hour: S.hour }) === 'nap') day.nap();
   } else await day.sleepUntilMorning();
   updateSchedules(true);
 }
 interactables.push({
-  label: '하은 · Ha-eun',
+  // Her name comes from the water bottles in H1; until then she is just a trainee.
+  get label() { return S.story.flags.h1_done ? '하은 · Ha-eun' : '연습생 · Trainee'; },
   pos: () => haeun.root.position,
   r: 1.8,
   on: () => loc.haeun === 'dorm' && haeun.root.visible,
-  act: () => { bubble(haeun, HAEUN_DORM.line.ko); toast(`<b>하은</b><span>${HAEUN_DORM.line.en}</span>`, 2400); },
+  act: () => { bubble(haeun, HAEUN_DORM.line.ko); toast(`<b>${S.story.flags.h1_done ? '하은' : '연습생'}</b><span>${HAEUN_DORM.line.en}</span>`, 2400); },
 });
 let dormCast = null;
 for (const i of [0, 1, 2, 3, 4]) interactables.push({
@@ -1383,8 +1498,9 @@ function updateInteract() {
         if (nearest?.character === staff.character && nearest.roomId === staff.roomId && staffAccessible(nearest, player.root.position)) openPlace(staffPlace, staff);
       },
     });
-    local.unshift({ label: `✈ ${airport.name} · Flights`, pos: () => new THREE.Vector3(...airport.spawn), r: 4, on: () => true, act: () => openTravel('flights') });
-    for (const it of [...(S.city === 'seoul' ? interactables : []), ...local]) {
+    if (!currentCity().hidden) local.unshift({ label: `✈ ${airport.name} · Flights`, pos: () => new THREE.Vector3(...airport.spawn), r: 4, on: () => true, act: () => openTravel('flights') });
+    const story = S.city === 'seoul' ? interactables : S.city === 'incheon' ? INCHEON_INTERACTABLES : [];
+    for (const it of [...story, ...local]) {
       if (!it.on()) continue;
       const q = it.pos();
       if (Math.abs(q.y - p.y) > 1.5) continue;
@@ -1698,7 +1814,7 @@ function openTravel(mode = 'subway') {
   const cards = $('flight-cities');
   cards.replaceChildren();
   cards.classList.toggle('hidden', !flights);
-  if (flights) for (const city of Object.values(cities)) {
+  if (flights) for (const city of Object.values(cities).filter((c) => !c.hidden)) {
     const b = document.createElement('button');
     b.className = 'city';
     b.disabled = city.id === S.city;
@@ -1794,9 +1910,11 @@ function drawMapBg() {
     row.textContent = `${p.icon} ${p.en}`;
     legend.appendChild(row);
   }
-  const airportLabel = document.createElement('span');
-  airportLabel.textContent = `✈ ${currentCity().airport.name} · Walk here for flights`;
-  legend.appendChild(airportLabel);
+  if (!currentCity().hidden) {
+    const airportLabel = document.createElement('span');
+    airportLabel.textContent = `✈ ${currentCity().airport.name} · Walk here for flights`;
+    legend.appendChild(airportLabel);
+  }
 }
 
 function drawMinimap() {
@@ -2034,13 +2152,13 @@ function setHour(h) {
 /** Tap Tong (or H): in Seoul, a hint plus Learn / Review; elsewhere, a greeting. */
 function tongTalk() {
   if (modalOpen() || dlg.state.active) return;
-  if (S.city === 'seoul' && S.started) return dlg.start('tong_menu');
+  if (inKorea() && S.started) return dlg.start('tong_menu');
   tongHintBubble();
 }
 /** Tong's hint as a speech bubble, without opening the menu. */
 function tongHintBubble() {
   if (modalOpen() || dlg.state.active) return;
-  if (S.city !== 'seoul') {
+  if (!inKorea()) {
     const greeting = S.city === 'tokyo' ? (localHour() < 17 ? 'こんにちは · Konnichiwa' : 'こんばんは · Konbanwa') : (localHour() < 17 ? '你好 · Nǐ hǎo' : '晚上好 · Wǎnshàng hǎo');
     bubble(tong, `${greeting}! ${errandLabel()}`, { dur: 5 });
     ui.questHint.textContent = `${currentCity().subtitle} · ${errandLabel()} · E / tap to practice at a landmark.`;
@@ -2698,7 +2816,7 @@ function updateHud() {
     lastClock = key;
     ui.clockIcon.textContent = timeIcon(localHour());
     ui.clockTime.textContent = tk.digital;
-    ui.clockKo.textContent = S.city === 'seoul' ? tk.ko : `${currentCity().name} · UTC+${S.city === 'shanghai' ? 8 : 9} · ${localHour() < 6 ? 'Night' : localHour() < 12 ? 'Morning' : localHour() < 18 ? 'Afternoon' : 'Evening'}`;
+    ui.clockKo.textContent = inKorea() ? tk.ko : `${currentCity().name} · UTC+${S.city === 'shanghai' ? 8 : 9} · ${localHour() < 6 ? 'Night' : localHour() < 12 ? 'Morning' : localHour() < 18 ? 'Afternoon' : 'Evening'}`;
   }
   const p = player.root.position;
   const z = zoneAt(p.x, p.z);
@@ -2772,7 +2890,10 @@ function frame() {
     if (loc.haeun === 'dorm') haeun.root.visible = onDormFloor(room);
     // Day one, evening: walking onto your floor plays the arrival (H0 · 숙소).
     if (onDormFloor(room) && !dlg.state.active && !modalOpen() && !S.story.flags.dorm_arrived && S.story.flags.h0_done) scenes.play('haeun.h0.dorm');
+    studioCast?.update(studioCastOn(S.story.flags));
+    for (const a of studioCast?.actors ?? []) if (a.character.root.visible) animate(a.character, dt, t, 0);
   }
+  if (!arrivalDone()) dayOneTick();
   const hs = updateHaeun(dt, t);
   const js = updateJin(dt, t);
   updateNpcs(dt, t);
@@ -2831,9 +2952,10 @@ function frame() {
 
 /** Creator identity: nationality and birthday (age is fixed by the game, see eval1.js PLAYER_AGE). */
 function fillIdentityFields() {
-  const nat = $('nationality'), m = $('birth-m'), d = $('birth-d');
+  const nat = $('nationality'), m = $('birth-m'), d = $('birth-d'), origin = $('origin');
   if (!nat || nat.options.length) return;
   for (const [ko, en] of PROFILE_OPTIONS.nationality) nat.add(new Option(`${en} · ${ko}`, ko));
+  for (const o of ORIGINS) origin?.add(new Option(`${o.en} · ${o.ko}`, o.id));
   for (let i = 1; i <= 12; i++) m.add(new Option(`${i}월`, String(i)));
   const days = () => {
     const keep = Number(d.value) || 1;
@@ -2875,13 +2997,14 @@ async function boot() {
       const place = places.find((place) => place.interiorId === room.id);
       if (room.staff && place) room.staff.placeId = place.id;
     }
-    buildApartment(city.home);
+    if (city.home) buildApartment(city.home);
   });
   buildCast();
   seoulEval.build(cityGroups.seoul);
   occupants = createOccupants(interiors, { groups: cityGroups });
   const dormHome = apartments.find((b) => b.id === DORM_HOME);
   if (dormHome) dormCast = createDormCast({ building: dormHome, group: cityGroups.seoul });
+  studioCast = createStudioCast({ group: cityGroups.seoul, floorY: TERRACE_Y, makePedestrian });
   initParticles();
   buildMotes();
   const saved = loadSave();
@@ -2916,21 +3039,27 @@ async function boot() {
       S.name = $('name').value.trim() || '연습생';
       S.nationality = $('nationality').value;
       S.birthday = { m: Number($('birth-m').value), d: Number($('birth-d').value) };
+      S.origin = ORIGINS.some((o) => o.id === $('origin')?.value) ? $('origin').value : ORIGINS[0].id;
+      // Day 1 starts at Incheon arrivals, 1:05pm (docs/seoul-day1.md).
+      S.city = 'incheon';
+      S.hour = START_HOUR;
+      S.story.flags = { ...S.story.flags, d1_started: true, [originFlag(S.origin)]: true };
     }
     initAudio();
     audio.ctx?.resume();
     $('title').classList.add('hidden');
     ui.hud.classList.remove('hidden');
     S.started = true;
-    if (!resume || !saved) placePlayer({ position: [1.6, 0, 18], yaw: 0 });
+    if (!resume || !saved) placePlayer({ position: INCHEON.spawn, yaw: incheon.yaw });
     syncCity();
+    setExitOpen(!!S.story.flags.d1_exit_done);
+    // Day one keeps the Today list open so every step is visible.
+    if (!arrivalDone()) document.querySelector('.panel.quest')?.setAttribute('open', '');
     if (resume && saved) {
       toast(`<b>${currentCity().nativeName} · ${currentCity().name}</b><span>${koreanTime(localHour()).digital} local. Tong floats beside you — press <kbd>H</kbd> for a hint. Walk to ✈ for flights.</span>`, 4200);
       setTimeout(tongHintBubble, 3800);
-    } else {
-      // A new game opens with Tong introducing itself, like /game's tong-intro.
-      setTimeout(() => dlg.start('tong_intro_1'), 600);
     }
+    // A new game opens at Incheon arrivals: dayOneTick() plays the airport scene, where Tong appears.
     save();
   };
   const creator = createCreator();
@@ -2990,6 +3119,15 @@ async function boot() {
     travelTo: (id, options) => travelTo(id === 'airport' ? { id: 'airport', icon: '✈', ko: currentCity().airport.nativeName, en: currentCity().airport.name, spawn: currentCity().airport.spawn, yaw: currentCity().yaw } : cityPlaces().find((p) => p.id === id), options),
     cities, cityRegistry: cities, get currentCity() { return currentCity(); },
     changeCity, openTravel, save, localHour, heightAt, zoneAt,
+    // Tests that start after Day 1's journey: mark Incheon → orientation done and stand in Hongdae.
+    skipDayOne: async () => {
+      if (dlg.state.active) dlg.end();
+      S.story.flags = { ...migrateDay1({}), ...S.story.flags, d1_exit_done: true, d1_arrived_hongdae: true, d1_arrival_seen: true, orientation_done: true, d1_legacy: true,
+        'played:seoul.d1.airport': true, 'played:seoul.d1.exit': true, 'played:seoul.d1.station': true, 'played:seoul.d1.arrive': true, 'played:seoul.d1.orientation': true };
+      await dayOneMove('seoul', HONGDAE_POSES.street, 16.5);
+      checkArrival();
+      updateQuest();
+    },
     get bounds() { return currentCity().bounds; },
     get transitioning() { return transitioning; },
     openPlace: (id) => { const p = cityPlaces().find((p) => p.id === id); if (p) openPlace(p); },

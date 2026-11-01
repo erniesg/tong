@@ -36,10 +36,10 @@ export const module: SceneModule = {
         lines: [
           {
             when: { flags: ['jin_banmal_accepted'] },
-            value: { ko: '그 앱 계속 켜 놔? 나랑 있을 땐 번역기 필요 없잖아. 내가 다 알려 줄게.', en: 'You keep that app on? You don\'t need a translator with me. I\'ll teach you everything.', review: 'native' },
+            value: { ko: '자꾸 뭘 찾아봐? 나랑 있을 땐 번역기 필요 없잖아. 내가 다 알려 줄게.', en: 'You keep looking things up? You don\'t need a translator with me. I\'ll teach you everything.', note: 'He can\'t see Tong. He sees you pause, glance at nothing, and come back with the right word.', review: 'native' },
           },
           {
-            value: { ko: '그 앱 계속 켜 놔요? 저랑 있을 땐 번역기 필요 없잖아요. 제가 다 알려 줄게요.', en: 'You keep that app on? You don\'t need a translator with me. I\'ll teach you everything.', review: 'native' },
+            value: { ko: '자꾸 뭘 찾아봐요? 저랑 있을 땐 번역기 필요 없잖아요. 제가 다 알려 줄게요.', en: 'You keep looking things up? You don\'t need a translator with me. I\'ll teach you everything.', note: 'He can\'t see Tong. He sees you pause, glance at nothing, and come back with the right word.', review: 'native' },
           },
         ],
         tong: { ko: '…나 말하는 거야?', en: '…Is he talking about me?', maxLevel: 6 },
@@ -48,13 +48,13 @@ export const module: SceneModule = {
             id: 'ja1_tong_off',
             intent: 'defer',
             ask: 'directive',
-            say: { ko: '…그래요. 꺼 둘게요.', en: '…Okay. I\'ll switch it off.', rom: 'geuraeyo. kkeo dulgeyo' },
+            say: { ko: '…그래요. 안 찾아볼게요.', en: '…Okay. I\'ll stop looking things up.', rom: 'geuraeyo. an chajabolgeyo' },
             outcomes: [
               {
                 when: { flags: ['jin_banmal_accepted'] },
                 speaker: 'jin',
                 expr: 'smile',
-                reaction: { ko: '잘했어. 모르는 거 있으면 나한테 물어봐.', en: 'Good. Anything you don\'t know, ask me.', note: 'Tong goes quiet whenever he\'s around now. It was easier. That\'s the point.' },
+                reaction: { ko: '잘했어. 모르는 거 있으면 나한테 물어봐.', en: 'Good. Anything you don\'t know, ask me.', note: 'You stop asking Tong anything when he\'s around. It was easier. That\'s the point.' },
                 deltas: { warmth: 3 },
                 setFlags: ['jin_tong_asked', 'tong_off_with_jin'],
                 tally: ['jin_directives'],
@@ -62,7 +62,7 @@ export const module: SceneModule = {
               {
                 speaker: 'jin',
                 expr: 'smile',
-                reaction: { ko: '잘했어요. 모르는 거 있으면 저한테 물어봐요.', en: 'Good. Anything you don\'t know, ask me.', note: 'Tong goes quiet whenever he\'s around now. It was easier. That\'s the point.', review: 'native' },
+                reaction: { ko: '잘했어요. 모르는 거 있으면 저한테 물어봐요.', en: 'Good. Anything you don\'t know, ask me.', note: 'You stop asking Tong anything when he\'s around. It was easier. That\'s the point.', review: 'native' },
                 deltas: { warmth: 3 },
                 setFlags: ['jin_tong_asked', 'tong_off_with_jin'],
                 tally: ['jin_directives'],
@@ -74,12 +74,12 @@ export const module: SceneModule = {
             intent: 'decline',
             ask: 'directive',
             minTier: 1,
-            say: { ko: '통은 제 선생님이에요. 진 씨도 같이 알려 주세요.', en: 'Tong\'s my teacher. You can teach me too.', rom: 'tong-eun je seonsaengnimieyo. jin ssido gachi allyeo juseyo' },
+            say: { ko: '저는 제 방식대로 배워요. 진 씨도 같이 알려 주세요.', en: 'I learn my own way. You can teach me too.', rom: 'jeoneun je bangsikdaero baewoyo. jin ssido gachi allyeo juseyo' },
             outcomes: [
               {
                 speaker: 'jin',
                 expr: 'laugh',
-                reaction: { ko: '하하, 선생님이 둘이네. 좋아요.', en: 'Haha, two teachers, then. Fine.', note: 'He means it, mostly. He glances at your phone once more before he lets it go.' },
+                reaction: { ko: '하하, 선생님이 둘이네. 좋아요.', en: 'Haha, two teachers, then. Fine.', note: 'He means it, mostly. He watches you glance at nothing once more before he lets it go.' },
                 deltas: { warmth: -1, trust: 2 },
                 setFlags: ['jin_tong_asked', 'kept_tong_kindly'],
               },

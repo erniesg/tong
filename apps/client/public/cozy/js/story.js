@@ -34,31 +34,6 @@ const CAFE_ITEMS = [
 
 const won = (n) => n.toLocaleString('en-US');
 
-// Tong's intro lines: the English is /game's tong-intro (app/game/page.tsx); one set per new game.
-// Korean is drafted and needs native review (#395).
-const INTRO_SETS = [
-  [
-    ['사람을 잇는 게 내 일이야. 나는 통!', 'They call me Tong. I connect people. It’s what I do.'],
-    ['단어를 배우고, 분위기를 읽고, 관계를 쌓아.', 'Learn the words. Read the room. Build the bonds.'],
-    ['세 도시가 네 인생을 바꿀 거야.', 'Three cities are about to change your life.'],
-  ],
-  [
-    ['나는 통. 기다리고 있었어.', 'I’m Tong. I’ve been waiting for you.'],
-    ['서울, 도쿄, 상하이. 다 너한테 필요한 게 있어.', 'Seoul, Tokyo, Shanghai: each one has something you need.'],
-    ['말을 배우고 믿음을 얻으면, 문이 열려.', 'Speak their language, earn their trust, and doors will open.'],
-  ],
-  [
-    ['나는 통. 네 비밀 무기라고 생각해.', 'The name’s Tong. Think of me as your edge.'],
-    ['이 업계는 인맥 없인 아무도 못 떠.', 'Nobody makes it in this industry without the right connections.'],
-    ['다행히 난 모두를 알아. 시작하자!', 'Lucky for you, I know everyone. Let’s get started.'],
-  ],
-  [
-    ['나는 통. 네가 아는 스타들, 다 여기서 시작했어.', 'I’m Tong. Every star you’ve heard of? They started exactly where you are.'],
-    ['세 도시. 세 언어. 기회는 한 번.', 'Three cities. Three languages. One shot to make it.'],
-    ['정신 바짝 차리고 나만 따라와.', 'Stay sharp and follow my lead.'],
-  ],
-];
-const INTRO = INTRO_SETS[Math.floor(Math.random() * INTRO_SETS.length)];
 
 /**
  * A = actions/state from main.js:
@@ -192,6 +167,7 @@ export function buildNodes(A) {
     /* ── 연습실 (day) ─────────────────────────── */
     // Ha-eun's scenes are authored in lib/content/routes/haeun and played by scene-player.js.
     haeun_busy: { who: 'haeun', expr: 'smile', ko: '아, 지금 연습 중이라서요~ 나중에 얘기해요.', en: 'Oh, I’m in the middle of practice~ Let’s talk later.', end: true },
+    haeun_busy_d1: { who: 'haeun_unnamed', expr: 'smile', ko: '아, 지금 연습 중이라서요~', en: 'Oh, I’m in the middle of practice~', end: true },
     haeun_tomorrow: { who: 'haeun', expr: 'smile', ko: '수고하셨어요~ 내일 봐요.', en: 'Good work~ See you tomorrow.', end: true },
     haeun_idle: {
       who: 'haeun',
@@ -332,18 +308,19 @@ export function buildNodes(A) {
       end: true,
     },
 
-    /* ── New game: Tong introduces itself (same lines as /game's tong-intro) ── */
-    tong_intro_1: { who: 'tong', expr: 'cheerful', ko: () => INTRO[0][0], en: () => INTRO[0][1], next: 'tong_intro_2' },
-    tong_intro_2: { who: 'tong', expr: 'excited', ko: () => INTRO[1][0], en: () => INTRO[1][1], next: 'tong_intro_3' },
-    tong_intro_3: { who: 'tong', expr: 'proud', ko: () => INTRO[2][0], en: () => INTRO[2][1], next: 'tong_intro_seoul' },
-    tong_intro_seoul: {
+    /* ── Day 1, bedtime: the letters you met today (hangul.js) ── */
+    hangul_recap: {
       who: 'tong',
-      expr: 'love',
-      ko: '서울에 온 걸 환영해, {name}!',
-      en: 'Welcome to Seoul, {name}! Your agency is up the stairs. Let’s find your locker first. Tap me (or press H) whenever you need me.',
-      hint: '<b>환영해</b> = welcome · Tong lives in your phone. The more you do yourself, the more people here notice.',
+      expr: 'proud',
+      ko: () => A.hangul().letters.map((l) => l.letter).join(' '),
+      en: () => {
+        const h = A.hangul();
+        const where = h.letters.map((l) => `${l.letter} ${l.word}`).join(' · ');
+        return `${h.count} of ${h.total} letters today: ${where}. ${h.total - h.count} to go.`;
+      },
+      hint: '<b>한글</b> · Tong goes over these in Review whenever you like.',
       end: true,
-      after: () => A.tongTalk(),
+      after: () => A.sleepNow(),
     },
 
     /* ── Tap Tong: a hint, then Learn / Review ─────────── */
@@ -436,7 +413,12 @@ export function buildNodes(A) {
 export function tongHint(S, hour) {
   const f = S.story?.flags ?? {};
   const night = hour >= 19 || hour < 3;
-  if (!f.h0_done) return { ko: '연습실에 네 사물함이 있어!', en: 'Your locker is in the agency’s practice studio, up the stairs. Start there.', expr: 'excited' };
+  // Day 1 (docs/seoul-day1.md): Incheon → Hongdae → Onsae.
+  if (!f.d1_exit_done) return { ko: '출구로 가자!', en: 'Follow the signs to the doors. The one marked 출구 is the way out.', expr: 'excited' };
+  if (!f.d1_arrived_hongdae) return { ko: '전광판 찾자!', en: 'Find the departure board in the concourse. We need the train that stops at 홍대입구.', expr: 'excited' };
+  if (!f['played:seoul.d1.arrive']) return { ko: '연습실로! 세 시까지.', en: 'Onsae\'s studio is up the stairs on the terrace by the river. Manager Choi said 3pm.', expr: 'excited' };
+  if (!f.orientation_done) return { ko: '오리엔테이션이야.', en: 'Orientation. Listen to Manager Choi.', expr: 'thinking' };
+  if (!f.h0_done) return { ko: '사물함 보러 가자!', en: 'Your locker is at the back of the studio, by the door wall.', expr: 'excited' };
   if (!f.dorm_arrived) return { ko: '숙소로 가자!', en: 'Manager Choi is waiting at the dorm: Yeonnam Apartments, northwest of the railway park. First floor. Your bed is there.', expr: 'excited' };
   if ((S.day ?? 1) < 2) return { ko: '오늘은 푹 자!', en: 'Long day. Your bed is the bottom bunk in Da-on\'s room. Studio at 10 tomorrow: Coach Park said don\'t be late.', expr: 'cheerful' };
   if (!f.h1_done && hour >= 5 && hour < 9) return { ko: '열 시까지 연습실!', en: 'Studio at 10: Coach Park is pairing you with someone today.', expr: 'cheerful' };

@@ -34,7 +34,7 @@ function checkLine(l: Line | undefined, where: string) {
 }
 
 // Speakers the cozy dialogue box can show (public/cozy/js/dialogue.js SPEAKERS).
-const SPEAKERS = new Set(['narration', 'tong', 'haeun', 'jin', 'ajusshi', 'barista', 'cashier', 'manager_choi', 'coach_park', 'minji', 'yerin', 'daon', 'boram', 'dohee', 'yunseo']);
+const SPEAKERS = new Set(['narration', 'tong', 'haeun', 'jin', 'ajusshi', 'barista', 'cashier', 'manager_choi', 'coach_park', 'minji', 'yerin', 'daon', 'boram', 'dohee', 'yunseo', 'haeun_unnamed', 'stranger', 'driver', 'fan']);
 
 const RETIRED = [/Busan|부산|라카노/, /내 이름 읽을 수 있어/, /masked busk|busks? masked/i];
 
