@@ -90,6 +90,15 @@ function migrationError(p: Record<string, unknown>): string | null {
   return null;
 }
 
+function practiceError(p: Record<string, unknown>): string | null {
+  if (p.mode !== 'learn' && p.mode !== 'review') return 'bad mode';
+  if (!CITIES.has(p.cityId as string)) return 'bad cityId';
+  if (typeof p.locationId !== 'string' || !ID.test(p.locationId)) return 'bad locationId';
+  if (!Array.isArray(p.words) || p.words.length > 400) return 'words must be a list of at most 400';
+  for (const w of p.words) if (!isObj(w) || !text(w.ko, 40) || !optText(w.rom, 80) || !optText(w.en, 120)) return 'bad words';
+  return null;
+}
+
 /** Validate an untrusted postMessage payload from the cozy iframe. */
 export function parseCozyMessage(data: unknown): Parsed {
   if (!isObj(data) || data.protocol !== PROTOCOL) return { ok: false, reason: 'not a cozy bridge message' };
@@ -112,6 +121,9 @@ export function parseCozyMessage(data: unknown): Parsed {
       break;
     case 'cozy:migrate':
       error = migrationError(p);
+      break;
+    case 'cozy:practice':
+      error = practiceError(p);
       break;
     default:
       error = `unknown type ${String(data.type)}`;

@@ -218,7 +218,7 @@ test('actual runtime occupied-room interaction uses nearby actor, not the zero-d
     openPlace: (p, a) => { opened = { p, a }; }, openTravel: () => {}, staffAccessible: () => true,
     THREE: { Vector3: class { constructor(x,y,z) { Object.assign(this, { x,y,z }); } } },
     ui: { prompt: { innerHTML: '', classList: { add() {}, remove() {} } } },
-    segmentHitsBox,
+    segmentHitsBox, placeName: (p) => ({ ko: p.ko, en: p.en }),
   };
   const api = new Function(...Object.keys(context), `let activeInteract; ${functionSource('updateInteract')}\nreturn () => {updateInteract(); return activeInteract;};`)(...Object.values(context));
   assert.equal(api(), null, 'room alone must not start an occupied shop activity');

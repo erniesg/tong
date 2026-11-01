@@ -1252,6 +1252,38 @@ export interface CozyMigrationResult {
   progress: CozyProgressSnapshot;
 }
 
+/**
+ * Tong's practice modes, opened by tapping Tong in the world.
+ * learn: a Tong lesson for the place the player stands in.
+ * review: fresh exercises on words the player has met, harder as they master them.
+ */
+export type CozyPracticeMode = 'learn' | 'review';
+
+export interface CozyPracticeWord {
+  ko: string;
+  rom?: string;
+  en?: string;
+}
+
+export interface CozyPracticeRequest {
+  mode: CozyPracticeMode;
+  cityId: CozyCityId;
+  /** Shared location id of the place the player is at, e.g. "food_street". */
+  locationId: string;
+  /** The player's phrase book (review draws from it); at most 400. */
+  words: CozyPracticeWord[];
+}
+
+export interface CozyPracticeResult {
+  outcome: CozyExerciseOutcome;
+  mode: CozyPracticeMode;
+  exercises: number;
+  correct: number;
+  xpAwarded: number;
+  progress: CozyProgressSnapshot;
+  reason?: string;
+}
+
 interface CozyEnvelope<T extends string, P> {
   protocol: typeof COZY_BRIDGE_PROTOCOL;
   version: typeof COZY_BRIDGE_VERSION;
@@ -1266,7 +1298,8 @@ export type CozyToHostMessage =
   | CozyEnvelope<'cozy:hello', Record<string, never>>
   | CozyEnvelope<'cozy:exercise', CozyExerciseRequest>
   | CozyEnvelope<'cozy:progress', { events: CozyProgressEvent[] }>
-  | CozyEnvelope<'cozy:migrate', CozyLegacyMigration>;
+  | CozyEnvelope<'cozy:migrate', CozyLegacyMigration>
+  | CozyEnvelope<'cozy:practice', CozyPracticeRequest>;
 
 /** The host page's safe-area insets in CSS px; an iframe cannot read them itself on iOS. */
 export interface CozyViewport {
@@ -1283,4 +1316,5 @@ export type HostToCozyMessage =
   | CozyEnvelope<'host:progress', { progress: CozyProgressSnapshot }>
   | CozyEnvelope<'host:exercise-result', CozyExerciseResult>
   | CozyEnvelope<'host:migrated', CozyMigrationResult>
+  | CozyEnvelope<'host:practice-result', CozyPracticeResult>
   | CozyEnvelope<'host:error', { reason: string }>;

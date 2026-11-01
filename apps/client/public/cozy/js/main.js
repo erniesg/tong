@@ -10,7 +10,7 @@ import { G, clamp, damp, lerp, rand, wrapAngle, makeCanvas, canvasTexture, round
 import { DayNight, koreanTime, timeIcon } from './sky.js';
 import {
   buildWorld, heightAt as seoulHeightAt, zoneAt as seoulZoneAt, setTentOpen, studioMirrorVisible, makeFood, water, tentMats, lanterns,
-  SPOTS, PLACES as SEOUL_PLACES, TENT, TX, COUNTER_Y, TERRACE_Y,
+  SPOTS, PLACES as SEOUL_PLACES, TENT, TX, COUNTER_Y, TERRACE_Y, SIGNS, setSignRead,
 } from './world.js';
 import {
   makeHaeun, makeJin, makePlayer, makeAjusshi, makeBarista, makeCashier, makePedestrian, makeTong, makeCat,
@@ -88,6 +88,7 @@ const S = {
   words: new Set(),
   phrases: new Map(),
   visited: new Set(),
+  signs: new Set(), // Seoul places whose jumbled sign the player has rebuilt
   quests: {},
   // Relationship engine state (scene-player.js): per-character RelState and save-wide story flags.
   seed: Math.floor(Math.random() * 2 ** 31),
@@ -117,7 +118,7 @@ function save() {
         version: 4, city: S.city, position: safePose(), adventures: S.adventures,
         cityPositions: S.cityPositions, postcards: S.postcards,
         name: S.name, look: S.look, hour: S.hour, day: S.day,
-        words: [...S.words], gloss: [...S.phrases], visited: [...S.visited], quests: S.quests,
+        words: [...S.words], gloss: [...S.phrases], visited: [...S.visited], signs: [...S.signs], quests: S.quests,
         pettedCat: S.pettedCat, seed: S.seed, rel: S.rel, story: S.story,
         ...(S.legacy ? { legacy: S.legacy } : {}),
       }),
@@ -159,6 +160,9 @@ function applySave(d) {
   S.words = new Set(d.words ?? []);
   S.phrases = new Map((d.version >= 4 ? d.gloss : d.phrases) ?? []);
   S.visited = new Set(d.visited ?? []);
+  // Saves from before readable signs start with every sign unread too.
+  S.signs = new Set(Array.isArray(d.signs) ? d.signs.filter((id) => Object.hasOwn(SIGNS, id)) : []);
+  syncSigns();
   S.look = d.look && typeof d.look === 'object' ? normalizeLook(d.look) : null;
   if (S.look) restylePlayer(player, S.look);
   placePlayer(d.position);
@@ -765,6 +769,37 @@ async function exercise(req) {
   }
 }
 
+// Shared location ids Tong's Learn uses for the place the player is nearest.
+const PRACTICE_LOCATIONS = { food: 'food_street', store: 'convenience_store', cafe: 'cafe', subway: 'subway_hub', studio: 'practice_studio' };
+function practiceLocation() {
+  const p = player.root.position;
+  let best = 'food', bestD = Infinity;
+  for (const pl of SEOUL_PLACES) {
+    const d = PRACTICE_LOCATIONS[pl.id] ? Math.hypot(p.x - pl.spawn[0], p.y - pl.spawn[1], p.z - pl.spawn[2]) : Infinity;
+    if (d < bestD) [best, bestD] = [pl.id, d];
+  }
+  return PRACTICE_LOCATIONS[best];
+}
+
+/** Open Tong's Learn or Review over the game; the world waits until it closes. */
+async function practice(mode) {
+  await bridge.ready();
+  // The contract caps the phrase book at 400 entries of short text.
+  const ok = (v, max) => typeof v === 'string' && v.trim() && v.length <= max;
+  const words = [...S.phrases]
+    .filter(([ko]) => ok(ko, 40) && HANGUL.test(ko))
+    .slice(-400)
+    .map(([ko, g]) => ({ ko, ...(ok(g?.rom, 80) ? { rom: g.rom } : {}), ...(ok(g?.en, 120) ? { en: g.en } : {}) }));
+  bridgeBusy = true;
+  clearControls();
+  try {
+    return await bridge.practice({ mode, cityId: 'seoul', locationId: practiceLocation(), words });
+  } finally {
+    bridgeBusy = false;
+    canvas.focus();
+  }
+}
+
 function done(id) {
   if (S.quests[id]) return;
   S.quests[id] = true;
@@ -991,7 +1026,11 @@ const A = {
   lookAtTower: (on) => (lookTower = on),
   quiz,
   quizChoices,
-  tongTalk: () => tongTalk(),
+  tongTalk: () => tongHintBubble(),
+  practice,
+  get sign() { return signOpen; },
+  readSign,
+  laterSign: () => (signDeclined = signOpen?.id ?? null),
   jinWave: () => {
     if (loc.jin === 'cafe' && !S.quests.jin) {
       jin.wave = 1.6;
@@ -1224,7 +1263,7 @@ function updateInteract() {
     const airport = currentCity().airport;
     const room = interiorAt(p, S.city);
     const local = cityPlaces().map((place) => ({
-      label: `${place.icon} ${place.ko} · ${place.en}`,
+      label: `${place.icon} ${placeName(place).ko} · ${placeName(place).en}`,
       // Retain the legacy room fallback ONLY for unstaffed rooms. Occupied
       // shops/homes require approaching their actual same-room/floor actor.
       pos: () => S.city !== 'seoul' && room && !room.staff && room.id === place.interiorId ? p : new THREE.Vector3(...place.spawn), r: place.radius ?? 2.8,
@@ -1326,11 +1365,53 @@ const SEOUL_PHRASES = {
   scenic: { text: '정말 아름다워요', rom: 'jeongmal areumdawoyo', en: 'It is really beautiful' },
 };
 function phraseFor(p) { return p.phrase ?? SEOUL_PHRASES[roleOf(p)]; }
+/* ── Readable signs (Seoul) ─────────────────────── */
+// A main Seoul place keeps its name hidden until its jumbled sign is rebuilt.
+const signUnread = (p) => S.city === 'seoul' && Object.hasOwn(SIGNS, p.id) && !S.signs.has(p.id);
+/** A place's shown name: '???' until its sign is read. */
+function placeName(p) {
+  return signUnread(p) ? { ko: '???', en: 'Unread sign', category: '???' } : { ko: p.ko, en: p.en, category: categoryNames[roleOf(p)] };
+}
+function syncSigns() {
+  for (const id of Object.keys(SIGNS)) setSignRead(id, S.signs.has(id));
+}
+let signPending = null; // place id whose sign Tong offers to read once the player is free
+let signOpen = null; // the sign being read now: { id, ...SIGNS[id] }
+let signDeclined = null; // not offered again until the player walks away and back
+/** Walking up to an unread sign (the place's door, not just its street) queues Tong's offer. */
+function offerSigns() {
+  if (S.city === 'seoul' && S.started && !signPending) {
+    const p = player.root.position;
+    const near = SEOUL_PLACES.find((pl) => {
+      const at = pl.entry ?? pl.spawn;
+      return signUnread(pl) && pl.id !== signDeclined && Math.hypot(p.x - at[0], p.z - at[2]) < 4 && Math.abs(p.y - at[1]) < 1.5;
+    });
+    if (near) signPending = near.id;
+    else if (signDeclined && !SEOUL_PLACES.some((pl) => pl.id === signDeclined && Math.hypot(p.x - (pl.entry ?? pl.spawn)[0], p.z - (pl.entry ?? pl.spawn)[2]) < 6)) signDeclined = null;
+  }
+  if (!signPending || !S.started || dlg.state.active || modalOpen() || S.tentStory !== 'idle' || S.benchSit) return;
+  if (!signUnread({ id: signPending })) return void (signPending = null);
+  signOpen = { id: signPending, ...SIGNS[signPending] };
+  signPending = null;
+  clearControls();
+  dlg.start('sign_build');
+}
+function readSign() {
+  if (!signOpen || S.signs.has(signOpen.id)) return;
+  S.signs.add(signOpen.id);
+  setSignRead(signOpen.id, true);
+  learn(signOpen.word, signOpen.rom, signOpen.en);
+  const p = SEOUL_PLACES.find((pl) => pl.id === signOpen.id);
+  if (p) banner(`${p.icon} ${p.ko}`, p.en);
+  populateLocations();
+  save();
+}
+
 function discover(p) {
   const a = adventure();
   if (a.discovered.includes(p.id)) return;
   a.discovered.push(p.id);
-  banner(`${p.icon} ${p.ko}`, p.en);
+  if (!signUnread(p)) banner(`${p.icon} ${p.ko}`, p.en);
   updateQuest();
   save();
 }
@@ -1345,7 +1426,7 @@ function openPlace(p, actor = null) {
   activityPlace = p;
   discover(p);
   const phrase = phraseFor(p);
-  $('activity-title').textContent = `${actor ? `${actor.name} · ` : ''}${p.icon} ${p.ko} · ${p.en}`;
+  $('activity-title').textContent = `${actor ? `${actor.name} · ` : ''}${p.icon} ${placeName(p).ko} · ${placeName(p).en}`;
   $('activity-description').textContent = `${actor ? `${actor.name}: ${actor.greeting} ` : ''}${p.description ?? `A stop in ${currentCity().name}. Practice a local phrase with Tong.`}`;
   const objective = () => roleOf(p) === 'home' ? 'Home visit · Greet your host politely. Learn the phrase for your next visit.' : errandLabel();
   $('activity-objective').textContent = objective();
@@ -1508,8 +1589,8 @@ function openTravel(mode = 'subway') {
     b.className = 'place';
     b.innerHTML = '<span class="icon"></span><span class="txt"><b></b><small></small></span>';
     b.querySelector('.icon').textContent = p.icon;
-    b.querySelector('b').textContent = p.ko;
-    b.querySelector('small').textContent = p.en;
+    b.querySelector('b').textContent = placeName(p).ko;
+    b.querySelector('small').textContent = placeName(p).en;
     b.onclick = () => travelTo(p);
     list.appendChild(b);
   }
@@ -1787,6 +1868,23 @@ canvas.addEventListener('pointerdown', (e) => {
   lookPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   pinchDistance = pointerDistance();
   canvas.setPointerCapture(e.pointerId);
+  tap = lookPointers.size === 1 ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() } : null;
+});
+// A quick tap that lands on Tong opens Tong's menu, like the Tong chip.
+let tap = null;
+const tapNdc = new THREE.Vector2();
+function tappedTong(e) {
+  if (!tap || e.pointerId !== tap.id || !tong.root.visible) return false;
+  if (performance.now() - tap.t > 350 || Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 8) return false;
+  const r = stageRect();
+  tapNdc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(tapNdc, camera);
+  ray.far = Infinity;
+  return ray.intersectObject(tong.root, true).length > 0;
+}
+canvas.addEventListener('pointerup', (e) => {
+  if (tappedTong(e)) tongTalk();
+  tap = null;
 });
 canvas.addEventListener('pointermove', (e) => {
   if (!actionsAllowed() || !lookPointers.has(e.pointerId)) return;
@@ -1832,7 +1930,14 @@ function setHour(h) {
   S.hour = (h + (S.city === 'shanghai' ? 1 : 0)) % 24;
   sfx.whoosh();
 }
+/** Tap Tong (or H): in Seoul, a hint plus Learn / Review; elsewhere, a greeting. */
 function tongTalk() {
+  if (modalOpen() || dlg.state.active) return;
+  if (S.city === 'seoul' && S.started) return dlg.start('tong_menu');
+  tongHintBubble();
+}
+/** Tong's hint as a speech bubble, without opening the menu. */
+function tongHintBubble() {
   if (modalOpen() || dlg.state.active) return;
   if (S.city !== 'seoul') {
     const greeting = S.city === 'tokyo' ? (localHour() < 17 ? 'こんにちは · Konnichiwa' : 'こんばんは · Konbanwa') : (localHour() < 17 ? '你好 · Nǐ hǎo' : '晚上好 · Wǎnshàng hǎo');
@@ -1946,7 +2051,7 @@ function populateLocations() {
       const room = interiors.find((i) => i.city === S.city && (i.id === p.interiorId || (i.category === roleOf(p) && p.category)));
       const target = p.entry ?? room?.door ?? p.spawn;
       const distance = player ? Math.round(Math.hypot(player.root.position.x - target[0], player.root.position.z - target[2])) : 0;
-      button.textContent = `${p.icon} ${categoryNames[roleOf(p)]} · ${p.en} · ${distance}m${room ? ' · Walk-in room' : ''} · ${progress.mastered.includes(p.id) ? 'Learned ✓' : progress.discovered.includes(p.id) ? 'Explored ✓' : 'Explore'}`;
+      button.textContent = `${p.icon} ${placeName(p).category} · ${placeName(p).en} · ${distance}m${room ? ' · Walk-in room' : ''} · ${progress.mastered.includes(p.id) ? 'Learned ✓' : progress.discovered.includes(p.id) ? 'Explored ✓' : 'Explore'}`;
       button.onclick = () => {
         waypointId = p.id;
         if (select) select.value = p.id;
@@ -2477,7 +2582,7 @@ function updateWayfinding() {
   const at = target.entry ?? target.spawn;
   tmpV.set(at[0], at[1] + 2.3, at[2]).project(camera);
   const behind = tmpV.z > 1;
-  wayfindingLabel.textContent = `${behind ? '↻ ' : ''}${target.ko} · ${categoryNames[roleOf(target)]} · ${Math.round(distance)}m`;
+  wayfindingLabel.textContent = `${behind ? '↻ ' : ''}${placeName(target).ko} · ${placeName(target).category} · ${Math.round(distance)}m`;
   wayfindingLabel.style.display = '';
   wayfindingLabel.style.left = `${clamp(behind ? stage.width / 2 : (tmpV.x * 0.5 + 0.5) * stage.width, Math.min(110, stage.width / 2), Math.max(stage.width / 2, stage.width - 110))}px`;
   wayfindingLabel.style.top = `${clamp(behind ? stage.height * 0.35 : (-tmpV.y * 0.5 + 0.5) * stage.height, Math.min(160, stage.height * 0.35), stage.height - 150)}px`;
@@ -2576,6 +2681,7 @@ function frame() {
   updateBubbles(dt);
   updateWayfinding();
   updateHud();
+  offerSigns();
   drawMinimap();
   studioMirrorVisible(zoneAt(player.root.position.x, player.root.position.z)?.id === 'studio');
 
@@ -2684,7 +2790,7 @@ async function boot() {
     syncCity();
     if (resume && saved) {
       toast(`<b>${currentCity().nativeName} · ${currentCity().name}</b><span>Day ${S.day}, ${koreanTime(localHour()).digital} local. Tong floats beside you — press <kbd>H</kbd> for a hint. Walk to ✈ for flights.</span>`, 4200);
-      setTimeout(tongTalk, 3800);
+      setTimeout(tongHintBubble, 3800);
     } else {
       // A new game opens with Tong introducing itself, like /game's tong-intro.
       setTimeout(() => dlg.start('tong_intro_1'), 600);

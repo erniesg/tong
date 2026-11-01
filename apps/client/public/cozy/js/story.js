@@ -64,7 +64,8 @@ const INTRO = INTRO_SETS[Math.floor(Math.random() * INTRO_SETS.length)];
  * A = actions/state from main.js:
  *   S, sitPlayer, serveFood, spicyFx, startExit, flipHair(who), learn, done(questId),
  *   hangout(locationId), exercise(request) → Promise<CozyExerciseResult>,
- *   toast, sfx, polaroid, startQuiz, quizChoices, lookAtTower
+ *   toast, sfx, polaroid, startQuiz, quizChoices, lookAtTower,
+ *   practice(mode) → Promise<CozyPracticeResult> (Tong's Learn / Review)
  * Nodes with `exercise: () => CozyExerciseRequest` open a shared Tong exercise
  * after their line and continue with `next(result)`.
  */
@@ -80,6 +81,14 @@ export function buildNodes(A) {
       { ko: `${f.ko} 감사합니다`, rom: `${f.rom} gamsahamnida`, en: '', next: 'order_wrong_phrase', hideEn: true, wrong: true },
       { ko: `주세요 ${f.ko}`, rom: `juseyo ${f.rom}`, en: '', next: 'order_wrong_order', hideEn: true, wrong: true },
     ]);
+  };
+
+  let tip = null; // Tong's hint, read when the menu opens
+  let practiced = null; // the last Learn / Review result (CozyPracticeResult)
+  const practiceNext = (r) => {
+    practiced = r;
+    if (r.outcome === 'unavailable') return 'tong_practice_off';
+    return r.exercises ? 'tong_practice_done' : 'tong_practice_later';
   };
 
   const N = {
@@ -331,11 +340,62 @@ export function buildNodes(A) {
       who: 'tong',
       expr: 'love',
       ko: '서울에 온 걸 환영해, {name}!',
-      en: 'Welcome to Seoul, {name}! Your agency is up the stairs. Let’s find your locker first. Press H whenever you need me.',
+      en: 'Welcome to Seoul, {name}! Your agency is up the stairs. Let’s find your locker first. Tap me (or press H) whenever you need me.',
       hint: '<b>환영해</b> = welcome · Tong lives in your phone. The more you do yourself, the more people here notice.',
       end: true,
       after: () => A.tongTalk(),
     },
+
+    /* ── Tap Tong: a hint, then Learn / Review ─────────── */
+    tong_menu: {
+      who: 'tong',
+      enter: () => (tip = tongHint(S, S.hour)),
+      expr: () => tip.expr,
+      ko: () => tip.ko,
+      en: () => tip.en,
+      choices: [
+        { ko: '배우기', en: 'Learn', next: 'tong_learn' },
+        { ko: '복습하기', en: 'Review', next: 'tong_review' },
+        { ko: '괜찮아', en: 'Not now', next: 'tong_bye' },
+      ],
+    },
+    tong_learn: { who: 'tong', expr: 'excited', ko: '같이 배우자!', en: 'Let’s learn!', task: () => A.practice('learn'), next: (r) => practiceNext(r) },
+    tong_review: { who: 'tong', expr: 'thinking', ko: '복습하자!', en: 'Let’s go over your words.', task: () => A.practice('review'), next: (r) => practiceNext(r) },
+    tong_practice_done: {
+      who: 'tong',
+      expr: () => (practiced.correct === practiced.exercises ? 'proud' : 'cheerful'),
+      ko: () => (practiced.correct === practiced.exercises ? '완벽해!' : '잘했어!'),
+      en: () => `${practiced.correct}/${practiced.exercises} · +${practiced.xpAwarded} XP`,
+      end: true,
+    },
+    tong_practice_later: { who: 'tong', expr: 'cheerful', ko: '언제든 불러!', en: 'Tap me anytime.', end: true },
+    tong_practice_off: { who: 'tong', expr: 'thinking', ko: '앱에서 열어 줘!', en: 'Open this in the Tong app to practise.', end: true },
+    tong_bye: { who: 'tong', expr: 'cheerful', ko: '언제든 불러!', en: 'Tap me anytime.', end: true },
+
+    /* ── Readable signs: a jumbled sign is rebuilt to learn the place ── */
+    sign_build: {
+      who: 'tong',
+      expr: 'excited',
+      ko: '간판이 뒤죽박죽이야!',
+      en: 'The sign’s letters are jumbled. Rebuild it to find out what this place is.',
+      exercise: () => ({
+        exerciseType: 'block_crush',
+        targetItems: [A.sign.word],
+        objectiveId: 'ko-script-blocks-2part',
+        framing: { speakerId: 'tong', ko: '간판을 맞춰 봐!', en: `Rebuild the sign. It means “${A.sign.en}”.` },
+        meaning: A.sign.en,
+        cityId: 'seoul',
+        locationId: A.sign.locationId,
+      }),
+      next: (r) => {
+        if (r.outcome === 'dismissed') return A.laterSign(), 'sign_later';
+        A.readSign();
+        return r.outcome === 'completed' && !r.correct ? 'sign_close' : 'sign_read';
+      },
+    },
+    sign_read: { who: 'tong', expr: 'proud', ko: () => `${A.sign.name}!`, en: () => A.sign.note, hint: () => `<b>${A.sign.word}</b> (${A.sign.rom}) = ${A.sign.en}`, end: true },
+    sign_close: { who: 'tong', expr: 'cheerful', ko: () => `거의! ${A.sign.name}.`, en: () => A.sign.note, hint: () => `<b>${A.sign.word}</b> (${A.sign.rom}) = ${A.sign.en}`, end: true },
+    sign_later: { who: 'tong', expr: 'thinking', ko: '다음에 읽자.', en: 'We can read it next time you pass.', end: true },
 
     /* ── Misc ─────────────────────────────────── */
     telescope: {
