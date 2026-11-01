@@ -222,7 +222,7 @@ Endings are Haeun's existing route endings (Opened, Armored, Stuck) plus a short
 | Mixed | You made it, and the epilogue shows what it cost. | Your fame got you both everything except privacy. | It worked, and every good thing carries your family's name. |
 | Bad | You helped her hide the injury. She never tells you when something's wrong again. | The fan photos defined the year. She stopped going to the convenience store. | The debt was collected: neither of you debuts. |
 
-**Your own debut:** decided by your evaluation performance, and gated by your origin's crisis. Handle the crisis badly and you are locked out whatever your scores: the Athlete is injured out of the final evaluation; the Creator is dropped by the agency after the PR crisis; the International-School Kid's lost negotiation locks out both you and Haeun.
+**Your own debut:** decided by your evaluation performance. *Owner, 2026-11-01:* only the International-School Kid can lose debut whatever their scores (the lost negotiation locks out both you and Haeun), so that origin is high risk, high reward. A badly handled Athlete or Creator crisis costs the relationship, your position and the coda, never debut itself (exact costs tbd in #429, #430).
 
 **Epilogue structure (post-debut):** three shared layers, no per-origin epilogue routes.
 
@@ -280,9 +280,9 @@ The funeral, evaluations and route endings stay shared.
 
 Points found when checking the PRD against `canon/*.ts`, `seoul-evals.md` and `seoul-evals-tbc.md` (2026-11-01). None is decided; each needs an owner call before it is built.
 
-1. **Haeun's mum's restaurant is new canon.** `haeun.ts` says her mother "works in Jeju-si" and Haeun sends money home. A restaurant dream (in Seoul) has to be added to her family background.
+1. **Decided 2026-11-01, added to `haeun.ts`.** Haeun's mum's restaurant is new canon. `haeun.ts` says her mother "works in Jeju-si" and Haeun sends money home. A restaurant dream (in Seoul) has to be added to her family background.
 2. **Two cuts.** The dorm direction (T17) uses a cut at eval 6 to open a bed; the PRD adds a default month-8 Yerin cut. Both can stand, but T2 (who is cut at eval 6) now has to account for both, and the Athlete's "nobody is cut" fate has to say whether it also prevents the eval 6 cut.
-3. **Debut lockout vs "the player is never cut".** `world.ts`: "A bad eval means probation, not a wall." The PRD's crisis gates lock you out of debut whatever your scores. Not a contradiction (scores still never wall you), but the rule should name the crisis gate as the one exception.
+3. **Decided 2026-11-01: only the International-School Kid can be locked out of debut; `world.ts` rule updated.** Debut lockout vs "the player is never cut". `world.ts`: "A bad eval means probation, not a wall." The PRD's crisis gates lock you out of debut whatever your scores. Not a contradiction (scores still never wall you), but the rule should name the crisis gate as the one exception.
 4. **Yerin's role.** The cohort handoff makes Yerin quietly the best vocalist; the PRD makes her the overtrainer who gets cut. Compatible, but her canon entry should carry both.
 5. **Where the Sunday calls happen.** Haeun's is canon on the dorm rooftop (her "place to be nobody"). Putting the International-School Kid's call on the same rooftop the same evening is a new shared scene, not a clash, but it touches her private place.
 6. **The dorm.** The PRD's "no separate living arrangement" matches the dorm decision (girls' dorm, separate buildings by gender). The International-School Kid's officetel is daytime only.

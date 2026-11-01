@@ -43,7 +43,7 @@ export const SEOUL_WORLD: WorldCanon = {
     'Days pass by sleeping. One energy meter (기력); sleep quality sets the next day\'s condition. Tapping Tong stops time: practice, learning and reading never cost clock time or energy.',
     'Curfew is 23:00 with a night check. Anything later is a sneak-out; late nights are rare, authored and cost condition.',
     'Each eval unlocks at a set point in the month and runs once, after the player confirms it (point of no return). Rehearsal before it is unlimited and ungraded.',
-    'The player is never cut. A bad eval means probation, not a wall.',
+    'The player is never cut. A bad eval means probation, not a wall. The one way to miss debut whatever your scores is the International-School Kid losing the family ultimatum (docs/seoul-origins.md): that origin is high risk, high reward.',
     'The player is a foreign trainee of either gender (cozy creator). The female route is built first; a male player lives in the boys\' dorm with his own cohort (later). On the female route you live in Haeun\'s dorm from day one but not her room; rooming with her is earned (docs/seoul-evals-tbc.md T17), so nothing on the shared spine may depend on it. You inherit Sua\'s lineup spot and her agency locker, not her bed.',
     'Trainees are under a dating ban and a curfew; contracts restrict social media and public appearances.',
     'No masked busking. Haeun\'s defiance is curfew breaks, the convenience store, the rooftop.',

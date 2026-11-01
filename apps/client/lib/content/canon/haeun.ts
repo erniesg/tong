@@ -7,7 +7,7 @@ export const HAEUN_CANON: CharacterCanon = {
   hometown: 'Seogwipo, Jeju',
   role: 'Onsae trainee, two years in. Strongest dancer in the cohort; center in most line-ups.',
   family:
-    'Raised mostly by her grandmother, a retired 해녀 (sea diver), in Seogwipo. Mother works in Jeju-si. Haeun sends money home. No one in the family can afford to visit Seoul often.',
+    'Raised mostly by her grandmother, a retired 해녀 (sea diver), in Seogwipo. Mother works as a cook in Jeju-si and has long wanted a restaurant of her own. Haeun sends money home. No one in the family can afford to visit Seoul often.',
   timeline: [
     { when: 'age 13–15', event: 'Tutors younger kids in Seogwipo to pay for dance classes and, later, the move to Seoul.', knownBy: ['haeun', 'sua', 'grandmother'] },
     { when: 'age 15', event: 'Moves to Seoul with Sua for an audition program; both are cast as Onsae trainees.', knownBy: ['haeun', 'sua', 'manager_choi'] },
