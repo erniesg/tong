@@ -4267,6 +4267,7 @@ export const SCENES = {
    {
     "id": "s_express",
     "speaker": "narration",
+    "cue": "ride",
     "when": {
      "notFlags": [
       "d1_early"

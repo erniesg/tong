@@ -154,6 +154,7 @@ export const module: SceneModule = {
       {
         id: 's_express',
         speaker: 'narration',
+        cue: 'ride',
         when: { notFlags: ['d1_early'] },
         lines: [{ value: { ko: '직통. 서울역까지 논스톱.', en: 'You\'re on the express, nonstop to Seoul Station. Out of the window, the Hongdae platform goes by without stopping.' } }],
         tong: { ko: '직통 = 바로!', en: '직통 = direct. It doesn\'t stop until the end.', maxLevel: 3 },
