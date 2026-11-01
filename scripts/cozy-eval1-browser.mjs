@@ -104,6 +104,15 @@ async function run(label, viewport, plan) {
   await screen('board');
   await shot('board-eve');
   await action('sleep');
+  // The eve goes to bed through the day loop (#410): recap, then the morning board.
+  const dayBtn = async (text) => {
+    const btn = f.locator('.day-overlay:not(.hidden) button', { hasText: text });
+    await btn.waitFor({ state: 'visible', timeout: 60000 });
+    await shot(`day-${text.split(' ')[0]}`);
+    await btn.click();
+  };
+  await dayBtn('자기');
+  await dayBtn('시작');
   // Eval day waits for a free world: close any arrival chatter Tong started meanwhile.
   for (let i = 0; i < 40 && !(await f.locator('#seoul-eval .eval-card[data-screen="eval-intro"]').count()); i++) {
     await page.waitForTimeout(500);
@@ -112,7 +121,8 @@ async function run(label, viewport, plan) {
     await quiet(f);
   }
   await screen('eval-intro');
-  assert.equal(await f.evaluate(() => __cozy.S.hour), 8);
+  const h = await f.evaluate(() => __cozy.S.hour);
+  assert.ok(h >= 7 && h <= 8.5, `eval morning hour ${h}`);
   await shot('eval-intro');
   await action('begin');
 
