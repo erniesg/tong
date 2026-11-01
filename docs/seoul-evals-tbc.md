@@ -18,7 +18,8 @@ Open questions and parked ideas for [`seoul-evals.md`](seoul-evals.md). Add the 
 | T10 | **Sua's line.** | Owner agrees she can be discovered before Act 3 with a richer backstory; how, when, where she works and what she knows are undecided. Ideas parked: a night job near the dorm, studying for the 검정고시. | Months 3–9 |
 | T11 | **Evals 4–12 round design.** | Review each one after evals 1–3 have been played. | — |
 | T13 | **Co-ed or not.** The player can be either gender and inherits Sua's lineup spot. Is the debut unit co-ed, or does a male player join a parallel boys' line? | Decides dorm floors and roommates. | Dorm, roster |
-| T14 | **The dorm.** How big, who rooms with whom. | One building, girls and boys on separate floors (canon). Rooms of 2–4 with bunk beds; the player shares with 1–3 trainees, so roommates are the first cast. | Sleep loop, roster |
+| T14 | **The dorm.** How big, who rooms with whom. | Owner doubts boys and girls share a building; real agencies usually house them in separate dorms. Proposal: a girls-only dorm (canon note to change). Rooms of 2–4 with bunk beds; the player shares with 1–3 trainees, so roommates are the first cast. | Sleep loop, roster |
+| T17 | **Rooming with Haeun** (female route). | Owner: you can room with her. Open: always, or by choice? Do you get Sua's empty bunk (contradicts canon "not her bed")? `world.ts` rule needs revising. | Dorm, H0–H2 |
 | T12 | **Can the player opt out of a late night that a character asks for** without a relationship cost? | Yes, but the character remembers which you chose. | Day loop |
 
 ## Closed
