@@ -29,7 +29,8 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm ci
+        # The root package has no dependencies or lockfile; the evidence lanes need none.
+        run: if [ -f package-lock.json ]; then npm ci; fi
 
       - name: Run agent evidence
         id: evidence
