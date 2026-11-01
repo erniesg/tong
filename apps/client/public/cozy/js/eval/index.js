@@ -12,6 +12,7 @@ import { hashSeed, scoreRound, suggestTier, gradeEval, rankBoard, weakObjectives
 import { EVAL1, itemsFor, danceItems, lunchOutcome, LUNCH, ROSTER, RESULT_LINES, PROFILE_OPTIONS, defaultProfile } from './eval1.js';
 import { createEvalUI } from './ui.js';
 import { createTtsAudio } from './voice.js';
+import { getDayLoop } from '../day.js';
 
 const BOARD = { x: -7.3, z: -43.2 }; // studio back wall, right of the word-quiz whiteboard
 const MONTH_KO = { 1: '3월', 2: '4월', 3: '5월' };
@@ -143,15 +144,17 @@ export function createSeoulEval(ctx) {
     return true;
   }
 
-  /**
-   * Sleep stub until the sleep branch (#410) lands: advance to tomorrow 08:00.
-   * The eval day poll below then starts the eval. Kept in one function so the real bed replaces it.
-   */
-  function sleepUntilMorning() {
-    S.day += 1;
+  /** Eval eve: go to bed through the day loop (#410) so bedtime sets eval-day condition. */
+  async function sleepUntilMorning() {
+    const day = getDayLoop();
+    if (day) return day.sleepUntilMorning({});
+    S.day += 1; // no day loop (tests, other cities): plain advance
     S.hour = 8;
     ctx.save();
   }
+
+  /** Tired players get a tighter Perfect window (condition from last night's bedtime). */
+  const windowScale = () => getDayLoop()?.getCondition?.().timingWindowScale ?? 1;
 
   function forceUnlock() {
     setChapter({ ...chapter(), forced: true });
@@ -233,7 +236,7 @@ export function createSeoulEval(ctx) {
       await u.show({ eyebrow, title: '단톡방 · Group chat', sub: 'Lunch order for five. Read it, then order at the counter.', body: chatNode(u), tag: 'chat' });
     }
     if (round.id === 'dance') {
-      const results = await u.runDance(items, { tier, eyebrow, title: '박 코치 · Coach Park', sub: rehearsal ? '리허설: ungraded.' : 'Move on the last beat.', showEn: false });
+      const results = await u.runDance(items, { tier, eyebrow, title: '박 코치 · Coach Park', sub: rehearsal ? '리허설: ungraded.' : 'Move on the last beat.', showEn: false, windowScale: windowScale() });
       items.forEach((it, i) => records.push(compact(it, results[i])));
     } else {
       for (const [i, it] of items.entries()) {
@@ -375,7 +378,8 @@ export function createSeoulEval(ctx) {
       const suggested = suggestTier(c.mastery, round.skill, 2);
       const tier = await chooseTier(round, suggested);
       const items = danceItems(seed, tier, 6);
-      const results = await u.runDance(items, { tier, eyebrow: '리허설 · Rehearsal', title: '박 코치 · Coach Park', sub: '다시. Ungraded.' });
+      getDayLoop()?.spend?.('dance');
+      const results = await u.runDance(items, { tier, eyebrow: '리허설 · Rehearsal', title: '박 코치 · Coach Park', sub: '다시. Ungraded.', windowScale: windowScale() });
       const records = items.map((it, i) => compact(it, results[i]));
       const summary = scoreRound(records, { tier, suggested });
       setChapter(recordRehearsal(chapter(), updateMastery(chapter().mastery, [summary], { gain: 0.25 })));
