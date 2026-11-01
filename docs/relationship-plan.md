@@ -94,14 +94,16 @@ Speech-recognition errors are never punished: a low-confidence read becomes a di
 
 Each beat can carry an `exercise` hook (type, objective, targets, framing, `onFail`). Failing defaults to `assist`: Tong or a character helps and the scene continues. Struggling learners get drama, not a wall.
 
-| Month | Curriculum targets | Story beats that test them |
+Curriculum follows the TOPIK-aligned eval ladder in [`seoul-evals.md`](seoul-evals.md); the table below maps it onto route beats.
+
+| Month | TOPIK · eval focus | Story beats that test them |
 |---|---|---|
-| 1 | Hangul blocks, names, greetings, native numbers | H0 locker label (수아), H1 water-bottle tags (하은), H2 counts (하나 둘 셋 넷); J0 ordering (주세요) |
-| 2–3 | Food, ordering, prices, time | H3 convenience store, ramyeon ritual |
-| 4–6 | Past tense, plans, invitations, reasons | H4 "나와.", H5 tutor/role reversal, H6 stealth excuse |
-| 7–8 | Feelings, opinions, register shifts | H7 rooftop, 말 놓을까, H8 Jeju slip |
-| 9–10 | Natural speech, indirect meaning | H9 notebook last page, H10 Sua |
-| 11–12 | Unscaffolded emotional talk | H11 decision, H12 confession |
+| Prologue + 1 | Hangul, names, greetings, native numbers; then TOPIK 1 self-intro, family, ordering and counters | H0 locker label (수아), H1 water-bottle tags (하은), H2 counts (하나 둘 셋 넷); J0 ordering (주세요) |
+| 2 | TOPIK 1 · time, days, plans (에/에서, -(으)ㄹ 거예요, -고 싶어요) | H3 convenience store, ramyeon ritual |
+| 3–5 | TOPIK 2 · favours and phone calls, getting around, registers and honorifics | Eval 3 locked out (Sua as a stranger), H4 "나와.", H5 tutor/role reversal |
+| 6–8 | TOPIK 3 · invitations and refusals, past tense, paragraph reading, spoken vs written | H6 stealth excuse, H7 rooftop, 말 놓을까, H8 Jeju slip |
+| 9–11 | TOPIK 4 · reported speech, news and notices, argument | H9 notebook last page, H10 Sua, H11 decision |
+| 12 | TOPIK 4→5 · everything, unscaffolded | H12 confession, final eval |
 
 The notebook is the visible literacy meter: pages decode as targets reach `familiar`.
 
