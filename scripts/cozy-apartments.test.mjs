@@ -12,9 +12,10 @@ const environment = b => ({
   ceilingAt: (x, z, y) => ceilingAt(b, x, z, y),
 });
 
-for (const depth of [12, 10]) {
-  test(`d${depth}: real authored route has continuous support, body width and head clearance`, () => {
-    const b = make(depth);
+const makeDorm = () => createApartmentPlan({ id: 'seoul-dorm', city: 'seoul', x: 348, z: -47, layout: 'dorm' });
+for (const [label, build] of [['d12', () => make(12)], ['d10', () => make(10)], ['dorm', makeDorm]]) {
+  test(`${label}: real authored route has continuous support, body width and head clearance`, () => {
+    const b = build();
     let p = b.route[0];
     const kinds = new Set();
     for (const q of b.route.slice(1)) {
@@ -40,8 +41,8 @@ for (const depth of [12, 10]) {
     assert.deepEqual(JSON.parse(JSON.stringify(b.route)), b.route);
   });
 
-  test(`d${depth}: CPU traversal walks up BOTH flights, visits rooms, descends and exits with no pose assignment`, () => {
-    const b = make(depth), env = environment(b), state = createTraversal();
+  test(`${label}: CPU traversal walks up BOTH flights, visits rooms, descends and exits with no pose assignment`, () => {
+    const b = build(), env = environment(b), state = createTraversal();
     const p = { ...b.route[0] }; let maxY = 0;
     for (const target of b.route.slice(1)) {
       let reached = false;
@@ -64,6 +65,24 @@ for (const depth of [12, 10]) {
     close(p.y, 0, 'exited at street height');
   });
 }
+
+test('dorm: three bunk rooms, your bunk on the first floor only, Sua\'s stripped bed, a manager at the desk', () => {
+  const b = makeDorm();
+  for (const room of b.levels.slice(1)) {
+    const kinds = room.furniture.map(f => f.kind);
+    assert.equal(kinds.filter(k => k === 'bunk-frame').length, 4, 'four bunks per floor');
+    for (const k of ['stripped-mattress', 'rice-cooker', 'kitchen-table', 'whiteboard', 'shoe-rack', 'manager-desk', 'washing-machine', 'toilet-seat', 'shower-tray', 'drying-rack'])
+      assert.ok(kinds.includes(k), k);
+    assert.equal(kinds.includes('your-bunk'), room.level === 1);
+    assert.deepEqual(room.zones.filter(z => z.name).map(z => z.name).sort(), ['room_a', 'room_b', 'room_c']);
+    const [x, y, z] = room.staff.spawn;
+    close(supportAt(b, x, z, y), y);
+    assert.equal(b.solids.some(s => bodyOverlaps(x, y, z, 0.3, s)), false, 'staff not in furniture');
+  }
+  assert.equal(b.levels[1].staff.role, 'manager');
+  for (const p of b.categoryPositions) assert.equal(b.solids.some(s => bodyOverlaps(p.x, p.y, p.z, 0.3, s)), false, p.kind);
+  assert.throws(() => createApartmentPlan({ id: 'x', city: 'seoul', x: 0, z: 0, d: 10, layout: 'dorm' }), RangeError);
+});
 
 test('rooftop terrace is outdoors, guarded at the well and the parapet, with a platform to sit on', () => {
   const b = make(), env = environment(b), roofY = 10.2;

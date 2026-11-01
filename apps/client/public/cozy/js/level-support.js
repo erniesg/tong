@@ -36,10 +36,11 @@ export function zoneAt(building, position) {
 
 /** Small authored switchback home, front +Z. All dimensions in metres.
  *  With `rooftop`, the stairwell continues to a walkable, dressed roof terrace. */
-export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3, storeyHeight = 3.4, style = city, rooftop = true }) {
+export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3, storeyHeight = 3.4, style = city, rooftop = true, layout = 'flat' }) {
   if (!id || !city || ![x, z, w, d, storeyHeight].every(Number.isFinite) || w < 14 || d < 10 || !Number.isInteger(floors) || floors < 2 || storeyHeight < 3.2 || storeyHeight > 3.5)
     throw new RangeError('Apartment needs id/city, finite origin, w>=14, d>=10, >=2 floors, and 3.2–3.5m storeys');
-  const b = { id, city, x, z, w, d, floors, storeyHeight, style,
+  if (layout === 'dorm' && (w !== 14 || d !== 12)) throw new RangeError('The dorm layout is authored for a 14×12m block');
+  const b = { id, city, x, z, w, d, floors, storeyHeight, style, layout,
     bounds: { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, minY: -0.16, maxY: floors * storeyHeight + (rooftop ? 3 : 0.2) },
     entry: [x, 0, z + d / 2], levels: [], supports: [], ceilings: [], solids: [], pieces: [], route: [], safePoints: [], categoryPositions: [] };
   const back = -d / 2, front = d / 2;
@@ -105,6 +106,83 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
     for (const y of [0.95, 1.75, 2.5]) part(middle, room.floorY + y, aperture, 0.055, 'trim', false);
   };
 
+  // A trainee dorm flat (Seoul girls' dorm, canon/cohort.ts DORM_ROOMS): three
+  // bunk rooms off a short corridor, one bathroom, a kitchen table and the dorm
+  // manager's desk by the door. Room B's lower bunk is the player's bed.
+  const bunk = (room, u, v, { mine = false, lower = 'linen', upper = 'accent' } = {}) => {
+    const y = room.floorY, ww = 1, dd = 2.05;
+    prop(room, 'bunk-frame', u, y, v, ww, 0.3, dd);
+    prop(room, mine ? 'your-bunk' : 'bunk-mattress', u, y + 0.3, v, ww - 0.06, 0.2, dd - 0.08, lower, false);
+    prop(room, 'bunk-deck', u, y + 1.5, v, ww, 0.1, dd);
+    prop(room, 'bunk-mattress-upper', u, y + 1.6, v, ww - 0.06, 0.18, dd - 0.08, upper, false);
+    for (const du of [-1, 1]) for (const dv of [-1, 1]) prop(room, 'bunk-post', u + du * (ww / 2 - 0.03), y, v + dv * (dd / 2 - 0.03), 0.06, 2.05, 0.06, 'trim');
+    for (let i = 1; i <= 4; i++) prop(room, 'bunk-ladder-rung', u - ww / 2 - 0.02, y + i * 0.33, v + dd / 2 - 0.3, 0.04, 0.035, 0.4, 'trim', false);
+  };
+  const single = (room, u, v, { stripped = false } = {}) => {
+    const y = room.floorY;
+    prop(room, 'single-frame', u, y, v, 1, 0.32, 2.05);
+    prop(room, stripped ? 'stripped-mattress' : 'single-mattress', u, y + 0.32, v, 0.94, 0.18, 1.97, stripped ? 'stone' : 'linen', false);
+    if (!stripped) prop(room, 'single-duvet', u, y + 0.5, v + 0.25, 0.96, 0.08, 1.4, 'accent', false);
+    else prop(room, 'name-tape-mark', u, y + 0.2, v + 1.035, 0.3, 0.05, 0.01, 'linen', false);
+  };
+  const doorway = (room, axis, at, lo, hi, from, to) => {
+    // Wall along `axis` at `at` from `from` to `to`, with an open doorway lo–hi and a lintel.
+    const seg = (a, c) => c - a > 0.01 && (axis === 'z'
+      ? wall(room, (a + c) / 2, at, c - a, 0.16) : wall(room, at, (a + c) / 2, 0.16, c - a));
+    seg(from, lo); seg(hi, to);
+    if (axis === 'z') lintel(room, (lo + hi) / 2, at, hi - lo, 0.16); else lintel(room, at, (lo + hi) / 2, 0.16, hi - lo);
+  };
+  const dormFlat = (room) => {
+    const y = room.floorY, inner = w / 2 - 0.1;
+    // Room C (four trainees) behind the kitchen; corridor; rooms A, B and the bathroom on the right.
+    doorway(room, 'z', -1, 0.05, 1.15, divider + 0.09, 2.48);
+    wall(room, 2.4, (back + -1) / 2, 0.16, -1 - back);
+    doorway(room, 'x', 3.6, -3.5, -2.4, back, -1.88);
+    doorway(room, 'x', 3.6, 0.4, 1.5, -1.72, 2.32);
+    doorway(room, 'x', 3.6, 3.3, 4.3, 2.48, front);
+    wall(room, (3.6 + w / 2) / 2, -1.8, w / 2 - 3.6, 0.16);
+    wall(room, (3.6 + w / 2) / 2, 2.4, w / 2 - 3.6, 0.16);
+    // Room A: Haeun below, Dohee above; Sua's single, stripped, by the window.
+    bunk(room, inner - 0.55, -4.85);
+    single(room, 4.3, -4.85, { stripped: true });
+    // Room B: you below, Daon above; Boram's single by the window.
+    bunk(room, inner - 0.55, 0.3, { mine: room.level === 1 });
+    prop(room, 'poster', inner - 0.04, y + 1.95, 0.3, 0.02, 0.5, 0.7, 'accent', false);
+    single(room, 4.3, -0.7);
+    // Room C: two bunks and a shared desk.
+    bunk(room, divider + 0.65, -4.85);
+    bunk(room, 1.85, -4.85);
+    prop(room, 'study-desk', 0.4, y, back + 0.45, 0.9, 0.75, 0.6);
+    // Kitchen and living: fridge, counter with the rice cooker, table and stools.
+    prop(room, 'fridge', divider + 0.45, y, -0.57, 0.7, 1.8, 0.7, 'linen');
+    prop(room, 'kitchen-cabinets', divider + 0.45, y, 0.55, 0.7, 0.9, 1.5, 'accent');
+    prop(room, 'kitchen-worktop', divider + 0.45, y + 0.9, 0.55, 0.76, 0.06, 1.54, 'stone');
+    prop(room, 'rice-cooker', divider + 0.45, y + 0.96, 0.9, 0.32, 0.28, 0.32, 'white', false);
+    prop(room, 'kitchen-table', 0.9, y, 1.3, 1.4, 0.75, 0.8, 'wood');
+    for (const [u, v] of [[0.5, 0.6], [1.3, 0.6], [0.5, 2.0], [1.3, 2.0]]) prop(room, 'stool', u, y, v, 0.35, 0.45, 0.35, 'plastic');
+    prop(room, 'whiteboard', 1.8, y + 1.0, -0.9, 1.1, 0.85, 0.03, 'white', false);
+    for (const dy of [0.2, 0.4, 0.6]) prop(room, 'whiteboard-rota', 1.75, y + 1.0 + dy, -0.885, 0.8, 0.02, 0.01, 'dark', false);
+    prop(room, 'drying-rack', 1.9, y, 4.6, 0.6, 1.1, 1.2, 'trim');
+    // By the door: the shoe pile and Manager Choi's desk.
+    prop(room, 'shoe-rack', divider + 0.5, y, 4.9, 0.8, 0.45, 0.4, 'wood');
+    for (const [u, v] of [[-1.15, 4.2], [-0.8, 4.35], [-1.3, 4.5], [-0.95, 4.0]]) prop(room, 'shoe-pair', u, y, v, 0.22, 0.1, 0.28, 'dark', false);
+    prop(room, 'manager-desk', 0.4, y, 4.7, 1.4, 0.75, 0.7, 'wood');
+    prop(room, 'night-check-clipboard', 0.6, y + 0.75, 4.7, 0.25, 0.02, 0.32, 'linen', false);
+    // Bathroom: washing machine, vanity, toilet and shower.
+    prop(room, 'washing-machine', 4.3, y, 2.85, 0.64, 0.85, 0.6, 'white');
+    prop(room, 'bath-vanity', 4.4, y, 5.5, 1.2, 0.85, 0.7, 'accent');
+    prop(room, 'bath-basin', 4.4, y + 0.85, 5.5, 1, 0.12, 0.6, 'linen');
+    prop(room, 'toilet-seat', 6.4, y, 5.3, 0.6, 0.45, 0.75, 'stone');
+    prop(room, 'shower-tray', 6.2, y, 3.2, 1.2, 0.1, 1.2, 'linen');
+    room.zones.push(
+      { kind: 'bedroom', name: 'room_a', ...bounds((3.6 + w / 2) / 2, (back - 1.8) / 2, w / 2 - 3.6, -1.8 - back) },
+      { kind: 'bedroom', name: 'room_b', ...bounds((3.6 + w / 2) / 2, 0.3, w / 2 - 3.6, 4.2) },
+      { kind: 'bathroom', ...bounds((3.6 + w / 2) / 2, (2.4 + front) / 2, w / 2 - 3.6, front - 2.4) },
+      { kind: 'bedroom', name: 'room_c', ...bounds((divider + 2.4) / 2, (back - 1) / 2, 2.4 - divider, -1 - back) },
+      { kind: 'living-kitchen', ...bounds((divider + 3.6) / 2, 2.5, 3.6 - divider, 7) });
+    b.categoryPositions.push(point(5.4, y, 0.6, 'bedside'), point(4.6, y, 3.8, 'bathroom'), point(-0.4, y, 0.2, 'kitchen'));
+  };
+
   for (let level = 0; level < floors; level++) {
     const y = level * storeyHeight;
     const room = { id: `${id}-level-${level}`, city, category: 'home', buildingId: id, level, floorY: y,
@@ -150,6 +228,11 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
       prop(room, 'guestbook', 4.2, y + 0.95, -2, 0.5, 0.04, 0.35, 'linen', false);
       prop(room, 'storage-cabinet', 6, y, back + 0.55, 1.1, 1.9, 0.7, 'accent');
       room.zones.push({ kind: 'lobby', ...bounds(1.8, 0, 9, d - 0.5) });
+    } else if (layout === 'dorm') {
+      dormFlat(room);
+      room.staff = level === 1
+        ? { spawn: [x + 0.4, y, z + 5.45], yaw: Math.PI, role: 'manager', name: '최 실장 · Manager Choi', greeting: '통금은 열한 시예요.', placeId: id }
+        : { spawn: [x - 0.4, y, z + 2.2], yaw: Math.PI / 2, role: 'resident', name: '연습생 · Trainee (another unit)', greeting: '안녕하세요~', placeId: id };
     } else {
       // Right wing: bedroom behind, bathroom in front, both with open doors.
       for (const [lo, hi] of [[back, -2.1], [-0.5, 0.5], [2.1, front]]) wall(room, 2.4, (lo + hi) / 2, 0.16, hi - lo);
@@ -305,7 +388,17 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
     walk(laneA, y + rise, end, 'flight-end'); walk(laneA, y + rise, -1, 'half-landing');
     walk(laneB, y + rise, -1, 'half-landing'); walk(laneB, y + rise, end, 'flight-start');
     walk(laneB, y + storeyHeight, start, 'flight-end'); walk(laneB, y + storeyHeight, 3.25, 'upper-landing');
-    walk(1.55, y + storeyHeight, 3.25, 'home-entry'); walk(1.55, y + storeyHeight, -1.3, 'living');
+    walk(1.55, y + storeyHeight, 3.25, 'home-entry');
+    if (layout === 'dorm') {
+      const Y = y + storeyHeight;
+      for (const [u, v, kind] of [[3, 3.25, 'corridor'], [3, 3.8, 'corridor'], [4.6, 3.8, 'bathroom'], [3, 3.8, 'corridor'],
+        [3, 0.95, 'corridor'], [5.4, 0.95, 'room-b'], [5.4, 0.6, 'bedside'], [5.4, 0.95, 'room-b'], [3, 0.95, 'corridor'],
+        [3, -2.95, 'corridor'], [5.3, -2.95, 'room-a'], [3, -2.95, 'corridor'], [3, -0.3, 'corridor'],
+        [0.6, -0.3, 'living'], [-0.4, 0.2, 'kitchen'], [0.6, -0.3, 'living'], [0.6, -2.5, 'room-c'], [0.6, -0.3, 'living'],
+        [2, -0.3, 'living'], [2, 3.25, 'living'], [1.55, 3.25, 'home-entry']]) walk(u, Y, v, kind);
+      continue;
+    }
+    walk(1.55, y + storeyHeight, -1.3, 'living');
     walk(0.1, y + storeyHeight, -1.3, 'kitchen-approach'); walk(0.1, y + storeyHeight, back + 1.6, 'kitchen');
     walk(0.1, y + storeyHeight, -1.3, 'kitchen-approach'); walk(1.55, y + storeyHeight, -1.3, 'living');
     walk(4, y + storeyHeight, -1.3, 'bedroom'); walk(4, y + storeyHeight, back + 1.65, 'bedside');

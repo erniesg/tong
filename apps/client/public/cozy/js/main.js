@@ -22,6 +22,9 @@ import { buildNodes, tongHint, WORDS } from './story.js';
 import { createDialogue, SPEAKERS } from './dialogue.js';
 import { createScenePlayer } from './scene-player.js';
 import { createBridge, AFFINITY_PER_HEART, stageOf, affinityOf, legacyProgress } from './bridge.js';
+import { createSeoulEval } from './eval/index.js';
+import { normalizeChapter } from './eval/chapter.js';
+import { PROFILE_OPTIONS } from './eval/eval1.js';
 import seoul from './cities/seoul.js';
 import tokyo from './cities/tokyo.js';
 import shanghai from './cities/shanghai.js';
@@ -30,6 +33,9 @@ import { MODES, PLAYER_CLEARANCE, bodyOverlaps, segmentHitsBox, createTraversal,
 import { createRides } from './rides.js';
 import { createOccupants } from './occupants.js';
 import { apartments, buildApartment, apartmentHeightAt, apartmentCeilingAt, apartmentZoneAt } from './apartments.js';
+import { createDayLoop, normalizeDayState, clockRuns, clockHours, bedKind, DAY_CONFIG } from './day.js';
+import { createDayUI } from './day-ui.js';
+import { DORM_HOME, DORM_LEVEL, HAEUN_DORM, createDormCast, haeunDormSpot, onDormFloor } from './dorm.js';
 
 const cities = { seoul, tokyo, shanghai };
 const cityGroups = {};
@@ -115,11 +121,12 @@ function save() {
     localStorage.setItem(
       SAVE_KEY,
       JSON.stringify({
+        chapter: S.chapter, // Seoul evals: month, eval state, results (js/eval/chapter.js)
         version: 4, city: S.city, position: safePose(), adventures: S.adventures,
         cityPositions: S.cityPositions, postcards: S.postcards,
-        name: S.name, look: S.look, hour: S.hour, day: S.day,
+        name: S.name, nationality: S.nationality, birthday: S.birthday, look: S.look, hour: S.hour, day: S.day,
         words: [...S.words], gloss: [...S.phrases], visited: [...S.visited], signs: [...S.signs], quests: S.quests,
-        pettedCat: S.pettedCat, seed: S.seed, rel: S.rel, story: S.story,
+        pettedCat: S.pettedCat, seed: S.seed, rel: S.rel, story: S.story, dayLoop: S.dayLoop,
         ...(S.legacy ? { legacy: S.legacy } : {}),
       }),
     );
@@ -142,10 +149,14 @@ function applySave(d) {
   if (Number.isInteger(d.seed)) S.seed = d.seed;
   S.rel = d.rel && typeof d.rel === 'object' ? d.rel : {};
   S.story = { flags: { ...d.story?.flags }, tally: { ...d.story?.tally } };
+  S.chapter = normalizeChapter(d.chapter);
   S.city = Object.hasOwn(cities, d.city) ? d.city : 'seoul';
   S.hour = Number.isFinite(d.hour) ? ((d.hour % 24) + 24) % 24 : 16.5;
   S.day = Number.isFinite(d.day) && d.day >= 1 ? Math.floor(d.day) : 1;
+  S.dayLoop = normalizeDayState(d.dayLoop, S.day);
   S.name = typeof d.name === 'string' ? d.name : '연습생';
+  S.nationality = typeof d.nationality === 'string' ? d.nationality : null;
+  S.birthday = d.birthday && Number.isInteger(d.birthday.m) && Number.isInteger(d.birthday.d) ? d.birthday : null;
   S.adventures = {};
   for (const id of Object.keys(cities)) {
     const a = d.adventures?.[id];
@@ -339,7 +350,8 @@ const where = {
     if (h >= 9 && h < 19) return 'studio';
     // once you're paired she drills late, alone (H2)
     if (S.story.flags.h1_done && h >= 21 && h < 23.5) return 'studio';
-    return 'away';
+    // Otherwise she is at the dorm (room A); she renders only while you are on that floor.
+    return 'dorm';
   },
   jin(h) {
     if (S.tentStory !== 'idle') return 'story';
@@ -358,10 +370,16 @@ const eatPose = (t) => {
 const talkPose = () => [-0.25, -0.35];
 
 function placeHaeun(l) {
-  haeun.root.visible = l !== 'away';
+  haeun.root.visible = l !== 'away' && l !== 'dorm';
   haeun.pose = 'idle';
   haeun.armPose = null;
   haeun.legSwing = false;
+  if (l === 'dorm') {
+    const home = apartments.find((b) => b.id === DORM_HOME);
+    if (home) haeun.root.position.copy(haeunDormSpot(home));
+    haeun.root.rotation.y = HAEUN_DORM.yaw;
+    haeun.baseExpr = 'cool';
+  }
   if (l === 'studio') {
     haeun.root.position.copy(SPOTS.haeunStudio);
     haeun.root.rotation.y = -Math.PI / 2;
@@ -666,8 +684,22 @@ function addAff(who, n, beatId) {
   sfx.heart();
 }
 
+// Day one in Seoul is one short chain; the rest of the list waits for day two.
+const ARRIVAL = [
+  ['locker', '🔑 Find your locker at Onsae'],
+  ['register', '📝 Hand in your trainee registration'],
+  ['dorm', '🏠 Get to the dorm (Yeonnam Apartments)'],
+  ['firstNight', '🛏️ Sleep in your bunk'],
+];
+const arrivalDone = () => ARRIVAL.every(([id]) => S.quests[id]);
+/** Ticks the arrival steps from game state (old saves past day one count as done). */
+function checkArrival() {
+  if (S.city !== 'seoul') return;
+  const f = S.story.flags, past = S.day >= 2;
+  const state = { locker: f.h0_done || past, register: !!seoulEval?.chapter?.profile || past, dorm: f.dorm_arrived || past, firstNight: past };
+  for (const [id] of ARRIVAL) if (state[id] && !S.quests[id]) done(id);
+}
 const QUESTS = [
-  ['locker', '🔑 Find your locker at the 연습실'],
   ['haeunDay', '💃 Meet your partner at the studio (9:00–19:00)'],
   ['pojang', '🏮 Dinner at the 포장마차 (19:00~)'],
   ['cafe', '☕ Order at 카페 봄 (8:00–22:00)'],
@@ -696,6 +728,17 @@ function updateQuest() {
     }
     $('quest-count').textContent = `${a.step}/3`;
     ui.questHint.textContent = 'E / tap at landmarks · Subway stays in this city · Flights leave from the airport.';
+    return;
+  }
+  if (!arrivalDone()) {
+    ui.questList.innerHTML = '';
+    for (const [id, label] of ARRIVAL) {
+      const li = document.createElement('li');
+      li.textContent = label;
+      if (S.quests[id]) li.className = 'step-done';
+      ui.questList.appendChild(li);
+    }
+    $('quest-count').textContent = `${ARRIVAL.filter(([id]) => S.quests[id]).length}/${ARRIVAL.length}`;
     return;
   }
   const open = QUESTS.filter(([id]) => !S.quests[id]);
@@ -752,6 +795,7 @@ async function connectBridge() {
 
 /** A completed hangout at a shared location (counts toward its missions), at most once per in-game day. */
 function hangout(locationId) {
+  if (locationId === 'cafe' || locationId === 'convenience_store') day.eat('snack');
   bridge.report([{ kind: 'location_hangout', cityId: 'seoul', locationId, beatId: `hangout:${locationId}:day${S.day}` }]);
 }
 
@@ -803,7 +847,7 @@ async function practice(mode) {
 function done(id) {
   if (S.quests[id]) return;
   S.quests[id] = true;
-  const q = QUESTS.find(([qid]) => qid === id);
+  const q = [...ARRIVAL, ...QUESTS].find(([qid]) => qid === id);
   if (q) toast(`<b>✓ 완료!</b><span>${q[1]}</span>`, 2400);
   sfx.chime();
   updateQuest();
@@ -895,6 +939,7 @@ function serveFood() {
   foodSteam = emitter(new THREE.Vector3(SPOTS.playerSeat.x, COUNTER_Y + 0.15, -0.86), 2.5, { s0: 0.06, s1: 0.22, alpha: 0.16, rise: 0.25 });
   ajusshi.serveT = 1.0;
   sfx.chime();
+  day.eat('meal');
 }
 
 let hotSteam = null;
@@ -1073,7 +1118,7 @@ const dlg = createDialogue({
 /* ── Relationship scenes ─────────────────────────── */
 
 // Authored scenes (lib/content/routes) played through the shared engine.
-const SCENE_QUEST = { 'haeun.h0': 'locker', 'haeun.h1': 'haeunDay', 'haeun.h2': 'drill', 'jin.j0': 'pojang', 'jin.a1.cafe': 'jin', 'jin.a2.river': 'jinNight' };
+const SCENE_QUEST = { 'haeun.h0': 'locker', 'haeun.h0.dorm': 'dorm', 'haeun.h1': 'haeunDay', 'haeun.h2': 'drill', 'jin.j0': 'pojang', 'jin.a1.cafe': 'jin', 'jin.a2.river': 'jinNight' };
 const scenes = createScenePlayer({
   S,
   nodes: NODES,
@@ -1109,6 +1154,7 @@ const scenes = createScenePlayer({
   },
   done(scene) {
     if (SCENE_QUEST[scene.id]) done(SCENE_QUEST[scene.id]);
+    if (scene.id === 'haeun.h2') day.spend('dance'); // the drills scene is dance practice
     hangout(scene.location === 'agency_lockers' ? 'practice_studio' : scene.location);
     if (scene.id === 'jin.j0') startExit();
     save();
@@ -1212,6 +1258,54 @@ const interactables = [
   })),
 ];
 
+/* ── Day loop: 기력, bed, morning (day.js) ───────── */
+
+const dayUI = createDayUI({ host: $('game-shell'), clockText: document.querySelector('.clock .clock-text'), fade: ui.fade, toast, onClose: () => canvas.focus() });
+const day = createDayLoop({ S, advanceHours, save, ui: dayUI });
+// Your bed: the bottom bunk in room B of the girls' dorm (dorm.js, canon/cohort.ts).
+function bedSpot() {
+  const room = apartments.find((b) => b.id === DORM_HOME)?.rooms.find((r) => r.level === DORM_LEVEL);
+  const m = room?.furniture.find((f) => f.kind === 'your-bunk');
+  if (!m) return null;
+  // The nearest point of the mattress, so standing beside the bunk always reaches it
+  // (a roommate at the foot of the bed must not win the prompt).
+  const p = player.root.position, [w, , d] = m.size;
+  return { x: clamp(p.x, m.position[0] - w / 2, m.position[0] + w / 2), y: room.floorY, z: clamp(p.z, m.position[2] - d / 2, m.position[2] + d / 2) };
+}
+/** Is the player inside room B of the dorm (so the bed is never offered through a wall)? */
+function inYourRoom() {
+  const room = apartments.find((b) => b.id === DORM_HOME)?.rooms.find((r) => r.level === DORM_LEVEL);
+  const z = room?.zones.find((zone) => zone.name === 'room_b'), p = player.root.position;
+  return !!z && Math.abs(p.y - room.floorY) < 1 && p.x > z.minX && p.x < z.maxX && p.z > z.minZ && p.z < z.maxZ;
+}
+async function useBed() {
+  clearControls();
+  if (bedKind(S.hour) === 'nap') {
+    if (await dayUI.napPrompt({ hour: S.hour }) === 'nap') day.nap();
+  } else await day.sleepUntilMorning();
+  updateSchedules(true);
+}
+interactables.push({
+  label: '하은 · Ha-eun',
+  pos: () => haeun.root.position,
+  r: 1.8,
+  on: () => loc.haeun === 'dorm' && haeun.root.visible,
+  act: () => { bubble(haeun, HAEUN_DORM.line.ko); toast(`<b>하은</b><span>${HAEUN_DORM.line.en}</span>`, 2400); },
+});
+let dormCast = null;
+for (const i of [0, 1, 2, 3, 4]) interactables.push({
+  get label() { return dormCast?.actors[i].name ?? ''; },
+  pos: () => dormCast?.actors[i].character.root.position ?? { x: 0, y: -99, z: 0 },
+  r: 1.6,
+  on: () => !!dormCast?.actors[i].character.root.visible,
+  act: () => {
+    const a = dormCast.actors[i];
+    bubble(a.character, a.line.ko);
+    toast(`<b>${a.name.split(' ')[0]}</b><span>${a.line.en}</span>`, 2400);
+  },
+});
+interactables.push({ label: '내 침대 · Your bed', pos: () => bedSpot() ?? { x: 0, y: -99, z: 0 }, r: 1.9, on: () => !!bedSpot() && inYourRoom() && !day.sleeping, act: useBed });
+
 function petCat() {
   S.pettedCat = true;
   cat.purr = 1.5;
@@ -1248,6 +1342,13 @@ function standBench() {
   S.speed = S.prevSpeed ?? 1;
   updateToggles();
 }
+
+// Seoul evals (js/eval): the studio schedule board, eval day, results night, 리허설.
+const seoulEval = createSeoulEval({
+  S, save: () => save(), toast, sfx, isBusy: () => modalOpen() || dlg.state.active || transitioning,
+  isMuted: () => audio.muted, goTo: (id) => travelTo(cityPlaces().find((p) => p.id === id), { skipAnimation: true }),
+});
+interactables.push(...seoulEval.interactables);
 
 let activeInteract = null;
 function staffAccessible(actor, position) {
@@ -1486,7 +1587,7 @@ function showPostcard(id) {
   const city = cities[id];
   $('polaroid-img').src = `/assets/locations/${id}-static.png`;
   $('polaroid-caption').textContent = `${city.nativeName} · Local errand complete`;
-  $('polaroid-date').textContent = `Day ${S.day} · ${city.name} · Collectible postcard`;
+  $('polaroid-date').textContent = `${city.name} · Collectible postcard`; // days aren't counted on screen
   $('polaroid').classList.remove('hidden');
   $('polaroid-close').focus();
 }
@@ -2622,6 +2723,7 @@ function updateHud() {
 
 const clock = new THREE.Clock();
 let saveT = 0;
+let dayMoves = { walkMetres: 0, runMetres: 0 }; // last frame's footsteps, spent on the next clock tick
 function frame() {
   if (bridgeBusy) {
     // A shared exercise covers the game: hold the world still and spare the GPU.
@@ -2631,13 +2733,12 @@ function frame() {
   }
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
-  if (S.started && !dlg.state.active && !modalOpen()) {
+  // Tapping Tong stops time: no clock and no 기력 while any panel is open.
+  const clockOn = clockRuns({ started: S.started, dialogue: dlg.state.active, modal: modalOpen(), bridgeBusy });
+  if (clockOn) {
     const prev = S.hour;
-    S.hour += (dt * S.speed) / 30;
-    if (S.hour >= 24) {
-      S.hour -= 24;
-      S.day++;
-    }
+    const here = zoneAt(player.root.position.x, player.root.position.z);
+    day.tick(clockHours(dt, S.speed), { ...dayMoves, resting: !!S.benchSit, awayFromDorm: here?.buildingId !== 'seoul-home', curfewApplies: S.city === 'seoul' });
     if (S.benchSit && ((prev < 19 && S.hour >= 19) || (prev < 7 && S.hour >= 7))) {
       S.speed = 1;
       toast(S.hour >= 19 ? '<b>🌙 밤이 됐어요</b><span>Night has fallen. The 포장마차 is open!</span>' : '<b>☀️ 아침이에요</b><span>Good morning, Seoul.</span>', 3000);
@@ -2658,7 +2759,20 @@ function frame() {
 
   if (S.city === 'seoul') updateSchedules();
   occupants?.update({ city: S.city, position: player.root.position, hour: localHour(), dt, time: t });
+  const walkFrom = [player.root.position.x, player.root.position.z];
   const ps = updatePlayer(dt);
+  const moved = traversal.mode === 'walk' ? Math.hypot(player.root.position.x - walkFrom[0], player.root.position.z - walkFrom[1]) : 0;
+  const running = lastTraversalSpeed > DAY_CONFIG.runningSpeed;
+  dayMoves = { walkMetres: running ? 0 : moved, runMetres: running ? moved : 0 };
+  if (S.city === 'seoul') {
+    if (!arrivalDone() && (window.__arrivalTick = (window.__arrivalTick ?? 0) + 1) % 30 === 0) checkArrival();
+    const room = interiorAt(player.root.position, S.city);
+    dormCast?.update(S.hour, room);
+    for (const a of dormCast?.actors ?? []) if (a.character.root.visible) animate(a.character, dt, t, 0);
+    if (loc.haeun === 'dorm') haeun.root.visible = onDormFloor(room);
+    // Day one, evening: walking onto your floor plays the arrival (H0 · 숙소).
+    if (onDormFloor(room) && !dlg.state.active && !modalOpen() && !S.story.flags.dorm_arrived && S.story.flags.h0_done) scenes.play('haeun.h0.dorm');
+  }
   const hs = updateHaeun(dt, t);
   const js = updateJin(dt, t);
   updateNpcs(dt, t);
@@ -2700,7 +2814,7 @@ function frame() {
     const url = renderer.domElement.toDataURL('image/jpeg', 0.85);
     $('polaroid-img').src = url;
     $('polaroid-caption').textContent = pendingPolaroid === 'jin' ? '진 선배와 한강에서 · Jin & me, Han River' : '홍대의 밤 · A night in Hongdae';
-    $('polaroid-date').textContent = `Day ${S.day} · ${koreanTime(S.hour).digital}`;
+    $('polaroid-date').textContent = koreanTime(S.hour).digital;
     $('polaroid').classList.remove('hidden');
     S.polaroids.push(url);
     pendingPolaroid = null;
@@ -2715,7 +2829,24 @@ function frame() {
 
 /* ── Boot ────────────────────────────────────────── */
 
+/** Creator identity: nationality and birthday (age is fixed by the game, see eval1.js PLAYER_AGE). */
+function fillIdentityFields() {
+  const nat = $('nationality'), m = $('birth-m'), d = $('birth-d');
+  if (!nat || nat.options.length) return;
+  for (const [ko, en] of PROFILE_OPTIONS.nationality) nat.add(new Option(`${en} · ${ko}`, ko));
+  for (let i = 1; i <= 12; i++) m.add(new Option(`${i}월`, String(i)));
+  const days = () => {
+    const keep = Number(d.value) || 1;
+    const n = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][Number(m.value) - 1];
+    d.replaceChildren(...Array.from({ length: n }, (_, i) => new Option(`${i + 1}일`, String(i + 1))));
+    d.value = String(Math.min(keep, n));
+  };
+  m.onchange = days;
+  days();
+}
+
 async function boot() {
+  fillIdentityFields();
   try {
     await Promise.race([
       Promise.all([document.fonts.load('64px Jua', '포장마차'), document.fonts.load('32px "Gowun Dodum"', '떡볶이')]),
@@ -2747,7 +2878,10 @@ async function boot() {
     buildApartment(city.home);
   });
   buildCast();
+  seoulEval.build(cityGroups.seoul);
   occupants = createOccupants(interiors, { groups: cityGroups });
+  const dormHome = apartments.find((b) => b.id === DORM_HOME);
+  if (dormHome) dormCast = createDormCast({ building: dormHome, group: cityGroups.seoul });
   initParticles();
   buildMotes();
   const saved = loadSave();
@@ -2780,6 +2914,8 @@ async function boot() {
       reportGloss();
     } else {
       S.name = $('name').value.trim() || '연습생';
+      S.nationality = $('nationality').value;
+      S.birthday = { m: Number($('birth-m').value), d: Number($('birth-d').value) };
     }
     initAudio();
     audio.ctx?.resume();
@@ -2789,7 +2925,7 @@ async function boot() {
     if (!resume || !saved) placePlayer({ position: [1.6, 0, 18], yaw: 0 });
     syncCity();
     if (resume && saved) {
-      toast(`<b>${currentCity().nativeName} · ${currentCity().name}</b><span>Day ${S.day}, ${koreanTime(localHour()).digital} local. Tong floats beside you — press <kbd>H</kbd> for a hint. Walk to ✈ for flights.</span>`, 4200);
+      toast(`<b>${currentCity().nativeName} · ${currentCity().name}</b><span>${koreanTime(localHour()).digital} local. Tong floats beside you — press <kbd>H</kbd> for a hint. Walk to ✈ for flights.</span>`, 4200);
       setTimeout(tongHintBubble, 3800);
     } else {
       // A new game opens with Tong introducing itself, like /game's tong-intro.
@@ -2848,15 +2984,16 @@ async function boot() {
   };
 
   window.__cozy = {
-    S, player, haeun, jin, dlg, scenes, creator, renderer, bloom, scene, sky, G, THREE, setHour, bridge,
+    S, player, haeun, jin, dlg, scenes, creator, renderer, bloom, scene, sky, G, THREE, setHour, bridge, seoulEval,
     get bridgeBusy() { return bridgeBusy; },
+    day,
     travelTo: (id, options) => travelTo(id === 'airport' ? { id: 'airport', icon: '✈', ko: currentCity().airport.nativeName, en: currentCity().airport.name, spawn: currentCity().airport.spawn, yaw: currentCity().yaw } : cityPlaces().find((p) => p.id === id), options),
     cities, cityRegistry: cities, get currentCity() { return currentCity(); },
     changeCity, openTravel, save, localHour, heightAt, zoneAt,
     get bounds() { return currentCity().bounds; },
     get transitioning() { return transitioning; },
     openPlace: (id) => { const p = cityPlaces().find((p) => p.id === id); if (p) openPlace(p); },
-    interact, loc, cam, camera, composer, stage, resizeStage, safePose, validPose,
+    interact, loc, tongHint: () => tongHint(S, localHour()).en, cam, camera, composer, stage, resizeStage, safePose, validPose,
     traversal, rides, jump, setTransport, demoJump,
     get demoEnabled() { return demoEnabled; },
     get controls() { return { keys: [...keys], joystick: { ...stick }, pointers: lookPointers.size, braking, runEnabled }; },

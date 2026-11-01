@@ -1,6 +1,6 @@
 import type { CharacterCanon } from '../../relationship/canon-types';
 
-/** Sua is offstage for most of the route; her canon keeps the mystery consistent. */
+/** Sua can be discovered before Act 3; her line is still being designed (tbc T10). */
 export const SUA_CANON: CharacterCanon = {
   id: 'sua',
   name: { ko: '수아', en: 'Su-a' },
@@ -64,5 +64,8 @@ export const SUA_CANON: CharacterCanon = {
     neverSays: [],
   },
   schedule: [{ slot: 'afternoons', where: 'yeonnam_cafe' }],
-  mustNot: ['Never on screen before Act 3 except in photos.', 'Never written as a villain.'],
+  mustNot: [
+    'Can be met before Act 3 (owner, 2026-11-01). How, when and what she reveals is undecided: see docs/seoul-evals-tbc.md T10. Do not write early Sua scenes until it is decided.',
+    'Never written as a villain.',
+  ],
 };

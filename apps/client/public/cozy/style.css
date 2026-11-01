@@ -94,6 +94,8 @@ p { overflow-wrap: anywhere; }
 .quest-list { list-style: none; margin: 0; padding: 0 12px 10px; display: grid; gap: 6px; }
 .quest-list li::before { content: '◻︎ '; color: var(--orange); }
 .quest-list li.done::before { content: ''; }
+.quest-list li.step-done { opacity: 0.55; text-decoration: line-through; }
+.quest-list li.step-done::before { content: '✓ '; }
 .quest-hint { display: flex; align-items: center; gap: 8px; padding: 0 12px 12px; color: var(--ink-soft); }
 .quest-hint:empty { display: none; }
 .quest-hint img { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; }
@@ -252,6 +254,8 @@ body.no-en .line-en, body.no-en .choice .en { display: none; }
 .creator-name { margin: 10px 0 4px; }
 .creator-name .name-input { max-width: 100%; text-align: left; }
 #creator[data-mode="edit"] .creator-name { display: none; }
+.creator-birthday { display: flex; gap: 8px; }
+.creator-birthday .name-input { flex: 1; }
 .creator-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 10px 0; border-bottom: 1px dashed #e6d6c0; }
 .creator-row:last-child { border-bottom: 0; }
 .creator-label { font-size: var(--small); color: var(--ink-soft); }
