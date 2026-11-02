@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { openPage, closePage } from './lib/cozy-video.mjs';
 
 const moduleName = process.env.PLAYWRIGHT_MODULE || 'playwright';
 const { chromium } = await import(path.isAbsolute(moduleName) ? pathToFileURL(moduleName).href : moduleName);
@@ -33,7 +34,7 @@ const RUNS = {
 
 async function run(tag) {
   const cfg = RUNS[tag];
-  const page = await browser.newPage({ viewport: cfg.viewport, hasTouch: !!cfg.touch, isMobile: !!cfg.touch });
+  const page = await openPage(browser, { viewport: cfg.viewport, hasTouch: !!cfg.touch, isMobile: !!cfg.touch });
   page.setDefaultTimeout(90000);
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -208,7 +209,7 @@ async function run(tag) {
   assert.ok(!t3.items.some((i) => /Sleep in your bunk/.test(i)), 'arrival list is replaced on day two');
   await shot('16-day-two');
   assert.deepEqual(errors, []);
-  await page.close();
+  await closePage(page, `day1-${tag}`);
 }
 
 try {

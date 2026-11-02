@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { openPage, closePage } from './lib/cozy-video.mjs';
 
 const moduleName = process.env.PLAYWRIGHT_MODULE || 'playwright';
 const { chromium } = await import(path.isAbsolute(moduleName) ? pathToFileURL(moduleName).href : moduleName);
@@ -19,7 +20,7 @@ const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '
 const summary = [];
 
 async function run(label, viewport, plan) {
-  const page = await browser.newPage({ viewport, hasTouch: label === 'phone', isMobile: label === 'phone', deviceScaleFactor: 1 });
+  const page = await openPage(browser, { viewport, hasTouch: label === 'phone', isMobile: label === 'phone', deviceScaleFactor: 1 });
   page.setDefaultTimeout(60000);
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -189,7 +190,7 @@ async function run(label, viewport, plan) {
   await page.waitForTimeout(800);
   await shot('after-results');
   assert.deepEqual(errors, [], `page errors: ${errors.join('\n')}`);
-  await page.close();
+  await closePage(page, `eval1-${label}`);
   return { label, grade: r.grade, band: r.band, rank: `${r.rank}/${r.of}`, scores: r.scores, tiers: r.tiers, weak: out.chapter.weak, mastery: out.chapter.mastery };
 }
 

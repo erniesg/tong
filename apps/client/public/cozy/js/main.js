@@ -1017,37 +1017,12 @@ function startExit() {
   ];
 }
 
-// The first night's card: where each relationship stands after day one.
+/** Jin has walked off after J0: back to the evening. (The old "Day one" card is gone: J0 is any night from day 2.) */
 function finishNight() {
   S.tentStory = 'idle';
   jin.root.visible = false;
   loc.jin = 'away';
-  const f = S.story.flags;
-  const haeunStage = scenes.stage('haeun');
-  const haeunLine = !f.h1_done
-    ? 'Somewhere in the agency there’s a girl who slammed her locker without looking at you. Tomorrow you’ll find out who.'
-    : haeunStage === 'strangers'
-      ? 'Ha-eun still calls you “the new one”. 내일 아홉 시. Don’t be late.'
-      : 'Ha-eun knows your name now. She’ll pretend she doesn’t.';
-  const jinLine = f.jin_plan_counter
-    ? 'You said yes to Jin’s plan and kept the day for yourself. He didn’t expect that.'
-    : f.paid_myself
-      ? 'You paid for yourself. Jin smiled, and put his card away slowly.'
-      : f.jin_plan_accepted && f.jin_paid
-        ? 'Jin ordered, planned and paid. It was easy. Maybe too easy.'
-        : 'A man in a cap knows your name. You still aren’t sure you know his.';
-  $('end-title').textContent = '첫날 · Day one';
-  $('end-hearts').innerHTML = hearts(Math.ceil(scenes.affinity('haeun') / 20), 5);
-  $('end-text').textContent = `${haeunLine} ${jinLine}`;
-  const words = $('end-words');
-  words.innerHTML = '';
-  for (const [ko, { en }] of S.phrases) {
-    const s = document.createElement('span');
-    s.textContent = `${ko} · ${en}`;
-    words.appendChild(s);
-  }
-  $('ending').classList.remove('hidden');
-  ui.hud.classList.add('hidden');
+  standUp();
   updateQuest();
   save();
 }
@@ -3192,21 +3167,6 @@ async function boot() {
       back: () => canvas.focus(),
     });
   };
-  $('stay').onclick = () => {
-    $('ending').classList.add('hidden');
-    ui.hud.classList.remove('hidden');
-    standUp();
-    updateQuest();
-  };
-  $('again').onclick = () => {
-    try {
-      localStorage.removeItem(SAVE_KEY);
-    } catch {
-      /* ignore */
-    }
-    window.location.reload();
-  };
-
   window.__cozy = {
     S, player, haeun, jin, dlg, scenes, creator, renderer, bloom, scene, sky, G, THREE, setHour, bridge, seoulEval,
     get bridgeBusy() { return bridgeBusy; },
