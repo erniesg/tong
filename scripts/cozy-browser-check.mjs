@@ -17,7 +17,12 @@ async function boot(page, resume = false) {
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForFunction(() => window.__cozy, null, { timeout: 90000 });
   await page.locator(resume ? '#continue' : '#start').click();
-  if (!resume) await page.locator('#creator-start').click();
+  if (!resume) {
+    await page.locator('#creator-start').click();
+    // Day 1 starts at Incheon (cozy-day1-browser.mjs); these checks start in Hongdae.
+    await page.waitForFunction(() => __cozy.S.started);
+    await page.evaluate(() => __cozy.skipDayOne());
+  }
   await page.evaluate(() => { __cozy.S.speed = 0; __cozy.renderer.setPixelRatio(0.65); });
 }
 async function shot(page, name) {

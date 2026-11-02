@@ -60,7 +60,7 @@ export function createCreator() {
   const tabs = $('creator-tabs');
   const panel = $('creator-panel');
   const spinBtn = $('creator-spin');
-  let look = normalizeLook(LOOK_PRESETS.m);
+  let look = normalizeLook(LOOK_PRESETS.f); // girls' route only until the boys' route exists
   let onDone = null, onBack = null;
   let renderer = null, scene, camera, model = null, raf = 0, last = 0, spin = 0.5, dragX = null;
   let category = 'basics';
@@ -416,7 +416,7 @@ export function createCreator() {
     /** mode 'new' shows the name field and Back; 'edit' restyles an ongoing game. */
     open({ look: initial, mode = 'new', done, back }) {
       ensureRenderer();
-      look = normalizeLook(initial ?? LOOK_PRESETS.m);
+      look = normalizeLook(initial ?? LOOK_PRESETS.f);
       onDone = done;
       onBack = back;
       root.dataset.mode = mode;

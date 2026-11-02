@@ -71,7 +71,7 @@ export const module: SceneModule = {
         when: { notFlags: ['ex_j0_order'] },
         lines: [
           { when: { minTier: 1 }, value: { ko: '네? 하하, 감사는 먹고 나서!', en: 'Huh? Haha, thanks comes after eating!', note: 'The words came out jumbled.' } },
-          { value: { ko: '네? 폰이 말하네?', en: 'Huh? The phone\'s talking?', note: 'You pointed at the menu and let Tong say it.' } },
+          { value: { ko: '네? 천천히 말해요~', en: 'Huh? Slowly, slowly~', note: 'You repeated Tong\'s whisper one word at a time.', review: 'native' } },
         ],
         next: 'j0_rescue',
       },

@@ -34,8 +34,12 @@ async function run({ width, height, tag, bedHour, touch }) {
   await f.evaluate(() => { __cozy.renderer.setPixelRatio(0.5); window.__fr = 0; const k = () => { window.__fr++; requestAnimationFrame(k); }; k(); });
   await click('#start');
   await click('#creator-start');
+  // Day 1 now starts at Incheon (cozy-day1-browser.mjs covers it); this proof starts in Hongdae.
+  await f.waitForFunction(() => __cozy.S.started, null, { polling: 500 });
+  await f.evaluate(() => __cozy.skipDayOne());
   await f.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 120000, polling: 500 }).catch(() => {});
-  await f.evaluate(() => { if (__cozy.dlg.state.active) __cozy.dlg.end(); __cozy.setHour(17); __cozy.S.speed = 1; });
+  // This proof is about the clock and the bed; the first-night talk is covered by the Day 1 and dorm proofs.
+  await f.evaluate(() => { if (__cozy.dlg.state.active) __cozy.dlg.end(); __cozy.S.story.flags['played:seoul.d1.bedtime'] = true; __cozy.setHour(17); __cozy.S.speed = 1; });
   const shot = (name) => page.screenshot({ path: `${OUT}/${tag}-${name}.png`, timeout: 600000 });
   const st = () => f.evaluate(() => ({ hour: __cozy.S.hour, day: __cozy.S.day, ...__cozy.day.getCondition(), modal: !!document.querySelector('.overlay:not(.hidden)'), busy: __cozy.bridgeBusy }));
 
@@ -138,7 +142,7 @@ try {
   assert.ok(a.hour >= 7 && a.hour < 7.2);
   const b = await run({ width: 390, height: 844, tag: 'phone', bedHour: 1.5, touch: true });
   assert.equal(b.id, 'tired');
-  assert.ok(b.hour >= 8 && b.hour < 8.2);
+  assert.ok(b.hour >= 7 && b.hour < 7.2); // the dorm wakes everyone at 07:00; tired only changes 기력
   console.log('OK');
 } finally {
   await browser.close();

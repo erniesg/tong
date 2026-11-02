@@ -11,12 +11,15 @@ export const SCENES = {
   "location": "agency_lockers",
   "slot": "m1.s0",
   "gate": {
+   "flags": [
+    "orientation_done"
+   ],
    "month": {
     "from": 1,
     "to": 1
    }
   },
-  "summary": "You arrive at Onsae (Tong has already introduced itself at the start of the game). Your locker has a half-scraped name label (수아) and a notebook jammed behind the drawer. Keep it, hand it in, or leave it. A girl slams her locker without looking at you. Coach Park: studio, 10am.",
+  "summary": "End of orientation: Manager Choi shows you your locker. It has a half-scraped name label (수아) and a notebook jammed behind the drawer. Keep it, hand it in, or leave it. A girl slams her locker without looking at you. Coach Park: studio, 10am.",
   "seeds": [
    "knows.sua_name (from the label)",
    "notebook_kept / notebook_handed_in / notebook_left",
@@ -34,44 +37,14 @@ export const SCENES = {
        ]
       },
       "value": {
-       "ko": "홍대, 3월. 비.",
-       "en": "Hongdae, March. Rain on the glass doors of Onsae Entertainment. Your suitcase is soaked."
+       "ko": "연습실 뒤쪽. 사물함.",
+       "en": "The back of the studio. A row of lockers. Rain ticks on the high windows."
       }
      },
      {
       "value": {
-       "ko": "홍대, 3월.",
-       "en": "Hongdae, March. The glass doors of Onsae Entertainment. Your suitcase wheel is already broken."
-      }
-     }
-    ],
-    "tong": {
-     "ko": "여기야! 온새 엔터.",
-     "en": "This is it: your agency. Tap me any time and I'll help, but the more you do yourself, the more people here will notice.",
-     "maxLevel": 1
-    },
-    "next": "h0_tong_blocks"
-   },
-   {
-    "id": "h0_tong_blocks",
-    "speaker": "tong",
-    "when": {
-     "minLevel": 0
-    },
-    "lines": [
-     {
-      "when": {
-       "minLevel": 2
-      },
-      "value": {
-       "ko": "한글은 이미 좀 읽네? 좋아.",
-       "en": "You already read some Hangul? Good. I'll stay quiet unless you need me."
-      }
-     },
-     {
-      "value": {
-       "ko": "한글은 블록이야.",
-       "en": "Korean is written in blocks. Each block is one syllable: a consonant, a vowel, sometimes one more underneath. You'll be reading signs by tonight."
+       "ko": "연습실 뒤쪽. 사물함.",
+       "en": "The back of the studio. A row of lockers, mirrors on the far wall."
       }
      }
     ],
@@ -84,26 +57,12 @@ export const SCENES = {
     "lines": [
      {
       "value": {
-       "ko": "외국인 연습생이죠? 이쪽이에요. 사물함은 여기 써요.",
-       "en": "You're the foreign trainee? This way. Use this locker.",
+       "ko": "이거예요. 사물함은 여기 써요.",
+       "en": "This one. Use this locker.",
        "review": "native"
       }
      }
     ],
-    "tong": {
-     "ko": "사물함 = 락커!",
-     "en": "사물함 (samulham) = locker.",
-     "maxLevel": 2
-    },
-    "effects": {
-     "vocab": [
-      {
-       "ko": "사물함",
-       "en": "locker",
-       "rom": "samulham"
-      }
-     ]
-    },
     "next": "h0_label"
    },
    {
@@ -132,6 +91,11 @@ export const SCENES = {
       "en": "Rebuild the name on the scraped label."
      },
      "onFail": "assist"
+    },
+    "effects": {
+     "setFlags": [
+      "hangul:수아"
+     ]
     },
     "next": "h0_label_pass"
    },
@@ -289,6 +253,17 @@ export const SCENES = {
     "speaker": "narration",
     "lines": [
      {
+      "when": {
+       "flags": [
+        "d1_early"
+       ]
+      },
+      "value": {
+       "ko": "쾅.",
+       "en": "Bang. At the far end of the row, the girl from Practice Room B shuts her locker, headphones in, and walks past without looking at you."
+      }
+     },
+     {
       "value": {
        "ko": "쾅.",
        "en": "Bang. At the far end of the corridor a girl shuts her locker, headphones in, and walks past without looking at you."
@@ -441,7 +416,7 @@ export const SCENES = {
    },
    {
     "id": "d0_haeun",
-    "speaker": "haeun",
+    "speaker": "haeun_unnamed",
     "expr": "cool",
     "lines": [
      {
@@ -469,7 +444,7 @@ export const SCENES = {
       },
       "outcomes": [
        {
-        "speaker": "haeun",
+        "speaker": "haeun_unnamed",
         "expr": "cool",
         "reaction": {
          "ko": "네~",
@@ -494,7 +469,7 @@ export const SCENES = {
       },
       "outcomes": [
        {
-        "speaker": "haeun",
+        "speaker": "haeun_unnamed",
         "expr": "smirk",
         "reaction": {
          "ko": "다온이 방이 더 넓어요. 창문도 있고요.",
@@ -558,6 +533,19 @@ export const SCENES = {
     "expr": "neutral",
     "lines": [
      {
+      "when": {
+       "flags": [
+        "boram_ally"
+       ]
+      },
+      "value": {
+       "ko": "또 보네. 화장실은 하나야. 아침엔 줄 서. 다온이 학교 가니까 다온이 먼저.",
+       "en": "You again. One bathroom. In the morning you queue. Da-on has school, so she goes first.",
+       "note": "From the single bed by the window, folding laundry. She doesn't mention the corridor.",
+       "review": "native"
+      }
+     },
+     {
       "value": {
        "ko": "난 보람. 화장실은 하나야. 아침엔 줄 서. 다온이 학교 가니까 다온이 먼저.",
        "en": "I'm Bo-ram. One bathroom. In the morning you queue. Da-on has school, so she goes first.",
@@ -571,6 +559,64 @@ export const SCENES = {
      "en": "Bo-ram uses 반말 with you straight away. She's the oldest, so that's normal here.",
      "maxLevel": 2
     },
+    "next": "d0_evening"
+   },
+   {
+    "id": "d0_evening",
+    "speaker": "daon",
+    "expr": "laugh",
+    "lines": [
+     {
+      "value": {
+       "ko": "언니, 바로 자요? 얘기해요!",
+       "en": "Eonni, are you going straight to sleep? Let's talk!",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "d0_stay_up",
+      "intent": "presence",
+      "say": {
+       "ko": "그래, 조금만.",
+       "en": "Okay, just for a bit.",
+       "rom": "geurae, jogeumman"
+      },
+      "outcomes": [
+       {
+        "speaker": "boram",
+        "reaction": {
+         "ko": "다온, 내일 학교.",
+         "en": "Da-on. School tomorrow.",
+         "note": "An hour later. Da-on has asked your age, your star sign and whether you have ever met an idol. Bo-ram turns the light off on both of you.",
+         "review": "native"
+        },
+        "setFlags": [
+         "d1_stayed_up"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "d0_sleep_early",
+      "intent": "decline",
+      "say": {
+       "ko": "피곤해서 먼저 잘게.",
+       "en": "I'm tired. I'll sleep first.",
+       "rom": "pigonhaeseo meonjeo jalge"
+      },
+      "outcomes": [
+       {
+        "speaker": "daon",
+        "reaction": {
+         "ko": "네~ 내일 얘기해요!",
+         "en": "Okay~ Tomorrow, then!"
+        }
+       }
+      ]
+     }
+    ],
     "next": "d0_bed"
    },
    {
@@ -620,7 +666,7 @@ export const SCENES = {
   "summary": "Coach Park: \"하은이 옆에 서.\" You find her by reading the water-bottle tags. Minji whispers that you took Sua's spot. Haeun, impeccably polite with a perfect smile: \"안녕하세요, 하은이에요. 저랑 짝이래요. 잘 부탁해요.\" Textbook, and she never asks your name. How you answer sets the first temperature: in stride, a register slip, asking about Sua straight out, or asking her to teach you.",
   "seeds": [
    "memory asked_straight (re-read at the rooftop)",
-   "tong_seen_once (her \"또 그거 써요?\")",
+   "tong_seen_once (she notices you leaning on help nobody else can see: \"또 외워서 말하는 거예요?\")",
    "banmal_too_early"
   ],
   "beats": [
@@ -809,7 +855,7 @@ export const SCENES = {
       "value": {
        "ko": "저 물병! 하은.",
        "en": "\"하은\", the one on the left.",
-       "note": "You held up your phone to read the tags. Ha-eun watches your phone talk. She says nothing."
+       "note": "Tong reads the tags for you. To everyone else you stared at the bottles, then muttered to yourself. Ha-eun says nothing."
       }
      }
     ],
@@ -872,9 +918,9 @@ export const SCENES = {
         "speaker": "haeun",
         "expr": "smirk",
         "reaction": {
-         "ko": "아, 또 앱이에요? 편하겠다~",
-         "en": "Oh, the app again? That must be handy~",
-         "note": "Still smiling.",
+         "ko": "또 외워서 말하는 거예요? 열심히 하네~",
+         "en": "Reciting again? Working hard~",
+         "note": "You repeated Tong's whisper word by word. She noticed. Still smiling.",
          "review": "native"
         },
         "deltas": {
@@ -882,7 +928,7 @@ export const SCENES = {
         },
         "memory": {
          "tag": "tong_noticed",
-         "note": "She noticed you speaking through Tong on day one."
+         "note": "She noticed you reciting someone else's words on day one."
         }
        },
        {
@@ -896,7 +942,7 @@ export const SCENES = {
         "reaction": {
          "ko": "네~",
          "en": "Sure~",
-         "note": "Her eyes go to your phone, not to you."
+         "note": "Her eyes go to the empty air beside you, where you keep glancing."
         },
         "setFlags": [
          "tong_seen_once"
@@ -1148,7 +1194,7 @@ export const SCENES = {
     "to": 1
    }
   },
-  "summary": "21:40, three days before the placement eval. She drills you on eight counts in native numbers and says nothing but \"다시.\" Keep going, call her mean (clean Korean earns respect), comfort her (backfires if she's raw), or leave early (looks like a loss; pays off much later).",
+  "summary": "21:40, a few nights after you start (gated on H1, not a date). She drills you on eight counts in native numbers and says nothing but \"다시.\" Keep going, call her mean (clean Korean earns respect), comfort her (backfires if she's raw), or leave early (looks like a loss; pays off much later).",
   "seeds": [
    "memory left_early (re-read when cried_in_studio is revealed, close+)",
    "memory comforted_early (re-read as pity in a later fight)",
@@ -1314,16 +1360,16 @@ export const SCENES = {
        ]
       },
       "value": {
-       "ko": "폰이 춤추는 거예요? 신기하다~",
-       "en": "Is your phone doing the dance? How neat~",
-       "note": "Tong counted out loud for you.",
+       "ko": "누구랑 세는 거예요? 신기하다~",
+       "en": "Who are you counting with? How neat~",
+       "note": "Tong counted in your ear and you mouthed along.",
        "review": "native"
       }
      },
      {
       "value": {
        "ko": "…",
-       "en": "Tong counts out loud for you. She lets the phone count. She doesn't count with it."
+       "en": "Tong counts in your ear. You mouth along. She watches your lips, not your feet."
       }
      }
     ],
@@ -1848,9 +1894,10 @@ export const SCENES = {
      },
      {
       "value": {
-       "ko": "네? 폰이 말하네?",
-       "en": "Huh? The phone's talking?",
-       "note": "You pointed at the menu and let Tong say it."
+       "ko": "네? 천천히 말해요~",
+       "en": "Huh? Slowly, slowly~",
+       "note": "You repeated Tong's whisper one word at a time.",
+       "review": "native"
       }
      }
     ],
@@ -2350,6 +2397,2534 @@ export const SCENES = {
      ]
     },
     "end": true
+   }
+  ]
+ },
+ "seoul.d1.airport": {
+  "id": "seoul.d1.airport",
+  "kind": "story",
+  "title": {
+   "ko": "도착",
+   "en": "Arrivals"
+  },
+  "characterId": "tong",
+  "location": "incheon_arrivals",
+  "slot": "d1.s1",
+  "gate": {
+   "month": {
+    "from": 1,
+    "to": 1
+   }
+  },
+  "summary": "Incheon arrivals, 1:05pm. Tong appears (only you can see it). Manager Choi: come to the company by 3pm. A second message by origin. Tong: find the way out.",
+  "seeds": [
+   "d1_started",
+   "tong_backstory_asked (Tong: \"Long story. Another time.\")"
+  ],
+  "beats": [
+   {
+    "id": "a_open",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "인천공항, 오후 1시 5분.",
+       "en": "Incheon Airport, 1:05pm. Arrivals. Your suitcase comes round on the belt; one wheel already wobbles."
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "d1_started"
+     ]
+    },
+    "next": "a_tong"
+   },
+   {
+    "id": "a_tong",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "안녕. 여기, 위에. 나는 통이야.",
+       "en": "Hi. Up here. I'm Tong.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "a_tong_seen"
+   },
+   {
+    "id": "a_tong_seen",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "다른 사람들 눈엔 내가 안 보여. 그러니까 손 흔들지 마.",
+       "en": "Nobody else can see me, so maybe don't wave back.",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "a_what",
+      "intent": "ask",
+      "say": {
+       "ko": "넌 뭐야?",
+       "en": "What are you?",
+       "rom": "neon mwoya?"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "주로 네 한국어 도우미. 막히면 내가 있어.",
+         "en": "Your Korean help, mostly. When you're stuck, I'm here.",
+         "review": "native"
+        }
+       }
+      ]
+     },
+     {
+      "id": "a_why",
+      "intent": "ask",
+      "say": {
+       "ko": "왜 나한테만 보여?",
+       "en": "Why can only I see you?",
+       "rom": "wae nahanteman boyeo?"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "얘기가 길어. 다음에.",
+         "en": "Long story. Another time.",
+         "review": "native"
+        },
+        "setFlags": [
+         "tong_backstory_asked"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "a_go",
+      "intent": "commit",
+      "say": {
+       "ko": "알았어. 가자.",
+       "en": "Okay. Let's go.",
+       "rom": "arasseo. gaja"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "가자!",
+         "en": "Let's go."
+        }
+       }
+      ]
+     }
+    ],
+    "next": "a_buzz"
+   },
+   {
+    "id": "a_buzz",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "휴대폰이 울린다.",
+       "en": "Your phone buzzes. KakaoTalk, from the agency."
+      }
+     }
+    ],
+    "next": "a_choi"
+   },
+   {
+    "id": "a_choi",
+    "speaker": "manager_choi",
+    "lines": [
+     {
+      "value": {
+       "ko": "오늘 오후 3시까지 회사로 오세요. 늦지 마세요!",
+       "en": "Come to the company by 3pm today. Don't be late!",
+       "note": "KakaoTalk.",
+       "review": "native"
+      }
+     }
+    ],
+    "tong": {
+     "ko": "3시 = 세 시!",
+     "en": "3시 (se si) = three o'clock. 회사 = the company. 늦지 마세요 = don't be late.",
+     "maxLevel": 3
+    },
+    "effects": {
+     "vocab": [
+      {
+       "ko": "회사",
+       "en": "company",
+       "rom": "hoesa"
+      }
+     ]
+    },
+    "next": "a_mum"
+   },
+   {
+    "id": "a_mum",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "origin_intl_kid"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "Landed? Take a taxi on the card, don't drag your bags on the train. Have fun!!",
+       "en": "Mum, on KakaoTalk."
+      }
+     }
+    ],
+    "next": "a_teammate"
+   },
+   {
+    "id": "a_teammate",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "origin_athlete"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "Seoul huh. Don't get soft.",
+       "en": "Your old teammate, on KakaoTalk."
+      }
+     }
+    ],
+    "next": "a_notifs"
+   },
+   {
+    "id": "a_notifs",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "origin_creator"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "wait are you in KOREA?? · landing vlog when",
+       "en": "Notifications. Lots of them."
+      }
+     }
+    ],
+    "next": "a_way_out"
+   },
+   {
+    "id": "a_way_out",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "출구부터 찾자. 표지판 따라가.",
+       "en": "First, the way out. Follow the signs to the doors.",
+       "review": "native"
+      }
+     }
+    ],
+    "end": true
+   }
+  ]
+ },
+ "seoul.d1.arrive": {
+  "id": "seoul.d1.arrive",
+  "kind": "story",
+  "title": {
+   "ko": "온새",
+   "en": "Onsae"
+  },
+  "characterId": "haeun",
+  "location": "practice_studio",
+  "slot": "d1.s3",
+  "gate": {
+   "flags": [
+    "d1_arrived_hongdae"
+   ],
+   "month": {
+    "from": 1,
+    "to": 1
+   }
+  },
+  "summary": "Early (2:25): Haeun alone, drilling a turn; \"…누구세요?\", \"실장님 3시에 오세요.\", music back on. Step out (trust) or stay and watch; the Creator can raise the phone (trust down). On time (2:58): the cohort. Minji asks Yerin \"쟤가 새로 온 애야?\" out loud, Yun-seo's over-polite 고생 많으셨죠, Da-on waves. Late (3:20): Manager Choi in the corridor; Bo-ram says she gave you the wrong directions.",
+  "seeds": [
+   "gave_haeun_space",
+   "filmed_haeun_d1",
+   "minji_talked_back",
+   "boram_ally",
+   "d1_arrival_seen"
+  ],
+  "beats": [
+   {
+    "id": "r_early",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "d1_early"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "연습실 B, 오후 2시 25분.",
+       "en": "Practice Room B, 2:25. A girl runs the same eight counts, misses the turn on seven, restarts. On the third try she sees you in the mirror and stops the music."
+      }
+     }
+    ],
+    "next": "r_early_who"
+   },
+   {
+    "id": "r_early_who",
+    "speaker": "haeun_unnamed",
+    "expr": "cool",
+    "when": {
+     "flags": [
+      "d1_early"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "…누구세요?",
+       "en": "…Who are you?",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "r_hi",
+      "intent": "commit",
+      "say": {
+       "ko": "안녕하세요. 오늘부터 들어온 연습생이에요.",
+       "en": "Hi. I'm the trainee starting today.",
+       "rom": "annyeonghaseyo. oneulbuteo deureoon yeonseupsaengieyo"
+      },
+      "outcomes": [
+       {
+        "speaker": "haeun_unnamed",
+        "expr": "cool",
+        "reaction": {
+         "ko": "아… 네.",
+         "en": "Oh… right."
+        }
+       }
+      ]
+     },
+     {
+      "id": "r_formal",
+      "intent": "commit",
+      "say": {
+       "ko": "처음 뵙겠습니다.",
+       "en": "Pleased to meet you. (very formal)",
+       "rom": "cheoeum boepgetseumnida"
+      },
+      "outcomes": [
+       {
+        "speaker": "haeun_unnamed",
+        "expr": "cool",
+        "reaction": {
+         "ko": "네.",
+         "en": "Right.",
+         "note": "A perfect, polite nod."
+        }
+       }
+      ]
+     },
+     {
+      "id": "r_english",
+      "intent": "ask",
+      "say": {
+       "ko": "Sorry, um, English?",
+       "en": "Sorry, um, English?"
+      },
+      "outcomes": [
+       {
+        "speaker": "haeun_unnamed",
+        "expr": "cool",
+        "reaction": {
+         "ko": "…Hi.",
+         "en": "…Hi."
+        },
+        "deltas": {
+         "tension": 3
+        }
+       }
+      ]
+     }
+    ],
+    "next": "r_early_three"
+   },
+   {
+    "id": "r_early_three",
+    "speaker": "haeun_unnamed",
+    "expr": "neutral",
+    "when": {
+     "flags": [
+      "d1_early"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "실장님 3시에 오세요.",
+       "en": "The manager's coming at three.",
+       "note": "She turns the music back on and runs the eight counts again.",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "r_step_out",
+      "intent": "presence",
+      "say": {
+       "ko": "(복도에서 기다린다)",
+       "en": "Step out and wait in the corridor."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "…",
+         "en": "Through the door, the music starts and stops, starts and stops."
+        },
+        "deltas": {
+         "trust": 2
+        },
+        "setFlags": [
+         "gave_haeun_space"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "r_watch",
+      "intent": "presence",
+      "say": {
+       "ko": "(벽 옆에 앉아서 본다)",
+       "en": "Sit by the wall and watch."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "…",
+         "en": "She lands the turn this time. She doesn't look at you."
+        },
+        "setFlags": [
+         "watched_haeun_d1"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "r_film",
+      "intent": "commit",
+      "gate": {
+       "flags": [
+        "origin_creator"
+       ]
+      },
+      "say": {
+       "ko": "(휴대폰을 든다)",
+       "en": "[Creator] Raise your phone."
+      },
+      "outcomes": [
+       {
+        "speaker": "haeun_unnamed",
+        "expr": "cool",
+        "reaction": {
+         "ko": "…",
+         "en": "She sees the phone in the mirror and stops. She waits until you put it down."
+        },
+        "deltas": {
+         "trust": -4
+        },
+        "setFlags": [
+         "filmed_haeun_d1"
+        ]
+       }
+      ]
+     }
+    ],
+    "next": "r_ontime"
+   },
+   {
+    "id": "r_ontime",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "d1_ontime"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "오후 2시 58분.",
+       "en": "2:58. The practice room is full. Trainees sit stretching on the floor."
+      }
+     }
+    ],
+    "next": "r_minji"
+   },
+   {
+    "id": "r_minji",
+    "speaker": "minji",
+    "when": {
+     "flags": [
+      "d1_ontime"
+     ]
+    },
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "pr_photo"
+       ]
+      },
+      "value": {
+       "ko": "아, 공항 사진 걔네.",
+       "en": "Oh, it's the one from the airport photo.",
+       "note": "To Yerin. Not quietly.",
+       "review": "native"
+      }
+     },
+     {
+      "value": {
+       "ko": "쟤가 새로 온 애야?",
+       "en": "Is that the new one?",
+       "note": "To Yerin. Not quietly.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "r_yerin"
+   },
+   {
+    "id": "r_yerin",
+    "speaker": "yerin",
+    "when": {
+     "flags": [
+      "d1_ontime"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "그치?",
+       "en": "Right?"
+      }
+     }
+    ],
+    "next": "r_yunseo"
+   },
+   {
+    "id": "r_yunseo",
+    "speaker": "yunseo",
+    "when": {
+     "flags": [
+      "d1_ontime"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "멀리서 오느라 고생 많으셨죠.",
+       "en": "It must have been hard, coming all this way.",
+       "note": "With a smile.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "r_room"
+   },
+   {
+    "id": "r_room",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "d1_ontime"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "…",
+       "en": "Da-on gives you a small wave. A girl by the mirror glances once and goes back to stretching."
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "r_room_hi",
+      "intent": "commit",
+      "say": {
+       "ko": "안녕하세요. 잘 부탁드려요.",
+       "en": "Hi. Looking forward to working with you all.",
+       "rom": "annyeonghaseyo. jal butakdeuryeoyo"
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "…",
+         "en": "A few nods. Da-on nods twice."
+        }
+       }
+      ]
+     },
+     {
+      "id": "r_room_back",
+      "intent": "challenge",
+      "say": {
+       "ko": "네, 제가 새로 온 애예요.",
+       "en": "Yep, I'm the new one.",
+       "rom": "ne, jega saero on aeyeyo"
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "…",
+         "en": "Minji's eyebrows go up. Da-on tries not to laugh."
+        },
+        "setFlags": [
+         "minji_talked_back"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "r_room_quiet",
+      "intent": "presence",
+      "say": {
+       "ko": "(말없이 앉는다)",
+       "en": "Say nothing and sit down."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "…",
+         "en": "You find a spot by the wall."
+        }
+       }
+      ]
+     }
+    ],
+    "next": "r_late"
+   },
+   {
+    "id": "r_late",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "d1_late"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "오후 3시 20분.",
+       "en": "3:20. The door is shut, music playing. Manager Choi is in the corridor."
+      }
+     }
+    ],
+    "next": "r_late_choi"
+   },
+   {
+    "id": "r_late_choi",
+    "speaker": "manager_choi",
+    "when": {
+     "flags": [
+      "d1_late"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "3시 20분. 첫날부터?",
+       "en": "3:20. On your first day?",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "r_late_boram"
+   },
+   {
+    "id": "r_late_boram",
+    "speaker": "boram",
+    "when": {
+     "flags": [
+      "d1_late"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "실장님, 제가 길을 잘못 알려줬어요.",
+       "en": "Manager Choi, I gave the new one the wrong directions.",
+       "note": "She slipped out of the room. She never gave you any directions.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "r_late_in"
+   },
+   {
+    "id": "r_late_in",
+    "speaker": "manager_choi",
+    "when": {
+     "flags": [
+      "d1_late"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "…들어가.",
+       "en": "…Go in.",
+       "note": "She looks at both of you first."
+      }
+     }
+    ],
+    "next": "r_late_hall"
+   },
+   {
+    "id": "r_late_hall",
+    "speaker": "boram",
+    "when": {
+     "flags": [
+      "d1_late"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "첫날엔 다 그래.",
+       "en": "Day one's always like that.",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "r_late_thanks",
+      "intent": "commit",
+      "say": {
+       "ko": "고마워요.",
+       "en": "Thanks.",
+       "rom": "gomawoyo"
+      },
+      "outcomes": [
+       {
+        "speaker": "boram",
+        "reaction": {
+         "ko": "됐고. 들어가.",
+         "en": "Never mind that. In you go."
+        },
+        "setFlags": [
+         "boram_ally"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "r_late_why",
+      "intent": "ask",
+      "say": {
+       "ko": "왜 도와줬어요?",
+       "en": "Why did you help me?",
+       "rom": "wae dowajwosseoyo?"
+      },
+      "outcomes": [
+       {
+        "speaker": "boram",
+        "reaction": {
+         "ko": "그냥.",
+         "en": "Just because."
+        },
+        "setFlags": [
+         "boram_ally"
+        ]
+       }
+      ]
+     }
+    ],
+    "next": "r_three"
+   },
+   {
+    "id": "r_three",
+    "speaker": "narration",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "d1_late"
+       ]
+      },
+      "value": {
+       "ko": "…",
+       "en": "You walk in halfway through the rules. Manager Choi doesn't stop."
+      }
+     },
+     {
+      "value": {
+       "ko": "오후 3시.",
+       "en": "Three o'clock. Manager Choi comes in with a clipboard and claps once."
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "d1_arrival_seen"
+     ]
+    },
+    "end": true
+   }
+  ]
+ },
+ "seoul.d1.bedtime": {
+  "id": "seoul.d1.bedtime",
+  "kind": "story",
+  "title": {
+   "ko": "첫날 밤",
+   "en": "First night"
+  },
+  "characterId": "tong",
+  "location": "dorm",
+  "slot": "d1.s5",
+  "gate": {
+   "flags": [
+    "dorm_arrived"
+   ],
+   "month": {
+    "from": 1,
+    "to": 1
+   }
+  },
+  "summary": "In your bunk. Tong: anything from today? Bo-ram's 반말, Yun-seo's 고생 많으셨죠 (on-time arrival only), why everyone says 언니. Then sleep.",
+  "seeds": [
+   "tong_explained_honorific_si"
+  ],
+  "beats": [
+   {
+    "id": "b_open",
+    "speaker": "tong",
+    "lines": [
+     {
+      "when": {
+       "any": [
+        {
+         "flags": [
+          "asked_boram"
+         ]
+        },
+        {
+         "flags": [
+          "asked_yunseo"
+         ]
+        },
+        {
+         "flags": [
+          "asked_eonni"
+         ]
+        }
+       ]
+      },
+      "value": {
+       "ko": "또?",
+       "en": "Anything else?"
+      }
+     },
+     {
+      "value": {
+       "ko": "오늘 거 다시 볼래?",
+       "en": "Anything from today you want to go over?",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "b_boram",
+      "intent": "ask",
+      "gate": {
+       "notFlags": [
+        "asked_boram"
+       ]
+      },
+      "say": {
+       "ko": "보람 언니는 왜 반말해?",
+       "en": "Why does Bo-ram talk to me casually?"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "언니니까. 말 편하게 해, 할 때까지 기다려.",
+         "en": "That's 반말, casual speech. She's the oldest, so she can drop the formal endings with you. You can't drop them back until she tells you 말 편하게 해, \"talk comfortably\". Switching first would be presumptuous.",
+         "review": "native"
+        },
+        "setFlags": [
+         "asked_boram"
+        ],
+        "next": "b_open"
+       }
+      ]
+     },
+     {
+      "id": "b_yunseo",
+      "intent": "ask",
+      "gate": {
+       "flags": [
+        "d1_ontime"
+       ],
+       "notFlags": [
+        "asked_yunseo"
+       ]
+      },
+      "say": {
+       "ko": "윤서가 정확히 뭐라고 했어?",
+       "en": "What did Yun-seo say to me, exactly?"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "시가 들어갔어.",
+         "en": "고생 is hardship. 많으셨죠 is \"you had a lot of it, didn't you\", and the 시 in there is an honorific, the one you use for people above you. Between trainees around the same age, people usually leave it out. She put it in.",
+         "review": "native"
+        },
+        "setFlags": [
+         "asked_yunseo",
+         "tong_explained_honorific_si"
+        ],
+        "next": "b_open"
+       }
+      ]
+     },
+     {
+      "id": "b_eonni",
+      "intent": "ask",
+      "gate": {
+       "notFlags": [
+        "asked_eonni"
+       ]
+      },
+      "say": {
+       "ko": "왜 다 언니라고 불러?",
+       "en": "Why does everyone call each other 언니?"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "언니, 누나, 오빠, 형.",
+         "en": "Girls call older girls 언니, family or not. Boys would say 누나. To an older guy it's 오빠 from a girl, 형 from a guy. Get it right and people relax.",
+         "review": "native"
+        },
+        "setFlags": [
+         "asked_eonni"
+        ],
+        "next": "b_open"
+       }
+      ]
+     },
+     {
+      "id": "b_sleep",
+      "intent": "leave",
+      "say": {
+       "ko": "잘래.",
+       "en": "Sleep."
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "잘 자.",
+         "en": "Night."
+        }
+       }
+      ]
+     }
+    ],
+    "next": "b_end"
+   },
+   {
+    "id": "b_end",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "자는 동안 기력이 차. 자정 전에 자면 내일 꽉 차.",
+       "en": "Energy refills while you sleep. Before midnight and you start tomorrow full.",
+       "review": "native"
+      }
+     }
+    ],
+    "end": true
+   }
+  ]
+ },
+ "seoul.d1.exit": {
+  "id": "seoul.d1.exit",
+  "kind": "story",
+  "title": {
+   "ko": "출구",
+   "en": "The way out"
+  },
+  "characterId": "tong",
+  "location": "incheon_arrivals",
+  "slot": "d1.s1b",
+  "gate": {
+   "flags": [
+    "d1_started"
+   ],
+   "month": {
+    "from": 1,
+    "to": 1
+   }
+  },
+  "summary": "Two doors, 입구 and 출구. Tong explains blocks with 구, then 출 (ㅊ ㅜ ㄹ). Block crush 출구; a miss gets Tong pointing at ㅊ. The doors open.",
+  "seeds": [
+   "hangul:출구",
+   "d1_exit_done"
+  ],
+  "beats": [
+   {
+    "id": "e_signs",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "입구 · 출구",
+       "en": "Two sets of glass doors, two signs."
+      }
+     }
+    ],
+    "next": "e_blocks"
+   },
+   {
+    "id": "e_blocks",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "한글은 블록이야. 한 블록이 한 음절.",
+       "en": "Korean letters stack into blocks. Each block is one syllable. The second block on both signs is the same: 구. That's ㄱ, a \"g\", on top of ㅜ, an \"oo\". 구, \"goo\".",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "e_out"
+   },
+   {
+    "id": "e_out",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "출은 ㅊ, ㅜ, ㄹ. 나가는 거야.",
+       "en": "The first blocks are different. 출 is ㅊ, a \"ch\", then ㅜ again, with ㄹ, an \"l\", underneath. \"Chul\". It means out. You want out.",
+       "review": "native"
+      }
+     }
+    ],
+    "exercise": {
+     "type": "block_crush",
+     "objectiveId": "ko-script-blocks-2part",
+     "targets": [
+      "출구"
+     ],
+     "distractors": [
+      "ㅂ",
+      "ㅣ"
+     ],
+     "framing": {
+      "ko": "나가는 문을 맞춰 봐.",
+      "en": "Rebuild the way out."
+     },
+     "onFail": "assist"
+    },
+    "effects": {
+     "setFlags": [
+      "hangul:출구"
+     ]
+    },
+    "next": "e_pass"
+   },
+   {
+    "id": "e_pass",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "ex_e_out"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "출구.",
+       "en": "출구. Exit. The doors slide open."
+      }
+     }
+    ],
+    "next": "e_assist"
+   },
+   {
+    "id": "e_assist",
+    "speaker": "tong",
+    "when": {
+     "notFlags": [
+      "ex_e_out"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "ㅊ로 시작하는 쪽! 출구.",
+       "en": "The one that starts with ㅊ. 출구, exit.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "e_train"
+   },
+   {
+    "id": "e_train",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "공항철도는 이쪽이야.",
+       "en": "The airport train is this way. Find the departure board.",
+       "review": "native"
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "d1_exit_done"
+     ],
+     "vocab": [
+      {
+       "ko": "출구",
+       "en": "exit",
+       "rom": "chulgu"
+      },
+      {
+       "ko": "입구",
+       "en": "entrance",
+       "rom": "ipgu"
+      }
+     ]
+    },
+    "end": true
+   }
+  ]
+ },
+ "seoul.d1.orientation": {
+  "id": "seoul.d1.orientation",
+  "kind": "story",
+  "title": {
+   "ko": "오리엔테이션",
+   "en": "Orientation"
+  },
+  "characterId": "manager_choi",
+  "location": "practice_studio",
+  "slot": "d1.s4",
+  "gate": {
+   "flags": [
+    "d1_arrival_seen"
+   ],
+   "month": {
+    "from": 1,
+    "to": 1
+   }
+  },
+  "summary": "Manager Choi: phones after 9pm, no social media, no dating, curfew 11; the first monthly eval is at the end of this month. Self-introduction (sentence builder: formal blocks, casual decoys). Origin beat. Overheard: Su-a really left. Then: your locker.",
+  "seeds": [
+   "intro_formal / intro_casual",
+   "hangul:입니다",
+   "heard_sua_left",
+   "orientation_done"
+  ],
+  "beats": [
+   {
+    "id": "o_rules",
+    "speaker": "manager_choi",
+    "lines": [
+     {
+      "value": {
+       "ko": "휴대폰은 저녁 9시 이후에만. SNS 금지. 연애 금지. 통금은 11시.",
+       "en": "Phones after 9pm only. No social media. No dating. Curfew is eleven.",
+       "review": "native"
+      }
+     }
+    ],
+    "tong": {
+     "ko": "금지 = 안 돼!",
+     "en": "금지 (geumji) = banned. 통금 = curfew.",
+     "maxLevel": 3
+    },
+    "effects": {
+     "vocab": [
+      {
+       "ko": "금지",
+       "en": "banned",
+       "rom": "geumji"
+      }
+     ]
+    },
+    "next": "o_eval"
+   },
+   {
+    "id": "o_eval",
+    "speaker": "manager_choi",
+    "lines": [
+     {
+      "value": {
+       "ko": "첫 월말평가는 이번 달 말이에요. 곡은 곧 알려 줄게요.",
+       "en": "The first monthly eval is at the end of this month. You'll get the song soon.",
+       "review": "native"
+      }
+     }
+    ],
+    "tong": {
+     "ko": "월말평가 = 달 끝 평가!",
+     "en": "월말평가 = end-of-month evaluation. You take it when you're ready; there's no countdown.",
+     "maxLevel": 3
+    },
+    "effects": {
+     "vocab": [
+      {
+       "ko": "월말평가",
+       "en": "monthly evaluation",
+       "rom": "wolmal pyeongga"
+      }
+     ]
+    },
+    "next": "o_call"
+   },
+   {
+    "id": "o_call",
+    "speaker": "manager_choi",
+    "lines": [
+     {
+      "value": {
+       "ko": "자, 한 명씩 자기소개.",
+       "en": "Right. Introduce yourselves, one at a time.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "o_intro"
+   },
+   {
+    "id": "o_intro",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "입니다는 존댓말이야.",
+       "en": "Formal, like on the train. That ending, 입니다, is everywhere when people are being formal. 니 is ㄴ, an \"n\", with the ㅣ you know. 다 is ㄷ, a \"d\", with ㅏ, an \"ah\".",
+       "review": "native"
+      }
+     }
+    ],
+    "exercise": {
+     "type": "sentence_builder",
+     "objectiveId": "ko-gram-imnida",
+     "targets": [
+      "안녕하세요.",
+      "저는 {name}입니다.",
+      "잘 부탁드립니다."
+     ],
+     "distractors": [
+      "나는 {name}이야.",
+      "잘 부탁해."
+     ],
+     "framing": {
+      "ko": "자기소개를 만들어 봐.",
+      "en": "Build your introduction."
+     },
+     "onFail": "continue"
+    },
+    "effects": {
+     "setFlags": [
+      "hangul:입니다"
+     ],
+     "vocab": [
+      {
+       "ko": "자기소개",
+       "en": "self-introduction",
+       "rom": "jagisogae"
+      }
+     ]
+    },
+    "next": "o_intro_ok"
+   },
+   {
+    "id": "o_intro_ok",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "ex_o_intro"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "짝짝짝.",
+       "en": "The polite clap. Bo-ram nods once."
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "intro_formal"
+     ]
+    },
+    "next": "o_intro_pick"
+   },
+   {
+    "id": "o_intro_pick",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "ex_o_intro_skipped"
+     ],
+     "notFlags": [
+      "intro_formal"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "…",
+       "en": "Your turn. Everyone is looking at you."
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "o_say_formal",
+      "intent": "commit",
+      "say": {
+       "ko": "안녕하세요. 저는 {name}입니다. 잘 부탁드립니다.",
+       "en": "Hello. I'm {name}. Please look after me.",
+       "rom": "annyeonghaseyo. jeoneun {name}imnida. jal butakdeurimnida"
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "짝짝짝.",
+         "en": "The polite clap. Bo-ram nods once."
+        },
+        "setFlags": [
+         "intro_formal"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "o_say_casual",
+      "intent": "commit",
+      "say": {
+       "ko": "안녕! 나는 {name}이야. 잘 부탁해.",
+       "en": "Hi! I'm {name}. Look after me.",
+       "rom": "annyeong! naneun {name}iya. jal butakae"
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "…",
+         "en": "The room goes quiet. Yun-seo smiles."
+        },
+        "setFlags": [
+         "intro_casual"
+        ]
+       }
+      ]
+     }
+    ],
+    "next": "o_intro_mixed"
+   },
+   {
+    "id": "o_intro_mixed",
+    "speaker": "narration",
+    "when": {
+     "notFlags": [
+      "intro_formal",
+      "intro_casual"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "…",
+       "en": "Half formal, half casual. The room goes quiet. Yun-seo smiles."
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "intro_casual"
+     ]
+    },
+    "next": "o_parents"
+   },
+   {
+    "id": "o_parents",
+    "speaker": "manager_choi",
+    "when": {
+     "flags": [
+      "origin_intl_kid"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "아, 그리고 {name} 씨 부모님께서 연락 주셨어요. 잘 부탁한다고.",
+       "en": "Oh, and {name}'s parents got in touch. They asked us to take good care of you.",
+       "note": "The room goes quiet. Yun-seo tilts her head.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "o_photo"
+   },
+   {
+    "id": "o_photo",
+    "speaker": "manager_choi",
+    "when": {
+     "flags": [
+      "origin_creator",
+      "pr_photo"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "공항 사진 봤어요. 오늘부터 그런 거 없어요.",
+       "en": "I saw the airport photo. From today, none of that.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "o_subscribers"
+   },
+   {
+    "id": "o_subscribers",
+    "speaker": "manager_choi",
+    "when": {
+     "flags": [
+      "origin_creator"
+     ],
+     "notFlags": [
+      "pr_photo"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "구독자 많다면서요? 여기선 0명이에요.",
+       "en": "I hear you've got a lot of subscribers. In here, you've got zero.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "o_front_row"
+   },
+   {
+    "id": "o_front_row",
+    "speaker": "coach_park",
+    "when": {
+     "flags": [
+      "origin_athlete"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "운동했어요? 체력은 좋겠네. 내일 앞줄.",
+       "en": "You played sport? Stamina should be good, then. Front row, tomorrow.",
+       "note": "He sizes you up from the door.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "o_overheard"
+   },
+   {
+    "id": "o_overheard",
+    "speaker": "minji",
+    "lines": [
+     {
+      "value": {
+       "ko": "수아 진짜 나갔대. 짐도 다 뺐대.",
+       "en": "Su-a really left. She cleared out all her stuff.",
+       "note": "Behind you, while the forms go round.",
+       "review": "native"
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "heard_sua_left"
+     ]
+    },
+    "next": "o_overheard_yerin"
+   },
+   {
+    "id": "o_overheard_yerin",
+    "speaker": "yerin",
+    "lines": [
+     {
+      "value": {
+       "ko": "그치? 평가 전에….",
+       "en": "Right? Right before the eval…",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "o_overheard_boram"
+   },
+   {
+    "id": "o_overheard_boram",
+    "speaker": "boram",
+    "lines": [
+     {
+      "value": {
+       "ko": "됐고. 연습해.",
+       "en": "Enough. Practise.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "o_locker"
+   },
+   {
+    "id": "o_locker",
+    "speaker": "manager_choi",
+    "lines": [
+     {
+      "value": {
+       "ko": "사물함은 연습실 뒤쪽이에요. 가 봐요.",
+       "en": "Your locker's at the back of the studio. Go and have a look.",
+       "review": "native"
+      }
+     }
+    ],
+    "tong": {
+     "ko": "사물함 = 락커!",
+     "en": "사물함 (samulham) = locker.",
+     "maxLevel": 3
+    },
+    "effects": {
+     "setFlags": [
+      "orientation_done"
+     ],
+     "vocab": [
+      {
+       "ko": "사물함",
+       "en": "locker",
+       "rom": "samulham"
+      }
+     ]
+    },
+    "end": true
+   }
+  ]
+ },
+ "seoul.d1.station": {
+  "id": "seoul.d1.station",
+  "kind": "story",
+  "title": {
+   "ko": "공항철도",
+   "en": "The airport train"
+  },
+  "characterId": "tong",
+  "location": "arex_station",
+  "slot": "d1.s2",
+  "gate": {
+   "flags": [
+    "d1_exit_done"
+   ],
+   "month": {
+    "from": 1,
+    "to": 1
+   }
+  },
+  "summary": "Read the board (block crush 일반: the all-stop that stops at Hongdae) and you are early. Miss it and you are on the express to Seoul Station; ask a stranger the way back (sentence builder): on time, or the airport bus and late. Origin shortcuts: taxi on the family card, a sprint for the boarding train, or a fan who walks you there. Tong moment on the ride in, then rebuild 홍대입구.",
+  "seeds": [
+   "d1_early / d1_ontime / d1_late",
+   "tally.toll (origin shortcuts)",
+   "pr_photo",
+   "d1_tight_calf",
+   "hangul:일반",
+   "hangul:홍대입구"
+  ],
+  "beats": [
+   {
+    "id": "s_open",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "공항철도, 오후 1시 25분.",
+       "en": "The airport railway concourse, 1:25pm. The departure board clicks over."
+      }
+     }
+    ],
+    "next": "s_where"
+   },
+   {
+    "id": "s_where",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "회사는 홍대에 있어. 홍대입구에 서는 기차를 타야 돼.",
+       "en": "The agency's in Hongdae. We need the train that stops at 홍대입구.",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "s_read",
+      "intent": "commit",
+      "say": {
+       "ko": "(전광판을 읽는다)",
+       "en": "Read the board."
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "좋아, 같이 보자.",
+         "en": "Good. Let's read it together."
+        },
+        "next": "s_board"
+       }
+      ]
+     },
+     {
+      "id": "s_taxi",
+      "intent": "defer",
+      "gate": {
+       "flags": [
+        "origin_intl_kid"
+       ]
+      },
+      "say": {
+       "ko": "(가족 카드로 택시를 탄다)",
+       "en": "[International-School Kid] Take a taxi on the family card."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "택시 승강장.",
+         "en": "The taxi rank is right outside. The card goes through without a beep."
+        },
+        "setFlags": [
+         "d1_taxi",
+         "d1_early",
+         "toll_family_card"
+        ],
+        "tally": [
+         "toll"
+        ],
+        "next": "s_taxi_where"
+       }
+      ]
+     },
+     {
+      "id": "s_run",
+      "intent": "commit",
+      "gate": {
+       "flags": [
+        "origin_athlete"
+       ]
+      },
+      "say": {
+       "ko": "(지금 타는 기차로 뛴다)",
+       "en": "[Athlete] Run for the all-stop that's boarding now."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "두 층 아래.",
+         "en": "Two levels down, the all-stop is boarding. You take the escalator two steps at a time, suitcase on your shoulder, and make it with a second to spare."
+        },
+        "setFlags": [
+         "d1_sprint",
+         "d1_early",
+         "d1_tight_calf"
+        ],
+        "tally": [
+         "toll"
+        ],
+        "next": "s_splits"
+       }
+      ]
+     },
+     {
+      "id": "s_fan",
+      "intent": "ask",
+      "gate": {
+       "flags": [
+        "origin_creator"
+       ]
+      },
+      "say": {
+       "ko": "(알아본 팬의 도움을 받는다)",
+       "en": "[Creator] A student at the ticket machines has recognised you. Let her help."
+      },
+      "outcomes": [
+       {
+        "speaker": "fan",
+        "reaction": {
+         "ko": "헐… 혹시 {name} 님 맞아요? Oh my god, I watch everything!",
+         "en": "Whoa… are you {name}, by any chance? Oh my god, I watch everything!",
+         "review": "native"
+        },
+        "setFlags": [
+         "d1_fan",
+         "d1_early"
+        ],
+        "next": "s_fan_walk"
+       }
+      ]
+     }
+    ],
+    "next": "s_board"
+   },
+   {
+    "id": "s_board",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "직통 · 서울역 · 13:30   일반 · 서울역 · 13:32",
+       "en": "Two rows. The English cycles in every twenty seconds. The first train leaves in five minutes."
+      }
+     }
+    ],
+    "next": "s_board_read"
+   },
+   {
+    "id": "s_board_read",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "일은 ㅇ, ㅣ, ㄹ. 일반이 홍대에 서.",
+       "en": "일: ㅇ, silent at the start of a block, then ㅣ, an \"ee\", with your ㄹ underneath. 일반 stops everywhere, Hongdae too. 직통 runs straight to Seoul Station and skips us. Rebuild the one we want.",
+       "review": "native"
+      }
+     }
+    ],
+    "exercise": {
+     "type": "block_crush",
+     "objectiveId": "ko-script-blocks-2part",
+     "targets": [
+      "일반"
+     ],
+     "distractors": [
+      "ㅈ",
+      "ㅌ"
+     ],
+     "framing": {
+      "ko": "홍대에 서는 기차를 맞춰 봐.",
+      "en": "Rebuild the train that stops at Hongdae."
+     },
+     "onFail": "continue"
+    },
+    "effects": {
+     "setFlags": [
+      "hangul:일반"
+     ],
+     "vocab": [
+      {
+       "ko": "일반",
+       "en": "all-stop (regular) train",
+       "rom": "ilban"
+      },
+      {
+       "ko": "직통",
+       "en": "express (nonstop) train",
+       "rom": "jiktong"
+      }
+     ]
+    },
+    "next": "s_board_ok"
+   },
+   {
+    "id": "s_board_ok",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "ex_s_board_read"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "2번 승강장, 일반.",
+       "en": "Platform 2, the all-stop. The doors close behind you."
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "d1_early"
+     ]
+    },
+    "next": "s_pick"
+   },
+   {
+    "id": "s_pick",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "ex_s_board_read_skipped"
+     ],
+     "notFlags": [
+      "d1_early"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "어느 기차?",
+       "en": "Which train?"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "s_pick_ilban",
+      "intent": "commit",
+      "say": {
+       "ko": "일반 · 13:32",
+       "en": "The 13:32."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "2번 승강장.",
+         "en": "Platform 2, the all-stop. The doors close behind you."
+        },
+        "setFlags": [
+         "d1_early"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "s_pick_jiktong",
+      "intent": "commit",
+      "say": {
+       "ko": "직통 · 13:30",
+       "en": "The 13:30."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "1번 승강장.",
+         "en": "Platform 1. It's moving before you sit down."
+        }
+       }
+      ]
+     }
+    ],
+    "next": "s_express"
+   },
+   {
+    "id": "s_express",
+    "speaker": "narration",
+    "cue": "ride",
+    "when": {
+     "notFlags": [
+      "d1_early"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "직통. 서울역까지 논스톱.",
+       "en": "You're on the express, nonstop to Seoul Station. Out of the window, the Hongdae platform goes by without stopping."
+      }
+     }
+    ],
+    "tong": {
+     "ko": "직통 = 바로!",
+     "en": "직통 = direct. It doesn't stop until the end.",
+     "maxLevel": 3
+    },
+    "next": "s_seoul_station"
+   },
+   {
+    "id": "s_seoul_station",
+    "speaker": "narration",
+    "when": {
+     "notFlags": [
+      "d1_early"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "서울역.",
+       "en": "Seoul Station, 2:20. Two stops past Hongdae. A woman with a shopping trolley is waiting by the escalator."
+      }
+     }
+    ],
+    "next": "s_ask"
+   },
+   {
+    "id": "s_ask",
+    "speaker": "tong",
+    "when": {
+     "notFlags": [
+      "d1_early"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "물어보자. 실례합니다!",
+       "en": "Ask her. 실례합니다 is \"excuse me\". You know 홍대.",
+       "review": "native"
+      }
+     }
+    ],
+    "exercise": {
+     "type": "sentence_builder",
+     "objectiveId": "ko-phrase-directions",
+     "targets": [
+      "실례합니다.",
+      "홍대",
+      "어떻게",
+      "가요?"
+     ],
+     "distractors": [
+      "버스"
+     ],
+     "framing": {
+      "ko": "홍대 가는 길을 물어봐.",
+      "en": "Ask the way to Hongdae."
+     },
+     "onFail": "continue"
+    },
+    "next": "s_ask_ok"
+   },
+   {
+    "id": "s_ask_ok",
+    "speaker": "stranger",
+    "when": {
+     "flags": [
+      "ex_s_ask"
+     ],
+     "notFlags": [
+      "d1_early"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "홍대요? 공항철도 다시 타요. 두 정거장! 저기 내려가요.",
+       "en": "Hongdae? Take the airport line back. Two stops! Down there.",
+       "review": "native"
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "d1_ontime"
+     ]
+    },
+    "next": "s_ask_pick"
+   },
+   {
+    "id": "s_ask_pick",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "ex_s_ask_skipped"
+     ],
+     "notFlags": [
+      "d1_early",
+      "d1_ontime"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "…",
+       "en": "She looks up from her phone."
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "s_ask_ko",
+      "intent": "ask",
+      "say": {
+       "ko": "실례합니다. 홍대 어떻게 가요?",
+       "en": "Excuse me. How do I get to Hongdae?",
+       "rom": "sillyehamnida. hongdae eotteoke gayo?"
+      },
+      "outcomes": [
+       {
+        "speaker": "stranger",
+        "reaction": {
+         "ko": "홍대요? 공항철도 다시 타요. 두 정거장! 저기 내려가요.",
+         "en": "Hongdae? Take the airport line back. Two stops! Down there.",
+         "review": "native"
+        },
+        "setFlags": [
+         "d1_ontime"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "s_ask_en",
+      "intent": "ask",
+      "say": {
+       "ko": "Excuse me… Hongdae?",
+       "en": "(In English.)"
+      },
+      "outcomes": [
+       {
+        "speaker": "stranger",
+        "reaction": {
+         "ko": "아, 버스? 버스는 밖이에요!",
+         "en": "Oh, the bus? Buses are outside!",
+         "review": "native"
+        },
+        "setFlags": [
+         "d1_late"
+        ]
+       }
+      ]
+     }
+    ],
+    "next": "s_bus"
+   },
+   {
+    "id": "s_bus",
+    "speaker": "stranger",
+    "when": {
+     "notFlags": [
+      "d1_early",
+      "d1_ontime",
+      "d1_late"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "버스요? 버스는 밖이에요!",
+       "en": "The bus? Buses are outside!",
+       "note": "The words came out in the wrong order; she heard 버스.",
+       "review": "native"
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "d1_late"
+     ]
+    },
+    "next": "s_bus_ride"
+   },
+   {
+    "id": "s_bus_ride",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "d1_late"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "홍대행 버스.",
+       "en": "The airport bus to Hongdae. Traffic on the bridge. The clock on the screen passes three."
+      }
+     }
+    ],
+    "next": "s_ride"
+   },
+   {
+    "id": "s_ride",
+    "speaker": "narration",
+    "cue": "ride",
+    "when": {
+     "notFlags": [
+      "d1_taxi",
+      "d1_late"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "기차 안.",
+       "en": "On the train. Fields, then the river, then the city."
+      }
+     }
+    ],
+    "next": "s_prep"
+   },
+   {
+    "id": "s_prep",
+    "speaker": "tong",
+    "lines": [
+     {
+      "when": {
+       "any": [
+        {
+         "flags": [
+          "asked_formal"
+         ]
+        },
+        {
+         "flags": [
+          "asked_names"
+         ]
+        },
+        {
+         "flags": [
+          "asked_ending"
+         ]
+        }
+       ]
+      },
+      "value": {
+       "ko": "또?",
+       "en": "Anything else?"
+      }
+     },
+     {
+      "value": {
+       "ko": "오늘 자기소개 해야 돼. 같이 볼래?",
+       "en": "You'll have to introduce yourself today. Want to go over it?",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "s_q_formal",
+      "intent": "ask",
+      "gate": {
+       "notFlags": [
+        "asked_formal"
+       ]
+      },
+      "say": {
+       "ko": "얼마나 격식 있게?",
+       "en": "How formal should I be?"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "첫날이니까 존댓말. 저는 {name}입니다.",
+         "en": "On a first day, with a manager and trainers in the room, go formal. That's the -습니다 endings: 저는 {name}입니다. Nobody gets told off for being too formal on day one.",
+         "review": "native"
+        },
+        "setFlags": [
+         "asked_formal"
+        ],
+        "next": "s_prep"
+       }
+      ]
+     },
+     {
+      "id": "s_q_names",
+      "intent": "ask",
+      "gate": {
+       "notFlags": [
+        "asked_names"
+       ]
+      },
+      "say": {
+       "ko": "다른 연습생은 뭐라고 불러?",
+       "en": "What do I call the other trainees?"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "언니, 아니면 이름에 씨.",
+         "en": "Older girls are 언니 to you. Until you know someone's age, use their name with 씨 after it. Koreans sort this out fast. Someone will ask your age today.",
+         "review": "native"
+        },
+        "setFlags": [
+         "asked_names"
+        ],
+        "next": "s_prep"
+       }
+      ]
+     },
+     {
+      "id": "s_q_ending",
+      "intent": "ask",
+      "gate": {
+       "notFlags": [
+        "asked_ending"
+       ]
+      },
+      "say": {
+       "ko": "끝은 어떻게 해?",
+       "en": "How do I end it?"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "잘 부탁드립니다.",
+         "en": "잘 부탁드립니다. It's close to \"please look after me\". Everyone says it, and people notice if you don't.",
+         "review": "native"
+        },
+        "setFlags": [
+         "asked_ending"
+        ],
+        "next": "s_prep"
+       }
+      ]
+     },
+     {
+      "id": "s_q_later",
+      "intent": "leave",
+      "say": {
+       "ko": "나중에.",
+       "en": "Later."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "…",
+         "en": "You watch the river go by."
+        }
+       }
+      ]
+     }
+    ],
+    "next": "s_stop"
+   },
+   {
+    "id": "s_stop",
+    "speaker": "narration",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "d1_taxi"
+       ]
+      },
+      "value": {
+       "ko": "홍대입구역 · 5분",
+       "en": "The driver's map: 홍대입구역, five minutes."
+      }
+     },
+     {
+      "when": {
+       "flags": [
+        "d1_late"
+       ]
+      },
+      "value": {
+       "ko": "다음 정류장: 홍대입구역",
+       "en": "The bus screen: next stop, 홍대입구역."
+      }
+     },
+     {
+      "value": {
+       "ko": "이번 역은 홍대입구역입니다.",
+       "en": "The announcement: this stop is 홍대입구. The line map over the door.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "s_stop_read"
+   },
+   {
+    "id": "s_stop_read",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "입구는 공항 문에서 봤지?",
+       "en": "You know 입구 from the airport doors: entrance. 홍대입구 is \"Hongik University entrance\". Rebuild it, so you know it when you see it.",
+       "review": "native"
+      }
+     }
+    ],
+    "exercise": {
+     "type": "block_crush",
+     "objectiveId": "ko-script-blocks-2part",
+     "targets": [
+      "홍대입구"
+     ],
+     "distractors": [
+      "ㅈ"
+     ],
+     "framing": {
+      "ko": "내릴 역을 맞춰 봐.",
+      "en": "Rebuild your stop."
+     },
+     "onFail": "assist"
+    },
+    "effects": {
+     "setFlags": [
+      "hangul:홍대입구",
+      "read_sign_subway"
+     ],
+     "vocab": [
+      {
+       "ko": "홍대입구",
+       "en": "Hongik Univ. (station)",
+       "rom": "hongdae-ipgu"
+      }
+     ]
+    },
+    "next": "s_arrive"
+   },
+   {
+    "id": "s_arrive",
+    "speaker": "narration",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "d1_taxi"
+       ]
+      },
+      "value": {
+       "ko": "홍대, 오후 2시 30분.",
+       "en": "Hongdae, 2:30pm. The driver pulls over on the main road."
+      }
+     },
+     {
+      "when": {
+       "flags": [
+        "d1_late"
+       ]
+      },
+      "value": {
+       "ko": "홍대입구역, 오후 3시 12분.",
+       "en": "Hongdae, 3:12pm. You run."
+      }
+     },
+     {
+      "when": {
+       "flags": [
+        "d1_ontime"
+       ]
+      },
+      "value": {
+       "ko": "홍대입구역, 오후 2시 50분.",
+       "en": "Hongdae, 2:50pm. Ten minutes."
+      }
+     },
+     {
+      "value": {
+       "ko": "홍대입구역, 오후 2시 25분.",
+       "en": "Hongdae, 2:25pm. Early."
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "d1_arrived_hongdae"
+     ]
+    },
+    "end": true
+   },
+   {
+    "id": "s_taxi_where",
+    "speaker": "driver",
+    "lines": [
+     {
+      "value": {
+       "ko": "어디까지 가세요?",
+       "en": "Where to?",
+       "note": "You show him the address on your phone.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "s_taxi_chat"
+   },
+   {
+    "id": "s_taxi_chat",
+    "speaker": "driver",
+    "lines": [
+     {
+      "value": {
+       "ko": "한국어 할 줄 알아요? 학생이에요?",
+       "en": "Do you speak Korean? Are you a student?",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "s_taxi_yes",
+      "intent": "defer",
+      "say": {
+       "ko": "네.",
+       "en": "Yes."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "…",
+         "en": "You say 네 to everything. He happily talks for the whole ride."
+        }
+       }
+      ]
+     },
+     {
+      "id": "s_taxi_little",
+      "intent": "commit",
+      "say": {
+       "ko": "Sorry… 조금.",
+       "en": "Sorry… a little."
+      },
+      "outcomes": [
+       {
+        "speaker": "driver",
+        "reaction": {
+         "ko": "괜찮아요. 천천히.",
+         "en": "That's okay. Slowly.",
+         "note": "He points out the river as you cross it.",
+         "review": "native"
+        }
+       }
+      ]
+     }
+    ],
+    "next": "s_prep"
+   },
+   {
+    "id": "s_splits",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "Splits?",
+       "en": "Your old teammate, on KakaoTalk."
+      }
+     }
+    ],
+    "next": "s_ride"
+   },
+   {
+    "id": "s_fan_walk",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "…",
+       "en": "She walks you to the all-stop, talking the whole way, then stops at the doors."
+      }
+     }
+    ],
+    "next": "s_fan_photo"
+   },
+   {
+    "id": "s_fan_photo",
+    "speaker": "fan",
+    "lines": [
+     {
+      "value": {
+       "ko": "사진 같이 찍어도 돼요?",
+       "en": "Can we take a photo together?",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "s_fan_yes",
+      "intent": "commit",
+      "say": {
+       "ko": "네, 좋아요.",
+       "en": "Sure."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "찰칵.",
+         "en": "A selfie. She's posting it before the doors close."
+        },
+        "setFlags": [
+         "pr_photo"
+        ],
+        "tally": [
+         "toll",
+         "toll"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "s_fan_no",
+      "intent": "decline",
+      "say": {
+       "ko": "죄송해요, 지금은….",
+       "en": "Sorry, not right now…"
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "찰칵.",
+         "en": "She takes a blurry one anyway, through the closing doors. She posts it."
+        },
+        "setFlags": [
+         "pr_photo"
+        ],
+        "tally": [
+         "toll"
+        ]
+       }
+      ]
+     }
+    ],
+    "next": "s_ride"
    }
   ]
  },
@@ -3437,15 +6012,17 @@ export const SCENES = {
        ]
       },
       "value": {
-       "ko": "그 앱 계속 켜 놔? 나랑 있을 땐 번역기 필요 없잖아. 내가 다 알려 줄게.",
-       "en": "You keep that app on? You don't need a translator with me. I'll teach you everything.",
+       "ko": "자꾸 뭘 찾아봐? 나랑 있을 땐 번역기 필요 없잖아. 내가 다 알려 줄게.",
+       "en": "You keep looking things up? You don't need a translator with me. I'll teach you everything.",
+       "note": "He can't see Tong. He sees you pause, glance at nothing, and come back with the right word.",
        "review": "native"
       }
      },
      {
       "value": {
-       "ko": "그 앱 계속 켜 놔요? 저랑 있을 땐 번역기 필요 없잖아요. 제가 다 알려 줄게요.",
-       "en": "You keep that app on? You don't need a translator with me. I'll teach you everything.",
+       "ko": "자꾸 뭘 찾아봐요? 저랑 있을 땐 번역기 필요 없잖아요. 제가 다 알려 줄게요.",
+       "en": "You keep looking things up? You don't need a translator with me. I'll teach you everything.",
+       "note": "He can't see Tong. He sees you pause, glance at nothing, and come back with the right word.",
        "review": "native"
       }
      }
@@ -3461,9 +6038,9 @@ export const SCENES = {
       "intent": "defer",
       "ask": "directive",
       "say": {
-       "ko": "…그래요. 꺼 둘게요.",
-       "en": "…Okay. I'll switch it off.",
-       "rom": "geuraeyo. kkeo dulgeyo"
+       "ko": "…그래요. 안 찾아볼게요.",
+       "en": "…Okay. I'll stop looking things up.",
+       "rom": "geuraeyo. an chajabolgeyo"
       },
       "outcomes": [
        {
@@ -3477,7 +6054,7 @@ export const SCENES = {
         "reaction": {
          "ko": "잘했어. 모르는 거 있으면 나한테 물어봐.",
          "en": "Good. Anything you don't know, ask me.",
-         "note": "Tong goes quiet whenever he's around now. It was easier. That's the point."
+         "note": "You stop asking Tong anything when he's around. It was easier. That's the point."
         },
         "deltas": {
          "warmth": 3
@@ -3496,7 +6073,7 @@ export const SCENES = {
         "reaction": {
          "ko": "잘했어요. 모르는 거 있으면 저한테 물어봐요.",
          "en": "Good. Anything you don't know, ask me.",
-         "note": "Tong goes quiet whenever he's around now. It was easier. That's the point.",
+         "note": "You stop asking Tong anything when he's around. It was easier. That's the point.",
          "review": "native"
         },
         "deltas": {
@@ -3518,9 +6095,9 @@ export const SCENES = {
       "ask": "directive",
       "minTier": 1,
       "say": {
-       "ko": "통은 제 선생님이에요. 진 씨도 같이 알려 주세요.",
-       "en": "Tong's my teacher. You can teach me too.",
-       "rom": "tong-eun je seonsaengnimieyo. jin ssido gachi allyeo juseyo"
+       "ko": "저는 제 방식대로 배워요. 진 씨도 같이 알려 주세요.",
+       "en": "I learn my own way. You can teach me too.",
+       "rom": "jeoneun je bangsikdaero baewoyo. jin ssido gachi allyeo juseyo"
       },
       "outcomes": [
        {
@@ -3529,7 +6106,7 @@ export const SCENES = {
         "reaction": {
          "ko": "하하, 선생님이 둘이네. 좋아요.",
          "en": "Haha, two teachers, then. Fine.",
-         "note": "He means it, mostly. He glances at your phone once more before he lets it go."
+         "note": "He means it, mostly. He watches you glance at nothing once more before he lets it go."
         },
         "deltas": {
          "warmth": -1,

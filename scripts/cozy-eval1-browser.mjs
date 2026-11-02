@@ -31,6 +31,9 @@ async function run(label, viewport, plan) {
   await f.evaluate(() => { try { localStorage.removeItem('tong-cozy-seoul-v2'); } catch {} });
   await f.locator('#start').click();
   await f.locator('#creator-start').click();
+  // Day 1 now starts at Incheon (cozy-day1-browser.mjs covers it); this proof starts in Hongdae.
+  await f.waitForFunction(() => __cozy.S.started, null, { polling: 500 });
+  await f.evaluate(() => __cozy.skipDayOne());
   await f.waitForFunction(() => __cozy.S.started);
   // A new game opens with Tong's intro; let it start, then close it.
   await f.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 15000 }).catch(() => {});
@@ -38,6 +41,8 @@ async function run(label, viewport, plan) {
   // Skip Tong's sign-reading tutorial (it would keep re-offering at the studio door).
   await f.evaluate(() => { for (const id of ['food', 'store', 'cafe', 'subway', 'studio', 'lookout']) __cozy.S.signs.add(id); });
   await f.evaluate(() => __cozy.travelTo('studio', { skipAnimation: true }));
+  // Wait for the trip to land, or it would move us back to the studio door after the teleport below.
+  await f.waitForFunction(() => !__cozy.transitioning, null, { timeout: 120000, polling: 250 });
   await page.waitForTimeout(1500);
   // Walk-up view: stand at the studio schedule board (next to the word-quiz whiteboard).
   await f.evaluate(() => {
@@ -67,6 +72,8 @@ async function run(label, viewport, plan) {
   assert.equal(chap0.month, 1);
   assert.equal(chap0.status, 'open');
   await quiet(f);
+  // The prompt picks the nearest thing on the next frames, once no dialogue is open.
+  await f.waitForFunction(() => __cozy.levelDiagnostics.interaction === '📋 스케줄표 · Schedule board', null, { timeout: 60000, polling: 250 }).catch(() => {});
   assert.equal(await f.evaluate(() => __cozy.levelDiagnostics.interaction), '📋 스케줄표 · Schedule board', 'E prompt at the board');
   await shot('board-in-world');
   await f.evaluate(() => __cozy.interact()); // the real E-key path
@@ -175,7 +182,8 @@ async function run(label, viewport, plan) {
   assert.equal(out.chapter.month, 2, 'the month advances after results');
   assert.equal(out.chapter.status, 'open');
   const r = out.chapter.results[1];
-  assert.ok(r && r.band && r.board.length === 6, 'results stored with the ranking board');
+  // The cohort of seven (eval1.js ROSTER), the foreign trainee picked for this save, and you.
+  assert.ok(r && r.band && r.board.length === 9, `results stored with the ranking board (${r?.board?.length})`);
   assert.ok(Array.isArray(out.chapter.weak));
   await action('results-close');
   await page.waitForTimeout(800);

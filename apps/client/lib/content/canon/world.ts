@@ -22,6 +22,8 @@ export const SEOUL_WORLD: WorldCanon = {
     { month: 12, label: 'February', eval: 'Eval 12: debut showcase · TOPIK 4→5', beats: ['H12 the night before'] },
   ],
   places: [
+    { id: 'incheon_arrivals', name: { ko: '인천공항 도착장', en: 'Incheon Airport arrivals' }, note: 'Day 1 starts here at 1:05pm. Signs: 도착, 입구, 출구, 화장실, 공항철도 (docs/seoul-day1.md).' },
+    { id: 'arex_station', name: { ko: '공항철도', en: 'Airport railway (AREX)' }, note: 'The all-stop (일반) stops at 홍대입구 (~50 min); the express (직통) runs nonstop to Seoul Station (~43 min), so for Hongdae it is the trap.' },
     { id: 'practice_studio', name: { ko: '연습실', en: 'Practice Studio' }, note: 'Onsae\'s rehearsal floor. Mirror wall, ranking sheet, water bottles with name tags.' },
     { id: 'agency_lockers', name: { ko: '사물함', en: 'Trainee lockers' }, note: 'Corridor outside the studio. Your locker was Sua\'s.' },
     { id: 'convenience_store', name: { ko: '편의점', en: 'Convenience store' }, note: '24h. Plastic chairs outside. The ramyeon ritual.' },
@@ -50,6 +52,8 @@ export const SEOUL_WORLD: WorldCanon = {
     'Each eval unlocks at a set point in the month and runs once, after the player confirms it (point of no return). Rehearsal before it is unlimited and ungraded.',
     'The player is never cut. A bad eval means probation, not a wall. The one way to miss debut whatever your scores is the International-School Kid losing the family ultimatum (docs/seoul-origins.md): that origin is high risk, high reward.',
     'The player is a foreign trainee of either gender (cozy creator). The female route is built first; a male player lives in the boys\' dorm with his own cohort (later). On the female route you live in Haeun\'s dorm from day one but not her room; rooming with her is earned (docs/seoul-evals-tbc.md T17), so nothing on the shared spine may depend on it. You inherit Sua\'s lineup spot and her agency locker, not her bed: on arrival Haeun politely steers you to the youngest\'s room, and Sua\'s bed stays empty until the reshuffle, when you can ask her for it.',
+    'Tong is a floating mascot that only the player can see and hear. Nobody else reacts to Tong; at most they notice you glance at nothing, mutter, or recite (owner, 2026-11-01).',
+    'Day 1 runs from Incheon arrivals (1:05pm) to the first night in the dorm; the agency expects you by 3pm (docs/seoul-day1.md). The player picks an origin (Athlete, Creator, International-School Kid) at the start.',
     'Trainees are under a dating ban and a curfew; contracts restrict social media and public appearances.',
     'No masked busking. Haeun\'s defiance is curfew breaks, the convenience store, the rooftop.',
     'Jeju lines (제주어) are written or approved by a Jeju speaker; Tong cannot translate them.',

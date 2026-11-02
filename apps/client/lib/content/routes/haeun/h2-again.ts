@@ -14,7 +14,7 @@ export const module: SceneModule = {
     slot: 'm1.s2',
     gate: { flags: ['h1_done'], month: { from: 1, to: 1 } },
     summary:
-      '21:40, three days before the placement eval. She drills you on eight counts in native numbers and says nothing but "다시." Keep going, call her mean (clean Korean earns respect), comfort her (backfires if she\'s raw), or leave early (looks like a loss; pays off much later).',
+      '21:40, a few nights after you start (gated on H1, not a date). She drills you on eight counts in native numbers and says nothing but "다시." Keep going, call her mean (clean Korean earns respect), comfort her (backfires if she\'s raw), or leave early (looks like a loss; pays off much later).',
     seeds: ['memory left_early (re-read when cried_in_studio is revealed, close+)', 'memory comforted_early (re-read as pity in a later fight)', 'first 반말 slip'],
     beats: [
       {
@@ -79,8 +79,8 @@ export const module: SceneModule = {
         expr: 'smirk',
         when: { notFlags: ['ex_h2_count', 'h2_counted_sino'] },
         lines: [
-          { when: { flags: ['tong_seen_once'] }, value: { ko: '폰이 춤추는 거예요? 신기하다~', en: 'Is your phone doing the dance? How neat~', note: 'Tong counted out loud for you.', review: 'native' } },
-          { value: { ko: '…', en: 'Tong counts out loud for you. She lets the phone count. She doesn\'t count with it.' } },
+          { when: { flags: ['tong_seen_once'] }, value: { ko: '누구랑 세는 거예요? 신기하다~', en: 'Who are you counting with? How neat~', note: 'Tong counted in your ear and you mouthed along.', review: 'native' } },
+          { value: { ko: '…', en: 'Tong counts in your ear. You mouth along. She watches your lips, not your feet.' } },
         ],
         effects: { setFlags: ['tong_seen_once'] },
         next: 'h2_slip',

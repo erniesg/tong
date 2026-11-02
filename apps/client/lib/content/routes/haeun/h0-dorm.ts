@@ -69,7 +69,7 @@ export const module: SceneModule = {
       },
       {
         id: 'd0_haeun',
-        speaker: 'haeun',
+        speaker: 'haeun_unnamed',
         expr: 'cool',
         lines: [
           {
@@ -89,7 +89,7 @@ export const module: SceneModule = {
             say: { ko: '네, 좋아요.', en: 'Sure, that\'s fine.', rom: 'ne, joayo' },
             outcomes: [
               {
-                speaker: 'haeun',
+                speaker: 'haeun_unnamed',
                 expr: 'cool',
                 reaction: { ko: '네~', en: 'Great~', note: 'The headphones go back on.' },
                 memory: { tag: 'haeun_sent_you_to_daon', note: 'On day one Haeun politely sent you to Da-on\'s room; you went.' },
@@ -103,7 +103,7 @@ export const module: SceneModule = {
             say: { ko: '저는 여기도 괜찮아요.', en: 'I\'m fine here too.', rom: 'jeoneun yeogido gwaenchanayo' },
             outcomes: [
               {
-                speaker: 'haeun',
+                speaker: 'haeun_unnamed',
                 expr: 'smirk',
                 reaction: {
                   ko: '다온이 방이 더 넓어요. 창문도 있고요.',
@@ -153,6 +153,15 @@ export const module: SceneModule = {
         expr: 'neutral',
         lines: [
           {
+            when: { flags: ['boram_ally'] },
+            value: {
+              ko: '또 보네. 화장실은 하나야. 아침엔 줄 서. 다온이 학교 가니까 다온이 먼저.',
+              en: 'You again. One bathroom. In the morning you queue. Da-on has school, so she goes first.',
+              note: 'From the single bed by the window, folding laundry. She doesn\'t mention the corridor.',
+              review: 'native',
+            },
+          },
+          {
             value: {
               ko: '난 보람. 화장실은 하나야. 아침엔 줄 서. 다온이 학교 가니까 다온이 먼저.',
               en: 'I\'m Bo-ram. One bathroom. In the morning you queue. Da-on has school, so she goes first.',
@@ -162,6 +171,34 @@ export const module: SceneModule = {
           },
         ],
         tong: { ko: '반말이야!', en: 'Bo-ram uses 반말 with you straight away. She\'s the oldest, so that\'s normal here.', maxLevel: 2 },
+        next: 'd0_evening',
+      },
+      {
+        // The evening choice (docs/seoul-day1.md): the 기력 bar shows for the first time.
+        id: 'd0_evening',
+        speaker: 'daon',
+        expr: 'laugh',
+        lines: [{ value: { ko: '언니, 바로 자요? 얘기해요!', en: 'Eonni, are you going straight to sleep? Let\'s talk!', review: 'native' } }],
+        choices: [
+          {
+            id: 'd0_stay_up',
+            intent: 'presence',
+            say: { ko: '그래, 조금만.', en: 'Okay, just for a bit.', rom: 'geurae, jogeumman' },
+            outcomes: [
+              {
+                speaker: 'boram',
+                reaction: { ko: '다온, 내일 학교.', en: 'Da-on. School tomorrow.', note: 'An hour later. Da-on has asked your age, your star sign and whether you have ever met an idol. Bo-ram turns the light off on both of you.', review: 'native' },
+                setFlags: ['d1_stayed_up'],
+              },
+            ],
+          },
+          {
+            id: 'd0_sleep_early',
+            intent: 'decline',
+            say: { ko: '피곤해서 먼저 잘게.', en: 'I\'m tired. I\'ll sleep first.', rom: 'pigonhaeseo meonjeo jalge' },
+            outcomes: [{ speaker: 'daon', reaction: { ko: '네~ 내일 얘기해요!', en: 'Okay~ Tomorrow, then!' } }],
+          },
+        ],
         next: 'd0_bed',
       },
       {
