@@ -43,12 +43,12 @@ async function run(tag) {
   const shot = (name) => page.screenshot({ path: `${OUT}/${tag}-${name}.png`, timeout: 600000 });
   const flags = () => f.evaluate(() => __cozy.S.story.flags);
   const busy = () => f.evaluate(() => __cozy.dlg.state.active || __cozy.bridgeBusy);
-  const drillOpen = () => f.evaluate(() => document.querySelector('#seoul-eval .eval-card')?.dataset.screen === 'dance');
+  const drillOpen = () => f.evaluate(() => !document.querySelector('#seoul-eval')?.classList.contains('hidden') && document.querySelector('#seoul-eval .eval-card')?.dataset.screen === 'dance');
   const seen = [];
   // Click through dialogue: the plan picks some replies, else the first. Drills are danced; Tong host exercises closed.
   const talkThrough = async (shots = {}) => {
     for (let i = 0; i < 200; i++) {
-      if (await drillOpen()) { await shot(`drill-${seen.filter((s) => s === 'drill').length}`); seen.push('drill'); await playDance(f); continue; }
+      if (await drillOpen()) { const n = seen.filter((s) => s === 'drill').length; seen.push('drill'); await playDance(f, (i) => i === 5 && shot(`drill-${n}`)); continue; } // a shot takes seconds here: only after the last call
       if (!(await busy())) {
         await frames(4);
         if (!(await busy()) && !(await drillOpen())) return;
@@ -128,17 +128,24 @@ async function run(tag) {
     assert.equal(t.tally.dawn, 1);
     assert.ok(t.hour >= 7 && t.hour < 7.2, 'back at seven');
     // 2. Studio at 10: H1 with the trainee by the water bottles, then Coach Park's drill.
-    await f.evaluate(() => __cozy.travelTo('studio', { skipAnimation: true }));
-    await frames(6);
+    // Skip Tong's sign-reading offers (they'd block the trip), then go and wait for it to land.
+    await f.evaluate(() => { if (__cozy.dlg.state.active) __cozy.dlg.end(); for (const id of ['food', 'store', 'cafe', 'subway', 'studio', 'lookout']) __cozy.S.signs.add(id); });
+    assert.notEqual(await f.evaluate(() => __cozy.travelTo('studio', { skipAnimation: true })), false, 'the trip to the studio starts');
+    await f.waitForFunction(() => !__cozy.transitioning, null, { timeout: 120000, polling: 250 });
     await f.evaluate(() => { __cozy.setHour(10); __cozy.S.speed = 0; });
     await frames(20);
+    await f.waitForFunction(() => __cozy.loc.haeun === 'studio', null, { timeout: 60000, polling: 500 });
     await f.evaluate(() => {
       const p = __cozy.haeun.root.position;
       __cozy.player.root.position.set(p.x + 0.9, p.y, p.z);
       __cozy.cam.snap = true;
     });
     await frames(6);
-    await f.waitForFunction(() => /연습생|하은/.test(document.querySelector('#prompt').textContent), null, { timeout: 120000, polling: 500 });
+    await f.waitForFunction(() => /연습생|하은/.test(document.querySelector('#prompt').textContent), null, { timeout: 60000, polling: 500 }).catch(async (e) => {
+      log(tag, 'no Haeun prompt', await f.evaluate(() => ({ prompt: document.querySelector('#prompt').textContent, dlg: __cozy.dlg.state.id, loc: __cozy.loc.haeun, hv: __cozy.haeun.root.visible, h: __cozy.haeun.root.position.toArray(), p: __cozy.player.root.position.toArray(), hour: __cozy.S.hour, overlays: [...document.querySelectorAll('.overlay:not(.hidden)')].map((o) => o.id || o.className) })));
+      await shot('no-haeun-prompt');
+      throw e;
+    });
     await f.evaluate(() => __cozy.interact());
     await f.waitForFunction(() => __cozy.dlg.state.active, null, { polling: 500 });
     await talkThrough({ 'seoul.d2.drill:dr_call': '2-coach-formation', 'seoul.d2.drill:dr_front': '4-front-row', 'seoul.d2.drill:dr_end': '5-schedule-board' });
@@ -178,7 +185,7 @@ async function run(tag) {
 }
 
 /** Follow each call on the beat (from eval1-browser's playDance): pose early, cell on the hit. */
-async function playDance(f) {
+async function playDance(f, onCall) {
   for (let i = 0; ; i++) {
     const ok = await f.waitForFunction((n) => {
       const c = document.querySelector('#seoul-eval .eval-card');
@@ -193,6 +200,7 @@ async function playDance(f) {
     if (needPose && needCell) await f.locator(`#seoul-eval .dance-pose[data-pose="${target.pose}"]`).click();
     const sel = needCell ? `#seoul-eval .dance-cell[data-cell="${target.x},${target.y}"]` : `#seoul-eval .dance-pose[data-pose="${target.pose}"]`;
     await f.evaluate(({ sel, hitAt }) => new Promise((r) => setTimeout(() => { document.querySelector(sel)?.click(); r(); }, Math.max(0, hitAt - performance.now() - 30))), { sel, hitAt });
+    await onCall?.(i);
   }
 }
 
