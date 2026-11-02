@@ -408,6 +408,28 @@ export function createSeoulEval(ctx) {
     }
   }
 
+  /**
+   * A drill inside a scene (the formation_grid exercise): Coach Park's first
+   * practice, the Athlete's dawn run. Tier 1, ungraded, no tier picker.
+   */
+  async function drill({ n = 6, kinds = null, eyebrow, title, sub, spend = 'dance' } = {}) {
+    if (running) return null;
+    running = true;
+    try {
+      const u = getUI();
+      const seed = hashSeed(S.seed, 'drill', S.day, title ?? '');
+      const items = danceItems(seed, 1, n, { kinds });
+      getDayLoop()?.spend?.(spend);
+      const results = await u.runDance(items, { tier: 1, eyebrow, title, sub, windowScale: windowScale() });
+      const records = items.map((it, i) => compact(it, results[i]));
+      setChapter(recordRehearsal(chapter(), updateMastery(chapter().mastery, [scoreRound(records, { tier: 1, suggested: 1 })], { gain: 0.25 })));
+      return results;
+    } finally {
+      running = false;
+      ui?.close();
+    }
+  }
+
   const interactables = [{
     label: '📋 스케줄표 · Schedule board',
     pos: () => new THREE.Vector3(BOARD.x, TERRACE_Y, BOARD.z),
@@ -417,7 +439,7 @@ export function createSeoulEval(ctx) {
   }];
 
   return {
-    interactables, build, openBoard, rehearse, forceUnlock, sleepUntilMorning, runEvalDay,
+    interactables, build, openBoard, rehearse, drill, forceUnlock, sleepUntilMorning, runEvalDay,
     confirm: () => { if (!canStart(chapter(), flags())) return false; setChapter(confirmEval(chapter(), flags(), S.day)); return true; },
     get chapter() { return chapter(); },
     get running() { return running; },

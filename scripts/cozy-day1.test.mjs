@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const js = (f) => new URL(`../apps/client/public/cozy/js/${f}`, import.meta.url).href;
-const { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn, ROAD_FLAGS, dayOneOpen, dayOneClockHeld } = await import(js('day1.js'));
+const { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn, inForPractice, ROAD_FLAGS, dayOneOpen, dayOneClockHeld } = await import(js('day1.js'));
 const { basicLetters, hangulProgress, metWords, BASIC } = await import(js('hangul.js'));
 
 test('there are 24 basic letters and words break into them', () => {
@@ -89,6 +89,12 @@ test('the studio fills for orientation, and only then', () => {
   assert.equal(studioCastOn({ d1_arrived_hongdae: true, d1_early: true, 'played:seoul.d1.arrive': true }), true);
   assert.equal(studioCastOn({ d1_arrived_hongdae: true, orientation_done: true }), false);
   assert.equal(studioCastOn({ ...migrateDay1({}) }), false);
+  // From day 2 the cohort is in for practice, 10:00–18:00; Da-on only after school.
+  assert.equal(studioCastOn({ orientation_done: true }, { day: 2, hour: 11 }), true);
+  assert.equal(studioCastOn({ orientation_done: true }, { day: 2, hour: 20 }), false);
+  assert.equal(inForPractice('daon', 11), false);
+  assert.equal(inForPractice('daon', 15), true);
+  assert.equal(inForPractice('minji', 11), true);
 });
 
 test('incheon is hidden from flights and starts the day facing the hall', () => {

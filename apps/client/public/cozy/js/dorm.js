@@ -1,6 +1,6 @@
 // The girls' trainee dorm (canon/cohort.ts DORM_ROOMS): your floor of the
 // Seoul home block, the trainees who are in at night, and where Haeun stands.
-import { makePedestrian } from './characters.js';
+import { makeCastMember } from './characters.js';
 
 export const DORM_HOME = 'seoul-home', DORM_LEVEL = 1;
 
@@ -18,13 +18,17 @@ export const HAEUN_DORM = { at: [5.35, -3.4], yaw: Math.PI / 2, line: { ko: '네
 /** Is this trainee in at `hour`? home = [from, to], wrapping past midnight. */
 export const isHome = ([from, to], hour) => (from > to ? hour >= from || hour < to : hour >= from && hour < to);
 
+/** Midnight to 06:30 the cohort is asleep in their bunks (not drawn; there's no lying pose yet). */
+export const SLEEP_HOURS = [0, 6.5];
+export const asleep = (hour) => isHome(SLEEP_HOURS, hour);
+
 /** Is a position on the cohort's floor (where the cast should render)? */
 export const onDormFloor = (room) => room?.buildingId === DORM_HOME && room.level === DORM_LEVEL;
 
 export function createDormCast({ building, group }) {
   const y = building.levels[DORM_LEVEL].floorY;
   const actors = DORM_CAST.map((c) => {
-    const character = makePedestrian(c.seed);
+    const character = makeCastMember(c.id, c.seed);
     character.root.name = `dorm:${c.id}`;
     character.root.position.set(building.x + c.at[0], y, building.z + c.at[1]);
     character.root.rotation.y = c.yaw;
@@ -37,7 +41,7 @@ export function createDormCast({ building, group }) {
     /** Show the trainees who are in, only while you are on their floor. */
     update(hour, playerRoom) {
       const here = onDormFloor(playerRoom);
-      for (const a of actors) a.character.root.visible = here && isHome(a.home, hour);
+      for (const a of actors) a.character.root.visible = here && isHome(a.home, hour) && !asleep(hour);
     },
   };
 }

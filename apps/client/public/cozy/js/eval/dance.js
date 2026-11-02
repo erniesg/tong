@@ -65,12 +65,15 @@ export function legalCalls(state, { combos = true } = {}) {
 }
 
 /** A seeded sequence of n calls from START. Each call needs a change from the current formation. */
-export function makeCalls(seed, n = 8, { combos = true } = {}) {
+export function makeCalls(seed, n = 8, { combos = true, kinds = null } = {}) {
   const rand = rng(hashSeed(seed, 'dance'));
   let state = { ...START };
   const calls = [];
   for (let i = 0; i < n; i++) {
-    const all = legalCalls(state, { combos: combos && i >= 2 });
+    // `kinds` narrows the calls (a drill of moves only); 일어나 stays so a sit never strands it.
+    const legal = legalCalls(state, { combos: combos && i >= 2 });
+    const narrowed = kinds ? legal.filter((c) => kinds.includes(c.kind)) : legal;
+    const all = narrowed.length ? narrowed : legal;
     // Weight: moves 3, poses 2, combos 1 — directions and counts are the core.
     const weighted = all.flatMap((c) => Array(c.kind === 'move' ? 3 : c.kind === 'pose' ? 2 : 1).fill(c));
     let c = weighted[Math.floor(rand() * weighted.length)];

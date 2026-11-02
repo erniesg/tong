@@ -1,5 +1,6 @@
 // Toon-shaded chibi characters with canvas-painted anime faces.
 import * as THREE from 'three';
+import { COHORT_LOOKS } from './cohort-looks.js';
 import { G, add, clamp, damp, rand, makeCanvas, canvasTexture, wrapAngle, hdr, seeded } from './util.js';
 import { knit, denim, leather, fabric, hairTexture, strandAlpha, furTextures, tiled } from './textures.js';
 
@@ -1380,6 +1381,15 @@ export function makeCashier() {
 const PED_TOPS = ['#c95b4a', '#5b7fc9', '#f0c34d', '#7cb07a', '#b07cc0', '#e98aa6', '#56575e', '#f2efe8'];
 const PED_PANTS = ['#2f3442', '#4f74ad', '#5d5f66', '#8a6e52', '#1f1f24'];
 const PED_HAIR = ['#141419', '#3b2a20', '#5a3826', '#2a1c16', '#7a5236'];
+
+/** A named cohort member or staff with their fixed look (cohort-looks.js); anyone else is a seeded pedestrian. */
+export function makeCastMember(id, seed) {
+  const look = COHORT_LOOKS[id];
+  if (!look) return makePedestrian(seed);
+  const c = makePlayer(look);
+  c.root.name = id;
+  return c;
+}
 
 export function makePedestrian(seed) {
   const r = seeded(seed);
