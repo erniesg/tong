@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const js = (f) => new URL(`../apps/client/public/cozy/js/${f}`, import.meta.url).href;
-const { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn } = await import(js('day1.js'));
+const { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn, ROAD_FLAGS, dayOneOpen, dayOneClockHeld } = await import(js('day1.js'));
 const { basicLetters, hangulProgress, metWords, BASIC } = await import(js('hangul.js'));
 
 test('there are 24 basic letters and words break into them', () => {
@@ -50,6 +50,26 @@ test('old saves skip the airport; new ones are left alone', () => {
   assert.ok(old.d1_legacy && old.orientation_done && old.d1_arrived_hongdae && old.h0_done);
   const fresh = { d1_started: true };
   assert.equal(migrateDay1(fresh), fresh);
+  // The Day 1 scenes count as played, so nothing replays and Tong's hints move on.
+  for (const id of ['airport', 'exit', 'station', 'arrive', 'orientation']) assert.ok(old[`played:seoul.d1.${id}`], id);
+  assert.equal(dayOneOpen(old), false);
+  assert.equal(dayOneClockHeld(old), false);
+  // The first-night talk is skipped once they've slept in the dorm, kept if tonight is their first.
+  assert.ok(migrateDay1({ dorm_arrived: true })['played:seoul.d1.bedtime']);
+  assert.equal(migrateDay1({ h0_done: true })['played:seoul.d1.bedtime'], undefined);
+});
+
+test('a clock left running on Day 1 never skips it', () => {
+  const inIncheon = { d1_started: true };
+  assert.equal(dayOneClockHeld(inIncheon), true);
+  assert.equal(dayOneClockHeld({ ...inIncheon, d1_arrival_seen: true }), false);
+  // Day 2 without orientation: nothing ticks by itself.
+  assert.ok(Object.values(arrivalState(inIncheon, { day: 2 })).every((v) => !v));
+  assert.equal(dayOneOpen({ ...inIncheon, d1_arrival_seen: true }), true);
+  // Every flag a road can set is cleared before a replay.
+  const station = readFileSync(new URL('../apps/client/lib/content/routes/seoul/d1-station.ts', import.meta.url), 'utf8');
+  const set = new Set([...station.matchAll(/setFlags: \[([^\]]*)\]/g)].flatMap((m) => [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1])));
+  for (const f of set) if (!/^hangul:|^read_sign|^d1_arrived/.test(f)) assert.ok(ROAD_FLAGS.includes(f), f);
 });
 
 test('the arrival chain ticks in order from story flags', () => {
@@ -57,7 +77,7 @@ test('the arrival chain ticks in order from story flags', () => {
   const s = arrivalState({ d1_exit_done: true, d1_arrived_hongdae: true });
   assert.equal(s.airport && s.train, true);
   assert.equal(s.agency, false);
-  assert.ok(Object.values(arrivalState({}, { day: 2 })).every(Boolean));
+  assert.ok(Object.values(arrivalState({ orientation_done: true }, { day: 2 })).every(Boolean));
   assert.equal(arrivalState({}, { registered: true }).register, true);
 });
 

@@ -22,7 +22,7 @@ const X0 = -400; // cities/incheon.js
 
 const RUNS = {
   laptop: {
-    viewport: { width: 1280, height: 800 }, origin: 'intl_kid', arrival: 'd1_early',
+    viewport: { width: 1280, height: 800 }, origin: 'intl_kid', arrival: 'd1_early', reloadAt: 'seoul.d1.orientation:o_call',
     plan: { 'seoul.d1.station:s_where': /taxi/i, 'seoul.d1.station:s_taxi_chat': /조금/ },
   },
   phone: {
@@ -39,7 +39,7 @@ async function run(tag) {
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 300000 });
   const el = await page.waitForSelector('iframe.cozy-frame', { timeout: 300000 });
-  const f = await el.contentFrame();
+  let f = await el.contentFrame();
   await f.waitForFunction(() => window.__cozy && !document.querySelector('#start').disabled, null, { timeout: 300000 });
   const frames = async (n) => {
     const start = await f.evaluate(() => window.__fr);
@@ -59,6 +59,7 @@ async function run(tag) {
       } else {
         const st = await f.evaluate(() => ({ id: __cozy.dlg.state.id, choices: (__cozy.dlg.state.choices ?? []).map((c) => `${c.ko ?? ''} ${c.en ?? ''}`) }));
         if (st.id && shots[st.id] && !seen.has(st.id)) { seen.add(st.id); await frames(3); await shot(shots[st.id]); }
+        if (st.id === cfg.reloadAt && !seen.has('reload')) { seen.add('reload'); await reloadAndContinue(); continue; }
         const want = cfg.plan[st.id];
         const pick = want ? Math.max(0, st.choices.findIndex((c) => want.test(c))) : 0;
         await f.evaluate((pick) => { if (!__cozy.dlg.state.active) return; __cozy.dlg.finishTyping(); if (__cozy.dlg.state.choices.length) __cozy.dlg.choose(pick); else __cozy.dlg.advance(); }, pick);
@@ -99,7 +100,20 @@ async function run(tag) {
     await f.waitForFunction(() => __cozy.dlg.state.active, null, { polling: 500 });
   };
 
-  await f.evaluate(() => { __cozy.renderer.setPixelRatio(0.5); window.__fr = 0; const k = () => { window.__fr++; requestAnimationFrame(k); }; k(); });
+  const countFrames = () => f.evaluate(() => { __cozy.renderer.setPixelRatio(0.5); window.__fr = 0; const k = () => { window.__fr++; requestAnimationFrame(k); }; k(); });
+  // Close the tab mid-scene (after the 10 s autosave) and continue the save, as a player coming back would.
+  const reloadAndContinue = async () => {
+    await page.waitForTimeout(12000);
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 300000 });
+    f = await (await page.waitForSelector('iframe.cozy-frame', { timeout: 300000 })).contentFrame();
+    await f.waitForFunction(() => window.__cozy && !document.querySelector('#continue').classList.contains('hidden'), null, { timeout: 300000 });
+    await countFrames();
+    await f.evaluate(() => document.querySelector('#continue').click());
+    await f.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 120000, polling: 500 });
+    log(tag, 'reloaded; resumed with', await f.evaluate(() => __cozy.dlg.state.id));
+  };
+
+  await countFrames();
   // 0. Creator: pick the origin.
   await f.evaluate(() => document.querySelector('#start').click());
   // Day 1 is the female route (girls' dorm, 언니): play as a girl.

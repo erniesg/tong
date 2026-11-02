@@ -56,6 +56,8 @@ From Incheon T1 (typical; they vary by timetable):
 | 9 | The dorm | Sua's bed offered and deflected; Da-on and Bo-ram; stay up talking (costs 기력 and an hour) or sleep early | `haeun.h0.dorm` |
 | 10 | Your bunk, after 20:00 | Tong: Bo-ram's 반말, Yun-seo's 고생 많으셨죠 (on time only), 언니; then the Hangul recap; sleep | `seoul.d1.bedtime`, `hangul_recap` |
 
+The clock waits from Incheon until the studio: the road you take sets the arrival time, not how long you wander. A reload resumes where you were (on the way to Hongdae, or orientation from the top), and a replayed station scene starts the road over. Saves from before Day 1 began in Incheon count its scenes as played.
+
 When an exercise is closed, or can't run without the Tong host, the scene sets `ex_<beat>_skipped` and offers a plain choice instead (pick the row, say the line), so a closed panel never decides the arrival time.
 
 Origin shortcuts (choices tagged [Athlete], [Creator], [International-School Kid]):

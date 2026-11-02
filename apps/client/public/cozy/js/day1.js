@@ -32,8 +32,20 @@ export function studioHour(flags, now) {
  */
 export function migrateDay1(flags) {
   if (flags.d1_started) return flags;
-  return { ...flags, d1_started: true, d1_exit_done: true, d1_arrived_hongdae: true, d1_arrival_seen: true, orientation_done: true, d1_legacy: true };
+  const played = Object.fromEntries(DAY1_SCENES.map((id) => [`played:${id}`, true]));
+  // The first-night talk is for tonight only if they haven't reached the dorm yet.
+  if (!flags.dorm_arrived) delete played['played:seoul.d1.bedtime'];
+  return { ...flags, ...played, d1_started: true, d1_exit_done: true, d1_arrived_hongdae: true, d1_arrival_seen: true, orientation_done: true, d1_legacy: true };
 }
+const DAY1_SCENES = ['airport', 'exit', 'station', 'arrive', 'orientation', 'bedtime'].map((s) => `seoul.d1.${s}`);
+
+/** Flags the station scene sets for one road; cleared before a replay so two roads never stack. */
+export const ROAD_FLAGS = ['d1_early', 'd1_ontime', 'd1_late', 'd1_taxi', 'd1_fan', 'd1_sprint', 'd1_tight_calf', 'toll_family_card', 'pr_photo', 'asked_ending', 'asked_formal', 'asked_names'];
+
+/** Is Day 1 still waiting on its own scenes (the airport through orientation)? */
+export const dayOneOpen = (f) => !f.orientation_done;
+/** The clock waits from Incheon until the studio: the road you take sets the arrival time, not real time. */
+export const dayOneClockHeld = (f) => !!f.d1_started && !f.d1_arrival_seen;
 
 /** The arrival chain on the Today list, ticked from story flags. */
 export const ARRIVAL_STEPS = [
@@ -46,7 +58,8 @@ export const ARRIVAL_STEPS = [
   ['firstNight', '🛏️ Sleep in your bunk'],
 ];
 export function arrivalState(f, { day = 1, registered = false } = {}) {
-  const past = day >= 2;
+  // Waking on day 2 ticks what's left, but never before orientation: a clock left running can't skip Day 1.
+  const past = day >= 2 && !!f.orientation_done;
   return {
     airport: !!f.d1_exit_done || past,
     train: !!f.d1_arrived_hongdae || past,

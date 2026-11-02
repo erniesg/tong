@@ -37,7 +37,7 @@ import { apartments, buildApartment, apartmentHeightAt, apartmentCeilingAt, apar
 import { createDayLoop, normalizeDayState, clockRuns, clockHours, bedKind, DAY_CONFIG } from './day.js';
 import { createDayUI } from './day-ui.js';
 import { DORM_HOME, DORM_LEVEL, HAEUN_DORM, createDormCast, haeunDormSpot, onDormFloor } from './dorm.js';
-import { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn, createStudioCast } from './day1.js';
+import { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn, createStudioCast, ROAD_FLAGS, dayOneOpen, dayOneClockHeld } from './day1.js';
 import { hangulProgress, metWords } from './hangul.js';
 
 const cities = { seoul, tokyo, shanghai, incheon };
@@ -1263,13 +1263,23 @@ function dayOneDone(scene) {
   return true;
 }
 /** Per frame on Day 1: start the airport scene, and the arrival when you walk into the studio. */
-function dayOneTick(room) {
-  if (dlg.state.active || modalOpen() || !S.started) return;
-  if (S.city === 'incheon' && !flag('played:seoul.d1.airport')) return void scenes.play('seoul.d1.airport');
-  if (S.city !== 'seoul' || !flag('d1_arrived_hongdae') || flag('played:seoul.d1.arrive')) return;
+function dayOneTick() {
+  if (dlg.state.active || modalOpen() || !S.started || transitioning) return;
+  if (S.city === 'incheon') {
+    if (!flag('played:seoul.d1.airport')) return void scenes.play('seoul.d1.airport');
+    // Reloaded on the station scene's last line: you were already on your way.
+    if (flag('d1_arrived_hongdae')) {
+      S.story.flags = { ...S.story.flags, 'played:seoul.d1.station': true };
+      arriveHongdae();
+    }
+    return;
+  }
+  if (S.city !== 'seoul' || !flag('d1_arrived_hongdae')) return;
   if (zoneAt(player.root.position.x, player.root.position.z)?.id !== 'studio') return;
-  setHour(studioHour(S.story.flags, S.hour));
-  scenes.play('seoul.d1.arrive');
+  if (!flag('played:seoul.d1.arrive')) {
+    setHour(studioHour(S.story.flags, S.hour));
+    scenes.play('seoul.d1.arrive');
+  } else if (!flag('orientation_done')) scenes.play('seoul.d1.orientation'); // reloaded mid-orientation
 }
 const INCHEON_INTERACTABLES = [
   {
@@ -1284,7 +1294,14 @@ const INCHEON_INTERACTABLES = [
     pos: () => INCHEON.board,
     r: 3.2,
     on: () => flag('d1_exit_done') && !flag('d1_arrived_hongdae'),
-    act: () => scenes.play('seoul.d1.station'),
+    act: () => {
+      // A replay after a reload starts the road over, so two roads' flags never stack.
+      const keep = (flags) => Object.fromEntries(Object.entries(flags).filter(([k]) => !ROAD_FLAGS.includes(k)));
+      S.story.flags = keep(S.story.flags);
+      if (S.rel?.tong) S.rel.tong = { ...S.rel.tong, flags: keep(S.rel.tong.flags) };
+      if (S.story.tally?.toll) S.story.tally = { ...S.story.tally, toll: 0 };
+      scenes.play('seoul.d1.station');
+    },
   },
 ];
 let studioCast = null;
@@ -1401,7 +1418,8 @@ function inYourRoom() {
 async function useBed() {
   clearControls();
   // The first night: Tong goes over the day, then the Hangul recap, then sleep (dayOneDone).
-  if (bedKind(S.hour) !== 'nap' && scenes.play('seoul.d1.bedtime')) return;
+  const firstNight = S.day === 1 || (S.day === 2 && S.hour < DAY_CONFIG.bedUntil);
+  if (firstNight && bedKind(S.hour) !== 'nap' && scenes.play('seoul.d1.bedtime')) return;
   if (bedKind(S.hour) === 'nap') {
     if (await dayUI.napPrompt({ hour: S.hour }) === 'nap') day.nap();
   } else await day.sleepUntilMorning();
@@ -2860,7 +2878,7 @@ function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
   // Tapping Tong stops time: no clock and no 기력 while any panel is open.
-  const clockOn = clockRuns({ started: S.started, dialogue: dlg.state.active, modal: modalOpen(), bridgeBusy });
+  const clockOn = clockRuns({ started: S.started, dialogue: dlg.state.active, modal: modalOpen(), bridgeBusy }) && !dayOneClockHeld(S.story.flags);
   if (clockOn) {
     const prev = S.hour;
     const here = zoneAt(player.root.position.x, player.root.position.z);
@@ -2901,7 +2919,7 @@ function frame() {
     studioCast?.update(studioCastOn(S.story.flags));
     for (const a of studioCast?.actors ?? []) if (a.character.root.visible) animate(a.character, dt, t, 0);
   }
-  if (!arrivalDone()) dayOneTick();
+  if (dayOneOpen(S.story.flags)) dayOneTick();
   const hs = updateHaeun(dt, t);
   const js = updateJin(dt, t);
   updateNpcs(dt, t);
@@ -3130,8 +3148,9 @@ async function boot() {
     // Tests that start after Day 1's journey: mark Incheon → orientation done and stand in Hongdae.
     skipDayOne: async () => {
       if (dlg.state.active) dlg.end();
-      S.story.flags = { ...migrateDay1({}), ...S.story.flags, d1_exit_done: true, d1_arrived_hongdae: true, d1_arrival_seen: true, orientation_done: true, d1_legacy: true,
-        'played:seoul.d1.airport': true, 'played:seoul.d1.exit': true, 'played:seoul.d1.station': true, 'played:seoul.d1.arrive': true, 'played:seoul.d1.orientation': true };
+      // Exactly what an old save (from before Day 1 began in Incheon) loads as.
+      const { d1_started, ...rest } = S.story.flags;
+      S.story.flags = migrateDay1(rest);
       await dayOneMove('seoul', HONGDAE_POSES.street, 16.5);
       checkArrival();
       updateQuest();
