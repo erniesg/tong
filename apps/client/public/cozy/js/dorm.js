@@ -1,6 +1,6 @@
 // The girls' trainee dorm (canon/cohort.ts DORM_ROOMS): your floor of the
 // Seoul home block, the trainees who are in at night, and where Haeun stands.
-import { makePedestrian } from './characters.js';
+import { makeCastMember } from './characters.js';
 
 export const DORM_HOME = 'seoul-home', DORM_LEVEL = 1;
 
@@ -28,7 +28,7 @@ export const onDormFloor = (room) => room?.buildingId === DORM_HOME && room.leve
 export function createDormCast({ building, group }) {
   const y = building.levels[DORM_LEVEL].floorY;
   const actors = DORM_CAST.map((c) => {
-    const character = makePedestrian(c.seed);
+    const character = makeCastMember(c.id, c.seed);
     character.root.name = `dorm:${c.id}`;
     character.root.position.set(building.x + c.at[0], y, building.z + c.at[1]);
     character.root.rotation.y = c.yaw;

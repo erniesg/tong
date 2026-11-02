@@ -19,6 +19,12 @@ Built on `feat/seoul-day2` (issue #435, after [Day 1](seoul-day1.md)). Day 2 is 
 - **The Athlete is sent to the front row** in the drill ("앞줄. 어제 말했지."), paying off orientation.
 - **The Sunday call mirrors Ha-eun's:** across the roof, someone else is on a call in a dialect you don't know.
 
+## The cohort's looks
+
+- Each cohort member and the two staff have a fixed look in the creator's format (`cohort-looks.js`), chosen from their canon role: Da-on (15) pigtails and a pink hoodie; Bo-ram (22) short hair, dark tee, track pants; Do-hee (ex-survival) rose-brown waves, cream knit; Minji a bob, green hoodie, red trainers; Yerin a ponytail and glasses; Yun-seo long black hair, cream jacket; Coach Park a buzz cut and cap. None of this is canon.
+- **Manager Choi is drawn as a woman** (she runs the girls' dorm and does the night checks). A proposal: canon doesn't say.
+- From day 2 the cohort and staff are in the studio 10:00–18:00; Da-on only from 14:00 (middle school in the mornings).
+
 ## Flags and counters
 
 | Flag / tally | Set in | Pays off |

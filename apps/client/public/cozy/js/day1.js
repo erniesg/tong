@@ -1,7 +1,7 @@
 // Day 1 in Seoul (docs/seoul-day1.md): Incheon → Hongdae → Onsae → the dorm.
 // Plain helpers (tested in scripts/cozy-day1.test.mjs) plus the studio cast
 // that fills the practice room for orientation. No three.js imports, so node
-// tests can load it; main.js passes the character factory in.
+// tests can load it; main.js passes the character factory (makeCastMember) in.
 
 export const ORIGINS = [
   { id: 'athlete', ko: '운동선수', en: 'Athlete' },
@@ -72,10 +72,15 @@ export function arrivalState(f, { day = 1, registered = false } = {}) {
 }
 
 /** Is the studio full for orientation (the cohort is in from the on-time arrival until the lockers)? */
-export function studioCastOn(f) {
+export function studioCastOn(f, { day = 1, hour = 0 } = {}) {
+  // From day 2 the cohort and staff are in for practice, 10:00–18:00.
+  if (day >= 2 && f.orientation_done) return hour >= PRACTICE[0] && hour < PRACTICE[1];
   if (!f.d1_arrived_hongdae || f.orientation_done || f.d1_legacy) return false;
   return f.d1_early ? !!f['played:seoul.d1.arrive'] : true;
 }
+export const PRACTICE = [10, 18];
+/** Who is in the studio from day 2: Da-on has middle school in the mornings (canon/cohort.ts). */
+export const inForPractice = (id, hour) => (id === 'daon' ? hour >= 14 : true);
 
 // Practice studio (world.js buildStudio): x −16…−6, z −44…−31, floor at TERRACE_Y.
 const CAST = [
@@ -89,9 +94,9 @@ const CAST = [
   { id: 'boram', seed: 709, at: [-12.8, -33.2], yaw: Math.PI / 2 },
 ];
 
-export function createStudioCast({ group, floorY, makePedestrian }) {
+export function createStudioCast({ group, floorY, makeCastMember }) {
   const actors = CAST.map((c) => {
-    const character = makePedestrian(c.seed);
+    const character = makeCastMember(c.id, c.seed);
     character.root.name = `studio:${c.id}`;
     character.root.position.set(c.at[0], floorY, c.at[1]);
     character.root.rotation.y = c.yaw;
@@ -101,8 +106,9 @@ export function createStudioCast({ group, floorY, makePedestrian }) {
   });
   return {
     actors,
-    update(on) {
-      for (const a of actors) a.character.root.visible = on;
+    /** `hour` set from day 2 (practice): who's in follows inForPractice. */
+    update(on, hour = null) {
+      for (const a of actors) a.character.root.visible = on && (hour == null || inForPractice(a.id, hour));
     },
   };
 }

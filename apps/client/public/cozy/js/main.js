@@ -13,7 +13,7 @@ import {
   SPOTS, PLACES as SEOUL_PLACES, TENT, TX, COUNTER_Y, TERRACE_Y, SIGNS, setSignRead,
 } from './world.js';
 import {
-  makeHaeun, makeJin, makePlayer, makeAjusshi, makeBarista, makeCashier, makePedestrian, makeTong, makeCat,
+  makeHaeun, makeJin, makePlayer, makeAjusshi, makeBarista, makeCashier, makePedestrian, makeCastMember, makeTong, makeCat,
   animate, animateTong, setExpr, lookAtYaw, headPos, restylePlayer, normalizeLook,
 } from './characters.js';
 import { createCreator } from './creator.js';
@@ -2978,7 +2978,7 @@ function frame() {
     if (loc.haeun === 'dorm') haeun.root.visible = onDormFloor(room) && !asleep(S.hour);
     // Day one, evening: walking onto your floor plays the arrival (H0 · 숙소).
     if (onDormFloor(room) && !dlg.state.active && !modalOpen() && !S.story.flags.dorm_arrived && S.story.flags.h0_done) scenes.play('haeun.h0.dorm');
-    studioCast?.update(studioCastOn(S.story.flags));
+    studioCast?.update(studioCastOn(S.story.flags, { day: S.day, hour: S.hour }), S.day >= 2 ? S.hour : null);
     for (const a of studioCast?.actors ?? []) if (a.character.root.visible) animate(a.character, dt, t, 0);
   }
   if (dayOneOpen(S.story.flags)) dayOneTick();
@@ -3092,7 +3092,7 @@ async function boot() {
   occupants = createOccupants(interiors, { groups: cityGroups });
   const dormHome = apartments.find((b) => b.id === DORM_HOME);
   if (dormHome) dormCast = createDormCast({ building: dormHome, group: cityGroups.seoul });
-  studioCast = createStudioCast({ group: cityGroups.seoul, floorY: TERRACE_Y, makePedestrian });
+  studioCast = createStudioCast({ group: cityGroups.seoul, floorY: TERRACE_Y, makeCastMember });
   initParticles();
   buildMotes();
   const saved = loadSave();

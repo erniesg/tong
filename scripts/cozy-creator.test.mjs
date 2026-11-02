@@ -187,3 +187,22 @@ test('repaintFace updates brow and lash features without rebuilding the body', a
   assert.equal(c.face.browKey, null, 'brow layer redraws on the next frame');
   h.animate(c, 0.016, 0, 0); // paints without throwing
 });
+
+test('the cohort and staff have fixed, valid looks; anyone else is a pedestrian', async () => {
+  const h = await harness();
+  const { COHORT_LOOKS } = await import('../apps/client/public/cozy/js/cohort-looks.js');
+  const ids = ['daon', 'boram', 'dohee', 'minji', 'yerin', 'yunseo', 'manager_choi', 'coach_park'];
+  assert.deepEqual(Object.keys(COHORT_LOOKS).sort(), [...ids].sort());
+  const seen = new Set();
+  for (const id of ids) {
+    // Every field set is a real creator option: normalizing keeps it.
+    const n = h.normalizeLook(COHORT_LOOKS[id]);
+    for (const [k, v] of Object.entries(COHORT_LOOKS[id])) assert.equal(n[k], v, `${id}.${k}`);
+    const key = `${COHORT_LOOKS[id].hairStyle}/${COHORT_LOOKS[id].hair}/${COHORT_LOOKS[id].top}/${COHORT_LOOKS[id].topStyle}`;
+    assert.ok(!seen.has(key), `${id} looks like someone else`);
+    seen.add(key);
+    const c = h.makeCastMember(id, 1);
+    assert.equal(c.root.name, id);
+  }
+  assert.notEqual(h.makeCastMember('passer_by', 7).root.name, 'passer_by', 'no fixed look: a seeded pedestrian');
+});
