@@ -1105,7 +1105,8 @@ function buildStudio(rnd) {
     const t = textTexture(lines, 384, 512, { bg });
     add(new THREE.PlaneGeometry(0.9, 1.2), mat(0xffffff, { map: t }), x, y + 1.9, z, G.scene, false).rotation.y = ry;
   };
-  poster([['데뷔까지', 64, '#fff', 180], ['D-100', 120, '#ffd23f', 300], ['화이팅!', 60, '#fff', 420]], '#3b2a6b', -9, -31.03, Math.PI);
+  // No countdowns on screen (docs/seoul-evals-tbc.md): a cheer, not a date.
+  poster([['우리는', 64, '#fff', 180], ['한 팀!', 120, '#ffd23f', 300], ['화이팅!', 60, '#fff', 420]], '#3b2a6b', -9, -31.03, Math.PI);
   poster([['연습', 100, '#3a1a10', 200], ['또 연습', 80, '#c0392b', 330]], '#fff3dc', -12, -31.03, Math.PI);
   // whiteboard: daily word quiz
   const wb = textTexture(

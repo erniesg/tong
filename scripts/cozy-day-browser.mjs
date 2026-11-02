@@ -38,7 +38,8 @@ async function run({ width, height, tag, bedHour, touch }) {
   await f.waitForFunction(() => __cozy.S.started, null, { polling: 500 });
   await f.evaluate(() => __cozy.skipDayOne());
   await f.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 120000, polling: 500 }).catch(() => {});
-  await f.evaluate(() => { if (__cozy.dlg.state.active) __cozy.dlg.end(); __cozy.setHour(17); __cozy.S.speed = 1; });
+  // This proof is about the clock and the bed; the first-night talk is covered by the Day 1 and dorm proofs.
+  await f.evaluate(() => { if (__cozy.dlg.state.active) __cozy.dlg.end(); __cozy.S.story.flags['played:seoul.d1.bedtime'] = true; __cozy.setHour(17); __cozy.S.speed = 1; });
   const shot = (name) => page.screenshot({ path: `${OUT}/${tag}-${name}.png`, timeout: 600000 });
   const st = () => f.evaluate(() => ({ hour: __cozy.S.hour, day: __cozy.S.day, ...__cozy.day.getCondition(), modal: !!document.querySelector('.overlay:not(.hidden)'), busy: __cozy.bridgeBusy }));
 
