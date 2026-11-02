@@ -178,7 +178,8 @@ async function run(label, viewport, plan) {
   assert.equal(out.chapter.month, 2, 'the month advances after results');
   assert.equal(out.chapter.status, 'open');
   const r = out.chapter.results[1];
-  assert.ok(r && r.band && r.board.length === 6, 'results stored with the ranking board');
+  // The cohort of seven (eval1.js ROSTER), the foreign trainee picked for this save, and you.
+  assert.ok(r && r.band && r.board.length === 9, `results stored with the ranking board (${r?.board?.length})`);
   assert.ok(Array.isArray(out.chapter.weak));
   await action('results-close');
   await page.waitForTimeout(800);
