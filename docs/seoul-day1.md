@@ -102,4 +102,4 @@ Shortcut riders skip the board, so they end the day a couple of letters lower. T
 - The Athlete's sprint as a rhythm-tap mini-game (the script's preview of the dawn drills); for now it's narrated.
 - Ride-in answers making the matching block glow in the self-introduction.
 - The cohort in the studio are stand-in figures (generic trainee models) until the cohort has its own looks.
-- Day 2: each origin's weekly loop, and the formation drill with Coach Park.
+- Day 2 is in [`seoul-day2.md`](seoul-day2.md): the formation drill after H1 and the origin loops.

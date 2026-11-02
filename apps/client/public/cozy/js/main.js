@@ -38,6 +38,7 @@ import { createDayLoop, normalizeDayState, clockRuns, clockHours, bedKind, DAY_C
 import { createDayUI } from './day-ui.js';
 import { DORM_HOME, DORM_LEVEL, HAEUN_DORM, createDormCast, haeunDormSpot, onDormFloor } from './dorm.js';
 import { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn, createStudioCast, ROAD_FLAGS, dayOneOpen, dayOneClockHeld } from './day1.js';
+import { LOOPS, loopDue, drillKinds, drillPassed } from './day2.js';
 import { hangulProgress, metWords } from './hangul.js';
 
 const cities = { seoul, tokyo, shanghai, incheon };
@@ -823,12 +824,34 @@ function hangout(locationId) {
 
 /** Open a shared exercise over the game; the world waits until it closes. */
 async function exercise(req) {
+  if (req.exerciseType === 'formation_grid') return formationDrill(req);
   // Don't freeze the world while still waiting to hear whether a host exists.
   await bridge.ready();
   bridgeBusy = true;
   clearControls();
   try {
     return await bridge.exercise(req);
+  } finally {
+    bridgeBusy = false;
+    canvas.focus();
+  }
+}
+
+/** A formation_grid exercise (Coach Park's drill, the dawn run): the eval's grid, ungraded. */
+async function formationDrill(req) {
+  bridgeBusy = true;
+  clearControls();
+  try {
+    const dawn = req.locationId === 'han_river';
+    const results = await seoulEval.drill({
+      kinds: drillKinds(req.targetItems),
+      eyebrow: dawn ? '새벽 · Dawn' : '연습실 · Practice',
+      title: dawn ? '통 · Tong' : '박 코치 · Coach Park',
+      sub: req.framing?.ko,
+      spend: dawn ? DAWN_COST : 'dance',
+    });
+    if (!results) return { outcome: 'unavailable', correct: null, exerciseType: req.exerciseType };
+    return { outcome: 'completed', correct: drillPassed(results), exerciseType: req.exerciseType };
   } finally {
     bridgeBusy = false;
     canvas.focus();
@@ -1180,6 +1203,7 @@ const scenes = createScenePlayer({
   done(scene) {
     if (SCENE_QUEST[scene.id]) done(SCENE_QUEST[scene.id]);
     if (dayOneDone(scene)) return;
+    if (dayTwoDone(scene)) return;
     if (scene.id === 'haeun.h2') day.spend('dance'); // the drills scene is dance practice
     hangout(scene.location === 'agency_lockers' ? 'practice_studio' : scene.location);
     if (scene.id === 'jin.j0') startExit();
@@ -1192,7 +1216,7 @@ function talkToHaeun() {
   const f = S.story.flags;
   // Day one she's only a trainee you haven't been introduced to; H1 is tomorrow at 10.
   if (!f.h0_done || S.day < 2) return dlg.start('haeun_busy_d1');
-  if (scenes.play('haeun.h1') || scenes.play('haeun.h2') || scenes.play('haeun.a3.water_break')) return;
+  if (scenes.play('haeun.h1') || scenes.play('seoul.d2.drill') || scenes.play('haeun.h2') || scenes.play('haeun.a3.water_break')) return;
   dlg.start(f.h1_done ? 'haeun_idle' : 'haeun_tomorrow');
 }
 
@@ -1281,6 +1305,34 @@ function dayOneTick() {
     scenes.play('seoul.d1.arrive');
   } else if (!flag('orientation_done')) scenes.play('seoul.d1.orientation'); // reloaded mid-orientation
 }
+/* ── Day 2 on: the drill and the origin loops (day2.js, docs/seoul-day2.md) ── */
+
+/** 기력 for the Athlete's dawn run: they drain slower (docs/seoul-origins.md). */
+const DAWN_COST = 10;
+function dayTwoDone(scene) {
+  if (scene.id === 'haeun.h1') setTimeout(() => scenes.play('seoul.d2.drill'), 500); // Coach Park isn't done
+  else if (scene.id === 'seoul.loop.dawn') {
+    // Running tired strains you (toll); resting just sleeps on.
+    const ran = !flag('dawn_rest');
+    S.story.flags = { ...S.story.flags, dawn_rest: false };
+    if (ran && ['tired', 'wrecked'].includes(day.getCondition().id)) S.story.tally = { ...S.story.tally, toll: (S.story.tally.toll ?? 0) + 1 };
+    setHour(DAY_CONFIG.wakeHour);
+  } else if (scene.id === 'seoul.loop.edit') setTimeout(useBed, 400); // then sleep
+  else if (scene.id === 'seoul.loop.family_call') advanceHours(1);
+  else return false;
+  updateQuest();
+  save();
+  return true;
+}
+/** After the morning board: Mum's text on day 2, or this morning's origin loop. */
+function morningLoops() {
+  if (S.day === 2 && scenes.play('seoul.d2.mum_text')) return;
+  const id = loopDue(S.origin, S.day, 'morning', S.story.flags);
+  if (!id) return;
+  setHour(LOOPS[S.origin].hour);
+  scenes.play(id);
+}
+
 const INCHEON_INTERACTABLES = [
   {
     label: '출구 · The way out',
@@ -1420,9 +1472,16 @@ async function useBed() {
   // The first night: Tong goes over the day, then the Hangul recap, then sleep (dayOneDone).
   const firstNight = S.day === 1 || (S.day === 2 && S.hour < DAY_CONFIG.bedUntil);
   if (firstNight && bedKind(S.hour) !== 'nap' && scenes.play('seoul.d1.bedtime')) return;
+  // Tonight's origin loop (the Creator's edit). After midnight it's still last night's.
+  const night = S.hour < DAY_CONFIG.bedUntil ? S.day - 1 : S.day;
+  const loop = bedKind(S.hour) !== 'nap' && loopDue(S.origin, night, 'bed', S.story.flags);
+  if (loop && !flag(`played:${loop}:d${S.day}`) && scenes.play(loop)) return;
   if (bedKind(S.hour) === 'nap') {
     if (await dayUI.napPrompt({ hour: S.hour }) === 'nap') day.nap();
-  } else await day.sleepUntilMorning();
+  } else if (await day.sleepUntilMorning()) {
+    updateSchedules(true);
+    return void setTimeout(morningLoops, 300);
+  }
   updateSchedules(true);
 }
 interactables.push({

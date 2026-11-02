@@ -149,7 +149,12 @@ export type Intent =
   | 'ask' | 'presence' | 'deflect' | 'commit' | 'help' | 'apologize' | 'leave';
 
 export interface ExerciseHook {
-  type: ExerciseData['type'];
+  /**
+   * A Tong exercise type, or 'formation_grid': the studio's follow-the-call
+   * grid, run by the cozy runtime itself (eval/dance.js), never sent to the
+   * Tong host. Its `targets` are the kinds of call: 'move', 'pose', 'combo'.
+   */
+  type: ExerciseData['type'] | 'formation_grid';
   objectiveId: string;
   targets: string[];
   distractors?: string[];

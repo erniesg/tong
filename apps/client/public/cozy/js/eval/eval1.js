@@ -85,8 +85,8 @@ export function vocalItems(seed, tier = 1) {
 
 /* ── Dance ───────────────────────────────────────── */
 
-export function danceItems(seed, tier = 1, n = 8) {
-  return makeCalls(hashSeed(seed, 'dance-round', tier), n).map((c) => ({
+export function danceItems(seed, tier = 1, n = 8, { kinds = null } = {}) {
+  return makeCalls(hashSeed(seed, 'dance-round', tier), n, { kinds }).map((c) => ({
     ...c, type: 'dance', audio: { text: c.ko.replace(/!$/, '') }, prompt: { ko: c.ko, en: c.en, showText: tier === 1 }, hint: c.en,
   }));
 }

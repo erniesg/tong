@@ -4928,6 +4928,324 @@ export const SCENES = {
    }
   ]
  },
+ "seoul.d2.drill": {
+  "id": "seoul.d2.drill",
+  "kind": "story",
+  "title": {
+   "ko": "대형",
+   "en": "Formation"
+  },
+  "characterId": "coach_park",
+  "location": "practice_studio",
+  "slot": "d2.s2",
+  "gate": {
+   "flags": [
+    "h1_done"
+   ],
+   "month": {
+    "from": 1,
+    "to": 1
+   }
+  },
+  "summary": "After H1. Coach Park: not done yet, formation. Tong gives the four directions and 칸. The formation grid (moves and poses, tier 1, ungraded). Coach Park reacts in one line; the Athlete is sent to the front row. Practice is every day now: the schedule board has the rehearsal.",
+  "seeds": [
+   "drill_clean / drill_rough",
+   "d2_drill_done"
+  ],
+  "beats": [
+   {
+    "id": "dr_open",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "…",
+       "en": "Everyone reaches for their water. Coach Park claps twice."
+      }
+     }
+    ],
+    "next": "dr_call"
+   },
+   {
+    "id": "dr_call",
+    "speaker": "coach_park",
+    "lines": [
+     {
+      "value": {
+       "ko": "아직 안 끝났어. 대형!",
+       "en": "We're not done. Formation!",
+       "review": "native"
+      }
+     }
+    ],
+    "tong": {
+     "ko": "대형 = 서는 자리!",
+     "en": "대형 (daehyeong) = formation: where everyone stands.",
+     "maxLevel": 3
+    },
+    "effects": {
+     "vocab": [
+      {
+       "ko": "대형",
+       "en": "formation",
+       "rom": "daehyeong"
+      }
+     ]
+    },
+    "next": "dr_dirs"
+   },
+   {
+    "id": "dr_dirs",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "앞, 뒤, 왼쪽, 오른쪽. 한 칸, 두 칸.",
+       "en": "앞 is the mirror, 뒤 is behind you. 왼쪽, 오른쪽: left, right. 칸 is one square: 한 칸, 두 칸.",
+       "review": "native"
+      }
+     }
+    ],
+    "next": "dr_grid"
+   },
+   {
+    "id": "dr_grid",
+    "speaker": "coach_park",
+    "lines": [
+     {
+      "value": {
+       "ko": "내가 부르면 움직여.",
+       "en": "When I call it, move.",
+       "review": "native"
+      }
+     }
+    ],
+    "exercise": {
+     "type": "formation_grid",
+     "objectiveId": "ko-vocab-directions",
+     "targets": [
+      "move",
+      "pose"
+     ],
+     "framing": {
+      "ko": "내가 부르면 움직여.",
+      "en": "Move on the call."
+     },
+     "onFail": "continue"
+    },
+    "next": "dr_clean"
+   },
+   {
+    "id": "dr_clean",
+    "speaker": "coach_park",
+    "when": {
+     "flags": [
+      "ex_dr_grid"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "그래. 그거야.",
+       "en": "Yes. That's it.",
+       "note": "He doesn't say it twice.",
+       "review": "native"
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "drill_clean"
+     ]
+    },
+    "next": "dr_rough"
+   },
+   {
+    "id": "dr_rough",
+    "speaker": "coach_park",
+    "when": {
+     "notFlags": [
+      "drill_clean"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "다시. 내일도.",
+       "en": "Again. Tomorrow too.",
+       "review": "native"
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "drill_rough"
+     ]
+    },
+    "next": "dr_front"
+   },
+   {
+    "id": "dr_front",
+    "speaker": "coach_park",
+    "when": {
+     "flags": [
+      "origin_athlete"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "{name}, 앞줄. 어제 말했지.",
+       "en": "{name}, front row. I told you yesterday.",
+       "review": "native"
+      }
+     }
+    ],
+    "tong": {
+     "ko": "앞줄 = 맨 앞!",
+     "en": "앞줄 = the front row. 앞 again.",
+     "maxLevel": 3
+    },
+    "next": "dr_mirror"
+   },
+   {
+    "id": "dr_mirror",
+    "speaker": "narration",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "drill_clean"
+       ]
+      },
+      "value": {
+       "ko": "…",
+       "en": "In the mirror, Ha-eun looks at your feet. Then away."
+      }
+     },
+     {
+      "value": {
+       "ko": "…",
+       "en": "In the mirror, Ha-eun is already back on her spot."
+      }
+     }
+    ],
+    "next": "dr_end"
+   },
+   {
+    "id": "dr_end",
+    "speaker": "coach_park",
+    "lines": [
+     {
+      "value": {
+       "ko": "내일부터 매일 연습. 스케줄표 봐.",
+       "en": "Practice every day from tomorrow. Check the schedule board.",
+       "review": "native"
+      }
+     }
+    ],
+    "tong": {
+     "ko": "스케줄표 = 일정!",
+     "en": "The 스케줄표 by the door has the rehearsal: the same grid, any day.",
+     "maxLevel": 3
+    },
+    "effects": {
+     "setFlags": [
+      "d2_drill_done"
+     ],
+     "vocab": [
+      {
+       "ko": "연습",
+       "en": "practice",
+       "rom": "yeonseup"
+      }
+     ]
+    },
+    "end": true
+   }
+  ]
+ },
+ "seoul.d2.mum_text": {
+  "id": "seoul.d2.mum_text",
+  "kind": "story",
+  "title": {
+   "ko": "엄마",
+   "en": "Mum"
+  },
+  "characterId": "tong",
+  "location": "dorm",
+  "slot": "d2.s1",
+  "gate": {
+   "flags": [
+    "origin_intl_kid"
+   ],
+   "month": {
+    "from": 1,
+    "to": 1
+   }
+  },
+  "summary": "Day 2, morning. Mum on KakaoTalk: a video call on Sundays at 10, Dad wants to see the dorm. Agree (sets the weekly call) or put her off (she asks again next week).",
+  "seeds": [
+   "family_call_set"
+  ],
+  "beats": [
+   {
+    "id": "mt_text",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "Sundays at 10 your time? Dad wants to see your room. Video please!!",
+       "en": "Mum, on KakaoTalk."
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "mt_yes",
+      "intent": "commit",
+      "say": {
+       "ko": "Sundays at 10. Okay.",
+       "en": "Sundays at 10. Okay."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "❤️❤️❤️",
+         "en": "Three hearts. Then a photo of the dog."
+        },
+        "setFlags": [
+         "family_call_set"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "mt_later",
+      "intent": "defer",
+      "say": {
+       "ko": "Phones are only after 9 here. I'll let you know.",
+       "en": "Phones are only after 9 here. I'll let you know."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "OK!! Sunday 10 then 😘",
+         "en": "Mum, deciding anyway."
+        },
+        "setFlags": [
+         "family_call_set"
+        ]
+       }
+      ]
+     }
+    ],
+    "end": true
+   }
+  ]
+ },
  "haeun.a1.ramyeon": {
   "id": "haeun.a1.ramyeon",
   "kind": "ambient",
@@ -6584,6 +6902,768 @@ export const SCENES = {
       }
      }
     ],
+    "end": true
+   }
+  ]
+ },
+ "seoul.loop.dawn": {
+  "id": "seoul.loop.dawn",
+  "kind": "ambient",
+  "title": {
+   "ko": "새벽",
+   "en": "Dawn"
+  },
+  "characterId": "tong",
+  "location": "han_river",
+  "gate": {
+   "flags": [
+    "origin_athlete"
+   ]
+  },
+  "summary": "05:30, Monday. Everyone else is asleep. Run alone, wake a teammate (Ha-eun, Minji or Yerin, once paired), or sleep until seven. The run: Tong calls moves on the river path (formation grid, moves only). Team trust by who you train with; strain if overdone.",
+  "seeds": [
+   "dawn_rest",
+   "tally team_haeun / team_minji / team_yerin",
+   "tally dawn"
+  ],
+  "beats": [
+   {
+    "id": "dw_open",
+    "speaker": "narration",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "dawn_seen"
+       ]
+      },
+      "value": {
+       "ko": "오전 5시 30분.",
+       "en": "05:30. Your body's alarm, again."
+      }
+     },
+     {
+      "value": {
+       "ko": "오전 5시 30분.",
+       "en": "05:30. Your eyes open on their own. Everyone else is asleep."
+      }
+     }
+    ],
+    "next": "dw_tong"
+   },
+   {
+    "id": "dw_tong",
+    "speaker": "tong",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "d1_tight_calf"
+       ],
+       "notFlags": [
+        "dawn_seen"
+       ]
+      },
+      "value": {
+       "ko": "종아리는 괜찮아?",
+       "en": "How's the calf?",
+       "note": "Tong floats over the bunk, upside down.",
+       "review": "native"
+      }
+     },
+     {
+      "value": {
+       "ko": "몸이 아직 선수 시간이네.",
+       "en": "Your body's still on athlete time.",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "dw_alone",
+      "intent": "commit",
+      "say": {
+       "ko": "뛰러 가자.",
+       "en": "Let's go for a run.",
+       "rom": "ttwireo gaja"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "가자!",
+         "en": "Let's go."
+        }
+       }
+      ]
+     },
+     {
+      "id": "dw_haeun",
+      "intent": "ask",
+      "gate": {
+       "flags": [
+        "h1_done"
+       ]
+      },
+      "say": {
+       "ko": "하은 씨, 같이 뛸래요?",
+       "en": "Ha-eun, want to run together?",
+       "rom": "haeun ssi, gachi ttwillaeyo?"
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "…",
+         "en": "She's already lacing her shoes."
+        },
+        "tally": [
+         "team_haeun"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "dw_minji",
+      "intent": "ask",
+      "gate": {
+       "flags": [
+        "h1_done"
+       ]
+      },
+      "say": {
+       "ko": "민지 씨, 같이 뛸래요?",
+       "en": "Min-ji, want to run together?",
+       "rom": "minji ssi, gachi ttwillaeyo?"
+      },
+      "outcomes": [
+       {
+        "speaker": "minji",
+        "reaction": {
+         "ko": "지금 몇 신데….",
+         "en": "What time is it even….",
+         "note": "She comes anyway.",
+         "review": "native"
+        },
+        "tally": [
+         "team_minji"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "dw_yerin",
+      "intent": "ask",
+      "gate": {
+       "flags": [
+        "h1_done"
+       ]
+      },
+      "say": {
+       "ko": "예린 씨, 같이 뛸래요?",
+       "en": "Ye-rin, want to run together?",
+       "rom": "yerin ssi, gachi ttwillaeyo?"
+      },
+      "outcomes": [
+       {
+        "speaker": "yerin",
+        "reaction": {
+         "ko": "응! 잠깐만!",
+         "en": "Yes! One second!",
+         "review": "native"
+        },
+        "tally": [
+         "team_yerin"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "dw_rest",
+      "intent": "leave",
+      "say": {
+       "ko": "더 잘래.",
+       "en": "I'll sleep a bit more.",
+       "rom": "deo jallae"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "그래. 일곱 시에 깨울게.",
+         "en": "Okay. I'll wake you at seven.",
+         "review": "native"
+        },
+        "setFlags": [
+         "dawn_rest",
+         "dawn_seen"
+        ],
+        "next": "dw_rested"
+       }
+      ]
+     }
+    ],
+    "next": "dw_run"
+   },
+   {
+    "id": "dw_run",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "강변길. 내가 부를게.",
+       "en": "The river path. I'll call it.",
+       "review": "native"
+      }
+     }
+    ],
+    "exercise": {
+     "type": "formation_grid",
+     "objectiveId": "ko-vocab-directions",
+     "targets": [
+      "move"
+     ],
+     "framing": {
+      "ko": "부르는 대로 뛰어!",
+      "en": "Run where I call!"
+     },
+     "onFail": "continue"
+    },
+    "next": "dw_done"
+   },
+   {
+    "id": "dw_done",
+    "speaker": "narration",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "ex_dw_run"
+       ]
+      },
+      "value": {
+       "ko": "…",
+       "en": "Sweat, the river going pink. You're back before the dorm wakes up."
+      }
+     },
+     {
+      "value": {
+       "ko": "…",
+       "en": "Your legs are heavier than you remember. You're back before the dorm wakes up."
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "dawn_seen"
+     ],
+     "tally": [
+      "dawn"
+     ]
+    },
+    "end": true
+   },
+   {
+    "id": "dw_rested",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "…",
+       "en": "You pull the blanket back up."
+      }
+     }
+    ],
+    "end": true
+   }
+  ]
+ },
+ "seoul.loop.edit": {
+  "id": "seoul.loop.edit",
+  "kind": "ambient",
+  "title": {
+   "ko": "편집",
+   "en": "The edit"
+  },
+  "characterId": "tong",
+  "location": "dorm",
+  "gate": {
+   "flags": [
+    "origin_creator"
+   ]
+  },
+  "summary": "Monday night, in your bunk. Pick the clip, caption it (block crush: 도착 the first week, letters you already have), then where it goes: the private archive (safe; builds the library) or a secret account (reach; exposure, toll +1). Or not tonight.",
+  "seeds": [
+   "edit_archive / secret_account",
+   "tally footage",
+   "hangul:도착"
+  ],
+  "beats": [
+   {
+    "id": "ed_open",
+    "speaker": "narration",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "edited_once"
+       ]
+      },
+      "value": {
+       "ko": "…",
+       "en": "Phone under the blanket. This week's clips."
+      }
+     },
+     {
+      "value": {
+       "ko": "…",
+       "en": "Phone under the blanket. Yesterday's clips: the baggage belt, the train window, the 홍대입구 sign."
+      }
+     }
+    ],
+    "next": "ed_tong"
+   },
+   {
+    "id": "ed_tong",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "편집할 거야?",
+       "en": "Editing?",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "ed_cut",
+      "intent": "commit",
+      "say": {
+       "ko": "응, 자르자.",
+       "en": "Yeah. Let's cut.",
+       "rom": "eung, jareuja"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "자막도 달자.",
+         "en": "Captions too. In Korean.",
+         "review": "native"
+        }
+       }
+      ]
+     },
+     {
+      "id": "ed_not",
+      "intent": "leave",
+      "say": {
+       "ko": "오늘은 안 할래.",
+       "en": "Not tonight.",
+       "rom": "oneureun an hallae"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "그래. 자.",
+         "en": "Okay. Sleep."
+        },
+        "next": "ed_skipped"
+       }
+      ]
+     }
+    ],
+    "next": "ed_caption"
+   },
+   {
+    "id": "ed_caption",
+    "speaker": "tong",
+    "lines": [
+     {
+      "when": {
+       "notFlags": [
+        "edited_once"
+       ]
+      },
+      "value": {
+       "ko": "도착. 다 아는 글자야.",
+       "en": "Caption: 도착, \"arrived\". You know every letter in it: ㄷ ㅗ from 홍대, ㅊ ㄱ from 출구, ㅏ from 일반.",
+       "review": "native"
+      }
+     },
+     {
+      "value": {
+       "ko": "자막 달자.",
+       "en": "Caption it."
+      }
+     }
+    ],
+    "exercise": {
+     "type": "block_crush",
+     "objectiveId": "ko-hangul-reuse",
+     "targets": [
+      "도착"
+     ],
+     "framing": {
+      "ko": "자막: 도착",
+      "en": "Caption: 도착, arrived."
+     },
+     "onFail": "continue"
+    },
+    "effects": {
+     "setFlags": [
+      "hangul:도착"
+     ],
+     "vocab": [
+      {
+       "ko": "도착",
+       "en": "arrival, arrived",
+       "rom": "dochak"
+      }
+     ]
+    },
+    "next": "ed_where"
+   },
+   {
+    "id": "ed_where",
+    "speaker": "tong",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "secret_account"
+       ]
+      },
+      "value": {
+       "ko": "이번에도 올려?",
+       "en": "Posting this one too?",
+       "review": "native"
+      }
+     },
+     {
+      "value": {
+       "ko": "어디에 둘 거야? SNS 금지야.",
+       "en": "Where does it go? Social media is banned, remember.",
+       "review": "native"
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "ed_archive",
+      "intent": "commit",
+      "say": {
+       "ko": "나만 볼 거야.",
+       "en": "Just for me.",
+       "rom": "naman bol geoya"
+      },
+      "outcomes": [
+       {
+        "speaker": "tong",
+        "reaction": {
+         "ko": "보관함에 저장.",
+         "en": "Saved to the archive.",
+         "review": "native"
+        },
+        "setFlags": [
+         "edit_archive",
+         "edited_once"
+        ],
+        "tally": [
+         "footage"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "ed_post",
+      "intent": "commit",
+      "say": {
+       "ko": "비밀 계정에 올리자.",
+       "en": "Post it on a secret account.",
+       "rom": "bimil gyejeonge ollija"
+      },
+      "outcomes": [
+       {
+        "when": {
+         "flags": [
+          "pr_photo"
+         ]
+        },
+        "speaker": "narration",
+        "reaction": {
+         "ko": "…",
+         "en": "Three comments in a minute. One links the fan's airport photo."
+        },
+        "setFlags": [
+         "secret_account",
+         "edited_once"
+        ],
+        "tally": [
+         "footage",
+         "toll"
+        ]
+       },
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "…",
+         "en": "Posted. A like, then another, from strangers."
+        },
+        "setFlags": [
+         "secret_account",
+         "edited_once"
+        ],
+        "tally": [
+         "footage",
+         "toll"
+        ]
+       }
+      ]
+     }
+    ],
+    "end": true
+   },
+   {
+    "id": "ed_skipped",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "…",
+       "en": "You put the phone face down."
+      }
+     }
+    ],
+    "end": true
+   }
+  ]
+ },
+ "seoul.loop.family_call": {
+  "id": "seoul.loop.family_call",
+  "kind": "ambient",
+  "title": {
+   "ko": "일요일 통화",
+   "en": "The Sunday call"
+  },
+  "characterId": "tong",
+  "location": "dorm_rooftop",
+  "gate": {
+   "flags": [
+    "origin_intl_kid",
+    "family_call_set"
+   ]
+  },
+  "summary": "Sunday, 10am, the rooftop. Mum and Dad on video. News from home; Dad asks to see the room; Mum offers a favour (top up the card, or call the agency). Take it (debt, toll +1) or say you're fine. Mum asks how to thank your manager properly: block crush 감사합니다. Someone else is on a call across the roof.",
+  "seeds": [
+   "family_favour / declined_favour",
+   "tally family_call",
+   "hangul:감사합니다"
+  ],
+  "beats": [
+   {
+    "id": "fc_open",
+    "speaker": "narration",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "family_called"
+       ]
+      },
+      "value": {
+       "ko": "…",
+       "en": "Sunday, ten. Mum and Dad, both too close to the camera again."
+      }
+     },
+     {
+      "value": {
+       "ko": "…",
+       "en": "Sunday, ten, the rooftop. Mum and Dad on video, both too close to the camera."
+      }
+     }
+    ],
+    "next": "fc_news"
+   },
+   {
+    "id": "fc_news",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "The dog sleeps on your bed now. Dad says it's temporary.",
+       "en": "Mum."
+      }
+     }
+    ],
+    "next": "fc_room"
+   },
+   {
+    "id": "fc_room",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "Show us the room? Where do you sleep?",
+       "en": "Dad."
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "fc_show",
+      "intent": "commit",
+      "say": {
+       "ko": "Okay, after. Bottom bunk.",
+       "en": "Okay, after. Bottom bunk."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "Bottom bunk! Like camp!",
+         "en": "Dad, delighted."
+        }
+       }
+      ]
+     },
+     {
+      "id": "fc_rules",
+      "intent": "deflect",
+      "say": {
+       "ko": "They're strict about filming the dorm.",
+       "en": "They're strict about filming the dorm."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "Strict is good. Strict is good.",
+         "en": "Dad, twice."
+        }
+       }
+      ]
+     }
+    ],
+    "next": "fc_favour"
+   },
+   {
+    "id": "fc_favour",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "Do you need anything? We can top up the card. Or Dad can call the agency, he knows someone.",
+       "en": "Mum."
+      }
+     }
+    ],
+    "choices": [
+     {
+      "id": "fc_take",
+      "intent": "commit",
+      "say": {
+       "ko": "Maybe top up the card. Thanks.",
+       "en": "Maybe top up the card. Thanks."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "Done!",
+         "en": "Before you finish the sentence."
+        },
+        "setFlags": [
+         "family_favour"
+        ],
+        "tally": [
+         "toll"
+        ]
+       }
+      ]
+     },
+     {
+      "id": "fc_fine",
+      "intent": "decline",
+      "say": {
+       "ko": "I'm fine. Really.",
+       "en": "I'm fine. Really."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "Okay. Okay. Just say.",
+         "en": "Mum, not convinced."
+        },
+        "setFlags": [
+         "declined_favour"
+        ]
+       }
+      ]
+     }
+    ],
+    "next": "fc_korean"
+   },
+   {
+    "id": "fc_korean",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "How do you say thank you to your manager? Properly.",
+       "en": "Mum. She wants to send a gift."
+      }
+     }
+    ],
+    "exercise": {
+     "type": "block_crush",
+     "objectiveId": "ko-vocab-thanks-formal",
+     "targets": [
+      "감사합니다"
+     ],
+     "framing": {
+      "ko": "감사합니다",
+      "en": "Thank you (formal)."
+     },
+     "onFail": "continue"
+    },
+    "effects": {
+     "setFlags": [
+      "hangul:감사합니다"
+     ],
+     "vocab": [
+      {
+       "ko": "감사합니다",
+       "en": "thank you (formal)",
+       "rom": "gamsahamnida"
+      }
+     ]
+    },
+    "next": "fc_end"
+   },
+   {
+    "id": "fc_end",
+    "speaker": "narration",
+    "lines": [
+     {
+      "value": {
+       "ko": "…",
+       "en": "Across the roof, someone else is on a call too, quiet, in a dialect you don't know. You both keep your voices down."
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "family_called"
+     ],
+     "tally": [
+      "family_call"
+     ]
+    },
     "end": true
    }
   ]
