@@ -81,7 +81,11 @@ async function run(tag) {
       __cozy.cam.snap = true;
     }, { ...bed, hour });
     await frames(6);
-    await f.waitForFunction(() => /침대/.test(document.querySelector('#prompt').textContent), null, { timeout: 300000, polling: 500 });
+    await f.waitForFunction(() => /침대/.test(document.querySelector('#prompt').textContent), null, { timeout: 60000, polling: 500 }).catch(async (e) => {
+      log(tag, 'no bed prompt', await f.evaluate(() => ({ prompt: document.querySelector('#prompt').textContent, dlg: __cozy.dlg.state.id, overlays: [...document.querySelectorAll('.overlay:not(.hidden)')].map((o) => o.id || o.className), p: __cozy.player.root.position.toArray(), zone: __cozy.levelDiagnostics.zone?.id })));
+      await shot('no-bed-prompt');
+      throw e;
+    });
   };
   const sleep = async () => {
     await f.waitForSelector('#bed-overlay:not(.hidden)', { state: 'attached', timeout: 120000 });
@@ -103,6 +107,10 @@ async function run(tag) {
     __cozy.S.speed = 0;
   });
   assert.equal(await f.evaluate(() => __cozy.S.origin), cfg.origin);
+  // The registration card follows H0; hand it in so the world is free.
+  await f.waitForSelector('#seoul-eval [data-action="profile-save"]', { timeout: 120000 }).catch(() => {});
+  await f.evaluate(() => document.querySelector('#seoul-eval [data-action="profile-save"]')?.click());
+  await frames(4);
   await toBunk(22.5);
   await f.evaluate(() => __cozy.interact());
   await sleep();

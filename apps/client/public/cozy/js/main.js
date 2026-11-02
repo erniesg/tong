@@ -36,7 +36,7 @@ import { createOccupants } from './occupants.js';
 import { apartments, buildApartment, apartmentHeightAt, apartmentCeilingAt, apartmentZoneAt } from './apartments.js';
 import { createDayLoop, normalizeDayState, clockRuns, clockHours, bedKind, DAY_CONFIG } from './day.js';
 import { createDayUI } from './day-ui.js';
-import { DORM_HOME, DORM_LEVEL, HAEUN_DORM, createDormCast, haeunDormSpot, onDormFloor } from './dorm.js';
+import { DORM_HOME, DORM_LEVEL, HAEUN_DORM, createDormCast, haeunDormSpot, onDormFloor, asleep } from './dorm.js';
 import { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn, createStudioCast, ROAD_FLAGS, dayOneOpen, dayOneClockHeld } from './day1.js';
 import { LOOPS, loopDue, drillKinds, drillPassed } from './day2.js';
 import { hangulProgress, metWords } from './hangul.js';
@@ -2975,7 +2975,7 @@ function frame() {
     const room = interiorAt(player.root.position, S.city);
     dormCast?.update(S.hour, room);
     for (const a of dormCast?.actors ?? []) if (a.character.root.visible) animate(a.character, dt, t, 0);
-    if (loc.haeun === 'dorm') haeun.root.visible = onDormFloor(room);
+    if (loc.haeun === 'dorm') haeun.root.visible = onDormFloor(room) && !asleep(S.hour);
     // Day one, evening: walking onto your floor plays the arrival (H0 · 숙소).
     if (onDormFloor(room) && !dlg.state.active && !modalOpen() && !S.story.flags.dorm_arrived && S.story.flags.h0_done) scenes.play('haeun.h0.dorm');
     studioCast?.update(studioCastOn(S.story.flags));

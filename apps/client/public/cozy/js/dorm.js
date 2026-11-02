@@ -18,6 +18,10 @@ export const HAEUN_DORM = { at: [5.35, -3.4], yaw: Math.PI / 2, line: { ko: '네
 /** Is this trainee in at `hour`? home = [from, to], wrapping past midnight. */
 export const isHome = ([from, to], hour) => (from > to ? hour >= from || hour < to : hour >= from && hour < to);
 
+/** Midnight to 06:30 the cohort is asleep in their bunks (not drawn; there's no lying pose yet). */
+export const SLEEP_HOURS = [0, 6.5];
+export const asleep = (hour) => isHome(SLEEP_HOURS, hour);
+
 /** Is a position on the cohort's floor (where the cast should render)? */
 export const onDormFloor = (room) => room?.buildingId === DORM_HOME && room.level === DORM_LEVEL;
 
@@ -37,7 +41,7 @@ export function createDormCast({ building, group }) {
     /** Show the trainees who are in, only while you are on their floor. */
     update(hour, playerRoom) {
       const here = onDormFloor(playerRoom);
-      for (const a of actors) a.character.root.visible = here && isHome(a.home, hour);
+      for (const a of actors) a.character.root.visible = here && isHome(a.home, hour) && !asleep(hour);
     },
   };
 }
