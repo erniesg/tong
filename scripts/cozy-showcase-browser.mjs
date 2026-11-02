@@ -43,7 +43,7 @@ async function open(tag, viewport) {
       if ((await overlayItem()) === 'dance') { await playDance(f); continue; }
       if (!(await busy())) { await frames(6); if (!(await busy()) && !(await overlayItem())) return; continue; }
       if (await page.evaluate(() => !!document.querySelector('.exercise-dismiss-btn, .cozy-practice__close'))) {
-        await page.evaluate(() => document.querySelector('.exercise-dismiss-btn, .cozy-practice__close').click());
+        await page.evaluate(() => document.querySelector('.exercise-dismiss-btn, .cozy-practice__close')?.click());
         continue;
       }
       const id = await f.evaluate(() => __cozy.dlg.state.id);
