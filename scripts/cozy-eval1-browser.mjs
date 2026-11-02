@@ -41,6 +41,8 @@ async function run(label, viewport, plan) {
   // Skip Tong's sign-reading tutorial (it would keep re-offering at the studio door).
   await f.evaluate(() => { for (const id of ['food', 'store', 'cafe', 'subway', 'studio', 'lookout']) __cozy.S.signs.add(id); });
   await f.evaluate(() => __cozy.travelTo('studio', { skipAnimation: true }));
+  // Wait for the trip to land, or it would move us back to the studio door after the teleport below.
+  await f.waitForFunction(() => !__cozy.transitioning, null, { timeout: 120000, polling: 250 });
   await page.waitForTimeout(1500);
   // Walk-up view: stand at the studio schedule board (next to the word-quiz whiteboard).
   await f.evaluate(() => {

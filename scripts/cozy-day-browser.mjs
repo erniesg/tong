@@ -142,7 +142,7 @@ try {
   assert.ok(a.hour >= 7 && a.hour < 7.2);
   const b = await run({ width: 390, height: 844, tag: 'phone', bedHour: 1.5, touch: true });
   assert.equal(b.id, 'tired');
-  assert.ok(b.hour >= 8 && b.hour < 8.2);
+  assert.ok(b.hour >= 7 && b.hour < 7.2); // the dorm wakes everyone at 07:00; tired only changes 기력
   console.log('OK');
 } finally {
   await browser.close();
