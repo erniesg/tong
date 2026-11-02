@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { openPage, closePage } from './lib/cozy-video.mjs';
 
 const moduleName = process.env.PLAYWRIGHT_MODULE || 'playwright';
 const { chromium } = await import(path.isAbsolute(moduleName) ? pathToFileURL(moduleName).href : moduleName);
@@ -16,7 +17,7 @@ const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '
 const log = (...a) => console.log(...a);
 
 async function run({ width, height, tag, touch }) {
-  const page = await browser.newPage({ viewport: { width, height }, hasTouch: !!touch, isMobile: !!touch });
+  const page = await openPage(browser, { viewport: { width, height }, hasTouch: !!touch, isMobile: !!touch });
   page.setDefaultTimeout(90000);
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -115,7 +116,7 @@ async function run({ width, height, tag, touch }) {
   const day = await f.evaluate(() => __cozy.S.day);
   log(tag, 'morning day', day, 'errors', errors);
   assert.deepEqual(errors, []);
-  await page.close();
+  await closePage(page, `dorm-${tag}`);
 }
 
 try {

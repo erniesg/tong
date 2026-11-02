@@ -12,6 +12,7 @@ import { hashSeed, scoreRound, suggestTier, gradeEval, rankBoard, weakObjectives
 import { EVAL1, itemsFor, danceItems, lunchOutcome, LUNCH, rosterFor, RESULT_LINES, PROFILE_OPTIONS, defaultProfile, birthKo } from './eval1.js';
 import { createEvalUI } from './ui.js';
 import { createTtsAudio } from './voice.js';
+import { calloutItems } from './dance.js';
 import { getDayLoop } from '../day.js';
 
 const BOARD = { x: -7.3, z: -43.2 }; // studio back wall, right of the word-quiz whiteboard
@@ -418,8 +419,10 @@ export function createSeoulEval(ctx) {
     try {
       const u = getUI();
       const seed = hashSeed(S.seed, 'drill', S.day, title ?? '');
-      const items = danceItems(seed, 1, n, { kinds });
       getDayLoop()?.spend?.(spend);
+      // Giving the call (a teammate follows you): untimed, ungraded, no mastery change.
+      if (kinds?.includes('give')) return await u.runCallout(calloutItems(seed, n), { eyebrow, title, sub, who: '🏃‍♀️' });
+      const items = danceItems(seed, 1, n, { kinds });
       const results = await u.runDance(items, { tier: 1, eyebrow, title, sub, windowScale: windowScale() });
       const records = items.map((it, i) => compact(it, results[i]));
       setChapter(recordRehearsal(chapter(), updateMastery(chapter().mastery, [scoreRound(records, { tier: 1, suggested: 1 })], { gain: 0.25 })));

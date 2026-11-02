@@ -354,5 +354,69 @@ export function createEvalUI({ root, audio, speech = null, sfx = {}, debug = fal
     return results;
   }
 
-  return { overlay, card, open, close, isOpen, show, runItem, runDance, el };
+  /**
+   * Giving the call: your teammate (`opts.who`, an emoji) stands on the grid;
+   * the dashed cell is where she needs to be. Pick the call that gets her
+   * there. Untimed. A wrong call sends her where you said, then shows the right one.
+   */
+  async function runCallout(items, opts = {}) {
+    open();
+    card.replaceChildren();
+    card.classList.add('wide');
+    card.dataset.item = 'callout';
+    card.append(header({ eyebrow: opts.eyebrow, title: opts.title, sub: opts.sub, tag: 'callout' }));
+    const stage = el('div', 'dance-stage');
+    const judge = el('div', 'dance-judge', '');
+    const grid = el('div', 'dance-grid');
+    grid.style.setProperty('--cols', GRID.cols);
+    const cells = [];
+    for (let y = 0; y < GRID.rows; y++) {
+      for (let x = 0; x < GRID.cols; x++) {
+        const c = el('div', 'dance-cell');
+        c.dataset.cell = `${x},${y}`;
+        cells.push(c);
+        grid.append(c);
+      }
+    }
+    const gridWrap = el('div', 'dance-grid-wrap');
+    gridWrap.append(el('div', 'dance-front', '앞 · 거울 (front, mirror)'), el('div', 'dance-side left', '왼쪽'), grid, el('div', 'dance-side right', '오른쪽'), el('div', 'dance-back', '뒤 (back)'));
+    const choices = el('div', 'callout-options');
+    stage.append(judge, gridWrap, choices);
+    card.append(stage);
+    const draw = (at, target) => {
+      for (const c of cells) {
+        const [x, y] = c.dataset.cell.split(',').map(Number);
+        c.classList.toggle('me', x === at.x && y === at.y);
+        c.classList.toggle('target', !!target && x === target.x && y === target.y);
+        c.textContent = x === at.x && y === at.y ? opts.who ?? '🧍' : '';
+      }
+    };
+    const results = [];
+    for (const [i, item] of items.entries()) {
+      card.dataset.call = String(i);
+      reveal(item.answer);
+      judge.textContent = '';
+      judge.className = 'dance-judge';
+      draw(item.from, item.target);
+      const picked = await new Promise((resolve) => {
+        choices.replaceChildren(...item.options.map((o) => {
+          const b = el('button', 'btn-secondary callout-option', o.ko);
+          b.dataset.call = o.ko;
+          b.onclick = () => resolve(o);
+          return b;
+        }));
+      });
+      choices.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+      const correct = picked.ko === item.answer;
+      results.push({ answer: picked.ko, correct });
+      draw(picked.target, correct ? null : item.target);
+      judge.textContent = correct ? `좋아! ${item.en}` : `${item.answer} · ${item.en}`;
+      judge.className = `dance-judge ${correct ? 'perfect' : 'miss'}`;
+      correct ? sfx.coin?.() : sfx.blip?.();
+      await wait(correct ? 900 : 1600);
+    }
+    return results;
+  }
+
+  return { overlay, card, open, close, isOpen, show, runItem, runDance, runCallout, el };
 }

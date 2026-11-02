@@ -52,3 +52,26 @@ test('every Day 2 scene is registered and the drill follows H1', () => {
   assert.match(main, /req\.exerciseType === 'formation_grid'/);
   assert.match(main, /scene\.id === 'haeun\.h1'\) \{\n    setTimeout\(\(\) => scenes\.play\('seoul\.d2\.drill'\)/);
 });
+
+test('giving the call: four different calls, exactly one gets her to the dashed cell', async () => {
+  const { calloutItems, matches } = await import(js('eval/dance.js'));
+  for (const seed of [3, 11, 99]) {
+    const items = calloutItems(seed, 6);
+    assert.equal(items.length, 6);
+    for (const it of items) {
+      assert.equal(it.options.length, 4, 'four options');
+      assert.equal(new Set(it.options.map((o) => o.ko)).size, 4, 'all different');
+      const right = it.options.filter((o) => matches(o.target, it.target));
+      assert.equal(right.length, 1, 'one right answer');
+      assert.equal(right[0].ko, it.answer);
+    }
+  }
+});
+
+test('everyone who sleeps in the dorm has a bed', () => {
+  const src = readFileSync(new URL('../apps/client/public/cozy/js/dorm.js', import.meta.url), 'utf8');
+  const cast = [...src.matchAll(/\{ id: '(\w+)', name:/g)].map((m) => m[1]);
+  const beds = src.slice(src.indexOf('export const DORM_BEDS'), src.indexOf('};', src.indexOf('export const DORM_BEDS')));
+  assert.ok(cast.length >= 5);
+  for (const id of [...cast, 'haeun']) assert.match(beds, new RegExp(`\\b${id}:`), `${id} has a bed`);
+});

@@ -11,7 +11,7 @@ Built on `feat/seoul-day2` (issue #435, after [Day 1](seoul-day1.md)). Day 2 is 
 
 | Origin | Loop | When | Plays | Builds |
 |---|---|---|---|---|
-| Athlete | Dawn run (`seoul.loop.dawn`) | Mondays 05:30, after the morning board | Run alone, or wake Ha-eun, Min-ji or Ye-rin (once you know names), or sleep until seven. The run is the grid, moves only, with Tong calling | `tally.team_<name>`; `tally.dawn`; running tired adds `toll` (strain) |
+| Athlete | Dawn run (`seoul.loop.dawn`) | Mondays 05:30, after the morning board | Run alone, or wake Ha-eun, Min-ji or Ye-rin (once you know names), or sleep until seven. Alone: the grid, moves only, with Tong calling. With a teammate: you call it, picking the Korean call that sends her to the dashed square (untimed; giving instructions) | `tally.team_<name>`; `tally.dawn`; running tired adds `toll` (strain) |
 | Creator | The edit (`seoul.loop.edit`) | Monday nights, at the bunk before sleep | Caption a clip (block crush, 도착 the first week), then the archive or a secret account | `tally.footage`; `edit_archive` / `secret_account` (posting adds `toll`) |
 | International-School Kid | Sunday call (`seoul.loop.family_call`) | Sundays at 10 from day 8; Mum sets it on day 2 (`seoul.d2.mum_text`) | News, Dad asks to see the room, Mum offers a favour, then "how do you say thank you properly" (block crush 감사합니다) | Taking the favour adds `toll` (debt); `tally.family_call` |
 
@@ -24,6 +24,7 @@ Built on `feat/seoul-day2` (issue #435, after [Day 1](seoul-day1.md)). Day 2 is 
 - Each cohort member and the two staff have a fixed look in the creator's format (`cohort-looks.js`), chosen from their canon role: Da-on (15) pigtails and a pink hoodie; Bo-ram (22) short hair, dark tee, track pants; Do-hee (ex-survival) dyed-pink waves, cream knit; Minji a bob, green hoodie, red trainers; Yerin a ponytail and glasses; Yun-seo long black hair, cream jacket; Coach Park a buzz cut and cap. None of this is canon.
 - **Manager Choi is drawn as a woman** (she runs the girls' dorm and does the night checks). A proposal: canon doesn't say.
 - From day 2 the cohort and staff are in the studio 10:00–18:00; Da-on only from 14:00 (middle school in the mornings).
+- **At night they sleep in their own bunks** (00:00–06:30, `dorm.js` `DORM_BEDS`): Ha-eun below Do-hee in room A, Da-on above you and Bo-ram's single in room B, Minji below Ye-rin and Yun-seo in room C. Nobody answers a tap in their sleep.
 
 ## Flags and counters
 
@@ -37,7 +38,6 @@ Built on `feat/seoul-day2` (issue #435, after [Day 1](seoul-day1.md)). Day 2 is 
 
 ## Not built yet
 
-- Giving instructions on the dawn run (you call the moves for a teammate).
 - The Athlete's dawn perks beyond the weekly run: daily 5–7am, slower drain, pool access.
 - Where the footage goes to "someone specific", and the fan comments on the secret account (reading practice).
 - The family call in the player's home language beyond English.

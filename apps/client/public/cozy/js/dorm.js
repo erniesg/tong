@@ -18,9 +18,40 @@ export const HAEUN_DORM = { at: [5.35, -3.4], yaw: Math.PI / 2, line: { ko: '네
 /** Is this trainee in at `hour`? home = [from, to], wrapping past midnight. */
 export const isHome = ([from, to], hour) => (from > to ? hour >= from || hour < to : hour >= from && hour < to);
 
-/** Midnight to 06:30 the cohort is asleep in their bunks (not drawn; there's no lying pose yet). */
+/** Midnight to 06:30 the cohort is asleep in their bunks (lieDown). */
 export const SLEEP_HOURS = [0, 6.5];
 export const asleep = (hour) => isHome(SLEEP_HOURS, hour);
+
+/**
+ * Where each sleeper lies at night: local [u, v, mattress top] in the flat
+ * (level-support.js dormFlat). Room A: Ha-eun below, Do-hee above. Room B:
+ * Da-on above you, Bo-ram's single. Room C: Minji below Ye-rin; Yun-seo below.
+ */
+export const DORM_BEDS = {
+  haeun: [6.35, -4.85, 0.5], dohee: [6.35, -4.85, 1.78],
+  daon: [6.35, 0.3, 1.78], boram: [4.3, -0.7, 0.58],
+  minji: [-1.05, -4.85, 0.5], yerin: [-1.05, -4.85, 1.78], yunseo: [1.85, -4.85, 0.5],
+};
+/** Lie a character on their back in their bed, head toward the wall (−z), eyes closed. */
+export function lieDown(c, building, id) {
+  const [u, v, top] = DORM_BEDS[id];
+  c.root.position.set(building.x + u, building.levels[DORM_LEVEL].floorY + top + 0.2, building.z + v + 0.75);
+  c.root.rotation.set(-Math.PI / 2, 0, 0);
+  c.pose = 'idle';
+  if (c.baseExpr !== 'asleep') c.awakeExpr = c.baseExpr;
+  c.baseExpr = c.expr = 'asleep';
+}
+/** Back on their feet at a standing spot. */
+export function standAt(c, x, y, z, yaw) {
+  c.root.position.set(x, y, z);
+  c.root.rotation.set(0, yaw, 0);
+  wake(c);
+}
+/** Eyes open again (their usual face). */
+export function wake(c) {
+  if (c.baseExpr === 'asleep') c.baseExpr = c.expr = c.awakeExpr ?? 'neutral';
+  c.root.rotation.x = 0;
+}
 
 /** Is a position on the cohort's floor (where the cast should render)? */
 export const onDormFloor = (room) => room?.buildingId === DORM_HOME && room.level === DORM_LEVEL;
@@ -38,10 +69,15 @@ export function createDormCast({ building, group }) {
   });
   return {
     actors,
-    /** Show the trainees who are in, only while you are on their floor. */
+    /** Show the trainees who are in, only while you are on their floor: asleep in bed, or standing. */
     update(hour, playerRoom) {
       const here = onDormFloor(playerRoom);
-      for (const a of actors) a.character.root.visible = here && isHome(a.home, hour) && !asleep(hour);
+      for (const a of actors) {
+        a.character.root.visible = here && isHome(a.home, hour);
+        if (!a.character.root.visible) continue;
+        if (asleep(hour)) lieDown(a.character, building, a.id);
+        else standAt(a.character, building.x + a.at[0], y, building.z + a.at[1], a.yaw);
+      }
     },
   };
 }

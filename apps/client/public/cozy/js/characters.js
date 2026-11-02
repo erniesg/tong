@@ -86,6 +86,7 @@ export const EXPR = {
   sad: { eyes: 'open', mouth: 'frown', brow: 1.1, lid: 0.15 },
   spicy: { eyes: 'tight', mouth: 'open', brow: 1, blush: 0.9 },
   sleepy: { eyes: 'closed', mouth: 'smile', brow: 0.3 },
+  asleep: { eyes: 'closed', mouth: 'neutral', brow: 0 },
 };
 
 function ellipse(g, x, y, rx, ry, rot = 0) {

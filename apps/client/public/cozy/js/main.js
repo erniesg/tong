@@ -36,7 +36,7 @@ import { createOccupants } from './occupants.js';
 import { apartments, buildApartment, apartmentHeightAt, apartmentCeilingAt, apartmentZoneAt } from './apartments.js';
 import { createDayLoop, normalizeDayState, clockRuns, clockHours, bedKind, DAY_CONFIG } from './day.js';
 import { createDayUI } from './day-ui.js';
-import { DORM_HOME, DORM_LEVEL, HAEUN_DORM, createDormCast, haeunDormSpot, onDormFloor, asleep } from './dorm.js';
+import { DORM_HOME, DORM_LEVEL, HAEUN_DORM, createDormCast, haeunDormSpot, onDormFloor, asleep, lieDown, wake } from './dorm.js';
 import { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn, createStudioCast, ROAD_FLAGS, dayOneOpen, dayOneClockHeld } from './day1.js';
 import { LOOPS, loopDue, drillKinds, drillPassed } from './day2.js';
 import { hangulProgress, metWords } from './hangul.js';
@@ -379,6 +379,7 @@ const eatPose = (t) => {
 const talkPose = () => [-0.25, -0.35];
 
 function placeHaeun(l) {
+  wake(haeun); // up from her bunk if she was asleep
   haeun.root.visible = l !== 'away' && l !== 'dorm';
   haeun.pose = 'idle';
   haeun.armPose = null;
@@ -1016,37 +1017,12 @@ function startExit() {
   ];
 }
 
-// The first night's card: where each relationship stands after day one.
+/** Jin has walked off after J0: back to the evening. (The old "Day one" card is gone: J0 is any night from day 2.) */
 function finishNight() {
   S.tentStory = 'idle';
   jin.root.visible = false;
   loc.jin = 'away';
-  const f = S.story.flags;
-  const haeunStage = scenes.stage('haeun');
-  const haeunLine = !f.h1_done
-    ? 'Somewhere in the agency there’s a girl who slammed her locker without looking at you. Tomorrow you’ll find out who.'
-    : haeunStage === 'strangers'
-      ? 'Ha-eun still calls you “the new one”. 내일 아홉 시. Don’t be late.'
-      : 'Ha-eun knows your name now. She’ll pretend she doesn’t.';
-  const jinLine = f.jin_plan_counter
-    ? 'You said yes to Jin’s plan and kept the day for yourself. He didn’t expect that.'
-    : f.paid_myself
-      ? 'You paid for yourself. Jin smiled, and put his card away slowly.'
-      : f.jin_plan_accepted && f.jin_paid
-        ? 'Jin ordered, planned and paid. It was easy. Maybe too easy.'
-        : 'A man in a cap knows your name. You still aren’t sure you know his.';
-  $('end-title').textContent = '첫날 · Day one';
-  $('end-hearts').innerHTML = hearts(Math.ceil(scenes.affinity('haeun') / 20), 5);
-  $('end-text').textContent = `${haeunLine} ${jinLine}`;
-  const words = $('end-words');
-  words.innerHTML = '';
-  for (const [ko, { en }] of S.phrases) {
-    const s = document.createElement('span');
-    s.textContent = `${ko} · ${en}`;
-    words.appendChild(s);
-  }
-  $('ending').classList.remove('hidden');
-  ui.hud.classList.add('hidden');
+  standUp();
   updateQuest();
   save();
 }
@@ -1492,7 +1468,7 @@ interactables.push({
   get label() { return S.story.flags.h1_done ? '하은 · Ha-eun' : '연습생 · Trainee'; },
   pos: () => haeun.root.position,
   r: 1.8,
-  on: () => loc.haeun === 'dorm' && haeun.root.visible,
+  on: () => loc.haeun === 'dorm' && haeun.root.visible && !asleep(S.hour),
   act: () => { bubble(haeun, HAEUN_DORM.line.ko); toast(`<b>${S.story.flags.h1_done ? '하은' : '연습생'}</b><span>${HAEUN_DORM.line.en}</span>`, 2400); },
 });
 let dormCast = null;
@@ -1500,7 +1476,7 @@ for (const i of [0, 1, 2, 3, 4]) interactables.push({
   get label() { return dormCast?.actors[i].name ?? ''; },
   pos: () => dormCast?.actors[i].character.root.position ?? { x: 0, y: -99, z: 0 },
   r: 1.6,
-  on: () => !!dormCast?.actors[i].character.root.visible,
+  on: () => !!dormCast?.actors[i].character.root.visible && !asleep(S.hour), // nobody chats in their sleep
   act: () => {
     const a = dormCast.actors[i];
     bubble(a.character, a.line.ko);
@@ -2975,7 +2951,13 @@ function frame() {
     const room = interiorAt(player.root.position, S.city);
     dormCast?.update(S.hour, room);
     for (const a of dormCast?.actors ?? []) if (a.character.root.visible) animate(a.character, dt, t, 0);
-    if (loc.haeun === 'dorm') haeun.root.visible = onDormFloor(room) && !asleep(S.hour);
+    if (loc.haeun === 'dorm') {
+      haeun.root.visible = onDormFloor(room);
+      // Asleep in her bunk (room A, below Do-hee); up at her spot otherwise.
+      const home = apartments.find((b) => b.id === DORM_HOME);
+      if (home && asleep(S.hour)) lieDown(haeun, home, 'haeun');
+      else if (home && haeun.baseExpr === 'asleep') placeHaeun('dorm');
+    }
     // Day one, evening: walking onto your floor plays the arrival (H0 · 숙소).
     if (onDormFloor(room) && !dlg.state.active && !modalOpen() && !S.story.flags.dorm_arrived && S.story.flags.h0_done) scenes.play('haeun.h0.dorm');
     studioCast?.update(studioCastOn(S.story.flags, { day: S.day, hour: S.hour }), S.day >= 2 ? S.hour : null);
@@ -3185,21 +3167,6 @@ async function boot() {
       back: () => canvas.focus(),
     });
   };
-  $('stay').onclick = () => {
-    $('ending').classList.add('hidden');
-    ui.hud.classList.remove('hidden');
-    standUp();
-    updateQuest();
-  };
-  $('again').onclick = () => {
-    try {
-      localStorage.removeItem(SAVE_KEY);
-    } catch {
-      /* ignore */
-    }
-    window.location.reload();
-  };
-
   window.__cozy = {
     S, player, haeun, jin, dlg, scenes, creator, renderer, bloom, scene, sky, G, THREE, setHour, bridge, seoulEval,
     get bridgeBusy() { return bridgeBusy; },

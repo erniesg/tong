@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { openPage, closePage } from './lib/cozy-video.mjs';
 
 // PLAYWRIGHT_MODULE may point to an existing Playwright on the host (no install).
 const moduleName = process.env.PLAYWRIGHT_MODULE || 'playwright';
@@ -17,7 +18,7 @@ const log = (...a) => console.log(...a);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function run({ width, height, tag, bedHour, touch }) {
-  const page = await browser.newPage({ viewport: { width, height }, hasTouch: !!touch, isMobile: !!touch });
+  const page = await openPage(browser, { viewport: { width, height }, hasTouch: !!touch, isMobile: !!touch });
   page.setDefaultTimeout(90000);
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -132,7 +133,7 @@ async function run({ width, height, tag, bedHour, touch }) {
   await shot('8-new-day-hud');
   const saved = await f.evaluate(() => JSON.parse(localStorage.getItem('tong-cozy-seoul-v2')).dayLoop);
   log(tag, 'saved', saved, 'errors', errors);
-  await page.close();
+  await closePage(page, `dayloop-${tag}`);
   return m;
 }
 

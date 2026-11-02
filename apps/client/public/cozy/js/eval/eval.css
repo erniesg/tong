@@ -74,6 +74,9 @@ body.no-en .eval-prompt-en { display: none; }
 .dance-grid { grid-area: grid; display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 6px; padding: 8px; border-radius: 14px; background: #3a3550; transition: box-shadow .08s; }
 .dance-cell { aspect-ratio: 1.25; min-height: 44px; border-radius: 10px; border: 2px solid #5b5577; background: #4a4466; color: #fff; font-size: clamp(20px, 4cqi, 32px); }
 .dance-cell.me { background: #ffd23f; border-color: #fff; }
+.dance-cell.target { border: 3px dashed #ffd23f; }
+.callout-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.callout-option { font-size: 17px; min-height: 44px; }
 .dance-poses { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .dance-pose { min-height: 44px; padding: 6px 4px; }
 .dance-pose.on { background: #ffedbd; border-color: #e7b84a; }
