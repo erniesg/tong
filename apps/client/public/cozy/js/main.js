@@ -1310,8 +1310,11 @@ function dayOneTick() {
 /** 기력 for the Athlete's dawn run: they drain slower (docs/seoul-origins.md). */
 const DAWN_COST = 10;
 function dayTwoDone(scene) {
-  if (scene.id === 'haeun.h1') setTimeout(() => scenes.play('seoul.d2.drill'), 500); // Coach Park isn't done
-  else if (scene.id === 'seoul.loop.dawn') {
+  if (scene.id === 'haeun.h1') {
+    setTimeout(() => scenes.play('seoul.d2.drill'), 500); // Coach Park isn't done
+    return false; // H1 still ends as a hangout
+  }
+  if (scene.id === 'seoul.loop.dawn') {
     // Running tired strains you (toll); resting just sleeps on.
     const ran = !flag('dawn_rest');
     S.story.flags = { ...S.story.flags, dawn_rest: false };

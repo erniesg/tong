@@ -50,5 +50,5 @@ test('every Day 2 scene is registered and the drill follows H1', () => {
   assert.match(index, /h1, d2Drill/);
   const main = readFileSync(new URL('../apps/client/public/cozy/js/main.js', import.meta.url), 'utf8');
   assert.match(main, /req\.exerciseType === 'formation_grid'/);
-  assert.match(main, /scene\.id === 'haeun\.h1'\) setTimeout\(\(\) => scenes\.play\('seoul\.d2\.drill'\)/);
+  assert.match(main, /scene\.id === 'haeun\.h1'\) \{\n    setTimeout\(\(\) => scenes\.play\('seoul\.d2\.drill'\)/);
 });
