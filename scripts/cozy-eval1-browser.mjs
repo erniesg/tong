@@ -72,6 +72,8 @@ async function run(label, viewport, plan) {
   assert.equal(chap0.month, 1);
   assert.equal(chap0.status, 'open');
   await quiet(f);
+  // The prompt picks the nearest thing on the next frames, once no dialogue is open.
+  await f.waitForFunction(() => __cozy.levelDiagnostics.interaction === '📋 스케줄표 · Schedule board', null, { timeout: 60000, polling: 250 }).catch(() => {});
   assert.equal(await f.evaluate(() => __cozy.levelDiagnostics.interaction), '📋 스케줄표 · Schedule board', 'E prompt at the board');
   await shot('board-in-world');
   await f.evaluate(() => __cozy.interact()); // the real E-key path
