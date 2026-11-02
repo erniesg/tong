@@ -6920,7 +6920,7 @@ export const SCENES = {
     "origin_athlete"
    ]
   },
-  "summary": "05:30, Monday. Everyone else is asleep. Run alone, wake a teammate (Ha-eun, Minji or Yerin, once paired), or sleep until seven. The run: Tong calls moves on the river path (formation grid, moves only). Team trust by who you train with; strain if overdone.",
+  "summary": "05:30, Monday. Everyone else is asleep. Run alone, wake a teammate (Ha-eun, Minji or Yerin, once paired), or sleep until seven. Alone: Tong calls moves on the river path (formation grid, moves only). With a teammate: you call it and she runs where you say (giving instructions, untimed). Team trust by who you train with; strain if overdone.",
   "seeds": [
    "dawn_rest",
    "tally team_haeun / team_minji / team_yerin",
@@ -7020,7 +7020,8 @@ export const SCENES = {
         },
         "tally": [
          "team_haeun"
-        ]
+        ],
+        "next": "dw_lead"
        }
       ]
      },
@@ -7048,7 +7049,8 @@ export const SCENES = {
         },
         "tally": [
          "team_minji"
-        ]
+        ],
+        "next": "dw_lead"
        }
       ]
      },
@@ -7075,7 +7077,8 @@ export const SCENES = {
         },
         "tally": [
          "team_yerin"
-        ]
+        ],
+        "next": "dw_lead"
        }
       ]
      },
@@ -7131,6 +7134,65 @@ export const SCENES = {
      "onFail": "continue"
     },
     "next": "dw_done"
+   },
+   {
+    "id": "dw_lead",
+    "speaker": "tong",
+    "lines": [
+     {
+      "value": {
+       "ko": "오늘은 네가 불러.",
+       "en": "You call it today. She runs where you say.",
+       "review": "native"
+      }
+     }
+    ],
+    "exercise": {
+     "type": "formation_grid",
+     "objectiveId": "ko-speak-directions",
+     "targets": [
+      "give"
+     ],
+     "framing": {
+      "ko": "어디로 가라고 할까?",
+      "en": "Where do you send her?"
+     },
+     "onFail": "continue"
+    },
+    "next": "dw_led"
+   },
+   {
+    "id": "dw_led",
+    "speaker": "narration",
+    "lines": [
+     {
+      "when": {
+       "flags": [
+        "ex_dw_lead"
+       ]
+      },
+      "value": {
+       "ko": "…",
+       "en": "She lands where you say, every time. Neither of you says much on the way back."
+      }
+     },
+     {
+      "value": {
+       "ko": "…",
+       "en": "She ends up in the wrong place twice and laughs. You walk back together."
+      }
+     }
+    ],
+    "effects": {
+     "setFlags": [
+      "dawn_seen",
+      "dawn_led"
+     ],
+     "tally": [
+      "dawn"
+     ]
+    },
+    "end": true
    },
    {
     "id": "dw_done",

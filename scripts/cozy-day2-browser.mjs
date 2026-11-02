@@ -23,6 +23,8 @@ const RUNS = {
   laptop: { viewport: { width: 1280, height: 800 }, origin: 'athlete', plan: { 'seoul.loop.dawn:dw_tong': /뛰러/ } },
   phone: { viewport: { width: 390, height: 844 }, touch: true, origin: 'creator', plan: { 'seoul.loop.edit:ed_tong': /자르자/, 'seoul.loop.edit:ed_where': /나만/ } },
   intl: { viewport: { width: 1280, height: 800 }, origin: 'intl_kid', plan: {} },
+  // A later Monday (day 9), paired with Ha-eun: run together and you call the moves.
+  lead: { viewport: { width: 1280, height: 800 }, origin: 'athlete', startDay: 8, flags: { h1_done: true, dawn_seen: true }, plan: { 'seoul.loop.dawn:dw_tong': /하은/ } },
 };
 
 async function run(tag) {
@@ -43,11 +45,13 @@ async function run(tag) {
   const shot = (name) => page.screenshot({ path: `${OUT}/${tag}-${name}.png`, timeout: 600000 });
   const flags = () => f.evaluate(() => __cozy.S.story.flags);
   const busy = () => f.evaluate(() => __cozy.dlg.state.active || __cozy.bridgeBusy);
+  const calloutOpen = () => f.evaluate(() => !document.querySelector('#seoul-eval')?.classList.contains('hidden') && document.querySelector('#seoul-eval .eval-card')?.dataset.item === 'callout');
   const drillOpen = () => f.evaluate(() => !document.querySelector('#seoul-eval')?.classList.contains('hidden') && document.querySelector('#seoul-eval .eval-card')?.dataset.screen === 'dance');
   const seen = [];
   // Click through dialogue: the plan picks some replies, else the first. Drills are danced; Tong host exercises closed.
   const talkThrough = async (shots = {}) => {
     for (let i = 0; i < 200; i++) {
+      if (await calloutOpen()) { await playCallout(f, () => shot('callout')); seen.push('callout'); continue; }
       if (await drillOpen()) { const n = seen.filter((s) => s === 'drill').length; seen.push('drill'); await playDance(f, (i) => i === 5 && shot(`drill-${n}`)); continue; } // a shot takes seconds here: only after the last call
       if (!(await busy())) {
         await frames(4);
@@ -106,6 +110,7 @@ async function run(tag) {
     __cozy.S.story.flags = { ...__cozy.S.story.flags, h0_done: true, dorm_arrived: true, 'played:seoul.d1.bedtime': true };
     __cozy.S.speed = 0;
   });
+  await f.evaluate(({ day, flags }) => { __cozy.S.day = day; Object.assign(__cozy.S.story.flags, flags); }, { day: cfg.startDay ?? 1, flags: cfg.flags ?? {} });
   assert.equal(await f.evaluate(() => __cozy.S.origin), cfg.origin);
   // The registration card follows H0; hand it in so the world is free.
   await f.waitForSelector('#seoul-eval [data-action="profile-save"]', { timeout: 120000 }).catch(() => {});
@@ -114,7 +119,7 @@ async function run(tag) {
   await toBunk(22.5);
   await f.evaluate(() => __cozy.interact());
   await sleep();
-  assert.equal(await f.evaluate(() => __cozy.S.day), 2);
+  assert.equal(await f.evaluate(() => __cozy.S.day), (cfg.startDay ?? 1) + 1);
 
   if (tag === 'laptop') {
     // 1. Monday 05:30: the dawn run.
@@ -157,6 +162,34 @@ async function run(tag) {
     assert.equal(seen.filter((s) => s === 'drill').length, 2, 'two drills: dawn and studio');
   }
 
+  if (tag === 'lead') {
+    // 05:30: the room asleep in their bunks, then the run with Ha-eun where you call it.
+    await f.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 60000, polling: 500 });
+    await frames(6);
+    const lying = await f.evaluate(() => [...__cozy.G.scene.children].length && ['daon', 'boram'].map((id) => { const o = __cozy.G.scene.getObjectByName(`dorm:${id}`); return o && o.visible && Math.abs(o.rotation.x + Math.PI / 2) < 0.01; }));
+    log(tag, 'asleep in bed', lying);
+    assert.deepEqual(lying, [true, true], 'Da-on and Bo-ram lie in their beds at 05:30');
+    await f.evaluate(() => { if (__cozy.dlg.state.active) __cozy.dlg.finishTyping(); });
+    await shot('1-asleep');
+    await talkThrough({ 'seoul.loop.dawn:dw_lead': '2-you-call-it' });
+    const fl = await flags();
+    log(tag, 'led', { led: fl.dawn_led, tally: await f.evaluate(() => __cozy.S.story.tally) });
+    assert.ok(seen.includes('callout'), 'the callout played');
+    assert.ok(fl.ex_dw_lead !== undefined || fl.dawn_led, 'the led run finished');
+    assert.equal(await f.evaluate(() => __cozy.S.story.tally.team_haeun), 1);
+    // The rooftop at night: 평상, drying rack, string lights.
+    await f.evaluate(() => {
+      const b = __cozy.apartmentDiagnostics.find((x) => x.id === 'seoul-home');
+      const p = b.route.find((r) => r.kind === 'rooftop');
+      const [x, y, z] = p.position ?? [p.x, p.y, p.z];
+      __cozy.player.root.position.set(x, y, z);
+      __cozy.setHour(21.5); __cozy.S.speed = 0;
+      Object.assign(__cozy.cam, { yaw: -2.2, pitch: 0.35, dist: 5, snap: true });
+    });
+    await frames(20);
+    await shot('3-rooftop-night');
+  }
+
   if (tag === 'intl') {
     await f.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 60000, polling: 500 });
     await shot('1-mum-text');
@@ -184,6 +217,21 @@ async function run(tag) {
   await page.close();
 }
 
+/** Giving the call: pick the option that sends her to the dashed cell (from data-answer). */
+async function playCallout(f, onFirst) {
+  for (let i = 0; ; i++) {
+    const ok = await f.waitForFunction((n) => {
+      const c = document.querySelector('#seoul-eval .eval-card');
+      if (c?.dataset.item !== 'callout' || document.querySelector('#seoul-eval').classList.contains('hidden')) return 'done';
+      return c.dataset.call === String(n) && document.querySelector('#seoul-eval .callout-option:not([disabled])') ? 'call' : false;
+    }, i, { timeout: 20000 }).then((h) => h.jsonValue()).catch(() => 'done');
+    if (ok === 'done') return;
+    if (i === 0) await onFirst?.();
+    const answer = JSON.parse(await f.locator('#seoul-eval .eval-card').getAttribute('data-answer'));
+    await f.evaluate((a) => [...document.querySelectorAll('#seoul-eval .callout-option')].find((b) => b.dataset.call === a)?.click(), answer);
+  }
+}
+
 /** Follow each call on the beat (from eval1-browser's playDance): pose early, cell on the hit. */
 async function playDance(f, onCall) {
   for (let i = 0; ; i++) {
@@ -204,7 +252,7 @@ async function playDance(f, onCall) {
   }
 }
 
-const runs = (process.env.DAY2_RUNS || 'laptop,phone,intl').split(',');
+const runs = (process.env.DAY2_RUNS || 'laptop,phone,intl,lead').split(',');
 try {
   for (const tag of runs) {
     await run(tag);

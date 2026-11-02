@@ -2,9 +2,11 @@ import type { SceneModule } from '../../../relationship/types';
 
 /**
  * Athlete loop · 새벽 (Dawn). Mondays at 05:30 your body wakes on training
- * time. Run (alone, or with someone once you know names) or sleep on (dawn_rest, cleared by main.js once read). The
- * run is the formation grid with Tong calling: following instructions under
- * rhythm. Training while tired strains you (toll; main.js).
+ * time. Run alone, run with a teammate once you know names, or sleep on
+ * (dawn_rest, cleared by main.js once read). Alone, the run is the formation
+ * grid with Tong calling (following instructions under rhythm); with a
+ * teammate you call it and she follows (giving them). Training tired strains
+ * you (toll; main.js).
  */
 export const module: SceneModule = {
   scene: {
@@ -15,7 +17,7 @@ export const module: SceneModule = {
     location: 'han_river',
     gate: { flags: ['origin_athlete'] },
     summary:
-      '05:30, Monday. Everyone else is asleep. Run alone, wake a teammate (Ha-eun, Minji or Yerin, once paired), or sleep until seven. The run: Tong calls moves on the river path (formation grid, moves only). Team trust by who you train with; strain if overdone.',
+      '05:30, Monday. Everyone else is asleep. Run alone, wake a teammate (Ha-eun, Minji or Yerin, once paired), or sleep until seven. Alone: Tong calls moves on the river path (formation grid, moves only). With a teammate: you call it and she runs where you say (giving instructions, untimed). Team trust by who you train with; strain if overdone.',
     seeds: ['dawn_rest', 'tally team_haeun / team_minji / team_yerin', 'tally dawn'],
     beats: [
       {
@@ -46,21 +48,21 @@ export const module: SceneModule = {
             intent: 'ask',
             gate: { flags: ['h1_done'] },
             say: { ko: '하은 씨, 같이 뛸래요?', en: 'Ha-eun, want to run together?', rom: 'haeun ssi, gachi ttwillaeyo?' },
-            outcomes: [{ speaker: 'narration', reaction: { ko: '…', en: 'She\'s already lacing her shoes.' }, tally: ['team_haeun'] }],
+            outcomes: [{ speaker: 'narration', reaction: { ko: '…', en: 'She\'s already lacing her shoes.' }, tally: ['team_haeun'], next: 'dw_lead' }],
           },
           {
             id: 'dw_minji',
             intent: 'ask',
             gate: { flags: ['h1_done'] },
             say: { ko: '민지 씨, 같이 뛸래요?', en: 'Min-ji, want to run together?', rom: 'minji ssi, gachi ttwillaeyo?' },
-            outcomes: [{ speaker: 'minji', reaction: { ko: '지금 몇 신데….', en: 'What time is it even….', note: 'She comes anyway.', review: 'native' }, tally: ['team_minji'] }],
+            outcomes: [{ speaker: 'minji', reaction: { ko: '지금 몇 신데….', en: 'What time is it even….', note: 'She comes anyway.', review: 'native' }, tally: ['team_minji'], next: 'dw_lead' }],
           },
           {
             id: 'dw_yerin',
             intent: 'ask',
             gate: { flags: ['h1_done'] },
             say: { ko: '예린 씨, 같이 뛸래요?', en: 'Ye-rin, want to run together?', rom: 'yerin ssi, gachi ttwillaeyo?' },
-            outcomes: [{ speaker: 'yerin', reaction: { ko: '응! 잠깐만!', en: 'Yes! One second!', review: 'native' }, tally: ['team_yerin'] }],
+            outcomes: [{ speaker: 'yerin', reaction: { ko: '응! 잠깐만!', en: 'Yes! One second!', review: 'native' }, tally: ['team_yerin'], next: 'dw_lead' }],
           },
           {
             id: 'dw_rest',
@@ -83,6 +85,30 @@ export const module: SceneModule = {
           onFail: 'continue',
         },
         next: 'dw_done',
+      },
+      // With a teammate you call it and she follows: giving instructions, untimed.
+      {
+        id: 'dw_lead',
+        speaker: 'tong',
+        lines: [{ value: { ko: '오늘은 네가 불러.', en: 'You call it today. She runs where you say.', review: 'native' } }],
+        exercise: {
+          type: 'formation_grid',
+          objectiveId: 'ko-speak-directions',
+          targets: ['give'],
+          framing: { ko: '어디로 가라고 할까?', en: 'Where do you send her?' },
+          onFail: 'continue',
+        },
+        next: 'dw_led',
+      },
+      {
+        id: 'dw_led',
+        speaker: 'narration',
+        lines: [
+          { when: { flags: ['ex_dw_lead'] }, value: { ko: '…', en: 'She lands where you say, every time. Neither of you says much on the way back.' } },
+          { value: { ko: '…', en: 'She ends up in the wrong place twice and laughs. You walk back together.' } },
+        ],
+        effects: { setFlags: ['dawn_seen', 'dawn_led'], tally: ['dawn'] },
+        end: true,
       },
       {
         id: 'dw_done',

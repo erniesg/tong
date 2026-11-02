@@ -1,7 +1,7 @@
 // Formation grid: "follow the call". Pure, seeded call generation and state checks.
 // The UI (ui.js) runs the beat; this module decides what each call means.
 
-import { rng, hashSeed } from './runner.js';
+import { rng, hashSeed, shuffled } from './runner.js';
 
 export const GRID = { cols: 5, rows: 3 };
 export const START = { x: 2, y: 1, pose: 'stand' };
@@ -97,4 +97,17 @@ export function applyInput(state, input) {
   }
   if (input.pose && POSES[input.pose]) return { ...state, pose: input.pose };
   return state;
+}
+
+/**
+ * Giving the call (the dawn run with a teammate): she stands at `from`; which
+ * call gets her to `target`? Four options, moves only, untimed. `answer` is the
+ * right call's Korean.
+ */
+export function calloutItems(seed, n = 6) {
+  const rand = rng(hashSeed(seed, 'callout'));
+  return makeCalls(seed, n, { kinds: ['move'] }).map((c, i) => {
+    const wrong = shuffled(legalCalls(c.from, { combos: false }).filter((o) => o.kind === 'move' && !matches(o.target, c.target)), rand).slice(0, 3);
+    return { id: `callout-${i + 1}`, skill: 'speaking', objective: c.objective, from: c.from, target: c.target, answer: c.ko, en: c.en, options: shuffled([c, ...wrong], rand).map((o) => ({ ko: o.ko, en: o.en, target: o.target })) };
+  });
 }

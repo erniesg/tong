@@ -38,7 +38,7 @@ export function loopDue(origin, day, when, flags = {}) {
  * Call sets for a formation_grid exercise: `targets` name the kinds of call.
  * Coach Park's first drill is moves and poses; the dawn run is moves only.
  */
-export const CALL_KINDS = ['move', 'pose', 'combo'];
+export const CALL_KINDS = ['move', 'pose', 'combo', 'give']; // give: you call it, a teammate follows
 export const drillKinds = (targets) => {
   const kinds = (targets ?? []).filter((k) => CALL_KINDS.includes(k));
   return kinds.length ? kinds : ['move', 'pose'];
