@@ -30,7 +30,12 @@ async function googleTranslate(text: string, from: string, to: string): Promise<
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
   const { words, from, to } = body as {
     words: string[];
     from: string;
@@ -57,6 +62,6 @@ export async function POST(req: Request) {
     return Response.json({ translations: result });
   } catch (e) {
     console.error('[translate] error:', e);
-    return Response.json({ translations: {} }, { status: 200 });
+    return Response.json({ error: 'Translation failed', translations: {} }, { status: 502 });
   }
 }
