@@ -1,6 +1,31 @@
 export type TargetLanguage = 'ko' | 'ja' | 'zh';
 export type AppLanguage = TargetLanguage | 'en';
 
+export type StandardAlignmentSystem = 'HSK' | 'JLPT' | 'TOPIK' | 'CEFR' | (string & {});
+
+export type StandardAlignmentSkill =
+  | 'script'
+  | 'pronunciation'
+  | 'vocabulary'
+  | 'grammar'
+  | 'sentences'
+  | 'conversation'
+  | 'reading'
+  | 'listening'
+  | 'speaking'
+  | 'writing'
+  | (string & {});
+
+export interface StandardAlignment {
+  system: StandardAlignmentSystem;
+  level: string;
+  lang: TargetLanguage;
+  skill: StandardAlignmentSkill;
+  confidence?: number;
+  source?: 'curated' | 'inferred' | 'partner' | (string & {});
+  tags?: string[];
+}
+
 export interface EnrichedCaptionToken {
   text: string;
   lemma: string;
@@ -90,6 +115,7 @@ export interface PlacementHint {
   legacyObjectiveId?: string;
   objectiveAliasIds?: string[];
   confidence?: number;
+  standardAlignments?: StandardAlignment[] | null;
 }
 
 export interface VocabInsightItem {
@@ -108,6 +134,7 @@ export interface VocabInsightItem {
     legacyObjectiveId?: string;
     objectiveAliasIds?: string[];
     reason: string;
+    standardAlignments?: StandardAlignment[] | null;
   }>;
 }
 
@@ -190,6 +217,7 @@ export interface ObjectiveDescriptor {
   objectiveNodeId?: string;
   targetNodeIds?: string[];
   summary?: string;
+  standardAlignments?: StandardAlignment[] | null;
 }
 
 export interface RouteStateDescriptor {
@@ -366,6 +394,7 @@ export interface ObjectiveNextResponse {
   level: number;
   mode: SessionMode;
   lang: TargetLanguage;
+  standardAlignments?: StandardAlignment[] | null;
   objectiveGraph: {
     objectiveNodeId: string;
     cityId: GraphCityId;
@@ -384,6 +413,7 @@ export interface ObjectiveNextResponse {
     lemma: string;
     source: 'youtube' | 'spotify';
     linkedNodeIds: string[];
+    standardAlignments?: StandardAlignment[] | null;
   }>;
   completionCriteria: {
     requiredTurns: number;
@@ -645,6 +675,7 @@ export interface ScriptTarget {
   transliteration?: string;
   notes?: string;
   level: number;
+  standardAlignments?: StandardAlignment[] | null;
 }
 
 export interface PronunciationTarget {
@@ -653,6 +684,7 @@ export interface PronunciationTarget {
   transliteration?: string;
   notes?: string;
   level: number;
+  standardAlignments?: StandardAlignment[] | null;
 }
 
 export interface VocabularyTarget {
@@ -664,6 +696,7 @@ export interface VocabularyTarget {
   level: number;
   sceneContext?: string;
   visualCue?: string;
+  standardAlignments?: StandardAlignment[] | null;
 }
 
 export interface GrammarTarget {
@@ -676,6 +709,7 @@ export interface GrammarTarget {
   }>;
   level: number;
   locationId: string;
+  standardAlignments?: StandardAlignment[] | null;
 }
 
 export interface SentenceFrameTarget {
@@ -687,6 +721,7 @@ export interface SentenceFrameTarget {
     translation: string;
   }>;
   level: number;
+  standardAlignments?: StandardAlignment[] | null;
 }
 
 export interface CurriculumGraphNode {
@@ -703,6 +738,7 @@ export interface CurriculumGraphNode {
   targetCount?: number;
   assessmentThreshold?: number;
   objectiveCategory?: ObjectiveCategory;
+  standardAlignments?: StandardAlignment[] | null;
   personalized?: {
     source: 'youtube' | 'spotify';
     rationale: string;
