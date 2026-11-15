@@ -1401,6 +1401,11 @@ function d1Shot() {
     const b = ONS.ROOMS.practice_b, [hx, hy, hz] = ONS.roomB;
     return { mode: 'd1-room-b', fov: 62, pos: [b.maxX - 0.35, b.floorY + 1.95, b.maxZ - 0.35], look: [(hx + pp.x) / 2 - 0.3, hy + 1.0, (hz + pp.z) / 2 - 0.2] };
   }
+  if (id.startsWith('seoul.d1.arrive:') && room === 'corridor2') {
+    // Down the corridor from the front end: Room A's door, the cohort coming past, Room B at the far end.
+    const b = ONS.ROOMS.corridor2;
+    return { mode: 'd1-corridor', fov: 66, pos: [(b.minX + b.maxX) / 2 + 0.55, b.floorY + 2.45, b.maxZ - 0.5], look: [(b.minX + b.maxX) / 2 - 0.2, b.floorY + 1.05, pp.z - 1.2] };
+  }
   if (id.startsWith('seoul.d1.orientation:') && room === 'practice_a') {
     // From the back corner by the door, over the cohort, to the staff at the mirror.
     const b = ONS.ROOMS.practice_a, [fx, fy, fz] = ONS.roomAFront;

@@ -1,221 +1,133 @@
-// Browser proof of Day 1 (docs/seoul-day1.md) from a fresh save: pick an origin → Incheon arrivals
-// (Tong appears) → walk to the 출구 doors → walk to the departure board → the station decision →
-// Hongdae → walk into the studio (arrival + orientation) → your locker (H0) → registration card →
-// the dorm → your bunk (Tong's bedtime moment, the Hangul recap) → day two.
-//   laptop: International-School Kid, taxi on the family card (early: Haeun alone).
-//   phone:  Creator, the express by mistake, asks the way at Seoul Station (on time: the cohort).
-// Exercises the Tong host opens are closed, as a player skipping them would; scenes then offer a
-// plain choice. Start the dev server first (cd apps/client && npx next dev -p 3021).
-import assert from 'node:assert/strict';
+// Browser play-through of the rebuilt first day (docs/seoul-first-day.md) from a fresh save:
+// the airport train (Tong, the grandmother, 아 and 이) → Hongdae (the poster, the 붕어빵 cart) →
+//   haeun: straight up to Onsae: lobby → Ha-eun alone in Room B (count her in) → orientation → locker
+//   jin:   the tent first (jin.j0) → Onsae: lobby → practice lets out in the corridor → orientation → locker
+// Tong's small games are played by clicking the right pieces. Places are reached by jumping to their
+// marks (walking the building is covered by scripts/cozy-onsae.test.mjs). Serve the game statically:
+//   python3 -m http.server 3032 --directory apps/client/public
+//   PLAYWRIGHT_MODULE=/abs/path/playwright/index.mjs node scripts/cozy-day1-browser.mjs <haeun|jin> <outdir> [desktop|phone] [athlete|creator|intl_kid]
+// On a busy host one run takes 10–20 minutes; run one at a time.
 import { mkdir } from 'node:fs/promises';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { openPage, closePage } from './lib/cozy-video.mjs';
-
-const moduleName = process.env.PLAYWRIGHT_MODULE || 'playwright';
-const { chromium } = await import(path.isAbsolute(moduleName) ? pathToFileURL(moduleName).href : moduleName);
-const OUT = process.env.COZY_EVIDENCE_DIR || 'artifacts/cozy-day1';
-const URL = process.env.COZY_HOST_URL || 'http://127.0.0.1:3021/cozy';
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const [PATH = 'haeun', OUT = 'artifacts/cozy-day1', SIZE = 'desktop', ORIGIN = 'athlete'] = process.argv.slice(2);
 await mkdir(OUT, { recursive: true });
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-const log = (...a) => console.log(...a);
-const X0 = -400; // cities/incheon.js
-
-const RUNS = {
-  laptop: {
-    viewport: { width: 1280, height: 800 }, origin: 'intl_kid', arrival: 'd1_early', reloadAt: 'seoul.d1.orientation:o_call',
-    plan: { 'seoul.d1.station:s_where': /taxi/i, 'seoul.d1.station:s_taxi_chat': /조금/ },
-  },
-  phone: {
-    viewport: { width: 390, height: 844 }, touch: true, origin: 'creator', arrival: 'd1_ontime',
-    plan: { 'seoul.d1.station:s_pick': /13:30/, 'seoul.d1.station:s_ask_pick': /실례합니다/, 'seoul.d1.arrive:r_room': /새로 온 애예요/ },
-  },
+const phone = SIZE === 'phone';
+const page = await browser.newPage({ viewport: phone ? { width: 390, height: 844 } : { width: 1280, height: 800 }, hasTouch: phone, isMobile: phone });
+page.setDefaultTimeout(180000);
+const errors = [];
+page.on('pageerror', (e) => { errors.push(String(e)); console.log('PAGEERROR', String(e).slice(0, 300)); });
+page.on('console', (m) => { if (m.type() === 'error') console.log('console.error', m.text().slice(0, 200)); });
+await page.goto(process.env.COZY_URL || 'http://127.0.0.1:3032/cozy/index.html', { waitUntil: 'domcontentloaded' });
+await page.waitForFunction(() => window.__cozy && !document.querySelector('#start').disabled);
+let n = 0;
+const shot = async (name) => { await page.waitForTimeout(2200); await page.screenshot({ path: `${OUT}/${String(++n).padStart(2, '0')}-${name}.png` }); console.log('shot', name); };
+const st = () => page.evaluate(() => ({ id: __cozy.dlg.state.id, active: __cozy.dlg.state.active, typing: __cozy.dlg.state.typing, choices: (__cozy.dlg.state.choices ?? []).map((c) => c.ko), play: !!document.querySelector('.play'), busy: __cozy.bridgeBusy }));
+// Play one of Tong's small games properly, by clicking the right things.
+async function playGame() {
+  const title = await page.textContent('.play-title b');
+  for (let guard = 0; guard < 40; guard++) {
+    if (await page.$('.play-next:not(.hidden)')) break;
+    const did = await page.evaluate(() => {
+      const q = (s) => [...document.querySelectorAll(s)];
+      const empty = q('.play-slot:not(.given):not(.filled)');
+      if (empty.length || q('.play-tile').length) {
+        // compose / missing: the test knows the answer from the request on window (set below)
+        const want = window.__want.shift();
+        const tile = q('.play-tile:not(.used)').find((t) => t.firstChild.textContent === want);
+        tile?.click(); return `tile ${want}`;
+      }
+      if (q('.play-cardopt').length) { const c = q('.play-cardopt').find((c) => c.firstChild.textContent === window.__want[0]); c.click(); return 'card'; }
+      if (q('.play-pair').length) {
+        const b = q('.play-pair.block:not(:disabled)')[0]; if (!b) return 'none';
+        const pair = window.__want.find((p) => p.startsWith(b.dataset.key + ':'));
+        b.click(); q('.play-pair.sound').find((s) => s.dataset.key === pair.split(':')[1]).click(); return 'pair';
+      }
+      if (q('.play-chip').length) {
+        if (window.__want.length) { const w = window.__want.shift(); q('.play-tray .play-chip:not(.used)').find((c) => c.textContent === w).click(); return `chip ${w}`; }
+        document.querySelector('.play-say').click(); return 'say';
+      }
+      return 'none';
+    });
+    await page.waitForTimeout(350);
+    if (did === 'none') break;
+  }
+  await shot(`game-${title.replace(/\W+/g, '-').slice(0, 24)}`);
+  await page.click('.play-next');
+}
+const WANT = {
+  'Build 아.': ['ㅇ', 'ㅏ'], 'Tap the one you hear.': ['이'], 'One piece is scraped off. Which?': ['ㅜ'], 'Which card is hers?': ['다온'],
+  'Match each block to its sound.': ['아:a', '이:i', '수:su', '다:da', '온:on'], 'Count her in: five, six, seven, eight.': ['다섯', '여섯', '일곱', '여덟'],
 };
-
-async function run(tag) {
-  const cfg = RUNS[tag];
-  const page = await openPage(browser, { viewport: cfg.viewport, hasTouch: !!cfg.touch, isMobile: !!cfg.touch });
-  page.setDefaultTimeout(90000);
-  const errors = [];
-  page.on('pageerror', (e) => errors.push(String(e)));
-  await page.goto(URL, { waitUntil: 'domcontentloaded', timeout: 300000 });
-  const el = await page.waitForSelector('iframe.cozy-frame', { timeout: 300000 });
-  let f = await el.contentFrame();
-  await f.waitForFunction(() => window.__cozy && !document.querySelector('#start').disabled, null, { timeout: 300000 });
-  const frames = async (n) => {
-    const start = await f.evaluate(() => window.__fr);
-    await f.waitForFunction((t) => window.__fr >= t, start + n, { timeout: 600000, polling: 500 });
-  };
-  const shot = (name) => page.screenshot({ path: `${OUT}/${tag}-${name}.png`, timeout: 600000 });
-  const flags = () => f.evaluate(() => __cozy.S.story.flags);
-  const today = () => f.evaluate(() => ({ count: document.querySelector('#quest-count')?.textContent, items: [...document.querySelectorAll('.quest-list li')].map((li) => `${li.className === 'step-done' ? '✓' : '·'} ${li.textContent}`) }));
-  const busy = () => f.evaluate(() => __cozy.dlg.state.active || __cozy.bridgeBusy);
+// Talk through whatever is playing. plan: beat id → regex for the reply; shots: beat id → name.
+async function talk(plan = {}, shots = {}) {
   const seen = new Set();
-  // Click through dialogue: the run's plan picks some replies, otherwise the first. Shots on key beats.
-  const talkThrough = async (shots = {}) => {
-    for (let i = 0; i < 200 && (await busy()); i++) {
-      if (await page.evaluate(() => !!document.querySelector('.exercise-dismiss-btn, .cozy-practice__close'))) {
-        await page.evaluate(() => document.querySelector('.exercise-dismiss-btn, .cozy-practice__close').click());
-        log(tag, 'closed an exercise');
-      } else {
-        const st = await f.evaluate(() => ({ id: __cozy.dlg.state.id, choices: (__cozy.dlg.state.choices ?? []).map((c) => `${c.ko ?? ''} ${c.en ?? ''}`) }));
-        if (st.id && shots[st.id] && !seen.has(st.id)) { seen.add(st.id); await frames(3); await shot(shots[st.id]); }
-        if (st.id === cfg.reloadAt && !seen.has('reload')) { seen.add('reload'); await reloadAndContinue(); continue; }
-        const want = cfg.plan[st.id];
-        const pick = want ? Math.max(0, st.choices.findIndex((c) => want.test(c))) : 0;
-        await f.evaluate((pick) => { if (!__cozy.dlg.state.active) return; __cozy.dlg.finishTyping(); if (__cozy.dlg.state.choices.length) __cozy.dlg.choose(pick); else __cozy.dlg.advance(); }, pick);
-      }
-      await frames(3);
+  let scene = null;
+  for (let i = 0; i < 400; i++) {
+    const s = await st();
+    // One call talks through one scene (two when the second is orientation, which follows by itself).
+    const sc = s.id?.split(':')[0];
+    if (sc && !scene) scene = sc; else if (sc && sc !== scene && !/orientation/.test(sc)) return;
+    if (s.play) {
+      const title = await page.textContent('.play-title b');
+      const want = WANT[title] ?? (title.startsWith('Build your') ? null : null);
+      if (!want) {
+        // the self-introduction: pieces in order come from the scene
+        await page.evaluate(() => { window.__want = ['안녕하세요.', [...document.querySelectorAll('.play-chip')].map((c) => c.textContent).find((t) => t.startsWith('저는') && t.endsWith('입니다.')), '잘 부탁드립니다.']; });
+      } else await page.evaluate((w) => { window.__want = [...w]; }, want);
+      await playGame();
+      continue;
     }
-  };
-  const walk = async (x, z, label, tolerance = 0.45, shots) => {
-    await f.evaluate(() => document.getElementById('scene').focus());
-    await page.keyboard.down('w');
-    let best = Infinity, still = 0;
-    for (let i = 0; i < 500; i++) {
-      if (await busy()) {
-        await page.keyboard.up('w');
-        log(tag, `on the way to ${label}: ${await f.evaluate(() => __cozy.dlg.state.id)}`);
-        await talkThrough(shots);
-        await f.evaluate(() => document.getElementById('scene').focus());
-        await page.keyboard.down('w');
-        still = 0;
-      }
-      const d = await f.evaluate(({ x, z }) => {
-        const p = __cozy.player.root.position, dx = x - p.x, dz = z - p.z;
-        __cozy.cam.yaw = Math.atan2(-dx, -dz);
-        return Math.hypot(dx, dz);
-      }, { x, z });
-      if (d < tolerance) break;
-      if (d < best - 0.05) { best = d; still = 0; } else if (++still > 40) { await page.keyboard.up('w'); await shot(`stuck-${label.replace(/\W+/g, '-')}`); throw new Error(`stuck walking to ${label} (${d.toFixed(2)} m away)`); }
-      await frames(2);
-    }
-    await page.keyboard.up('w');
-    await f.evaluate(() => { __cozy.traversal.vx = __cozy.traversal.vz = 0; });
-  };
-  const interactWith = async (re, label) => {
-    await frames(4);
-    await f.waitForFunction((src) => new RegExp(src).test(document.querySelector('#prompt').textContent), re.source, { timeout: 120000, polling: 500 })
-      .catch(async (e) => { log(tag, 'no prompt for', label, await f.evaluate(() => document.querySelector('#prompt').textContent)); await shot(`no-prompt-${label}`); throw e; });
-    await f.evaluate(() => __cozy.interact());
-    await f.waitForFunction(() => __cozy.dlg.state.active, null, { polling: 500 });
-  };
-
-  const countFrames = () => f.evaluate(() => { __cozy.renderer.setPixelRatio(0.5); window.__fr = 0; const k = () => { window.__fr++; requestAnimationFrame(k); }; k(); });
-  // Close the tab mid-scene (after the 10 s autosave) and continue the save, as a player coming back would.
-  const reloadAndContinue = async () => {
-    await page.waitForTimeout(12000);
-    await page.reload({ waitUntil: 'domcontentloaded', timeout: 300000 });
-    f = await (await page.waitForSelector('iframe.cozy-frame', { timeout: 300000 })).contentFrame();
-    await f.waitForFunction(() => window.__cozy && !document.querySelector('#continue').classList.contains('hidden'), null, { timeout: 300000 });
-    await countFrames();
-    await f.evaluate(() => document.querySelector('#continue').click());
-    await f.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 120000, polling: 500 });
-    log(tag, 'reloaded; resumed with', await f.evaluate(() => __cozy.dlg.state.id));
-  };
-
-  await countFrames();
-  // 0. Creator: pick the origin.
-  await f.evaluate(() => document.querySelector('#start').click());
-  // Day 1 is the female route (girls' dorm, 언니): play as a girl.
-  await f.evaluate((o) => { document.querySelector('#origin').value = o; document.querySelector('[data-gender="f"]').click(); }, cfg.origin);
-  await shot('0-creator-origin');
-  await f.evaluate(() => document.querySelector('#creator-start').click());
-
-  // 1. Incheon arrivals: the airport scene plays by itself.
-  await f.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 120000, polling: 500 });
-  assert.equal(await f.evaluate(() => __cozy.S.city), 'incheon');
-  await talkThrough({ 'seoul.d1.airport:a_tong': '1-tong-appears', 'seoul.d1.airport:a_choi': '2-kakao-3pm' });
-  await f.evaluate(() => { __cozy.S.speed = 0; });
-  const t0 = await today();
-  log(tag, 'incheon', t0, await f.evaluate(() => __cozy.tongHint()));
-  assert.equal(t0.count, '0/7');
-  assert.ok(await f.evaluate(() => document.querySelector('.panel.quest').open), 'Today list is open on day one');
-  await shot('3-arrivals-hall');
-
-  // 2. Walk to the 출구 doors; the sign exercise opens the way out.
-  await walk(X0 - 4.2, 4, 'exit doors', 0.5);
-  await interactWith(/출구/, 'exit');
-  await talkThrough({ 'seoul.d1.exit:e_out': '4-exit-signs' });
-  assert.ok((await flags()).d1_exit_done, 'exit done');
-  await walk(X0 + 1, 4, 'through the doors', 0.5);
-  await walk(X0 + 8.6, 0, 'departure board', 0.5);
-  await shot('5-departure-board');
-  await interactWith(/전광판/, 'board');
-  await talkThrough({ 'seoul.d1.station:s_where': '6-station-decision', 'seoul.d1.station:s_prep': '7-tong-ride-in', 'seoul.d1.station:s_ask': '7-seoul-station' });
-  await f.waitForFunction(() => __cozy.S.city === 'seoul' && !__cozy.transitioning, null, { timeout: 120000, polling: 500 });
-  await frames(20);
-  const f1 = await flags();
-  log(tag, 'hongdae', { hour: await f.evaluate(() => __cozy.S.hour.toFixed(2)), early: f1.d1_early, ontime: f1.d1_ontime, late: f1.d1_late, toll: await f.evaluate(() => __cozy.S.story.tally.toll ?? 0) }, await f.evaluate(() => __cozy.tongHint()));
-  assert.ok(f1[cfg.arrival], `arrival ${cfg.arrival}`);
-  await shot('8-hongdae');
-
-  // 3. The studio: arrival, then orientation, then your locker (H0).
-  await f.evaluate(() => __cozy.travelTo('studio', { skipAnimation: true }));
-  await frames(6);
-  await walk(-8.4, -34.2, 'studio floor', 0.45, { 'seoul.d1.arrive:r_early_who': '9-early-haeun', 'seoul.d1.arrive:r_minji': '9-ontime-cohort', 'seoul.d1.orientation:o_rules': '10-orientation', 'seoul.d1.orientation:o_overheard': '11-sua-gossip' });
-  await f.waitForFunction(() => __cozy.S.story.flags.orientation_done || __cozy.dlg.state.active, null, { timeout: 120000, polling: 500 });
-  await talkThrough({ 'seoul.d1.orientation:o_rules': '10-orientation', 'seoul.d1.orientation:o_overheard': '11-sua-gossip' });
-  assert.ok((await flags()).orientation_done, 'orientation done');
-  await walk(-13.0, -32.4, 'locker', 0.6);
-  await interactWith(/사물함/, 'locker');
-  await talkThrough();
-  assert.ok((await flags()).h0_done, 'H0 done');
-  await f.waitForSelector('#seoul-eval [data-action="profile-save"]', { timeout: 120000 });
-  await f.evaluate(() => document.querySelector('#seoul-eval [data-action="profile-save"]').click());
-  await f.waitForFunction(() => !document.querySelector('.overlay:not(.hidden)'), null, { timeout: 120000, polling: 500 });
-  await frames(40);
-  const t1 = await today();
-  log(tag, 'after lockers + card', t1);
-  assert.equal(t1.count, '5/7');
-  await shot('12-today-dorm-next');
-
-  // 4. The dorm, up the stairs: the arrival scene with the evening choice.
-  await f.evaluate(() => { __cozy.setHour(19.5); __cozy.S.speed = 0; });
-  await f.evaluate(() => __cozy.travelTo('seoul-home', { skipAnimation: true }));
-  await frames(6);
-  const route = await f.evaluate(() => {
-    const b = __cozy.apartmentDiagnostics.find((b) => b.id === 'seoul-home');
-    const end = b.route.findIndex((p) => p.kind === 'home-entry' && p.y > 3);
-    return b.route.slice(1, end + 1).filter((p) => !['shared-lobby', 'concierge-approach'].includes(p.kind));
-  });
-  for (const p of route) {
-    if ((await flags()).dorm_arrived) break;
-    await walk(p.x, p.z, p.kind, 0.35, { 'haeun.h0.dorm:d0_evening': '13-dorm-evening' });
+    if (!s.active && !s.busy) { await page.waitForTimeout(900); const again = await st(); if (!again.active && !again.busy && !again.play) return; continue; }
+    const sk = s.id && Object.keys(shots).find((k) => s.id.endsWith(':' + k));
+    if (sk && !seen.has(sk)) { seen.add(sk); await page.evaluate(() => __cozy.dlg.finishTyping()); await shot(shots[sk]); }
+    const key = Object.keys(plan).find((k) => s.id?.endsWith(':' + k));
+    await page.evaluate((re) => { const d = __cozy.dlg; if (!d.state.active) return; d.finishTyping(); if (d.state.choices.length) { const i = re ? Math.max(0, d.state.choices.findIndex((c) => new RegExp(re).test(`${c.ko} ${c.en ?? ''}`))) : 0; d.choose(i); } else d.advance(); }, key ? plan[key] : null);
+    await page.waitForTimeout(450);
   }
-  if (!(await flags()).dorm_arrived) {
-    await f.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 120000, polling: 500 });
-    await talkThrough({ 'haeun.h0.dorm:d0_evening': '13-dorm-evening' });
-  }
-  assert.ok((await flags()).dorm_arrived, 'arrived at the dorm');
-
-  // 5. Your bunk after 20:00: Tong's bedtime moment, the Hangul recap, then sleep.
-  const home = await f.evaluate(() => { const b = __cozy.apartmentDiagnostics.find((b) => b.id === 'seoul-home'); return { x: (b.bounds.minX + b.bounds.maxX) / 2, z: (b.bounds.minZ + b.bounds.maxZ) / 2 }; });
-  await f.evaluate(() => { __cozy.setHour(22.5); __cozy.S.speed = 0; });
-  for (const [u, v, label] of [[3, 3.25, 'corridor'], [3, 0.95, 'room B door'], [5.4, 0.95, 'room B'], [5.4, 0.6, 'bedside']]) await walk(home.x + u, home.z + v, label, 0.35);
-  await interactWith(/침대/, 'bed');
-  await talkThrough({ 'seoul.d1.bedtime:b_open': '14-tong-bedtime', hangul_recap: '15-hangul-recap' });
-  const recap = await f.evaluate(() => [...document.querySelectorAll('.quest-list li.hangul-count')].map((li) => li.textContent)[0]);
-  log(tag, 'hangul', recap);
-  assert.match(recap ?? '', /^한글 1\d\/24$/);
-  await f.waitForSelector('#bed-overlay:not(.hidden)', { state: 'attached' });
-  await f.evaluate(() => document.querySelector('#bed-overlay .btn-primary').click());
-  await f.waitForSelector('#morning-board:not(.hidden)', { state: 'attached', timeout: 60000 });
-  await f.evaluate(() => document.querySelector('#morning-board .btn-primary').click());
-  await frames(40);
-  const t3 = await today();
-  log(tag, 'day two', await f.evaluate(() => __cozy.S.day), t3, await f.evaluate(() => __cozy.tongHint()), 'errors', errors);
-  assert.equal(await f.evaluate(() => __cozy.S.day), 2);
-  assert.ok(!t3.items.some((i) => /Sleep in your bunk/.test(i)), 'arrival list is replaced on day two');
-  await shot('16-day-two');
-  assert.deepEqual(errors, []);
-  await closePage(page, `day1-${tag}`);
 }
+const tp = (at, yaw) => page.evaluate(({ at, yaw }) => { const c = __cozy; c.player.root.position.set(at[0], at[1] ?? c.heightAt(at[0], at[2], 50), at[2]); if (yaw != null) { c.cam.yaw = yaw; c.cam.snap = true; } c.traversal.vx = c.traversal.vz = 0; }, { at, yaw });
+const spot = (name) => page.evaluate((n) => __cozy.ONS[n] ?? __cozy.STREET[n], name);
+const flags = () => page.evaluate(() => __cozy.S.story.flags);
+const waitTalk = () => page.waitForFunction(() => __cozy.dlg.state.active, null, { timeout: 240000 });
+const interact = async (re) => { await page.waitForFunction((src) => new RegExp(src).test(document.querySelector('#prompt').textContent), re, { timeout: 30000 }); await page.evaluate(() => __cozy.interact()); await waitTalk(); };
 
-try {
-  const only = process.env.COZY_ONLY;
-  for (const tag of Object.keys(RUNS)) if (!only || only === tag) await run(tag);
-  log('PASS');
-} finally {
-  await browser.close();
+await page.evaluate(() => document.querySelector('#start').click());
+await page.evaluate((o) => { document.querySelector('#origin').value = o; document.querySelector('[data-gender="f"]').click(); document.querySelector('#creator-start').click(); }, ORIGIN);
+await waitTalk();
+await talk({ 't_tong_seen': '왜', 't_halmoni': '안녕하세요', 't_gyul': '감사', 't_bye': '안녕히' }, { 't_open': 'train-open', 't_tong': 'train-tong', 't_halmoni': 'train-halmoni', 't_choi': 'train-kakao', 't_stop': 'train-stop' });
+await page.waitForFunction(() => __cozy.S.city === 'seoul' && !__cozy.transitioning, null, { timeout: 240000 });
+await waitTalk();
+await talk({ 's_fan_photo': '죄송' }, { 's_open': 'hongdae-arrive', 's_hungry': 'hongdae-hungry' });
+await shot('hongdae-free');
+console.log('today', await page.evaluate(() => [...document.querySelectorAll('.quest-list li')].map((li) => li.textContent)), 'hint', await page.evaluate(() => __cozy.tongHint()));
+// the poster
+await tp(await spot('poster'), Math.PI / 2); await interact('광고판'); await talk({}, { 'p_open': 'poster' });
+// the cart
+await tp(await spot('cart'), 0); await interact('붕어빵'); await talk({ 'c_open': '하나', 'c_thanks': '감사' }, { 'c_open': 'cart' });
+if (PATH === 'jin') {
+  await tp(await spot('tent'), 0); await shot('tent-outside');
+  await page.evaluate(() => { const j = __cozy.jin.root.position; __cozy.player.root.position.set(j.x + 1.2, 0, j.z + 0.8); });
+  await interact('모자');
+  await talk({ 'j0_where': '온새' }, { 'j0_open': 'jin-open', 'j0_name': 'jin-name', 'j0_where': 'jin-where', 'j0_phone': 'jin-phone' });
+  await page.waitForFunction(() => __cozy.S.tentStory === 'idle' && !__cozy.dlg.state.active, null, { timeout: 600000 });
+  await shot('after-jin');
 }
+// up to Onsae
+await tp([5, 2.4, -33], Math.PI); await shot('terrace-onsae-front');
+await tp(await spot('lobby'), Math.PI);
+await waitTalk(); await talk({}, { 'l_open': 'lobby', 'l_wall': 'lobby-wall' });
+await tp(await spot('artistWall'), Math.PI); await shot('lobby-artist-wall');
+await tp(await spot('stair2'), -Math.PI / 2); await shot('2f-landing');
+await tp(await spot('corridor2'), 0);
+await waitTalk();
+console.log('timing', Object.keys(await flags()).filter((f) => /^d1_(early|ontime|late)$/.test(f)), 'hour', await page.evaluate(() => __cozy.S.hour.toFixed(2)));
+await talk({ 'hb_who': '안녕하세요', 'hb_drill': '세 드릴', 'hb_water': '하나 드세요', 'r_room': '잘 부탁' },
+  { 'hb_count': 'coach-through-door', 'hb_who': 'haeun-who', 'hb_new': 'haeun-wall', 'hb_drill': 'haeun-drill', 'hb_water': 'haeun-water', 'hb_banmal': 'haeun-banmal', 'r_minji': 'cohort-out', 'r_room': 'corridor-glance', 'o_rules': 'orientation', 'o_overheard': 'gossip', 'o_locker': 'to-lockers' });
+console.log('after orientation', Object.keys(await flags()).filter((f) => /orientation|met_haeun|counted|intro_/.test(f)));
+await shot('room-a-after');
+await tp(await spot('locker'), Math.PI); await interact('사물함'); await talk({ 'h0_drawer': '가방' }, { 'h0_label': 'locker-label', 'h0_glimpse': 'locker-glimpse' });
+await page.waitForTimeout(1500); await shot('registration-card');
+if (errors.length) process.exitCode = 1;
+console.log(errors.length ? 'FAIL' : 'PASS', 'errors', errors.length, 'hangul', await page.evaluate(() => [...document.querySelectorAll('.quest-list li.hangul-count')].map((li) => li.textContent)));
+await browser.close();
