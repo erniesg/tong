@@ -1374,19 +1374,39 @@ function stageCue(name) {
     // "Everyone files into Room A": a cut, then the room as it is at five.
     ui.fade.classList.add('on');
     setTimeout(() => {
-      stageCast(ONS.CAST_SPOTS);
-      placeAt(haeun, ONS.mirror, ONS.SPOT_YAW.roomAFront);
-      // By the door at the back, off to one side: the whole room in view, nobody's head in the way.
-      const [x, y, z] = ONS.roomA;
-      const yaw = Math.atan2(ONS.roomAFront[0] - (x - 2.3), ONS.roomAFront[2] - (z + 4.4));
-      player.root.position.set(x - 2.3, y, z + 4.4);
-      player.root.rotation.y = yaw;
-      traversal.vx = traversal.vz = 0;
-      cam.yaw = yaw + Math.PI;
-      cam.snap = true;
+      seatOrientation();
       ui.fade.classList.remove('on');
     }, 420);
   }
+}
+/** Room A at five: staff at the mirror, the cohort on the floor, you by the door at the back, off to one side. */
+function seatOrientation() {
+  stageCast(ONS.CAST_SPOTS);
+  placeAt(haeun, ONS.mirror, ONS.SPOT_YAW.roomAFront);
+  const [x, y, z] = ONS.roomA;
+  const yaw = Math.atan2(ONS.roomAFront[0] - (x - 2.3), ONS.roomAFront[2] - (z + 4.4));
+  player.root.position.set(x - 2.3, y, z + 4.4);
+  player.root.rotation.y = yaw;
+  traversal.vx = traversal.vz = 0;
+  cam.yaw = yaw + Math.PI;
+  cam.snap = true;
+}
+/** The fixed camera for Ha-eun's Room B scene and for orientation, while you stand in that room. */
+function d1Shot() {
+  const id = dlg.state.id ?? '';
+  const pp = player.root.position;
+  const room = ONS.roomAt(pp.x, pp.y, pp.z);
+  if (id.startsWith('haeun.d1.room_b:') && room === 'practice_b') {
+    // From the corner by the door: you in the foreground, her at the mirror panel.
+    const b = ONS.ROOMS.practice_b, [hx, hy, hz] = ONS.roomB;
+    return { mode: 'd1-room-b', fov: 62, pos: [b.maxX - 0.35, b.floorY + 1.95, b.maxZ - 0.35], look: [(hx + pp.x) / 2 - 0.3, hy + 1.0, (hz + pp.z) / 2 - 0.2] };
+  }
+  if (id.startsWith('seoul.d1.orientation:') && room === 'practice_a') {
+    // From the back corner by the door, over the cohort, to the staff at the mirror.
+    const b = ONS.ROOMS.practice_a, [fx, fy, fz] = ONS.roomAFront;
+    return { mode: 'd1-orientation', fov: 64, pos: [b.minX + 0.4, b.floorY + 2.35, b.maxZ - 0.4], look: [fx - 1.2, fy + 0.9, fz - 0.4] };
+  }
+  return null;
 }
 /** Staged cast walk to their marks; returns true while day one owns them. */
 function updateStagedCast(dt, t) {
@@ -1394,8 +1414,7 @@ function updateStagedCast(dt, t) {
   // A reload during orientation: the room as it was.
   if (!d1Stage && flag('d1_arrival_seen')) {
     d1Stage = 'orientation';
-    stageCast(ONS.CAST_SPOTS);
-    placeAt(haeun, ONS.mirror, ONS.SPOT_YAW.roomAFront);
+    seatOrientation();
   } else if (!d1Stage) for (const a of studioCast?.actors ?? []) a.character.root.visible = false;
   for (const a of studioCast?.actors ?? []) {
     const r = a.character.root;
@@ -2913,6 +2932,16 @@ function updateCamera(dt, t) {
       mode = 'counter';
     }
     k = 3;
+  } else if (dlg.state.active && S.city === 'seoul' && d1Shot()) {
+    // Day one's two set pieces are framed from inside the room (docs/seoul-first-day.md): Room B is too
+    // small for the two-shot (it backs onto the stairwell), and orientation is a room, not one face.
+    const shot = d1Shot();
+    camTargetPos.set(...shot.pos);
+    camTargetLook.set(...shot.look);
+    updateCutaways(p, camTargetPos, dt, S.city);
+    fov = shot.fov;
+    k = 3;
+    mode = shot.mode;
   } else if (dlg.state.active && node && chars[node.who]?.root.visible && S.city !== 'incheon' && node.who !== 'tong' && node.who !== 'player') {
     // two-shot: both faces in frame, from whichever side isn't a wall
     const sp = chars[node.who];
