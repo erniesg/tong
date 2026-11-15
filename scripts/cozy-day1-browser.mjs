@@ -44,7 +44,7 @@ async function playGame() {
         b.click(); q('.play-pair.sound').find((s) => s.dataset.key === pair.split(':')[1]).click(); return 'pair';
       }
       if (q('.play-chip').length) {
-        if (window.__want.length) { const w = window.__want.shift(); q('.play-tray .play-chip:not(.used)').find((c) => c.textContent === w).click(); return `chip ${w}`; }
+        if (window.__want.length) { const w = window.__want.shift(); q('.play-tray .play-chip:not(.used)').find((c) => c.firstChild.textContent === w).click(); return `chip ${w}`; }
         document.querySelector('.play-say').click(); return 'say';
       }
       return 'none';
@@ -73,7 +73,7 @@ async function talk(plan = {}, shots = {}) {
       const want = WANT[title] ?? (title.startsWith('Build your') ? null : null);
       if (!want) {
         // the self-introduction: pieces in order come from the scene
-        await page.evaluate(() => { window.__want = ['안녕하세요.', [...document.querySelectorAll('.play-chip')].map((c) => c.textContent).find((t) => t.startsWith('저는') && t.endsWith('입니다.')), '잘 부탁드립니다.']; });
+        await page.evaluate(() => { window.__want = ['안녕하세요.', [...document.querySelectorAll('.play-chip')].map((c) => c.firstChild.textContent).find((t) => t.startsWith('저는') && t.endsWith('입니다.')), '잘 부탁드립니다.']; });
       } else await page.evaluate((w) => { window.__want = [...w]; }, want);
       await playGame();
       continue;
@@ -95,7 +95,7 @@ const interact = async (re) => { await page.waitForFunction((src) => new RegExp(
 await page.evaluate(() => document.querySelector('#start').click());
 await page.evaluate((o) => { document.querySelector('#origin').value = o; document.querySelector('[data-gender="f"]').click(); document.querySelector('#creator-start').click(); }, ORIGIN);
 await waitTalk();
-await talk({ 't_tong_seen': '왜', 't_halmoni': '안녕하세요', 't_gyul': '감사', 't_bye': '안녕히' }, { 't_open': 'train-open', 't_tong': 'train-tong', 't_halmoni': 'train-halmoni', 't_choi': 'train-kakao', 't_stop': 'train-stop' });
+await talk({ 't_tong_seen': '왜', 't_halmoni': '안녕하세요', 't_gyul': '감사' }, { 't_open': 'train-open', 't_tong': 'train-tong', 't_halmoni': 'train-halmoni', 't_choi': 'train-kakao', 't_stop': 'train-stop' });
 await page.waitForFunction(() => __cozy.S.city === 'seoul' && !__cozy.transitioning, null, { timeout: 240000 });
 await waitTalk();
 await talk({ 's_fan_photo': '죄송' }, { 's_open': 'hongdae-arrive', 's_hungry': 'hongdae-hungry' });

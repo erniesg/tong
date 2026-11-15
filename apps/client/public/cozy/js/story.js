@@ -413,7 +413,8 @@ export function buildNodes(A) {
 /** Contextual hint from Tong (H key). */
 export function tongHint(S, hour) {
   const f = S.story?.flags ?? {};
-  const night = hour >= 16 || hour < 3;
+  const night = hour >= 19 || hour < 3;
+  const tentOpen = hour >= 16 || hour < 3;
   // Day 1 (docs/seoul-first-day.md): the train → Hongdae → Onsae → the dorm.
   if (!f.d1_arrived_hongdae) return { ko: '곧 홍대야!', en: 'Nearly there. Hongdae is the next stop.', expr: 'excited' };
   if (!f.d1_arrival_seen && !f.j0_done) return { ko: '돌계단 위가 회사야.', en: 'Onsae is up the stone stairs, the building with the lit sign. Practice rooms are on the second floor. Hungry? The tent on the food street is open.', expr: 'excited' };
@@ -425,7 +426,7 @@ export function tongHint(S, hour) {
   if ((S.day ?? 1) < 2) return { ko: '오늘은 푹 자!', en: 'Long day. Your bed is the bottom bunk in Da-on\'s room. Practice at 10 tomorrow: Coach Park said don\'t be late.', expr: 'cheerful' };
   if (!f.h1_done && hour >= 5 && hour < 9) return { ko: '열 시까지 연습실!', en: 'Studio at 10: Coach Park is pairing you with someone today.', expr: 'cheerful' };
   if (!f.h1_done && hour >= 9 && hour < 19) return { ko: '하은이 연습실에 있어!', en: 'Coach Park paired you with someone. She’s at Onsae, in 연습실 B on the second floor. Read the water-bottle name tags to find her.', expr: 'excited' };
-  if (!f.j0_done && night) return { ko: '포장마차 문 열었어!', en: 'The pojangmacha is open. Go order something yourself: [food] + 주세요.', expr: 'love' };
+  if (!f.j0_done && tentOpen) return { ko: '포장마차 문 열었어!', en: 'The pojangmacha is open. Go order something yourself: [food] + 주세요.', expr: 'love' };
   if (!S.quests.cafe && hour >= 8 && hour < 22) return { ko: '카페 봄에서 커피 한 잔 어때?', en: 'How about a coffee at Café Bom? It’s on the right side of the plaza.', expr: 'cheerful' };
   if (!S.quests.store) return { ko: '편의점은 24시간이야!', en: 'The convenience store is open 24 hours. Try buying something.', expr: 'cheerful' };
   if (!f.h1_done) return { ko: '하은은 낮에 연습실에 있어.', en: 'Ha-eun practises at Onsae (연습실 B, second floor) from 9 to 7. Sit on a lookout bench to pass time.', expr: 'thinking' };

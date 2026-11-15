@@ -5,7 +5,7 @@ import type { SceneModule } from '../../../relationship/types';
  * opens seated on a full car a minute from Hongdae. Tong appears, the grandmother
  * beside you offers a tangerine (your first Korean to a person), Manager Choi
  * texts the 5pm deadline, the message from your old life lands, the stop is called.
- * The first two blocks, 아 and 이, come out of her 아이고.
+ * The first block, 아, comes out of her 아이고; 이 waits for the floor guide at Onsae (2층).
  */
 export const module: SceneModule = {
   scene: {
@@ -17,8 +17,8 @@ export const module: SceneModule = {
     slot: 'd1.s1',
     gate: { month: { from: 1, to: 1 } },
     summary:
-      'Seated on the airport train, 4:20pm. Tong appears (only you can see it). The grandmother beside you: who are you talking to? Have a tangerine. Build 아, then pick 이 by ear (her 아이고). Manager Choi: the company by five. A message by origin. The stop is called: Hongdae.',
-    seeds: ['d1_started', 'tong_backstory_asked (Tong: "Long story. Another time.")', 'hangul:아', 'hangul:이', 'took_gyul', 'd1_arrived_hongdae'],
+      'Seated on the airport train, 4:20pm. Tong appears (only you can see it). The grandmother beside you: who are you talking to? Have a tangerine. Build 아 (from her 아이고). Manager Choi: the company by five. A message by origin. The stop is called: Hongdae.',
+    seeds: ['d1_started', 'tong_backstory_asked (Tong: "Long story. Another time.")', 'hangul:아', 'took_gyul', 'd1_arrived_hongdae'],
     beats: [
       {
         id: 't_open',
@@ -133,36 +133,14 @@ export const module: SceneModule = {
           onFail: 'assist',
         },
         effects: { setFlags: ['hangul:아'] },
-        next: 't_i',
-      },
-      {
-        id: 't_i',
-        speaker: 'tong',
-        lines: [{ value: { ko: '다음은 이.', en: 'Her second block is 이: the same silent ㅇ, with ㅣ, "i". Listen. Which one is it?', review: 'native' } }],
-        exercise: {
-          type: 'hangul_listen',
-          objectiveId: 'ko-script-blocks-2part',
-          targets: ['이'],
-          distractors: ['아'],
-          framing: { ko: '들리는 걸 골라 봐.', en: 'Tap the one you hear.' },
-          onFail: 'assist',
-        },
-        effects: { setFlags: ['hangul:이'] },
-        next: 't_buzz',
-      },
-
-      /* ── The deadline and your old life ───────────── */
-      {
-        id: 't_buzz',
-        speaker: 'narration',
-        cue: 'phone_buzz',
-        lines: [{ value: { ko: '휴대폰이 울린다.', en: 'Your phone buzzes. KakaoTalk, from the agency.' } }],
         next: 't_choi',
       },
+      /* ── The deadline and your old life ───────────── */
       {
         id: 't_choi',
         speaker: 'manager_choi',
-        lines: [{ value: { ko: '오늘 오후 5시까지 회사로 오세요. 늦지 마세요!', en: 'Come to the company by 5pm today. Don\'t be late!', note: 'KakaoTalk.', review: 'native' } }],
+        cue: 'phone_buzz',
+        lines: [{ value: { ko: '오늘 오후 5시까지 회사로 오세요. 늦지 마세요!', en: 'Come to the company by 5pm today. Don\'t be late!', note: 'Your phone. KakaoTalk, from the agency.', review: 'native' } }],
         tong: { ko: '5시 = 다섯 시!', en: '5시 (daseot si) = five o\'clock. 회사 = the company. 늦지 마세요 = don\'t be late.', maxLevel: 3 },
         effects: { vocab: [{ ko: '회사', en: 'company', rom: 'hoesa' }] },
         next: 't_mum',
@@ -204,35 +182,15 @@ export const module: SceneModule = {
       {
         id: 't_bye',
         speaker: 'halmoni',
-        lines: [{ value: { ko: '여기서 내려? 잘 가, 학생.', en: 'This is you? Off you go, dear.', review: 'native' } }],
-        choices: [
-          {
-            id: 't_bye_thanks',
-            intent: 'commit',
-            say: { ko: '감사합니다!', en: 'Thank you!', rom: 'gamsahamnida' },
-            outcomes: [{ speaker: 'halmoni', reaction: { ko: '그래, 그래.', en: 'Yes, yes.' } }],
-          },
-          {
-            id: 't_bye_formal',
-            intent: 'commit',
-            say: { ko: '안녕히 계세요.', en: 'Goodbye. (to someone staying)', rom: 'annyeonghi gyeseyo' },
-            outcomes: [{ speaker: 'halmoni', reaction: { ko: '아이고, 잘하네!', en: 'Aigo, listen to you!', review: 'native' }, vocab: [{ ko: '안녕히 계세요', en: 'goodbye (to someone staying)', rom: 'annyeonghi gyeseyo' }] }],
-          },
-        ],
-        next: 't_arrive',
-      },
-      {
-        id: 't_arrive',
-        speaker: 'narration',
-        lines: [{ value: { ko: '홍대입구역, 오후 4시 25분.', en: 'Hongdae, 4:25pm. The doors open on noise.' } }],
+        lines: [{ value: { ko: '여기서 내려? 잘 가, 학생.', en: 'This is you? Off you go, dear.', note: 'Hongdae, 4:25pm. The doors open on noise.', review: 'native' } }],
         effects: { setFlags: ['d1_arrived_hongdae'] },
         end: true,
       },
     ],
   },
   presets: [
-    { id: 'd1t_none', label: 'No origin: hello, thank you, the stop', state: { day: 1 }, world: { hour: 16, playerLevel: 0, inputTier: 1 }, path: ['t_go', 't_hello', 't_thanks', 't_bye_thanks'] },
-    { id: 'd1t_intl', label: 'International-School Kid: Mum says take a taxi; no Korean yet', state: { day: 1 }, world: { hour: 16, playerLevel: 0, inputTier: 1, flags: { origin_intl_kid: true } }, path: ['t_why', 't_english', 't_fine', 't_bye_formal'], exercises: false },
-    { id: 'd1t_creator', label: 'Creator: the student across the aisle', state: { day: 1 }, world: { hour: 16, playerLevel: 1, inputTier: 1, flags: { origin_creator: true } }, path: ['t_what', 't_smile', 't_thanks', 't_bye_thanks'] },
+    { id: 'd1t_none', label: 'No origin: hello, thank you, the stop', state: { day: 1 }, world: { hour: 16, playerLevel: 0, inputTier: 1 }, path: ['t_go', 't_hello', 't_thanks'] },
+    { id: 'd1t_intl', label: 'International-School Kid: Mum says take a taxi; no Korean yet', state: { day: 1 }, world: { hour: 16, playerLevel: 0, inputTier: 1, flags: { origin_intl_kid: true } }, path: ['t_why', 't_english', 't_fine'], exercises: false },
+    { id: 'd1t_creator', label: 'Creator: the student across the aisle', state: { day: 1 }, world: { hour: 16, playerLevel: 1, inputTier: 1, flags: { origin_creator: true } }, path: ['t_what', 't_smile', 't_thanks'] },
   ],
 };

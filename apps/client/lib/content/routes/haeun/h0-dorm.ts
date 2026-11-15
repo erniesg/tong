@@ -152,6 +152,7 @@ export const module: SceneModule = {
         speaker: 'daon',
         expr: 'smile',
         lines: [{ value: { ko: '이게 제 이름이에요! 다온! 어느 건지 맞혀 봐요!', en: 'This is my name! Da-on! Guess which one!', note: 'Two name cards are taped to the bunk frames on this side of the room.', review: 'native' } }],
+        tong: { ko: '아는 글자를 찾아 봐.', en: 'Look for what you know: the ㅏ from 아, and the round silent ㅇ.', maxLevel: 6 },
         exercise: {
           type: 'hangul_listen',
           objectiveId: 'ko-script-blocks-2part',

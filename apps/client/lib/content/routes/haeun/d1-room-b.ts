@@ -19,8 +19,8 @@ export const module: SceneModule = {
     slot: 'd1.s3',
     gate: { flags: ['d1_arrived_hongdae', 'd1_early'], notFlags: ['d1_arrival_seen'], month: { from: 1, to: 1 } },
     summary:
-      'Early, 4:35. Coach Park\'s count through Room A\'s door. Room B ajar: a girl alone, no music, missing the turn on seven. "…누구세요?" Perfectly polite; she never asks your name. Watch, wait outside, or count her in (다섯, 여섯, 일곱, 여덟): on your count she lands it. Origins: the Creator can ask to film (no) or just raise the phone; the International-School Kid offers a drink; a 붕어빵 can be offered. Practice lets out; Da-on calls her and she answers in 반말, laughing. Then the wall again: "가시죠."',
-    seeds: ['met_haeun_d1', 'gave_haeun_space', 'watched_haeun_d1', 'counted_haeun_in', 'filmed_haeun_d1', 'asked_to_film_d1', 'offered_haeun_drink', 'offered_bungeoppang', 'asked_haeun_name_d1', 'd1_arrival_seen'],
+      'Early, 4:35. Coach Park\'s count through Room A\'s door. Room B ajar: a girl alone, no music, missing the turn on seven. "…누구세요?" Perfectly polite; she never asks your name. She tells you, politely, that you can wait in the corridor. Stay and watch, wait outside, or count her in (다섯, 여섯, 일곱, 여덟): on your count she lands it. Origins: the Athlete can take the turn beside her; the Creator can ask to film (no) or just raise the phone; the International-School Kid offers a drink; a 붕어빵 can be offered. Practice lets out; Da-on calls her and she answers in 반말, laughing. Then the wall again: "가시죠."',
+    seeds: ['met_haeun_d1', 'gave_haeun_space', 'watched_haeun_d1', 'counted_haeun_in', 'turned_with_haeun_d1', 'filmed_haeun_d1', 'asked_to_film_d1', 'offered_haeun_drink', 'offered_bungeoppang', 'asked_haeun_name_d1', 'd1_arrival_seen'],
     beats: [
       {
         id: 'hb_open',
@@ -86,9 +86,9 @@ export const module: SceneModule = {
         lines: [
           {
             value: {
-              ko: '아, 새로 오신 분. 실장님은 5시에 오세요. 여기서 기다리셔도 돼요.',
-              en: 'Ah, the new person. The manager comes at five. You\'re welcome to wait here.',
-              note: 'A perfect smile. She hasn\'t asked your name.',
+              ko: '아, 새로 오신 분. 실장님은 5시에 오세요. 복도에서 기다리시면 돼요.',
+              en: 'Ah, the new person. The manager comes at five. You can wait in the corridor.',
+              note: 'A perfect smile. She hasn\'t asked your name. She has told you where the door is.',
               review: 'native',
             },
           },
@@ -108,13 +108,20 @@ export const module: SceneModule = {
           {
             id: 'hb_count_offer',
             intent: 'help',
-            say: { ko: '세 드릴까요?', en: 'Shall I count for you?', rom: 'se deurilkkayo?' },
+            say: { ko: '박자 세 드릴까요?', en: 'Shall I count you in?', rom: 'bakja se deurilkkayo?' },
             outcomes: [{ speaker: 'haeun_unnamed', expr: 'cool', reaction: { ko: '…네?', en: '…Sorry?', note: 'She doesn\'t say no.' }, next: 'hb_count_in' }],
+          },
+          {
+            id: 'hb_turn',
+            intent: 'challenge',
+            gate: { flags: ['origin_athlete'] },
+            say: { ko: '(옆에서 같이 돈다)', en: '[Athlete] Take the turn beside her.' },
+            outcomes: [{ speaker: 'narration', reaction: { ko: '…', en: 'Cold, in outdoor shoes, on seven. It lands. She watches your feet, not your face, and goes again.' }, deltas: { tension: 2, trust: 1 }, setFlags: ['turned_with_haeun_d1'], memory: { tag: 'turned_with_haeun_d1', note: 'On day one you took the turn on seven beside her and landed it.' } }],
           },
           {
             id: 'hb_watch',
             intent: 'presence',
-            say: { ko: '(벽에 기대앉아 본다)', en: 'Sit against the wall and watch.' },
+            say: { ko: '(벽에 기대앉아 본다)', en: 'Stay. Sit against the wall and watch.' },
             outcomes: [{ speaker: 'narration', reaction: { ko: '…', en: 'The fourth time, she lands it. She doesn\'t look at you. She knows you saw.' }, setFlags: ['watched_haeun_d1'] }],
           },
           {
@@ -184,9 +191,16 @@ export const module: SceneModule = {
         id: 'hb_count_miss',
         speaker: 'haeun_unnamed',
         expr: 'smile',
-        when: { notFlags: ['ex_hb_count_in'] },
+        when: { notFlags: ['ex_hb_count_in', 'ex_hb_count_in_skipped'] },
         lines: [{ value: { ko: '여섯 다음은 일곱이에요.', en: 'After six comes seven.', note: 'No smile for a second. Then the smile.', review: 'native' } }],
         effects: { deltas: { tension: 2 } },
+        next: 'hb_count_lost',
+      },
+      {
+        id: 'hb_count_lost',
+        speaker: 'narration',
+        when: { flags: ['ex_hb_count_in_skipped'] },
+        lines: [{ value: { ko: '…', en: 'You lose your nerve. She counts herself.' } }],
         next: 'hb_water',
       },
 

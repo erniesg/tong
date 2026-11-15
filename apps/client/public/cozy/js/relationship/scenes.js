@@ -23,12 +23,13 @@ export const SCENES = {
     "to": 1
    }
   },
-  "summary": "Early, 4:35. Coach Park's count through Room A's door. Room B ajar: a girl alone, no music, missing the turn on seven. \"…누구세요?\" Perfectly polite; she never asks your name. Watch, wait outside, or count her in (다섯, 여섯, 일곱, 여덟): on your count she lands it. Origins: the Creator can ask to film (no) or just raise the phone; the International-School Kid offers a drink; a 붕어빵 can be offered. Practice lets out; Da-on calls her and she answers in 반말, laughing. Then the wall again: \"가시죠.\"",
+  "summary": "Early, 4:35. Coach Park's count through Room A's door. Room B ajar: a girl alone, no music, missing the turn on seven. \"…누구세요?\" Perfectly polite; she never asks your name. She tells you, politely, that you can wait in the corridor. Stay and watch, wait outside, or count her in (다섯, 여섯, 일곱, 여덟): on your count she lands it. Origins: the Athlete can take the turn beside her; the Creator can ask to film (no) or just raise the phone; the International-School Kid offers a drink; a 붕어빵 can be offered. Practice lets out; Da-on calls her and she answers in 반말, laughing. Then the wall again: \"가시죠.\"",
   "seeds": [
    "met_haeun_d1",
    "gave_haeun_space",
    "watched_haeun_d1",
    "counted_haeun_in",
+   "turned_with_haeun_d1",
    "filmed_haeun_d1",
    "asked_to_film_d1",
    "offered_haeun_drink",
@@ -191,9 +192,9 @@ export const SCENES = {
     "lines": [
      {
       "value": {
-       "ko": "아, 새로 오신 분. 실장님은 5시에 오세요. 여기서 기다리셔도 돼요.",
-       "en": "Ah, the new person. The manager comes at five. You're welcome to wait here.",
-       "note": "A perfect smile. She hasn't asked your name.",
+       "ko": "아, 새로 오신 분. 실장님은 5시에 오세요. 복도에서 기다리시면 돼요.",
+       "en": "Ah, the new person. The manager comes at five. You can wait in the corridor.",
+       "note": "A perfect smile. She hasn't asked your name. She has told you where the door is.",
        "review": "native"
       }
      }
@@ -231,9 +232,9 @@ export const SCENES = {
       "id": "hb_count_offer",
       "intent": "help",
       "say": {
-       "ko": "세 드릴까요?",
-       "en": "Shall I count for you?",
-       "rom": "se deurilkkayo?"
+       "ko": "박자 세 드릴까요?",
+       "en": "Shall I count you in?",
+       "rom": "bakja se deurilkkayo?"
       },
       "outcomes": [
        {
@@ -249,11 +250,44 @@ export const SCENES = {
       ]
      },
      {
+      "id": "hb_turn",
+      "intent": "challenge",
+      "gate": {
+       "flags": [
+        "origin_athlete"
+       ]
+      },
+      "say": {
+       "ko": "(옆에서 같이 돈다)",
+       "en": "[Athlete] Take the turn beside her."
+      },
+      "outcomes": [
+       {
+        "speaker": "narration",
+        "reaction": {
+         "ko": "…",
+         "en": "Cold, in outdoor shoes, on seven. It lands. She watches your feet, not your face, and goes again."
+        },
+        "deltas": {
+         "tension": 2,
+         "trust": 1
+        },
+        "setFlags": [
+         "turned_with_haeun_d1"
+        ],
+        "memory": {
+         "tag": "turned_with_haeun_d1",
+         "note": "On day one you took the turn on seven beside her and landed it."
+        }
+       }
+      ]
+     },
+     {
       "id": "hb_watch",
       "intent": "presence",
       "say": {
        "ko": "(벽에 기대앉아 본다)",
-       "en": "Sit against the wall and watch."
+       "en": "Stay. Sit against the wall and watch."
       },
       "outcomes": [
        {
@@ -487,7 +521,8 @@ export const SCENES = {
     "expr": "smile",
     "when": {
      "notFlags": [
-      "ex_hb_count_in"
+      "ex_hb_count_in",
+      "ex_hb_count_in_skipped"
      ]
     },
     "lines": [
@@ -505,6 +540,24 @@ export const SCENES = {
       "tension": 2
      }
     },
+    "next": "hb_count_lost"
+   },
+   {
+    "id": "hb_count_lost",
+    "speaker": "narration",
+    "when": {
+     "flags": [
+      "ex_hb_count_in_skipped"
+     ]
+    },
+    "lines": [
+     {
+      "value": {
+       "ko": "…",
+       "en": "You lose your nerve. She counts herself."
+      }
+     }
+    ],
     "next": "hb_water"
    },
    {
@@ -1228,6 +1281,11 @@ export const SCENES = {
       }
      }
     ],
+    "tong": {
+     "ko": "아는 글자를 찾아 봐.",
+     "en": "Look for what you know: the ㅏ from 아, and the round silent ㅇ.",
+     "maxLevel": 6
+    },
     "exercise": {
      "type": "hangul_listen",
      "objectiveId": "ko-script-blocks-2part",
@@ -1548,7 +1606,7 @@ export const SCENES = {
      {
       "value": {
        "ko": "…",
-       "en": "You stand by the bottle that says 하은. The girl from the corridor. She glances at the bottle, then at you. You found her yourself; she noticed."
+       "en": "You stand by the bottle that says 하은. The girl from yesterday. She glances at the bottle, then at you. You found her yourself; she noticed."
       }
      }
     ],
@@ -1577,7 +1635,7 @@ export const SCENES = {
       "value": {
        "ko": "저 하늘인데요?",
        "en": "Um, I'm Ha-neul?",
-       "note": "You stood by the wrong bottle. Coach Park points. The girl from the corridor doesn't laugh.",
+       "note": "You stood by the wrong bottle. Coach Park points. The girl from yesterday doesn't laugh.",
        "review": "native"
       }
      }
@@ -2575,7 +2633,7 @@ export const SCENES = {
      }
     ],
     "exercise": {
-     "type": "sentence_builder",
+     "type": "say_it",
      "objectiveId": "ko-gram-juseyo",
      "targets": [
       "떡볶이",
@@ -2723,6 +2781,40 @@ export const SCENES = {
       ]
      },
      {
+      "id": "j0_poster",
+      "intent": "ask",
+      "gate": {
+       "flags": [
+        "saw_jin_poster"
+       ]
+      },
+      "say": {
+       "ko": "역 포스터… 그 사람 아니에요?",
+       "en": "The poster at the station… isn't that you?",
+       "rom": "yeok poseuteo… geu saram anieyo?"
+      },
+      "outcomes": [
+       {
+        "speaker": "jin",
+        "expr": "laugh",
+        "reaction": {
+         "ko": "쉿. 여기 아저씨는 드라마 안 봐요.",
+         "en": "Shh. The ajusshi here doesn't watch dramas.",
+         "note": "He tugs the cap a little lower. He doesn't say no.",
+         "review": "native"
+        },
+        "setFlags": [
+         "nearly_recognised_jin",
+         "recognised_jin_poster"
+        ],
+        "memory": {
+         "tag": "said_familiar",
+         "note": "Asked Jin if he was the man on the station poster the day you met."
+        }
+       }
+      ]
+     },
+     {
       "id": "j0_familiar",
       "intent": "ask",
       "say": {
@@ -2812,7 +2904,7 @@ export const SCENES = {
         "speaker": "jin",
         "expr": "smile",
         "reaction": {
-         "ko": "비밀이구나. 좋아요.",
+         "ko": "비밀이군요. 좋아요.",
          "en": "A secret. I like that."
         }
        }
@@ -3319,8 +3411,8 @@ export const SCENES = {
        ]
       },
       "value": {
-       "ko": "아, 공항 사진 걔네.",
-       "en": "Oh, it's the one from the airport photo.",
+       "ko": "아, 아까 그 사진 걔네.",
+       "en": "Oh, it's the one from that photo.",
        "note": "To Yerin, on their way past. Not quietly.",
        "review": "native"
       }
@@ -3519,7 +3611,7 @@ export const SCENES = {
     "lines": [
      {
       "value": {
-       "ko": "…들어가.",
+       "ko": "…들어가요.",
        "en": "…Go in.",
        "note": "She looks at both of you first."
       }
@@ -3917,7 +4009,8 @@ export const SCENES = {
          "review": "native"
         },
         "setFlags": [
-         "d1_busker"
+         "d1_busker",
+         "d1_busker_song"
         ],
         "tally": [
          "d1_stops"
@@ -4147,10 +4240,11 @@ export const SCENES = {
     "to": 1
    }
   },
-  "summary": "Onsae's lobby: smaller than the name, nobody at the desk, bass through the ceiling. The artist wall: the biggest frame is the drama poster (진). The floor guide: practice rooms on 2층.",
+  "summary": "Onsae's lobby, two beats: nobody at the desk, bass through the ceiling, the biggest frame on the artist wall is the drama poster (진; the man from the tent if you ate first). The floor guide: 2층, and 이 by ear.",
   "seeds": [
    "d1_lobby_seen",
-   "saw_jin_poster"
+   "saw_jin_poster",
+   "hangul:이"
   ],
   "beats": [
    {
@@ -4158,18 +4252,16 @@ export const SCENES = {
     "speaker": "narration",
     "lines": [
      {
+      "when": {
+       "flags": [
+        "jin_knows_onsae"
+       ]
+      },
       "value": {
        "ko": "온새 엔터테인먼트.",
-       "en": "Onsae Entertainment. Smaller than the name. Nobody at the desk. Bass comes down through the ceiling."
+       "en": "Onsae Entertainment. Nobody at the desk, bass through the ceiling. The biggest frame on the artist wall is a drama poster: the man from the tent, without the cap. \"…온새,\" he said."
       }
-     }
-    ],
-    "next": "l_wall"
-   },
-   {
-    "id": "l_wall",
-    "speaker": "narration",
-    "lines": [
+     },
      {
       "when": {
        "flags": [
@@ -4177,8 +4269,8 @@ export const SCENES = {
        ]
       },
       "value": {
-       "ko": "소속 아티스트",
-       "en": "Framed on the wall, the people Onsae looks after. The biggest frame is a drama poster. The man from the tent, without the cap."
+       "ko": "온새 엔터테인먼트.",
+       "en": "Onsae Entertainment. Nobody at the desk, bass through the ceiling. The biggest frame on the artist wall is a drama poster: the man from the tent, without the cap."
       }
      },
      {
@@ -4188,22 +4280,17 @@ export const SCENES = {
        ]
       },
       "value": {
-       "ko": "소속 아티스트",
-       "en": "Framed on the wall, the people Onsae looks after. The biggest frame is the poster from the station. He is one of theirs."
+       "ko": "온새 엔터테인먼트.",
+       "en": "Onsae Entertainment. Nobody at the desk, bass through the ceiling. The biggest frame on the artist wall is the poster from the station. He is one of theirs."
       }
      },
      {
       "value": {
-       "ko": "소속 아티스트",
-       "en": "Framed on the wall, the people Onsae looks after. The biggest frame is a drama poster: one face, one name, 진."
+       "ko": "온새 엔터테인먼트.",
+       "en": "Onsae Entertainment. Nobody at the desk, bass through the ceiling. The biggest frame on the artist wall is a drama poster: one face, one name, 진."
       }
      }
     ],
-    "tong": {
-     "ko": "소속 = 여기 사람!",
-     "en": "소속 아티스트 = the artists signed here. 진 = Jin.",
-     "maxLevel": 6
-    },
     "effects": {
      "setFlags": [
       "saw_jin_poster"
@@ -4217,21 +4304,37 @@ export const SCENES = {
     "lines": [
      {
       "value": {
-       "ko": "연습실은 2층이야. 계단은 저 문.",
-       "en": "The floor guide: practice rooms on 2층, the second floor. The stairs are through that door.",
+       "ko": "연습실은 2층. 이층.",
+       "en": "Practice rooms: 2층. Two is 이: the silent ㅇ you built, with ㅣ, \"i\". Which one is 이?",
        "review": "native"
       }
      }
     ],
+    "exercise": {
+     "type": "hangul_listen",
+     "objectiveId": "ko-script-blocks-2part",
+     "targets": [
+      "이"
+     ],
+     "distractors": [
+      "아"
+     ],
+     "framing": {
+      "ko": "이를 골라 봐.",
+      "en": "Tap the one you hear."
+     },
+     "onFail": "assist"
+    },
     "effects": {
      "setFlags": [
+      "hangul:이",
       "d1_lobby_seen"
      ],
      "vocab": [
       {
-       "ko": "층",
-       "en": "floor (of a building)",
-       "rom": "cheung"
+       "ko": "2층",
+       "en": "second floor",
+       "rom": "i-cheung"
       }
      ]
     },
@@ -4531,8 +4634,8 @@ export const SCENES = {
     "lines": [
      {
       "value": {
-       "ko": "공항 사진 봤어요. 오늘부터 그런 거 없어요.",
-       "en": "I saw the airport photo. From today, none of that.",
+       "ko": "오늘 올라온 사진 봤어요. 오늘부터 그런 거 없어요.",
+       "en": "I saw the photo that went up today. From today, none of that.",
        "review": "native"
       }
      }
@@ -4571,10 +4674,23 @@ export const SCENES = {
     },
     "lines": [
      {
+      "when": {
+       "flags": [
+        "d1_sprint"
+       ]
+      },
       "value": {
        "ko": "운동했어요? 체력은 좋겠네. 내일 앞줄.",
        "en": "You played sport? Stamina should be good, then. Front row, tomorrow.",
-       "note": "He watched you come up the stairs with that suitcase.",
+       "note": "He saw you come up the stairs with that suitcase.",
+       "review": "native"
+      }
+     },
+     {
+      "value": {
+       "ko": "운동했어요? 체력은 좋겠네. 내일 앞줄.",
+       "en": "You played sport? Stamina should be good, then. Front row, tomorrow.",
+       "note": "He sizes you up from the door.",
        "review": "native"
       }
      }
@@ -4976,8 +5092,8 @@ export const SCENES = {
      }
     ],
     "tong": {
-     "ko": "걷는 건 공짜. 멈추면 시간이 가.",
-     "en": "Walking is free. Stopping for things takes time.",
+     "ko": "둘 중에 골라.",
+     "en": "Two places are lit. Up the stairs, music is still coming out of one window at Onsae. Down the street, the tent has one stool free. Your call.",
      "maxLevel": 6
     },
     "effects": {
@@ -5041,7 +5157,7 @@ export const SCENES = {
     "lines": [
      {
       "value": {
-       "ko": "…타요. 한국어 할 줄 알아요? 학생이에요?",
+       "ko": "…타세요. 한국어 할 줄 알아요? 학생이에요?",
        "en": "…Get in. Do you speak Korean? Are you a student?",
        "review": "native"
       }
@@ -5137,12 +5253,11 @@ export const SCENES = {
     "to": 1
    }
   },
-  "summary": "Seated on the airport train, 4:20pm. Tong appears (only you can see it). The grandmother beside you: who are you talking to? Have a tangerine. Build 아, then pick 이 by ear (her 아이고). Manager Choi: the company by five. A message by origin. The stop is called: Hongdae.",
+  "summary": "Seated on the airport train, 4:20pm. Tong appears (only you can see it). The grandmother beside you: who are you talking to? Have a tangerine. Build 아 (from her 아이고). Manager Choi: the company by five. A message by origin. The stop is called: Hongdae.",
   "seeds": [
    "d1_started",
    "tong_backstory_asked (Tong: \"Long story. Another time.\")",
    "hangul:아",
-   "hangul:이",
    "took_gyul",
    "d1_arrived_hongdae"
   ],
@@ -5448,65 +5563,18 @@ export const SCENES = {
       "hangul:아"
      ]
     },
-    "next": "t_i"
-   },
-   {
-    "id": "t_i",
-    "speaker": "tong",
-    "lines": [
-     {
-      "value": {
-       "ko": "다음은 이.",
-       "en": "Her second block is 이: the same silent ㅇ, with ㅣ, \"i\". Listen. Which one is it?",
-       "review": "native"
-      }
-     }
-    ],
-    "exercise": {
-     "type": "hangul_listen",
-     "objectiveId": "ko-script-blocks-2part",
-     "targets": [
-      "이"
-     ],
-     "distractors": [
-      "아"
-     ],
-     "framing": {
-      "ko": "들리는 걸 골라 봐.",
-      "en": "Tap the one you hear."
-     },
-     "onFail": "assist"
-    },
-    "effects": {
-     "setFlags": [
-      "hangul:이"
-     ]
-    },
-    "next": "t_buzz"
-   },
-   {
-    "id": "t_buzz",
-    "speaker": "narration",
-    "cue": "phone_buzz",
-    "lines": [
-     {
-      "value": {
-       "ko": "휴대폰이 울린다.",
-       "en": "Your phone buzzes. KakaoTalk, from the agency."
-      }
-     }
-    ],
     "next": "t_choi"
    },
    {
     "id": "t_choi",
     "speaker": "manager_choi",
+    "cue": "phone_buzz",
     "lines": [
      {
       "value": {
        "ko": "오늘 오후 5시까지 회사로 오세요. 늦지 마세요!",
        "en": "Come to the company by 5pm today. Don't be late!",
-       "note": "KakaoTalk.",
+       "note": "Your phone. KakaoTalk, from the agency.",
        "review": "native"
       }
      }
@@ -5619,66 +5687,8 @@ export const SCENES = {
       "value": {
        "ko": "여기서 내려? 잘 가, 학생.",
        "en": "This is you? Off you go, dear.",
+       "note": "Hongdae, 4:25pm. The doors open on noise.",
        "review": "native"
-      }
-     }
-    ],
-    "choices": [
-     {
-      "id": "t_bye_thanks",
-      "intent": "commit",
-      "say": {
-       "ko": "감사합니다!",
-       "en": "Thank you!",
-       "rom": "gamsahamnida"
-      },
-      "outcomes": [
-       {
-        "speaker": "halmoni",
-        "reaction": {
-         "ko": "그래, 그래.",
-         "en": "Yes, yes."
-        }
-       }
-      ]
-     },
-     {
-      "id": "t_bye_formal",
-      "intent": "commit",
-      "say": {
-       "ko": "안녕히 계세요.",
-       "en": "Goodbye. (to someone staying)",
-       "rom": "annyeonghi gyeseyo"
-      },
-      "outcomes": [
-       {
-        "speaker": "halmoni",
-        "reaction": {
-         "ko": "아이고, 잘하네!",
-         "en": "Aigo, listen to you!",
-         "review": "native"
-        },
-        "vocab": [
-         {
-          "ko": "안녕히 계세요",
-          "en": "goodbye (to someone staying)",
-          "rom": "annyeonghi gyeseyo"
-         }
-        ]
-       }
-      ]
-     }
-    ],
-    "next": "t_arrive"
-   },
-   {
-    "id": "t_arrive",
-    "speaker": "narration",
-    "lines": [
-     {
-      "value": {
-       "ko": "홍대입구역, 오후 4시 25분.",
-       "en": "Hongdae, 4:25pm. The doors open on noise."
       }
      }
     ],

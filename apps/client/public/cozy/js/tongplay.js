@@ -6,8 +6,11 @@
 //   hangul_missing  a label with one letter scraped off       targets: [word, letter]
 //   hangul_match    match blocks to their sounds              targets: 'block:sound'
 //   say_it          put the pieces of a line in order         targets in order; distractors don't belong
+// The card carries Tong's explanation (req.teach), so the teaching is still on screen while you play.
 // A wrong answer never fails anything: after two misses Tong shows the answer and the
 // scene goes on (correct: false).
+
+import { romanize } from './romanize.js';
 
 const LEAD = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
 const VOWEL = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ';
@@ -37,6 +40,15 @@ export function decompose(block) {
 }
 /** Block-by-block sound of a word, joined with hyphens ('수아' → 'su-a'). */
 export const blockRom = (word) => [...word].map((ch) => decompose(ch)?.rom ?? ch).join('-');
+/** How a word is put together, for the line under a finished game: '다 = ㄷ d + ㅏ a · 온 = ㅇ + ㅗ o + ㄴ n'. */
+export function breakdown(word) {
+  return [...word].map((ch) => {
+    const d = decompose(ch);
+    if (!d) return ch;
+    const part = (l, tail) => (l === 'ㅇ' && !tail ? 'ㅇ' : `${l} ${tail ? TAIL_ROM[TAIL.indexOf(l)] : SOUND[l] ?? ''}`.trim());
+    return `${ch} = ${[part(d.lead), part(d.vowel), ...(d.tail ? [part(d.tail, true)] : [])].join(' + ')}`;
+  }).join(' · ');
+}
 const sayFor = (letter) => SAY[letter] ?? (decompose(letter) ? letter : VOWEL.includes(letter) ? String.fromCharCode(0xac00 + 11 * 588 + VOWEL.indexOf(letter) * 28) : letter);
 
 /** The slots a request needs filling: [{ block, slots: [{ letter, role, given }] }]. Exported for tests. */
@@ -95,6 +107,9 @@ export function createTongPlay(ctx) {
       const close = h('button', 'chip play-close', '✕');
       close.setAttribute('aria-label', 'Skip this');
       head.append(tong, title, close);
+      const teach = h('p', 'play-teach', req.teach?.en ?? '');
+      teach.dataset.gloss = '';
+      if (!req.teach?.en) teach.classList.add('hidden');
       const body = h('div', 'play-body');
       const foot = h('div', 'play-foot');
       const note = h('div', 'play-note');
@@ -102,10 +117,12 @@ export function createTongPlay(ctx) {
       note.setAttribute('aria-live', 'polite');
       const next = h('button', 'btn-primary play-next hidden', '계속 · Continue');
       foot.append(note, next);
-      card.append(head, body, foot);
+      card.append(head, teach, body, foot);
       el.append(card);
       ctx.root.append(el);
       ctx.onOpen?.();
+      el.addEventListener('keydown', (e) => { if (e.key === 'Escape') finish('dismissed', null); e.stopPropagation(); });
+      setTimeout(() => (card.querySelector('.play-body button') ?? close).focus(), 60);
 
       const state = { misses: 0, assisted: false, done: false };
       const finish = (outcome, correct) => {
@@ -120,8 +137,9 @@ export function createTongPlay(ctx) {
       close.onclick = () => finish('dismissed', null);
       next.onclick = () => finish('completed', !state.assisted);
       const say = (t) => ctx.speak?.(t);
-      const win = (text) => {
+      const win = (text, more = '') => {
         state.done = true;
+        if (more) { teach.textContent = more; teach.classList.remove('hidden'); teach.classList.add('how'); }
         tong.src = `img/tong-${state.assisted ? 'cheerful' : 'proud'}.png`;
         note.textContent = text;
         note.classList.toggle('good', !state.assisted);
@@ -180,7 +198,7 @@ export function createTongPlay(ctx) {
       }
       if (slotEls.every((x) => x.filled)) {
         setTimeout(() => say(word), 250);
-        win(`${word} · ${blockRom(word)}`);
+        win(`${word} · ${blockRom(word)}`, breakdown(word));
       }
     };
     const tiles = letters.map((letter) => {
@@ -213,7 +231,7 @@ export function createTongPlay(ctx) {
     prompt.append(hear, h('span', null, canHear ? 'Listen' : `"${blockRom(target)}"`));
     hear.onclick = () => say(target);
     const cards = h('div', 'play-cards');
-    for (const word of scramble([target, ...(req.distractors ?? [])])) {
+    for (const word of shuffle([target, ...(req.distractors ?? [])])) {
       const card = h('button', 'play-cardopt');
       card.append(h('b', null, word), h('small', null, ''));
       card.onclick = () => {
@@ -221,7 +239,7 @@ export function createTongPlay(ctx) {
         const reveal = () => {
           for (const c of cards.children) c.lastChild.textContent = blockRom(c.firstChild.textContent);
           [...cards.children].find((c) => c.firstChild.textContent === target).classList.add('right');
-          win(`${target} · ${blockRom(target)}`);
+          win(`${target} · ${blockRom(target)}`, breakdown(target));
         };
         if (word === target) return reveal();
         card.classList.add('wrong');
@@ -298,8 +316,9 @@ export function createTongPlay(ctx) {
       go.disabled = placed.length < answer.length;
     };
     const chips = scramble([...answer, ...(req.distractors ?? [])]).map((text) => {
-      const chip = h('button', 'play-chip', text);
-      const out = h('button', 'play-chip out', text);
+      const mk = (cls) => { const b = h('button', cls); b.append(h('b', null, text), h('small', null, romanize(text).replace(/[.?!]/g, ''))); return b; };
+      const chip = mk('play-chip');
+      const out = mk('play-chip out');
       const entry = { text, chip, out };
       chip.onclick = () => {
         if (state.done || chip.classList.contains('used')) return;
@@ -326,6 +345,12 @@ export function createTongPlay(ctx) {
       if (state.done) return;
       if (placed.length === answer.length && placed.every((p, i) => p.text === answer[i])) return finish();
       const extra = placed.find((p) => !answer.includes(p.text));
+      // onFail 'continue': what you said is what you said; the scene reacts to it.
+      if (req.onFail === 'continue') {
+        state.assisted = true;
+        setTimeout(() => say(placed.map((p) => p.text).join(' ')), 200);
+        return win(placed.map((p) => p.text).join(' '));
+      }
       if (miss(line, extra ? `${extra.text} doesn't belong in this one.` : 'Close. Try another order.')) {
         placed.length = 0;
         for (const c of chips) c.chip.classList.remove('used');

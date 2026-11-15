@@ -185,6 +185,8 @@ export function createScenePlayer(ctx) {
       cityId: 'seoul',
       locationId: run.scene.location,
       characterId: run.scene.characterId,
+      // Tong's small games (tongplay.js) keep the line that explains them on the card.
+      ...(/^(hangul_|say_it)/.test(hook.type) ? { teach: { ko: fill(run.line?.ko), en: fill(run.line?.en) }, onFail: hook.onFail } : {}),
     };
   }
 

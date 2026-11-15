@@ -22,7 +22,7 @@ export const module: SceneModule = {
       {
         id: 'x_chat',
         speaker: 'driver',
-        lines: [{ value: { ko: '…타요. 한국어 할 줄 알아요? 학생이에요?', en: '…Get in. Do you speak Korean? Are you a student?', review: 'native' } }],
+        lines: [{ value: { ko: '…타세요. 한국어 할 줄 알아요? 학생이에요?', en: '…Get in. Do you speak Korean? Are you a student?', review: 'native' } }],
         choices: [
           {
             id: 'x_yes',

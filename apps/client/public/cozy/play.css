@@ -8,6 +8,10 @@
 .play-title b { font-family: 'Jua', sans-serif; font-weight: 400; font-size: clamp(24px, 3.4cqi, 30px); line-height: 1.2; color: var(--orange-deep); }
 .play-title > span { font-size: var(--body); line-height: 1.4; color: var(--ink-soft); }
 .play-close { flex: none; min-width: 44px; min-height: 44px; }
+.play-teach { margin: 0; padding: 10px 14px; border-radius: 14px; background: #ffedbd; font-size: 18px; line-height: 1.5; color: var(--ink); }
+.play-teach.how { background: #f1fbf3; font-size: 20px; }
+.play-chip { display: grid; justify-items: center; }
+.play-chip small { font-size: 15px; font-weight: 400; color: var(--ink-soft); }
 .play-body { display: grid; justify-items: center; gap: 18px; }
 .play-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; }
 .play-note { font-size: var(--body); line-height: 1.4; color: var(--ink-soft); }

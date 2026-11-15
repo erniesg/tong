@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 const js = (f) => new URL(`../apps/client/public/cozy/js/${f}`, import.meta.url).href;
 const { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn, inForPractice, arrivalTiming, ARRIVAL_HOURS, STOP_MINUTES, dayOneOpen, dayOneClockHeld } = await import(js('day1.js'));
 const { basicLetters, hangulProgress, metWords, BASIC } = await import(js('hangul.js'));
-const { decompose, blockRom, slotsFor, pairsFor, isTongPlay } = await import(js('tongplay.js'));
+const { decompose, blockRom, breakdown, slotsFor, pairsFor, isTongPlay } = await import(js('tongplay.js'));
 const scene = (f) => readFileSync(new URL(`../apps/client/lib/content/routes/${f}`, import.meta.url), 'utf8');
 
 test('there are 24 basic letters and words break into them', () => {
@@ -32,7 +32,7 @@ test('day one meets eight letters, two or three at a time, each new word built o
   assert.equal(p.letters.find((l) => l.letter === 'ㅅ').word, '수아');
   assert.equal(p.letters.find((l) => l.letter === 'ㄴ').word, '다온');
   // Each of those words is set by a scene, and no scene asks for block crush on day one.
-  const day = ['seoul/d1-train.ts', 'haeun/h0-arrival.ts', 'haeun/h0-dorm.ts', 'seoul/d1-bedtime.ts', 'seoul/d1-orientation.ts', 'haeun/d1-room-b.ts'].map(scene);
+  const day = ['seoul/d1-train.ts', 'seoul/d1-lobby.ts', 'haeun/h0-arrival.ts', 'haeun/h0-dorm.ts', 'seoul/d1-bedtime.ts', 'seoul/d1-orientation.ts', 'haeun/d1-room-b.ts'].map(scene);
   for (const [word] of steps) assert.ok(day.some((src) => src.includes(`'hangul:${word}'`)), word);
   for (const src of day) assert.doesNotMatch(src, /type: 'block_crush'/);
   // Five kinds of small game, and the day never plays the same kind twice running.
@@ -46,6 +46,9 @@ test('the small games read their pieces from the scene', () => {
   assert.equal(decompose('ㅅ'), null);
   assert.equal(blockRom('다온'), 'da-on');
   assert.equal(blockRom('아이'), 'a-i');
+  // What a finished game shows: how the word is put together.
+  assert.equal(breakdown('다온'), '다 = ㄷ d + ㅏ a · 온 = ㅇ + ㅗ o + ㄴ n');
+  assert.equal(breakdown('수'), '수 = ㅅ s + ㅜ u');
   // Build 아: two empty slots, side by side.
   const [a] = slotsFor('hangul_compose', ['아']);
   assert.deepEqual(a.slots.map((s) => [s.letter, s.given]), [['ㅇ', false], ['ㅏ', false]]);

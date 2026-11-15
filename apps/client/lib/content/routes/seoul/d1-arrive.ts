@@ -33,7 +33,7 @@ export const module: SceneModule = {
         speaker: 'minji',
         when: { flags: ['d1_ontime'] },
         lines: [
-          { when: { flags: ['pr_photo'] }, value: { ko: '아, 공항 사진 걔네.', en: 'Oh, it\'s the one from the airport photo.', note: 'To Yerin, on their way past. Not quietly.', review: 'native' } },
+          { when: { flags: ['pr_photo'] }, value: { ko: '아, 아까 그 사진 걔네.', en: 'Oh, it\'s the one from that photo.', note: 'To Yerin, on their way past. Not quietly.', review: 'native' } },
           { value: { ko: '쟤가 새로 온 애야?', en: 'Is that the new one?', note: 'To Yerin, on their way past. Not quietly.', review: 'native' } },
         ],
         next: 'r_yerin',
@@ -107,7 +107,7 @@ export const module: SceneModule = {
         id: 'r_late_in',
         speaker: 'manager_choi',
         when: { flags: ['d1_late'] },
-        lines: [{ value: { ko: '…들어가.', en: '…Go in.', note: 'She looks at both of you first.' } }],
+        lines: [{ value: { ko: '…들어가요.', en: '…Go in.', note: 'She looks at both of you first.' } }],
         next: 'r_late_hall',
       },
       {

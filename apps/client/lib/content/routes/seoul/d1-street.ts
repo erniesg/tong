@@ -63,7 +63,7 @@ export const module: SceneModule = {
         id: 's_hungry',
         speaker: 'narration',
         lines: [{ value: { ko: '꼬르륵.', en: 'Your stomach. You last ate over an ocean. Down the food street an orange tent is already steaming.' } }],
-        tong: { ko: '걷는 건 공짜. 멈추면 시간이 가.', en: 'Walking is free. Stopping for things takes time.', maxLevel: 6 },
+        tong: { ko: '둘 중에 골라.', en: 'Two places are lit. Up the stairs, music is still coming out of one window at Onsae. Down the street, the tent has one stool free. Your call.', maxLevel: 6 },
         effects: { setFlags: ['d1_street_seen'] },
         end: true,
       },

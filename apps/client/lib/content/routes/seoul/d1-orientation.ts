@@ -116,7 +116,7 @@ export const module: SceneModule = {
         id: 'o_photo',
         speaker: 'manager_choi',
         when: { flags: ['origin_creator', 'pr_photo'] },
-        lines: [{ value: { ko: '공항 사진 봤어요. 오늘부터 그런 거 없어요.', en: 'I saw the airport photo. From today, none of that.', review: 'native' } }],
+        lines: [{ value: { ko: '오늘 올라온 사진 봤어요. 오늘부터 그런 거 없어요.', en: 'I saw the photo that went up today. From today, none of that.', review: 'native' } }],
         next: 'o_subscribers',
       },
       {
@@ -130,7 +130,10 @@ export const module: SceneModule = {
         id: 'o_front_row',
         speaker: 'coach_park',
         when: { flags: ['origin_athlete'] },
-        lines: [{ value: { ko: '운동했어요? 체력은 좋겠네. 내일 앞줄.', en: 'You played sport? Stamina should be good, then. Front row, tomorrow.', note: 'He watched you come up the stairs with that suitcase.', review: 'native' } }],
+        lines: [
+          { when: { flags: ['d1_sprint'] }, value: { ko: '운동했어요? 체력은 좋겠네. 내일 앞줄.', en: 'You played sport? Stamina should be good, then. Front row, tomorrow.', note: 'He saw you come up the stairs with that suitcase.', review: 'native' } },
+          { value: { ko: '운동했어요? 체력은 좋겠네. 내일 앞줄.', en: 'You played sport? Stamina should be good, then. Front row, tomorrow.', note: 'He sizes you up from the door.', review: 'native' } },
+        ],
         next: 'o_overheard',
       },
 

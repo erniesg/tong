@@ -33,7 +33,7 @@ export const module: SceneModule = {
               {
                 speaker: 'busker',
                 reaction: { ko: '좋아요. 하나, 둘, 셋, 넷—', en: 'All right. One, two, three, four—', note: 'He counts himself in. You stay for the whole song.', review: 'native' },
-                setFlags: ['d1_busker'],
+                setFlags: ['d1_busker', 'd1_busker_song'],
                 tally: ['d1_stops'],
                 vocab: [{ ko: '하나, 둘, 셋, 넷', en: 'one, two, three, four', rom: 'hana, dul, set, net' }],
               },

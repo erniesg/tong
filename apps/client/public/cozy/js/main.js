@@ -385,6 +385,8 @@ const where = {
     if (S.tentStory !== 'idle') return 'story';
     // until you've met him he's only the man in the cap at the pojangmacha (J0)
     if (!S.story.flags.j0_done) return isOpen(h) ? 'tent' : 'away';
+    // Met on day one: he has a shoot. The café and the river start tomorrow.
+    if (S.day === 1 && !S.story.flags.d1_legacy) return 'away';
     if (h >= 8 && h < 18) return 'cafe';
     if (h >= 18) return 'lookout';
     return 'away';
@@ -727,7 +729,8 @@ function checkArrival() {
   for (const [id] of ARRIVAL) if (state[id] && !S.quests[id]) done(id);
 }
 /** 한글 X/24: letters from the words this save rebuilt, plus the signs it read. */
-const hangul = () => hangulProgress(metWords(S.story.flags));
+// Saves from when signs were rebuilt keep those letters.
+const hangul = () => hangulProgress(metWords(S.story.flags, [...S.signs].map((id) => SIGNS[id]?.word).filter(Boolean)));
 const QUESTS = [
   ['haeunDay', '💃 Meet your partner at the studio (9:00–19:00)'],
   ['pojang', '🏮 Eat at the 포장마차 (16:00~)'],
@@ -863,7 +866,7 @@ async function exercise(req) {
 }
 
 /** One of Tong's small games (tongplay.js), played over the world; the letters met count in Tong too. */
-const tongPlay = createTongPlay({ root: shell ?? document.body, speak: (text) => speak(text, 'tong'), canHear: () => voice.available(), sfx });
+const tongPlay = createTongPlay({ root: shell ?? document.body, speak: (text) => speak(text, 'tong'), canHear: () => voice.available() && voice.on && !audio.muted, sfx });
 async function playGame(req) {
   bridgeBusy = true;
   clearControls();
@@ -1380,9 +1383,10 @@ function stageCue(name) {
   }
 }
 /** Room A at five: staff at the mirror, the cohort on the floor, you by the door at the back, off to one side. */
-function seatOrientation() {
+function seatOrientation(movePlayer = true) {
   stageCast(ONS.CAST_SPOTS);
   placeAt(haeun, ONS.mirror, ONS.SPOT_YAW.roomAFront);
+  if (!movePlayer) return;
   const [x, y, z] = ONS.roomA;
   const yaw = Math.atan2(ONS.roomAFront[0] - (x - 2.3), ONS.roomAFront[2] - (z + 4.4));
   player.root.position.set(x - 2.3, y, z + 4.4);
@@ -1419,7 +1423,7 @@ function updateStagedCast(dt, t) {
   // A reload during orientation: the room as it was.
   if (!d1Stage && flag('d1_arrival_seen')) {
     d1Stage = 'orientation';
-    seatOrientation();
+    seatOrientation(!flag('orientation_done'));
   } else if (!d1Stage) for (const a of studioCast?.actors ?? []) a.character.root.visible = false;
   for (const a of studioCast?.actors ?? []) {
     const r = a.character.root;
@@ -1452,14 +1456,13 @@ function dayOneDone(scene) {
     day.spend(12);
     advanceHours(1);
   }
-  if (scene.id === 'jin.j0' || scene.id === 'seoul.d1.busker') spendStop(scene.id);
+  if (scene.id === 'jin.j0' || (scene.id === 'seoul.d1.busker' && flag('d1_busker_song'))) spendStop(scene.id);
   const mine = scene.id.startsWith('seoul.d1.') || scene.id === 'haeun.d1.room_b';
   if (!mine) return false;
   if (scene.id === 'seoul.d1.train') arriveHongdae();
   if (scene.id === 'seoul.d1.cart') day.eat('snack');
   if (scene.id === 'seoul.d1.taxi') dayOneMove('seoul', { position: ONS.door, yaw: Math.PI });
   if (scene.id === 'seoul.d1.sprint') dayOneMove('seoul', { position: [5, TERRACE_Y, -33], yaw: Math.PI });
-  if (scene.id === 'seoul.d1.arrive' || scene.id === 'haeun.d1.room_b') setTimeout(() => scenes.play('seoul.d1.orientation'), 700);
   if (scene.id === 'seoul.d1.bedtime') setTimeout(() => dlg.start('hangul_recap'), 400);
   checkArrival();
   updateQuest();
@@ -1470,9 +1473,12 @@ function dayOneDone(scene) {
 function dayOneTick() {
   if (dlg.state.active || modalOpen() || !S.started || transitioning || bridgeBusy) return;
   if (S.city === 'incheon') {
-    if (!flag('played:seoul.d1.train')) return void scenes.play('seoul.d1.train');
     // Reloaded on the train scene's last line: you were already getting off.
-    if (flag('d1_arrived_hongdae')) arriveHongdae();
+    if (flag('d1_arrived_hongdae')) {
+      setFlag('played:seoul.d1.train');
+      return void arriveHongdae();
+    }
+    if (!flag('played:seoul.d1.train')) scenes.play('seoul.d1.train');
     return;
   }
   if (S.city !== 'seoul' || !flag('d1_arrived_hongdae')) return;
@@ -1481,7 +1487,11 @@ function dayOneTick() {
   const room = ONS.roomAt(p.x, p.y, p.z);
   if (!room) return;
   if (room === 'lobby' && !flag('played:seoul.d1.lobby')) return void scenes.play('seoul.d1.lobby');
-  if (flag('d1_arrival_seen')) return void scenes.play('seoul.d1.orientation'); // reloaded mid-orientation
+  if (flag('d1_arrival_seen')) {
+    // Orientation is at five, however early you were (also where a reload mid-orientation resumes).
+    if (S.hour < 17) setHour(17);
+    return void scenes.play('seoul.d1.orientation');
+  }
   if (!['corridor2', 'practice_a', 'practice_b'].includes(room)) return;
   // Who you met on the way decides when you get here, and who is here.
   if (!flag('d1_early') && !flag('d1_ontime') && !flag('d1_late')) setFlag(`d1_${arrivalTiming(S.story.flags, S.story.tally)}`);
@@ -1522,7 +1532,7 @@ function morningLoops() {
 // Day one's street (hongdae-life.js dresses and exports the spots): things to stop for on the way up.
 const onTheWay = () => S.day === 1 && flag('d1_arrived_hongdae') && !flag('orientation_done') && !flag('d1_legacy');
 const STREET_INTERACTABLES = [
-  { label: '광고판 · The poster', pos: () => v3(STREET.poster), r: 2.6, on: () => flag('d1_arrived_hongdae') && !flag('played:seoul.d1.poster'), act: () => scenes.play('seoul.d1.poster') },
+  { label: '광고판 · The poster', pos: () => v3(STREET.poster), r: 2.6, on: () => scenes.available('seoul.d1.poster'), act: () => scenes.play('seoul.d1.poster') },
   { label: '붕어빵 · Bungeoppang', pos: () => v3(STREET.cart), r: 2.2, on: () => onTheWay() && !flag('played:seoul.d1.cart'), act: () => scenes.play('seoul.d1.cart') },
   { label: '버스킹 · Listen', pos: () => v3(STREET.busker), r: 2.8, on: () => onTheWay() && !flag('played:seoul.d1.busker'), act: () => scenes.play('seoul.d1.busker') },
   { label: '택시 · Taxi, on the family card', pos: () => v3(STREET.taxi), r: 2.4, on: () => onTheWay() && S.origin === 'intl_kid' && !flag('played:seoul.d1.taxi'), act: () => scenes.play('seoul.d1.taxi') },
@@ -2947,7 +2957,8 @@ function updateCamera(dt, t) {
     fov = shot.fov;
     k = 3;
     mode = shot.mode;
-  } else if (dlg.state.active && node && chars[node.who]?.root.visible && S.city !== 'incheon' && node.who !== 'tong' && node.who !== 'player') {
+  } else if (dlg.state.active && node && chars[node.who]?.root.visible && S.city !== 'incheon' && node.who !== 'tong' && node.who !== 'player' &&
+    Math.abs(chars[node.who].root.position.y - p.y) < 1.5 && chars[node.who].root.position.distanceTo(p) < 9) {
     // two-shot: both faces in frame, from whichever side isn't a wall
     const sp = chars[node.who];
     headPos(sp, hv);
@@ -3128,7 +3139,7 @@ function frame() {
     day.tick(clockHours(dt, S.speed), { ...dayMoves, resting: !!S.benchSit, awayFromDorm: here?.buildingId !== 'seoul-home', curfewApplies: S.city === 'seoul' });
     if (S.benchSit && ((prev < 19 && S.hour >= 19) || (prev < 7 && S.hour >= 7))) {
       S.speed = 1;
-      toast(S.hour >= 19 ? '<b>🌙 밤이 됐어요</b><span>Night has fallen. The 포장마차 is open!</span>' : '<b>☀️ 아침이에요</b><span>Good morning, Seoul.</span>', 3000);
+      toast(S.hour >= 19 ? '<b>🌙 밤이 됐어요</b><span>Night has fallen.</span>' : '<b>☀️ 아침이에요</b><span>Good morning, Seoul.</span>', 3000);
       updateToggles();
     }
   }
@@ -3223,7 +3234,8 @@ function frame() {
     pendingPolaroid = null;
   }
   saveT += dt;
-  if (saveT > 10 && S.started) {
+  // Never mid-scene: a reload replays a scene from its top, so its effects must not already be saved.
+  if (saveT > 10 && S.started && !scenes.running) {
     saveT = 0;
     save();
   }
@@ -3382,15 +3394,19 @@ async function boot() {
       back: () => canvas.focus(),
     });
   };
+  // ?debug adds the staging helpers the browser checks use.
+  const DEBUG = new URLSearchParams(location.search).has('debug');
   window.__cozy = {
     S, player, haeun, jin, dlg, scenes, creator, renderer, bloom, scene, sky, G, THREE, setHour, bridge, seoulEval,
+    ...(DEBUG ? {
     // Tests and staging checks: stand somewhere in Seoul on day one with these story flags set.
     d1Jump: async (flags, position, hour = 16.5) => {
       if (dlg.state.active) dlg.end();
       S.story.flags = { ...S.story.flags, ...flags };
       await dayOneMove('seoul', { position, yaw: 0 }, hour);
     },
-    stageCue,
+      stageCue,
+    } : {}),
     ONS, STREET, INCHEON,
     get bridgeBusy() { return bridgeBusy; },
     day,

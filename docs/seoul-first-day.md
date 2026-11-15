@@ -65,7 +65,7 @@ Still picked in the creator. Each one is something you can do, not a label.
 
 | Origin | On the train | Perk on the street | Who reacts | Cost |
 |---|---|---|---|---|
-| Athlete | Your old teammate: "Don't get soft." | Take the terrace stairs at a run with the suitcase on your shoulder. | Coach Park watched you come up: "내일 앞줄." In Room B you count like someone who has been counted at. | `d1_tight_calf`, toll +1 |
+| Athlete | Your old teammate: "Don't get soft." | Take the terrace stairs at a run with the suitcase on your shoulder. | In Room B you can take the turn on seven beside her, cold, and land it. Coach Park: "내일 앞줄." | `d1_tight_calf`, toll +1 |
 | Creator | Notifications; the student across the aisle keeps looking. | She catches you up outside the station. The photo: yes or no, she posts either way. In Room B you can ask to film (she says no) or just raise the phone. | Min-ji has already seen it. Manager Choi: none of that from today. | `pr_photo`, toll +1 or +2 |
 | International-School Kid | Mum: take a taxi on the card. | The taxi at the rank, round the block to the door. In Room B you can offer to buy her a drink. | Manager Choi mentions your parents rang, in front of everyone. | `toll_family_card`, toll +1 |
 
@@ -75,7 +75,8 @@ Still picked in the creator. Each one is something you can do, not a label.
 
 | When | Word | New letters | Game | Total |
 |---|---|---|---|---|
-| Train | 아, 이 (from the grandmother's 아이고) | ㅇ ㅏ ㅣ | Build 아 from two pieces; then hear one and pick it | 3 |
+| Train | 아 (from the grandmother's 아이고) | ㅇ ㅏ | Build 아 from two pieces | 2 |
+| Onsae lobby | 이 (the floor guide: 2층 is 이층) | ㅣ | Hear it, pick it | 3 |
 | Room B (if you offer) | — | — | Count her in: 다섯, 여섯, 일곱, 여덟 in order | 3 |
 | Lockers | 수아 (the scraped label reads ㅅ…아) | ㅅ ㅜ | Find the missing piece | 5 |
 | Dorm | 다온 (the name card on the bunk above yours) | ㄷ ㅗ ㄴ | She says her name; pick her card from three | 8 |
@@ -91,7 +92,9 @@ Heard and said in replies, with romanisation and sound, each at least twice: 안
 
 Meet a word where it lives (a voice, a label, a sign) → hover or tap it for sound and meaning → one small game, a different kind each time → use it on a person, who reacts → it comes back before bed.
 
-A wrong answer never fails anything: the character says it again or Tong points, and the scene goes on.
+Every game card keeps Tong's explanation on it, shows romanisation under the pieces of a line, and ends by showing how the word is put together (다 = ㄷ d + ㅏ a).
+
+A wrong answer never fails anything: the character says it again or Tong points, and the scene goes on. Your introduction is the exception by design: what you put together is what you say, and the room reacts to it.
 
 ## Proposals
 
@@ -100,7 +103,8 @@ Added here, not in canon yet. Say if any should change.
 - **Jin's drama** is 〈밤의 끝에서〉 *At the Edge of Night*, weekends at nine (owner: your call).
 - **The tent opens at four**, not seven, so Jin can be the first person you meet.
 - **Jin hears you're headed to Onsae** on day one and says only "…온새." (he trained there; canon).
-- **Ha-eun's first scene** is `haeun.d1.room_b`. She stays unnamed; nothing in it goes past her wall.
+- **Ha-eun's first scene** is `haeun.d1.room_b`. She stays unnamed; nothing in it goes past her wall. She tells you, politely, to wait in the corridor; staying is your choice.
+- **After a day-one meeting Jin is away until tomorrow** (the café and the river start on day two).
 - **The grandmother on the train**, the **붕어빵 seller** and the **busker** are unnamed one-offs.
 - **Orientation at 5pm** (was 3pm), day-one start 4:20pm.
 - **Arriving late** now only happens if you eat at the tent and also stay for the busker's song.
