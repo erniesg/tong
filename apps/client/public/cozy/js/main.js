@@ -2940,6 +2940,8 @@ function updateCamera(dt, t) {
           best = sgn;
         }
       }
+      // Practice Room B backs onto the stairwell, which never cuts away: keep the camera on the river side.
+      if (S.city === 'seoul' && ONS.roomAt(p.x, p.y, p.z) === 'practice_b') best = dir.x * 1 < 0 ? 1 : -1;
       cam.talkSide = best;
     }
     const side = new THREE.Vector3(-dir.z * cam.talkSide, 0, dir.x * cam.talkSide);
