@@ -72,9 +72,9 @@ export function buildNodes(A) {
     ajusshi_later: { who: 'ajusshi', expr: 'happy', ko: '또 와요~ 다음엔 친구랑 같이!', en: 'Come again~ Bring your friend next time!', end: true },
     tent_closed: {
       who: 'narration',
-      ko: '영업시간 19:00 ~ 03:00',
-      en: 'Business hours 7 PM – 3 AM. The tent is zipped shut for now.',
-      hint: '<b>영업시간</b> (yeong-eop-sigan) = business hours. Come back after dark, or sit on the lookout bench to pass time.',
+      ko: '영업시간 16:00 ~ 03:00',
+      en: 'Business hours 4 PM – 3 AM. The tent is zipped shut for now.',
+      hint: '<b>영업시간</b> (yeong-eop-sigan) = business hours. Come back after four, or sit on the lookout bench to pass time.',
       enter: () => A.learn('영업시간', 'yeongeop-sigan', 'business hours'),
       end: true,
     },
@@ -313,7 +313,7 @@ export function buildNodes(A) {
       who: 'tong',
       expr: 'proud',
       ko: () => `한글 ${A.hangul().count}/${A.hangul().total}`,
-      // Grouped by the word each letter first came from: 출구 ㅊㅜㄹㄱ · 홍대입구 ㅎㅗㅇ…
+      // Grouped by the word each letter first came from: 아 ㅇㅏ · 수아 ㅅㅜ …
       en: () => {
         const h = A.hangul(), by = new Map();
         for (const l of h.letters) by.set(l.word, (by.get(l.word) ?? '') + l.letter);
@@ -414,23 +414,25 @@ export function buildNodes(A) {
 export function tongHint(S, hour) {
   const f = S.story?.flags ?? {};
   const night = hour >= 19 || hour < 3;
-  // Day 1 (docs/seoul-day1.md): Incheon → Hongdae → Onsae.
-  if (!f.d1_exit_done) return { ko: '출구로 가자!', en: 'Follow the signs to the doors. The one marked 출구 is the way out.', expr: 'excited' };
-  if (!f.d1_arrived_hongdae) return { ko: '전광판 찾자!', en: 'Find the departure board in the concourse. We need the train that stops at 홍대입구.', expr: 'excited' };
-  if (!f['played:seoul.d1.arrive']) return { ko: '연습실로! 세 시까지.', en: 'Onsae\'s studio is up the stairs on the terrace by the river. Manager Choi said 3pm.', expr: 'excited' };
+  const tentOpen = hour >= 16 || hour < 3;
+  // Day 1 (docs/seoul-first-day.md): the train → Hongdae → Onsae → the dorm.
+  if (!f.d1_arrived_hongdae) return { ko: '곧 홍대야!', en: 'Nearly there. Hongdae is the next stop.', expr: 'excited' };
+  if (!f.d1_arrival_seen && !f.j0_done) return { ko: '돌계단 위가 회사야.', en: 'Onsae is up the stone stairs, the building with the lit sign. Practice rooms are on the second floor. Hungry? The tent on the food street is open.', expr: 'excited' };
+  if (!f.d1_arrival_seen) return { ko: '이제 회사로! 5시야.', en: 'Nearly five. Onsae: up the stone stairs, then the second floor.', expr: 'excited' };
   if (!f.orientation_done) return { ko: '오리엔테이션이야.', en: 'Orientation. Listen to Manager Choi.', expr: 'thinking' };
-  if (!f.h0_done) return { ko: '사물함 보러 가자!', en: 'Your locker is at the back of the studio, by the door wall.', expr: 'excited' };
+  if (!f.h0_done) return { ko: '사물함은 3층!', en: 'Your locker is on the third floor: through the stair door and up.', expr: 'excited' };
+  if (!f.dorm_arrived && !f.j0_done && (S.day ?? 1) < 2 && hour < 21.5) return { ko: '저녁은 네 거야.', en: 'The evening is yours until curfew at eleven. Hungry? The tent on the food street. The dorm is Yeonnam Apartments, northwest of the railway park.', expr: 'cheerful' };
   if (!f.dorm_arrived) return { ko: '숙소로 가자!', en: 'Manager Choi is waiting at the dorm: Yeonnam Apartments, northwest of the railway park. First floor. Your bed is there.', expr: 'excited' };
-  if ((S.day ?? 1) < 2) return { ko: '오늘은 푹 자!', en: 'Long day. Your bed is the bottom bunk in Da-on\'s room. Studio at 10 tomorrow: Coach Park said don\'t be late.', expr: 'cheerful' };
+  if ((S.day ?? 1) < 2) return { ko: '오늘은 푹 자!', en: 'Long day. Your bed is the bottom bunk in Da-on\'s room. Practice at 10 tomorrow: Coach Park said don\'t be late.', expr: 'cheerful' };
   if (!f.h1_done && hour >= 5 && hour < 9) return { ko: '열 시까지 연습실!', en: 'Studio at 10: Coach Park is pairing you with someone today.', expr: 'cheerful' };
-  if (!f.h1_done && hour >= 9 && hour < 19) return { ko: '하은이 연습실에 있어!', en: 'Coach Park paired you with someone. She’s in the studio. Read the water-bottle name tags to find her.', expr: 'excited' };
-  if (!f.j0_done && night) return { ko: '포장마차 문 열었어!', en: 'The pojangmacha is open. Go order something yourself: [food] + 주세요.', expr: 'love' };
+  if (!f.h1_done && hour >= 9 && hour < 19) return { ko: '하은이 연습실에 있어!', en: 'Coach Park paired you with someone. She’s at Onsae, in 연습실 B on the second floor. Read the water-bottle name tags to find her.', expr: 'excited' };
+  if (!f.j0_done && tentOpen) return { ko: '포장마차 문 열었어!', en: 'The pojangmacha is open. Go order something yourself: [food] + 주세요.', expr: 'love' };
   if (!S.quests.cafe && hour >= 8 && hour < 22) return { ko: '카페 봄에서 커피 한 잔 어때?', en: 'How about a coffee at Café Bom? It’s on the right side of the plaza.', expr: 'cheerful' };
   if (!S.quests.store) return { ko: '편의점은 24시간이야!', en: 'The convenience store is open 24 hours. Try buying something.', expr: 'cheerful' };
-  if (!f.h1_done) return { ko: '하은은 낮에 연습실에 있어.', en: 'Ha-eun practises in the studio from 9 to 7. Sit on a lookout bench to pass time.', expr: 'thinking' };
-  if (!f.j0_done) return { ko: '포장마차는 밤에 열어.', en: 'The pojangmacha opens at 7 PM. Sit on a lookout bench to watch the sunset.', expr: 'thinking' };
-  if (f.h1_done && !f.h2_done && hour >= 21 && hour < 23.5) return { ko: '연습실 불이 아직 켜져 있어…', en: 'The studio lights are still on. Ha-eun is drilling late.', expr: 'thinking' };
+  if (!f.h1_done) return { ko: '하은은 낮에 연습실에 있어.', en: 'Ha-eun practises at Onsae (연습실 B, second floor) from 9 to 7. Sit on a lookout bench to pass time.', expr: 'thinking' };
+  if (!f.j0_done) return { ko: '포장마차는 네 시에 열어.', en: 'The pojangmacha opens at 4 PM. Sit on a lookout bench to pass the time.', expr: 'thinking' };
+  if (f.h1_done && !f.h2_done && hour >= 21 && hour < 23.5) return { ko: '연습실 불이 아직 켜져 있어…', en: 'Onsae’s second-floor lights are still on. Ha-eun is drilling late in 연습실 B.', expr: 'thinking' };
   if (!S.quests.jinNight && night && f.met_jin) return { ko: '진이 한강에 있대.', en: 'Jin is at the river lookout tonight.', expr: 'cheerful' };
   if (S.words.size < 10) return { ko: '반짝이는 단어를 찾아봐!', en: `Find the glowing words around the neighbourhood (${S.words.size}/10).`, expr: 'thinking' };
-  return { ko: '오늘 정말 잘했어!', en: 'You did amazing today. Try the word quiz in the studio!', expr: 'proud' };
+  return { ko: '오늘 정말 잘했어!', en: 'You did amazing today. Try the word quiz on the whiteboard in 연습실 A!', expr: 'proud' };
 }

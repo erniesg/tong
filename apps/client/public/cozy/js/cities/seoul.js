@@ -12,7 +12,7 @@ const airportSpawn = [-53, 0, 42];
 const roads = [
   // Existing activity core, including its only terrace ascent (the stairs).
   { points: [[2, -26], [2, -8], [2, 9.5], [0, 30], [0, 36]], width: 5.5 },
-  { points: [[2, -26], [5, -26], [5, -32], [5, -37.5], [-4.6, -37.5]], width: 3 },
+  { points: [[2, -26], [5, -26], [5, -33], [1.5, -33], [-9, -30.4]], width: 3 }, // up the stone stairs, then west along the terrace to Onsae's door
   { points: [[-32, 9.5], [0, 9.5], [33, 9.5]], width: 4, color: '#a89a89' },
   { points: [[-29, -6], [2, -6], [30, -6]], width: 3.6, color: '#a89a89' },
   { points: [[-31, -40], [-35, -24], [-29, -6], [-32, 9.5], [-37, 25], [-26, 37]], width: 6 },

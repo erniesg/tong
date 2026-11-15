@@ -15,7 +15,7 @@ export const module: SceneModule = {
     characterId: 'jin',
     location: 'food_street',
     slot: 'm1.j0',
-    gate: { hours: { from: 19, to: 3 } },
+    gate: { hours: { from: 16, to: 3 } },
     summary:
       'Night tent. You fumble the order; a man in a low cap rescues it and orders 떡볶이 for you (or adjusts your correct order). He gives his name freely, proposes 반말, asks a lot of questions. His phone buzzes: one second, a different face. He insists on paying. He leaves in a cap and mask. That was easy. Too easy?',
     seeds: ['saw_face_change', 'tally.jin_directives (going along with his plans)', 'jin_adjusted_order even when you got it right', 'jin_banmal_declined'],
@@ -37,7 +37,7 @@ export const module: SceneModule = {
         expr: 'smile',
         lines: [{ value: { ko: '뭐 줄까요?', en: 'What\'ll it be?' } }],
         exercise: {
-          type: 'sentence_builder',
+          type: 'say_it',
           objectiveId: 'ko-gram-juseyo',
           targets: ['떡볶이', '주세요'],
           distractors: ['감사합니다', '순대'],
@@ -108,6 +108,21 @@ export const module: SceneModule = {
             outcomes: [{ speaker: 'jin', expr: 'smile', reaction: { ko: '{name}. 좋은 이름이다.', en: '{name}. Nice name.' }, deltas: { warmth: 3 } }],
           },
           {
+            id: 'j0_poster',
+            intent: 'ask',
+            gate: { flags: ['saw_jin_poster'] },
+            say: { ko: '역 포스터… 그 사람 아니에요?', en: 'The poster at the station… isn\'t that you?', rom: 'yeok poseuteo… geu saram anieyo?' },
+            outcomes: [
+              {
+                speaker: 'jin',
+                expr: 'laugh',
+                reaction: { ko: '쉿. 여기 아저씨는 드라마 안 봐요.', en: 'Shh. The ajusshi here doesn\'t watch dramas.', note: 'He tugs the cap a little lower. He doesn\'t say no.', review: 'native' },
+                setFlags: ['nearly_recognised_jin', 'recognised_jin_poster'],
+                memory: { tag: 'said_familiar', note: 'Asked Jin if he was the man on the station poster the day you met.' },
+              },
+            ],
+          },
+          {
             id: 'j0_familiar',
             intent: 'ask',
             say: { ko: '혹시… 어디서 본 것 같은데요.', en: 'Have I… seen you somewhere?', rom: 'hoksi… eodiseo bon geot gateundeyo' },
@@ -120,6 +135,29 @@ export const module: SceneModule = {
                 memory: { tag: 'said_familiar', note: 'Told Jin he looked familiar the night you met.' },
               },
             ],
+          },
+        ],
+        next: 'j0_where',
+      },
+      // Day one, before you've reported: he hears where you're headed. He trained there (canon/jin.ts).
+      {
+        id: 'j0_where',
+        speaker: 'jin',
+        expr: 'smile',
+        when: { notFlags: ['orientation_done'], month: { from: 1, to: 1 } },
+        lines: [{ value: { ko: '짐이 많네요. 오늘 온 거예요? 어디 가는 길이에요?', en: 'That\'s a lot of luggage. Did you land today? Where are you headed?', review: 'native' } }],
+        choices: [
+          {
+            id: 'j0_onsae',
+            intent: 'commit',
+            say: { ko: '온새 엔터요. 5시까지요.', en: 'Onsae Entertainment. By five.', rom: 'onsae enteoyo. daseot sikkajiyo' },
+            outcomes: [{ speaker: 'jin', expr: 'neutral', reaction: { ko: '…온새.', en: '…Onsae.', note: 'The smile holds. Something behind it moves, and is put away.' }, setFlags: ['jin_knows_onsae'] }],
+          },
+          {
+            id: 'j0_vague',
+            intent: 'deflect',
+            say: { ko: '근처요.', en: 'Somewhere near here.', rom: 'geuncheoyo' },
+            outcomes: [{ speaker: 'jin', expr: 'smile', reaction: { ko: '비밀이군요. 좋아요.', en: 'A secret. I like that.' } }],
           },
         ],
         next: 'j0_banmal',
@@ -169,6 +207,22 @@ export const module: SceneModule = {
         speaker: 'jin',
         expr: 'smile',
         lines: [
+          {
+            when: { flags: ['jin_banmal_accepted'], notFlags: ['orientation_done'], month: { from: 1, to: 1 } },
+            value: {
+              ko: '{name}, 오늘 왔으면 아무것도 모르겠네. 그럼 내가 맛집 다 알려 줄게. 다음엔 순대 먹자, 그치?',
+              en: '{name}, if you landed today you don\'t know anywhere yet. Then I\'ll show you all the good places. Sundae next time, right?',
+              review: 'native',
+            },
+          },
+          {
+            when: { notFlags: ['orientation_done'], month: { from: 1, to: 1 } },
+            value: {
+              ko: '{name} 씨, 오늘 왔으면 아무것도 모르겠네요. 그럼 제가 맛집 다 알려 줄게요. 다음엔 순대 먹어요, 그쵸?',
+              en: '{name}, if you landed today you don\'t know anywhere yet. Then I\'ll show you all the good places. Sundae next time, yeah?',
+              review: 'native',
+            },
+          },
           {
             when: { flags: ['jin_banmal_accepted'] },
             value: {

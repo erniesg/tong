@@ -1,9 +1,9 @@
 /* Seoul eval overlay (js/eval). Loaded by js/eval/index.js; uses the cozy tokens in style.css. */
 .eval-overlay { z-index: 30; }
-.eval-card { width: min(560px, 100%); text-align: left; }
-.eval-card.wide { width: min(720px, 100%); }
+.eval-card { width: min(620px, 100%); text-align: left; }
+.eval-card.wide { width: min(780px, 100%); }
 .eval-head .eyebrow { display: block; font-size: var(--small); color: var(--ink-soft); letter-spacing: .02em; }
-.eval-title { margin: 2px 0 4px; font-family: Jua, 'Gowun Dodum', sans-serif; font-weight: 400; font-size: clamp(22px, 3.2cqi, 30px); line-height: 1.25; }
+.eval-title { margin: 2px 0 4px; font-family: Jua, 'Gowun Dodum', sans-serif; font-weight: 400; font-size: clamp(24px, 3.2cqi, 32px); line-height: 1.25; }
 .eval-sub { margin: 0 0 6px; color: var(--ink-soft); }
 .eval-body { margin-top: 8px; }
 .eval-body p { margin: 6px 0; }
@@ -18,18 +18,18 @@
 .eval-prompt-en { color: var(--ink-soft); }
 body.no-en .eval-prompt-en { display: none; }
 .eval-note { font-size: var(--small); color: var(--rose); }
-.eval-choices .choice { width: 100%; min-height: 44px; }
+.eval-choices .choice { width: 100%; min-height: 52px; padding: 8px 14px; font-size: max(20px, var(--body)); }
 .eval-tray { min-height: 54px; display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 2px dashed #cbb394; border-radius: 14px; margin-top: 10px; background: #fffdf8; align-items: center; }
 .eval-tray-empty { color: var(--ink-soft); font-size: var(--small); }
 .eval-pool { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.eval-block { min-height: 44px; min-width: 44px; padding: 6px 14px; border-radius: 12px; border: 2px solid #deccb5; background: #fff; font-size: max(18px, var(--body)); box-shadow: 0 3px 0 #deccb5; }
+.eval-block { min-height: 48px; min-width: 48px; padding: 6px 14px; border-radius: 12px; border: 2px solid #deccb5; background: #fff; font-size: max(22px, var(--body)); box-shadow: 0 3px 0 #deccb5; }
 .eval-block.placed { background: #ffedbd; border-color: #e7b84a; box-shadow: 0 3px 0 #e7b84a; }
 .eval-block:disabled { opacity: .3; }
 .eval-check { margin-top: 12px; width: 100%; min-height: 44px; }
 .eval-check:disabled { opacity: .5; }
-.eval-input { max-width: none; margin-top: 10px; font-size: max(18px, var(--body)); }
+.eval-input { max-width: none; margin-top: 10px; font-size: max(20px, var(--body)); }
 .eval-hint-row { margin-top: 10px; }
-.eval-hint-btn { font-size: var(--small); padding: 6px 12px; min-height: 36px; }
+.eval-hint-btn { font-size: var(--small); padding: 6px 12px; min-height: 44px; }
 .eval-hint-row .hint { display: block; margin-top: 6px; }
 .eval-feedback { margin-top: 10px; padding: 8px 12px; border-radius: 12px; font-weight: 700; }
 .eval-feedback.ok { background: #dff3e1; color: #1f6b33; }
@@ -54,7 +54,7 @@ body.no-en .eval-prompt-en { display: none; }
 /* Formation grid */
 .dance-stage { display: grid; gap: 8px; }
 .dance-call { min-height: 64px; text-align: center; }
-.dance-call-ko { font-size: clamp(22px, 3.6cqi, 32px); font-weight: 700; font-family: Jua, 'Gowun Dodum', sans-serif; }
+.dance-call-ko { font-size: clamp(26px, 3.6cqi, 34px); font-weight: 700; font-family: Jua, 'Gowun Dodum', sans-serif; }
 .dance-call-en { color: var(--ink-soft); font-size: var(--small); }
 .dance-beats { display: flex; justify-content: center; gap: 10px; }
 .dance-beats .beat { width: 14px; height: 14px; border-radius: 50%; background: #e6d6bf; transition: background .08s; }
@@ -76,7 +76,7 @@ body.no-en .eval-prompt-en { display: none; }
 .dance-cell.me { background: #ffd23f; border-color: #fff; }
 .dance-cell.target { border: 3px dashed #ffd23f; }
 .callout-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
-.callout-option { font-size: 17px; min-height: 44px; }
+.callout-option { font-size: max(20px, var(--body)); min-height: 48px; }
 .dance-poses { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .dance-pose { min-height: 44px; padding: 6px 4px; }
 .dance-pose.on { background: #ffedbd; border-color: #e7b84a; }
@@ -101,5 +101,5 @@ body.no-en .eval-prompt-en { display: none; }
   .dance-pose { font-size: var(--small); }
   .eval-band { font-size: 52px; }
 }
-.eval-change { margin-top: 8px; padding: 6px 12px; border-radius: 12px; background: #fff3d6; color: #6b4a12; font-size: 0.92em; }
+.eval-change { margin-top: 8px; padding: 6px 12px; border-radius: 12px; background: #fff3d6; color: #6b4a12; font-size: var(--small); }
 .eval-fixed { opacity: 0.8; }

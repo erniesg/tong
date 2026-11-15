@@ -29,20 +29,28 @@ export function ceilingAt(building, x, z, feetY) {
 
 export function zoneAt(building, position) {
   const { x, y, z } = position;
-  if (!inside(building.bounds, x, z) || y < -0.05 || y >= building.floors * building.storeyHeight) return null;
-  const level = Math.floor((y + 0.025) / building.storeyHeight);
+  const ry = y - (building.baseY ?? 0); // height above the building's own ground floor
+  if (!inside(building.bounds, x, z) || ry < -0.05 || ry >= building.floors * building.storeyHeight) return null;
+  const level = Math.floor((ry + 0.025) / building.storeyHeight);
   return building.levels[Math.min(level, building.floors - 1)] ?? null;
 }
 
 /** Small authored switchback home, front +Z. All dimensions in metres.
- *  With `rooftop`, the stairwell continues to a walkable, dressed roof terrace. */
-export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3, storeyHeight = 3.4, style = city, rooftop = true, layout = 'flat' }) {
+ *  With `rooftop`, the stairwell continues to a walkable, dressed roof terrace.
+ *  `baseY` stands the whole building on raised ground (Onsae on the terrace).
+ *  `layout: 'agency'` is Onsae Entertainment: lobby, practice rooms, lockers. */
+export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3, storeyHeight = 3.4, style = city, rooftop = true, layout = 'flat', baseY = 0 }) {
   if (!id || !city || ![x, z, w, d, storeyHeight].every(Number.isFinite) || w < 14 || d < 10 || !Number.isInteger(floors) || floors < 2 || storeyHeight < 3.2 || storeyHeight > 3.5)
     throw new RangeError('Apartment needs id/city, finite origin, w>=14, d>=10, >=2 floors, and 3.2–3.5m storeys');
   if (layout === 'dorm' && (w !== 14 || d !== 12)) throw new RangeError('The dorm layout is authored for a 14×12m block');
+  if (!Number.isFinite(baseY)) throw new RangeError('Apartment baseY must be finite');
+  const agency = layout === 'agency';
+  if (agency && (w !== 14 || d !== 12 || floors !== 3)) throw new RangeError('The agency layout is authored for a three-floor 14×12m block');
+  if (agency) rooftop = false;
   const b = { id, city, x, z, w, d, floors, storeyHeight, style, layout,
-    bounds: { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, minY: -0.16, maxY: floors * storeyHeight + (rooftop ? 3 : 0.2) },
-    entry: [x, 0, z + d / 2], levels: [], supports: [], ceilings: [], solids: [], pieces: [], route: [], safePoints: [], categoryPositions: [] };
+    bounds: { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, minY: baseY - 0.16, maxY: baseY + floors * storeyHeight + (rooftop ? 3 : 0.2) },
+    entry: [x, baseY, z + d / 2], levels: [], supports: [], ceilings: [], solids: [], pieces: [], route: [], safePoints: [], categoryPositions: [] };
+  if (baseY) b.baseY = baseY; // omitted at ground level: existing plans keep their exact records
   const back = -d / 2, front = d / 2;
   const left = -w / 2 + 0.45, right = left + 4.6, divider = right + 0.25;
   const laneA = left + 1, laneB = right - 1;
@@ -71,7 +79,7 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
   const slab = (level, u, v, ww, dd, y, kind = 'floor', owner = level - 1) => {
     support(u, v, ww, dd, y, level, kind);
     const p = piece(level, 'slab', 'floor', u, y - 0.16, v, ww, 0.20, dd, { overhead: true, owner: Math.max(0, owner) });
-    p.cutaway = level === 0 && y === 0 ? 'base' : kind === 'half-landing' ? 'content' : 'roof';
+    p.cutaway = level === 0 && y === baseY ? 'base' : kind === 'half-landing' ? 'content' : 'roof';
     return p;
   };
   const point = (u, y, v, kind) => ({ x: x + u, y, z: z + v, kind });
@@ -183,8 +191,258 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
     b.categoryPositions.push(point(5.4, y, 0.6, 'bedside'), point(4.6, y, 3.8, 'bathroom'), point(-0.4, y, 0.2, 'kitchen'));
   };
 
+
+  // Onsae Entertainment (docs/seoul-first-day.md): 1F lobby; 2F a corridor with
+  // practice rooms A (the mirror wall) and B (small, behind the stairwell); 3F
+  // lockers, vocal booth and lounge. Same stairwell as the homes; nobody on staff.
+  const agencyLevel = (room) => {
+    const y = room.floorY, level = room.level, P = 0.3, H = storeyHeight - 0.16;
+    const rect = (u0, u1, v0, v1) => bounds((u0 + u1) / 2, (v0 + v1) / 2, u1 - u0, v1 - v0);
+    const zone = (name, u0, u1, v0, v1, kind = name) => room.zones.push({ kind, name, ...rect(u0, u1, v0, v1) });
+    const put = (kind, u, dy, v, ww, hh, dd, color = 'wood', solid = true) => prop(room, kind, u, y + dy, v, ww, hh, dd, color, solid);
+    const deco = (kind, u, dy, v, ww, hh, dd, color) => put(kind, u, dy, v, ww, hh, dd, color, false);
+    // A wall run along u (at v = `at`) or along v (at u = `at`) with open doorways and lintels.
+    const run = (along, at, from, to, doors = [], thick = 0.16) => {
+      const seg = (a, c) => c - a > 0.01 && (along === 'u' ? wall(room, (a + c) / 2, at, c - a, thick) : wall(room, at, (a + c) / 2, thick, c - a));
+      let a = from;
+      for (const [lo, hi] of doors) {
+        seg(a, lo); a = hi;
+        if (along === 'u') lintel(room, (lo + hi) / 2, at, hi - lo, thick); else lintel(room, at, (lo + hi) / 2, thick, hi - lo);
+      }
+      seg(a, to);
+    };
+    const outer = (along, at, lo, hi, glazed) => glazed ? windowWall(room, along === 'u' ? 'x' : 'z', at, lo, hi) : run(along, at, lo, hi, [], 0.2);
+    // One flat piece in an authored wall plane (glass fronts, panels, canopies).
+    const inPlane = (along, at, mid, dy, length, hh, color, solid = true, thick = 0.2) => {
+      const p = piece(level, 'wall', color, along === 'u' ? mid : at, y + dy, along === 'u' ? at : mid,
+        along === 'u' ? length : thick, hh, along === 'u' ? thick : length, { solid });
+      p.cutawayPlane = along === 'u' ? { axis: 'z', at: z + at } : { axis: 'x', at: x + at };
+      return p;
+    };
+    const ceilingLight = (u, v, ww, dd) => { piece(level, 'ceiling-light', 'panel', u, y + H - 0.06, v, ww, 0.05, dd).cutaway = 'roof'; };
+    const plantPot = (u, v) => { put('plant-pot', u, 0, v, 0.42, 0.42, 0.42, 'pot'); room.plants.push([x + u, y + 0.42, z + v]); };
+    const shoes = (u, v, color = 'dark', along = 'v') => deco('shoe-pair', u, 0.04, v, along === 'v' ? 0.22 : 0.28, 0.1, along === 'v' ? 0.28 : 0.22, color);
+    const vending = (u, v, face) => { // face: [du, dv] of the lit front
+      const deep = 0.75, wide = 0.95, alongV = face[0] !== 0;
+      put('vending-machine', u, 0, v, alongV ? deep : wide, 1.9, alongV ? wide : deep, 'red');
+      deco('vending-window', u + face[0] * (deep / 2 + 0.01), 0.75, v + face[1] * (deep / 2 + 0.01), alongV ? 0.02 : 0.7, 1, alongV ? 0.7 : 0.02, 'panel');
+      for (let i = 0; i < 4; i++) deco('vending-can', u + face[0] * (deep / 2 + 0.03) + (alongV ? 0 : -0.24 + i * 0.16), 1.3, v + face[1] * (deep / 2 + 0.03) + (alongV ? -0.24 + i * 0.16 : 0), alongV ? 0.02 : 0.09, 0.16, alongV ? 0.09 : 0.02, ['blue', 'mustard', 'green', 'rose'][i]);
+    };
+    const sofa = (u, v, length, facing, color = 'accent') => { // facing: 'w' (back to the east wall) or 's' (back to a +v wall, looking -v)
+      const alongV = facing === 'w', ww = alongV ? 0.85 : length, dd = alongV ? length : 0.85;
+      put('sofa-base', u, 0, v, ww, 0.42, dd, 'wood');
+      put('sofa-cushion', u, 0.42, v, ww, 0.16, dd, color, false);
+      if (alongV) put('sofa-back', u + 0.34, 0.42, v, 0.18, 0.62, length, color); else put('sofa-back', u, 0.42, v + 0.34, length, 0.62, 0.18, color);
+      for (const s of [-1, 1]) if (alongV) put('sofa-arm', u, 0.42, v + s * (length / 2 - 0.08), 0.85, 0.3, 0.16, color, false); else put('sofa-arm', u + s * (length / 2 - 0.08), 0.42, v, 0.16, 0.3, 0.85, color, false);
+      deco('sofa-pillow', alongV ? u + 0.1 : u - length / 4, 0.58, alongV ? v - length / 4 : v + 0.1, 0.36, 0.3, 0.36, 'mustard');
+    };
+    room.category = 'studio'; room.staff = null; room.plants = [];
+    room.center = [x + 2.6, y, z + 0.6];
+    if (level) room.door = [x + divider, y, z + 3.25];
+
+    // Shell. The stair hall keeps its door on every floor; the bay behind the
+    // stairwell is closed off at ground level and a room upstairs.
+    outer('v', -w / 2, -1.9, front, true);
+    run('u', -1.9, -w / 2 + 0.1, divider, [], 0.12);
+    run('v', divider, back, front, level === 2 ? [[-4.4, -3.3], [-3, -2.1], [2.35, 4.15]] : level ? [[-4.4, -3.3], [2.35, 4.15]] : [[2.35, 4.15]], 0.18);
+    deco('door-leaf', divider + 0.13, 0, 1.9, 0.05, 2.45, 0.88, 'wood');
+    zone('stairs', -w / 2 + 0.1, divider, -1.9, front - 0.1);
+    ceilingLight(-4.25, 4.1, 2.4, 0.35);
+
+    if (!level) {
+      outer('u', back, -w / 2, w / 2, false);
+      outer('v', -w / 2, back, -1.9, false);
+      outer('v', w / 2, back, 0.6, false); outer('v', w / 2, 0.6, front, true);
+      // Glass front: plinth, tall panes, a dark header for the fascia, open double doors.
+      for (const [lo, hi] of [[-w / 2, -1.1], [1.1, w / 2]]) {
+        const span = hi - lo, mid = (lo + hi) / 2, n = Math.round(span / 1.5);
+        inPlane('u', front, mid, 0, span, 0.3, 'trim');
+        inPlane('u', front, mid, 0.3, span, 2.3, 'glass', true, 0.08);
+        inPlane('u', front, mid, 2.6, span, H - 2.6, 'trim');
+        for (let i = 0; i <= n; i++) inPlane('u', front, lo + span * i / n, 0.3, 0.09, 2.3, 'trim', false, 0.14);
+      }
+      lintel(room, 0, front, 2.2, 0.2);
+      for (const s of [-1, 1]) {
+        deco('glass-door', s * 1.06, 0.02, front - 0.5, 0.05, 2.5, 0.95, 'glass');
+        deco('door-handle', s * 1.02, 0.95, front - 0.85, 0.05, 0.4, 0.04, 'gold');
+        inPlane('u', front + 0.16, s * 1.5, 1.85, 0.14, 0.34, 'bulb', false, 0.1);
+        put('street-planter', s * 3.4, 0, front + 0.5, 2.2, 0.5, 0.5, 'trim');
+        deco('street-planter-greens', s * 3.4, 0.5, front + 0.5, 2.05, 0.28, 0.38, 'green');
+      }
+      inPlane('u', front + 0.55, 0, 2.5, 3.4, 0.09, 'trim', false, 0.9); // canopy
+      deco('door-mat', 0, 0.045, front - 0.9, 1.9, 0.015, 1, 'rug2');
+
+      // Reception: nobody behind it. A bell, a dark monitor and an empty chair.
+      put('reception-desk', 4.6, 0, -1.2, 0.8, 1.05, 2.8, 'wood');
+      deco('reception-front', 4.19, 0.08, -1.2, 0.03, 0.9, 2.6, 'trim');
+      deco('reception-top', 4.6, 1.05, -1.2, 0.92, 0.05, 2.92, 'stone');
+      deco('reception-monitor', 4.8, 1.1, -1.75, 0.05, 0.34, 0.52, 'black');
+      deco('reception-bell', 4.45, 1.1, -0.55, 0.11, 0.06, 0.11, 'gold');
+      put('reception-chair', 5.65, 0, -1.2, 0.5, 0.46, 0.5, 'dark');
+      deco('reception-chair-back', 5.88, 0.46, -1.2, 0.07, 0.5, 0.48, 'dark');
+      // Waiting corner by the front window.
+      sofa(6.3, 3.3, 2.3, 'w');
+      put('low-table', 5.05, 0, 3.3, 0.6, 0.38, 1.1, 'wood');
+      deco('magazine', 5.05, 0.38, 3.05, 0.22, 0.02, 0.3, 'linen');
+      deco('magazine', 5.1, 0.38, 3.55, 0.22, 0.02, 0.3, 'rose');
+      deco('lobby-rug', 5.5, 0.045, 3.3, 2.6, 0.015, 3.2, 'rug');
+      // Trophies along the stair wall.
+      put('trophy-cabinet', -1.37, 0, -3.6, 0.45, 0.95, 2.4, 'wood');
+      deco('trophy-shelf', -1.45, 1.5, -3.6, 0.3, 0.05, 2.4, 'wood');
+      for (const [dv, dy, hh] of [[-0.9, 0.95, 0.34], [-0.3, 0.95, 0.24], [0.35, 0.95, 0.42], [0.9, 0.95, 0.2], [-0.7, 1.55, 0.26], [0, 1.55, 0.36], [0.7, 1.55, 0.22]]) {
+        deco('trophy-base', -1.4, dy, -3.6 + dv, 0.18, 0.05, 0.18, 'dark');
+        deco('trophy', -1.4, dy + 0.05, -3.6 + dv, 0.11, hh, 0.11, 'gold');
+      }
+      deco('artist-wall-rail', 2.3, 2.9, back + 0.16, 7.2, 0.05, 0.08, 'bulb');
+      vending(6.4, -5.3, [-1, 0]);
+      put('water-cooler', -1.3, 0, 5.4, 0.36, 1, 0.36, 'white');
+      deco('water-cooler-bottle', -1.3, 1, 5.4, 0.27, 0.42, 0.27, 'water');
+      plantPot(1.9, 5.4); plantPot(6.45, 5.4); plantPot(-1.2, -5.45);
+      for (const v of [-3.2, 0.6, 4.2]) ceilingLight(2.6, v, 3.2, 0.36);
+      zone('lobby', divider, w / 2 - 0.1, back + 0.1, front - 0.1);
+    } else if (level === 1) {
+      outer('u', back, -w / 2, divider, false); outer('u', back, divider, P, true); outer('u', back, P, w / 2, false);
+      outer('v', -w / 2, back, -1.9, true);
+      outer('v', w / 2, back, front, false);
+      outer('u', front, -w / 2, divider, true); outer('u', front, divider, P, true);
+      outer('u', front, P, 3.65, true); outer('u', front, 3.65, w / 2, true);
+      run('v', P, back, front, [[0.4, 1.8]]);
+      deco('door-leaf', P + 0.12, 0, 2.25, 0.05, 2.45, 0.88, 'wood');
+      // Corridor: a bench under the front window, shoes outside the practice room.
+      put('corridor-bench', -0.7, 0, 5.4, 1.5, 0.45, 0.5, 'wood');
+      deco('corridor-bench-cushion', -0.7, 0.45, 5.4, 1.4, 0.06, 0.44, 'accent');
+      plantPot(-0.7, -5.45);
+      shoes(0.02, 2.1); shoes(0.02, 2.45, 'white'); shoes(0.0, 2.8, 'rose'); shoes(0.03, 0.05, 'white'); shoes(0.0, -0.3);
+      for (const v of [-3.6, 0.8, 4.4]) ceilingLight(-0.7, v, 0.36, 1.7);
+      // Practice room A: barre along the mirror wall, speakers, benches, bags and bottles.
+      deco('barre', 6.55, 1.05, 0, 0.05, 0.05, 11, 'steel');
+      for (const v of [-5, -2.5, 0, 2.5, 5]) deco('barre-bracket', 6.7, 1.03, v, 0.34, 0.04, 0.04, 'steel');
+      for (const [v, color] of [[-3.3, 'rose'], [1.2, 'linen'], [3.6, 'mustard']]) deco('towel', 6.55, 0.74, v, 0.07, 0.34, 0.32, color);
+      for (const v of [-5.35, 5.35]) {
+        put('speaker', 6.45, 0, v, 0.5, 1.1, 0.5, 'black');
+        deco('speaker-cone', 6.19, 0.62, v, 0.02, 0.3, 0.3, 'dark');
+        deco('speaker-cone', 6.19, 0.2, v, 0.02, 0.34, 0.34, 'dark');
+      }
+      put('window-bench', 3.6, 0, 5.5, 3.2, 0.45, 0.5, 'wood');
+      for (const [u, color] of [[2.5, 'linen'], [2.9, 'rose'], [4.6, 'navy']]) deco('folded-towel', u, 0.45, 5.5, 0.34, 0.1, 0.3, color);
+      deco('gym-bag', 3.8, 0.45, 5.5, 0.55, 0.26, 0.3, 'accent');
+      put('audio-rack', 0.85, 0, -5.5, 0.6, 0.9, 0.5, 'black');
+      deco('audio-deck', 0.85, 0.9, -5.5, 0.5, 0.08, 0.4, 'steel');
+      deco('audio-light', 0.85, 0.6, -5.24, 0.4, 0.04, 0.02, 'bulb');
+      for (const [v, color] of [[-1.3, 'water'], [-1.6, 'rose'], [-1.9, 'water'], [-2.2, 'mustard'], [-2.5, 'water']]) deco('water-bottle', 0.55, 0.04, v, 0.08, 0.24, 0.08, color);
+      deco('gym-bag', 0.7, 0.04, -3.4, 0.32, 0.28, 0.55, 'navy');
+      deco('gym-bag', 0.7, 0.04, -4.2, 0.32, 0.26, 0.5, 'accent');
+      deco('gym-bag', 0.7, 0.04, 4.6, 0.32, 0.28, 0.55, 'green');
+      for (const v of [-3.9, 0, 3.9]) ceilingLight(3.5, v, 5, 0.4);
+      // Practice room B: a mirror panel, one speaker, a bottle and a towel on the floor.
+      deco('mirror-panel', -4.3, 0.25, back + 0.12, 4.5, 2.3, 0.03, 'mirror');
+      deco('mirror-frame', -4.3, 0.18, back + 0.115, 4.62, 0.07, 0.04, 'trim');
+      deco('mirror-frame', -4.3, 2.55, back + 0.115, 4.62, 0.07, 0.04, 'trim');
+      put('speaker', -6.45, 0, -2.45, 0.45, 1, 0.45, 'black');
+      deco('speaker-cone', -6.45, 0.55, -2.69, 0.3, 0.3, 0.02, 'dark');
+      deco('water-bottle', -5.3, 0.04, -2.25, 0.08, 0.24, 0.08, 'water');
+      deco('towel-on-floor', -4.95, 0.04, -2.3, 0.46, 0.04, 0.3, 'rose');
+      deco('gym-bag', -2.25, 0.04, -5.4, 0.5, 0.26, 0.3, 'navy');
+      shoes(-1.45, -3.0, 'white', 'u');
+      ceilingLight(-4.3, -3.9, 2.6, 0.36);
+      zone('corridor2', divider, P, back + 0.1, front - 0.1);
+      zone('practice_a', P, w / 2 - 0.1, back + 0.1, front - 0.1);
+      zone('practice_b', -w / 2 + 0.1, divider, back + 0.1, -1.9);
+    } else {
+      outer('u', back, -w / 2, divider, false); outer('u', back, divider, P, true);
+      outer('u', back, P, 3.65, true); outer('u', back, 3.65, w / 2, true);
+      outer('v', -w / 2, back, -1.9, false);
+      outer('v', w / 2, back, 0, true); outer('v', w / 2, 0, front, true);
+      outer('u', front, -w / 2, divider, true); outer('u', front, divider, P, true);
+      outer('u', front, P, 3.65, true); outer('u', front, 3.65, w / 2, true);
+      run('v', P, back, front, [[-3, -1.8], [2.6, 3.9]]);
+      run('u', 0, P, w / 2 - 0.1, []);
+      for (const [u, v] of [[P + 0.12, 2.15], [P + 0.12, -3.45], [divider - 0.13, -4.85]]) deco('door-leaf', u, 0, v, 0.05, 2.45, 0.88, 'wood');
+      // The vocal booth's glass panel on the corridor.
+      wall(room, divider, -2.55, 0.18, 0.9, 0.95);
+      inPlane('v', divider, -2.55, 0.95, 0.9, 1.65, 'glass', true, 0.05);
+      inPlane('v', divider, -2.55, 0.95, 0.9, 0.05, 'trim', false, 0.2);
+      // Corridor: shoe rack by the locker room, a plant at the window.
+      put('shoe-rack', 0.03, 0, 4.9, 0.36, 0.5, 1.1, 'wood');
+      shoes(0.03, 4.6, 'white'); shoes(0.03, 5.0); shoes(0.03, 5.3, 'rose');
+      for (const [v, color] of [[4.55, 'dark'], [4.95, 'white'], [5.3, 'mustard']]) deco('shoe-pair', 0.03, 0.5, v, 0.22, 0.1, 0.28, color);
+      plantPot(-0.7, 5.45); plantPot(-0.7, -5.45);
+      for (const v of [-3.6, 0.8, 4.4]) ceilingLight(-0.7, v, 0.36, 1.7);
+      // Lockers: a bank of seven on the inner wall; the middle one is the player's.
+      for (let i = 0; i < 7; i++) {
+        const u = 1.8 + i * 0.6;
+        put(i === 3 ? 'your-locker' : 'locker', u, 0.06, 0.33, 0.58, 1.84, 0.5, 'locker');
+        deco('locker-handle', u + 0.18, 0.95, 0.595, 0.04, 0.2, 0.03, 'steel');
+        for (let vent = 0; vent < 3; vent++) deco('locker-vent', u, 1.36 + vent * 0.06, 0.585, 0.3, 0.02, 0.012, 'dark');
+      }
+      put('locker-plinth', 3.6, 0, 0.33, 4.2, 0.06, 0.5, 'dark');
+      deco('locker-top-box', 2.1, 1.9, 0.33, 0.5, 0.26, 0.38, 'linen');
+      deco('locker-top-box', 5.0, 1.9, 0.33, 0.44, 0.2, 0.36, 'accent');
+      put('locker-bench', 4.1, 0, 3.6, 2.4, 0.45, 0.45, 'wood');
+      deco('gym-bag', 4.7, 0.45, 3.6, 0.55, 0.26, 0.3, 'navy');
+      deco('folded-towel', 3.4, 0.45, 3.6, 0.34, 0.1, 0.3, 'linen');
+      shoes(3.3, 3.2, 'white', 'u'); shoes(4.3, 3.2, 'dark', 'u'); shoes(5.0, 4.05, 'rose', 'u');
+      for (const [v, color] of [[4.5, 'rose'], [4.95, 'linen'], [5.4, 'mustard']]) {
+        deco('towel-hook', P + 0.11, 1.65, v, 0.06, 0.04, 0.04, 'steel');
+        deco('hanging-towel', P + 0.12, 1.05, v, 0.04, 0.6, 0.3, color);
+      }
+      put('laundry-basket', 6.4, 0, 0.5, 0.5, 0.6, 0.5, 'linen');
+      deco('bathroom-scale', 6.3, 0.04, 5.2, 0.34, 0.05, 0.34, 'white');
+      deco('locker-rug', 3.6, 0.045, 2.1, 3.6, 0.015, 1.5, 'rug2');
+      for (const v of [1.6, 4.3]) ceilingLight(3.6, v, 4.4, 0.38);
+      // Lounge: sofa facing the river windows, vending machine, kettle counter.
+      sofa(4.2, -0.6, 2.4, 's');
+      put('low-table', 4.2, 0, -2.1, 1.1, 0.38, 0.6, 'wood');
+      deco('mug', 3.95, 0.38, -2.1, 0.1, 0.1, 0.1, 'white'); deco('mug', 4.5, 0.38, -2.0, 0.1, 0.1, 0.1, 'rose');
+      put('bean-bag', 2.2, 0, -3.7, 0.8, 0.42, 0.8, 'mustard');
+      deco('lounge-rug', 4, 0.045, -2.3, 3.6, 0.015, 2.6, 'rug');
+      put('lounge-counter', 6.55, 0, -3.6, 0.6, 0.9, 2.2, 'accent');
+      deco('lounge-worktop', 6.55, 0.9, -3.6, 0.66, 0.05, 2.26, 'stone');
+      deco('kettle-base', 6.55, 0.95, -3, 0.2, 0.03, 0.2, 'dark');
+      deco('kettle', 6.55, 0.98, -3, 0.16, 0.22, 0.16, 'steel');
+      deco('microwave', 6.55, 0.95, -4.2, 0.4, 0.28, 0.5, 'black');
+      for (const [v, color] of [[-3.3, 'white'], [-3.5, 'white'], [-3.7, 'rose']]) deco('cup', 6.5, 0.95, v, 0.09, 0.1, 0.09, color);
+      for (const v of [-2.75, -2.6]) deco('ramen-cup', 6.6, 0.95, v, 0.11, 0.12, 0.11, 'red');
+      vending(0.84, -5.2, [1, 0]);
+      plantPot(6.45, -5.45);
+      for (let i = 0; i < 9; i++) deco('string-bulb', 2.2 + i * 0.5, 2.3 - Math.abs(i - 4) * 0.02, -0.12, 0.07, 0.1, 0.07, 'bulb');
+      for (const v of [-1.6, -4.3]) ceilingLight(3.6, v, 4.4, 0.38);
+      // Vocal booth: foam on the walls, mic and pop filter, keyboard, a lamp.
+      for (let i = 0; i < 5; i++) deco('acoustic-foam', -6.1 + i * 0.9, 0.9 + (i % 2) * 0.45, back + 0.13, 0.8, 0.8, 0.06, i % 2 ? 'accent' : 'foam');
+      for (let i = 0; i < 3; i++) deco('acoustic-foam', -w / 2 + 0.13, 0.9 + (i % 2) * 0.45, -5.2 + i * 0.9, 0.06, 0.8, 0.8, i % 2 ? 'foam' : 'accent');
+      put('mic-stand-base', -4.4, 0, -4.2, 0.3, 0.04, 0.3, 'black');
+      deco('mic-stand-pole', -4.4, 0.04, -4.2, 0.03, 1.42, 0.03, 'steel');
+      deco('microphone', -4.4, 1.46, -4.16, 0.06, 0.07, 0.17, 'black');
+      deco('pop-filter', -4.4, 1.41, -4.0, 0.17, 0.17, 0.012, 'dark');
+      put('keyboard-stand', -6.4, 0, -3.3, 0.3, 0.74, 1.2, 'dark');
+      deco('keyboard', -6.4, 0.74, -3.3, 0.36, 0.08, 1.3, 'black');
+      deco('keyboard-keys', -6.34, 0.82, -3.3, 0.16, 0.012, 1.24, 'white');
+      put('vocal-stool', -5.75, 0, -3.3, 0.36, 0.46, 0.36, 'wood');
+      deco('lyric-sheet', -6.52, 0.86, -3.3, 0.02, 0.26, 0.2, 'linen');
+      put('floor-lamp-base', -2.2, 0, -5.45, 0.24, 0.04, 0.24, 'dark');
+      deco('floor-lamp-pole', -2.2, 0.04, -5.45, 0.03, 1.35, 0.03, 'dark');
+      deco('floor-lamp-shade', -2.2, 1.39, -5.45, 0.3, 0.3, 0.3, 'bulb');
+      deco('vocal-rug', -4.3, 0.045, -3.9, 2.6, 0.015, 2, 'rug2');
+      ceilingLight(-4.3, -3.9, 2.2, 0.34);
+      // The stairwell ends here: close the open side where a flight would go on up.
+      piece(level, 'rail', 'trim', (left + laneB - 0.9) / 2, y, start + 0.035, laneB - 0.9 - left, 1.05, 0.07, { solid: true });
+      zone('corridor3', divider, P, back + 0.1, front - 0.1);
+      zone('lockers', P, w / 2 - 0.1, 0, front - 0.1);
+      zone('lounge', P, w / 2 - 0.1, back + 0.1, 0);
+      zone('vocal', -w / 2 + 0.1, divider, back + 0.1, -1.9);
+    }
+    b.safePoints.push(point(level ? -0.7 : 0.8, y, 3.25, level ? 'corridor' : 'lobby'));
+    if (level) piece(level, 'rail', 'trim', (left + right) / 2, y, rear - 0.035, right - left, 1.05, 0.07, { solid: true });
+    if (level) piece(level, 'rail', 'trim', (laneA + laneB) / 2, y, start, laneB - laneA - 1.8, 1.05, 0.07, { solid: true });
+    if (level === floors - 1) {
+      piece(level, 'slab', 'roof', 0, y + storeyHeight - 0.16, 0, w + 0.3, 0.24, d + 0.3, { overhead: true }).cutaway = 'roof';
+      piece(level, 'roof-trim', 'trim', 0, y + storeyHeight + 0.08, front, w + 0.5, 0.12, 0.26);
+      for (const [u, v, ww, dd] of [[0, back, w + 0.3, 0.2], [-w / 2, 0, 0.2, d], [w / 2, 0, 0.2, d]]) piece(level, 'roof-trim', 'trim', u, y + storeyHeight + 0.08, v, ww, 0.5, dd);
+    }
+  };
+
   for (let level = 0; level < floors; level++) {
-    const y = level * storeyHeight;
+    const y = baseY + level * storeyHeight;
     const room = { id: `${id}-level-${level}`, city, category: 'home', buildingId: id, level, floorY: y,
       bounds: { ...b.bounds, minY: y - 0.025, maxY: y + storeyHeight - 0.026 },
       center: [x + 0.6, y, z + 2.8], door: level ? [x + divider, y, z + 3.25] : [x, y, z + front], furniture: [],
@@ -193,7 +451,7 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
         greeting: level ? 'Welcome home. Shall we find the kitchen and bedroom?' : 'Welcome! The stairs lead to the homes upstairs.', placeId: id },
       zones: [] };
     b.levels.push(room);
-    if (!level) slab(0, 0, 0, w - 0.22, d - 0.22, 0);
+    if (!level) slab(0, 0, 0, w - 0.22, d - 0.22, y);
     else {
       // Four slab rectangles around ONE actual stairwell hole. No collider
       // spans it; the back and front strips connect the landing to the flat.
@@ -202,6 +460,7 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
       slab(level, (left + right) / 2, (back + 0.11 + rear) / 2, right - left, rear - back - 0.11, y);
       slab(level, (left + right) / 2, (start + front - 0.11) / 2, right - left, front - 0.11 - start, y, 'landing');
     }
+    if (agency) { agencyLevel(room); continue; }
     // Side/back fenestration and open 2.2m front doorway with physical lintel.
     windowWall(room, 'x', back, -w / 2, w / 2);
     for (const u of [-w / 2, w / 2]) windowWall(room, 'z', u, back, front);
@@ -297,7 +556,7 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
   // One switchback per storey; a rooftop adds the top flat's flight to the roof.
   const flights = rooftop ? floors : floors - 1;
   for (let level = 0; level < flights; level++) {
-    const y = level * storeyHeight;
+    const y = baseY + level * storeyHeight;
     slab(level, (left + right) / 2, (rear + end) / 2, right - left, end - rear, y + rise, 'half-landing', level);
     for (const [u, a, dir, y0] of [[laneA, start, -1, y], [laneB, end, 1, y + rise]]) {
       support(u, (start + end) / 2, 1.8, run, y0, level, 'stair', dir * rise / run, z + a);
@@ -320,7 +579,7 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
       piece(level, 'rail', 'trim', u, y + rise, rear + 0.05, 0.07, 1, 0.07, { solid: true });
     piece(level, 'rail', 'wood', (left + right) / 2, y + rise + 1, rear + 0.05, right - left, 0.07, 0.07, { solid: true });
   }
-  const roofY = floors * storeyHeight;
+  const roofY = baseY + floors * storeyHeight;
   if (rooftop) {
     // Roof terrace: the same four slabs around the continuing stairwell. It is
     // outdoors (zoneAt stops at roofY) but owned by the top flat's cutaway, so
@@ -377,17 +636,31 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
 
   // Normal-input route, explicitly including both halves of every switchback
   // and upper-room visits. Descent reverses the physical path, not a floor API.
-  walk(w / 2 + 2, 0, front + 2.5, 'street-approach');
-  walk(0, 0, front + 1.2, 'entrance-approach'); walk(0, 0, front - 0.7, 'lobby');
-  walk(0, 0, 3.25, 'lobby');
-  walk(3.6, 0, 3.25, 'shared-lobby'); walk(3.6, 0, 0.8, 'concierge-approach');
-  walk(3.6, 0, 3.25, 'shared-lobby'); walk(0, 0, 3.25, 'lobby');
+  walk(w / 2 + 2, baseY, front + 2.5, 'street-approach');
+  walk(0, baseY, front + 1.2, 'entrance-approach'); walk(0, baseY, front - 0.7, 'lobby');
+  walk(0, baseY, 3.25, 'lobby');
+  if (agency) for (const [u, v, kind] of [[2, 1, 'lobby'], [2, -4.2, 'artist-wall'], [2, 1, 'lobby'], [-0.6, 1.3, 'floor-guide'], [0, 3.25, 'lobby']]) walk(u, baseY, v, kind);
+  else {
+    walk(3.6, baseY, 3.25, 'shared-lobby'); walk(3.6, baseY, 0.8, 'concierge-approach');
+    walk(3.6, baseY, 3.25, 'shared-lobby'); walk(0, baseY, 3.25, 'lobby');
+  }
   for (let level = 0; level < floors - 1; level++) {
-    const y = level * storeyHeight;
+    const y = baseY + level * storeyHeight;
     walk(laneA, y, 3.25, 'stair-entry'); walk(laneA, y, start, 'flight-start');
     walk(laneA, y + rise, end, 'flight-end'); walk(laneA, y + rise, -1, 'half-landing');
     walk(laneB, y + rise, -1, 'half-landing'); walk(laneB, y + rise, end, 'flight-start');
     walk(laneB, y + storeyHeight, start, 'flight-end'); walk(laneB, y + storeyHeight, 3.25, 'upper-landing');
+    if (agency) {
+      const Y = y + storeyHeight;
+      for (const [u, v, kind] of level === 0
+        ? [[-0.7, 3.25, 'corridor'], [-0.7, 1.1, 'corridor'], [2.5, 1.1, 'practice-a-door'], [3.5, -2, 'practice-a'], [2.5, 1.1, 'practice-a-door'],
+          [-0.7, 1.1, 'corridor'], [-0.7, -3.85, 'corridor'], [-2.5, -3.85, 'practice-b-door'], [-4.3, -4.2, 'practice-b'], [-2.5, -3.85, 'practice-b-door'],
+          [-0.7, -3.85, 'corridor'], [-0.7, 3.25, 'corridor']]
+        : [[-0.7, 3.25, 'corridor'], [2, 3.25, 'lockers-door'], [2, 1.6, 'lockers'], [3.6, 1.2, 'locker'], [2, 1.6, 'lockers'], [2, 3.25, 'lockers-door'],
+          [-0.7, 3.25, 'corridor'], [-0.7, -2.4, 'corridor'], [2.5, -2.4, 'lounge'], [-0.7, -2.4, 'corridor'], [-0.7, -3.85, 'corridor'],
+          [-2.5, -3.85, 'vocal-door'], [-4.3, -5, 'vocal'], [-2.5, -3.85, 'vocal-door'], [-0.7, -3.85, 'corridor'], [-0.7, 3.25, 'corridor']]) walk(u, Y, v, kind);
+      continue;
+    }
     walk(1.55, y + storeyHeight, 3.25, 'home-entry');
     if (layout === 'dorm') {
       const Y = y + storeyHeight;
@@ -407,7 +680,7 @@ export function createApartmentPlan({ id, city, x, z, w = 14, d = 12, floors = 3
     walk(1.55, y + storeyHeight, 1.3, 'living'); walk(1.55, y + storeyHeight, 3.25, 'home-entry');
   }
   if (rooftop) {
-    const y = (floors - 1) * storeyHeight;
+    const y = baseY + (floors - 1) * storeyHeight;
     walk(laneA, y, 3.25, 'stair-entry'); walk(laneA, y, start, 'flight-start');
     walk(laneA, y + rise, end, 'flight-end'); walk(laneA, y + rise, -1, 'half-landing');
     walk(laneB, y + rise, -1, 'half-landing'); walk(laneB, y + rise, end, 'flight-start');

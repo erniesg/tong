@@ -3,7 +3,8 @@
 // main.js only wires this in (save/load of S.chapter, one interactable list, one build call).
 
 import * as THREE from 'three';
-import { TERRACE_Y } from '../world.js';
+import { ONSAE, MOUNTS, evalBoard } from '../onsae.js';
+import { mountOnsae } from '../onsae-build.js';
 import {
   normalizeChapter, isUnlocked, missingBeats, canStart, confirmEval, evalDayDue, beginEvalDay,
   recordRound, restartRound, finishEval, recordRehearsal, CONFIRM_LINE,
@@ -15,7 +16,8 @@ import { createTtsAudio } from './voice.js';
 import { calloutItems } from './dance.js';
 import { getDayLoop } from '../day.js';
 
-const BOARD = { x: -7.3, z: -43.2 }; // studio back wall, right of the word-quiz whiteboard
+// The schedule board hangs on 연습실 A's back wall (Onsae 2F), right of the word-quiz whiteboard.
+const BOARD = { at: MOUNTS.evalBoard.at, stand: evalBoard };
 const MONTH_KO = { 1: '3월', 2: '4월', 3: '5월' };
 const ROUND_NOTE = {
   vocal: 'Song 1 「좋아요」: dictation and questions.',
@@ -97,9 +99,11 @@ export function createSeoulEval(ctx) {
     boardTex.colorSpace = THREE.SRGBColorSpace;
     paintBoard();
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.76), new THREE.MeshStandardMaterial({ map: boardTex, roughness: 0.5, emissive: 0xffffff, emissiveMap: boardTex, emissiveIntensity: 0.25 }));
-    mesh.position.set(BOARD.x, TERRACE_Y + 1.6, -43.96);
+    mesh.position.set(...BOARD.at);
     mesh.name = 'seoul-eval-board';
     group.add(mesh);
+    // Part of that wall: it fades and hides with the second floor's cutaway.
+    mountOnsae(mesh, 1, { wall: { axis: 'z', at: ONSAE.z - ONSAE.d / 2 } });
   }
 
   async function openBoard() {
@@ -435,7 +439,7 @@ export function createSeoulEval(ctx) {
 
   const interactables = [{
     label: '📋 스케줄표 · Schedule board',
-    pos: () => new THREE.Vector3(BOARD.x, TERRACE_Y, BOARD.z),
+    pos: () => new THREE.Vector3(...BOARD.stand),
     r: 1.6,
     on: () => true,
     act: openBoard,

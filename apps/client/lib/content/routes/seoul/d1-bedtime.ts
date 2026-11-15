@@ -86,6 +86,20 @@ export const module: SceneModule = {
             outcomes: [{ speaker: 'tong', reaction: { ko: '잘 자.', en: 'Night.' } }],
           },
         ],
+        next: 'b_blocks',
+      },
+      {
+        id: 'b_blocks',
+        speaker: 'tong',
+        when: { flags: ['hangul:아'] },
+        lines: [{ value: { ko: '오늘 만난 글자, 한 번만 더.', en: 'Today\'s blocks, once more before you sleep. Match each to its sound.', review: 'native' } }],
+        exercise: {
+          type: 'hangul_match',
+          objectiveId: 'ko-script-blocks-2part',
+          targets: ['아:a', '이:i', '수:su', '다:da', '온:on'],
+          framing: { ko: '소리랑 맞춰 봐.', en: 'Match each block to its sound.' },
+          onFail: 'continue',
+        },
         next: 'b_end',
       },
       {

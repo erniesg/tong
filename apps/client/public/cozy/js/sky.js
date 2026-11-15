@@ -5,17 +5,19 @@ import { G, lerp, makeCanvas, canvasTexture, seeded, clamp } from './util.js';
 const C = (hex) => new THREE.Color(hex);
 
 // hour → look. Colours are blended in linear space between keys.
+// From 16:00 the look is tuned warm and soft (day one plays 16:20 → night): more sky fill and a
+// warm bounce so shadows go plum instead of black, a lower amber sun, and lights on by 17:30.
 const KEYS = [
-  { h: 0.0, top: '#060a1c', horizon: '#18203f', sun: '#000000', sunI: 0.0, hemiSky: '#46578f', hemiGround: '#1a1420', hemiI: 0.75, fog: '#121831', night: 1, exposure: 1.15, bloom: 0.75 },
-  { h: 4.8, top: '#0c1333', horizon: '#2a2c58', sun: '#000000', sunI: 0.0, hemiSky: '#4d5a92', hemiGround: '#1d1622', hemiI: 0.75, fog: '#1a1f3d', night: 0.95, exposure: 1.15, bloom: 0.75 },
-  { h: 6.0, top: '#3d5a9a', horizon: '#f2a985', sun: '#ffb07a', sunI: 1.12, hemiSky: '#9aa7d6', hemiGround: '#4a3a3a', hemiI: 1.12, fog: '#c7a7a8', night: 0.45, exposure: 1.05, bloom: 0.5 },
-  { h: 7.5, top: '#5a98de', horizon: '#cfe2f3', sun: '#fff0d8', sunI: 3.0, hemiSky: '#bcd6f2', hemiGround: '#6b5a48', hemiI: 1.58, fog: '#c6d8ea', night: 0, exposure: 1.0, bloom: 0.28 },
-  { h: 12.0, top: '#4889dd', horizon: '#d4e7f7', sun: '#ffffff', sunI: 3.62, hemiSky: '#c2dcf6', hemiGround: '#6e5d4b', hemiI: 1.72, fog: '#cfe0f0', night: 0, exposure: 1.0, bloom: 0.25 },
-  { h: 16.0, top: '#5690d6', horizon: '#f0dcc2', sun: '#ffe4bc', sunI: 3.12, hemiSky: '#c8d6ea', hemiGround: '#6e5a46', hemiI: 1.58, fog: '#e3d9cc', night: 0, exposure: 1.0, bloom: 0.3 },
-  { h: 17.5, top: '#6a7ec0', horizon: '#ffae6c', sun: '#ff9c56', sunI: 2.38, hemiSky: '#c5b5c8', hemiGround: '#6a4a3a', hemiI: 1.27, fog: '#e6b08b', night: 0.12, exposure: 1.05, bloom: 0.4 },
-  { h: 18.5, top: '#2f3b7c', horizon: '#e0736a', sun: '#ff6a48', sunI: 0.75, hemiSky: '#8b7fa8', hemiGround: '#3a2a34', hemiI: 0.9, fog: '#6d5272', night: 0.55, exposure: 1.1, bloom: 0.6 },
-  { h: 19.5, top: '#121a44', horizon: '#3b305f', sun: '#000000', sunI: 0.0, hemiSky: '#56619c', hemiGround: '#221a28', hemiI: 0.75, fog: '#1d2142', night: 0.95, exposure: 1.15, bloom: 0.75 },
-  { h: 24.0, top: '#060a1c', horizon: '#18203f', sun: '#000000', sunI: 0.0, hemiSky: '#46578f', hemiGround: '#1a1420', hemiI: 0.75, fog: '#121831', night: 1, exposure: 1.15, bloom: 0.75 },
+  { h: 0.0, top: '#060a1c', horizon: '#18203f', sun: '#000000', sunI: 0.0, hemiSky: '#4a5a94', hemiGround: '#221a2a', hemiI: 0.85, fog: '#121831', night: 1, exposure: 1.15, bloom: 0.75 },
+  { h: 4.8, top: '#0c1333', horizon: '#2a2c58', sun: '#000000', sunI: 0.0, hemiSky: '#4f5c96', hemiGround: '#231b2b', hemiI: 0.85, fog: '#1a1f3d', night: 0.95, exposure: 1.15, bloom: 0.75 },
+  { h: 6.0, top: '#3d5a9a', horizon: '#f2a985', sun: '#ffb07a', sunI: 1.12, hemiSky: '#9aa7d6', hemiGround: '#4f3e40', hemiI: 1.16, fog: '#c7a7a8', night: 0.45, exposure: 1.05, bloom: 0.5 },
+  { h: 7.5, top: '#5a98de', horizon: '#cfe2f3', sun: '#fff0d8', sunI: 3.0, hemiSky: '#bcd6f2', hemiGround: '#70604e', hemiI: 1.6, fog: '#c6d8ea', night: 0, exposure: 1.0, bloom: 0.28 },
+  { h: 12.0, top: '#4889dd', horizon: '#d4e7f7', sun: '#ffffff', sunI: 3.5, hemiSky: '#c2dcf6', hemiGround: '#766552', hemiI: 1.75, fog: '#cfe0f0', night: 0, exposure: 1.0, bloom: 0.25 },
+  { h: 16.0, top: '#5690d6', horizon: '#f4dcc0', sun: '#ffdcae', sunI: 2.75, hemiSky: '#d2d8ee', hemiGround: '#8e7a6a', hemiI: 1.85, fog: '#ecdcc8', night: 0, exposure: 1.0, bloom: 0.32 },
+  { h: 17.5, top: '#6a7ec0', horizon: '#ffb070', sun: '#ffa262', sunI: 2.1, hemiSky: '#cfb8d2', hemiGround: '#8c665a', hemiI: 1.6, fog: '#ecb894', night: 0.3, exposure: 1.05, bloom: 0.45 },
+  { h: 18.5, top: '#2f3b7c', horizon: '#e0736a', sun: '#ff7450', sunI: 0.9, hemiSky: '#9c88b8', hemiGround: '#523c4a', hemiI: 1.2, fog: '#7a5c7c', night: 0.62, exposure: 1.1, bloom: 0.62 },
+  { h: 19.5, top: '#121a44', horizon: '#3b305f', sun: '#000000', sunI: 0.0, hemiSky: '#5c68a4', hemiGround: '#2c2234', hemiI: 0.9, fog: '#1d2142', night: 0.95, exposure: 1.15, bloom: 0.75 },
+  { h: 24.0, top: '#060a1c', horizon: '#18203f', sun: '#000000', sunI: 0.0, hemiSky: '#4a5a94', hemiGround: '#221a2a', hemiI: 0.85, fog: '#121831', night: 1, exposure: 1.15, bloom: 0.75 },
 ];
 for (const k of KEYS) for (const p of ['top', 'horizon', 'sun', 'hemiSky', 'hemiGround', 'fog']) k[p] = C(k[p]);
 
@@ -120,6 +122,7 @@ export class DayNight {
     sc.far = 120;
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.03;
+    this.sun.shadow.intensity = 0.82; // never fully black under a tree or an awning
     G.scene.add(this.sun);
     G.scene.add(this.sun.target);
 

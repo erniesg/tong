@@ -2,15 +2,18 @@
 // +z is north (Yeonnam), -z south (compressed Han River connection).
 // The reference art is atmospheric, not a literal map of Hongdae.
 import * as THREE from 'three';
-import { Reflector } from 'three/addons/objects/Reflector.js';
 import { makeTree } from './nature.js';
 import { registerInterior, buildRoom } from './interiors.js';
 import {
   G, add, box, boxMM, collider, mat, makeCanvas, canvasTexture, roundRect, softTexture, textTexture,
   nightGlow, pointLight, hdr, rand, seeded, clamp, worldUV,
 } from './util.js';
-import { asphalt, pavers, brick, stone, plaster, wood, tiles, fabric, tiled } from './textures.js';
+import { setts, pavers, brick, stone, plaster, wood, tiles, fabric, tiled } from './textures.js';
 import { toon } from './characters.js';
+import { buildOnsae, studioMirrorVisible } from './onsae-build.js';
+import * as ONSAE from './onsae.js';
+
+export { studioMirrorVisible };
 
 /* ── Layout ───────────────────────────────────────── */
 
@@ -25,15 +28,15 @@ export const SPOTS = {
   playerSeat: STOOLS[1],
   ajusshi: new THREE.Vector3(TX - 1.55, 0, -1.75),
   cat: new THREE.Vector3(1.45, 0.82, -1.4),
-  haeunStudio: new THREE.Vector3(-11.5, TERRACE_Y, -37.5),
+  haeunStudio: new THREE.Vector3(...ONSAE.roomB), // 연습실 B, Onsae 2F (js/onsae.js)
   jinCafe: new THREE.Vector3(13.15, 0, -12.6),
   jinLookout: new THREE.Vector3(9, TERRACE_Y, -44.35),
   barista: new THREE.Vector3(17.25, 0, -16.5),
   cashier: new THREE.Vector3(-13.35, 0, -12.6),
   subway: new THREE.Vector3(-4, 0, -18.4),
   telescope: new THREE.Vector3(4.6, TERRACE_Y, -45.2),
-  whiteboard: new THREE.Vector3(-9.2, TERRACE_Y, -43.2),
-  locker: new THREE.Vector3(-13.75, TERRACE_Y, -32.1),
+  whiteboard: new THREE.Vector3(...ONSAE.whiteboard), // 연습실 A, 2F
+  locker: new THREE.Vector3(...ONSAE.locker), // 사물함, 3F
   tentSign: new THREE.Vector3(TX + 2.6, 0, 2.6),
   vending: new THREE.Vector3(5.4, 0, -4.5),
 };
@@ -43,15 +46,16 @@ export const PLACES = [
   { id: 'store', ko: '편의점', en: 'Convenience Store', spawn: [-8.6, 0, -15.5], yaw: Math.PI / 2, icon: '🏪' },
   { id: 'cafe', ko: '카페 봄', en: 'Café Bom', spawn: [8.6, 0, -15.5], yaw: -Math.PI / 2, icon: '☕' },
   { id: 'subway', ko: '홍대입구역', en: 'Subway', spawn: [-4, 0, -16.6], yaw: 0, icon: '🚇' },
-  { id: 'studio', ko: '연습실', en: 'Practice Studio', spawn: [-4.6, TERRACE_Y, -37.5], yaw: Math.PI / 2, icon: '💃' },
+  { id: 'studio', ko: '온새 엔터테인먼트', en: 'Onsae Entertainment', spawn: [...ONSAE.door], yaw: 0, icon: '💃' },
   { id: 'lookout', ko: '한강 전망대', en: 'Han River Lookout', spawn: [6, TERRACE_Y, -41.5], yaw: 0, icon: '🌉' },
 ];
 for (const place of PLACES) {
   if (place.id === 'lookout') continue;
   place.category = place.id;
-  place.interiorId = `seoul-${place.id}-room`;
+  // Onsae is a three-floor building (js/onsae.js); its lobby is the walk-in room.
+  place.interiorId = place.id === 'studio' ? ONSAE.LEVEL_IDS[0] : `seoul-${place.id}-room`;
   place.entry = { food: [TX, 0, TENT.maxZ], store: [-10, 0, -15.5], cafe: [10, 0, -15.5],
-    subway: [-4, 0, -19.2], studio: [-6, TERRACE_Y, -37.5] }[place.id];
+    subway: [-4, 0, -19.2], studio: [ONSAE.ONSAE.x, TERRACE_Y, ONSAE.ONSAE.z + ONSAE.ONSAE.d / 2] }[place.id];
 }
 
 // Register the existing Seoul shells, including their upper floors, fascia and
@@ -94,7 +98,8 @@ function registerSeoulShell(category, initial, bounds, floorY = 0) {
 export const ZONES = [
   { id: 'store', minX: -18, maxX: -10, minZ: -20, maxZ: -11, indoor: true },
   { id: 'cafe', minX: 10, maxX: 18, minZ: -20, maxZ: -11, indoor: true },
-  { id: 'studio', minX: -16, maxX: -6, minZ: -44, maxZ: -31, indoor: true },
+  // Onsae's footprint. main.js zoneAt() answers for inside it (floor and room); this is the map/ground fallback.
+  { id: 'studio', minX: ONSAE.ONSAE.x - ONSAE.ONSAE.w / 2, maxX: ONSAE.ONSAE.x + ONSAE.ONSAE.w / 2, minZ: ONSAE.ONSAE.z - ONSAE.ONSAE.d / 2, maxZ: ONSAE.ONSAE.z + ONSAE.ONSAE.d / 2, indoor: true },
   { id: 'food', minX: -6.2, maxX: 6.2, minZ: -8, maxZ: 30 },
   { id: 'subway', minX: -7, maxX: -1, minZ: -27, maxZ: -16 },
   { id: 'lookout', minX: -6, maxX: 16, minZ: -46, maxZ: -38 },
@@ -129,7 +134,8 @@ function worldMat(t, opts = {}) {
 let M;
 function materials() {
   M = {
-    asphalt: worldMat(asphalt(), { roughness: 0.75, metalness: 0.05 }),
+    // The walking street is warm granite setts, not black tarmac: shadows on it stay soft.
+    asphalt: worldMat(setts(), { roughness: 0.84 }),
     pavers: worldMat(pavers(), { roughness: 0.85 }),
     stone: worldMat(stone(), { roughness: 0.95 }),
     concrete: worldMat(plaster('#a9a49c'), { roughness: 0.95 }),
@@ -146,6 +152,7 @@ function materials() {
     dark: mat(0x2a2a30, { roughness: 0.6 }),
     glass: new THREE.MeshStandardMaterial({ color: 0xbfd6e6, metalness: 0.2, roughness: 0.05, transparent: true, opacity: 0.22, depthWrite: false }),
   };
+  M.pavers.color.setRGB(1.42, 1.33, 1.2); // lift the shared grey pavers towards warm stone
 }
 
 /* ── Facades ──────────────────────────────────────── */
@@ -344,7 +351,7 @@ function signSurface(id, m, read, jumbled) {
     m.map = m.emissiveMap = on ? read : jumbled;
     m.needsUpdate = true;
   };
-  swap(false);
+  swap(true); // signs are plain, readable signs now (docs/seoul-first-day.md)
   (signViews[id] ??= []).push(swap);
 }
 
@@ -365,8 +372,7 @@ function fasciaTexture(text, sub, bg, fg) {
   );
 }
 
-function fascia(text, sub, bg, fg, x, y, z, rotY, w, h = 0.6, sign = null) {
-  const tex = fasciaTexture(text, sub, bg, fg);
+function fascia(text, sub, bg, fg, x, y, z, rotY, w, h = 0.6, sign = null, tex = fasciaTexture(text, sub, bg, fg)) {
   const m = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, roughness: 0.5 });
   nightGlow(m, 0.15, 1.15);
   if (sign) signSurface(sign, m, tex, fasciaTexture(jumble(text), '? ? ?', bg, fg));
@@ -647,7 +653,7 @@ function lantern(text, x, y, z, real, sign = null) {
   grp.position.set(x, y, z);
   const tex = lanternTexture(text);
   const m = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, side: THREE.DoubleSide });
-  nightGlow(m, 0.25, 1.4);
+  nightGlow(m, 0.7, 1.4);
   if (sign) signSurface(sign, m, tex, lanternTexture(jumble(text).slice(0, 5)));
   const body = add(new THREE.SphereGeometry(0.28, 24, 16), m, 0, 0, 0, grp, false);
   body.scale.set(1, 1.25, 1);
@@ -669,7 +675,7 @@ function buildTent() {
   const midZ = (minZ + maxZ) / 2;
   const ft = tiled(fabric('#ff7a22'), 4, 2);
   const tarp = mat(0xffffff, { map: ft.map, normalMap: ft.normalMap, emissive: 0xff5a10, emissiveIntensity: 0.1, roughness: 0.95, side: THREE.DoubleSide, transparent: true, opacity: 0.94 });
-  nightGlow(tarp, 0.0, 0.32);
+  nightGlow(tarp, 0.14, 0.32); // the tent can be the first stop at 4:30pm: it glows by day too
   tentMats.tarp = tarp;
 
   add(new THREE.PlaneGeometry(W, wallH), tarp, TX, wallH / 2, minZ, G.scene, false);
@@ -692,7 +698,7 @@ function buildTent() {
 
   const valTex = textTexture([['포장마차 · 떡볶이 · 오뎅 · 소주', 64, '#fff6e0', 64]], 1024, 128);
   const valM = new THREE.MeshStandardMaterial({ map: valTex, emissiveMap: valTex, transparent: true, emissive: 0xffffff, depthWrite: false });
-  nightGlow(valM, 0.05, 0.4);
+  nightGlow(valM, 0.28, 0.4);
   signSurface('food', valM, valTex, textTexture([[`${jumble('포장마차')} · 떡볶이 · 오뎅 · 소주`, 64, '#fff6e0', 64]], 1024, 128));
   tentMats.valance = valM;
   const valance = add(new THREE.PlaneGeometry(open * 2, valanceDrop * 0.88), valM, TX, wallH - valanceDrop / 2, maxZ + 0.015, G.scene, false);
@@ -708,12 +714,12 @@ function buildTent() {
   for (const [x, z] of [[minX, minZ], [maxX, minZ], [minX, maxZ], [maxX, maxZ], [TX - open, maxZ], [TX + open, maxZ]]) add(new THREE.CylinderGeometry(0.03, 0.03, wallH, 8), poleM, x, wallH / 2, z);
   add(new THREE.CylinderGeometry(0.03, 0.03, W, 8), poleM, TX, ridgeH - 0.03, midZ).rotation.z = Math.PI / 2;
   const bulbM = new THREE.MeshStandardMaterial({ color: 0xffe2b0, emissive: 0xffd08a, emissiveIntensity: 3 });
-  nightGlow(bulbM, 0.3, 2.2);
+  nightGlow(bulbM, 1.5, 2.2);
   for (const dx of [-1.6, 0, 1.6]) {
     add(new THREE.CylinderGeometry(0.005, 0.005, 0.45, 4), poleM, TX + dx, ridgeH - 0.25, -0.1, G.scene, false);
     add(new THREE.SphereGeometry(0.07, 12, 10), bulbM, TX + dx, ridgeH - 0.5, -0.1, G.scene, false);
   }
-  tentMats.light = pointLight(0xffb066, 4, 14, TX, 2.35, -0.3, { day: 2 });
+  tentMats.light = pointLight(0xffb066, 4, 14, TX, 2.35, -0.3, { day: 3 });
 
   const menu = textTexture(
     [
@@ -771,7 +777,7 @@ function buildTent() {
   const hours = textTexture(
     [
       ['영업시간', 64, '#7a2a12', 60],
-      ['19:00 ~ 03:00', 72, '#3a1a10', 140, 'Gowun Dodum'],
+      ['16:00 ~ 03:00', 72, '#3a1a10', 140, 'Gowun Dodum'],
     ],
     512,
     200,
@@ -1062,78 +1068,21 @@ function buildTerrace(rnd) {
   }
 }
 
-let studioMirror;
-export function studioMirrorVisible(on) {
-  if (studioMirror) studioMirror.visible = on && !studioMirror.userData.cutawayHidden;
-}
-
-function buildStudio(rnd) {
-  const initial = new Set(G.scene.children);
-  initial.colliderStart = G.colliders.length;
-  const y = TERRACE_Y;
-  const wallM = M.white;
-  boxMM(-16.3, -16, y, y + 3.6, -44, -31, wallM, { collide: true, block: true });
-  boxMM(-16, -6, y, y + 3.6, -44.3, -44, wallM, { collide: true, block: true });
-  boxMM(-16, -6, y, y + 3.6, -31, -30.7, wallM, { collide: true, block: true });
-  boxMM(-16, -6, y - 0.01, y + 0.03, -44, -31, M.wood, { uv: 2, cast: false });
-  boxMM(-16.3, -6, y + 3.4, y + 3.6, -44.3, -30.7, M.white, { cast: false });
-  building(-16.3, -6, -44.3, -30.7, 5.6, 'px', rnd, { y0: y + 3.6, shop: false, collide: false, base: '#c9c4bd' });
-  // glass front with door gap
-  boxMM(-6.05, -5.95, y, y + 3.0, -44, -39, M.glass, { cast: false });
-  boxMM(-6.05, -5.95, y, y + 3.0, -36, -31, M.glass, { cast: false });
-  collider(-6.15, -5.85, -44, -39);
-  collider(-6.15, -5.85, -36, -31);
-  for (const z of [-44, -39, -36, -31]) boxMM(-6.08, -5.92, y, y + 3.0, z - 0.06, z + 0.06, M.dark);
-  boxMM(-6.1, -5.9, y + 3.0, y + 3.6, -44, -31, M.dark, { cast: false });
-  fascia('온새 엔터 연습실', 'ONSAE ENT. · Practice Studio', '#1d1b3a', '#ffe9a8', -5.88, y + 3.3, -37.5, Math.PI / 2, 8, 0.6, 'studio');
-
-  // the mirror wall
-  studioMirror = new Reflector(new THREE.PlaneGeometry(12.6, 2.6), {
-    textureWidth: 768,
-    textureHeight: 192,
-    color: 0xb8c4c8,
+// Onsae Entertainment: three walkable floors on the west half of the terrace
+// (plan: level-support.js `layout: 'agency'`; dressing: onsae-build.js; spots: onsae.js).
+function buildStudio() {
+  if (Math.abs(ONSAE.ONSAE.baseY - TERRACE_Y) > 1e-9) throw new Error('Onsae must stand on the terrace');
+  let sign = null;
+  buildOnsae({
+    fascia: (tex, w, h, x, y, z) => (sign = fascia('온새 엔터테인먼트', 'ONSAE ENTERTAINMENT', '#1d1b3a', '#ffe9a8', x, y, z, 0, w, h, null, tex)),
   });
-  studioMirror.position.set(-15.97, y + 1.45, -37.5);
-  studioMirror.rotation.y = Math.PI / 2;
-  G.scene.add(studioMirror);
-  // barre, speakers, ring light, posters
-  const steel = M.steel;
-  const barre = add(new THREE.CylinderGeometry(0.03, 0.03, 12, 8), steel, -15.6, y + 1.05, -37.5, G.scene, false);
-  barre.rotation.x = Math.PI / 2;
-  for (const z of [-42.5, -32.5]) box(0.5, 1.1, 0.5, mat(0x1d1d22, { roughness: 0.4 }), -15.4, y, z, { collide: true });
-  const poster = (lines, bg, x, z, ry) => {
-    const t = textTexture(lines, 384, 512, { bg });
-    add(new THREE.PlaneGeometry(0.9, 1.2), mat(0xffffff, { map: t }), x, y + 1.9, z, G.scene, false).rotation.y = ry;
-  };
-  // No countdowns on screen (docs/seoul-evals-tbc.md): a cheer, not a date.
-  poster([['우리는', 64, '#fff', 180], ['한 팀!', 120, '#ffd23f', 300], ['화이팅!', 60, '#fff', 420]], '#3b2a6b', -9, -31.03, Math.PI);
-  poster([['연습', 100, '#3a1a10', 200], ['또 연습', 80, '#c0392b', 330]], '#fff3dc', -12, -31.03, Math.PI);
-  // whiteboard: daily word quiz
-  const wb = textTexture(
-    [
-      ['오늘의 단어', 72, '#2b3a8a', 80],
-      ['Word of the day quiz', 40, '#555', 150, 'Gowun Dodum'],
-      ['떡볶이 · 커피 · 지하철 · 한강', 44, '#c0392b', 240, 'Gowun Dodum'],
-    ],
-    768,
-    320,
-    { bg: '#ffffff', border: '#9aa0a8' },
-  );
-  add(new THREE.PlaneGeometry(2.4, 1.0), mat(0xffffff, { map: wb, roughness: 0.3 }), -9.2, y + 1.6, -43.97, G.scene, false);
-  // trainee lockers; the middle one is yours, with Su-a's half-scraped name label (H0)
-  const lockerM = mat(0x6f8fa8, { roughness: 0.5, metalness: 0.3 });
-  boxMM(-14.9, -12.6, y, y + 1.9, -31.45, -31.0, lockerM, { collide: true, block: true });
-  for (const x of [-14.13, -13.37]) boxMM(x - 0.01, x + 0.01, y + 0.05, y + 1.85, -31.47, -31.44, M.dark, { cast: false });
-  for (const x of [-14.3, -13.55, -12.8]) boxMM(x - 0.02, x + 0.02, y + 0.95, y + 1.15, -31.5, -31.45, steel, { cast: false });
-  const label = textTexture([['ㅅ…아', 72, '#333', 70, 'Gowun Dodum']], 256, 112, { bg: '#f3ead2' });
-  add(new THREE.PlaneGeometry(0.34, 0.15), mat(0xffffff, { map: label }), -13.75, y + 1.62, -31.5, G.scene, false).rotation.y = Math.PI;
-  const panel = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.1 });
-  for (const z of [-41, -37.5, -34]) boxMM(-15, -7, y + 3.33, y + 3.4, z - 0.2, z + 0.2, panel, { cast: false });
-  pointLight(0xfff4e8, 7, 14, -11, y + 3.0, -37.5, { day: 5 });
-  const room = registerSeoulShell('studio', initial, { minX: -16, maxX: -6, minZ: -44, maxZ: -31 }, y);
-  // Mirror is a rear-wall child and must not remain an opaque slab in cutaway.
-  const rear = room.walls.find(m => m.position.x < -16);
-  if (rear && !room.walls.includes(studioMirror)) { rear.attach(studioMirror); registerInterior(room); }
+  // The room registry gives the fascia its own material, so wire the readable/jumbled swap to that one.
+  if (sign) {
+    const face = sign.material[4];
+    signSurface('studio', face, face.map, textTexture([[jumble('온새 엔터테인먼트'), 150, '#ffe9a8', 200], ['? ? ?', 92, '#ffe9a8', 398, 'Gowun Dodum']], 2048, 512, { bg: '#1d1b3a', radius: 36 }));
+  }
+  // A warm pool on the walk outside the glass doors.
+  lightPool(ONSAE.door[0], TERRACE_Y, ONSAE.door[2] - 0.4, 3.4);
 }
 
 function buildLookout(rnd) {
@@ -1392,11 +1341,11 @@ export function buildWorld() {
   buildCafe(rnd);
   buildSubway();
   buildTerrace(rnd);
-  buildStudio(rnd);
+  buildStudio();
   buildLookout(rnd);
   buildRiver(rnd);
 
-  for (const [x, z] of [[-8.6, -9.8], [8.6, -9.4], [-8.4, -25.6], [9.2, -25.8], [-3.2, -31.6], [10.8, -31.2], [14.6, -38.5], [-3.6, -44.2], [12.6, -42.6], [1.2, -36]]) ginkgo(x, heightAt(x, z), z, rnd, 1 + rnd() * 0.25);
+  for (const [x, z] of [[-8.6, -9.8], [8.6, -9.4], [-8.4, -25.6], [9.2, -25.8], [-0.5, -40], [10.8, -31.2], [14.6, -38.5], [-0.4, -44.6], [12.6, -42.6], [1.2, -36]]) ginkgo(x, heightAt(x, z), z, rnd, 1 + rnd() * 0.25);
   leafCarpet(rnd);
   fallingLeaves();
 
