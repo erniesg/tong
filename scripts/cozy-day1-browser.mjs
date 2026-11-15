@@ -56,7 +56,7 @@ async function playGame() {
   await page.click('.play-next');
 }
 const WANT = {
-  'Build 아.': ['ㅇ', 'ㅏ'], 'Tap the one you hear.': ['이'], 'One piece is scraped off. Which?': ['ㅜ'], 'Which card is hers?': ['다온'],
+  'Build 아.': ['ㅇ', 'ㅏ'], 'Order the tteokbokki: put the words in order.': ['떡볶이', '주세요'], 'Tap the one you hear.': ['이'], 'One piece is scraped off. Which?': ['ㅜ'], 'Which card is hers?': ['다온'],
   'Match each block to its sound.': ['아:a', '이:i', '수:su', '다:da', '온:on'], 'Count her in: five, six, seven, eight.': ['다섯', '여섯', '일곱', '여덟'],
 };
 // Talk through whatever is playing. plan: beat id → regex for the reply; shots: beat id → name.
