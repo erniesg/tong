@@ -1,6 +1,6 @@
 # Handoff: Seoul first day, after the owner's playtest (15 Nov 2026)
 
-For whoever picks up PR #439 next. The owner played the staging build and left eight notes. None of them is started. This file is the list, where each one lives in the code, and what I would do first.
+For whoever picks up PR #439 next. The owner played the staging build and left nine notes. None of them is started. This file is the list, where each one lives in the code, and what I would do first.
 
 ## State
 
@@ -12,6 +12,10 @@ For whoever picks up PR #439 next. The owner played the staging build and left e
 ## The owner's notes (verbatim)
 
 > hmmm there's still too much hangeul u should like vary the amount of english and hangeul exposed to the play'ers level for complete beginners im expecting to read in english and see hangeul introduced in a very phased manner; also there's this weird fuzz around tong; also how come thjere's like men in the girls' dorm rooms; also i find it weird that sometimes the scene doesnt kind of like show u in the same place as ppl talking and can see who's talking eg in thje dorm w the girls, i think u should make sure the npcs do not reuse any of the story characters too; can we enhance the character avatars somewhat; i also dun like it when you do storytelling exposition inside dialogue box or sms, any messages should have a dedicated kakaotalk interface that shows u hv a msg; and then the map it should be possible to kind of like select quests and guide you to it or sth; anw these are all notes for improvement
+
+Sent while this handoff was being written:
+
+> a lot of the exercises are also not scaffolded enough i was expecting some repetition around like ok first we will teach the vowels or consonants or whatever and u get to hear, play block crush, trace, whatever, variety of exercises and building up the lingo bit by bit
 
 Earlier requests, also verbatim, are at the top of `seoul-first-day.md`. Standing rules from this owner: very short copy, no pill tags, propose design changes that touch canon rather than shipping them (`docs/seoul-evals-tbc.md`), never put undecided story facts into canon.
 
@@ -79,6 +83,26 @@ Open-ended. The chibis are built in `js/characters.js` (`makeChibi`, canvas-draw
 
 **To build:** give each quest step a target (a place id or a spot such as `ONS.locker`, `STREET.tent`), make the Today rows and map pins selectable, set `waypointId` (extend it to accept spots, including floors inside Onsae), and draw a path or a pulsing marker in the world and on the map. The current step should be selected by default so a new player is always being led somewhere.
 
+### 9. Exercises aren't scaffolded: teach a small set, repeat it several ways, then build
+
+**What the owner expects:** a lesson shape. First a small set (some vowels, say), then the same set several times in different forms (hear it, block crush, trace it, and so on), then the next set built on top.
+
+**What the build does:** each letter group gets exactly one game, once, at a story moment (아 on the train, 이 in the lobby, 수아 at the lockers, 다온 in the dorm), then one match at bedtime. That is variety across the day but no repetition within a set, and no sense of "now we are learning the vowels". The independent review said the same: only ㅇ ㅏ are built by hand; ㄷ ㅗ ㄴ are never introduced at all.
+
+**What already exists to build from:**
+- `js/tongplay.js`: five small in-world games (build a block, hear and pick, missing piece, match, order a line). Easy to add kinds to; each takes a request and returns pass/fail.
+- The Tong host's exercises, reachable from the cozy game through the bridge (`lib/cozy/bridge.ts`, `components/cozy/CozyHost.tsx`): `block_crush`, `stroke_tracing`, `pronunciation_select`, `matching`, `multiple_choice`, `sentence_builder` (`lib/exercises/generators.ts`). The bridge currently accepts five of them (`EXERCISE_TYPES` in `bridge.ts`); tracing is not on the list yet.
+- Tong's Learn and Review (tap Tong): `lib/cozy/review.ts` already has a format ladder ("untried format first, then stretch a rung") per word. That ladder is the closest thing to what the owner describes and is not used by the story at all.
+- The Hangul teaching order in `lib/content/scripts/hangul.ts`.
+
+**Suggested shape (a proposal; agree the sets with the owner first):**
+- Define day-one sets explicitly, e.g. set 1 vowels ㅏ ㅣ ㅗ ㅜ with the silent ㅇ (아 이 오 우), set 2 consonants ㅅ ㄷ ㄴ, set 3 blocks and names built from both (수아, 다온, 나, 누나).
+- A "Tong moment" for each set is a short run of three or four different games over the *same* letters: hear each one, pick by ear, trace, build a block, block crush a word. Two or three minutes, with the story moment as the reason for it (the grandmother's 아이고, the floor guide, the locker label).
+- Each later set starts by replaying one game from the previous set.
+- Bedtime becomes the day's review using the existing ladder, not one match.
+- This pairs with note 1: at reading level 0 the Tong moments are where Hangul lives, and dialogue stays English.
+- Keep the owner's earlier rule in mind: these must stay organic to the scene, not a lesson screen that interrupts it.
+
 ## Also still open (from the review, in the PR description)
 
 - The first meeting barely carries forward into later scenes (H1, the dorm).
@@ -90,7 +114,7 @@ Open-ended. The chibis are built in `js/characters.js` (`makeChibi`, canvas-draw
 
 ## Suggested order
 
-1. Note 1 (reading level): it changes how every scene reads, so do it before more writing. Send the owner the level table first.
+1. Notes 1 and 9 together (reading level, and letter sets taught through a run of games): they decide how every scene reads and where Hangul appears, so do them before more writing. Send the owner the level table and the day-one sets first.
 2. Note 7 (KakaoTalk interface, narration audit): changes the scene files, so batch it with 1.
 3. Note 4 (staging for the dorm and lockers) and note 3/5 (who the NPCs are): correctness the owner noticed immediately.
 4. Note 8 (quest guidance).
