@@ -110,6 +110,10 @@ if (PATH === 'jin') {
   await page.evaluate(() => { const j = __cozy.jin.root.position; __cozy.player.root.position.set(j.x + 1.2, 0, j.z + 0.8); });
   await interact('모자');
   await talk({ 'j0_where': '온새' }, { 'j0_open': 'jin-open', 'j0_name': 'jin-name', 'j0_where': 'jin-where', 'j0_phone': 'jin-phone' });
+  // He walks off down the street and waves (about fifteen seconds in the game). Under software rendering
+  // that walk can take many minutes, so put him at the end of it; the walk itself is unchanged code.
+  await page.waitForFunction(() => __cozy.S.tentStory === 'exit' && !__cozy.dlg.state.active);
+  await page.evaluate(() => { const j = __cozy.jin; const last = j.path.at(-1); j.path = [last]; j.root.position.set(last.x, 0, last.z + 0.3); });
   await page.waitForFunction(() => __cozy.S.tentStory === 'idle' && !__cozy.dlg.state.active, null, { timeout: 600000 });
   await shot('after-jin');
 }
@@ -122,8 +126,14 @@ await tp(await spot('stair2'), -Math.PI / 2); await shot('2f-landing');
 await tp(await spot('corridor2'), 0);
 await waitTalk();
 console.log('timing', Object.keys(await flags()).filter((f) => /^d1_(early|ontime|late)$/.test(f)), 'hour', await page.evaluate(() => __cozy.S.hour.toFixed(2)));
-await talk({ 'hb_who': '안녕하세요', 'hb_drill': '세 드릴', 'hb_water': '하나 드세요', 'r_room': '잘 부탁' },
-  { 'hb_count': 'coach-through-door', 'hb_who': 'haeun-who', 'hb_new': 'haeun-wall', 'hb_drill': 'haeun-drill', 'hb_water': 'haeun-water', 'hb_banmal': 'haeun-banmal', 'r_minji': 'cohort-out', 'r_room': 'corridor-glance', 'o_rules': 'orientation', 'o_overheard': 'gossip', 'o_locker': 'to-lockers' });
+const upstairs = [{ 'hb_who': '안녕하세요', 'hb_drill': '세 드릴', 'hb_water': '하나 드세요', 'r_room': '잘 부탁' },
+  { 'hb_count': 'coach-through-door', 'hb_who': 'haeun-who', 'hb_new': 'haeun-wall', 'hb_drill': 'haeun-drill', 'hb_water': 'haeun-water', 'hb_banmal': 'haeun-banmal', 'r_minji': 'cohort-out', 'r_room': 'corridor-glance', 'o_rules': 'orientation', 'o_overheard': 'gossip', 'o_locker': 'to-lockers' }];
+await talk(...upstairs);
+// Orientation follows by itself once you have met whoever was on the second floor.
+for (let i = 0; i < 6 && !(await flags()).orientation_done; i++) {
+  await page.waitForFunction(() => __cozy.S.story.flags.orientation_done || __cozy.dlg.state.active);
+  await talk(...upstairs);
+}
 console.log('after orientation', Object.keys(await flags()).filter((f) => /orientation|met_haeun|counted|intro_/.test(f)));
 await shot('room-a-after');
 await tp(await spot('locker'), Math.PI); await interact('사물함'); await talk({ 'h0_drawer': '가방' }, { 'h0_label': 'locker-label', 'h0_glimpse': 'locker-glimpse' });

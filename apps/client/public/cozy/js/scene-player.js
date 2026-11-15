@@ -134,7 +134,7 @@ export function createScenePlayer(ctx) {
       },
       ...(beat.exercise
         ? {
-            exercise: () => request(beat.exercise),
+            exercise: () => request(beat.exercise, beat),
             next: (r) => {
               // Closed or unavailable (no Tong host) is not a wrong answer: scenes can branch on _skipped.
               const skipped = r.outcome !== 'completed';
@@ -175,7 +175,7 @@ export function createScenePlayer(ctx) {
     return id;
   }
 
-  function request(hook) {
+  function request(hook, beat = null) {
     return {
       exerciseType: hook.type,
       targetItems: hook.targets.map(fill),
@@ -186,7 +186,7 @@ export function createScenePlayer(ctx) {
       locationId: run.scene.location,
       characterId: run.scene.characterId,
       // Tong's small games (tongplay.js) keep the line that explains them on the card.
-      ...(/^(hangul_|say_it)/.test(hook.type) ? { teach: { ko: fill(run.line?.ko), en: fill(run.line?.en) }, onFail: hook.onFail } : {}),
+      ...(/^(hangul_|say_it)/.test(hook.type) ? { teach: { ko: fill(run.line?.ko), en: fill((beat && tongFor(beat, run.w, run.scene.characterId)?.en) || run.line?.en) }, onFail: hook.onFail } : {}),
     };
   }
 
