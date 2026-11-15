@@ -16,7 +16,7 @@ export const module: SceneModule = {
     gate: { month: { from: 1, to: 1 }, flags: ['h0_done'] },
     summary:
       'Manager Choi shows you the girls\' dorm and offers the free bed in Haeun\'s room. Haeun, smiling, says Da-on has been asking for an 언니 in her room. You room with Da-on (15) and Bo-ram (22). Sua\'s bed stays empty.',
-    seeds: ['dorm_arrived', 'offered_suas_bed', 'memory: haeun_sent_you_to_daon'],
+    seeds: ['dorm_arrived', 'hangul:다온', 'offered_suas_bed', 'memory: haeun_sent_you_to_daon'],
     beats: [
       {
         id: 'd0_open',
@@ -144,6 +144,32 @@ export const module: SceneModule = {
               review: 'native',
             },
           },
+        ],
+        next: 'd0_card',
+      },
+      {
+        id: 'd0_card',
+        speaker: 'daon',
+        expr: 'smile',
+        lines: [{ value: { ko: '이게 제 이름이에요! 다온! 어느 건지 맞혀 봐요!', en: 'This is my name! Da-on! Guess which one!', note: 'Two name cards are taped to the bunk frames on this side of the room.', review: 'native' } }],
+        exercise: {
+          type: 'hangul_listen',
+          objectiveId: 'ko-script-blocks-2part',
+          targets: ['다온'],
+          distractors: ['보람'],
+          framing: { ko: '다온이의 이름표를 골라 봐.', en: 'Which card is hers?' },
+          onFail: 'assist',
+        },
+        effects: { setFlags: ['hangul:다온'] },
+        next: 'd0_card_ok',
+      },
+      {
+        id: 'd0_card_ok',
+        speaker: 'daon',
+        expr: 'laugh',
+        lines: [
+          { when: { flags: ['ex_d0_card'] }, value: { ko: '헐, 언니 한글 읽어요?!', en: 'Whoa, eonni, you can read Hangul?!', review: 'native' } },
+          { value: { ko: '아니에요, 이거요! 다, 온!', en: 'No, this one! Da, on!', note: 'She taps each block.', review: 'native' } },
         ],
         next: 'd0_boram',
       },

@@ -1627,3 +1627,6 @@ export function makeCat(pos) {
   });
   return cat;
 }
+
+/** Building blocks for one-off characters defined beside their sets (train, street). */
+export const chibiKit = { lathe, part, FACE_BASE };

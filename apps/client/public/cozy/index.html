@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./style.css" />
   <link rel="stylesheet" href="./day.css" />
+  <link rel="stylesheet" href="./play.css" />
   <script type="importmap">
     {
       "imports": {
@@ -30,7 +31,7 @@
   <div id="hud" class="hud hidden">
     <div class="hud-left">
       <details class="panel quest">
-        <summary class="quest-title"><b id="quest-title-text">서울 · Today</b> <span id="quest-count"></span></summary>
+        <summary class="quest-title"><b id="quest-title-text">서울 · Today</b> <span id="quest-count"></span><span id="quest-now" class="quest-now"></span></summary>
         <ul id="quest-list" class="quest-list"></ul>
         <div id="quest-hint" class="quest-hint"></div>
       </details>
@@ -162,7 +163,7 @@
     <div id="portrait" class="portrait"></div>
     <div class="dialogue-body">
       <div id="speaker" class="speaker"></div>
-      <div id="line-ko" class="line-ko" title="Tap to hear it"></div>
+      <div id="line-ko" class="line-ko"></div>
       <div id="line-en" class="line-en"></div>
       <div id="hint" class="hint hidden"></div>
       <div id="choices" class="choices"></div>

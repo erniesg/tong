@@ -148,13 +148,24 @@ export type Intent =
   | 'tease' | 'comfort' | 'challenge' | 'defer' | 'decline' | 'confess'
   | 'ask' | 'presence' | 'deflect' | 'commit' | 'help' | 'apologize' | 'leave';
 
+/**
+ * Small games the cozy runtime plays itself (public/cozy/js/tongplay.js), never
+ * sent to the Tong host. `targets` / `distractors` by kind:
+ * - hangul_compose: targets = blocks to build one after another ('아'); distractors = extra letters.
+ * - hangul_listen:  targets[0] = the word spoken; distractors = the other cards.
+ * - hangul_missing: targets = [word, the letter scraped off]; distractors = wrong letters.
+ * - hangul_match:   targets = 'block:sound' pairs ('수:su').
+ * - say_it:         targets = the pieces of the line in order; distractors = pieces that don't belong.
+ */
+export type TongPlay = 'hangul_compose' | 'hangul_listen' | 'hangul_missing' | 'hangul_match' | 'say_it';
+
 export interface ExerciseHook {
   /**
    * A Tong exercise type, or 'formation_grid': the studio's follow-the-call
    * grid, run by the cozy runtime itself (eval/dance.js), never sent to the
    * Tong host. Its `targets` are the kinds of call: 'move', 'pose', 'combo'.
    */
-  type: ExerciseData['type'] | 'formation_grid';
+  type: ExerciseData['type'] | 'formation_grid' | TongPlay;
   objectiveId: string;
   targets: string[];
   distractors?: string[];
@@ -230,7 +241,7 @@ export interface TongLine extends Line {
  * Stage directions a runtime may act on (the lab ignores them): the cozy 3D
  * world sits the player down at 'sit', serves food at 'serve', and so on.
  */
-export type Cue = 'sit' | 'serve' | 'phone_buzz' | 'stand' | 'leave' | 'photo' | 'ride';
+export type Cue = 'sit' | 'serve' | 'phone_buzz' | 'stand' | 'leave' | 'photo' | 'ride' | `stage:${string}`;
 
 export interface Beat {
   id: string;

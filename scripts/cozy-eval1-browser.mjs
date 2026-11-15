@@ -47,7 +47,7 @@ async function run(label, viewport, plan) {
   await page.waitForTimeout(1500);
   // Walk-up view: stand at the studio schedule board (next to the word-quiz whiteboard).
   await f.evaluate(() => {
-    __cozy.player.root.position.set(-7.3, 2.4, -42.2);
+    __cozy.player.root.position.set(-4.3, 5.8, -42.7); // js/onsae.js evalBoard: 연습실 A, Onsae 2F
     __cozy.player.root.rotation.y = Math.PI;
     Object.assign(__cozy.cam, { yaw: 0, pitch: 0.25, dist: 3.5, snap: true });
   });

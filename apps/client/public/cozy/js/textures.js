@@ -159,6 +159,36 @@ export const pavers = () =>
     return finish(p, 2.5);
   });
 
+/** Hongdae's walking street: warm grey granite setts with a few rose and sand stones. */
+export const setts = () =>
+  memo('setts', () => {
+    const rnd = seeded(57);
+    const S = 512;
+    const bw = 64;
+    const bh = 64;
+    const pal = ['#b3aa9f', '#bdb3a6', '#a89f96', '#c4b6a6', '#b0a49c', '#b9a79b', '#c9b8a2', '#a79a94'];
+    const colors = [];
+    for (let r = 0; r < S / bh; r++) {
+      colors.push([]);
+      for (let k = 0; k <= S / bw; k++) colors[r].push(hexRgb(pick(pal, rnd)));
+    }
+    const n1 = makeNoise(16, rnd);
+    const p = paint(S, (x, y) => {
+      const row = Math.floor(y / bh);
+      const off = row % 2 ? bw / 2 : 0;
+      const col = Math.floor(((x + off) % S) / bw);
+      const lx = (x + off) % bw;
+      const ly = y % bh;
+      const edge = Math.min(lx, bw - 1 - lx, ly, bh - 1 - ly);
+      const [r, g, b] = colors[row][col];
+      const n = (rnd() - 0.5) * 16 + (n1(x / 32, y / 32) - 0.5) * 22;
+      if (edge < 2) return [128, 118, 108, 30];
+      const bevel = Math.min(1, edge / 4);
+      return [r + n, g + n, b + n, 130 + bevel * 110];
+    });
+    return finish(p, 1.6);
+  });
+
 function pick(arr, rnd) {
   return arr[Math.floor(rnd() * arr.length)];
 }

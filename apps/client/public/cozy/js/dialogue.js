@@ -23,6 +23,9 @@ export const SPEAKERS = {
   stranger: { label: '행인 Passer-by', emoji: '🧳', cls: 'green' },
   driver: { label: '택시 기사 Driver', emoji: '🚕', cls: 'green' },
   fan: { label: '팬 Fan', emoji: '📱', cls: 'pink' },
+  halmoni: { label: '할머니 Grandmother', emoji: '🍊', cls: 'green' },
+  seller: { label: '붕어빵 아주머니 Seller', emoji: '🐟', cls: 'green' },
+  busker: { label: '버스커 Busker', emoji: '🎸', cls: 'blue' },
   tong: { label: '통 Tong', tong: true, cls: 'gold' },
   narration: { label: '…', none: true, cls: 'purple' },
 };
@@ -62,6 +65,7 @@ export function createDialogue(ctx) {
     d.node = null;
     d.id = null;
     ui.box.classList.add('hidden');
+    ctx.gloss?.close();
     for (const c of Object.values(ctx.chars)) if (c?.baseExpr) setExpr(c, c.baseExpr);
     ctx.onEnd?.();
     n?.after?.();
@@ -107,6 +111,10 @@ export function createDialogue(ctx) {
     const hint = val(n.hint);
     ui.hint.classList.toggle('hidden', !hint);
     ui.hint.innerHTML = hint ?? '';
+    // Hover / tap lookups (js/gloss.js): the Korean line is wrapped once typed.
+    ctx.gloss?.close();
+    ctx.gloss?.glossify(ui.en);
+    ctx.gloss?.glossify(ui.hint);
     ui.choices.innerHTML = '';
     ui.next.classList.add('hidden');
     d.choices = val(n.choices) ?? [];
@@ -117,6 +125,19 @@ export function createDialogue(ctx) {
     d.typing = false;
     d.shown = d.full.length;
     ui.ko.textContent = d.full;
+    ctx.gloss?.glossify(ui.ko, { rom: fill(val(d.node?.rom)) });
+    if (/\p{Script=Hangul}/u.test(d.full)) {
+      const hear = document.createElement('button');
+      hear.type = 'button';
+      hear.className = 'say-line';
+      hear.textContent = '🔊';
+      hear.setAttribute('aria-label', 'Hear the line');
+      hear.onclick = (e) => {
+        e.stopPropagation();
+        (ctx.gloss?.say ?? ctx.speak)(d.full, d.node?.who, hear);
+      };
+      ui.ko.append('\u00a0', hear);
+    }
     if (d.node?.exercise || d.node?.task) runExercise(d.node);
     else if (d.choices.length) renderChoices();
     else ui.next.classList.remove('hidden');
@@ -140,7 +161,9 @@ export function createDialogue(ctx) {
     d.choices.forEach((c, i) => {
       const b = document.createElement('button');
       b.className = 'choice';
-      b.innerHTML = '<span class="num"></span><span class="txt"><span class="ko"></span><small class="sub"></small></span>';
+      // A touch on a word looks it up; the rest of the button (and its › edge) answers.
+      b.setAttribute('data-gloss-tap', '');
+      b.innerHTML = '<span class="num"></span><span class="txt"><span class="ko"></span><small class="sub"></small></span><span class="go" aria-hidden="true">›</span>';
       b.querySelector('.num').textContent = i + 1;
       b.querySelector('.ko').textContent = c.ko;
       const sub = b.querySelector('.sub');
@@ -151,6 +174,8 @@ export function createDialogue(ctx) {
         en.textContent = c.rom ? ` · ${c.en}` : c.en;
         sub.append(en);
       }
+      if (c.hideEn) b.querySelector('.ko').setAttribute('data-no-en', '');
+      ctx.gloss?.glossify(b.querySelector('.ko'), { rom: c.rom, en: c.hideEn ? '' : c.en });
       b.onclick = () => choose(i);
       ui.choices.appendChild(b);
     });
@@ -193,9 +218,8 @@ export function createDialogue(ctx) {
     if (d.shown >= d.full.length) finishTyping();
   }
 
-  ui.ko.addEventListener('click', () => ctx.speak(d.full, d.node?.who));
   ui.box.addEventListener('click', (e) => {
-    if (e.target.closest('.choice') || e.target === ui.ko) return;
+    if (e.target.closest('.choice, .say-line')) return;
     advance();
   });
 

@@ -20,6 +20,8 @@ import { createCreator } from './creator.js';
 import { initAudio, updateAudio, sfx, setMuted, audio, initVoice, speak as speakRaw, voice } from './audio.js';
 import { buildNodes, tongHint, WORDS } from './story.js';
 import { createDialogue, SPEAKERS } from './dialogue.js';
+import { createGloss, phraseLookup } from './gloss.js';
+import { initHud } from './hud.js';
 import { createScenePlayer } from './scene-player.js';
 import { createBridge, AFFINITY_PER_HEART, stageOf, affinityOf, legacyProgress } from './bridge.js';
 import { createSeoulEval } from './eval/index.js';
@@ -28,16 +30,21 @@ import { PROFILE_OPTIONS } from './eval/eval1.js';
 import seoul from './cities/seoul.js';
 import tokyo from './cities/tokyo.js';
 import shanghai from './cities/shanghai.js';
-import incheon, { INCHEON, setExitOpen } from './cities/incheon.js';
+import incheon, { INCHEON, setTrainStop, updateTrain } from './cities/incheon.js';
+import { buildHongdaeLife, updateHongdaeLife, STREET, STREET_CAST } from './hongdae-life.js';
 import { interiors, interiorAt, enhanceRoom, updateCutaways, isCameraOccluder, cutawaySnapshot } from './interiors.js';
 import { MODES, PLAYER_CLEARANCE, bodyOverlaps, segmentHitsBox, createTraversal, stopTraversal, resetTraversal, queueJump, stepTraversal } from './traversal.js';
 import { createRides } from './rides.js';
 import { createOccupants } from './occupants.js';
 import { apartments, buildApartment, apartmentHeightAt, apartmentCeilingAt, apartmentZoneAt } from './apartments.js';
+import { FLOOR_Y as ONSAE_FLOOR_Y, SPOT_YAW as ONSAE_YAW } from './onsae.js';
+import { updateOnsae } from './onsae-build.js';
 import { createDayLoop, normalizeDayState, clockRuns, clockHours, bedKind, DAY_CONFIG } from './day.js';
 import { createDayUI } from './day-ui.js';
 import { DORM_HOME, DORM_LEVEL, HAEUN_DORM, createDormCast, haeunDormSpot, onDormFloor, asleep, lieDown, wake } from './dorm.js';
-import { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn, createStudioCast, ROAD_FLAGS, dayOneOpen, dayOneClockHeld } from './day1.js';
+import { ORIGINS, originFlag, START_HOUR, hongdaeArrival, studioHour, migrateDay1, ARRIVAL_STEPS, arrivalState, studioCastOn, createStudioCast, arrivalTiming, STOP_MINUTES, dayOneOpen, dayOneClockHeld } from './day1.js';
+import * as ONS from './onsae.js';
+import { createTongPlay, isTongPlay } from './tongplay.js';
 import { LOOPS, loopDue, drillKinds, drillPassed } from './day2.js';
 import { hangulProgress, metWords } from './hangul.js';
 
@@ -68,11 +75,19 @@ function ceilingAt(x, z, feetY) {
 }
 function zoneAt(x, z, feetY = player?.root.position.y ?? 0) {
   const home = apartmentZoneAt({ x, y: feetY, z }, S.city);
+  // Onsae (js/onsae.js): `id: 'studio'` still means "inside the agency"; `level` and `room` say where.
+  if (home && home.category !== 'home') return { id: home.category, buildingId: home.buildingId, level: home.level, floorY: home.floorY, category: home.category,
+    room: home.zones.find((r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ)?.name ?? null, interiorId: home.id, indoor: true };
   if (home) return { id: home.id, buildingId: home.buildingId, level: home.level, floorY: home.floorY, category: 'home', interiorId: home.id, indoor: true };
   const zone = (S.city === 'seoul' && inSeoulCore(x, z) ? seoulZoneAt(x, z) : null) ?? currentCity().zoneAt?.(x, z, feetY) ?? null;
   const room = interiorAt({ x, y: feetY, z }, S.city);
   return room ? { ...zone, id: zone?.id ?? room.id, indoor: true, interiorId: room.id, category: room.category } : zone;
 }
+// From a lower floor of Onsae the floors above are cut away: nobody up there is drawn standing in mid-air.
+const onsaeFloorSeen = (level) => {
+  const zone = player ? zoneAt(player.root.position.x, player.root.position.z) : null;
+  return !(zone?.id === 'studio' && zone.level < level);
+};
 const traversal = createTraversal();
 let rides, occupants;
 let runEnabled = false, braking = false, demoEnabled = false;
@@ -327,7 +342,11 @@ function buildCast() {
   cashier = makeCashier();
   tong = makeTong();
   cat = makeCat(SPOTS.cat);
-  Object.assign(chars, { player, haeun, jin, ajusshi, barista, cashier, tong });
+  Object.assign(chars, { player, haeun, jin, ajusshi, barista, cashier, tong, haeun_unnamed: haeun });
+  // The grandmother on the airport train is built with the car (cities/incheon.js).
+  Object.defineProperty(chars, 'halmoni', { get: () => INCHEON.grandma, enumerable: true });
+  // The street's one-offs (hongdae-life.js).
+  for (const id of ['busker', 'seller', 'driver']) Object.defineProperty(chars, id, { get: () => STREET_CAST[id], enumerable: true });
 
   ajusshi.root.position.copy(SPOTS.ajusshi);
   ajusshi.armPose = (t) => (ajusshi.serveT > 0 ? [-1.4, -1.4] : [-0.9 + Math.sin(t * 3) * 0.25, -0.2]);
@@ -337,11 +356,9 @@ function buildCast() {
   cashier.root.position.copy(SPOTS.cashier);
   cashier.root.rotation.y = Math.PI / 2;
 
+  // The plaza and food-street crowd lives in hongdae-life.js; only the terrace stroller is here.
   const loops = [
-    [[1.5, 27], [1.5, -6], [3, -14], [-2, -16], [-1.5, -6], [-1.5, 27]],
-    [[-7, -11], [7, -11], [7, -24], [-7, -24]],
     [[-2, -34], [14, -34], [14, -42.5], [-4, -42.5]],
-    [[-2.5, 24], [3.5, 12], [3.5, -2], [-1, -12], [4.5, -20], [3.5, -2], [-2.5, 24]],
   ];
   loops.forEach((loop, i) => {
     const p = makePedestrian(100 + i * 17);
@@ -353,9 +370,11 @@ function buildCast() {
 
 /* ── Schedules (who is where, when) ──────────────── */
 
-const isOpen = (h) => h >= 19 || h < 3;
+const isOpen = (h) => h >= 16 || h < 3; // the tent sets up at four
 const where = {
   haeun(h) {
+    // Day one: its scenes place her (Room B, the corridor, orientation) until the lockers.
+    if (dayOneStaged()) return 'd1';
     if (h >= 9 && h < 19) return 'studio';
     // once you're paired she drills late, alone (H2)
     if (S.story.flags.h1_done && h >= 21 && h < 23.5) return 'studio';
@@ -380,7 +399,7 @@ const talkPose = () => [-0.25, -0.35];
 
 function placeHaeun(l) {
   wake(haeun); // up from her bunk if she was asleep
-  haeun.root.visible = l !== 'away' && l !== 'dorm';
+  haeun.root.visible = l !== 'away' && l !== 'dorm' && l !== 'd1';
   haeun.pose = 'idle';
   haeun.armPose = null;
   haeun.legSwing = false;
@@ -392,7 +411,7 @@ function placeHaeun(l) {
   }
   if (l === 'studio') {
     haeun.root.position.copy(SPOTS.haeunStudio);
-    haeun.root.rotation.y = -Math.PI / 2;
+    haeun.root.rotation.y = ONSAE_YAW.roomB; // facing 연습실 B's mirror panel
     haeun.pose = 'dance';
     haeun.baseExpr = 'smirk';
   }
@@ -590,6 +609,10 @@ function updatePickups(dt, t) {
       }
       continue;
     }
+    // Day one is about people, not collecting: the glowing words appear from day two.
+    const out = S.day >= 2 || !!S.story.flags.d1_legacy;
+    p.sprite.visible = p.glow.visible = out;
+    if (!out) continue;
     p.sprite.position.y = p.y + 1.3 + Math.sin(t * 2 + p.phase) * 0.1;
     if (!S.started) continue;
     const pp = player.root.position;
@@ -704,10 +727,10 @@ function checkArrival() {
   for (const [id] of ARRIVAL) if (state[id] && !S.quests[id]) done(id);
 }
 /** 한글 X/24: letters from the words this save rebuilt, plus the signs it read. */
-const hangul = () => hangulProgress(metWords(S.story.flags, [...S.signs].map((id) => SIGNS[id]?.word).filter(Boolean)));
+const hangul = () => hangulProgress(metWords(S.story.flags));
 const QUESTS = [
   ['haeunDay', '💃 Meet your partner at the studio (9:00–19:00)'],
-  ['pojang', '🏮 Dinner at the 포장마차 (19:00~)'],
+  ['pojang', '🏮 Eat at the 포장마차 (16:00~)'],
   ['cafe', '☕ Order at 카페 봄 (8:00–22:00)'],
   ['store', '🏪 Buy something at the 편의점'],
   ['drill', '🌙 The studio lights at 21:00'],
@@ -826,12 +849,31 @@ function hangout(locationId) {
 /** Open a shared exercise over the game; the world waits until it closes. */
 async function exercise(req) {
   if (req.exerciseType === 'formation_grid') return formationDrill(req);
+  if (isTongPlay(req.exerciseType)) return playGame(req);
   // Don't freeze the world while still waiting to hear whether a host exists.
   await bridge.ready();
   bridgeBusy = true;
   clearControls();
   try {
     return await bridge.exercise(req);
+  } finally {
+    bridgeBusy = false;
+    canvas.focus();
+  }
+}
+
+/** One of Tong's small games (tongplay.js), played over the world; the letters met count in Tong too. */
+const tongPlay = createTongPlay({ root: shell ?? document.body, speak: (text) => speak(text, 'tong'), canHear: () => voice.available(), sfx });
+async function playGame(req) {
+  bridgeBusy = true;
+  clearControls();
+  try {
+    const result = await tongPlay.run(req);
+    if (result.outcome === 'completed' && req.exerciseType.startsWith('hangul_')) {
+      const items = req.exerciseType === 'hangul_match' ? req.targetItems.map((t) => t.split(':')[0]) : [req.targetItems[0]];
+      bridge.report(items.map((itemId) => ({ kind: 'item_seen', itemId, category: 'script' })));
+    }
+    return result;
   } finally {
     bridgeBusy = false;
     canvas.focus();
@@ -1110,6 +1152,12 @@ const A = {
 const NODES = buildNodes(A);
 NODES.quiz.enter = newQuizQ;
 
+// Hover / tap lookups on every piece of Korean (js/gloss.js); late-rendered UI is kept wrapped by the observer.
+const phraseOf = phraseLookup(() => S.phrases);
+const gloss = createGloss({ speak, lookup: (w) => phraseOf(w) ?? WORDS.find((x) => x.ko === w) ?? null, hasVoice: () => voice.available() });
+gloss.auto($('game-shell'), ['.bubble', '#toast', '#banner', '#prompt', '#quest-list', '#quest-now', '#quest-hint', '#quest-title-text', '#city-title', '#clock-ko', '#book-list', '.day-card', '.play-title', '.play-note', '[data-gloss]']);
+initHud();
+
 const dlg = createDialogue({
   nodes: NODES,
   S,
@@ -1118,6 +1166,7 @@ const dlg = createDialogue({
   learn,
   exercise,
   speak,
+  gloss,
   sfx,
   bubble,
   onStart: () => {
@@ -1132,7 +1181,7 @@ const dlg = createDialogue({
     document.body.classList.remove('talking');
     if (loc.haeun === 'studio' && S.tentStory === 'idle') {
       haeun.pose = 'dance';
-      haeun.root.rotation.y = -Math.PI / 2;
+      haeun.root.rotation.y = ONSAE_YAW.roomB;
     }
     save();
   },
@@ -1154,6 +1203,10 @@ const scenes = createScenePlayer({
     else if (c === 'serve') {
       S.food = { ko: '떡볶이', en: 'tteokbokki' };
       serveFood();
+    } else if (c.startsWith('stage:')) stageCue(c.slice(6));
+    else if (c === 'phone_buzz' && S.city === 'incheon') {
+      bubble(player, '📳', { dur: 1.6 });
+      sfx.thump();
     } else if (c === 'phone_buzz') {
       bubble(jin, '📳', { dur: 1.6 });
       sfx.thump();
@@ -1196,9 +1249,11 @@ function talkToHaeun() {
   dlg.start(f.h1_done ? 'haeun_idle' : 'haeun_tomorrow');
 }
 
-/* ── Day 1: Incheon → Hongdae → Onsae (day1.js, docs/seoul-day1.md) ── */
+/* ── Day 1: the airport train → Hongdae → Onsae (day1.js, docs/seoul-first-day.md) ── */
 
 const flag = (f) => !!S.story.flags[f];
+const setFlag = (f) => { S.story.flags = { ...S.story.flags, [f]: true }; };
+const v3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
 /** Move between Day 1's places behind a fade, without the flight banner or the two-hour hop. */
 async function dayOneMove(cityId, pose, hour) {
   transitioning = true;
@@ -1217,69 +1272,197 @@ async function dayOneMove(cityId, pose, hour) {
   transitioning = false;
   clearControls();
 }
-/** Cue 'ride': sit down in the train car while the dialogue goes on. */
+/** Cue 'ride' and a new game: you are already in your seat on the airport train. */
 function rideTrain() {
+  player.auto = null;
+  player.root.position.set(...INCHEON.seat);
+  player.root.rotation.y = INCHEON.seatYaw ?? 0;
+  player.pose = 'sit';
+  cam.yaw = INCHEON.cam?.yaw ?? Math.PI;
+  if (Number.isFinite(INCHEON.cam?.pitch)) cam.pitch = INCHEON.cam.pitch;
+  if (Number.isFinite(INCHEON.cam?.dist)) cam.dist = INCHEON.cam.dist;
+  cam.snap = true;
+}
+const HONGDAE_POSE = { position: SEOUL_PLACES.find((p) => p.id === 'subway').spawn, yaw: 0 };
+async function arriveHongdae() {
+  player.pose = 'idle';
+  await dayOneMove('seoul', HONGDAE_POSE, hongdaeArrival().hour);
+  banner('🚇 홍대입구역', 'Hongdae');
+  checkArrival();
+}
+/** A stop on the way took time (docs/seoul-first-day.md): say so, and move the held clock. */
+function spendStop(sceneId) {
+  const minutes = STOP_MINUTES[sceneId];
+  if (!minutes || !dayOneClockHeld(S.story.flags)) return;
+  setHour(Math.min(S.hour + minutes / 60, 17.3));
+  toast(`<b>+${minutes}분</b><span>${koreanTime(localHour()).digital} · Onsae by 5:00</span>`, 2600);
+}
+
+/* Who stands where at Onsae while day one's scenes play (cues 'stage:<name>'). */
+/** Day one, from the station until your locker: the cohort and Ha-eun are placed by the scenes. */
+const dayOneStaged = () => S.day === 1 && !!S.story.flags.d1_arrived_hongdae && !S.story.flags.d1_legacy && !S.story.flags.h0_done;
+let d1Stage = null;
+function stageCast(spots, from = null) {
+  for (const a of studioCast?.actors ?? []) {
+    const s = spots[a.id], r = a.character.root;
+    a.goal = s ? v3(s.at) : null;
+    a.goalYaw = s?.yaw ?? 0;
+    a.goalPose = s?.pose === 'sit' ? 'sit' : 'idle';
+    a.delay = s && from ? 0.25 + (s.pair ?? 0) * 0.8 + Math.random() * 0.25 : 0;
+    r.visible = !!s && !from;
+    a.character.pose = 'idle';
+    if (s && from) r.position.copy(v3(from));
+    else if (s) {
+      r.position.copy(a.goal);
+      r.rotation.y = a.goalYaw;
+      a.character.pose = a.goalPose;
+    }
+  }
+}
+function placeAt(c, at, yaw = 0, pose = 'idle') {
+  c.root.position.copy(v3(at));
+  c.root.rotation.y = yaw;
+  c.root.visible = true;
+  c.pose = pose;
+}
+/** A short cut to black while the player is put on a mark, facing `yaw`, camera behind them. */
+function cutPlayerTo(at, yaw) {
   ui.fade.classList.add('on');
   setTimeout(() => {
-    player.auto = null;
-    player.root.position.set(...INCHEON.seat);
-    player.root.rotation.y = 0;
-    player.pose = 'sit';
-    cam.yaw = Math.PI;
+    player.root.position.set(at[0], at[1], at[2]);
+    player.root.rotation.y = yaw;
+    traversal.vx = traversal.vz = 0;
+    cam.yaw = yaw + Math.PI;
     cam.snap = true;
     ui.fade.classList.remove('on');
-  }, 450);
+  }, 380);
 }
-const HONGDAE_POSES = {
-  station: { position: SEOUL_PLACES.find((p) => p.id === 'subway').spawn, yaw: 0 },
-  street: { position: [1.6, 0, 18], yaw: 0 },
-};
-async function arriveHongdae() {
-  const { at, hour } = hongdaeArrival(S.story.flags);
-  player.pose = 'idle';
-  if (flag('read_sign_subway') && !S.signs.has('subway')) {
-    S.signs.add('subway');
-    setSignRead('subway', true);
+function stageCue(name) {
+  if (name === 'halmoni') return void (INCHEON.grandma && setExpr(INCHEON.grandma, 'smile', 4));
+  if (name === 'student') return void (INCHEON.student && bubble(INCHEON.student, '👀', { dur: 2 }));
+  if (name === 'stop') {
+    setTrainStop('홍대입구', 'Hongik Univ.');
+    sfx.chime();
+    return;
   }
-  await dayOneMove('seoul', HONGDAE_POSES[at], hour);
-  banner(at === 'street' ? '홍대' : '🚇 홍대입구역', 'Hongdae · Onsae is up the stairs by the river');
-  checkArrival();
-  setTimeout(tongHintBubble, 1200);
+  if (S.city !== 'seoul') return;
+  if (name === 'haeun_drill') {
+    placeAt(haeun, ONS.roomB, ONS.SPOT_YAW.roomB, 'dance');
+    // You push the door: from here the scene plays inside Room B, with her in front of you.
+    const p = player.root.position;
+    if (ONS.roomAt(p.x, p.y, p.z) !== 'practice_b') cutPlayerTo(ONS.roomBWatch, ONS.SPOT_YAW.roomBWatch);
+    return;
+  }
+  if (name === 'haeun_stop') {
+    haeun.pose = 'idle';
+    haeun.root.rotation.y = Math.atan2(player.root.position.x - haeun.root.position.x, player.root.position.z - haeun.root.position.z);
+    return;
+  }
+  if (name === d1Stage) return;
+  d1Stage = name;
+  if (name === 'early') {
+    stageCast({});
+    placeAt(haeun, ONS.roomB, ONS.SPOT_YAW.roomB, 'dance');
+  } else if (name === 'cohort_out') {
+    // Practice lets out: they come through Room A's door in twos.
+    stageCast(ONS.CORRIDOR_SPOTS, ONS.roomADoor);
+    if (!flag('d1_early')) placeAt(haeun, ONS.roomBDoor, ONS.SPOT_YAW.roomBDoor + Math.PI);
+  } else if (name === 'late') {
+    stageCast({ manager_choi: { at: ONS.corridor2, yaw: 0 }, boram: { at: ONS.roomADoor, yaw: 0 } });
+    haeun.root.visible = false;
+  } else if (name === 'orientation') {
+    // "Everyone files into Room A": a cut, then the room as it is at five.
+    ui.fade.classList.add('on');
+    setTimeout(() => {
+      stageCast(ONS.CAST_SPOTS);
+      placeAt(haeun, ONS.mirror, ONS.SPOT_YAW.roomAFront);
+      // By the door at the back, off to one side: the whole room in view, nobody's head in the way.
+      const [x, y, z] = ONS.roomA;
+      const yaw = Math.atan2(ONS.roomAFront[0] - (x - 2.3), ONS.roomAFront[2] - (z + 4.4));
+      player.root.position.set(x - 2.3, y, z + 4.4);
+      player.root.rotation.y = yaw;
+      traversal.vx = traversal.vz = 0;
+      cam.yaw = yaw + Math.PI;
+      cam.snap = true;
+      ui.fade.classList.remove('on');
+    }, 420);
+  }
 }
+/** Staged cast walk to their marks; returns true while day one owns them. */
+function updateStagedCast(dt, t) {
+  if (!dayOneStaged()) return false;
+  // A reload during orientation: the room as it was.
+  if (!d1Stage && flag('d1_arrival_seen')) {
+    d1Stage = 'orientation';
+    stageCast(ONS.CAST_SPOTS);
+    placeAt(haeun, ONS.mirror, ONS.SPOT_YAW.roomAFront);
+  } else if (!d1Stage) for (const a of studioCast?.actors ?? []) a.character.root.visible = false;
+  for (const a of studioCast?.actors ?? []) {
+    const r = a.character.root;
+    if (!a.goal) continue;
+    if (a.delay > 0) {
+      a.delay -= dt;
+      if (a.delay > 0) continue;
+      r.visible = true;
+    }
+    const dx = a.goal.x - r.position.x, dz = a.goal.z - r.position.z, d = Math.hypot(dx, dz);
+    let speed = 0;
+    if (d > 0.06) {
+      const step = Math.min(d, 1.5 * dt);
+      r.position.x += (dx / d) * step;
+      r.position.z += (dz / d) * step;
+      r.rotation.y += wrapAngle(Math.atan2(dx, dz) - r.rotation.y) * damp(8, dt);
+      speed = 0.45;
+    } else {
+      r.rotation.y += wrapAngle(a.goalYaw - r.rotation.y) * damp(6, dt);
+      a.character.pose = a.goalPose;
+    }
+    if (r.visible) animate(a.character, dt, t, speed);
+  }
+  return true;
+}
+
 /** Day 1 scene endings. Returns true when the scene is one of Day 1's own. */
 function dayOneDone(scene) {
   if (scene.id === 'haeun.h0.dorm' && flag('d1_stayed_up')) {
     day.spend(12);
     advanceHours(1);
   }
-  if (!scene.id.startsWith('seoul.d1.')) return false;
-  if (scene.id === 'seoul.d1.exit') setExitOpen(true);
-  if (scene.id === 'seoul.d1.station') arriveHongdae();
-  if (scene.id === 'seoul.d1.arrive') setTimeout(() => scenes.play('seoul.d1.orientation'), 500);
+  if (scene.id === 'jin.j0' || scene.id === 'seoul.d1.busker') spendStop(scene.id);
+  const mine = scene.id.startsWith('seoul.d1.') || scene.id === 'haeun.d1.room_b';
+  if (!mine) return false;
+  if (scene.id === 'seoul.d1.train') arriveHongdae();
+  if (scene.id === 'seoul.d1.cart') day.eat('snack');
+  if (scene.id === 'seoul.d1.taxi') dayOneMove('seoul', { position: ONS.door, yaw: Math.PI });
+  if (scene.id === 'seoul.d1.sprint') dayOneMove('seoul', { position: [5, TERRACE_Y, -33], yaw: Math.PI });
+  if (scene.id === 'seoul.d1.arrive' || scene.id === 'haeun.d1.room_b') setTimeout(() => scenes.play('seoul.d1.orientation'), 700);
   if (scene.id === 'seoul.d1.bedtime') setTimeout(() => dlg.start('hangul_recap'), 400);
   checkArrival();
   updateQuest();
   save();
   return true;
 }
-/** Per frame on Day 1: start the airport scene, and the arrival when you walk into the studio. */
+/** Per frame on Day 1: the train scene, the street, the lobby, and whoever is on the second floor. */
 function dayOneTick() {
-  if (dlg.state.active || modalOpen() || !S.started || transitioning) return;
+  if (dlg.state.active || modalOpen() || !S.started || transitioning || bridgeBusy) return;
   if (S.city === 'incheon') {
-    if (!flag('played:seoul.d1.airport')) return void scenes.play('seoul.d1.airport');
-    // Reloaded on the station scene's last line: you were already on your way.
-    if (flag('d1_arrived_hongdae')) {
-      S.story.flags = { ...S.story.flags, 'played:seoul.d1.station': true };
-      arriveHongdae();
-    }
+    if (!flag('played:seoul.d1.train')) return void scenes.play('seoul.d1.train');
+    // Reloaded on the train scene's last line: you were already getting off.
+    if (flag('d1_arrived_hongdae')) arriveHongdae();
     return;
   }
   if (S.city !== 'seoul' || !flag('d1_arrived_hongdae')) return;
-  if (zoneAt(player.root.position.x, player.root.position.z)?.id !== 'studio') return;
-  if (!flag('played:seoul.d1.arrive')) {
-    setHour(studioHour(S.story.flags, S.hour));
-    scenes.play('seoul.d1.arrive');
-  } else if (!flag('orientation_done')) scenes.play('seoul.d1.orientation'); // reloaded mid-orientation
+  if (!flag('played:seoul.d1.street')) return void scenes.play('seoul.d1.street');
+  const p = player.root.position;
+  const room = ONS.roomAt(p.x, p.y, p.z);
+  if (!room) return;
+  if (room === 'lobby' && !flag('played:seoul.d1.lobby')) return void scenes.play('seoul.d1.lobby');
+  if (flag('d1_arrival_seen')) return void scenes.play('seoul.d1.orientation'); // reloaded mid-orientation
+  if (!['corridor2', 'practice_a', 'practice_b'].includes(room)) return;
+  // Who you met on the way decides when you get here, and who is here.
+  if (!flag('d1_early') && !flag('d1_ontime') && !flag('d1_late')) setFlag(`d1_${arrivalTiming(S.story.flags, S.story.tally)}`);
+  setHour(studioHour(S.story.flags, S.hour));
+  scenes.play(flag('d1_early') ? 'haeun.d1.room_b' : 'seoul.d1.arrive');
 }
 /* ── Day 2 on: the drill and the origin loops (day2.js, docs/seoul-day2.md) ── */
 
@@ -1312,28 +1495,14 @@ function morningLoops() {
   scenes.play(id);
 }
 
-const INCHEON_INTERACTABLES = [
-  {
-    label: '출구 · The way out',
-    pos: () => INCHEON.exitDoor,
-    r: 3,
-    on: () => !flag('d1_exit_done'),
-    act: () => scenes.play('seoul.d1.exit'),
-  },
-  {
-    label: '전광판 · Departure board',
-    pos: () => INCHEON.board,
-    r: 3.2,
-    on: () => flag('d1_exit_done') && !flag('d1_arrived_hongdae'),
-    act: () => {
-      // A replay after a reload starts the road over, so two roads' flags never stack.
-      const keep = (flags) => Object.fromEntries(Object.entries(flags).filter(([k]) => !ROAD_FLAGS.includes(k)));
-      S.story.flags = keep(S.story.flags);
-      if (S.rel?.tong) S.rel.tong = { ...S.rel.tong, flags: keep(S.rel.tong.flags) };
-      if (S.story.tally?.toll) S.story.tally = { ...S.story.tally, toll: 0 };
-      scenes.play('seoul.d1.station');
-    },
-  },
+// Day one's street (hongdae-life.js dresses and exports the spots): things to stop for on the way up.
+const onTheWay = () => S.day === 1 && flag('d1_arrived_hongdae') && !flag('orientation_done') && !flag('d1_legacy');
+const STREET_INTERACTABLES = [
+  { label: '광고판 · The poster', pos: () => v3(STREET.poster), r: 2.6, on: () => flag('d1_arrived_hongdae') && !flag('played:seoul.d1.poster'), act: () => scenes.play('seoul.d1.poster') },
+  { label: '붕어빵 · Bungeoppang', pos: () => v3(STREET.cart), r: 2.2, on: () => onTheWay() && !flag('played:seoul.d1.cart'), act: () => scenes.play('seoul.d1.cart') },
+  { label: '버스킹 · Listen', pos: () => v3(STREET.busker), r: 2.8, on: () => onTheWay() && !flag('played:seoul.d1.busker'), act: () => scenes.play('seoul.d1.busker') },
+  { label: '택시 · Taxi, on the family card', pos: () => v3(STREET.taxi), r: 2.4, on: () => onTheWay() && S.origin === 'intl_kid' && !flag('played:seoul.d1.taxi'), act: () => scenes.play('seoul.d1.taxi') },
+  { label: '계단 · Run the stairs', pos: () => v3(STREET.stairsFoot), r: 2, on: () => onTheWay() && S.origin === 'athlete' && !flag('played:seoul.d1.sprint'), act: () => scenes.play('seoul.d1.sprint') },
 ];
 let studioCast = null;
 
@@ -1563,7 +1732,7 @@ function updateInteract() {
       },
     });
     if (!currentCity().hidden) local.unshift({ label: `✈ ${airport.name} · Flights`, pos: () => new THREE.Vector3(...airport.spawn), r: 4, on: () => true, act: () => openTravel('flights') });
-    const story = S.city === 'seoul' ? interactables : S.city === 'incheon' ? INCHEON_INTERACTABLES : [];
+    const story = S.city === 'seoul' ? [...STREET_INTERACTABLES, ...interactables] : [];
     for (const it of [...story, ...local]) {
       if (!it.on()) continue;
       const q = it.pos();
@@ -1577,11 +1746,11 @@ function updateInteract() {
   }
   if (activeInteract) {
     const label = `<kbd>E</kbd> ${activeInteract.label}`;
-    if (ui.prompt.innerHTML !== label) ui.prompt.innerHTML = label;
+    if (ui.prompt.shownLabel !== label) ui.prompt.innerHTML = ui.prompt.shownLabel = label; // innerHTML itself is rewrapped by gloss.js
     ui.prompt.classList.remove('hidden');
   } else if (S.benchSit) {
     const label = '<kbd>E</kbd> 일어나기 · Stand up';
-    if (ui.prompt.innerHTML !== label) ui.prompt.innerHTML = label;
+    if (ui.prompt.shownLabel !== label) ui.prompt.innerHTML = ui.prompt.shownLabel = label; // innerHTML itself is rewrapped by gloss.js
     ui.prompt.classList.remove('hidden');
   } else ui.prompt.classList.add('hidden');
 }
@@ -1647,14 +1816,14 @@ const SEOUL_PHRASES = {
 };
 function phraseFor(p) { return p.phrase ?? SEOUL_PHRASES[roleOf(p)]; }
 /* ── Readable signs (Seoul) ─────────────────────── */
-// A main Seoul place keeps its name hidden until its jumbled sign is rebuilt.
-const signUnread = (p) => S.city === 'seoul' && Object.hasOwn(SIGNS, p.id) && !S.signs.has(p.id);
+// Shop signs are plain, readable signs (hover or tap any Korean for its sound): no jumbling, no rebuild.
+const signUnread = () => false;
 /** A place's shown name: '???' until its sign is read. */
 function placeName(p) {
   return signUnread(p) ? { ko: '???', en: 'Unread sign', category: '???' } : { ko: p.ko, en: p.en, category: categoryNames[roleOf(p)] };
 }
 function syncSigns() {
-  for (const id of Object.keys(SIGNS)) setSignRead(id, S.signs.has(id));
+  for (const id of Object.keys(SIGNS)) setSignRead(id, true);
 }
 let signPending = null; // place id whose sign Tong offers to read once the player is free
 let signOpen = null; // the sign being read now: { id, ...SIGNS[id] }
@@ -2744,7 +2913,7 @@ function updateCamera(dt, t) {
       mode = 'counter';
     }
     k = 3;
-  } else if (dlg.state.active && node && chars[node.who] && node.who !== 'tong' && node.who !== 'player') {
+  } else if (dlg.state.active && node && chars[node.who]?.root.visible && S.city !== 'incheon' && node.who !== 'tong' && node.who !== 'player') {
     // two-shot: both faces in frame, from whichever side isn't a wall
     const sp = chars[node.who];
     headPos(sp, hv);
@@ -2867,7 +3036,7 @@ function updateWayfinding() {
   const behind = tmpV.z > 1;
   wayfindingLabel.textContent = `${behind ? '↻ ' : ''}${placeName(target).ko} · ${placeName(target).category} · ${Math.round(distance)}m`;
   wayfindingLabel.style.display = '';
-  wayfindingLabel.style.left = `${clamp(behind ? stage.width / 2 : (tmpV.x * 0.5 + 0.5) * stage.width, Math.min(110, stage.width / 2), Math.max(stage.width / 2, stage.width - 110))}px`;
+  wayfindingLabel.style.left = `${clamp(behind ? stage.width / 2 : (tmpV.x * 0.5 + 0.5) * stage.width, Math.min(138, stage.width / 2), Math.max(stage.width / 2, stage.width - 138))}px`;
   wayfindingLabel.style.top = `${clamp(behind ? stage.height * 0.35 : (-tmpV.y * 0.5 + 0.5) * stage.height, Math.min(160, stage.height * 0.35), stage.height - 150)}px`;
 }
 
@@ -2930,8 +3099,8 @@ function frame() {
   const L = sky.update(localHour(), t, player.root.position, camera);
   bloom.strength = L.bloom;
   renderer.toneMappingExposure = L.exposure;
-  const warm = clamp(1 - Math.abs(localHour() - 18) / 2, 0, 1);
-  grade.uniforms.uTint.value.setRGB(1 + warm * 0.06, 1 - warm * 0.01, 1 - warm * 0.08 + L.night * 0.04);
+  const warm = clamp(1 - Math.abs(localHour() - 17.75) / 2.25, 0, 1); // golden from about 16:00
+  grade.uniforms.uTint.value.setRGB(1 + warm * 0.07, 1 - warm * 0.005, 1 - warm * 0.09 + L.night * 0.04);
   water.material.uniforms.uSky.value.copy(L.top);
   water.material.uniforms.uHorizon.value.copy(L.horizon);
   water.material.uniforms.uSunDir.value.copy(sky.uniforms.uSunDir.value);
@@ -2960,9 +3129,13 @@ function frame() {
     }
     // Day one, evening: walking onto your floor plays the arrival (H0 · 숙소).
     if (onDormFloor(room) && !dlg.state.active && !modalOpen() && !S.story.flags.dorm_arrived && S.story.flags.h0_done) scenes.play('haeun.h0.dorm');
-    studioCast?.update(studioCastOn(S.story.flags, { day: S.day, hour: S.hour }), S.day >= 2 ? S.hour : null);
-    for (const a of studioCast?.actors ?? []) if (a.character.root.visible) animate(a.character, dt, t, 0);
+    if (!updateStagedCast(dt, t)) {
+      studioCast?.update(studioCastOn(S.story.flags, { day: S.day, hour: S.hour }) && onsaeFloorSeen(1), S.day >= 2 ? S.hour : null);
+      for (const a of studioCast?.actors ?? []) if (a.character.root.visible) animate(a.character, dt, t, 0);
+    }
   }
+  if (S.city === 'incheon') updateTrain(dt, t);
+  if (S.city === 'seoul') updateHongdaeLife(dt, t, { hour: localHour(), playerPos: player.root.position, talking: dlg.state.active });
   if (dayOneOpen(S.story.flags)) dayOneTick();
   const hs = updateHaeun(dt, t);
   const js = updateJin(dt, t);
@@ -2988,7 +3161,10 @@ function frame() {
   updateHud();
   offerSigns();
   drawMinimap();
-  studioMirrorVisible(zoneAt(player.root.position.x, player.root.position.z)?.id === 'studio');
+  const onsaeZone = zoneAt(player.root.position.x, player.root.position.z);
+  studioMirrorVisible(onsaeZone?.id === 'studio' && ['practice_a', 'corridor2'].includes(onsaeZone.room));
+  updateOnsae(player.root.position, dt);
+  if (loc.haeun === 'studio') haeun.root.visible = onsaeFloorSeen(1);
 
   const pp = player.root.position;
   updateAudio({
@@ -3056,7 +3232,7 @@ async function boot() {
     scene.add(group);
     group.visible = id === S.city;
   };
-  buildCityGeometry('seoul', buildWorld);
+  buildCityGeometry('seoul', () => { buildWorld(); buildHongdaeLife({ heightAt: seoulHeightAt }); });
   for (const city of Object.values(cities)) buildCityGeometry(city.id, () => {
     city.build();
     // The staffed-shop and stair pilots passed before opting in other cities.
@@ -3074,7 +3250,8 @@ async function boot() {
   occupants = createOccupants(interiors, { groups: cityGroups });
   const dormHome = apartments.find((b) => b.id === DORM_HOME);
   if (dormHome) dormCast = createDormCast({ building: dormHome, group: cityGroups.seoul });
-  studioCast = createStudioCast({ group: cityGroups.seoul, floorY: TERRACE_Y, makeCastMember });
+  studioCast = createStudioCast({ group: cityGroups.seoul, floorY: ONSAE_FLOOR_Y[1], makeCastMember });
+  for (const a of studioCast.actors) chars[a.id] = a.character; // they turn and talk when their lines play
   initParticles();
   buildMotes();
   const saved = loadSave();
@@ -3082,6 +3259,7 @@ async function boot() {
   S.legacy = saved ? (saved.version >= 4 ? saved.legacy ?? null : legacyProgress(saved)) : null;
   connectBridge();
   buildPickups();
+  syncSigns();
   drawMapBg();
   updateHearts();
   updateQuest();
@@ -3110,7 +3288,7 @@ async function boot() {
       S.nationality = $('nationality').value;
       S.birthday = { m: Number($('birth-m').value), d: Number($('birth-d').value) };
       S.origin = ORIGINS.some((o) => o.id === $('origin')?.value) ? $('origin').value : ORIGINS[0].id;
-      // Day 1 starts at Incheon arrivals, 1:05pm (docs/seoul-day1.md).
+      // Day 1 starts seated on the airport train, 4:20pm (docs/seoul-first-day.md).
       S.city = 'incheon';
       S.hour = START_HOUR;
       S.story.flags = { ...S.story.flags, d1_started: true, [originFlag(S.origin)]: true };
@@ -3122,14 +3300,15 @@ async function boot() {
     S.started = true;
     if (!resume || !saved) placePlayer({ position: INCHEON.spawn, yaw: incheon.yaw });
     syncCity();
-    setExitOpen(!!S.story.flags.d1_exit_done);
-    // Day one keeps the Today list open so every step is visible.
-    if (!arrivalDone()) document.querySelector('.panel.quest')?.setAttribute('open', '');
+    if (S.city === 'incheon') {
+      setTrainStop('디지털미디어시티', 'Digital Media City');
+      rideTrain();
+    }
     if (resume && saved) {
       toast(`<b>${currentCity().nativeName} · ${currentCity().name}</b><span>${koreanTime(localHour()).digital} local. Tong floats beside you — press <kbd>H</kbd> for a hint. Walk to ✈ for flights.</span>`, 4200);
       setTimeout(tongHintBubble, 3800);
     }
-    // A new game opens at Incheon arrivals: dayOneTick() plays the airport scene, where Tong appears.
+    // A new game opens on the airport train: dayOneTick() plays the scene, where Tong appears.
     save();
   };
   const creator = createCreator();
@@ -3169,6 +3348,14 @@ async function boot() {
   };
   window.__cozy = {
     S, player, haeun, jin, dlg, scenes, creator, renderer, bloom, scene, sky, G, THREE, setHour, bridge, seoulEval,
+    // Tests and staging checks: stand somewhere in Seoul on day one with these story flags set.
+    d1Jump: async (flags, position, hour = 16.5) => {
+      if (dlg.state.active) dlg.end();
+      S.story.flags = { ...S.story.flags, ...flags };
+      await dayOneMove('seoul', { position, yaw: 0 }, hour);
+    },
+    stageCue,
+    ONS, STREET, INCHEON,
     get bridgeBusy() { return bridgeBusy; },
     day,
     travelTo: (id, options) => travelTo(id === 'airport' ? { id: 'airport', icon: '✈', ko: currentCity().airport.nativeName, en: currentCity().airport.name, spawn: currentCity().airport.spawn, yaw: currentCity().yaw } : cityPlaces().find((p) => p.id === id), options),
@@ -3180,13 +3367,14 @@ async function boot() {
       // Exactly what an old save (from before Day 1 began in Incheon) loads as.
       const { d1_started, ...rest } = S.story.flags;
       S.story.flags = migrateDay1(rest);
-      await dayOneMove('seoul', HONGDAE_POSES.street, 16.5);
+      await dayOneMove('seoul', { position: [1.6, 0, 18], yaw: 0 }, 16.5);
       checkArrival();
       updateQuest();
     },
     get bounds() { return currentCity().bounds; },
     get transitioning() { return transitioning; },
     openPlace: (id) => { const p = cityPlaces().find((p) => p.id === id); if (p) openPlace(p); },
+    tongPlay, gloss,
     interact, loc, tongHint: () => tongHint(S, localHour()).en, cam, camera, composer, stage, resizeStage, safePose, validPose,
     traversal, rides, jump, setTransport, demoJump,
     get demoEnabled() { return demoEnabled; },

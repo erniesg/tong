@@ -15,9 +15,14 @@ export function buildApartment(options) {
   if (apartments.some(b => b.id === options.id)) throw new Error(`Apartment already built: ${options.id}`);
   const building = createApartmentPlan(options);
   const colors = { ...(palettes[options.city] || palettes.tokyo), ...(typeof options.style === 'object' ? options.style : palettes[options.style]) };
-  const materials = Object.fromEntries(Object.entries(colors).map(([key, color]) => [key, key === 'bulb'
-    ? nightGlow(mat(color, { emissive: '#ffc98a' }), 0.1, 2.6)
-    : mat(color, key === 'glass' ? { transparent: true, opacity: 0.32, roughness: 0.24, depthWrite: false } : {})]));
+  // `options.materials[key]`: extra material settings for one palette colour;
+  // `glow: [day, night]` makes its emissive follow the evening (lit windows).
+  const materials = Object.fromEntries(Object.entries(colors).map(([key, color]) => {
+    if (key === 'bulb') return [key, nightGlow(mat(color, { emissive: '#ffc98a' }), 0.1, 2.6)];
+    const { glow, ...extra } = options.materials?.[key] ?? {};
+    const material = mat(color, { ...(key === 'glass' ? { transparent: true, opacity: 0.32, roughness: 0.24, depthWrite: false } : {}), ...extra });
+    return [key, glow ? nightGlow(material, glow[0], glow[1]) : material];
+  }));
   const rooms = building.levels.map(level => ({ ...level, walls: [], roofs: [], occluders: [],
     ceilingAt: (x, z, feetY = level.floorY) => ceilingAt(building, x, z, feetY),
     floorSupport: (x, z, feetY) => supportAt(building, x, z, feetY),

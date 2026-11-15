@@ -1,10 +1,10 @@
 import type { SceneModule } from '../../../relationship/types';
 
 /**
- * Day 1 · 오리엔테이션 (3pm). Everyone converges: the rules, the first monthly
+ * Day 1 · 오리엔테이션 (5pm, Practice Room A). Everyone converges: the rules, the first monthly
  * eval, the self-introduction, each origin's expectation, and the agency still
  * talking about Su-a leaving (who left and when, never why or where: tbc T10).
- * Ends by sending you to your locker (H0). The formation drill is day 2.
+ * Ends by sending you up to your locker on 3F (H0). The formation drill is day 2.
  */
 export const module: SceneModule = {
   scene: {
@@ -17,11 +17,12 @@ export const module: SceneModule = {
     gate: { flags: ['d1_arrival_seen'], month: { from: 1, to: 1 } },
     summary:
       'Manager Choi: phones after 9pm, no social media, no dating, curfew 11; the first monthly eval is at the end of this month. Self-introduction (sentence builder: formal blocks, casual decoys). Origin beat. Overheard: Su-a really left. Then: your locker.',
-    seeds: ['intro_formal / intro_casual', 'hangul:입니다', 'heard_sua_left', 'orientation_done'],
+    seeds: ['intro_formal / intro_casual', 'heard_sua_left', 'orientation_done'],
     beats: [
       {
         id: 'o_rules',
         speaker: 'manager_choi',
+        cue: 'stage:orientation',
         lines: [{ value: { ko: '휴대폰은 저녁 9시 이후에만. SNS 금지. 연애 금지. 통금은 11시.', en: 'Phones after 9pm only. No social media. No dating. Curfew is eleven.', review: 'native' } }],
         tong: { ko: '금지 = 안 돼!', en: '금지 (geumji) = banned. 통금 = curfew.', maxLevel: 3 },
         effects: { vocab: [{ ko: '금지', en: 'banned', rom: 'geumji' }] },
@@ -47,21 +48,21 @@ export const module: SceneModule = {
         lines: [
           {
             value: {
-              ko: '입니다는 존댓말이야.',
-              en: 'Formal, like on the train. That ending, 입니다, is everywhere when people are being formal. 니 is ㄴ, an "n", with the ㅣ you know. 다 is ㄷ, a "d", with ㅏ, an "ah".',
+              ko: '첫날이니까 존댓말. 저는 {name}입니다.',
+              en: 'Your turn. First day, a manager in the room: go formal. 저는 {name}입니다, "I am {name}". Put it in order.',
               review: 'native',
             },
           },
         ],
         exercise: {
-          type: 'sentence_builder',
+          type: 'say_it',
           objectiveId: 'ko-gram-imnida',
           targets: ['안녕하세요.', '저는 {name}입니다.', '잘 부탁드립니다.'],
           distractors: ['나는 {name}이야.', '잘 부탁해.'],
           framing: { ko: '자기소개를 만들어 봐.', en: 'Build your introduction.' },
           onFail: 'continue',
         },
-        effects: { setFlags: ['hangul:입니다'], vocab: [{ ko: '자기소개', en: 'self-introduction', rom: 'jagisogae' }] },
+        effects: { vocab: [{ ko: '자기소개', en: 'self-introduction', rom: 'jagisogae' }, { ko: '저는 {name}입니다', en: 'I am {name} (formal)', rom: 'jeoneun {name}imnida' }, { ko: '잘 부탁드립니다', en: 'please look after me', rom: 'jal butakdeurimnida' }] },
         next: 'o_intro_ok',
       },
       {
@@ -129,7 +130,7 @@ export const module: SceneModule = {
         id: 'o_front_row',
         speaker: 'coach_park',
         when: { flags: ['origin_athlete'] },
-        lines: [{ value: { ko: '운동했어요? 체력은 좋겠네. 내일 앞줄.', en: 'You played sport? Stamina should be good, then. Front row, tomorrow.', note: 'He sizes you up from the door.', review: 'native' } }],
+        lines: [{ value: { ko: '운동했어요? 체력은 좋겠네. 내일 앞줄.', en: 'You played sport? Stamina should be good, then. Front row, tomorrow.', note: 'He watched you come up the stairs with that suitcase.', review: 'native' } }],
         next: 'o_overheard',
       },
 
@@ -156,17 +157,17 @@ export const module: SceneModule = {
       {
         id: 'o_locker',
         speaker: 'manager_choi',
-        lines: [{ value: { ko: '사물함은 연습실 뒤쪽이에요. 가 봐요.', en: 'Your locker\'s at the back of the studio. Go and have a look.', review: 'native' } }],
-        tong: { ko: '사물함 = 락커!', en: '사물함 (samulham) = locker.', maxLevel: 3 },
+        lines: [{ value: { ko: '사물함은 3층이에요. 가 봐요.', en: 'Your locker\'s on the third floor. Go and have a look.', review: 'native' } }],
+        tong: { ko: '사물함 = 락커!', en: '사물함 (samulham) = locker. 3층 (sam-cheung) = third floor.', maxLevel: 3 },
         effects: { setFlags: ['orientation_done'], vocab: [{ ko: '사물함', en: 'locker', rom: 'samulham' }] },
         end: true,
       },
     ],
   },
   presets: [
-    { id: 'd1o_formal', label: 'Formal introduction, no origin', state: { day: 1 }, world: { hour: 15, playerLevel: 1, inputTier: 1, flags: { d1_arrival_seen: true } } },
-    { id: 'd1o_mixed_intl', label: 'International-School Kid; mixes in casual blocks', state: { day: 1 }, world: { hour: 15, playerLevel: 0, inputTier: 1, flags: { d1_arrival_seen: true, origin_intl_kid: true } }, exercises: { o_intro: false } },
-    { id: 'd1o_creator', label: 'Creator with the airport photo out', state: { day: 1 }, world: { hour: 15, playerLevel: 1, inputTier: 1, flags: { d1_arrival_seen: true, origin_creator: true, pr_photo: true } } },
-    { id: 'd1o_athlete', label: 'Athlete: front row tomorrow', state: { day: 1 }, world: { hour: 15, playerLevel: 1, inputTier: 1, flags: { d1_arrival_seen: true, origin_athlete: true } } },
+    { id: 'd1o_formal', label: 'Formal introduction, no origin', state: { day: 1 }, world: { hour: 17, playerLevel: 1, inputTier: 1, flags: { d1_arrival_seen: true } } },
+    { id: 'd1o_mixed_intl', label: 'International-School Kid; mixes in casual blocks', state: { day: 1 }, world: { hour: 17, playerLevel: 0, inputTier: 1, flags: { d1_arrival_seen: true, origin_intl_kid: true } }, exercises: { o_intro: false } },
+    { id: 'd1o_creator', label: 'Creator with the airport photo out', state: { day: 1 }, world: { hour: 17, playerLevel: 1, inputTier: 1, flags: { d1_arrival_seen: true, origin_creator: true, pr_photo: true } } },
+    { id: 'd1o_athlete', label: 'Athlete: front row tomorrow', state: { day: 1 }, world: { hour: 17, playerLevel: 1, inputTier: 1, flags: { d1_arrival_seen: true, origin_athlete: true } } },
   ],
 };
